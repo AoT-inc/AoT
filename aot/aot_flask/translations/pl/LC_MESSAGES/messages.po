@@ -30661,3 +30661,21 @@ msgstr "Pokazuje, ile żądań zapisu od zewnętrznej AI oczekuje na zatwierdzen
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Bez terenu"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Zakres orientacyjny dla %(what)s (%(guide)s) wykracza poza Twoje twarde limity (%(hard)s), więc cele są ustalane tylko w zakresie %(effective)s. Poszerz twarde limity lub zawęź zakres orientacyjny, aby były zgodne."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Wartość ustawiona dla %(opt)s nie jest używana: obowiązuje tylko wtedy, gdy %(cond)s ma ustawioną odpowiednią opcję. Najpierw zmień tamto ustawienie, w przeciwnym razie ta wartość nie ma żadnego skutku."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "temperatury"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "wilgotności"

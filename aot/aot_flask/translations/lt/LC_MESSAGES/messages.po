@@ -30571,3 +30571,21 @@ msgstr "Rodo, kiek išorinės DI rašymo užklausų laukia patvirtinimo. Spustel
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Be vietos"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "%(what)s orientacinis intervalas (%(guide)s) yra už griežtųjų ribų (%(hard)s), todėl tikslai nustatomi tik intervale %(effective)s. Išplėskite griežtąsias ribas arba susiaurinkite orientacinį intervalą, kad jie sutaptų."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Jūsų nustatyta %(opt)s reikšmė nenaudojama: ji taikoma tik tada, kai %(cond)s nustatytas į atitinkamą parinktį. Pirmiausia pakeiskite tai, kitaip ši reikšmė neturės jokio poveikio."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "temperatūros"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "drėgmės"

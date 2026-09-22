@@ -30755,3 +30755,21 @@ msgstr "Megmutatja, hány külső AI-írási kérés vár jóváhagyásra. A sz�
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Telephely nélkül"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "A(z) %(what)s irányadó tartománya (%(guide)s) kívül esik a szigorú határértékeken (%(hard)s), ezért a célértékek csak a(z) %(effective)s tartományon belül jönnek létre. Tágítsa a szigorú határértékeket vagy szűkítse az irányadó tartományt, hogy a kettő egyezzen."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "A(z) %(opt)s beállításnál megadott érték nincs használatban: csak akkor érvényes, ha a(z) %(cond)s a megfelelő lehetőségre van állítva. Először azt módosítsa, különben ennek az értéknek nincs hatása."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "hőmérséklet"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "páratartalom"

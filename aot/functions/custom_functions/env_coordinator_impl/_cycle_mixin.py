@@ -942,6 +942,80 @@ class CycleMixin:
                 ','.join(_carried))
         return external, _od_cache
 
+    def _act_on_triggered_gate(self, gate_result, gate_env: dict,
+                               cycle_sec: float, now_ts: float,
+                               internal: dict) -> None:
+        """발동한 사전 안전 게이트를 집행한다 — 강제 명령·기록·경보·축소 요약.
+
+        정상 사이클과 운전 시간대 밖 사이클(`_run_outside_window`)이 같은
+        집행을 쓴다. 둘이 따로 가지면 한쪽만 고쳤을 때 갈라진다.
+        """
+        uid = self.unique_id
+        # 안전게이트 강제명령은 항상 즉시 반영 — 구동주기 설정(actuation_profile)의
+        # 정상-사이클 최소 이동 간격에 지연되면 안 된다(강우·돌풍·폭염·한파 대응).
+        self._dispatch(gate_result.forced_commands, cycle_sec, emergency=True)
+        write_decision_log(uid, 'safety_gate_active',
+                           CH_SAFETY_GATE, float(gate_result.gate_mask))
+        # ── 심각 이벤트 이메일 알림 (1일 1회) ─────────────────────────────
+        mask   = gate_result.gate_mask
+        ext_t  = gate_env.get('external', {})
+        int_t  = gate_env.get('internal', {})
+        if mask & GATE_BIT_WIND:
+            # 풍속을 잃은 채 마지막 값으로 닫고 있으면 이번 값은 None 이다
+            # (`SafetyPreGate._weather_view` — 래치). 숫자 서식에 None 을
+            # 넣으면 여기서 예외가 나 사이클이 죽는다.
+            wind_v = ext_t.get('wind')
+            wind_txt = (f'풍속 {wind_v:.1f} m/s 감지' if wind_v is not None
+                        else '풍속 센서 끊김(마지막 값이 강풍)')
+            self._send_critical_email(
+                'wind_gate',
+                f'[돌풍 경보] {wind_txt} — '
+                f'환기구 전체 강제 폐쇄 중. 시설 고정 상태를 점검하세요.',
+            )
+        if mask & GATE_BIT_RAIN:
+            self._send_critical_email(
+                'rain_gate',
+                '[강우 경보] 강우 감지 — 환기구 폐쇄. '
+                '전기 장치 수분 노출 여부를 점검하세요.',
+            )
+        if mask & GATE_BIT_HEAT:
+            # ⚠ `get(k, 기본)` 은 값이 None 이면 기본을 쓰지 않는다. 폭염
+            #   판정은 극값(T_max)으로 서므로 평균 T 가 비어 있을 수 있고,
+            #   그러면 서식에서 예외가 나 **경보를 내려던 사이클이 죽는다**.
+            T_e = ext_t.get('T') or 0.0
+            T_i = int_t.get('T') or int_t.get('T_max') or 0.0
+            self._send_critical_email(
+                'extreme_heat',
+                f'[폭염 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
+                f'냉방 장치 최대 가동 중. 그늘막·차광 설비를 점검하세요.',
+            )
+        if mask & GATE_BIT_COLD:
+            T_e = ext_t.get('T') or 0.0
+            T_i = int_t.get('T') or int_t.get('T_min') or 0.0
+            self._send_critical_email(
+                'extreme_cold',
+                f'[한파 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
+                f'난방 장치 최대 가동 중. 보온재 및 배관 동결 여부를 점검하세요.',
+            )
+        # ── 게이트로 멈춰도 **말은 해야 한다** (2026-08-26) ───────────────
+        # 이 경로는 L1~L3 앞에서 반환하므로 `_build_cycle_summary` 가 돌지
+        # 않는다. 그러면 요약의 `ts` 가 안 갱신되고, 화면은 그것을 보고
+        # **"자동 제어가 응답하지 않습니다"** 라고 말한다 — 제어는 매 사이클
+        # 정상 실행 중인데도.
+        #
+        # 가장 알려야 할 순간에 화면이 정반대를 말하는 셈이다. "지금 비가
+        # 와서 창을 닫았습니다" 가 나와야 할 자리이고, 게다가 **진짜로
+        # 죽었을 때와 구분되지 않는다**(실측: 강우 게이트 45분 → 화면은
+        # 응답 없음).
+        #
+        # ⚠ 여기에는 `situation` 이 없다(L2 전이다). 그래서 전체 요약을
+        #   쓸 수 없고 **게이트 사실만** 담은 축소 요약을 쓴다. 환경 값은
+        #   이 사이클의 것이 아니므로 싣지 않는다 — 낡은 값을 지금 값으로
+        #   보이게 하는 것이 침묵보다 나쁘다. 화면은 `gate_only` 를 보고
+        #   "환경 데이터는 이 사이클의 것이 아님" 을 말한다.
+        self._write_gate_only_summary(gate_result, gate_env, now_ts,
+                                      internal=internal)
+
     def _intentional_stop(self) -> 'str | None':
         """제어를 **일부러** 쉬는 중인가 — 그렇다면 사유, 아니면 None.
 
@@ -974,11 +1048,50 @@ class CycleMixin:
                     'EnvCoordinator: no actuators registered — skipping cycle')
             return 'no_actuators'
 
+        # 종료 동작은 여기서 하지 않는다 — 안전 게이트가 먼저 봐야 한다
+        # (`_run_outside_window`). 여기는 판정만 한다.
         if self.time_enable and not self._in_time_window():
-            self._apply_end_behaviors()
             return 'outside_time_window'
 
         return None
+
+    def _run_outside_window(self, max_age, cycle_sec: float) -> None:
+        """운전 시간대 밖 사이클 — 사전 안전 게이트만 보고, 아니면 종료 동작.
+
+        시간대 밖에는 목표 추종(L1~L3)을 통째로 쉰다. 그러나 **비·강풍·폭염·
+        한파는 시간을 가리지 않는다.** 예전에는 시간대 판정이 게이트 평가보다
+        앞에서 사이클을 끝내, 밤에 비가 들이쳐도 창이 열린 채였다 — 설정
+        화면과 매뉴얼은 "안전 한계는 그래도 작동" 한다고 말하고 있었다.
+
+        게이트가 발동하면 정상 사이클과 같은 집행(`_act_on_triggered_gate`)을
+        쓰고 종료 동작은 건너뛴다(같은 사이클에 두 명령이 겨루지 않게). 발동이
+        없으면 종래대로 종료 동작을 보낸다 — 게이트가 풀린 뒤 첫 사이클에
+        종료 상태로 돌아가는 것도 이 경로다.
+
+        ⚠ 실내 값이 없어도 게이트는 돈다. 강우·강풍은 실외 값으로 서고,
+          폭염·한파는 모르면 발동하지 않는다(`_build_gate_env` — None 규약).
+          정상 사이클처럼 여기서 return 하면 센서가 죽은 밤에 보호가 빠진다.
+        ⚠ 게이트 평가가 실패해도 종료 동작은 보낸다 — 보호를 더하려다 기존
+          동작까지 잃으면 안 된다.
+        """
+        gate_result = None
+        try:
+            external, _od_cache = self._collect_external_context(max_age)
+            internal = self._collect_internal(
+                max_age, outdoor_data=_od_cache or None) or {}
+            self._compute_light_est(internal, external)
+            gate_env    = self._build_gate_env(internal, external)
+            gate_result = self._pre_gate.evaluate(gate_env, self._profiles,
+                                                  self.unique_id)
+        except Exception as exc:
+            self.logger.error(
+                'EnvCoordinator: 운전 시간대 밖 안전 게이트 평가 실패 — '
+                '종료 동작만 보냅니다: %s', exc)
+        if gate_result is not None and gate_result.triggered:
+            self._act_on_triggered_gate(gate_result, gate_env, cycle_sec,
+                                        time.time(), internal)
+            return
+        self._apply_end_behaviors()
 
     def _run_cycle(self, cycle_sec: float) -> None:
         uid     = self.unique_id
@@ -1000,6 +1113,9 @@ class CycleMixin:
         # 워치독이 고장과 구분하는 근거다(`env_coordinator.loop`). 정상
         # 진행이면 None 이 들어가 사유가 지워진다.
         self._control_paused = self._intentional_stop()
+        if self._control_paused == 'outside_time_window':
+            self._run_outside_window(max_age, cycle_sec)
+            return
         if self._control_paused:
             return
 
@@ -1060,70 +1176,8 @@ class CycleMixin:
         gate_result = self._pre_gate.evaluate(gate_env, self._profiles, uid)
 
         if gate_result.triggered:
-            # 안전게이트 강제명령은 항상 즉시 반영 — 구동주기 설정(actuation_profile)의
-            # 정상-사이클 최소 이동 간격에 지연되면 안 된다(강우·돌풍·폭염·한파 대응).
-            self._dispatch(gate_result.forced_commands, cycle_sec, emergency=True)
-            write_decision_log(uid, 'safety_gate_active',
-                               CH_SAFETY_GATE, float(gate_result.gate_mask))
-            # ── 심각 이벤트 이메일 알림 (1일 1회) ─────────────────────────────
-            mask   = gate_result.gate_mask
-            ext_t  = gate_env.get('external', {})
-            int_t  = gate_env.get('internal', {})
-            if mask & GATE_BIT_WIND:
-                # 풍속을 잃은 채 마지막 값으로 닫고 있으면 이번 값은 None 이다
-                # (`SafetyPreGate._weather_view` — 래치). 숫자 서식에 None 을
-                # 넣으면 여기서 예외가 나 사이클이 죽는다.
-                wind_v = ext_t.get('wind')
-                wind_txt = (f'풍속 {wind_v:.1f} m/s 감지' if wind_v is not None
-                            else '풍속 센서 끊김(마지막 값이 강풍)')
-                self._send_critical_email(
-                    'wind_gate',
-                    f'[돌풍 경보] {wind_txt} — '
-                    f'환기구 전체 강제 폐쇄 중. 시설 고정 상태를 점검하세요.',
-                )
-            if mask & GATE_BIT_RAIN:
-                self._send_critical_email(
-                    'rain_gate',
-                    '[강우 경보] 강우 감지 — 환기구 폐쇄. '
-                    '전기 장치 수분 노출 여부를 점검하세요.',
-                )
-            if mask & GATE_BIT_HEAT:
-                # ⚠ `get(k, 기본)` 은 값이 None 이면 기본을 쓰지 않는다. 폭염
-                #   판정은 극값(T_max)으로 서므로 평균 T 가 비어 있을 수 있고,
-                #   그러면 서식에서 예외가 나 **경보를 내려던 사이클이 죽는다**.
-                T_e = ext_t.get('T') or 0.0
-                T_i = int_t.get('T') or int_t.get('T_max') or 0.0
-                self._send_critical_email(
-                    'extreme_heat',
-                    f'[폭염 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
-                    f'냉방 장치 최대 가동 중. 그늘막·차광 설비를 점검하세요.',
-                )
-            if mask & GATE_BIT_COLD:
-                T_e = ext_t.get('T') or 0.0
-                T_i = int_t.get('T') or int_t.get('T_min') or 0.0
-                self._send_critical_email(
-                    'extreme_cold',
-                    f'[한파 경보] 외부 {T_e:.1f}°C / 내부 {T_i:.1f}°C — '
-                    f'난방 장치 최대 가동 중. 보온재 및 배관 동결 여부를 점검하세요.',
-                )
-            # ── 게이트로 멈춰도 **말은 해야 한다** (2026-08-26) ───────────────
-            # 이 경로는 L1~L3 앞에서 반환하므로 `_build_cycle_summary` 가 돌지
-            # 않는다. 그러면 요약의 `ts` 가 안 갱신되고, 화면은 그것을 보고
-            # **"자동 제어가 응답하지 않습니다"** 라고 말한다 — 제어는 매 사이클
-            # 정상 실행 중인데도.
-            #
-            # 가장 알려야 할 순간에 화면이 정반대를 말하는 셈이다. "지금 비가
-            # 와서 창을 닫았습니다" 가 나와야 할 자리이고, 게다가 **진짜로
-            # 죽었을 때와 구분되지 않는다**(실측: 강우 게이트 45분 → 화면은
-            # 응답 없음).
-            #
-            # ⚠ 여기에는 `situation` 이 없다(L2 전이다). 그래서 전체 요약을
-            #   쓸 수 없고 **게이트 사실만** 담은 축소 요약을 쓴다. 환경 값은
-            #   이 사이클의 것이 아니므로 싣지 않는다 — 낡은 값을 지금 값으로
-            #   보이게 하는 것이 침묵보다 나쁘다. 화면은 `gate_only` 를 보고
-            #   "환경 데이터는 이 사이클의 것이 아님" 을 말한다.
-            self._write_gate_only_summary(gate_result, gate_env, now_ts,
-                                          internal=internal)
+            self._act_on_triggered_gate(gate_result, gate_env, cycle_sec,
+                                        now_ts, internal)
             return
         elif gate_result.gate_mask == 0:
             # P6: integral 은 액추에이터별 평형 개도(%) 기억이므로 매 사이클 지우지

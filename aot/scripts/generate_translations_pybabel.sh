@@ -25,11 +25,15 @@ printf "\n#### Extracting translatable texts\n"
 # The built-in Integrated Environment Control ships under custom_functions/ (which
 # babel.cfg ignores). Extract its FUNCTION_INFORMATION separately and merge so its
 # options/descriptions are translatable. Rooting at the dir avoids the ignore.
+# env_coordinator.py itself is listed too: its save-time warnings (guide range
+# outside hard limits, unused option values) are shown on screen. Leaving it out
+# once made a catalog cleanup treat those live strings as orphans and delete them.
 printf "\n#### Extracting + merging Integrated Environment Control\n"
 IEC_CFG=$(mktemp)
 printf '[python: **.py]\n' > "${IEC_CFG}"
 "${INSTALL_DIRECTORY}"/env/bin/pybabel extract -F "${IEC_CFG}" -k _ -k gettext -k ngettext -k lazy_gettext -k lg \
-  -o /tmp/aot_iec.pot functions/custom_functions/env_coordinator_impl/
+  -o /tmp/aot_iec.pot functions/custom_functions/env_coordinator_impl/ \
+  functions/custom_functions/env_coordinator.py
 "${INSTALL_DIRECTORY}"/env/bin/python3 - <<'PYMERGE'
 import polib
 main = polib.pofile('aot_flask/translations/messages.pot')

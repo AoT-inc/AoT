@@ -30527,3 +30527,21 @@ msgstr "Onay bekleyen harici AI yazma isteklerinin sayısını gösterir. Listey
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Alan atanmamış"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "%(what)s için rehber aralık (%(guide)s) kesin sınırlarınızın (%(hard)s) dışında kalıyor; bu yüzden hedefler yalnızca %(effective)s içinde belirleniyor. İkisinin uyuşması için kesin sınırları genişletin veya rehber aralığı daraltın."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "%(opt)s için ayarladığınız değer kullanılmıyor: yalnızca %(cond)s ilgili seçeneğe ayarlandığında geçerlidir. Önce onu değiştirin, aksi hâlde bu değerin hiçbir etkisi olmaz."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "sıcaklık"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "nem"

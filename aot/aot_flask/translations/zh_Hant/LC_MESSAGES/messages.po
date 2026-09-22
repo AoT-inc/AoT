@@ -29461,3 +29461,21 @@ msgstr "顯示有多少外部 AI 的寫入請求正在等待核准。點選數�
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "未分配場地"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "%(what)s的引導範圍（%(guide)s）超出了硬性限值（%(hard)s），因此目標只能在 %(effective)s 內設定。請放寬硬性限值或縮小引導範圍，使兩者一致。"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "您為 %(opt)s 設定的值未被使用：只有當 %(cond)s 設為對應選項時才會生效。請先變更該設定，否則此值不起作用。"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "溫度"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "濕度"

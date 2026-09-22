@@ -30471,3 +30471,21 @@ msgstr "Приказује колико захтева за упис спољн�
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Без локације"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Оријентациони опсег за %(what)s (%(guide)s) је изван ваших чврстих граница (%(hard)s), па се циљеви постављају само унутар %(effective)s. Проширите чврсте границе или сузите оријентациони опсег да би се поклапали."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Вредност коју сте поставили за %(opt)s се не користи: примењује се само када је %(cond)s постављено на одговарајућу опцију. Прво промените то, иначе ова вредност нема ефекта."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "температура"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "влажност"

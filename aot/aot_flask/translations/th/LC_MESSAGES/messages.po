@@ -30492,3 +30492,21 @@ msgstr "แสดงจำนวนคำขอเขียนจาก AI ภ�
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "ไม่ได้กำหนดไซต์"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "ช่วงแนวทางของ%(what)s (%(guide)s) อยู่นอกขีดจำกัดตายตัวของคุณ (%(hard)s) จึงตั้งเป้าหมายได้เฉพาะภายใน %(effective)s ขยายขีดจำกัดตายตัวหรือแคบช่วงแนวทางลงเพื่อให้ทั้งสองสอดคล้องกัน"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "ค่าที่คุณตั้งไว้สำหรับ %(opt)s ไม่ได้ถูกใช้งาน: ค่านี้จะมีผลเฉพาะเมื่อ %(cond)s ตั้งเป็นตัวเลือกที่ตรงกันเท่านั้น โปรดเปลี่ยนส่วนนั้นก่อน มิฉะนั้นค่านี้จะไม่มีผล"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "อุณหภูมิ"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "ความชื้น"

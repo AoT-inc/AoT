@@ -80,9 +80,9 @@ and humid or too cold and dry. Each cycle the coordinator replaces its guide ran
 - The range actually used is shown as **Guide range** under the plot in the function's
   settings.
 
-Since 2026-09-01 the coordinator has **no end-date option of its own**. Whether growing
-continues is the plot's business. The previous behaviour was that a date set once in the
-function kept the facility stopped even after a new crop was planted.
+The coordinator has **no end-date option of its own**. Whether growing continues is the
+plot's business. A date kept in the function could leave the facility stopped even after a
+new crop was planted.
 
 ### More than one plot in scope { #targets-reference-plot }
 
@@ -131,23 +131,58 @@ Evaluates current deviation, limiting factors, and trend.
 | Evaluation item | Description |
 |----------------|-------------|
 | Deviation | `current value - target` |
-| Limiting factor | Which of temperature/humidity/CO₂/light is preventing the target from being reached |
+| Limiting factor | Which of light, CO₂, temperature and water (VPD) is holding photosynthesis back |
 | Trend | Whether the value is moving toward the target |
 
-When VPD can be used, temperature and humidity are demoted to *constraints* — the
-range VPD is decomposed into, and the lines that must not be crossed. This function
-is not a thermostat.
+When there is a VPD target and VPD can be measured, temperature and humidity are
+demoted to *constraints* — the range VPD is decomposed into, and the lines that must
+not be crossed. This function is not a thermostat.
 
 ### L3 — Coordinator (actuator command) { #l3-coordinator-actuator-command }
 
-Applies PI control + slew rate limiting + anti-windup to command actuators.
+Each device gets a 0–100 % command from a **position-form PI** controller. It differs
+from the textbook PI in three ways:
+
+- **The integral is not accumulated error but the device's remembered equilibrium
+  opening (%)**, always held within 0–100. When the deviation is small the integral
+  stays put, so the device holds its last position.
+- **A device that affects several axes combines them into one error.** A vent, for
+  example, moves temperature, humidity and CO₂. Each axis's deviation is divided by its
+  proportional band (tolerance × 6) so they share one scale, then averaged with the
+  weight *priority × how strongly this device moves that axis*.
+- **Within half the tolerance is a rest zone (dead zone).** Outside it, the dead zone is
+  subtracted rather than switched on, so the command does not jump at the boundary.
 
 ```
-e(t) = setpoint - measurement
-u(t) = Kp × e(t) + Ki × ∫e dt
-slew: |Δu| ≤ slew_rate_per_cycle
-output → heater / vent / fan / mister / CO₂ supply
+e      = Σ(priority × effect × deviation/band) / Σ(priority × effect)
+e_eff  = e minus the dead zone (tolerance × 0.5)
+I      = clamp(I + 0.2 × e_eff, 0, 100)          # remembered equilibrium opening
+cmd    = clamp(1.0 × e_eff × 100 + I, 0, 100)
 ```
+
+- **Devices are settled in cost-index order** (cheapest first). Within a domain, each
+  later device sees only the deviation left after the effect of those before it — this
+  is load sharing.
+- **A device that cannot help rests.** If running it at 100 % would move the variable by
+  less than 2.5 % of the proportional band (for example ventilation with almost no
+  indoor/outdoor difference), or it is parked, it moves toward its safe position,
+  keeping 60 % of the remaining distance each cycle.
+- **Anti-windup.** At the 100 % rail the overshoot is fed back into the integral; at the
+  0 % rail that cycle's integration is frozen. If a device stays pinned to a rail, its
+  integral is eased toward the actual opening.
+- **Rate limit.** A command moves at most 20 percentage points per cycle; if the Action
+  sets a full stroke time and the device can physically move less than that, the smaller
+  value is used. Curtains and shade screens are exempt because they open or close in one
+  motion. Commands below 5 % are sent as 0.
+
+**Temperature ceiling in VPD mode.** When VPD is controlled directly, temperature is not
+a control target — left alone, nothing would open the vents as the house heats up. So
+when the temperature expected at the next decision (current + rate of rise × period)
+comes within 1 °C of the guide ceiling, a temperature term is added for the ventilation
+devices, weighted more the further it goes over. At the **Max Temperature** hard limit
+the term also applies to coolers, and terms from other axes that oppose cooling are
+dropped. It is still a PI proportional to the deviation and forces nothing to 100 % —
+when outdoor air is hotter, the vents move toward closing instead.
 
 ---
 
@@ -178,8 +213,8 @@ window from a side window, and the effect model uses it:
 | Ridge (roof) | Buoyancy helps — the same area removes more heat | Reversed — hot outdoor air does not descend easily |
 | Side | The reference case | Direct inflow, which is straight heating |
 
-If the drawing does not say which form an opening is, it behaves exactly as before
-(no correction).
+If the drawing does not say which form an opening is, ridge and side vents use the same
+model (no correction).
 
 ---
 
@@ -191,8 +226,7 @@ auto-discovered from the linked facility.
 
 ### Reading the settings screen { #settings-screen }
 
-The screen was rebuilt in 2026-08. Five things are worth knowing before reading the
-tables below.
+Five things are worth knowing before reading the tables below.
 
 **A status header sits at the top.** Under the facility picker the screen shows what
 control is doing right now — the current VPD against its target, the position of each
@@ -220,11 +254,13 @@ saved** — only the real values are, and the current step is inferred back from
 If the values match no step, the control reads *Custom*.
 
 **Ranges are asked as a band with two handles.** Temperature and humidity have one
-question — what range to grow in — and the hard limits are derived from it by a fixed
-margin (±5 °C, ±5 %RH). One consequence is deliberate: the hard limit can never be
-tighter than the guide range, so "grow at 12–32 °C but never exceed 30 °C" cannot be
-expressed. That combination is what once had a heater and a cooler both driven to
-100 % against each other.
+question — what range to grow in. Dragging a handle moves the matching never-cross line
+with it by a fixed margin (±5 °C, ±5 %RH); if you never drag, the hard limits stay at
+their factory values (5–35 °C, 30–90 %). The band cannot put a hard limit inside the
+guide range, so "grow at 12–32 °C but never exceed 30 °C" cannot be expressed — that
+combination is what sets a heater and a cooler against each other. If you type numbers
+under [Advanced] that do this anyway, the coordinator narrows the guide range to fit
+inside the hard limits and logs that it did.
 
 **One [Advanced] switch opens every numeric field.** It turns each step scale into a
 step scale plus its number box, reveals every advanced-only row, and expands the folded
@@ -256,14 +292,19 @@ values are still submitted and survive being toggled off and on.
 ### Working Hours { #time-control }
 
 Only the toggle is visible until it is switched on. This is a switch, not a schedule:
-outside the window the coordinator stops **entirely**, heating and cooling included.
-Safety limits still act.
+outside the window, target tracking (L1–L3) stops **entirely** — heating and cooling
+and the temperature/humidity hard-limit responses included. The
+[Pre-Gate safety checks](#pre-gate-checked-before-l1l3) (rain, strong wind, heat and
+cold emergencies and so on) are still evaluated every cycle: if one fires, its forced
+commands are sent; otherwise each device's end behaviour is sent. The window is judged
+in the facility's local time, falling back to server time when the facility's timezone
+is unknown.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Enable Time Window | Off | When enabled, control only runs between Start and End. |
+| Enable Time Window | Off | When enabled, target tracking only runs between Start and End. |
 | Start Time (HH:MM) | 06:00 | When the coordinator starts working each day. |
-| End Time (HH:MM) | 20:00 | When it stops. What each device does at that moment is set in its Action. |
+| End Time (HH:MM) | 20:00 | When it stops. What each device does outside the window is set in its Action (On Time Window End). |
 | Photoperiod Method | (none) | Sets the window from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs only for those hours, so nothing is heated overnight. |
 | Photoperiod Anchor (HH:MM) | 12:00 | Solar-noon equivalent — the window is centred on this time. |
 
@@ -273,8 +314,8 @@ Safety limits still act.
 |-------|---------|-------------|
 | Temperature Range | 12–32 °C | The range to grow in. Past a limit, control stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full. |
 | Humidity Range | 40–85 % | Same rule for humidity — too damp: misting off; too dry: exhaust fans off. |
-| CO₂ Tolerance (ppm) | 100 | Dead-band half-width around the CO₂ setpoint. Typical: 50–150 ppm. |
-| Control Temperament | (Custom) | How hard the system chases the target. One step sets the cycle period, the vent actuation profile, the VPD dead-band and both emergency thresholds together. A newly added function's factory values match no step, so the control reads *Custom* until you pick one. |
+| CO₂ Tolerance (ppm) | 100 | Within half this value of the target, CO₂ injection is left as it is. The value also sets how strongly control responds: at six times this value off target, it responds fully ([L3](#l3-coordinator-actuator-command)). Typical: 50–150 ppm. |
+| Control Temperament | (Custom) | How hard the system chases the target. One step sets the cycle period, the vent actuation profile, the VPD tolerance and both emergency thresholds together. A newly added function's factory values match no step, so the control reads *Custom* until you pick one. |
 
 Under [Advanced], each range band also shows the four numbers behind it
 (`Guide T Min/Max`, `Min/Max Temperature`, and the humidity equivalents), and Control
@@ -323,9 +364,13 @@ gate move the vents immediately regardless.
   already past the target, ventilation alone gets there and running HVAC alongside pays
   for what the outside would do for free. Three conditions must all hold: the outdoor
   value is past the target by more than the tolerance, *every* controlled variable is,
-  and the vents still have headroom (the last cycle's widest opening below 90 %). If the
-  target is still not reached after **15 minutes**, everything is handed back to heating
-  and cooling — the prediction was wrong.
+  and the vents still have headroom (the last cycle's widest opening below 90 %). When
+  outdoor air can cover only part of the way to the target, heating and cooling work
+  only on what is left. If the target is still not reached after **15 minutes**,
+  everything is handed back to heating and cooling — the prediction was wrong. While
+  rain or wind readings are lost and the vents cannot open further, this judgement is
+  switched off entirely — heating and cooling must not back off counting on a vent that
+  cannot open.
 - **Keep Vents Closed While Heating or Cooling Runs** — venting against a running unit
   throws that heat or cold straight outside. In a season where outdoor air could help
   toward the target, this throws that help away too.
@@ -333,10 +378,8 @@ gate move the vents immediately regardless.
 Detection of a running unit needs **evidence**, and there are only two sources: this
 coordinator commands the unit itself, or you point the signal field at a measurement
 that rises when the unit runs. Indoor temperature is deliberately **not** used to guess.
-It was tested against 30 days of real data from a house with no cooler installed: under
-300 W/m² or more of sun the indoor-to-outdoor difference had a median of +0.03 °C and a
-minimum of −4.22 °C, so "indoor cooler than outdoor means cooling is on" misfired on
-13 % of daytime samples even with a 1.5 °C margin.
+On a sunny day a house can be cooler inside than outside with no cooler at all, so
+"indoor cooler than outdoor means cooling is on" is often wrong even with a margin.
 
 | Field (shown when the interlock is on) | Default | Description |
 |-------|---------|-------------|
@@ -382,25 +425,33 @@ is what this scale sets.
 | Frequent | 20 | 600 |
 | Very frequent | 30 | 450 |
 
-Sunburn protection is a **separate** decision from frequency — the two were briefly
-merged, which made "spray often but lock out in strong sun" impossible to express.
+Sunburn protection is a **separate** decision from frequency — keeping them apart is what
+lets you ask for "spray often but lock out in strong sun".
 
 | Field (shown when protection is on) | Default | Description |
 |-------|---------|-------------|
-| Misting by Sunlight Level | 150–250 W/m² | A band with two handles: below the lower value misting runs freely, above the upper it stops, and in between it tapers off linearly. The gap keeps the mist from switching on and off as clouds pass. **Applies to leaf-wetting misting only** — fog-type misting runs in strong sun too. The estimated *indoor* level is used, so closing the shade screen relaxes the lockout. |
+| Misting by Sunlight Level | 150–250 W/m² | A band with two handles: below the lower value misting runs freely, above the upper it stops, and in between it tapers off linearly. The gap keeps the mist from switching on and off as clouds pass. **Applies to leaf-wetting misting only** — fog-type misting runs in strong sun too. The estimated *indoor* level is used, so closing the shade screen relaxes the lockout. With the default water source (groundwater) the values actually used are lowered to 100–150 W/m². |
 | Allow Misting Before Sunset | On | Turn off to leave the leaves dry overnight. The longer leaves stay wet, the higher the risk of gray mold and downy mildew. |
 | Stop Misting Before Sunset (min) | 120 | How long before sunset misting stops. |
-| Misting Water Source | Groundwater (untreated) | Untreated groundwater is usually hard and cold: drying droplets leave mineral spots and can chill a sunlit leaf. Choosing it lowers the lockout/release thresholds automatically (to at most 150/100 W/m²). |
+| Misting Water Source | Groundwater (untreated) | Untreated groundwater is usually hard and cold: drying droplets leave mineral spots and can chill a sunlit leaf. While it is selected (the default), the lockout/release thresholds are lowered automatically (to at most 150/100 W/m²). |
 
-Even with protection off, a wetting-type mister is dosed in pulses rather than modulated
-continuously — 30 s maximum on, 180 s minimum off by default — because continuous
-modulation never lets the leaves dry.
+Whether or not protection is on, a wetting-type mister is dosed in pulses rather than
+modulated continuously, because continuous modulation never lets the leaves dry. The run
+time and interval come from the Misting Frequency scale (factory setting *Frequent*:
+20 s maximum on, 600 s drying interval); only when those values are empty does it fall
+back to 30 s / 180 s.
+
+Wetting-type misting is also locked well before the **Max Humidity** hard limit. It is
+locked when humidity rises above this cycle's humidity reference (the humidity split out
+of the VPD target, kept inside the guide range) **plus 5 %**, and also whenever humidity
+is unknown — so already-wet air does not wet the leaves further. Fog-type (high-pressure)
+misting is not affected.
 
 ### Light and Shading { #settings-light }
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Shading and Supplemental Light | 0–800 W/m² | Two reference lines, not a range to stay inside. Darker than the band: supplemental lights come on and the shade screen opens. Brighter: the shade screen closes. Inside the band nothing happens. |
+| Shading and Supplemental Light | 0–800 W/m² | Two reference lines, not a range to stay inside. Darker than the band: supplemental lights come on and the shade screen opens. Brighter: the shade screen closes. Inside the band nothing happens. The reference is **the light the crop actually receives** — outdoor irradiance with the covering and shade screen transmittance applied. |
 
 Either end can be switched off, and off means different things at the two ends: the
 lower handle at 0 is *no supplemental light*, and the upper handle turned off is
@@ -410,18 +461,22 @@ registered, the screen says so rather than offering a handle that does nothing.
 The underlying values are **Min Light Threshold (Supplemental)** (default 0) and
 **Max Light Threshold** (default 800), both visible under [Advanced].
 
-Two related properties are **not** on this screen:
+Three related values are **not** on this screen:
 
 - **Shade cloth transmittance** belongs to the facility, under the shade curtain in the
   facility editor. It is used only when there is no indoor light sensor: indoor light is
   then estimated from outdoor irradiance and the screen position. An unset or
   out-of-range value falls back to 0.50, and a facility that declares *no* shade curtain
   uses 1.0. A single screen whose cloth differs can still override it in its own Action.
+- **Covering transmittance** comes automatically from the envelope material (glass 0.85 ·
+  double film 0.78 · non-woven 0.50, and so on). A roof always cuts light even without a
+  shade screen, so it is multiplied into the indoor light estimate. The
+  light thresholds are therefore **indoor** values. The same 250 means nearly twice as much
+  light for the crop in a glasshouse as under non-woven cover.
 - **The light saturation point** is derived from the crop's `K_L` in the program, not
-  from the shading threshold. When those two were the same field, lowering the shading
-  threshold made the photosynthesis model conclude that light was already sufficient —
-  two coordinators set to 250 never once saw a light limitation while measured
-  irradiance was 542 and 650 W/m². With no `K_L`, the system default of 600 W/m² is used.
+  from the shading threshold. If the two were one value, lowering the shading threshold
+  would make the photosynthesis model conclude that light is already sufficient, and it
+  would miss light limitation even under strong sun. With no `K_L`, the system default of 600 W/m² is used.
 
 ### Advanced Settings { #settings-advanced }
 
@@ -430,11 +485,11 @@ growers.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Max Sensor Age (seconds) | 0 | Reject sensor readings older than this. **0 means "not set", not "no limit"** — each sensor is then judged by its own update interval (×2). A fixed number that is shorter than a source's period can never be satisfied: an outdoor station publishing every 300 s under a 120 s limit reported zero valid channels for a full day. |
+| Max Sensor Age (seconds) | 0 | Reject sensor readings older than this. If a sensor (Input) has its own max age set, that value takes precedence over this option. **0 means "not set", not "no limit"** — each sensor is then judged by its own update interval × 2 (at least 300 s). A fixed number shorter than a source's period can never be satisfied: an outdoor station publishing every 300 s under a 120 s limit never has a valid reading. |
 | Enable Photosynthesis-Oriented Control | Off | Each cycle, the Big-Leaf model identifies the current limiting factor (light / CO₂ / temperature / VPD) and raises that variable's priority. Requires a light sensor; the crop constants come from the plot's program. |
 | Reference Plot (optional) | (empty) | Which plot this coordinator follows when more than one is growing in its scope. Leave empty when there is only one. |
-| T Weight (0–1) | 0.6 | Fraction of a VPD adjustment carried out via temperature (the rest via humidity). |
-| VPD Priority | 1.2 | Processing-order weight — higher is processed first. |
+| T Weight (0–1) | 0.6 | When the VPD target is split into auxiliary temperature and humidity targets, the share given to temperature (the rest goes to humidity). When VPD can be measured, VPD itself is what is controlled; this value only shapes the auxiliary targets — the never-cross lines and the reference for the wetting-mist lock. |
+| VPD Priority | 1.2 | The weight used when a device that affects several axes combines their deviations — higher means this axis counts more in the command. The order in which devices are settled is set by cost index, not by priority ([L3](#l3-coordinator-actuator-command)). |
 | CO₂ Priority | 0.8 | The same weight for CO₂, lower than VPD because enrichment is secondary. |
 | Enable DLI / GDD Tracker | Off | Tracks daily light integral and growing degree-days, rolling over at facility-local midnight. Light is converted to PPFD by sensor unit. Targets come from the plot's program; requires a light sensor for DLI. |
 
@@ -442,7 +497,7 @@ growers.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Effect Engine | Legacy | `Legacy`: built-in K_* constants (default, safe). `Shadow`: runs the grey-box model in parallel for logging only — no control change. `Grey-box`: physics-model control (with MPC look-ahead when a forecast is available). Recommended flow: Shadow first, then Grey-box. Change only while testing. |
+| Effect Engine | Legacy | `Legacy`: built-in K_* constants (default, safe). `Shadow`: runs the grey-box model in parallel for logging only — no control change. `Grey-box`: physics-model control. Each cycle it tries MPC (an optimisation that looks several steps ahead) first, then falls back to the physics-model PI, then to Legacy. MPC assumes outdoor conditions stay at their current values; it does not use the forecast. Recommended flow: Shadow first, then Grey-box. Change only while testing. |
 | Enable RLS Calibration | Off | Learns per-actuator effect coefficients (K_*) from sensor response. Needs several days to converge; falls back to built-in defaults until then. |
 | Enable Active Probing | Off | Periodically perturbs one actuator by ±10 % to improve calibration identifiability. Only triggers when load is low and no safety gate is active. Requires RLS Calibration. |
 | Probe Interval (seconds) | 3600 | Minimum time between probing events. Steps: Often (1800) / Standard (3600) / Rare (10800). |
@@ -452,7 +507,7 @@ growers.
 | Field | Default | Description |
 |-------|---------|-------------|
 | Enable Forecast Feedforward | Off | Uses the short-term weather forecast to proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. |
-| Forecast Lookahead (hours) | 3 | How far ahead to check. Steps: Short (1) / Standard (3) / Long (6). Longer gives earlier warning but may over-correct. |
+| Forecast Lookahead (hours) | 3 | How far ahead to check. Steps: Short (1) / Standard (3) / Long (6). Longer gives earlier warning but may over-correct. When the facility has its own forecast source linked, that source's forecast is used as is and this value is not used. |
 
 > **Debug logging is no longer a separate option.** It duplicated the framework's own
 > debug switch, and almost everything it guarded was written at DEBUG level, so on its
@@ -507,6 +562,42 @@ summed into that actuator's `flow_lpm`, and the volumetric adapter and the fogge
 model use it directly. The fallback order is per-actuator flow, then the facility total,
 then 1.0 L/min.
 
+### Axes without a measurement, axes without a device { #actuators-missing }
+
+Every facility has different equipment. An axis that can be measured but not moved, and
+one that can be moved but not measured, are both normal configurations. The coordinator
+looks at the combination and adapts on its own.
+
+| Situation | What the coordinator does |
+|-----------|---------------------------|
+| Measured, but no device moves that axis | The value is **for reference**. It leaves control (its target is replaced by the outdoor value when one is available) but is still used for the photosynthesis judgement and other axes' calculations. If it stays off target, the facility popup says *No device can move this*. |
+| Only one direction exists (a heater but no cooler) | Normal. The device works when demand is in its direction and rests at 0 % otherwise. |
+| A device exists, but that axis cannot be measured | If another axis the device moves can be measured, it keeps controlling through that axis (for example a vent where humidity is unknown but temperature is measured). Only when **none** of the axes it moves can be measured does it **hold where it is**. Moving without knowing the deviation would use equipment without evidence, and closing or opening is a decision too. |
+| Indoor temperature or humidity cannot be measured | That axis leaves control entirely. A missing value is never invented as 0 — that would read as "0 °C indoors" and drive the heating to full. Leaf-wetting misting is locked while humidity is unknown. |
+
+**The safety gates follow the same rule.** When indoor values are lost, the gate names
+that fact on the screen and in the log, but **creates no forced command.** Driving
+every device to its safe default (vents closed, screens retracted) would move equipment
+precisely because there is no evidence. This is the same judgement as for
+lost outdoor values, and control does not stop as a whole either: axes that can still be
+measured, such as CO₂ or light, keep being controlled.
+
+Risks that can be judged **from outdoor data alone**, such as rain and wind, are still
+guarded. Heat and cold emergencies, on the other hand, are not judged while indoor
+temperature is unknown — those gates drive every device one way, so they must only fire
+on firm evidence.
+
+The health check reports mismatched combinations as well:
+
+```bash
+python3 -m aot.scripts.check_env_coordinator_health
+```
+
+It reports under **configuration check** a target with no measurement, a target with no
+device, and a device that cannot measure any of the axes it moves. An axis that has a
+measurement but neither a target nor a device is not reported — that is exactly what a
+reference value is.
+
 ### Safe default { #actuators-safe-default }
 
 Each actuator has a safe position it moves to when a safety gate fires, on emergency
@@ -557,12 +648,18 @@ Once triggered, a Pre-Gate stays active for at least 300 s after its last trigge
 | Gate | Trigger condition | Action |
 |------|--------------------|--------|
 | Rain | Rain rate ≥ 0.5 mm/hr (fixed, not user-configurable) | Closes side/roof vents. Curtains/shades are interior equipment and are left alone. |
-| Strong Wind | Wind speed ≥ **Strong Wind Threshold** (default 12 m/s) | Closes vents. If wind is the *only* active gate and both wind direction and vent azimuth are known, only windward vents (within ±60°) are forced closed — leeward vents keep running under normal control. |
+| Strong Wind | Wind speed ≥ **Strong Wind Threshold** (default 12 m/s) | Closes vents. If wind is the *only* active gate (no lost readings either), the wind direction is known, and **every** vent has an azimuth, only windward vents (within ±60°) are forced closed — leeward vents keep running under normal control. |
 | Heat Emergency | Outdoor T ≥ 45 °C **and** indoor T ≥ 35 °C (both fixed) | Fully opens vents, closes shade screens, forces coolers to 100 %. |
 | Cold Emergency | Outdoor T ≤ −5 °C **and** indoor T ≤ 5 °C (both fixed) | Closes vents, closes thermal curtains, forces heaters to 100 %. |
-| Internal Sensor Expired | No fresh indoor reading for > 120 s (fixed) | Every actuator returns to its safe default — control isn't possible without indoor data. |
+| Heat/cold cannot be judged | Indoor temperature unknown | The emergency gates **do not fire** — they drive every device one way, so they fire only on firm evidence. |
+| Indoor values lost | Indoor temperature/humidity stop arriving (judged by each sensor's own freshness rule — there is no separate 120 s clock) | **Nothing is forced.** The deviation cannot be measured, so that axis leaves control and devices that lost their evidence hold where they are. Axes that can still be measured (CO₂, light) keep being controlled, and control resumes as soon as values return (no 300 s hold). |
 | Outdoor Rain/Wind Lost | A rain or wind reading that used to arrive stops arriving (judged by each sensor's own freshness rule — no separate 300 s clock). A sensor the facility never had does not count. | If the last value was rain or strong wind, the Rain/Wind gate keeps the vents **closed** until a fresh reading says otherwise. Otherwise vents may hold or close but **never open further** — a stale "no rain" is not a reason to open. Exception: above your **Max Temperature** hard limit vents may still open. Shades and everything else keep normal control. |
 | Misting Lockout | Strong light, or the evening cutoff, with Sunburn/Evening Protection on | Locks wetting-type misters only. A local lock: it does not freeze the rest of the facility and does not hold for 300 s. |
+
+**Lost values are a constraint, not an emergency.** Indoor values lost and outdoor
+rain/wind lost both create no forced command and no 300 s hold, and when only these two
+are active, L1–L3 run normally. The rule is that equipment is not moved just because
+evidence is missing; whether to move is decided axis by axis by the coordinator.
 
 Rain, Heat and Cold thresholds are fixed in code — the **Wind** threshold is the only
 one exposed as a function option. Multiple gates can be active at once (e.g. rain +
@@ -582,7 +679,7 @@ rather than 0 %.
 | Non-finite command (NaN/Inf) | Actuator falls back to its safe default. |
 | Out-of-range command | Clamped to [0, 100]. |
 | Manual Lock active | Overrides with the locked value. |
-| Cooler and heater both ON at once | Not allowed — the cheaper one (lower cost index) keeps running, the other is forced to 0. |
+| Cooler and heater both ON at once (both above 5 %) | Not allowed. Checked **last**, after the hard-limit responses, and the side whose command has the stronger source wins — safety gate > manual lock > normal control. On a tie, the lower cost index wins; the other side is forced to 0. L3 also rests the side opposing the temperature demand in advance (the heater when too warm, the cooler when too cold), so this check is rarely reached. |
 
 ### Emergency stop and safe state { #emergency-stop }
 
@@ -609,8 +706,10 @@ immediately afterwards is that delay, not a fault.
 | Vents don't close in high wind | Check the Strong Wind Threshold and the outdoor wind sensor binding on the facility. |
 | Vents stay closed at night | Expected when **Close at Night** is on — the facility popup says *Closed for the night*. Hard temperature/humidity limits and safety gates still break it. |
 | Outdoor readings are reported as missing | Max Sensor Age may be shorter than the source's own period. Leave it at 0 so each sensor is judged by its own interval. |
-| Heating and cooling both ran | The post-gate forbids it; if the guide range is wider than the hard limits on an older configuration, the save screen warns rather than blocking. |
+| Heating and cooling both ran | The interlock just before dispatch forbids it ([Post-Gate](#post-gate-checked-after-l3-before-dispatch)). A configuration whose guide range is wider than the hard limits is warned about at save time rather than blocked, and the coordinator narrows the guide range to fit inside the hard limits. |
 | A setting appears to be ignored | It may be conditional — the custom actuation period applies only to the *Custom* profile, and the night clock times only when night is measured by fixed times. The screen reports values entered but unused. |
+| Every device is holding still | Indoor measurements may have disappeared. When temperature or humidity cannot be measured, that axis leaves control, and a device with no measurable axis left **does nothing** — it neither closes nor opens. The facility popup says *Holding — cannot measure right now*, and the log records it once. Check the sensor connections and Max Sensor Age. |
+| A device drawn on the map does not appear in control | It may be a kind that control does not handle (vents, shade screens, thermal curtains, heating/cooling, misting, CO₂, supplemental light, fans). Such equipment is left out of registration and that is logged once — change its kind in the facility editor to bring it in. |
 | A facility change isn't taking effect | Run **Reload Actuators**, or deactivate and reactivate the function. |
 | The watchdog reports a long outage | An intentional pause — outside the working-hours window, or with no actuators registered — is reported as a pause, not a fault. A genuine outage still warns. |
 
@@ -618,19 +717,21 @@ immediately afterwards is that delay, not a fault.
 
 ## AI Integration { #ai-integration }
 
-The AI agent uses `analyze_control_performance` to diagnose control quality.
+The AI in AoT's chat, and an AI connected over MCP, use the following tools to look at
+this coordinator. Every write tool goes through human approval.
 
-```
-vpd_rmse         → VPD tracking error (lower is better)
-oscillation_index → Control oscillation index (lower is more stable)
-assessment       → "good" / "moderate" / "poor"
-```
+| Tool | What it does |
+|------|--------------|
+| `get_control_state` | Read. Per coordinator: targets, tolerances, priorities, safety ranges and operating windows, plus the latest cycle's actually-applied targets, limiting factor, safety-gate status and each device's command with its reason. This is what to read before advising on control. |
+| `get_cumulative_status` | Read. Daily DLI and GDD totals and the running deficit (when the DLI / GDD tracker is on). |
+| `get_function_detail` | Read. The function's full configuration. |
+| `modify_function_options` | Write. Changes this function's options and reloads it. |
+| `activate_function` / `deactivate_function` | Write. Turns the function on or off. |
 
-Based on diagnostics, `suggest_setpoint_adjustment` proposes a target adjustment. A
-suggestion is advice only — the target itself lives on the plot's stage plan, so
-applying it means editing that stage target on the plot screen, or, for a
-Method-curve target, calling `update_method_point` (with user approval) to
-change the relevant curve point.
+Targets live on the plot's stage plan, not in this function. To change one plot's
+targets, edit them on the plot screen. The AI can also change stage targets with the
+program editing tool (`modify_program`), but that applies to every plot using the
+program.
 
 ---
 

@@ -402,8 +402,9 @@ class CustomModule(
         # 그래서 원수가 지하수면 잠금 임계를 자동으로 더 보수적으로 내린다.
         _lockout = float(self.nursery_solar_lockout or 250.0)
         _release = float(self.nursery_solar_release or 150.0)
-        # 일소 잠금 자체는 습윤형 분무기가 있으면 늘 선다(육묘 모드 무관).
-        # 지하수 원수의 추가 하향은 **육묘 모드에서만** 적용한다 — 근거가
+        # 일소 잠금은 **육묘 모드에서만** 선다(`SafetyPreGate._eval_nursery_lock`
+        # — 모드가 꺼져 있으면 저녁 차단만 남는다). 지하수 원수의 추가 하향도
+        # 같은 조건이다 — 근거가
         # 어린 모종(염류 잔류·저온 충격)이라 성체 작물까지 150 W/m² 로 묶으면
         # 흐린 아침부터 분무가 막힌다.
         if (bool(self.nursery_mode)

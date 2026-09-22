@@ -30701,3 +30701,21 @@ msgstr "Показывает, сколько запросов на запись 
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Без участка"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Ориентировочный диапазон для параметра «%(what)s» (%(guide)s) выходит за жёсткие пределы (%(hard)s), поэтому цели задаются только в пределах %(effective)s. Расширьте жёсткие пределы или сузьте ориентировочный диапазон, чтобы они совпадали."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Заданное значение %(opt)s не используется: оно применяется только тогда, когда для %(cond)s выбран соответствующий вариант. Сначала измените этот параметр, иначе это значение ни на что не влияет."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "температура"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "влажность"

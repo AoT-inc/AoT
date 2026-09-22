@@ -30443,3 +30443,21 @@ msgstr "Visar hur många skrivförfrågningar från extern AI som väntar på go
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Utan plats"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Riktområdet för %(what)s (%(guide)s) ligger utanför dina hårda gränser (%(hard)s), så mål sätts bara inom %(effective)s. Vidga de hårda gränserna eller smalna av riktområdet så att de stämmer överens."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Värdet du angav för %(opt)s används inte: det gäller bara när %(cond)s är inställt på motsvarande alternativ. Ändra det först, annars har detta värde ingen effekt."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "temperatur"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "luftfuktighet"

@@ -30418,3 +30418,21 @@ msgstr "बाहरी AI के कितने राइट अनुरो�
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "साइट निर्धारित नहीं"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "%(what)s की मार्गदर्शी सीमा (%(guide)s) आपकी कठोर सीमाओं (%(hard)s) से बाहर है, इसलिए लक्ष्य केवल %(effective)s के भीतर तय किए जाते हैं। दोनों को मेल कराने के लिए कठोर सीमाएँ बढ़ाएँ या मार्गदर्शी सीमा घटाएँ।"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "%(opt)s के लिए आपका सेट किया गया मान उपयोग में नहीं है: यह केवल तभी लागू होता है जब %(cond)s संबंधित विकल्प पर सेट हो। पहले उसे बदलें, अन्यथा इस मान का कोई प्रभाव नहीं होगा।"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "तापमान"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "आर्द्रता"

@@ -30273,3 +30273,21 @@ msgstr "Mostra quantas solicitações de gravação de IA externa aguardam aprov
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Sem local atribuído"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "A faixa de referência para %(what)s (%(guide)s) está fora dos seus limites rígidos (%(hard)s), por isso as metas só são definidas dentro de %(effective)s. Amplie os limites rígidos ou estreite a faixa de referência para que coincidam."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "O valor que você definiu para %(opt)s não está sendo usado: ele só se aplica quando %(cond)s está definido na opção correspondente. Altere isso primeiro; caso contrário, este valor não tem efeito."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "temperatura"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "umidade"

@@ -7,7 +7,7 @@
 
 ## ⚠ 시간창(`time_enable`)의 확장이 아니다
 
-    time_enable   창밖 시간 → `_apply_end_behaviors()` 후 return  = 제어 **중단**
+    time_enable   창밖 시간 → 안전 게이트만 보고 종료 동작  = 목표 추종 **중단**
     night_vent_park  개구부만 park_ids 로                          = 수단의 **제한**
 
 기존 옵션을 확장하면 밤에 난방까지 멈춘다. 공유하는 것은 동작이 아니라 기준축

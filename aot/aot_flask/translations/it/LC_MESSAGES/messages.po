@@ -30869,3 +30869,21 @@ msgstr "Mostra quante richieste di scrittura da parte di IA esterne sono in atte
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Senza sito"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "L’intervallo guida per %(what)s (%(guide)s) è fuori dai limiti rigidi (%(hard)s), quindi gli obiettivi vengono definiti solo entro %(effective)s. Allarga i limiti rigidi o restringi l’intervallo guida perché coincidano."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Il valore impostato per %(opt)s non viene usato: si applica solo quando %(cond)s è impostato sull’opzione corrispondente. Modifica prima quello, altrimenti questo valore non ha effetto."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "temperatura"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "umidità"

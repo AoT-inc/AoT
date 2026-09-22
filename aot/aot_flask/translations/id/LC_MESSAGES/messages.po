@@ -30193,3 +30193,21 @@ msgstr "Menampilkan jumlah permintaan tulis dari AI eksternal yang menunggu pers
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Tanpa situs"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Rentang panduan untuk %(what)s (%(guide)s) berada di luar batas keras Anda (%(hard)s), sehingga target hanya dibuat di dalam %(effective)s. Perlebar batas keras atau persempit rentang panduan agar keduanya sesuai."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Nilai yang Anda atur untuk %(opt)s tidak digunakan: nilai ini hanya berlaku jika %(cond)s diatur ke opsi yang sesuai. Ubah itu terlebih dahulu, atau nilai ini tidak berpengaruh."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "suhu"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "kelembapan"

@@ -30626,3 +30626,21 @@ msgstr "Hiển thị số yêu cầu ghi từ AI bên ngoài đang chờ phê du
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Chưa gán địa điểm"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Khoảng hướng dẫn cho %(what)s (%(guide)s) nằm ngoài giới hạn cứng của bạn (%(hard)s), nên mục tiêu chỉ được đặt trong %(effective)s. Hãy nới rộng giới hạn cứng hoặc thu hẹp khoảng hướng dẫn để hai bên khớp nhau."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "Giá trị bạn đặt cho %(opt)s không được sử dụng: nó chỉ áp dụng khi %(cond)s được đặt thành tùy chọn tương ứng. Hãy thay đổi mục đó trước, nếu không giá trị này sẽ không có tác dụng."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "nhiệt độ"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "độ ẩm"

@@ -30942,3 +30942,21 @@ msgstr "Affiche le nombre de demandes d'écriture d'IA externes en attente d'app
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Sans site"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "La plage guide de %(what)s (%(guide)s) sort de vos limites strictes (%(hard)s) ; les consignes ne sont donc établies qu’à l’intérieur de %(effective)s. Élargissez les limites strictes ou resserrez la plage guide pour qu’elles concordent."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "La valeur définie pour %(opt)s n’est pas utilisée : elle ne s’applique que lorsque %(cond)s est réglé sur l’option correspondante. Modifiez d’abord ce réglage, sinon cette valeur reste sans effet."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "température"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "humidité"

@@ -542,9 +542,15 @@ class HelpersMixin:
             return self.time_start or '06:00', self.time_end or '20:00'
 
     def _in_time_window(self) -> bool:
-        """Return True if current time is within the active time window."""
+        """Return True if current time is within the active time window.
+
+        시각은 **시설 현지 시각**이다(`_facility_local_now`). 서버 시각으로
+        재면 다른 시간대의 시설이 서버의 하루를 따라 켜지고 꺼진다 — 광주기
+        Method 는 이미 시설 시간대로 창을 계산하는데 비교만 서버 시각이면
+        둘이 어긋난다.
+        """
         try:
-            now   = datetime.now().strftime('%H:%M')
+            now   = self._facility_local_now().strftime('%H:%M')
             start, end = self._get_time_window()
             if start <= end:
                 return start <= now <= end
@@ -563,7 +569,7 @@ class HelpersMixin:
         나은 시간대다. 그래서 개구부만 닫고 **냉난방·제습은 그대로 돌린다.**
 
         ⚠ `time_enable`(시간창)과 섞지 말 것 — 그것은 창밖 시간에 제어를 통째로
-          멈춘다(`_apply_end_behaviors()` 후 return). 여기서 하는 것은 수단의
+          멈춘다(안전 게이트만 보고 종료 동작, `_run_outside_window`). 여기서 하는 것은 수단의
           제한이지 제어의 중단이 아니다. 공유하는 것은 동작이 아니라 기준축뿐이다.
 
         ## 탈출구 — 닫아 두는 것이 위험해지는 순간
@@ -626,9 +632,9 @@ class HelpersMixin:
     def _facility_local_now(self):
         """시설 현지 시각. 시간대를 모르면 서버 시각으로 물러난다.
 
-        `_in_time_window` 은 예전부터 `datetime.now()`(서버 시각)를 쓴다. 같은
-        서버가 여러 지역의 시설을 돌리면 그 둘이 갈리는데, 여기서 서버 시각을
-        쓰면 쿠마모토 온실이 서울 시각으로 밤을 맞는다.
+        같은 서버가 여러 지역의 시설을 돌리므로 서버 시각을 쓰면 쿠마모토
+        온실이 서울 시각으로 밤을 맞는다. 운전 시간대(`_in_time_window`)와
+        야간 파킹이 모두 이 시각을 쓴다.
         """
         fac_tz = self._get_facility_tz()
         if fac_tz is None:

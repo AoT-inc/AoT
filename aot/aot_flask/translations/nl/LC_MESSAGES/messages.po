@@ -30753,3 +30753,21 @@ msgstr "Toont hoeveel schrijfverzoeken van externe AI wachten op goedkeuring. Kl
 #: utils/calendar_event_providers.py:527
 msgid "Unassigned site"
 msgstr "Zonder locatie"
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The guide range for %(what)s (%(guide)s) lies outside your hard limits (%(hard)s), so targets are only built inside %(effective)s. Widen the hard limits or narrow the guide range so the two agree."
+msgstr "Het richtbereik voor %(what)s (%(guide)s) ligt buiten uw harde grenzen (%(hard)s), dus doelen worden alleen binnen %(effective)s opgesteld. Verruim de harde grenzen of versmal het richtbereik zodat ze overeenkomen."
+
+#: functions/custom_functions/env_coordinator.py
+#, python-format
+msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
+msgstr "De waarde die u voor %(opt)s hebt ingesteld, wordt niet gebruikt: deze geldt alleen als %(cond)s op de bijbehorende optie staat. Wijzig dat eerst, anders heeft deze waarde geen effect."
+
+#: functions/custom_functions/env_coordinator.py
+msgid "temperature"
+msgstr "temperatuur"
+
+#: functions/custom_functions/env_coordinator.py
+msgid "humidity"
+msgstr "luchtvochtigheid"
