@@ -1180,6 +1180,89 @@ class CycleMixin:
         except Exception:
             self.logger.debug('EnvCoordinator: 그림자 기준 명령 실패', exc_info=True)
 
+    # 그림자 기록 채널 — `env_greybox` 측정(0~5 는 greybox 1스텝 예측이 쓴다).
+    # ⚠ 채널 번호는 한 번 정하면 바꾸지 않는다(기록이 쌓인 뒤 뜻이 바뀐다).
+    _GB_CH_MPC_BASE   = 6    # 6~10: heat · cool · vent · fog · co2_inj (그림자 MPC 명령 %)
+    _GB_CH_MPC_T_END  = 11   # 그림자 MPC 지평 끝 예측 온도
+    _GB_CH_MPC_RH_END = 12   # 그림자 MPC 지평 끝 예측 습도
+    _GB_CH_MPC_COST   = 13
+    _GB_CH_SOLAR_X    = 14   # 일사 선행 지표 S − S̄(60분) [W/m²]
+    _GB_CH_SOLAR_PRED = 15   # 그 지표로 예측한 20분 뒤 실내 온도 변화 [°C]
+
+    def _mpc_shadow(self, situation) -> None:
+        """MPC 였다면 나갔을 명령을 기록한다(G 단계) — **제어에 쓰지 않는다.**
+
+        greybox 모델을 돌리는 설치(effect_engine = shadow/greybox)에서, 실제 제어가
+        이미 MPC 가 아닐 때만 돈다. 미모델 장치를 맡는 legacy L3 는 로그 없이
+        돈다(uid ''). 모델이 아직 학습 전이어도 기록한다 — 학습 횟수를 함께 남긴다.
+        """
+        self._last_mpc_shadow = None
+        if getattr(self, 'effect_engine', 'legacy') == 'legacy':
+            return
+        if getattr(self, '_greybox_active', False):
+            return          # 실제 제어가 MPC 를 시도한다 — 그림자가 필요 없다
+        try:
+            self._last_mpc_result = None
+            out = self._run_mpc(situation, '')
+            res = getattr(self, '_last_mpc_result', None)
+            if out is None or res is None:
+                self._last_mpc_shadow = {'method': 'noop'}
+                return
+            cmds, _ = out
+            kind = {p.actuator_id: p.kind for p in self._profiles}
+            names = getattr(self, '_actuator_names', None) or {}
+            end = res.end_state
+            self._last_mpc_shadow = {
+                'method': res.method, 'converged': bool(res.converged),
+                'cost': round(float(res.cost), 4),
+                'channels': {k: round(v, 1) for k, v in res.channel_cmds.items()},
+                'end': (None if end is None else
+                        {'T': round(end[0], 2), 'RH': round(end[1], 1)}),
+                'params_n_updates': int(getattr(self._greybox_shadow.params,
+                                                'n_updates', 0) or 0),
+                'commands': [
+                    {'name': names.get(aid) or None, 'kind': kind.get(aid),
+                     'pct': round(float(c.control_value()), 1)}
+                    for aid, c in cmds.items()][:self._SUMMARY_MAX_COMMANDS],
+            }
+            from aot.utils.influx import write_influxdb_value
+            from aot.functions.utils.env_control.greybox.channels import CHANNELS
+            for i, ch in enumerate(CHANNELS):
+                write_influxdb_value(self.unique_id, 'env_greybox',
+                                     value=float(res.channel_cmds.get(ch, 0.0)),
+                                     channel=self._GB_CH_MPC_BASE + i)
+            if end is not None:
+                write_influxdb_value(self.unique_id, 'env_greybox', value=float(end[0]),
+                                     channel=self._GB_CH_MPC_T_END)
+                write_influxdb_value(self.unique_id, 'env_greybox', value=float(end[1]),
+                                     channel=self._GB_CH_MPC_RH_END)
+            write_influxdb_value(self.unique_id, 'env_greybox', value=float(res.cost),
+                                 channel=self._GB_CH_MPC_COST)
+        except Exception:
+            self.logger.debug('EnvCoordinator: 그림자 MPC 실패', exc_info=True)
+
+    def _solar_lead_step(self, situation, cycle_sec: float) -> None:
+        """일사 선행 예측(그림자) — 기록만 한다. `env_control/solar_lead.py` 참조."""
+        self._last_solar_lead = None
+        try:
+            from aot.functions.utils.env_control.solar_lead import SolarLead
+            if getattr(self, '_solar_lead', None) is None:
+                self._solar_lead = SolarLead()
+            ctx = situation.context or {}
+            rep = self._solar_lead.step(time.time(), ctx.get('solar'),
+                                        ctx.get('T_int'), float(cycle_sec))
+            self._last_solar_lead = rep
+            if rep and rep.get('x') is not None:
+                from aot.utils.influx import write_influxdb_value
+                write_influxdb_value(self.unique_id, 'env_greybox', value=float(rep['x']),
+                                     channel=self._GB_CH_SOLAR_X)
+                if rep.get('pred_dT') is not None:
+                    write_influxdb_value(self.unique_id, 'env_greybox',
+                                         value=float(rep['pred_dT']),
+                                         channel=self._GB_CH_SOLAR_PRED)
+        except Exception:
+            self.logger.debug('EnvCoordinator: 일사 선행 예측 실패', exc_info=True)
+
     def _rebase_integral_after_gate(self) -> None:
         """전체 게이트가 풀린 첫 사이클 — 게이트가 움직인 장치의 적분을 그 위치로.
 
@@ -1446,6 +1529,7 @@ class CycleMixin:
         # (값 ± 폭, 하드 임계 안). 아래 클램프·중앙값·예보·T_ceiling 이 모두 이것을 쓴다.
         (T_g_min, T_g_max, RH_g_min, RH_g_max) = self._apply_stage_guide(
             (T_g_min, T_g_max, RH_g_min, RH_g_max))
+        self._last_guide_range = (T_g_min, T_g_max, RH_g_min, RH_g_max)   # MPC 범위 벌점
 
         self._warn_inert_options_once()
         self._warn_light_band_conflict_once()
@@ -1608,6 +1692,8 @@ class CycleMixin:
         self._apply_cmd_scales(internal, external)
 
         self._basis_shadow_commands(situation)
+        self._mpc_shadow(situation)
+        self._solar_lead_step(situation, cycle_sec)
 
         # ── L3: Coordination (MPC → greybox-PI → legacy) ──────────────────────
         commands, new_state = self._run_control(situation, uid)
@@ -2724,6 +2810,9 @@ class CycleMixin:
                               if getattr(self, '_greybox_shadow_inst', None) is not None
                               and getattr(self, 'effect_engine', 'legacy') != 'legacy'
                               else None),
+            # 그림자 MPC(G 단계)·일사 선행 예측(그림자) — 제어에 쓰지 않는다.
+            'mpc_shadow': getattr(self, '_last_mpc_shadow', None),
+            'solar_lead': getattr(self, '_last_solar_lead', None),
             # 축별 기능 상태(`_refresh_capability`, 1단계 — 표시 전용).
             'capability': getattr(self, '_last_capability', None),
             # 제어 기준과 다른 기준의 그림자 명령(`_basis_shadow_commands`).
@@ -3057,12 +3146,20 @@ class CycleMixin:
         cycle_sec = float(ctx.get('cycle_sec', 60.0) or 60.0)
 
         targets = {}
-        for var in ('temperature', 'humidity', 'co2'):
+        for var in ('temperature', 'humidity', 'co2', 'vpd'):
             tv = situation.target.get(var)
-            if tv is not None:
-                targets[var] = (tv.value, tv.tolerance, tv.priority)
+            if tv is None:
+                continue
+            if var == 'vpd' and getattr(tv, 'limit', False):
+                continue   # 온도 우선 모드의 VPD 경계 항 — 추종 목표가 아니다
+            targets[var] = (tv.value, tv.tolerance, tv.priority)
         if not targets:
             return None
+        # 온·습도 범위(유도 범위, 하드 한계로 이미 좁혀짐)는 벌점 제약 — VPD 를 아주
+        # 덥거나 찬 공기로 맞추지 않게 한다(결정 D3).
+        g = getattr(self, '_last_guide_range', None)
+        soft = ({'temperature': (g[0], g[1]), 'humidity': (g[2], g[3])}
+                if g else None)
 
         cfg = getattr(self, '_mpc_config', None) or gbmpc.MPCConfig()
         ext_seq = self._build_mpc_ext_seq(situation, cfg.horizon)
@@ -3074,7 +3171,9 @@ class CycleMixin:
             params=self._greybox_shadow.params, prev_channel_cmds=prev_ch,
             cycle_sec=cycle_sec, config=cfg,
             fixed_cmds=({'shade': prev_ch['shade']} if 'shade' in prev_ch else None),
+            soft_bounds=soft,
         )
+        self._last_mpc_result = res
         if res.method == 'noop':
             return None
 

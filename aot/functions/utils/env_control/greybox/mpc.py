@@ -35,6 +35,12 @@ class MPCConfig:
     effort_weight: float = 0.002  # 에너지/개도 패널티
     slew_weight: float = 0.0005   # 이전 명령 대비 변화 패널티
     co2_scale: float = 100.0      # CO2 정규화 스케일(ppm)
+    # 범위 벌점 가중치 — 벗어난 1 °C / 1 % 당(제곱). 추종 항(우선도/허용오차²,
+    # VPD 1.2/0.1² = 120 kPa⁻²)과 견주어, 범위를 1 °C 넘는 것이 VPD 를 약 0.9 kPa
+    # 놓치는 것만큼 아프다 — 온도 범위가 VPD 보다 확실히 앞선다. 10 이면 난방만
+    # 있는 습한 밤에 VPD 를 좇느라 범위를 2 °C 넘었다(테스트 기록).
+    # ⚠ 지평 동안 명령을 하나로 두는(move-blocking) 탓에 끝에서 0.5 °C 쯤은 넘을 수 있다.
+    bound_weight: float = 100.0
 
 
 @dataclass
@@ -43,6 +49,7 @@ class MPCResult:
     cost: float
     converged: bool
     method: str                      # 'lbfgsb' | 'cem' | 'noop'
+    end_state: Optional[Tuple[float, float, float]] = None   # 지평 끝 예측 (T, RH, CO2)
 
 
 def _clamp(v: float, lo: float, hi: float) -> float:
@@ -69,9 +76,16 @@ def optimize_channels(
     cycle_sec: float = 60.0,
     config: Optional[MPCConfig] = None,
     fixed_cmds: Optional[Dict[str, float]] = None,
+    soft_bounds: Optional[Dict[str, tuple]] = None,
 ) -> MPCResult:
     """`fixed_cmds`: 최적화하지 않지만 모델이 읽는 입력(예: 차광막 개도) — 지평 동안
     지금 값으로 둔다. 빠뜨리면 모델은 차광막이 걷힌 것으로 보고 일사를 과대 예측한다.
+
+    `targets` 에 'vpd' 가 있으면 예측 (T, RH) 로 계산한 VPD 를 추종한다(결정 D3 —
+    VPD 방식에서도 MPC 가 돈다). PI 의 VPD 직접 제어가 틀린 이유는 온도 결과를 모른
+    채 밀었기 때문인데, MPC 는 온도를 예측하므로 `soft_bounds`
+    ({'temperature': (lo, hi), 'humidity': (lo, hi)}, 벗어난 만큼 제곱 벌점)와
+    함께 쓰면 극한 고온에서도 VPD 를 아주 덥거나 찬 공기로 맞추지 않는다.
     """
     cfg = config or MPCConfig()
     avail = available_channels(profiles)
@@ -86,7 +100,7 @@ def optimize_channels(
     # 변수 가중치: priority / tolerance²  (타이트·고우선 변수일수록 큼)
     weights: Dict[str, float] = {}
     for var, tv in targets.items():
-        if var not in _VAR_IDX or tv is None:
+        if (var not in _VAR_IDX and var != 'vpd') or tv is None:
             continue
         sp, tol, prio = tv
         if sp is None:
@@ -96,7 +110,9 @@ def optimize_channels(
     if not weights:
         return MPCResult({c: 0.0 for c in CHANNELS}, 0.0, True, 'noop')
 
-    scale = {'temperature': 1.0, 'humidity': 1.0, 'co2': cfg.co2_scale}
+    scale = {'temperature': 1.0, 'humidity': 1.0, 'co2': cfg.co2_scale, 'vpd': 1.0}
+    soft = {k: v for k, v in (soft_bounds or {}).items()
+            if k in ('temperature', 'humidity') and v}
     prev = prev_channel_cmds or {}
 
     fixed = dict(fixed_cmds or {})
@@ -111,9 +127,19 @@ def optimize_channels(
         J = 0.0
         for (T, RH, CO2) in traj:
             sv = {'temperature': T, 'humidity': RH, 'co2': CO2}
+            if 'vpd' in weights:
+                sv['vpd'] = _vpd(T, RH)
             for var, wv in weights.items():
                 sp = targets[var][0]
-                J += wv * ((sv[var] - sp) / scale[var]) ** 2
+                J += wv * ((sv[var] - sp) / scale.get(var, 1.0)) ** 2
+            for var, (lo, hi) in soft.items():
+                x = sv.get(var)
+                if x is None:
+                    continue
+                over = (lo - x) if (lo is not None and x < lo) else \
+                       (x - hi) if (hi is not None and x > hi) else 0.0
+                if over > 0.0:
+                    J += cfg.bound_weight * over * over
         for c, u in zip(avail, uvec):
             J += cfg.effort_weight * (u / 100.0) ** 2
             J += cfg.slew_weight * ((u - prev.get(c, 0.0)) / 100.0) ** 2
@@ -136,7 +162,20 @@ def optimize_channels(
     cmds = {c: 0.0 for c in CHANNELS}
     for c, u in zip(avail, xbest):
         cmds[c] = _clamp(u, 0.0, 100.0)
-    return MPCResult(cmds, cost(xbest), converged, method)
+    end = None
+    try:
+        traj = predict_horizon(state[0], state[1], state[2], seq,
+                               [dict(cmds, **fixed)] * H, params, cycle_sec)
+        end = traj[-1] if traj else None
+    except Exception:
+        end = None
+    return MPCResult(cmds, cost(xbest), converged, method, end)
+
+
+def _vpd(T: float, RH: float) -> float:
+    import math
+    svp = 0.6108 * math.exp(17.27 * T / (T + 237.3))
+    return max(0.0, svp * (1.0 - max(0.0, min(100.0, RH)) / 100.0))
 
 
 def _cem(cost, x0, bounds, max_iter, pop=24, elite=6, seed_iters=None):
