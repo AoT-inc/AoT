@@ -123,9 +123,9 @@ class TestActuatorCalibrator:
             cal.update('temperature', 0.0, 100.0, delta_obs=3.0)
         k_t = cal.k_hat('temperature')
         k_rh = cal.k_hat('humidity')
-        # temperature 만 갱신했으므로 humidity 는 default 에 가까움
-        assert k_rh == pytest.approx(1.5, abs=0.01)  # K_HEATER_RH default
-        assert k_t != pytest.approx(2.0, abs=0.01)   # temperature 는 변경됨
+        # temperature 만 갱신했으므로 humidity 는 기본 배율(1.0) 그대로
+        assert k_rh == pytest.approx(1.0, abs=1e-9)
+        assert k_t != pytest.approx(1.0, abs=0.01)   # temperature 는 변경됨
 
     def test_state_round_trip(self):
         cal = ActuatorCalibrator('a1', 'fogger', enabled=True)

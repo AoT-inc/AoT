@@ -220,6 +220,11 @@ K_HEATER_T    = 2.0    # °C/cycle at 100%
 K_HEATER_RH   = 1.5    # %/cycle at 100% (온도 상승 → 상대습도 하락)
 # CO₂ 주입기
 K_CO2_INJ     = 80.0   # ppm/cycle at 100%
+# CO₂ 주입 보존율이 0 이 되는 개구부 평균 개도(0~1). 창을 열어 둔 채 주입하면
+# 넣은 CO₂ 가 곧장 빠져나가 "부족 → 주입 → 환기로 배출 → 또 부족" 을 돈다.
+# 선형 근사: 보존율 = max(0, 1 − 평균 개도 / 이 값). 배기팬 압력 유효도
+# (VENT_PRESSURE_F0)와 같은 방식의 경험 상수다 — 질량수지는 greybox 모델이 맡는다.
+CO2_VENT_LOSS_F0 = 0.30
 # 차광막·보온커튼 (온도 영향만)
 # 규약: 모든 액추에이터 cmd_pct = 개도(100=완전 열림, 0=완전 닫힘).
 #   차광막 100%=열림=빛 유입(온도↑), 0%=닫힘=차광(온도↓ 효과)
@@ -247,15 +252,45 @@ def _wind_boost(env: EnvContext) -> float:
 
 
 def _calibrated_k(profile, var: str, default: float) -> float:
-    """profile.calibrated_K[var] 가 있으면 반환, 없으면 default(모듈 상수) 사용.
+    """모듈 상수 K 에 학습된 **배율 θ** 를 곱해 돌려준다(없으면 K 그대로).
 
-    Stage 1 CalibrationRegistry 가 ActuatorProfile.calibrated_K 를 주입한다.
-    주입 전까지는 기존 상수 동작 그대로 유지 (후방 호환).
+    Stage 1 CalibrationRegistry 가 `ActuatorProfile.calibrated_K` 에 변수별 θ(무차원,
+    기본 1.0)를 주입한다. 예전에는 학습값이 K 를 **대체**했는데, 학습값은 ΔT·풍속·
+    면적을 뺀 단위라 이 자리에 맞지 않았다(`calibration.py` 머리말). 배율이면 조건은
+    그대로 모델이 맡는다.
     """
-    cal_k = getattr(profile, 'calibrated_K', None)
-    if cal_k and var in cal_k:
-        return float(cal_k[var])
-    return default
+    return default * _calibrated_scale(profile, var)
+
+
+def _calibrated_scale(profile, var: str) -> float:
+    """학습된 효과 배율 θ. 주입 전·값 없음이면 1.0(모델 그대로)."""
+    cal = getattr(profile, 'calibrated_K', None)
+    if cal and var in cal:
+        try:
+            v = float(cal[var])
+        except (TypeError, ValueError):
+            return 1.0
+        return v if v > 0.0 else 1.0
+    return 1.0
+
+
+def _scaled(var: str):
+    """K 를 `_calibrated_k` 로 받지 않는 효과 함수에 학습 배율 θ 를 곱하는 장식자.
+
+    반환 경로가 여럿인 함수(배기팬 등)에서 반환마다 곱을 잊지 않게 한 곳에서 한다.
+    """
+    def deco(fn):
+        import functools
+
+        @functools.wraps(fn)
+        def wrapper(env, cmd_pct, profile=None):
+            r = fn(env, cmd_pct, profile)
+            theta = _calibrated_scale(profile, var)
+            if theta == 1.0 or not r.magnitude_native:
+                return r
+            return EffectResult(r.direction, r.magnitude_native * theta)
+        return wrapper
+    return deco
 
 
 def _gis_factor(profile, use_u: bool = True):
@@ -553,7 +588,7 @@ def _fog_liters(env: EnvContext, cmd_pct: float, profile=None):
 def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """분무 → 증발 → RH 상승.
 
-    우선순위: 캘리브레이션 K → 노즐 유량 기반 물리 → 보수적 K 상수.
+    우선순위: 노즐 유량 기반 물리 → 보수적 K 상수. 학습 배율 θ 는 마지막에 곱한다.
     어느 경로든 마지막에 증발 가용도(`_evaporation_availability`)를 곱한다 —
     포화 공기에서는 분무해도 RH 가 오르지 않는다.
     단순화: ΔRH ≈ liters × 1000g × (100 / volume_m3) × RH_per_g/m3
@@ -563,15 +598,13 @@ def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
     if avail <= 0.0:
         return EffectResult('0', 0.0)
 
-    k_cal = _calibrated_k(profile, 'humidity', 0.0)
-    if k_cal > 0.0:
-        # 캘리브레이션 값 우선
-        return EffectResult('↑', k_cal * (cmd_pct / 100.0) * avail)
+    # 학습 배율은 경로와 무관하게 마지막에 곱한다(`_calibrated_scale`).
+    theta = _calibrated_scale(profile, 'humidity')
 
     liters = _fog_liters(env, cmd_pct, profile)
     if liters is None:
         # 노즐 유량 미상 — 물리 계산 불가. 보수적 기본 계수로 떨어진다.
-        return EffectResult('↑', K_FOG_RH * (cmd_pct / 100.0) * avail)
+        return EffectResult('↑', K_FOG_RH * (cmd_pct / 100.0) * avail * theta)
 
     cap      = getattr(profile, 'capacity_meta', None) or {}
     vol      = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
@@ -579,7 +612,7 @@ def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
     # 실용적 근사: ΔRH ≈ liters × 1000 / vol × 0.5
     delta_rh = liters * 1000.0 / vol * 0.5
     return EffectResult(
-        '↑', max(delta_rh, K_FOG_RH * (cmd_pct / 100.0) * 0.1) * avail)
+        '↑', max(delta_rh, K_FOG_RH * (cmd_pct / 100.0) * 0.1) * avail * theta)
 
 
 def fogger_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
@@ -594,19 +627,17 @@ def fogger_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectR
     if avail <= 0.0:
         return EffectResult('0', 0.0)
 
-    k_cal = _calibrated_k(profile, 'temperature', 0.0)
-    if k_cal > 0.0:
-        return EffectResult('↓', k_cal * (cmd_pct / 100.0) * avail)
+    theta = _calibrated_scale(profile, 'temperature')
 
     liters = _fog_liters(env, cmd_pct, profile)
     if liters is None:
-        return EffectResult('↓', K_FOG_T * (cmd_pct / 100.0) * avail)
+        return EffectResult('↓', K_FOG_T * (cmd_pct / 100.0) * avail * theta)
 
     cap    = getattr(profile, 'capacity_meta', None) or {}
     vol    = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
     delta_t = liters * _L_VAP_KJ_KG / (vol * _RHO_CP_AIR)
     return EffectResult(
-        '↓', max(delta_t, K_FOG_T * (cmd_pct / 100.0) * 0.1) * avail)
+        '↓', max(delta_t, K_FOG_T * (cmd_pct / 100.0) * 0.1) * avail * theta)
 
 
 FOGGER_EFFECT_MODEL = {
@@ -640,8 +671,18 @@ HEATER_EFFECT_MODEL = {
 # CO₂ 주입기 (co2_injector)
 # ─────────────────────────────────────────────────────────────────────────────
 
+@_scaled('co2')
 def co2_injector_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    return EffectResult('↑', K_CO2_INJ * (cmd_pct / 100.0))
+    """CO₂ 주입 → 실내 CO₂ 상승. **환기로 빠지는 몫**을 뺀다.
+
+    창이 열려 있으면 넣은 CO₂ 의 상당 부분이 곧장 밖으로 나간다. 예전에는 주입
+    효과가 상수라 환기 중에도 주입기가 부족분을 좇아 계속 돌았다(에너지·가스 낭비
+    루프). 보존율이 떨어지면 효과가 작아지고, 유효도 게이트(`G_MIN_EFFECT`)가
+    주입기를 쉬게 한다 — 따로 인터록을 두지 않는다.
+    """
+    frac = env.get('vent_open_frac', 0.0) or 0.0
+    retention = max(0.0, 1.0 - frac / CO2_VENT_LOSS_F0)
+    return EffectResult('↑', K_CO2_INJ * (cmd_pct / 100.0) * retention)
 
 
 CO2_INJECTOR_EFFECT_MODEL = {
@@ -653,6 +694,7 @@ CO2_INJECTOR_EFFECT_MODEL = {
 # 차광막·보온커튼 (shade / curtain)
 # ─────────────────────────────────────────────────────────────────────────────
 
+@_scaled('temperature')
 def shade_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """차광막: 개도(100%=열림)에 따른 일사 유입 → 온도 상승.
 
@@ -758,6 +800,7 @@ def _exhaust_pressure_factor(env: EnvContext) -> float:
     return max(0.0, 1.0 - frac / VENT_PRESSURE_F0)
 
 
+@_scaled('temperature')
 def exhaust_fan_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """배기팬 → 외내부 온도차 × ACH 기반 T 변화 (개구부 압력 유효도 반영)."""
     pf = _exhaust_pressure_factor(env)
@@ -780,6 +823,7 @@ def exhaust_fan_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Ef
     return EffectResult('↑' if delta_T > 0 else '↓', mag)
 
 
+@_scaled('humidity')
 def exhaust_fan_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """배기팬 → 외내부 RH 차 × ACH 기반 RH 변화 (개구부 압력 유효도 반영)."""
     pf = _exhaust_pressure_factor(env)
@@ -799,6 +843,7 @@ def exhaust_fan_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> E
     return EffectResult('↑' if delta_rh > 0 else '↓', mag)
 
 
+@_scaled('co2')
 def exhaust_fan_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """배기팬 → CO₂ 희석 (실내 CO₂ > 외부 가정, 개구부 압력 유효도 반영)."""
     pf = _exhaust_pressure_factor(env)

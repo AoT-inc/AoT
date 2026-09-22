@@ -30231,3 +30231,7 @@ msgstr "hanya menurunkan"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "hanya memantau"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "Mempelajari, untuk tiap perangkat, seberapa kuat perangkat itu benar-benar menggerakkan tiap pembacaan dibandingkan model bawaan. Hanya belajar dari siklus ketika hanya perangkat itu yang berubah. Butuh data beberapa hari; sampai saat itu model dipakai apa adanya."

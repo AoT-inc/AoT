@@ -954,6 +954,14 @@ class CycleMixin:
         # 안전게이트 강제명령은 항상 즉시 반영 — 구동주기 설정(actuation_profile)의
         # 정상-사이클 최소 이동 간격에 지연되면 안 된다(강우·돌풍·폭염·한파 대응).
         self._dispatch(gate_result.forced_commands, cycle_sec, emergency=True)
+        # 해제될 때 적분을 이 위치로 맞춘다(`_rebase_integral_after_gate`).
+        held = getattr(self, '_gate_held_positions', None) or {}
+        for aid, cmd in (gate_result.forced_commands or {}).items():
+            try:
+                held[aid] = float((cmd or {}).get('value', 0.0))
+            except (TypeError, ValueError):
+                continue
+        self._gate_held_positions = held
         write_decision_log(uid, 'safety_gate_active',
                            CH_SAFETY_GATE, float(gate_result.gate_mask))
         # ── 심각 이벤트 이메일 알림 (1일 1회) ─────────────────────────────
@@ -1060,6 +1068,28 @@ class CycleMixin:
                     self._last_capability_diff = key
         except Exception:
             self.logger.debug('EnvCoordinator: 기능 상태 계산 실패', exc_info=True)
+
+    def _rebase_integral_after_gate(self) -> None:
+        """전체 게이트가 풀린 첫 사이클 — 게이트가 움직인 장치의 적분을 그 위치로.
+
+        적분은 장치별 **평형 개도 기억**이다. 게이트(강우·강풍·폭염·한파)가 창을
+        닫아 둔 동안에도 그 기억은 게이트 전 값(예: 60 %) 그대로 남아, 해제되는 순간
+        조건이 바뀌었는데도 곧장 그 개도로 돌아가려 했다(슬루만큼씩). 무충격 전환의
+        규칙대로 적분을 **지금 장치가 있는 자리**(게이트가 두고 간 값)로 맞추면, PI 가
+        거기서 평형을 다시 찾는다.
+
+        게이트가 건드리지 않은 장치는 그대로 둔다 — 그 장치의 기억은 유효하다.
+        """
+        held = getattr(self, '_gate_held_positions', None)
+        if not held:
+            return
+        integral = self._coord_state.integral
+        for aid, pos in held.items():
+            integral[aid] = max(0.0, min(100.0, float(pos)))
+        self.logger.error(
+            'EnvCoordinator: 안전 게이트 해제 — 장치 %d개의 평형 기억을 게이트가 둔 '
+            '위치에서 다시 시작합니다', len(held))
+        self._gate_held_positions = {}
 
     def _intentional_stop(self) -> 'str | None':
         """제어를 **일부러** 쉬는 중인가 — 그렇다면 사유, 아니면 None.
@@ -1255,7 +1285,8 @@ class CycleMixin:
             self._act_on_triggered_gate(gate_result, gate_env, cycle_sec,
                                         now_ts, internal)
             return
-        elif gate_result.gate_mask == 0:
+        self._rebase_integral_after_gate()
+        if gate_result.gate_mask == 0:
             # P6: integral 은 액추에이터별 평형 개도(%) 기억이므로 매 사이클 지우지
             # 않는다(지우면 평형 hold 불가 → 진동 재발). [0,100] 클램프 + 자기복원
             # 으로 폭주 위험이 없다. active_vars(hysteresis 텔레메트리)만 정리.
@@ -1430,7 +1461,9 @@ class CycleMixin:
             for p in self._profiles:
                 k_all = {
                     var: kv
-                    for var in ('temperature', 'humidity', 'co2', 'vpd')
+                    # 배율 θ(무차원) — VPD 효과는 온도·습도 효과에서 유도되므로
+                    # 따로 배우지 않는다(`calibration.ActuatorCalibrator.VARS`).
+                    for var in ('temperature', 'humidity', 'co2')
                     if (kv := self._cal_registry.k_hat(p.actuator_id, var)) is not None
                 }
                 if k_all:
@@ -1995,9 +2028,21 @@ class CycleMixin:
                 'co2':         internal.get('CO2'),
             }
             sensor_snapshot = {k: v for k, v in sensor_snapshot.items() if v is not None}
+            # 효과를 섞지 않는다 — 이 사이클에 명령이 움직인 장치를 센다. 한 장치의
+            # 변화만 있을 때만 그 장치가 배운다(`ActuatorCalibrator.push_cycle`).
+            prev_pcts = getattr(self, '_cal_prev_cmd_pcts', {}) or {}
+            moved = {aid for aid, v in current_cmd_pcts.items()
+                     if abs(float(v) - float(prev_pcts.get(aid, v))) >= 2.0}
+            self._cal_prev_cmd_pcts = dict(current_cmd_pcts)
             for p in self._profiles:
                 trust = self._feedback_registry.trust_score(p.actuator_id)
                 cmd_pct = current_cmd_pcts.get(p.actuator_id, 0.0)
+                # 모델 예측(100 % 기준 사이클당 변화, 부호 있음) — θ 의 분모.
+                pred = {}
+                for var, eff in (getattr(p, 'live_effect', None) or {}).items():
+                    sign = {'↑': 1.0, '↓': -1.0}.get(getattr(eff, 'direction', ''))
+                    if sign is not None:
+                        pred[var] = sign * float(eff.magnitude_native or 0.0)
                 self._cal_registry.push_cycle(
                     actuator_id=p.actuator_id,
                     kind=p.kind,
@@ -2006,6 +2051,8 @@ class CycleMixin:
                     clean_for_learning=clean,
                     trust_score=trust,
                     is_probe=is_probe,
+                    pred_rate100=pred,
+                    others_steady=not (moved - {p.actuator_id}),
                 )
 
         # ── P5-5: Cumulative Goal Tracker ────────────────────────────────────

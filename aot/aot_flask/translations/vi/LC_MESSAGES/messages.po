@@ -30664,3 +30664,7 @@ msgstr "chỉ giảm"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "chỉ theo dõi"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "Học, với từng thiết bị, mức độ nó thực sự làm thay đổi mỗi giá trị đo so với mô hình tích hợp. Chỉ học từ những chu kỳ mà riêng thiết bị đó thay đổi. Cần dữ liệu vài ngày; trước đó mô hình được dùng nguyên như cũ."

@@ -137,9 +137,10 @@ class SafetyPreGate:
     GateResult.triggered == True 이면 forced_commands 를 그대로 L4 에 전달하고
     L1~L3 를 건너뛴다.
 
-    게이트 해제 후 호출자는 L3 적분 상태를 reset 해야 한다 (bumpless 복귀).
-    ⚠ 2026-09-19 현재 `reset_after_release()` 를 부르는 곳이 없다 — 전체 게이트
-      해제 뒤 적분은 게이트 전 값 그대로 복귀한다. 알려진 미결 사항이다.
+    게이트 해제 후 L3 적분의 무충격 복귀는 호출자가 맡는다 — 게이트가 움직인
+    장치의 평형 기억을 게이트가 둔 위치로 맞춘다(`_cycle_mixin.
+    _rebase_integral_after_gate`, 2026-09-22). `reset_after_release()` 는 이
+    객체의 래치만 푸는 것이라 그 일과 무관하다.
     """
 
     def __init__(self, config: PreGateConfig = None):

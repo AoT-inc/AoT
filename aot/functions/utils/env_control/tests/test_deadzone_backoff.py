@@ -106,7 +106,7 @@ class TestTheFrozenRail:
         assert pct < 100.0, '부호가 반대인 채 굳어 있다 — %r' % (rows,)
 
     def test_it_keeps_coming_down(self):
-        """한 번 내리고 마는 것이 아니라 safe_default 로 수렴해야 한다."""
+        """한 번 내리고 마는 것이 아니라 계속 줄어 0 으로 수렴해야 한다."""
         rows, _ = _run([_WRONG] * 12)
         pcts = [pct for pct, _r in rows]
         assert pcts[-1] < 5.0, pcts
@@ -161,14 +161,15 @@ class TestItOnlyAppliesInsideTheDeadzone:
         assert rows[-1][1] != REASON_DEADZONE_BACKOFF, rows
 
 
-class TestScreensConvergeToTheirOwnRest:
-    """물러남은 '닫기' 가 아니라 **safe_default 로 수렴**이다.
+class TestScreensBackOffInTheirDriveDirection:
+    """물러남은 **명령을 줄이는 것**이다 — safe_default 로 가는 것이 아니다.
 
-    보온커빈·차광막은 `safe_default=100`(걷힘)이라, 닫는 것으로 구현하면
-    스크린이 반대로 움직인다.
+    e_norm < 0 은 장치 자기 기준 "줄여라" 이고, 보온커튼·차광막의 효과도 개도에
+    비례한다. 예전에는 safe_default(100, 걷힘)로 물러나 과한 효과를 더 키웠다.
+    safe_default 는 고장·게이트 때 돌아갈 자리다.
     """
 
-    def test_a_screen_relaxes_upward(self):
+    def test_a_screen_backs_off_by_closing(self):
         screen = ActuatorProfile(
             actuator_id='curtain', kind='curtain',
             effect_model={'vpd': _effect('↓', 0.3)},
@@ -184,7 +185,7 @@ class TestScreensConvergeToTheirOwnRest:
                                   unique_id='t')
             last = cmds['curtain']
         assert last.reason == REASON_DEADZONE_BACKOFF
-        assert last.control_value() > 20.0, '스크린이 반대로 움직인다'
+        assert last.control_value() < 20.0, '과한 스크린이 걷혀서 효과를 더 키운다'
 
 
 class TestStateWiring:

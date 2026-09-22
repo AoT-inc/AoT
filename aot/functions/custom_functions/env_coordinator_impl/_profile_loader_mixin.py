@@ -1166,10 +1166,8 @@ class ProfileLoaderMixin:
         RLSCalibrator slots are keyed by 'temperature'|'humidity'|'co2'. We
         translate at read time.
         """
-        _VAR_MAP = {'T': 'temperature', 'RH': 'humidity', 'CO2': 'co2'}
 
         # Build actuator_id → kind map from currently loaded profiles
-        kind_by_id = {p.actuator_id: p.kind for p in self._profiles}
 
         try:
             from aot.databases.models import GeoFacility
@@ -1195,20 +1193,12 @@ class ProfileLoaderMixin:
                 for anchor in anchors:
                     if anchor.get('consumed'):
                         continue
-                    aid    = anchor.get('actuator_id', '')
-                    var_in = anchor.get('var', '')
-                    k      = anchor.get('k_measured')
-                    var_internal = _VAR_MAP.get(var_in, var_in)
-                    kind   = kind_by_id.get(aid)
-
-                    if aid and var_internal and kind and k is not None:
-                        cal = self._cal_registry.get_or_create(aid, kind)
-                        rls = cal._rls.get(var_internal) if cal else None
-                        if rls is not None:
-                            # Seed k_hat with measured value as trusted anchor
-                            rls.k_hat = float(k)
-                            rls.n_updates = max(rls.n_updates, 5)
-                            rls._P = min(rls._P, 0.1)   # reduce variance → high confidence
+                    # ⚠ 점검 기준값을 RLS 에 **심지 않는다**(2026-09-22). RLS 가 이제
+                    #   배우는 것은 모델 대비 배율 θ(무차원)인데, 점검의 k_measured 는
+                    #   시험 중 관측된 변화량(native)이라 같은 자리에 넣으면 모델을
+                    #   그 배수로 키운다. 예전 K 모델에서도 단위가 달랐다. 기준값은
+                    #   시설 상태에 그대로 남는다 — 그 시험의 예측값을 함께 남기게
+                    #   되면 θ = 관측/예측 으로 옮길 수 있다.
                     anchor['consumed'] = True
                     consumed_count += 1
 

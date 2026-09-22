@@ -954,7 +954,7 @@ def api_calibration_status(facility_uuid):
               "kind": "heater",
               "vars": {
                 "temperature": {
-                  "k_hat": 0.042,
+                  "k_hat": 0.85,        # 효과 배율 θ(무차원, 1.0 = 모델 그대로)
                   "n_updates": 18,
                   "P": 0.08,
                   "trusted": true

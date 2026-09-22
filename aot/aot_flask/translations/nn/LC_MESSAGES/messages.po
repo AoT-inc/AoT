@@ -30482,3 +30482,7 @@ msgstr "berre senke"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "berre sjå"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "Lærer for kvar eining kor sterkt ho faktisk flyttar kvar måleverdi samanlikna med den innebygde modellen. Lærer berre frå syklusar der berre den eininga endra seg. Treng data frå fleire dagar; til då vert modellen brukt som han er."

@@ -968,9 +968,10 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Enable RLS Calibration'),
             'phrase': lazy_gettext(
-                'Learn per-actuator effect coefficients (K_*) from sensor response. '
-                'Requires several days of data to converge. '
-                'Falls back to built-in defaults until convergence.'
+                'Learn, for each device, how strongly it actually moves each reading '
+                'compared with the built-in model. It learns only from cycles in which '
+                'that device alone changed. Needs several days of data; until then the '
+                'model is used as it is.'
             ),
         },
         {

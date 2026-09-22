@@ -29493,3 +29493,7 @@ msgstr "只能降低"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "仅观察"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "针对每台设备，学习它相对于内置模型实际对各个读数的影响有多大。只从仅该设备发生变化的周期中学习。需要几天的数据；在此之前按原样使用模型。"

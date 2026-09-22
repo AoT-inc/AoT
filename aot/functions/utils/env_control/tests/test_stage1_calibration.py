@@ -54,14 +54,85 @@ def test_actuator_calibrator_lag_skip():
 
 
 def test_actuator_calibrator_push_updates():
-    """충분한 사이클 push 후 n_updates 증가."""
+    """명령이 한 번 바뀌고 lag 가 지나면, 예측이 있으면 갱신된다."""
     cal = ActuatorCalibrator('v1', 'opening', enabled=True)
-    lag = cal._lag
-    for i in range(lag + 3):
-        cal.push_cycle(50.0 + i, {'temperature': 24.0 - i * 0.1,
-                                   'humidity':    65.0}, True, 1.0)
-    rls = cal._rls.get('temperature')
-    assert rls.n_updates > 0
+    for cmd, T in _simulate(cal, rate=-0.2, theta=1.0, steps=[20, 60]):
+        pass
+    assert cal._rls['temperature'].n_updates > 0
+
+
+def _simulate(cal, rate, theta, steps, drift=0.0, probe=False, steady=True,
+              var='temperature', start=24.0, hold=None):
+    """센서 = 이전 사이클 명령 × θ × 예측 속도 + 드리프트. 명령을 steps 순으로 번갈아 든다."""
+    hold = hold or cal._lag + 2
+    s, prev_cmd, out = start, steps[0], []
+    for i in range(len(steps) * hold * 30):
+        cmd = steps[(i // hold) % len(steps)]
+        s += theta * (prev_cmd / 100.0) * rate + drift
+        cal.push_cycle(cmd, {var: s}, True, 1.0, probe, {var: rate}, steady)
+        prev_cmd = cmd
+        out.append((cmd, s))
+    return out
+
+
+def test_scale_converges_for_a_lowering_device():
+    """내리는 장치(예측 음수)도 θ 가 하한에 붙지 않고 실제 배율로 수렴한다."""
+    cal = ActuatorCalibrator('c1', 'cooler', enabled=True)
+    _simulate(cal, rate=-0.3, theta=0.5, steps=[10, 70])
+    assert cal.k_hat('temperature') == pytest.approx(0.5, abs=0.05)
+
+
+def test_drift_before_the_change_is_removed():
+    """이미 진행 중이던 흐름(드리프트)은 장치 몫으로 치지 않는다."""
+    cal = ActuatorCalibrator('h1', 'heater', enabled=True)
+    _simulate(cal, rate=0.4, theta=1.5, steps=[10, 60], drift=0.05)
+    assert cal.k_hat('temperature') == pytest.approx(1.5, abs=0.1)
+
+
+def test_probe_weight_does_not_bias_the_estimate():
+    """탐색 가중치는 갱신의 무게다 — 관측값을 2배로 만들지 않는다."""
+    a = ActuatorCalibrator('a', 'heater', enabled=True)
+    b = ActuatorCalibrator('b', 'heater', enabled=True)
+    _simulate(a, rate=0.4, theta=0.8, steps=[10, 60], probe=False)
+    _simulate(b, rate=0.4, theta=0.8, steps=[10, 60], probe=True)
+    assert b.k_hat('temperature') == pytest.approx(0.8, abs=0.05)
+    assert b.k_hat('temperature') == pytest.approx(a.k_hat('temperature'), abs=0.05)
+
+
+def test_no_learning_while_other_devices_move():
+    """다른 장치가 같이 움직이면 누구 몫인지 가를 수 없다 — 배우지 않는다."""
+    cal = ActuatorCalibrator('h1', 'heater', enabled=True)
+    _simulate(cal, rate=0.4, theta=3.0, steps=[10, 60], steady=False)
+    assert cal._rls['temperature'].n_updates == 0
+
+
+def test_no_learning_without_a_prediction():
+    cal = ActuatorCalibrator('h1', 'heater', enabled=True)
+    for i in range(30):
+        cal.push_cycle(10 if (i // 7) % 2 else 60, {'temperature': 20 + i * 0.1}, True, 1.0)
+    assert cal._rls['temperature'].n_updates == 0
+
+
+def test_old_k_model_state_is_discarded():
+    """옛 상태의 k_hat 은 단위가 다른 K 다 — θ 자리에 올리면 모델을 수십 배로 키운다."""
+    old = {'actuator_id': 'h1', 'kind': 'heater', 'enabled': True,
+           'rls': {'temperature': {'k_hat': 2.4, 'P': 0.01, 'n_updates': 40,
+                                   'k_default': 2.0}}}
+    cal = ActuatorCalibrator.from_state(old)
+    assert cal.k_hat('temperature') == 1.0
+    assert cal._rls['temperature'].n_updates == 0
+
+
+def test_effect_function_multiplies_its_k_by_the_scale():
+    from types import SimpleNamespace
+    from aot.functions.utils.env_control.effect_functions import (
+        heater_temp_effect, co2_injector_co2_effect)
+    base = heater_temp_effect({}, 50.0, SimpleNamespace())
+    scaled = heater_temp_effect({}, 50.0, SimpleNamespace(calibrated_K={'temperature': 2.0}))
+    assert scaled.magnitude_native == pytest.approx(2 * base.magnitude_native)
+    c0 = co2_injector_co2_effect({}, 50.0, SimpleNamespace())
+    c1 = co2_injector_co2_effect({}, 50.0, SimpleNamespace(calibrated_K={'co2': 0.5}))
+    assert c1.magnitude_native == pytest.approx(0.5 * c0.magnitude_native)
 
 
 # ── CalibrationRegistry ───────────────────────────────────────────────────────

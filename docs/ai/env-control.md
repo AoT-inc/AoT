@@ -167,6 +167,10 @@ cmd    = clamp(1.0 × e_eff × 100 + I, 0, 100)
   less than 2.5 % of the proportional band (for example ventilation with almost no
   indoor/outdoor difference), or it is parked, it moves toward its safe position,
   keeping 60 % of the remaining distance each cycle.
+- **It does not freeze past the target.** Even inside the deadzone, if the deviation keeps
+  saying "less" for three cycles, the device backs off by keeping 60 % of its command each
+  cycle. Thermal curtains and shade screens do the same: their effect is proportional to
+  the opening, so reducing the command is what reduces the effect.
 - **Anti-windup.** At the 100 % rail the overshoot is fed back into the integral; at the
   0 % rail that cycle's integration is frozen. If a device stays pinned to a rail, its
   integral is eased toward the actual opening.
@@ -197,7 +201,7 @@ same split.
 | Ventilation | Vents/openings, exhaust fan, intake fan | Can only push the inside toward the outside |
 | Heating, cooling and misting | Heater, cooler, fogger | Adds or removes directly, regardless of outdoor air |
 | Light and shading | Shade screen, thermal curtain, supplemental lighting | Blocks or adds incoming/outgoing radiation |
-| CO₂ | CO₂ injector | Its own axis, with nothing to compete against |
+| CO₂ | CO₂ injector | Its own axis, with nothing to compete against. When vents are open, though, injected CO₂ leaves straight away, so the injection effect is reduced by the average vent opening (zero at 30 %). If the effect becomes too small, the injector rests |
 
 Because domains do not see each other's work, coordination between them is done by
 **declared interlocks** (see [Ventilation](#settings-ventilation)), never by implicit
@@ -506,7 +510,7 @@ growers.
 | Field | Default | Description |
 |-------|---------|-------------|
 | Effect Engine | Legacy | `Legacy`: built-in K_* constants (default, safe). `Shadow`: runs the grey-box model in parallel for logging only — no control change. `Grey-box`: physics-model control. Each cycle it tries MPC (an optimisation that looks several steps ahead) first, then falls back to the physics-model PI, then to Legacy. MPC assumes outdoor conditions stay at their current values; it does not use the forecast. Recommended flow: Shadow first, then Grey-box. Change only while testing. |
-| Enable RLS Calibration | Off | Learns per-actuator effect coefficients (K_*) from sensor response. Needs several days to converge; falls back to built-in defaults until then. |
+| Enable RLS Calibration | Off | Learns, per device, how strongly it actually moves each reading (temperature, humidity, CO₂) compared with the built-in model, as a **scale factor** (1.0 = the model as it is). The model's condition terms (indoor/outdoor difference, wind, area) stay; only the size is corrected. It learns only from cycles in which that device alone changed — when several move together, their shares cannot be told apart. Needs several days of data; until then the model is used as it is. |
 | Enable Active Probing | Off | Periodically perturbs one actuator by ±10 % to improve calibration identifiability. Only triggers when load is low and no safety gate is active. Requires RLS Calibration. |
 | Probe Interval (seconds) | 3600 | Minimum time between probing events. Steps: Often (1800) / Standard (3600) / Rare (10800). |
 
@@ -667,7 +671,9 @@ before editing.
 Safety runs outside the L1–L3 coordination algorithm — a Pre-Gate checked every cycle
 before L1–L3, and a Post-Gate that sanity-checks the L3 result before it is dispatched.
 Once triggered, a Pre-Gate stays active for at least 300 s after its last trigger
-(prevents rapid on/off flapping).
+(prevents rapid on/off flapping). When a gate releases, the devices it moved find their
+equilibrium again **from where the gate left them** rather than jumping back to the
+pre-gate opening, because conditions may have changed in the meantime.
 
 ### Pre-Gate (checked before L1–L3) { #pre-gate-checked-before-l1l3 }
 

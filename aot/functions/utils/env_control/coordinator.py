@@ -883,11 +883,15 @@ def coordinate(
                     else:
                         _n = 0
                     if _n >= DEADZONE_BACKOFF_CYCLES:
-                        # 파킹과 **같은 감쇠 경로**를 쓴다(RELAX_FACTOR, safe_default
-                        # 기준). 감쇠율을 여기만 따로 두면 "왜 이 장치만 다르게
-                        # 내려오는가" 에 답할 자리가 없어진다.
-                        sd = p.safe_default
-                        I = sd + (prev_val - sd) * RELAX_FACTOR
+                        # 감쇠율은 파킹과 같은 RELAX_FACTOR 다. 그러나 **향하는 곳은
+                        # safe_default 가 아니라 0 이다** — e_norm < 0 은 장치 자기
+                        # 기준으로 "명령을 줄여라" 이고, 모든 효과 모델은 명령(개도)에
+                        # 비례한다. 창·냉방기는 safe_default 가 0 이라 둘이 같지만,
+                        # 보온커튼·차광막은 safe_default 가 100(걷힘)이라 예전에는 과한
+                        # 효과를 **더 키우는 쪽**(걷힘)으로 물러났다. safe_default 는
+                        # 고장·게이트 때 돌아갈 자리이지 제어 방향이 아니다
+                        # (2026-09-22 외부 검토 대조로 확인).
+                        I = prev_val * RELAX_FACTOR
                         cmd_raw = _clamp(I, 0.0, 100.0)
                         reason = REASON_DEADZONE_BACKOFF
                     else:

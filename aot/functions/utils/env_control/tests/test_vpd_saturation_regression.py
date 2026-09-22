@@ -464,13 +464,19 @@ class TestFoggerEvaporativeFlow:
         cool_dT = DEFAULT_EFFECT_MODELS['cooler']['temperature'](_env(), 100.0, None)
         assert fog_dT.magnitude_native <= cool_dT.magnitude_native
 
-    def test_calibrated_k_still_wins(self):
-        """실측 캘리브레이션 값이 있으면 그것이 최우선이다."""
+    def test_calibration_scales_the_physics(self):
+        """학습값은 물리 계산을 **대체하지 않고 배율로 곱한다**(2026-09-22).
+
+        학습값은 모델 대비 실제 반응의 비율 θ(무차원)다. 예전처럼 K 로 대체하면
+        유량·체적·증발 가용도가 통째로 빠진 값이 들어간다(`calibration.py` 머리말).
+        """
         p = _FakeProfile(volume_m3=FACILITY_VOL_M3, fog_flow_lpm=3.0)
+        base = DEFAULT_EFFECT_MODELS['fogger']['temperature'](
+            _env(RH=EVAP_OK_RH), 100.0, p)
         p.calibrated_K = {'temperature': 1.25}
         eff = DEFAULT_EFFECT_MODELS['fogger']['temperature'](
             _env(RH=EVAP_OK_RH), 100.0, p)
-        assert eff.magnitude_native == pytest.approx(1.25)
+        assert eff.magnitude_native == pytest.approx(1.25 * base.magnitude_native)
 
 
 class TestSprinklerFlowSplit:

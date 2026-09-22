@@ -32101,3 +32101,7 @@ msgstr "내리기만"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "보기만"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "장치마다, 내장 모델이 예측한 것보다 실제로 각 값을 얼마나 세게 움직이는지 배웁니다. 그 장치만 명령이 바뀐 사이클에서만 배웁니다. 며칠 치 데이터가 필요하고, 그때까지는 모델을 그대로 씁니다."

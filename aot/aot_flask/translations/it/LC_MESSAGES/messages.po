@@ -30907,3 +30907,7 @@ msgstr "solo diminuire"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "solo osservare"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "Impara, per ogni dispositivo, quanto sposta davvero ciascuna lettura rispetto al modello integrato. Impara solo dai cicli in cui è cambiato soltanto quel dispositivo. Servono dati di diversi giorni; fino ad allora il modello viene usato così com’è."

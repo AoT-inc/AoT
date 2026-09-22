@@ -30565,3 +30565,7 @@ msgstr "yalnızca azaltma"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "yalnızca izleme"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "Her cihaz için, yerleşik modele kıyasla her ölçümü gerçekte ne kadar güçlü değiştirdiğini öğrenir. Yalnızca o cihazın tek başına değiştiği döngülerden öğrenir. Birkaç günlük veri gerekir; o zamana kadar model olduğu gibi kullanılır."

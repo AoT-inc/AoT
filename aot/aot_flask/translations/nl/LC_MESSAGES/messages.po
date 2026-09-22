@@ -30791,3 +30791,7 @@ msgstr "alleen verlagen"
 #: aot_flask/static/js/common/aot-env-status.js
 msgid "watch only"
 msgstr "alleen bekijken"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
+msgstr "Leert per apparaat hoe sterk het elke meetwaarde werkelijk verandert vergeleken met het ingebouwde model. Leert alleen van cycli waarin alleen dat apparaat veranderde. Heeft gegevens van enkele dagen nodig; tot dan wordt het model ongewijzigd gebruikt."
