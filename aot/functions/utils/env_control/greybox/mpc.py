@@ -68,7 +68,11 @@ def optimize_channels(
     prev_channel_cmds: Optional[Dict[str, float]],
     cycle_sec: float = 60.0,
     config: Optional[MPCConfig] = None,
+    fixed_cmds: Optional[Dict[str, float]] = None,
 ) -> MPCResult:
+    """`fixed_cmds`: 최적화하지 않지만 모델이 읽는 입력(예: 차광막 개도) — 지평 동안
+    지금 값으로 둔다. 빠뜨리면 모델은 차광막이 걷힌 것으로 보고 일사를 과대 예측한다.
+    """
     cfg = config or MPCConfig()
     avail = available_channels(profiles)
     if not avail or not ext_seq:
@@ -95,8 +99,11 @@ def optimize_channels(
     scale = {'temperature': 1.0, 'humidity': 1.0, 'co2': cfg.co2_scale}
     prev = prev_channel_cmds or {}
 
+    fixed = dict(fixed_cmds or {})
+
     def cost(uvec) -> float:
         cmds = {c: 0.0 for c in CHANNELS}
+        cmds.update(fixed)
         for c, u in zip(avail, uvec):
             cmds[c] = float(u)
         traj = predict_horizon(state[0], state[1], state[2],

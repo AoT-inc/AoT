@@ -613,13 +613,22 @@ class CycleMixin:
                         _gbp.get('n_updates'), _gbp.get('rmse_T'))
             except Exception:
                 gb_params = None
+            cap = {}
+            for p in getattr(self, '_profiles', []):
+                if p.capacity_meta:
+                    cap = p.capacity_meta
+                    break
             if gb_params is None:
-                cap = {}
-                for p in getattr(self, '_profiles', []):
-                    if p.capacity_meta:
-                        cap = p.capacity_meta
-                        break
                 gb_params = GreyboxParams.from_capacity_meta(cap)
+            # 시설이 아는 값은 학습값이 아니라 시설에서 매번 채운다(v2) — 저장된
+            # 옛 파라미터에는 없고, 시설을 고치면 따라가야 한다.
+            try:
+                vol = float(cap.get('volume_m3') or 0.0)
+                if vol > 0.0:
+                    gb_params.volume_m3 = vol
+                gb_params.tau_shade = float(self._facility_shade_transmittance())
+            except Exception:
+                pass
             self._greybox_shadow_inst = GreyboxShadow(params=gb_params)
         return self._greybox_shadow_inst
 
@@ -2788,6 +2797,8 @@ class CycleMixin:
             'greybox_kpi_mae_T':  round(mae_t, 3),
             'greybox_kpi_mae_RH': round(mae_rh, 3),
             'greybox_kpi_ts':     now,
+            'greybox_kpi_model_version': int(getattr(
+                self._greybox_shadow.params, 'model_version', 1) or 1),
         })
 
     # ── Greybox calibration-state persistence (FunctionRuntimeState JSON) ──────
@@ -2878,6 +2889,17 @@ class CycleMixin:
         if not kpi_ok:
             return False
         params = self._greybox_shadow.params
+        # 물리식이 바뀌면(모델 판) 옛 판의 KPI·학습은 새 모델을 보증하지 않는다 —
+        # 영속된 통과 기록도 같은 판이어야 인정한다(`_handle_greybox_kpi_passed`).
+        from aot.functions.utils.env_control.greybox.params import GreyboxParams as _GP
+        cur_v = _GP().model_version
+        if int(getattr(params, 'model_version', 1) or 1) != cur_v:
+            return False
+        if cache['kpi'] and not self._greybox_shadow.kpi_passed():
+            persisted_v = int((self._read_calibration_state() or {}).get(
+                'greybox_kpi_model_version') or 1)
+            if persisted_v != cur_v:
+                return False
         if getattr(params, 'n_updates', 0) < 1:
             return False
         if getattr(params, 'rmse_T', 999.0) > 1.5 or getattr(params, 'rmse_RH', 999.0) > 8.0:
@@ -3027,6 +3049,7 @@ class CycleMixin:
             state=state, targets=targets, profiles=modeled, ext_seq=ext_seq,
             params=self._greybox_shadow.params, prev_channel_cmds=prev_ch,
             cycle_sec=cycle_sec, config=cfg,
+            fixed_cmds=({'shade': prev_ch['shade']} if 'shade' in prev_ch else None),
         )
         if res.method == 'noop':
             return None

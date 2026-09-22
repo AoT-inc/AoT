@@ -8,7 +8,7 @@ prior: facility_integration.capacity_meta 기반 초기값.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Optional
 
 
 @dataclass
@@ -50,6 +50,20 @@ class GreyboxParams:
     K_RH_vent:    float = 0.05
     # K_CO2_inj: CO₂ 주입 계수 [ppm/s at 100%]
     K_CO2_inj:    float = 2.0
+    # ── 모델 v2 (2026-09-22, 계획서 env-mpc-reinforcement A 단계) ──────────
+    # k_transp: 증산 [kg/s per kPa VPD] at 일사 기준(500 W/m²). 밤에는 기저 15 %.
+    #   1,000 m² 잎 면적 · 0.2 L/m²/h 규모 ≈ 5.6e-5 kg/s — kPa 당으로 약 3e-5.
+    k_transp:     float = 3.0e-5
+    # k_photo: 광합성 CO₂ 흡수 [ppm/s] at 일사 500 W/m²·CO₂ 포화. 온실 약 0.05.
+    k_photo:      float = 0.05
+    # ⚠ 아래 둘은 **학습하지 않는다** — 시설이 안다.
+    # volume_m3: 공기 체적 [m³]. 수분·CO₂ 수지의 분모. None 이면 열용량에서 어림한다
+    #   (구조체·토양 열용량이 섞여 과대 — 알면 반드시 채운다).
+    volume_m3:    Optional[float] = None
+    # tau_shade: 차광막을 다 쳤을 때 일사 투과율. 시설 값이 정본(_facility_shade_transmittance).
+    tau_shade:    float = 0.5
+    # model_version: 물리식 판. 식이 바뀌면 옛 판으로 학습한 값·KPI 는 다시 검증한다.
+    model_version: int = 2
 
     # ── 수렴 상태 ─────────────────────────────────────────────────────────────
     n_updates: int = 0
@@ -68,6 +82,8 @@ class GreyboxParams:
         'tau_T':        (30.0,    7200.0),
         'K_RH_vent':    (0.001,   2.0),
         'K_CO2_inj':    (0.01,    50.0),
+        'k_transp':     (0.0,     1.0e-2),
+        'k_photo':      (0.0,     2.0),
     })
 
     def clamp(self):
@@ -96,6 +112,10 @@ class GreyboxParams:
         if volume > 0:
             # tau_T = ρVcp / UA_eff  (공기: ρcp≈1200 J/m³K)
             p.tau_T = max(60.0, 1200.0 * volume / max(p.UA_eff, 1.0))
+            p.volume_m3 = volume
+        tau_sh = meta.get('shade_transmittance')
+        if tau_sh is not None and 0.0 < float(tau_sh) <= 1.0:
+            p.tau_shade = float(tau_sh)
 
         vent_m2 = float(meta.get('vent_open_m2') or 0.0)
         if vent_m2 > 0:
@@ -104,17 +124,25 @@ class GreyboxParams:
         return p
 
     def to_dict(self) -> dict:
-        keys = ['UA_eff', 'alpha_sol', 'Q_heat', 'Q_cool', 'm_vent_coef',
-                'm_fog_evap', 'Q_plant_base', 'tau_T', 'K_RH_vent', 'K_CO2_inj',
-                'n_updates', 'rmse_T', 'rmse_RH']
-        return {k: getattr(self, k) for k in keys}
+        return {k: getattr(self, k) for k in _PERSIST_KEYS}
 
     @classmethod
     def from_dict(cls, d: dict) -> 'GreyboxParams':
         p = cls()
-        for k in ['UA_eff', 'alpha_sol', 'Q_heat', 'Q_cool', 'm_vent_coef',
-                  'm_fog_evap', 'Q_plant_base', 'tau_T', 'K_RH_vent', 'K_CO2_inj',
-                  'n_updates', 'rmse_T', 'rmse_RH']:
-            if k in d:
+        for k in _PERSIST_KEYS:
+            if k in d and k != 'model_version':
                 setattr(p, k, d[k])
+        # 옛 판(버전 없음 = 1)으로 학습한 값: 열 계수는 물리적으로 여전히 쓸 만해
+        # 초기값으로 남기되, 학습 횟수·오차는 새 식에서 다시 잰다 — 옛 오차로
+        # 새 모델을 통과시키지 않는다(`_greybox_control_gate_ok`).
+        if int(d.get('model_version') or 1) != p.model_version:
+            p.n_updates = 0
+            p.rmse_T = 999.0
+            p.rmse_RH = 999.0
         return p
+
+
+_PERSIST_KEYS = ('UA_eff', 'alpha_sol', 'Q_heat', 'Q_cool', 'm_vent_coef',
+                 'm_fog_evap', 'Q_plant_base', 'tau_T', 'K_RH_vent', 'K_CO2_inj',
+                 'k_transp', 'k_photo', 'volume_m3', 'tau_shade', 'model_version',
+                 'n_updates', 'rmse_T', 'rmse_RH')

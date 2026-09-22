@@ -82,6 +82,12 @@ def aggregate_cmds_by_kind(
     """
     result = {ch: 0.0 for ch in CHANNELS}
     kind_by_aid = kind_by_aid or {}
+    # 차광막은 최적화 채널이 아니라 모델 **입력**이다(v2 — 일사 유입을 깎는다).
+    # 개도(100 = 걷힘)의 평균. 차광막이 없으면 키를 두지 않는다(모델은 걷힘으로 본다).
+    shades = [float(pct or 0.0) for aid, pct in cmds_pct.items()
+              if kind_by_aid.get(aid) == 'shade']
+    if shades:
+        result['shade'] = sum(shades) / len(shades)
     for aid, pct in cmds_pct.items():
         kind = kind_by_aid.get(aid)
         ch = channel_for_kind(kind)
