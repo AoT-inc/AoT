@@ -30440,3 +30440,7 @@ msgstr "Maks viste element"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Viser kor mange skriveførespurnader frå ekstern AI som ventar på godkjenning. Klikk på talet for å opne lista og godkjenne, avvise eller redigere og godkjenne dei ein om gongen, eller vel fleire og godkjenn/avvis dei samla. Ved godkjenning køyrer førespurnaden med ein gong med nøyaktig dei verdiane som er viste."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Utan anlegg"

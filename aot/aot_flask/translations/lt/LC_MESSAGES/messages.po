@@ -30567,3 +30567,7 @@ msgstr "Maks. rodomų elementų"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Rodo, kiek išorinės DI rašymo užklausų laukia patvirtinimo. Spustelėkite skaičių, kad atidarytumėte sąrašą ir po vieną patvirtintumėte, atmestumėte arba redaguotumėte ir patvirtintumėte užklausas, arba pasirinkite kelias ir patvirtinkite / atmeskite jas masiškai. Patvirtinus užklausa iškart vykdoma tiksliai su rodomomis reikšmėmis."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Be vietos"

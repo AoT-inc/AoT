@@ -30938,3 +30938,7 @@ msgstr "Nombre maximal affiché"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Affiche le nombre de demandes d'écriture d'IA externes en attente d'approbation. Cliquez sur ce nombre pour ouvrir la liste et approuver, rejeter ou modifier puis approuver les demandes une par une, ou en sélectionner plusieurs pour les approuver ou les rejeter en lot. L'approbation exécute immédiatement la demande avec exactement les valeurs affichées."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Sans site"

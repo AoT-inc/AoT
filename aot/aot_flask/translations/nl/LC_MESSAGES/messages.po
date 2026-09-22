@@ -30749,3 +30749,7 @@ msgstr "Max. aantal getoonde items"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Toont hoeveel schrijfverzoeken van externe AI wachten op goedkeuring. Klik op het aantal om de lijst te openen en de verzoeken één voor één goed te keuren, af te wijzen of eerst te bewerken en dan goed te keuren, of selecteer er meerdere en keur ze in bulk goed of wijs ze af. Bij goedkeuring wordt het verzoek direct uitgevoerd met precies de getoonde waarden."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Zonder locatie"

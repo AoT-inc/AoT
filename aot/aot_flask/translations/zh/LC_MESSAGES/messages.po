@@ -25273,11 +25273,11 @@ msgstr "在地图上显示区域多边形。"
 
 #: widgets/AoT_map.py:910
 msgid "Plot Shape"
-msgstr ""
+msgstr "地块图形"
 
 #: widgets/AoT_map.py:912
 msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
-msgstr ""
+msgstr "在地图上显示地块（什么在哪里）。放大后显示地块标签。"
 
 #: widgets/AoT_map.py:921
 msgid "Facility Shape"
@@ -29451,3 +29451,7 @@ msgstr "最大显示数量"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "显示等待审批的外部 AI 写入请求数量。点击数量可打开列表，逐条批准、拒绝或修改后批准，也可选择多条进行批量批准/拒绝。批准后将按所显示的值立即执行请求。"
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "未分配场地"

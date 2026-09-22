@@ -26048,11 +26048,11 @@ msgstr "Mostra polígonos de zonas no mapa."
 
 #: widgets/AoT_map.py:910
 msgid "Plot Shape"
-msgstr ""
+msgstr "Forma do talhão"
 
 #: widgets/AoT_map.py:912
 msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
-msgstr ""
+msgstr "Mostra os talhões (o que está onde) no mapa. Os rótulos dos talhões aparecem ao aproximar."
 
 #: widgets/AoT_map.py:921
 msgid "Facility Shape"
@@ -30269,3 +30269,7 @@ msgstr "Máximo de itens exibidos"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Mostra quantas solicitações de gravação de IA externa aguardam aprovação. Clique na contagem para abrir a lista e aprovar, rejeitar ou editar e aprovar uma a uma, ou selecione várias e aprove/rejeite em lote. Ao aprovar, a solicitação é executada imediatamente com exatamente os valores exibidos."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Sem local atribuído"

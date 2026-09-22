@@ -30467,3 +30467,7 @@ msgstr "Макс. број приказаних ставки"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Приказује колико захтева за упис спољног AI-ја чека одобрење. Кликните на број да отворите листу и одобрите, одбијте или уредите па одобрите захтеве један по један, или изаберите више њих и одобрите/одбијте групно. Одобравање одмах извршава захтев са тачно приказаним вредностима."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Без локације"

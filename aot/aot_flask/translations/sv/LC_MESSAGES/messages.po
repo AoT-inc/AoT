@@ -30439,3 +30439,7 @@ msgstr "Max antal poster som visas"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Visar hur många skrivförfrågningar från extern AI som väntar på godkännande. Klicka på antalet för att öppna listan och godkänna, avvisa eller redigera och sedan godkänna dem en i taget, eller markera flera och godkänna/avvisa dem samlat. Ett godkännande kör förfrågan direkt med exakt de värden som visas."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Utan plats"

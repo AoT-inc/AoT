@@ -30751,3 +30751,7 @@ msgstr "Megjelenített elemek max. száma"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Megmutatja, hány külső AI-írási kérés vár jóváhagyásra. A számra kattintva megnyílik a lista, ahol egyenként jóváhagyhatja, elutasíthatja vagy szerkesztés után jóváhagyhatja őket, vagy több kérést kijelölve tömegesen jóváhagyhatja/elutasíthatja azokat. A jóváhagyás azonnal végrehajtja a kérést, pontosan a megjelenített értékekkel."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Telephely nélkül"

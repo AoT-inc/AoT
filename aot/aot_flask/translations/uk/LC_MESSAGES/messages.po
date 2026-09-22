@@ -30597,3 +30597,7 @@ msgstr "Макс. елементів для показу"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Показує, скільки запитів на запис від зовнішнього ШІ очікують затвердження. Клацніть на кількість, щоб відкрити список і затверджувати, відхиляти або змінювати та затверджувати запити по одному, або виберіть кілька й затвердити чи відхилити їх пакетом. Затвердження виконує запит негайно саме з тими значеннями, що показано."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Без об'єкта"

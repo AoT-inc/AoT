@@ -30523,3 +30523,7 @@ msgstr "Gösterilen maks. öğe"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Onay bekleyen harici AI yazma isteklerinin sayısını gösterir. Listeyi açmak için sayıya tıklayın; istekleri tek tek onaylayabilir, reddedebilir veya düzenleyip onaylayabilir ya da birkaçını seçip toplu onaylayabilir/reddedebilirsiniz. Onaylamak, isteği tam olarak gösterilen değerlerle hemen çalıştırır."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Alan atanmamış"

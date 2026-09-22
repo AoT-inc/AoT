@@ -30414,3 +30414,7 @@ msgstr "अधिकतम दिखाए जाने वाले आइट�
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "बाहरी AI के कितने राइट अनुरोध स्वीकृति की प्रतीक्षा में हैं, यह दिखाता है। सूची खोलने के लिए संख्या पर क्लिक करें और उन्हें एक-एक करके स्वीकृत करें, अस्वीकार करें या संपादित करके स्वीकृत करें, या कई चुनकर एक साथ स्वीकृत/अस्वीकार करें। स्वीकृत करने पर अनुरोध ठीक वही मान लेकर तुरंत चलता है जो दिखाए गए हैं।"
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "साइट निर्धारित नहीं"

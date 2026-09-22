@@ -25486,7 +25486,7 @@ msgstr "区画の図形"
 
 #: widgets/AoT_map.py:912
 msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
-msgstr ""
+msgstr "地図に区画（どこに何があるか）を表示します。区画のラベルは拡大すると表示されます。"
 
 #: widgets/AoT_map.py:921
 msgid "Facility Shape"
@@ -26748,7 +26748,7 @@ msgstr "このコーディネーターを一棟に限定します。空欄なら
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:423
 msgid "Time Control"
-msgstr ""
+msgstr "時間制御"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:430
 msgid "Enable Time Window"
@@ -31614,3 +31614,7 @@ msgstr "最大表示件数"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "承認待ちの外部AIからの書き込みリクエストの件数を表示します。件数をクリックすると一覧が開き、1件ずつ承認・却下・編集して承認できるほか、複数を選択してまとめて承認・却下することもできます。承認すると、表示された値のままリクエストがすぐに実行されます。"
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "サイト未割当"

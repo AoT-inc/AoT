@@ -30622,3 +30622,7 @@ msgstr "Số mục hiển thị tối đa"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Hiển thị số yêu cầu ghi từ AI bên ngoài đang chờ phê duyệt. Nhấp vào con số để mở danh sách rồi phê duyệt, từ chối hoặc chỉnh sửa rồi phê duyệt từng yêu cầu một, hoặc chọn nhiều yêu cầu để phê duyệt/từ chối hàng loạt. Phê duyệt sẽ chạy yêu cầu ngay lập tức với đúng các giá trị đang hiển thị."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Chưa gán địa điểm"

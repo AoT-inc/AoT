@@ -26026,11 +26026,11 @@ msgstr "Tampilkan poligon Zona di peta."
 
 #: widgets/AoT_map.py:910
 msgid "Plot Shape"
-msgstr ""
+msgstr "Bentuk petak"
 
 #: widgets/AoT_map.py:912
 msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
-msgstr ""
+msgstr "Tampilkan petak (apa ada di mana) di peta. Label petak muncul saat diperbesar."
 
 #: widgets/AoT_map.py:921
 msgid "Facility Shape"
@@ -30189,3 +30189,7 @@ msgstr "Jumlah item maksimum yang ditampilkan"
 #: widgets/widget_mcp_review.py
 msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
 msgstr "Menampilkan jumlah permintaan tulis dari AI eksternal yang menunggu persetujuan. Klik jumlahnya untuk membuka daftar, lalu setujui, tolak, atau edit lalu setujui satu per satu, atau pilih beberapa dan setujui/tolak sekaligus. Menyetujui akan langsung menjalankan permintaan dengan nilai persis seperti yang ditampilkan."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "Tanpa situs"

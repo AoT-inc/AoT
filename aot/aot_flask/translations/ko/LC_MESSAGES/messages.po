@@ -25820,7 +25820,7 @@ msgstr "구획 도형"
 
 #: widgets/AoT_map.py:912
 msgid "Show plots (what is where) on the map. Plot labels appear when zoomed in."
-msgstr ""
+msgstr "지도에 구획(무엇이 어디에 있는지)을 표시합니다. 구획 라벨은 확대하면 나타납니다."
 
 #: widgets/AoT_map.py:921
 msgid "Facility Shape"
@@ -27093,7 +27093,7 @@ msgstr "이 코디네이터를 한 동으로 한정합니다. 비우면 시설 �
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:423
 msgid "Time Control"
-msgstr ""
+msgstr "시간 제어"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:430
 msgid "Enable Time Window"
@@ -32067,3 +32067,7 @@ msgstr "자체 범위가 없는 행(CO2, 토양 수분, 이슬점)을 최근 추
 #: widgets/AoT_plot.py
 msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
 msgstr "다음 단계까지 이 단계가 적산온도 기준으로 얼마나 진행되었는지 보여 줍니다. 프로그램이 GDD로 단계를 넘길 때만 표시됩니다. 식재 이후의 누적 합계는 대신 환경 카드의 한 행으로 표시되며 그 카드의 설정을 따릅니다."
+
+#: utils/calendar_event_providers.py:527
+msgid "Unassigned site"
+msgstr "대지 미배정"
