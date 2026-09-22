@@ -558,7 +558,7 @@ growers.
 | Field | Default | Description |
 |-------|---------|-------------|
 | Enable Forecast Feedforward | Off | Uses the short-term weather forecast to proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. |
-| Forecast Lookahead (hours) | 3 | How far ahead to check. Steps: Short (1) / Standard (3) / Long (6). Longer gives earlier warning but may over-correct. When the facility has its own forecast source linked, that source's forecast is used as is and this value is not used. |
+| Forecast Lookahead (hours) | 3 | How far ahead to check. Steps: Short (1) / Standard (3) / Long (6). Longer gives earlier warning but may over-correct. Hours are counted **from now**: if the forecast file is updated late, forecasts for hours that have already passed are not used, and if the file has no upcoming hours no correction is made. When the facility has its own forecast source linked, that source's forecast is used as is and this value is not used. |
 
 > **Debug logging is no longer a separate option.** It duplicated the framework's own
 > debug switch, and almost everything it guarded was written at DEBUG level, so on its

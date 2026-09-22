@@ -67,11 +67,10 @@ def upcoming(hours=_DEFAULT_WINDOW_H):
     종류마다 하나만 내는 이유: "3시간 뒤 서리, 4시간 뒤 서리, 5시간 뒤 서리" 는
     같은 사실을 세 번 말하는 것이고, 사람이 할 일은 하나다.
     """
-    from datetime import datetime
-
     out = {'stale': False, 'age_hours': None, 'items': []}
     try:
-        from aot.functions.utils.env_control.forecast_feedforward import _load_forecast
+        from aot.functions.utils.env_control.forecast_feedforward import (
+            _load_forecast, forecast_epoch, forecast_rows_ahead)
         data = _load_forecast() or {}
     except Exception as exc:                                # noqa: BLE001
         logger.debug('[hazards] 예보 로드 실패: %s', exc)
@@ -80,26 +79,21 @@ def upcoming(hours=_DEFAULT_WINDOW_H):
     if not forecasts:
         return out
 
-    pub = data.get('pub_dt')
-    if pub:
-        try:
-            age = (datetime.now()
-                   - datetime.strptime(str(pub), '%Y%m%d%H%M')).total_seconds() / 3600.0
-            out['age_hours'] = round(age, 1)
-            if age > _STALE_HOURS:
-                out['stale'] = True
-                return out
-        except ValueError:
-            pass
+    # 발표 시각은 파일의 벽시계(`tz`, 없으면 KST)다. 예전에는 naive 로 두고
+    # `datetime.now()` 와 뺐는데, 컨테이너 시계는 UTC 라 9시간 어긋났다.
+    pub = forecast_epoch(data.get('pub_dt'), data.get('tz'))
+    if pub is not None:
+        age = (time.time() - pub) / 3600.0
+        out['age_hours'] = round(age, 1)
+        if age > _STALE_HOURS:
+            out['stale'] = True
+            return out
 
     best = {}
-    for key, row in forecasts.items():
-        try:
-            off = int(key)
-        except (TypeError, ValueError):
-            continue
-        if off < 0 or off > hours or not isinstance(row, dict):
-            continue
+    # 몇 시간 뒤인지는 파일을 쓴 시각 기준으로 푼다(`forecast_rows_ahead`) — 키를
+    # 그대로 "몇 시간 뒤" 로 읽으면 늦게 갱신된 파일에서 지난 시간대를 앞날로 본다.
+    for ahead, row in forecast_rows_ahead(data, hours):
+        off = max(0, int(round(ahead)))
         for kind, severity, field, limit, how in _RULES:
             val = _num(row.get(field))
             if val is None:

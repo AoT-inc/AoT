@@ -854,6 +854,47 @@ class ProfileLoaderMixin:
                     'actuator_paired 시설 소속 판정 실패 — 필터 없이 진행',
                     exc_info=True)
 
+        # ── 고아 장치(다른 시설 지도에 마커만 남은 장치) 제외 ───────────────────
+        # 위 판정은 "지금 실제로 제어 중인" 장치만 잡는다. 하지만 액추에이터
+        # 역할 바인딩이 끊긴 뒤에도 지도 마커(GeoShape)는 그대로 남는 장치가
+        # 있다 — 실측 2026-09-22: `側面窓 左/右` 는 7753aa42(イチゴ) 시설
+        # 지도에 마커만 남았고 실제 제어 바인딩은 2026-08-28에 끝나 있어,
+        # 위 판정으로는 못 잡고 임자 없는 장치로 보여 아무 시설 전체-스코프
+        # 코디네이터에나 계속 자동 등록됐다(bf1874fb 도 매 사이클 실제
+        # dispatch).
+        #
+        # 지도 위 정확한 시설(맵 하나에 시설이 여럿 겹칠 수 있다 — 예:
+        # "Japan" 맵에 4개)까지는 가리지 않는다 — GeoShape 에 그 계층을 풀
+        # 방법이 없다(마커 shape 는 parent_id 가 비어 있다). 대신 **내 시설의
+        # 지도(geo_id)와 다른 지도**에 마커가 있는 장치만 걸러낸다 — "정확히
+        # 누구 것인가"는 몰라도 "내 지도 위 장치가 아니다"는 확실하기 때문.
+        # 지도를 아예 안 쓰는 설치(마커가 전혀 없는 장치)는 기존 동작대로
+        # 그대로 자동 등록된다.
+        if paired_outputs:
+            try:
+                from aot.aot_flask.geo.device_binding import shapes_for_devices
+                from aot.databases.models import GeoFacility
+                my_facility = (GeoFacility.query.filter_by(
+                    unique_id=facility_uuid).first() if facility_uuid else None)
+                my_geo_id = my_facility.geo_id if my_facility else None
+                if my_geo_id:
+                    remaining = [o.unique_id for o in paired_outputs
+                                if o.unique_id not in foreign_paired_ids]
+                    shapes_by_dev = shapes_for_devices(remaining)
+                    orphaned = {
+                        dev_id for dev_id, shapes in shapes_by_dev.items()
+                        if shapes and my_geo_id not in {s.geo_id for s in shapes}}
+                    if orphaned:
+                        self.logger.info(
+                            '_reload_profiles: 다른 지도에 마커만 남은 '
+                            'actuator_paired 출력 %d개 자동 등록에서 제외',
+                            len(orphaned))
+                        foreign_paired_ids |= orphaned
+            except Exception:
+                self.logger.debug(
+                    'actuator_paired 지도 배치 판정 실패 — 필터 없이 진행',
+                    exc_info=True)
+
         for out in paired_outputs:
             out_uuid = out.unique_id
             if out_uuid in by_id:

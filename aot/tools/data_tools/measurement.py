@@ -1148,21 +1148,17 @@ class MeasurementToolsMixin:
                 except ValueError:
                     published_at = str(pub_raw)
 
-            # 키는 현재시각 기준 시간 오프셋(문자열). 음수는 과거이므로 버린다.
+            # 키는 **파일을 쓴 시각** 기준 시간 오프셋이다 — 지금 기준이 아니다.
+            # `forecast_rows_ahead` 가 지금부터 몇 시간 뒤인지로 바꿔 준다.
+            from aot.functions.utils.env_control.forecast_feedforward import (
+                forecast_rows_ahead)
             try:
                 limit = max(1, int(hours))
             except (TypeError, ValueError):
                 limit = 24
 
-            future = []
-            for k, v in forecasts.items():
-                try:
-                    off = int(k)
-                except (TypeError, ValueError):
-                    continue
-                if 0 <= off <= limit:
-                    future.append({"hour_offset": off, **(v if isinstance(v, dict) else {})})
-            future.sort(key=lambda x: x["hour_offset"])
+            future = [{"hour_offset": max(0, int(round(ahead))), **row}
+                      for ahead, row in forecast_rows_ahead(data, limit)]
 
             # 하루를 넘긴 것은 "낡은 예보" 가 아니라 **수집이 멈춘 것**이다.
             # 그런데도 내용을 실어 보내면 받는 쪽은 그것을 예보로 다루고, 매번

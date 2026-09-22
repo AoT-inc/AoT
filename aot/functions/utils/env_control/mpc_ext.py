@@ -33,8 +33,9 @@ F 는 예보 곡선(시간별 점을 직선으로 잇는다). 예보 값 자체�
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Callable, List, Optional, Tuple
+
+from .forecast_feedforward import forecast_epoch
 
 STALE_H = 6.0          # 발표 뒤 이 시간이 지난 예보는 쓰지 않는다(AI 도구와 같은 기준)
 K_MIN_CLEAR = 50.0     # W/m² — 맑은 날 일사가 이보다 작으면 맑음 정도를 재지 않는다
@@ -52,8 +53,8 @@ def kma_curve(data: dict, now_epoch: float) -> Optional[Curve]:
     if not data:
         return None
     fc = data.get('forecasts') or {}
-    anchor = _parse_local(data.get('now'), data.get('tz'))
-    pub = _parse_local(data.get('pub_dt'), data.get('tz'))
+    anchor = forecast_epoch(data.get('now'), data.get('tz'))
+    pub = forecast_epoch(data.get('pub_dt'), data.get('tz'))
     if not fc or anchor is None:
         return None
     if pub is not None and (now_epoch - pub) / 3600.0 > STALE_H:
@@ -77,19 +78,6 @@ def kma_curve(data: dict, now_epoch: float) -> Optional[Curve]:
 
 def _num(v) -> Optional[float]:
     return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
-
-
-def _parse_local(stamp, tz) -> Optional[float]:
-    """'YYYYmmddHHMM' 벽시계 + 시간대 이름 → epoch. 시간대가 없으면 기상청(KST)."""
-    if not stamp:
-        return None
-    try:
-        import pytz
-        naive = datetime.strptime(str(stamp), '%Y%m%d%H%M')
-        zone = pytz.timezone(str(tz) if tz else 'Asia/Seoul')
-        return zone.localize(naive).timestamp()
-    except Exception:
-        return None
 
 
 def _interp(curve: Curve, t: float, idx: int) -> Optional[float]:

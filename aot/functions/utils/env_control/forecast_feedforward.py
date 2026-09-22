@@ -83,18 +83,57 @@ def _load_forecast(forecast_path: Optional[str] = None) -> dict:
         return {}
 
 
-def _extract_window(forecasts: dict, lookahead_h: float) -> list[dict]:
-    """현재(offset=0) ~ lookahead_h 시간 범위의 예보 항목 리스트를 반환."""
-    result = []
-    max_offset = int(lookahead_h)
-    for offset_str, data in forecasts.items():
+def forecast_epoch(stamp, tz=None) -> Optional[float]:
+    """예보 파일의 'YYYYmmddHHMM' 벽시계 + 시간대 이름 → epoch. 시간대가 없으면
+    기상청(KST). 읽을 수 없으면 None."""
+    if not stamp:
+        return None
+    try:
+        import pytz
+        from datetime import datetime
+        naive = datetime.strptime(str(stamp), '%Y%m%d%H%M')
+        zone = pytz.timezone(str(tz) if tz else 'Asia/Seoul')
+        return zone.localize(naive).timestamp()
+    except Exception:
+        return None
+
+
+def forecast_rows_ahead(data: dict, hours: float,
+                        now_epoch: Optional[float] = None) -> list:
+    """지금부터 `hours` 시간 안의 예보 → [(몇 시간 뒤, 항목)], 이른 순.
+
+    ⚠ 파일의 오프셋 키는 **파일을 쓴 시각(`now`, 벽시계 `tz`) 기준**이다 — 지금 기준이
+      아니다(2026-09-22 수정). 예전에는 오프셋을 그대로 "몇 시간 뒤" 로 읽어서, 파일이
+      늦게 갱신되면 이미 지난 시간대를 앞으로 올 예보로 봤다. 발표 215일 지난 파일도
+      "0~3시간 뒤" 가 채워져 있으니 판정이 계속 돌았다.
+
+    지금 시각이 든 한 시간 칸(몇 시간 뒤가 −1 보다 큰 것)은 포함한다 — 매시 정각 값이
+    그 시간을 대표한다. 기준 시각(`now`)이 없는 파일은 언제 것인지 모르므로 빈 목록이다.
+    """
+    fc = (data or {}).get('forecasts') or {}
+    anchor = forecast_epoch((data or {}).get('now'), (data or {}).get('tz'))
+    if not fc or anchor is None:
+        return []
+    now = time.time() if now_epoch is None else float(now_epoch)
+    out = []
+    for key, row in fc.items():
         try:
-            offset = int(offset_str)
-        except ValueError:
+            off = int(key)
+        except (TypeError, ValueError):
             continue
-        if 0 <= offset <= max_offset and data:
-            result.append(data)
-    return result
+        if not row or not isinstance(row, dict):
+            continue
+        ahead = (anchor + off * 3600.0 - now) / 3600.0
+        if -1.0 < ahead <= float(hours):
+            out.append((ahead, row))
+    out.sort(key=lambda r: r[0])
+    return out
+
+
+def _extract_window(data: dict, lookahead_h: float,
+                    now_epoch: Optional[float] = None) -> list[dict]:
+    """지금 ~ lookahead_h 시간 안의 예보 항목 리스트(`forecast_rows_ahead`)."""
+    return [row for _ahead, row in forecast_rows_ahead(data, lookahead_h, now_epoch)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -112,6 +151,7 @@ def build_feedforward_signal(
     wind_threshold: float = 8.0,
     rain_pop_threshold: int = 50,
     forecast_path: Optional[str] = None,
+    now_epoch: Optional[float] = None,
 ) -> FeedforwardSignal:
     """
     현재 내부 T/RH와 예보를 비교해 FeedforwardSignal을 반환한다.
@@ -139,7 +179,7 @@ def build_feedforward_signal(
     if not forecasts:
         return sig
 
-    window = _extract_window(forecasts, lookahead_h)
+    window = _extract_window(data, lookahead_h, now_epoch)
     if not window:
         return sig
 
