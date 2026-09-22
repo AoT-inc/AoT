@@ -1203,7 +1203,7 @@ class CycleMixin:
             return          # 실제 제어가 MPC 를 시도한다 — 그림자가 필요 없다
         try:
             self._last_mpc_result = None
-            out = self._run_mpc(situation, '')
+            out = self._run_mpc(situation, '', shadow=True)
             res = getattr(self, '_last_mpc_result', None)
             if out is None or res is None:
                 self._last_mpc_shadow = {'method': 'noop'}
@@ -1216,6 +1216,8 @@ class CycleMixin:
                 'method': res.method, 'converged': bool(res.converged),
                 'cost': round(float(res.cost), 4),
                 'channels': {k: round(v, 1) for k, v in res.channel_cmds.items()},
+                # PI 와 같은 판정으로 막힌 채널(D 단계) — {채널: 상한}
+                'capped': dict(getattr(self, '_last_mpc_caps', None) or {}),
                 'end': (None if end is None else
                         {'T': round(end[0], 2), 'RH': round(end[1], 1)}),
                 'params_n_updates': int(getattr(self._greybox_shadow.params,
@@ -3117,19 +3119,23 @@ class CycleMixin:
 
     def _run_mpc(
             self, situation: SituationReport,
-            uid: str) -> 'tuple[dict, CoordinatorState] | None':
+            uid: str, shadow: bool = False) -> 'tuple[dict, CoordinatorState] | None':
         """greybox MPC 로 modeled 채널을 최적화하고, 미모델 actuator 는 레거시
-        coordinate() 로 처리해 병합한다. 적용 불가 시 None(상위에서 PI 폴백)."""
+        coordinate() 로 처리해 병합한다. 적용 불가 시 None(상위에서 PI 폴백).
+
+        `shadow=True` 는 그림자 계산이다 — 파킹 판정의 경고 로그를 남기지 않는다
+        (같은 사이클에 PI 가 같은 판정을 이미 남긴다)."""
         from aot.functions.utils.env_control.greybox import mpc as gbmpc
         from aot.functions.utils.env_control.greybox.channels import (
             channel_for_kind, aggregate_cmds_by_kind,
         )
         from aot.functions.utils.env_control.coordinator import (
             finalize_command, ActuatorCommand, CoordinatorState,
-            limit_vent_for_unknown_outdoor,
+            limit_vent_for_unknown_outdoor, decide_parking,
         )
         from aot.functions.utils.env_control.log_channels import (
-            REASON_PRIMARY, REASON_MANUAL_OVERRIDE,
+            REASON_PRIMARY, REASON_MANUAL_OVERRIDE, REASON_NIGHT_PARKED,
+            REASON_OPPOSING_PARKED, REASON_NO_GRADIENT,
         )
 
         modeled   = [p for p in self._profiles if channel_for_kind(getattr(p, 'kind', None))]
@@ -3180,6 +3186,28 @@ class CycleMixin:
                      for c in prev_ch}
         self._mpc_prev_ch_seen = dict(prev_ch)
 
+        # ── 규칙 동등성(D 단계) — PI 와 **같은 판정**을 채널 상한으로 ─────────────
+        # 야간 파킹(결로 탈출 포함)·환기 무익·냉난방 연동·환기 우선·온도 축 반대편.
+        # 판정은 `decide_parking` 한 곳이다 — 따로 적으면 엔진을 바꿀 때 밤에 창이
+        # 열리고 안 열리고가 갈린다. 채널의 장치가 **전부** 파킹이면 그 채널 상한을
+        # safe_default 로 내린다(개구부·냉난방은 0). 일부만이면 채널은 두고 분배 뒤
+        # 그 장치만 자른다(아래 루프).
+        # 온도 상한 항(`_temperature_ceiling`)은 옮기지 않는다 — 그 상한은 유도 범위
+        # 위쪽(`T_ceiling`)이고, MPC 는 같은 값을 `soft` 범위 벌점으로 **예측 궤적
+        # 전체에** 이미 건다.
+        held_prev = float(getattr(self._coord_state, 'vent_first_held_s', 0.0) or 0.0)
+        pk = decide_parking(self._profiles, situation, ctx, cycle_sec,
+                            self._coord_state.prev_commands, held_prev,
+                            log=not shadow)
+        caps: dict = {}
+        by_ch: dict = {}
+        for p in modeled:
+            by_ch.setdefault(channel_for_kind(p.kind), []).append(p)
+        for ch, ps in by_ch.items():
+            if ps and all(p.actuator_id in pk.park_ids for p in ps):
+                caps[ch] = max(float(p.safe_default or 0.0) for p in ps)
+        self._last_mpc_caps = {k: round(v, 1) for k, v in caps.items()}
+
         res = gbmpc.optimize_channels(
             state=state, targets=targets, profiles=modeled, ext_seq=ext_seq,
             params=self._greybox_shadow.params, prev_channel_cmds=prev_ch,
@@ -3188,6 +3216,7 @@ class CycleMixin:
             soft_bounds=soft,
             channel_kw=ch_kw,
             prev_move=prev_move,
+            channel_upper=caps or None,
         )
         self._last_mpc_result = res
         if res.method == 'noop':
@@ -3204,12 +3233,22 @@ class CycleMixin:
                 continue
             ap = apertures.get(p.actuator_id, 0.0)
             prev = self._coord_state.prev_commands.get(p.actuator_id, 0.0)
+            # 파킹된 장치는 safe_default 를 넘지 않는다 — 사유는 PI 와 같은 말로.
+            parked_reason = None
+            if p.actuator_id in pk.park_ids:
+                ap = min(ap, float(p.safe_default or 0.0))
+                parked_reason = (REASON_NIGHT_PARKED if p.actuator_id in pk.night_parked
+                                 else REASON_OPPOSING_PARKED
+                                 if p.actuator_id in pk.opposing_ids
+                                 else REASON_NO_GRADIENT)
             # 실외를 모를 때의 개구부 규칙(제자리 · 더 열지 않음)은 PI 와 **같아야**
             # 한다 — 엔진에 따라 비 오는 날 창이 열리고 안 열리고가 갈리면 안 된다.
             # 이 경로에는 적분이 없어 명령만 자르면 된다(prev 가 곧 기억이다).
             ap, _held = limit_vent_for_unknown_outdoor(ctx, p, ap, prev)
             cmd = finalize_command(p, ap, prev, cycle_sec,
                                    reason=(_held if _held is not None
+                                           else parked_reason
+                                           if parked_reason is not None
                                            else REASON_PRIMARY),
                                    var_source='mpc')
             commands[p.actuator_id] = cmd
@@ -3225,8 +3264,10 @@ class CycleMixin:
                 # ⚠ 사이클을 넘어 쌓이는 값은 **여기서도 이어 받아야** 한다.
                 #   빠뜨리면 매 사이클 0 에서 다시 세어 환기 우선의 인내가
                 #   영영 차지 않는다(= 냉난방에 넘기는 경로가 죽는다).
-                vent_first_held_s=getattr(
-                    self._coord_state, 'vent_first_held_s', 0.0) or 0.0,
+                # 환기 우선의 인내는 위의 `decide_parking` 이 전체 장치로 센다.
+                # 여기(개구부·냉난방이 없는 미모델 장치만)서 세면 매 사이클 0 으로
+                # 풀린다 — 그래서 0 을 넘기고 결과도 받지 않는다.
+                vent_first_held_s=0.0,
                 deadzone_wrong_side=dict(getattr(
                     self._coord_state, 'deadzone_wrong_side', None) or {}))
             um_cmds, um_new = coordinate(
@@ -3240,9 +3281,7 @@ class CycleMixin:
 
         return commands, CoordinatorState(
             prev_commands=new_prev, integral=integral, active_vars=active_vars,
-            vent_first_held_s=(um_new.vent_first_held_s if unmodeled
-                               else (getattr(self._coord_state,
-                                             'vent_first_held_s', 0.0) or 0.0)),
+            vent_first_held_s=(held_prev if shadow else pk.vent_first_held_s),
             deadzone_wrong_side=(um_new.deadzone_wrong_side if unmodeled
                                  else dict(getattr(self._coord_state,
                                            'deadzone_wrong_side', None) or {})))

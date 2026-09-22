@@ -354,7 +354,7 @@ class TestContract:
         """차광막·CO2 주입기까지 파킹하면 다른 일이 멈춘다."""
         import inspect
         from aot.functions.utils.env_control import coordinator as c
-        src = inspect.getsource(c.coordinate)
+        src = inspect.getsource(c.decide_parking)   # PI·MPC 공용 판정(D 단계)
         i = src.index("ctx.get('vent_first'")
         assert "== 'hvac'" in src[i:i + 500]
 

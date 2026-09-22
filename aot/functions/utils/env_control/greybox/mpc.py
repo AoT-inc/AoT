@@ -10,7 +10,8 @@ CEM(교차엔트로피) 으로 폴백한다.
 목적함수:
   J(u) = Σ_k Σ_var w_var·((pred_k[var]-target_var)/scale_var)²
        + Σ_ch effort·(u_ch/100)² + Σ_ch slew_w·((u_ch-prev_ch)/100)²
-  s.t. 0 ≤ u_ch ≤ 100  (actuator 가 존재하는 채널만 자유, 나머지 0 고정)
+  s.t. 0 ≤ u_ch ≤ ub_ch (기본 100 — PI 의 파킹 판정이 낮춘다, `channel_upper`)
+       (actuator 가 존재하는 채널만 자유, 나머지 0 고정)
 
 산출 채널 명령은 distribute_to_actuators 로 해당 kind actuator 들에 분배되고,
 coordinator.finalize_command 로 slew·min-ON·operating-range 후처리된다.
@@ -90,6 +91,7 @@ def optimize_channels(
     soft_bounds: Optional[Dict[str, tuple]] = None,
     channel_kw: Optional[Dict[str, float]] = None,
     prev_move: Optional[Dict[str, float]] = None,
+    channel_upper: Optional[Dict[str, float]] = None,
 ) -> MPCResult:
     """`fixed_cmds`: 최적화하지 않지만 모델이 읽는 입력(예: 차광막 개도) — 지평 동안
     지금 값으로 둔다. 빠뜨리면 모델은 차광막이 걷힌 것으로 보고 일사를 과대 예측한다.
@@ -102,6 +104,10 @@ def optimize_channels(
 
     `channel_kw`: 채널별 에너지 무게(정격 kW × 종류별 단가) — 없으면 에너지 항 없음.
     `prev_move`: 채널별 직전 움직임(이번 사이클 전 명령 − 그 전 명령) — 반대 방향 벌점.
+    `channel_upper`: 채널별 상한 [%] — PI 와 같은 파킹 판정(`coordinator.decide_parking`)
+    을 옮긴 것(D 단계). 야간 파킹·환기 무익·냉난방 연동이면 vent 0, 환기 우선이나 온도
+    축 반대편이면 heat/cool 0. 벌점이 아니라 **경계**다 — 판정이 선 채널은 최적화가
+    이득을 봐도 넘지 못한다.
     """
     cfg = config or MPCConfig()
     avail = available_channels(profiles)
@@ -177,8 +183,10 @@ def optimize_channels(
             J += cfg.hc_weight * uh * uc * H
         return J
 
-    x0 = [float(prev.get(c, 0.0)) for c in avail]
-    bounds = [(0.0, 100.0)] * len(avail)
+    ub = channel_upper or {}
+    bounds = [(0.0, _clamp(float(ub.get(c, 100.0)), 0.0, 100.0)) for c in avail]
+    x0 = [_clamp(float(prev.get(c, 0.0)), lo, hi)
+          for c, (lo, hi) in zip(avail, bounds)]
 
     method = 'lbfgsb'
     try:
@@ -192,8 +200,8 @@ def optimize_channels(
         method = 'cem'
 
     cmds = {c: 0.0 for c in CHANNELS}
-    for c, u in zip(avail, xbest):
-        cmds[c] = _clamp(u, 0.0, 100.0)
+    for c, u, (lo, hi) in zip(avail, xbest, bounds):
+        cmds[c] = _clamp(u, lo, hi)
     end = None
     try:
         traj = predict_horizon(state[0], state[1], state[2], seq,

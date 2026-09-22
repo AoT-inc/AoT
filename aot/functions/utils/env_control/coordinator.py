@@ -312,6 +312,257 @@ CoordResult = Dict[str, ActuatorCommand]
 # Main entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
+@dataclass
+class ParkDecision:
+    """한 사이클의 파킹·제자리 판정 — PI(`coordinate`)와 MPC(`_run_mpc`)가 함께 읽는다.
+
+    두 엔진이 판정을 따로 하면 엔진을 바꿀 때 동작이 갈린다(MPC 보강 D 단계,
+    2026-09-22). 그래서 판정은 여기 한 곳이고, PI 는 파킹된 장치를 safe_default 로
+    감쇠시키고 MPC 는 그 채널의 상한으로 받는다.
+    """
+    park_ids: set                      # safe_default 로 보낼 장치(아래 사유의 합)
+    night_parked: set                  # 야간 파킹(결로 탈출 포함 — `_night_vent_parked`)
+    opposing_ids: set                  # 온도 축 요구의 반대편 냉·난방
+    hold_ids: set                      # 실외를 모름 — 제자리(파킹에서 빠짐)
+    ceiling_ids: set                   # 강우·풍속 모름 — 더 열지 않음
+    vent_credit: Dict[str, float]      # 환기 우선 — 실외가 대신 해 주는 몫(PI 전용)
+    t_ceiling: Optional[Tuple[float, bool]]
+    vent_first_held_s: float           # 다음 사이클로 넘길 환기 우선 인내 시간
+    futile_ids: set = field(default_factory=set)       # 환기 무익
+    interlock_ids: set = field(default_factory=set)    # 냉난방 연동 잠금
+    vent_first_ids: set = field(default_factory=set)   # 환기 우선으로 쉬는 냉난방
+
+
+def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
+                   ctx: Dict, cycle_sec: float, prev_commands: Dict[str, float],
+                   vent_first_held_s: float = 0.0,
+                   log: bool = True) -> ParkDecision:
+    """파킹 판정(2.5~2.6). `log=False` 는 그림자 계산용 — 인내 시간 경고를 두 번
+    남기지 않는다(상태도 호출부가 버린다)."""
+    _err = logger.error if log else (lambda *a, **k: None)
+    held = float(vent_first_held_s or 0.0)
+    futile_ids: set = set()
+    interlock_ids: set = set()
+    vent_first_ids: set = set()
+    # ── 2.5. 개구부 파킹 판정 (사용자 옵션 2종) ────────────────────────────────
+    # 파킹된 액추에이터는 편차 비례로 조금씩 여는 대신 NO_GRADIENT 완화 경로로
+    # 보내 safe_default 로 수렴시킨다. 두 판정은 성격이 다르다.
+    #   (a) 환기 무익  — 실외 상태로는 목표에 갈 수 없다 (도달 가능성)
+    #   (b) 냉난방 연동 — 갈 수는 있으나 냉난방과 맞서 에너지를 버린다 (상충)
+    park_ids: set = set()
+    vents = [p for p in available if getattr(p, 'kind', '') in VENTILATING_KINDS]
+
+    # 온도 상한 — 무익 게이트와 PI 가 같은 판정을 본다(한 번만 계산).
+    t_ceiling = _temperature_ceiling(situation, ctx, cycle_sec)
+    ctx['_t_ceiling'] = t_ceiling
+    if t_ceiling is not None:
+        logger.debug('온도 상한 — 초과 %.2f °C, 하드 %s', t_ceiling[0], t_ceiling[1])
+
+    if bool(ctx.get('vent_futility_gate', False)):
+        futile = {p.actuator_id for p in vents
+                  if _ventilation_is_futile(p, situation, ctx)}
+        futile_ids = set(futile)
+        if futile:
+            park_ids |= futile
+            logger.debug(
+                '환기 무익 — 실외 상태로는 목표에 못 감, %d개 파킹: %s',
+                len(futile), sorted(i[:8] for i in futile))
+
+    # ── 야간 개구부 파킹 ─────────────────────────────────────────────────────
+    # 밤에는 습도가 오르고 이슬이 맺힌다 — 환기 대신 장치로 관리하는 시간대다.
+    # **개구부만** 닫고 냉난방·제습은 그대로 돌린다(제어의 중단이 아니라 수단의
+    # 제한이다). 넘을지 말지의 판정과 하드 임계 탈출구는 호출자에 있다
+    # (`_night_vent_parked`) — 여기 오는 것은 그 결론뿐이다.
+    #
+    # ⚠ **안전 게이트가 이긴다.** 게이트는 이 함수 앞에서 명령을 강제하거나
+    #   (triggered) 뒤에서 덮어쓰므로(partial), 파킹은 그 사이에서만 유효하다.
+    #   여름밤 고온에 창이 잠긴 채 방치되면 작물 손실이다 — 파킹이 잠금이
+    #   아니라 park_ids 인 덕분에 이 성질이 공짜로 따라온다.
+    night_parked: set = set()
+    if bool(ctx.get('night_vent_park', False)):
+        night_parked = {p.actuator_id for p in vents}
+        if night_parked:
+            park_ids |= night_parked
+            logger.debug(
+                '야간 파킹 — 개구부 %d개를 닫는다: %s',
+                len(night_parked), sorted(i[:8] for i in night_parked))
+
+    if bool(ctx.get('hvac_interlock', False)) and bool(ctx.get('hvac_running', False)):
+        locked = {p.actuator_id for p in vents}
+        interlock_ids = set(locked)
+        if locked:
+            park_ids |= locked
+            logger.debug(
+                '냉난방 연동 — 가동 중이라 개구부 %d개 잠금: %s',
+                len(locked), sorted(i[:8] for i in locked))
+
+    # ── 환기 우선 — 실외가 목표 너머면 냉난방을 쉬게 한다 ──────────────────────
+    # `hvac_interlock` 의 짝이다. 둘 다 켜도 교착하지 않는다: 이 판정은 실외
+    # 조건만 보므로 냉난방이 파킹되면 hvac_running 이 내려가고 개구부 잠금이
+    # 풀린다. 반대로 환기 여력이 없으면 여기서 파킹하지 않으므로 냉난방이 계속
+    # 일한다 — 아무도 일하지 않는 상태로 떨어지지 않는다.
+    #
+    # ⚠ 판정이 참인 동안 **인내 시간을 센다.** 예측이 맞다면 편차가 줄어 판정이
+    #   스스로 꺼지므로 시간은 쌓이지 않는다. 쌓인다는 것은 곧 예측이 틀렸다는
+    #   뜻이고, 그때는 파킹을 풀어 냉난방에 넘긴다(VENT_FIRST_PATIENCE_S).
+    #
+    # ⚠ **의지하는 정도는 둘이 아니라 연속이다** (2026-08-26). 예전에는
+    #   "전부 된다"(파킹) 아니면 "아니다"(냉난방이 전체 편차를 혼자 계산)뿐이라,
+    #   흔한 중간(실외가 목표의 일부를 메운다)에서 냉난방이 과다 가동했다.
+    #   `_ventilation_credit` 이 그 몫을 재서 냉난방의 편차에서 뺀다.
+    #   판단 기준은 스위치가 아니라 **내외 환경 차이**다 — 실외가 못 도우면
+    #   크레딧이 0 이라 저절로 예전 동작이 된다.
+    # 강우·풍속을 잃은 개구부 — "더 열지 않음"(2.6 아래 주석). 환기 우선보다
+    # **앞에서** 정한다: 더 열 수 없는 창의 도움을 믿고 냉난방이 물러나면 안
+    # 된다(비 오는 날 난방이 모자라는 모양, `_ventilation_credit` 안전 조건).
+    ceiling_ids = vent_open_ceiling_ids(ctx, vents)
+
+    vent_credit: Dict[str, float] = {}
+    if bool(ctx.get('vent_first', False)) and not ceiling_ids:
+        hvac_ids = {p.actuator_id for p in available
+                    if ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'}
+        _reaches = _ventilation_reaches_all_targets(
+            situation, ctx, vents, prev_commands)
+        _credit = ({} if _reaches else
+                   _ventilation_credit(situation, ctx, vents, park_ids))
+        if _reaches or _credit:
+            # 환기에 **의지하고 있는** 동안 인내를 센다. 전부 맡기든 일부만
+            # 맡기든, 목표에 못 닿은 채 시간이 흐르면 예측이 틀린 것이다.
+            _held_before = held
+            held += float(cycle_sec)
+            if held >= VENT_FIRST_PATIENCE_S:
+                # 넘겼다는 사실은 남긴다 — 안 그러면 "왜 갑자기 켜졌나" 에
+                # 답할 근거가 어디에도 없다.
+                #
+                # ⚠ **문턱을 처음 넘는 사이클에 한 번만** (2026-09-20). 예전에는
+                #   넘긴 뒤 매 사이클 찍어서 aot-005 에서 하루 14~80줄이 쌓였다
+                #   — 읽어야 할 로그를 밀어낸다. 한 번이면 "언제부터" 가 남고,
+                #   풀릴 때 한 번 더 남겨 "언제까지" 를 닫는다(아래 else).
+                # ⚠ **냉난방이 없으면 "넘긴다" 고 말하지 않는다.** 넘길 대상이
+                #   없는데 넘긴다고 쓰면 거짓이고, 그 시설에서 이 판정의 실제
+                #   뜻은 "환기만으로 목표에 못 닿는다"(설비 한계)다.
+                if _held_before < VENT_FIRST_PATIENCE_S:
+                    if hvac_ids:
+                        _err(
+                            '환기 우선 — %.0f분째 목표에 못 닿아 냉난방 %d개에 '
+                            '넘깁니다(실외 예측이 빗나갔습니다)',
+                            held / 60.0, len(hvac_ids))
+                    else:
+                        _err(
+                            '환기만으로 목표에 닿지 못하고 있습니다(%.0f분째) — '
+                            '넘길 냉난방 장치가 없어 환기로 계속 버팁니다',
+                            held / 60.0)
+            elif _reaches and hvac_ids:
+                park_ids |= hvac_ids
+                vent_first_ids = set(hvac_ids)
+                logger.debug(
+                    '환기 우선 — 실외로 목표에 닿으므로 냉난방 %d개 파킹: %s',
+                    len(hvac_ids), sorted(i[:8] for i in hvac_ids))
+            else:
+                vent_credit = _credit
+                logger.debug(
+                    '환기 우선 — 실외가 대신 해 주는 몫: %s',
+                    {k: round(v, 3) for k, v in _credit.items()})
+        else:
+            if held >= VENT_FIRST_PATIENCE_S:
+                # 위에서 한 번 남긴 경고를 닫는다 — 없으면 로그만 보고는
+                # 그 상태가 지금도 이어지는지 알 수 없다.
+                _err(
+                    '환기 우선 — 판정이 풀렸습니다(%.0f분 지속). 목표에 '
+                    '들어왔거나 환기로 갈 수 없는 조건이 되었습니다',
+                    held / 60.0)
+            held = 0.0
+    else:
+        held = 0.0
+
+    # ── 2.55. 맞서는 짝은 **온도 축의 요구가 한쪽만 고른다** ──────────────────
+    # 냉방과 난방은 온도 축에서 정확히 raise/lower 쌍이다. PID 는 오차 부호가
+    # 한쪽만 고르므로 **방향을 정하는 행위 자체가 인터록**인데, 코디네이터는
+    # 액추에이터마다 따로 PI 를 돌려서 그 성질이 공짜로 따라오지 않는다.
+    # 그래서 여기서 명시적으로 준다 — 요구 방향의 반대편을 이 사이클의 후보에서
+    # 뺀다(파킹).
+    #
+    # ⚠ **뒤에서 끄는 것으로는 부족하다.** 디스패치 직전 인터록
+    # (`_cycle_mixin.apply_hvac_opposition_interlock`)은 마지막 방어선이지만,
+    # 그때까지 진 쪽은 **매 사이클 100% 를 원하며 적분을 쌓는다.** 여기서 빼면
+    # 적분이 safe_default 로 풀린다(아래 NO_GRADIENT 경로).
+    #
+    # ⚠ **VPD 직접 제어 모드에서는 온도가 제어목표에 없다.** `_decompose_vpd`
+    # 가 'temperature' 를 `_temperature_constraint` 로 강등하므로
+    # `deviation_native` 에 온도가 아예 없다 — 그래서 편차 부호만 보면 이 판정이
+    # **통째로 서지 않는다.** 실측(2026-08-26 温室環境制御)에서 난방기를 100%
+    # 로 만든 근거는 온도가 아니라 VPD 였고, 그동안 실내는 하드 상한을 4°C
+    # 넘겨 있었다. 그래서 하드 임계를 **먼저** 본다.
+    #
+    #   1) 하드 임계 위반(temp_max/temp_min) — 사용자가 정한 문턱. 최우선.
+    #   2) 온도 잔여 편차의 부호 — 허용오차 밖일 때만. 제어목표에서 강등됐어도
+    #      목표·허용오차는 `_temperature_constraint` 에 그대로 남아 있다.
+    #   3) 둘 다 없으면 제한하지 않는다 — 온도가 편안한 구간이면 VPD 를 위해
+    #      가온하거나 냉방하는 것이 옳다.
+    # 파킹 사유를 구분해 두는 집합. 같은 파킹이라도 **왜** 쉬는지가 다르면
+    # 화면이 다른 말을 해야 한다(0% 로 쉬는 난방기에게 "할 수 있는 만큼 하고
+    # 있다" 는 정반대의 말이다).
+    opposing_ids: set = set()
+    _internal = (ctx.get('internal') or {})
+    _demand = None
+    if bool(_internal.get('_force_cool')):
+        _demand = 'cool'
+    elif bool(_internal.get('_force_heat')):
+        _demand = 'heat'
+    else:
+        _t_now = ctx.get('T_int')
+        _t_tv = ((situation.target or {}).get('temperature')
+                 or (situation.target or {}).get('_temperature_constraint'))
+        _tol = float(getattr(_t_tv, 'tolerance', 0.0) or 0.0) if _t_tv else 0.0
+        if _t_now is not None and _t_tv is not None and _tol > 0:
+            _t_dev = float(_t_now) - float(_t_tv.value)
+            if _t_dev > _tol:
+                _demand = 'cool'
+            elif _t_dev < -_tol:
+                _demand = 'heat'
+    if _demand:
+        _losing_kind = 'heater' if _demand == 'cool' else 'cooler'
+        _losers = {p.actuator_id for p in available
+                   if getattr(p, 'kind', '') == _losing_kind}
+        if _losers:
+            park_ids |= _losers
+            opposing_ids |= _losers
+            logger.debug(
+                '온도 축 요구=%s — 반대편 %s %d개 파킹: %s',
+                _demand, _losing_kind, len(_losers),
+                sorted(i[:8] for i in _losers))
+
+    # ── 2.6. 실외 근거가 지어낸 것이면 → **제자리 유지**(hold) ──────────────────
+    # 환기는 실내를 실외 쪽으로만 밀 수 있으므로, 실외를 모르면 열지 닫을지 말할
+    # 근거가 없다. 그런데 지금 구조는 실외를 모를 때 fallback 이 **실외=실내**로
+    # 가정해 채운다(`ext_context_fallback`, 캐시가 비었을 때). 그러면 내외 차이가
+    # 0 이라 환기 무익 판정이 서고 개구부가 safe_default(닫힘)로 수렴한다 —
+    # 한여름에 기상대가 죽으면 창이 닫힌다는 뜻이다. 실측(리플레이에서 기상대만
+    # 제거): 71 사이클 전부 NO_GRADIENT, 개도가 0 까지 내려갔다.
+    #
+    # 파킹(위 2.5)과 다르다 — 파킹은 닫는 것이고, 여기서 해야 할 일은 **아무것도
+    # 하지 않는 것**이다. 근거가 없다는 이유로 장비를 움직여서는 안 된다.
+    #
+    # 판정은 `_ext_synthetic`(캐시조차 없어 지어낸 실외) 하나로 한다. 마지막
+    # 실측이 남아 있으면(캐시 hit) 그것은 근거이므로 여기 걸리지 않는다.
+    if bool((ctx.get('external') or {}).get('_ext_synthetic')):
+        hold_ids = {p.actuator_id for p in vents}
+    else:
+        hold_ids = set()
+    if hold_ids:
+        # 근거 없음이 근거 있는 판정을 이겨서는 안 되므로 파킹에서 뺀다.
+        park_ids -= hold_ids
+        logger.debug(
+            '실외 측정 없음(지어낸 값) — 개구부 %d개 제자리 유지: %s',
+            len(hold_ids), sorted(i[:8] for i in hold_ids))
+
+    return ParkDecision(
+        park_ids=park_ids, night_parked=night_parked, opposing_ids=opposing_ids,
+        hold_ids=hold_ids, ceiling_ids=ceiling_ids, vent_credit=vent_credit,
+        t_ceiling=t_ceiling, vent_first_held_s=held, futile_ids=futile_ids,
+        interlock_ids=interlock_ids, vent_first_ids=vent_first_ids)
+
+
 def coordinate(
     situation: SituationReport,
     profiles: List[ActuatorProfile],
@@ -400,214 +651,18 @@ def coordinate(
         if authority and is_natural_var(authority, v)
     }
 
-    # ── 2.5. 개구부 파킹 판정 (사용자 옵션 2종) ────────────────────────────────
-    # 파킹된 액추에이터는 편차 비례로 조금씩 여는 대신 NO_GRADIENT 완화 경로로
-    # 보내 safe_default 로 수렴시킨다. 두 판정은 성격이 다르다.
-    #   (a) 환기 무익  — 실외 상태로는 목표에 갈 수 없다 (도달 가능성)
-    #   (b) 냉난방 연동 — 갈 수는 있으나 냉난방과 맞서 에너지를 버린다 (상충)
-    park_ids: set = set()
-    vents = [p for p in available if getattr(p, 'kind', '') in VENTILATING_KINDS]
-
-    # 온도 상한 — 무익 게이트와 PI 가 같은 판정을 본다(한 번만 계산).
-    t_ceiling = _temperature_ceiling(situation, ctx, cycle_sec)
-    ctx['_t_ceiling'] = t_ceiling
-    if t_ceiling is not None:
-        logger.debug('온도 상한 — 초과 %.2f °C, 하드 %s', t_ceiling[0], t_ceiling[1])
-
-    if bool(ctx.get('vent_futility_gate', False)):
-        futile = {p.actuator_id for p in vents
-                  if _ventilation_is_futile(p, situation, ctx)}
-        if futile:
-            park_ids |= futile
-            logger.debug(
-                '환기 무익 — 실외 상태로는 목표에 못 감, %d개 파킹: %s',
-                len(futile), sorted(i[:8] for i in futile))
-
-    # ── 야간 개구부 파킹 ─────────────────────────────────────────────────────
-    # 밤에는 습도가 오르고 이슬이 맺힌다 — 환기 대신 장치로 관리하는 시간대다.
-    # **개구부만** 닫고 냉난방·제습은 그대로 돌린다(제어의 중단이 아니라 수단의
-    # 제한이다). 넘을지 말지의 판정과 하드 임계 탈출구는 호출자에 있다
-    # (`_night_vent_parked`) — 여기 오는 것은 그 결론뿐이다.
-    #
-    # ⚠ **안전 게이트가 이긴다.** 게이트는 이 함수 앞에서 명령을 강제하거나
-    #   (triggered) 뒤에서 덮어쓰므로(partial), 파킹은 그 사이에서만 유효하다.
-    #   여름밤 고온에 창이 잠긴 채 방치되면 작물 손실이다 — 파킹이 잠금이
-    #   아니라 park_ids 인 덕분에 이 성질이 공짜로 따라온다.
-    night_parked: set = set()
-    if bool(ctx.get('night_vent_park', False)):
-        night_parked = {p.actuator_id for p in vents}
-        if night_parked:
-            park_ids |= night_parked
-            logger.debug(
-                '야간 파킹 — 개구부 %d개를 닫는다: %s',
-                len(night_parked), sorted(i[:8] for i in night_parked))
-
-    if bool(ctx.get('hvac_interlock', False)) and bool(ctx.get('hvac_running', False)):
-        locked = {p.actuator_id for p in vents}
-        if locked:
-            park_ids |= locked
-            logger.debug(
-                '냉난방 연동 — 가동 중이라 개구부 %d개 잠금: %s',
-                len(locked), sorted(i[:8] for i in locked))
-
-    # ── 환기 우선 — 실외가 목표 너머면 냉난방을 쉬게 한다 ──────────────────────
-    # `hvac_interlock` 의 짝이다. 둘 다 켜도 교착하지 않는다: 이 판정은 실외
-    # 조건만 보므로 냉난방이 파킹되면 hvac_running 이 내려가고 개구부 잠금이
-    # 풀린다. 반대로 환기 여력이 없으면 여기서 파킹하지 않으므로 냉난방이 계속
-    # 일한다 — 아무도 일하지 않는 상태로 떨어지지 않는다.
-    #
-    # ⚠ 판정이 참인 동안 **인내 시간을 센다.** 예측이 맞다면 편차가 줄어 판정이
-    #   스스로 꺼지므로 시간은 쌓이지 않는다. 쌓인다는 것은 곧 예측이 틀렸다는
-    #   뜻이고, 그때는 파킹을 풀어 냉난방에 넘긴다(VENT_FIRST_PATIENCE_S).
-    #
-    # ⚠ **의지하는 정도는 둘이 아니라 연속이다** (2026-08-26). 예전에는
-    #   "전부 된다"(파킹) 아니면 "아니다"(냉난방이 전체 편차를 혼자 계산)뿐이라,
-    #   흔한 중간(실외가 목표의 일부를 메운다)에서 냉난방이 과다 가동했다.
-    #   `_ventilation_credit` 이 그 몫을 재서 냉난방의 편차에서 뺀다.
-    #   판단 기준은 스위치가 아니라 **내외 환경 차이**다 — 실외가 못 도우면
-    #   크레딧이 0 이라 저절로 예전 동작이 된다.
-    # 강우·풍속을 잃은 개구부 — "더 열지 않음"(2.6 아래 주석). 환기 우선보다
-    # **앞에서** 정한다: 더 열 수 없는 창의 도움을 믿고 냉난방이 물러나면 안
-    # 된다(비 오는 날 난방이 모자라는 모양, `_ventilation_credit` 안전 조건).
-    ceiling_ids = vent_open_ceiling_ids(ctx, vents)
-
-    vent_credit: Dict[str, float] = {}
-    if bool(ctx.get('vent_first', False)) and not ceiling_ids:
-        hvac_ids = {p.actuator_id for p in available
-                    if ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'}
-        _reaches = _ventilation_reaches_all_targets(
-            situation, ctx, vents, state.prev_commands)
-        _credit = ({} if _reaches else
-                   _ventilation_credit(situation, ctx, vents, park_ids))
-        if _reaches or _credit:
-            # 환기에 **의지하고 있는** 동안 인내를 센다. 전부 맡기든 일부만
-            # 맡기든, 목표에 못 닿은 채 시간이 흐르면 예측이 틀린 것이다.
-            _held_before = new_state.vent_first_held_s
-            new_state.vent_first_held_s += float(cycle_sec)
-            if new_state.vent_first_held_s >= VENT_FIRST_PATIENCE_S:
-                # 넘겼다는 사실은 남긴다 — 안 그러면 "왜 갑자기 켜졌나" 에
-                # 답할 근거가 어디에도 없다.
-                #
-                # ⚠ **문턱을 처음 넘는 사이클에 한 번만** (2026-09-20). 예전에는
-                #   넘긴 뒤 매 사이클 찍어서 aot-005 에서 하루 14~80줄이 쌓였다
-                #   — 읽어야 할 로그를 밀어낸다. 한 번이면 "언제부터" 가 남고,
-                #   풀릴 때 한 번 더 남겨 "언제까지" 를 닫는다(아래 else).
-                # ⚠ **냉난방이 없으면 "넘긴다" 고 말하지 않는다.** 넘길 대상이
-                #   없는데 넘긴다고 쓰면 거짓이고, 그 시설에서 이 판정의 실제
-                #   뜻은 "환기만으로 목표에 못 닿는다"(설비 한계)다.
-                if _held_before < VENT_FIRST_PATIENCE_S:
-                    if hvac_ids:
-                        logger.error(
-                            '환기 우선 — %.0f분째 목표에 못 닿아 냉난방 %d개에 '
-                            '넘깁니다(실외 예측이 빗나갔습니다)',
-                            new_state.vent_first_held_s / 60.0, len(hvac_ids))
-                    else:
-                        logger.error(
-                            '환기만으로 목표에 닿지 못하고 있습니다(%.0f분째) — '
-                            '넘길 냉난방 장치가 없어 환기로 계속 버팁니다',
-                            new_state.vent_first_held_s / 60.0)
-            elif _reaches and hvac_ids:
-                park_ids |= hvac_ids
-                logger.debug(
-                    '환기 우선 — 실외로 목표에 닿으므로 냉난방 %d개 파킹: %s',
-                    len(hvac_ids), sorted(i[:8] for i in hvac_ids))
-            else:
-                vent_credit = _credit
-                logger.debug(
-                    '환기 우선 — 실외가 대신 해 주는 몫: %s',
-                    {k: round(v, 3) for k, v in _credit.items()})
-        else:
-            if new_state.vent_first_held_s >= VENT_FIRST_PATIENCE_S:
-                # 위에서 한 번 남긴 경고를 닫는다 — 없으면 로그만 보고는
-                # 그 상태가 지금도 이어지는지 알 수 없다.
-                logger.error(
-                    '환기 우선 — 판정이 풀렸습니다(%.0f분 지속). 목표에 '
-                    '들어왔거나 환기로 갈 수 없는 조건이 되었습니다',
-                    new_state.vent_first_held_s / 60.0)
-            new_state.vent_first_held_s = 0.0
-    else:
-        new_state.vent_first_held_s = 0.0
-
-    # ── 2.55. 맞서는 짝은 **온도 축의 요구가 한쪽만 고른다** ──────────────────
-    # 냉방과 난방은 온도 축에서 정확히 raise/lower 쌍이다. PID 는 오차 부호가
-    # 한쪽만 고르므로 **방향을 정하는 행위 자체가 인터록**인데, 코디네이터는
-    # 액추에이터마다 따로 PI 를 돌려서 그 성질이 공짜로 따라오지 않는다.
-    # 그래서 여기서 명시적으로 준다 — 요구 방향의 반대편을 이 사이클의 후보에서
-    # 뺀다(파킹).
-    #
-    # ⚠ **뒤에서 끄는 것으로는 부족하다.** 디스패치 직전 인터록
-    # (`_cycle_mixin.apply_hvac_opposition_interlock`)은 마지막 방어선이지만,
-    # 그때까지 진 쪽은 **매 사이클 100% 를 원하며 적분을 쌓는다.** 여기서 빼면
-    # 적분이 safe_default 로 풀린다(아래 NO_GRADIENT 경로).
-    #
-    # ⚠ **VPD 직접 제어 모드에서는 온도가 제어목표에 없다.** `_decompose_vpd`
-    # 가 'temperature' 를 `_temperature_constraint` 로 강등하므로
-    # `deviation_native` 에 온도가 아예 없다 — 그래서 편차 부호만 보면 이 판정이
-    # **통째로 서지 않는다.** 실측(2026-08-26 温室環境制御)에서 난방기를 100%
-    # 로 만든 근거는 온도가 아니라 VPD 였고, 그동안 실내는 하드 상한을 4°C
-    # 넘겨 있었다. 그래서 하드 임계를 **먼저** 본다.
-    #
-    #   1) 하드 임계 위반(temp_max/temp_min) — 사용자가 정한 문턱. 최우선.
-    #   2) 온도 잔여 편차의 부호 — 허용오차 밖일 때만. 제어목표에서 강등됐어도
-    #      목표·허용오차는 `_temperature_constraint` 에 그대로 남아 있다.
-    #   3) 둘 다 없으면 제한하지 않는다 — 온도가 편안한 구간이면 VPD 를 위해
-    #      가온하거나 냉방하는 것이 옳다.
-    # 파킹 사유를 구분해 두는 집합. 같은 파킹이라도 **왜** 쉬는지가 다르면
-    # 화면이 다른 말을 해야 한다(0% 로 쉬는 난방기에게 "할 수 있는 만큼 하고
-    # 있다" 는 정반대의 말이다).
-    opposing_ids: set = set()
-    _internal = (ctx.get('internal') or {})
-    _demand = None
-    if bool(_internal.get('_force_cool')):
-        _demand = 'cool'
-    elif bool(_internal.get('_force_heat')):
-        _demand = 'heat'
-    else:
-        _t_now = ctx.get('T_int')
-        _t_tv = ((situation.target or {}).get('temperature')
-                 or (situation.target or {}).get('_temperature_constraint'))
-        _tol = float(getattr(_t_tv, 'tolerance', 0.0) or 0.0) if _t_tv else 0.0
-        if _t_now is not None and _t_tv is not None and _tol > 0:
-            _t_dev = float(_t_now) - float(_t_tv.value)
-            if _t_dev > _tol:
-                _demand = 'cool'
-            elif _t_dev < -_tol:
-                _demand = 'heat'
-    if _demand:
-        _losing_kind = 'heater' if _demand == 'cool' else 'cooler'
-        _losers = {p.actuator_id for p in available
-                   if getattr(p, 'kind', '') == _losing_kind}
-        if _losers:
-            park_ids |= _losers
-            opposing_ids |= _losers
-            logger.debug(
-                '온도 축 요구=%s — 반대편 %s %d개 파킹: %s',
-                _demand, _losing_kind, len(_losers),
-                sorted(i[:8] for i in _losers))
-
-    # ── 2.6. 실외 근거가 지어낸 것이면 → **제자리 유지**(hold) ──────────────────
-    # 환기는 실내를 실외 쪽으로만 밀 수 있으므로, 실외를 모르면 열지 닫을지 말할
-    # 근거가 없다. 그런데 지금 구조는 실외를 모를 때 fallback 이 **실외=실내**로
-    # 가정해 채운다(`ext_context_fallback`, 캐시가 비었을 때). 그러면 내외 차이가
-    # 0 이라 환기 무익 판정이 서고 개구부가 safe_default(닫힘)로 수렴한다 —
-    # 한여름에 기상대가 죽으면 창이 닫힌다는 뜻이다. 실측(리플레이에서 기상대만
-    # 제거): 71 사이클 전부 NO_GRADIENT, 개도가 0 까지 내려갔다.
-    #
-    # 파킹(위 2.5)과 다르다 — 파킹은 닫는 것이고, 여기서 해야 할 일은 **아무것도
-    # 하지 않는 것**이다. 근거가 없다는 이유로 장비를 움직여서는 안 된다.
-    #
-    # 판정은 `_ext_synthetic`(캐시조차 없어 지어낸 실외) 하나로 한다. 마지막
-    # 실측이 남아 있으면(캐시 hit) 그것은 근거이므로 여기 걸리지 않는다.
-    if bool((ctx.get('external') or {}).get('_ext_synthetic')):
-        hold_ids = {p.actuator_id for p in vents}
-    else:
-        hold_ids = set()
-    if hold_ids:
-        # 근거 없음이 근거 있는 판정을 이겨서는 안 되므로 파킹에서 뺀다.
-        park_ids -= hold_ids
-        logger.debug(
-            '실외 측정 없음(지어낸 값) — 개구부 %d개 제자리 유지: %s',
-            len(hold_ids), sorted(i[:8] for i in hold_ids))
+    # ── 2.5~2.6. 파킹·제자리 판정 — `decide_parking` 한 곳에서(MPC 도 같은 것을 읽는다)
+    _pk = decide_parking(available, situation, ctx, cycle_sec,
+                         state.prev_commands,
+                         getattr(state, 'vent_first_held_s', 0.0) or 0.0)
+    new_state.vent_first_held_s = _pk.vent_first_held_s
+    park_ids = _pk.park_ids
+    night_parked = _pk.night_parked
+    opposing_ids = _pk.opposing_ids
+    hold_ids = _pk.hold_ids
+    ceiling_ids = _pk.ceiling_ids
+    vent_credit = _pk.vent_credit
+    t_ceiling = _pk.t_ceiling
 
     # ── 2.7. 강우·풍속을 잃었으면 → **더 열지 않음**(ceiling, 2026-09-19) ──────
     # 2.6 과 같은 원칙의 짝이다(`docs/design/sensor-freshness-and-control-
