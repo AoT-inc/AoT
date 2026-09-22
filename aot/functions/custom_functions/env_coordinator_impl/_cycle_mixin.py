@@ -575,6 +575,11 @@ def apply_threshold_and_gate_overrides(
     apply_hvac_opposition_interlock(profiles, final_cmds)
 
 
+# greybox KPI 기준의 이름 — 영속된 통과 기록이 어느 기준으로 통과했는지 가른다.
+# 기준을 바꾸면 이 값을 바꿔 옛 통과 기록을 무효로 만든다.
+_KPI_BASIS = 'h_skill_v1'
+
+
 class CycleMixin:
     """Mixin: one coordination cycle (L1 target → L2 situation → L3 coordinate → dispatch)."""
 
@@ -608,9 +613,14 @@ class CycleMixin:
                 _gbp = (self._read_calibration_state() or {}).get('greybox_params')
                 if _gbp:
                     gb_params = GreyboxParams.from_dict(_gbp)
+                    # 불러온 **뒤의** 값을 찍는다 — 옛 모델 판이면 학습 횟수가 0 으로
+                    # 돌아가는데, 저장된 원값을 찍으면 재검증 중인 것이 안 보인다.
                     self.logger.info(
-                        'greybox params loaded from store: n=%s rmse_T=%s',
-                        _gbp.get('n_updates'), _gbp.get('rmse_T'))
+                        'greybox params loaded from store: model_v=%s n=%s rmse_T=%s '
+                        '(stored v=%s n=%s)',
+                        gb_params.model_version, gb_params.n_updates,
+                        gb_params.rmse_T, _gbp.get('model_version', 1),
+                        _gbp.get('n_updates'))
             except Exception:
                 gb_params = None
             cap = {}
@@ -2197,8 +2207,12 @@ class CycleMixin:
                     if mae_t is not None:
                         kpi_ok = self._greybox_shadow.kpi_passed()
                         self.logger.info(
-                            'greybox shadow KPI — MAE_T=%.2f°C MAE_RH=%.1f%% passed=%s active=%s',
-                            mae_t, mae_rh or 0.0, kpi_ok, getattr(self, '_greybox_active', False))
+                            'greybox shadow KPI (H스텝) — MAE_T=%.2f°C MAE_RH=%.1f%% '
+                            'passed=%s active=%s skill=%s',
+                            mae_t, mae_rh or 0.0, kpi_ok,
+                            getattr(self, '_greybox_active', False),
+                            {k: (v['n'], v['skill_T'], v['skill_RH']) for k, v in
+                             self._greybox_shadow.skill_report()['regimes'].items()})
                         # KPI 통과 알림: shadow 모드, 또는 greybox 모드인데 아직 물리 제어가
                         # 활성화되지 않은(게이트 미통과) 경우. 이미 활성이면 알림 불필요.
                         if kpi_ok and not getattr(self, '_greybox_active', False):
@@ -2705,6 +2719,11 @@ class CycleMixin:
             'targets': {k: _r(tv.value) for k, tv in (env_target or {}).items()},
             # 이 사이클이 쓴 단계 온·습도 가이드 범위(`_apply_stage_guide`). None 이면 시설 guide.
             'stage_guide': getattr(self, '_last_stage_guide', None),
+            # greybox 그림자 모델의 H스텝 skill(B 단계) — 그림자를 돌리는 설치만.
+            'greybox_skill': (self._greybox_shadow_inst.skill_report()
+                              if getattr(self, '_greybox_shadow_inst', None) is not None
+                              and getattr(self, 'effect_engine', 'legacy') != 'legacy'
+                              else None),
             # 축별 기능 상태(`_refresh_capability`, 1단계 — 표시 전용).
             'capability': getattr(self, '_last_capability', None),
             # 제어 기준과 다른 기준의 그림자 명령(`_basis_shadow_commands`).
@@ -2797,6 +2816,8 @@ class CycleMixin:
             'greybox_kpi_mae_T':  round(mae_t, 3),
             'greybox_kpi_mae_RH': round(mae_rh, 3),
             'greybox_kpi_ts':     now,
+            'greybox_kpi_skill':  self._greybox_shadow.skill_report(),
+            'greybox_kpi_basis':  _KPI_BASIS,
             'greybox_kpi_model_version': int(getattr(
                 self._greybox_shadow.params, 'model_version', 1) or 1),
         })
@@ -2896,9 +2917,12 @@ class CycleMixin:
         if int(getattr(params, 'model_version', 1) or 1) != cur_v:
             return False
         if cache['kpi'] and not self._greybox_shadow.kpi_passed():
-            persisted_v = int((self._read_calibration_state() or {}).get(
-                'greybox_kpi_model_version') or 1)
-            if persisted_v != cur_v:
+            # 영속된 통과 기록은 **같은 모델 판 · 같은 KPI 기준**일 때만 인정한다.
+            # 옛 기준(1스텝 오차)의 통과는 "변화 없음" 수준 모델도 받았다.
+            _cs = self._read_calibration_state() or {}
+            if int(_cs.get('greybox_kpi_model_version') or 1) != cur_v:
+                return False
+            if _cs.get('greybox_kpi_basis') != _KPI_BASIS:
                 return False
         if getattr(params, 'n_updates', 0) < 1:
             return False
