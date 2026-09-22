@@ -441,17 +441,30 @@ class TestFoggerEvaporativeFlow:
             % eff.magnitude_native)
 
     def test_nozzle_flow_drives_the_physics(self):
-        """`fog_flow_lpm` 이 있으면 그 값으로 물리 계산한다."""
-        eff = _fog({'volume_m3': FACILITY_VOL_M3, 'fog_flow_lpm': 3.0}, 'temperature')
-        # ΔT = liters × L_vap / (vol × ρcp),  liters = 3 L/min × 60s /60 = 3 L
-        expected = 3.0 * 2430.0 / (FACILITY_VOL_M3 * 1.21 * 1.006)
-        assert eff.magnitude_native == pytest.approx(expected, rel=0.01)
+        """`fog_flow_lpm` 이 있으면 그 값으로 물리 계산한다(`psychro.evaporate`).
+
+        2026-09-22 부터 증발은 습공기 보존식으로 푼다. 고운 포그 노즐(η 0.9)이면
+        옛 근사(전량 증발 × 잠열/체적)의 약 0.9배가 나와야 한다 — 3 L 분무,
+        노즐 한계 구간.
+        """
+        old = 3.0 * 2430.0 / (FACILITY_VOL_M3 * 1.21 * 1.006)
+        fine = _fog({'volume_m3': FACILITY_VOL_M3, 'fog_flow_lpm': 3.0,
+                     'nozzle': {'wetting': False}}, 'temperature')
+        assert fine.magnitude_native == pytest.approx(0.9 * old, rel=0.05)
+
+    def test_unknown_nozzle_is_treated_as_wetting(self):
+        """노즐 정보가 없으면 적시는 노즐(η 0.5)로 본다 — 효과를 크게 주장하지 않는다."""
+        base = {'volume_m3': FACILITY_VOL_M3, 'fog_flow_lpm': 3.0}
+        unknown = _fog(base, 'temperature').magnitude_native
+        fine = _fog(dict(base, nozzle={'wetting': False}), 'temperature').magnitude_native
+        assert unknown == pytest.approx(fine * 0.5 / 0.9, rel=0.02)
 
     def test_flow_scales_with_command_percent(self):
+        """노즐 한계 구간에서는 명령에 비례한다(수분에 따른 비열 변화로 0.1 % 안팎)."""
         cap = {'volume_m3': FACILITY_VOL_M3, 'fog_flow_lpm': 12.0}
         full = _fog(cap, 'temperature', 100.0).magnitude_native
         half = _fog(cap, 'temperature', 50.0).magnitude_native
-        assert half == pytest.approx(full / 2.0, rel=1e-6)
+        assert half == pytest.approx(full / 2.0, rel=0.005)
 
     def test_fogger_does_not_dominate_the_other_actuators(self):
         """분무의 온도 유효도가 냉방기를 압도하지 않는다.
@@ -571,12 +584,16 @@ class TestFoggerAtSaturation:
         assert vals[0] > 0.0 and vals[-1] == 0.0
 
     def test_unchanged_below_the_reference_humidity(self):
-        """기준 습도 이하에서는 계수를 그대로 쓴다 — 건조하다고 키우지 않는다."""
+        """노즐 한계 구간에서는 건조하다고 효과가 커지지 않는다.
+
+        물이 모자라 증발이 노즐에 묶이면(건조한 공기) 증발량은 분무량 × η 그대로다.
+        남는 차이는 습도에 따른 공기 비열뿐이다(3 % 이내).
+        """
         from aot.functions.utils.env_control.effect_functions import _EVAP_REF_RH
         base = _fog(self.CAP, 'temperature', rh=_EVAP_REF_RH).magnitude_native
         for rh in (0.0, 20.0, 50.0, _EVAP_REF_RH):
             assert _fog(self.CAP, 'temperature',
-                        rh=rh).magnitude_native == pytest.approx(base)
+                        rh=rh).magnitude_native == pytest.approx(base, rel=0.03)
 
     def test_calibrated_k_is_also_scaled(self):
         """캘리브레이션 값이라도 포화에서는 증발하지 않는다."""

@@ -11,6 +11,7 @@ K_* 계수는 모듈 기본값. 실제 사용 시 apply_calibration()으로 장�
 """
 
 import math
+from typing import Optional
 
 from .types import VENTILATING_KINDS, EffectResult, EnvContext
 
@@ -580,69 +581,138 @@ def _fog_liters(env: EnvContext, cmd_pct: float, profile=None):
     sprayed = flow * run_sec * (cmd_pct / 100.0) / 60.0
 
     # ── 공기가 받아들일 수 있는 양을 넘길 수 없다 ──────────────────────────
+    # ⚠ 분무 효과 함수는 이제 이 값을 쓰지 않는다 — `_fog_psychro` 가 단열포화
+    #   한계로 직접 자른다. 이 함수는 "뿌린 양·받을 수 있는 양" 을 묻는 다른
+    #   호출부(테스트 포함)를 위해 남는다.
     # `_evaporation_availability` 는 비율이라 총량을 막지 못한다. 여기서 자른다.
     cap_l = _absorbable_liters(env, float(cap.get('volume_m3') or 0.0))
     return min(sprayed, cap_l)
 
 
-def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """분무 → 증발 → RH 상승.
+# ── 분무 = 증발냉각 액추에이터 (2026-09-22, `psychro.evaporate`) ──────────────
+# 증발은 한 번 일어나 냉각과 가습을 **동시에** 만든다. 예전에는 둘을 따로
+# 추정했다 — 냉각은 잠열/체적, 가습은 "1 L ≈ ΔRH liters×1000/vol×0.5" 였는데
+# 뒤의 근사는 실제(1 g/m³ ≈ 25 °C 에서 RH 4~5 %)의 약 1/10 이었고, 증발로 식으며
+# RH 가 더 오르는 효과가 빠져 있었다. 공기가 받을 수 있는 상한도 지금 온도로
+# 잡아(식으면 줄어드는 것을 무시) 과대였다.
+#
+# 이제 실내 공기(T, RH)를 분무 시간 동안 한 번 훑는 것으로 보고, 증발량을
+# 노즐 한계와 **단열포화 한계** 중 작은 쪽으로 정한 뒤 출구 상태를 질량·엔탈피
+# 보존으로 푼다. 온도·습도·VPD 효과가 모두 그 한 결과에서 나온다.
+#
+# η(노즐 증발 가능 비율)는 사전값이다 — 잎을 적시는 노즐(굵은 물방울)은 낮게.
+# 현장 학습 배율 θ(`_calibrated_scale`)가 크기를 보정한다. ε(포화효율)는 1 —
+# 닫힌 공간 한 사이클 기준의 상한이고, 틀리면 과소(분무를 덜 쓴다) 쪽이다.
+# 기압은 문맥의 `pressure_kpa`(시설 고도), 없으면 해면. 물 온도는 A 단계에서
+# 넣지 않는다(잠열의 수 %, 계획서 4.1).
+FOG_ETA_FINE    = 0.9
+FOG_ETA_WETTING = 0.5
+FOG_EPS_ROOM    = 1.0
 
-    우선순위: 노즐 유량 기반 물리 → 보수적 K 상수. 학습 배율 θ 는 마지막에 곱한다.
-    어느 경로든 마지막에 증발 가용도(`_evaporation_availability`)를 곱한다 —
-    포화 공기에서는 분무해도 RH 가 오르지 않는다.
-    단순화: ΔRH ≈ liters × 1000g × (100 / volume_m3) × RH_per_g/m3
-    volume_m3 미설정 시 _VOLUME_REF_M3 사용.
+
+def _fog_sprayed_kg(env: EnvContext, cmd_pct: float, profile) -> Optional[tuple]:
+    """(뿌린 물 kg, 분무 시간 s) — 유량을 모르면 None. 시간 규칙은 `_fog_liters` 와 같다."""
+    cap  = getattr(profile, 'capacity_meta', None) or {}
+    flow = float(cap.get('fog_flow_lpm') or 0.0)
+    if flow <= 0.0:
+        return None
+    cycle = float(env.get('cycle_sec', _CYCLE_REF_S) or _CYCLE_REF_S)
+    cc     = getattr(profile, 'cmd_constraints', None)
+    max_on = float(getattr(cc, 'max_on_sec', 0.0) or 0.0)
+    run_sec = min(cycle, max_on) if max_on > 0.0 else cycle
+    return flow * run_sec * (cmd_pct / 100.0) / 60.0, run_sec
+
+
+def _fog_psychro(env: EnvContext, cmd_pct: float, profile) -> Optional[dict]:
+    """분무 한 사이클의 (dT, dRH, dVPD) — 물리로 못 구하면 None(호출부가 K 상수로)."""
+    from . import psychro as ps
+    T = env.get('T_int')
+    RH = env.get('RH_int')
+    if T is None or RH is None:
+        return None
+    got = _fog_sprayed_kg(env, cmd_pct, profile)
+    if got is None:
+        return None
+    kg, run_sec = got
+    if kg <= 0.0 or run_sec <= 0.0:
+        return {'dT': 0.0, 'dRH': 0.0, 'dVPD': 0.0, 'e_in': 0.0, 'de': 0.0}
+    cap = getattr(profile, 'capacity_meta', None) or {}
+    vol = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
+    p = float(env.get('pressure_kpa') or ps.P_STD_KPA)
+    T, RH = float(T), float(RH)
+    e_in = ps.vapor_pressure(T, RH)
+    m_da = ps.dry_air_density(T, e_in, p) * vol / run_sec     # 실내 공기를 한 번 훑는다
+    nozzle = cap.get('nozzle') or {}
+    eta = FOG_ETA_WETTING if (not nozzle or nozzle.get('wetting')) else FOG_ETA_FINE
+    r = ps.evaporate(T, RH, m_da, kg / run_sec, eta=eta, eps=FOG_EPS_ROOM, p=p)
+    e_out = ps.vapor_pressure_from_ratio(r.w_out, p)
+    return {'dT': r.T_out - T, 'dRH': r.RH_out - RH,
+            'dVPD': ps.vpd(r.T_out, e_out) - ps.vpd(T, e_in),
+            'e_in': e_in, 'de': e_out - e_in}
+
+
+def fogger_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
+    """분무 → 증발 → RH 상승(증발로 식어 오르는 몫 포함). `_fog_psychro` 참조.
+
+    노즐 유량을 모르면 보수적 K 상수 × 증발 가용도로 떨어진다(예전과 같다).
     """
+    theta = _calibrated_scale(profile, 'humidity')
+    r = _fog_psychro(env, cmd_pct, profile)
+    if r is not None:
+        return EffectResult('↑' if r['dRH'] > 0 else '0', max(0.0, r['dRH']) * theta)
+    if env.get('T_int') is not None and env.get('RH_int') is not None \
+            and _fog_sprayed_kg(env, cmd_pct, profile) is not None:
+        return EffectResult('0', 0.0)
     avail = _evaporation_availability(env)
     if avail <= 0.0:
         return EffectResult('0', 0.0)
-
-    # 학습 배율은 경로와 무관하게 마지막에 곱한다(`_calibrated_scale`).
-    theta = _calibrated_scale(profile, 'humidity')
-
-    liters = _fog_liters(env, cmd_pct, profile)
-    if liters is None:
-        # 노즐 유량 미상 — 물리 계산 불가. 보수적 기본 계수로 떨어진다.
-        return EffectResult('↑', K_FOG_RH * (cmd_pct / 100.0) * avail * theta)
-
-    cap      = getattr(profile, 'capacity_meta', None) or {}
-    vol      = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
-    # 1 L = 1000 g → 수증기량(g/m³) 증가 → RH 변환 (포화수증기량 기준 약 1% per 0.2 g/m³ @20°C)
-    # 실용적 근사: ΔRH ≈ liters × 1000 / vol × 0.5
-    delta_rh = liters * 1000.0 / vol * 0.5
-    return EffectResult(
-        '↑', max(delta_rh, K_FOG_RH * (cmd_pct / 100.0) * 0.1) * avail * theta)
+    return EffectResult('↑', K_FOG_RH * (cmd_pct / 100.0) * avail * theta)
 
 
 def fogger_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """증발냉각으로 온도 하락.
-
-    우선순위: 캘리브레이션 K → 노즐 유량 기반 물리 → 보수적 K 상수.
-    어느 경로든 마지막에 증발 가용도(`_evaporation_availability`)를 곱한다 —
-    증발하지 않은 물은 잠열을 가져가지 않는다(표면만 젖는다).
-    ΔT = -(liters × _L_VAP_KJ_KG) / (volume_m3 × _RHO_CP_AIR)
-    """
+    """증발냉각으로 온도 하락. `_fog_psychro` 참조 — 못 날린 물은 열을 가져가지 않는다."""
+    theta = _calibrated_scale(profile, 'temperature')
+    r = _fog_psychro(env, cmd_pct, profile)
+    if r is not None:
+        return EffectResult('↓' if r['dT'] < 0 else '0', max(0.0, -r['dT']) * theta)
     avail = _evaporation_availability(env)
     if avail <= 0.0:
         return EffectResult('0', 0.0)
+    return EffectResult('↓', K_FOG_T * (cmd_pct / 100.0) * avail * theta)
 
-    theta = _calibrated_scale(profile, 'temperature')
 
-    liters = _fog_liters(env, cmd_pct, profile)
-    if liters is None:
-        return EffectResult('↓', K_FOG_T * (cmd_pct / 100.0) * avail * theta)
+_fogger_vpd_chain = None   # 유량 미상일 때의 연쇄법칙 VPD (아래에서 채운다)
 
-    cap    = getattr(profile, 'capacity_meta', None) or {}
-    vol    = float(cap.get('volume_m3') or 0.0) or _VOLUME_REF_M3
-    delta_t = liters * _L_VAP_KJ_KG / (vol * _RHO_CP_AIR)
-    return EffectResult(
-        '↓', max(delta_t, K_FOG_T * (cmd_pct / 100.0) * 0.1) * avail * theta)
 
+def fogger_vpd_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
+    """분무 → VPD 하강. 물리로 구하면 **출구 상태에서 직접** 계산한다.
+
+    연쇄법칙(`make_vpd_effect`)을 쓰지 않는 이유: 위 습도 효과가 이제 "식어서 오르는
+    RH" 까지 담고 있어, 연쇄법칙이 온도 항을 한 번 더 더하면 이중계상이다.
+    학습 배율은 온도·습도 각각의 것을 쓴다.
+    """
+    r = _fog_psychro(env, cmd_pct, profile)
+    if r is None:
+        return _fogger_vpd_chain(env, cmd_pct, profile)
+    from . import psychro as ps
+    T = float(env.get('T_int'))
+    tT = _calibrated_scale(profile, 'temperature')
+    tH = _calibrated_scale(profile, 'humidity')
+    if tT == 1.0 and tH == 1.0:
+        d = r['dVPD']
+    else:
+        d = (ps.vpd(T + tT * r['dT'], r['e_in'] + tH * r['de'])
+             - ps.vpd(T, r['e_in']))
+    return EffectResult('↓' if d < 0 else '0', max(0.0, -d))
+
+
+_fogger_vpd_chain = make_vpd_effect(fogger_temp_effect, fogger_humid_effect,
+                                    humid_is_moisture=True)
 
 FOGGER_EFFECT_MODEL = {
     'temperature': fogger_temp_effect,
     'humidity':    fogger_humid_effect,
+    'vpd':         fogger_vpd_effect,
 }
 
 
