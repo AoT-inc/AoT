@@ -1941,7 +1941,7 @@ msgstr "Бажана витрата"
 
 #: config_translations.py:253 outputs/pump_gpio.py:130
 msgid "ml/min"
-msgstr "ml/min"
+msgstr "мл/хв"
 
 #: config_translations.py:256
 msgid "Name Font Size (em)"
@@ -4679,11 +4679,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "Послідовність усе ще виконується — демон не застосував зміну."
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "Послідовність не запустилася — демон не застосував зміну."
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4758,7 +4758,7 @@ msgstr "Не вдалося знайти цю територію."
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "Об'єкти без розташування на карті тут не відображатимуться — спершу вкажіть їхнє розташування в налаштуваннях об'єкта."
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4775,15 +4775,15 @@ msgstr "Виберіть, чого стосується цей журнал."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "Введіть і дату початку, і дату завершення."
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "Дата початку пізніша за дату завершення."
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "Не вдалося визначити, чого стосується цей журнал."
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4792,24 +4792,24 @@ msgstr "Не вдалося прочитати цю ціль."
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "Цей період надто довгий (%(days)s дн.). Спробуйте коротший період."
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "Вибраний діапазон містить надто багато пристроїв (каналів: %(n)s). Звузьте область або виберіть одну ділянку."
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "Вибраний діапазон потребує зчитування надто великого обсягу даних. Спробуйте коротший період або вужчу область."
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "Цей журнал ще створюється."
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -5003,10 +5003,6 @@ msgstr "— Немає —"
 msgid "Select one or more devices to register."
 msgstr "Виберіть один або кілька пристроїв для реєстрації."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Виберіть ціль реєстрації (вхід/вихід) або планувальник."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5074,11 +5070,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "Тип дії"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Назва параметра"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Тип джерела"
@@ -5087,24 +5078,6 @@ msgstr "Тип джерела"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Ручне введення"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Нотатка/опис"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "Зовнішній URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Значення / URL / текст"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "ID запису"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7310,26 +7283,6 @@ msgstr "Колір фону «Інформація»"
 msgid "Info Tint Text"
 msgstr "Текст на кольорі фону «Інформація»"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Межа відтінку успіху"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Межа відтінку попередження"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Межа відтінку небезпеки"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Межа відтінку інформації"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "Фон значка LLM"
@@ -7337,12 +7290,6 @@ msgstr "Фон значка LLM"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "Фон значка MCP"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Значок оновлення"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7544,27 +7491,9 @@ msgstr "Робочий цикл умови (%)"
 msgid "Confirmed"
 msgstr "Підтверджено"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "Потрібна перевірка"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Введіть значення"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "напр. 25.5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "напр. задане значення на основі ранкової температури"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "напр. https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7585,59 +7514,10 @@ msgstr "Виконується"
 msgid "Failed"
 msgstr "Помилка"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "Пропозиція ШІ"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Завдання не зареєстровано."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Додайте його за допомогою кнопки \"Додати завдання\" вгорі."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "Затвердити розклад, запропонований ШІ, і додати його до календаря?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "Розклад, запропонований ШІ, затверджено."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "Помилка затвердження"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Помилка мережі"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Відхилити та видалити цю пропозицію?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "Пропозицію відхилено та видалено."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Помилка відхилення"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Немає батьківського завдання для вкладення"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Це вже завдання верхнього рівня"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Порядок оновлено"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7646,14 +7526,6 @@ msgstr "Порядок оновлено"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "Помилка оновлення"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Ієрархію оновлено"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Назву оновлено"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7753,65 +7625,15 @@ msgstr "Завантаження..."
 msgid "Failed to load data."
 msgstr "Не вдалося завантажити дані."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Записів контексту не зареєстровано."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Немає записів, що відповідають критеріям."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Системне значення за замовчуванням"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Редагувати визначення"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "Очікує перевірки"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Відхилено"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Введіть або підтвердьте визначення для затвердження:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Успішно затверджено."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Під час затвердження сталася помилка."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Сталася помилка сервера."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Відхилити цей термін?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Успішно відхилено."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "Під час обробки сталася помилка."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Введіть нове визначення:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -11014,69 +10836,11 @@ msgstr "не може бути скасована"
 msgid "Usage"
 msgstr "Використання"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "Менеджер контексту ШІ"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr "Додавайте зовнішню інформацію до ШІ та керуйте рівнем довіри до неї."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Додати контекст"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Примітки (необов'язково)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Записи контексту"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Системне значення за замовчуванням"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "Потребує перевірки"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr ""
-"Автоматично згенеровано ШІ на основі стандартних значень домену. Ще не "
-"перевірено."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Введено користувачем або очікує розгляду. ШІ використовує це, але з "
-"низьким рівнем довіри."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"Значення перевірено та затверджено користувачем. ШІ використовує його з "
-"високим рівнем довіри."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Виявлена платформа"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "ПК/сервер"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Контейнер Docker"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11953,14 +11717,6 @@ msgstr "або оновіть сторінку."
 msgid "Control requests awaiting approval"
 msgstr "Запити на керування, що очікують схвалення"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Вони ще НЕ виконані. Схвалення запускає дію негайно з точно вказаними "
-"параметрами — повертатися до ШІ й повідомляти про це не потрібно."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Немає запитів на керування, що очікують."
@@ -11998,54 +11754,9 @@ msgstr "Схвалено та виконано."
 msgid "Approved, but it failed to run"
 msgstr "Схвалено, але виконати не вдалося"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "Стан ШІ"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Прогрес навчання"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Ключові слова"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Часто використовувані функції"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "Скинути стан ШІ"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Ваші інструкції для ШІ"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Розширено — необов'язково"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "Додайте конкретні інструкції для вашого ШІ (необов'язково)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"напр. Я керую теплицею і потребую допомоги з боротьбою зі шкідниками та "
-"контролем температури"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Відкрите фермерство"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12055,34 +11766,12 @@ msgstr "Відкрите фермерство"
 msgid "Greenhouse"
 msgstr "Теплиця"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Спортивна споруда"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Парк"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Транспорт"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "Оновити налаштування ШІ"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Підтверджені елементи знань:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12091,25 +11780,6 @@ msgstr "Очікують:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Усього:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "ШІ ще навчається..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Активності поки немає"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"Скинути стан ШІ? Знімок стану буде перераховано під час наступного "
-"завантаження."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "Не вдалося зберегти. Спробуйте ще раз."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12125,26 +11795,6 @@ msgstr "ШІ-агент"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "Налаштування ШІ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"Рівень оркестрації ШІ-агентів. Керуйте своїми ШІ-службами та агентами для"
-" автоматизації складних завдань."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "Робота служби ШІ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"Запустіть або зупиніть модель ШІ. Поки вона зупинена, чат, запити порад і"
-" фонова робота ШІ недоступні."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12224,36 +11874,11 @@ msgstr "Спочатку виберіть рушій."
 msgid "Creating agent... Please wait."
 msgstr "Створення агента... Зачекайте, будь ласка."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Спочатку виберіть службу або реалізацію."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "Потрібно вказати назву та команду."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "Сервер MCP додано."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Помилка."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "Не вдалося додати сервер MCP."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Налаштування агента"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Помилка: форму не знайдено"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12315,14 +11940,6 @@ msgstr "Сервер AoT MCP"
 msgid "Action failed"
 msgstr "Дію не виконано"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Записи MCP не налаштовано."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "Не вдалося завантажити записи MCP."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "Службу ШІ запущено"
@@ -12342,52 +11959,13 @@ msgstr "Службу ШІ зупинено"
 msgid "Save failed"
 msgstr "Не вдалося зберегти"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Зберегти налаштування"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "Налаштування збережено"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "Для зміни перемикача ШІ потрібен перезапуск"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Експериментальна функція"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "Функціональність ШІ наразі перебуває на експериментальній стадії."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Автоматично схвалювати рутинні завдання"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Максимальний вплив для автосхвалення"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Вимагати зворотний зв'язок у разі помилки"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Моделі"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Модель-керівник"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Робоча модель"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12405,98 +11983,22 @@ msgstr "Об'єкт за замовчуванням"
 msgid "(none)"
 msgstr "(немає)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Контекст і бюджет"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Початок періоду тиші"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Кінець періоду тиші"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Обсяг контексту (годин)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Максимальний контекст історії"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Місячний ліміт бюджету (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "завантаження..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "Записи MCP"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "Служби ШІ"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "Реєстр служб ШІ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Назад до порталу"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "Зареєструвати службу ШІ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"Реєструйте та керуйте з'єднаннями рушіїв ШІ (Gemini, OpenAI, локальні "
-"проксі)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Видалити цю службу?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Кінцева точка"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Служб ШІ ще не зареєстровано."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "Підключіть свою першу LLM"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Назва служби"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "напр. Мій Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Тип рушія"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Назва моделі"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "Кінцева точка API (необов'язково)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12509,28 +12011,6 @@ msgstr "Автентифікація"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Тип автентифікації"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "Ідентифікатор / пароль"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Без автентифікації"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "Ідентифікатор облікового запису"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Зареєструвати службу"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Немає попередньо визначених моделей"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12568,28 +12048,6 @@ msgstr "Синхронізувати"
 msgid "Data credits"
 msgstr "Джерела даних"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "Перегляд знань, дібраних ШІ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Знання, які ШІ самостійно відклав (спочатку завжди непідтверджені). "
-"Підтвердьте/відредагуйте те, що правильне, відкличте те, що помилкове — "
-"до перевірки вони цитуються як [AI 정리 — 미확인]."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Лише перевірені знання: УВІМК."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Лише перевірені знання: ВИМК."
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12598,10 +12056,6 @@ msgstr ""
 "Коли ввімкнено, ШІ не може посилатися на нотатки, які написав сам, доки "
 "людина їх не підтвердить. На авторитетні та введені вручну знання це не "
 "впливає."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Поки немає знань, дібраних ШІ."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12619,18 +12073,9 @@ msgstr "Непідтверджено"
 msgid "Flagged"
 msgstr "Позначено"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Та сама тема, що й авторитетне джерело"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Збіги"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Відкрити джерело"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12639,23 +12084,6 @@ msgstr "Реактивувати"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Відкликати"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Елементи знань"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"Усе, на що може посилатися ШІ — синхронізоване з джерел, відкладене ШІ "
-"або введене вручну. Використовуйте пошук і фільтри, щоб побачити, що тут "
-"насправді є."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Пошук знань…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12692,16 +12120,6 @@ msgstr ""
 "Бібліотека знань порожня. Поки в ній нічого немає, ШІ відповідає на "
 "тематичні запитання, спираючись на власні загальні знання — без джерела "
 "для посилання."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Три способи наповнити її: підключіть джерело вище, натисніть «Додати "
-"знання», щоб записати те, що вже знаєте, або просто попросіть ШІ щось "
-"знайти — він збереже знайдене."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12770,14 +12188,6 @@ msgstr "URL-адреса джерела"
 msgid "Source Settings"
 msgstr "Налаштування джерела"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "Редагувати знання, дібрані ШІ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Зберегти (підтверджує)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Виберіть тип джерела."
@@ -12815,10 +12225,6 @@ msgstr "Джерело не знайдено."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Назва джерела"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Назва параметра (ключ контексту)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12927,17 +12333,9 @@ msgstr "Не вдалося видалити"
 msgid "Crop Type"
 msgstr "Тип культури"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Підтвердження…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Підтверджено."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Відкликання…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12946,10 +12344,6 @@ msgstr "Відкликано."
 #: aot_flask/templates/pages/ai/ai_library.html:505
 msgid "Retire this item? It will stop being cited until reactivated."
 msgstr "Відкликати цей елемент? Його не цитуватимуть, доки не буде реактивовано."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Реактивація…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13099,10 +12493,6 @@ msgstr "Виберіть операції для реєстрації як зн�
 msgid "Parameters for the selected operations"
 msgstr "Параметри вибраних операцій"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "Виберіть щонайменше одну операцію."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13242,23 +12632,9 @@ msgstr "Зведення"
 msgid "Key-Value Extraction"
 msgstr "Вилучення пар «ключ-значення»"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "Менеджер ШІ"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Керування розмовами"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Панель помилок"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Історія міркувань"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13274,25 +12650,9 @@ msgstr "Дата"
 msgid "Details"
 msgstr "Деталі"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Історії міркувань ще немає."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "Панель помилок ШІ"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Оновити шаблони"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Оновити список"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Аналіз шаблонів помилок..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13334,51 +12694,14 @@ msgstr "Недоречна дія"
 msgid "Tool Misuse"
 msgstr "Неправильне використання інструмента"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Виправлення користувача"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Деталі міркувань"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "Етап 1: запит користувача"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "Етап 2: намір і планування"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "Етап 3: виконання інструментів (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "Етап 4: синтез і координація"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Координатор"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "Етап 5: остаточна відповідь"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Деталі помилки та вирішення"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Застосувати до знань"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Усього очікує"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13389,47 +12712,19 @@ msgstr "Рекомендації"
 msgid "Review"
 msgstr "Перегляд"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Помилок не знайдено."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Ви впевнені?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "Змінити сервер MCP"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Назва сервера"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Команда виконання"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Область дії"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Загальна (завжди в маніфесті)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Спеціальна (завантажується на вимогу)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Призначення"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Змінні середовища (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13437,38 +12732,14 @@ msgstr "Змінні середовища (JSON)"
 msgid "Update"
 msgstr "Оновити"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "Створити ШІ-агента"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "Пов'язане посилання"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "Отримати ключ API"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Інформація про агента"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Назва агента"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "напр. Менеджер енергії"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "Реєстрація служби ШІ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "напр. Мій OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13480,14 +12751,6 @@ msgstr "Вибір моделі"
 msgid "Enter model name manually"
 msgstr "Введіть назву моделі вручну"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "Кінцева точка API"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "Конвеєр ШІ та доступ до інструментів"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13497,10 +12760,6 @@ msgstr "Роль у конвеєрі"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Робочий процес (застаріле)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Рівень моделі"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13515,17 +12774,9 @@ msgstr "Стандартна"
 msgid "Heavy"
 msgstr "Потужна"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Доступ до інструментів"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Призначено"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Виберіть призначені сервери MCP"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13533,15 +12784,6 @@ msgstr "Виберіть призначені сервери MCP"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Спеціалізація"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "напр. зрошення, клімат"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Правила агента"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13554,29 +12796,9 @@ msgstr "Системний запит"
 msgid "Define how this agent should behave..."
 msgstr "Визначте, як має поводитися цей агент..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Власна модель..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Ключ служби"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "Ключ API служби"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Системний рушій за замовчуванням"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Облікові дані служби"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "Конфігурація ядра ШІ"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13588,164 +12810,17 @@ msgstr "Конфігурація ядра ШІ"
 msgid "Options"
 msgstr "Параметри"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "Область дії MCP"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "Інструкції MCP"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Інструкція сервера"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "Лише класифікує намір. Рекомендується легка модель."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "Створює плани виконання. Рекомендується стандартна або потужна модель."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Викликає інструменти та збирає дані."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Об'єднує результати у відповідь користувачу."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Застарілий режим супервізор/робочий процес."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "Глобальні параметри ШІ"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Глобальні налаштування ШІ"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "Налаштування загальносистемних параметрів рівня оркестрації ШІ."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "Переглянути контекст ШІ пристрою"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "Перевірити дані контексту ШІ для окремих пристроїв"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Переглянути пристрої"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Інфраструктура"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "URL головного проксі"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr ""
-"Глобальний проксі, який використовується, якщо кінцева точка агента не "
-"вказана."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "Тайм-аут запиту (сек)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Взаємодія з користувачем (спливні сповіщення)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "Приховати повідомлення про успіх ШІ"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "Приховати попередження ШІ"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "Планувальник ШІ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "Спільний трекер цілей"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Загальний вигляд]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[День]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Тиждень]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Місяць]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Рік]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Сьогодні]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Вгору(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Вниз(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Відступ(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Скасувати відступ(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Оновити дані"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Додати завдання"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Завантаження завдань..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "Керування завданнями, запропонованими ШІ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "Перегляд і керування завданнями, запропонованими агентами ШІ."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Пошук завдань..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13755,22 +12830,6 @@ msgstr "Пошук завдань..."
 msgid "Target"
 msgstr "Ціль"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Запланований час"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Завантаження запропонованих завдань..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Редагувати завдання"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "Виконується"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Завдання"
@@ -13779,21 +12838,9 @@ msgstr "Завдання"
 msgid "Goal"
 msgstr "Мета"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Віха"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Контрольна точка"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Батьківське завдання"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Редагувати запропоновану задачу"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13804,10 +12851,6 @@ msgstr "Керування виходом"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "Налаштування ПІД"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "Ідентифікатор цілі"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13822,63 +12865,10 @@ msgstr "Час розкладу"
 msgid "AI Reasoning"
 msgstr "Обґрунтування ШІ"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Причина видалення"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "напр. Непотрібно, Невірний час..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Видалити завдання"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Зберегти зміни"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "Запити та поради ШІ"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"Зовнішній ШІ, підключений через MCP, не може самостійно нічого змінювати."
-" Запити на керування очікують тут вашого підтвердження, а думки "
-"збираються тут для порівняння."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "Журнал порад ШІ"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"Думки, надані основним ШІ, зовнішнім ШІ або підпорядкованими вузлами. "
-"Прийняття означає лише згоду — воно не виконує керування."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Останні виклики інструментів ШІ"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Поки що жодних порад не надано."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Поки що не зафіксовано жодних викликів інструментів."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13896,21 +12886,9 @@ msgstr "Запропонована дія"
 msgid "MCP Server Management"
 msgstr "Керування серверами MCP"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Оновити всі статуси"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Додати сервер"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Моніторинг і керування процесами-містками Model Context Protocol"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "Пошук серверів MCP..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13935,10 +12913,6 @@ msgstr "Активувати при збереженні"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Змінні середовища"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Зберегти конфігурацію"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -13975,14 +12949,6 @@ msgstr "Автоматичний тригер"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Нове завдання"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "Пропозиції ШІ"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Немає пропозицій, що очікують."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14025,10 +12991,6 @@ msgstr "Історії поки немає."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Деталі пропозиції"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Автор пропозиції"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14184,14 +13146,6 @@ msgstr "Місцевий час пристрою"
 msgid "Your time"
 msgstr "Ваш час"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Затвердити цю задачу?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Причина відхилення (необов'язково):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14224,14 +13178,6 @@ msgstr "Ціль: "
 msgid "By: "
 msgstr "Автор: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Місцевий час: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Обґрунтування: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "Календар показано у вашому часовому поясі"
@@ -14240,138 +13186,21 @@ msgstr "Календар показано у вашому часовому по�
 msgid "Getting to Know Each Other"
 msgstr "Знайомство"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "ШІ навчається на ваших даних з часом"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Що більше ви взаємодієте, то точнішим він стає"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "Ви контролюєте, на чому зосереджується ШІ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Розкажіть нам про ваш об'єкт"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Що найкраще описує ваш об'єкт?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "Будь ласка, оберіть тип об'єкта, щоб продовжити."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Опишіть конкретно, що вам потрібно від цього ШІ (необов'язково)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Продовжити"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Усе готово!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Тип об'єкта"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Ваші інструкції"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"Тепер ви побачите статус ШІ, ваші ключові слова та те, як ШІ вивчає ваш "
-"об'єкт."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "Перейти до панелі приладів ШІ"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Статус навчання щодо об'єкта"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "Початок роботи з ШІ-радником"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Цій системі ШІ потрібен період навчання, щоб надавати поради, адаптовані "
-"до вашого об'єкта."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "Під час періоду навчання:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "Поради ґрунтуються на загальних агрономічних знаннях"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "Дані, специфічні для об'єкта, поки обмежені"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Ваш зворотний зв'язок є ключем до калібрування"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Інформація про об'єкт"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Вертикальна ферма"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Розсадник"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "Досвід роботи"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "Менше 1 року"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 роки"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 років"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ років"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Критичні параметри"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "оберіть усі, що підходять"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Поживні речовини"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14387,54 +13216,6 @@ msgstr "Назад"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "Далі"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Умови використання"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Цей ШІ-радник з часом навчається на основі даних вашого об'єкта. У "
-"початковий період навчання поради ґрунтуються на загальних агрономічних "
-"знаннях і можуть не враховувати особливості ваших умов. Саме ваш "
-"зворотний зв'язок — підтвердження, коригування або відхилення пропозицій "
-"— калібрує систему під ваш об'єкт. Система повідомить вам, коли вона не "
-"впевнена та яке підтвердження допоможе. Контроль завжди залишається за "
-"вами: жодна автоматична дія не буде виконана без вашого схвалення."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Я розумію та погоджуюся з наведеними вище умовами"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Погодитися та почати"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Налаштування завершено"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"ШІ-радник почне вивчати цей об'єкт. Що більше зворотного зв'язку ви "
-"надаватимете щодо його пропозицій, то точнішими й персоналізованішими "
-"стають поради."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "Почати використання ШІ"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14469,10 +13250,6 @@ msgstr "Великий"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "Бюджети автоматично оптимізуються відповідно до рівня."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Сервіс і модель"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Ручне введення"
@@ -14480,10 +13257,6 @@ msgstr "Ручне введення"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Залиште порожнім, щоб зберегти наявний ключ"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "Конфігурація конвеєра"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16463,14 +15236,6 @@ msgstr "Покриття та вентиляція"
 msgid "Cover layers"
 msgstr "Шари покриття"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"Зовнішнє покриття завжди обов'язкове. За потреби додайте посилення стін "
-"або внутрішнє покриття."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Посилення стін"
@@ -16889,7 +15654,7 @@ msgstr "Охолодження"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1063
 msgid "ACH"
-msgstr "ACH"
+msgstr "ACH (обмінів повітря за годину)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1067
 msgid "Reference values for mechanical equipment sizing"
@@ -17655,26 +16420,6 @@ msgstr "Застосування..."
 msgid "Failed to submit judgment"
 msgstr "Не вдалося надіслати висновок"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Знайдіть адресу, щоб визначити початкове розташування"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "Широта початкового центру карти. Напр. 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "Довгота початкового центру карти. Напр. 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr "Початковий рівень масштабування карти. Можна змінити, ввівши число."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Виберіть пошукову систему за замовчуванням для глобального пошуку."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Скинути до значень за замовчуванням"
@@ -17695,82 +16440,16 @@ msgstr "Колір споруди"
 msgid "Equipment Color"
 msgstr "Колір обладнання"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "Колір пристрою AoT"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Колір фону панелі"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "За замовчуванням: 25. Максимальна межа — 30."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"Використовувати цифрове масштабування для високих рівнів масштабу, не "
-"наданих джерелом карти."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "Увімкнути дробове масштабування для рівнів, близьких до 18 і вище."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Увімкнути ефект плавної появи під час завантаження тайлів."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"Використовувати рендерер Canvas для підвищення продуктивності за "
-"наявності багатьох векторних шарів."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Макс. кількість полігонів об'єкта"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Обмежити максимальну кількість полігонів для об'єктів. Об'єкти, що "
-"перевищують цей ліміт, відображатимуться як точки."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Макс. кількість полігонів зони"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Обмежити максимальну кількість полігонів для зон. Зони, що перевищують "
-"цей ліміт, відображатимуться як точки."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Макс. кількість полігонів пристрою"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Обмежити максимальну кількість полігонів для пристроїв. Пристрої, що "
-"перевищують цей ліміт, відображатимуться як точки."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "Виберіть ділянку, зону чи об'єкт і період — і створіть знімок того, що вирощувалося, вимірювалося та контролювалося: документ, який можна передати іншим або надрукувати."
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17778,7 +16457,7 @@ msgstr "Змінити"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "Пошук за культурою, сортом, назвою, зоною…"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17786,7 +16465,7 @@ msgstr "Дата закінчення"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "Або створіть журнал для всього об'єкта чи зони"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17802,7 +16481,7 @@ msgstr "Без назви"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "Охоплено весь об'єкт або всю зону, включно з кожною ділянкою в ній."
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17846,11 +16525,11 @@ msgstr "Журнал"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "Цей журнал ще створюється. Ця сторінка оновиться автоматично."
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "Не вдалося створити цей журнал."
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17883,7 +16562,7 @@ msgstr "Зміст"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "Кожен розділ нижче починається з нової сторінки в такому порядку."
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -17893,7 +16572,7 @@ msgstr "Огляд"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "чого стосується цей журнал"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -17923,41 +16602,33 @@ msgstr "%(n)s періодів"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "Як це читати"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "Період і часовий пояс"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "Дні починаються й закінчуються за часовим поясом %(tz)s. Кожна дата в цьому документі — це календарна доба за місцевим часом, а не за UTC."
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "Мін. / Макс. / Середнє"
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "Мінімум і максимум точні. Середнє — це середнє з погодинних середніх, тож години з частими записами не зміщують його; це наближення, а не справжнє середнє, зважене за часом."
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "Ціль і Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -17967,17 +16638,17 @@ msgstr "Час роботи"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "Години, протягом яких пристрій був увімкнений за цей період, зчитані за його першим каналом."
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "Що не включено"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "Діагностика пристроїв (батарея, сигнал) за замовчуванням не включається. Її можна ввімкнути під час створення журналу."
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -17985,7 +16656,7 @@ msgstr "Терміни, використані тут"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "Звідки беруться числа"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -17995,7 +16666,7 @@ msgstr "Джерело"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "Записи датчиків і пристроїв, які зберігає ця система AoT для пристроїв, призначених до цього місця."
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -18005,15 +16676,15 @@ msgstr "Знімок"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "Цей документ зафіксовано на момент створення. Подальші зміни пристроїв, програм чи підключень його не змінюють."
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "Примітки щодо точності"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "Друк (зберегти як PDF)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -18042,22 +16713,22 @@ msgstr "Найменування"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "Градусо-дні вегетації"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "цей журнал: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "база %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "Днів із вимірюваннями: %(p)s%%"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -18069,12 +16740,12 @@ msgstr "У програми немає базової температури"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "Недостатньо днів із вимірюваннями"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "Днів у цьому журналі: %(n)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18140,7 +16811,7 @@ msgstr "оцінка"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "до цього журналу"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18172,12 +16843,7 @@ msgstr "Увесь період"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "світловий день %(h)s год"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18197,11 +16863,6 @@ msgstr "використання"
 msgid "varies"
 msgstr "змінюється"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "немає датчика"
@@ -18213,7 +16874,7 @@ msgstr "Видалити цей журнал? Цю дію неможливо с�
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "Щось пішло не так."
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19293,10 +17954,6 @@ msgstr "Корисне навантаження OFF (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Призначити планувальнику"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Зареєструвати вибрані пристрої"
@@ -19510,10 +18167,6 @@ msgstr "Значок MCP"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "Натисніть, щоб редагувати кольори значка MCP"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Натисніть, щоб редагувати кольори значка оновлення"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19790,24 +18443,6 @@ msgstr "М'який фон значка для станів виконання/�
 msgid "Text color used on the info tint"
 msgstr "Колір тексту, що використовується на кольорі фону «Інформація»"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr ""
-"Колір рамки для блоків повідомлень про успіх (сторінки адміністрування, "
-"напр. «Оновлення»)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Колір рамки для блоків попереджень/стандартних повідомлень"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Колір рамки для блоків повідомлень про небезпеку/помилки"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Колір рамки для інформаційних блоків повідомлень"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr ""
@@ -19841,10 +18476,6 @@ msgstr "Рамка кнопки"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Рамка для всіх кнопок і рядків списків"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "Значок оновлення в навігації та фон кнопки оновлення"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20965,34 +19596,6 @@ msgstr "Керування нотатками"
 msgid "Search content, subject..."
 msgstr "Пошук за вмістом, темою..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Очистити фільтри"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Розширені фільтри"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Експортувати результати"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "Експорт звіту у PDF"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Об'єднати нотатки за певний період (за допомогою фільтра тегів вище) у "
-"форматований PDF-звіт."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Заголовок звіту (необов'язково)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "Нотаток не знайдено"
@@ -21276,7 +19879,7 @@ msgstr "Немає тегів"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "Аналіз ШІ ще недоступний. Аналіз виконується автоматично — зазирніть трохи згодом."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21288,7 +19891,7 @@ msgstr "Навчити ШІ"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "Додайте нотатку, щоб допомогти ШІ зрозуміти цей об'єкт..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21329,11 +19932,11 @@ msgstr "Достовірність:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "За результатами аналізу, ймовірно, відбулися такі зміни:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "Не вдалося завантажити пораду. Перевірте з'єднання."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21341,7 +19944,7 @@ msgstr "Будь ласка, введіть нотатку перед надси
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "Нотатку збережено — її буде враховано в наступному циклі ШІ."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21351,25 +19954,9 @@ msgstr "Не вдалося надіслати."
 msgid "Unable to save note. Please try again."
 msgstr "Не вдалося зберегти нотатку. Спробуйте ще раз."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Аналізувати"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "Не вдалося виконати аналіз ШІ"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Не вдалося виконати"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21405,11 +19992,11 @@ msgstr "подвійний шар"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "Права кнопка миші: обертання"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "Ліва кнопка миші: переміщення"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21464,7 +20051,7 @@ msgstr "Зберегти як глобальні кольори секцій"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "Застосовує кольори перших 5 секцій до кольорів секцій у «Налаштування» > «Користувацький інтерфейс»."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21507,15 +20094,15 @@ msgstr "Стовпчик"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "Збережено як глобальні кольори графіків"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "Зберегти як глобальні кольори графіків"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "Застосовує кольори перших 6 рядів до кольорів графіків у «Налаштування» > «Користувацький інтерфейс»."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21525,7 +20112,7 @@ msgstr "Параметри осі Y"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "Увімкнути ручні мін./макс. осі Y"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21553,7 +20140,7 @@ msgstr "Введіть адресу."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "Поставте запитання щодо цієї рекомендації (наприклад, що мені робити?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21561,7 +20148,7 @@ msgstr "Запитати ШІ, що робити"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "Які конкретні дії мені слід виконати відповідно до цієї рекомендації?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21610,19 +20197,19 @@ msgstr "5 хв"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
-msgstr ""
+msgstr "30 хв"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:169
 msgid "1h"
-msgstr ""
+msgstr "1 год"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:170
 msgid "6h"
-msgstr ""
+msgstr "6 год"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:171
 msgid "1d"
-msgstr ""
+msgstr "1 д"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
 msgid "Actual"
@@ -21651,11 +20238,6 @@ msgstr "Час початку"
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
 msgid "Select the Output to control in the widget options."
 msgstr "Виберіть вихід для керування в налаштуваннях віджета."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Зсув позиції даних (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
@@ -21687,19 +20269,19 @@ msgstr "Помилка отримання зображення"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "Помилка: не вдалося завантажити бібліотеку HLS"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "Помилка: браузер не підтримує пряме відтворення RTSP. Скористайтеся натомість методом 'Relay'."
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "Помилка: URL потоку не налаштовано"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "Помилка отримання даних камери"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21722,54 +20304,18 @@ msgstr "Увімкнено"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "Цей тип функції не має параметрів для редагування."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "Цей контролер активний. Деактивуйте його перед збереженням змін, інакше їх не буде застосовано."
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Параметри ряду"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Увімкнути власні кольори"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Увімкнути вирівнювання поділок осі Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Увімкнути початок осі Y на поділці"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Увімкнути кінець осі Y на поділці"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Мінімум осі Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Максимум осі Y"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21796,11 +20342,11 @@ msgstr "Фільтр за категорією"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "Показувати лише оголошення з вибраних категорій. Якщо нічого не вибрано, показуються оголошення всіх категорій."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "Категорій ще немає. Укажіть категорію під час створення оголошення, щоб фільтрувати за нею тут."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22220,12 +20766,12 @@ msgstr "Призупинено — не зареєстровано жодног�
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "Призупинено — поза робочим часовим вікном"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "Призупинено (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22254,12 +20800,12 @@ msgstr "Приводи: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "Вентиляція: відкрито %(ratio)s (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "Блокування безпеки: %(reason)s — керування зупинено"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22268,27 +20814,27 @@ msgstr "спрацювало"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "Блокування безпеки (часткове): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "Немає приводу для керування: %(target)s"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "Обладнання досягло межі: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "Вихід за встановлену межу: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "Останній цикл: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22323,22 +20869,22 @@ msgstr "Послідовність: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "Вікно на сьогодні: %(start)s – %(end)s (цикл %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "Вікно на сьогодні: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "Минуло за цикл: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "Кроки: працює %(running)s із %(total)s"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22353,15 +20899,15 @@ msgstr "Період: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "Остання перевірка: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "Остання перевірка виконала дію."
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "Остання перевірка не виконала жодної дії."
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22370,7 +20916,7 @@ msgstr "Ще не перевірено."
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "До наступної перевірки: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23712,21 +22258,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Збирач контексту зовнішнього середовища"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Збирає зовнішню температуру, вологість, швидкість вітру, кількість "
-"опадів, сонячну радіацію, точку роси та CO2 ззовні приміщення. Функція "
-"інтегрованого керування середовищем використовує цей збирач як єдине "
-"джерело достовірних даних. Оберіть зовнішній датчик для кожного пункту. "
-"Залиште пункти порожніми, щоб застосувати резервне значення за "
-"замовчуванням."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Період оновлення"
@@ -23802,34 +22333,6 @@ msgid ""
 msgstr ""
 "Оберіть вимірювання зовнішнього CO₂ (ppm). За відсутності "
 "використовується значення за замовчуванням 400 ppm."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Максимально допустимий вік датчика (секунди)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr ""
-"Вимірювання, старіші за це значення, замінюються резервним значенням за "
-"замовчуванням."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Резервна зовнішня температура (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr ""
-"Значення за замовчуванням для використання, коли датчик відсутній або "
-"застарів."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Резервна зовнішня вологість (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Резервна швидкість вітру (м/с)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -23964,14 +22467,6 @@ msgstr "Максимальний вік входу (с)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "Порт REST"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Сервер/токен з розділу Налаштування -> ChirpStack; пристрої призначаються"
-" там (\"Керується\")."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -25607,7 +24102,7 @@ msgstr ""
 
 #: inputs/kma_weather_stn_L.py:88
 msgid "stn"
-msgstr "stn"
+msgstr "Станція"
 
 #: inputs/linux_command.py:50
 msgid "Command Timeout"
@@ -26146,18 +24641,6 @@ msgstr ""
 "Voyager, розроблені так, щоб виділяти точки даних та інформацію з "
 "датчиків."
 
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"Глобальна карта земного покриву на основі супутникових даних Sentinel-2 "
-"Європейського космічного агентства (ESA). Рослинність, міські території, "
-"орні землі, ліси та водойми класифіковані та позначені кольором з "
-"роздільною здатністю 10 м, що корисно для екологічного аналізу."
-
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
 msgstr "Esri"
@@ -26302,11 +24785,11 @@ msgstr ""
 
 #: inputs_gis/gis_nasa_gibs.py:9
 msgid "MODIS Terra TrueColor"
-msgstr "MODIS Terra TrueColor"
+msgstr "MODIS Terra (натуральні кольори)"
 
 #: inputs_gis/gis_nasa_gibs.py:18
 msgid "VIIRS SNPP TrueColor"
-msgstr "VIIRS SNPP TrueColor"
+msgstr "VIIRS SNPP (натуральні кольори)"
 
 #: inputs_gis/gis_nasa_gibs.py:27
 msgid "Blue Marble (Precip)"
@@ -27396,7 +25879,7 @@ msgstr ""
 
 #: utils/calendar_event_format.py:269
 msgid "pid"
-msgstr "pid"
+msgstr "PID"
 
 #: utils/calendar_event_format.py:271
 msgid "setting"
@@ -27940,17 +26423,6 @@ msgstr ""
 "(Високе). Вибір готових налаштувань, таких як Температура, Вологість або "
 "VPD, автоматично встановлює мінімальні/максимальні значення та кольорові "
 "секції."
-
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts безкоштовний для проєктів із відкритим кодом та особистого "
-"використання. Однак у складі комерційного продукту може знадобитися "
-"комерційна ліцензія. Актуальну інформацію дивіться на "
-"https://shop.highsoft.com."
 
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
@@ -28657,52 +27129,17 @@ msgstr "Хронологія стадій із позначеними сього
 msgid "Targets vs now"
 msgstr "Цілі порівняно з поточним станом"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Поточні показники порівняно з цілями та межами, заданими для цієї стадії."
-" Один показник отримує індикатор, решта наводяться у вигляді тексту."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Тенденції"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr "Заповнює рядки без осі лінією нещодавньої тенденції. Потребує блоку цілей."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Накопичене тепло"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Наскільки ця стадія просунулася в градусоднях вегетації. Показується лише"
-" коли програма визначає базову температуру."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Вологість ґрунту"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Показник індикатора"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Яке вимірювання отримує індикатор. Решта наводяться у вигляді тексту. "
-"Якщо ця ділянка його не вимірює, натомість показується перше вимірювання "
-"з діапазоном."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29309,30 +27746,9 @@ msgstr "Кількість десяткових знаків 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "Кількість десяткових знаків для другого вимірювання"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"Відображає заголовки останніх дописів дошки оголошень. Натискання на "
-"заголовок відкриває повний допис (вміст, опитування, відповіді, "
-"підтвердження) у спливному вікні; усі дії, виконані там, відображаються "
-"на самому дописі. Користувачі з правом запису також можуть створювати, "
-"редагувати та видаляти дописи безпосередньо з віджета."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Кількість дописів"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Скільки останніх оголошень відображати"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Як часто оновлювати список оголошень"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29535,11 +27951,6 @@ msgstr "Перемикає видимість списку дій за замо�
 msgid "Sequence Settings (Synced)"
 msgstr "Налаштування послідовності (синхронізовано)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "Формат ГГ:ХХ"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "Період (секунди)"
@@ -29578,18 +27989,18 @@ msgstr "Продовжити з місця зупинки"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "Почати спочатку"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "Після повторного ввімкнення"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "Що відбувається, коли цю послідовність вимикають і знову вмикають. Продовження відновлює перервений цикл; початок спочатку запускає його з першого кроку. Перезапуск демона завжди продовжує цикл, незалежно від цього налаштування."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -30122,7 +28533,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "Блокує зволоження змочувального типу за сильного освітлення (краплі можуть, як лінзи, фокусувати сонячне світло на листі) і, якщо задано нижче, перед заходом сонця. Не залежить від того, як часто виконується зволоження — можна вмикати чи вимикати за будь-якої частоти зволоження."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30462,16 +28873,6 @@ msgstr "Прогнозоване випередження"
 msgid "Enable Forecast Feedforward"
 msgstr "Увімкнути прогнозоване випередження"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"Використовувати короткостроковий прогноз погоди KMA (forecast.json) для "
-"завчасного зсуву заданих значень температури/вологості та стримування "
-"вентиляції перед настанням несприятливої погоди."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "Реагує на те, що є зараз"
@@ -30483,15 +28884,6 @@ msgstr "Готується заздалегідь"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Горизонт прогнозу (години)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"На скільки годин вперед перевіряти наближення несприятливої погоди (1–6 "
-"год). Довший горизонт дає раніше попередження, але може призвести до "
-"надмірної корекції."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30690,14 +29082,6 @@ msgstr "Накопичено з початку"
 msgid "Vapor Pressure Deficit"
 msgstr "Дефіцит тиску пари"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Розмір шрифту значення (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "Розмір шрифту вимірювання"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Графік вирощування"
@@ -30706,31 +29090,9 @@ msgstr "Графік вирощування"
 msgid "Stop Control On"
 msgstr "Зупинити керування"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"Керування остаточно зупиняється після цієї дати. Залиште порожнім, щоб "
-"продовжити роботу."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Захист від опіків при зволоженні"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Режим розсадника"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Режим розсадника (сіянці)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Суворіші межі зволоження для сіянців, які легше обпалюються, ніж дозріле "
-"листя."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30744,10 +29106,6 @@ msgstr "Туманоутворення"
 
 msgid "Devices under automatic control"
 msgstr "Пристрої під автоматичним керуванням"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s виключено"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr "Вимкніть пристрій, щоб автоматичне керування не рухало ним."
@@ -30799,14 +29157,6 @@ msgstr ""
 "прогнозу KMA. Більший горизонт дає раннє попередження, але може призвести"
 " до надмірної корекції. Ігнорується, якщо до цього об'єкта прив'язане "
 "власне джерело прогнозу — це джерело вже застосовує власний горизонт."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Фільтр категорій оголошень"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Простір нотаток"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -30913,10 +29263,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "Виберіть простір у налаштуваннях віджета, щоб показувати нотатки."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr "Показує нотатки, написані у вибраному просторі (див. «Простір» нижче)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31243,19 +29589,6 @@ msgstr "Зупинити обертання"
 msgid "System Timezone"
 msgstr "Часовий пояс системи"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"Часовий пояс за замовчуванням для всієї системи (назва IANA, напр. "
-"Asia/Seoul). Використовується для часу в журналі демона, журналі аудиту "
-"та як останній резервний варіант для розкладів пристроїв без "
-"розташування. Це не ваш особистий часовий пояс відображення в "
-"налаштуваннях облікового запису."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31268,3 +29601,999 @@ msgstr "Місце розташування не задано — оцінено
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "Типовий часовий пояс усієї системи (назва IANA, напр. Asia/Seoul). Використовується для часу в журналі демона та як останній варіант для пристроїв без місця розташування; після збереження тут ці пристрої переходять на нього. Час, який люди читають і вводять, відповідає особистому часовому поясу кожного з налаштувань облікового запису."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "На всю ширину на мобільних"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Розмір екрана комп'ютера"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Поверхня елементів керування"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Роздільна лінія"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Роздільна лінія (м'яка)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Розмір екрана мобільного пристрою"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Доріжка перемикача вимкнено"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Не відповідає"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Заплановано"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "Час завершення має бути пізнішим за час початку в межах тієї самої доби (проміжок, що перетинає північ, не підтримується)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Ця послідовність використовує час за днями тижня, тому час початку/завершення тут не застосовано. Змініть його в розкладі за днями тижня у віджеті послідовності."
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "Виберіть щоденний, щотижневий або щомісячний."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Виберіть ціль реєстрації (вхід або вихід)."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Повернути"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Повернути налаштування до стану на момент відкриття цього вікна"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Повернуто"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "Сигнал"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Установити залежності для"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "Домашня сторінка AoT"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Збільшує всю сторінку на комп'ютерах — текст, кнопки та карти разом. Телефони й планшети використовують налаштування вище."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Збільшує всю сторінку на телефонах і планшетах — текст, кнопки та карти разом. Комп'ютери використовують налаштування нижче."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Немає результатів"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Нічого не вибрано"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Записи"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "Запити"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "Вибрано {0} із {1}"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Не вдалося завантажити запити на керування"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Вирішувати це можуть лише користувачі, які мають право редагувати контролери."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Вони ще не виконувалися. Схвалення запускає саме те, що описано тут, — повертатися й повідомляти ШІ не потрібно."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "Запити до ШІ"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "Порада ШІ"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Не вдалося завантажити поради"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Немає порад, що очікують."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Немає пропозицій розкладу, що очікують."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Думки цього ШІ та інших підключених ШІ. Прийняття лише фіксує, що ви згодні, — воно нічого не запускає."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "Запропоновано ШІ"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Додати цю пропозицію до розкладу?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Відхилити цю пропозицію?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Пропозиції розкладу"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "Завдання, які ШІ запропонував для розкладу. Схвалення додає їх до розкладу — вони виконуються у свій час."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "Що ШІ очікує від вас — кожен пункт нижче чекає на ваше рішення."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "Підключення ШІ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Ключі доступу"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Розширено"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "Дозволено"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Застосунок ШІ, яким ви вже користуєтеся, наприклад Claude Desktop, може читати дані цього господарства та запитувати керування обладнанням. Керування обладнанням виконується лише після схвалення людиною."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "Вбудований ШІ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "Підключіть свій застосунок ШІ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Помилка завантаження налаштувань"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "Орієнтовні щомісячні витрати вбудованого ШІ. Ви отримаєте сповіщення, коли ліміт наближатиметься, а після його досягнення ШІ перейде на найдешевшу модель. 0 означає відсутність ліміту."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Доступ зовнішнього ШІ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Створіть окремий ключ для кожного застосунку ШІ та вставте його в цей застосунок."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Дозволяє вбудованому ШІ періодично підсумовувати ситуацію на господарстві у фоновому режимі."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "Мостові сервери MCP"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Керування ключами"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "Не дозволено"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Відкрити загальні налаштування"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Запустити вбудований ШІ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "Модель ШІ, яку використовують чат і поради в цьому застосунку. Вона працює окремо від вашого застосунку ШІ, тож її можна залишити вимкненою, якщо ви нею не користуєтеся."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "Об'єкт, який ШІ бере за основу, коли чат або екран його не вказує."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "Сервери інструментів, до яких звертається вбудований ШІ. Один додається автоматично, коли ви додаєте рушій MCP вище."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "Вмикається й вимикається в розділі «Налаштування» > «Загальні»."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "Нотаток, написаних ШІ, що очікують підтвердження людиною: %(n)s."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0 означає, що автоматичної синхронізації немає."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "Знання ШІ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "Заголовок ключа API"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Додано"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Усі стани"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Усі теги"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Bearer Token"
+msgstr "Токен Bearer"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Цитувати лише підтверджені знання"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Джерела даних"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "Як використовуються знання"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Тип джерела"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Налаштування знань"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Остання синхронізація"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Джерело бібліотеки"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "Пошук за запитом"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Потребує підтвердження"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Ще не синхронізовано"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Відкрити посилання"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Зберегти й підтвердити"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Показати їх"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Помилка синхронізації"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Синхронізувати зараз"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Синхронізовано"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "Синхронізовано {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Наповнити можна трьома способами: підключити джерело на вкладці «Джерела даних», натиснути «Додати знання», щоб записати те, що ви вже знаєте, або попросити ШІ щось знайти — він збереже знайдене."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Кількість отримань"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Назва, текст або атрибуція"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Довіра"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "Те, що записали люди та ШІ, щоб ШІ міг на це посилатися. Дані, синхронізовані з джерел, тут за замовчуванням приховано — виберіть їх у фільтрі джерел або керуйте ними на вкладці «Джерела даних»."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "Написано людьми та ШІ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "Записи ШІ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Усі рівні серйозності"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Усі типи"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Відповідь"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "Застосовано до знань."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Схвалено"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Очікує схвалення"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "Викликав"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Виконано"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Розмови"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Виправлено"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Виправлення"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Не вдалося завантажити записи"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Проігноровано"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Звіти про помилки"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Термін минув"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Засвоєно"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Пошук"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Немає звітів про помилки."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "Запитання до вбудованого ШІ та його відповіді."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Отримано"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Виклики інструментів"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Що підключені ШІ зробили за допомогою інструментів — найновіші зверху. Для запитів, що потребували схвалення, показано, як їх вирішили."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "Що сказав ШІ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Коли"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "Помилкові відповіді ШІ, про які повідомили люди, разом з їхніми виправленнями. Застосування виправлення додає його до знань ШІ."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "Не вдалося завантажити список серверів MCP."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Видалити цей сервер?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Схема вводу"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "Об'єкт JSON, наприклад {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "Серверів MCP ще немає."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Цей сервер не надає жодних інструментів."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Сервер додано."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Сервер видалено."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Сервер оновлено."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "Сервери"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Зупинено"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "Сервери інструментів, до яких звертається вбудований ШІ. Додавання рушія MCP на сторінці «Підключення ШІ» автоматично створює один сервер."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "Інструменти"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Очікує повтору"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "Зміна ролі викличе запитання, чи заповнити спеціалізацію, системний промпт, рівень і модель значеннями за замовчуванням для цієї ролі."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Заповнити спеціалізацію, системний промпт, рівень і модель значеннями за замовчуванням для цієї ролі? Уведені вами значення буде замінено."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "Пропозицій розкладу від ШІ, що очікують у розділі ШІ → Запити: %(n)s."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Скасувати це завдання?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "Запити на керування та пропозиції розкладу від ШІ вирішуються в розділі ШІ → Запити."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Не вдалося завантажити хронологію пристрою"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Пристроїв не знайдено."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "Відкрити запити"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Готові кольори"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Усі карти"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Усі об'єкти"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Ключ"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Не вдалося завантажити налаштування"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "Чим крупніша одиниця, тим менший документ. Щоденні подробиці згодом відновити не можна, тож вибирайте її, лише якщо вони вам не потрібні."
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "Одиниця запису"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "Етапів: %(n)s, періодів: %(m)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "Вище"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "Відносно цільових значень"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "Нижче"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "За етапами"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "Кількість днів"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "Польовий датчик і метеостанція"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Вимірює метеостанція"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "Тенденції вимірювань"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "Вимірювання, які ви не вибрали під час створення цього журналу, до нього не входять. Їх названо в застереженнях вище."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "Рядки з позначкою «Метеостанція» і смугою зліва беруть значення з метеостанції об'єкта, а не з датчика, розміщеного в цьому місці. Якщо для того самого вимірювання є обидва джерела, цільові значення порівнюються лише з польовим датчиком."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "Ті самі цільові значення, що й на попередньому етапі."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Датчики дають різні висновки"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "Показані датчики належать до навколишньої області."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "Форма й розташування датчиків — поточні, а не за цей період."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "Показати ще %(n)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "Згорнути"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "Показати план"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "Хронологія етапів"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "Цільові значення беруться з програми, прикріпленої до цієї ділянки. Δ — це виміряне середнє мінус це цільове значення. Цільові значення для дня/ночі та на основі кривої лише позначаються, а різниця не обчислюється, бо порівняння їх із середнім за всю добу дає хибні тривоги."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "Контур отримано від об'єкта."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "накопичено %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "метеостанція %(out)s × покриття %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Натисніть, щоб редагувати кольори «Підтвердження»"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Натисніть, щоб редагувати кольори «Поверхня елементів керування»"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Натисніть, щоб редагувати кольори «Немає відповіді»"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Натисніть, щоб редагувати кольори «Перемикач увімкнено»"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Натисніть, щоб редагувати кольори «Доріжка перемикача вимкнено»"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "Поверхня елементів, якими ви керуєте, — текстові поля, списки вибору, «таблетки». Тримайте її відмінною від фону сторінки, інакше елемент керування на сторінці зіллється з нею"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Світліша роздільна лінія для щільних списків, де лінія повної товщини створювала б шум"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Лінія між елементами всередині одного контейнера — списки, рядки параметрів. Не рамка навколо чогось"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Фон рядка/картки, коли пристрій перестає відповідати, — це не те саме, що «Стан попередження», коли людина призупиняє його навмисно"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Слайд-перемикач"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "Доріжка слайд-перемикача у вимкненому стані (для увімкненого використовується Діапазон 3)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Текстове поле"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Перемикач увімкнено"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Ви впевнені, що хочете видалити цю роль?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Жодне оголошення не відповідає вашому пошуку."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Пошук за заголовком, вмістом, категорією..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Кольори секцій"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Глобальні кольори секцій"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Секція"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Кольори"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Заплановано"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Текст"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Тривалість (хв)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Змінити й затвердити"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "Недійсне значення в полі '{field}'"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Зберегти й затвердити"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Запланований час"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Крок"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Це керує реальним обладнанням (клапанами, насосами)."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Переглянути"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Докладніше"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "Очікують затвердження: {n}"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "Успішно: {ok}/{total}"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "Евапотранспірація"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Збирає зовнішню температуру, вологість, швидкість вітру, опади, сонячну радіацію, точку роси та CO2 ззовні об'єкта. Функція інтегрованого керування середовищем використовує цей збирач як єдине джерело даних. Виберіть зовнішній датчик для кожного пункту. Пункти, залишені порожніми, не передаються — інтегроване керування вважатиме їх невідомими, а не припускатиме значення."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Сервер і токен беруться з розділу «Налаштування» -> ChirpStack; пристрої приєднуються до цього планувальника зі своєї сторінки пристрою (наприклад, поле «Class Scheduler» у AoT-C)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Вікно пошуку (дні)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Активні канали"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "Останні 14 днів"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "Останні 30 днів"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "Останні 60 днів"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "Останні 90 днів"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Залиште порожнім, щоб автоматично підібрати зареєстрований полігон, що містить точку, на яку клацнули."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (середнє)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "Вікно пошуку NDVI"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "Статистика NDVI для окремого поля, а також вологість і температура ґрунту для полігона, зареєстрованого на agromonitoring.com — єдиний тут вхід, що подає вологість ґрунту числом для меж вашого власного поля, а не як грубий супутниковий шар. Намалюйте поле на панелі Agromonitoring (1–3000 га) і вставте нижче ID його полігона або залиште поле порожнім, щоб підібрати полігон, який містить точку, на яку ви клацнули. Використовує той самий обліковий запис, що й OpenWeatherMap."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "ID полігона"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Темп. ґрунту (10 см)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Темп. ґрунту (поверхня)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "Використовується найновіший проліт супутника в межах цього вікна. Через хмарність тижнями може не бути придатного знімка."
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "Глобальна вологість поверхневого шару ґрунту (0–5 см) за продуктом SMAP (Soil Moisture Active Passive) L4 від NASA, що подається як шар майже в реальному часі через NASA GIBS. Доступна з роздільною здатністю приблизно 9 км із можливістю вибору дат; корисна для планування зрошення та моніторингу посухи."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Найчистіший знімок у вікні"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "Хмари залишають прогалини на знімку будь-якої окремої дати, тому натомість відображається найновіший придатний знімок у межах цього вікна."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Колекція"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Хибні кольори (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "Останні 7 днів"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Макс. хмарність"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "Найновіший знімок"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (вологість)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (вегетація)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (вода)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Пріоритет знімка"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Вікно пошуку"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (верх атмосфери)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (з атмосферною корекцією)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Знімки Sentinel-2 з роздільною здатністю 10 м через Sentinel Hub в Copernicus Data Space Ecosystem — достатньо детальні, щоб бачити відмінності росту всередині одного поля, на відміну від NDVI MODIS із роздільною здатністю 250 м. Зареєструйте безкоштовний обліковий запис CDSE, створіть клієнт OAuth і вставте його Client ID та Secret нижче. Безкоштовний рівень дозволяє 30 000 одиниць обробки на місяць; один екран карти коштує приблизно 4, а тайли кешуються на добу."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Натуральні кольори"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Вигляд"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Розмір тексту"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "Поточні показники порівняно з цілями та межами, які оголошує ця стадія — та сама картка, що й у віджеті карти, зокрема DLI та накопичене тепло. [7 днів] перетворює кожен рядок на діапазон, у якому значення змінювалося за останній тиждень."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Заповнює рядки, що не мають власного діапазону (CO2, вологість ґрунту, точка роси), лінією недавнього тренду. Потрібен блок цілей."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Наскільки ця стадія просунулася до наступної в градусо-днях росту. Показується лише тоді, коли програма змінює стадії за GDD. Накопичена сума від початку посадки натомість є рядком у картці середовища й відповідає налаштуванням тієї картки."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "Помилка вимкнення: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "Максимальна кількість запитів на затвердження, які модальне вікно зі списком показує одночасно"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Як часто оновлювати кількість запитів, що очікують"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "Запити на затвердження MCP"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Макс. елементів для показу"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Показує, скільки запитів на запис від зовнішнього ШІ очікують затвердження. Клацніть на кількість, щоб відкрити список і затверджувати, відхиляти або змінювати та затверджувати запити по одному, або виберіть кілька й затвердити чи відхилити їх пакетом. Затвердження виконує запит негайно саме з тими значеннями, що показано."

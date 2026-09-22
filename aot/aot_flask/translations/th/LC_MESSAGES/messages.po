@@ -4962,10 +4962,6 @@ msgstr "— ไม่มี —"
 msgid "Select one or more devices to register."
 msgstr "เลือกอุปกรณ์ที่ต้องการลงทะเบียนอย่างน้อยหนึ่งรายการ"
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "เลือกเป้าหมายการลงทะเบียน (Input/Output) หรือ scheduler"
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5031,11 +5027,6 @@ msgstr "ทรัพยากรนี้ถูกกำหนดให้กล
 msgid "Action Type"
 msgstr "ประเภทการดำเนินการ"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "ชื่อพารามิเตอร์"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "ประเภทแหล่งข้อมูล"
@@ -5044,24 +5035,6 @@ msgstr "ประเภทแหล่งข้อมูล"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "ป้อนข้อมูลด้วยตนเอง"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "หมายเหตุ/คำอธิบาย"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "URL ภายนอก"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "ค่า / URL / ข้อความ"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "รหัสระเบียน"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7267,26 +7240,6 @@ msgstr "สีพื้นหลังข้อมูล"
 msgid "Info Tint Text"
 msgstr "สีข้อความบนพื้นหลังข้อมูล"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "ขอบสีโทนความสำเร็จ"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "เส้นขอบสีของคำเตือน"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "ขอบสีโทนอันตราย"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "เส้นขอบโทนสีข้อมูล"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "พื้นหลังป้าย LLM"
@@ -7294,12 +7247,6 @@ msgstr "พื้นหลังป้าย LLM"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "พื้นหลังป้าย MCP"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "ป้ายอัปเกรด"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7501,27 +7448,9 @@ msgstr "Duty Cycle ของเงื่อนไข (%)"
 msgid "Confirmed"
 msgstr "ยืนยันแล้ว"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "ต้องตรวจสอบ"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "ป้อนค่า"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "เช่น 25.5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "เช่น ค่าตั้งจุดตามอุณหภูมิตอนเช้า"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "เช่น https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7542,59 +7471,10 @@ msgstr "กำลังดำเนินการ"
 msgid "Failed"
 msgstr "ล้มเหลว"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "คำแนะนำจาก AI"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "ยังไม่มีงานที่ลงทะเบียนไว้"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "เพิ่มงานได้ด้วยปุ่ม Add Task ที่ด้านบน"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "ต้องการอนุมัติตารางเวลาที่ AI เสนอและเพิ่มลงในปฏิทินหรือไม่?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "อนุมัติตารางเวลาที่ AI เสนอแล้ว"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "การอนุมัติล้มเหลว"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "ข้อผิดพลาดเครือข่าย"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "ต้องการปฏิเสธและลบคำแนะนำนี้หรือไม่?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "ปฏิเสธและลบคำแนะนำแล้ว"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "การปฏิเสธล้มเหลว"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "ไม่มีงานหลักให้เยื้องเข้า"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "เป็นงานระดับบนสุดอยู่แล้ว"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "อัปเดตลำดับแล้ว"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7603,14 +7483,6 @@ msgstr "อัปเดตลำดับแล้ว"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "อัปเดตล้มเหลว"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "อัปเดตโครงสร้างลำดับชั้นแล้ว"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "อัปเดตชื่อแล้ว"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7710,65 +7582,15 @@ msgstr "กำลังโหลด..."
 msgid "Failed to load data."
 msgstr "โหลดข้อมูลไม่สำเร็จ"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "ยังไม่มีบันทึกบริบทที่ลงทะเบียนไว้"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "ไม่มีบันทึกที่ตรงตามเงื่อนไข"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "ค่าเริ่มต้นของระบบ"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "แก้ไขคำนิยาม"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "รอการตรวจสอบ"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "ถูกปฏิเสธ"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "กรอกหรือยืนยันคำนิยามที่จะอนุมัติ:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "อนุมัติสำเร็จ"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "เกิดข้อผิดพลาดระหว่างการอนุมัติ"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "เกิดข้อผิดพลาดของเซิร์ฟเวอร์"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "ต้องการปฏิเสธคำศัพท์นี้หรือไม่?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "ปฏิเสธสำเร็จ"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "เกิดข้อผิดพลาดระหว่างการประมวลผล"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "กรอกคำนิยามใหม่:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -10948,65 +10770,11 @@ msgstr "ไม่สามารถย้อนกลับได้"
 msgid "Usage"
 msgstr "การใช้งาน"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "ตัวจัดการบริบท AI"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr "แทรกข้อมูลภายนอกเข้าสู่ AI และจัดการสถานะความน่าเชื่อถือ"
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "เพิ่มบริบท"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "หมายเหตุ (ไม่บังคับ)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "บันทึกบริบท"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "ค่าเริ่มต้นของระบบ"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "ต้องตรวจสอบ"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr "สร้างขึ้นโดยอัตโนมัติจาก AI จากค่าเริ่มต้นของโดเมน ยังไม่ได้รับการตรวจสอบ"
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"ข้อมูลที่ผู้ใช้ป้อนหรือรายการที่รอดำเนินการ AI "
-"จะอ้างอิงข้อมูลนี้แต่ด้วยความเชื่อมั่นต่ำ"
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr "ค่าที่ผู้ใช้ตรวจสอบและอนุมัติแล้ว AI จะใช้ค่านี้ด้วยความเชื่อมั่นสูง"
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "แพลตฟอร์มที่ตรวจพบ"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "พีซี/เซิร์ฟเวอร์"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "คอนเทนเนอร์ Docker"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11882,15 +11650,6 @@ msgstr "หรือรีเฟรชหน้าเว็บ"
 msgid "Control requests awaiting approval"
 msgstr "คำขอควบคุมที่รอการอนุมัติ"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"รายการเหล่านี้ยังไม่ได้ถูกรัน "
-"การอนุมัติจะรันทันทีด้วยอาร์กิวเมนต์ตามที่แสดงไว้เป๊ะๆ — "
-"คุณไม่จำเป็นต้องกลับไปแจ้ง AI อีก"
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "ไม่มีคำขอควบคุมที่รอดำเนินการ"
@@ -11928,54 +11687,9 @@ msgstr "อนุมัติและดำเนินการแล้ว"
 msgid "Approved, but it failed to run"
 msgstr "อนุมัติแล้ว แต่ทำงานไม่สำเร็จ"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "สถานะ AI"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "ความคืบหน้าการเรียนรู้"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "คำสำคัญหลัก"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "ฟีเจอร์ที่ใช้บ่อย"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "รีเซ็ตสถานะ AI"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "คำสั่งสำหรับ AI ของคุณ"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "ขั้นสูง — ไม่บังคับ"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "เพิ่มคำสั่งเฉพาะสำหรับ AI ของคุณ (ไม่บังคับ)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"เช่น "
-"ฉันดูแลโรงเรือนและต้องการความช่วยเหลือเรื่องการจัดการศัตรูพืชและการควบคุมอุณหภูมิ"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "การเกษตรกลางแจ้ง"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -11985,34 +11699,12 @@ msgstr "การเกษตรกลางแจ้ง"
 msgid "Greenhouse"
 msgstr "โรงเรือน"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "สนามกีฬา"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "สวนสาธารณะ"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "การขนส่ง"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "อัปเดตการตั้งค่า AI"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "รายการความรู้ที่ยืนยันแล้ว:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12022,25 +11714,6 @@ msgstr "รอดำเนินการ:"
 msgid "Total:"
 msgstr "ทั้งหมด:"
 
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "AI ยังคงเรียนรู้อยู่..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "ยังไม่มีกิจกรรม"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"ต้องการรีเซ็ตสถานะ AI ใช่หรือไม่? "
-"สแนปช็อตจะถูกคำนวณใหม่ในการโหลดครั้งถัดไป"
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
 #: aot_flask/templates/pages/ai/ai_agent.html:35
@@ -12049,32 +11722,12 @@ msgstr "บันทึกไม่สำเร็จ กรุณาลอง�
 #: aot_flask/templates/pages/ai/ai_manage.html:280
 #: aot_flask/templates/pages/ai/scheduler.html:589
 msgid "AI Agent"
-msgstr "AI Agent"
+msgstr "เอเจนต์ AI"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:37
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "การตั้งค่า AI"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"เลเยอร์การประสานงานของ AI Agent จัดการบริการและเอเจนต์ AI "
-"ของคุณเพื่อทำงานที่ซับซ้อนโดยอัตโนมัติ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "การทำงานของบริการ AI"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"เริ่มหรือหยุดโมเดล AI ขณะที่หยุดทำงานอยู่ การแชท คำขอคำแนะนำ และงาน AI "
-"เบื้องหลังทั้งหมดจะไม่สามารถใช้งานได้"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12153,36 +11806,11 @@ msgstr "กรุณาเลือกเอนจินก่อน"
 msgid "Creating agent... Please wait."
 msgstr "กำลังสร้างเอเจนต์... กรุณารอสักครู่"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "กรุณาเลือกบริการหรือการใช้งานก่อน"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "จำเป็นต้องระบุชื่อและคำสั่ง"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "เพิ่ม MCP Server แล้ว"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "ล้มเหลว"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "เพิ่ม MCP Server ไม่สำเร็จ"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "การตั้งค่าเอเจนต์"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "ข้อผิดพลาด: ไม่พบฟอร์ม"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12244,14 +11872,6 @@ msgstr "เซิร์ฟเวอร์ MCP ของ AoT"
 msgid "Action failed"
 msgstr "การดำเนินการล้มเหลว"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "ไม่มีรายการ MCP ที่กำหนดค่าไว้"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "โหลดรายการ MCP ล้มเหลว"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "บริการ AI เริ่มทำงานแล้ว"
@@ -12271,52 +11891,13 @@ msgstr "บริการ AI หยุดทำงานแล้ว"
 msgid "Save failed"
 msgstr "บันทึกล้มเหลว"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "บันทึกการตั้งค่า"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "บันทึกการตั้งค่าแล้ว"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "ต้องรีสตาร์ทเมื่อเปลี่ยนการเปิด/ปิด AI"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "ฟีเจอร์ทดลอง"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "ฟังก์ชัน AI อยู่ในขั้นทดลองในขณะนี้"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "อนุมัติงานประจำอัตโนมัติ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "ผลกระทบสูงสุดที่อนุมัติอัตโนมัติ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "ต้องการฟีดแบ็กเมื่อล้มเหลว"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "โมเดล"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "โมเดลผู้ควบคุม"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "โมเดลผู้ปฏิบัติงาน"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12334,98 +11915,22 @@ msgstr "ไซต์เริ่มต้น"
 msgid "(none)"
 msgstr "(ไม่มี)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "บริบทและงบประมาณ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "เริ่มช่วงเวลาปิดกั้น"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "สิ้นสุดช่วงเวลาปิดกั้น"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "ขอบเขตบริบท (ชั่วโมง)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "บริบทประวัติสูงสุด"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "วงเงินงบประมาณรายเดือน (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "กำลังโหลด..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "รายการ MCP"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "บริการ AI"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "รายการบริการ AI"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "กลับสู่พอร์ทัล"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "ลงทะเบียนบริการ AI"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"ลงทะเบียนและจัดการการเชื่อมต่อเอนจิน AI (Gemini, OpenAI, "
-"พร็อกซีภายในเครื่อง)"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "ลบบริการนี้หรือไม่?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "เอนด์พอยต์"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "ยังไม่มีบริการ AI ที่ลงทะเบียนไว้"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "เชื่อมต่อ LLM แรกของคุณ"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "ชื่อบริการ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "เช่น My Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "ประเภทเอนจิน"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "ชื่อโมเดล"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API เอนด์พอยต์ (ไม่บังคับ)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12438,28 +11943,6 @@ msgstr "การยืนยันตัวตน"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "ประเภทการยืนยันตัวตน"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "ID / รหัสผ่าน"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "ไม่มีการยืนยันตัวตน"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "รหัสบัญชี"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "ลงทะเบียนบริการ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "ไม่มีโมเดลที่ตั้งไว้ล่วงหน้า"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12498,28 +11981,6 @@ msgstr "ซิงค์"
 msgid "Data credits"
 msgstr "แหล่งข้อมูล"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "การตรวจทานความรู้ที่ AI จัดทำ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"ความรู้ที่ AI จัดเก็บด้วยตัวเองโดยอัตโนมัติ (ยังไม่ยืนยันเสมอในตอนแรก) "
-"ยืนยัน/แก้ไขสิ่งที่ถูกต้อง ถอนสิ่งที่ผิด — จะถูกอ้างอิงเป็น [AI 정리 — 미확인]"
-" จนกว่าจะได้รับการตรวจทาน"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "เฉพาะความรู้ที่ตรวจสอบแล้วเท่านั้น: เปิด"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "เฉพาะความรู้ที่ตรวจสอบแล้วเท่านั้น: ปิด"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12528,10 +11989,6 @@ msgstr ""
 "เมื่อเปิดใช้งาน AI "
 "จะไม่สามารถอ้างอิงโน้ตที่ตนเองเขียนไว้จนกว่าจะมีคนยืนยัน "
 "ความรู้ที่เชื่อถือได้และที่ป้อนด้วยตนเองจะไม่ได้รับผลกระทบ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "ยังไม่มีความรู้ที่ AI จัดทำ"
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12549,18 +12006,9 @@ msgstr "ยังไม่ยืนยัน"
 msgid "Flagged"
 msgstr "ถูกทำเครื่องหมาย"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "หัวข้อเดียวกันกับแหล่งข้อมูลที่น่าเชื่อถือ"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "รายการที่ตรงกัน"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "โอเพนซอร์ส"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12569,22 +12017,6 @@ msgstr "เปิดใช้งานอีกครั้ง"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "ถอนออก"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "รายการความรู้"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"ทุกอย่างที่ AI สามารถอ้างอิงได้ ไม่ว่าจะซิงค์มาจากแหล่งข้อมูล จัดเก็บโดย "
-"AI หรือเขียนขึ้นเอง ค้นหาและกรองเพื่อดูว่ามีอะไรอยู่ในนี้จริง ๆ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "ค้นหาความรู้…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12620,16 +12052,6 @@ msgid ""
 msgstr ""
 "คลังความรู้ยังว่างเปล่าอยู่ จนกว่าจะมีข้อมูลอยู่ในนี้ AI "
 "จะตอบคำถามที่เกี่ยวข้องจากความรู้ทั่วไปของตนเอง — โดยไม่มีแหล่งอ้างอิงใดๆ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"มีสามวิธีในการเติมข้อมูล ได้แก่ เชื่อมต่อแหล่งข้อมูลด้านบน "
-"กดปุ่มเพิ่มความรู้เพื่อบันทึกสิ่งที่คุณรู้อยู่แล้ว หรือเพียงถาม AI "
-"ให้ค้นหาข้อมูล — ระบบจะบันทึกสิ่งที่พบไว้ให้"
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12698,14 +12120,6 @@ msgstr "URL ต้นทาง"
 msgid "Source Settings"
 msgstr "การตั้งค่าแหล่งข้อมูล"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "แก้ไขความรู้ที่ AI จัดทำ"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "บันทึก (ยืนยัน)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "กรุณาเลือกประเภทแหล่งข้อมูล"
@@ -12741,10 +12155,6 @@ msgstr "ไม่พบแหล่งข้อมูล"
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "ชื่อแหล่งข้อมูล"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "ชื่อพารามิเตอร์ (คีย์บริบท)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12853,17 +12263,9 @@ msgstr "ลบล้มเหลว"
 msgid "Crop Type"
 msgstr "ประเภทพืช"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "กำลังยืนยัน…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "ยืนยันแล้ว"
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "กำลังถอนออก…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12872,10 +12274,6 @@ msgstr "ถอนออกแล้ว"
 #: aot_flask/templates/pages/ai/ai_library.html:505
 msgid "Retire this item? It will stop being cited until reactivated."
 msgstr "ถอนรายการนี้หรือไม่? รายการนี้จะไม่ถูกอ้างอิงจนกว่าจะเปิดใช้งานอีกครั้ง"
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "กำลังเปิดใช้งานอีกครั้ง…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13022,10 +12420,6 @@ msgstr "เลือกการดำเนินการที่จะลง
 msgid "Parameters for the selected operations"
 msgstr "พารามิเตอร์สำหรับการดำเนินการที่เลือก"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "เลือกอย่างน้อยหนึ่งการดำเนินการ"
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13163,23 +12557,9 @@ msgstr "สรุป"
 msgid "Key-Value Extraction"
 msgstr "การดึงข้อมูลคีย์-ค่า"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "ตัวจัดการ AI"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "การจัดการบทสนทนา"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "แดชบอร์ดข้อผิดพลาด"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "ประวัติการให้เหตุผล"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13195,25 +12575,9 @@ msgstr "วันที่"
 msgid "Details"
 msgstr "รายละเอียด"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "ยังไม่มีประวัติการให้เหตุผล"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "แดชบอร์ดข้อผิดพลาด AI"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "รีเฟรชรูปแบบ"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "รีเฟรชรายการ"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "กำลังวิเคราะห์รูปแบบข้อผิดพลาด..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13255,51 +12619,14 @@ msgstr "การกระทำที่ไม่เหมาะสม"
 msgid "Tool Misuse"
 msgstr "การใช้เครื่องมือผิดวิธี"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "การแก้ไขโดยผู้ใช้"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "รายละเอียดการให้เหตุผล"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "ขั้นตอนที่ 1: คำขอของผู้ใช้"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "ขั้นตอนที่ 2: ความตั้งใจและการวางแผน"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "ขั้นตอนที่ 3: การทำงานของเครื่องมือ (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "ขั้นตอนที่ 4: การสังเคราะห์และการประสานงาน"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "ผู้ประสานงาน"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "ขั้นตอนที่ 5: การตอบกลับขั้นสุดท้าย"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "รายละเอียดข้อผิดพลาดและการแก้ไข"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "นำไปใช้กับฐานความรู้"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "จำนวนที่รอดำเนินการทั้งหมด"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13310,47 +12637,19 @@ msgstr "คำแนะนำ"
 msgid "Review"
 msgstr "ตรวจสอบ"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "ไม่พบข้อผิดพลาด"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "คุณแน่ใจหรือไม่?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "แก้ไขเซิร์ฟเวอร์ MCP"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "ชื่อเซิร์ฟเวอร์"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "คำสั่งเรียกใช้งาน"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "ขอบเขต"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "ทั่วไป (รวมอยู่ใน Manifest เสมอ)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "เฉพาะเจาะจง (โหลดแบบ Lazy-loaded)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "วัตถุประสงค์"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "ตัวแปรสภาพแวดล้อม (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13358,38 +12657,14 @@ msgstr "ตัวแปรสภาพแวดล้อม (JSON)"
 msgid "Update"
 msgstr "อัปเดต"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "สร้าง AI Agent"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "ลิงก์ที่เกี่ยวข้อง"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "รับ API Key"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "ข้อมูล Agent"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "ชื่อ Agent"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "เช่น Energy Manager"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "การลงทะเบียนบริการ AI"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "เช่น My OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13401,14 +12676,6 @@ msgstr "การเลือกโมเดล"
 msgid "Enter model name manually"
 msgstr "ป้อนชื่อโมเดลด้วยตนเอง"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "ปลายทาง API"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "AI Pipeline และการเข้าถึงเครื่องมือ"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13418,10 +12685,6 @@ msgstr "บทบาทใน Pipeline"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Worker (แบบเดิม)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "ระดับโมเดล"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13436,17 +12699,9 @@ msgstr "มาตรฐาน"
 msgid "Heavy"
 msgstr "หนัก"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "การเข้าถึงเครื่องมือ"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "ที่กำหนดแล้ว"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "เลือกเซิร์ฟเวอร์ MCP ที่จะกำหนด"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13454,15 +12709,6 @@ msgstr "เลือกเซิร์ฟเวอร์ MCP ที่จะก�
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "ความเชี่ยวชาญเฉพาะทาง"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "เช่น การให้น้ำ, สภาพภูมิอากาศ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "กฎของเอเจนต์"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13475,29 +12721,9 @@ msgstr "พรอมป์ระบบ"
 msgid "Define how this agent should behave..."
 msgstr "กำหนดพฤติกรรมของเอเจนต์นี้..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "โมเดลกำหนดเอง..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "คีย์บริการ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "คีย์ API ของบริการ"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "เอนจินระบบเริ่มต้น"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "ข้อมูลรับรองบริการ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "การตั้งค่า Brain"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13509,162 +12735,17 @@ msgstr "การตั้งค่า Brain"
 msgid "Options"
 msgstr "ตัวเลือก"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "ขอบเขต MCP"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "คำแนะนำ MCP"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "คำสั่งของเซิร์ฟเวอร์"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "จำแนกความตั้งใจเท่านั้น แนะนำให้ใช้โมเดลน้ำหนักเบา"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "สร้างแผนการดำเนินการ แนะนำให้ใช้โมเดลมาตรฐานหรือโมเดลหนัก"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "เรียกใช้เครื่องมือและรวบรวมข้อมูล"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "สังเคราะห์ผลลัพธ์เป็นคำตอบสำหรับผู้ใช้"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "โหมด supervisor/worker แบบเดิม"
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "ตัวเลือกทั่วไปของ AI"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "การตั้งค่า AI ทั่วไป"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "กำหนดค่าพารามิเตอร์ทั่วทั้งระบบสำหรับเลเยอร์การประสานงานของ AI"
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "ดูบริบท AI ของอุปกรณ์"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "ตรวจสอบข้อมูลบริบท AI ของอุปกรณ์แต่ละเครื่อง"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "เรียกดูอุปกรณ์"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "โครงสร้างพื้นฐาน"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "URL พร็อกซีหลัก"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr "พร็อกซีทั่วไปที่จะใช้เมื่อไม่ได้ระบุเอนด์พอยต์เฉพาะเอเจนต์"
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "หมดเวลาคำขอ (วินาที)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "ประสบการณ์ผู้ใช้ (Toast)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "ซ่อนข้อความสำเร็จของ AI"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "ซ่อนข้อความเตือนของ AI"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "ตัวจัดตารางเวลา AI"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "ตัวติดตามเป้าหมายแบบร่วมมือ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[มุมมองภาพรวม]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[วัน]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[สัปดาห์]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[เดือน]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[ปี]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[วันนี้]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[ขึ้น(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[ลง(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[ย่อหน้า(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[ยกเลิกย่อหน้า(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "รีเฟรชข้อมูล"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "เพิ่มงาน"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "กำลังโหลดงาน..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "การจัดการงานที่ AI เสนอ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "ตรวจสอบและจัดการงานที่เสนอโดย AI Agent"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "ค้นหางาน..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13674,22 +12755,6 @@ msgstr "ค้นหางาน..."
 msgid "Target"
 msgstr "เป้าหมาย"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "เวลาที่กำหนดไว้"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "กำลังโหลดงานที่เสนอ..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "แก้ไขงาน"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "กำลังดำเนินการ"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "งาน"
@@ -13698,21 +12763,9 @@ msgstr "งาน"
 msgid "Goal"
 msgstr "เป้าหมาย"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "หลักไมล์"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "จุดตรวจสอบ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "งานหลัก"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "แก้ไขงานที่เสนอ"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13723,10 +12776,6 @@ msgstr "การควบคุมเอาต์พุต"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "การปรับค่า PID"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "รหัสเป้าหมาย"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13741,63 +12790,10 @@ msgstr "เวลาที่กำหนดไว้"
 msgid "AI Reasoning"
 msgstr "เหตุผลของ AI"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "เหตุผลในการลบ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "เช่น ไม่จำเป็น, จังหวะเวลาไม่ถูกต้อง..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "ลบงาน"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "บันทึกการเปลี่ยนแปลง"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "คำขอและคำแนะนำของ AI"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"AI ภายนอกที่เชื่อมต่อผ่าน MCP ไม่สามารถเปลี่ยนแปลงสิ่งใดได้เองโดยลำพัง "
-"คำขอควบคุมจะรอการอนุมัติของคุณที่นี่ และความคิดเห็นต่าง ๆ "
-"จะถูกรวบรวมไว้ให้คุณเปรียบเทียบ"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "บันทึกคำแนะนำของ AI"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"ความคิดเห็นที่ส่งโดย AI หลัก, AI ภายนอก หรือโหนดในสังกัด "
-"การยอมรับเป็นเพียงการเห็นด้วยเท่านั้น — ไม่ได้เป็นการสั่งควบคุมการทำงาน"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "การเรียกใช้เครื่องมือ AI ล่าสุด"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "ยังไม่มีการส่งคำแนะนำ"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "ยังไม่มีการบันทึกการเรียกใช้เครื่องมือ"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13815,21 +12811,9 @@ msgstr "การดำเนินการที่เสนอ"
 msgid "MCP Server Management"
 msgstr "การจัดการเซิร์ฟเวอร์ MCP"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "รีเฟรชสถานะทั้งหมด"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "เพิ่มเซิร์ฟเวอร์"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "ตรวจสอบและควบคุมกระบวนการบริดจ์ Model Context Protocol"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "กำลังค้นหาเซิร์ฟเวอร์ MCP..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13854,10 +12838,6 @@ msgstr "เปิดใช้งานเมื่อบันทึก"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "ตัวแปรสภาพแวดล้อม"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "บันทึกการตั้งค่า"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -13894,14 +12874,6 @@ msgstr "ทริกเกอร์อัตโนมัติ"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "งานใหม่"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "ข้อเสนอจาก AI"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "ไม่มีข้อเสนอที่รอดำเนินการ"
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -13944,10 +12916,6 @@ msgstr "ยังไม่มีประวัติ"
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "รายละเอียดข้อเสนอ"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "เสนอโดย"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14103,14 +13071,6 @@ msgstr "ท้องถิ่นของอุปกรณ์"
 msgid "Your time"
 msgstr "เวลาของคุณ"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "อนุมัติงานนี้หรือไม่?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "เหตุผลการปฏิเสธ (ไม่บังคับ):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14143,14 +13103,6 @@ msgstr "เป้าหมาย:"
 msgid "By: "
 msgstr "ผู้ร้องขอ:"
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "เวลาท้องถิ่น: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "เหตุผล:"
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "ปฏิทินแสดงตามเขตเวลาของคุณ"
@@ -14159,138 +13111,21 @@ msgstr "ปฏิทินแสดงตามเขตเวลาของค
 msgid "Getting to Know Each Other"
 msgstr "การเรียนรู้ซึ่งกันและกัน"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "AI เรียนรู้จากข้อมูลของคุณเมื่อเวลาผ่านไป"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "ยิ่งคุณโต้ตอบมากเท่าไร ก็ยิ่งแม่นยำมากขึ้นเท่านั้น"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "คุณเป็นผู้ควบคุมสิ่งที่ AI จะให้ความสำคัญ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "บอกเราเกี่ยวกับสถานที่ของคุณ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "อะไรอธิบายสถานที่ของคุณได้ดีที่สุด?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "กรุณาเลือกประเภทสถานที่เพื่อดำเนินการต่อ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "อธิบายสิ่งที่คุณต้องการจาก AI นี้โดยเฉพาะ (ไม่บังคับ)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "ดำเนินการต่อ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "พร้อมใช้งานแล้ว!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "ประเภทสถานที่"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "คำแนะนำของคุณ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"ตอนนี้คุณจะเห็น สถานะ AI คำสำคัญหลักของคุณ และวิธีที่ AI "
-"เรียนรู้เกี่ยวกับสถานที่ของคุณ"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "ไปที่แดชบอร์ด AI"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "สถานะการเรียนรู้ของสถานที่"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "เริ่มต้นใช้งาน AI Advisor"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"ระบบ AI "
-"นี้ต้องการช่วงเวลาเรียนรู้เพื่อให้คำแนะนำที่ปรับให้เหมาะกับสถานที่ของคุณ"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "ในระหว่างช่วงเวลาเรียนรู้:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "คำแนะนำอ้างอิงจากความรู้ทางการเกษตรทั่วไป"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "ข้อมูลเฉพาะของสถานที่ยังมีจำกัด"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "ความคิดเห็นของคุณคือกุญแจสำคัญในการปรับเทียบระบบ"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "ข้อมูลสถานที่"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "ฟาร์มแนวตั้ง"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "เรือนเพาะชำ"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "ประสบการณ์การดำเนินงาน"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "น้อยกว่า 1 ปี"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 ปี"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 ปี"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "มากกว่า 10 ปี"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "พารามิเตอร์สำคัญ"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "เลือกทั้งหมดที่เกี่ยวข้อง"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "ธาตุอาหาร"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14306,55 +13141,6 @@ msgstr "ย้อนกลับ"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "ถัดไป"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "ข้อกำหนดการใช้งาน"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"AI Advisor นี้เรียนรู้เกี่ยวกับสถานที่ของคุณไปตามกาลเวลา "
-"ในช่วงเรียนรู้เริ่มต้น คำแนะนำจะอ้างอิงจากความรู้ทางการเกษตรทั่วไป "
-"และอาจไม่เจาะจงกับสภาพของคุณเสมอไป ความคิดเห็นของคุณ "
-"ไม่ว่าจะเป็นการยืนยัน ปรับแก้ หรือปฏิเสธข้อเสนอแนะ "
-"คือสิ่งที่ช่วยปรับเทียบระบบให้เหมาะกับสถานที่ของคุณ "
-"ระบบจะแจ้งให้ทราบเมื่อไม่แน่ใจ และการยืนยันแบบใดที่จะเป็นประโยชน์ "
-"คุณยังคงเป็นผู้ควบคุม จะไม่มีการดำเนินการอัตโนมัติใด ๆ "
-"โดยไม่ได้รับการอนุมัติจากคุณ"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "ฉันเข้าใจและยอมรับข้อกำหนดข้างต้น"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "ยอมรับและเริ่มต้นใช้งาน"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "การเริ่มต้นใช้งานเสร็จสมบูรณ์"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"AI Advisor จะเริ่มเรียนรู้เกี่ยวกับสถานที่นี้ "
-"ยิ่งคุณให้ความคิดเห็นเกี่ยวกับข้อเสนอแนะมากเท่าไร "
-"คำแนะนำก็จะยิ่งแม่นยำและปรับให้เหมาะสมมากขึ้นเท่านั้น"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "เริ่มใช้งาน AI"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14389,10 +13175,6 @@ msgstr "ใหญ่"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "งบประมาณจะได้รับการปรับให้เหมาะสมโดยอัตโนมัติตามแต่ละ Tier"
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "บริการและโมเดล"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "ป้อนข้อมูลด้วยตนเอง"
@@ -14400,10 +13182,6 @@ msgstr "ป้อนข้อมูลด้วยตนเอง"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "เว้นว่างไว้เพื่อคงคีย์เดิม"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "การตั้งค่าไปป์ไลน์"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16346,14 +15124,6 @@ msgstr "การคลุมและการระบายอากาศ"
 msgid "Cover layers"
 msgstr "เลเยอร์วัสดุคลุม"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"จำเป็นต้องมีวัสดุคลุมชั้นนอกเสมอ "
-"เพิ่มการเสริมผนังด้านข้างหรือวัสดุคลุมชั้นในได้ตามต้องการ"
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "การเสริมผนังด้านข้าง"
@@ -17527,26 +16297,6 @@ msgstr "กำลังนำไปใช้..."
 msgid "Failed to submit judgment"
 msgstr "ส่งผลการตัดสินไม่สำเร็จ"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "ค้นหาที่อยู่เพื่อค้นหาตำแหน่งเริ่มต้น"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "ละติจูดจุดศูนย์กลางแผนที่เริ่มต้น เช่น 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "ลองจิจูดจุดศูนย์กลางแผนที่เริ่มต้น เช่น 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr "ระดับการซูมแผนที่เริ่มต้น สามารถเปลี่ยนได้โดยป้อนตัวเลข"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "เลือกเครื่องมือค้นหาเริ่มต้นสำหรับการค้นหาทั่วทั้งระบบ"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "รีเซ็ตเป็นค่าเริ่มต้น"
@@ -17567,71 +16317,9 @@ msgstr "สีของสิ่งอำนวยความสะดวก"
 msgid "Equipment Color"
 msgstr "สีอุปกรณ์"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "สีอุปกรณ์ AoT"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "สีพื้นหลังแผงควบคุม"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "ค่าเริ่มต้น: 25 ค่าสูงสุดคือ 30"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr "ใช้การซูมดิจิทัลสำหรับระดับการซูมสูงที่แหล่งแผนที่ไม่รองรับ"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "เปิดใช้งานการซูมแบบเศษส่วนสำหรับระดับที่ใกล้ 18 ขึ้นไป"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "เปิดใช้งานเอฟเฟกต์ค่อยๆ ปรากฏเมื่อโหลดกระเบื้องแผนที่"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr "ใช้ตัวเรนเดอร์ Canvas เพื่อเพิ่มประสิทธิภาพเมื่อมีเลเยอร์เวกเตอร์จำนวนมาก"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "จำนวนรูปหลายเหลี่ยมไซต์สูงสุด"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"จำกัดจำนวนรูปหลายเหลี่ยมสูงสุดสำหรับไซต์ "
-"ไซต์ที่เกินขีดจำกัดนี้จะแสดงเป็นจุดแทน"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "รูปหลายเหลี่ยมโซนสูงสุด"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"จำกัดจำนวนรูปหลายเหลี่ยมสูงสุดสำหรับโซน "
-"โซนที่เกินขีดจำกัดนี้จะแสดงเป็นจุดแทน"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "จำนวนรูปหลายเหลี่ยมอุปกรณ์สูงสุด"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"จำกัดจำนวนรูปหลายเหลี่ยมสูงสุดสำหรับอุปกรณ์ "
-"อุปกรณ์ที่เกินขีดจำกัดนี้จะแสดงเป็นจุดแทน"
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
@@ -18047,11 +16735,6 @@ msgstr "ทั้งช่วงเวลา"
 #, python-format
 msgid "daylight %(h)s h"
 msgstr "เวลากลางวัน %(h)s ชม."
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr "GDD %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -19152,10 +17835,6 @@ msgstr "เพย์โหลดปิด (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "กำหนดให้กับตัวจัดตารางเวลา"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "ลงทะเบียนอุปกรณ์ที่เลือก"
@@ -19367,10 +18046,6 @@ msgstr "ป้าย MCP"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "คลิกเพื่อแก้ไขสีป้าย MCP"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "คลิกเพื่อแก้ไขสีป้ายอัปเกรด"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19643,22 +18318,6 @@ msgstr "สีพื้นหลังป้ายอ่อนสำหรับ
 msgid "Text color used on the info tint"
 msgstr "สีข้อความที่ใช้บนพื้นหลังข้อมูล"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr "สีขอบสำหรับกล่องแจ้งเตือนความสำเร็จ (หน้าผู้ดูแลระบบ เช่น หน้าอัปเกรด)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "สีขอบสำหรับกล่องแจ้งเตือนคำเตือน/ค่าเริ่มต้น"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "สีขอบสำหรับกล่องแจ้งเตือนอันตราย/ข้อผิดพลาด"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "สีขอบสำหรับกล่องแจ้งเตือนข้อมูล"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr "บันทึก, เปิดใช้งาน, แท็บ — ปุ่มหลักแบบทึบทั่วทั้งแอป"
@@ -19690,10 +18349,6 @@ msgstr "ขอบปุ่ม"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "ขอบสำหรับปุ่มและแถวรายการทั้งหมด"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "พื้นหลังป้ายอัปเกรดและปุ่มอัปเกรดในแถบนำทาง"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20779,34 +19434,6 @@ msgstr "ตัวจัดการโน้ต"
 msgid "Search content, subject..."
 msgstr "ค้นหาเนื้อหา หัวข้อ..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "ล้างตัวกรอง"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "ตัวกรองขั้นสูง"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "ส่งออกผลลัพธ์"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "ส่งออกรายงาน PDF"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"รวบรวมโน้ตภายในช่วงเวลาหนึ่ง (โดยใช้ตัวกรองแท็กด้านบน) เป็นรายงาน PDF "
-"ที่จัดรูปแบบแล้ว"
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "ชื่อรายงาน (ไม่บังคับ)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "ไม่พบโน้ต"
@@ -21167,25 +19794,9 @@ msgstr "การส่งข้อมูลล้มเหลว"
 msgid "Unable to save note. Please try again."
 msgstr "ไม่สามารถบันทึกโน้ตได้ กรุณาลองใหม่อีกครั้ง"
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr "กำหนดเป้าหมาย (เช่น ประหยัดพลังงานใน Zone A)"
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "วิเคราะห์"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr "พร้อมสำหรับการวิเคราะห์อัจฉริยะ"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "การวิเคราะห์ของ AI ล้มเหลว"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "การทำงานล้มเหลว"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21470,11 +20081,6 @@ msgstr "เริ่มเวลา"
 msgid "Select the Output to control in the widget options."
 msgstr "เลือกเอาต์พุตที่จะควบคุมในตัวเลือกวิดเจ็ต"
 
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "ระยะเลื่อนตำแหน่งข้อมูล (%%)"
-
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
 msgstr "แก้ไขตารางเวลา"
@@ -21554,42 +20160,6 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "ตัวเลือกชุดข้อมูล"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "เปิดใช้สีที่กำหนดเอง"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr "เส้น (แบบขั้นบันได ซ้าย)"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr "เส้น (แบบขั้นบันได กึ่งกลาง)"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr "เส้น (แบบขั้นบันได ขวา)"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "เปิดใช้การจัดตำแหน่งขีดสเกลแกน Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "เปิดใช้ให้แกน Y เริ่มที่ขีดสเกล"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "เปิดใช้ให้แกน Y สิ้นสุดที่ขีดสเกล"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "ค่าต่ำสุดของแกน Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "ค่าสูงสุดของแกน Y"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -23521,20 +22091,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "ตัวรวบรวมบริบทสภาพแวดล้อมภายนอก"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"รวบรวมอุณหภูมิ ความชื้น ความเร็วลม ปริมาณน้ำฝน ปริมาณรังสีดวงอาทิตย์ "
-"จุดน้ำค้าง และ CO2 จากภายนอกโรงเรือน "
-"ฟังก์ชันควบคุมสภาพแวดล้อมแบบบูรณาการจะใช้ตัวรวบรวมนี้เป็นแหล่งข้อมูลหลักเพียงแหล่งเดียว"
-" เลือกเซนเซอร์ภายนอกสำหรับแต่ละรายการ หากเว้นว่างไว้ "
-"ระบบจะใช้ค่าเริ่มต้นสำรอง (fallback)"
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "คาบการอัปเดต"
@@ -23606,30 +22162,6 @@ msgid ""
 "Select the external CO₂ (ppm) measurement. If absent, the default is 400 "
 "ppm."
 msgstr "เลือกค่าที่วัด CO₂ ภายนอก (ppm) หากไม่มี ค่าเริ่มต้นคือ 400 ppm"
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "อายุสูงสุดที่อนุญาตของเซนเซอร์ (วินาที)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr "ค่าที่วัดซึ่งเก่ากว่านี้จะถูกแทนที่ด้วยค่าเริ่มต้นสำรอง (fallback)"
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "อุณหภูมิภายนอกสำรอง (Fallback) (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr "ค่าเริ่มต้นที่จะใช้เมื่อไม่มีเซนเซอร์หรือข้อมูลหมดอายุ"
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "ความชื้นภายนอกสำรอง (Fallback) (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "ความเร็วลมสำรอง (Fallback) (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -23763,14 +22295,6 @@ msgstr "อายุสูงสุดของข้อมูลอินพุ
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "พอร์ต REST"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"เซิร์ฟเวอร์/โทเคนมาจากการตั้งค่า -> ChirpStack "
-"และอุปกรณ์จะถูกกำหนดไว้ที่นั่น (\"จัดการโดย\")"
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -27687,17 +26211,6 @@ msgstr ""
 "เพื่อการแสดงผลที่ถูกต้อง การเลือกค่าที่ตั้งไว้ล่วงหน้า เช่น อุณหภูมิ "
 "ความชื้น หรือ VPD จะกำหนดค่าต่ำสุด/สูงสุดและส่วนสีโดยอัตโนมัติ"
 
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts ใช้งานได้ฟรีสำหรับซอฟต์แวร์โอเพนซอร์สและการใช้งานส่วนบุคคล "
-"อย่างไรก็ตาม หากนำไปใช้เป็นส่วนหนึ่งของผลิตภัณฑ์เชิงพาณิชย์ "
-"อาจต้องมีใบอนุญาตเชิงพาณิชย์ กรุณาตรวจสอบ https://shop.highsoft.com "
-"เพื่อข้อมูลที่ถูกต้องที่สุด"
-
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
 #: widgets/AoT_graph.py:479
@@ -28383,51 +26896,17 @@ msgstr "ไทม์ไลน์ขั้นตอนที่ทำเครื
 msgid "Targets vs now"
 msgstr "เป้าหมายเทียบกับปัจจุบัน"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"ค่าที่อ่านได้ในปัจจุบันเทียบกับเป้าหมายและขีดจำกัดที่ระยะนี้กำหนด "
-"ค่าหนึ่งจะแสดงเป็นเกจ ส่วนที่เหลือจะแสดงเป็นข้อความ"
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "แนวโน้ม"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr "เติมแถวที่ไม่มีแกนด้วยเส้นแนวโน้มล่าสุด ต้องมีบล็อกเป้าหมาย"
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "ความร้อนสะสม"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"ระยะที่ผ่านมาของขั้นนี้ในหน่วยวันองศาการเจริญเติบโต "
-"แสดงเฉพาะเมื่อโปรแกรมกำหนดอุณหภูมิฐานไว้"
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "ความชื้นในดิน"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "ตัวชี้วัดมาตรวัด"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"ค่าที่วัดใดจะแสดงบนมาตรวัด ส่วนที่เหลือจะแสดงเป็นข้อความ "
-"หากแปลงนี้ไม่ได้วัดค่าดังกล่าว จะแสดงค่าแรกที่มีช่วงค่าแทน"
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29019,29 +27498,9 @@ msgstr "ตำแหน่งทศนิยม 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "จำนวนตำแหน่งทศนิยมของค่าที่วัดสำหรับการวัดครั้งที่สอง"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"แสดงหัวข้อประกาศล่าสุดจากบอร์ดประกาศ การคลิกหัวข้อจะเปิดเนื้อหาทั้งหมด "
-"(เนื้อหา โพล การตอบกลับ การยืนยันรับทราบ) ในหน้าต่างป๊อปอัป "
-"การดำเนินการทั้งหมดที่ทำในนั้นจะสะท้อนกลับไปยังโพสต์จริง "
-"ผู้ใช้ที่มีสิทธิ์เขียนยังสามารถสร้าง แก้ไข และลบโพสต์ได้โดยตรงจากวิดเจ็ต"
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "จำนวนโพสต์"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "จำนวนประกาศล่าสุดที่จะแสดง"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "ความถี่ในการรีเฟรชรายการประกาศ"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29243,11 +27702,6 @@ msgstr "สลับการแสดงรายการการดำเน
 #: widgets/widget_trigger_sequence.py:490
 msgid "Sequence Settings (Synced)"
 msgstr "การตั้งค่าลำดับการทำงาน (ซิงค์แล้ว)"
-
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "รูปแบบ HH:MM"
 
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
@@ -30169,15 +28623,6 @@ msgstr "การป้อนไปข้างหน้าจากพยาก
 msgid "Enable Forecast Feedforward"
 msgstr "เปิดใช้งานการป้อนไปข้างหน้าจากพยากรณ์"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"ใช้พยากรณ์อากาศระยะสั้นของ KMA (forecast.json) "
-"เพื่อปรับค่าตั้งอุณหภูมิ/ความชื้นล่วงหน้าเชิงรุกและระงับการระบายอากาศก่อนที่สภาพอากาศเลวร้ายจะมาถึง"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "ตอบสนองต่อสิ่งที่เป็นอยู่ในขณะนี้"
@@ -30189,14 +28634,6 @@ msgstr "เตรียมการล่วงหน้ามากขึ้น
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "ระยะเวลาล่วงหน้าของพยากรณ์ (ชั่วโมง)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"ตรวจสอบสภาพอากาศเลวร้ายที่กำลังจะมาถึงล่วงหน้ากี่ชั่วโมง (1–6 ชั่วโมง) "
-"ยิ่งมองล่วงหน้าไกลยิ่งได้รับการเตือนเร็วขึ้น แต่อาจปรับแก้มากเกินไป"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30427,14 +28864,6 @@ msgstr "โน้ต %(n)s รายการ"
 msgid "Vapor Pressure Deficit"
 msgstr "ค่าความพร่องแรงดันไอน้ำ"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "ขนาดตัวอักษรของค่า (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "ขนาดตัวอักษรของค่าที่วัดได้"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "ตารางการเจริญเติบโต"
@@ -30443,82 +28872,13 @@ msgstr "ตารางการเจริญเติบโต"
 msgid "Stop Control On"
 msgstr "หยุดการควบคุมเมื่อ"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "การควบคุมจะหยุดถาวรหลังจากวันที่นี้ เว้นว่างไว้เพื่อให้ทำงานต่อไป"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "การพ่นหมอกป้องกันแดดเผา"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "โหมดเพาะกล้า"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "โหมดเพาะกล้า (ต้นกล้า)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"จำกัดการพ่นหมอกให้เข้มงวดขึ้นสำหรับต้นกล้า "
-"เนื่องจากไหม้ได้ง่ายกว่าใบที่โตเต็มที่"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "ไม่ได้ใช้งาน"
-
-#: aot_flask/static/js/geo/journal-page.js:78
-#: aot_flask/templates/pages/geo/journal.html:47
-msgid "Whole area"
-msgstr "ทั้งพื้นที่"
-
-#: aot_flask/templates/pages/geo/journal_view.html:182
-msgid "h"
-msgstr "ชม."
-
-#: aot_flask/templates/pages/geo/journal_view.html:194
-msgid "attachment(s)"
-msgstr "ไฟล์แนบ"
-
-#: aot_flask/static/js/geo/journal-page.js:123
-msgid "Select an area first."
-msgstr "เลือกพื้นที่ก่อน"
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Daily averages are the mean of hourly means, not a true time-weighted "
-"average of every reading."
-msgstr ""
-"ค่าเฉลี่ยรายวันคือค่าเฉลี่ยของค่าเฉลี่ยรายชั่วโมง "
-"ไม่ใช่ค่าเฉลี่ยถ่วงน้ำหนักตามเวลาที่แท้จริงของทุกค่าที่อ่านได้"
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Runtime is read from the first channel only, even for multi-channel "
-"outputs."
-msgstr "เวลาทำงานจะอ่านจากช่องแรกเท่านั้น แม้จะเป็นเอาต์พุตแบบหลายช่องก็ตาม"
-
-#: aot_flask/geo/plot_journal.py
-#, python-format
-msgid "%(n)s channel(s) could not be read and are missing from this journal."
-msgstr "ไม่สามารถอ่านช่องสัญญาณได้ %(n)s ช่อง และหายไปจากบันทึกนี้"
-
-#: aot_flask/geo/plot_journal.py
-#, python-format
-msgid "%(n)s device area(s) overlap this plot with no device assigned yet."
-msgstr "มีพื้นที่อุปกรณ์ %(n)s แห่งซ้อนทับแปลงนี้โดยยังไม่ได้กำหนดอุปกรณ์"
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Notes pinned to a map location are not included for facility plots — "
-"their outline is derived from the facility, not their own."
-msgstr ""
-"โน้ตที่ปักหมุดบนตำแหน่งแผนที่จะไม่ถูกรวมสำหรับแปลงในสิ่งปลูกสร้าง — "
-"เนื่องจากเส้นขอบเขตของแปลงเหล่านั้นได้มาจากสิ่งปลูกสร้าง ไม่ใช่ของแปลงเอง"
 
 #: aot_flask/geo/plot_journal.py
 msgid "Notes pinned to a map location were not checked."
@@ -30545,14 +28905,6 @@ msgstr "ข้อมูลสำหรับพื้นที่นี้เร
 msgid "No measurements found for this area yet."
 msgstr "ยังไม่พบค่าที่วัดได้สำหรับพื้นที่นี้"
 
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"This period was too large to store day by day, so it was saved in weekly "
-"buckets — daily detail is not available for it."
-msgstr ""
-"ช่วงเวลานี้มีขนาดใหญ่เกินกว่าจะบันทึกแบบรายวัน "
-"จึงถูกบันทึกเป็นชุดรายสัปดาห์แทน — ไม่มีรายละเอียดรายวันสำหรับช่วงนี้"
-
 #: aot_flask/static/js/geo/journal-page.js
 #, python-format
 msgid "%(on)s of %(all)s"
@@ -30562,10 +28914,6 @@ msgstr "%(on)s จาก %(all)s"
 #, python-format
 msgid "Device diagnostics were left out of this journal: %(names)s."
 msgstr "ไม่ได้รวมการวินิจฉัยอุปกรณ์ไว้ในสมุดบันทึกนี้: %(names)s"
-
-#: aot_flask/templates/pages/geo/journal_view.html
-msgid "Outdoor (weather)"
-msgstr "ภายนอก (สภาพอากาศ)"
 
 #: aot_flask/geo/plot_journal.py
 msgid "NNE"
@@ -30599,60 +28947,6 @@ msgstr "ทิศตะวันตกเฉียงเหนือค่อน
 msgid "NNW"
 msgstr "NNW"
 
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Daily light integral is estimated from solar radiation (W/m2), assuming "
-"sunlight. A PAR sensor would measure it directly."
-msgstr ""
-"ปริมาณแสงสะสมรายวันประมาณจากค่ารังสีดวงอาทิตย์ (W/m2) "
-"โดยสมมติว่าเป็นแสงแดด เซนเซอร์ PAR จะวัดค่านี้ได้โดยตรง"
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Light is measured outdoors, so the daily light integral is what reached "
-"the site — not what reached the crop under cover or supplemental "
-"lighting."
-msgstr ""
-"แสงถูกวัดจากภายนอกอาคาร "
-"ดังนั้นค่าปริมาณแสงสะสมรายวันจึงเป็นค่าที่มาถึงพื้นที่ "
-"ไม่ใช่ค่าที่มาถึงพืชภายใต้หลังคาหรือแสงเสริม"
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Water volumes are estimated from the designed nozzle flow and run time, "
-"and split by the plot's share of the bay — not measured by a flow meter."
-msgstr ""
-"ปริมาตรน้ำประมาณจากอัตราการไหลของหัวฉีดตามการออกแบบและเวลาทำงาน "
-"แล้วแบ่งตามสัดส่วนพื้นที่ของแปลงในโรงเรือน — "
-"ไม่ได้วัดจากมิเตอร์วัดอัตราการไหลจริง"
-
-#: aot_flask/geo/plot_journal.py
-msgid "s"
-msgstr "วิ"
-
-#: aot/aot_flask/geo/plot_journal.py
-#, python-format
-msgid ""
-"Light is measured outdoors, so the daily light integral shown is what got"
-" through the cover: the outdoor figure multiplied by %(tau)s for "
-"%(material)s. The cover's material is used; its thickness, age and dust "
-"are not, so the real figure is usually a little lower."
-msgstr ""
-"แสงถูกวัดจากภายนอกอาคาร "
-"ดังนั้นค่าปริมาณแสงสะสมรายวันที่แสดงคือค่าที่ผ่านหลังคาเข้ามา: "
-"ค่าจากภายนอกคูณด้วย %(tau)s สำหรับวัสดุ %(material)s "
-"ใช้เฉพาะชนิดวัสดุของหลังคาเท่านั้น ไม่รวมความหนา อายุการใช้งาน และฝุ่น "
-"ดังนั้นค่าจริงมักจะต่ำกว่านี้เล็กน้อย"
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"This facility has a shade screen. Whether it was drawn on any given day "
-"is not recorded, so it is not counted — on days it was drawn, the crop "
-"got less light than shown."
-msgstr ""
-"โรงเรือนนี้มีม่านบังแดด แต่ไม่มีการบันทึกว่าดึงม่านในวันใดบ้าง "
-"จึงไม่ถูกนับรวม — ในวันที่ดึงม่าน พืชได้รับแสงน้อยกว่าที่แสดง"
-
 #: aot/aot_flask/geo/plot_journal.py
 msgid "Single-layer vinyl"
 msgstr "ไวนิลชั้นเดียว"
@@ -30670,51 +28964,12 @@ msgid "GDD (growing degree days)"
 msgstr "GDD (วันองศาการเจริญเติบโต)"
 
 #: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"A running total of warmth. Each day adds how much the day's average "
-"temperature sat above the temperature this crop needs to grow at all, so "
-"a warm day adds more than a cool one. Crops move through their stages on "
-"accumulated warmth rather than on the calendar, which is why a stage can "
-"arrive early in a hot season."
-msgstr ""
-"ผลรวมสะสมของความอบอุ่น "
-"แต่ละวันจะเพิ่มค่าตามอุณหภูมิเฉลี่ยของวันนั้นที่สูงกว่าอุณหภูมิขั้นต่ำที่พืชชนิดนี้ต้องการเพื่อเจริญเติบโต"
-" ดังนั้นวันที่อากาศอุ่นจะเพิ่มค่ามากกว่าวันที่อากาศเย็น "
-"พืชจะเปลี่ยนผ่านระยะการเจริญเติบโตตามความอบอุ่นสะสมมากกว่าตามปฏิทิน "
-"จึงเป็นเหตุผลที่ระยะหนึ่งอาจมาถึงเร็วกว่าปกติในฤดูร้อน"
-
-#: aot/aot_flask/geo/plot_journal.py
 msgid "DLI (daily light integral)"
 msgstr "DLI (ปริมาณแสงสะสมรายวัน)"
 
 #: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"How much light the crop received over a whole day, added up rather than "
-"measured at one moment. Brightness alone does not say much — a bright but"
-" short day and a dim but long one can come to the same total. Measured in"
-" mol/m2/day."
-msgstr ""
-"ปริมาณแสงที่พืชได้รับตลอดทั้งวัน รวมสะสมแทนที่จะวัดเพียงชั่วขณะ "
-"ความสว่างเพียงอย่างเดียวบอกอะไรไม่ได้มากนัก "
-"วันที่สว่างแต่สั้นกับวันที่มืดแต่ยาวอาจให้ผลรวมเท่ากันได้ วัดเป็น "
-"mol/m2/วัน"
-
-#: aot/aot_flask/geo/plot_journal.py
 msgid "VPD (vapour pressure deficit)"
 msgstr "VPD (ค่าความพร่องแรงดันไอน้ำ)"
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"How dry the air feels to the plant, in kPa. It combines temperature and "
-"humidity, because the same humidity is drying on a warm day and not on a "
-"cool one. High VPD pushes the plant to transpire; too high and it closes "
-"up and stops growing."
-msgstr ""
-"อากาศแห้งเพียงใดในสายตาของพืช วัดเป็น kPa "
-"ค่านี้รวมทั้งอุณหภูมิและความชื้นเข้าด้วยกัน "
-"เนื่องจากความชื้นเท่ากันอาจทำให้แห้งในวันที่อากาศอุ่นแต่ไม่แห้งในวันที่อากาศเย็น"
-" VPD สูงจะกระตุ้นให้พืชคายน้ำมากขึ้น "
-"แต่หากสูงเกินไปพืชจะปิดปากใบและหยุดเจริญเติบโต"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set a base temperature in the program to see this."
@@ -30730,54 +28985,6 @@ msgid "%(v)s so far, but only %(pct)s of the days have data."
 msgstr "จนถึงตอนนี้ %(v)s แต่มีข้อมูลเพียง %(pct)s ของจำนวนวันเท่านั้น"
 
 #: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Water volume is only filled in for devices whose flow rate is known, and "
-"none here is — so this journal shows run times only. Facilities get flow "
-"from their piping layout; equipment drawn straight onto the map carries a"
-" flow rate but is not linked to the valve that opens it, so it cannot be "
-"attributed."
-msgstr ""
-"ปริมาตรน้ำจะถูกกรอกให้เฉพาะอุปกรณ์ที่ทราบอัตราการไหลเท่านั้น "
-"และในที่นี้ไม่มีอุปกรณ์ใดที่ทราบเลย — "
-"สมุดบันทึกนี้จึงแสดงเฉพาะเวลาทำงานเท่านั้น "
-"โรงเรือนได้ค่าอัตราการไหลจากผังท่อ "
-"ส่วนอุปกรณ์ที่วาดลงบนแผนที่โดยตรงจะมีอัตราการไหลติดตัว "
-"แต่ไม่ได้เชื่อมโยงกับวาล์วที่เปิดใช้งาน จึงไม่สามารถระบุที่มาได้"
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Water volumes are estimated from the sprinklers drawn on the map inside "
-"the area each valve covers, and how long that valve ran — not measured by"
-" a flow meter. Only the part that overlaps this plot is counted, so no "
-"share is guessed."
-msgstr ""
-"ปริมาตรน้ำประมาณจากสปริงเกลอร์ที่วาดไว้บนแผนที่ภายในพื้นที่ที่วาล์วแต่ละตัวครอบคลุม"
-" และระยะเวลาที่วาล์วนั้นทำงาน — ไม่ได้วัดจากมิเตอร์วัดอัตราการไหลจริง "
-"จะนับเฉพาะส่วนที่ทับซ้อนกับแปลงนี้เท่านั้น จึงไม่มีการเดาสัดส่วน"
-
-#: aot/aot_flask/geo/plot_journal.py
-#, python-format
-msgid ""
-"These devices belong to this target but left no record in this period, so"
-" they are not in the tables: %(names)s. That is not the same as running "
-"for zero hours — it means nothing was written."
-msgstr ""
-"อุปกรณ์เหล่านี้อยู่ในเป้าหมายนี้แต่ไม่มีบันทึกในช่วงเวลานี้ "
-"จึงไม่ปรากฏในตาราง: %(names)s นี่ไม่เหมือนกับการทำงานเป็นเวลาศูนย์ชั่วโมง"
-" — แต่หมายความว่าไม่มีการบันทึกข้อมูลใดๆ เลย"
-
-#: aot/aot_flask/geo/plot_journal.py
-#, python-format
-msgid ""
-"No sensor sits inside this plot, so the nearest one in the same zone was "
-"used — about %(m)s m away. It is the closest reading available, not a "
-"reading of this plot."
-msgstr ""
-"ไม่มีเซนเซอร์อยู่ภายในแปลงนี้ จึงใช้เซนเซอร์ที่ใกล้ที่สุดในโซนเดียวกันแทน"
-" — ห่างออกไปประมาณ %(m)s เมตร นี่คือค่าที่ใกล้เคียงที่สุดที่มีอยู่ "
-"ไม่ใช่ค่าที่วัดจากแปลงนี้โดยตรง"
-
-#: aot/aot_flask/geo/plot_journal.py
 #, python-format
 msgid "Weather station %(name)s"
 msgstr "สถานีตรวจอากาศ %(name)s"
@@ -30790,44 +28997,9 @@ msgstr "เซนเซอร์ภาคสนามและสถานีต
 msgid "Runtime (h)"
 msgstr "เวลาทำงาน (ชม.)"
 
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Photo links below point to `/note_attachment/...` and stay valid only "
-"while the server is running."
-msgstr ""
-"ลิงก์ภาพถ่ายด้านล่างชี้ไปที่ `/note_attachment/...` "
-"และจะใช้งานได้ก็ต่อเมื่อเซิร์ฟเวอร์กำลังทำงานอยู่เท่านั้น"
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Some devices in this journal have no mapped coverage area, so their water"
-" column stays blank — that does not mean they used no water."
-msgstr ""
-"อุปกรณ์บางตัวในบันทึกนี้ไม่มีพื้นที่ครอบคลุมที่กำหนดไว้บนแผนที่ "
-"ดังนั้นคอลัมน์น้ำของอุปกรณ์เหล่านั้นจึงว่างเปล่า — "
-"ไม่ได้หมายความว่าไม่มีการใช้น้ำ"
-
-#: aot_flask/templates/pages/geo/journal_view.html
-msgid "Full numbers for this period"
-msgstr "ตัวเลขทั้งหมดของช่วงเวลานี้"
-
 #: aot_flask/templates/pages/geo/journal_view.html
 msgid "Same targets as the previous stage."
 msgstr "เป้าหมายเดียวกันกับขั้นตอนก่อนหน้า"
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"No rainfall total is given. Each stored reading covers its own window, "
-"and this system cannot tell whether those windows overlap — the weather-"
-"station channel, for one, repeats a 15-minute total every 5 minutes. Read"
-" the maximum as the wettest single window, and the average as the mean of"
-" those windows, not an hourly rate."
-msgstr ""
-"ไม่มีการระบุปริมาณน้ำฝนรวม ค่าที่บันทึกแต่ละค่าครอบคลุมช่วงเวลาของตัวเอง "
-"และระบบนี้ไม่สามารถบอกได้ว่าช่วงเวลาเหล่านั้นซ้อนทับกันหรือไม่ — "
-"ตัวอย่างเช่น ช่องสัญญาณของสถานีตรวจอากาศจะแสดงยอดรวม 15 นาทีซ้ำทุก 5 นาที"
-" ให้อ่านค่าสูงสุดว่าเป็นช่วงเวลาเดียวที่ฝนตกมากที่สุด "
-"และค่าเฉลี่ยว่าเป็นค่าเฉลี่ยของช่วงเวลาเหล่านั้น ไม่ใช่อัตรารายชั่วโมง"
 
 #: aot/aot_flask/geo/plot_journal.py
 #, python-format
@@ -30860,31 +29032,6 @@ msgstr "สะสม %(v)s"
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Show plan"
 msgstr "แสดงแผน"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "%(n)s of %(d)s days above target"
-msgstr "%(n)s จาก %(d)s วันสูงกว่าเป้าหมาย"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "%(n)s of %(d)s days below target"
-msgstr "%(n)s จาก %(d)s วันต่ำกว่าเป้าหมาย"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "on target for all %(d)s days"
-msgstr "ตรงตามเป้าหมายทั้ง %(d)s วัน"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "average %(v)s"
-msgstr "เฉลี่ย %(v)s"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "of %(d)s days: %(a)s above, %(b)s below"
-msgstr "จาก %(d)s วัน: สูงกว่าเป้าหมาย %(a)s วัน ต่ำกว่าเป้าหมาย %(b)s วัน"
 
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Measurement trends"
@@ -30964,10 +29111,6 @@ msgstr "พ่นหมอก"
 msgid "Devices under automatic control"
 msgstr "อุปกรณ์ภายใต้การควบคุมอัตโนมัติ"
 
-#, python-format
-msgid "%(n)s excluded"
-msgstr "ยกเว้น %(n)s รายการ"
-
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr "ปิดอุปกรณ์เพื่อไม่ให้การควบคุมอัตโนมัติสั่งงานอุปกรณ์นั้น"
 
@@ -31018,14 +29161,6 @@ msgstr ""
 "แต่อาจทำให้ปรับแก้มากเกินไป "
 "ค่านี้จะถูกละเว้นเมื่อสถานที่นี้มีแหล่งพยากรณ์ของตัวเองเชื่อมโยงอยู่ — "
 "เพราะแหล่งนั้นใช้ระยะเวลาล่วงหน้าของตัวเองอยู่แล้ว"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "ตัวกรองหมวดหมู่ประกาศ"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "พื้นที่บันทึก"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -31129,10 +29264,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "เลือกพื้นที่ในการตั้งค่าวิดเจ็ตเพื่อแสดงบันทึก"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr "แสดงบันทึกที่เขียนไว้ในพื้นที่ที่เลือก (ดู \"พื้นที่\" ด้านล่าง)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31453,18 +29584,6 @@ msgstr "หยุดการหมุน"
 msgid "System Timezone"
 msgstr "เขตเวลาของระบบ"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"เขตเวลาเริ่มต้นของทั้งระบบ (ชื่อ IANA เช่น Asia/Seoul) "
-"ใช้สำหรับเวลาในบันทึกของเดมอน บันทึกการตรวจสอบ "
-"และเป็นค่าสำรองสุดท้ายสำหรับกำหนดการของอุปกรณ์ที่ไม่มีตำแหน่ง "
-"ค่านี้ไม่ใช่เขตเวลาสำหรับแสดงผลส่วนตัวในการตั้งค่าบัญชี"
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31477,3 +29596,895 @@ msgstr "ยังไม่ได้ตั้งตำแหน่ง — ปร�
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "เขตเวลาเริ่มต้นของทั้งระบบ (ชื่อ IANA เช่น Asia/Seoul) ใช้กับเวลาในบันทึกของเดมอนและเป็นค่าสำรองสุดท้ายของอุปกรณ์ที่ไม่มีตำแหน่ง อุปกรณ์เหล่านั้นจะใช้ค่านี้เมื่อบันทึกที่นี่ ส่วนเวลาที่ผู้คนอ่านและเขียนจะใช้เขตเวลาส่วนตัวของแต่ละคนในการตั้งค่าบัญชี"
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "เต็มความกว้างบนมือถือ"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "ขนาดหน้าจอคอมพิวเตอร์"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "พื้นผิวส่วนควบคุม"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "เส้นแบ่ง"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "เส้นแบ่ง (แบบเบา)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "ขนาดหน้าจอมือถือ"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "รางสวิตช์เมื่อปิด"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "ไม่ตอบสนอง"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "จัดตารางเวลาแล้ว"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้นภายในวันเดียวกัน (ไม่รองรับช่วงเวลาที่ข้ามเที่ยงคืน)"
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "ลำดับการทำงานนี้ใช้เวลาแยกตามวันในสัปดาห์ จึงไม่ได้นำเวลาเริ่ม/สิ้นสุดที่นี่ไปใช้ โปรดเปลี่ยนที่ตารางเวลารายวันของวิดเจ็ตลำดับการทำงาน"
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "เลือกเป้าหมายการลงทะเบียน (อินพุตหรือเอาต์พุต)"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "ย้อนกลับ"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "ย้อนกลับไปยังการตั้งค่าตอนที่เปิดกล่องโต้ตอบนี้"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "ย้อนกลับแล้ว"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "สัญญาณ"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "ติดตั้งไลบรารีที่จำเป็นสำหรับ"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "โฮมเพจ AoT"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "ขยายทั้งหน้าบนคอมพิวเตอร์ ทั้งข้อความ ปุ่ม และแผนที่ ส่วนโทรศัพท์และแท็บเล็ตใช้การตั้งค่าด้านบน"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "ขยายทั้งหน้าบนโทรศัพท์และแท็บเล็ต ทั้งข้อความ ปุ่ม และแผนที่ ส่วนคอมพิวเตอร์ใช้การตั้งค่าด้านล่าง"
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "ไม่พบผลลัพธ์"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "ไม่ได้เลือกรายการใด"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "บันทึก"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "คำขอ"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "เลือกแล้ว {0} จาก {1}"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "ไม่สามารถโหลดคำขอควบคุมได้"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "เฉพาะผู้ที่แก้ไขตัวควบคุมได้เท่านั้นที่ตัดสินรายการเหล่านี้ได้"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "รายการเหล่านี้ยังไม่ได้ทำงาน การอนุมัติจะรันตามที่อธิบายไว้ตรงนี้ทุกประการ — ไม่ต้องกลับไปบอก AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "คำขอ AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "คำแนะนำจาก AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "ไม่สามารถโหลดคำแนะนำได้"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "ไม่มีคำแนะนำที่รอดำเนินการ"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "ไม่มีข้อเสนอตารางเวลาที่รอดำเนินการ"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "ความเห็นจาก AI ตัวนี้และ AI อื่นที่เชื่อมต่ออยู่ การยอมรับคือการบันทึกว่าคุณเห็นด้วย — ไม่ได้สั่งให้ทำงานใดๆ"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "เสนอโดย AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "ต้องการนำข้อเสนอนี้ไปใส่ในตารางเวลาหรือไม่?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "ต้องการปฏิเสธข้อเสนอนี้หรือไม่?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "ข้อเสนอตารางเวลา"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "งานที่ AI เสนอสำหรับตารางเวลา การอนุมัติจะนำงานเหล่านั้นไปใส่ในตารางเวลา — งานจะทำงานตามเวลาที่กำหนด"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "สิ่งที่ AI กำลังรอให้คุณตัดสินใจ — แต่ละรายการด้านล่างรอการตัดสินใจจากคุณ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "การเชื่อมต่อ AI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "คีย์การเข้าถึง"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "ขั้นสูง"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "อนุญาต"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "แอป AI ที่คุณใช้อยู่แล้ว เช่น Claude Desktop สามารถอ่านข้อมูลของฟาร์มนี้และขอควบคุมอุปกรณ์ได้ การควบคุมอุปกรณ์จะทำงานหลังจากมีคนอนุมัติเท่านั้น"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "AI ในตัว"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "เชื่อมต่อแอป AI ของคุณ"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "เกิดข้อผิดพลาดในการโหลดการตั้งค่า"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "ค่าใช้จ่ายรายเดือนโดยประมาณของ AI ในตัว ระบบจะแจ้งเตือนเมื่อใกล้ถึงขีดจำกัด และเมื่อถึงขีดจำกัดแล้วจะสลับไปใช้โมเดลที่ราคาถูกที่สุด ค่า 0 หมายถึงไม่จำกัด"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "การเข้าถึง AI ภายนอก"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "ออกคีย์หนึ่งชุดต่อแอป AI หนึ่งแอป แล้ววางลงในแอปนั้น"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "ให้ AI ในตัวสรุปสถานการณ์ของฟาร์มเป็นระยะในเบื้องหลัง"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "เซิร์ฟเวอร์บริดจ์ MCP"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "จัดการคีย์"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "ไม่อนุญาต"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "เปิดการตั้งค่าทั่วไป"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "เรียกใช้ AI ในตัว"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "โมเดล AI ที่ใช้สำหรับแชตและคำแนะนำภายในแอปนี้ ทำงานแยกจากแอป AI ของคุณเอง จึงปิดไว้ได้หากไม่ได้ใช้"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "ไซต์ที่ AI ใช้เมื่อแชตหรือหน้าจอไม่ได้ระบุไซต์"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "เซิร์ฟเวอร์เครื่องมือที่ AI ในตัวเรียกใช้ ระบบจะเพิ่มให้อัตโนมัติหนึ่งรายการเมื่อคุณเพิ่มเอนจิน MCP ด้านบน"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "เปิดหรือปิดได้ที่การตั้งค่า > ทั่วไป"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "โน้ต %(n)s รายการที่ AI เขียนกำลังรอให้ผู้ใช้ยืนยัน"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "ค่า 0 หมายถึงไม่ซิงค์อัตโนมัติ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "ความรู้ AI"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "ส่วนหัว API Key"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "เพิ่มแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "ทุกสถานะ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "ทุกแท็ก"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "อ้างอิงเฉพาะความรู้ที่ยืนยันแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "แหล่งข้อมูล"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "วิธีการใช้ความรู้"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "ประเภทของแหล่งข้อมูล"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "การตั้งค่าความรู้"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "ซิงค์ล่าสุด"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "แหล่งไลบรารี"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "ค้นหาเมื่อต้องการ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "รอการยืนยัน"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "ยังไม่เคยซิงค์"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "เปิดลิงก์"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "บันทึกและยืนยัน"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "แสดงรายการเหล่านั้น"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "ซิงค์ผิดพลาด"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "ซิงค์ทันที"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "ซิงค์แล้ว"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "ซิงค์เมื่อ {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "มีสามวิธีเพิ่มข้อมูล: เชื่อมต่อแหล่งข้อมูลที่แท็บแหล่งข้อมูล กดเพิ่มความรู้เพื่อเขียนสิ่งที่คุณรู้อยู่แล้ว หรือให้ AI ค้นหาข้อมูล — AI จะบันทึกสิ่งที่พบไว้"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "จำนวนครั้งที่ดึงข้อมูล"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "ชื่อเรื่อง ข้อความ หรือการระบุแหล่งที่มา"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "ความน่าเชื่อถือ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "สิ่งที่ผู้ใช้และ AI จดบันทึกไว้เพื่อให้ AI อ้างอิง ข้อมูลที่ซิงค์จากแหล่งข้อมูลจะถูกซ่อนไว้ที่นี่ตามค่าเริ่มต้น — เลือกได้ในตัวกรองแหล่งที่มา หรือจัดการที่แท็บแหล่งข้อมูล"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "เขียนโดยผู้ใช้และ AI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "บันทึก AI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "ทุกระดับความรุนแรง"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "ทุกประเภท"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "คำตอบ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "นำไปใช้กับความรู้แล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "อนุมัติแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "รออนุมัติ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "ผู้เรียกใช้"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "ดำเนินการแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "บทสนทนา"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "แก้ไขแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "คำแก้ไข"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "ไม่สามารถโหลดบันทึกได้"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "ละเว้นแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "รายงานข้อผิดพลาด"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "หมดอายุแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "เรียนรู้แล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "ค้นหาแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "ไม่มีรายงานข้อผิดพลาด"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "คำถามที่ถาม AI ในตัวและคำตอบของ AI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "ได้รับแล้ว"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "การเรียกใช้เครื่องมือ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "สิ่งที่ AI ที่เชื่อมต่อไว้ทำผ่านเครื่องมือ — ใหม่สุดก่อน คำขอที่ต้องได้รับอนุมัติจะแสดงวิธีการตัดสิน"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "สิ่งที่ AI ตอบ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "เมื่อ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "คำตอบของ AI ที่ผิดซึ่งผู้ใช้รายงานพร้อมคำแก้ไข การนำคำแก้ไขไปใช้จะเพิ่มลงในความรู้ AI"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "ไม่สามารถโหลดรายการเซิร์ฟเวอร์ MCP ได้"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "ต้องการลบเซิร์ฟเวอร์นี้หรือไม่?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "สคีมาอินพุต"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "ออบเจ็กต์ JSON เช่น {\"API_KEY\": \"...\"}"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "ยังไม่มีเซิร์ฟเวอร์ MCP"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "เซิร์ฟเวอร์นี้ไม่มีเครื่องมือที่เปิดให้ใช้"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "เพิ่มเซิร์ฟเวอร์แล้ว"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "ลบเซิร์ฟเวอร์แล้ว"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "อัปเดตเซิร์ฟเวอร์แล้ว"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "เซิร์ฟเวอร์"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "หยุดแล้ว"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "เซิร์ฟเวอร์เครื่องมือที่ AI ในตัวเรียกใช้ การเพิ่มเอนจิน MCP ในหน้าการเชื่อมต่อ AI จะสร้างให้โดยอัตโนมัติ"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "เครื่องมือ"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "รอลองใหม่"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "การเปลี่ยนบทบาทจะถามว่าจะกรอกความเชี่ยวชาญ system prompt ระดับ และโมเดลใหม่ด้วยค่าเริ่มต้นของบทบาทนั้นหรือไม่"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "กรอกความเชี่ยวชาญ system prompt ระดับ และโมเดลเริ่มต้นของบทบาทนี้หรือไม่? สิ่งที่คุณป้อนไว้จะถูกแทนที่"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "ข้อเสนอตารางเวลา %(n)s รายการรออยู่ที่ AI → คำขอ"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "ต้องการยกเลิกงานนี้หรือไม่?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "คำขอควบคุมและข้อเสนอตารางเวลาของ AI ตัดสินได้ที่ AI → คำขอ"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "ไม่สามารถโหลดไทม์ไลน์ของอุปกรณ์ได้"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "ไม่พบอุปกรณ์"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "เปิดคำขอ"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "สีที่ตั้งไว้ล่วงหน้า"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "แผนที่ทั้งหมด"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "ไซต์ทั้งหมด"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "คีย์"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "ไม่สามารถโหลดการตั้งค่าได้"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "วัดโดยสถานีตรวจอากาศ"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "ค่าที่วัดซึ่งคุณไม่ได้เลือกตอนสร้างรายงานนี้จะไม่อยู่ในรายงาน ข้อควรระวังด้านบนระบุไว้แล้ว"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "เซนเซอร์ให้ค่าไม่ตรงกัน"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "คลิกเพื่อแก้ไขสี: กำลังยืนยัน"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "คลิกเพื่อแก้ไขสี: พื้นผิวส่วนควบคุม"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "คลิกเพื่อแก้ไขสี: ไม่มีการตอบสนอง"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "คลิกเพื่อแก้ไขสี: สวิตช์เปิด"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "คลิกเพื่อแก้ไขสี: รางสวิตช์เมื่อปิด"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "พื้นผิวของสิ่งที่คุณใช้งาน เช่น ช่องข้อความ ช่องเลือก และปุ่มทรงแคปซูล ควรให้ต่างจากพื้นหลังของหน้า ไม่เช่นนั้นตัวควบคุมที่วางบนหน้าจะกลืนหายไปกับพื้นหลัง"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "เส้นแบ่งที่บางกว่าสำหรับรายการที่แน่น ซึ่งเส้นหนักเต็มที่จะดูรกตา"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "เส้นคั่นระหว่างรายการภายในคอนเทนเนอร์เดียวกัน เช่น รายการและแถวตัวเลือก ไม่ใช่เส้นขอบรอบสิ่งใด"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "สีพื้นหลังของแถว/การ์ดเมื่ออุปกรณ์หยุดตอบสนอง ซึ่งต่างจากสถานะเตือนที่ผู้ใช้เป็นฝ่ายหยุดไว้โดยตั้งใจ"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "สวิตช์เลื่อน"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "รางของสวิตช์เลื่อนเมื่อปิด (เมื่อเปิดใช้ช่วงที่ 3)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "ช่องข้อความ"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "สวิตช์เปิด"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "คุณแน่ใจหรือไม่ว่าต้องการลบบทบาทนี้"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "ไม่พบประกาศที่ตรงกับการค้นหา"
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "ค้นหาหัวข้อ เนื้อหา หมวดหมู่..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "ส่วนของสี"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "สีช่วงแบบทั่วไป"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "ส่วน"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "สี"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "วางแผนไว้"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "เนื้อหา"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "ระยะเวลา (นาที)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "แก้ไขและอนุมัติ"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "ค่าในช่อง '{field}' ไม่ถูกต้อง"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "บันทึกและอนุมัติ"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "เวลาที่กำหนด"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "ขั้นตอน"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "รายการนี้จะสั่งงานอุปกรณ์จริง (วาล์ว ปั๊ม)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "ดู"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "ดูรายละเอียด"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "รออนุมัติ {n} รายการ"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "สำเร็จ {ok}/{total}"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "การคายระเหย (Evapotranspiration)"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "รวบรวมอุณหภูมิ ความชื้น ความเร็วลม ปริมาณน้ำฝน รังสีดวงอาทิตย์ จุดน้ำค้าง และ CO2 ภายนอกสถานที่ ฟังก์ชันควบคุมสภาพแวดล้อมแบบรวมใช้ตัวรวบรวมนี้เป็นแหล่งข้อมูลอ้างอิงเดียว เลือกเซนเซอร์ภายนอกสำหรับแต่ละรายการ รายการที่เว้นว่างไว้จะไม่ถูกแชร์ — การควบคุมแบบรวมจะถือว่าไม่ทราบค่า แทนที่จะสมมติค่าขึ้นมาเอง"
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "เซิร์ฟเวอร์/โทเค็นจากการตั้งค่า -> ChirpStack อุปกรณ์จะเข้าร่วมตัวจัดตารางเวลานี้จากหน้าอุปกรณ์ของตัวเอง (เช่น ช่อง \"Class Scheduler\" ของ AoT-C)"
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "ช่วงค้นหา (วัน)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "ช่องที่ใช้งานอยู่"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "14 วันล่าสุด"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "30 วันล่าสุด"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "60 วันล่าสุด"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "90 วันล่าสุด"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "เว้นว่างไว้เพื่อจับคู่อัตโนมัติกับรูปหลายเหลี่ยมที่ลงทะเบียนไว้ซึ่งครอบคลุมจุดที่คลิก"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (ค่าเฉลี่ย)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "ช่วงเวลาค้นหา NDVI"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "สถิติ NDVI รายพื้นที่ รวมถึงความชื้นในดินและอุณหภูมิดินของรูปหลายเหลี่ยมที่ลงทะเบียนไว้ที่ agromonitoring.com — เป็นอินพุตเดียวที่รายงานความชื้นในดินเป็นตัวเลขสำหรับขอบเขตพื้นที่ของคุณเอง แทนที่จะเป็นเลเยอร์ดาวเทียมแบบหยาบ วาดพื้นที่ในแดชบอร์ด Agromonitoring (1-3000 เฮกตาร์) แล้ววาง Polygon ID ของพื้นที่นั้นลงด้านล่าง หรือเว้นว่างไว้เพื่อจับคู่กับรูปหลายเหลี่ยมที่ครอบคลุมจุดที่คุณคลิก ใช้บัญชีเดียวกับ OpenWeatherMap"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "อุณหภูมิดิน (10cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "อุณหภูมิดิน (ผิวดิน)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "ระบบจะใช้ภาพผ่านล่าสุดภายในช่วงเวลานี้ เมฆอาจทำให้ไม่มีภาพที่ใช้ได้นานหลายสัปดาห์"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "ภาพที่ชัดที่สุดในช่วงเวลา"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "เมฆทำให้ภาพของแต่ละวันมีช่องว่าง จึงแสดงภาพล่าสุดที่ใช้ได้ภายในช่วงเวลานี้แทน"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "คอลเลกชัน"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "สีเท็จ (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "7 วันล่าสุด"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "เมฆปกคลุมสูงสุด"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "ภาพล่าสุด"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (ความชื้น)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (พืชพรรณ)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (น้ำ)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "ลำดับความสำคัญของภาพ"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "ช่วงเวลาค้นหา"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (ที่ยอดชั้นบรรยากาศ)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (แก้ไขผลของชั้นบรรยากาศแล้ว)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "ภาพ Sentinel-2 ความละเอียด 10 ม. ผ่าน Sentinel Hub บน Copernicus Data Space Ecosystem ละเอียดพอที่จะเห็นความแตกต่างของการเจริญเติบโตภายในพื้นที่เดียว ซึ่งต่างจาก NDVI ของ MODIS ที่ความละเอียด 250 ม. ลงทะเบียนบัญชี CDSE ฟรี สร้างไคลเอนต์ OAuth แล้ววาง Client ID และ Secret ลงด้านล่าง แพ็กเกจฟรีให้ 30,000 หน่วยประมวลผลต่อเดือน โดยหนึ่งหน้าจอแผนที่ใช้ประมาณ 4 หน่วย และไทล์จะถูกแคชไว้หนึ่งวัน"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "สีจริง"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "การแสดงผล"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "ขนาดตัวอักษร"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "ค่าที่อ่านได้ในปัจจุบันเทียบกับเป้าหมายและขีดจำกัดที่ขั้นตอนนี้กำหนดไว้ ซึ่งเป็นการ์ดเดียวกับที่วิดเจ็ตแผนที่แสดง รวมถึง DLI และความร้อนสะสม ปุ่ม [7 วัน] จะเปลี่ยนแต่ละแถวให้แสดงช่วงค่าที่เคลื่อนผ่านในสัปดาห์ที่ผ่านมา"
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "เติมแถวที่ไม่มีช่วงค่าของตัวเอง (CO2 ความชื้นในดิน จุดน้ำค้าง) ด้วยเส้นแนวโน้มล่าสุด ต้องเปิดบล็อกเป้าหมายด้วย"
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "แสดงว่าขั้นตอนนี้คืบหน้าไปสู่ขั้นตอนถัดไปแล้วเพียงใด โดยวัดเป็นวันองศาการเจริญเติบโต (GDD) แสดงเฉพาะเมื่อโปรแกรมเปลี่ยนขั้นตอนตาม GDD ส่วนยอดรวมสะสมตั้งแต่เริ่มปลูกจะเป็นแถวหนึ่งในการ์ดสภาพแวดล้อมแทน และเป็นไปตามการตั้งค่าของการ์ดนั้น"
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "OFF ล้มเหลว: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "จำนวนสูงสุดของคำขอที่รอดำเนินการซึ่งหน้าต่างรายการแสดงในครั้งเดียว"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "ความถี่ในการรีเฟรชจำนวนที่รอดำเนินการ"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "คำขออนุมัติ MCP"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "จำนวนรายการที่แสดงสูงสุด"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "แสดงจำนวนคำขอเขียนจาก AI ภายนอกที่รอการอนุมัติ คลิกที่ตัวเลขเพื่อเปิดรายการ แล้วอนุมัติ ปฏิเสธ หรือแก้ไขก่อนอนุมัติทีละรายการ หรือเลือกหลายรายการเพื่ออนุมัติ/ปฏิเสธพร้อมกัน เมื่ออนุมัติ คำขอจะทำงานทันทีด้วยค่าตามที่แสดงทุกประการ"

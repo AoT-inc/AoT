@@ -4668,11 +4668,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "Sekans hâlâ çalışıyor — daemon değişikliği uygulamadı."
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "Sekans başlamadı — daemon değişikliği uygulamadı."
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4747,7 +4747,7 @@ msgstr "Bu alan bulunamadı."
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "Haritada konumu olmayan tesisler burada görünmez — önce Tesis ayarlarında konumlarını ekleyin."
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4764,15 +4764,15 @@ msgstr "Günlüğün ne hakkında olduğunu seçin."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "Hem bir başlangıç hem de bir bitiş tarihi girin."
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "Başlangıç tarihi bitiş tarihinden sonra."
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "Bu günlüğün ne hakkında olduğu bulunamadı."
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4781,24 +4781,24 @@ msgstr "Bu hedef okunamadı."
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "Bu dönem çok uzun (%(days)s gün). Daha kısa bir dönem deneyin."
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "Bu seçimde çok fazla cihaz var (%(n)s kanal). Kapsamı daraltın veya bunun yerine tek bir ekim alanı seçin."
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "Bu seçim çok fazla veri okumayı gerektirir. Daha kısa bir dönem veya daha dar bir kapsam deneyin."
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "Bu günlük hâlâ oluşturuluyor."
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -4992,10 +4992,6 @@ msgstr "— Yok —"
 msgid "Select one or more devices to register."
 msgstr "Kaydedilecek bir veya daha fazla cihaz seçin."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Bir kayıt hedefi (Giriş/Çıkış) veya bir zamanlayıcı seçin."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5061,11 +5057,6 @@ msgstr "Bu kaynak başka bir gruba atanmış. Erişim için bir yöneticiden ist
 msgid "Action Type"
 msgstr "Eylem Türü"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Parametre Adı"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Kaynak Türü"
@@ -5074,24 +5065,6 @@ msgstr "Kaynak Türü"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Manuel giriş"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Not/Açıklama"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "Harici URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Değer / URL / Metin"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "Kayıt Kimliği"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7297,26 +7270,6 @@ msgstr "Bilgi Tonu"
 msgid "Info Tint Text"
 msgstr "Bilgi Tonu Metni"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Başarı Tonu Kenarlığı"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Uyarı Tonu Kenarlığı"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Tehlike Tonu Kenarlığı"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Bilgi Tonu Kenarlığı"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "Arka Plan LLM Rozeti"
@@ -7324,12 +7277,6 @@ msgstr "Arka Plan LLM Rozeti"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "Arka Plan MCP Rozeti"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Yükseltme Rozeti"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7531,27 +7478,9 @@ msgstr "Koşul Görev Döngüsü (%)"
 msgid "Confirmed"
 msgstr "Onaylandı"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "İnceleme gerekli"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Değer girin"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "örn. 25,5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "örn. sabah sıcaklığına dayalı ayar noktası"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "örn. https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7572,59 +7501,10 @@ msgstr "Devam ediyor"
 msgid "Failed"
 msgstr "Başarısız Oldu"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "AI önerisi"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Kayıtlı görev yok."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Üstteki Görev Ekle düğmesiyle bir tane ekleyin."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "AI tarafından önerilen zamanlama onaylanıp takvime eklensin mi?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "AI tarafından önerilen zamanlama onaylandı."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "Onay başarısız oldu"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Ağ hatası"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Bu öneri reddedilip silinsin mi?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "Öneri reddedildi ve silindi."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Reddetme başarısız oldu"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Altına girintileneceği üst görev yok"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Zaten üst düzey bir görev"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Sıra güncellendi"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7633,14 +7513,6 @@ msgstr "Sıra güncellendi"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "Güncelleme başarısız"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Hiyerarşi güncellendi"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Ad güncellendi"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7740,65 +7612,15 @@ msgstr "Yükleniyor..."
 msgid "Failed to load data."
 msgstr "Veri yüklenemedi."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Kayıtlı bağlam kaydı yok."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Kriterlerle eşleşen kayıt yok."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Sistem varsayılanı"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Tanımı düzenle"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "İncelemesi bekleniyor"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Reddedildi"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Onaylanacak tanımı girin veya doğrulayın:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Başarıyla onaylandı."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Onay sırasında bir hata oluştu."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Bir sunucu hatası oluştu."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Bu terim reddedilsin mi?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Başarıyla reddedildi."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "İşleme sırasında bir hata oluştu."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Yeni bir tanım girin:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -8010,7 +7832,7 @@ msgstr "Harita bulunamadı"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2020
 msgid "map_load_failed"
-msgstr "map_load_failed"
+msgstr "Harita yüklenemedi. Lütfen tekrar deneyin."
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2624
 msgid "saved_successfully"
@@ -10998,69 +10820,11 @@ msgstr "geri alınamaz"
 msgid "Usage"
 msgstr "Kullanım"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "AI Bağlam Yöneticisi"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr "AI'ya harici bilgi enjekte edin ve güven durumunu yönetin."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Bağlam Ekle"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Notlar (isteğe bağlı)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Bağlam Kayıtları"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Sistem Varsayılanı"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "İnceleme Gerekiyor"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr ""
-"AI tarafından alan varsayılanlarından otomatik oluşturuldu. Henüz "
-"incelenmedi."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Kullanıcı girdisi veya bekleyen öğe. Yapay zeka bunu referans alır ancak "
-"düşük güvenle."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"Kullanıcı tarafından incelenip onaylanan değer. Yapay zeka bunu yüksek "
-"güvenle kullanır."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Algılanan Platform"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC/Sunucu"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Docker Konteyneri"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11643,7 +11407,7 @@ msgstr "Daemon RAM Kullanımı"
 
 #: aot_flask/templates/pages/info.html:60
 msgid "Daemon Virtualenv"
-msgstr "Daemon Virtualenv"
+msgstr "Daemon Sanal Ortamı"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:783
 #: aot_flask/templates/pages/ai/ai_agent.html:798
@@ -11940,15 +11704,6 @@ msgstr "veya sayfayı yenileyin."
 msgid "Control requests awaiting approval"
 msgstr "Onay bekleyen kontrol istekleri"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Bunlar HENÜZ çalıştırılmadı. Onaylamak, tam olarak gösterilen "
-"argümanlarla anında çalıştırır — AI'ya geri dönüp söylemenize gerek "
-"yoktur."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Bekleyen kontrol isteği yok."
@@ -11986,54 +11741,9 @@ msgstr "Onaylandı ve gerçekleştirildi."
 msgid "Approved, but it failed to run"
 msgstr "Onaylandı ancak çalıştırılamadı"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "AI Durumu"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Öğrenme İlerlemesi"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Anahtar Kelimeler"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Sık Kullanılan Özellikler"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "AI Durumunu Sıfırla"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Yapay Zeka Talimatlarınız"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Gelişmiş — isteğe bağlı"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "AI'niz için özel talimatlar ekleyin (isteğe bağlı)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"örn. Bir sera işletiyorum ve zararlı yönetimi ile sıcaklık kontrolü "
-"konusunda yardıma ihtiyacım var"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Açık Alan Tarımı"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12043,34 +11753,12 @@ msgstr "Açık Alan Tarımı"
 msgid "Greenhouse"
 msgstr "Sera"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Spor Tesisi"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Beklemeye Al"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Ulaşım"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "AI Kurulumunu Güncelle"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Onaylanmış bilgi öğeleri:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12079,25 +11767,6 @@ msgstr "Beklemede:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Toplam:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "AI hâlâ öğreniyor..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Henüz etkinlik yok"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"AI Durumu sıfırlansın mı? Anlık görüntü bir sonraki yüklemede yeniden "
-"hesaplanacaktır."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "Kaydedilemedi. Lütfen tekrar deneyin."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12113,26 +11782,6 @@ msgstr "AI Ajanı"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "AI Ayarları"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"AI Ajanları orkestrasyon katmanı. Karmaşık görevleri otomatikleştirmek "
-"için AI hizmetlerinizi ve ajanlarınızı yönetin."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "AI Servis İşlemi"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"AI modelini başlatın veya durdurun. Durdurulduğunda sohbet, tavsiye "
-"istekleri ve arka planda çalışan AI işleri kullanılamaz."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12212,36 +11861,11 @@ msgstr "Lütfen önce bir motor seçin."
 msgid "Creating agent... Please wait."
 msgstr "Ajan oluşturuluyor... Lütfen bekleyin."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Lütfen önce bir hizmet veya uygulama seçin."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "Ad ve Komut gereklidir."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "MCP Sunucusu eklendi."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Başarısız oldu."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "MCP sunucusu eklenemedi."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Ajan Ayarları"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Hata: Form bulunamadı"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12303,14 +11927,6 @@ msgstr "AoT MCP Sunucusu"
 msgid "Action failed"
 msgstr "Eylem başarısız oldu"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Yapılandırılmış MCP girişi yok."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "MCP girişleri yüklenemedi."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "AI servisi başlatıldı"
@@ -12330,52 +11946,13 @@ msgstr "AI servisi durduruldu"
 msgid "Save failed"
 msgstr "Kaydetme başarısız oldu"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Ayarları Kaydet"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "Ayarlar kaydedildi"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "AI açma/kapama değişikliği için yeniden başlatma gerekir"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Deneysel Özellik"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "AI işlevselliği şu anda deneysel aşamadadır."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Rutin Görevleri Otomatik Onayla"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Otomatik Onay için Maks. Etki"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Başarısızlıkta Geri Bildirim Gerektir"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Modeller"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Denetleyici Model"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Çalışan Modeli"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12393,98 +11970,22 @@ msgstr "Varsayılan Saha"
 msgid "(none)"
 msgstr "(yok)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Bağlam ve Bütçe"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Kısıtlı Dönem Başlangıcı"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Kısıtlı Dönem Bitişi"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Bağlam Kapsamı (Saat)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Maks. Geçmiş Bağlamı"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Aylık Bütçe Limiti (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "yükleniyor..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "MCP Girişleri"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "AI Hizmetleri"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "AI Hizmet Kayıt Defteri"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Portala Dön"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "AI Hizmeti Kaydet"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"AI motoru bağlantılarını kaydedin ve yönetin (Gemini, OpenAI, Yerel "
-"Proxy'ler)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Bu hizmet silinsin mi?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Uç Nokta"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Henüz kayıtlı AI Hizmeti yok."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "İlk LLM'inizi bağlayın"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Servis Adı"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "örn. Benim Gemini Pro'm"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Motor Türü"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Model Adı"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API Uç Noktası (İsteğe Bağlı)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12497,28 +11998,6 @@ msgstr "Kimlik Doğrulama"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Kimlik Doğrulama Türü"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "Kimlik / Parola"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Kimlik Doğrulama Yok"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "Hesap Kimliği"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Hizmeti Kaydet"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Önceden tanımlı model yok"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12556,28 +12035,6 @@ msgstr "Senkronize Et"
 msgid "Data credits"
 msgstr "Veri kaynak bilgisi"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "Yapay Zekâ Tarafından Derlenen Bilginin İncelenmesi"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Yapay zekânın kendi başına rafa kaldırdığı bilgi (başlangıçta her zaman "
-"onaylanmamıştır). Doğru olanı onaylayın/düzenleyin, yanlış olanı geri "
-"çekin — incelenene kadar [AI 정리 — 미확인] olarak alıntılanır."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Yalnızca incelenmiş bilgi: AÇIK"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Yalnızca incelenmiş bilgi: KAPALI"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12585,10 +12042,6 @@ msgid ""
 msgstr ""
 "Açıkken, bir kişi onaylayana kadar AI kendi yazdığı notları kaynak "
 "gösteremez. Yetkili ve elle girilen bilgiler bundan etkilenmez."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Henüz yapay zekâ tarafından derlenen bilgi yok."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12606,18 +12059,9 @@ msgstr "Onaylanmadı"
 msgid "Flagged"
 msgstr "İşaretlendi"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Yetkili bir kaynakla aynı konu"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Eşleşmeler"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Açık kaynak"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12626,23 +12070,6 @@ msgstr "Yeniden Etkinleştir"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Geri Çek"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Bilgi Öğeleri"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"AI'nin alıntılayabildiği her şey — kaynaklardan senkronize edilmiş, AI "
-"tarafından rafa kaldırılmış veya elle yazılmış. Burada gerçekte ne "
-"olduğunu görmek için arayın ve filtreleyin."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Bilgi ara…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12678,16 +12105,6 @@ msgid ""
 msgstr ""
 "Bilgi kütüphanesi boş. Burada bir şey olana kadar AI, konu sorularını "
 "kendi genel bilgisinden yanıtlar — belirtebileceği bir kaynak olmadan."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Doldurmanın üç yolu var: yukarıdan bir kaynak bağlayın, zaten bildiğinizi"
-" yazmak için Bilgi Ekle'ye basın veya AI'dan bir şey aramasını isteyin — "
-"bulduğunu kaydeder."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12756,14 +12173,6 @@ msgstr "Kaynak URL"
 msgid "Source Settings"
 msgstr "Kaynak Ayarları"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "Yapay Zekâ Tarafından Derlenen Bilgiyi Düzenle"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Kaydet (Onaylar)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Lütfen bir kaynak türü seçin."
@@ -12799,10 +12208,6 @@ msgstr "Kaynak bulunamadı."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Kaynak Adı"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Parametre Adı (Bağlam Anahtarı)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12911,17 +12316,9 @@ msgstr "Silme başarısız oldu"
 msgid "Crop Type"
 msgstr "Ürün Türü"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Onaylanıyor…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Onaylandı."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Geri çekiliyor…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12932,10 +12329,6 @@ msgid "Retire this item? It will stop being cited until reactivated."
 msgstr ""
 "Bu öğe geri çekilsin mi? Yeniden etkinleştirilene kadar artık "
 "alıntılanmayacak."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Yeniden etkinleştiriliyor…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13084,10 +12477,6 @@ msgstr "Bilgi olarak kaydedilecek işlemleri seçin"
 msgid "Parameters for the selected operations"
 msgstr "Seçilen işlemler için parametreler"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "En az bir işlem seçin."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13227,23 +12616,9 @@ msgstr "Özet"
 msgid "Key-Value Extraction"
 msgstr "Anahtar-Değer Çıkarımı"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "AI Yöneticisi"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Konuşma Yönetimi"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Hata Kontrol Paneli"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Akıl Yürütme Geçmişi"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13259,25 +12634,9 @@ msgstr "Tarih"
 msgid "Details"
 msgstr "Ayrıntılar"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Henüz akıl yürütme geçmişi yok."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "AI Hata Kontrol Paneli"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Yenileme Desenleri"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Listeyi Yenile"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Hata kalıpları analiz ediliyor..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13319,51 +12678,14 @@ msgstr "Uygunsuz Eylem"
 msgid "Tool Misuse"
 msgstr "Araç Kötüye Kullanımı"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Kullanıcı Düzeltmesi"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Akıl Yürütme Ayrıntıları"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "Aşama 1: Kullanıcı İsteği"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "Aşama 2: Niyet ve Planlama"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "Aşama 3: Araç Yürütme (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "Aşama 4: Sentez ve Koordinasyon"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Koordinatör"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "Aşama 5: Nihai Yanıt"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Hata Ayrıntısı ve Çözümü"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Bilgiye Uygula"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Toplam Bekleyen"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13374,47 +12696,19 @@ msgstr "Öneriler"
 msgid "Review"
 msgstr "İncele"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Hata bulunamadı."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Emin misiniz?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "MCP Sunucusunu Düzenle"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Sunucu Adı"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Çalıştırma Komutu"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Kapsam"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Genel (Manifestoda Her Zaman)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Özel (Geç Yüklenen)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Amaç"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Ortam Değişkenleri (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13422,38 +12716,14 @@ msgstr "Ortam Değişkenleri (JSON)"
 msgid "Update"
 msgstr "Güncelle"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "AI Ajanı Oluştur"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "İlgili Bağlantı"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "API Anahtarı Al"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Ajan Bilgisi"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Ajan Adı"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "örn. Enerji Yöneticisi"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "AI Hizmeti Kaydı"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "örn. Benim OpenAI'm"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13465,14 +12735,6 @@ msgstr "Model Seçimi"
 msgid "Enter model name manually"
 msgstr "Model adını manuel olarak girin"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "API Uç Noktası"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "AI İşlem Hattı ve Araç Erişimi"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13482,10 +12744,6 @@ msgstr "İşlem Hattı Rolü"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Çalışan (Eski)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Model Katmanı"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13500,17 +12758,9 @@ msgstr "Standart"
 msgid "Heavy"
 msgstr "Yoğun"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Araç Erişimi"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Atandı"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Atanan MCP Sunucularını Seç"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13518,15 +12768,6 @@ msgstr "Atanan MCP Sunucularını Seç"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Uzmanlık"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "örn. sulama, iklim"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Ajan Kuralları"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13539,29 +12780,9 @@ msgstr "Sistem İstemi"
 msgid "Define how this agent should behave..."
 msgstr "Bu ajanın nasıl davranması gerektiğini tanımlayın..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Özel Model..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Servis Anahtarı"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "Servis API Anahtarı"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Varsayılan Sistem Motoru"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Servis Kimlik Bilgileri"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "Beyin Yapılandırması"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13573,164 +12794,17 @@ msgstr "Beyin Yapılandırması"
 msgid "Options"
 msgstr "Seçenekler"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "MCP Kapsamı"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "MCP Talimatları"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Sunucu Talimatı"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "Yalnızca amacı sınıflandırır. Hafif model önerilir."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "Yürütme planları oluşturur. Standart veya Ağır model önerilir."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Araçları çağırır ve veri toplar."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Sonuçları kullanıcı yanıtına dönüştürür."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Eski denetleyici/çalışan modu."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "AI Genel Seçenekleri"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Genel AI Ayarları"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr ""
-"AI orkestrasyon katmanı için sistem genelindeki parametreleri "
-"yapılandırın."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "Cihaz AI Bağlamını Görüntüle"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "Tekil cihazlar için AI bağlam verilerini inceleyin"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Cihazlara Gözat"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Altyapı"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "Ana Proxy URL'si"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr "Ajana özel uç nokta boşsa kullanılacak genel proxy."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "İstek Zaman Aşımı (sn)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Kullanıcı Deneyimi (Bildirim)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "AI Başarı mesajlarını gizle"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "AI Uyarı mesajlarını gizle"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "AI Zamanlayıcısı"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "İşbirlikçi Hedef Takipçisi"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Makro Görünüm]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[Gün]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Hafta]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Ay]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Yıl]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Bugün]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Yukarı(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Aşağı(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Girinti(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Girinti Azalt(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Verileri Yenile"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Görev Ekle"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Görevler yükleniyor..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "AI Tarafından Önerilen Görevlerin Yönetimi"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "AI Ajanları tarafından önerilen görevleri inceleyin ve yönetin."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Görevleri ara..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13740,22 +12814,6 @@ msgstr "Görevleri ara..."
 msgid "Target"
 msgstr "Hedef"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Planlanan Saat"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Önerilen görevler yükleniyor..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Görevi Düzenle"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "Devam Ediyor"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Görev"
@@ -13764,21 +12822,9 @@ msgstr "Görev"
 msgid "Goal"
 msgstr "Hedef"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Kilometre Taşı"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Kontrol Noktası"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Üst Görev"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Önerilen İşi Düzenle"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13789,10 +12835,6 @@ msgstr "Çıkış Kontrolü"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "PID Ayarı"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "Hedef ID"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13807,63 +12849,10 @@ msgstr "Zamanlama Saati"
 msgid "AI Reasoning"
 msgstr "AI Muhakemesi"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Silme Nedeni"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "örn. Gereksiz, Yanlış zamanlama..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Görevi Sil"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Değişiklikleri Kaydet"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "AI İstekleri ve Önerileri"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"MCP üzerinden bağlanan harici yapay zeka kendi başına hiçbir şeyi "
-"değiştiremez. Kontrol istekleri onayınız için burada bekler ve "
-"karşılaştırmanız için görüşler toplanır."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "AI öneri kaydı"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"Ana AI, harici AI veya alt düğümler tarafından gönderilen görüşler. Kabul"
-" etmek yalnızca onay anlamına gelir — kontrolü yürütmez."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Son AI Araç Çağrıları"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Henüz gönderilmiş öneri yok."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Henüz kaydedilmiş araç çağrısı yok."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13881,21 +12870,9 @@ msgstr "Önerilen eylem"
 msgid "MCP Server Management"
 msgstr "MCP Sunucu Yönetimi"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Tüm Durumları Yenile"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Sunucu Ekle"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Model Context Protocol köprü süreçlerini izleyin ve kontrol edin"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "MCP sunucuları keşfediliyor..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13920,10 +12897,6 @@ msgstr "Kaydederken Etkinleştir"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Ortam Değişkenleri"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Yapılandırmayı Kaydet"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -13960,14 +12933,6 @@ msgstr "Otomatik Tetikleyici"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Yeni Görev"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "AI Önerileri"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Bekleyen öneri yok."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14010,10 +12975,6 @@ msgstr "Henüz geçmiş yok."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Öneri Detayları"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Öneren"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14169,14 +13130,6 @@ msgstr "Cihaz-yerel"
 msgid "Your time"
 msgstr "Sizin saatiniz"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Bu iş onaylansın mı?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Reddetme nedeni (isteğe bağlı):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14209,14 +13162,6 @@ msgstr "Hedef: "
 msgid "By: "
 msgstr "Tarafından: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Yerel saat: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Akıl Yürütme: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "Takvim, saat diliminizde gösterilir"
@@ -14225,138 +13170,21 @@ msgstr "Takvim, saat diliminizde gösterilir"
 msgid "Getting to Know Each Other"
 msgstr "Birbirimizi Tanıyalım"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "AI, zamanla verilerinizden öğrenir"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Ne kadar çok etkileşime girerseniz, o kadar hassas hale gelir"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "Yapay zekânın neye odaklanacağını siz kontrol edersiniz"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Tesisiniz Hakkında Bize Bilgi Verin"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Tesisinizi en iyi ne tanımlar?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "Devam etmek için lütfen bir tesis türü seçin."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Bu AI'den tam olarak neye ihtiyacınız olduğunu açıklayın (isteğe bağlı)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Devam Et"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Her Şey Hazır!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Tesis Türü"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Talimatlarınız"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"Şimdi şunları göreceksiniz: Yapay Zeka Durumu, anahtar kelimeleriniz ve "
-"yapay zekânın tesisiniz hakkında nasıl öğrendiği."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "AI Kontrol Paneline Git"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Tesis Öğrenme Durumu"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "AI Danışman ile Başlarken"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Bu yapay zeka sistemi, tesisinize özel tavsiyeler sunabilmek için bir "
-"öğrenme süresine ihtiyaç duyar."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "Öğrenme dönemi boyunca:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "Öneriler genel tarım bilgisine dayanmaktadır"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "Tesise özgü veriler hâlâ sınırlı"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Geri bildiriminiz kalibrasyonun anahtarıdır"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Tesis Bilgileri"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Dikey Tarım"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Fidanlık"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "İşletme Deneyimi"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "1 yıldan az"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 yıl"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 yıl"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ yıl"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Kritik Parametreler"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "uygun olan tümünü seçin"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Besinler"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14372,54 +13200,6 @@ msgstr "Geri"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "İleri"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Kullanım Şartları"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Bu yapay zeka danışmanı, zaman içinde tesisinizden öğrenir. Öğrenme "
-"sürecinin başlangıcında tavsiyeler genel tarım bilgisine dayanır ve "
-"koşullarınıza özgü olmayabilir. Önerileri onaylamanız, ayarlamanız veya "
-"reddetmeniz şeklindeki geri bildiriminiz, sistemi tesisinize göre kalibre"
-" eden şeydir. Sistem, emin olmadığı zamanları ve hangi onayın yardımcı "
-"olacağını size bildirecektir. Kontrol her zaman sizde kalır: onayınız "
-"olmadan hiçbir otomatik eylem gerçekleştirilmez."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Yukarıdaki şartları anlıyor ve kabul ediyorum"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Kabul Et ve Başla"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Başlangıç Tamamlandı"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"Yapay zeka danışmanı bu tesis hakkında öğrenmeye başlayacaktır. Önerileri"
-" hakkında verdiğiniz geri bildirim arttıkça, tavsiyeler daha doğru ve "
-"özelleştirilmiş hale gelir."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "AI Kullanmaya Başla"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14454,10 +13234,6 @@ msgstr "Büyük"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "Bütçeler her Katman için otomatik olarak optimize edilir."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Servis ve Model"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Manuel Giriş"
@@ -14465,10 +13241,6 @@ msgstr "Manuel Giriş"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Mevcut anahtarı korumak için boş bırakın"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "İşlem Hattı Yapılandırması"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16435,14 +15207,6 @@ msgstr "Örtü ve Havalandırma"
 msgid "Cover layers"
 msgstr "Örtü katmanları"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"Dış örtü her zaman gereklidir. Gerektiğinde duvar güçlendirmesi veya iç "
-"örtü ekleyin."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Duvar güçlendirme"
@@ -17621,28 +16385,6 @@ msgstr "Uygulanıyor..."
 msgid "Failed to submit judgment"
 msgstr "Değerlendirme gönderilemedi"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Başlangıç konumunu bulmak için adres arayın"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "Başlangıç harita merkezi enlemi. Örn. 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "Başlangıç harita merkezi boylamı. Örn. 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr ""
-"Başlangıç harita yakınlaştırma düzeyi. Bir sayı girerek "
-"değiştirebilirsiniz."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Genel arama için varsayılan arama motorunu seçin."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Varsayılana Sıfırla"
@@ -17663,82 +16405,16 @@ msgstr "Tesis Rengi"
 msgid "Equipment Color"
 msgstr "Ekipman Rengi"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "AoT Cihaz Rengi"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Panel Arka Plan Rengi"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "Varsayılan: 25. Maksimum sınır 30'dur."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"Harita kaynağı tarafından sağlanmayan yüksek yakınlaştırma seviyeleri "
-"için dijital yakınlaştırma kullanın."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "18'e yakın ve üzeri seviyeler için kesirli yakınlaştırmayı etkinleştirir."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Kareler yüklenirken belirme efektini etkinleştirir."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"Çok sayıda vektör katmanı bulunduğunda performansı artırmak için Canvas "
-"oluşturucusunu kullanın."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Maks. Saha Poligonu"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Siteler için maksimum çokgen sayısını sınırlayın. Bu sınırı aşan siteler "
-"nokta olarak gösterilir."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Maks. Bölge Poligonu"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Bölgeler için maksimum çokgen sayısını sınırlayın. Bu sınırı aşan "
-"bölgeler nokta olarak gösterilir."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Maks. Cihaz Poligonu"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Cihazlar için maksimum çokgen sayısını sınırlayın. Bu sınırı aşan "
-"cihazlar nokta olarak gösterilir."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "Bir ekim alanı, bölge veya alan ile bir dönem seçin; nelerin yetiştirildiğini, ölçüldüğünü ve kontrol edildiğini gösteren bir anlık görüntü oluşturun — devredebileceğiniz veya yazdırabileceğiniz bir belge."
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17746,7 +16422,7 @@ msgstr "Değiştir"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "Ürüne, çeşide, ada, bölgeye göre ara…"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17754,7 +16430,7 @@ msgstr "Bitiş Tarihi"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "Ya da tüm bir alan veya bölge için günlük oluşturun"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17770,7 +16446,7 @@ msgstr "Haritasız"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "Alanın veya bölgenin tamamı, içindeki tüm ekim alanları dahil olmak üzere kapsanır."
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17814,11 +16490,11 @@ msgstr "Günlük"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "Bu günlük hâlâ oluşturuluyor. Bu sayfa otomatik olarak yenilenecek."
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "Bu günlük oluşturulamadı."
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17851,7 +16527,7 @@ msgstr "İçindekiler"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "Aşağıdaki her bölüm bu sırayla yeni bir sayfada başlar."
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -17861,7 +16537,7 @@ msgstr "Genel Bakış"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "bu günlüğün konusu"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -17891,41 +16567,33 @@ msgstr "%(n)s dönem"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "Bunu nasıl okumalı"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "Dönem ve saat dilimi"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "Günler %(tz)s saat diliminde başlar ve biter. Bu belgedeki her tarih bir yerel takvim günüdür, UTC günü değil."
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "Min / Maks. / Ort."
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "Min ve maks. değerler kesindir. Ortalama, saatlik ortalamaların ortalamasıdır; bu yüzden yoğun örneklenen saatler onu çekmez — gerçek bir zaman ağırlıklı ortalama değil, bir yaklaşımdır."
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "Hedef ve Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -17935,17 +16603,17 @@ msgstr "Çalışma Süresi"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "Dönem boyunca bir cihazın açık kaldığı saatler, ilk kanalından okunur."
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "Dışarıda bırakılanlar"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "Cihaz tanılamaları (pil, sinyal) varsayılan olarak dahil edilmez. Günlük oluşturulurken açılabilirler."
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -17953,7 +16621,7 @@ msgstr "Burada kullanılan terimler"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "Sayıların kaynağı"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -17963,7 +16631,7 @@ msgstr "Kaynak"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "Bu AoT sisteminin, bu hedefe atanan cihazlar için tuttuğu sensör ve cihaz kayıtları."
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -17973,15 +16641,15 @@ msgstr "Anlık Görüntü"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "Bu belge oluşturulduğu anda sabitlendi. Cihazlarda, programlarda veya kablolamada sonradan yapılan değişiklikler onu değiştirmez."
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "Doğruluk notları"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "Yazdır (PDF olarak kaydet)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -18010,22 +16678,22 @@ msgstr "Öğe"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "Büyüme derece günleri"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "bu günlük: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "taban %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "Ölçülen gün oranı: %(p)s%%"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -18037,12 +16705,12 @@ msgstr "Program için taban sıcaklığı tanımlanmamış"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "Yeterli ölçülmüş gün yok"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "Bu günlükte %(n)s gün"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18108,7 +16776,7 @@ msgstr "tahmini"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "bu günlükten önce"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18140,12 +16808,7 @@ msgstr "Tüm dönem"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "gün ışığı %(h)s sa"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18165,11 +16828,6 @@ msgstr "kullanım"
 msgid "varies"
 msgstr "değişken"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "sensör yok"
@@ -18181,7 +16839,7 @@ msgstr "Bu günlük silinsin mi? Bu işlem geri alınamaz."
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "Bir şeyler ters gitti."
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19252,10 +17910,6 @@ msgstr "Kapatma veri yükü (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Zamanlayıcıya ata"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Seçili cihazları kaydet"
@@ -19467,10 +18121,6 @@ msgstr "MCP Rozeti"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "MCP Rozeti renklerini düzenlemek için tıklayın"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Yükseltme Rozeti renklerini düzenlemek için tıklayın"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19749,24 +18399,6 @@ msgstr "Devam eden/bilgilendirme durumları için yumuşak rozet arka planı"
 msgid "Text color used on the info tint"
 msgstr "Bilgi tonu üzerinde kullanılan metin rengi"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr ""
-"Başarı uyarı kutuları için kenarlık rengi (Yönetici sayfaları, ör. "
-"Güncelleme)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Uyarı/varsayılan uyarı kutuları için kenarlık rengi"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Tehlike/hata uyarı kutuları için kenarlık rengi"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Bilgi uyarı kutuları için kenarlık rengi"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr "Kaydet, etkinleştir, sekme — uygulama genelinde dolgulu birincil düğmeler"
@@ -19798,10 +18430,6 @@ msgstr "Düğme Kenarlığı"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Tüm düğmeler ve liste satırları için kenarlık"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "Gezinme çubuğu yükseltme rozeti ve yükseltme düğmesi arka planı"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20923,34 +19551,6 @@ msgstr "Not Yöneticisi"
 msgid "Search content, subject..."
 msgstr "İçerik, konu ara..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Filtreleri Temizle"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Gelişmiş Filtreler"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Sonuçları Dışa Aktar"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "PDF Rapor Dışa Aktarma"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Belirli bir dönem içindeki notları (yukarıdaki etiket filtresini "
-"kullanarak) biçimlendirilmiş bir PDF raporu haline getirin."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Rapor Başlığı (isteğe bağlı)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "Not bulunamadı"
@@ -21234,7 +19834,7 @@ msgstr "Etiket yok"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "AI analizi yok. Analiz otomatik olarak çalışır — kısa süre sonra tekrar kontrol edin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21246,7 +19846,7 @@ msgstr "AI'ya Öğret"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "AI'nın bu tesisi anlamasına yardımcı olacak bir not ekleyin..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21287,11 +19887,11 @@ msgstr "Güven:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "Analiz, aşağıdaki değişikliklerin gerçekleşmiş olabileceğini düşündürüyor:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "Öneriler yüklenemiyor. Bağlantıyı kontrol edin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21299,7 +19899,7 @@ msgstr "Göndermeden önce bir not girin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "Not kaydedildi - sonraki AI döngüsüne bilgi verecek."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21309,25 +19909,9 @@ msgstr "Gönderim başarısız oldu."
 msgid "Unable to save note. Please try again."
 msgstr "Not kaydedilemedi. Lütfen tekrar deneyin."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Analiz Et"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "AI analizi başarısız oldu"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Yürütme başarısız oldu"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21363,11 +19947,11 @@ msgstr "çift katman"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "Sağ tık: döndür"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "Sol tık: kaydır"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21422,7 +20006,7 @@ msgstr "Genel Bant Renkleri Olarak Kaydet"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "İlk 5 bölüm rengini Ayarlar > Özel Arayüz bant renklerine uygular."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21465,15 +20049,15 @@ msgstr "Sütun"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "Genel grafik renkleri olarak kaydedildi"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "Genel Grafik Renkleri Olarak Kaydet"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "İlk 6 seri rengini Ayarlar > Özel Arayüz grafik renklerine uygular."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21483,7 +20067,7 @@ msgstr "Y Ekseni Seçenekleri"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "Manuel Y Ekseni Min/Maks Değerini Etkinleştir"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21511,7 +20095,7 @@ msgstr "Adres girin."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "Bu öneri hakkında bir soru sorun (ör. ne yapmalıyım?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21519,7 +20103,7 @@ msgstr "AI'ya ne yapılacağını sor"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "Bu öneriye göre hangi somut işlemleri yapmalıyım?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21568,19 +20152,19 @@ msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
-msgstr ""
+msgstr "30dk"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:169
 msgid "1h"
-msgstr ""
+msgstr "1sa"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:170
 msgid "6h"
-msgstr ""
+msgstr "6sa"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:171
 msgid "1d"
-msgstr ""
+msgstr "1g"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
 msgid "Actual"
@@ -21609,11 +20193,6 @@ msgstr "Başlangıç Saati"
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
 msgid "Select the Output to control in the widget options."
 msgstr "Kontrol edilecek Çıkışı widget seçeneklerinden seçin."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Veri Konum Kaydırması (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
@@ -21645,19 +20224,19 @@ msgstr "Görüntü alınırken hata oluştu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "Hata: HLS kütüphanesi yüklenemedi"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "Hata: Tarayıcı doğrudan RTSP'yi desteklemiyor. Bunun yerine 'Relay' yöntemini kullanın."
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "Hata: Akış URL'si yapılandırılmamış"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "Kamera bilgisi alınırken hata oluştu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21680,54 +20259,18 @@ msgstr "Etkinleştirildi"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "Bu fonksiyon türünün düzenlenebilir seçeneği yok."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "Bu kontrolör etkin. Değişiklikleri kaydetmeden önce devre dışı bırakın, aksi halde uygulanmazlar."
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Seri Seçenekleri"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Özel Renkleri Etkinleştir"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Y Ekseni İşaretlerini Hizalamayı Etkinleştir"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Y Ekseni Başlangıcını İşarete Hizalamayı Etkinleştir"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Y Ekseni Bitişini İşarete Hizalamayı Etkinleştir"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Y Ekseni Minimumu"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Y Ekseni Maksimumu"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21754,11 +20297,11 @@ msgstr "Kategori Filtresi"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "Yalnızca seçilen kategorilerdeki gönderileri gösterir. Hiçbiri seçilmezse tüm kategorilerin gönderileri gösterilir."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "Henüz kategori yok. Filtrelemek için gönderi oluştururken bir kategori belirleyin."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22180,12 +20723,12 @@ msgstr "Duraklatıldı — kayıtlı aktüatör yok"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "Duraklatıldı — çalışma zaman aralığının dışında"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "Duraklatıldı (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22214,12 +20757,12 @@ msgstr "Aktüatörler: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "Havalandırma: %(ratio)s açık (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "Güvenlik geçidi: %(reason)s — kontrol durduruldu"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22228,27 +20771,27 @@ msgstr "tetiklendi"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "Güvenlik geçidi (kısmi): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "%(target)s için kontrol edecek aktüatör yok"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "Ekipman sınırında: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "Belirlenen sınırın ötesinde: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "Son döngü: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22283,22 +20826,22 @@ msgstr "Sekans: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "Bugünün aralığı: %(start)s – %(end)s (döngü %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "Bugünün aralığı: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "Döngüde geçen süre: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "Adımlar: %(total)s adımdan %(running)s tanesi çalışıyor"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22313,15 +20856,15 @@ msgstr "Periyot: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "Son kontrol: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "Son kontrol bir işlem çalıştırdı."
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "Son kontrol hiçbir işlem çalıştırmadı."
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22330,7 +20873,7 @@ msgstr "Henüz kontrol edilmedi."
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "Sonraki kontrole kalan: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23667,19 +22210,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Harici Ortam Bağlamı Toplayıcı"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Tesis dışından dış sıcaklık, nem, rüzgar hızı, yağış, güneş radyasyonu, "
-"çiy noktası ve CO2 verilerini toplar. Entegre ortam kontrol Fonksiyonu bu"
-" toplayıcıyı tek gerçek kaynağı olarak kullanır. Her öğe için dış sensörü"
-" seçin. Yedek varsayılan değeri uygulamak için öğeleri boş bırakın."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Güncelleme Periyodu"
@@ -23751,32 +22281,6 @@ msgid ""
 "Select the external CO₂ (ppm) measurement. If absent, the default is 400 "
 "ppm."
 msgstr "Harici CO₂ (ppm) ölçümünü seçin. Yoksa varsayılan 400 ppm kullanılır."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Sensör Maksimum İzin Verilen Yaş (saniye)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr "Bundan daha eski ölçümler, yedek varsayılan değerle değiştirilir."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Yedek Harici Sıcaklık (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr ""
-"Sensör mevcut olmadığında veya süresi dolduğunda kullanılacak varsayılan "
-"değer."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Yedek Harici Nem (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Yedek Rüzgar Hızı (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -23912,14 +22416,6 @@ msgstr "Giriş maksimum yaşı (sn)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "REST Portu"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Sunucu/jeton, Ayarlar -> ChirpStack'ten alınır; cihazlar orada atanır "
-"(\"Yöneten\")."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -25559,7 +24055,7 @@ msgstr ""
 
 #: inputs/kma_weather_stn_L.py:88
 msgid "stn"
-msgstr "stn"
+msgstr "İstasyon (stn)"
 
 #: inputs/linux_command.py:50
 msgid "Command Timeout"
@@ -26093,18 +24589,6 @@ msgstr ""
 "CARTO DB'den veri analizi odaklı haritalar. Veri noktalarını ve sensör "
 "bilgilerini öne çıkarmak için tasarlanmış Positron (açık), Dark Matter "
 "(koyu) ve Voyager stilleriyle sade renk şemaları sunar."
-
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"Avrupa Uzay Ajansı (ESA) Sentinel-2 uydu verilerine dayalı küresel bir "
-"arazi örtüsü haritası. Bitki örtüsü, kentsel alanlar, tarım arazileri, "
-"orman ve su kütleleri 10 m çözünürlükte sınıflandırılır ve renk kodlanır;"
-" çevresel analiz için faydalıdır."
 
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
@@ -27877,17 +26361,6 @@ msgstr ""
 "Sıcaklık, Nem veya VPD gibi hazır ayarları seçmek min/maks değerlerini ve"
 " renk bölümlerini otomatik olarak ayarlar."
 
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts, açık kaynak ve kişisel kullanım için ücretsizdir. Ancak "
-"ticari bir ürünün parçası olarak kullanılırsa ticari lisans gerekebilir. "
-"En doğru bilgi için lütfen https://shop.highsoft.com adresini kontrol "
-"edin."
-
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
 #: widgets/AoT_graph.py:479
@@ -28594,54 +27067,17 @@ msgstr "Bugünün ve geçmiş geçişlerin işaretlendiği aşama zaman çizelge
 msgid "Targets vs now"
 msgstr "Hedefler ve şu an"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Bu aşamanın belirttiği hedeflere ve sınırlara göre güncel okumalar. Biri "
-"gösterge alır, geri kalanı metin olarak listelenir."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Eğilimler"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"Ekseni olmayan satırları yakın zamandaki bir eğilim çizgisiyle doldurur. "
-"Hedefler bloğuna ihtiyaç duyar."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Birikmiş ısı"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Bu aşamanın büyüme derece günlerinde ne kadar ilerlediği. Yalnızca "
-"program bir taban sıcaklık belirttiğinde gösterilir."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Toprak nemi"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Gösterge metriği"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Göstergeyi hangi ölçümün alacağı. Geri kalanlar metin olarak listelenir. "
-"Bu parsel bunu ölçmüyorsa, bunun yerine aralığı olan ilk ölçüm "
-"gösterilir."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29244,30 +27680,9 @@ msgstr "Ondalık Basamak 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "İkinci ölçüm için ölçüm ondalık basamak sayısı"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"En son duyuru panosu gönderi başlıklarını gösterir. Bir başlığa tıklamak,"
-" gönderinin tamamını (içerik, anket, yanıtlar, onaylama) bir açılır "
-"pencerede açar; orada yapılan tüm işlemler gerçek gönderiye yansıtılır. "
-"Yazma izni olan kullanıcılar, widget üzerinden doğrudan gönderi "
-"oluşturabilir, düzenleyebilir ve silebilir."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Gönderi Sayısı"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Gösterilecek en son bildirim sayısı"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Bildirim listesinin ne sıklıkla yenileneceği"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29470,11 +27885,6 @@ msgstr "Eylem listesinin görünürlüğünü varsayılan olarak aç/kapat."
 msgid "Sequence Settings (Synced)"
 msgstr "Sekans Ayarları (Senkronize)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "HH:MM biçimi"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "Periyot (Saniye)"
@@ -29513,18 +27923,18 @@ msgstr "Kaldığı yerden devam et"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "Baştan başla"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "Tekrar Açıldığında"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "Bu sekans kapatılıp tekrar açıldığında ne olacağı. Devam etmek kesintiye uğrayan döngüyü sürdürür; baştan başlamak ise ilk adımdan itibaren çalıştırır. Daemon yeniden başlatması bu ayardan bağımsız olarak her zaman devam eder."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -30058,7 +28468,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "Güçlü ışıkta ıslatma tipi sislemeyi engeller (su damlaları güneş ışığını yapraklara odaklayabilir) ve aşağıda ayarlanırsa gün batımından önce de engeller. Sislemenin ne sıklıkta çalıştığından bağımsızdır — herhangi bir sisleme sıklığında açıp kapatabilirsiniz."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30395,16 +28805,6 @@ msgstr "Tahmine Dayalı İleri Besleme"
 msgid "Enable Forecast Feedforward"
 msgstr "Tahmin İleri Beslemesini Etkinleştir"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"Olumsuz hava koşulları gelmeden önce sıcaklık/nem ayar noktalarını "
-"proaktif olarak kaydırmak ve havalandırmayı engellemek için KMA kısa "
-"vadeli hava tahminini (forecast.json) kullanın."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "Şu anda burada olana tepki verir"
@@ -30416,15 +28816,6 @@ msgstr "Daha ileriye hazırlanır"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Tahmin İleri Bakış (saat)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"Yaklaşan olumsuz hava durumunun kaç saat öncesinden kontrol edileceği "
-"(1–6 sa). Daha uzun bir öngörü süresi daha erken uyarı sağlar ancak aşırı"
-" düzeltmeye yol açabilir."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30621,14 +29012,6 @@ msgstr "Başlangıçtan bu yana birikimli"
 msgid "Vapor Pressure Deficit"
 msgstr "Buhar Basıncı Açığı"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Değer Yazı Tipi Boyutu (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "Ölçümün yazı tipi boyutu"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Büyüme Zamanlaması"
@@ -30637,31 +29020,9 @@ msgstr "Büyüme Zamanlaması"
 msgid "Stop Control On"
 msgstr "Kontrol Açıkken Durdur"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"Bu tarihten sonra kontrol kalıcı olarak durur. Çalışmaya devam etmesi "
-"için boş bırakın."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Sisleme Güneş Yanığı Koruması"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Fidelik Modu"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Fidelik (Fide) Modu"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Olgun yapraklara göre daha kolay yanan fideler için daha sıkı sisleme "
-"sınırları."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30675,10 +29036,6 @@ msgstr "Sisleme"
 
 msgid "Devices under automatic control"
 msgstr "Otomatik kontrol altındaki cihazlar"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s hariç tutuldu"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr ""
@@ -30732,14 +29089,6 @@ msgstr ""
 " Daha uzun ileri bakış daha erken uyarı sağlar ancak aşırı düzeltmeye yol"
 " açabilir. Bu tesisin kendi bağlı tahmin kaynağı varsa yok sayılır — o "
 "kaynak zaten kendi ileri bakışını uygular."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Duyuru Kategorisi Filtresi"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Not Alanı"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -30844,12 +29193,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "Notları göstermek için widget ayarlarından bir alan seçin."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr ""
-"Seçilen bir alanda yazılan notları gösterir (aşağıdaki \"Alan\" bölümüne "
-"bakın)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31176,18 +29519,6 @@ msgstr "Döndürmeyi Durdur"
 msgid "System Timezone"
 msgstr "Sistem Saat Dilimi"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"Tüm sistem için varsayılan saat dilimi (IANA adı, ör. Asia/Seoul). Daemon"
-" günlüğü zamanları, denetim günlüğü ve konumu olmayan cihazların "
-"zamanlamaları için son yedek olarak kullanılır. Bu, hesap ayarlarındaki "
-"kişisel görüntüleme saat diliminiz değildir."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31200,3 +29531,995 @@ msgstr "Konum ayarlanmadı — sistem saat dilimiyle tahmin edildi"
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "Sistem genelindeki varsayılan saat dilimi (IANA adı, ör. Asia/Seoul). Daemon günlük saatleri için ve konumu olmayan cihazlar için son çare olarak kullanılır; burada kaydettiğinizde bu cihazlar onu izler. Kişilerin okuduğu ve yazdığı saatler, hesap ayarlarındaki herkesin kendi saat dilimini izler."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "Mobilde Tam Genişlik"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Bilgisayar Ekran Boyutu"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Kontrol Yüzeyi"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Ayırıcı Çizgi"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Ayırıcı Çizgi (Yumuşak)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Mobil Ekran Boyutu"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Anahtar Rayı Kapalı"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Yanıt Vermiyor"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Zamanlandı"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "Bitiş saati, aynı gün içinde başlangıç saatinden sonra olmalıdır (gece yarısını aşan bir aralık desteklenmez)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Bu sekans haftanın günlerine göre ayrı saatler kullanıyor, bu nedenle buradaki başlangıç/bitiş saati uygulanmadı. Bunu sekans widget'ının haftalık gün zamanlamasından değiştirin."
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "Günlük, haftalık veya aylık seçeneklerinden birini seçin."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Bir kayıt hedefi (Giriş veya Çıkış) seçin."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Geri Al"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Bu iletişim kutusu açıldığındaki ayarlara geri dönün"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Geri alındı"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "Sinyal"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Bağımlılıkları Yükle:"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "AoT Ana Sayfa"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Bilgisayarlarda tüm sayfayı büyütür — metin, düğmeler ve haritalar birlikte. Telefonlar ve tabletler yukarıdaki ayarı kullanır."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Telefonlarda ve tabletlerde tüm sayfayı büyütür — metin, düğmeler ve haritalar birlikte. Bilgisayarlar aşağıdaki ayarı kullanır."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Sonuç yok"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Hiçbir şey seçilmedi"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Kayıtlar"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "İstekler"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "{1} içinden {0} seçildi"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Kontrol istekleri yüklenemedi"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Bunlara yalnızca kontrolörleri düzenleyebilen kişiler karar verebilir."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Bunlar henüz çalıştırılmadı. Onaylamak, burada açıklananı aynen çalıştırır — AI'ya geri dönüp söylemeniz gerekmez."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "AI İstekleri"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "AI önerisi"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Öneri yüklenemedi"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Bekleyen öneri yok."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Bekleyen zamanlama önerisi yok."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Bu AI'dan ve bağlı diğer AI'lardan gelen görüşler. Kabul etmek, aynı fikirde olduğunuzu kaydeder — hiçbir şeyi çalıştırmaz."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "AI tarafından önerildi"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Bu öneri zamanlamaya eklensin mi?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Bu öneri reddedilsin mi?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Zamanlama önerileri"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "AI'nın zamanlama için önerdiği görevler. Onaylamak bunları zamanlamaya ekler — kendi zamanlarında çalışırlar."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "AI'nın sizden karar beklediği konular — aşağıdaki her öğe kararınızı bekliyor."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "AI Bağlantısı"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Erişim anahtarları"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Gelişmiş"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "İzin verildi"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Claude Desktop gibi halihazırda kullandığınız bir AI uygulaması bu çiftliği okuyabilir ve ekipman kontrolü isteyebilir. Ekipman kontrolü yalnızca bir kişi onayladıktan sonra çalışır."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "Yerleşik AI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "AI uygulamanızı bağlayın"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Ayarlar yüklenirken hata oluştu"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "Yerleşik AI'nın tahmini aylık harcaması. Sınıra yaklaşıldığında uyarılırsınız; sınıra ulaşıldığında en ucuz modele geçilir. 0, sınır olmadığı anlamına gelir."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Harici AI erişimi"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Her AI uygulaması için bir anahtar oluşturun ve o uygulamaya yapıştırın."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Yerleşik AI'nın çiftliğin durumunu arka planda düzenli olarak özetlemesini sağlar."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "MCP köprü sunucuları"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Anahtarları yönet"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "İzin verilmiyor"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Genel Ayarları Aç"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Yerleşik AI'yı çalıştır"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "Bu uygulamadaki sohbet ve öneriler tarafından kullanılan AI modeli. Kendi AI uygulamanızdan ayrı çalışır; kullanmıyorsanız kapalı bırakabilirsiniz."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "Bir sohbet veya ekran alan belirtmediğinde AI'nın kullandığı alan."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "Yerleşik AI'nın çağırdığı araç sunucuları. Yukarıdan bir MCP motoru eklediğinizde otomatik olarak bir tane eklenir."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "Ayarlar > Genel bölümünden açılır veya kapatılır."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "AI'nın yazdığı %(n)s not, bir kişinin onaylamasını bekliyor."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0, otomatik senkronizasyon yok anlamına gelir."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "AI Bilgisi"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "API Anahtarı Başlığı"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Eklenme Tarihi"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Tüm durumlar"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Tüm etiketler"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Yalnızca onaylanmış bilgileri alıntıla"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Veri kaynakları"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "Bilginin kullanılma biçimi"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Kaynak türü"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Bilgi ayarları"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Son senkronizasyon"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Kütüphane kaynağı"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "İstek üzerine sorgulanır"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Onay gerekiyor"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Henüz senkronize edilmedi"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Bağlantıyı aç"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Kaydet ve onayla"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Bunları göster"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Senkronizasyon hatası"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Şimdi senkronize et"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Senkronize edildi"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "{time} senkronize edildi"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Doldurmanın üç yolu var: Veri kaynakları sekmesinde bir kaynak bağlayın, zaten bildiklerinizi yazmak için Bilgi Ekle'ye basın veya AI'dan bir şey araştırmasını isteyin — bulduklarını kaydeder."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Getirilme sayısı"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Başlık, metin veya kaynak belirtme"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Güven"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "AI'nın alıntılaması için insanların ve AI'nın not ettikleri. Kaynaklardan senkronize edilen veriler burada varsayılan olarak gizlidir — kaynak filtresinden seçin veya Veri kaynakları sekmesinden yönetin."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "İnsanlar ve AI tarafından yazılanlar"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "AI Kayıtları"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Tüm önem dereceleri"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Tüm türler"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Yanıt"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "Bilgiye uygulandı."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Onaylandı"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Onay bekliyor"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "Çağıran"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Gerçekleştirildi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Sohbetler"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Düzeltildi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Düzeltme"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Kayıtlar yüklenemedi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Yoksayıldı"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Hata raporları"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Süresi doldu"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Öğrenildi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Sorgulandı"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Hata raporu yok."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "Yerleşik AI'ya sorulan sorular ve yanıtları."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Alındı"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Araç çağrıları"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Bağlı AI'ların araçlar aracılığıyla yaptıkları — en yeniler önce. Onay gerektiren istekler nasıl karara bağlandığını gösterir."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "AI'nın söylediği"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Ne zaman"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "İnsanların bildirdiği yanlış AI yanıtları ve düzeltmeleri. Bir düzeltmeyi uygulamak onu AI Bilgisine ekler."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "MCP sunucu listesi yüklenemedi."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Bu sunucu silinsin mi?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Giriş şeması"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON nesnesi, örneğin {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "Henüz MCP sunucusu yok."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Bu sunucu tarafından sunulan araç yok."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Sunucu eklendi."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Sunucu silindi."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Sunucu güncellendi."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "Sunucular"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Durduruldu"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "Yerleşik AI'nın çağırdığı araç sunucuları. AI Bağlantısı sayfasında bir MCP motoru eklemek otomatik olarak bir tane oluşturur."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "Araçlar"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Yeniden denemeyi bekliyor"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "Rolü değiştirmek, uzmanlık alanı, sistem istemi, katman ve modelin o rolün varsayılanlarıyla yeniden doldurulup doldurulmayacağını sorar."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Bu rolün varsayılan uzmanlık alanı, sistem istemi, katman ve modeli girilsin mi? Girdiğiniz değerler değiştirilecek."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "AI → İstekler altında %(n)s zamanlama önerisi bekliyor."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Bu görev iptal edilsin mi?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "Kontrol istekleri ve AI zamanlama önerileri AI → İstekler altında karara bağlanır."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Cihaz zaman çizelgesi yüklenemedi"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Cihaz bulunamadı."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "İstekleri aç"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Hazır renkler"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Tüm haritalar"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Tüm alanlar"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Anahtar"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Ayarlar yüklenemedi"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "Daha kaba bir birim daha küçük bir belge oluşturur. Günlük ayrıntı sonradan geri getirilemez; bu yüzden yalnızca ihtiyacınız yoksa seçin."
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "Kayıt birimi"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "%(n)s aşama, %(m)s dönem"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "Üzerinde"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "Hedefe göre"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "Altında"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "Aşamaya göre"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "Gün sayısı"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "Saha sensörü ve hava istasyonu"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Hava istasyonu tarafından ölçülür"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "Ölçüm eğilimleri"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "Bu günlük oluşturulurken seçmediğiniz ölçümler içinde yer almaz. Yukarıdaki uyarılar bunları belirtir."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "Sol kenarlıkla ayrılmış ve \"Hava istasyonu\" olarak işaretlenmiş satırlar, bu hedefe yerleştirilmiş bir sensörden değil, alanın hava istasyonundan gelir. Aynı ölçüm için ikisi de varsa, hedefler yalnızca saha sensörüyle karşılaştırılır."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "Önceki aşamayla aynı hedefler."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Sensörler aynı fikirde değil"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "Gösterilen sensörler çevredeki bölgeye aittir."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "Şekil ve sensör konumları güncel olanlardır, bu döneme ait değildir."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "%(n)s tane daha göster"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "Daha az göster"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "Planı göster"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "Aşama zaman çizelgesi"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "Hedefler bu ekim alanına bağlı programdan gelir. Δ, ölçülen ortalamadan o hedefin çıkarılmasıyla bulunur. Gündüz/gece hedefleri ve eğri tabanlı hedefler fark alınmak yerine işaretlenir; çünkü bunları tüm günün ortalamasıyla karşılaştırmak yanlış alarmlara yol açar."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "Ana hat tesisten türetilmiştir."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "birikmiş %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "hava istasyonu %(out)s × örtü %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Onaylanıyor renklerini düzenlemek için tıklayın"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Kontrol Yüzeyi renklerini düzenlemek için tıklayın"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Yanıt yok renklerini düzenlemek için tıklayın"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Anahtar Açık renklerini düzenlemek için tıklayın"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Anahtar Kapalı Rayı renklerini düzenlemek için tıklayın"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "Kullandığınız öğelerin yüzü — metin alanları, seçim kutuları, hap biçimli etiketler. Sayfa arka planından ayrı tutun; aksi halde sayfa üzerindeki bir kontrol arka planda kaybolur"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Yoğun listeler için daha açık ayırıcı; tam kalınlıkta bir çizgi burada gürültülü olur"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Bir kapsayıcı içindeki öğeler arasındaki çizgi — listeler, seçenek satırları. Herhangi bir şeyin etrafındaki kenarlık değildir"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Bir cihaz yanıt vermeyi bıraktığında satır/kart arka planı — bir kişinin bilerek duraklattığı Uyarı Durumu'ndan farklı bir şeydir"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Kaydırmalı Anahtar"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "Kapalıyken kaydırmalı anahtar rayı (açıkken Bant 3 kullanılır)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Metin Alanı"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Anahtar Açık"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Bu rolü silmek istediğinizden emin misiniz?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Aramanızla eşleşen duyuru yok."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Başlık, içerik, kategori ara..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Renk Bölümleri"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Genel Bant Renkleri"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Bölüm"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Renkler"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Planlandı"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Gövde"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Süre (dk)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Düzenle ve onayla"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "'{field}' alanında geçersiz değer"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Kaydet ve onayla"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Zamanlanmış saat"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Adım"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Bu işlem gerçek ekipmanı (vanalar, pompalar) çalıştırır."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Görüntüle"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Ayrıntıları görüntüle"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "{n} onay bekliyor"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total} başarılı"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "Evapotranspirasyon"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Tesisin dışından harici sıcaklık, nem, rüzgar hızı, yağış, güneş ışınımı, çiy noktası ve CO2 verilerini toplar. Entegre ortam kontrolü Fonksiyonu bu toplayıcıyı tek doğru kaynak olarak kullanır. Her öğe için harici sensörü seçin. Boş bırakılan öğeler paylaşılmaz — entegre kontrol bir değer varsaymak yerine bunları bilinmiyor olarak ele alır."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Ayarlar -> ChirpStack altındaki sunucu/token; cihazlar bu zamanlayıcıya kendi cihaz sayfalarından katılır (ör. AoT-C \"Class Scheduler\" alanı)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Arama Penceresi (gün)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Etkin Kanallar"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "Son 14 gün"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "Son 30 gün"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "Son 60 gün"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "Son 90 gün"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Tıklanan noktayı içeren kayıtlı çokgeni otomatik eşleştirmek için boş bırakın."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (ortalama)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "NDVI Arama Penceresi"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "agromonitoring.com'da kayıtlı bir çokgen için alan başına NDVI istatistikleri ve toprak nemi / toprak sıcaklığı — burada toprak nemini kaba bir uydu katmanı olarak değil, kendi alan sınırınız için sayısal değer olarak bildiren tek giriştir. Alanı Agromonitoring panelinde çizin (1-3000 ha) ve çokgen kimliğini aşağıya yapıştırın ya da boş bırakarak tıkladığınız noktayı içeren çokgenin eşleşmesini sağlayın. OpenWeatherMap ile aynı hesabı kullanır."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "Çokgen Kimliği"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Toprak Sıcaklığı (10cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Toprak Sıcaklığı (yüzey)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "Bu aralıktaki en son geçiş kullanılır. Bulutlar, haftalarca kullanılabilir görüntü bırakmayabilir."
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "NASA'nın SMAP (Soil Moisture Active Passive) L4 ürününden küresel yüzey toprak nemi (0-5cm); NASA GIBS üzerinden neredeyse gerçek zamanlı bir katman olarak sunulur. Yaklaşık 9km çözünürlükte, seçilebilir tarihlerle mevcuttur; sulama planlaması ve kuraklık izleme için kullanışlıdır."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Aralıktaki en net görüntü"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "Bulutlar herhangi bir tek tarihte boşluklar bırakır, bu yüzden bunun yerine bu aralıktaki en son kullanılabilir görüntü çizilir."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Koleksiyon"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Yanlış Renk (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "Son 7 gün"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Maks. Bulut Kapsamı"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "En son görüntü"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (Nem)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (Bitki Örtüsü)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (Su)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Görüntü Önceliği"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Arama Aralığı"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (atmosfer üstü)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (atmosfer düzeltmeli)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Copernicus Data Space Ecosystem üzerindeki Sentinel Hub aracılığıyla 10 m çözünürlükte Sentinel-2 görüntüleri — 250 m MODIS NDVI'nin aksine, tek bir alan içindeki farkları okumaya yetecek kadar ayrıntılıdır. Ücretsiz bir CDSE hesabı açın, bir OAuth istemcisi oluşturun ve İstemci Kimliği ile Gizli Anahtarını aşağıya yapıştırın. Ücretsiz katman ayda 30.000 işleme birimine izin verir; bir harita ekranı yaklaşık 4 birim tutar ve karolar bir gün boyunca önbelleğe alınır."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Gerçek Renk"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Görünüm"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Metin Boyutu"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "Bu aşamanın bildirdiği hedeflere ve sınırlara karşı güncel okumalar — harita widget'ının gösterdiği aynı kart; DLI ve birikmiş ısı da dahildir. [7 Gün] her satırı son bir hafta boyunca hareket ettiği aralığa dönüştürür."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Kendi aralığı olmayan satırları (CO2, toprak nemi, çiy noktası) yakın zamanlı bir eğilim çizgisiyle doldurur. Hedefler bloğu gerekir."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Bu aşamanın, büyüme derece günü (GDD) cinsinden bir sonrakine ne kadar yaklaştığı. Yalnızca program aşamaları GDD ile değiştiriyorsa gösterilir. Dikimden itibaren çalışan toplam ise bunun yerine ortam kartında bir satırdır ve o kartın ayarlarını izler."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "KAPATMA Başarısız: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "Liste modalının aynı anda gösterdiği bekleyen istek sayısı üst sınırı"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Bekleyen sayısının ne sıklıkta yenileneceği"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "MCP Onay İstekleri"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Gösterilen maks. öğe"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Onay bekleyen harici AI yazma isteklerinin sayısını gösterir. Listeyi açmak için sayıya tıklayın; istekleri tek tek onaylayabilir, reddedebilir veya düzenleyip onaylayabilir ya da birkaçını seçip toplu onaylayabilir/reddedebilirsiniz. Onaylamak, isteği tam olarak gösterilen değerlerle hemen çalıştırır."

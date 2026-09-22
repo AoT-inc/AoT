@@ -4696,11 +4696,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "A szekvencia még fut — a daemon nem alkalmazta a módosítást."
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "A szekvencia nem indult el — a daemon nem alkalmazta a módosítást."
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4775,7 +4775,7 @@ msgstr "A megadott terület nem található."
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "A térképen nem szereplő helyszínű létesítmények itt nem jelennek meg — először adja meg a helyüket a Létesítmény beállításaiban."
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4792,15 +4792,15 @@ msgstr "Válassza ki, miről szól a napló."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "Adja meg a kezdő és a záró dátumot is."
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "A kezdő dátum a záró dátum után van."
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "Nem található, hogy miről szól ez a napló."
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4809,24 +4809,24 @@ msgstr "Nem sikerült beolvasni ezt a célt."
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "Ez az időszak túl hosszú (%(days)s nap). Próbáljon rövidebb időszakot."
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "A kijelölés túl sok eszközt tartalmaz (%(n)s csatorna). Szűkítse a területet, vagy válasszon inkább egyetlen parcellát."
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "A kijelölés túl sok adat beolvasását igényelné. Próbáljon rövidebb időszakot vagy szűkebb területet."
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "Ez a napló még készül."
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -5022,10 +5022,6 @@ msgstr "— Nincs —"
 msgid "Select one or more devices to register."
 msgstr "Válasszon ki egy vagy több regisztrálandó eszközt."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Válasszon regisztrációs célt (Bemenet/Kimenet) vagy ütemezőt."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5093,11 +5089,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "Művelet típusa"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Paraméter neve"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Forrás típusa"
@@ -5106,24 +5097,6 @@ msgstr "Forrás típusa"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Manuális bevitel"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Jegyzet/Leírás"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "Külső URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Érték / URL / Szöveg"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "Rekordazonosító"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7329,26 +7302,6 @@ msgstr "Információ háttérszín"
 msgid "Info Tint Text"
 msgstr "Szöveg az Információ háttérszínen"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Sikeres árnyalat szegélye"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Figyelmeztető árnyalat szegélye"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Veszély árnyalat szegélye"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Információs árnyalat szegélye"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "LLM jelvény háttere"
@@ -7356,12 +7309,6 @@ msgstr "LLM jelvény háttere"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "MCP jelvény háttere"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Frissítés jelvény"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7563,27 +7510,9 @@ msgstr "Feltétel kitöltési tényezője (%)"
 msgid "Confirmed"
 msgstr "Megerősítve"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "Ellenőrzés szükséges"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Adjon meg egy értéket"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "pl. 25.5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "pl. beállítási érték a reggeli hőmérséklet alapján"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "pl. https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7604,59 +7533,10 @@ msgstr "Folyamatban"
 msgid "Failed"
 msgstr "Sikertelen"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "AI javaslat"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Nincs regisztrált feladat."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Adjon hozzá egyet a fenti Feladat hozzáadása gombbal."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "Jóváhagyja az AI által javasolt ütemezést, és hozzáadja a naptárhoz?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "Az AI által javasolt ütemezés jóváhagyva."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "A jóváhagyás sikertelen"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Hálózati hiba"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Elutasítja és törli ezt a javaslatot?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "A javaslat elutasítva és törölve."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Az elutasítás sikertelen"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Nincs szülőfeladat, amely alá behúzhatná"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Ez már felső szintű feladat"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Sorrend frissítve"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7665,14 +7545,6 @@ msgstr "Sorrend frissítve"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "A frissítés sikertelen"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Hierarchia frissítve"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Név frissítve"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7772,65 +7644,15 @@ msgstr "Betöltés..."
 msgid "Failed to load data."
 msgstr "Az adatok betöltése sikertelen."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Nincs regisztrált kontextusrekord."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Nincs a feltételeknek megfelelő rekord."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Rendszer alapértelmezett"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Definíció szerkesztése"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "Ellenőrzésre vár"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Elutasítva"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Adja meg vagy erősítse meg a jóváhagyandó definíciót:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Sikeresen jóváhagyva."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Hiba történt a jóváhagyás során."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Szerverhiba történt."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Elutasítja ezt a kifejezést?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Sikeresen elutasítva."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "Hiba történt a feldolgozás során."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Adjon meg egy új definíciót:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -8900,11 +8722,11 @@ msgstr "Nincs eszközinformáció"
 
 #: aot_flask/static/js/widgets/AoT_facility/aot-facility-3d.js:2108
 msgid "▦ Iso → Persp"
-msgstr "▦ Iso → Persp"
+msgstr "▦ Izo → Perspektíva"
 
 #: aot_flask/static/js/widgets/AoT_facility/aot-facility-3d.js:2108
 msgid "▧ Persp → Iso"
-msgstr "▧ Persp → Iso"
+msgstr "▧ Perspektíva → Izo"
 
 #: aot_flask/static/js/widgets/AoT_facility/aot-facility-3d.js:2691
 msgid "Ortho ON"
@@ -11042,71 +10864,11 @@ msgstr "nem vonható vissza"
 msgid "Usage"
 msgstr "Használat"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "AI kontextuskezelő"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr ""
-"Külső információ beillesztése az AI-ba és a megbízhatósági állapot "
-"kezelése."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Kontextus hozzáadása"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Megjegyzések (opcionális)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Kontextusrekordok"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Rendszer alapértelmezett"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "Ellenőrzésre vár"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr ""
-"Az AI automatikusan generálta a terület alapértelmezett értékeiből. Még "
-"nincs ellenőrizve."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Felhasználói bevitel vagy függőben lévő elem. Az AI hivatkozik rá, de "
-"alacsony megbízhatósággal."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"A felhasználó által ellenőrzött és jóváhagyott érték. Az AI magas "
-"megbízhatósággal használja."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Észlelt platform"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC/Szerver"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Docker konténer"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11984,15 +11746,6 @@ msgstr "vagy frissítse az oldalt."
 msgid "Control requests awaiting approval"
 msgstr "Jóváhagyásra váró vezérlési kérések"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Ezek MÉG NEM lettek végrehajtva. A jóváhagyás azonnal futtatja a "
-"megjelenített argumentumokkal pontosan úgy, ahogy azok láthatók — nem "
-"kell visszatérnie az AI-hoz, hogy tájékoztassa róla."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Nincs függőben lévő vezérlési kérés."
@@ -12030,54 +11783,9 @@ msgstr "Jóváhagyva és végrehajtva."
 msgid "Approved, but it failed to run"
 msgstr "Jóváhagyva, de a végrehajtás sikertelen volt"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "AI állapota"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Tanulási folyamat"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Kulcsfontosságú kulcsszavak"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Gyakran használt funkciók"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "AI állapotának visszaállítása"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Az Ön AI-utasításai"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Speciális — opcionális"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "Adjon meg konkrét utasításokat az AI számára (opcionális)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"pl. üvegházat üzemeltetek, és segítségre van szükségem a kártevőirtásban "
-"és a hőmérséklet-szabályozásban"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Szabadföldi gazdálkodás"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12087,34 +11795,12 @@ msgstr "Szabadföldi gazdálkodás"
 msgid "Greenhouse"
 msgstr "Üvegház"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Sportlétesítmény"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Park"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Szállítás"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "AI beállítások frissítése"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Megerősített tudáselemek:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12123,25 +11809,6 @@ msgstr "Függőben:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Összesen:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "Az AI még tanul..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Még nincs tevékenység"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"Visszaállítja az AI állapotát? Az állapotpillanatkép a következő "
-"betöltéskor újraszámolódik."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "A mentés sikertelen. Kérjük, próbálja újra."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12157,27 +11824,6 @@ msgstr "AI ügynök"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "AI beállítások"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"AI-ügynökök vezérlési rétege. Kezelje az AI-szolgáltatásait és -ügynökeit"
-" összetett feladatok automatizálásához."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "AI-szolgáltatás üzemeltetése"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"Indítsa el vagy állítsa le az AI-modellt. Leállított állapotban a "
-"csevegés, a tanácskérések és a háttérben futó AI-munka egyaránt nem "
-"érhető el."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12259,36 +11905,11 @@ msgstr "Kérjük, először válasszon motort."
 msgid "Creating agent... Please wait."
 msgstr "Ügynök létrehozása... Kérjük, várjon."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Kérjük, először válasszon szolgáltatást vagy implementációt."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "A név és a parancs megadása kötelező."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "MCP-szerver hozzáadva."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Sikertelen."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "Az MCP-szerver hozzáadása sikertelen."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Ügynök beállításai"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Hiba: az űrlap nem található"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12350,14 +11971,6 @@ msgstr "AoT MCP-szerver"
 msgid "Action failed"
 msgstr "A művelet sikertelen"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Nincs beállított MCP-bejegyzés."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "Az MCP-bejegyzések betöltése sikertelen."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "Az AI-szolgáltatás elindult"
@@ -12377,52 +11990,13 @@ msgstr "Az AI-szolgáltatás leállt"
 msgid "Save failed"
 msgstr "A mentés sikertelen"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Beállítások mentése"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "A beállítások mentve"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "Az AI-kapcsoló módosításához újraindítás szükséges"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Kísérleti funkció"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "Az AI-funkció jelenleg kísérleti szakaszban van."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Rutinfeladatok automatikus jóváhagyása"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Automatikusan jóváhagyható maximális hatás"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Visszajelzés kérése hiba esetén"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Modellek"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Felügyelő modell"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Munkafolyamat modell"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12440,98 +12014,22 @@ msgstr "Alapértelmezett telephely"
 msgid "(none)"
 msgstr "(nincs)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Kontextus és költségkeret"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Csendes időszak kezdete"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Csendes időszak vége"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Kontextus hatóköre (óra)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Maximális előzménykontextus"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Havi költségkeret-korlát (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "betöltés..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "MCP-bejegyzések"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "AI-szolgáltatások"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "AI-szolgáltatás-nyilvántartás"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Vissza a portálra"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "AI-szolgáltatás regisztrálása"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"AI-motorkapcsolatok regisztrálása és kezelése (Gemini, OpenAI, helyi "
-"proxyk)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Törli ezt a szolgáltatást?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Végpont"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Még nincs regisztrált AI-szolgáltatás."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "Csatlakoztassa első LLM-jét"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Szolgáltatás neve"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "pl. My Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Motor típusa"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Modell neve"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API-végpont (opcionális)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12544,28 +12042,6 @@ msgstr "Hitelesítés"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Hitelesítés típusa"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "Azonosító / jelszó"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Nincs hitelesítés"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "Fiókazonosító"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Szolgáltatás regisztrálása"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Nincs előre beállított modell"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12604,28 +12080,6 @@ msgstr "Szinkronizálás"
 msgid "Data credits"
 msgstr "Adatforrások"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "AI által rendszerezett tudás áttekintése"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Az AI által önállóan félretett tudás (kezdetben mindig megerősítetlen). "
-"Erősítse meg/szerkessze a helyeset, vonja vissza a hibásat — ellenőrzésig"
-" [AI 정리 — 미확인] jelöléssel hivatkoznak rá."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Csak ellenőrzött tudás: BE"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Csak ellenőrzött tudás: KI"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12634,10 +12088,6 @@ msgstr ""
 "Ha be van kapcsolva, az AI nem hivatkozhat a saját maga által írt "
 "jegyzetekre, amíg egy személy meg nem erősíti azokat. A hiteles és kézzel"
 " bevitt tudást ez nem érinti."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Még nincs AI által rendszerezett tudás."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12655,18 +12105,9 @@ msgstr "Megerősítetlen"
 msgid "Flagged"
 msgstr "Megjelölve"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Ugyanaz a téma, mint egy mérvadó forrásé"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Találatok"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Nyílt forrás"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12675,23 +12116,6 @@ msgstr "Újraaktiválás"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Visszavonás"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Tudáselemek"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"Minden, amire az AI hivatkozhat — forrásokból szinkronizált, az AI által "
-"félretett vagy kézzel beírt elemek. Keressen és szűrjön, hogy megtudja, "
-"mi található valójában itt."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Tudás keresése…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12727,16 +12151,6 @@ msgid ""
 msgstr ""
 "A tudáskönyvtár üres. Amíg nincs itt semmi, az AI a szakkérdésekre a "
 "saját általános tudásából válaszol — hivatkozási forrás nélkül."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Háromféleképpen töltheti fel: kapcsoljon forrást fent, nyomja meg a Tudás"
-" hozzáadása gombot, hogy beírja, amit már tud, vagy egyszerűen kérje meg "
-"az AI-t, hogy nézzen utána valaminek — az AI elmenti, amit talál."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12805,14 +12219,6 @@ msgstr "Forrás URL-je"
 msgid "Source Settings"
 msgstr "Forrás beállításai"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "AI által rendszerezett tudás szerkesztése"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Mentés (megerősít)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Kérjük, válasszon forrástípust."
@@ -12850,10 +12256,6 @@ msgstr "A forrás nem található."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Forrás neve"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Paraméter neve (kontextuskulcs)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12962,17 +12364,9 @@ msgstr "A törlés sikertelen"
 msgid "Crop Type"
 msgstr "Növénytípus"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Megerősítés…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Megerősítve."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Visszavonás…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12981,10 +12375,6 @@ msgstr "Visszavonva."
 #: aot_flask/templates/pages/ai/ai_library.html:505
 msgid "Retire this item? It will stop being cited until reactivated."
 msgstr "Visszavonja ezt az elemet? Az újraaktiválásig nem lesz rá hivatkozás."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Újraaktiválás…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13135,10 +12525,6 @@ msgstr "Válassza ki a tudásként regisztrálandó műveleteket"
 msgid "Parameters for the selected operations"
 msgstr "A kiválasztott műveletek paraméterei"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "Válasszon legalább egy műveletet."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13278,23 +12664,9 @@ msgstr "Összegzés"
 msgid "Key-Value Extraction"
 msgstr "Kulcs-érték kinyerés"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "AI-kezelő"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Beszélgetéskezelés"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Hiba-vezérlőpult"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Következtetési előzmények"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13310,25 +12682,9 @@ msgstr "Dátum"
 msgid "Details"
 msgstr "Részletek"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Még nincs következtetési előzmény."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "AI hiba-vezérlőpult"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Minták frissítése"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Lista frissítése"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Hibaminták elemzése..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13370,51 +12726,14 @@ msgstr "Nem megfelelő művelet"
 msgid "Tool Misuse"
 msgstr "Eszköz helytelen használata"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Felhasználói javítás"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Következtetés részletei"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "1. fázis: Felhasználói kérés"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "2. fázis: Szándék és tervezés"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "3. fázis: Eszközvégrehajtás (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "4. fázis: Szintézis és koordináció"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Koordinátor"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "5. fázis: Végleges válasz"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Hiba részletei és megoldása"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Alkalmazás a tudásra"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Összes függőben lévő"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13425,47 +12744,19 @@ msgstr "Javaslatok"
 msgid "Review"
 msgstr "Ellenőrzés"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Nem található hiba."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Biztos benne?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "MCP-szerver módosítása"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Szerver neve"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Végrehajtási parancs"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Hatókör"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Általános (mindig a manifestben)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Specifikus (késleltetve betöltött)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Cél"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Környezeti változók (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13473,38 +12764,14 @@ msgstr "Környezeti változók (JSON)"
 msgid "Update"
 msgstr "Frissítés"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "AI-ügynök létrehozása"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "Kapcsolódó hivatkozás"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "API-kulcs beszerzése"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Ügynök adatai"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Ügynök neve"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "pl. Energiakezelő"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "AI-szolgáltatás regisztrációja"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "pl. My OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13516,14 +12783,6 @@ msgstr "Modell kiválasztása"
 msgid "Enter model name manually"
 msgstr "Modell nevének manuális megadása"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "API-végpont"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "AI-folyamat és eszközhozzáférés"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13533,10 +12792,6 @@ msgstr "Folyamatbeli szerep"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Munkafolyamat (régi típusú)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Modellszint"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13551,17 +12806,9 @@ msgstr "Normál"
 msgid "Heavy"
 msgstr "Nagy teljesítményű"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Eszközhozzáférés"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Hozzárendelve"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Hozzárendelt MCP-szerverek kiválasztása"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13569,15 +12816,6 @@ msgstr "Hozzárendelt MCP-szerverek kiválasztása"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Szakterület"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "pl. öntözés, klíma"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Ügynök szabályai"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13590,29 +12828,9 @@ msgstr "Rendszerutasítás"
 msgid "Define how this agent should behave..."
 msgstr "Határozza meg, hogyan viselkedjen ez az ügynök..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Egyéni modell..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Szolgáltatáskulcs"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "Szolgáltatás API-kulcsa"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Alapértelmezett rendszermotor"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Szolgáltatás hitelesítő adatai"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "Agykonfiguráció"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13624,164 +12842,17 @@ msgstr "Agykonfiguráció"
 msgid "Options"
 msgstr "Beállítások"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "MCP hatókör"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "MCP utasítások"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Szerverutasítás"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "Csak a szándékot osztályozza. Könnyűsúlyú modell ajánlott."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "Végrehajtási terveket készít. Standard vagy Heavy modell ajánlott."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Eszközöket hív meg és adatokat gyűjt."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Az eredményeket felhasználói válasszá szintetizálja."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Örökölt felügyelő/munkás mód."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "Globális AI-beállítások"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Globális AI-beállítások"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "A rendszerszintű paraméterek beállítása az AI-orkesztrációs réteghez."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "Eszköz AI-kontextusának megtekintése"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "Az egyes eszközök AI-kontextusadatainak vizsgálata"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Eszközök böngészése"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Infrastruktúra"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "Fő proxy URL"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr ""
-"Globális proxy, amely akkor kerül felhasználásra, ha az ügynökspecifikus "
-"végpont üres."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "Kérés időtúllépése (mp)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Felhasználói élmény (értesítés)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "AI sikerüzenetek elrejtése"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "AI figyelmeztető üzenetek elrejtése"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "AI ütemező"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "Közös célkövető"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Makronézet]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[Nap]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Hét]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Hónap]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Év]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Ma]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Fel(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Le(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Behúzás(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Kihúzás(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Adatok frissítése"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Feladat hozzáadása"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Feladatok betöltése..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "AI által javasolt feladatok kezelése"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "Az AI-ügynökök által javasolt feladatok áttekintése és kezelése."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Feladatok keresése..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13791,22 +12862,6 @@ msgstr "Feladatok keresése..."
 msgid "Target"
 msgstr "Cél"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Ütemezett időpont"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Javasolt feladatok betöltése..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Feladat szerkesztése"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "Folyamatban"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Feladat"
@@ -13815,21 +12870,9 @@ msgstr "Feladat"
 msgid "Goal"
 msgstr "Cél"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Mérföldkő"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Ellenőrzőpont"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Szülőfeladat"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Javasolt feladat szerkesztése"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13840,10 +12883,6 @@ msgstr "Kimenetvezérlés"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "PID-beállítás"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "Cél azonosító"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13858,64 +12897,10 @@ msgstr "Ütemezés időpontja"
 msgid "AI Reasoning"
 msgstr "AI indoklása"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Törlés indoka"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "pl. Felesleges, Rossz időzítés..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Feladat törlése"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Változtatások mentése"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "AI kérések és tanácsok"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"Az MCP-n keresztül csatlakoztatott külső AI önállóan semmit sem tud "
-"módosítani. A vezérléskérések itt várakoznak az Ön jóváhagyására, a "
-"véleményeket pedig itt gyűjtjük össze összehasonlításhoz."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "AI tanácsnapló"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"A fő AI, a külső AI vagy az alárendelt csomópontok által beküldött "
-"vélemények. Az elfogadás csupán egyetértést jelent — nem hajt végre "
-"vezérlést."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Legutóbbi AI eszközhívások"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Még nem érkezett tanács."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Még nem rögzültek eszközhívások."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13933,21 +12918,9 @@ msgstr "Javasolt művelet"
 msgid "MCP Server Management"
 msgstr "MCP-szerverek kezelése"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Összes állapot frissítése"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Szerver hozzáadása"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "A Model Context Protocol híd-folyamatainak felügyelete és vezérlése"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "MCP-szerverek felderítése..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13972,10 +12945,6 @@ msgstr "Aktiválás mentéskor"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Környezeti változók"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Konfiguráció mentése"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -14012,14 +12981,6 @@ msgstr "Automatizált kiváltó"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Új feladat"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "AI javaslatok"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Nincs függőben lévő javaslat."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14062,10 +13023,6 @@ msgstr "Még nincs előzmény."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Javaslat részletei"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Javasolta"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14221,14 +13178,6 @@ msgstr "Eszköz helyi"
 msgid "Your time"
 msgstr "Az Ön ideje"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Jóváhagyja ezt a feladatot?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Elutasítás indoka (opcionális):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14261,14 +13210,6 @@ msgstr "Cél: "
 msgid "By: "
 msgstr "Készítette: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Helyi idő: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Indoklás: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "A naptár az Ön időzónájában jelenik meg"
@@ -14277,138 +13218,21 @@ msgstr "A naptár az Ön időzónájában jelenik meg"
 msgid "Getting to Know Each Other"
 msgstr "Ismerkedjünk meg"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "Az AI idővel tanul az Ön adataiból"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Minél többet használja, annál pontosabbá válik"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "Ön határozza meg, mire összpontosít az AI"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Meséljen a létesítményéről"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Mi írja le legjobban a létesítményét?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "A folytatáshoz válasszon létesítménytípust."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Írja le pontosan, mit vár ettől az AI-tól (opcionális)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Folytatás"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Minden készen áll!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Létesítmény típusa"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Az Ön utasításai"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"Mostantól látni fogja az AI állapotát, a megadott kulcsszavakat, valamint"
-" azt, hogyan tanul az AI a létesítményéről."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "Ugrás az AI vezérlőpultra"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Létesítmény tanulási állapota"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "Első lépések az AI tanácsadóval"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Ez az AI-rendszer tanulási időszakot igényel ahhoz, hogy az Ön "
-"létesítményére szabott tanácsokat adhasson."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "A tanulási időszak alatt:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "A tanácsok általános mezőgazdasági ismereteken alapulnak"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "A létesítményre jellemző adatok még korlátozottak"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Az Ön visszajelzése a kulcs a kalibráláshoz"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Létesítmény adatai"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Függőleges farm"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Palántanevelő"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "Üzemeltetési tapasztalat"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "Kevesebb mint 1 év"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 év"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 év"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ év"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Kritikus paraméterek"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "válassza ki az összes érvényeset"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Tápanyagok"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14424,55 +13248,6 @@ msgstr "Vissza"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "Tovább"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Felhasználási feltételek"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Ez az AI tanácsadó idővel tanul az Ön létesítményéről. A kezdeti tanulási"
-" időszak alatt a tanácsok általános mezőgazdasági ismereteken alapulnak, "
-"és lehet, hogy nem illeszkednek pontosan az Ön körülményeihez. Az Ön "
-"visszajelzése — a javaslatok megerősítése, módosítása vagy elutasítása — "
-"az, ami a rendszert az Ön létesítményéhez kalibrálja. A rendszer jelzi, "
-"ha bizonytalan, és megmondja, milyen megerősítés segítene. Ön mindvégig "
-"az irányítás birtokában marad: automatizált műveletet a rendszer nem hajt"
-" végre az Ön jóváhagyása nélkül."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Megértettem és elfogadom a fenti feltételeket"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Elfogadás és kezdés"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Bevezetés befejezve"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"Az AI tanácsadó megkezdi a tanulást erről a létesítményről. Minél több "
-"visszajelzést ad a javaslataira, annál pontosabbá és személyre "
-"szabottabbá válnak a tanácsok."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "AI használatának megkezdése"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14507,10 +13282,6 @@ msgstr "Nagy"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "A költségkeretek szintenként automatikusan optimalizálva vannak."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Szolgáltatás és modell"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Kézi megadás"
@@ -14518,10 +13289,6 @@ msgstr "Kézi megadás"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Hagyja üresen a meglévő kulcs megtartásához"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "Pipeline konfiguráció"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16511,14 +15278,6 @@ msgstr "Borítás és szellőzés"
 msgid "Cover layers"
 msgstr "Borítási rétegek"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"A külső borítás mindig szükséges. Adjon hozzá falerősítést vagy belső "
-"borítást igény szerint."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Falerősítés"
@@ -17717,26 +16476,6 @@ msgstr "Alkalmazás..."
 msgid "Failed to submit judgment"
 msgstr "Az értékelés elküldése sikertelen"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Cím keresése a kezdő helyszín megtalálásához"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "A térkép kezdeti középpontjának szélessége. Pl. 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "A térkép kezdeti középpontjának hosszúsága. Pl. 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr "A térkép kezdeti nagyítási szintje. Egy szám megadásával módosíthatja."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Válassza ki az alapértelmezett keresőmotort a globális kereséshez."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Visszaállítás alapértelmezettre"
@@ -17757,82 +16496,16 @@ msgstr "Létesítmény színe"
 msgid "Equipment Color"
 msgstr "Berendezés színe"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "AoT eszköz színe"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Panel háttérszíne"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "Alapértelmezett: 25. A maximális korlát 30."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"Digitális nagyítás használata azoknál a magas nagyítási szinteknél, "
-"amelyeket a térképforrás nem biztosít."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "Törtszámú nagyítás engedélyezése a 18-hoz közeli és afeletti szintekhez."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Elhalványuló effektus engedélyezése a csempék betöltésekor."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"Canvas renderelő használata a teljesítmény javítására, ha sok vektorréteg"
-" van jelen."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Telephely-poligonok maximuma"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"A telephelyek maximális poligonszámának korlátozása. Az ezt a korlátot "
-"meghaladó telephelyek pontként jelennek meg."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Zóna-poligonok maximuma"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"A zónák maximális poligonszámának korlátozása. Az ezt a korlátot "
-"meghaladó zónák pontként jelennek meg."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Eszköz-poligonok maximuma"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Az eszközök maximális poligonszámának korlátozása. Az ezt a korlátot "
-"meghaladó eszközök pontként jelennek meg."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "Válasszon parcellát, zónát vagy telephelyet és egy időszakot, és készítsen pillanatképet arról, hogy mi nőtt, mit mértek és mit vezéreltek — átadható vagy kinyomtatható dokumentumot."
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17840,7 +16513,7 @@ msgstr "Módosítás"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "Keresés termény, fajta, név, zóna szerint…"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17848,7 +16521,7 @@ msgstr "Befejezés dátuma"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "Vagy készítsen naplót egy egész telephelyről vagy zónáról"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17864,7 +16537,7 @@ msgstr "Térkép nélkül"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "A teljes telephelyet vagy zónát lefedi, a benne lévő összes parcellával együtt."
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17908,11 +16581,11 @@ msgstr "Napló"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "Ez a napló még készül. Az oldal automatikusan frissül."
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "Ezt a naplót nem sikerült elkészíteni."
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17945,7 +16618,7 @@ msgstr "Tartalom"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "Az alábbi szakaszok mindegyike új oldalon kezdődik, ebben a sorrendben."
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -17955,7 +16628,7 @@ msgstr "Áttekintés"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "miről szól ez a napló"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -17985,41 +16658,33 @@ msgstr "%(n)s időszak"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "Hogyan olvassa"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "Időszak és időzóna"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "A napok kezdete és vége a következő időzóna szerint értendő: %(tz)s. A dokumentumban minden dátum helyi naptári nap, nem UTC-nap."
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "Min / Max / Átl."
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "A minimum és a maximum pontos. Az átlag az óránkénti átlagok átlaga, így a sűrűn mintavételezett órák nem húzzák el — ez közelítés, nem valódi időben súlyozott átlag."
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "Célérték és Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -18029,17 +16694,17 @@ msgstr "Üzemidő"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "Az eszköz bekapcsolt óráinak száma az időszakban, az első csatornájáról leolvasva."
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "Ami kimaradt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "Az eszközdiagnosztika (akkumulátor, jel) alapértelmezés szerint nem szerepel benne. A napló készítésekor bekapcsolható."
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -18047,7 +16712,7 @@ msgstr "Az itt használt fogalmak"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "Honnan származnak a számok"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -18057,7 +16722,7 @@ msgstr "Forrás"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "Az ehhez a célhoz rendelt eszközök érzékelő- és eszközrekordjai, amelyeket ez az AoT rendszer tárol."
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -18067,15 +16732,15 @@ msgstr "Pillanatkép"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "Ez a dokumentum a létrehozásakor rögzítésre került. Az eszközök, programok vagy a huzalozás későbbi módosításai nem változtatják meg."
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "Megjegyzések a pontosságról"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "Nyomtatás (mentés PDF-ként)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -18104,22 +16769,22 @@ msgstr "Tétel"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "Növekedési fokozatnapok"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "ez a napló: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "alap: %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "A napok %(p)s%%-án történt mérés"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -18131,12 +16796,12 @@ msgstr "A programhoz nincs megadva alaphőmérséklet"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "Nincs elég mért nap"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "%(n)s nap ebben a naplóban"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18202,7 +16867,7 @@ msgstr "becsült"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "e napló előtt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18234,12 +16899,7 @@ msgstr "Teljes időtartam"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "nappali fény: %(h)s ó"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18259,11 +16919,6 @@ msgstr "Használat"
 msgid "varies"
 msgstr "változó"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "nincs érzékelő"
@@ -18275,7 +16930,7 @@ msgstr "Törli ezt a naplót? Ez nem vonható vissza."
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "Valami hiba történt."
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19357,10 +18012,6 @@ msgstr "Kikapcsolási payload (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Hozzárendelés az ütemezőhöz"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Kiválasztott eszközök regisztrálása"
@@ -19574,10 +18225,6 @@ msgstr "MCP jelvény"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "Kattintson az MCP jelvény színeinek szerkesztéséhez"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Kattintson a frissítés jelvény színeinek szerkesztéséhez"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19859,22 +18506,6 @@ msgstr "Lágy jelvényháttér a folyamatban lévő/informatív állapotokhoz"
 msgid "Text color used on the info tint"
 msgstr "Az Információ háttérszínen használt szövegszín"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr "Sikeres értesítő dobozok szegélyszíne (Admin oldalak, pl. Frissítés)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Figyelmeztető/alapértelmezett értesítő dobozok szegélyszíne"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Veszély/hiba értesítő dobozok szegélyszíne"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Információs értesítő dobozok szegélyszíne"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr ""
@@ -19908,10 +18539,6 @@ msgstr "Gomb szegély"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Szegély minden gombhoz és listasorhoz"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "Navigációs frissítés jelvény és frissítés gomb háttere"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -21038,34 +19665,6 @@ msgstr "Jegyzetkezelő"
 msgid "Search content, subject..."
 msgstr "Tartalom, tárgy keresése..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Szűrők törlése"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Speciális szűrők"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Eredmények exportálása"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "PDF jelentés exportálása"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Állítsa össze egy időszak jegyzeteit (a fenti címkeszűrő segítségével) "
-"formázott PDF jelentéssé."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Jelentés címe (opcionális)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "Nem található jegyzet"
@@ -21349,7 +19948,7 @@ msgstr "Nincsenek címkék"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "Még nincs AI-elemzés. Az elemzés automatikusan fut — nézzen vissza hamarosan."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21361,7 +19960,7 @@ msgstr "AI tanítása"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "Adjon hozzá egy jegyzetet, hogy segítse az AI-t e létesítmény megértésében..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21402,11 +20001,11 @@ msgstr "Megbízhatóság:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "Az elemzés szerint a következő változások történhettek:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "A tanács nem tölthető be. Ellenőrizze a kapcsolatot."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21414,7 +20013,7 @@ msgstr "Kérjük, írjon be egy jegyzetet, mielőtt elküldi."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "A jegyzet elmentve - a következő AI-ciklusban figyelembe lesz véve."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21424,25 +20023,9 @@ msgstr "A beküldés sikertelen."
 msgid "Unable to save note. Please try again."
 msgstr "Nem sikerült elmenteni a jegyzetet. Kérjük, próbálja újra."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Elemzés"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "Az AI-elemzés sikertelen."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Végrehajtás sikertelen."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21478,11 +20061,11 @@ msgstr "kettős rétegű"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "Jobb kattintás: forgatás"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "Bal kattintás: mozgatás"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21537,7 +20120,7 @@ msgstr "Mentés globális sávszínekként"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "Az első 5 színszakasz színét a Beállítások > Egyéni felhasználói felület sávszíneiként alkalmazza."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21580,15 +20163,15 @@ msgstr "Oszlop"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "Mentve globális diagramszínekként"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "Mentés globális diagramszínekként"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "Az első 6 sorozatszínt a Beállítások > Egyéni felhasználói felület diagramszíneiként alkalmazza."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21598,7 +20181,7 @@ msgstr "Y-tengely beállításai"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "Y-tengely minimum/maximum kézi beállításának engedélyezése"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21626,7 +20209,7 @@ msgstr "Adja meg a címet."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "Tegyen fel kérdést erről a tanácsról (pl. mit tegyek?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21634,7 +20217,7 @@ msgstr "Kérdezze meg az AI-t, mit tegyen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "Milyen konkrét intézkedéseket tegyek e tanács alapján?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21683,19 +20266,19 @@ msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
-msgstr ""
+msgstr "30 p"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:169
 msgid "1h"
-msgstr ""
+msgstr "1 ó"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:170
 msgid "6h"
-msgstr ""
+msgstr "6 ó"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:171
 msgid "1d"
-msgstr ""
+msgstr "1 n"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
 msgid "Actual"
@@ -21724,11 +20307,6 @@ msgstr "Kezdés"
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
 msgid "Select the Output to control in the widget options."
 msgstr "Válassza ki a vezérlendő kimenetet a widget beállításaiban."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Adatpozíció eltolása (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
@@ -21760,19 +20338,19 @@ msgstr "Hiba a kép lekérésekor"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "Hiba: A HLS-könyvtár betöltése sikertelen"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "Hiba: A böngésző nem támogatja a közvetlen RTSP-t. Használja helyette a Szerver közvetítés ('Relay') módszert."
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "Hiba: Nincs beállítva streamelési URL"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "Hiba a kamera adatainak lekérésekor"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21795,54 +20373,18 @@ msgstr "Bekapcsolva"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "Ennek a funkciótípusnak nincsenek szerkeszthető beállításai."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "Ez a vezérlő aktív. Mentés előtt inaktiválja, különben a módosítások nem lesznek alkalmazva."
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Sorozat beállításai"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Egyéni színek engedélyezése"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Y-tengely osztásjel-igazítás engedélyezése"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Y-tengely kezdés osztásjelen engedélyezése"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Y-tengely végződés osztásjelen engedélyezése"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Y-tengely minimuma"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Y-tengely maximuma"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21869,11 +20411,11 @@ msgstr "Kategória szerinti szűrő"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "Csak a kiválasztott kategóriák bejegyzéseit jeleníti meg. Ha egyet sem választ ki, minden kategória bejegyzései megjelennek."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "Még nincs kategória. Bejegyzés létrehozásakor állítson be egyet, hogy itt szűrhessen rá."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22299,12 +20841,12 @@ msgstr "Szüneteltetve — nincs regisztrált aktuátor"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "Szüneteltetve — az üzemi időablakon kívül"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "Szüneteltetve (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22333,12 +20875,12 @@ msgstr "Aktuátorok: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "Szellőztetés: %(ratio)s nyitva (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "Biztonsági zár: %(reason)s — a vezérlés leállt"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22347,27 +20889,27 @@ msgstr "kiváltva"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "Biztonsági zár (részleges): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "Nincs aktuátor a(z) %(target)s vezérléséhez"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "A berendezés elérte a határértékét: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "A beállított határértéken túl: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "Utolsó ciklus: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22402,22 +20944,22 @@ msgstr "Szekvencia: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "A mai időablak: %(start)s – %(end)s (ciklus: %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "A mai időablak: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "Eltelt a ciklusban: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "Lépések: %(total)s közül %(running)s fut"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22432,15 +20974,15 @@ msgstr "Időszak: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "Utolsó ellenőrzés: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "Az utolsó ellenőrzés műveletet hajtott végre."
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "Az utolsó ellenőrzés nem hajtott végre műveletet."
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22449,7 +20991,7 @@ msgstr "Még nem történt ellenőrzés."
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "Következő ellenőrzésig: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23818,21 +22360,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Külső környezeti kontextusgyűjtő"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Külső hőmérsékletet, páratartalmat, szélsebességet, csapadékot, "
-"napsugárzást, harmatpontot és CO2-t gyűjt a létesítményen kívülről. Az "
-"integrált környezetszabályozó funkció ezt a gyűjtőt használja egyetlen "
-"megbízható forrásként. Válassza ki a külső érzékelőt minden elemhez. "
-"Hagyja üresen az elemeket, ha a tartalék alapértelmezett értéket szeretné"
-" alkalmazni."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Frissítési időköz"
@@ -23908,34 +22435,6 @@ msgid ""
 msgstr ""
 "Válassza ki a külső CO₂- (ppm) mérést. Ha hiányzik, az alapértelmezett "
 "érték 400 ppm."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Érzékelő maximálisan megengedett kora (másodperc)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr ""
-"Az ennél régebbi méréseket a rendszer a tartalék alapértelmezett értékkel"
-" helyettesíti."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Tartalék külső hőmérséklet (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr ""
-"Alapértelmezett érték, amelyet akkor használ a rendszer, ha az érzékelő "
-"hiányzik vagy lejárt."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Tartalék külső páratartalom (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Tartalék szélsebesség (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -24072,14 +22571,6 @@ msgstr "Bemenet maximális kora (s)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "REST port"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Kiszolgáló/token a Beállítások -> ChirpStack menüből; az eszközök ott "
-"vannak hozzárendelve („Kezelő”)."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -26215,7 +24706,7 @@ msgstr "Adja meg a SenseCAP eszköz Node EUI-ját."
 
 #: inputs/sensecap_weather.py:139
 msgid "API ID"
-msgstr "API ID"
+msgstr "API-azonosító"
 
 #: inputs/sensecap_weather.py:140
 msgid ""
@@ -26227,7 +24718,7 @@ msgstr ""
 
 #: inputs/sensecap_weather.py:147
 msgid "Access API Key"
-msgstr "Access API Key"
+msgstr "Hozzáférési API-kulcs"
 
 #: inputs/sensecap_weather.py:148
 msgid "Enter the Access API Key issued by the SenseCAP portal."
@@ -26274,18 +24765,6 @@ msgstr ""
 "Adatelemzésre összpontosító térképek a CARTO DB-től. Visszafogott "
 "színvilágú Positron (világos), Dark Matter (sötét) és Voyager stílusokat "
 "kínál, amelyek kiemelik az adatpontokat és az érzékelőinformációkat."
-
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"Globális felszínborítási térkép az Európai Űrügynökség (ESA) Sentinel-2 "
-"műholdadatai alapján. A növényzet, a beépített területek, a szántóföldek,"
-" az erdők és a vízfelületek 10 méteres felbontásban vannak osztályozva és"
-" színkódolva, ami hasznos a környezeti elemzéshez."
 
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
@@ -27529,7 +26008,7 @@ msgstr ""
 
 #: utils/calendar_event_format.py:269
 msgid "pid"
-msgstr "pid"
+msgstr "PID"
 
 #: utils/calendar_event_format.py:271
 msgid "setting"
@@ -28076,17 +26555,6 @@ msgstr ""
 "(Magas). Az előre beállított sablonok, például Hőmérséklet, Páratartalom "
 "vagy VPD kiválasztása automatikusan beállítja a min/max értékeket és a "
 "színszakaszokat."
-
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"A Highcharts nyílt forráskódú és személyes használatra ingyenes. "
-"Kereskedelmi termék részeként történő felhasználás esetén azonban "
-"kereskedelmi licenc szükséges lehet. A pontos információért látogasson el"
-" a https://shop.highsoft.com oldalra."
 
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
@@ -28801,55 +27269,17 @@ msgstr "Szakaszidővonal a mai nap és a korábbi átmenetek jelölésével."
 msgid "Targets vs now"
 msgstr "Célértékek a jelenlegihez viszonyítva"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Az aktuális leolvasások a szakasz által meghatározott célértékekhez és "
-"határértékekhez viszonyítva. Egy kap műszert, a többi szövegként jelenik "
-"meg."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Trendek"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"A tengellyel nem rendelkező sorokat a legutóbbi trendvonallal tölti fel. "
-"A célértékblokk szükséges hozzá."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Felhalmozott hő"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Milyen messzire jutott ez a szakasz a hőösszeg-napokban (GDD). Csak akkor"
-" jelenik meg, ha a program alaphőmérsékletet határoz meg."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Talajnedvesség"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Műszer mértéke"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Melyik mérés kapja a műszert. A többi szövegként jelenik meg. Ha ez a "
-"parcella nem méri azt, akkor helyette az első, tartománnyal rendelkező "
-"mérés jelenik meg."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29453,31 +27883,9 @@ msgstr "2. tizedesjegyek száma"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "A második mérés tizedesjegyeinek száma"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"Megjeleníti a hirdetőtábla legutóbbi bejegyzéseinek címeit. Egy cím "
-"kattintására felugró ablakban megnyílik a teljes bejegyzés (tartalom, "
-"szavazás, válaszok, nyugtázás); az itt végzett műveletek a tényleges "
-"bejegyzésen is megjelennek. Az írási jogosultsággal rendelkező "
-"felhasználók közvetlenül a widgetből is létrehozhatnak, szerkeszthetnek "
-"és törölhetnek bejegyzéseket."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Bejegyzések száma"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Hány legutóbbi közleményt jelenítsen meg"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Milyen gyakran frissüljön a közlemények listája"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29680,11 +28088,6 @@ msgstr "Alapértelmezés szerint be- vagy kikapcsolja a műveletlista láthatós
 msgid "Sequence Settings (Synced)"
 msgstr "Szekvenciabeállítások (szinkronizált)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "ÓÓ:PP formátum"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "Időszak (másodperc)"
@@ -29723,18 +28126,18 @@ msgstr "Folytatás onnan, ahol megállt"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "Indítás elölről"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "Újrabekapcsoláskor"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "Mi történik, ha ezt a szekvenciát kikapcsolja, majd újra bekapcsolja. A folytatás a megszakított ciklust folytatja; az elölről indítás az első lépéstől futtatja. A daemon újraindítása a beállítástól függetlenül mindig folytatja."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -30279,7 +28682,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "Erős fényben megakadályozza a nedvesítő típusú párásítást (a vízcseppek lencseként összegyűjthetik a napfényt a leveleken), és ha lentebb meg van adva, napnyugta előtt is. Független a párásítás gyakoriságától — bármely párásítási gyakoriságnál be- vagy kikapcsolható."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30618,16 +29021,6 @@ msgstr "Előrejelzés-alapú előrevezérlés"
 msgid "Enable Forecast Feedforward"
 msgstr "Előrejelzés-alapú előrevezérlés engedélyezése"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"A KMA rövid távú időjárás-előrejelzés (forecast.json) használata a "
-"hőmérséklet-/páratartalom-célértékek proaktív eltolására és a "
-"szellőztetés gátlására a kedvezőtlen időjárás beérkezése előtt."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "A jelenlegi állapotra reagál"
@@ -30639,14 +29032,6 @@ msgstr "Előre felkészül"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Előrejelzési előretekintés (óra)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"Hány órával előre ellenőrizze a közelgő kedvezőtlen időjárást (1–6 óra). "
-"A hosszabb előretekintés korábbi figyelmeztetést ad, de túlkorrigálhat."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30847,14 +29232,6 @@ msgstr "Halmozott a kezdet óta"
 msgid "Vapor Pressure Deficit"
 msgstr "Páranyomás-hiány"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Érték betűmérete (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "A mérés betűmérete"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Növekedési ütemezés"
@@ -30863,31 +29240,9 @@ msgstr "Növekedési ütemezés"
 msgid "Stop Control On"
 msgstr "Vezérlés leállítása ekkor"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"A vezérlés véglegesen leáll ez után a dátum után. Hagyja üresen a "
-"folyamatos működéshez."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Napégés elleni védelem párásítással"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Palántanevelő üzemmód"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Palántanevelő (csíranövény) üzemmód"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Szigorúbb párásítási korlátok a csíranövényekhez, amelyek könnyebben "
-"megégnek, mint a kifejlett levelek."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30901,10 +29256,6 @@ msgstr "Párásítás"
 
 msgid "Devices under automatic control"
 msgstr "Automatikus vezérlés alatt álló eszközök"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s kizárva"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr "Kapcsolja ki az eszközt, hogy az automatikus vezérlés ne mozgassa."
@@ -30958,14 +29309,6 @@ msgstr ""
 "Figyelmen kívül marad, ha ehhez a létesítményhez saját előrejelzési "
 "forrás van hozzárendelve – az a forrás már alkalmazza a saját "
 "előretekintését."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Közlemény kategória szűrő"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Jegyzetek helye"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -31073,12 +29416,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "Válasszon egy helyet a widget beállításaiban a jegyzetek megjelenítéséhez."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr ""
-"Megjeleníti a kiválasztott helyen írt jegyzeteket (lásd az alábbi "
-"\"Hely\" mezőt)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31406,18 +29743,6 @@ msgstr "Forgatás leállítása"
 msgid "System Timezone"
 msgstr "Rendszer-időzóna"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"A teljes rendszer alapértelmezett időzónája (IANA-név, pl. Asia/Seoul). A"
-" démonnapló időpontjaihoz, a felügyeleti naplóhoz és a hely nélküli "
-"eszközök ütemezéseinél végső tartalékként használatos. Ez nem az Ön "
-"személyes megjelenítési időzónája a fiókbeállításokban."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31430,3 +29755,999 @@ msgstr "Nincs megadva hely – a rendszer időzónájával becsülve"
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "A teljes rendszer alapértelmezett időzónája (IANA-név, pl. Asia/Seoul). A démonnapló időpontjaihoz és a hely nélküli eszközök végső tartalékaként szolgál; ezek az eszközök átveszik, amikor itt ment. Az emberek által olvasott és beírt időpontok mindenki saját, a fiókbeállításokban megadott időzónáját követik."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "Teljes szélesség mobilon"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Számítógép képernyőmérete"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Vezérlőfelület"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Elválasztóvonal"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Elválasztóvonal (lágy)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Mobil képernyőmérete"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Kapcsoló sávja (ki)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Nem válaszol"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Ütemezett"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "A befejezési időpontnak ugyanazon a napon későbbinek kell lennie a kezdési időpontnál (az éjfélt átlépő időszak nem támogatott)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Ez a szekvencia napokra bontott időpontokat használ, ezért az itt megadott kezdési/befejezési időpont nem lett alkalmazva. Módosítsa a szekvencia widgetének napi ütemezésében."
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "Válasszon napi, heti vagy havi bontást."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Válasszon regisztrációs célt (Bemenet vagy Kimenet)."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Visszaállítás"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Visszaállítás a párbeszédablak megnyitásakor érvényes beállításokra"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Visszaállítva"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "Jel"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Függőségek telepítése ehhez:"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "AoT honlap"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Számítógépen az egész oldalt nagyítja — a szöveget, a gombokat és a térképeket együtt. A telefonok és táblagépek a fenti beállítást használják."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Telefonokon és táblagépeken az egész oldalt nagyítja — a szöveget, a gombokat és a térképeket együtt. A számítógépek az alábbi beállítást használják."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Nincs találat"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Nincs kijelölve"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Előzmények"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "Kérések"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "{0} / {1} kijelölve"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Nem sikerült betölteni a vezérlési kéréseket"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Ezekről csak a vezérlők szerkesztésére jogosult személyek dönthetnek."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Ezek még nem futottak le. A jóváhagyás pontosan azt hajtja végre, ami itt le van írva — nem kell visszamennie és szólnia az AI-nak."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "AI-kérések"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "AI-tanács"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Nem sikerült betölteni a tanácsokat"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Nincs várakozó tanács."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Nincs várakozó ütemezési javaslat."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Ennek az AI-nak és más csatlakoztatott AI-knak a véleményei. Az elfogadás azt rögzíti, hogy egyetért — nem hajt végre semmit."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "Az AI javasolta"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Felveszi ezt a javaslatot az ütemezésbe?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Elutasítja ezt a javaslatot?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Ütemezési javaslatok"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "Az AI által az ütemezésre javasolt feladatok. A jóváhagyás felveszi őket az ütemezésbe — a megadott időpontban lefutnak."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "Amire az AI az Ön döntésére vár — az alábbi tételek mindegyike az Ön döntésére vár."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "AI-kapcsolat"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Hozzáférési kulcsok"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Speciális"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "Engedélyezve"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Egy Ön által már használt AI-alkalmazás, például a Claude Desktop, elolvashatja ennek a gazdaságnak az adatait, és kérheti a berendezések vezérlését. A berendezések vezérlése csak azután fut le, hogy egy személy jóváhagyta."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "Beépített AI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "AI-alkalmazás csatlakoztatása"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Hiba a beállítások betöltésekor"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "A beépített AI becsült havi költése. A limit közeledtekor értesítést kap, a limit elérésekor pedig a legolcsóbb modellre vált. A 0 azt jelenti, hogy nincs limit."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Külső AI-hozzáférés"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Minden AI-alkalmazáshoz állítson ki egy kulcsot, és illessze be abba az alkalmazásba."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Lehetővé teszi, hogy a beépített AI a háttérben rendszeresen összefoglalja a gazdaság helyzetét."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "MCP-híd szerverek"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Kulcsok kezelése"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "Nem engedélyezett"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Általános beállítások megnyitása"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Beépített AI futtatása"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "Az alkalmazáson belüli csevegés és tanácsadás által használt AI-modell. A saját AI-alkalmazásától függetlenül fut, ezért kikapcsolva hagyhatja, ha nem használja."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "Az a telephely, amelyet az AI használ, ha a csevegés vagy a képernyő nem jelöl meg egyet."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "A beépített AI által hívott eszközszerverek. Egy automatikusan hozzáadódik, ha fentebb MCP-motort ad hozzá."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "Be- és kikapcsolható a Beállítások > Általános menüben."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "Az AI által írt %(n)s jegyzet vár személyes megerősítésre."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "A 0 azt jelenti, hogy nincs automatikus szinkronizálás."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "AI-tudás"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "API-kulcs fejléce"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Hozzáadva"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Minden állapot"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Minden címke"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Bearer Token"
+msgstr "Bearer token"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Csak megerősített tudásra hivatkozzon"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Adatforrások"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "A tudás felhasználásának módja"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Forrás típusa"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Tudásbeállítások"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Utolsó szinkronizálás"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Könyvtárforrás"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "Igény szerinti lekérdezés"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Megerősítésre vár"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Még nincs szinkronizálva"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Hivatkozás megnyitása"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Mentés és megerősítés"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Csak ezek megjelenítése"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Szinkronizálási hiba"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Szinkronizálás most"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Szinkronizálva"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "Szinkronizálva: {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Háromféleképpen tölthető fel: csatlakoztasson egy forrást az Adatforrások lapon, kattintson a Tudás hozzáadása gombra, hogy beírja, amit már tud, vagy kérje meg az AI-t, hogy nézzen utána valaminek — a talált információt elmenti."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Lekérések száma"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Cím, szöveg vagy forrásmegjelölés"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Megbízhatóság"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "Amit az emberek és az AI leírtak, hogy az AI hivatkozhasson rá. A forrásokból szinkronizált adatok alapértelmezés szerint el vannak rejtve — válassza ki őket a forrásszűrőben, vagy kezelje őket az Adatforrások lapon."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "Emberek és az AI által írva"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "AI-előzmények"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Minden súlyosság"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Minden típus"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Válasz"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "Alkalmazva a tudásra."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Jóváhagyva"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Jóváhagyásra vár"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "Hívó"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Végrehajtva"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Beszélgetések"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Javítva"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Javítás"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Nem sikerült betölteni az előzményeket"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Elvetve"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Hibajelentések"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Lejárt"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Megtanult"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Lekérdezve"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Nincs hibajelentés."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "A beépített AI-nak feltett kérdések és a válaszai."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Fogadva"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Eszközhívások"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Amit a csatlakoztatott AI-k az eszközökön keresztül tettek — a legújabbak elöl. A jóváhagyást igénylő kéréseknél látható, hogyan született döntés."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "Amit az AI mondott"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Mikor"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "Az emberek által jelentett hibás AI-válaszok a javításaikkal. A javítás alkalmazása hozzáadja azt az AI-tudáshoz."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "Nem sikerült betölteni az MCP-szerverek listáját."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Törli ezt a szervert?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Bemeneti séma"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON-objektum, például {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "Még nincs MCP-szerver."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Ez a szerver nem tesz elérhetővé eszközöket."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Szerver hozzáadva."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Szerver törölve."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Szerver frissítve."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "Szerverek"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Leállítva"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "A beépített AI által hívott eszközszerverek. Az MCP-motor hozzáadása az AI-kapcsolat oldalon automatikusan létrehoz egyet."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "Eszközök"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Újrapróbálásra vár"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "A szerepkör módosításakor a program rákérdez, hogy a szakterületet, a rendszerpromptot, a szintet és a modellt újratöltse-e a szerepkör alapértelmezett értékeivel."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Kitölti a szerepkör alapértelmezett szakterületét, rendszerpromptját, szintjét és modelljét? A megadott értékek felülíródnak."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "%(n)s ütemezési javaslat vár az AI → Kérések alatt."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Megszakítja ezt a feladatot?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "A vezérlési kérésekről és az AI ütemezési javaslatairól az AI → Kérések alatt lehet dönteni."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Nem sikerült betölteni az eszköz idővonalát"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Nem található eszköz."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "Nyitott kérések"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Előre beállított színek"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Minden térkép"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Minden telephely"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Kulcs"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Nem sikerült betölteni a beállításokat"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "A durvább mértékegység kisebb dokumentumot eredményez. A napi részletek később nem állíthatók vissza, ezért csak akkor válassza, ha nincs rájuk szüksége."
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "Rögzítési bontás"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "%(n)s szakasz, %(m)s időszak"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "Felett"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "A célértékhez képest"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "Alatt"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "Szakaszok szerint"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "Napok száma"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "Terepi érzékelő és időjárás-állomás"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Az időjárás-állomás mérte"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "Mérési trendek"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "A napló készítésekor ki nem választott mérések nincsenek benne. A fenti megjegyzések megnevezik őket."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "Az „Időjárás-állomás” jelzésű, bal oldali szegéllyel kiemelt sorok a telephely időjárás-állomásáról származnak, nem az ezen a célnál elhelyezett érzékelőtől. Ha ugyanahhoz a méréshez mindkettő létezik, a célértékeket csak a terepi érzékelővel hasonlítjuk össze."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "Ugyanazok a célok, mint az előző szakaszban."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Az érzékelők eltérnek"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "A megjelenített érzékelők a környező területhez tartoznak."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "Az alakzat és az érzékelők pozíciója az aktuális állapotot mutatja, nem az ebben az időszakban érvényeset."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "További %(n)s megjelenítése"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "Kevesebb megjelenítése"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "Terv megjelenítése"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "Szakaszok idővonala"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "A célértékek az ehhez a parcellához csatolt programból származnak. A Δ a mért átlag és a célérték különbsége. A nappali/éjszakai és a görbealapú célértékek különbség helyett jelölve vannak, mert a teljes napi átlaggal való összehasonlításuk téves riasztásokat okoz."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "A körvonal a létesítményből származik."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "felhalmozott: %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "időjárás-állomás %(out)s × fedés %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Kattintson a Megerősítő színek szerkesztéséhez"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Kattintson a Vezérlőfelület színeinek szerkesztéséhez"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Kattintson a Nincs válasz színeinek szerkesztéséhez"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Kattintson a kapcsoló bekapcsolt színeinek szerkesztéséhez"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Kattintson a kapcsolósín kikapcsolt állapotú színeinek szerkesztéséhez"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "A kezelt elemek felülete — szövegmezők, legördülő listák, kapszula alakú elemek. Tartsa elkülönítve az oldal hátterétől, különben az oldalon elhelyezett vezérlőelem beleolvad"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Halványabb elválasztó sűrű listákhoz, ahol egy teljes vastagságú vonal zavaró lenne"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Egy tárolón belüli elemeket elválasztó vonal — listák, opciósorok. Nem valami köré húzott szegély"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Sor-/kártyaháttér, amikor egy eszköz nem válaszol — ez más, mint a Figyelmeztető állapot, amikor valaki szándékosan szünetelteti"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Csúszókapcsoló"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "A csúszókapcsoló sávja kikapcsolt állapotban (bekapcsolva a 3. sáv színét használja)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Szövegmező"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Kapcsoló be"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Biztosan törli ezt a szerepkört?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Egyetlen közlemény sem felel meg a keresésnek."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Keresés címben, tartalomban, kategóriában..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Színszakaszok"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Globális sávszínek"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Szakasz"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Színek"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Tervezett"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Törzs"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Időtartam (perc)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Szerkesztés és jóváhagyás"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "Érvénytelen érték a(z) '{field}' mezőben"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Mentés és jóváhagyás"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Ütemezett időpont"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Lépés"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Ez valós berendezéseket (szelepeket, szivattyúkat) működtet."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Megtekintés"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Részletek"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "{n} jóváhagyásra vár"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total} sikeres"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "Evapotranspiráció"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Összegyűjti a létesítményen kívüli hőmérsékletet, páratartalmat, szélsebességet, csapadékot, napsugárzást, harmatpontot és CO2-t. Az integrált környezetvezérlési funkció ezt a gyűjtőt használja a külső értékek egyetlen forrásaként. Válassza ki az egyes tételekhez tartozó külső érzékelőt. Az üresen hagyott tételeket nem osztja meg — az integrált vezérlés nem feltételez értéket, hanem ismeretlenként kezeli őket."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Kiszolgáló/token a Beállítások -> ChirpStack menüpontból; az eszközök a saját eszközoldalukról csatlakoznak ehhez az ütemezőhöz (pl. az AoT-C \"Class Scheduler\" mezője)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Keresési ablak (nap)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Aktív csatornák"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "Elmúlt 14 nap"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "Elmúlt 30 nap"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "Elmúlt 60 nap"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "Elmúlt 90 nap"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Hagyja üresen, hogy a rendszer automatikusan a kattintott pontot tartalmazó regisztrált sokszöget társítsa."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (átlag)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "NDVI keresési ablak"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "Területenkénti NDVI-statisztika, valamint talajnedvesség és talajhőmérséklet az agromonitoring.com-on regisztrált sokszöghöz — az egyetlen itteni bemenet, amely a talajnedvességet a saját területhatárára vonatkozó számként adja meg, nem pedig durva műholdas átfedésként. Rajzolja meg a területet az Agromonitoring vezérlőpultján (1–3000 ha), majd az alábbiakban vagy illessze be a sokszög azonosítóját, vagy hagyja üresen, hogy a rendszer a kattintott pontot tartalmazó sokszöget társítsa. Ugyanazt a fiókot használja, mint az OpenWeatherMap."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "Sokszög-azonosító"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Talajhőmérséklet (10 cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Talajhőmérséklet (felszín)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "Az ablakon belüli legutóbbi átvonulás adatait használja. A felhők miatt előfordulhat, hogy hetekig nincs használható felvétel."
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "A NASA SMAP (Soil Moisture Active Passive) L4 termékéből származó globális felszíni talajnedvesség (0–5 cm), közel valós idejű átfedésként a NASA GIBS-en keresztül. Nagyjából 9 km-es felbontásban, választható dátumokkal érhető el; hasznos az öntözés tervezéséhez és az aszály megfigyeléséhez."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Legtisztább felvétel az ablakban"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "A felhők bármely egyetlen dátumon lyukakat hagynak, ezért helyette az ablakon belüli legutóbbi használható felvétel jelenik meg."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Gyűjtemény"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Hamis színes (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "Elmúlt 7 nap"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Maximális felhőborítottság"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "Legfrissebb felvétel"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (nedvesség)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (növényzet)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (víz)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Felvétel prioritása"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Keresési ablak"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (a légkör teteje)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (légköri korrekcióval)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Sentinel-2 felvételek 10 m felbontásban a Sentinel Hubon keresztül a Copernicus Data Space Ecosystemben — elég finom ahhoz, hogy egyetlen területen belül is kiolvashatók legyenek a növekedési különbségek, ellentétben a 250 m-es MODIS NDVI-vel. Regisztráljon egy ingyenes CDSE-fiókot, hozzon létre egy OAuth-klienst, és illessze be az alábbiakba a kliensazonosítóját és a titkos kulcsát. Az ingyenes csomag havonta 30 000 feldolgozási egységet tesz lehetővé; egy térképképernyő nagyjából 4-be kerül, a csempéket pedig egy napig gyorsítótárazza."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Valós színes"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Megjelenés"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Szövegméret"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "A jelenlegi értékek a szakasz által megadott célértékekhez és határokhoz viszonyítva — ugyanaz a kártya, amelyet a térképwidget mutat, a DLI-t és a felhalmozott hőt is beleértve. A [7 nap] minden sort azzá a tartománnyá alakít, amelyben az elmúlt héten mozgott."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Kitölti a saját tartománnyal nem rendelkező sorokat (CO2, talajnedvesség, harmatpont) egy friss trendvonallal. A célértékek blokkot igényli."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Megmutatja, mennyire jutott el ez a szakasz a következőig a fejlődési hőösszeg (GDD) alapján. Csak akkor jelenik meg, ha a program GDD szerint lépteti a szakaszokat. Az ültetés óta felhalmozott összeg ehelyett a környezeti kártya egyik sora, és annak beállításait követi."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "Kikapcsolás sikertelen: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "A listamodális ablak által egyszerre megjelenített függőben lévő kérések felső korlátja"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Milyen gyakran frissüljön a függőben lévő kérések száma"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "MCP jóváhagyási kérések"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Megjelenített elemek max. száma"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Megmutatja, hány külső AI-írási kérés vár jóváhagyásra. A számra kattintva megnyílik a lista, ahol egyenként jóváhagyhatja, elutasíthatja vagy szerkesztés után jóváhagyhatja őket, vagy több kérést kijelölve tömegesen jóváhagyhatja/elutasíthatja azokat. A jóváhagyás azonnal végrehajtja a kérést, pontosan a megjelenített értékekkel."

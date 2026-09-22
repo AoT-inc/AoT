@@ -4653,11 +4653,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "सीक्वेंस अभी भी चल रहा है — डेमन ने परिवर्तन लागू नहीं किया।"
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "सीक्वेंस शुरू नहीं हुआ — डेमन ने परिवर्तन लागू नहीं किया।"
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4732,7 +4732,7 @@ msgstr "वह क्षेत्र नहीं मिला।"
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "जिन फैसिलिटी का मानचित्र पर कोई स्थान नहीं है, वे यहाँ दिखाई नहीं देंगी — पहले फैसिलिटी सेटिंग्स में उनका स्थान जोड़ें।"
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4749,15 +4749,15 @@ msgstr "जर्नल किस बारे में है, वह चु�
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "प्रारंभ और समाप्ति, दोनों तिथियां दर्ज करें।"
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "प्रारंभ तिथि समाप्ति तिथि के बाद की है।"
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "यह जर्नल किस बारे में है, यह नहीं मिल सका।"
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4766,24 +4766,24 @@ msgstr "इस टारगेट को नहीं पढ़ा जा सक
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "यह अवधि बहुत लंबी है (%(days)s दिन)। कृपया कम अवधि चुनें।"
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "इस चयन में बहुत अधिक डिवाइस हैं (%(n)s चैनल)। क्षेत्र को सीमित करें, या इसके बजाय कोई एक प्लॉट चुनें।"
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "इस चयन से बहुत अधिक डेटा पढ़ना पड़ेगा। कम अवधि या छोटा क्षेत्र चुनकर पुनः प्रयास करें।"
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "यह जर्नल अभी जनरेट हो रहा है।"
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -4978,10 +4978,6 @@ msgstr "— कोई नहीं —"
 msgid "Select one or more devices to register."
 msgstr "रजिस्टर करने के लिए एक या अधिक डिवाइस चुनें।"
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "एक रजिस्ट्रेशन टारगेट (इनपुट/आउटपुट) या शेड्यूलर चुनें।"
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5049,11 +5045,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "क्रिया प्रकार"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "पैरामीटर नाम"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "सोर्स प्रकार"
@@ -5062,24 +5053,6 @@ msgstr "सोर्स प्रकार"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "मैनुअल एंट्री"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "नोट/विवरण"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "बाहरी URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "मान / URL / टेक्स्ट"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "रिकॉर्ड ID"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7285,26 +7258,6 @@ msgstr "जानकारी टिंट"
 msgid "Info Tint Text"
 msgstr "जानकारी टिंट टेक्स्ट"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "सफलता टिंट बॉर्डर"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "चेतावनी टिंट बॉर्डर"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "खतरा टिंट बॉर्डर"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "जानकारी टिंट बॉर्डर"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "BG LLM बैज"
@@ -7312,12 +7265,6 @@ msgstr "BG LLM बैज"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "BG MCP बैज"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "अपग्रेड बैज"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7519,27 +7466,9 @@ msgstr "शर्त ड्यूटी साइकिल (%)"
 msgid "Confirmed"
 msgstr "पुष्टि की गई"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "समीक्षा आवश्यक"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "मान दर्ज करें"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "उदा. 25.5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "उदा. सुबह के तापमान के आधार पर सेटपॉइंट"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "उदा. https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7560,59 +7489,10 @@ msgstr "प्रगति पर"
 msgid "Failed"
 msgstr "विफल"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "AI सुझाव"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "कोई कार्य पंजीकृत नहीं है।"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "ऊपर दिए गए 'कार्य जोड़ें' बटन से एक जोड़ें।"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "AI द्वारा सुझाए गए शेड्यूल को स्वीकृत करके कैलेंडर में जोड़ें?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "AI द्वारा सुझाया गया शेड्यूल स्वीकृत हो गया।"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "स्वीकृति विफल रही"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "नेटवर्क त्रुटि"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "इस सुझाव को अस्वीकार कर हटाएं?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "सुझाव अस्वीकार कर हटा दिया गया।"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "अस्वीकृति विफल रही"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "इंडेंट करने के लिए कोई मूल कार्य नहीं है"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "यह पहले से ही एक शीर्ष-स्तरीय कार्य है"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "क्रम अपडेट किया गया"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7621,14 +7501,6 @@ msgstr "क्रम अपडेट किया गया"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "अपडेट विफल रहा"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "पदानुक्रम अपडेट किया गया"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "नाम अपडेट किया गया"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7728,65 +7600,15 @@ msgstr "लोड हो रहा है..."
 msgid "Failed to load data."
 msgstr "डेटा लोड करने में विफल।"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "कोई संदर्भ रिकॉर्ड पंजीकृत नहीं है।"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "मानदंडों से मेल खाने वाला कोई रिकॉर्ड नहीं है।"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "सिस्टम डिफ़ॉल्ट"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "परिभाषा संपादित करें"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "समीक्षा लंबित"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "अस्वीकृत"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "स्वीकृत करने हेतु परिभाषा दर्ज करें या पुष्टि करें:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "सफलतापूर्वक स्वीकृत किया गया।"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "स्वीकृति के दौरान एक त्रुटि हुई।"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "एक सर्वर त्रुटि हुई।"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "इस शब्द को अस्वीकार करें?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "सफलतापूर्वक अस्वीकृत किया गया।"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "प्रोसेसिंग के दौरान एक त्रुटि हुई।"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "एक नई परिभाषा दर्ज करें:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -7998,7 +7820,7 @@ msgstr "मानचित्र नहीं मिला"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2020
 msgid "map_load_failed"
-msgstr "map_load_failed"
+msgstr "मानचित्र लोड नहीं हो सका। कृपया पुनः प्रयास करें।"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2624
 msgid "saved_successfully"
@@ -10978,69 +10800,11 @@ msgstr "पूर्ववत नहीं की जा सकती"
 msgid "Usage"
 msgstr "उपयोग"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "AI संदर्भ प्रबंधक"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr ""
-"AI में बाहरी जानकारी इंजेक्ट करें और उसकी विश्वसनीयता स्थिति प्रबंधित "
-"करें।"
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "संदर्भ जोड़ें"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "नोट्स (वैकल्पिक)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "संदर्भ रिकॉर्ड"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "सिस्टम डिफ़ॉल्ट"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "समीक्षा आवश्यक"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr "AI द्वारा डोमेन डिफ़ॉल्ट से स्वतः जनरेट किया गया। अभी समीक्षा नहीं हुई।"
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"उपयोगकर्ता इनपुट या लंबित आइटम। AI इसका संदर्भ लेता है लेकिन कम विश्वास "
-"के साथ।"
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"मान की उपयोगकर्ता द्वारा समीक्षा और स्वीकृति की गई है। AI इसे उच्च "
-"विश्वास के साथ उपयोग करता है।"
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "पहचाना गया प्लेटफ़ॉर्म"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC/सर्वर"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Docker कंटेनर"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11410,7 +11174,7 @@ msgstr "आउटपुट अवधि से गणना किया गय�
 
 #: aot_flask/templates/pages/energy_usage_outputs.html:39
 msgid "CH"
-msgstr "CH"
+msgstr "चैनल"
 
 #: aot_flask/templates/pages/energy_usage_outputs.html:45
 msgid "From"
@@ -11918,15 +11682,6 @@ msgstr "या पेज को रीफ्रेश करें।"
 msgid "Control requests awaiting approval"
 msgstr "स्वीकृति की प्रतीक्षा में नियंत्रण अनुरोध"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"ये अभी तक निष्पादित नहीं हुए हैं। स्वीकृत करने पर यह दिखाए गए "
-"आर्ग्युमेंट्स के साथ तुरंत चलता है — आपको वापस AI के पास जाकर बताने की "
-"ज़रूरत नहीं है।"
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "कोई नियंत्रण अनुरोध प्रतीक्षा में नहीं है।"
@@ -11964,54 +11719,9 @@ msgstr "स्वीकृत और पूरा किया गया।"
 msgid "Approved, but it failed to run"
 msgstr "स्वीकृत, लेकिन चलाने में विफल रहा"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "AI स्थिति"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "सीखने की प्रगति"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "मुख्य कीवर्ड"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "अक्सर उपयोग होने वाली सुविधाएं"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "AI स्थिति रीसेट करें"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "आपके AI निर्देश"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "उन्नत — वैकल्पिक"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "अपने AI के लिए विशिष्ट निर्देश जोड़ें (वैकल्पिक)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"उदा. मैं एक ग्रीनहाउस संभालता/संभालती हूं और कीट प्रबंधन व तापमान "
-"नियंत्रण में मदद चाहता/चाहती हूं"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "आउटडोर खेती"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12021,34 +11731,12 @@ msgstr "आउटडोर खेती"
 msgid "Greenhouse"
 msgstr "ग्रीनहाउस"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "स्पोर्ट्स सुविधा"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "पार्क"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "परिवहन"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "AI सेटअप अपडेट करें"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "पुष्ट ज्ञान आइटम:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12057,23 +11745,6 @@ msgstr "लंबित:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "कुल:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "AI अभी भी सीख रहा है..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "अभी तक कोई गतिविधि नहीं"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr "AI स्थिति रीसेट करें? अगली बार लोड होने पर स्नैपशॉट की पुनर्गणना की जाएगी।"
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "सहेजने में विफल। कृपया पुनः प्रयास करें।"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12089,26 +11760,6 @@ msgstr "AI एजेंट"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "AI सेटिंग्स"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"AI एजेंट ऑर्केस्ट्रेशन परत। जटिल कार्यों को स्वचालित करने के लिए अपनी AI "
-"सेवाओं और एजेंट को प्रबंधित करें।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "AI सेवा संचालन"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"AI मॉडल शुरू या बंद करें। बंद रहने पर चैट, सलाह अनुरोध और बैकग्राउंड AI "
-"कार्य — सभी अनुपलब्ध रहते हैं।"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12186,36 +11837,11 @@ msgstr "कृपया पहले एक इंजन चुनें।"
 msgid "Creating agent... Please wait."
 msgstr "एजेंट बनाया जा रहा है... कृपया प्रतीक्षा करें।"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "कृपया पहले एक सेवा या इम्प्लीमेंटेशन चुनें।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "नाम और कमांड आवश्यक हैं।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "MCP सर्वर जोड़ा गया।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "विफल।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "MCP सर्वर जोड़ने में विफल।"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "एजेंट सेटिंग्स"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "त्रुटि: फ़ॉर्म नहीं मिला"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12277,14 +11903,6 @@ msgstr "AoT MCP सर्वर"
 msgid "Action failed"
 msgstr "कार्रवाई विफल"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "कोई MCP प्रविष्टि कॉन्फ़िगर नहीं है।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "MCP प्रविष्टियां लोड करने में विफल।"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "AI सेवा शुरू हुई"
@@ -12304,52 +11922,13 @@ msgstr "AI सेवा बंद हुई"
 msgid "Save failed"
 msgstr "सहेजना विफल"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "सेटिंग्स सहेजें"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "सेटिंग्स सहेजी गईं"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "AI टॉगल परिवर्तन के लिए पुनः आरंभ आवश्यक है"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "प्रायोगिक सुविधा"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "AI कार्यक्षमता वर्तमान में प्रायोगिक चरण में है।"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "नियमित कार्यों को स्वतः स्वीकृत करें"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "स्वतः स्वीकृति के लिए अधिकतम प्रभाव"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "विफल होने पर फ़ीडबैक आवश्यक"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "मॉडल"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "सुपरवाइज़र मॉडल"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "वर्कर मॉडल"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12367,98 +11946,22 @@ msgstr "डिफ़ॉल्ट साइट"
 msgid "(none)"
 msgstr "(कोई नहीं)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "संदर्भ और बजट"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "ब्लैकआउट प्रारंभ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "ब्लैकआउट समाप्ति"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "संदर्भ दायरा (घंटे)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "अधिकतम इतिहास संदर्भ"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "मासिक बजट सीमा (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "लोड हो रहा है..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "MCP प्रविष्टियां"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "AI सेवाएं"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "AI सेवा रजिस्ट्री"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "पोर्टल पर वापस जाएं"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "AI सेवा पंजीकृत करें"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"AI इंजन कनेक्शन पंजीकृत और प्रबंधित करें (Gemini, OpenAI, स्थानीय "
-"प्रॉक्सी)।"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "इस सेवा को हटाएं?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "एंडपॉइंट"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "अभी तक कोई AI सेवा पंजीकृत नहीं है।"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "अपना पहला LLM कनेक्ट करें"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "सेवा नाम"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "उदा. My Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "इंजन प्रकार"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "मॉडल नाम"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API एंडपॉइंट (वैकल्पिक)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12471,28 +11974,6 @@ msgstr "प्रमाणीकरण"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "प्रमाणीकरण प्रकार"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "ID / पासवर्ड"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "कोई प्रमाणीकरण नहीं"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "खाता ID"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "सेवा पंजीकृत करें"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "कोई पूर्व-निर्धारित मॉडल नहीं"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12530,28 +12011,6 @@ msgstr "सिंक करें"
 msgid "Data credits"
 msgstr "डेटा क्रेडिट"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "AI द्वारा संकलित ज्ञान की समीक्षा"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"AI ने स्वयं जो ज्ञान संग्रहीत किया है (शुरुआत में हमेशा अपुष्ट)। जो सही "
-"है उसकी पुष्टि/संपादन करें, जो गलत है उसे हटाएँ — समीक्षा होने तक इसे [AI"
-" 정리 — 미확인] के रूप में उद्धृत किया जाता है।"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "केवल समीक्षित ज्ञान: चालू"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "केवल समीक्षित ज्ञान: बंद"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12560,10 +12019,6 @@ msgstr ""
 "चालू होने पर, AI अपने द्वारा लिखे गए नोट्स तब तक उद्धृत नहीं कर सकता जब "
 "तक कोई व्यक्ति उनकी पुष्टि न कर दे। प्रामाणिक और हाथ से दर्ज किया गया "
 "ज्ञान इससे अप्रभावित रहता है।"
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "अभी तक AI द्वारा संकलित कोई ज्ञान नहीं है।"
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12581,18 +12036,9 @@ msgstr "अपुष्ट"
 msgid "Flagged"
 msgstr "फ़्लैग किया गया"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "किसी प्रामाणिक स्रोत के समान विषय"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "मिलान"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "ओपन सोर्स"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12601,23 +12047,6 @@ msgstr "पुनः सक्रिय करें"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "वापस लें"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "ज्ञान आइटम"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"वह सब कुछ जिसे AI उद्धृत कर सकता है — स्रोतों से सिंक किया गया, AI द्वारा"
-" संग्रहीत किया गया, या हाथ से लिखा गया। यहां वास्तव में क्या है यह देखने "
-"के लिए खोजें और फ़िल्टर करें।"
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "ज्ञान खोजें…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12654,16 +12083,6 @@ msgstr ""
 "नॉलेज लाइब्रेरी खाली है। जब तक इसमें कुछ नहीं जोड़ा जाता, AI विषय संबंधी "
 "प्रश्नों के उत्तर अपने सामान्य ज्ञान से देगा — बिना किसी स्रोत का हवाला "
 "दिए।"
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"इसे भरने के तीन तरीके हैं: ऊपर एक स्रोत कनेक्ट करें, जो आप पहले से जानते "
-"हैं उसे लिखने के लिए 'नॉलेज जोड़ें' दबाएं, या बस AI से कुछ खोजने के लिए "
-"कहें — यह जो पाता है उसे सहेज लेता है।"
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12732,14 +12151,6 @@ msgstr "स्रोत URL"
 msgid "Source Settings"
 msgstr "स्रोत सेटिंग्स"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "AI द्वारा संकलित ज्ञान संपादित करें"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "सहेजें (पुष्टि करता है)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "कृपया एक स्रोत प्रकार चुनें।"
@@ -12777,10 +12188,6 @@ msgstr "स्रोत नहीं मिला।"
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "स्रोत नाम"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "पैरामीटर नाम (संदर्भ कुंजी)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12889,17 +12296,9 @@ msgstr "हटाना विफल"
 msgid "Crop Type"
 msgstr "फ़सल प्रकार"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "पुष्टि हो रही है…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "पुष्टि की गई।"
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "वापस लिया जा रहा है…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12908,10 +12307,6 @@ msgstr "वापस लिया गया।"
 #: aot_flask/templates/pages/ai/ai_library.html:505
 msgid "Retire this item? It will stop being cited until reactivated."
 msgstr "इस आइटम को वापस लें? पुनः सक्रिय होने तक इसे उद्धृत नहीं किया जाएगा।"
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "पुनः सक्रिय किया जा रहा है…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13061,10 +12456,6 @@ msgstr "ज्ञान के रूप में पंजीकृत कर�
 msgid "Parameters for the selected operations"
 msgstr "चयनित ऑपरेशनों के लिए पैरामीटर"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "कम से कम एक ऑपरेशन चुनें।"
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13203,23 +12594,9 @@ msgstr "सारांश"
 msgid "Key-Value Extraction"
 msgstr "की-वैल्यू एक्सट्रैक्शन"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "AI प्रबंधक"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "बातचीत प्रबंधन"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "त्रुटि डैशबोर्ड"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "रीज़निंग इतिहास"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13235,25 +12612,9 @@ msgstr "तिथि"
 msgid "Details"
 msgstr "विवरण"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "अभी तक कोई रीज़निंग इतिहास नहीं है।"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "AI त्रुटि डैशबोर्ड"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "पैटर्न रीफ़्रेश करें"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "सूची रीफ़्रेश करें"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "त्रुटि पैटर्न का विश्लेषण किया जा रहा है..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13295,51 +12656,14 @@ msgstr "अनुचित कार्रवाई"
 msgid "Tool Misuse"
 msgstr "टूल का दुरुपयोग"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "उपयोगकर्ता सुधार"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "तर्क विवरण"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "चरण 1: उपयोगकर्ता अनुरोध"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "चरण 2: इरादा और योजना"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "चरण 3: टूल निष्पादन (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "चरण 4: संश्लेषण और समन्वय"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "समन्वयक"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "चरण 5: अंतिम प्रतिक्रिया"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "त्रुटि विवरण और समाधान"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "नॉलेज पर लागू करें"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "कुल लंबित"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13350,47 +12674,19 @@ msgstr "सिफारिशें"
 msgid "Review"
 msgstr "समीक्षा करें"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "कोई त्रुटि नहीं मिली।"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "क्या आप सुनिश्चित हैं?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "MCP सर्वर संशोधित करें"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "सर्वर का नाम"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "निष्पादन कमांड"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "स्कोप"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "सामान्य (हमेशा मेनिफ़ेस्ट में)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "विशिष्ट (लेज़ी-लोडेड)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "उद्देश्य"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "एनवायरनमेंट वेरिएबल्स (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13398,38 +12694,14 @@ msgstr "एनवायरनमेंट वेरिएबल्स (JSON)"
 msgid "Update"
 msgstr "अपडेट करें"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "AI एजेंट बनाएं"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "संबंधित लिंक"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "API कुंजी प्राप्त करें"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "एजेंट जानकारी"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "एजेंट का नाम"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "उदा. एनर्जी मैनेजर"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "AI सेवा पंजीकरण"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "उदा. मेरा OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13441,14 +12713,6 @@ msgstr "मॉडल चयन"
 msgid "Enter model name manually"
 msgstr "मॉडल का नाम मैन्युअल रूप से दर्ज करें"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "API एंडपॉइंट"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "AI पाइपलाइन और टूल एक्सेस"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13458,10 +12722,6 @@ msgstr "पाइपलाइन भूमिका"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "वर्कर (लीगेसी)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "मॉडल टियर"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13476,17 +12736,9 @@ msgstr "स्टैंडर्ड"
 msgid "Heavy"
 msgstr "हैवी"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "टूल एक्सेस"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "असाइन किया गया"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "असाइन किए गए MCP सर्वर चुनें"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13494,15 +12746,6 @@ msgstr "असाइन किए गए MCP सर्वर चुनें"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "विशेषज्ञता"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "उदा. सिंचाई, जलवायु"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "एजेंट नियम"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13515,29 +12758,9 @@ msgstr "सिस्टम प्रॉम्प्ट"
 msgid "Define how this agent should behave..."
 msgstr "परिभाषित करें कि यह एजेंट कैसे व्यवहार करे..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "कस्टम मॉडल..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "सेवा कुंजी"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "सेवा API कुंजी"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "डिफ़ॉल्ट सिस्टम इंजन"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "सेवा क्रेडेंशियल"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "ब्रेन कॉन्फ़िगरेशन"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13549,164 +12772,17 @@ msgstr "ब्रेन कॉन्फ़िगरेशन"
 msgid "Options"
 msgstr "विकल्प"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "MCP स्कोप"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "MCP निर्देश"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "सर्वर निर्देश"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "केवल इरादे को वर्गीकृत करता है। लाइटवेट मॉडल की सिफारिश की जाती है।"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "निष्पादन योजनाएं बनाता है। स्टैंडर्ड या हैवी मॉडल की सिफारिश की जाती है।"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "टूल्स को कॉल करता है और डेटा एकत्र करता है।"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "परिणामों को उपयोगकर्ता प्रतिक्रिया में संश्लेषित करता है।"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "लीगेसी सुपरवाइज़र/वर्कर मोड।"
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "AI वैश्विक विकल्प"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "वैश्विक AI सेटिंग्स"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "AI ऑर्केस्ट्रेशन लेयर के लिए सिस्टम-व्यापी पैरामीटर कॉन्फ़िगर करें।"
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "डिवाइस AI संदर्भ देखें"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "व्यक्तिगत डिवाइसों के लिए AI संदर्भ डेटा जांचें"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "डिवाइस ब्राउज़ करें"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "इंफ्रास्ट्रक्चर"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "मास्टर प्रॉक्सी URL"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr ""
-"यदि एजेंट-विशिष्ट एंडपॉइंट खाली है तो उपयोग किया जाने वाला वैश्विक "
-"प्रॉक्सी।"
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "अनुरोध टाइमआउट (सेकंड)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "उपयोगकर्ता अनुभव (टोस्ट)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "AI सफलता संदेश छिपाएं"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "AI चेतावनी संदेश छिपाएं"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "AI शेड्यूलर"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "सहयोगी लक्ष्य ट्रैकर"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[मैक्रो व्यू]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[दिन]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[सप्ताह]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[महीना]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[वर्ष]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[आज]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[ऊपर(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[नीचे(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[इंडेंट(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[आउटडेंट(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "डेटा रीफ़्रेश करें"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "कार्य जोड़ें"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "कार्य लोड हो रहे हैं..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "AI प्रस्तावित कार्य प्रबंधन"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "AI एजेंटों द्वारा प्रस्तावित कार्यों की समीक्षा और प्रबंधन करें।"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "कार्य खोजें..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13716,22 +12792,6 @@ msgstr "कार्य खोजें..."
 msgid "Target"
 msgstr "टारगेट"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "निर्धारित समय"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "प्रस्तावित कार्य लोड हो रहे हैं..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "कार्य संपादित करें"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "प्रगति पर"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "कार्य"
@@ -13740,21 +12800,9 @@ msgstr "कार्य"
 msgid "Goal"
 msgstr "लक्ष्य"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "माइलस्टोन"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "चेकपॉइंट"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "पैरेंट कार्य"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "प्रस्तावित जॉब संपादित करें"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13765,10 +12813,6 @@ msgstr "आउटपुट नियंत्रण"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "PID समायोजन"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "टारगेट ID"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13783,63 +12827,10 @@ msgstr "शेड्यूल समय"
 msgid "AI Reasoning"
 msgstr "AI तर्क"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "हटाने का कारण"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "उदा. अनावश्यक, गलत समय..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "कार्य हटाएं"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "परिवर्तन सहेजें"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "AI अनुरोध और सलाह"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"MCP के माध्यम से जुड़ा बाहरी AI अपने आप कुछ भी नहीं बदल सकता। नियंत्रण "
-"अनुरोध यहां आपकी स्वीकृति की प्रतीक्षा करते हैं, और तुलना के लिए राय "
-"एकत्र की जाती है।"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "AI सलाह लेजर"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"मुख्य AI, बाहरी AI, या अधीनस्थ नोड्स द्वारा सबमिट की गई राय। स्वीकार करना"
-" केवल सहमति है — यह नियंत्रण निष्पादित नहीं करता।"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "हाल के AI टूल कॉल"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "अभी तक कोई सलाह सबमिट नहीं की गई है।"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "अभी तक कोई टूल कॉल दर्ज नहीं किया गया है।"
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13857,21 +12848,9 @@ msgstr "प्रस्तावित कार्रवाई"
 msgid "MCP Server Management"
 msgstr "MCP सर्वर प्रबंधन"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "सभी स्थिति रीफ़्रेश करें"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "सर्वर जोड़ें"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Model Context Protocol ब्रिज प्रक्रियाओं की निगरानी और नियंत्रण करें"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "MCP सर्वर खोजे जा रहे हैं..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13896,10 +12875,6 @@ msgstr "सहेजने पर सक्रिय करें"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "एनवायरनमेंट वेरिएबल्स"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "कॉन्फ़िगरेशन सहेजें"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -13936,14 +12911,6 @@ msgstr "स्वचालित ट्रिगर"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "नया कार्य"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "AI प्रस्ताव"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "कोई लंबित प्रस्ताव नहीं।"
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -13986,10 +12953,6 @@ msgstr "अभी तक कोई इतिहास नहीं।"
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "प्रस्ताव विवरण"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "प्रस्तावक"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14145,14 +13108,6 @@ msgstr "डिवाइस-स्थानीय"
 msgid "Your time"
 msgstr "आपका समय"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "इस जॉब को स्वीकृत करें?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "अस्वीकृति कारण (वैकल्पिक):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14185,14 +13140,6 @@ msgstr "टारगेट: "
 msgid "By: "
 msgstr "द्वारा: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "स्थानीय समय: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "तर्क: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "कैलेंडर आपके समय क्षेत्र में दिखाया जाता है"
@@ -14201,138 +13148,21 @@ msgstr "कैलेंडर आपके समय क्षेत्र म�
 msgid "Getting to Know Each Other"
 msgstr "एक-दूसरे को जानना"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "AI समय के साथ आपके डेटा से सीखता है"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "आप जितना अधिक इंटरैक्ट करेंगे, यह उतना ही सटीक होता जाएगा"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "AI किस पर ध्यान केंद्रित करे, यह आप नियंत्रित करते हैं"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "हमें अपनी सुविधा के बारे में बताएं"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "आपकी सुविधा का सबसे अच्छा वर्णन क्या करता है?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "जारी रखने के लिए कृपया सुविधा का प्रकार चुनें।"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "इस AI से आपको विशेष रूप से क्या चाहिए, यह बताएं (वैकल्पिक)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "जारी रखें"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "सब तैयार है!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "सुविधा का प्रकार"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "आपके निर्देश"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"अब आप देखेंगे: AI स्थिति, आपके मुख्य कीवर्ड, और AI आपकी सुविधा के बारे "
-"में कैसे सीख रहा है।"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "AI डैशबोर्ड पर जाएं"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "सुविधा सीखने की स्थिति"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "AI सलाहकार के साथ शुरुआत करें"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"इस AI सिस्टम को आपकी सुविधा के अनुरूप सलाह देने के लिए एक सीखने की अवधि "
-"की आवश्यकता होती है।"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "सीखने की अवधि के दौरान:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "सलाह सामान्य कृषि ज्ञान पर आधारित होती है"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "सुविधा-विशिष्ट डेटा अभी भी सीमित है"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "आपकी प्रतिक्रिया ही कैलिब्रेशन की कुंजी है"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "सुविधा जानकारी"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "वर्टिकल फ़ार्म"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "नर्सरी"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "संचालन अनुभव"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "1 वर्ष से कम"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 वर्ष"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 वर्ष"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ वर्ष"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "महत्वपूर्ण पैरामीटर"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "जो लागू हो सभी चुनें"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "पोषक तत्व"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14348,53 +13178,6 @@ msgstr "पीछे"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "अगला"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "उपयोग की शर्तें"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"यह AI सलाहकार समय के साथ आपकी सुविधा से सीखता है। प्रारंभिक सीखने की अवधि"
-" के दौरान, सलाह सामान्य कृषि ज्ञान पर आधारित होती है और हो सकता है कि "
-"आपकी परिस्थितियों के अनुरूप न हो। आपकी प्रतिक्रिया — सुझावों की पुष्टि "
-"करना, समायोजित करना, या अस्वीकार करना — ही सिस्टम को आपकी सुविधा के "
-"अनुसार कैलिब्रेट करती है। जब सिस्टम अनिश्चित होगा, तो वह आपको बताएगा कि "
-"कौन-सी पुष्टि सहायक होगी। नियंत्रण हमेशा आपके पास रहता है: आपकी स्वीकृति "
-"के बिना कोई स्वचालित कार्रवाई नहीं की जाएगी।"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "मैं उपरोक्त शर्तों को समझता हूं और सहमत हूं"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "सहमत हों और शुरू करें"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "ऑनबोर्डिंग पूर्ण"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"AI सलाहकार इस सुविधा के बारे में सीखना शुरू करेगा। आप इसके सुझावों पर "
-"जितनी अधिक प्रतिक्रिया देंगे, सलाह उतनी ही सटीक और अनुकूलित होती जाएगी।"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "AI का उपयोग शुरू करें"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14429,10 +13212,6 @@ msgstr "बड़ा"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "बजट स्वचालित रूप से प्रत्येक टियर के अनुसार अनुकूलित होते हैं।"
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "सेवा और मॉडल"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "मैनुअल एंट्री"
@@ -14440,10 +13219,6 @@ msgstr "मैनुअल एंट्री"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "मौजूदा कुंजी रखने के लिए खाली छोड़ें"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "पाइपलाइन कॉन्फ़िगरेशन"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16407,14 +15182,6 @@ msgstr "आवरण और वेंटिलेशन"
 msgid "Cover layers"
 msgstr "कवर परतें"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"बाहरी कवर हमेशा आवश्यक है। आवश्यकतानुसार दीवार सुदृढ़ीकरण या भीतरी कवर "
-"जोड़ें।"
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "दीवार सुदृढ़ीकरण"
@@ -16824,7 +15591,7 @@ msgstr "कूलिंग"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1063
 msgid "ACH"
-msgstr "ACH"
+msgstr "ACH (प्रति घंटा वायु परिवर्तन)"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1067
 msgid "Reference values for mechanical equipment sizing"
@@ -17461,7 +16228,7 @@ msgstr "विंडो"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1335
 msgid "ch"
-msgstr "ch"
+msgstr "चैनल"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1337
 msgid "Capacity"
@@ -17581,26 +16348,6 @@ msgstr "लागू किया जा रहा है..."
 msgid "Failed to submit judgment"
 msgstr "निर्णय सबमिट करने में विफल"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "प्रारंभिक स्थान खोजने के लिए पता खोजें"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "प्रारंभिक मानचित्र केंद्र अक्षांश। उदाहरण: 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "प्रारंभिक मानचित्र केंद्र देशांतर। उदाहरण: 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr "प्रारंभिक मानचित्र ज़ूम स्तर। आप संख्या दर्ज करके इसे बदल सकते हैं।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "वैश्विक खोज के लिए डिफ़ॉल्ट सर्च इंजन चुनें।"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "डिफ़ॉल्ट पर रीसेट करें"
@@ -17621,82 +16368,16 @@ msgstr "सुविधा रंग"
 msgid "Equipment Color"
 msgstr "उपकरण रंग"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "AoT डिवाइस रंग"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "पैनल पृष्ठभूमि रंग"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "डिफ़ॉल्ट: 25। अधिकतम सीमा 30 है।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"मानचित्र स्रोत द्वारा प्रदान न किए गए उच्च ज़ूम स्तरों के लिए डिजिटल ज़ूम"
-" का उपयोग करें।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "18 और उससे ऊपर के निकट स्तरों के लिए आंशिक ज़ूम सक्षम करें।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "टाइल लोड होने पर फेड-इन प्रभाव सक्षम करें।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"कई वेक्टर लेयर मौजूद होने पर प्रदर्शन सुधारने के लिए Canvas रेंडरर का "
-"उपयोग करें।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "अधिकतम साइट पॉलीगॉन"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"साइटों के लिए अधिकतम पॉलीगॉन सीमित करें। इस सीमा से अधिक साइटों को "
-"बिंदुओं के रूप में प्रदर्शित किया जाएगा।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "अधिकतम ज़ोन पॉलीगॉन"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"ज़ोन के लिए अधिकतम पॉलीगॉन सीमित करें। इस सीमा से अधिक ज़ोन को बिंदुओं के"
-" रूप में प्रदर्शित किया जाएगा।"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "अधिकतम डिवाइस पॉलीगॉन"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"डिवाइस के लिए अधिकतम पॉलीगॉन सीमित करें। इस सीमा से अधिक डिवाइस को "
-"बिंदुओं के रूप में प्रदर्शित किया जाएगा।"
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "कोई प्लॉट, ज़ोन या साइट और एक अवधि चुनें, और जो उगाया गया, मापा गया और नियंत्रित किया गया, उसका स्नैपशॉट जनरेट करें — एक ऐसा दस्तावेज़ जिसे आप सौंप या प्रिंट कर सकते हैं।"
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17704,7 +16385,7 @@ msgstr "बदलें"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "फसल, किस्म, नाम, ज़ोन से खोजें…"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17712,7 +16393,7 @@ msgstr "समाप्ति तिथि"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "या पूरी साइट या ज़ोन के लिए जर्नल बनाएं"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17728,7 +16409,7 @@ msgstr "मैप न किया गया"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "पूरी साइट या ज़ोन शामिल होता है, उसके अंदर के हर प्लॉट सहित।"
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17772,11 +16453,11 @@ msgstr "जर्नल"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "यह जर्नल अभी जनरेट हो रहा है। यह पेज अपने-आप रीफ्रेश हो जाएगा।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "यह जर्नल जनरेट नहीं हो सका।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17809,7 +16490,7 @@ msgstr "सामग्री"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "नीचे का हर खंड इसी क्रम में नए पेज से शुरू होता है।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -17819,7 +16500,7 @@ msgstr "अवलोकन"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "यह जर्नल किस बारे में है"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -17849,41 +16530,33 @@ msgstr "%(n)s अवधियाँ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "इसे कैसे पढ़ें"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "अवधि और टाइमज़ोन"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "दिन की शुरुआत और समाप्ति %(tz)s के अनुसार है। इस दस्तावेज़ की हर तिथि स्थानीय कैलेंडर का दिन है, UTC का दिन नहीं।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "न्यूनतम / अधिकतम / औसत"
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "न्यूनतम और अधिकतम सटीक हैं। औसत, प्रति घंटे के औसतों का औसत है, इसलिए जिन घंटों में अधिक नमूने लिए गए, वे उसे अपनी ओर नहीं खींचते — यह एक अनुमान है, वास्तविक समय-भारित औसत नहीं।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "लक्ष्य और Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -17893,17 +16566,17 @@ msgstr "रनटाइम"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "अवधि के दौरान डिवाइस जितने घंटे चालू रहा, जो उसके पहले चैनल से पढ़ा गया है।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "जो शामिल नहीं किया गया"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "डिवाइस डायग्नोस्टिक्स (बैटरी, सिग्नल) डिफ़ॉल्ट रूप से शामिल नहीं होते। जर्नल जनरेट करते समय इन्हें चालू किया जा सकता है।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -17911,7 +16584,7 @@ msgstr "यहाँ उपयोग किए गए शब्द"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "संख्याएं कहां से आती हैं"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -17921,7 +16594,7 @@ msgstr "स्रोत"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "इस विषय को सौंपे गए डिवाइस के लिए इस AoT सिस्टम में रखे गए सेंसर और डिवाइस रिकॉर्ड।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -17931,15 +16604,15 @@ msgstr "स्नैपशॉट"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "यह दस्तावेज़ जनरेट होने के समय ही तय हो गया था। डिवाइस, प्रोग्राम या वायरिंग में बाद के बदलाव इसे नहीं बदलते।"
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "सटीकता पर टिप्पणियां"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "प्रिंट करें (PDF के रूप में सहेजें)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -17968,22 +16641,22 @@ msgstr "आइटम"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "ग्रोइंग डिग्री डेज़"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "यह जर्नल: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "आधार %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "%(p)s%% दिनों में मापन हुआ"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -17995,12 +16668,12 @@ msgstr "प्रोग्राम में कोई आधार ताप�
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "पर्याप्त मापे गए दिन नहीं हैं"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "इस जर्नल में %(n)s दिन"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18066,7 +16739,7 @@ msgstr "अनुमानित"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "इस जर्नल से पहले"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18098,12 +16771,7 @@ msgstr "पूरी अवधि"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "दिन का उजाला %(h)s घंटे"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18123,11 +16791,6 @@ msgstr "उपयोग"
 msgid "varies"
 msgstr "अलग-अलग"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "कोई सेंसर नहीं"
@@ -18139,7 +16802,7 @@ msgstr "इस जर्नल को हटाएं? इसे पूर्व
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "कुछ गड़बड़ हो गई।"
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19220,10 +17883,6 @@ msgstr "ऑफ़ पेलोड (हेक्स)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "शेड्यूलर को असाइन करें"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "चयनित डिवाइस पंजीकृत करें"
@@ -19437,10 +18096,6 @@ msgstr "MCP बैज"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "MCP बैज रंग संपादित करने के लिए क्लिक करें"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "अपग्रेड बैज रंग संपादित करने के लिए क्लिक करें"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19719,22 +18374,6 @@ msgstr "प्रगतिरत/जानकारीपरक स्थित�
 msgid "Text color used on the info tint"
 msgstr "जानकारी टिंट पर प्रयुक्त टेक्स्ट रंग"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr "सफलता सूचना बॉक्स के लिए बॉर्डर रंग (एडमिन पेज, जैसे अपग्रेड)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "चेतावनी/डिफ़ॉल्ट सूचना बॉक्स के लिए बॉर्डर रंग"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "खतरा/त्रुटि सूचना बॉक्स के लिए बॉर्डर रंग"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "जानकारी सूचना बॉक्स के लिए बॉर्डर रंग"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr "सहेजें, सक्रिय करें, टैब — पूरे ऐप में भरे हुए प्राइमरी बटन"
@@ -19766,10 +18405,6 @@ msgstr "बटन बॉर्डर"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "सभी बटन और सूची पंक्तियों के लिए बॉर्डर"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "नेव अपग्रेड बैज और अपग्रेड बटन पृष्ठभूमि"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20876,34 +19511,6 @@ msgstr "नोट्स प्रबंधक"
 msgid "Search content, subject..."
 msgstr "सामग्री, विषय खोजें..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "फ़िल्टर साफ़ करें"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "उन्नत फ़िल्टर"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "परिणाम निर्यात करें"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "PDF रिपोर्ट निर्यात"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"ऊपर दिए गए टैग फ़िल्टर का उपयोग करके किसी अवधि के भीतर के नोट्स को एक "
-"फ़ॉर्मेटेड PDF रिपोर्ट में संकलित करें।"
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "रिपोर्ट शीर्षक (वैकल्पिक)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "कोई नोट नहीं मिला"
@@ -21187,7 +19794,7 @@ msgstr "कोई टैग नहीं"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "कोई AI विश्लेषण उपलब्ध नहीं है। विश्लेषण अपने आप चलता है — कुछ देर बाद फिर देखें।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21199,7 +19806,7 @@ msgstr "AI को सिखाएं"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "AI को इस फैसिलिटी को समझने में मदद करने के लिए एक नोट जोड़ें..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21240,11 +19847,11 @@ msgstr "विश्वसनीयता:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "विश्लेषण से संकेत मिलता है कि निम्नलिखित बदलाव हुए हो सकते हैं:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "सलाह लोड नहीं हो सकी। कनेक्शन जांचें।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21252,7 +19859,7 @@ msgstr "सबमिट करने से पहले एक नोट दर
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "नोट सहेजा गया - अगले AI चक्र को इसकी जानकारी मिलेगी।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21262,25 +19869,9 @@ msgstr "सबमिशन विफल रहा।"
 msgid "Unable to save note. Please try again."
 msgstr "सहेजने में विफल। कृपया पुनः प्रयास करें।"
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "विश्लेषण करें"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "AI विश्लेषण विफल रहा"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "निष्पादन विफल रहा"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21316,11 +19907,11 @@ msgstr "डबल लेयर"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "राइट-क्लिक: घुमाएं"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "लेफ्ट-क्लिक: पैन"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21375,7 +19966,7 @@ msgstr "वैश्विक बैंड रंगों के रूप म�
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "पहले 5 खंड रंगों को सेटिंग्स > कस्टम UI के बैंड रंगों पर लागू करता है।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21418,15 +20009,15 @@ msgstr "कॉलम"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "वैश्विक चार्ट रंगों के रूप में सहेजा गया"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "वैश्विक चार्ट रंगों के रूप में सहेजें"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "पहले 6 सीरीज़ रंगों को सेटिंग्स > कस्टम UI के चार्ट रंगों पर लागू करता है।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21436,7 +20027,7 @@ msgstr "Y-अक्ष विकल्प"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "मैन्युअल Y-अक्ष न्यूनतम/अधिकतम सक्षम करें"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21464,7 +20055,7 @@ msgstr "पता दर्ज करें।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "इस सलाह के बारे में प्रश्न पूछें (जैसे, मुझे क्या करना चाहिए?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21472,7 +20063,7 @@ msgstr "AI से पूछें कि क्या करें"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "इस सलाह के आधार पर मुझे कौन-से ठोस कदम उठाने चाहिए?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21563,11 +20154,6 @@ msgstr "प्रारंभ समय"
 msgid "Select the Output to control in the widget options."
 msgstr "विजेट विकल्पों में नियंत्रित करने के लिए आउटपुट चुनें।"
 
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "डेटा स्थिति ऑफसेट (%%)"
-
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
 msgstr "शेड्यूल संपादित करें"
@@ -21598,19 +20184,19 @@ msgstr "छवि प्राप्त करने में त्रुट�
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "त्रुटि: HLS लाइब्रेरी लोड नहीं हो सकी"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "त्रुटि: ब्राउज़र सीधे RTSP का समर्थन नहीं करता। इसके बजाय 'रिले' विधि का उपयोग करें।"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "त्रुटि: कोई स्ट्रीमिंग URL कॉन्फ़िगर नहीं है"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "कैमरा जानकारी प्राप्त करने में त्रुटि"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21633,54 +20219,18 @@ msgstr "सक्रिय किया गया"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "इस फ़ंक्शन प्रकार में संपादन योग्य विकल्प नहीं हैं।"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "यह नियंत्रक सक्रिय है। बदलाव सहेजने से पहले इसे निष्क्रिय करें, अन्यथा वे लागू नहीं होंगे।"
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "सीरीज़ विकल्प"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "कस्टम रंग सक्षम करें"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Y-अक्ष टिक संरेखण सक्षम करें"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Y-अक्ष टिक पर आरंभ सक्षम करें"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Y-अक्ष टिक पर अंत सक्षम करें"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Y-अक्ष न्यूनतम"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Y-अक्ष अधिकतम"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21707,11 +20257,11 @@ msgstr "श्रेणी फ़िल्टर"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "केवल चुनी गई श्रेणियों की पोस्ट दिखाएं। कोई श्रेणी न चुनने पर सभी श्रेणियों की पोस्ट दिखाई जाती हैं।"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "अभी कोई श्रेणी नहीं है। यहाँ फ़िल्टर करने के लिए पोस्ट बनाते समय श्रेणी सेट करें।"
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22131,12 +20681,12 @@ msgstr "रुका हुआ — कोई एक्चुएटर पंज�
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "रोका गया — संचालन समय विंडो के बाहर"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "रोका गया (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22165,12 +20715,12 @@ msgstr "एक्चुएटर: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "वेंटिलेशन: %(ratio)s खुला (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "सुरक्षा गेट: %(reason)s — नियंत्रण रोका गया"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22179,27 +20729,27 @@ msgstr "ट्रिगर हुआ"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "सुरक्षा गेट (आंशिक): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "%(target)s को नियंत्रित करने के लिए कोई एक्चुएटर नहीं"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "उपकरण अपनी सीमा पर: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "सेट सीमा से अधिक: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "अंतिम चक्र: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22234,22 +20784,22 @@ msgstr "सीक्वेंस: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "आज की विंडो: %(start)s – %(end)s (चक्र %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "आज की विंडो: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "चक्र में बीता समय: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "स्टेप: %(total)s में से %(running)s चल रहे हैं"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22264,15 +20814,15 @@ msgstr "अवधि: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "अंतिम जांच: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "पिछली जांच में एक कार्रवाई चलाई गई।"
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "पिछली जांच में कोई कार्रवाई नहीं चलाई गई।"
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22281,7 +20831,7 @@ msgstr "अभी तक जांच नहीं हुई।"
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "अगली जांच में: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23617,20 +22167,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "बाहरी पर्यावरण संदर्भ संग्रहकर्ता"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"सुविधा के बाहर से बाहरी तापमान, नमी, हवा की गति, वर्षा, सौर विकिरण, ओस "
-"बिंदु, और CO2 एकत्र करता है। एकीकृत पर्यावरण नियंत्रण फ़ंक्शन इस "
-"संग्रहकर्ता को अपने एकमात्र प्रामाणिक स्रोत के रूप में उपयोग करता है। "
-"प्रत्येक आइटम के लिए बाहरी सेंसर चुनें। फ़ॉलबैक डिफ़ॉल्ट मान लागू करने के"
-" लिए आइटम को खाली छोड़ दें।"
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "अपडेट अवधि"
@@ -23704,32 +22240,6 @@ msgid ""
 "Select the external CO₂ (ppm) measurement. If absent, the default is 400 "
 "ppm."
 msgstr "बाहरी CO₂ (ppm) माप चुनें। यदि उपलब्ध नहीं है, तो डिफ़ॉल्ट 400 ppm है।"
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "सेंसर की अधिकतम अनुमत आयु (सेकंड)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr "इससे पुराने माप को फ़ॉलबैक डिफ़ॉल्ट मान से बदल दिया जाता है।"
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "फ़ॉलबैक बाहरी तापमान (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr ""
-"जब सेंसर उपलब्ध न हो या समाप्त हो गया हो, तब उपयोग करने के लिए डिफ़ॉल्ट "
-"मान।"
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "फ़ॉलबैक बाहरी नमी (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "फ़ॉलबैक हवा की गति (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -23865,14 +22375,6 @@ msgstr "इनपुट की अधिकतम आयु (सेकंड)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "REST पोर्ट"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"सेटिंग्स -> ChirpStack से सर्वर/टोकन; डिवाइस वहां असाइन किए गए (\"द्वारा "
-"प्रबंधित\")।"
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -25503,7 +24005,7 @@ msgstr ""
 
 #: inputs/kma_weather_stn_L.py:88
 msgid "stn"
-msgstr "stn"
+msgstr "स्टेशन"
 
 #: inputs/linux_command.py:50
 msgid "Command Timeout"
@@ -26037,18 +24539,6 @@ msgstr ""
 "(गहरा), और Voyager शैलियों के साथ संयमित रंग योजनाएं प्रदान करता है, जो "
 "डेटा बिंदुओं और सेंसर जानकारी को उभारने के लिए डिज़ाइन की गई हैं।"
 
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"यूरोपीय अंतरिक्ष एजेंसी (ESA) के Sentinel-2 उपग्रह डेटा पर आधारित एक "
-"वैश्विक भूमि आवरण मैप। वनस्पति, शहरी क्षेत्र, कृषि भूमि, वन, और जल "
-"निकायों को 10मी रिज़ॉल्यूशन पर वर्गीकृत और रंग-कोडित किया गया है, जो "
-"पर्यावरणीय विश्लेषण के लिए उपयोगी है।"
-
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
 msgstr "Esri"
@@ -26191,11 +24681,11 @@ msgstr ""
 
 #: inputs_gis/gis_nasa_gibs.py:9
 msgid "MODIS Terra TrueColor"
-msgstr "MODIS Terra TrueColor"
+msgstr "MODIS Terra ट्रू कलर"
 
 #: inputs_gis/gis_nasa_gibs.py:18
 msgid "VIIRS SNPP TrueColor"
-msgstr "VIIRS SNPP TrueColor"
+msgstr "VIIRS SNPP ट्रू कलर"
 
 #: inputs_gis/gis_nasa_gibs.py:27
 msgid "Blue Marble (Precip)"
@@ -27801,17 +26291,6 @@ msgstr ""
 "आर्द्रता या VPD जैसे प्रीसेट चुनने पर न्यूनतम/अधिकतम मान और रंग खंड स्वतः"
 " सेट हो जाते हैं।"
 
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts ओपन सोर्स और व्यक्तिगत उपयोग के लिए निःशुल्क है। हालांकि, यदि "
-"इसे किसी व्यावसायिक उत्पाद के हिस्से के रूप में उपयोग किया जाता है, तो "
-"व्यावसायिक लाइसेंस आवश्यक हो सकता है। सटीक जानकारी के लिए कृपया "
-"https://shop.highsoft.com देखें।"
-
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
 #: widgets/AoT_graph.py:479
@@ -28501,54 +26980,17 @@ msgstr "आज और पिछले परिवर्तनों को च�
 msgid "Targets vs now"
 msgstr "लक्ष्य बनाम अभी"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"इस चरण द्वारा घोषित लक्ष्यों और सीमाओं के मुकाबले वर्तमान रीडिंग। एक को "
-"गेज मिलता है, बाकी को टेक्स्ट के रूप में सूचीबद्ध किया जाता है।"
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "रुझान"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"जिन पंक्तियों में कोई अक्ष नहीं है उन्हें हाल की ट्रेंड लाइन से भरता है। "
-"इसके लिए लक्ष्य ब्लॉक की आवश्यकता है।"
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "संचित ऊष्मा"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"यह चरण ग्रोइंग डिग्री डेज़ में कितनी दूर आ चुका है। यह केवल तभी दिखाया "
-"जाता है जब प्रोग्राम एक आधार तापमान घोषित करता है।"
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "मिट्टी की नमी"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "गेज मीट्रिक"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"किस मापन को गेज मिलता है। बाकी को टेक्स्ट के रूप में सूचीबद्ध किया जाता "
-"है। यदि यह प्लॉट इसे नहीं मापता, तो इसके बजाय रेंज वाला पहला मापन दिखाया "
-"जाता है।"
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29142,30 +27584,9 @@ msgstr "दशमलव स्थान 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "दूसरे माप के लिए दशमलव स्थानों की संख्या"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"नवीनतम सूचना बोर्ड पोस्ट के शीर्षक प्रदर्शित करता है। किसी शीर्षक पर "
-"क्लिक करने पर पूरी पोस्ट (सामग्री, पोल, उत्तर, स्वीकृति) एक पॉपअप में "
-"खुलती है; वहाँ की गई सभी कार्रवाइयाँ वास्तविक पोस्ट में परिलक्षित होती "
-"हैं। लेखन अनुमति वाले उपयोगकर्ता विजेट से सीधे पोस्ट बना, संपादित और हटा "
-"भी सकते हैं।"
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "पोस्ट की संख्या"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "नवीनतम सूचनाओं में से कितनी प्रदर्शित करनी हैं"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "सूचना सूची को कितनी बार रीफ़्रेश करना है"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29368,11 +27789,6 @@ msgstr "डिफ़ॉल्ट रूप से क्रिया सूच�
 msgid "Sequence Settings (Synced)"
 msgstr "सीक्वेंस सेटिंग्स (सिंक्ड)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "HH:MM प्रारूप"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "अवधि (सेकंड)"
@@ -29411,18 +27827,18 @@ msgstr "जहाँ रुका था वहीं से जारी रख
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "शुरू से आरंभ करें"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "फिर से चालू करने पर"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "इस सीक्वेंस को बंद करके फिर चालू करने पर क्या होता है। जारी रखने पर बाधित चक्र वहीं से फिर शुरू होता है; शुरू से आरंभ करने पर यह पहले स्टेप से चलता है। डेमन पुनः आरंभ होने पर, इस सेटिंग की परवाह किए बिना, हमेशा जारी रहता है।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -29947,7 +28363,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "तेज़ रोशनी में गीला करने वाली (वेटिंग-प्रकार) मिस्टिंग को रोकता है (पानी की बूंदें लेंस की तरह सूर्य की रोशनी को पत्तियों पर केंद्रित कर सकती हैं) और, यदि नीचे सेट किया गया हो, तो सूर्यास्त से पहले भी। यह इस बात से स्वतंत्र है कि मिस्टिंग कितनी बार चलती है — किसी भी मिस्टिंग आवृत्ति पर इसे चालू या बंद करें।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30280,16 +28696,6 @@ msgstr "पूर्वानुमान फ़ीडफ़ॉरवर्ड"
 msgid "Enable Forecast Feedforward"
 msgstr "पूर्वानुमान फ़ीडफ़ॉरवर्ड सक्षम करें"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"प्रतिकूल मौसम आने से पहले सक्रिय रूप से तापमान/आर्द्रता सेटपॉइंट को "
-"स्थानांतरित करने और वेंटिलेशन को रोकने के लिए KMA अल्पकालिक मौसम "
-"पूर्वानुमान (forecast.json) का उपयोग करें।"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "अभी यहाँ जो है उस पर प्रतिक्रिया करता है"
@@ -30301,14 +28707,6 @@ msgstr "आगे के लिए पहले से तैयारी कर
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "पूर्वानुमान लुकअहेड (घंटे)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"आने वाले प्रतिकूल मौसम की जांच के लिए कितने घंटे आगे देखना है (1–6 घंटे)।"
-" लंबा लुकअहेड पहले चेतावनी देता है लेकिन अधिक-सुधार कर सकता है।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30503,14 +28901,6 @@ msgstr "शुरुआत से संचयी"
 msgid "Vapor Pressure Deficit"
 msgstr "वाष्प दाब न्यूनता"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "मान फ़ॉन्ट आकार (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "मापन का फ़ॉन्ट आकार"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "विकास शेड्यूल"
@@ -30519,31 +28909,9 @@ msgstr "विकास शेड्यूल"
 msgid "Stop Control On"
 msgstr "नियंत्रण को 'चालू' पर रोकें"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"इस तिथि के बाद नियंत्रण स्थायी रूप से बंद हो जाता है। चलते रहने के लिए "
-"इसे खाली छोड़ दें।"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "मिस्टिंग सनबर्न सुरक्षा"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "नर्सरी मोड"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "नर्सरी (पौध) मोड"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"पौध के लिए सख्त मिस्टिंग सीमाएं, क्योंकि वे बड़ी पत्तियों की तुलना में "
-"जल्दी झुलस जाते हैं।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30557,10 +28925,6 @@ msgstr "मिस्ट"
 
 msgid "Devices under automatic control"
 msgstr "स्वचालित नियंत्रण के अंतर्गत उपकरण"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s बाहर रखे गए"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr "स्वचालित नियंत्रण को किसी उपकरण को चलाने से रोकने के लिए उसे बंद करें।"
@@ -30612,14 +28976,6 @@ msgstr ""
 " देता है लेकिन अत्यधिक सुधार कर सकता है। यदि इस सुविधा का अपना "
 "पूर्वानुमान स्रोत जोड़ा गया है तो इसे अनदेखा किया जाता है — वह स्रोत पहले"
 " से ही अपना खुद का लुकअहेड लागू करता है।"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "सूचना श्रेणी फ़िल्टर"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "नोट्स स्थान"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -30724,10 +29080,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "नोट्स दिखाने के लिए विजेट सेटिंग्स में एक स्थान चुनें।"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr "चुने गए स्थान में लिखे गए नोट्स दिखाता है (नीचे \"स्थान\" देखें)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31054,18 +29406,6 @@ msgstr "घूर्णन रोकें"
 msgid "System Timezone"
 msgstr "सिस्टम समय क्षेत्र"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"पूरे सिस्टम का डिफ़ॉल्ट समय क्षेत्र (IANA नाम, जैसे Asia/Seoul)। डेमन लॉग"
-" के समय, ऑडिट लॉग और बिना स्थान वाले उपकरणों के शेड्यूल के अंतिम आधार के "
-"रूप में उपयोग होता है। यह खाता सेटिंग्स में आपका व्यक्तिगत प्रदर्शन समय "
-"क्षेत्र नहीं है।"
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31078,3 +29418,999 @@ msgstr "स्थान सेट नहीं है — सिस्टम ट
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "पूरे सिस्टम का डिफ़ॉल्ट टाइमज़ोन (IANA नाम, जैसे Asia/Seoul)। यह डेमन लॉग के समय और बिना स्थान वाले उपकरणों के अंतिम आधार के रूप में उपयोग होता है; यहाँ सहेजने पर वे उपकरण इसे अपनाते हैं। लोग जो समय पढ़ते और लिखते हैं, वह खाता सेटिंग्स में हर व्यक्ति के अपने टाइमज़ोन के अनुसार होता है।"
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "मोबाइल पर पूरी चौड़ाई"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "कंप्यूटर स्क्रीन का आकार"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "कंट्रोल सरफ़ेस"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "विभाजक रेखा"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "विभाजक रेखा (हल्की)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "मोबाइल स्क्रीन का आकार"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "टॉगल ट्रैक ऑफ"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "अनुत्तरदायी"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "शेड्यूल किया गया"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "समाप्ति समय उसी दिन के प्रारंभ समय के बाद का होना चाहिए (आधी रात को पार करने वाली अवधि समर्थित नहीं है)।"
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "यह सीक्वेंस सप्ताह के दिनों के अनुसार अलग-अलग समय का उपयोग करता है, इसलिए यहाँ का प्रारंभ/समाप्ति समय लागू नहीं किया गया। इसे सीक्वेंस विजेट के दिनवार शेड्यूल में बदलें।"
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "दैनिक, साप्ताहिक या मासिक चुनें।"
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "पंजीकरण का लक्ष्य (इनपुट या आउटपुट) चुनें।"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "पूर्ववत करें"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "इस डायलॉग को खोलते समय की सेटिंग्स पर वापस लौटें"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "पूर्ववत किया गया"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "सिग्नल"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "निर्भरताएं इंस्टॉल करें:"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "AoT होमपेज"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "कंप्यूटर पर पूरे पेज को बड़ा करता है — टेक्स्ट, बटन और मानचित्र एक साथ। फ़ोन और टैबलेट ऊपर की सेटिंग का उपयोग करते हैं।"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "फ़ोन और टैबलेट पर पूरे पेज को बड़ा करता है — टेक्स्ट, बटन और मानचित्र एक साथ। कंप्यूटर नीचे की सेटिंग का उपयोग करते हैं।"
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "कोई परिणाम नहीं"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "कुछ भी चयनित नहीं"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "रिकॉर्ड"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "अनुरोध"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "{1} में से {0} चयनित"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "नियंत्रण अनुरोध लोड नहीं हो सके"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "केवल नियंत्रक संपादित कर सकने वाले लोग ही इन पर निर्णय ले सकते हैं।"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "ये अभी चलाए नहीं गए हैं। स्वीकृत करने पर यहाँ वर्णित कार्य ठीक वैसा ही चलेगा — AI को वापस जाकर बताने की आवश्यकता नहीं है।"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "AI अनुरोध"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "AI सलाह"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "सलाह लोड नहीं हो सकी"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "कोई सलाह प्रतीक्षा में नहीं है।"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "कोई शेड्यूल प्रस्ताव प्रतीक्षा में नहीं है।"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "इस AI और जुड़े हुए अन्य AI की राय। स्वीकार करने का अर्थ केवल यह दर्ज करना है कि आप सहमत हैं — इससे कुछ भी नहीं चलता।"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "AI द्वारा प्रस्तावित"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "इस प्रस्ताव को शेड्यूल में जोड़ें?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "इस प्रस्ताव को अस्वीकार करें?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "शेड्यूल प्रस्ताव"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "AI द्वारा शेड्यूल के लिए प्रस्तावित कार्य। स्वीकृत करने पर वे शेड्यूल में जुड़ जाते हैं — और अपने निर्धारित समय पर चलते हैं।"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "AI आपके किन निर्णयों की प्रतीक्षा कर रहा है — नीचे का हर आइटम आपके निर्णय की प्रतीक्षा में है।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "AI कनेक्शन"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "एक्सेस कुंजियां"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "उन्नत"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "अनुमत"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Claude Desktop जैसा कोई AI ऐप, जिसका आप पहले से उपयोग करते हैं, इस फ़ार्म की जानकारी पढ़ सकता है और उपकरण नियंत्रित करने का अनुरोध कर सकता है। उपकरण का नियंत्रण तभी चलता है जब कोई व्यक्ति उसे स्वीकृत करे।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "बिल्ट-इन AI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "अपना AI ऐप कनेक्ट करें"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "सेटिंग्स लोड करने में त्रुटि"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "बिल्ट-इन AI का अनुमानित मासिक खर्च। सीमा के करीब पहुंचने पर आपको सूचित किया जाता है, और सीमा पूरी होने पर यह सबसे सस्ते मॉडल पर स्विच हो जाता है। 0 का अर्थ है कोई सीमा नहीं।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "बाहरी AI एक्सेस"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "हर AI ऐप के लिए एक कुंजी जारी करें और उसे उसी ऐप में पेस्ट करें।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "बिल्ट-इन AI को पृष्ठभूमि में समय-समय पर फ़ार्म की स्थिति का सारांश तैयार करने देता है।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "MCP ब्रिज सर्वर"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "कुंजियां प्रबंधित करें"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "अनुमत नहीं"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "सामान्य सेटिंग्स खोलें"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "बिल्ट-इन AI चलाएं"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "इस ऐप के भीतर चैट और सलाह में उपयोग होने वाला AI मॉडल। यह आपके अपने AI ऐप से अलग चलता है, इसलिए यदि आप इसका उपयोग नहीं करते तो इसे बंद रख सकते हैं।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "जब किसी चैट या स्क्रीन में साइट निर्दिष्ट न हो, तब AI जिस साइट का उपयोग करता है।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "बिल्ट-इन AI जिन टूल सर्वरों को कॉल करता है। ऊपर MCP इंजन जोड़ने पर एक अपने-आप जुड़ जाता है।"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "सेटिंग्स > सामान्य में चालू या बंद किया जाता है।"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "AI द्वारा लिखे गए %(n)s नोट किसी व्यक्ति की पुष्टि की प्रतीक्षा में हैं।"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0 का अर्थ है कोई स्वचालित सिंक नहीं।"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "AI ज्ञान"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "API कुंजी हेडर"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "जोड़ा गया"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "सभी स्थितियां"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "सभी टैग"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Bearer Token"
+msgstr "Bearer टोकन"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "केवल पुष्टि किया हुआ ज्ञान उद्धृत करें"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "डेटा स्रोत"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "ज्ञान का उपयोग कैसे होता है"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "स्रोत का प्रकार"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "ज्ञान सेटिंग्स"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "अंतिम सिंक"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "लाइब्रेरी स्रोत"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "मांग पर खोजा गया"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "पुष्टि आवश्यक"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "अभी सिंक नहीं हुआ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "लिंक खोलें"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "सहेजें और पुष्टि करें"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "उन्हें दिखाएं"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "सिंक त्रुटि"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "अभी सिंक करें"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "सिंक हो गया"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "{time} पर सिंक हुआ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "इसे भरने के तीन तरीके हैं: डेटा स्रोत टैब में कोई स्रोत कनेक्ट करें, जो आप पहले से जानते हैं उसे लिखने के लिए ज्ञान जोड़ें दबाएं, या AI से कुछ खोजने को कहें — वह जो पाता है उसे सहेज लेता है।"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "कितनी बार प्राप्त किया गया"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "शीर्षक, पाठ या स्रोत उल्लेख"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "विश्वसनीयता"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "लोगों और AI द्वारा लिखा गया ज्ञान, जिसे AI उद्धृत करता है। स्रोतों से सिंक किया गया डेटा यहाँ डिफ़ॉल्ट रूप से छिपा रहता है — इसे स्रोत फ़िल्टर में चुनें, या डेटा स्रोत टैब में प्रबंधित करें।"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "लोगों और AI द्वारा लिखा गया"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "AI रिकॉर्ड"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "सभी गंभीरता स्तर"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "सभी प्रकार"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "उत्तर"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "ज्ञान में लागू किया गया।"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "स्वीकृत"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "स्वीकृति की प्रतीक्षा में"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "कॉल करने वाला"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "निष्पादित"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "बातचीत"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "सुधारा गया"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "सुधार"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "रिकॉर्ड लोड नहीं हो सके"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "खारिज किया गया"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "त्रुटि रिपोर्ट"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "समाप्त"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "ज्ञान में जोड़ा गया"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "खोजा गया"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "कोई त्रुटि रिपोर्ट नहीं है।"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "बिल्ट-इन AI से पूछे गए प्रश्न और उसके उत्तर।"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "प्राप्त"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "टूल कॉल"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "जुड़े हुए AI ने टूल के माध्यम से क्या किया — नवीनतम पहले। जिन अनुरोधों के लिए स्वीकृति आवश्यक थी, उनके साथ यह दिखता है कि उन पर निर्णय कैसे हुआ।"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "AI ने क्या कहा"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "कब"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "लोगों द्वारा बताए गए AI के गलत उत्तर, उनके सुधारों सहित। सुधार लागू करने पर वह AI ज्ञान में जुड़ जाता है।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "MCP सर्वर सूची लोड नहीं हो सकी।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "इस सर्वर को हटाएं?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "इनपुट स्कीमा"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON ऑब्जेक्ट, उदाहरण के लिए {\"API_KEY\": \"...\"}।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "अभी तक कोई MCP सर्वर नहीं है।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "यह सर्वर कोई टूल प्रदान नहीं करता।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "सर्वर जोड़ा गया।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "सर्वर हटाया गया।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "सर्वर अपडेट किया गया।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "सर्वर"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "रुका हुआ"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "बिल्ट-इन AI जिन टूल सर्वरों को कॉल करता है। AI कनेक्शन पेज पर MCP इंजन जोड़ने पर एक अपने-आप बन जाता है।"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "टूल्स"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "पुनः प्रयास की प्रतीक्षा में"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "भूमिका बदलने पर पूछा जाता है कि क्या विशेषज्ञता, सिस्टम प्रॉम्प्ट, टियर और मॉडल को उस भूमिका के डिफ़ॉल्ट मानों से फिर से भरना है।"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "इस भूमिका की डिफ़ॉल्ट विशेषज्ञता, सिस्टम प्रॉम्प्ट, टियर और मॉडल भरें? आपके दर्ज किए गए मान बदल दिए जाएंगे।"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "AI → अनुरोध में %(n)s शेड्यूल प्रस्ताव प्रतीक्षा में हैं।"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "इस कार्य को रद्द करें?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "नियंत्रण अनुरोधों और AI शेड्यूल प्रस्तावों पर निर्णय AI → अनुरोध में लिया जाता है।"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "डिवाइस टाइमलाइन लोड नहीं हो सकी"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "कोई डिवाइस नहीं मिला।"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "अनुरोध खोलें"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "प्रीसेट रंग"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "सभी मानचित्र"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "सभी साइट"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "कुंजी"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "सेटिंग्स लोड नहीं हो सकीं"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "बड़ी इकाई से दस्तावेज़ छोटा बनता है। दैनिक विवरण बाद में वापस नहीं पाया जा सकता, इसलिए इसे तभी चुनें जब आपको उसकी आवश्यकता न हो।"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "रिकॉर्ड की इकाई"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "%(n)s चरण, %(m)s अवधियां"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "ऊपर"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "लक्ष्य की तुलना में"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "नीचे"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "चरण के अनुसार"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "दिनों की संख्या"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "फ़ील्ड सेंसर और मौसम स्टेशन"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "मौसम स्टेशन द्वारा मापा गया"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "मापन के रुझान"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "यह जर्नल जनरेट करते समय जिन मापनों को आपने नहीं चुना, वे इसमें शामिल नहीं हैं। ऊपर की सावधानियों में उनके नाम दिए गए हैं।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "जिन पंक्तियों पर \"मौसम स्टेशन\" लिखा है और जिनके बाईं ओर बॉर्डर है, वे इस विषय पर लगे सेंसर से नहीं, बल्कि साइट के मौसम स्टेशन से आती हैं। जहां एक ही मापन के लिए दोनों मौजूद हों, वहां लक्ष्यों की तुलना केवल फ़ील्ड सेंसर से की जाती है।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "पिछले चरण जैसे ही लक्ष्य।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "सेंसरों में असहमति है"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "दिखाए गए सेंसर आसपास के क्षेत्र के हैं।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "आकृति और सेंसर की स्थितियां वर्तमान की हैं, इस अवधि की नहीं।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "और %(n)s दिखाएं"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "कम दिखाएं"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "योजना दिखाएं"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "चरण टाइमलाइन"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "लक्ष्य इस प्लॉट से जुड़े प्रोग्राम से आते हैं। Δ मापे गए औसत में से वह लक्ष्य घटाने पर मिलता है। दिन/रात के लक्ष्य और वक्र-आधारित लक्ष्य अंतर निकालने के बजाय चिह्नित किए जाते हैं, क्योंकि उनकी पूरे दिन के औसत से तुलना करने पर झूठे अलर्ट बनते हैं।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "यह रूपरेखा फैसिलिटी से ली गई है।"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "संचित %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "मौसम स्टेशन %(out)s × आवरण %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "पुष्टि की जा रही है रंग संपादित करने के लिए क्लिक करें"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "कंट्रोल सरफ़ेस रंग संपादित करने के लिए क्लिक करें"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "कोई प्रतिक्रिया नहीं रंग संपादित करने के लिए क्लिक करें"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "टॉगल ऑन रंग संपादित करने के लिए क्लिक करें"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "टॉगल ट्रैक ऑफ रंग संपादित करने के लिए क्लिक करें"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "जिन चीज़ों को आप चलाते हैं उनकी सतह — टेक्स्ट फ़ील्ड, सेलेक्ट, पिल। इसे पेज की पृष्ठभूमि से अलग रखें, वरना पेज पर रखा कंट्रोल उसी में गुम हो जाता है"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "घनी सूचियों के लिए हल्का विभाजक, जहां पूरी गहराई की रेखा बहुत भारी लगेगी"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "एक कंटेनर के भीतर आइटमों के बीच की रेखा — सूचियां, विकल्प वाली पंक्तियां। किसी चीज़ को घेरने वाला बॉर्डर नहीं"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "जब कोई डिवाइस जवाब देना बंद कर दे तब पंक्ति/कार्ड की पृष्ठभूमि — यह चेतावनी स्थिति से अलग है, जिसमें कोई व्यक्ति जानबूझकर उसे रोकता है"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "स्लाइड टॉगल"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "स्लाइड टॉगल का ट्रैक बंद होने पर (चालू होने पर बैंड 3 का उपयोग होता है)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "टेक्स्ट फ़ील्ड"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "टॉगल चालू"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "क्या आप वाकई इस भूमिका को हटाना चाहते हैं?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "आपकी खोज से मेल खाने वाली कोई सूचना नहीं है।"
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "शीर्षक, सामग्री, श्रेणी खोजें..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "रंग खंड"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "वैश्विक बैंड रंग"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "खंड"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "रंग"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "नियोजित"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "बॉडी"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "अवधि (मिनट)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "संपादित करें और स्वीकृत करें"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "'{field}' फ़ील्ड में अमान्य मान"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "सहेजें और स्वीकृत करें"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "निर्धारित समय"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "स्टेप"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "यह वास्तविक उपकरण (वाल्व, पंप) चलाता है।"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "देखें"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "विवरण देखें"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "{n} स्वीकृति लंबित"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total} सफल"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "वाष्पीकरण-वाष्पोत्सर्जन"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "फैसिलिटी के बाहर से बाहरी तापमान, आर्द्रता, हवा की गति, वर्षा, सौर विकिरण, ओस बिंदु और CO2 एकत्र करता है। एकीकृत पर्यावरण नियंत्रण फ़ंक्शन इस संग्रहकर्ता को एकमात्र विश्वसनीय स्रोत के रूप में उपयोग करता है। प्रत्येक आइटम के लिए बाहरी सेंसर चुनें। खाली छोड़े गए आइटम साझा नहीं किए जाते — एकीकृत नियंत्रण किसी मान की धारणा बनाने के बजाय उन्हें अज्ञात मानता है।"
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "सेटिंग्स -> ChirpStack से सर्वर/टोकन लें; डिवाइस अपने डिवाइस पेज से इस शेड्यूलर से जुड़ते हैं (जैसे AoT-C का \"क्लास शेड्यूलर\" फ़ील्ड)।"
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "खोज विंडो (दिन)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "सक्रिय चैनल"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "पिछले 14 दिन"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "पिछले 30 दिन"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "पिछले 60 दिन"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "पिछले 90 दिन"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "क्लिक किए गए बिंदु वाले पंजीकृत पॉलीगॉन से अपने आप मिलान के लिए खाली छोड़ें।"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (औसत)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "NDVI खोज विंडो"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "agromonitoring.com पर पंजीकृत पॉलीगॉन के लिए प्रति-क्षेत्र NDVI आंकड़े और मिट्टी की नमी / मिट्टी का तापमान — यहाँ यह एकमात्र इनपुट है जो मिट्टी की नमी को मोटे सैटेलाइट ओवरले के बजाय आपकी अपनी क्षेत्र सीमा के लिए संख्या के रूप में बताता है। Agromonitoring डैशबोर्ड में क्षेत्र बनाएं (1-3000 हेक्टेयर) और या तो नीचे उसका पॉलीगॉन ID चिपकाएं या खाली छोड़ दें, ताकि आपके क्लिक किए गए बिंदु वाले पॉलीगॉन से मिलान हो। यह OpenWeatherMap वाले खाते का ही उपयोग करता है।"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "पॉलीगॉन ID"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "मिट्टी का तापमान (10cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "मिट्टी का तापमान (सतह)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "इस विंडो में सबसे हालिया पास का उपयोग किया जाता है। बादलों के कारण कई हफ़्तों तक कोई उपयोगी दृश्य नहीं मिल सकता।"
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "NASA के SMAP (Soil Moisture Active Passive) L4 उत्पाद से वैश्विक सतही मिट्टी की नमी (0-5cm), जो NASA GIBS के माध्यम से लगभग वास्तविक-समय ओवरले के रूप में उपलब्ध कराई जाती है। लगभग 9km रिज़ॉल्यूशन पर चुनने योग्य तिथियों के साथ उपलब्ध; सिंचाई योजना और सूखा निगरानी के लिए उपयोगी।"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "विंडो में सबसे साफ़ दृश्य"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "बादलों के कारण किसी एक तिथि के दृश्य में खाली जगह रह जाती है, इसलिए इसके बजाय इस विंडो का सबसे हालिया उपयोगी दृश्य दिखाया जाता है।"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "कलेक्शन"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "फॉल्स कलर (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "पिछले 7 दिन"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "अधिकतम बादल आच्छादन"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "सबसे हालिया दृश्य"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (नमी)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (वनस्पति)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (पानी)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "दृश्य प्राथमिकता"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "खोज विंडो"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (वायुमंडल का शीर्ष)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (वायुमंडलीय सुधार सहित)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Copernicus Data Space Ecosystem पर Sentinel Hub के माध्यम से 10 m रिज़ॉल्यूशन की Sentinel-2 इमेजरी — 250 m के MODIS NDVI के विपरीत, यह एक ही क्षेत्र के भीतर वृद्धि के अंतर पढ़ने के लिए पर्याप्त सूक्ष्म है। एक निःशुल्क CDSE खाता पंजीकृत करें, OAuth क्लाइंट बनाएं और उसकी क्लाइंट ID और सीक्रेट नीचे चिपकाएं। निःशुल्क स्तर में प्रति माह 30,000 प्रोसेसिंग इकाइयों की अनुमति है; एक मानचित्र स्क्रीन की लागत लगभग 4 है, और टाइल एक दिन के लिए कैश की जाती हैं।"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "ट्रू कलर"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "दिखावट"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "टेक्स्ट आकार"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "इस चरण द्वारा घोषित लक्ष्यों और सीमाओं के मुकाबले वर्तमान रीडिंग — वही कार्ड जो मानचित्र विजेट दिखाता है, जिसमें DLI और संचित ऊष्मा शामिल हैं। [7 दिन] हर पंक्ति को उस सीमा में बदल देता है जिसमें वह पिछले सप्ताह के दौरान रही।"
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "जिन पंक्तियों की अपनी कोई सीमा नहीं है (CO2, मिट्टी की नमी, ओस बिंदु) उन्हें हाल की ट्रेंड लाइन से भरता है। इसके लिए लक्ष्य ब्लॉक आवश्यक है।"
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "ग्रोइंग डिग्री डेज़ में यह चरण अगले चरण की ओर कितना आगे बढ़ चुका है। यह केवल तभी दिखाया जाता है जब प्रोग्राम चरणों को GDD से आगे बढ़ाता है। रोपण के बाद से चल रहा कुल योग इसके बजाय पर्यावरण कार्ड की एक पंक्ति है और उस कार्ड की सेटिंग्स का पालन करता है।"
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "OFF विफल: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "सूची मोडल में एक बार में दिखाए जाने वाले लंबित अनुरोधों की अधिकतम संख्या"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "लंबित संख्या कितनी बार रीफ्रेश की जाए"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "MCP स्वीकृति अनुरोध"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "अधिकतम दिखाए जाने वाले आइटम"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "बाहरी AI के कितने राइट अनुरोध स्वीकृति की प्रतीक्षा में हैं, यह दिखाता है। सूची खोलने के लिए संख्या पर क्लिक करें और उन्हें एक-एक करके स्वीकृत करें, अस्वीकार करें या संपादित करके स्वीकृत करें, या कई चुनकर एक साथ स्वीकृत/अस्वीकार करें। स्वीकृत करने पर अनुरोध ठीक वही मान लेकर तुरंत चलता है जो दिखाए गए हैं।"

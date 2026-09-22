@@ -4990,10 +4990,6 @@ msgstr "— Không có —"
 msgid "Select one or more devices to register."
 msgstr "Chọn một hoặc nhiều thiết bị để đăng ký."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Chọn đối tượng đăng ký (Đầu vào/Đầu ra) hoặc bộ lập lịch."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5061,11 +5057,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "Loại Hành động"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Tên tham số"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Loại nguồn"
@@ -5074,24 +5065,6 @@ msgstr "Loại nguồn"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Nhập thủ công"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Ghi chú/Mô tả"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "URL bên ngoài"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Giá trị / URL / Văn bản"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "ID bản ghi"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7297,26 +7270,6 @@ msgstr "Sắc thái thông tin"
 msgid "Info Tint Text"
 msgstr "Văn bản sắc thái thông tin"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Viền sắc thái thành công"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Viền màu cảnh báo"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Viền sắc nguy hiểm"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Viền sắc thái thông tin"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "Nền huy hiệu LLM"
@@ -7324,12 +7277,6 @@ msgstr "Nền huy hiệu LLM"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "Nền huy hiệu MCP"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Huy hiệu Nâng cấp"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7531,27 +7478,9 @@ msgstr "Chu kỳ nhiệm vụ điều kiện (%)"
 msgid "Confirmed"
 msgstr "Đã xác nhận"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "Cần xem xét"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Nhập giá trị"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "vd: 25.5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "vd: giá trị đặt dựa trên nhiệt độ buổi sáng"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "vd: https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7572,59 +7501,10 @@ msgstr "Đang tiến hành"
 msgid "Failed"
 msgstr "Đã thất bại"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "Gợi ý AI"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Chưa đăng ký tác vụ nào."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Thêm một cái bằng nút Thêm Tác vụ ở trên cùng."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "Phê duyệt lịch trình do AI đề xuất và thêm vào lịch?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "Lịch trình do AI đề xuất đã được phê duyệt."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "Phê duyệt thất bại"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Lỗi mạng"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Từ chối và xóa đề xuất này?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "Đã từ chối và xóa đề xuất."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Từ chối thất bại"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Không có tác vụ cha để thụt vào dưới"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Đã là tác vụ cấp cao nhất"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Đã cập nhật thứ tự"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7633,14 +7513,6 @@ msgstr "Đã cập nhật thứ tự"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "Cập nhật thất bại"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Đã cập nhật phân cấp"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Đã cập nhật tên"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7740,65 +7612,15 @@ msgstr "Đang tải..."
 msgid "Failed to load data."
 msgstr "Không thể tải dữ liệu."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Chưa đăng ký bản ghi ngữ cảnh nào."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Không có bản ghi nào khớp với tiêu chí."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Mặc định hệ thống"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Chỉnh sửa định nghĩa"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "Đang chờ xem xét"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Đã từ chối"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Nhập hoặc xác nhận định nghĩa cần phê duyệt:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Đã phê duyệt thành công."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Đã xảy ra lỗi trong quá trình phê duyệt."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Đã xảy ra lỗi máy chủ."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Từ chối thuật ngữ này?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Đã từ chối thành công."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "Đã xảy ra lỗi trong quá trình xử lý."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Nhập định nghĩa mới:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -10992,69 +10814,11 @@ msgstr "không thể hoàn tác"
 msgid "Usage"
 msgstr "Sử dụng"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "Trình quản lý Ngữ cảnh AI"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr ""
-"Đưa thông tin bên ngoài vào AI và quản lý trạng thái tin cậy của thông "
-"tin đó."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Thêm Ngữ cảnh"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Ghi chú (không bắt buộc)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Bản ghi ngữ cảnh"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Mặc định hệ thống"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "Cần xem xét"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr "Được AI tự động tạo từ giá trị mặc định của lĩnh vực. Chưa được xem xét."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Dữ liệu người dùng nhập hoặc mục đang chờ xử lý. AI tham chiếu đến nó "
-"nhưng với độ tin cậy thấp."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"Giá trị đã được người dùng xem xét và phê duyệt. AI sử dụng nó với độ tin"
-" cậy cao."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Nền tảng được phát hiện"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC/Máy chủ"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Container Docker"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11932,15 +11696,6 @@ msgstr "hoặc làm mới trang."
 msgid "Control requests awaiting approval"
 msgstr "Các yêu cầu điều khiển đang chờ phê duyệt"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Những mục này CHƯA được thực thi. Việc phê duyệt sẽ chạy ngay lập tức với"
-" chính xác các đối số được hiển thị — bạn không cần quay lại AI và báo "
-"lại."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Không có yêu cầu điều khiển nào đang chờ."
@@ -11978,54 +11733,9 @@ msgstr "Đã phê duyệt và thực hiện."
 msgid "Approved, but it failed to run"
 msgstr "Đã phê duyệt, nhưng chạy thất bại"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "Trạng thái AI"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Tiến trình học"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Từ khóa chính"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Các tính năng thường dùng"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "Đặt lại trạng thái AI"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Hướng dẫn AI của bạn"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Nâng cao — tùy chọn"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "Thêm hướng dẫn cụ thể cho AI của bạn (tùy chọn)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"vd: Tôi quản lý một nhà kính và cần trợ giúp về quản lý sâu bệnh và kiểm "
-"soát nhiệt độ"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Canh tác ngoài trời"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12035,34 +11745,12 @@ msgstr "Canh tác ngoài trời"
 msgid "Greenhouse"
 msgstr "Nhà kính"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Cơ sở thể thao"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Công viên"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Vận chuyển"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "Cập nhật Thiết lập AI"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Các mục kiến thức đã xác nhận:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12071,25 +11759,6 @@ msgstr "Đang chờ:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Tổng:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "AI vẫn đang học..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Chưa có hoạt động nào"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"Đặt lại trạng thái AI? Ảnh chụp trạng thái sẽ được tính lại ở lần tải "
-"tiếp theo."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "Không thể lưu. Vui lòng thử lại."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12105,26 +11774,6 @@ msgstr "Tác nhân AI"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "Cài đặt AI"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"Lớp điều phối Tác nhân AI. Quản lý các dịch vụ và tác nhân AI của bạn để "
-"tự động hóa các tác vụ phức tạp."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "Vận hành Dịch vụ AI"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"Bắt đầu hoặc dừng mô hình AI. Trong khi dừng, trò chuyện, yêu cầu tư vấn "
-"và các tác vụ AI nền đều không khả dụng."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12204,36 +11853,11 @@ msgstr "Vui lòng chọn một công cụ trước."
 msgid "Creating agent... Please wait."
 msgstr "Đang tạo tác nhân... Vui lòng chờ."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Vui lòng chọn một dịch vụ hoặc cách triển khai trước."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "Tên và Lệnh là bắt buộc."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "Đã thêm máy chủ MCP."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Đã thất bại."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "Không thể thêm máy chủ MCP."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Cài đặt tác nhân"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Lỗi: Không tìm thấy biểu mẫu"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12295,14 +11919,6 @@ msgstr "Máy chủ MCP AoT"
 msgid "Action failed"
 msgstr "Hành động thất bại"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Chưa cấu hình mục MCP nào."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "Không thể tải các mục MCP."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "Dịch vụ AI đã khởi động"
@@ -12322,52 +11938,13 @@ msgstr "Dịch vụ AI đã dừng"
 msgid "Save failed"
 msgstr "Lưu thất bại"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Lưu cài đặt"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "Đã lưu cài đặt"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "Cần khởi động lại để áp dụng thay đổi bật/tắt AI"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Tính năng thử nghiệm"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "Chức năng AI hiện đang trong giai đoạn thử nghiệm."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Tự động phê duyệt tác vụ định kỳ"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Mức tác động tối đa để tự động phê duyệt"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Yêu cầu phản hồi khi thất bại"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Mô hình"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Mô hình giám sát"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Mô hình Worker"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12385,96 +11962,22 @@ msgstr "Địa điểm mặc định"
 msgid "(none)"
 msgstr "(không có)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Ngữ cảnh & Ngân sách"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Bắt đầu thời gian tối"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Kết thúc thời gian tối"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Phạm vi ngữ cảnh (giờ)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Ngữ cảnh lịch sử tối đa"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Giới hạn ngân sách hàng tháng (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "Đang tải..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "Mục MCP"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "Dịch vụ AI"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "Sổ đăng ký Dịch vụ AI"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Quay lại Cổng thông tin"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "Đăng ký dịch vụ AI"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr "Đăng ký và quản lý các kết nối công cụ AI (Gemini, OpenAI, Proxy cục bộ)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Xóa dịch vụ này?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Điểm cuối"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Chưa đăng ký dịch vụ AI nào."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "Kết nối LLM đầu tiên của bạn"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Tên dịch vụ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "vd: Gemini Pro của tôi"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Loại công cụ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Tên mô hình"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "Điểm cuối API (Tùy chọn)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12487,28 +11990,6 @@ msgstr "Xác thực"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Loại xác thực"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "ID / Mật khẩu"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Không xác thực"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "ID Tài khoản"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Đăng ký dịch vụ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Không có mô hình cài đặt sẵn nào"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12547,28 +12028,6 @@ msgstr "Đồng bộ"
 msgid "Data credits"
 msgstr "Ghi nhận nguồn dữ liệu"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "Xem xét Kiến thức do AI Tuyển chọn"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Kiến thức mà AI tự lưu lại (luôn ở trạng thái chưa xác nhận lúc đầu). Xác"
-" nhận/chỉnh sửa những gì đúng, loại bỏ những gì sai — nó sẽ được trích "
-"dẫn là [AI 정리 — 미확인] cho đến khi được xem xét."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Chỉ kiến thức đã kiểm duyệt: BẬT"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Chỉ kiến thức đã kiểm duyệt: TẮT"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12577,10 +12036,6 @@ msgstr ""
 "Khi bật, AI sẽ không được trích dẫn các ghi chú do chính nó viết cho đến "
 "khi có người xác nhận. Kiến thức có thẩm quyền và kiến thức nhập tay "
 "không bị ảnh hưởng."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Chưa có kiến thức nào do AI tuyển chọn."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12598,18 +12053,9 @@ msgstr "Chưa xác nhận"
 msgid "Flagged"
 msgstr "Đã gắn cờ"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Cùng chủ đề với một nguồn đáng tin cậy"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Khớp"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Mã nguồn mở"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12618,23 +12064,6 @@ msgstr "Kích hoạt lại"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Ngừng sử dụng"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Mục kiến thức"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"Mọi thứ mà AI có thể trích dẫn — được đồng bộ từ các nguồn, do AI lưu "
-"trữ, hoặc được viết tay vào. Tìm kiếm và lọc để xem những gì thực sự có ở"
-" đây."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Tìm kiếm kiến thức…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12671,16 +12100,6 @@ msgstr ""
 "Thư viện kiến thức đang trống. Cho đến khi có nội dung ở đây, AI sẽ trả "
 "lời các câu hỏi chuyên môn bằng kiến thức chung của chính nó — không có "
 "nguồn để trích dẫn."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Có ba cách để bổ sung: kết nối một nguồn ở trên, nhấn Thêm Kiến thức để "
-"ghi lại những gì bạn đã biết, hoặc chỉ cần yêu cầu AI tra cứu điều gì đó "
-"— nó sẽ lưu lại những gì tìm được."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12749,14 +12168,6 @@ msgstr "URL nguồn"
 msgid "Source Settings"
 msgstr "Cài đặt nguồn"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "Chỉnh sửa kiến thức do AI tuyển chọn"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Lưu (Xác nhận)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Vui lòng chọn loại nguồn."
@@ -12794,10 +12205,6 @@ msgstr "Không tìm thấy nguồn."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Tên nguồn"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Tên tham số (Khóa ngữ cảnh)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12906,17 +12313,9 @@ msgstr "Xóa thất bại"
 msgid "Crop Type"
 msgstr "Loại cây trồng"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Đang xác nhận…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Đã xác nhận."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Đang ngừng sử dụng…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12927,10 +12326,6 @@ msgid "Retire this item? It will stop being cited until reactivated."
 msgstr ""
 "Ngừng sử dụng mục này? Mục sẽ không còn được trích dẫn cho đến khi được "
 "kích hoạt lại."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Đang kích hoạt lại…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13078,10 +12473,6 @@ msgstr "Chọn các thao tác để đăng ký làm tri thức"
 msgid "Parameters for the selected operations"
 msgstr "Tham số cho các thao tác đã chọn"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "Hãy chọn ít nhất một thao tác."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13219,23 +12610,9 @@ msgstr "Tóm tắt"
 msgid "Key-Value Extraction"
 msgstr "Trích xuất Khóa-Giá trị"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "Trình quản lý AI"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Quản lý cuộc trò chuyện"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Bảng điều khiển lỗi"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Lịch sử suy luận"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13251,25 +12628,9 @@ msgstr "Ngày"
 msgid "Details"
 msgstr "Chi tiết"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Chưa có lịch sử suy luận nào."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "Bảng điều khiển Lỗi AI"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Làm mới mẫu"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Làm mới danh sách"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Đang phân tích mẫu lỗi..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13311,51 +12672,14 @@ msgstr "Hành động không phù hợp"
 msgid "Tool Misuse"
 msgstr "Lạm dụng Công cụ"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Hiệu chỉnh của Người dùng"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Chi tiết suy luận"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "Giai đoạn 1: Yêu cầu người dùng"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "Giai đoạn 2: Ý định & Lập kế hoạch"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "Giai đoạn 3: Thực thi công cụ (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "Giai đoạn 4: Tổng hợp & Điều phối"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Bộ điều phối"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "Giai đoạn 5: Phản hồi cuối cùng"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Chi tiết lỗi & Cách khắc phục"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Áp dụng vào Kiến thức"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Tổng đang chờ"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13366,47 +12690,19 @@ msgstr "Khuyến nghị"
 msgid "Review"
 msgstr "Xem xét"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Không tìm thấy lỗi nào."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Bạn có chắc chắn không?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "Chỉnh sửa máy chủ MCP"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Tên máy chủ"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Lệnh thực thi"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Phạm vi"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Chung (Luôn có trong Manifest)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Cụ thể (Tải chậm)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Mục đích"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Biến môi trường (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13414,38 +12710,14 @@ msgstr "Biến môi trường (JSON)"
 msgid "Update"
 msgstr "Cập nhật"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "Tạo tác nhân AI"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "Liên kết liên quan"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "Lấy khóa API"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Thông tin tác nhân"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Tên tác nhân"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "vd: Trình quản lý năng lượng"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "Đăng ký Dịch vụ AI"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "vd: OpenAI của tôi"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13457,14 +12729,6 @@ msgstr "Chọn mô hình"
 msgid "Enter model name manually"
 msgstr "Nhập tên mô hình theo cách thủ công"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "Điểm cuối API"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "Quy trình AI & Truy cập Công cụ"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13474,10 +12738,6 @@ msgstr "Vai trò quy trình"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Worker (Cũ)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Cấp mô hình"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13492,17 +12752,9 @@ msgstr "Tiêu chuẩn"
 msgid "Heavy"
 msgstr "Nặng"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Quyền truy cập Công cụ"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Đã gán"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Chọn máy chủ MCP đã gán"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13510,15 +12762,6 @@ msgstr "Chọn máy chủ MCP đã gán"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Chuyên biệt"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "vd: tưới tiêu, khí hậu"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Quy tắc tác nhân"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13531,29 +12774,9 @@ msgstr "Lời nhắc hệ thống"
 msgid "Define how this agent should behave..."
 msgstr "Xác định cách tác nhân này sẽ hoạt động..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Mô hình tùy chỉnh..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Khóa dịch vụ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "Khóa API dịch vụ"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Công cụ hệ thống mặc định"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Thông tin xác thực dịch vụ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "Cấu hình Brain"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13565,162 +12788,17 @@ msgstr "Cấu hình Brain"
 msgid "Options"
 msgstr "Tùy chọn"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "Phạm vi MCP"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "Hướng dẫn MCP"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Chỉ dẫn máy chủ"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "Chỉ phân loại ý định. Nên dùng mô hình nhẹ."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "Tạo các kế hoạch thực thi. Khuyến nghị dùng mô hình Standard hoặc Heavy."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Gọi công cụ và thu thập dữ liệu."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Tổng hợp kết quả thành phản hồi cho người dùng."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Chế độ giám sát/worker kế thừa."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "Tùy chọn Toàn cục AI"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Cài đặt AI toàn cục"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "Cấu hình các tham số toàn hệ thống cho lớp điều phối AI."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "Xem ngữ cảnh AI của thiết bị"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "Kiểm tra dữ liệu ngữ cảnh AI cho từng thiết bị"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Duyệt thiết bị"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Cơ sở hạ tầng"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "URL proxy chính"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr "Proxy toàn cục được sử dụng nếu điểm cuối riêng của tác nhân để trống."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "Thời gian chờ yêu cầu (giây)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Trải nghiệm Người dùng (Toast)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "Ẩn thông báo thành công của AI"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "Ẩn thông báo cảnh báo của AI"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "Lịch trình AI"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "Trình theo dõi Mục tiêu Hợp tác"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Xem tổng quan]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[Ngày]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Tuần]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Tháng]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Năm]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Hôm nay]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Lên(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Xuống(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Thụt vào(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Thụt ra(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Làm mới dữ liệu"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Thêm Tác vụ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Đang tải tác vụ..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "Quản lý Tác vụ do AI Đề xuất"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "Xem xét và quản lý các tác vụ do Tác nhân AI đề xuất."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Tìm kiếm tác vụ..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13730,22 +12808,6 @@ msgstr "Tìm kiếm tác vụ..."
 msgid "Target"
 msgstr "Mục tiêu"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Thời gian đã lên lịch"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Đang tải các tác vụ đề xuất..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Chỉnh sửa tác vụ"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "Đang tiến hành"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Tác vụ"
@@ -13754,21 +12816,9 @@ msgstr "Tác vụ"
 msgid "Goal"
 msgstr "Mục tiêu"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Mốc quan trọng"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Điểm kiểm tra"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Tác vụ cha"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Chỉnh sửa công việc đề xuất"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13779,10 +12829,6 @@ msgstr "Điều khiển đầu ra"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "Điều chỉnh PID"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "ID mục tiêu"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13797,63 +12843,10 @@ msgstr "Thời gian lịch trình"
 msgid "AI Reasoning"
 msgstr "Suy luận AI"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Lý do xóa"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "vd: Không cần thiết, Sai thời điểm..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Xóa tác vụ"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Lưu thay đổi"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "Yêu cầu & Lời khuyên AI"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"AI bên ngoài kết nối qua MCP không thể tự thay đổi bất cứ điều gì. Các "
-"yêu cầu điều khiển sẽ chờ ở đây để bạn phê duyệt, và các ý kiến được thu "
-"thập để bạn so sánh."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "Sổ ghi lời khuyên AI"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"Ý kiến do AI chính, AI bên ngoài, hoặc các nút cấp dưới gửi lên. Chấp "
-"nhận chỉ là đồng ý — không thực thi điều khiển."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Các lệnh gọi công cụ AI gần đây"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Chưa có lời khuyên nào được gửi."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Chưa ghi nhận lệnh gọi công cụ nào."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13871,21 +12864,9 @@ msgstr "Hành động được đề xuất"
 msgid "MCP Server Management"
 msgstr "Quản lý máy chủ MCP"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Làm mới toàn bộ trạng thái"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Thêm Máy chủ"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Giám sát và điều khiển các tiến trình cầu nối Model Context Protocol"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "Đang khám phá các máy chủ MCP..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13910,10 +12891,6 @@ msgstr "Kích hoạt khi Lưu"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Biến môi trường"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Lưu cấu hình"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -13950,14 +12927,6 @@ msgstr "Kích hoạt tự động"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Tác vụ mới"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "Đề xuất AI"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Không có đề xuất nào đang chờ xử lý."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14000,10 +12969,6 @@ msgstr "Chưa có lịch sử nào."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Chi tiết đề xuất"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Đề xuất bởi"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14159,14 +13124,6 @@ msgstr "Cục bộ theo thiết bị"
 msgid "Your time"
 msgstr "Giờ của bạn"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Phê duyệt tác vụ này?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Lý do từ chối (không bắt buộc):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14199,14 +13156,6 @@ msgstr "Mục tiêu: "
 msgid "By: "
 msgstr "Bởi: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Giờ địa phương: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Suy luận: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "Lịch hiển thị theo múi giờ của bạn"
@@ -14215,138 +13164,21 @@ msgstr "Lịch hiển thị theo múi giờ của bạn"
 msgid "Getting to Know Each Other"
 msgstr "Làm quen với nhau"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "AI học từ dữ liệu của bạn theo thời gian"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Bạn tương tác càng nhiều, hệ thống càng trở nên chính xác hơn"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "Bạn kiểm soát những gì AI tập trung vào"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Hãy cho chúng tôi biết về cơ sở của bạn"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Điều gì mô tả đúng nhất cơ sở của bạn?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "Vui lòng chọn loại cơ sở để tiếp tục."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Mô tả cụ thể những gì bạn cần từ AI này (tùy chọn)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Tiếp tục"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Đã sẵn sàng!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Loại cơ sở"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Hướng dẫn của bạn"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"Bây giờ bạn sẽ thấy: Trạng thái AI, các từ khóa chính của bạn, và cách AI"
-" đang tìm hiểu về cơ sở của bạn."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "Đi đến Bảng điều khiển AI"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Trạng thái học tập của cơ sở"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "Bắt đầu với Cố vấn AI"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Hệ thống AI này cần một giai đoạn học tập để đưa ra lời khuyên phù hợp "
-"riêng với cơ sở của bạn."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "Trong giai đoạn học:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "Lời khuyên dựa trên kiến thức nông nghiệp tổng quát"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "Dữ liệu riêng cho cơ sở vẫn còn hạn chế"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Phản hồi của bạn là chìa khóa để hiệu chỉnh"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Thông tin cơ sở"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Nông trại thẳng đứng"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Vườn ươm"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "Kinh nghiệm vận hành"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "Dưới 1 năm"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 năm"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 năm"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "Trên 10 năm"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Các tham số quan trọng"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "chọn tất cả những gì phù hợp"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Dinh dưỡng"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14362,53 +13194,6 @@ msgstr "Quay lại"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "Tiếp theo"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Điều khoản sử dụng"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Trợ lý AI này học hỏi từ cơ sở của bạn theo thời gian. Trong giai đoạn "
-"học tập ban đầu, lời khuyên dựa trên kiến thức nông nghiệp chung và có "
-"thể không phù hợp cụ thể với điều kiện của bạn. Phản hồi của bạn — xác "
-"nhận, điều chỉnh, hoặc từ chối các đề xuất — chính là thứ hiệu chỉnh hệ "
-"thống theo cơ sở của bạn. Hệ thống sẽ cho bạn biết khi nó không chắc chắn"
-" và xác nhận nào sẽ hữu ích. Bạn vẫn nắm quyền kiểm soát: không có hành "
-"động tự động nào được thực hiện mà không có sự phê duyệt của bạn."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Tôi hiểu và đồng ý với các điều khoản trên"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Đồng ý và bắt đầu"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Đã hoàn tất giới thiệu"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"Trợ lý AI sẽ bắt đầu học về cơ sở này. Bạn cung cấp phản hồi cho các đề "
-"xuất của nó càng nhiều, lời khuyên sẽ càng chính xác và phù hợp riêng."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "Bắt đầu sử dụng AI"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14443,10 +13228,6 @@ msgstr "Lớn"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "Ngân sách được tự động tối ưu hóa theo từng Tier."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Dịch vụ & Mô hình"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Nhập thủ công"
@@ -14454,10 +13235,6 @@ msgstr "Nhập thủ công"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Để trống để giữ nguyên khóa hiện có"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "Cấu hình quy trình"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16414,12 +15191,6 @@ msgstr "Che phủ & Thông gió"
 msgid "Cover layers"
 msgstr "Lớp che"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr "Lớp phủ ngoài luôn bắt buộc. Thêm gia cố tường hoặc lớp phủ trong nếu cần."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Gia cố tường"
@@ -17595,26 +16366,6 @@ msgstr "Đang áp dụng..."
 msgid "Failed to submit judgment"
 msgstr "Không thể gửi đánh giá"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Tìm kiếm địa chỉ để xác định vị trí bắt đầu"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "Vĩ độ tâm bản đồ ban đầu. Ví dụ: 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "Kinh độ tâm bản đồ ban đầu. Ví dụ: 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr "Mức thu phóng bản đồ ban đầu. Bạn có thể thay đổi bằng cách nhập một số."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Chọn công cụ tìm kiếm mặc định cho tìm kiếm toàn cục."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Đặt lại về mặc định"
@@ -17635,71 +16386,9 @@ msgstr "Màu cơ sở"
 msgid "Equipment Color"
 msgstr "Màu thiết bị"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "Màu thiết bị AoT"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Màu nền bảng điều khiển"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "Mặc định: 25. Giới hạn tối đa là 30."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr "Dùng zoom kỹ thuật số cho các mức zoom cao mà nguồn bản đồ không cung cấp."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "Bật thu phóng phân số cho các mức gần 18 trở lên."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Bật hiệu ứng mờ dần khi ô bản đồ tải xong."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr "Dùng bộ kết xuất Canvas để cải thiện hiệu năng khi có nhiều lớp vector."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Số đa giác khu vực tối đa"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Giới hạn số đa giác tối đa cho Địa điểm. Các địa điểm vượt quá giới hạn "
-"này sẽ được hiển thị dưới dạng điểm."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Số đa giác vùng tối đa"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Giới hạn số đa giác tối đa cho Khu vực. Các khu vực vượt quá giới hạn này"
-" sẽ được hiển thị dưới dạng điểm."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Số đa giác thiết bị tối đa"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Giới hạn số đa giác tối đa cho Thiết bị. Các thiết bị vượt quá giới hạn "
-"này sẽ được hiển thị dưới dạng điểm."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
@@ -18120,11 +16809,6 @@ msgstr "Toàn bộ giai đoạn"
 #, python-format
 msgid "daylight %(h)s h"
 msgstr "Ánh sáng ban ngày %(h)s giờ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr "GDD %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -19234,10 +17918,6 @@ msgstr "Payload tắt (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Gán vào bộ lập lịch"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Đăng ký các thiết bị đã chọn"
@@ -19451,10 +18131,6 @@ msgstr "Huy hiệu MCP"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "Nhấp để chỉnh sửa màu Huy hiệu MCP"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Nhấp để chỉnh sửa màu Huy hiệu Nâng cấp"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19731,22 +18407,6 @@ msgstr "Nền huy hiệu dịu cho trạng thái đang xử lý/thông tin"
 msgid "Text color used on the info tint"
 msgstr "Màu văn bản dùng trên nền màu thông tin"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr "Màu viền cho hộp thông báo thành công (Trang quản trị, ví dụ: Nâng cấp)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Màu viền cho hộp thông báo cảnh báo/mặc định"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Màu viền cho hộp thông báo nguy hiểm/lỗi"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Màu viền cho hộp thông báo thông tin"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr "Lưu, kích hoạt, tab — các nút chính dạng tô đầy trong toàn ứng dụng"
@@ -19778,10 +18438,6 @@ msgstr "Viền nút"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Viền cho tất cả các nút và hàng danh sách"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "Nền huy hiệu nâng cấp và nút nâng cấp trên thanh điều hướng"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20879,34 +19535,6 @@ msgstr "Trình quản lý ghi chú"
 msgid "Search content, subject..."
 msgstr "Tìm nội dung, chủ đề..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Xóa bộ lọc"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Bộ lọc nâng cao"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Xuất kết quả"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "Xuất báo cáo PDF"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Tổng hợp các ghi chú trong một khoảng thời gian (sử dụng bộ lọc thẻ ở "
-"trên) thành báo cáo PDF đã được định dạng."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Tiêu đề báo cáo (không bắt buộc)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "Không tìm thấy ghi chú nào"
@@ -21267,25 +19895,9 @@ msgstr "Gửi thất bại."
 msgid "Unable to save note. Please try again."
 msgstr "Không thể lưu ghi chú. Vui lòng thử lại."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr "Hình dung một mục tiêu (ví dụ: Tiết kiệm năng lượng ở Khu vực A)"
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Phân tích"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr "Sẵn sàng cho phân tích thông minh."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "Phân tích AI thất bại"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Thực thi thất bại"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21570,11 +20182,6 @@ msgstr "Bắt đầu lúc"
 msgid "Select the Output to control in the widget options."
 msgstr "Chọn Đầu ra cần điều khiển trong tùy chọn tiện ích."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Độ lệch vị trí dữ liệu (%%)"
-
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
 msgstr "Chỉnh sửa lịch trình"
@@ -21656,42 +20263,6 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Tùy chọn chuỗi dữ liệu"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Bật màu tùy chỉnh"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr "Đường (Bậc thang, Trái)"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr "Đường (Bậc thang, Giữa)"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr "Đường (Bậc thang, Phải)"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Bật căn chỉnh vạch chia trục Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Bật bắt đầu tại vạch chia trục Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Bật kết thúc tại vạch chia trục Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Giá trị tối thiểu trục Y"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Giá trị tối đa trục Y"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -23633,20 +22204,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Bộ thu thập bối cảnh môi trường bên ngoài"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Thu thập nhiệt độ, độ ẩm, tốc độ gió, lượng mưa, bức xạ mặt trời, điểm "
-"sương và CO2 từ bên ngoài cơ sở. Hàm điều khiển môi trường tích hợp sử "
-"dụng bộ thu thập này làm nguồn dữ liệu duy nhất và đáng tin cậy. Chọn cảm"
-" biến bên ngoài cho từng mục. Để trống để áp dụng giá trị mặc định dự "
-"phòng."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Chu kỳ Cập nhật"
@@ -23720,30 +22277,6 @@ msgid ""
 "Select the external CO₂ (ppm) measurement. If absent, the default is 400 "
 "ppm."
 msgstr "Chọn phép đo CO₂ ngoài trời (ppm). Nếu không có, mặc định là 400 ppm."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Tuổi tối đa cho phép của cảm biến (giây)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr "Các phép đo cũ hơn mức này sẽ được thay bằng giá trị mặc định dự phòng."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Nhiệt độ bên ngoài dự phòng (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr "Giá trị mặc định sử dụng khi cảm biến không có hoặc đã hết hạn."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Độ ẩm bên ngoài dự phòng (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Tốc độ gió dự phòng (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -23877,14 +22410,6 @@ msgstr "Tuổi tối đa của đầu vào (giây)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "Cổng REST"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Máy chủ/mã thông báo từ Cài đặt -> ChirpStack; thiết bị được gán tại đó "
-"(\"Được quản lý bởi\")."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -27305,7 +25830,7 @@ msgstr "nội dung"
 
 #: utils/calendar_event_format.py:294
 msgid "worker"
-msgstr "worker"
+msgstr "Người thực hiện"
 
 #: utils/calendar_event_format.py:315 utils/calendar_event_format.py:317
 msgid "Device control"
@@ -27805,16 +26330,6 @@ msgstr ""
 "đa khớp với phần cuối cùng (Cao) để hiển thị chính xác. Chọn các cài đặt "
 "sẵn như Nhiệt độ, Độ ẩm hoặc VPD sẽ tự động đặt giá trị min/max và các "
 "phần màu."
-
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts miễn phí cho mã nguồn mở và sử dụng cá nhân. Tuy nhiên, nếu "
-"dùng trong sản phẩm thương mại, có thể cần giấy phép thương mại. Vui lòng"
-" truy cập https://shop.highsoft.com để biết thông tin chính xác nhất."
 
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
@@ -28503,55 +27018,17 @@ msgstr "Dòng thời gian giai đoạn có đánh dấu hôm nay và các chuy�
 msgid "Targets vs now"
 msgstr "Mục tiêu so với hiện tại"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Các số liệu đọc hiện tại so với mục tiêu và giới hạn mà giai đoạn này "
-"khai báo. Một mục được hiển thị dạng đồng hồ đo, số còn lại được liệt kê "
-"dưới dạng văn bản."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Xu hướng"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"Điền các hàng không có trục bằng một đường xu hướng gần đây. Cần có khối "
-"mục tiêu."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Nhiệt tích lũy"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Giai đoạn này đã tiến bao xa theo số ngày độ tăng trưởng. Chỉ hiển thị "
-"khi chương trình khai báo nhiệt độ nền."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Độ ẩm đất"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Chỉ số đồng hồ đo"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Phép đo nào được hiển thị bằng đồng hồ đo. Các phép đo còn lại được liệt "
-"kê dưới dạng văn bản. Nếu khu đất này không đo được, phép đo đầu tiên có "
-"khoảng giá trị sẽ được hiển thị thay thế."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29143,30 +27620,9 @@ msgstr "Số chữ số thập phân 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "Số chữ số thập phân của số liệu đo thứ hai"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"Hiển thị tiêu đề các bài đăng mới nhất trên bảng thông báo. Nhấp vào tiêu"
-" đề sẽ mở toàn bộ bài đăng (nội dung, khảo sát, phản hồi, xác nhận) trong"
-" một cửa sổ bật lên; mọi thao tác thực hiện ở đó sẽ được phản ánh trên "
-"bài đăng thực tế. Người dùng có quyền ghi cũng có thể tạo, chỉnh sửa và "
-"xóa bài đăng trực tiếp từ tiện ích."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Số bài viết"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Số lượng thông báo mới nhất cần hiển thị"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Tần suất làm mới danh sách thông báo"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29368,11 +27824,6 @@ msgstr "Bật/tắt chế độ hiển thị mặc định của danh sách hàn
 #: widgets/widget_trigger_sequence.py:490
 msgid "Sequence Settings (Synced)"
 msgstr "Cài đặt chuỗi thao tác (Đã đồng bộ)"
-
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "Định dạng HH:MM"
 
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
@@ -30296,16 +28747,6 @@ msgstr "Dự báo tiến (feedforward)"
 msgid "Enable Forecast Feedforward"
 msgstr "Bật bù trừ theo dự báo"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"Dùng dự báo thời tiết ngắn hạn của KMA (forecast.json) để chủ động điều "
-"chỉnh điểm đặt nhiệt độ/độ ẩm và ngăn thông gió trước khi thời tiết xấu "
-"ập đến."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "Phản ứng với những gì đang có ở đây ngay bây giờ"
@@ -30317,15 +28758,6 @@ msgstr "Chuẩn bị trước xa hơn"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Thời gian nhìn trước dự báo (giờ)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"Kiểm tra trước bao nhiêu giờ để phát hiện thời tiết bất lợi sắp tới (1–6 "
-"giờ). Thời gian dự báo dài hơn cho cảnh báo sớm hơn nhưng có thể gây điều"
-" chỉnh quá mức."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30553,14 +28985,6 @@ msgstr "%(n)s ghi chú"
 msgid "Vapor Pressure Deficit"
 msgstr "Độ thiếu hụt áp suất hơi (VPD)"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Cỡ chữ Giá trị (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "Cỡ chữ của số liệu đo"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Lịch trình sinh trưởng"
@@ -30569,86 +28993,13 @@ msgstr "Lịch trình sinh trưởng"
 msgid "Stop Control On"
 msgstr "Dừng điều khiển khi"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr "Việc điều khiển sẽ dừng hẳn sau ngày này. Để trống để tiếp tục chạy."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Bảo vệ cháy nắng bằng phun sương"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Chế độ vườn ươm"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Chế độ vườn ươm (cây con)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Giới hạn phun sương chặt chẽ hơn cho cây con, vì chúng dễ bị cháy lá hơn "
-"lá đã trưởng thành."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
 msgstr "Không sử dụng"
-
-#: aot_flask/static/js/geo/journal-page.js:78
-#: aot_flask/templates/pages/geo/journal.html:47
-msgid "Whole area"
-msgstr "Toàn bộ khu vực"
-
-#: aot_flask/templates/pages/geo/journal_view.html:182
-msgid "h"
-msgstr "giờ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:194
-msgid "attachment(s)"
-msgstr "tệp đính kèm"
-
-#: aot_flask/static/js/geo/journal-page.js:123
-msgid "Select an area first."
-msgstr "Hãy chọn khu vực trước."
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Daily averages are the mean of hourly means, not a true time-weighted "
-"average of every reading."
-msgstr ""
-"Trung bình hàng ngày là giá trị trung bình của các trung bình hàng giờ, "
-"không phải là trung bình có trọng số thời gian thực sự của từng số liệu "
-"đo."
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Runtime is read from the first channel only, even for multi-channel "
-"outputs."
-msgstr ""
-"Thời gian chạy chỉ được đọc từ kênh đầu tiên, ngay cả với đầu ra nhiều "
-"kênh."
-
-#: aot_flask/geo/plot_journal.py
-#, python-format
-msgid "%(n)s channel(s) could not be read and are missing from this journal."
-msgstr "%(n)s kênh không thể đọc được và bị thiếu trong nhật ký này."
-
-#: aot_flask/geo/plot_journal.py
-#, python-format
-msgid "%(n)s device area(s) overlap this plot with no device assigned yet."
-msgstr "%(n)s khu vực thiết bị chồng lấn lô đất này nhưng chưa được gán thiết bị."
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Notes pinned to a map location are not included for facility plots — "
-"their outline is derived from the facility, not their own."
-msgstr ""
-"Ghi chú được ghim tại một vị trí trên bản đồ không được đưa vào cho các "
-"khu đất thuộc cơ sở — ranh giới của chúng được suy ra từ cơ sở, không "
-"phải của riêng chúng."
 
 #: aot_flask/geo/plot_journal.py
 msgid "Notes pinned to a map location were not checked."
@@ -30675,14 +29026,6 @@ msgstr "Dữ liệu cho khu vực này bắt đầu từ %(d)s."
 msgid "No measurements found for this area yet."
 msgstr "Chưa tìm thấy phép đo nào cho khu vực này."
 
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"This period was too large to store day by day, so it was saved in weekly "
-"buckets — daily detail is not available for it."
-msgstr ""
-"Khoảng thời gian này quá dài để lưu theo từng ngày, nên đã được lưu theo "
-"từng nhóm tuần — không có chi tiết theo ngày cho khoảng thời gian này."
-
 #: aot_flask/static/js/geo/journal-page.js
 #, python-format
 msgid "%(on)s of %(all)s"
@@ -30692,10 +29035,6 @@ msgstr "%(on)s trong %(all)s"
 #, python-format
 msgid "Device diagnostics were left out of this journal: %(names)s."
 msgstr "Chẩn đoán thiết bị đã bị bỏ qua trong nhật ký này: %(names)s."
-
-#: aot_flask/templates/pages/geo/journal_view.html
-msgid "Outdoor (weather)"
-msgstr "Ngoài trời (thời tiết)"
 
 #: aot_flask/geo/plot_journal.py
 msgid "NNE"
@@ -30729,62 +29068,6 @@ msgstr "TTB"
 msgid "NNW"
 msgstr "BTB"
 
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Daily light integral is estimated from solar radiation (W/m2), assuming "
-"sunlight. A PAR sensor would measure it directly."
-msgstr ""
-"Tích phân ánh sáng ngày được ước tính từ bức xạ mặt trời (W/m2), giả định"
-" là ánh sáng mặt trời. Cảm biến PAR sẽ đo trực tiếp giá trị này."
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Light is measured outdoors, so the daily light integral is what reached "
-"the site — not what reached the crop under cover or supplemental "
-"lighting."
-msgstr ""
-"Ánh sáng được đo ở ngoài trời, vì vậy tổng tích phân ánh sáng hàng ngày "
-"là lượng ánh sáng đến khu vực — không phải lượng ánh sáng đến cây trồng "
-"dưới mái che hoặc dưới ánh sáng bổ sung."
-
-#: aot_flask/geo/plot_journal.py
-msgid ""
-"Water volumes are estimated from the designed nozzle flow and run time, "
-"and split by the plot's share of the bay — not measured by a flow meter."
-msgstr ""
-"Thể tích nước được ước tính từ lưu lượng vòi phun theo thiết kế và thời "
-"gian vận hành, rồi chia theo tỷ lệ diện tích khu đất trong dãy — không "
-"phải đo bằng đồng hồ đo lưu lượng."
-
-#: aot_flask/geo/plot_journal.py
-msgid "s"
-msgstr "giây"
-
-#: aot/aot_flask/geo/plot_journal.py
-#, python-format
-msgid ""
-"Light is measured outdoors, so the daily light integral shown is what got"
-" through the cover: the outdoor figure multiplied by %(tau)s for "
-"%(material)s. The cover's material is used; its thickness, age and dust "
-"are not, so the real figure is usually a little lower."
-msgstr ""
-"Ánh sáng được đo ở ngoài trời, vì vậy tổng tích phân ánh sáng hàng ngày "
-"hiển thị là lượng đã xuyên qua mái che: giá trị ngoài trời nhân với "
-"%(tau)s cho %(material)s. Chất liệu của mái che được sử dụng; độ dày, "
-"tuổi và bụi bẩn của nó thì không, vì vậy giá trị thực tế thường thấp hơn "
-"một chút."
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"This facility has a shade screen. Whether it was drawn on any given day "
-"is not recorded, so it is not counted — on days it was drawn, the crop "
-"got less light than shown."
-msgstr ""
-"Cơ sở này có màn che nắng. Việc màn có được kéo vào một ngày cụ thể hay "
-"không không được ghi lại, vì vậy không được tính đến — vào những ngày màn"
-" được kéo, cây trồng nhận được ít ánh sáng hơn so với những gì được hiển "
-"thị."
-
 #: aot/aot_flask/geo/plot_journal.py
 msgid "Single-layer vinyl"
 msgstr "Vinyl một lớp"
@@ -30802,50 +29085,12 @@ msgid "GDD (growing degree days)"
 msgstr "GDD (độ ngày sinh trưởng)"
 
 #: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"A running total of warmth. Each day adds how much the day's average "
-"temperature sat above the temperature this crop needs to grow at all, so "
-"a warm day adds more than a cool one. Crops move through their stages on "
-"accumulated warmth rather than on the calendar, which is why a stage can "
-"arrive early in a hot season."
-msgstr ""
-"Tổng tích lũy nhiệt liên tục. Mỗi ngày cộng thêm phần nhiệt độ trung bình"
-" của ngày đó vượt trên nhiệt độ tối thiểu mà cây trồng này cần để sinh "
-"trưởng, vì vậy một ngày ấm sẽ cộng nhiều hơn một ngày mát. Cây trồng "
-"chuyển qua các giai đoạn dựa trên nhiệt tích lũy chứ không phải theo "
-"lịch, đó là lý do một giai đoạn có thể đến sớm trong mùa nóng."
-
-#: aot/aot_flask/geo/plot_journal.py
 msgid "DLI (daily light integral)"
 msgstr "DLI (tích phân ánh sáng ngày)"
 
 #: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"How much light the crop received over a whole day, added up rather than "
-"measured at one moment. Brightness alone does not say much — a bright but"
-" short day and a dim but long one can come to the same total. Measured in"
-" mol/m2/day."
-msgstr ""
-"Tổng lượng ánh sáng cây trồng nhận được trong cả ngày, được cộng dồn thay"
-" vì đo tại một thời điểm. Độ sáng đơn thuần không nói lên nhiều điều — "
-"một ngày sáng nhưng ngắn và một ngày mờ nhưng dài có thể có tổng bằng "
-"nhau. Đo bằng mol/m2/ngày."
-
-#: aot/aot_flask/geo/plot_journal.py
 msgid "VPD (vapour pressure deficit)"
 msgstr "VPD (độ thiếu hụt áp suất hơi)"
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"How dry the air feels to the plant, in kPa. It combines temperature and "
-"humidity, because the same humidity is drying on a warm day and not on a "
-"cool one. High VPD pushes the plant to transpire; too high and it closes "
-"up and stops growing."
-msgstr ""
-"Mức độ khô của không khí mà cây cảm nhận được, tính bằng kPa. Chỉ số này "
-"kết hợp nhiệt độ và độ ẩm, vì cùng một độ ẩm gây khô vào ngày ấm nhưng "
-"không gây khô vào ngày mát. VPD cao thúc đẩy cây thoát hơi nước; quá cao "
-"khiến cây khép lại và ngừng phát triển."
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 msgid "Set a base temperature in the program to see this."
@@ -30861,55 +29106,6 @@ msgid "%(v)s so far, but only %(pct)s of the days have data."
 msgstr "%(v)s tính đến hiện tại, nhưng chỉ %(pct)s số ngày có dữ liệu."
 
 #: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Water volume is only filled in for devices whose flow rate is known, and "
-"none here is — so this journal shows run times only. Facilities get flow "
-"from their piping layout; equipment drawn straight onto the map carries a"
-" flow rate but is not linked to the valve that opens it, so it cannot be "
-"attributed."
-msgstr ""
-"Thể tích nước chỉ được điền cho các thiết bị đã biết lưu lượng, và ở đây "
-"không có thiết bị nào như vậy — nên nhật ký này chỉ hiển thị thời gian "
-"vận hành. Cơ sở lấy lưu lượng từ sơ đồ đường ống của mình; thiết bị vẽ "
-"trực tiếp lên bản đồ có mang lưu lượng nhưng không liên kết với van mở "
-"nó, nên không thể quy về được."
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Water volumes are estimated from the sprinklers drawn on the map inside "
-"the area each valve covers, and how long that valve ran — not measured by"
-" a flow meter. Only the part that overlaps this plot is counted, so no "
-"share is guessed."
-msgstr ""
-"Thể tích nước được ước tính từ các vòi phun vẽ trên bản đồ trong phạm vi "
-"mà mỗi van bao phủ, cùng với thời gian van đó chạy — không phải đo bằng "
-"đồng hồ đo lưu lượng. Chỉ phần chồng lấn với khu đất này mới được tính, "
-"nên không có tỷ lệ nào bị suy đoán."
-
-#: aot/aot_flask/geo/plot_journal.py
-#, python-format
-msgid ""
-"These devices belong to this target but left no record in this period, so"
-" they are not in the tables: %(names)s. That is not the same as running "
-"for zero hours — it means nothing was written."
-msgstr ""
-"Các thiết bị này thuộc mục tiêu này nhưng không để lại bản ghi trong "
-"khoảng thời gian này, vì vậy chúng không có trong các bảng: %(names)s. "
-"Điều đó không giống với việc chạy trong 0 giờ — nó có nghĩa là không có "
-"gì được ghi lại."
-
-#: aot/aot_flask/geo/plot_journal.py
-#, python-format
-msgid ""
-"No sensor sits inside this plot, so the nearest one in the same zone was "
-"used — about %(m)s m away. It is the closest reading available, not a "
-"reading of this plot."
-msgstr ""
-"Không có cảm biến nào nằm trong khu đất này, nên cảm biến gần nhất trong "
-"cùng khu vực đã được sử dụng — cách khoảng %(m)s m. Đây là giá trị đo gần"
-" nhất hiện có, không phải giá trị đo của chính khu đất này."
-
-#: aot/aot_flask/geo/plot_journal.py
 #, python-format
 msgid "Weather station %(name)s"
 msgstr "Trạm thời tiết %(name)s"
@@ -30922,45 +29118,9 @@ msgstr "Cảm biến hiện trường và trạm thời tiết"
 msgid "Runtime (h)"
 msgstr "Thời gian chạy (giờ)"
 
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Photo links below point to `/note_attachment/...` and stay valid only "
-"while the server is running."
-msgstr ""
-"Các liên kết ảnh bên dưới trỏ đến `/note_attachment/...` và chỉ còn hiệu "
-"lực khi máy chủ đang chạy."
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"Some devices in this journal have no mapped coverage area, so their water"
-" column stays blank — that does not mean they used no water."
-msgstr ""
-"Một số thiết bị trong nhật ký này không có khu vực bao phủ được ánh xạ, "
-"nên cột lượng nước của chúng để trống — điều đó không có nghĩa là chúng "
-"không sử dụng nước."
-
-#: aot_flask/templates/pages/geo/journal_view.html
-msgid "Full numbers for this period"
-msgstr "Số liệu đầy đủ cho giai đoạn này"
-
 #: aot_flask/templates/pages/geo/journal_view.html
 msgid "Same targets as the previous stage."
 msgstr "Mục tiêu giống giai đoạn trước."
-
-#: aot/aot_flask/geo/plot_journal.py
-msgid ""
-"No rainfall total is given. Each stored reading covers its own window, "
-"and this system cannot tell whether those windows overlap — the weather-"
-"station channel, for one, repeats a 15-minute total every 5 minutes. Read"
-" the maximum as the wettest single window, and the average as the mean of"
-" those windows, not an hourly rate."
-msgstr ""
-"Không có tổng lượng mưa nào được cung cấp. Mỗi giá trị đo được lưu tương "
-"ứng với một khoảng thời gian riêng, và hệ thống này không thể biết liệu "
-"các khoảng đó có chồng lấn hay không — ví dụ kênh trạm thời tiết lặp lại "
-"tổng 15 phút mỗi 5 phút. Hãy hiểu giá trị lớn nhất là khoảng thời gian ẩm"
-" ướt nhất, và giá trị trung bình là trung bình của các khoảng đó, không "
-"phải tốc độ theo giờ."
 
 #: aot/aot_flask/geo/plot_journal.py
 #, python-format
@@ -30993,31 +29153,6 @@ msgstr "tích lũy %(v)s"
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Show plan"
 msgstr "Hiển thị kế hoạch"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "%(n)s of %(d)s days above target"
-msgstr "%(n)s trong %(d)s ngày trên mục tiêu"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "%(n)s of %(d)s days below target"
-msgstr "%(n)s trong %(d)s ngày dưới mục tiêu"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "on target for all %(d)s days"
-msgstr "đạt mục tiêu trong cả %(d)s ngày"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "average %(v)s"
-msgstr "trung bình %(v)s"
-
-#: aot/aot_flask/templates/pages/geo/journal_view.html
-#, python-format
-msgid "of %(d)s days: %(a)s above, %(b)s below"
-msgstr "trong %(d)s ngày: %(a)s trên, %(b)s dưới"
 
 #: aot/aot_flask/templates/pages/geo/journal_view.html
 msgid "Measurement trends"
@@ -31098,10 +29233,6 @@ msgstr "Phun sương"
 msgid "Devices under automatic control"
 msgstr "Thiết bị được điều khiển tự động"
 
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s bị loại trừ"
-
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr "Tắt thiết bị để điều khiển tự động không tác động đến nó."
 
@@ -31152,14 +29283,6 @@ msgstr ""
 "nhìn trước dài hơn giúp cảnh báo sớm hơn nhưng có thể gây điều chỉnh quá "
 "mức. Bị bỏ qua khi cơ sở này đã liên kết nguồn dự báo riêng — nguồn đó đã"
 " tự áp dụng thời gian nhìn trước của nó."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Bộ lọc danh mục thông báo"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Không gian ghi chú"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -31265,12 +29388,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "Chọn một không gian trong cài đặt tiện ích để hiển thị ghi chú."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr ""
-"Hiển thị ghi chú được viết trong không gian đã chọn (xem \"Không gian\" "
-"bên dưới)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31597,18 +29714,6 @@ msgstr "Dừng xoay"
 msgid "System Timezone"
 msgstr "Múi giờ hệ thống"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"Múi giờ mặc định cho toàn hệ thống (tên IANA, ví dụ Asia/Seoul). Dùng cho"
-" thời gian trong nhật ký daemon, nhật ký kiểm tra và làm phương án cuối "
-"cùng cho lịch của thiết bị không có vị trí. Đây không phải múi giờ hiển "
-"thị cá nhân của bạn trong cài đặt tài khoản."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31621,3 +29726,899 @@ msgstr "Chưa đặt vị trí — ước tính theo múi giờ hệ thống"
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "Múi giờ mặc định của toàn hệ thống (tên IANA, ví dụ Asia/Seoul). Dùng cho thời gian trong nhật ký daemon và làm mốc cuối cùng cho các thiết bị chưa có vị trí; các thiết bị đó sẽ theo giá trị này khi bạn lưu tại đây. Thời gian mọi người đọc và ghi theo múi giờ cá nhân của từng người trong cài đặt tài khoản."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "Toàn chiều rộng trên di động"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Kích thước màn hình máy tính"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Bề mặt điều khiển"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Đường phân cách"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Đường phân cách (nhẹ)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Kích thước màn hình di động"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Rãnh công tắc khi tắt"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Không phản hồi"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Đã lên lịch"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "Giờ kết thúc phải muộn hơn giờ bắt đầu trong cùng một ngày (không hỗ trợ khoảng thời gian qua nửa đêm)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Chuỗi thao tác này dùng giờ riêng theo từng ngày trong tuần nên giờ bắt đầu/kết thúc ở đây chưa được áp dụng. Hãy thay đổi trong lịch theo ngày trong tuần của tiện ích chuỗi thao tác."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Chọn đối tượng đăng ký (Đầu vào hoặc Đầu ra)."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Khôi phục"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Khôi phục về cài đặt tại thời điểm hộp thoại này được mở"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Đã khôi phục"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "Tín hiệu"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Cài đặt các phụ thuộc cho"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "Trang chủ AoT"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Phóng to toàn bộ trang trên máy tính — chữ, nút và bản đồ cùng lúc. Điện thoại và máy tính bảng dùng cài đặt ở trên."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Phóng to toàn bộ trang trên điện thoại và máy tính bảng — chữ, nút và bản đồ cùng lúc. Máy tính dùng cài đặt bên dưới."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Không có kết quả"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Chưa chọn gì"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Bản ghi"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "Yêu cầu"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "Đã chọn {0} trên {1}"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Không thể tải các yêu cầu điều khiển"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Chỉ những người có quyền chỉnh sửa bộ điều khiển mới có thể quyết định các mục này."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Các mục này chưa được chạy. Phê duyệt sẽ chạy đúng như mô tả ở đây — bạn không cần quay lại báo cho AI."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "Yêu cầu AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "Lời khuyên của AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Không thể tải lời khuyên"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Không có lời khuyên nào đang chờ."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Không có đề xuất lịch trình nào đang chờ."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Ý kiến từ AI này và các AI khác được kết nối. Chấp nhận chỉ ghi lại rằng bạn đồng ý — không chạy bất cứ điều gì."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "Do AI đề xuất"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Đưa đề xuất này vào lịch trình?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Từ chối đề xuất này?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Đề xuất lịch trình"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "Các tác vụ AI đề xuất đưa vào lịch trình. Phê duyệt sẽ đưa chúng vào lịch trình — chúng chạy đúng vào giờ đã định."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "Những việc AI đang chờ bạn quyết định — mỗi mục bên dưới đều chờ quyết định của bạn."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "Kết nối AI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Khóa truy cập"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Nâng cao"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "Được phép"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Một ứng dụng AI bạn đã dùng, chẳng hạn Claude Desktop, có thể đọc thông tin của nông trại này và yêu cầu điều khiển thiết bị. Việc điều khiển thiết bị chỉ chạy sau khi có người phê duyệt."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "AI tích hợp"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "Kết nối ứng dụng AI của bạn"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Lỗi khi tải cài đặt"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "Chi phí sử dụng ước tính hằng tháng của AI tích hợp. Bạn sẽ được cảnh báo khi gần chạm hạn mức, và khi đạt hạn mức, hệ thống chuyển sang mô hình rẻ nhất. 0 nghĩa là không giới hạn."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Truy cập AI bên ngoài"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Cấp một khóa cho mỗi ứng dụng AI rồi dán khóa đó vào ứng dụng ấy."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Cho phép AI tích hợp định kỳ tóm tắt tình hình của nông trại ở chế độ nền."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "Máy chủ cầu nối MCP"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Quản lý khóa"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "Không được phép"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Mở Cài đặt chung"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Chạy AI tích hợp"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "Mô hình AI được dùng cho trò chuyện và lời khuyên trong ứng dụng này. Nó chạy tách biệt với ứng dụng AI của bạn, nên bạn có thể để tắt nếu không dùng."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "Địa điểm mà AI dùng khi cuộc trò chuyện hoặc màn hình không chỉ định địa điểm nào."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "Các máy chủ công cụ mà AI tích hợp gọi. Khi bạn thêm một engine MCP ở trên, một máy chủ sẽ được tạo tự động."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "Bật hoặc tắt trong Cài đặt > Chung."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "%(n)s ghi chú do AI viết đang chờ người xác nhận."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0 nghĩa là không tự động đồng bộ."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "Kiến thức AI"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "Header khóa API"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Ngày thêm"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Tất cả trạng thái"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Tất cả thẻ gắn"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Chỉ trích dẫn kiến thức đã xác nhận"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Nguồn dữ liệu"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "Mức độ sử dụng kiến thức"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Loại nguồn"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Cài đặt kiến thức"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Đồng bộ lần cuối"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Nguồn thư viện"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "Tra cứu khi cần"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Cần xác nhận"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Chưa đồng bộ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Mở liên kết"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Lưu và xác nhận"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Chỉ xem các ghi chú đó"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Lỗi đồng bộ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Đồng bộ ngay"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Đã đồng bộ"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "Đã đồng bộ {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Có ba cách để bổ sung: kết nối một nguồn ở tab Nguồn dữ liệu, nhấn Thêm kiến thức để ghi lại những gì bạn đã biết, hoặc nhờ AI tra cứu điều gì đó — AI sẽ lưu lại những gì tìm được."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Số lần được truy xuất"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Tiêu đề, nội dung hoặc ghi nguồn"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Độ tin cậy"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "Những gì con người và AI đã ghi lại để AI trích dẫn. Dữ liệu đồng bộ từ các nguồn mặc định bị ẩn ở đây — hãy chọn trong bộ lọc nguồn hoặc quản lý ở tab Nguồn dữ liệu."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "Do con người và AI viết"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "Bản ghi AI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Tất cả mức độ nghiêm trọng"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Tất cả loại"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Câu trả lời"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "Đã áp dụng vào kiến thức."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Đã phê duyệt"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Chờ phê duyệt"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "AI gọi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Đã thực hiện"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Cuộc trò chuyện"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Đã sửa"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Nội dung sửa"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Không thể tải các bản ghi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Đã bỏ qua"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Báo cáo lỗi"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Hết hạn"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Đã đưa vào kiến thức"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Đã tra cứu"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Không có báo cáo lỗi nào."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "Các câu hỏi đã hỏi AI tích hợp và câu trả lời của nó."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Đã nhận"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Lệnh gọi công cụ"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Những gì các AI được kết nối đã làm thông qua các công cụ — mới nhất trước. Các yêu cầu cần phê duyệt sẽ hiển thị cách chúng đã được quyết định."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "Câu trả lời của AI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Khi nào"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "Các câu trả lời sai của AI do người dùng báo cáo, kèm nội dung sửa. Áp dụng một bản sửa sẽ thêm nó vào Kiến thức AI."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "Không thể tải danh sách máy chủ MCP."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Xóa máy chủ này?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Lược đồ đầu vào"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "Đối tượng JSON, ví dụ {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "Chưa có máy chủ MCP nào."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Máy chủ này không cung cấp công cụ nào."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Đã thêm máy chủ."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Đã xóa máy chủ."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Đã cập nhật máy chủ."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "Máy chủ"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Đã dừng"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "Các máy chủ công cụ mà AI tích hợp gọi. Thêm một engine MCP ở trang Kết nối AI sẽ tự động tạo một máy chủ."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "Công cụ"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Chờ thử lại"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "Thay đổi vai trò sẽ hỏi xem có điền lại chuyên môn, lời nhắc hệ thống, cấp độ và mô hình theo mặc định của vai trò đó không."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Điền chuyên môn, lời nhắc hệ thống, cấp độ và mô hình mặc định của vai trò này? Những gì bạn đã nhập sẽ bị thay thế."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "%(n)s đề xuất lịch trình của AI đang chờ trong AI → Yêu cầu."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Hủy tác vụ này?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "Yêu cầu điều khiển và đề xuất lịch trình của AI được quyết định trong AI → Yêu cầu."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Không thể tải dòng thời gian thiết bị"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Không tìm thấy thiết bị nào."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "Mở yêu cầu"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Màu cài sẵn"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Tất cả bản đồ"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Tất cả địa điểm"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Khóa"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Không thể tải cài đặt"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Được đo bởi trạm thời tiết"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "Các phép đo bạn không chọn khi tạo nhật ký này sẽ không có trong đó. Các lưu ý ở trên nêu rõ chúng."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Các cảm biến không thống nhất"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Nhấp để chỉnh sửa màu Đang xác nhận"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Nhấp để chỉnh sửa màu Bề mặt điều khiển"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Nhấp để chỉnh sửa màu Không có phản hồi"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Nhấp để chỉnh sửa màu Công tắc bật"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Nhấp để chỉnh sửa màu Rãnh công tắc khi tắt"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "Bề mặt của những thứ bạn thao tác — ô nhập văn bản, ô chọn, nút dạng viên. Hãy giữ nó khác với nền trang, nếu không điều khiển đặt trên trang sẽ chìm vào nền"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Đường phân cách nhạt hơn cho danh sách dày đặc, nơi một đường đậm đủ sẽ gây rối mắt"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Đường giữa các mục bên trong một vùng chứa — danh sách, hàng tùy chọn. Không phải viền bao quanh thứ gì"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Nền hàng/thẻ khi thiết bị ngừng phản hồi — khác với Trạng thái cảnh báo, là khi con người chủ ý tạm dừng nó"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Công tắc trượt"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "Rãnh công tắc trượt khi tắt (khi bật dùng Dải 3)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Ô nhập văn bản"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Công tắc bật"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Bạn có chắc chắn muốn xóa vai trò này không?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Không có thông báo nào khớp với tìm kiếm của bạn."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Tìm theo tiêu đề, nội dung, danh mục..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Màu theo đoạn"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Màu dải toàn cục"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Đoạn"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Màu"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Đã lên kế hoạch"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Nội dung"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Thời lượng (phút)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Chỉnh sửa và phê duyệt"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "Giá trị không hợp lệ trong trường '{field}'"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Lưu và phê duyệt"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Thời gian đã lên lịch"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Bước"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Thao tác này sẽ chạy thiết bị thật (van, bơm)."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Xem"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Xem chi tiết"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "{n} yêu cầu đang chờ phê duyệt"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total} thành công"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "Bốc thoát hơi nước"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Thu thập nhiệt độ, độ ẩm, tốc độ gió, lượng mưa, bức xạ mặt trời, điểm sương và CO2 từ bên ngoài cơ sở. Hàm điều khiển môi trường tích hợp dùng bộ thu thập này làm nguồn dữ liệu chuẩn duy nhất. Hãy chọn cảm biến ngoài trời cho từng mục. Các mục để trống sẽ không được chia sẻ — điều khiển tích hợp sẽ coi chúng là chưa biết thay vì giả định một giá trị."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Máy chủ/token lấy từ Cài đặt -> ChirpStack; các thiết bị tham gia bộ lập lịch này từ trang thiết bị của chính chúng (ví dụ: trường \"Class Scheduler\" của AoT-C)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Khoảng thời gian tìm kiếm (ngày)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Kênh đang hoạt động"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "14 ngày qua"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "30 ngày qua"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "60 ngày qua"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "90 ngày qua"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Để trống để tự động khớp với đa giác đã đăng ký chứa điểm được nhấp."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (trung bình)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "Khoảng thời gian tìm kiếm NDVI"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "Thống kê NDVI theo từng thửa đất cùng độ ẩm đất / nhiệt độ đất cho một đa giác đã đăng ký tại agromonitoring.com — đây là đầu vào duy nhất ở đây báo cáo độ ẩm đất bằng con số cho ranh giới thửa đất của riêng bạn, thay vì một lớp phủ vệ tinh thô. Hãy vẽ thửa đất trong bảng điều khiển Agromonitoring (1-3000 ha) rồi dán ID đa giác của nó vào bên dưới, hoặc để trống để tự động khớp với đa giác chứa điểm bạn nhấp. Dùng cùng tài khoản với OpenWeatherMap."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "ID đa giác"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Nhiệt độ đất (10cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Nhiệt độ đất (bề mặt)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "Hệ thống dùng lần chụp gần nhất trong khoảng thời gian này. Mây có thể khiến nhiều tuần liền không có ảnh khả dụng."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Ảnh rõ nhất trong khoảng thời gian"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "Mây làm khuyết dữ liệu ở bất kỳ ngày đơn lẻ nào, nên hệ thống hiển thị ảnh khả dụng gần nhất trong khoảng thời gian này thay thế."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Bộ dữ liệu"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Ảnh màu giả (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "7 ngày qua"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Độ phủ mây tối đa"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "Ảnh mới nhất"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (Độ ẩm)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (Thực vật)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (Nước)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Ưu tiên ảnh"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Khoảng thời gian tìm kiếm"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (đỉnh khí quyển)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (đã hiệu chỉnh khí quyển)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Ảnh Sentinel-2 độ phân giải 10 m qua Sentinel Hub trên Copernicus Data Space Ecosystem — đủ mịn để nhận ra sự khác biệt về sinh trưởng ngay trong một thửa đất, không như NDVI MODIS 250 m. Hãy đăng ký tài khoản CDSE miễn phí, tạo một ứng dụng khách OAuth và dán Client ID cùng Secret của nó vào bên dưới. Gói miễn phí cho phép 30.000 đơn vị xử lý mỗi tháng; một màn hình bản đồ tốn khoảng 4 đơn vị, và các ô bản đồ được lưu đệm trong một ngày."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Màu thực"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Giao diện"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Kích thước chữ"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "Các số đo hiện tại so với mục tiêu và giới hạn mà giai đoạn này khai báo — cùng thẻ mà tiện ích bản đồ hiển thị, bao gồm DLI và nhiệt tích lũy. [7 ngày] biến mỗi hàng thành khoảng giá trị đã dao động trong tuần qua."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Điền các hàng không có khoảng giá trị riêng (CO2, độ ẩm đất, điểm sương) bằng một đường xu hướng gần đây. Cần có khối mục tiêu."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Giai đoạn này đã tiến được bao xa so với giai đoạn kế tiếp tính theo độ ngày sinh trưởng (GDD). Chỉ hiển thị khi chương trình chuyển giai đoạn theo GDD. Tổng tích lũy kể từ khi trồng là một hàng trong thẻ môi trường, và tuân theo cài đặt của thẻ đó."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "Tắt thất bại: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "Giới hạn số yêu cầu đang chờ xử lý mà modal danh sách hiển thị cùng một lúc"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Tần suất làm mới số lượng đang chờ"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "Yêu cầu phê duyệt MCP"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Số mục hiển thị tối đa"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Hiển thị số yêu cầu ghi từ AI bên ngoài đang chờ phê duyệt. Nhấp vào con số để mở danh sách rồi phê duyệt, từ chối hoặc chỉnh sửa rồi phê duyệt từng yêu cầu một, hoặc chọn nhiều yêu cầu để phê duyệt/từ chối hàng loạt. Phê duyệt sẽ chạy yêu cầu ngay lập tức với đúng các giá trị đang hiển thị."

@@ -4673,11 +4673,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "Seka vis dar vykdoma — fono procesas nepritaikė pakeitimo."
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "Seka nebuvo paleista — fono procesas nepritaikė pakeitimo."
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4752,7 +4752,7 @@ msgstr "Nepavyko rasti šios teritorijos."
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "Objektai be nurodytos vietos žemėlapyje čia nebus rodomi — pirmiausia nurodykite jų vietą objekto nustatymuose."
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4769,15 +4769,15 @@ msgstr "Pasirinkite, apie ką bus šis žurnalas."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "Įveskite pradžios ir pabaigos datas."
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "Pradžios data yra vėlesnė už pabaigos datą."
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "Nepavyko rasti, apie ką šis žurnalas."
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4786,24 +4786,24 @@ msgstr "Nepavyko nuskaityti šio tikslo."
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "Šis laikotarpis per ilgas (%(days)s d.). Pabandykite trumpesnį laikotarpį."
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "Pasirinkta per daug įrenginių (%(n)s kanalų). Susiaurinkite sritį arba vietoj to pasirinkite vieną sklypą."
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "Pasirinkimas apimtų per daug duomenų. Pabandykite trumpesnį laikotarpį arba mažesnę sritį."
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "Šis žurnalas dar generuojamas."
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -4998,10 +4998,6 @@ msgstr "— Nėra —"
 msgid "Select one or more devices to register."
 msgstr "Pasirinkite vieną ar daugiau įrenginių registracijai."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Pasirinkite registracijos tikslą (Įvestis / Išvestis) arba tvarkaraštį."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5069,11 +5065,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "Veiksmo tipas"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Parametro pavadinimas"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Šaltinio tipas"
@@ -5082,24 +5073,6 @@ msgstr "Šaltinio tipas"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Rankinis įvedimas"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Pastaba / aprašymas"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "Išorinis URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Reikšmė / URL / Tekstas"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "Įrašo ID"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7305,26 +7278,6 @@ msgstr "Informacijos fono spalva"
 msgid "Info Tint Text"
 msgstr "Tekstas ant informacijos fono spalvos"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Sėkmės atspalvio kraštinė"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Įspėjimo atspalvio kraštinė"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Pavojaus atspalvio kraštinė"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Informacijos atspalvio kraštinė"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "DKM ženklelio fonas"
@@ -7332,12 +7285,6 @@ msgstr "DKM ženklelio fonas"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "MCP ženklelio fonas"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Atnaujinimo ženklelis"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7539,27 +7486,9 @@ msgstr "Sąlygos darbo ciklas (%)"
 msgid "Confirmed"
 msgstr "Patvirtinta"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "Reikia peržiūros"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Įveskite reikšmę"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "pvz., 25.5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "pvz., nustatyta reikšmė pagal ryto temperatūrą"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "pvz., https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7580,59 +7509,10 @@ msgstr "Vykdoma"
 msgid "Failed"
 msgstr "Nepavyko"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "DI pasiūlymas"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Nėra registruotų užduočių."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Pridėkite ją mygtuku „Pridėti užduotį“ viršuje."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr "Patvirtinti DI pasiūlytą tvarkaraštį ir pridėti jį į kalendorių?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "DI pasiūlytas tvarkaraštis patvirtintas."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "Patvirtinti nepavyko"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Tinklo klaida"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Atmesti ir ištrinti šį pasiūlymą?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "Pasiūlymas atmestas ir ištrintas."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Atmesti nepavyko"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Nėra tėvinės užduoties, po kuria įtraukti"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Jau yra aukščiausio lygio užduotis"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Tvarka atnaujinta"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7641,14 +7521,6 @@ msgstr "Tvarka atnaujinta"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "Atnaujinti nepavyko"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Hierarchija atnaujinta"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Pavadinimas atnaujintas"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7748,65 +7620,15 @@ msgstr "Įkeliama..."
 msgid "Failed to load data."
 msgstr "Nepavyko įkelti duomenų."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Nėra registruotų konteksto įrašų."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Nėra kriterijus atitinkančių įrašų."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Sistemos numatytoji"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Redaguoti apibrėžimą"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "Laukiama peržiūros"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Atmesta"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Įveskite arba patvirtinkite tvirtinamą apibrėžimą:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Sėkmingai patvirtinta."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Tvirtinant įvyko klaida."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Įvyko serverio klaida."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Atmesti šį terminą?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Sėkmingai atmesta."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "Apdorojant įvyko klaida."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Įveskite naują apibrėžimą:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -9063,7 +8885,7 @@ msgstr "Prie šios vietos dar nepriskirta jutiklių."
 #: aot_flask/templates/pages/ai/scheduler.html:525
 #: utils/calendar_event_format.py:287
 msgid "min"
-msgstr "min"
+msgstr "min."
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:9350
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:8
@@ -11000,69 +10822,11 @@ msgstr "anuliuoti negalima"
 msgid "Usage"
 msgstr "Naudojimas"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "AI konteksto tvarkyklė"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr "Įtraukite išorinę informaciją į AI ir tvarkykite jos patikimumo būseną."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Pridėti kontekstą"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Pastabos (nebūtina)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Konteksto įrašai"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Sistemos numatytoji reikšmė"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "Reikia peržiūros"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr ""
-"AI automatiškai sugeneruota iš srities numatytųjų reikšmių. Dar "
-"neperžiūrėta."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Naudotojo įvestis arba laukiantis elementas. AI juo remiasi, tačiau su "
-"mažu pasitikėjimu."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"Reikšmė peržiūrėta ir patvirtinta naudotojo. AI ja naudojasi su dideliu "
-"pasitikėjimu."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Aptikta platforma"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC / serveris"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Docker konteineris"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -11433,7 +11197,7 @@ msgstr ""
 
 #: aot_flask/templates/pages/energy_usage_outputs.html:39
 msgid "CH"
-msgstr "CH"
+msgstr "Kan."
 
 #: aot_flask/templates/pages/energy_usage_outputs.html:45
 msgid "From"
@@ -11941,15 +11705,6 @@ msgstr "arba atnaujinkite puslapį."
 msgid "Control requests awaiting approval"
 msgstr "Valdymo užklausos, laukiančios patvirtinimo"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Jos DAR NEĮVYKDYTOS. Patvirtinus, veiksmas bus atliktas nedelsiant, "
-"būtent su rodomais parametrais — nereikia grįžti pas AI ir jam apie tai "
-"pranešti."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Nėra laukiančių valdymo užklausų."
@@ -11987,54 +11742,9 @@ msgstr "Patvirtinta ir įvykdyta."
 msgid "Approved, but it failed to run"
 msgstr "Patvirtinta, tačiau įvykdyti nepavyko"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "AI būsena"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Mokymosi eiga"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Pagrindiniai raktažodžiai"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Dažniausiai naudojamos funkcijos"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "Atkurti AI būseną"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Jūsų AI instrukcijos"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Išplėstinė — neprivaloma"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "Pridėkite konkrečias instrukcijas savo AI (neprivaloma)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"pvz., prižiūriu šiltnamį ir man reikia pagalbos su kenkėjų kontrole bei "
-"temperatūros valdymu"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Lauko ūkininkavimas"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12044,34 +11754,12 @@ msgstr "Lauko ūkininkavimas"
 msgid "Greenhouse"
 msgstr "Šiltnamis"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Sporto įrenginys"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Parkas"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Transportas"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "Atnaujinti AI konfigūraciją"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Patvirtinti žinių įrašai:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12080,25 +11768,6 @@ msgstr "Laukiama:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Iš viso:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "AI vis dar mokosi..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Kol kas jokios veiklos"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"Atkurti AI būseną? Momentinė nuotrauka bus perskaičiuota kito įkėlimo "
-"metu."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "Išsaugoti nepavyko. Bandykite dar kartą."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12114,26 +11783,6 @@ msgstr "AI agentas"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "AI nustatymai"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"AI agentų orkestravimo sluoksnis. Tvarkykite savo AI paslaugas ir "
-"agentus, kad automatizuotumėte sudėtingas užduotis."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "AI paslaugos veikimas"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"Paleiskite arba sustabdykite AI modelį. Kol jis sustabdytas, pokalbiai, "
-"patarimų užklausos ir foninis AI darbas negalimi."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12211,36 +11860,11 @@ msgstr "Pirmiausia pasirinkite variklį."
 msgid "Creating agent... Please wait."
 msgstr "Kuriamas agentas... Palaukite."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Pirmiausia pasirinkite paslaugą arba realizaciją."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "Būtina nurodyti pavadinimą ir komandą."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "MCP serveris pridėtas."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Nepavyko."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "Nepavyko pridėti MCP serverio."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Agento nustatymai"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Klaida: forma nerasta"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12302,14 +11926,6 @@ msgstr "AoT MCP serveris"
 msgid "Action failed"
 msgstr "Veiksmas nepavyko"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Nesukonfigūruotas nė vienas MCP įrašas."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "Nepavyko įkelti MCP įrašų."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "AI paslauga paleista"
@@ -12329,52 +11945,13 @@ msgstr "AI paslauga sustabdyta"
 msgid "Save failed"
 msgstr "Išsaugoti nepavyko"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Išsaugoti nustatymus"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "Nustatymai išsaugoti"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "Norint pakeisti AI perjungiklį, reikia paleisti iš naujo"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Eksperimentinė funkcija"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "AI funkcionalumas šiuo metu yra eksperimentinėje stadijoje."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Automatiškai patvirtinti įprastas užduotis"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Maksimalus poveikis automatiniam patvirtinimui"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Reikalauti atsiliepimo nepavykus"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Modeliai"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Prižiūrinčiojo modelis"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Darbininko modelis"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12392,98 +11969,22 @@ msgstr "Numatytoji vieta"
 msgid "(none)"
 msgstr "(nėra)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Kontekstas ir biudžetas"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Draudžiamo laikotarpio pradžia"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Draudžiamo laikotarpio pabaiga"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Konteksto apimtis (valandomis)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Maksimalus istorijos kontekstas"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Mėnesinio biudžeto limitas (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "įkeliama..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "MCP įrašai"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "AI paslaugos"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "AI paslaugų registras"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Grįžti į portalą"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "Registruoti AI paslaugą"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"Registruokite ir tvarkykite AI variklių ryšius (Gemini, OpenAI, vietiniai"
-" tarpiniai serveriai)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Ištrinti šią paslaugą?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Galinis taškas"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Kol kas neregistruota nė viena AI paslauga."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "Prijunkite savo pirmąjį LLM"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Paslaugos pavadinimas"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "pvz., Mano Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Variklio tipas"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Modelio pavadinimas"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API galinis taškas (neprivaloma)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12496,28 +11997,6 @@ msgstr "Autentifikacija"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Autentifikacijos tipas"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "ID / slaptažodis"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Be autentifikacijos"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "Paskyros ID"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Registruoti paslaugą"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Nėra iš anksto nustatytų modelių"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12555,28 +12034,6 @@ msgstr "Sinchronizuoti"
 msgid "Data credits"
 msgstr "Duomenų šaltiniai"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "DI sutvarkytų žinių peržiūra"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Žinios, kurias DI atidėjo savarankiškai (iš pradžių visada "
-"nepatvirtintos). Patvirtinkite / redaguokite, kas teisinga, pašalinkite, "
-"kas klaidinga — kol nebus peržiūrėta, jos cituojamos kaip [AI 정리 — 미확인]."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Tik peržiūrėtos žinios: ĮJUNGTA"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Tik peržiūrėtos žinios: IŠJUNGTA"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12585,10 +12042,6 @@ msgstr ""
 "Kai įjungta, AI negali cituoti pačios parašytų užrašų, kol jų "
 "nepatvirtins žmogus. Autoritetingoms ir rankiniu būdu įvestoms žinioms "
 "tai įtakos neturi."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Dar nėra DI sutvarkytų žinių."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12606,18 +12059,9 @@ msgstr "Nepatvirtinta"
 msgid "Flagged"
 msgstr "Pažymėta"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Ta pati tema kaip autoritetingame šaltinyje"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Atitikmenys"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Atidaryti šaltinį"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12626,23 +12070,6 @@ msgstr "Aktyvinti iš naujo"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Atšaukti"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Žinių įrašai"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"Viskas, ką AI gali cituoti — sinchronizuota iš šaltinių, AI atidėta arba "
-"įvesta ranka. Ieškokite ir filtruokite, kad pamatytumėte, kas čia iš "
-"tikrųjų yra."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Ieškoti žinių…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12679,16 +12106,6 @@ msgstr ""
 "Žinių biblioteka tuščia. Kol čia nieko nėra, AI atsako į temos klausimus "
 "remdamasis savo bendromis žiniomis — neturėdama šaltinio, kurį galėtų "
 "nurodyti."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Trys būdai ją užpildyti: prijunkite šaltinį aukščiau, spustelėkite "
-"„Pridėti žinias“ ir įrašykite tai, ką jau žinote, arba tiesiog "
-"paprašykite AI ką nors surasti — ji išsaugos, ką ras."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12757,14 +12174,6 @@ msgstr "Šaltinio URL"
 msgid "Source Settings"
 msgstr "Šaltinio nustatymai"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "Redaguoti DI sutvarkytas žinias"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Išsaugoti (patvirtina)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Pasirinkite šaltinio tipą."
@@ -12802,10 +12211,6 @@ msgstr "Šaltinis nerastas."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Šaltinio pavadinimas"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Parametro pavadinimas (konteksto raktas)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12914,17 +12319,9 @@ msgstr "Ištrinti nepavyko"
 msgid "Crop Type"
 msgstr "Kultūros tipas"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Patvirtinama…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Patvirtinta."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Atšaukiama…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -12935,10 +12332,6 @@ msgid "Retire this item? It will stop being cited until reactivated."
 msgstr ""
 "Atšaukti šį elementą? Jis nebebus cituojamas, kol nebus aktyvintas iš "
 "naujo."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Aktyvinama iš naujo…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13089,10 +12482,6 @@ msgstr "Pasirinkite operacijas, kurias reikia registruoti kaip žinias"
 msgid "Parameters for the selected operations"
 msgstr "Pasirinktų operacijų parametrai"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "Pasirinkite bent vieną operaciją."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13234,23 +12623,9 @@ msgstr "Santrauka"
 msgid "Key-Value Extraction"
 msgstr "Rakto ir reikšmės išgavimas"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "AI tvarkytuvė"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Pokalbių valdymas"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Klaidų skydelis"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Samprotavimo istorija"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13266,25 +12641,9 @@ msgstr "Data"
 msgid "Details"
 msgstr "Detalės"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Kol kas nėra samprotavimo istorijos."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "AI klaidų skydelis"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Atnaujinti modelius"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Atnaujinti sąrašą"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Analizuojami klaidų modeliai..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13326,51 +12685,14 @@ msgstr "Netinkamas veiksmas"
 msgid "Tool Misuse"
 msgstr "Netinkamas įrankio naudojimas"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Naudotojo pataisymas"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Samprotavimo detalės"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "1 etapas: naudotojo užklausa"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "2 etapas: ketinimas ir planavimas"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "3 etapas: įrankio vykdymas (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "4 etapas: sintezė ir koordinavimas"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Koordinatorius"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "5 etapas: galutinis atsakymas"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Klaidos detalės ir sprendimas"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Pritaikyti žinioms"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Iš viso laukiama"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13381,47 +12703,19 @@ msgstr "Rekomendacijos"
 msgid "Review"
 msgstr "Peržiūrėti"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Klaidų nerasta."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Ar tikrai?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "Keisti MCP serverį"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Serverio pavadinimas"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Vykdymo komanda"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Apimtis"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Bendra (visada manifeste)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Konkreti (įkeliama pagal poreikį)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Paskirtis"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Aplinkos kintamieji (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13429,38 +12723,14 @@ msgstr "Aplinkos kintamieji (JSON)"
 msgid "Update"
 msgstr "Atnaujinti"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "Sukurti AI agentą"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "Susijusi nuoroda"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "Gauti API raktą"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Agento informacija"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Agento pavadinimas"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "pvz., Energijos tvarkytuvė"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "AI paslaugos registracija"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "pvz., Mano OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13472,14 +12742,6 @@ msgstr "Modelio pasirinkimas"
 msgid "Enter model name manually"
 msgstr "Įveskite modelio pavadinimą rankiniu būdu"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "API galinis taškas"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "AI srautas ir įrankių prieiga"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13489,10 +12751,6 @@ msgstr "Vaidmuo sraute"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Darbininkas (pasenęs)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Modelio lygis"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13507,17 +12765,9 @@ msgstr "Standartinis"
 msgid "Heavy"
 msgstr "Sunkusis"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Įrankių prieiga"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Priskirta"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Pasirinkite priskirtus MCP serverius"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13525,15 +12775,6 @@ msgstr "Pasirinkite priskirtus MCP serverius"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Specializacija"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "pvz., drėkinimas, klimatas"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Agento taisyklės"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13546,29 +12787,9 @@ msgstr "Sistemos raginimas"
 msgid "Define how this agent should behave..."
 msgstr "Apibrėžkite, kaip šis agentas turėtų elgtis..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Pasirinktinis modelis..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Paslaugos raktas"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "Paslaugos API raktas"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Numatytasis sistemos variklis"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Paslaugos prisijungimo duomenys"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "Pagrindinė konfigūracija"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13580,166 +12801,17 @@ msgstr "Pagrindinė konfigūracija"
 msgid "Options"
 msgstr "Parinktys"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "MCP apimtis"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "MCP instrukcijos"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Serverio instrukcija"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "Klasifikuoja tik ketinimą. Rekomenduojamas lengvasis modelis."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr ""
-"Sukuria vykdymo planus. Rekomenduojamas standartinis arba sudėtingas "
-"modelis."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Iškviečia įrankius ir renka duomenis."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Apjungia rezultatus į atsakymą vartotojui."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Pasenęs prižiūrėtojo/darbuotojo režimas."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "Bendrosios DI parinktys"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Bendrieji DI nustatymai"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "Sukonfigūruokite viso sistemos DI orkestravimo lygio parametrus."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "Peržiūrėti įrenginio DI kontekstą"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "Tikrinti atskirų įrenginių DI konteksto duomenis"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Naršyti įrenginius"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Infrastruktūra"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "Pagrindinio tarpinio serverio URL"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr ""
-"Bendrasis tarpinis serveris, naudojamas, kai agento specifinis galutinis "
-"taškas tuščias."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "Užklausos laiko limitas (sek.)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Vartotojo patirtis (pranešimai)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "Slėpti DI sėkmės pranešimus"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "Slėpti DI įspėjimo pranešimus"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "DI tvarkaraštis"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "Bendradarbiavimo tikslų sekiklis"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Makro vaizdas]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[Diena]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Savaitė]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Mėnuo]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Metai]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Šiandien]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Aukštyn(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Žemyn(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Įtrauka(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Panaikinti įtrauką(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Atnaujinti duomenis"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Pridėti užduotį"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Įkeliamos užduotys..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "DI pasiūlytų užduočių valdymas"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "Peržiūrėkite ir valdykite DI agentų pasiūlytas užduotis."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Ieškoti užduočių..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13749,22 +12821,6 @@ msgstr "Ieškoti užduočių..."
 msgid "Target"
 msgstr "Tikslas"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Suplanuotas laikas"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Įkeliamos pasiūlytos užduotys..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Redaguoti užduotį"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "Vykdoma"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Užduotis"
@@ -13773,21 +12829,9 @@ msgstr "Užduotis"
 msgid "Goal"
 msgstr "Tikslas"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Etapas"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Kontrolinis taškas"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Pagrindinė užduotis"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Redaguoti pasiūlytą darbą"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13798,10 +12842,6 @@ msgstr "Išvesties valdymas"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "PID koregavimas"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "Tikslo ID"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13816,63 +12856,10 @@ msgstr "Tvarkaraščio laikas"
 msgid "AI Reasoning"
 msgstr "DI argumentacija"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Ištrynimo priežastis"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "pvz., nereikalinga, neteisingas laikas..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Ištrinti užduotį"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Išsaugoti pakeitimus"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "DI užklausos ir patarimai"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"Per MCP prijungta išorinė DI negali nieko keisti savarankiškai. Valdymo "
-"užklausos čia laukia jūsų patvirtinimo, o nuomonės renkamos, kad "
-"galėtumėte jas palyginti."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "DI patarimų žurnalas"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"Nuomonės, pateiktos pagrindinės DI, išorinės DI arba pavaldžių mazgų. "
-"Priėmimas reiškia tik pritarimą — jis nevykdo valdymo."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Naujausi DI įrankių iškvietimai"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Kol kas nepateikta jokių patarimų."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Kol kas neužfiksuota jokių įrankių iškvietimų."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13890,21 +12877,9 @@ msgstr "Siūlomas veiksmas"
 msgid "MCP Server Management"
 msgstr "MCP serverių valdymas"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Atnaujinti visų būseną"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Pridėti serverį"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Stebėkite ir valdykite Model Context Protocol tiltų procesus"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "Aptinkami MCP serveriai..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13929,10 +12904,6 @@ msgstr "Aktyvinti išsaugant"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Aplinkos kintamieji"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Išsaugoti konfigūraciją"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -13969,14 +12940,6 @@ msgstr "Automatinis paleidiklis"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Nauja užduotis"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "DI pasiūlymai"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Nėra laukiančių pasiūlymų."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14019,10 +12982,6 @@ msgstr "Kol kas nėra istorijos."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Pasiūlymo informacija"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Pasiūlė"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14178,14 +13137,6 @@ msgstr "Įrenginio vietinis"
 msgid "Your time"
 msgstr "Jūsų laikas"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Patvirtinti šį darbą?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Atmetimo priežastis (neprivaloma):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14218,14 +13169,6 @@ msgstr "Tikslas: "
 msgid "By: "
 msgstr "Autorius: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Vietinis laikas: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Argumentacija: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "Kalendorius rodomas jūsų laiko juostoje"
@@ -14234,138 +13177,21 @@ msgstr "Kalendorius rodomas jūsų laiko juostoje"
 msgid "Getting to Know Each Other"
 msgstr "Pažinkime vienas kitą"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "DI laikui bėgant mokosi iš jūsų duomenų"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Kuo daugiau bendraujate, tuo tikslesnė ji tampa"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "Jūs kontroliuojate, į ką DI sutelkia dėmesį"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Papasakokite apie savo objektą"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Kas geriausiai apibūdina jūsų objektą?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "Pasirinkite objekto tipą, kad tęstumėte."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Konkrečiai aprašykite, ko jums reikia iš šios DI (neprivaloma)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Tęsti"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Viskas paruošta!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Objekto tipas"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Jūsų instrukcijos"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"Dabar matysite: DI būseną, jūsų pagrindinius raktinius žodžius ir kaip DI"
-" mokosi apie jūsų objektą."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "Eiti į DI skydelį"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Objekto mokymosi būsena"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "Darbo su DI patarėju pradžia"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Šiai DI sistemai reikia mokymosi laikotarpio, kad ji galėtų teikti jūsų "
-"objektui pritaikytus patarimus."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "Mokymosi laikotarpiu:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "Patarimai grindžiami bendromis žemės ūkio žiniomis"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "Objektui būdingų duomenų kol kas nedaug"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Jūsų atsiliepimai yra kalibravimo raktas"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Objekto informacija"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Vertikalus ūkis"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Daigynas"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "Eksploatavimo patirtis"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "Mažiau nei 1 metai"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1–3 metai"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3–10 metų"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ metų"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Svarbiausi parametrai"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "pasirinkite visus tinkamus"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Maistinės medžiagos"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14381,54 +13207,6 @@ msgstr "Atgal"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "Toliau"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Naudojimo sąlygos"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Šis DI patarėjas laikui bėgant mokosi iš jūsų objekto. Pradiniu mokymosi "
-"laikotarpiu patarimai grindžiami bendromis žemės ūkio žiniomis ir gali "
-"neatitikti jūsų konkrečių sąlygų. Jūsų atsiliepimai — pasiūlymų "
-"patvirtinimas, koregavimas ar atmetimas — kalibruoja sistemą pagal jūsų "
-"objektą. Sistema praneš, kai jai kils netikrumas ir koks patvirtinimas "
-"padėtų. Valdymas išlieka jūsų rankose: joks automatinis veiksmas nebus "
-"atliktas be jūsų patvirtinimo."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Suprantu ir sutinku su aukščiau nurodytomis sąlygomis"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Sutikti ir pradėti"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Pradinė sąranka baigta"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"DI patarėjas pradės mokytis apie šį objektą. Kuo daugiau atsiliepimų "
-"pateiksite apie jo pasiūlymus, tuo tikslesni ir labiau pritaikyti taps "
-"patarimai."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "Pradėti naudoti DI"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14463,10 +13241,6 @@ msgstr "Didelis"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "Biudžetai automatiškai optimizuojami pagal lygį."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Paslauga ir modelis"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Rankinis įvedimas"
@@ -14474,10 +13248,6 @@ msgstr "Rankinis įvedimas"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Palikite tuščią, kad išsaugotumėte esamą raktą"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "Konvejerio konfigūracija"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16449,14 +15219,6 @@ msgstr "Danga ir vėdinimas"
 msgid "Cover layers"
 msgstr "Dangos sluoksniai"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"Išorinė danga visada privaloma. Prireikus pridėkite sienos sutvirtinimą "
-"arba vidinę dangą."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Sienos sutvirtinimas"
@@ -17638,26 +16400,6 @@ msgstr "Taikoma..."
 msgid "Failed to submit judgment"
 msgstr "Nepavyko pateikti vertinimo"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Ieškokite adreso, kad rastumėte pradinę vietą"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "Pradinė žemėlapio centro platuma. Pvz., 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "Pradinė žemėlapio centro ilguma. Pvz., 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr "Pradinis žemėlapio mastelis. Galite jį pakeisti įvesdami skaičių."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Pasirinkite numatytąją paieškos sistemą visuotinei paieškai."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Atkurti numatytuosius"
@@ -17678,82 +16420,16 @@ msgstr "Įrenginio spalva"
 msgid "Equipment Color"
 msgstr "Įrangos spalva"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "AoT įrenginio spalva"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Skydelio fono spalva"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "Numatytoji: 25. Didžiausia riba — 30."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"Naudoti skaitmeninį mastelio keitimą aukštiems mastelio lygiams, kurių "
-"nepateikia žemėlapio šaltinis."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "Įjungti trupmeninį mastelio keitimą lygiams, artimiems 18 ir aukštesniems."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Įjungti pamažu ryškėjimo efektą įkeliant plyteles."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"Naudoti Canvas atvaizdavimą našumui pagerinti, kai yra daug vektorinių "
-"sluoksnių."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Didžiausias objektų poligonų skaičius"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Ribokite didžiausią objektų poligonų skaičių. Šią ribą viršijantys "
-"objektai bus rodomi kaip taškai."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Didžiausias zonų poligonų skaičius"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Ribokite didžiausią zonų poligonų skaičių. Šią ribą viršijančios zonos "
-"bus rodomos kaip taškai."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Didžiausias įrenginių poligonų skaičius"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Ribokite didžiausią įrenginių poligonų skaičių. Šią ribą viršijantys "
-"įrenginiai bus rodomi kaip taškai."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "Pasirinkite sklypą, zoną ar vietą ir laikotarpį, ir sugeneruokite momentinį vaizdą to, kas buvo auginama, matuojama ir valdoma — dokumentą, kurį galite perduoti kitam ar atspausdinti."
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17761,7 +16437,7 @@ msgstr "Keisti"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "Ieškoti pagal kultūrą, veislę, pavadinimą, zoną…"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17769,7 +16445,7 @@ msgstr "Pabaigos data"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "Arba sukurkite žurnalą visai vietai ar zonai"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17785,7 +16461,7 @@ msgstr "Be žemėlapio"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "Apimama visa vieta ar zona, įskaitant visus joje esančius sklypus."
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17829,11 +16505,11 @@ msgstr "Žurnalas"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "Šis žurnalas dar generuojamas. Šis puslapis atsinaujins automatiškai."
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "Šio žurnalo sugeneruoti nepavyko."
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17866,7 +16542,7 @@ msgstr "Turinys"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "Kiekvienas žemiau esantis skyrius pradedamas naujame puslapyje šia tvarka."
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -17876,7 +16552,7 @@ msgstr "Apžvalga"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "apie ką šis žurnalas"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -17906,41 +16582,33 @@ msgstr "%(n)s laikotarpiai"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "Kaip tai skaityti"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "Laikotarpis ir laiko juosta"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "Dienos prasideda ir baigiasi pagal %(tz)s. Kiekviena šio dokumento data yra vietinė kalendorinė diena, o ne UTC diena."
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "Min. / maks. / vid."
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "Minimumas ir maksimumas yra tikslūs. Vidurkis yra valandinių vidurkių vidurkis, todėl dažnai matuotos valandos jo neiškreipia — tai apytikslė reikšmė, o ne tikras laiko svertinis vidurkis."
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "Tikslas ir Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -17950,17 +16618,17 @@ msgstr "Veikimo trukmė"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "Valandos, kurias įrenginys buvo įjungtas per laikotarpį, nuskaitytos iš pirmojo jo kanalo."
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "Kas buvo praleista"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "Įrenginių diagnostika (baterija, signalas) pagal numatytuosius nustatymus neįtraukiama. Ją galima įjungti generuojant žurnalą."
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -17968,7 +16636,7 @@ msgstr "Čia vartojami terminai"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "Iš kur imami skaičiai"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -17978,7 +16646,7 @@ msgstr "Šaltinis"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "Šios AoT sistemos saugomi jutiklių ir įrenginių įrašai apie šiai sričiai priskirtus įrenginius."
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -17988,15 +16656,15 @@ msgstr "Kadras"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "Šis dokumentas buvo užfiksuotas jį sugeneravus. Vėlesni įrenginių, programų ar laidų pakeitimai jo nekeičia."
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "Pastabos dėl tikslumo"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "Spausdinti (išsaugoti kaip PDF)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -18025,22 +16693,22 @@ msgstr "Elementas"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "Augimo laipsnio dienos"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "šis žurnalas: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "bazė %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "Išmatuotos dienos: %(p)s%%"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -18052,17 +16720,17 @@ msgstr "Programoje nenurodyta bazinė temperatūra"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "Nepakanka išmatuotų dienų"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "Dienų šiame žurnale: %(n)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
 msgid "Min"
-msgstr "Min"
+msgstr "Min."
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18123,7 +16791,7 @@ msgstr "įvertinta"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "prieš šį žurnalą"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18155,12 +16823,7 @@ msgstr "Visas laikotarpis"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "šviesusis paros metas %(h)s val."
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18180,11 +16843,6 @@ msgstr "sunaudota"
 msgid "varies"
 msgstr "kinta"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "nėra jutiklio"
@@ -18196,7 +16854,7 @@ msgstr "Ištrinti šį žurnalą? Šio veiksmo anuliuoti negalima."
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "Įvyko klaida."
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19267,10 +17925,6 @@ msgstr "Išjungimo duomenys (šešioliktainiu)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Priskirti tvarkaraščiui"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Registruoti pasirinktus įrenginius"
@@ -19484,10 +18138,6 @@ msgstr "MCP ženkliukas"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "Spustelėkite, norėdami redaguoti MCP ženkliuko spalvas"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Spustelėkite, norėdami redaguoti atnaujinimo ženkliuko spalvas"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19767,24 +18417,6 @@ msgstr "Švelnus ženkliuko fonas vykdomoms / informacinėms būsenoms"
 msgid "Text color used on the info tint"
 msgstr "Teksto spalva, naudojama ant informacijos fono spalvos"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr ""
-"Sėkmės pranešimo langelių rėmelio spalva (administravimo puslapiuose, "
-"pvz., „Atnaujinimas“)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Įspėjimo / numatytųjų pranešimo langelių rėmelio spalva"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Pavojaus / klaidos pranešimo langelių rėmelio spalva"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Informacinių pranešimo langelių rėmelio spalva"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr ""
@@ -19818,10 +18450,6 @@ msgstr "Mygtuko rėmelis"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Rėmelis visiems mygtukams ir sąrašo eilutėms"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "Navigacijos atnaujinimo ženkliukas ir atnaujinimo mygtuko fonas"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20933,34 +19561,6 @@ msgstr "Užrašų tvarkyklė"
 msgid "Search content, subject..."
 msgstr "Ieškoti turinio, temos..."
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Išvalyti filtrus"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Išplėstiniai filtrai"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Eksportuoti rezultatus"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "PDF ataskaitos eksportas"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Sukurkite laikotarpio užrašus (naudodami aukščiau esantį žymų filtrą) į "
-"suformatuotą PDF ataskaitą."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Ataskaitos pavadinimas (neprivaloma)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "Užrašų nerasta"
@@ -21244,7 +19844,7 @@ msgstr "Žymų nėra"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "DI analizės kol kas nėra. Analizė vykdoma automatiškai — užsukite šiek tiek vėliau."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21256,7 +19856,7 @@ msgstr "Mokyti AI"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "Pridėkite pastabą, kad DI geriau suprastų šį objektą..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21297,11 +19897,11 @@ msgstr "Patikimumas:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "Analizė leidžia manyti, kad įvyko šie pakeitimai:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "Nepavyko įkelti patarimo. Patikrinkite ryšį."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21309,7 +19909,7 @@ msgstr "Prieš pateikdami įveskite pastabą."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "Pastaba išsaugota – bus panaudota kitame DI cikle."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21319,25 +19919,9 @@ msgstr "Pateikti nepavyko."
 msgid "Unable to save note. Please try again."
 msgstr "Nepavyko išsaugoti pastabos. Bandykite dar kartą."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Analizuoti"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "AI analizė nepavyko"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Vykdymas nepavyko"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21373,11 +19957,11 @@ msgstr "dvigubas sluoksnis"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "Dešinys spustelėjimas: sukti"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "Kairys spustelėjimas: slinkti"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21432,7 +20016,7 @@ msgstr "Išsaugoti kaip visuotines diapazonų spalvas"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "Pritaiko pirmųjų 5 atkarpų spalvas Nustatymų > Pasirinktinės sąsajos diapazonų spalvoms."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21475,15 +20059,15 @@ msgstr "Stulpelinė"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "Išsaugota kaip visuotinės diagramų spalvos"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "Išsaugoti kaip visuotines diagramų spalvas"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "Pritaiko pirmųjų 6 serijų spalvas Nustatymų > Pasirinktinės sąsajos diagramų spalvoms."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21493,7 +20077,7 @@ msgstr "Y ašies parinktys"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "Įjungti rankinį Y ašies min. / maks. nustatymą"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21521,7 +20105,7 @@ msgstr "Įveskite adresą."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "Užduokite klausimą apie šį patarimą (pvz., ką turėčiau daryti?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21529,7 +20113,7 @@ msgstr "Paklauskite AI, ką daryti"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "Kokių konkrečių veiksmų turėčiau imtis remdamasis šiuo patarimu?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21578,19 +20162,19 @@ msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
-msgstr ""
+msgstr "30 min."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:169
 msgid "1h"
-msgstr ""
+msgstr "1 val."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:170
 msgid "6h"
-msgstr ""
+msgstr "6 val."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:171
 msgid "1d"
-msgstr ""
+msgstr "1 d."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
 msgid "Actual"
@@ -21619,11 +20203,6 @@ msgstr "Pradžia"
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
 msgid "Select the Output to control in the widget options."
 msgstr "Pasirinkite valdomą išvestį valdiklio parinktyse."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Duomenų pozicijos poslinkis (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
@@ -21655,19 +20234,19 @@ msgstr "Klaida gaunant vaizdą"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "Klaida: nepavyko įkelti HLS bibliotekos"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "Klaida: naršyklė nepalaiko tiesioginio RTSP. Vietoje jo naudokite 'Relay' metodą."
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "Klaida: nesukonfigūruotas transliacijos URL"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "Klaida gaunant kameros informaciją"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21690,54 +20269,18 @@ msgstr "Įjungta"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "Šio funkcijos tipo redaguojamų parinkčių nėra."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "Šis kontroleris aktyvus. Prieš išsaugodami pakeitimus jį išjunkite, kitaip jie nebus pritaikyti."
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Serijos parinktys"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Įjungti pasirinktines spalvas"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Įjungti Y ašies žymų lygiavimą"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Įjungti Y ašies pradžią ties žyme"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Įjungti Y ašies pabaigą ties žyme"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Y ašies minimumas"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Y ašies maksimumas"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21764,11 +20307,11 @@ msgstr "Kategorijos filtras"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "Rodyti tik pasirinktų kategorijų įrašus. Jei nepasirinkta nė viena, rodomi visų kategorijų įrašai."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "Kategorijų dar nėra. Nustatykite kategoriją kurdami įrašą, kad čia galėtumėte pagal ją filtruoti."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22190,12 +20733,12 @@ msgstr "Pristabdyta — neužregistruotas nė vienas vykdiklis"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "Pristabdyta — už darbo laiko lango ribų"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "Pristabdyta (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22224,12 +20767,12 @@ msgstr "Vykdikliai: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "Vėdinimas: atidaryta %(ratio)s (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "Apsauginiai vartai: %(reason)s — valdymas sustabdytas"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22238,27 +20781,27 @@ msgstr "suveikė"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "Apsauginiai vartai (dalinai): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "Nėra vykdiklio, valdančio %(target)s"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "Įranga pasiekė ribą: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "Už nustatytos ribos: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "Paskutinis ciklas: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22293,22 +20836,22 @@ msgstr "Seka: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "Šiandienos langas: %(start)s – %(end)s (ciklas %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "Šiandienos langas: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "Ciklo metu praėjo: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "Žingsniai: veikia %(running)s iš %(total)s"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22323,15 +20866,15 @@ msgstr "Periodas: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "Paskutinis patikrinimas: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "Paskutinio patikrinimo metu buvo atliktas veiksmas."
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "Paskutinio patikrinimo metu jokių veiksmų neatlikta."
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22340,7 +20883,7 @@ msgstr "Dar nepatikrinta."
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "Kitas patikrinimas po: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23683,20 +22226,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Išorinės aplinkos konteksto rinktuvas"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Renka išorinę temperatūrą, drėgmę, vėjo greitį, kritulius, saulės "
-"spinduliuotę, rasos tašką ir CO2 iš už patalpos ribų. Integruoto aplinkos"
-" valdymo funkcija naudoja šį rinktuvą kaip vienintelį patikimą duomenų "
-"šaltinį. Kiekvienam elementui pasirinkite išorinį jutiklį. Palikite "
-"elementus tuščius, kad būtų taikoma atsarginė numatytoji reikšmė."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Atnaujinimo periodas"
@@ -23772,30 +22301,6 @@ msgid ""
 msgstr ""
 "Pasirinkite išorinį CO₂ (ppm) matavimą. Jei nenurodytas, numatytoji "
 "reikšmė yra 400 ppm."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Didžiausias leidžiamas jutiklio duomenų amžius (sekundėmis)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr "Senesni už šį matavimai pakeičiami atsargine numatytąja reikšme."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Atsarginė išorinė temperatūra (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr "Numatytoji reikšmė, naudojama, kai jutiklio nėra arba jo duomenys pasenę."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Atsarginė išorinė drėgmė (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Atsarginis vėjo greitis (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -23931,14 +22436,6 @@ msgstr "Didžiausias įvesties amžius (s)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "REST prievadas"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Serveris / žetonas iš Nustatymai -> ChirpStack; įrenginiai priskiriami "
-"ten („Valdo“)."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -26125,19 +24622,6 @@ msgstr ""
 "schemas – Positron (šviesi), Dark Matter (tamsi) ir Voyager stilius, "
 "skirtus išryškinti duomenų taškus ir jutiklių informaciją."
 
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"Pasaulinis žemės dangos žemėlapis, sudarytas pagal Europos kosmoso "
-"agentūros (ESA) „Sentinel-2“ palydovo duomenis. Augalija, miesto "
-"teritorijos, žemės ūkio naudmenos, miškai ir vandens telkiniai "
-"klasifikuojami ir spalviškai žymimi 10 m skiriamąja geba, naudinga "
-"aplinkos analizei."
-
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
 msgstr "Esri"
@@ -27916,17 +26400,6 @@ msgstr ""
 "arba VPD, minimali / maksimali vertė ir spalvų sekcijos nustatomos "
 "automatiškai."
 
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"„Highcharts“ yra nemokama atvirojo kodo ir asmeniniam naudojimui. Tačiau "
-"naudojant kaip komercinio produkto dalį, gali reikėti komercinės "
-"licencijos. Tikslesnės informacijos ieškokite adresu "
-"https://shop.highsoft.com."
-
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
 #: widgets/AoT_graph.py:479
@@ -28638,54 +27111,17 @@ msgstr "Etapų laiko juosta su pažymėtais šiandienos ir praėjusiais perėjim
 msgid "Targets vs now"
 msgstr "Tikslai palyginti su dabartimi"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Dabartiniai rodmenys lyginami su šio etapo nustatytais tikslais ir "
-"ribomis. Vienam skiriamas matuoklis, likę pateikiami tekstu."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Tendencijos"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"Eilutes, neturinčias ašies, užpildo naujausia tendencijos linija. "
-"Reikalingas tikslų blokas."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Sukauptas šilumos kiekis"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Kiek šis etapas pažengė augimo laipsnio dienomis. Rodoma tik tada, kai "
-"programoje nurodyta bazinė temperatūra."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Dirvožemio drėgmė"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Matuoklio rodiklis"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Kuriam matavimui skiriamas matuoklis. Likę pateikiami tekstu. Jei šiame "
-"sklype tokio matavimo nėra, vietoj jo rodomas pirmasis, turintis "
-"nustatytą diapazoną."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29291,30 +27727,9 @@ msgstr "Skaičius po kablelio 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "Skaičių po kablelio kiekis antrajam matavimui"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"Rodo naujausių skelbimų lentos įrašų pavadinimus. Spustelėjus pavadinimą "
-"iškylančiajame lange atveriamas visas įrašas (turinys, apklausa, "
-"atsakymai, patvirtinimas); ten atlikti veiksmai atsispindi pačiame įraše."
-" Naudotojai, turintys rašymo teisę, gali kurti, redaguoti ir trinti "
-"įrašus tiesiogiai iš valdiklio."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Įrašų skaičius"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Kiek naujausių skelbimų rodyti"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Kaip dažnai atnaujinti skelbimų sąrašą"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29517,11 +27932,6 @@ msgstr "Numatytasis veiksmų sąrašo matomumo perjungimas."
 msgid "Sequence Settings (Synced)"
 msgstr "Sekos nustatymai (sinchronizuoti)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "HH:MM formatas"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "Periodas (sekundėmis)"
@@ -29560,18 +27970,18 @@ msgstr "Tęsti nuo sustojimo vietos"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "Pradėti nuo pradžių"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "Kai vėl įjungiama"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "Kas nutinka, kai ši seka išjungiama ir vėl įjungiama. Tęsiant, tęsiamas pertrauktas ciklas; pradedant nuo pradžių, jis vykdomas nuo pirmojo žingsnio. Tarnybos (daemon) paleidimas iš naujo visada tęsia, nepaisant šio nustatymo."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -30102,7 +28512,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "Blokuoja drėkinamojo tipo purškimą esant stipriai šviesai (lašeliai gali sufokusuoti saulės spindulius ant lapų) ir, jei nustatyta žemiau, prieš saulėlydį. Nepriklauso nuo to, kaip dažnai vyksta purškimas — įjunkite arba išjunkite bet kokiu purškimo dažnumu."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30440,16 +28850,6 @@ msgstr "Prognozės išankstinis koregavimas"
 msgid "Enable Forecast Feedforward"
 msgstr "Įjungti prognozės išankstinį koregavimą"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"Naudoti KMA trumpalaikę orų prognozę (forecast.json), kad iš anksto "
-"pakoreguotų temperatūros / drėgmės nustatytus taškus ir sustabdytų "
-"vėdinimą prieš atvykstant nepalankiam orui."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "Reaguoja į esamą situaciją"
@@ -30461,15 +28861,6 @@ msgstr "Ruošiasi toliau į priekį"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Prognozės žvalgymo laikas į priekį (valandomis)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"Kiek valandų į priekį tikrinti artėjantį nepalankų orą (1–6 val.). "
-"Ilgesnis laikotarpis suteikia ankstesnį įspėjimą, tačiau gali sukelti "
-"perteklinį koregavimą."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30666,14 +29057,6 @@ msgstr "Sukaupta nuo pradžios"
 msgid "Vapor Pressure Deficit"
 msgstr "Garų slėgio deficitas"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Vertės šrifto dydis (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "Matavimo šrifto dydis"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Augimo tvarkaraštis"
@@ -30682,31 +29065,9 @@ msgstr "Augimo tvarkaraštis"
 msgid "Stop Control On"
 msgstr "Sustabdyti valdymą"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"Valdymas visiškai sustabdomas po šios datos. Palikite tuščią, kad veiktų "
-"nuolat."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Purškimo apsauga nuo nudegimo saulėje"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Daigyno režimas"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Daigyno (daigų) režimas"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Griežtesnės purškimo ribos daigams, kurie lengviau nudega nei subrendę "
-"lapai."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30720,10 +29081,6 @@ msgstr "Rūkas"
 
 msgid "Devices under automatic control"
 msgstr "Automatiškai valdomi įrenginiai"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s neįtraukta"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr "Išjunkite įrenginį, kad automatinis valdymas jo nevaldytų."
@@ -30774,14 +29131,6 @@ msgstr ""
 "variantas. Ilgesnis žvalgymo laikas duoda ankstesnį įspėjimą, bet gali "
 "per daug koreguoti. Ignoruojama, jei šiam objektui susietas nuosavas "
 "prognozės šaltinis – tas šaltinis jau taiko savų žvalgymo laiką."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Pranešimų kategorijos filtras"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Užrašų erdvė"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -30888,10 +29237,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "Pasirinkite erdvę valdiklio nustatymuose, kad būtų rodomos pastabos."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr "Rodo pastabas, parašytas pasirinktoje erdvėje (žr. „Erdvė\" žemiau)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31214,18 +29559,6 @@ msgstr "Sustabdyti sukimą"
 msgid "System Timezone"
 msgstr "Sistemos laiko juosta"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"Visos sistemos numatytoji laiko juosta (IANA pavadinimas, pvz., "
-"Asia/Seoul). Naudojama demono žurnalo laikui, audito žurnalui ir kaip "
-"paskutinė atsarginė reikšmė įrenginių be vietos tvarkaraščiams. Tai nėra "
-"jūsų asmeninė rodymo laiko juosta paskyros nustatymuose."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31238,3 +29571,999 @@ msgstr "Vieta nenustatyta — įvertinta pagal sistemos laiko juostą"
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "Visos sistemos numatytoji laiko juosta (IANA pavadinimas, pvz., Asia/Seoul). Naudojama demono žurnalo laikui ir kaip paskutinė atsarginė reikšmė įrenginiams be vietos; išsaugojus čia, tie įrenginiai ją perima. Žmonių skaitomi ir įvedami laikai atitinka kiekvieno asmeninę laiko juostą paskyros nustatymuose."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "Visas plotis mobiliajame"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Kompiuterio ekrano dydis"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Valdymo paviršius"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Skiriamoji linija"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Skiriamoji linija (švelni)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Mobiliojo ekrano dydis"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Jungiklio takelis „Išjungta“"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Nereaguoja"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Suplanuota"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "Pabaigos laikas turi būti vėlesnis už pradžios laiką tą pačią dieną (intervalas, kertantis vidurnaktį, nepalaikomas)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Ši seka naudoja skirtingus laikus pagal savaitės dienas, todėl čia nurodytas pradžios ir pabaigos laikas nebuvo pritaikytas. Pakeiskite jį sekos valdiklio savaitės dienų tvarkaraštyje."
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "Pasirinkite kasdienį, savaitinį arba mėnesinį."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Pasirinkite, ką registruoti (įvestį ar išvestį)."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Grąžinti"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Grąžinti nustatymus, buvusius atidarant šį langą"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Grąžinta"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "Signalas"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Įdiegti priklausomybes įrenginiui"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "AoT svetainė"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Padidina visą puslapį kompiuteriuose — tekstą, mygtukus ir žemėlapius kartu. Telefonai ir planšetės naudoja aukščiau esantį nustatymą."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Padidina visą puslapį telefonuose ir planšetėse — tekstą, mygtukus ir žemėlapius kartu. Kompiuteriai naudoja žemiau esantį nustatymą."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Rezultatų nėra"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Nieko nepasirinkta"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Įrašai"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "Užklausos"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "Pasirinkta {0} iš {1}"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Nepavyko įkelti valdymo užklausų"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Spręsti dėl jų gali tik kontrolerių redagavimo teisę turintys asmenys."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Šie veiksmai dar nebuvo įvykdyti. Patvirtinus bus įvykdyta būtent tai, kas čia aprašyta — grįžti ir apie tai pranešti DI nereikia."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "DI užklausos"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "DI patarimai"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Nepavyko įkelti patarimų"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Laukiančių patarimų nėra."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Laukiančių tvarkaraščio pasiūlymų nėra."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Šio ir kitų prijungtų DI nuomonės. Priėmimas tik užfiksuoja, kad sutinkate — jis nieko nevykdo."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "DI pasiūlyta"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Įtraukti šį pasiūlymą į tvarkaraštį?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Atmesti šį pasiūlymą?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Tvarkaraščio pasiūlymai"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "Užduotys, kurias DI pasiūlė įtraukti į tvarkaraštį. Patvirtinus jos įtraukiamos į tvarkaraštį ir vykdomos nustatytu laiku."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "Ko DI laukia iš jūsų — kiekvienas žemiau esantis punktas laukia jūsų sprendimo."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "DI ryšys"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Prieigos raktai"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Išplėstiniai"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "Leidžiama"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Jau naudojama DI programa, pavyzdžiui, Claude Desktop, gali skaityti šio ūkio duomenis ir prašyti valdyti įrangą. Įrangos valdymas vykdomas tik po to, kai jį patvirtina žmogus."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "Integruotas DI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "Prijunkite savo DI programą"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Klaida įkeliant nustatymus"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "Apytikslės integruoto DI mėnesio išlaidos. Artėjant prie limito būsite įspėti, o pasiekus limitą bus perjungta į pigiausią modelį. 0 reiškia, kad limito nėra."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Išorinė DI prieiga"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Kiekvienai DI programai išduokite po vieną raktą ir įklijuokite jį į tą programą."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Leidžia integruotam DI fone periodiškai apibendrinti ūkio padėtį."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "MCP tiltų serveriai"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Tvarkyti raktus"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "Neleidžiama"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Atidaryti bendruosius nustatymus"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Paleisti integruotą DI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "DI modelis, kurį naudoja pokalbiai ir patarimai šioje programoje. Jis veikia atskirai nuo jūsų DI programos, todėl, jei jo nenaudojate, galite palikti išjungtą."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "Vieta, kurią DI naudoja, kai pokalbyje ar ekrane vieta nenurodyta."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "Įrankių serveriai, kuriuos iškviečia integruotas DI. Aukščiau pridėjus MCP variklį, vienas sukuriamas automatiškai."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "Įjungiama arba išjungiama skiltyje Nustatymai > Bendrieji."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "DI parašytos pastabos (%(n)s) laukia žmogaus patvirtinimo."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0 reiškia, kad automatinio sinchronizavimo nėra."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "DI žinios"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "API rakto antraštė"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Pridėta"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Visos būsenos"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Visos žymos"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Bearer Token"
+msgstr "Bearer žetonas"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Cituoti tik patvirtintas žinias"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Duomenų šaltiniai"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "Kaip naudojamos žinios"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Šaltinio rūšis"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Žinių nustatymai"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Paskutinį kartą sinchronizuota"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Bibliotekos šaltinis"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "Užklausiama pagal poreikį"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Reikia patvirtinti"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Dar nesinchronizuota"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Atidaryti nuorodą"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Išsaugoti ir patvirtinti"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Rodyti jas"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Sinchronizavimo klaida"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Sinchronizuoti dabar"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Sinchronizuota"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "Sinchronizuota {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Trys būdai užpildyti: prijunkite šaltinį skirtuke Duomenų šaltiniai, spauskite „Pridėti žinias“ ir įrašykite tai, ką jau žinote, arba paprašykite DI ką nors surasti — jis išsaugos tai, ką rado."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Kiek kartų paimta"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Pavadinimas, tekstas arba šaltinio nurodymas"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Patikimumas"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "Tai, ką žmonės ir DI užrašė, kad DI galėtų cituoti. Iš šaltinių sinchronizuoti duomenys čia pagal numatytuosius nustatymus paslėpti — pasirinkite juos šaltinio filtre arba tvarkykite skirtuke Duomenų šaltiniai."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "Parašė žmonės ir DI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "DI įrašai"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Visi svarbos lygiai"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Visi tipai"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Atsakymas"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "Pritaikyta žinioms."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Patvirtinta"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Laukia patvirtinimo"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "Iškvietėjas"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Įvykdyta"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Pokalbiai"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Pataisyta"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Pataisymas"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Nepavyko įkelti įrašų"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Ignoruota"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Klaidų pranešimai"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Nebegalioja"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Išmokta"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Ieškota"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Klaidų pranešimų nėra."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "Integruotam DI užduoti klausimai ir jo atsakymai."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Gauta"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Įrankių iškvietimai"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Ką prijungti DI atliko naudodami įrankius — naujausi viršuje. Užklausoms, kurioms reikėjo patvirtinimo, rodoma, kaip dėl jų buvo nuspręsta."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "Ką pasakė DI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Kada"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "Klaidingi DI atsakymai, apie kuriuos pranešė žmonės, kartu su jų pataisymais. Pritaikius pataisymą, jis įtraukiamas į DI žinias."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "Nepavyko įkelti MCP serverių sąrašo."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Ištrinti šį serverį?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Įvesties schema"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON objektas, pavyzdžiui, {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "MCP serverių dar nėra."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Šis serveris nepateikia jokių įrankių."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Serveris pridėtas."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Serveris ištrintas."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Serveris atnaujintas."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "Serveriai"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Sustabdyta"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "Įrankių serveriai, kuriuos iškviečia integruotas DI. Pridėjus MCP variklį puslapyje „DI ryšys“, vienas sukuriamas automatiškai."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tools"
+msgstr "Įrankiai"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Laukiama pakartojimo"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "Pakeitus vaidmenį, bus paklausta, ar iš naujo užpildyti specializaciją, sistemos raginimą, lygį ir modelį to vaidmens numatytosiomis reikšmėmis."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Užpildyti šio vaidmens numatytąją specializaciją, sistemos raginimą, lygį ir modelį? Jūsų įvestos reikšmės bus pakeistos."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "Tvarkaraščio pasiūlymai (%(n)s) laukia skiltyje DI → Užklausos."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Atšaukti šią užduotį?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "Valdymo užklausos ir DI tvarkaraščio pasiūlymai sprendžiami skiltyje DI → Užklausos."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Nepavyko įkelti įrenginio laiko juostos"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Įrenginių nerasta."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "Atidaryti užklausas"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Iš anksto parinktos spalvos"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Visi žemėlapiai"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Visos vietos"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Raktas"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Nepavyko įkelti nustatymų"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "Stambesnis vienetas sumažina dokumento dydį. Dienos duomenų vėliau atkurti nebegalima, todėl rinkitės jį tik jei jų nereikia."
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "Įrašyti pagal"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "Etapų: %(n)s, laikotarpių: %(m)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "Virš"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "Palyginti su tikslu"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "Žemiau"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "Pagal etapus"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "Dienų skaičius"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "Lauko jutiklis ir orų stotis"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Matuoja orų stotis"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "Matavimų tendencijos"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "Matavimų, kurių nepasirinkote generuodami šį žurnalą, jame nėra. Jie įvardyti aukščiau pateiktose pastabose."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "Eilutės, pažymėtos „Orų stotis“ ir išskirtos kairiuoju kraštu, gaunamos iš vietos orų stoties, o ne iš šiai sričiai priskirto jutiklio. Kai to paties matavimo yra abiejų šaltinių, tikslinės reikšmės lyginamos tik su lauko jutikliu."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "Tos pačios tikslinės reikšmės kaip ankstesniame etape."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Jutikliai nesutaria"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "Rodomi jutikliai priklauso aplinkinei sričiai."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "Forma ir jutiklių padėtys yra dabartinės, o ne iš šio laikotarpio."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "Rodyti dar %(n)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "Rodyti mažiau"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "Rodyti planą"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "Etapų laiko juosta"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "Tikslinės reikšmės imamos iš prie šio sklypo prijungtos programos. Δ yra išmatuotas vidurkis minus ta tikslinė reikšmė. Dienos/nakties ir kreive pagrįstos tikslinės reikšmės tik pažymimos, bet skirtumas neskaičiuojamas, nes lyginant jas su visos dienos vidurkiu kyla klaidingų aliarmų."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "Kontūras išvestas iš objekto."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "sukaupta %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "orų stotis %(out)s × danga %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Spustelėkite, norėdami redaguoti būsenos „Patvirtinama“ spalvas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Spustelėkite, norėdami redaguoti valdymo paviršiaus spalvas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Spustelėkite, norėdami redaguoti būsenos „Nėra atsakymo“ spalvas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Spustelėkite, norėdami redaguoti jungiklio „Įjungta“ spalvas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Spustelėkite, norėdami redaguoti jungiklio takelio „Išjungta“ spalvas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "Tai, ką valdote, paviršius — teksto laukai, pasirinkimo sąrašai, piliulės. Laikykite jį atskirą nuo puslapio fono, nes kitaip ant puslapio esantis valdymo elementas susilies su juo"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Šviesesnė skiriamoji linija tankiems sąrašams, kur pilno storio linija atrodytų per daug krentanti į akis"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Linija tarp elementų viename konteineryje — sąrašuose, parinkčių eilutėse. Tai ne rėmelis aplink ką nors"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Eilutės / kortelės fonas, kai įrenginys nustoja atsakinėti — tai kas kita nei „Įspėjimo būsena“, kai žmogus įrenginį sustabdo tyčia"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Slankusis jungiklis"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "Slankiojo jungiklio takelis, kai išjungtas (įjungtam naudojama 3 juosta)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Teksto laukas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Jungiklis įjungtas"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Ar tikrai norite ištrinti šį vaidmenį?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Nėra pranešimų, atitinkančių jūsų paiešką."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Ieškoti pagal pavadinimą, turinį, kategoriją..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Spalvų atkarpos"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Visuotinės diapazonų spalvos"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Atkarpa"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Spalvos"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Planuojama"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Turinys"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Trukmė (min.)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Redaguoti ir patvirtinti"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "Netinkama reikšmė lauke '{field}'"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Išsaugoti ir patvirtinti"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Suplanuotas laikas"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Žingsnis"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Tai valdo realią įrangą (vožtuvus, siurblius)."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Peržiūrėti"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Peržiūrėti išsamiau"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "Laukiama patvirtinimo: {n}"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "Pavyko: {ok}/{total}"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "Evapotranspiracija"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Renka išorės temperatūrą, drėgmę, vėjo greitį, kritulius, saulės spinduliuotę, rasos tašką ir CO2 už objekto ribų. Integruoto aplinkos valdymo funkcija šį rinkėją naudoja kaip vienintelį duomenų šaltinį. Kiekvienam elementui pasirinkite išorės jutiklį. Tušti elementai nebendrinami — integruotas valdymas jų reikšmių nespėlioja, o laiko jas nežinomomis."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Serveris / prieigos raktas iš Nustatymai -> ChirpStack; įrenginiai prisijungia prie šio planuoklio savo įrenginio puslapyje (pvz., AoT-C lauke „Class Scheduler“)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Paieškos langas (dienos)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Aktyvūs kanalai"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "Paskutinės 14 dienų"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "Paskutinės 30 dienų"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "Paskutinės 60 dienų"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "Paskutinės 90 dienų"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Palikite tuščią, kad būtų automatiškai parinktas užregistruotas daugiakampis, kuriame yra paspaustas taškas."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (vidurkis)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "NDVI paieškos langas"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "NDVI statistika pagal lauką ir dirvožemio drėgmė / temperatūra daugiakampiui, užregistruotam agromonitoring.com — tai vienintelė čia esanti įvestis, pateikianti dirvožemio drėgmę skaičiumi jūsų paties lauko ribose, o ne kaip grubų palydovinį sluoksnį. Nubraižykite lauką Agromonitoring skydelyje (1–3000 ha) ir žemiau įklijuokite jo daugiakampio ID arba palikite tuščią, kad būtų parinktas daugiakampis, kuriame yra jūsų paspaustas taškas. Naudojama ta pati paskyra kaip ir OpenWeatherMap."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "Daugiakampio ID"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Dirvožemio temp. (10 cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Dirvožemio temp. (paviršius)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "Naudojamas naujausias praskridimas šiame lange. Dėl debesų kelias savaites gali nebūti tinkamo vaizdo."
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "Pasaulinė paviršinė dirvožemio drėgmė (0–5 cm) iš NASA SMAP (Soil Moisture Active Passive) L4 produkto, pateikiama kaip beveik realiu laiku atnaujinamas sluoksnis per NASA GIBS. Prieinama maždaug 9 km raiška su pasirenkamomis datomis; naudinga laistymui planuoti ir sausrai stebėti."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Giedriausias vaizdas lange"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "Debesys palieka spragų bet kurios vienos datos vaizde, todėl vietoje jo piešiamas naujausias tinkamas vaizdas šiame lange."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Kolekcija"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Netikros spalvos (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "Paskutinės 7 dienos"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Maksimalus debesuotumas"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "Naujausias vaizdas"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (drėgmė)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (augalija)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (vanduo)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Vaizdo prioritetas"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Paieškos langas"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (atmosferos viršus)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (atmosferiškai pataisytas)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Sentinel-2 vaizdai 10 m raiška per Sentinel Hub Copernicus Data Space Ecosystem — pakankamai detalūs, kad būtų galima matyti augimo skirtumus viename lauke, skirtingai nei 250 m raiškos MODIS NDVI. Užregistruokite nemokamą CDSE paskyrą, sukurkite OAuth klientą ir žemiau įklijuokite jo kliento ID ir paslaptį. Nemokamas planas leidžia 30 000 apdorojimo vienetų per mėnesį; vienas žemėlapio ekranas kainuoja maždaug 4, o plytelės podėlyje laikomos dieną."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Tikros spalvos"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Išvaizda"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Teksto dydis"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "Dabartiniai rodmenys, palyginti su šio etapo deklaruotais tikslais ir ribomis — ta pati kortelė, kurią rodo žemėlapio valdiklis, įskaitant DLI ir sukauptą šilumą. [7 dienos] kiekvieną eilutę paverčia diapazonu, kuriuo ji svyravo per pastarąją savaitę."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Eilutes, neturinčias savo diapazono (CO2, dirvožemio drėgmė, rasos taškas), užpildo neseniai užfiksuota tendencijos linija. Reikalingas tikslų blokas."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Kiek šis etapas pažengė link kito augimo laipsniadieniais. Rodoma tik tada, kai programa etapus keičia pagal GDD. Bendra suma nuo pasodinimo pateikiama aplinkos kortelės eilutėje ir seka tos kortelės nustatymus."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "Išjungti nepavyko: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "Didžiausias laukiančių užklausų skaičius, rodomas sąrašo lange vienu metu"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Kaip dažnai atnaujinti laukiančių užklausų skaičių"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "MCP patvirtinimo užklausos"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Maks. rodomų elementų"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Rodo, kiek išorinės DI rašymo užklausų laukia patvirtinimo. Spustelėkite skaičių, kad atidarytumėte sąrašą ir po vieną patvirtintumėte, atmestumėte arba redaguotumėte ir patvirtintumėte užklausas, arba pasirinkite kelias ir patvirtinkite / atmeskite jas masiškai. Patvirtinus užklausa iškart vykdoma tiksliai su rodomomis reikšmėmis."

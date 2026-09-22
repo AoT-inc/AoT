@@ -4700,11 +4700,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "De sequentie draait nog — de daemon heeft de wijziging niet toegepast."
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "De sequentie is niet gestart — de daemon heeft de wijziging niet toegepast."
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4779,7 +4779,7 @@ msgstr "Kon dat gebied niet vinden."
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "Faciliteiten zonder locatie op de kaart worden hier niet weergegeven — voeg eerst hun locatie toe in de faciliteitsinstellingen."
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4796,15 +4796,15 @@ msgstr "Selecteer waarover het logboek gaat."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "Voer zowel een begin- als een einddatum in."
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "De begindatum ligt na de einddatum."
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "Kon niet vaststellen waarover dit logboek gaat."
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4813,24 +4813,24 @@ msgstr "Kon dit doel niet uitlezen."
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "Die periode is te lang (%(days)s dagen). Probeer een kortere periode."
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "Die selectie bevat te veel apparaten (%(n)s kanalen). Beperk het gebied of kies in plaats daarvan één perceel."
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "Die selectie zou te veel gegevens lezen. Probeer een kortere periode of een kleiner gebied."
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "Dit logboek wordt nog gegenereerd."
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -5026,10 +5026,6 @@ msgstr "— Geen —"
 msgid "Select one or more devices to register."
 msgstr "Selecteer een of meer apparaten om te registreren."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Selecteer een registratiedoel (Ingang/Uitgang) of een planner."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5097,11 +5093,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "Actietype"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Parameternaam"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Brontype"
@@ -5110,24 +5101,6 @@ msgstr "Brontype"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Handmatige invoer"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Notitie/Beschrijving"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "Externe URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Waarde / URL / Tekst"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "Record-ID"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7333,26 +7306,6 @@ msgstr "Achtergrondkleur Info"
 msgid "Info Tint Text"
 msgstr "Tekst op achtergrondkleur Info"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Rand voor succes-tint"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Rand voor waarschuwing-tint"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Rand voor gevaar-tint"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Rand voor info-tint"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "Achtergrond LLM-badge"
@@ -7360,12 +7313,6 @@ msgstr "Achtergrond LLM-badge"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "Achtergrond MCP-badge"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Upgrade-badge"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7567,27 +7514,9 @@ msgstr "Duty cycle voorwaarde (%)"
 msgid "Confirmed"
 msgstr "Bevestigd"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "Controle vereist"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Waarde invoeren"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "bijv. 25,5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "bijv. instelpunt gebaseerd op de ochtendtemperatuur"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "bijv. https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7608,61 +7537,10 @@ msgstr "Bezig"
 msgid "Failed"
 msgstr "Mislukt"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "AI-suggestie"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Geen taken geregistreerd."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Voeg er een toe met de knop Taak toevoegen bovenaan."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr ""
-"Wilt u het door AI voorgestelde schema goedkeuren en toevoegen aan de "
-"kalender?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "Door AI voorgesteld schema goedgekeurd."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "Goedkeuring mislukt"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Netwerkfout"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Deze suggestie afwijzen en verwijderen?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "Suggestie afgewezen en verwijderd."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Afwijzing mislukt"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Geen bovenliggende taak om onder in te springen"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Al een taak op het hoogste niveau"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Volgorde bijgewerkt"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7671,14 +7549,6 @@ msgstr "Volgorde bijgewerkt"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "Bijwerken mislukt"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Hiërarchie bijgewerkt"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Naam bijgewerkt"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7780,65 +7650,15 @@ msgstr "Bezig met laden..."
 msgid "Failed to load data."
 msgstr "Laden van gegevens mislukt."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Geen contextrecords geregistreerd."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Geen records voldoen aan de criteria."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Systeemstandaard"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Definitie bewerken"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "In afwachting van controle"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Afgewezen"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Voer de definitie in of bevestig deze om goed te keuren:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Goedkeuring geslaagd."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Er is een fout opgetreden tijdens de goedkeuring."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Er is een serverfout opgetreden."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Deze term afwijzen?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Afwijzing geslaagd."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "Er is een fout opgetreden tijdens de verwerking."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Voer een nieuwe definitie in:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -11066,71 +10886,11 @@ msgstr "kan niet ongedaan worden gemaakt"
 msgid "Usage"
 msgstr "Gebruik"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "AI-contextbeheer"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr ""
-"Externe informatie in de AI invoegen en de betrouwbaarheidsstatus ervan "
-"beheren."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Context toevoegen"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Notities (optioneel)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Contextrecords"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Systeemstandaard"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "Beoordeling nodig"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr ""
-"Automatisch gegenereerd door de AI op basis van domeinstandaarden. Nog "
-"niet beoordeeld."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Gebruikersinvoer of item in behandeling. De AI verwijst ernaar, maar met "
-"een lage betrouwbaarheid."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"Waarde beoordeeld en goedgekeurd door de gebruiker. De AI gebruikt deze "
-"met een hoge betrouwbaarheid."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Gedetecteerd platform"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC/server"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Docker-container"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -12008,15 +11768,6 @@ msgstr "of vernieuw de pagina."
 msgid "Control requests awaiting approval"
 msgstr "Besturingsverzoeken die wachten op goedkeuring"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Deze zijn NOG NIET uitgevoerd. Goedkeuren voert het onmiddellijk uit met "
-"precies de getoonde parameters — u hoeft niet naar de AI terug te gaan om"
-" dit te melden."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Er zijn geen besturingsverzoeken in afwachting."
@@ -12054,54 +11805,9 @@ msgstr "Goedgekeurd en uitgevoerd."
 msgid "Approved, but it failed to run"
 msgstr "Goedgekeurd, maar uitvoering is mislukt"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "AI-status"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Leervoortgang"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Belangrijkste trefwoorden"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Veelgebruikte functies"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "AI-status resetten"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Uw AI-instructies"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Geavanceerd — optioneel"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "Voeg specifieke instructies toe voor uw AI (optioneel)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"bijv. Ik beheer een kas en heb hulp nodig bij plaagbestrijding en "
-"temperatuurregeling"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Buitenlandbouw"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12111,34 +11817,12 @@ msgstr "Buitenlandbouw"
 msgid "Greenhouse"
 msgstr "Kas"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Sportaccommodatie"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Park"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Transport"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "AI-configuratie bijwerken"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Bevestigde kennisitems:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12147,25 +11831,6 @@ msgstr "In behandeling:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Totaal:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "De AI is nog aan het leren..."
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Nog geen activiteit"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"AI-status resetten? De momentopname wordt bij de volgende keer laden "
-"opnieuw berekend."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "Opslaan mislukt. Probeer het opnieuw."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12181,26 +11846,6 @@ msgstr "AI-agent"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "AI-instellingen"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"Orkestratielaag voor AI-agenten. Beheer uw AI-services en agenten om "
-"complexe taken te automatiseren."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "AI-servicewerking"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"Start of stop het AI-model. Terwijl het gestopt is, zijn chat, "
-"adviesverzoeken en AI-achtergrondwerk allemaal niet beschikbaar."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12280,36 +11925,11 @@ msgstr "Selecteer eerst een engine."
 msgid "Creating agent... Please wait."
 msgstr "Agent wordt aangemaakt... Even geduld."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Selecteer eerst een service of implementatie."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "Naam en opdracht zijn verplicht."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "MCP-server toegevoegd."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Mislukt."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "MCP-server toevoegen mislukt."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Agentinstellingen"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Fout: formulier niet gevonden"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12371,14 +11991,6 @@ msgstr "AoT MCP-server"
 msgid "Action failed"
 msgstr "Actie mislukt"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Er zijn geen MCP-items geconfigureerd."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "MCP-items laden mislukt."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "AI-service gestart"
@@ -12398,52 +12010,13 @@ msgstr "AI-service gestopt"
 msgid "Save failed"
 msgstr "Opslaan mislukt"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Instellingen opslaan"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "Instellingen opgeslagen"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "Voor de wijziging van de AI-schakelaar is een herstart vereist"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Experimentele functie"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "De AI-functionaliteit bevindt zich momenteel in een experimentele fase."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Routinetaken automatisch goedkeuren"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Maximale impact voor automatische goedkeuring"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Feedback vereisen bij mislukking"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Modellen"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Supervisormodel"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Workermodel"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12461,98 +12034,22 @@ msgstr "Standaardlocatie"
 msgid "(none)"
 msgstr "(geen)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Context en budget"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Start blokkeerperiode"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Einde blokkeerperiode"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Contextbereik (uren)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Maximale geschiedeniscontext"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Maandelijkse budgetlimiet (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "laden..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "MCP-items"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "AI-services"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "AI-serviceregister"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Terug naar portaal"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "AI-service registreren"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"Registreer en beheer verbindingen met AI-engines (Gemini, OpenAI, lokale "
-"proxy's)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Deze service verwijderen?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Eindpunt"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Er zijn nog geen AI-services geregistreerd."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "Verbind uw eerste LLM"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Servicenaam"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "bijv. Mijn Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Enginetype"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Modelnaam"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API-eindpunt (optioneel)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12565,28 +12062,6 @@ msgstr "Authenticatie"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Type authenticatie"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "ID/wachtwoord"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Geen authenticatie"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "Account-ID"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Service registreren"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Geen vooraf ingestelde modellen"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12625,28 +12100,6 @@ msgstr "Synchroniseren"
 msgid "Data credits"
 msgstr "Databronnen"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "Beoordeling van door AI samengestelde kennis"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Kennis die de AI zelfstandig heeft opgeslagen (aanvankelijk altijd "
-"onbevestigd). Bevestig/bewerk wat correct is, trek in wat onjuist is — "
-"totdat het is beoordeeld, wordt het geciteerd als [AI 정리 — 미확인]."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Alleen beoordeelde kennis: AAN"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Alleen beoordeelde kennis: UIT"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12655,10 +12108,6 @@ msgstr ""
 "Indien ingeschakeld mag de AI notities die zij zelf heeft geschreven niet"
 " aanhalen totdat een persoon deze bevestigt. Gezaghebbende en handmatig "
 "ingevoerde kennis blijft ongewijzigd."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Nog geen door AI samengestelde kennis."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12676,18 +12125,9 @@ msgstr "Onbevestigd"
 msgid "Flagged"
 msgstr "Gemarkeerd"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Zelfde onderwerp als een gezaghebbende bron"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Overeenkomsten"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Bron openen"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12696,23 +12136,6 @@ msgstr "Heractiveren"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Intrekken"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Kennisitems"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"Alles wat de AI kan aanhalen — gesynchroniseerd vanuit bronnen, door de "
-"AI opgeslagen of handmatig ingevoerd. Zoek en filter om te zien wat er "
-"daadwerkelijk in zit."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Kennis doorzoeken…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12749,16 +12172,6 @@ msgstr ""
 "De kennisbibliotheek is leeg. Zolang hier niets in staat, beantwoordt de "
 "AI vakvragen op basis van eigen algemene kennis — zonder bron om aan te "
 "halen."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Drie manieren om te vullen: koppel hierboven een bron, klik op Kennis "
-"toevoegen om in te voeren wat u al weet, of vraag de AI iets op te zoeken"
-" — zij slaat op wat zij vindt."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12828,14 +12241,6 @@ msgstr "Bron-URL"
 msgid "Source Settings"
 msgstr "Broninstellingen"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "Door AI samengestelde kennis bewerken"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Opslaan (bevestigt)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Selecteer een brontype."
@@ -12873,10 +12278,6 @@ msgstr "Bron niet gevonden."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Bronnaam"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Parameternaam (contextsleutel)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -12985,17 +12386,9 @@ msgstr "Verwijderen mislukt"
 msgid "Crop Type"
 msgstr "Gewastype"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Bevestigen…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Bevestigd."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Intrekken…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -13006,10 +12399,6 @@ msgid "Retire this item? It will stop being cited until reactivated."
 msgstr ""
 "Dit item intrekken? Het wordt niet meer geciteerd totdat het opnieuw is "
 "geactiveerd."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Heractiveren…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13159,10 +12548,6 @@ msgstr "Selecteer bewerkingen om als kennis te registreren"
 msgid "Parameters for the selected operations"
 msgstr "Parameters voor de geselecteerde bewerkingen"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "Selecteer ten minste één bewerking."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13302,23 +12687,9 @@ msgstr "Samenvatting"
 msgid "Key-Value Extraction"
 msgstr "Sleutel-waarde-extractie"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "AI-beheerder"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Gespreksbeheer"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Foutendashboard"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Redeneergeschiedenis"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13334,25 +12705,9 @@ msgstr "Datum"
 msgid "Details"
 msgstr "Details"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Nog geen redeneergeschiedenis."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "AI-foutendashboard"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Patronen vernieuwen"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Lijst vernieuwen"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Foutpatronen worden geanalyseerd..."
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13394,51 +12749,14 @@ msgstr "Ongepaste actie"
 msgid "Tool Misuse"
 msgstr "Misbruik van tools"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Correctie door gebruiker"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Redeneerdetails"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "Fase 1: gebruikersverzoek"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "Fase 2: intentie en planning"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "Fase 3: tooluitvoering (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "Fase 4: synthese en coördinatie"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Coördinator"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "Fase 5: definitief antwoord"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Foutdetail en oplossing"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Toepassen op kennis"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Totaal in behandeling"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13449,47 +12767,19 @@ msgstr "Aanbevelingen"
 msgid "Review"
 msgstr "Beoordelen"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Geen fouten gevonden."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Weet u het zeker?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "MCP-server wijzigen"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Servernaam"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Uitvoeringsopdracht"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Bereik"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Algemeen (altijd in manifest)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Specifiek (lazy-loaded)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Doel"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Omgevingsvariabelen (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13497,38 +12787,14 @@ msgstr "Omgevingsvariabelen (JSON)"
 msgid "Update"
 msgstr "Bijwerken"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "AI-agent aanmaken"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "Gerelateerde link"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "API-sleutel ophalen"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Agentinformatie"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Agentnaam"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "bijv. Energiebeheerder"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "AI-serviceregistratie"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "bijv. Mijn OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13540,14 +12806,6 @@ msgstr "Modelselectie"
 msgid "Enter model name manually"
 msgstr "Modelnaam handmatig invoeren"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "API-eindpunt"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "AI-pijplijn en tooltoegang"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13557,10 +12815,6 @@ msgstr "Pijplijnrol"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Worker (verouderd)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Modelniveau"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13575,17 +12829,9 @@ msgstr "Standaard"
 msgid "Heavy"
 msgstr "Zwaar"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Toegang tot tools"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Toegewezen"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Selecteer toegewezen MCP-servers"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13593,15 +12839,6 @@ msgstr "Selecteer toegewezen MCP-servers"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Specialisatie"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "bijv. irrigatie, klimaat"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Agentregels"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13614,29 +12851,9 @@ msgstr "Systeemprompt"
 msgid "Define how this agent should behave..."
 msgstr "Bepaal hoe deze agent zich moet gedragen..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Aangepast model..."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Servicesleutel"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "API-sleutel voor service"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Standaard systeemengine"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Servicegegevens"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "Breinconfiguratie"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13648,164 +12865,17 @@ msgstr "Breinconfiguratie"
 msgid "Options"
 msgstr "Opties"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "MCP-bereik"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "MCP-instructies"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Serverinstructie"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr "Classificeert alleen de intentie. Lichtgewicht model aanbevolen."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "Maakt uitvoeringsplannen. Standaard of zwaar model aanbevolen."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Roept tools aan en verzamelt gegevens."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Synthetiseert resultaten tot een antwoord voor de gebruiker."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Verouderde supervisor/worker-modus."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "Algemene AI-opties"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Algemene AI-instellingen"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "Configureer systeembrede parameters voor de AI-orchestratielaag."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "AI-context van apparaat bekijken"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "AI-contextgegevens voor individuele apparaten inspecteren"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Apparaten doorbladeren"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Infrastructuur"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "Hoofdproxy-URL"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr ""
-"Algemene proxy die wordt gebruikt als het agentspecifieke eindpunt leeg "
-"is."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "Time-out voor verzoeken (sec)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Gebruikerservaring (melding)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "AI-succesberichten verbergen"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "AI-waarschuwingsberichten verbergen"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "AI-planner"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "Gezamenlijke doeltracker"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Macroweergave]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[Dag]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Week]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Maand]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Jaar]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Vandaag]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Omhoog(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Omlaag(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Inspringen(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Inspringen ongedaan maken(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Gegevens vernieuwen"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Taak toevoegen"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Taken laden..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "Beheer van door AI voorgestelde taken"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "Controleer en beheer taken die zijn voorgesteld door AI-agents."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Taken zoeken..."
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13815,22 +12885,6 @@ msgstr "Taken zoeken..."
 msgid "Target"
 msgstr "Doel"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Geplande tijd"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Voorgestelde taken laden..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Taak bewerken"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "In uitvoering"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Taak"
@@ -13839,21 +12893,9 @@ msgstr "Taak"
 msgid "Goal"
 msgstr "Doel"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Mijlpaal"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Controlepunt"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Bovenliggende taak"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Voorgestelde opdracht bewerken"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13864,10 +12906,6 @@ msgstr "Uitgangsbediening"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "PID-aanpassing"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "Doel-ID"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13882,63 +12920,10 @@ msgstr "Plantijd"
 msgid "AI Reasoning"
 msgstr "AI-redenering"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Reden voor verwijdering"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "bijv. Onnodig, Verkeerde timing..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Taak verwijderen"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Wijzigingen opslaan"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "AI-verzoeken en advies"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"Externe AI die via MCP is verbonden, kan niets zelfstandig wijzigen. "
-"Besturingsverzoeken wachten hier op uw goedkeuring en meningen worden "
-"hier verzameld zodat u ze kunt vergelijken."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "AI-adviesoverzicht"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"Meningen ingediend door de hoofd-AI, externe AI of ondergeschikte nodes. "
-"Accepteren betekent alleen instemming — het voert geen besturing uit."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Recente AI-tooloproepen"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Er is nog geen advies ingediend."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Er zijn nog geen tooloproepen geregistreerd."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13956,21 +12941,9 @@ msgstr "Voorgestelde actie"
 msgid "MCP Server Management"
 msgstr "MCP-serverbeheer"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Alle statussen vernieuwen"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Server toevoegen"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Model Context Protocol-brugprocessen bewaken en besturen"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "MCP-servers worden gedetecteerd..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -13995,10 +12968,6 @@ msgstr "Activeren bij opslaan"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Omgevingsvariabelen"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Configuratie opslaan"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -14035,14 +13004,6 @@ msgstr "Geautomatiseerde trigger"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Nieuwe taak"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "AI-voorstellen"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Geen openstaande voorstellen."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14085,10 +13046,6 @@ msgstr "Nog geen geschiedenis."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Details van voorstel"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Voorgesteld door"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14244,14 +13201,6 @@ msgstr "Lokaal (apparaat)"
 msgid "Your time"
 msgstr "Uw tijd"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Deze opdracht goedkeuren?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Reden voor afwijzing (optioneel):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14284,14 +13233,6 @@ msgstr "Doel: "
 msgid "By: "
 msgstr "Door: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Lokale tijd: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Redenering: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "Agenda wordt weergegeven in uw tijdzone"
@@ -14300,138 +13241,21 @@ msgstr "Agenda wordt weergegeven in uw tijdzone"
 msgid "Getting to Know Each Other"
 msgstr "Elkaar leren kennen"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "AI leert na verloop van tijd van uw gegevens"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Hoe meer u interactie heeft, hoe nauwkeuriger het wordt"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "U bepaalt waar de AI zich op richt"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Vertel ons over uw faciliteit"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Wat beschrijft uw faciliteit het best?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "Selecteer een faciliteitstype om verder te gaan."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Beschrijf specifiek wat u van deze AI nodig heeft (optioneel)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Doorgaan"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Helemaal klaar!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Faciliteitstype"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Uw instructies"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"U ziet nu: de AI-status, uw belangrijkste trefwoorden en hoe de AI leert "
-"over uw faciliteit."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "Naar AI-dashboard"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Leerstatus van faciliteit"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "Aan de slag met de AI-adviseur"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Dit AI-systeem heeft een leerperiode nodig om advies op maat van uw "
-"faciliteit te geven."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "Tijdens de leerperiode:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "Advies is gebaseerd op algemene landbouwkennis"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "Faciliteitsspecifieke gegevens zijn nog beperkt"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Uw feedback is essentieel voor de kalibratie"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Faciliteitsinformatie"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Verticale boerderij"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Kwekerij"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "Operationele ervaring"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "Minder dan 1 jaar"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1-3 jaar"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3-10 jaar"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ jaar"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Kritieke parameters"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "selecteer alles wat van toepassing is"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Voedingsstoffen"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14447,54 +13271,6 @@ msgstr "Terug"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "Volgende"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Gebruiksvoorwaarden"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Deze AI-adviseur leert na verloop van tijd van uw faciliteit. Tijdens de "
-"eerste leerperiode is het advies gebaseerd op algemene landbouwkennis en "
-"is het mogelijk niet specifiek voor uw omstandigheden. Uw feedback — het "
-"bevestigen, aanpassen of afwijzen van suggesties — kalibreert het systeem"
-" voor uw faciliteit. Het systeem laat u weten wanneer het onzeker is en "
-"welke bevestiging zou helpen. U houdt de controle: er worden geen "
-"geautomatiseerde acties ondernomen zonder uw goedkeuring."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Ik begrijp en ga akkoord met de bovenstaande voorwaarden"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Akkoord en starten"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Onboarding voltooid"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"De AI-adviseur begint met het leren over deze faciliteit. Hoe meer "
-"feedback u geeft op de suggesties, hoe nauwkeuriger en meer op maat het "
-"advies wordt."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "AI gaan gebruiken"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14529,10 +13305,6 @@ msgstr "Groot"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "Budgetten worden automatisch geoptimaliseerd per niveau."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Service en model"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Handmatige invoer"
@@ -14540,10 +13312,6 @@ msgstr "Handmatige invoer"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Laat leeg om de bestaande sleutel te behouden"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "Pijplijnconfiguratie"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16540,14 +15308,6 @@ msgstr "Bedekking en ventilatie"
 msgid "Cover layers"
 msgstr "Bedekkingslagen"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"Buitenbedekking is altijd vereist. Voeg indien nodig wandversterking of "
-"binnenbedekking toe."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Wandversterking"
@@ -17733,28 +16493,6 @@ msgstr "Toepassen..."
 msgid "Failed to submit judgment"
 msgstr "Indienen van beoordeling mislukt"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Zoek adres om beginlocatie te vinden"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "Beginbreedtegraad van het kaartmiddelpunt. Bijv. 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "Beginlengtegraad van het kaartmiddelpunt. Bijv. 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr ""
-"Beginzoomniveau van de kaart. U kunt dit wijzigen door een getal in te "
-"voeren."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Selecteer de standaardzoekmachine voor algemeen zoeken."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Terugzetten naar standaard"
@@ -17775,82 +16513,16 @@ msgstr "Faciliteitskleur"
 msgid "Equipment Color"
 msgstr "Apparatuurkleur"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "AoT-apparaatkleur"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Achtergrondkleur paneel"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "Standaard: 25. Maximale limiet is 30."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"Gebruik digitale zoom voor hoge zoomniveaus die niet door de kaartbron "
-"worden geleverd."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "Schakel fractioneel zoomen in voor niveaus rond 18 en hoger."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Schakel het infade-effect in bij het laden van tegels."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"Gebruik de Canvas-renderer om de prestaties te verbeteren wanneer er veel"
-" vectorlagen aanwezig zijn."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Max. aantal locatiepolygonen"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Beperk het maximale aantal polygonen voor locaties. Locaties die deze "
-"limiet overschrijden, worden weergegeven als punten."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Max. aantal zonepolygonen"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Beperk het maximale aantal polygonen voor zones. Zones die deze limiet "
-"overschrijden, worden weergegeven als punten."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Max. aantal apparaatpolygonen"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Beperk het maximale aantal polygonen voor apparaten. Apparaten die deze "
-"limiet overschrijden, worden weergegeven als punten."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "Kies een perceel, zone of locatie en een periode, en genereer een momentopname van wat er is geteeld, gemeten en bestuurd — een document dat u kunt doorgeven of afdrukken."
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17858,7 +16530,7 @@ msgstr "Wijzigen"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "Zoek op gewas, variëteit, naam, zone…"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17866,7 +16538,7 @@ msgstr "Einddatum"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "Of maak een logboek voor een hele locatie of zone"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17882,7 +16554,7 @@ msgstr "Niet gekoppeld"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "De hele locatie of zone wordt gedekt, inclusief elk perceel daarbinnen."
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17926,11 +16598,11 @@ msgstr "Logboek"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "Dit logboek wordt nog gegenereerd. Deze pagina wordt automatisch vernieuwd."
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "Dit logboek kon niet worden gegenereerd."
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17963,7 +16635,7 @@ msgstr "Inhoud"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "Elke onderstaande sectie begint op een nieuwe pagina, in deze volgorde."
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -17973,7 +16645,7 @@ msgstr "Overzicht"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "waar dit logboek over gaat"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -18003,41 +16675,33 @@ msgstr "%(n)s periodes"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "Zo leest u dit"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "Periode en tijdzone"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "Dagen beginnen en eindigen in %(tz)s. Elke datum in dit document is een lokale kalenderdag, geen UTC-dag."
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "Min / Max / Gem."
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "Min en max zijn exact. Het gemiddelde is het gemiddelde van de uurgemiddelden, zodat vaak bemonsterde uren het niet vertekenen — het is een benadering, geen echt tijdgewogen gemiddelde."
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "Doel en Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -18047,17 +16711,17 @@ msgstr "Looptijd"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "Uren dat een apparaat in de periode aan stond, afgelezen van het eerste kanaal."
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "Wat is weggelaten"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "Apparaatdiagnostiek (batterij, signaal) is standaard niet opgenomen. U kunt deze inschakelen bij het genereren van een logboek."
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -18065,7 +16729,7 @@ msgstr "Hier gebruikte termen"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "Waar de cijfers vandaan komen"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -18075,7 +16739,7 @@ msgstr "Bron"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "Sensor- en apparaatgegevens die dit AoT-systeem bewaart voor de apparaten die aan dit doel zijn toegewezen."
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -18085,15 +16749,15 @@ msgstr "Momentopname"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "Dit document is vastgelegd op het moment van genereren. Latere wijzigingen aan apparaten, programma's of bedrading hebben er geen invloed op."
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "Opmerkingen over de nauwkeurigheid"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "Afdrukken (opslaan als PDF)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -18122,22 +16786,22 @@ msgstr "Item"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "Groeigraaddagen"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "dit logboek: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "basis %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "%(p)s%% van de dagen gemeten"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -18149,12 +16813,12 @@ msgstr "Het programma heeft geen basistemperatuur"
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "Te weinig gemeten dagen"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "%(n)s dagen in dit logboek"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18220,7 +16884,7 @@ msgstr "geschat"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "vóór dit logboek"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18252,12 +16916,7 @@ msgstr "Hele periode"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "daglicht %(h)s u"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18277,11 +16936,6 @@ msgstr "verbruik"
 msgid "varies"
 msgstr "varieert"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "geen sensor"
@@ -18293,7 +16947,7 @@ msgstr "Dit logboek verwijderen? Dit kan niet ongedaan worden gemaakt."
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "Er is iets misgegaan."
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19374,10 +18028,6 @@ msgstr "Payload uit (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Toewijzen aan planner"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Geselecteerde apparaten registreren"
@@ -19591,10 +18241,6 @@ msgstr "MCP-badge"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "Klik om de kleuren van de MCP-badge te bewerken"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Klik om de kleuren van de upgradebadge te bewerken"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19876,22 +18522,6 @@ msgstr "Zachte badgeachtergrond voor lopende/informatieve statussen"
 msgid "Text color used on the info tint"
 msgstr "Tekstkleur gebruikt op achtergrondkleur Info"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr "Randkleur voor meldingsvakken bij succes (Admin-pagina's, bijv. Upgrade)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Randkleur voor meldingsvakken bij waarschuwing/standaard"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Randkleur voor meldingsvakken bij gevaar/fout"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Randkleur voor informatiemeldingsvakken"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr "Opslaan, activeren, tabblad — gevulde primaire knoppen in de hele app"
@@ -19923,10 +18553,6 @@ msgstr "Knoprand"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Rand voor alle knoppen en lijstrijen"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr "Upgradebadge in navigatie en achtergrond van upgradeknop"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -20830,7 +19456,7 @@ msgstr "Doelobject"
 
 #: aot_flask/templates/tools/audit_log.html:67
 msgid "Detail"
-msgstr "Detail"
+msgstr "Details"
 
 #: aot_flask/templates/tools/export.html:3
 #: aot_flask/templates/tools/export.html:5
@@ -20965,7 +19591,7 @@ msgstr "Logweergave"
 
 #: aot_flask/templates/tools/logview.html:18
 msgid "Log"
-msgstr "Log"
+msgstr "Logboek"
 
 #: aot_flask/templates/tools/logview.html:36
 msgid "Minimum level"
@@ -21060,34 +19686,6 @@ msgstr "Notitiebeheer"
 #: aot_flask/templates/tools/notes.html:152
 msgid "Search content, subject..."
 msgstr "Inhoud, onderwerp zoeken..."
-
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Filters wissen"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Geavanceerde filters"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Resultaten exporteren"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "PDF-rapport exporteren"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Stel notities binnen een periode (met bovenstaand tagfilter) samen tot "
-"een opgemaakt PDF-rapport."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Rapporttitel (optioneel)"
 
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
@@ -21374,7 +19972,7 @@ msgstr "Geen tags"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "Nog geen AI-analyse beschikbaar. De analyse wordt automatisch uitgevoerd — kijk zo dadelijk opnieuw."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21386,7 +19984,7 @@ msgstr "AI trainen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "Voeg een notitie toe om de AI deze faciliteit te helpen begrijpen..."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21427,11 +20025,11 @@ msgstr "Betrouwbaarheid:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "De analyse suggereert dat de volgende wijzigingen hebben plaatsgevonden:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "Advies kan niet worden geladen. Controleer de verbinding."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21439,7 +20037,7 @@ msgstr "Voer een notitie in voordat u verzendt."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "Notitie opgeslagen - wordt meegenomen in de volgende AI-cyclus."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21449,25 +20047,9 @@ msgstr "Verzenden mislukt."
 msgid "Unable to save note. Please try again."
 msgstr "Kon notitie niet opslaan. Probeer het opnieuw."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Analyseren"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "AI-analyse mislukt"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Uitvoering mislukt"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21503,11 +20085,11 @@ msgstr "dubbele laag"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "Rechtermuisknop: draaien"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "Linkermuisknop: verschuiven"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21562,7 +20144,7 @@ msgstr "Opslaan als globale bandkleuren"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "Past de eerste 5 sectiekleuren toe op de bandkleuren onder Instellingen > Aangepaste UI."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21605,15 +20187,15 @@ msgstr "Kolom"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "Opgeslagen als algemene grafiekkleuren"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "Opslaan als algemene grafiekkleuren"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "Past de eerste 6 reekskleuren toe op de grafiekkleuren onder Instellingen > Aangepaste UI."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21623,7 +20205,7 @@ msgstr "Y-as-opties"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "Handmatig min./max. voor Y-as inschakelen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21651,7 +20233,7 @@ msgstr "Voer een adres in."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "Stel een vraag over dit advies (bijv. wat moet ik doen?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21659,7 +20241,7 @@ msgstr "Vraag de AI wat te doen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "Welke concrete acties moet ik ondernemen op basis van dit advies?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21708,19 +20290,19 @@ msgstr "5m"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
-msgstr ""
+msgstr "30 min"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:169
 msgid "1h"
-msgstr ""
+msgstr "1 u"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:170
 msgid "6h"
-msgstr ""
+msgstr "6 u"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:171
 msgid "1d"
-msgstr ""
+msgstr "1 d"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
 msgid "Actual"
@@ -21749,11 +20331,6 @@ msgstr "Start om"
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
 msgid "Select the Output to control in the widget options."
 msgstr "Selecteer de te besturen uitgang in de widgetopties."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Positieoffset gegevens (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
@@ -21785,19 +20362,19 @@ msgstr "Fout bij ophalen van afbeelding"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "Fout: de HLS-bibliotheek kon niet worden geladen"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "Fout: de browser ondersteunt geen directe RTSP. Gebruik in plaats daarvan de methode 'Relay'."
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "Fout: geen streaming-URL geconfigureerd"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "Fout bij het ophalen van camera-informatie"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21820,54 +20397,18 @@ msgstr "Ingeschakeld"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "Dit functietype heeft geen bewerkbare opties."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "Deze controller is actief. Deactiveer hem voordat u wijzigingen opslaat, anders worden ze niet toegepast."
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Reeksopties"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Aangepaste kleuren inschakelen"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Y-as ticks uitlijnen inschakelen"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Y-as beginnen op tick inschakelen"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Y-as eindigen op tick inschakelen"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Y-as minimum"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Y-as maximum"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21894,11 +20435,11 @@ msgstr "Categoriefilter"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "Toon alleen berichten in de geselecteerde categorieën. Als er geen is geselecteerd, worden berichten van alle categorieën getoond."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "Nog geen categorieën. Stel er een in bij het maken van een bericht om hier op te filteren."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22322,12 +20863,12 @@ msgstr "Gepauzeerd — geen actuatoren geregistreerd"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "Gepauzeerd — buiten het bedrijfstijdvenster"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "Gepauzeerd (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22356,12 +20897,12 @@ msgstr "Actuatoren: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "Ventilatie: %(ratio)s open (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "Veiligheidsvergrendeling: %(reason)s — besturing gestopt"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22370,27 +20911,27 @@ msgstr "geactiveerd"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "Veiligheidsvergrendeling (gedeeltelijk): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "Geen actuator om %(target)s te besturen"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "Apparatuur aan de limiet: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "Buiten de ingestelde limiet: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "Laatste cyclus: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22425,22 +20966,22 @@ msgstr "Sequentie: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "Tijdvenster van vandaag: %(start)s – %(end)s (cyclus %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "Tijdvenster van vandaag: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "Verstreken in cyclus: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "Stappen: %(running)s van %(total)s actief"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22455,15 +20996,15 @@ msgstr "Periode: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "Laatste controle: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "De laatste controle voerde een actie uit."
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "De laatste controle voerde geen actie uit."
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22472,7 +21013,7 @@ msgstr "Nog niet gecontroleerd."
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "Volgende controle over: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23821,20 +22362,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Externe omgevingscontextverzamelaar"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Verzamelt externe temperatuur, luchtvochtigheid, windsnelheid, neerslag, "
-"zonnestraling, dauwpunt en CO2 van buiten de faciliteit. De geïntegreerde"
-" omgevingsregelfunctie gebruikt deze verzamelaar als enige bron van "
-"waarheid. Selecteer voor elk item de externe sensor. Laat items leeg om "
-"de standaard terugvalwaarde toe te passen."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Bijwerkperiode"
@@ -23910,34 +22437,6 @@ msgid ""
 msgstr ""
 "Selecteer de externe CO₂-meting (ppm). Indien afwezig, wordt standaard "
 "400 ppm gebruikt."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Maximaal toegestane leeftijd van sensor (seconden)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr ""
-"Metingen die ouder zijn dan dit worden vervangen door de standaard "
-"terugvalwaarde."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Terugval externe temperatuur (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr ""
-"Standaardwaarde die wordt gebruikt wanneer de sensor ontbreekt of "
-"verlopen is."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Terugval externe luchtvochtigheid (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Terugval windsnelheid (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -24075,14 +22574,6 @@ msgstr "Max. leeftijd ingang (s)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "REST-poort"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Server/token uit Instellingen -> ChirpStack; apparaten worden daar "
-"toegewezen (\"Beheerd door\")."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -26291,19 +24782,6 @@ msgstr ""
 "kleurenschema's met de stijlen Positron (licht), Dark Matter (donker) en "
 "Voyager, ontworpen om datapunten en sensorinformatie te laten opvallen."
 
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"Een wereldwijde landbedekkingskaart op basis van "
-"Sentinel-2-satellietgegevens van het Europees Ruimteagentschap (ESA). "
-"Vegetatie, stedelijke gebieden, landbouwgrond, bos en waterpartijen "
-"worden geclassificeerd en met kleurcodering weergegeven op een resolutie "
-"van 10m, nuttig voor milieuanalyse."
-
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
 msgstr "Esri"
@@ -27548,7 +26026,7 @@ msgstr "Behoud de regels 'Sleutel: Waarde' zodat AoT uw wijzigingen kan toepasse
 
 #: utils/calendar_event_format.py:269
 msgid "pid"
-msgstr "pid"
+msgstr "PID"
 
 #: utils/calendar_event_format.py:271
 msgid "setting"
@@ -28094,17 +26572,6 @@ msgstr ""
 "overeenkomt met de laatste sectie (Hoog) voor een correcte weergave. Door"
 " voorinstellingen zoals Temperatuur, Vochtigheid of VPD te selecteren, "
 "worden de min./max.-waarden en kleursecties automatisch ingesteld."
-
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts is gratis voor open source en persoonlijk gebruik. Bij gebruik"
-" als onderdeel van een commercieel product kan echter een commerciële "
-"licentie vereist zijn. Raadpleeg https://shop.highsoft.com voor de meest "
-"actuele informatie."
 
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
@@ -28809,54 +27276,17 @@ msgstr "Tijdlijn van de stadia met vandaag en eerdere overgangen gemarkeerd."
 msgid "Targets vs now"
 msgstr "Streefwaarden versus nu"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Actuele metingen tegenover de streefwaarden en limieten van dit stadium. "
-"Eén ervan krijgt de meter, de rest wordt als tekst weergegeven."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Trends"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"Vult de rijen zonder as met een recente trendlijn. Vereist het "
-"streefwaardenblok."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Opgebouwde warmte"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Hoe ver dit stadium is gevorderd in groeigraaddagen. Wordt alleen "
-"weergegeven wanneer het programma een basistemperatuur opgeeft."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Bodemvochtigheid"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Metriek voor meter"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Welke meting de meter krijgt. De rest wordt als tekst weergegeven. Als "
-"dit perceel deze meting niet heeft, wordt in plaats daarvan de eerste met"
-" een bereik weergegeven."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -28881,7 +27311,7 @@ msgstr "AAN mislukt: {}"
 
 #: widgets/AoT_timer.py:1127
 msgid "AoT Timer"
-msgstr "AoT Timer"
+msgstr "AoT-timer"
 
 #: widgets/AoT_timer.py:1133
 msgid ""
@@ -29462,31 +27892,9 @@ msgstr "Decimalen 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "Het aantal decimalen voor de tweede meting"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"Toont de titels van de nieuwste mededelingenbord-berichten. Door op een "
-"titel te klikken, opent het volledige bericht (inhoud, peiling, reacties,"
-" bevestigen) in een pop-up; alle acties die daar worden uitgevoerd, "
-"worden op het werkelijke bericht doorgevoerd. Gebruikers met "
-"schrijfrechten kunnen berichten ook rechtstreeks vanuit de widget "
-"aanmaken, bewerken en verwijderen."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Aantal berichten"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Hoeveel van de nieuwste mededelingen worden weergegeven"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Hoe vaak de mededelingenlijst wordt vernieuwd"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29689,11 +28097,6 @@ msgstr "Schakel de standaardzichtbaarheid van de actielijst in of uit."
 msgid "Sequence Settings (Synced)"
 msgstr "Sequentie-instellingen (gesynchroniseerd)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "Notatie UU:MM"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "Periode (seconden)"
@@ -29732,18 +28135,18 @@ msgstr "Doorgaan waar het gestopt was"
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "Opnieuw beginnen"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "Bij opnieuw inschakelen"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "Wat er gebeurt wanneer deze sequentie wordt uit- en weer ingeschakeld. Doorgaan hervat de onderbroken cyclus; opnieuw beginnen voert de sequentie uit vanaf de eerste stap. Een herstart van de daemon gaat altijd door, ongeacht deze instelling."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -30285,7 +28688,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "Blokkeert bevochtigende verneveling bij fel licht (druppels kunnen zonlicht als een lens op bladeren richten) en, indien hieronder ingesteld, ook vóór zonsondergang. Onafhankelijk van hoe vaak de verneveling draait — u kunt dit bij elke vernevelingsfrequentie in- of uitschakelen."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30624,17 +29027,6 @@ msgstr "Voorspellende feedforward"
 msgid "Enable Forecast Feedforward"
 msgstr "Voorspellende feedforward inschakelen"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"Gebruik de kortetermijnweersvoorspelling van KMA (forecast.json) om "
-"proactief de instelpunten voor temperatuur/luchtvochtigheid te "
-"verschuiven en ventilatie te onderdrukken voordat ongunstig weer "
-"arriveert."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "Reageert op wat er nu is"
@@ -30646,15 +29038,6 @@ msgstr "Bereidt verder vooruit voor"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Vooruitblik voorspelling (uur)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"Hoeveel uur vooruit wordt gecontroleerd op naderend ongunstig weer (1–6 "
-"uur). Een langere vooruitblik geeft eerdere waarschuwing, maar kan tot "
-"overcorrectie leiden."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30730,7 +29113,7 @@ msgstr "Gemiddeld"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1202
 msgid "Frequent"
-msgstr "Frequent"
+msgstr "Vaak"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1204
 msgid "Very frequent"
@@ -30852,14 +29235,6 @@ msgstr "Cumulatief sinds de start"
 msgid "Vapor Pressure Deficit"
 msgstr "Dampdrukdeficiet"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Lettergrootte waarde (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "De lettergrootte van de meting"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Groeischema"
@@ -30868,31 +29243,9 @@ msgstr "Groeischema"
 msgid "Stop Control On"
 msgstr "Regeling stoppen op"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"De regeling stopt definitief na deze datum. Laat leeg om te blijven "
-"doorlopen."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Verneveling zonnebrandbescherming"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Kwekerijmodus"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Kwekerij(zaailing)modus"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Strengere vernevelingslimieten voor zaailingen, die gemakkelijker "
-"verschroeien dan volgroeide bladeren."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -30906,10 +29259,6 @@ msgstr "Nevel"
 
 msgid "Devices under automatic control"
 msgstr "Apparaten onder automatische besturing"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s uitgesloten"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr ""
@@ -30967,14 +29316,6 @@ msgstr ""
 "veroorzaken. Wordt genegeerd wanneer deze faciliteit een eigen "
 "voorspellingsbron heeft gekoppeld — die bron past dan al zijn eigen "
 "vooruitblik toe."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Mededelingencategoriefilter"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Notitieruimte"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -31081,12 +29422,6 @@ msgstr ""
 #: aot/widgets/widget_notice.py:1
 msgid "Choose a space in the widget settings to show notes."
 msgstr "Kies een ruimte in de widget-instellingen om notities weer te geven."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr ""
-"Toont notities die zijn geschreven in een gekozen ruimte (zie \"Ruimte\" "
-"hieronder)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31414,18 +29749,6 @@ msgstr "Rotatie stoppen"
 msgid "System Timezone"
 msgstr "Systeemtijdzone"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"Standaardtijdzone voor het hele systeem (IANA-naam, bijv. Asia/Seoul). "
-"Gebruikt voor tijden in het daemonlogboek, het auditlogboek en als "
-"laatste terugvaloptie voor schema's van apparaten zonder locatie. Dit is "
-"niet uw persoonlijke weergavetijdzone in de accountinstellingen."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31438,3 +29761,991 @@ msgstr "Geen locatie ingesteld — geschat met de systeemtijdzone"
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "Systeembrede standaardtijdzone (IANA-naam, bijv. Asia/Seoul). Gebruikt voor de tijden in het daemonlogboek en als laatste terugval voor apparaten zonder locatie; die apparaten nemen hem over wanneer u hier opslaat. Tijden die mensen lezen en invoeren, volgen ieders eigen tijdzone uit de accountinstellingen."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "Volledige breedte op mobiel"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Schermgrootte computer"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Bedieningsvlak"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Scheidingslijn"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Scheidingslijn (zacht)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Schermgrootte mobiel"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Schakelaarbaan uit"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Reageert niet"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Gepland"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "De eindtijd moet op dezelfde dag later zijn dan de starttijd (een tijdvak dat over middernacht loopt, wordt niet ondersteund)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Deze sequentie gebruikt tijden per weekdag, dus de start-/eindtijd hier is niet toegepast. Wijzig deze in het weekdagschema van de sequentiewidget."
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "Kies dagelijks, wekelijks of maandelijks."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Selecteer een registratiedoel (ingang of uitgang)."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Terugzetten"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Zet terug naar de instellingen van het moment waarop dit venster werd geopend"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Teruggezet"
+
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Signal"
+msgstr "Signaal"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Afhankelijkheden installeren voor"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "AoT-homepage"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Vergroot de hele pagina op computers — tekst, knoppen en kaarten samen. Telefoons en tablets gebruiken de instelling hierboven."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Vergroot de hele pagina op telefoons en tablets — tekst, knoppen en kaarten samen. Computers gebruiken de instelling hieronder."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Geen resultaten"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Niets geselecteerd"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Registraties"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "Verzoeken"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "{0} van {1} geselecteerd"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Kon besturingsverzoeken niet laden"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Alleen personen die controllers kunnen bewerken, kunnen hierover beslissen."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Deze zijn nog niet uitgevoerd. Bij goedkeuring wordt precies uitgevoerd wat hier staat beschreven — u hoeft dit niet meer aan de AI te melden."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "AI-verzoeken"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "AI-advies"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Kon advies niet laden"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Er is geen advies in afwachting."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Er zijn geen schemavoorstellen in afwachting."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Meningen van deze AI en van andere gekoppelde AI's. Accepteren legt vast dat u het ermee eens bent — er wordt niets uitgevoerd."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "Voorgesteld door de AI"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Dit voorstel in het schema opnemen?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Dit voorstel afwijzen?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Schemavoorstellen"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "Taken die de AI voor het schema heeft voorgesteld. Bij goedkeuring komen ze in het schema — ze worden op hun tijdstip uitgevoerd."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "Waarop de AI van u wacht — elk onderstaand item wacht op uw beslissing."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "AI-verbinding"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Toegangssleutels"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Geavanceerd"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "Toegestaan"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Een AI-app die u al gebruikt, zoals Claude Desktop, kan deze boerderij lezen en vragen om apparatuur te besturen. Apparatuurbesturing wordt pas uitgevoerd nadat een persoon dit heeft goedgekeurd."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "Ingebouwde AI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "Verbind uw AI-app"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Fout bij laden van instellingen"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "Geschatte maandelijkse uitgaven van de ingebouwde AI. U wordt gewaarschuwd wanneer de limiet nadert en zodra de limiet is bereikt, schakelt de AI over op het goedkoopste model. 0 betekent geen limiet."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Externe AI-toegang"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Geef per AI-app één sleutel uit en plak die in die app."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Laat de ingebouwde AI op de achtergrond periodiek de situatie op de boerderij samenvatten."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "MCP-brugservers"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Sleutels beheren"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "Niet toegestaan"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Algemene instellingen openen"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Ingebouwde AI laten draaien"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "Het AI-model dat wordt gebruikt voor chat en advies in deze app. Het werkt los van uw eigen AI-app, dus u kunt het uitgeschakeld laten als u het niet gebruikt."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "De locatie die de AI gebruikt wanneer een chat of scherm er geen aanwijst."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "Toolservers die de ingebouwde AI aanroept. Er wordt er automatisch een toegevoegd wanneer u hierboven een MCP-engine toevoegt."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "In- of uitgeschakeld bij Instellingen > Algemeen."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "%(n)s notities die de AI heeft geschreven, wachten op bevestiging door een persoon."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0 betekent geen automatische synchronisatie."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "AI-kennis"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "API-sleutelheader"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Toegevoegd"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Alle statussen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Alle tags"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Bearer Token"
+msgstr "Bearer-token"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Alleen bevestigde kennis aanhalen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Gegevensbronnen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "Hoe de kennis wordt gebruikt"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Soort bron"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Kennisinstellingen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Laatst gesynchroniseerd"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Bibliotheekbron"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "Op verzoek opgezocht"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Moet worden bevestigd"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Nog niet gesynchroniseerd"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Link openen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Opslaan en bevestigen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Toon deze"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Synchronisatiefout"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Nu synchroniseren"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Gesynchroniseerd"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "Gesynchroniseerd {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Er zijn drie manieren om het te vullen: koppel een bron op het tabblad Gegevensbronnen, klik op Kennis toevoegen om op te schrijven wat u al weet, of vraag de AI iets op te zoeken — die slaat op wat ze vindt."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Aantal keer opgehaald"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Titel, tekst of bronvermelding"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Betrouwbaarheid"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "Wat mensen en de AI hebben opgeschreven om door de AI te worden aangehaald. Uit bronnen gesynchroniseerde gegevens zijn hier standaard verborgen — kies ze in het bronfilter of beheer ze op het tabblad Gegevensbronnen."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "Geschreven door mensen en de AI"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "AI-registraties"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Alle ernstniveaus"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Alle typen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Antwoord"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "Toegepast op de kennis."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Goedgekeurd"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Wacht op goedkeuring"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "Aanroeper"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Uitgevoerd"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Gesprekken"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Gecorrigeerd"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Correctie"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Kon registraties niet laden"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Genegeerd"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Foutmeldingen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Verlopen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Geleerd"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Opgezocht"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Geen foutmeldingen."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "Vragen aan de ingebouwde AI en de antwoorden daarop."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Ontvangen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Tooloproepen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Wat gekoppelde AI's via de tools hebben gedaan — nieuwste eerst. Bij verzoeken die goedkeuring nodig hadden, wordt getoond hoe erover is beslist."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "Wat de AI zei"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Wanneer"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "Onjuiste AI-antwoorden die mensen hebben gemeld, met hun correcties. Als u een correctie toepast, wordt deze aan de AI-kennis toegevoegd."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "Kon de lijst met MCP-servers niet laden."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Deze server verwijderen?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Invoerschema"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON-object, bijvoorbeeld {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "Nog geen MCP-servers."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Deze server stelt geen tools beschikbaar."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Server toegevoegd."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Server verwijderd."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Server bijgewerkt."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Gestopt"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "Toolservers die de ingebouwde AI aanroept. Als u op de pagina AI-verbinding een MCP-engine toevoegt, wordt er automatisch een aangemaakt."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Wacht op nieuwe poging"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "Als u de rol wijzigt, wordt gevraagd of specialisme, systeemprompt, niveau en model opnieuw met de standaardwaarden van die rol moeten worden gevuld."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Standaardspecialisme, systeemprompt, niveau en model van deze rol invullen? Wat u heeft ingevoerd, wordt vervangen."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "%(n)s schemavoorstellen van de AI wachten onder AI → Verzoeken."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Deze taak annuleren?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "Besturingsverzoeken en schemavoorstellen van de AI worden beslist onder AI → Verzoeken."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Kon de apparaattijdlijn niet laden"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Geen apparaten gevonden."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "Verzoeken openen"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Kleurvoorinstellingen"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Alle kaarten"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Alle locaties"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Sleutel"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Kon instellingen niet laden"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "Een grovere eenheid levert een kleiner document op. Dagelijkse details kunnen later niet worden hersteld, dus kies dit alleen als u ze niet nodig heeft."
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "Vastleggen per"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "%(n)s fasen, %(m)s periodes"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "Boven"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "Ten opzichte van streefwaarde"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "Onder"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "Per fase"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "Aantal dagen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "Veldsensor en weerstation"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Gemeten door het weerstation"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "Trends van metingen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "Metingen die u bij het genereren van dit logboek niet hebt geselecteerd, zijn er niet in opgenomen. De bovenstaande kanttekeningen noemen ze."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "Rijen die zijn gemarkeerd met \"Weerstation\" en voorzien van een linkerrand, komen van het weerstation van de locatie en niet van een sensor die bij dit doel is geplaatst. Als beide bestaan voor dezelfde meting, worden doelen alleen met de veldsensor vergeleken."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "Dezelfde doelen als de vorige fase."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Sensoren zijn het oneens"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "De weergegeven sensoren horen bij het omliggende gebied."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "Vorm en sensorposities zijn actueel en niet van deze periode."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "%(n)s meer weergeven"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "Minder weergeven"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "Plan weergeven"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "Fasetijdlijn"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "Doelen komen uit het programma dat aan dit perceel is gekoppeld. Δ is het gemeten gemiddelde min dat doel. Dag-/nachtdoelen en curvegebaseerde doelen worden gemarkeerd in plaats van als verschil getoond, omdat een vergelijking met een gemiddelde over de hele dag valse alarmen oplevert."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "De contour is afgeleid van de faciliteit."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "opgebouwd %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "weerstation %(out)s × afdekking %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Klik om de kleuren van Bevestigen te bewerken"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Klik om de kleuren van Bedieningsvlak te bewerken"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Klik om de kleuren van Geen reactie te bewerken"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Klik om de kleuren van Schakelaar aan te bewerken"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Klik om de kleuren van Schakelaarbaan uit te bewerken"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "Vlak van dingen die u bedient — tekstvelden, selectievelden, pillen. Houd het los van de paginaachtergrond, anders verdwijnt een bedieningselement op de pagina erin"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Lichtere scheidingslijn voor dichte lijsten, waar een volle lijn onrustig zou ogen"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Lijn tussen items binnen één container — lijsten, optierijen. Geen rand rondom iets"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Achtergrond van rij/kaart wanneer een apparaat niet meer reageert — iets anders dan Waarschuwingsstatus, waarbij iemand het bewust pauzeert"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Schuifschakelaar"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "Baan van schuifschakelaar wanneer uit (aan gebruikt Band 3)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Tekstveld"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Schakelaar aan"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Weet u zeker dat u deze rol wilt verwijderen?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Geen mededelingen die overeenkomen met uw zoekopdracht."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Zoek op titel, inhoud, categorie..."
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Sectiekleuren"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Algemene bandkleuren"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Sectie"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Kleuren"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Gepland"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Inhoud"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Duur (min)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Bewerken en goedkeuren"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "Ongeldige waarde in veld '{field}'"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Opslaan en goedkeuren"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Geplande tijd"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Stap"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Hiermee wordt echte apparatuur (kleppen, pompen) bediend."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Weergeven"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Details weergeven"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "{n} in afwachting van goedkeuring"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total} geslaagd"
+
+#: config_devices_units.py
+msgid "Evapotranspiration"
+msgstr "Evapotranspiratie"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Verzamelt externe temperatuur, luchtvochtigheid, windsnelheid, neerslag, zonnestraling, dauwpunt en CO2 van buiten de faciliteit. De Functie voor geïntegreerde omgevingsregeling gebruikt deze verzamelaar als enige bron van waarheid. Selecteer voor elk item de externe sensor. Items die leeg blijven, worden niet gedeeld — de geïntegreerde regeling behandelt ze als onbekend in plaats van een waarde aan te nemen."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Server/token uit Instellingen -> ChirpStack; apparaten sluiten zich aan bij deze planner via hun eigen apparaatpagina (bijv. het veld \"Klassenplanner\" van AoT-C)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Zoekvenster (dagen)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Actieve kanalen"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "Laatste 14 dagen"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "Laatste 30 dagen"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "Laatste 60 dagen"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "Laatste 90 dagen"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Laat leeg om automatisch de geregistreerde polygoon te koppelen die het aangeklikte punt bevat."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (gemiddelde)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "NDVI-zoekvenster"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "NDVI-statistieken per veld en bodemvocht/bodemtemperatuur voor een polygoon die is geregistreerd op agromonitoring.com — de enige ingang hier die bodemvocht als getal rapporteert voor uw eigen veldgrens in plaats van als grove satellietoverlay. Teken het veld in het Agromonitoring-dashboard (1-3000 ha) en plak de polygoon-ID hieronder, of laat het leeg om de polygoon te koppelen die het punt bevat waarop u klikt. Gebruikt hetzelfde account als OpenWeatherMap."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "Polygoon-ID"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Bodemtemp. (10 cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Bodemtemp. (oppervlak)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "De meest recente opname binnen dit venster wordt gebruikt. Door wolken kan er weken lang geen bruikbare opname zijn."
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "Wereldwijd bodemvocht aan het oppervlak (0-5 cm) uit het SMAP-product (Soil Moisture Active Passive) L4 van NASA, geleverd als bijna-realtime overlay via NASA GIBS. Beschikbaar met een resolutie van ongeveer 9 km en met selecteerbare datums, nuttig voor irrigatieplanning en droogtemonitoring."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Helderste opname in venster"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "Wolken laten gaten vallen in elke afzonderlijke datum, dus in plaats daarvan wordt de meest recente bruikbare opname binnen dit venster getekend."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Collectie"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Valse kleuren (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "Laatste 7 dagen"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Max. bewolking"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "Meest recente opname"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (vocht)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDVI (Vegetation)"
+msgstr "NDVI (vegetatie)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (water)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Opnameprioriteit"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Zoekvenster"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (bovenkant atmosfeer)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (atmosferisch gecorrigeerd)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Sentinel-2-beelden met een resolutie van 10 m via Sentinel Hub op het Copernicus Data Space Ecosystem — nauwkeurig genoeg om groeiverschillen binnen één veld te zien, in tegenstelling tot de 250 m MODIS NDVI. Registreer een gratis CDSE-account, maak een OAuth-client aan en plak hieronder de client-ID en het geheim. De gratis variant biedt 30.000 verwerkingseenheden per maand; één kaartscherm kost ongeveer 4 eenheden en tegels worden een dag in de cache bewaard."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Ware kleuren"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Weergave"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Tekstgrootte"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "Actuele metingen tegenover de streefwaarden en limieten die deze fase vastlegt — dezelfde kaart die de kaartwidget toont, inclusief DLI en opgebouwde warmte. [7 dagen] maakt van elke rij het bereik waarin de waarde de afgelopen week is bewogen."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Vult de rijen zonder eigen bereik (CO2, bodemvocht, dauwpunt) met een recente trendlijn. Vereist het streefwaardenblok."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Hoe ver deze fase is gevorderd richting de volgende, in groeigraaddagen. Wordt alleen weergegeven wanneer het programma fasen laat overgaan op basis van GDD. Het lopende totaal sinds het planten is in plaats daarvan een rij in de omgevingskaart en volgt de instellingen van die kaart."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "UIT mislukt: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "Maximumaantal openstaande verzoeken dat de lijstmodal tegelijk toont"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Hoe vaak het aantal openstaande verzoeken wordt vernieuwd"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "MCP-goedkeuringsverzoeken"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Max. aantal getoonde items"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Toont hoeveel schrijfverzoeken van externe AI wachten op goedkeuring. Klik op het aantal om de lijst te openen en de verzoeken één voor één goed te keuren, af te wijzen of eerst te bewerken en dan goed te keuren, of selecteer er meerdere en keur ze in bulk goed of wijs ze af. Bij goedkeuring wordt het verzoek direct uitgevoerd met precies de getoonde waarden."

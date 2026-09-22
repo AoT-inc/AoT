@@ -4713,11 +4713,11 @@ msgstr ""
 
 #: aot_flask/routes_function.py:2263
 msgid "The sequence is still running — the daemon did not apply the change."
-msgstr ""
+msgstr "Die Sequenz läuft weiterhin — der Daemon hat die Änderung nicht übernommen."
 
 #: aot_flask/routes_function.py:2265
 msgid "The sequence did not start — the daemon did not apply the change."
-msgstr ""
+msgstr "Die Sequenz wurde nicht gestartet — der Daemon hat die Änderung nicht übernommen."
 
 #: aot_flask/routes_general.py:1201
 msgid "No measurements to export in this time period"
@@ -4792,7 +4792,7 @@ msgstr "Dieser Bereich wurde nicht gefunden."
 msgid ""
 "Facilities without a mapped location won't appear here — add their "
 "location in Facility settings first."
-msgstr ""
+msgstr "Anlagen ohne Kartenposition werden hier nicht angezeigt — tragen Sie zuerst ihre Position in den Anlageneinstellungen ein."
 
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
@@ -4809,15 +4809,15 @@ msgstr "Wählen Sie aus, worum es in diesem Journal geht."
 
 #: aot_flask/routes_geo_journal.py:250
 msgid "Enter both a start and an end date."
-msgstr ""
+msgstr "Geben Sie sowohl ein Start- als auch ein Enddatum ein."
 
 #: aot_flask/routes_geo_journal.py:252
 msgid "The start date is after the end date."
-msgstr ""
+msgstr "Das Startdatum liegt nach dem Enddatum."
 
 #: aot_flask/routes_geo_journal.py:263
 msgid "Could not find what this journal is about."
-msgstr ""
+msgstr "Es konnte nicht ermittelt werden, worum es in diesem Journal geht."
 
 #: aot_flask/routes_geo_journal.py:266
 msgid "Could not read this target."
@@ -4826,24 +4826,24 @@ msgstr "Dieses Ziel konnte nicht gelesen werden."
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
+msgstr "Dieser Zeitraum ist zu lang (%(days)s Tage). Versuchen Sie einen kürzeren Zeitraum."
 
 #: aot_flask/routes_geo_journal.py:275
 #, python-format
 msgid ""
 "That selection has too many devices (%(n)s channels). Narrow the area, or"
 " pick a single plot instead."
-msgstr ""
+msgstr "Diese Auswahl enthält zu viele Geräte (%(n)s Kanäle). Grenzen Sie den Bereich ein oder wählen Sie stattdessen eine einzelne Fläche aus."
 
 #: aot_flask/routes_geo_journal.py:280
 msgid ""
 "That selection would read too much data. Try a shorter period or a "
 "narrower area."
-msgstr ""
+msgstr "Diese Auswahl würde zu viele Daten lesen. Versuchen Sie einen kürzeren Zeitraum oder einen kleineren Bereich."
 
 #: aot_flask/routes_geo_journal.py:331
 msgid "This journal is still being generated."
-msgstr ""
+msgstr "Dieses Journal wird noch erstellt."
 
 #: aot_flask/routes_geo_journal.py:456
 msgid "Journal not found."
@@ -5038,10 +5038,6 @@ msgstr "— Keine —"
 msgid "Select one or more devices to register."
 msgstr "Wählen Sie ein oder mehrere zu registrierende Geräte aus."
 
-#: aot_flask/routes_settings.py:177
-msgid "Select a registration target (Input/Output) or a scheduler."
-msgstr "Wählen Sie ein Registrierungsziel (Eingang/Ausgang) oder einen Planer aus."
-
 #: aot_flask/routes_settings.py:201
 #, python-format
 msgid "Registration complete — Input %(i)s, Output %(o)s (%(n)s devices)"
@@ -5109,11 +5105,6 @@ msgstr ""
 msgid "Action Type"
 msgstr "Aktionstyp"
 
-#: aot_flask/forms/forms_ai_context.py:14
-#: aot_flask/forms/forms_ai_context.py:43
-msgid "Parameter Name"
-msgstr "Parametername"
-
 #: aot_flask/forms/forms_ai_context.py:18
 msgid "Source Type"
 msgstr "Quellentyp"
@@ -5122,24 +5113,6 @@ msgstr "Quellentyp"
 #: aot_flask/templates/pages/ai/scheduler.html:721
 msgid "Manual entry"
 msgstr "Manuelle Eingabe"
-
-#: aot_flask/forms/forms_ai_context.py:21
-#: aot_flask/static/js/ai/aot-ai-context.js:110
-msgid "Note/Description"
-msgstr "Notiz/Beschreibung"
-
-#: aot_flask/forms/forms_ai_context.py:22
-#: aot_flask/static/js/ai/aot-ai-context.js:113
-msgid "External URL"
-msgstr "Externe URL"
-
-#: aot_flask/forms/forms_ai_context.py:27
-msgid "Value / URL / Text"
-msgstr "Wert / URL / Text"
-
-#: aot_flask/forms/forms_ai_context.py:39
-msgid "Record ID"
-msgstr "Datensatz-ID"
 
 #: aot_flask/forms/forms_ai_context.py:55
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:240
@@ -7345,26 +7318,6 @@ msgstr "Info-Tönung"
 msgid "Info Tint Text"
 msgstr "Text der Info-Tönung"
 
-#: aot_flask/forms/forms_settings.py:713
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Success Tint Border"
-msgstr "Erfolgs-Farbton-Rahmen"
-
-#: aot_flask/forms/forms_settings.py:714
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Warning Tint Border"
-msgstr "Warn-Farbton-Rahmen"
-
-#: aot_flask/forms/forms_settings.py:715
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Danger Tint Border"
-msgstr "Gefahrenton-Rahmen"
-
-#: aot_flask/forms/forms_settings.py:716
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Info Tint Border"
-msgstr "Rahmen der Info-Tönung"
-
 #: aot_flask/forms/forms_settings.py:717
 msgid "BG LLM Badge"
 msgstr "HG LLM-Badge"
@@ -7372,12 +7325,6 @@ msgstr "HG LLM-Badge"
 #: aot_flask/forms/forms_settings.py:718
 msgid "BG MCP Badge"
 msgstr "HG MCP-Badge"
-
-#: aot_flask/forms/forms_settings.py:721
-#: aot_flask/templates/settings/custom_ui.html:201
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Upgrade Badge"
-msgstr "Upgrade-Abzeichen"
 
 #: aot_flask/forms/forms_settings.py:724
 #: aot_flask/templates/settings/custom_ui.html:101
@@ -7579,27 +7526,9 @@ msgstr "Bedingungs-Tastverhältnis (%)"
 msgid "Confirmed"
 msgstr "Bestätigt"
 
-#: aot_flask/static/js/ai/aot-ai-context.js:81
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:221
-msgid "Review needed"
-msgstr "Überprüfung erforderlich"
-
 #: aot_flask/static/js/ai/aot-ai-context.js:107
 msgid "Enter value"
 msgstr "Wert eingeben"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:108
-#: aot_flask/templates/pages/ai_context.html:100
-msgid "e.g. 25.5"
-msgstr "z. B. 25,5"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:111
-msgid "e.g. setpoint based on morning temperature"
-msgstr "z. B. Sollwert basierend auf der Morgentemperatur"
-
-#: aot_flask/static/js/ai/aot-ai-context.js:114
-msgid "e.g. https://api.weather.kr/..."
-msgstr "z. B. https://api.weather.kr/..."
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:84
 msgid "Click to edit"
@@ -7620,61 +7549,10 @@ msgstr "In Bearbeitung"
 msgid "Failed"
 msgstr "Fehlgeschlagen"
 
-#: aot_flask/static/js/ai/aot-ai-gantt.js:309
-#: aot_flask/static/js/ai/aot-ai-gantt.js:432
-msgid "AI suggestion"
-msgstr "KI-Vorschlag"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "No tasks registered."
-msgstr "Keine Aufgaben registriert."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:420
-msgid "Add one with the Add Task button at the top."
-msgstr "Fügen Sie über die Schaltfläche „Aufgabe hinzufügen“ oben eine hinzu."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:512
-msgid "Approve the AI-suggested schedule and add it to the calendar?"
-msgstr ""
-"Den von der KI vorgeschlagenen Zeitplan genehmigen und zum Kalender "
-"hinzufügen?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:520
-msgid "AI-suggested schedule approved."
-msgstr "Von der KI vorgeschlagener Zeitplan genehmigt."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:524
-msgid "Approval failed"
-msgstr "Genehmigung fehlgeschlagen"
-
 #: aot_flask/static/js/ai/aot-ai-gantt.js:528
 #: aot_flask/static/js/ai/aot-ai-gantt.js:549
 msgid "Network error"
 msgstr "Netzwerkfehler"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:533
-msgid "Reject and delete this suggestion?"
-msgstr "Diesen Vorschlag ablehnen und löschen?"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:541
-msgid "Suggestion rejected and deleted."
-msgstr "Vorschlag abgelehnt und gelöscht."
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:545
-msgid "Rejection failed"
-msgstr "Ablehnung fehlgeschlagen"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:566
-msgid "No parent task to indent under"
-msgstr "Keine übergeordnete Aufgabe zum Einrücken vorhanden"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:576
-msgid "Already a top-level task"
-msgstr "Bereits eine Aufgabe oberster Ebene"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:602
-msgid "Order updated"
-msgstr "Reihenfolge aktualisiert"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:606
 #: aot_flask/static/js/ai/aot-ai-gantt.js:621
@@ -7683,14 +7561,6 @@ msgstr "Reihenfolge aktualisiert"
 #: widgets/widget_trigger_sequence.py:432
 msgid "Update failed"
 msgstr "Aktualisierung fehlgeschlagen"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:617
-msgid "Hierarchy updated"
-msgstr "Hierarchie aktualisiert"
-
-#: aot_flask/static/js/ai/aot-ai-gantt.js:646
-msgid "Name updated"
-msgstr "Name aktualisiert"
 
 #: aot_flask/static/js/ai/aot-ai-gantt.js:775
 msgid "Schedule updated"
@@ -7792,65 +7662,15 @@ msgstr "Wird geladen..."
 msgid "Failed to load data."
 msgstr "Daten konnten nicht geladen werden."
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:186
-#: aot_flask/templates/pages/ai_context.html:176
-msgid "No context records registered."
-msgstr "Keine Kontexteinträge registriert."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:208
-msgid "No records match the criteria."
-msgstr "Keine Einträge entsprechen den Kriterien."
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:220
 #: aot_flask/templates/layout.html:861
 #: aot_flask/templates/layout_default.html:861
 msgid "System default"
 msgstr "Systemstandard"
 
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:473
-msgid "Edit definition"
-msgstr "Definition bearbeiten"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:478
-msgid "Pending review"
-msgstr "Prüfung ausstehend"
-
 #: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:488
 msgid "Rejected"
 msgstr "Abgelehnt"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:518
-msgid "Enter or confirm the definition to approve:"
-msgstr "Geben Sie die zu genehmigende Definition ein oder bestätigen Sie sie:"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:533
-msgid "Approved successfully."
-msgstr "Erfolgreich genehmigt."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:537
-msgid "An error occurred during approval."
-msgstr "Bei der Genehmigung ist ein Fehler aufgetreten."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:542
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:572
-msgid "A server error occurred."
-msgstr "Es ist ein Serverfehler aufgetreten."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:550
-msgid "Reject this term?"
-msgstr "Diesen Begriff ablehnen?"
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:563
-msgid "Rejected successfully."
-msgstr "Erfolgreich abgelehnt."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:567
-msgid "An error occurred during processing."
-msgstr "Bei der Verarbeitung ist ein Fehler aufgetreten."
-
-#: aot_flask/static/js/ai/aot-ai-knowledge-dashboard.js:581
-msgid "Enter a new definition:"
-msgstr "Neue Definition eingeben:"
 
 #: aot_flask/static/js/app/dashboard.js:319
 msgid "layout_save_fail"
@@ -11079,71 +10899,11 @@ msgstr "kann nicht rückgängig gemacht werden"
 msgid "Usage"
 msgstr "Nutzung"
 
-#: aot_flask/templates/pages/ai_context.html:3
-#: aot_flask/templates/pages/ai_context.html:73
-msgid "AI Context Manager"
-msgstr "KI-Kontext-Manager"
-
-#: aot_flask/templates/pages/ai_context.html:74
-msgid "Inject external information into the AI and manage its trust state."
-msgstr ""
-"Externe Informationen in die KI einspeisen und deren Vertrauensstatus "
-"verwalten."
-
-#: aot_flask/templates/pages/ai_context.html:81
-msgid "Add Context"
-msgstr "Kontext hinzufügen"
-
-#: aot_flask/templates/pages/ai_context.html:105
-msgid "Notes (optional)"
-msgstr "Notizen (optional)"
-
-#: aot_flask/templates/pages/ai_context.html:121
-msgid "Context Records"
-msgstr "Kontexteinträge"
-
-#: aot_flask/templates/pages/ai_context.html:129
-#: aot_flask/templates/pages/ai_context.html:184
-msgid "System Default"
-msgstr "Systemstandard"
-
 #: aot_flask/templates/pages/ai_context.html:131
 #: aot_flask/templates/pages/ai_context.html:186
 #: aot_flask/templates/pages/geo/geo_facility.html:1357
 msgid "Needs Review"
 msgstr "Überprüfung erforderlich"
-
-#: aot_flask/templates/pages/ai_context.html:185
-msgid "Auto-generated by the AI from domain defaults. Not yet reviewed."
-msgstr ""
-"Automatisch von der KI aus Bereichsstandards generiert. Noch nicht "
-"überprüft."
-
-#: aot_flask/templates/pages/ai_context.html:187
-msgid "User input or pending item. The AI references it but with low confidence."
-msgstr ""
-"Benutzereingabe oder ausstehender Eintrag. Die KI bezieht sich darauf, "
-"jedoch mit geringer Zuverlässigkeit."
-
-#: aot_flask/templates/pages/ai_context.html:189
-msgid ""
-"Value reviewed and approved by the user. The AI uses it with high "
-"confidence."
-msgstr ""
-"Vom Benutzer geprüfter und genehmigter Wert. Die KI verwendet ihn mit "
-"hoher Zuverlässigkeit."
-
-#: aot_flask/templates/pages/camera.html:46
-msgid "Detected Platform"
-msgstr "Erkannte Plattform"
-
-#: aot_flask/templates/pages/camera.html:51
-msgid "PC/Server"
-msgstr "PC/Server"
-
-#: aot_flask/templates/pages/camera.html:53
-msgid "Docker Container"
-msgstr "Docker-Container"
 
 #: aot_flask/templates/pages/camera.html:55
 #: aot_flask/templates/tools/notes.html:802
@@ -12019,15 +11779,6 @@ msgstr "oder laden Sie die Seite neu."
 msgid "Control requests awaiting approval"
 msgstr "Steuerungsanfragen, die auf Freigabe warten"
 
-#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:19
-msgid ""
-"These have NOT been executed. Approving runs it immediately with exactly "
-"the arguments shown — you do not need to go back to the AI and tell it."
-msgstr ""
-"Diese wurden NICHT ausgeführt. Durch Genehmigen wird sofort mit genau den"
-" angezeigten Argumenten ausgeführt — Sie müssen nicht zur KI "
-"zurückkehren, um es ihr mitzuteilen."
-
 #: aot_flask/templates/pages/ai/_mcp_pending_approvals.html:26
 msgid "No control requests are waiting."
 msgstr "Es liegen keine Steueranfragen vor."
@@ -12065,54 +11816,9 @@ msgstr "Genehmigt und ausgeführt."
 msgid "Approved, but it failed to run"
 msgstr "Genehmigt, aber die Ausführung ist fehlgeschlagen"
 
-#: aot_flask/templates/pages/ai/ai.html:290
-msgid "AI Status"
-msgstr "KI-Status"
-
 #: aot_flask/templates/pages/ai/ai.html:295
 msgid "Learning Progress"
 msgstr "Lernfortschritt"
-
-#: aot_flask/templates/pages/ai/ai.html:304
-msgid "Key Keywords"
-msgstr "Schlüsselwörter"
-
-#: aot_flask/templates/pages/ai/ai.html:312
-msgid "Frequently Used Features"
-msgstr "Häufig verwendete Funktionen"
-
-#: aot_flask/templates/pages/ai/ai.html:321
-msgid "Reset AI Status"
-msgstr "KI-Status zurücksetzen"
-
-#: aot_flask/templates/pages/ai/ai.html:330
-msgid "Your AI Instructions"
-msgstr "Ihre KI-Anweisungen"
-
-#: aot_flask/templates/pages/ai/ai.html:331
-msgid "Advanced — optional"
-msgstr "Erweitert – optional"
-
-#: aot_flask/templates/pages/ai/ai.html:344
-#: aot_flask/templates/pages/ai/ai.html:538
-msgid "Add specific instructions for your AI (optional)"
-msgstr "Fügen Sie spezifische Anweisungen für Ihre KI hinzu (optional)"
-
-#: aot_flask/templates/pages/ai/ai.html:352
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:277
-msgid ""
-"e.g. I manage a greenhouse and need help with pest management and "
-"temperature control"
-msgstr ""
-"z. B. Ich betreibe ein Gewächshaus und benötige Hilfe bei der "
-"Schädlingsbekämpfung und der Temperaturregelung"
-
-#: aot_flask/templates/pages/ai/ai.html:359
-#: aot_flask/templates/pages/ai/ai.html:409
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:249
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:327
-msgid "Outdoor Farming"
-msgstr "Freilandanbau"
 
 #: aot_flask/templates/pages/ai/ai.html:363
 #: aot_flask/templates/pages/ai/ai.html:410
@@ -12122,34 +11828,12 @@ msgstr "Freilandanbau"
 msgid "Greenhouse"
 msgstr "Gewächshaus"
 
-#: aot_flask/templates/pages/ai/ai.html:367
-#: aot_flask/templates/pages/ai/ai.html:411
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:255
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:329
-msgid "Sports Facility"
-msgstr "Sportanlage"
-
 #: aot_flask/templates/pages/ai/ai.html:371
 #: aot_flask/templates/pages/ai/ai.html:412
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:258
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:330
 msgid "Park"
 msgstr "Beiseitelegen"
-
-#: aot_flask/templates/pages/ai/ai.html:375
-#: aot_flask/templates/pages/ai/ai.html:413
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:261
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:331
-msgid "Transportation"
-msgstr "Transport"
-
-#: aot_flask/templates/pages/ai/ai.html:390
-msgid "Update AI Setup"
-msgstr "KI-Einrichtung aktualisieren"
-
-#: aot_flask/templates/pages/ai/ai.html:442
-msgid "Confirmed knowledge items:"
-msgstr "Bestätigte Wissenseinträge:"
 
 #: aot_flask/templates/pages/ai/ai.html:443
 msgid "Pending:"
@@ -12158,25 +11842,6 @@ msgstr "Ausstehend:"
 #: aot_flask/templates/pages/ai/ai.html:444
 msgid "Total:"
 msgstr "Gesamt:"
-
-#: aot_flask/templates/pages/ai/ai.html:452
-msgid "AI is still learning..."
-msgstr "Die KI lernt noch …"
-
-#: aot_flask/templates/pages/ai/ai.html:465
-msgid "No activity yet"
-msgstr "Noch keine Aktivität"
-
-#: aot_flask/templates/pages/ai/ai.html:480
-msgid "Reset AI Status? The snapshot will be recalculated on next load."
-msgstr ""
-"KI-Status zurücksetzen? Der Snapshot wird beim nächsten Laden neu "
-"berechnet."
-
-#: aot_flask/templates/pages/ai/ai.html:546
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:416
-msgid "Failed to save. Please try again."
-msgstr "Speichern fehlgeschlagen. Bitte versuchen Sie es erneut."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:3
 #: aot_flask/templates/pages/ai/ai_agent.html:5
@@ -12192,26 +11857,6 @@ msgstr "KI-Agent"
 #: aot_flask/templates/pages/ai/ai_agent.html:746
 msgid "AI Settings"
 msgstr "KI-Einstellungen"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:40
-msgid ""
-"AI Agents orchestration layer. Manage your AI services and agents to "
-"automate complex tasks."
-msgstr ""
-"Orchestrierungsebene für KI-Agenten. Verwalten Sie Ihre KI-Dienste und "
-"-Agenten, um komplexe Aufgaben zu automatisieren."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:49
-msgid "AI Service Operation"
-msgstr "KI-Dienstbetrieb"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:53
-msgid ""
-"Start or stop the AI model. While stopped, chat, advice requests and "
-"background AI work are all unavailable."
-msgstr ""
-"Startet oder stoppt das KI-Modell. Im gestoppten Zustand sind Chat, "
-"Beratungsanfragen und KI-Hintergrundaufgaben nicht verfügbar."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
 msgid "The AI service is disabled. Enable it in Settings > General first."
@@ -12293,36 +11938,11 @@ msgstr "Bitte wählen Sie zuerst eine Engine aus."
 msgid "Creating agent... Please wait."
 msgstr "Agent wird erstellt … Bitte warten."
 
-#: aot_flask/templates/pages/ai/ai_agent.html:203
-#: aot_flask/templates/pages/ai/ai_agent.html:439
-msgid "Please select a service or implementation first."
-msgstr "Bitte wählen Sie zuerst einen Dienst oder eine Implementierung aus."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:235
-msgid "Name and Command are required."
-msgstr "Name und Befehl sind erforderlich."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:241
-msgid "MCP Server added."
-msgstr "MCP-Server hinzugefügt."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:242
-msgid "Failed."
-msgstr "Fehlgeschlagen."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:244
-msgid "Failed to add MCP server."
-msgstr "MCP-Server konnte nicht hinzugefügt werden."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:276
 #: aot_flask/templates/pages/ai/ai_agent.html:322
 #: aot_flask/templates/pages/ai/ai_agent.html:324
 msgid "Agent Settings"
 msgstr "Agenteneinstellungen"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:335
-msgid "Error: Form not found"
-msgstr "Fehler: Formular nicht gefunden"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:341
 msgid "Delete this agent?"
@@ -12384,14 +12004,6 @@ msgstr "AoT-MCP-Server"
 msgid "Action failed"
 msgstr "Aktion fehlgeschlagen"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:654
-msgid "No MCP entries configured."
-msgstr "Keine MCP-Einträge konfiguriert."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:671
-msgid "Failed to load MCP entries."
-msgstr "MCP-Einträge konnten nicht geladen werden."
-
 #: aot_flask/templates/pages/ai/ai_agent.html:694
 msgid "AI service started"
 msgstr "KI-Dienst gestartet"
@@ -12411,52 +12023,13 @@ msgstr "KI-Dienst gestoppt"
 msgid "Save failed"
 msgstr "Speichern fehlgeschlagen"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:724
-#: aot_flask/templates/pages/ai/ai_agent.html:735
-#: aot_flask/templates/pages/ai/ai_agent.html:921
-#: aot_flask/templates/pages/ai/ai_option.html:88
-msgid "Save Settings"
-msgstr "Einstellungen speichern"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:726
 msgid "Settings saved"
 msgstr "Einstellungen gespeichert"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:728
-msgid "Restart required for AI toggle change"
-msgstr "Für die Änderung der KI-Umschaltung ist ein Neustart erforderlich"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:773
-msgid "Experimental Feature"
-msgstr "Experimentelle Funktion"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:774
-msgid "AI functionality is currently in experimental stage."
-msgstr "Die KI-Funktionalität befindet sich derzeit im experimentellen Stadium."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:780
-msgid "Auto Approve Routine Tasks"
-msgstr "Routineaufgaben automatisch genehmigen"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:789
-msgid "Max Impact to Auto Approve"
-msgstr "Max. Auswirkung für automatische Genehmigung"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:795
-msgid "Require Feedback on Fail"
-msgstr "Rückmeldung bei Fehlschlag erforderlich"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:805
 msgid "Models"
 msgstr "Modelle"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:808
-msgid "Supervisor Model"
-msgstr "Supervisor-Modell"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:814
-msgid "Worker Model"
-msgstr "Worker-Modell"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:821
 msgid "Context Layer"
@@ -12474,98 +12047,22 @@ msgstr "Standardstandort"
 msgid "(none)"
 msgstr "(keine)"
 
-#: aot_flask/templates/pages/ai/ai_agent.html:854
-msgid "Context & Budget"
-msgstr "Kontext & Budget"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:857
-msgid "Blackout Start"
-msgstr "Beginn der Sperrzeit"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:863
-msgid "Blackout End"
-msgstr "Ende der Sperrzeit"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:869
-msgid "Context Scope (Hours)"
-msgstr "Kontextumfang (Stunden)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:875
-msgid "Max History Context"
-msgstr "Max. Verlaufskontext"
-
 #: aot_flask/templates/pages/ai/ai_agent.html:881
 msgid "Monthly Budget Limit (USD)"
 msgstr "Monatliches Budgetlimit (USD)"
-
-#: aot_flask/templates/pages/ai/ai_agent.html:899
-msgid "loading..."
-msgstr "Lädt..."
-
-#: aot_flask/templates/pages/ai/ai_agent.html:910
-msgid "MCP Entries"
-msgstr "MCP-Einträge"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:2
 msgid "AI Services"
 msgstr "KI-Dienste"
 
-#: aot_flask/templates/pages/ai/ai_entry.html:15
-msgid "AI Service Registry"
-msgstr "KI-Dienstregister"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:18
-msgid "Back to Portal"
-msgstr "Zurück zum Portal"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:21
-#: aot_flask/templates/pages/ai/ai_entry.html:77
-msgid "Register AI Service"
-msgstr "KI-Dienst registrieren"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:25
-msgid "Register and manage AI engine connections (Gemini, OpenAI, Local Proxies)."
-msgstr ""
-"Verbindungen zu KI-Engines registrieren und verwalten (Gemini, OpenAI, "
-"lokale Proxys)."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:39
-msgid "Delete this service?"
-msgstr "Diesen Dienst löschen?"
-
 #: aot_flask/templates/pages/ai/ai_entry.html:50
 msgid "Endpoint"
 msgstr "Endpunkt"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:65
-msgid "No AI Services registered yet."
-msgstr "Noch keine KI-Dienste registriert."
-
-#: aot_flask/templates/pages/ai/ai_entry.html:66
-msgid "Connect your first LLM"
-msgstr "Verbinden Sie Ihr erstes LLM"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:85
 #: aot_flask/templates/pages/ai/ai_modals.html:48
 msgid "Service Name"
 msgstr "Dienstname"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:87
-msgid "e.g. My Gemini Pro"
-msgstr "z. B. Mein Gemini Pro"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:91
-#: aot_flask/templates/pages/ai/ai_modals.html:56
-msgid "Engine Type"
-msgstr "Engine-Typ"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:101
-msgid "Model Name"
-msgstr "Modellname"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:108
-msgid "API Endpoint (Optional)"
-msgstr "API-Endpunkt (optional)"
 
 #: aot_flask/templates/pages/ai/ai_entry.html:115
 #: aot_flask/templates/pages/ai/ai_modals.html:77
@@ -12578,28 +12075,6 @@ msgstr "Authentifizierung"
 #: aot_flask/templates/pages/ai/ai_modals.html:204
 msgid "Auth Type"
 msgstr "Authentifizierungstyp"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:122
-#: aot_flask/templates/pages/ai/ai_modals.html:209
-msgid "ID / Password"
-msgstr "ID / Passwort"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:123
-msgid "No Auth"
-msgstr "Keine Authentifizierung"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:128
-#: aot_flask/templates/pages/ai/ai_modals.html:216
-msgid "Account ID"
-msgstr "Konto-ID"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:144
-msgid "Register Service"
-msgstr "Dienst registrieren"
-
-#: aot_flask/templates/pages/ai/ai_entry.html:164
-msgid "No preset models"
-msgstr "Keine voreingestellten Modelle"
 
 #: aot_flask/templates/pages/ai/ai_library.html:3
 #: aot_flask/templates/pages/ai/ai_library.html:5
@@ -12638,28 +12113,6 @@ msgstr "Synchronisieren"
 msgid "Data credits"
 msgstr "Datenquellenangaben"
 
-#: aot_flask/templates/pages/ai/ai_library.html:160
-msgid "AI-Curated Knowledge Review"
-msgstr "Überprüfung des von der KI zusammengestellten Wissens"
-
-#: aot_flask/templates/pages/ai/ai_library.html:162
-msgid ""
-"Knowledge the AI shelved on its own (always unconfirmed at first). "
-"Confirm/edit what is correct, retire what is wrong — see it cited as [AI "
-"정리 — 미확인] until reviewed."
-msgstr ""
-"Wissen, das die KI eigenständig abgelegt hat (anfangs immer unbestätigt)."
-" Bestätigen/bearbeiten Sie, was korrekt ist, und ziehen Sie zurück, was "
-"falsch ist — bis zur Überprüfung wird es als [AI 정리 — 미확인] zitiert."
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: ON"
-msgstr "Nur geprüftes Wissen: EIN"
-
-#: aot_flask/templates/pages/ai/ai_library.html:170
-msgid "Reviewed knowledge only: OFF"
-msgstr "Nur geprüftes Wissen: AUS"
-
 #: aot_flask/templates/pages/ai/ai_library.html:172
 msgid ""
 "When on, the AI may not cite notes it wrote itself until a person "
@@ -12668,10 +12121,6 @@ msgstr ""
 "Wenn aktiviert, darf die KI selbst verfasste Notizen erst zitieren, wenn "
 "eine Person sie bestätigt hat. Maßgebliches und manuell eingegebenes "
 "Wissen ist davon nicht betroffen."
-
-#: aot_flask/templates/pages/ai/ai_library.html:177
-msgid "No AI-curated knowledge yet."
-msgstr "Noch kein von der KI zusammengestelltes Wissen."
 
 #: aot_flask/templates/pages/ai/ai_library.html:201
 msgid "Corroborated"
@@ -12689,18 +12138,9 @@ msgstr "Unbestätigt"
 msgid "Flagged"
 msgstr "Markiert"
 
-#: aot_flask/templates/pages/ai/ai_library.html:211
-msgid "Same topic as an authoritative source"
-msgstr "Gleiches Thema wie eine maßgebliche Quelle"
-
 #: aot_flask/templates/pages/ai/ai_library.html:212
 msgid "Matches"
 msgstr "Treffer"
-
-#: aot_flask/templates/pages/ai/ai_library.html:235
-#: aot_flask/templates/pages/ai/ai_library.html:531
-msgid "Open source"
-msgstr "Open Source"
 
 #: aot_flask/templates/pages/ai/ai_library.html:240
 msgid "Reactivate"
@@ -12709,23 +12149,6 @@ msgstr "Reaktivieren"
 #: aot_flask/templates/pages/ai/ai_library.html:251
 msgid "Retire"
 msgstr "Zurückziehen"
-
-#: aot_flask/templates/pages/ai/ai_library.html:274
-msgid "Knowledge Items"
-msgstr "Wissenseinträge"
-
-#: aot_flask/templates/pages/ai/ai_library.html:277
-msgid ""
-"Everything the AI can cite — synced from sources, shelved by the AI, or "
-"written in by hand. Search and filter to see what is actually in here."
-msgstr ""
-"Alles, was die KI zitieren kann — aus Quellen synchronisiert, von der KI "
-"abgelegt oder manuell eingetragen. Suchen und filtern Sie, um zu sehen, "
-"was hier tatsächlich vorhanden ist."
-
-#: aot_flask/templates/pages/ai/ai_library.html:284
-msgid "Search knowledge…"
-msgstr "Wissen durchsuchen …"
 
 #: aot_flask/templates/pages/ai/ai_library.html:290
 #: aot_flask/templates/pages/ai/ai_library.html:291
@@ -12762,17 +12185,6 @@ msgstr ""
 "Die Wissensbibliothek ist leer. Solange sich nichts hier befindet, "
 "beantwortet die KI Fachfragen aus ihrem eigenen allgemeinen Wissen — ohne"
 " Quelle zum Zitieren."
-
-#: aot_flask/templates/pages/ai/ai_library.html:320
-msgid ""
-"Three ways to fill it: connect a source above, press Add Knowledge to "
-"write in what you already know, or just ask the AI to look something up —"
-" it saves what it finds."
-msgstr ""
-"Drei Wege, um es zu füllen: Verbinden Sie oben eine Quelle, klicken Sie "
-"auf Wissen hinzufügen, um einzutragen, was Sie bereits wissen, oder "
-"bitten Sie die KI einfach, etwas nachzuschlagen — sie speichert, was sie "
-"findet."
 
 #: aot_flask/templates/pages/ai/ai_library.html:331
 msgid "Retrieved at least once"
@@ -12842,14 +12254,6 @@ msgstr "Quell-URL"
 msgid "Source Settings"
 msgstr "Quelleneinstellungen"
 
-#: aot_flask/templates/pages/ai/ai_library.html:434
-msgid "Edit AI-Curated Knowledge"
-msgstr "Von der KI zusammengestelltes Wissen bearbeiten"
-
-#: aot_flask/templates/pages/ai/ai_library.html:444
-msgid "Save (Confirms)"
-msgstr "Speichern (bestätigt)"
-
 #: aot_flask/templates/pages/ai/ai_library.html:455
 msgid "Please select a source type."
 msgstr "Bitte wählen Sie einen Quelltyp aus."
@@ -12889,10 +12293,6 @@ msgstr "Quelle nicht gefunden."
 #: aot_flask/templates/pages/ai/ai_library.html:467
 msgid "Source Name"
 msgstr "Quellenname"
-
-#: aot_flask/templates/pages/ai/ai_library.html:468
-msgid "Parameter Name (Context Key)"
-msgstr "Parametername (Kontextschlüssel)"
 
 #: aot_flask/templates/pages/ai/ai_library.html:469
 msgid "Sync Interval (min)"
@@ -13003,17 +12403,9 @@ msgstr "Löschen fehlgeschlagen"
 msgid "Crop Type"
 msgstr "Kulturart"
 
-#: aot_flask/templates/pages/ai/ai_library.html:501
-msgid "Confirming…"
-msgstr "Wird bestätigt…"
-
 #: aot_flask/templates/pages/ai/ai_library.html:502
 msgid "Confirmed."
 msgstr "Bestätigt."
-
-#: aot_flask/templates/pages/ai/ai_library.html:503
-msgid "Retiring…"
-msgstr "Wird zurückgezogen…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:504
 msgid "Retired."
@@ -13024,10 +12416,6 @@ msgid "Retire this item? It will stop being cited until reactivated."
 msgstr ""
 "Diesen Eintrag zurückziehen? Er wird bis zur Reaktivierung nicht mehr "
 "zitiert."
-
-#: aot_flask/templates/pages/ai/ai_library.html:506
-msgid "Reactivating…"
-msgstr "Wird reaktiviert…"
 
 #: aot_flask/templates/pages/ai/ai_library.html:507
 msgid "Reactivated."
@@ -13178,10 +12566,6 @@ msgstr "Operationen auswählen, die als Wissen registriert werden sollen"
 msgid "Parameters for the selected operations"
 msgstr "Parameter für die ausgewählten Operationen"
 
-#: aot_flask/templates/pages/ai/ai_library.html:546
-msgid "Select at least one operation."
-msgstr "Wählen Sie mindestens eine Operation aus."
-
 #: aot_flask/templates/pages/ai/ai_library.html:547
 msgid ""
 "Enter your service key, then use the Farm and Season pickers below to "
@@ -13323,23 +12707,9 @@ msgstr "Zusammenfassung"
 msgid "Key-Value Extraction"
 msgstr "Schlüssel-Wert-Extraktion"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:3
-#: aot_flask/templates/pages/ai/ai_manage.html:5
-#: aot_flask/templates/pages/ai/ai_manage.html:89
-msgid "AI Manager"
-msgstr "KI-Manager"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:95
-msgid "Conversation Management"
-msgstr "Unterhaltungsverwaltung"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:98
 msgid "Error Dashboard"
 msgstr "Fehler-Dashboard"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:108
-msgid "Reasoning History"
-msgstr "Verlauf der Überlegungen"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:122
 #: aot_flask/templates/pages/ai/ai_manage.html:221
@@ -13355,25 +12725,9 @@ msgstr "Datum"
 msgid "Details"
 msgstr "Details"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:145
-msgid "No reasoning history yet."
-msgstr "Noch kein Begründungsverlauf."
-
 #: aot_flask/templates/pages/ai/ai_manage.html:155
 msgid "AI Error Dashboard"
 msgstr "KI-Fehler-Dashboard"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:160
-msgid "Refresh Patterns"
-msgstr "Aktualisierungsmuster"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:164
-msgid "Refresh List"
-msgstr "Liste aktualisieren"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:172
-msgid "Analyzing error patterns..."
-msgstr "Fehlermuster werden analysiert …"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:184
 msgid "Resolved"
@@ -13415,51 +12769,14 @@ msgstr "Unangemessene Aktion"
 msgid "Tool Misuse"
 msgstr "Werkzeugmissbrauch"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:224
-#: aot_flask/templates/pages/ai/ai_manage.html:367
-msgid "User Correction"
-msgstr "Benutzerkorrektur"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:251
-msgid "Reasoning Details"
-msgstr "Details zur Überlegung"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:260
-msgid "Phase 1: User Request"
-msgstr "Phase 1: Benutzeranfrage"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:268
-msgid "Phase 2: Intent & Planning"
-msgstr "Phase 2: Absicht & Planung"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:293
-msgid "Phase 3: Tool Execution (MCP)"
-msgstr "Phase 3: Tool-Ausführung (MCP)"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:310
-msgid "Phase 4: Synthesis & Coordination"
-msgstr "Phase 4: Synthese & Koordination"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:315
 #: aot_flask/templates/pages/ai/ai_manage.html:323
 msgid "Coordinator"
 msgstr "Koordinator"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:339
-msgid "Phase 5: Final Response"
-msgstr "Phase 5: Endgültige Antwort"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:357
-msgid "Error Detail & Resolution"
-msgstr "Fehlerdetails & Lösung"
-
 #: aot_flask/templates/pages/ai/ai_manage.html:371
 msgid "Apply to Knowledge"
 msgstr "Auf Wissen anwenden"
-
-#: aot_flask/templates/pages/ai/ai_manage.html:408
-msgid "Total Pending"
-msgstr "Insgesamt ausstehend"
 
 #: aot_flask/templates/pages/ai/ai_manage.html:410
 msgid "Recommendations"
@@ -13470,47 +12787,19 @@ msgstr "Empfehlungen"
 msgid "Review"
 msgstr "Überprüfen"
 
-#: aot_flask/templates/pages/ai/ai_manage.html:441
-msgid "No errors found."
-msgstr "Keine Fehler gefunden."
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:28
-msgid "Are you sure?"
-msgstr "Sind Sie sicher?"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:45
-msgid "Modify MCP Server"
-msgstr "MCP-Server ändern"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:53
 #: aot_flask/templates/pages/ai/mcp_servers.html:54
 msgid "Server Name"
 msgstr "Servername"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:59
-msgid "Execution Command"
-msgstr "Ausführungsbefehl"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:65
 #: aot_flask/templates/pages/ai/mcp_servers.html:67
 msgid "Scope"
 msgstr "Geltungsbereich"
 
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:68
-msgid "General (Always in Manifest)"
-msgstr "Allgemein (immer im Manifest)"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:69
-msgid "Specific (Lazy-loaded)"
-msgstr "Spezifisch (bei Bedarf geladen)"
-
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:74
 msgid "Purpose"
 msgstr "Zweck"
-
-#: aot_flask/templates/pages/ai/ai_mcp_entry.html:80
-msgid "Environment Variables (JSON)"
-msgstr "Umgebungsvariablen (JSON)"
 
 #: aot_flask/templates/pages/ai/ai_mcp_entry.html:87
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_title_bar.html:8
@@ -13518,38 +12807,14 @@ msgstr "Umgebungsvariablen (JSON)"
 msgid "Update"
 msgstr "Aktualisieren"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:10
-msgid "Create AI Agent"
-msgstr "KI-Agent erstellen"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:22
-msgid "Related Link"
-msgstr "Zugehöriger Link"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:24
 msgid "Get API Key"
 msgstr "API-Schlüssel abrufen"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:29
-msgid "Agent Information"
-msgstr "Agent-Informationen"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:32
 #: aot_flask/templates/pages/ai/options/options_llm.html:27
 msgid "Agent Name"
 msgstr "Agentenname"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:34
-msgid "e.g. Energy Manager"
-msgstr "z. B. Energiemanager"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:45
-msgid "AI Service Registration"
-msgstr "KI-Dienst-Registrierung"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:50
-msgid "e.g. My OpenAI"
-msgstr "z. B. Mein OpenAI"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:63
 #: aot_flask/templates/pages/ai/options/options_llm.html:59
@@ -13561,14 +12826,6 @@ msgstr "Modellauswahl"
 msgid "Enter model name manually"
 msgstr "Modellname manuell eingeben"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:70
-msgid "API Endpoint"
-msgstr "API-Endpunkt"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:93
-msgid "AI Pipeline & Tool Access"
-msgstr "KI-Pipeline & Tool-Zugriff"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:95
 #: aot_flask/templates/pages/ai/options/options_llm.html:92
 msgid "Pipeline Role"
@@ -13578,10 +12835,6 @@ msgstr "Pipeline-Rolle"
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
 msgstr "Worker (Legacy)"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:107
-msgid "Model Tier"
-msgstr "Modellstufe"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -13596,17 +12849,9 @@ msgstr "Standard"
 msgid "Heavy"
 msgstr "Stark"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:117
-msgid "Tool Access"
-msgstr "Werkzeugzugriff"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:122
 msgid "Assigned"
 msgstr "Zugewiesen"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:130
-msgid "Select Assigned MCP Servers"
-msgstr "Zugewiesene MCP-Server auswählen"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:146
 #: aot_flask/templates/pages/ai/ai_modals.html:378
@@ -13614,15 +12859,6 @@ msgstr "Zugewiesene MCP-Server auswählen"
 #: aot_flask/templates/pages/ai/options/options_mcp.html:37
 msgid "Specialty"
 msgstr "Spezialgebiet"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:148
-msgid "e.g. irrigation, climate"
-msgstr "z. B. Bewässerung, Klima"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:152
-#: aot_flask/templates/pages/ai/ai_modals.html:379
-msgid "Agent Rules"
-msgstr "Agentenregeln"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:155
 #: aot_flask/templates/pages/ai/ai_modals.html:380
@@ -13635,29 +12871,9 @@ msgstr "System-Prompt"
 msgid "Define how this agent should behave..."
 msgstr "Definieren Sie, wie sich dieser Agent verhalten soll ..."
 
-#: aot_flask/templates/pages/ai/ai_modals.html:185
-msgid "Custom Model..."
-msgstr "Benutzerdefiniertes Modell …"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:249
-msgid "Service Key"
-msgstr "Dienstschlüssel"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:261
-msgid "Service API Key"
-msgstr "Dienst-API-Schlüssel"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:284
 msgid "Default System Engine"
 msgstr "Standard-System-Engine"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:326
-msgid "Service Credentials"
-msgstr "Dienstanmeldedaten"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:327
-msgid "Brain Configuration"
-msgstr "KI-Konfiguration"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:328
 #: aot_flask/templates/pages/function_options/conditional_options.html:60
@@ -13669,166 +12885,17 @@ msgstr "KI-Konfiguration"
 msgid "Options"
 msgstr "Optionen"
 
-#: aot_flask/templates/pages/ai/ai_modals.html:355
-msgid "MCP Scope"
-msgstr "MCP-Geltungsbereich"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:356
-msgid "MCP Instructions"
-msgstr "MCP-Anweisungen"
-
 #: aot_flask/templates/pages/ai/ai_modals.html:357
 msgid "Server Instruction"
 msgstr "Serveranweisung"
-
-#: aot_flask/templates/pages/ai/ai_modals.html:448
-msgid "Classifies intent only. Lightweight model recommended."
-msgstr ""
-"Klassifiziert nur die Absicht. Ein leichtgewichtiges Modell wird "
-"empfohlen."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:449
-msgid "Creates execution plans. Standard or Heavy model recommended."
-msgstr "Erstellt Ausführungspläne. Ein Standard- oder Heavy-Modell wird empfohlen."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:450
-msgid "Calls tools and collects data."
-msgstr "Ruft Tools auf und sammelt Daten."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:451
-msgid "Synthesizes results into user response."
-msgstr "Fasst Ergebnisse zu einer Antwort für den Benutzer zusammen."
-
-#: aot_flask/templates/pages/ai/ai_modals.html:452
-msgid "Legacy supervisor/worker mode."
-msgstr "Legacy-Supervisor/Worker-Modus."
-
-#: aot_flask/templates/pages/ai/ai_option.html:3
-#: aot_flask/templates/pages/ai/ai_option.html:5
-msgid "AI Global Options"
-msgstr "Globale KI-Optionen"
-
-#: aot_flask/templates/pages/ai/ai_option.html:19
-msgid "Global AI Settings"
-msgstr "Globale KI-Einstellungen"
-
-#: aot_flask/templates/pages/ai/ai_option.html:21
-msgid "Configure system-wide parameters for the AI orchestration layer."
-msgstr "Konfigurieren Sie systemweite Parameter für die KI-Orchestrierungsschicht."
-
-#: aot_flask/templates/pages/ai/ai_option.html:29
-msgid "View Device AI Context"
-msgstr "KI-Kontext des Geräts anzeigen"
-
-#: aot_flask/templates/pages/ai/ai_option.html:30
-msgid "Inspect AI context data for individual devices"
-msgstr "KI-Kontextdaten für einzelne Geräte einsehen"
-
-#: aot_flask/templates/pages/ai/ai_option.html:33
-msgid "Browse Devices"
-msgstr "Geräte durchsuchen"
 
 #: aot_flask/templates/pages/ai/ai_option.html:41
 msgid "Infrastructure"
 msgstr "Infrastruktur"
 
-#: aot_flask/templates/pages/ai/ai_option.html:44
-msgid "Master Proxy URL"
-msgstr "Master-Proxy-URL"
-
-#: aot_flask/templates/pages/ai/ai_option.html:48
-msgid "Global proxy to be used if agent-specific endpoint is empty."
-msgstr ""
-"Globaler Proxy, der verwendet wird, wenn der agentenspezifische Endpunkt "
-"leer ist."
-
-#: aot_flask/templates/pages/ai/ai_option.html:53
-msgid "Request Timeout (sec)"
-msgstr "Anfrage-Timeout (Sek.)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:61
-msgid "User Experience (Toast)"
-msgstr "Benutzererlebnis (Toast)"
-
-#: aot_flask/templates/pages/ai/ai_option.html:64
-msgid "Hide AI Success messages"
-msgstr "KI-Erfolgsmeldungen ausblenden"
-
-#: aot_flask/templates/pages/ai/ai_option.html:75
-msgid "Hide AI Warning messages"
-msgstr "KI-Warnmeldungen ausblenden"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:2
 msgid "AI Scheduler"
 msgstr "KI-Planer"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:20
-msgid "Collaborative Goal Tracker"
-msgstr "Kollaborativer Zieltracker"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:24
-msgid "[Macro View]"
-msgstr "[Makroansicht]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:28
-msgid "[Day]"
-msgstr "[Tag]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:29
-msgid "[Week]"
-msgstr "[Woche]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:30
-msgid "[Month]"
-msgstr "[Monat]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:31
-msgid "[Year]"
-msgstr "[Jahr]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:32
-msgid "[Today]"
-msgstr "[Heute]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:36
-msgid "[Up(↑)]"
-msgstr "[Aufwärts(↑)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:37
-msgid "[Down(↓)]"
-msgstr "[Abwärts(↓)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:38
-msgid "[Indent(→)]"
-msgstr "[Einrücken(→)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:39
-msgid "[Outdent(←)]"
-msgstr "[Ausrücken(←)]"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:41
-msgid "Refresh Data"
-msgstr "Daten aktualisieren"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:42
-msgid "Add Task"
-msgstr "Aufgabe hinzufügen"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:53
-msgid "Loading tasks..."
-msgstr "Aufgaben werden geladen..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:66
-msgid "AI Proposed Tasks Management"
-msgstr "Verwaltung KI-vorgeschlagener Aufgaben"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:67
-msgid "Review and manage tasks proposed by AI Agents."
-msgstr "Von KI-Agenten vorgeschlagene Aufgaben überprüfen und verwalten."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:73
-msgid "Search tasks..."
-msgstr "Aufgaben durchsuchen …"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:103
 #: aot_flask/templates/pages/geo/journal_view.html:449
@@ -13838,22 +12905,6 @@ msgstr "Aufgaben durchsuchen …"
 msgid "Target"
 msgstr "Ziel"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:104
-msgid "Scheduled Time"
-msgstr "Geplante Zeit"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:110
-msgid "Loading proposed tasks..."
-msgstr "Vorgeschlagene Aufgaben werden geladen..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:125
-msgid "Edit Task"
-msgstr "Aufgabe bearbeiten"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:151
-msgid "In Progress"
-msgstr "In Bearbeitung"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:161
 msgid "Task"
 msgstr "Aufgabe"
@@ -13862,21 +12913,9 @@ msgstr "Aufgabe"
 msgid "Goal"
 msgstr "Ziel"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:163
-msgid "Milestone"
-msgstr "Meilenstein"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:164
 msgid "Checkpoint"
 msgstr "Kontrollpunkt"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:169
-msgid "Parent Task"
-msgstr "Übergeordnete Aufgabe"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:205
-msgid "Edit Proposed Job"
-msgstr "Vorgeschlagene Aufgabe bearbeiten"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:218
 #: aot_flask/templates/pages/ai/scheduler.html:638
@@ -13887,10 +12926,6 @@ msgstr "Ausgangssteuerung"
 #: aot_flask/templates/pages/ai/scheduler.html:639
 msgid "PID Adjustment"
 msgstr "PID-Anpassung"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:224
-msgid "Target ID"
-msgstr "Ziel-ID"
 
 #: aot_flask/templates/pages/ai/ai_scheduler.html:230
 #: aot_flask/templates/pages/ai/scheduler.html:329
@@ -13905,64 +12940,10 @@ msgstr "Zeitplan-Uhrzeit"
 msgid "AI Reasoning"
 msgstr "KI-Begründung"
 
-#: aot_flask/templates/pages/ai/ai_scheduler.html:242
-msgid "Reason for Deletion"
-msgstr "Grund für die Löschung"
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:244
-msgid "e.g. Unnecessary, Wrong timing..."
-msgstr "z. B. Unnötig, falscher Zeitpunkt..."
-
-#: aot_flask/templates/pages/ai/ai_scheduler.html:251
-msgid "Delete Task"
-msgstr "Aufgabe löschen"
-
 #: aot_flask/templates/pages/ai/ai_scheduler.html:253
 #: aot_flask/templates/tools/notes.html:423
 msgid "Save Changes"
 msgstr "Änderungen speichern"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:3
-#: aot_flask/templates/pages/ai/mcp_review.html:12
-#: aot_flask/templates/pages/ai/mcp_servers.html:19
-#: aot_flask/templates/pages/ai/scheduler.html:84
-msgid "AI Requests & Advice"
-msgstr "KI-Anfragen & Empfehlungen"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:19
-msgid ""
-"External AI connected over MCP cannot change anything on its own. Control"
-" requests wait here for your approval, and opinions are collected for you"
-" to compare."
-msgstr ""
-"Eine über MCP verbundene externe KI kann nichts eigenständig ändern. "
-"Steuerungsanfragen warten hier auf Ihre Genehmigung, und Einschätzungen "
-"werden hier zum Vergleich gesammelt."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:26
-msgid "AI advice ledger"
-msgstr "KI-Empfehlungsprotokoll"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:28
-msgid ""
-"Opinions submitted by the main AI, external AI, or subordinate nodes. "
-"Accepting is agreement only — it does not execute control."
-msgstr ""
-"Meinungen, die von der Haupt-KI, einer externen KI oder untergeordneten "
-"Knoten eingereicht wurden. Annehmen bedeutet nur Zustimmung — es führt "
-"keine Steuerung aus."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:33
-msgid "Recent AI tool calls"
-msgstr "Kürzliche KI-Tool-Aufrufe"
-
-#: aot_flask/templates/pages/ai/mcp_review.html:42
-msgid "No advice has been submitted yet."
-msgstr "Es wurde noch kein Ratschlag eingereicht."
-
-#: aot_flask/templates/pages/ai/mcp_review.html:43
-msgid "No tool calls recorded yet."
-msgstr "Noch keine Werkzeugaufrufe erfasst."
 
 #: aot_flask/templates/pages/ai/mcp_review.html:45
 msgid "Accept"
@@ -13980,21 +12961,9 @@ msgstr "Vorgeschlagene Aktion"
 msgid "MCP Server Management"
 msgstr "MCP-Serververwaltung"
 
-#: aot_flask/templates/pages/ai/mcp_servers.html:15
-msgid "Refresh All Status"
-msgstr "Alle Status aktualisieren"
-
 #: aot_flask/templates/pages/ai/mcp_servers.html:22
 msgid "Add Server"
 msgstr "Server hinzufügen"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:26
-msgid "Monitor and control Model Context Protocol bridge processes"
-msgstr "Model-Context-Protocol-Brückenprozesse überwachen und steuern"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:34
-msgid "Discovering MCP servers..."
-msgstr "MCP-Server werden erkannt ..."
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:44
 msgid "Configure MCP Server"
@@ -14019,10 +12988,6 @@ msgstr "Beim Speichern aktivieren"
 #: aot_flask/templates/pages/ai/mcp_servers.html:85
 msgid "Environment Variables"
 msgstr "Umgebungsvariablen"
-
-#: aot_flask/templates/pages/ai/mcp_servers.html:93
-msgid "Save Configuration"
-msgstr "Konfiguration speichern"
 
 #: aot_flask/templates/pages/ai/mcp_servers.html:104
 msgid "Available Tools"
@@ -14059,14 +13024,6 @@ msgstr "Automatisierter Auslöser"
 #: aot_flask/templates/pages/ai/scheduler.html:568
 msgid "New Task"
 msgstr "Neue Aufgabe"
-
-#: aot_flask/templates/pages/ai/scheduler.html:88
-msgid "AI Proposals"
-msgstr "KI-Vorschläge"
-
-#: aot_flask/templates/pages/ai/scheduler.html:136
-msgid "No pending proposals."
-msgstr "Keine ausstehenden Vorschläge."
 
 #: aot_flask/templates/pages/ai/scheduler.html:143
 msgid "Active Jobs"
@@ -14109,10 +13066,6 @@ msgstr "Noch kein Verlauf."
 #: aot_flask/templates/pages/ai/scheduler.html:283
 msgid "Proposal Details"
 msgstr "Vorschlagsdetails"
-
-#: aot_flask/templates/pages/ai/scheduler.html:297
-msgid "Proposed By"
-msgstr "Vorgeschlagen von"
 
 #: aot_flask/templates/pages/ai/scheduler.html:307
 #: aot_flask/templates/pages/ai/scheduler.html:403
@@ -14268,14 +13221,6 @@ msgstr "Gerätelokal"
 msgid "Your time"
 msgstr "Ihre Zeit"
 
-#: aot_flask/templates/pages/ai/scheduler.html:891
-msgid "Approve this job?"
-msgstr "Diesen Auftrag genehmigen?"
-
-#: aot_flask/templates/pages/ai/scheduler.html:896
-msgid "Rejection reason (optional):"
-msgstr "Ablehnungsgrund (optional):"
-
 #: aot_flask/templates/pages/ai/scheduler.html:921
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:17
 msgid "Cancellation reason (optional):"
@@ -14308,14 +13253,6 @@ msgstr "Ziel: "
 msgid "By: "
 msgstr "Von: "
 
-#: aot_flask/templates/pages/ai/scheduler.html:1022
-msgid "Local time: "
-msgstr "Lokale Zeit: "
-
-#: aot_flask/templates/pages/ai/scheduler.html:1023
-msgid "Reasoning: "
-msgstr "Überlegung: "
-
 #: aot_flask/templates/pages/ai/scheduler.html:1049
 msgid "Calendar shown in your timezone"
 msgstr "Kalender wird in Ihrer Zeitzone angezeigt"
@@ -14324,138 +13261,21 @@ msgstr "Kalender wird in Ihrer Zeitzone angezeigt"
 msgid "Getting to Know Each Other"
 msgstr "Sich gegenseitig kennenlernen"
 
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:222
-msgid "AI learns from your data over time"
-msgstr "Die KI lernt im Laufe der Zeit aus Ihren Daten"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:226
-msgid "The more you interact, the more precise it becomes"
-msgstr "Je mehr Sie interagieren, desto präziser wird sie"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:230
-msgid "You control what AI focuses on"
-msgstr "Sie bestimmen, worauf sich die KI konzentriert"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:242
-msgid "Tell Us About Your Facility"
-msgstr "Erzählen Sie uns von Ihrer Anlage"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:246
-msgid "What best describes your facility?"
-msgstr "Was beschreibt Ihre Anlage am besten?"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:265
-msgid "Please select a facility type to continue."
-msgstr "Bitte wählen Sie einen Anlagentyp aus, um fortzufahren."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:272
-msgid "Describe specifically what you need from this AI (optional)"
-msgstr "Beschreiben Sie konkret, was Sie von dieser KI benötigen (optional)"
-
 #: aot_flask/templates/pages/ai/components/getting_to_know.html:282
 msgid "Continue"
 msgstr "Weiter"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:290
-msgid "All Set!"
-msgstr "Alles bereit!"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:294
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:39
-msgid "Facility Type"
-msgstr "Anlagentyp"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:298
-msgid "Your Instructions"
-msgstr "Ihre Anweisungen"
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:304
-msgid ""
-"You will now see: AI Status, your key keywords, and how the AI is "
-"learning about your facility."
-msgstr ""
-"Sie sehen jetzt: KI-Status, Ihre wichtigsten Schlüsselwörter und wie die "
-"KI mehr über Ihre Anlage lernt."
-
-#: aot_flask/templates/pages/ai/components/getting_to_know.html:311
-msgid "Go to AI Dashboard"
-msgstr "Zum KI-Dashboard"
-
-#: aot_flask/templates/pages/ai/components/learning_dashboard.html:6
-msgid "Facility Learning Status"
-msgstr "Lernstatus der Anlage"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:17
-msgid "Getting Started with AI Advisor"
-msgstr "Erste Schritte mit dem KI-Berater"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:18
-msgid ""
-"This AI system requires a learning period to provide advice customized to"
-" your facility."
-msgstr ""
-"Dieses KI-System benötigt eine Lernphase, um auf Ihre Anlage "
-"zugeschnittene Empfehlungen zu geben."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:19
-msgid "During the learning period:"
-msgstr "Während der Lernphase:"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:21
-msgid "Advice is based on general agricultural knowledge"
-msgstr "Die Empfehlung basiert auf allgemeinem landwirtschaftlichem Wissen"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:22
-msgid "Facility-specific data is still limited"
-msgstr "Anlagenspezifische Daten sind noch begrenzt"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:23
-msgid "Your feedback is the key to calibration"
-msgstr "Ihr Feedback ist der Schlüssel zur Kalibrierung"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:36
 msgid "Facility Information"
 msgstr "Anlageninformationen"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:43
-msgid "Vertical Farm"
-msgstr "Vertikale Farm"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:44
 msgid "Nursery"
 msgstr "Gärtnerei"
 
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:50
-msgid "Operating Experience"
-msgstr "Betriebserfahrung"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:53
-msgid "Less than 1 year"
-msgstr "Weniger als 1 Jahr"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:54
-msgid "1-3 years"
-msgstr "1–3 Jahre"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:55
-msgid "3-10 years"
-msgstr "3–10 Jahre"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:56
-msgid "10+ years"
-msgstr "10+ Jahre"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
-msgid "Critical Parameters"
-msgstr "Kritische Parameter"
-
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:61
 msgid "select all that apply"
 msgstr "Wählen Sie alles Zutreffende aus"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:68
-msgid "Nutrients"
-msgstr "Nährstoffe"
 
 #: aot_flask/templates/pages/ai/components/onboarding_flow.html:69
 msgid "Pest Management"
@@ -14471,55 +13291,6 @@ msgstr "Zurück"
 #: aot_flask/templates/tools/notice.html:153
 msgid "Next"
 msgstr "Weiter"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:85
-msgid "Terms of Use"
-msgstr "Nutzungsbedingungen"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:87
-msgid ""
-"This AI advisor learns from your facility over time. During the initial "
-"learning period, advice is based on general agricultural knowledge and "
-"may not be specific to your conditions. Your feedback — confirming, "
-"adjusting, or rejecting suggestions — is what calibrates the system to "
-"your facility. The system will tell you when it is uncertain and what "
-"confirmation would help. You remain in control: no automated actions will"
-" be taken without your approval."
-msgstr ""
-"Dieser KI-Berater lernt im Laufe der Zeit von Ihrer Anlage. Während der "
-"anfänglichen Lernphase basiert die Beratung auf allgemeinem "
-"landwirtschaftlichem Wissen und ist möglicherweise nicht auf Ihre "
-"Gegebenheiten zugeschnitten. Ihr Feedback — das Bestätigen, Anpassen oder"
-" Ablehnen von Vorschlägen — kalibriert das System auf Ihre Anlage. Das "
-"System teilt Ihnen mit, wann es unsicher ist und welche Bestätigung "
-"hilfreich wäre. Sie behalten die Kontrolle: Ohne Ihre Zustimmung werden "
-"keine automatisierten Aktionen ausgeführt."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:91
-msgid "I understand and agree to the above terms"
-msgstr "Ich verstehe die obigen Bedingungen und stimme ihnen zu"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:96
-msgid "Agree and Start"
-msgstr "Zustimmen und starten"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:106
-msgid "Onboarding Complete"
-msgstr "Onboarding abgeschlossen"
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:107
-msgid ""
-"The AI advisor will begin learning about this facility. The more feedback"
-" you provide on its suggestions, the more accurate and customized the "
-"advice becomes."
-msgstr ""
-"Der KI-Berater beginnt, diese Anlage kennenzulernen. Je mehr "
-"Rückmeldungen Sie zu seinen Vorschlägen geben, desto genauer und "
-"individueller wird die Beratung."
-
-#: aot_flask/templates/pages/ai/components/onboarding_flow.html:109
-msgid "Start Using AI"
-msgstr "KI jetzt nutzen"
 
 #: aot_flask/templates/pages/ai/options/ai_custom_options.html:42
 msgid "Leave blank to keep"
@@ -14554,10 +13325,6 @@ msgstr "Groß"
 msgid "Budgets are automatically optimized per Tier."
 msgstr "Budgets werden automatisch pro Tier optimiert."
 
-#: aot_flask/templates/pages/ai/options/options_llm.html:56
-msgid "Service & Model"
-msgstr "Dienst & Modell"
-
 #: aot_flask/templates/pages/ai/options/options_llm.html:65
 msgid "Manual Entry"
 msgstr "Manuelle Eingabe"
@@ -14565,10 +13332,6 @@ msgstr "Manuelle Eingabe"
 #: aot_flask/templates/pages/ai/options/options_llm.html:78
 msgid "Leave blank to keep existing key"
 msgstr "Leer lassen, um den vorhandenen Schlüssel beizubehalten"
-
-#: aot_flask/templates/pages/ai/options/options_llm.html:89
-msgid "Pipeline Configuration"
-msgstr "Pipeline-Konfiguration"
 
 #: aot_flask/templates/pages/ai/options/options_llm.html:121
 #: aot_flask/templates/pages/ai/options/options_mcp.html:58
@@ -16570,14 +15333,6 @@ msgstr "Abdeckung & Belüftung"
 msgid "Cover layers"
 msgstr "Abdeckschichten"
 
-#: aot_flask/templates/pages/geo/geo_facility.html:555
-msgid ""
-"Outer cover is always required. Add wall reinforcement or inner cover as "
-"needed."
-msgstr ""
-"Eine Außenabdeckung ist immer erforderlich. Fügen Sie bei Bedarf eine "
-"Wandverstärkung oder eine Innenabdeckung hinzu."
-
 #: aot_flask/templates/pages/geo/geo_facility.html:560
 msgid "Wall reinforcement"
 msgstr "Wandverstärkung"
@@ -17769,28 +16524,6 @@ msgstr "Wird angewendet …"
 msgid "Failed to submit judgment"
 msgstr "Beurteilung konnte nicht übermittelt werden"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:38
-msgid "Search address to find start location"
-msgstr "Adresse suchen, um den Startort zu finden"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:84
-msgid "Initial map center latitude. E.g. 37.5665"
-msgstr "Anfänglicher Breitengrad des Kartenmittelpunkts. Z. B. 37.5665"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:97
-msgid "Initial map center longitude. E.g. 126.9780"
-msgstr "Anfänglicher Längengrad des Kartenmittelpunkts. Z. B. 126.9780"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:110
-msgid "Initial map zoom level. You can change it by entering a number."
-msgstr ""
-"Anfängliche Zoomstufe der Karte. Sie können sie durch Eingabe einer Zahl "
-"ändern."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:123
-msgid "Select the default search engine for global search."
-msgstr "Wählen Sie die Standardsuchmaschine für die globale Suche aus."
-
 #: aot_flask/templates/pages/geo/geo_setting.html:149
 msgid "Reset to Default"
 msgstr "Auf Standard zurücksetzen"
@@ -17811,82 +16544,16 @@ msgstr "Anlagenfarbe"
 msgid "Equipment Color"
 msgstr "Ausrüstungsfarbe"
 
-#: aot_flask/templates/pages/geo/geo_setting.html:193
-msgid "AoT Device Color"
-msgstr "AoT-Gerätefarbe"
-
 #: aot_flask/templates/pages/geo/geo_setting.html:202
 msgid "Panel Background Color"
 msgstr "Panel-Hintergrundfarbe"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:232
-msgid "Default: 25. Max limit is 30."
-msgstr "Standard: 25. Maximales Limit ist 30."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:247
-msgid "Use digital zoom for high zoom levels not provided by the map source."
-msgstr ""
-"Digitalen Zoom für hohe Zoomstufen verwenden, die von der Kartenquelle "
-"nicht bereitgestellt werden."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:262
-msgid "Enable fractional zoom for levels close to 18 and above."
-msgstr "Aktiviert stufenlosen Zoom für Zoomstufen nahe 18 und darüber."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:283
-msgid "Enable fade-in effect when tiles load."
-msgstr "Aktiviert einen Einblendeffekt beim Laden der Kacheln."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:298
-msgid ""
-"Use Canvas renderer to improve performance when many vector layers are "
-"present."
-msgstr ""
-"Canvas-Renderer verwenden, um die Leistung bei vielen Vektorebenen zu "
-"verbessern."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:312
-msgid "Max Site Polygons"
-msgstr "Max. Standortpolygone"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:314
-msgid ""
-"Limit max polygons for Sites. Sites exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Begrenzt die maximale Anzahl an Polygonen für Standorte. Standorte, die "
-"dieses Limit überschreiten, werden als Punkte dargestellt."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:325
-msgid "Max Zone Polygons"
-msgstr "Max. Zonenpolygone"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:327
-msgid ""
-"Limit max polygons for Zones. Zones exceeding this limit will be rendered"
-" as points."
-msgstr ""
-"Begrenzt die maximale Anzahl an Polygonen für Zonen. Zonen, die dieses "
-"Limit überschreiten, werden als Punkte dargestellt."
-
-#: aot_flask/templates/pages/geo/geo_setting.html:338
-msgid "Max Device Polygons"
-msgstr "Max. Gerätepolygone"
-
-#: aot_flask/templates/pages/geo/geo_setting.html:340
-msgid ""
-"Limit max polygons for Devices. Devices exceeding this limit will be "
-"rendered as points."
-msgstr ""
-"Begrenzt die maximale Anzahl an Polygonen für Geräte. Geräte, die dieses "
-"Limit überschreiten, werden als Punkte dargestellt."
 
 #: aot_flask/templates/pages/geo/journal.html:61
 msgid ""
 "Pick a plot, zone, or site and a period, and generate a snapshot of what "
 "was grown, measured, and controlled — a document you can hand off or "
 "print."
-msgstr ""
+msgstr "Wählen Sie eine Fläche, eine Zone oder einen Standort und einen Zeitraum aus und erzeugen Sie eine Momentaufnahme dessen, was angebaut, gemessen und gesteuert wurde — ein Dokument, das Sie weitergeben oder ausdrucken können."
 
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
@@ -17894,7 +16561,7 @@ msgstr "Ändern"
 
 #: aot_flask/templates/pages/geo/journal.html:80
 msgid "Search by crop, variety, name, zone…"
-msgstr ""
+msgstr "Nach Kultur, Sorte, Name, Zone suchen …"
 
 #: aot_flask/templates/pages/geo/journal.html:94
 msgid "End date"
@@ -17902,7 +16569,7 @@ msgstr "Enddatum"
 
 #: aot_flask/templates/pages/geo/journal.html:110
 msgid "Or make a journal for a whole site or zone"
-msgstr ""
+msgstr "Oder ein Journal für einen ganzen Standort oder eine ganze Zone erstellen"
 
 #: aot_flask/templates/pages/geo/journal.html:113
 msgid "Site or zone"
@@ -17918,7 +16585,7 @@ msgstr "Nicht zugeordnet"
 
 #: aot_flask/templates/pages/geo/journal.html:133
 msgid "The whole site or zone is covered, including every plot inside it."
-msgstr ""
+msgstr "Der gesamte Standort bzw. die gesamte Zone wird erfasst, einschließlich aller darin liegenden Flächen."
 
 #: aot_flask/templates/pages/geo/journal.html:147
 msgid "Measurements to include"
@@ -17962,11 +16629,11 @@ msgstr "Journal"
 msgid ""
 "This journal is still being generated. This page will refresh "
 "automatically."
-msgstr ""
+msgstr "Dieses Journal wird noch erstellt. Diese Seite wird automatisch aktualisiert."
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
 msgid "This journal could not be generated."
-msgstr ""
+msgstr "Dieses Journal konnte nicht erstellt werden."
 
 #: aot_flask/templates/pages/geo/journal_view.html:204
 #: aot_flask/templates/pages/geo/journal_view.html:368
@@ -17999,7 +16666,7 @@ msgstr "Inhalt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:246
 msgid "Each section below starts on a new page, in this order."
-msgstr ""
+msgstr "Jeder der folgenden Abschnitte beginnt in dieser Reihenfolge auf einer neuen Seite."
 
 #: aot_flask/templates/pages/geo/journal_view.html:249
 #: aot_flask/templates/pages/geo/journal_view.html:328
@@ -18009,7 +16676,7 @@ msgstr "Übersicht"
 
 #: aot_flask/templates/pages/geo/journal_view.html:250
 msgid "what this journal is about"
-msgstr ""
+msgstr "worum es in diesem Journal geht"
 
 #: aot_flask/templates/pages/geo/journal_view.html:252
 #: aot_flask/templates/pages/geo/journal_view.html:329
@@ -18039,41 +16706,33 @@ msgstr "%(n)s Zeiträume"
 
 #: aot_flask/templates/pages/geo/journal_view.html:262
 msgid "How to read this"
-msgstr ""
+msgstr "So lesen Sie dieses Dokument"
 
 #: aot_flask/templates/pages/geo/journal_view.html:264
 msgid "Period and time zone"
-msgstr ""
+msgstr "Zeitraum und Zeitzone"
 
 #: aot_flask/templates/pages/geo/journal_view.html:265
 #, python-format
 msgid ""
 "Days start and end in %(tz)s. Every date in this document is a local "
 "calendar day, not a UTC day."
-msgstr ""
+msgstr "Tage beginnen und enden in %(tz)s. Jedes Datum in diesem Dokument ist ein lokaler Kalendertag, kein UTC-Tag."
 
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
-msgstr ""
+msgstr "Min. / Max. / Durchschn."
 
 #: aot_flask/templates/pages/geo/journal_view.html:268
 msgid ""
 "Min and max are exact. The average is the mean of hourly means, so "
 "heavily sampled hours do not pull it — it is an approximation, not a true"
 " time-weighted average."
-msgstr ""
+msgstr "Minimum und Maximum sind exakt. Der Durchschnitt ist der Mittelwert der Stundenmittelwerte, sodass stark abgetastete Stunden ihn nicht verzerren — er ist eine Näherung und kein echter zeitgewichteter Durchschnitt."
 
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
 msgstr "Ziel und Δ"
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against"
-" a whole-day average produces false alarms."
-msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
 #: aot_flask/templates/pages/geo/journal_view.html:510
@@ -18083,17 +16742,17 @@ msgstr "Laufzeit"
 
 #: aot_flask/templates/pages/geo/journal_view.html:274
 msgid "Hours a device was on during the period, read from its first channel."
-msgstr ""
+msgstr "Stunden, die ein Gerät im Zeitraum eingeschaltet war, gelesen vom ersten Kanal."
 
 #: aot_flask/templates/pages/geo/journal_view.html:277
 msgid "What was left out"
-msgstr ""
+msgstr "Was weggelassen wurde"
 
 #: aot_flask/templates/pages/geo/journal_view.html:278
 msgid ""
 "Device diagnostics (battery, signal) are not included by default. They "
 "can be turned on when generating a journal."
-msgstr ""
+msgstr "Gerätediagnosen (Batterie, Signal) sind standardmäßig nicht enthalten. Sie lassen sich beim Erstellen eines Journals einschalten."
 
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
@@ -18101,7 +16760,7 @@ msgstr "Verwendete Begriffe"
 
 #: aot_flask/templates/pages/geo/journal_view.html:295
 msgid "Where the numbers come from"
-msgstr ""
+msgstr "Woher die Zahlen stammen"
 
 #: aot_flask/templates/pages/geo/journal_view.html:297
 msgid "Source"
@@ -18111,7 +16770,7 @@ msgstr "Quelle"
 msgid ""
 "Sensor and device records held by this AoT system for the devices "
 "assigned to this target."
-msgstr ""
+msgstr "Sensor- und Geräteaufzeichnungen, die dieses AoT-System für die diesem Ziel zugeordneten Geräte vorhält."
 
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
@@ -18121,15 +16780,15 @@ msgstr "Snapshot"
 msgid ""
 "This document was fixed when it was generated. Later changes to devices, "
 "programs or wiring do not alter it."
-msgstr ""
+msgstr "Dieses Dokument wurde bei der Erstellung festgeschrieben. Spätere Änderungen an Geräten, Programmen oder Verkabelung ändern es nicht."
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
 msgid "Notes on accuracy"
-msgstr ""
+msgstr "Hinweise zur Genauigkeit"
 
 #: aot_flask/templates/pages/geo/journal_view.html:314
 msgid "Print (save as PDF)"
-msgstr ""
+msgstr "Drucken (als PDF speichern)"
 
 #: aot_flask/templates/pages/geo/journal_view.html:315
 msgid "Markdown"
@@ -18158,22 +16817,22 @@ msgstr "Kultur"
 
 #: aot_flask/templates/pages/geo/journal_view.html:387
 msgid "Growing degree days"
-msgstr ""
+msgstr "Wachstumsgradtage"
 
 #: aot_flask/templates/pages/geo/journal_view.html:391
 #, python-format
 msgid "this journal: %(v)s"
-msgstr ""
+msgstr "dieses Journal: %(v)s"
 
 #: aot_flask/templates/pages/geo/journal_view.html:392
 #, python-format
 msgid "base %(t)s°"
-msgstr ""
+msgstr "Basis %(t)s°"
 
 #: aot_flask/templates/pages/geo/journal_view.html:394
 #, python-format
 msgid "%(p)s%% of days measured"
-msgstr ""
+msgstr "%(p)s%% der Tage gemessen"
 
 #: aot_flask/templates/pages/geo/journal_view.html:398
 msgid "No program attached"
@@ -18185,12 +16844,12 @@ msgstr "Das Programm hat keine Basistemperatur."
 
 #: aot_flask/templates/pages/geo/journal_view.html:400
 msgid "Not enough measured days"
-msgstr ""
+msgstr "Nicht genügend Messtage"
 
 #: aot_flask/templates/pages/geo/journal_view.html:433
 #, python-format
 msgid "%(n)s days in this journal"
-msgstr ""
+msgstr "%(n)s Tage in diesem Journal"
 
 #: aot_flask/templates/pages/geo/journal_view.html:448
 #: aot_flask/templates/pages/geo/journal_view.html:664
@@ -18256,7 +16915,7 @@ msgstr "Geschätzt"
 
 #: aot_flask/templates/pages/geo/journal_view.html:562
 msgid "before this journal"
-msgstr ""
+msgstr "vor diesem Journal"
 
 #: aot_flask/templates/pages/geo/journal_view.html:563
 msgid "planned"
@@ -18288,12 +16947,7 @@ msgstr "Gesamter Zeitraum"
 #: aot_flask/templates/pages/geo/journal_view.html:631
 #, python-format
 msgid "daylight %(h)s h"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:633
-#, python-format
-msgid "GDD %(v)s"
-msgstr ""
+msgstr "Tageslicht %(h)s h"
 
 #: aot_flask/templates/pages/geo/journal_view.html:644
 #, python-format
@@ -18313,11 +16967,6 @@ msgstr "Nutzung"
 msgid "varies"
 msgstr "variiert"
 
-#: aot_flask/templates/pages/geo/journal_view.html:726
-#, python-format
-msgid "outdoors %(out)s × cover %(tau)s"
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:739
 msgid "no sensor"
 msgstr "kein Sensor"
@@ -18329,7 +16978,7 @@ msgstr "Dieses Journal löschen? Dies kann nicht rückgängig gemacht werden."
 #: aot_flask/templates/pages/geo/journal_view.html:869
 #: aot_flask/templates/pages/geo/journal_view.html:873
 msgid "Something went wrong."
-msgstr ""
+msgstr "Etwas ist schiefgelaufen."
 
 #: aot_flask/templates/pages/geo/plots.html:80
 msgid "Register as programme"
@@ -19425,10 +18074,6 @@ msgstr "Aus-Payload (hex)"
 msgid "FPort"
 msgstr "FPort"
 
-#: aot_flask/templates/settings/chirpstack.html:141
-msgid "Assign to scheduler"
-msgstr "Dem Zeitplaner zuweisen"
-
 #: aot_flask/templates/settings/chirpstack.html:155
 msgid "Register selected devices"
 msgstr "Ausgewählte Geräte registrieren"
@@ -19644,10 +18289,6 @@ msgstr "MCP-Badge"
 #: aot_flask/templates/settings/custom_ui.html:196
 msgid "Click to edit MCP Badge colors"
 msgstr "Klicken, um die Farben des MCP-Badges zu bearbeiten"
-
-#: aot_flask/templates/settings/custom_ui.html:202
-msgid "Click to edit Upgrade Badge colors"
-msgstr "Klicken, um die Farben des Upgrade-Badges zu bearbeiten"
 
 #: aot_flask/templates/settings/custom_ui.html:222
 msgid "Output/Input Channel Preview"
@@ -19929,22 +18570,6 @@ msgstr "Sanfter Badge-Hintergrund für laufende/informative Zustände"
 msgid "Text color used on the info tint"
 msgstr "Textfarbe auf dem Info-Farbton"
 
-#: aot_flask/templates/settings/custom_ui.html:544
-msgid "Border color for success notice boxes (Admin pages, e.g. Upgrade)"
-msgstr "Rahmenfarbe für Erfolgshinweisfelder (Admin-Seiten, z. B. Upgrade)"
-
-#: aot_flask/templates/settings/custom_ui.html:545
-msgid "Border color for warning/default notice boxes"
-msgstr "Rahmenfarbe für Warn-/Standardhinweisfelder"
-
-#: aot_flask/templates/settings/custom_ui.html:546
-msgid "Border color for danger/error notice boxes"
-msgstr "Rahmenfarbe für Gefahr-/Fehlerhinweisfelder"
-
-#: aot_flask/templates/settings/custom_ui.html:547
-msgid "Border color for info notice boxes"
-msgstr "Rahmenfarbe für Infohinweisfelder"
-
 #: aot_flask/templates/settings/custom_ui.html:586
 msgid "Save, activate, tab — filled primary buttons app-wide"
 msgstr "Speichern, Aktivieren, Tab — gefüllte primäre Schaltflächen app-weit"
@@ -19976,12 +18601,6 @@ msgstr "Schaltflächenrahmen"
 #: aot_flask/templates/settings/custom_ui.html:592
 msgid "Border for all buttons and list rows"
 msgstr "Rahmen für alle Schaltflächen und Listenzeilen"
-
-#: aot_flask/templates/settings/custom_ui.html:629
-msgid "Nav upgrade badge and upgrade button background"
-msgstr ""
-"Hintergrund von Upgrade-Abzeichen und Upgrade-Schaltfläche in der "
-"Navigation"
 
 #: aot_flask/templates/settings/custom_ui.html:630
 msgid "AI model (LLM) badge background"
@@ -21124,34 +19743,6 @@ msgstr "Notizverwaltung"
 msgid "Search content, subject..."
 msgstr "Inhalt, Betreff durchsuchen …"
 
-#: aot_flask/templates/tools/notes.html:174
-msgid "Clear Filters"
-msgstr "Filter zurücksetzen"
-
-#: aot_flask/templates/tools/notes.html:184
-msgid "Advanced Filters"
-msgstr "Erweiterte Filter"
-
-#: aot_flask/templates/tools/notes.html:200
-msgid "Export Results"
-msgstr "Ergebnisse exportieren"
-
-#: aot_flask/templates/tools/notes.html:209
-msgid "PDF Report Export"
-msgstr "PDF-Berichtsexport"
-
-#: aot_flask/templates/tools/notes.html:211
-msgid ""
-"Compose notes within a period (using the tag filter above) into a "
-"formatted PDF report."
-msgstr ""
-"Fasst Notizen innerhalb eines Zeitraums (mit dem obigen Tag-Filter) zu "
-"einem formatierten PDF-Bericht zusammen."
-
-#: aot_flask/templates/tools/notes.html:214
-msgid "Report Title (optional)"
-msgstr "Berichtstitel (optional)"
-
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
 msgstr "Keine Notizen gefunden"
@@ -21435,7 +20026,7 @@ msgstr "Keine Tags"
 msgid ""
 "No AI analysis available. Analysis runs automatically — check back "
 "shortly."
-msgstr ""
+msgstr "Keine KI-Analyse verfügbar. Die Analyse läuft automatisch — schauen Sie in Kürze wieder vorbei."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:22
 msgid "Retry"
@@ -21447,7 +20038,7 @@ msgstr "KI trainieren"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_body.html:79
 msgid "Add a note to help the AI understand this facility..."
-msgstr ""
+msgstr "Fügen Sie eine Notiz hinzu, damit die KI diese Anlage besser versteht …"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_head.html:210
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:233
@@ -21488,11 +20079,11 @@ msgstr "Konfidenz:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:192
 msgid "The analysis may suggest the following changes occurred:"
-msgstr ""
+msgstr "Die Analyse deutet möglicherweise darauf hin, dass folgende Änderungen stattgefunden haben:"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:255
 msgid "Unable to load advice. Check connection."
-msgstr ""
+msgstr "Empfehlung konnte nicht geladen werden. Prüfen Sie die Verbindung."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:288
 msgid "Please enter a note before submitting."
@@ -21500,7 +20091,7 @@ msgstr "Bitte geben Sie eine Notiz ein, bevor Sie sie absenden."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:304
 msgid "Note saved - will inform the next AI cycle."
-msgstr ""
+msgstr "Notiz gespeichert - fließt in den nächsten KI-Zyklus ein."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_advice_js.html:309
 msgid "Submission failed."
@@ -21510,25 +20101,9 @@ msgstr "Absenden fehlgeschlagen."
 msgid "Unable to save note. Please try again."
 msgstr "Die Notiz konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
 
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:5
-msgid "Envision a goal (e.g., Save energy in Zone A)"
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:8
 msgid "Analyze"
 msgstr "Analysieren"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_body.html:23
-msgid "Ready for intelligent analysis."
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:65
-msgid "AI analysis failed"
-msgstr "KI-Analyse fehlgeschlagen"
-
-#: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:86
-msgid "Execution failed"
-msgstr "Ausführung fehlgeschlagen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_ai_insight_js.html:90
 msgid "Communication error"
@@ -21564,11 +20139,11 @@ msgstr "Doppelschicht"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Right-click: rotate"
-msgstr ""
+msgstr "Rechtsklick: drehen"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Left-click: pan"
-msgstr ""
+msgstr "Linksklick: verschieben"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_facility_body.html:39
 msgid "Scroll: zoom"
@@ -21623,7 +20198,7 @@ msgstr "Als globale Bandfarben speichern"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
 msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr ""
+msgstr "Übernimmt die ersten 5 Abschnittsfarben als Bandfarben unter Einstellungen > Benutzerdefinierte Oberfläche."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -21666,15 +20241,15 @@ msgstr "Säule"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:77
 msgid "Saved as global chart colors"
-msgstr ""
+msgstr "Als globale Diagrammfarben gespeichert"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:79
 msgid "Save as Global Chart Colors"
-msgstr ""
+msgstr "Als globale Diagrammfarben speichern"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
 msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr ""
+msgstr "Übernimmt die ersten 6 Serienfarben als Diagrammfarben unter Einstellungen > Benutzerdefinierte Oberfläche."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21684,7 +20259,7 @@ msgstr "Y-Achsen-Optionen"
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:88
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:65
 msgid "Enable Manual Y-Axis Min/Max"
-msgstr ""
+msgstr "Manuelles Y-Achsen-Min./Max. aktivieren"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:97
 msgid "Enable Align Ticks"
@@ -21712,7 +20287,7 @@ msgstr "Adresse eingeben."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:124
 msgid "Ask a question about this advisory (e.g., what should I do?)"
-msgstr ""
+msgstr "Stellen Sie eine Frage zu dieser Empfehlung (z. B. Was soll ich tun?)"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:125
 msgid "Ask AI what to do"
@@ -21720,7 +20295,7 @@ msgstr "Fragen Sie die KI, was zu tun ist"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_body.html:155
 msgid "What concrete actions should I take based on this advisory?"
-msgstr ""
+msgstr "Welche konkreten Maßnahmen sollte ich aufgrund dieser Empfehlung ergreifen?"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_map_title_bar.html:14
 msgid "Show Controls"
@@ -21769,19 +20344,19 @@ msgstr "5 Min."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:168
 msgid "30m"
-msgstr ""
+msgstr "30 Min."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:169
 msgid "1h"
-msgstr ""
+msgstr "1 Std."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:170
 msgid "6h"
-msgstr ""
+msgstr "6 Std."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:171
 msgid "1d"
-msgstr ""
+msgstr "1 T"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_js_ready_end.html:201
 msgid "Actual"
@@ -21810,11 +20385,6 @@ msgstr "Startzeit"
 #: aot_flask/templates/user_templates/widget_template_AoT_timer_body.html:222
 msgid "Select the Output to control in the widget options."
 msgstr "Wählen Sie den zu steuernden Ausgang in den Widget-Optionen aus."
-
-#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html:29
-#, python-format
-msgid "Data Position Offset (%%)"
-msgstr "Datenposition-Offset (%%)"
 
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_body.html:12
 msgid "Edit Schedule"
@@ -21846,19 +20416,19 @@ msgstr "Fehler beim Abrufen des Bildes"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:113
 msgid "Error: HLS library failed to load"
-msgstr ""
+msgstr "Fehler: HLS-Bibliothek konnte nicht geladen werden"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:126
 msgid "Error: Browser doesn't support direct RTSP. Use 'Relay' method instead."
-msgstr ""
+msgstr "Fehler: Der Browser unterstützt kein direktes RTSP. Verwenden Sie stattdessen die Methode 'Relay'."
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:147
 msgid "Error: No streaming URL configured"
-msgstr ""
+msgstr "Fehler: Keine Streaming-URL konfiguriert"
 
 #: aot_flask/templates/user_templates/widget_template_widget_camera_js.html:159
 msgid "Error fetching camera info"
-msgstr ""
+msgstr "Fehler beim Abrufen der Kamerainformationen"
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:53
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:169
@@ -21881,54 +20451,18 @@ msgstr "Aktiviert"
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:172
 #: widgets/widget_function_status.py:165
 msgid "This function type has no editable options."
-msgstr ""
+msgstr "Dieser Funktionstyp hat keine bearbeitbaren Optionen."
 
 #: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
 #: widgets/widget_function_status.py:187
 msgid ""
 "This controller is active. Deactivate it before saving changes, or they "
 "will not be applied."
-msgstr ""
+msgstr "Dieser Regler ist aktiv. Deaktivieren Sie ihn, bevor Sie Änderungen speichern, sonst werden sie nicht übernommen."
 
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr "Reihenoptionen"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:7
-msgid "Enable Custom Colors"
-msgstr "Benutzerdefinierte Farben aktivieren"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:49
-msgid "Line (Step, Left)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:50
-msgid "Line (Step, Center)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:51
-msgid "Line (Step, Right)"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:71
-msgid "Enable Y-Axis Align Ticks"
-msgstr "Y-Achsen-Tick-Ausrichtung aktivieren"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:77
-msgid "Enable Y-Axis Start On Tick"
-msgstr "Y-Achsen-Start bei Tick aktivieren"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:83
-msgid "Enable Y-Axis End On Tick"
-msgstr "Y-Achsen-Ende bei Tick aktivieren"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:101
-msgid "Y-Axis Minimum"
-msgstr "Y-Achsen-Minimum"
-
-#: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:107
-msgid "Y-Axis Maximum"
-msgstr "Y-Achsen-Maximum"
 
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:42
 #: aot_flask/templates/user_templates/widget_template_widget_indicator_js.html:53
@@ -21955,11 +20489,11 @@ msgstr "Kategoriefilter"
 msgid ""
 "Only show posts in the selected categories. If none are selected, posts "
 "of every category are shown."
-msgstr ""
+msgstr "Zeigt nur Beiträge der ausgewählten Kategorien an. Ist keine ausgewählt, werden Beiträge aller Kategorien angezeigt."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_configure_options.html:23
 msgid "No categories yet. Set one when creating a post to filter by it here."
-msgstr ""
+msgstr "Noch keine Kategorien. Legen Sie beim Erstellen eines Beitrags eine fest, um hier danach zu filtern."
 
 #: aot_flask/templates/user_templates/widget_template_widget_notice_js.html:415
 msgid "Notice updated"
@@ -22391,12 +20925,12 @@ msgstr "Pausiert — keine Aktoren registriert"
 
 #: aot_flask/utils/utils_function_status.py:118
 msgid "Paused — outside the operating time window"
-msgstr ""
+msgstr "Pausiert — außerhalb des Betriebszeitfensters"
 
 #: aot_flask/utils/utils_function_status.py:129
 #, python-format
 msgid "Paused (%(reason)s)"
-msgstr ""
+msgstr "Pausiert (%(reason)s)"
 
 #: aot_flask/utils/utils_function_status.py:132
 msgid "Waiting for the first control cycle."
@@ -22425,12 +20959,12 @@ msgstr "Aktoren: %(values)s"
 #: aot_flask/utils/utils_function_status.py:176
 #, python-format
 msgid "Ventilation: %(ratio)s open (%(area)s)"
-msgstr ""
+msgstr "Belüftung: %(ratio)s geöffnet (%(area)s)"
 
 #: aot_flask/utils/utils_function_status.py:186
 #, python-format
 msgid "Safety gate: %(reason)s — control stopped"
-msgstr ""
+msgstr "Sicherheitssperre: %(reason)s — Steuerung gestoppt"
 
 #: aot_flask/utils/utils_function_status.py:187
 msgid "triggered"
@@ -22439,27 +20973,27 @@ msgstr "ausgelöst"
 #: aot_flask/utils/utils_function_status.py:189
 #, python-format
 msgid "Safety gate (partial): %(reason)s"
-msgstr ""
+msgstr "Sicherheitssperre (teilweise): %(reason)s"
 
 #: aot_flask/utils/utils_function_status.py:195
 #, python-format
 msgid "No actuator to control %(target)s"
-msgstr ""
+msgstr "Kein Aktor zur Steuerung von %(target)s"
 
 #: aot_flask/utils/utils_function_status.py:199
 #, python-format
 msgid "Equipment at its limit: %(detail)s"
-msgstr ""
+msgstr "Ausrüstung am Limit: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:201
 #, python-format
 msgid "Beyond the set limit: %(detail)s"
-msgstr ""
+msgstr "Außerhalb des festgelegten Grenzwerts: %(detail)s"
 
 #: aot_flask/utils/utils_function_status.py:205
 #, python-format
 msgid "Last cycle: %(when)s"
-msgstr ""
+msgstr "Letzter Zyklus: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:213
 msgid "Idle"
@@ -22494,22 +21028,22 @@ msgstr "Sequenz: %(state)s"
 #: aot_flask/utils/utils_function_status.py:236
 #, python-format
 msgid "Today's window: %(start)s – %(end)s (cycle %(period)s)"
-msgstr ""
+msgstr "Heutiges Zeitfenster: %(start)s – %(end)s (Zyklus %(period)s)"
 
 #: aot_flask/utils/utils_function_status.py:237
 #, python-format
 msgid "Today's window: %(start)s – %(end)s"
-msgstr ""
+msgstr "Heutiges Zeitfenster: %(start)s – %(end)s"
 
 #: aot_flask/utils/utils_function_status.py:241
 #, python-format
 msgid "Elapsed in cycle: %(elapsed)s"
-msgstr ""
+msgstr "Im Zyklus verstrichen: %(elapsed)s"
 
 #: aot_flask/utils/utils_function_status.py:248
 #, python-format
 msgid "Steps: %(running)s of %(total)s running"
-msgstr ""
+msgstr "Schritte: %(running)s von %(total)s laufen"
 
 #: aot_flask/utils/utils_function_status.py:257
 #, python-format
@@ -22524,15 +21058,15 @@ msgstr "Zeitraum: %(period)s"
 #: aot_flask/utils/utils_function_status.py:266
 #, python-format
 msgid "Last check: %(when)s"
-msgstr ""
+msgstr "Letzte Prüfung: %(when)s"
 
 #: aot_flask/utils/utils_function_status.py:267
 msgid "The last check ran an action."
-msgstr ""
+msgstr "Die letzte Prüfung hat eine Aktion ausgeführt."
 
 #: aot_flask/utils/utils_function_status.py:268
 msgid "The last check ran no action."
-msgstr ""
+msgstr "Die letzte Prüfung hat keine Aktion ausgeführt."
 
 #: aot_flask/utils/utils_function_status.py:270
 msgid "Not checked yet."
@@ -22541,7 +21075,7 @@ msgstr "Noch nicht geprüft."
 #: aot_flask/utils/utils_function_status.py:274
 #, python-format
 msgid "Next check in: %(time)s"
-msgstr ""
+msgstr "Nächste Prüfung in: %(time)s"
 
 #: aot_flask/utils/utils_general.py:95
 msgid ""
@@ -23916,21 +22450,6 @@ msgstr ""
 msgid "External Environment Context Collector"
 msgstr "Sammler für externe Umgebungsdaten"
 
-#: functions/ext_context_collector.py:74
-msgid ""
-"Collects external temperature, humidity, wind speed, rainfall, solar "
-"radiation, dew point, and CO2 from outside the facility. The integrated "
-"environment control Function uses this collector as its single source of "
-"truth. Select the external sensor for each item. Leave items blank to "
-"apply the fallback default value."
-msgstr ""
-"Erfasst Außentemperatur, Luftfeuchtigkeit, Windgeschwindigkeit, "
-"Niederschlag, Sonneneinstrahlung, Taupunkt und CO2 außerhalb der Anlage. "
-"Die integrierte Klimasteuerungsfunktion nutzt diesen Collector als "
-"einzige verbindliche Datenquelle. Wählen Sie für jeden Punkt den externen"
-" Sensor aus. Lassen Sie Punkte leer, um den hinterlegten Standardwert zu "
-"verwenden."
-
 #: functions/ext_context_collector.py:91
 msgid "Update Period"
 msgstr "Aktualisierungsperiode"
@@ -24008,34 +22527,6 @@ msgid ""
 msgstr ""
 "Wählen Sie die externe CO₂-Messgröße (ppm) aus. Falls nicht vorhanden, "
 "wird standardmäßig 400 ppm verwendet."
-
-#: functions/ext_context_collector.py:164
-msgid "Sensor Maximum Allowed Age (seconds)"
-msgstr "Maximal zulässiges Sensoralter (Sekunden)"
-
-#: functions/ext_context_collector.py:165
-msgid "Measurements older than this are replaced with the fallback default value."
-msgstr ""
-"Messungen, die älter als dieser Wert sind, werden durch den Standard-"
-"Rückfallwert ersetzt."
-
-#: functions/ext_context_collector.py:172
-msgid "Fallback External Temperature (°C)"
-msgstr "Externe Ersatztemperatur (°C)"
-
-#: functions/ext_context_collector.py:173
-msgid "Default value to use when the sensor is absent or expired."
-msgstr ""
-"Standardwert, der verwendet wird, wenn der Sensor fehlt oder abgelaufen "
-"ist."
-
-#: functions/ext_context_collector.py:180
-msgid "Fallback External Humidity (%)"
-msgstr "Externe Ersatz-Luftfeuchtigkeit (%)"
-
-#: functions/ext_context_collector.py:188
-msgid "Fallback Wind Speed (m/s)"
-msgstr "Ersatz-Windgeschwindigkeit (m/s)"
 
 #: functions/function_adafruit_neokey_01.py:129
 msgid ""
@@ -24173,14 +22664,6 @@ msgstr "Max. Eingangsalter (s)"
 #: functions/lorawan_class_scheduler.py:162
 msgid "REST Port"
 msgstr "REST-Port"
-
-#: functions/lorawan_class_scheduler.py:163
-msgid ""
-"Server/token from Settings -> ChirpStack; devices assigned there "
-"(\"Managed by\")."
-msgstr ""
-"Server/Token unter Einstellungen -> ChirpStack; Geräte werden dort "
-"zugewiesen (\"Verwaltet von\")."
 
 #: functions/lorawan_class_scheduler.py:165
 msgid "Control Mode"
@@ -26397,18 +24880,6 @@ msgstr ""
 " Farbschemata mit den Stilen Positron (hell), Dark Matter (dunkel) und "
 "Voyager, die Datenpunkte und Sensorinformationen hervorheben."
 
-#: inputs_gis/gis_esa.py:9
-msgid ""
-"A global land cover map based on European Space Agency (ESA) Sentinel-2 "
-"satellite data. Vegetation, urban areas, cropland, forest, and water "
-"bodies are classified and color-coded at 10m resolution, useful for "
-"environmental analysis."
-msgstr ""
-"Eine globale Landbedeckungskarte auf Basis von Sentinel-2-Satellitendaten"
-" der Europäischen Weltraumorganisation (ESA). Vegetation, städtische "
-"Gebiete, Ackerland, Wald und Gewässer werden mit einer Auflösung von 10 m"
-" klassifiziert und farblich codiert – nützlich für Umweltanalysen."
-
 #: inputs_gis/gis_esri.py:7
 msgid "Esri"
 msgstr "Esri"
@@ -28220,17 +26691,6 @@ msgstr ""
 "Temperatur, Luftfeuchtigkeit oder VPD legt automatisch Min-/Max-Werte und"
 " Farbabschnitte fest."
 
-#: widgets/AoT_gauge_angular.py:240 widgets/AoT_graph.py:277
-msgid ""
-"Highcharts is free for open source and personal use. However, if used as "
-"part of a commercial product, a commercial license may be required. "
-"Please check https://shop.highsoft.com for the most accurate information."
-msgstr ""
-"Highcharts ist für Open-Source- und private Nutzung kostenlos. Wird es "
-"jedoch als Teil eines kommerziellen Produkts verwendet, kann eine "
-"kommerzielle Lizenz erforderlich sein. Bitte besuchen Sie "
-"https://shop.highsoft.com für die aktuellsten Informationen."
-
 #: widgets/AoT_gauge_angular.py:260 widgets/AoT_graph.py:439
 #: widgets/AoT_graph.py:449 widgets/AoT_graph.py:459 widgets/AoT_graph.py:469
 #: widgets/AoT_graph.py:479
@@ -28945,55 +27405,17 @@ msgstr "Phasenzeitleiste mit markiertem Heute und vergangenen Übergängen."
 msgid "Targets vs now"
 msgstr "Zielwerte vs. aktuell"
 
-#: widgets/AoT_plot.py:393
-msgid ""
-"Current readings against the targets and limits this stage declares. One "
-"gets the gauge, the rest are listed as text."
-msgstr ""
-"Aktuelle Messwerte im Vergleich zu den für diese Stufe festgelegten "
-"Zielwerten und Grenzen. Einer erhält die Anzeige, die übrigen werden als "
-"Text aufgeführt."
-
 #: widgets/AoT_plot.py:400
 msgid "Trends"
 msgstr "Trends"
-
-#: widgets/AoT_plot.py:402
-msgid ""
-"Fills the rows that have no axis with a recent trend line. Needs the "
-"targets block."
-msgstr ""
-"Füllt die Zeilen ohne Achse mit einer aktuellen Trendlinie. Benötigt den "
-"Zielwerteblock."
 
 #: widgets/AoT_plot.py:409
 msgid "Accumulated heat"
 msgstr "Akkumulierte Wärme"
 
-#: widgets/AoT_plot.py:411
-msgid ""
-"How far this stage has come in growing degree days. Shown only when the "
-"programme declares a base temperature."
-msgstr ""
-"Wie weit dieser Abschnitt in Wachstumsgradtagen fortgeschritten ist. Wird"
-" nur angezeigt, wenn das Programm eine Basistemperatur festlegt."
-
 #: widgets/AoT_plot.py:422
 msgid "Soil moisture"
 msgstr "Bodenfeuchte"
-
-#: widgets/AoT_plot.py:424
-msgid "Gauge metric"
-msgstr "Anzeigekennzahl"
-
-#: widgets/AoT_plot.py:426
-msgid ""
-"Which measurement gets the gauge. The rest are listed as text. If this "
-"plot does not measure it, the first one with a range is shown instead."
-msgstr ""
-"Welcher Messwert die Anzeige erhält. Die übrigen werden als Text "
-"aufgeführt. Misst diese Parzelle ihn nicht, wird stattdessen der erste "
-"mit einem Bereich angezeigt."
 
 #: widgets/AoT_plot.py:440
 msgid ""
@@ -29602,31 +28024,9 @@ msgstr "Dezimalstellen 2"
 msgid "The number of measurement decimal places for second measurement"
 msgstr "Die Anzahl der Dezimalstellen für den zweiten Messwert"
 
-#: widgets/widget_notice.py:34
-msgid ""
-"Displays the latest notice board post titles. Clicking a title opens the "
-"full post (content, poll, replies, acknowledge) in a popup; all actions "
-"taken there are reflected on the actual post. Users with write permission"
-" can also create, edit, and delete posts directly from the widget."
-msgstr ""
-"Zeigt die Titel der neuesten Beiträge des Mitteilungsboards an. Ein Klick"
-" auf einen Titel öffnet den vollständigen Beitrag (Inhalt, Umfrage, "
-"Antworten, Bestätigung) in einem Popup; alle dort vorgenommenen Aktionen "
-"werden im tatsächlichen Beitrag übernommen. Benutzer mit Schreibrechten "
-"können Beiträge auch direkt über das Widget erstellen, bearbeiten und "
-"löschen."
-
-#: widgets/widget_notice.py:53
-msgid "Number of Posts"
-msgstr "Anzahl der Beiträge"
-
 #: widgets/widget_notice.py:54
 msgid "How many of the latest notices to display"
 msgstr "Wie viele der neuesten Meldungen angezeigt werden sollen"
-
-#: widgets/widget_notice.py:62
-msgid "How often to refresh the notice list"
-msgstr "Wie oft die Meldungsliste aktualisiert wird"
 
 #: widgets/widget_notice.py:68
 msgid "Show Poll Voting"
@@ -29831,11 +28231,6 @@ msgstr "Standardmäßige Sichtbarkeit der Aktionsliste umschalten."
 msgid "Sequence Settings (Synced)"
 msgstr "Sequenzeinstellungen (synchronisiert)"
 
-#: widgets/widget_trigger_sequence.py:497
-#: widgets/widget_trigger_sequence.py:504
-msgid "HH:MM format"
-msgstr "HH:MM-Format"
-
 #: widgets/widget_trigger_sequence.py:511
 msgid "Period (Seconds)"
 msgstr "Zeitraum (Sekunden)"
@@ -29874,18 +28269,18 @@ msgstr "Dort fortsetzen, wo es aufgehört hat."
 
 #: widgets/widget_trigger_sequence.py:540
 msgid "Start from the beginning"
-msgstr ""
+msgstr "Von vorn beginnen"
 
 #: widgets/widget_trigger_sequence.py:543
 msgid "When Switched Back On"
-msgstr ""
+msgstr "Beim erneuten Einschalten"
 
 #: widgets/widget_trigger_sequence.py:545
 msgid ""
 "What happens when this sequence is turned off and on again. Continuing "
 "resumes the interrupted cycle; starting over runs it from the first step."
 " A daemon restart always continues, regardless of this setting."
-msgstr ""
+msgstr "Legt fest, was geschieht, wenn diese Sequenz aus- und wieder eingeschaltet wird. Beim Fortsetzen wird der unterbrochene Zyklus weitergeführt, beim Neubeginn läuft er ab dem ersten Schritt. Ein Neustart des Daemons setzt die Sequenz unabhängig von dieser Einstellung immer fort."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:69
 msgid "Integrated Environment Control"
@@ -30431,7 +28826,7 @@ msgid ""
 "Blocks wetting-type misting in strong light (droplets can lens sunlight "
 "onto leaves) and, if set below, before sunset. Independent of how often "
 "misting runs — turn this on or off at any misting frequency."
-msgstr ""
+msgstr "Sperrt benetzende Beneblung bei starkem Licht (Tropfen können das Sonnenlicht wie Linsen auf Blätter bündeln) und, sofern unten festgelegt, vor Sonnenuntergang. Unabhängig davon, wie oft die Beneblung läuft — Sie können dies bei jeder Beneblungshäufigkeit ein- oder ausschalten."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
@@ -30769,16 +29164,6 @@ msgstr "Prognose-Vorsteuerung"
 msgid "Enable Forecast Feedforward"
 msgstr "Prognose-Vorsteuerung aktivieren"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:986
-msgid ""
-"Use KMA short-term weather forecast (forecast.json) to proactively shift "
-"temperature/humidity setpoints and inhibit ventilation before adverse "
-"weather arrives."
-msgstr ""
-"KMA-Kurzfristwettervorhersage (forecast.json) verwenden, um Temperatur"
-"-/Feuchtigkeits-Sollwerte proaktiv zu verschieben und die Belüftung vor "
-"dem Eintreffen von ungünstigem Wetter zu unterdrücken."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:995
 msgid "Reacts to what is here now"
 msgstr "Reagiert auf das, was gerade vorliegt"
@@ -30790,15 +29175,6 @@ msgstr "Bereitet weiter im Voraus vor"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1000
 msgid "Forecast Lookahead (hours)"
 msgstr "Prognose-Vorausschau (Stunden)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:1002
-msgid ""
-"How many hours ahead to check for incoming adverse weather (1–6 h). "
-"Longer lookahead gives earlier warning but may over-correct."
-msgstr ""
-"Wie viele Stunden im Voraus auf bevorstehendes Unwetter geprüft wird (1–6"
-" Std.). Ein längerer Vorlauf ermöglicht eine frühere Warnung, kann aber "
-"zu Überkorrektur führen."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1065
 msgid "Control Temperament"
@@ -30998,14 +29374,6 @@ msgstr "Kumuliert seit Beginn"
 msgid "Vapor Pressure Deficit"
 msgstr "Sättigungsdefizit"
 
-#: widgets/widget_function_status.py:68
-msgid "Value Font Size (em)"
-msgstr "Wert-Schriftgröße (em)"
-
-#: widgets/widget_function_status.py:69
-msgid "The font size of the measurement"
-msgstr "Die Schriftgröße des Messwerts"
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:391
 msgid "Growth Schedule"
 msgstr "Wachstumszeitplan"
@@ -31014,31 +29382,9 @@ msgstr "Wachstumszeitplan"
 msgid "Stop Control On"
 msgstr "Regelung beenden bei"
 
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:401
-msgid "Control stops for good after this date. Leave blank to keep running."
-msgstr ""
-"Die Steuerung stoppt nach diesem Datum endgültig. Leer lassen, damit sie "
-"weiterläuft."
-
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:667
 msgid "Misting Sunburn Protection"
 msgstr "Beneblungs-Sonnenbrandschutz"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:701
-msgid "Nursery Mode"
-msgstr "Anzuchtmodus"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:709
-msgid "Nursery (Seedling) Mode"
-msgstr "Anzuchtmodus (Sämling)"
-
-#: functions/custom_functions/env_coordinator_impl/_function_info.py:711
-msgid ""
-"Tighter misting limits for seedlings, which scorch more easily than grown"
-" leaves."
-msgstr ""
-"Engere Vernebelungsgrenzen für Sämlinge, die leichter verbrennen als "
-"ausgewachsene Blätter."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1192
 msgid "Not used"
@@ -31052,10 +29398,6 @@ msgstr "Nebel"
 
 msgid "Devices under automatic control"
 msgstr "Geräte unter automatischer Steuerung"
-
-#, python-format
-msgid "%(n)s excluded"
-msgstr "%(n)s ausgeschlossen"
 
 msgid "Turn a device off to keep automatic control from moving it."
 msgstr ""
@@ -31113,14 +29455,6 @@ msgstr ""
 "einer Überkorrektur führen. Wird ignoriert, wenn für diese Anlage eine "
 "eigene Prognosequelle hinterlegt ist — diese Quelle wendet bereits ihre "
 "eigene Vorausschau an."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notice Category Filter"
-msgstr "Filter für Ankündigungskategorien"
-
-#: aot/widgets/widget_notice.py:1
-msgid "Notes Space"
-msgstr "Notizbereich"
 
 #: aot/widgets/widget_notice.py:1
 msgid "Space"
@@ -31229,12 +29563,6 @@ msgid "Choose a space in the widget settings to show notes."
 msgstr ""
 "Wählen Sie in den Widget-Einstellungen einen Bereich aus, um Notizen "
 "anzuzeigen."
-
-#: aot/widgets/widget_notice.py:1
-msgid "Display notes written in a chosen space (see Space below)"
-msgstr ""
-"Zeigt Notizen an, die in einem ausgewählten Bereich geschrieben wurden "
-"(siehe „Bereich\" unten)"
 
 #: aot/widgets/widget_notice.py:1
 msgid ""
@@ -31561,18 +29889,6 @@ msgstr "Rotation stoppen"
 msgid "System Timezone"
 msgstr "Systemzeitzone"
 
-#: aot_flask/templates/settings/general.html:67
-msgid ""
-"System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for "
-"daemon log times, the audit log, and as the last fallback for schedules "
-"on devices without a location. This is not your personal display timezone"
-" in Account settings."
-msgstr ""
-"Systemweite Standard-Zeitzone (IANA-Name, z. B. Asia/Seoul). Wird für die"
-" Zeitangaben im Daemon-Log, das Audit-Log und als letzte Rückfallebene "
-"für Zeitpläne von Geräten ohne Standort verwendet. Dies ist nicht Ihre "
-"persönliche Anzeige-Zeitzone in den Kontoeinstellungen."
-
 #: aot_flask/utils/utils_settings.py:1005
 #, python-format
 msgid "Unknown timezone: %(tz)s"
@@ -31585,3 +29901,983 @@ msgstr "Kein Standort festgelegt – mit der Systemzeitzone geschätzt"
 #: aot_flask/templates/settings/general.html
 msgid "System-wide default timezone (IANA name, e.g. Asia/Seoul). Used for daemon log times and as the last fallback for devices without a location; those devices follow it when you save here. Times people read and write use each person's own timezone from Account settings."
 msgstr "Systemweite Standardzeitzone (IANA-Name, z. B. Asia/Seoul). Wird für die Zeitstempel im Daemon-Protokoll und als letzte Rückfallebene für Geräte ohne Standort verwendet; diese Geräte übernehmen den Wert, wenn Sie hier speichern. Zeiten, die Personen lesen und eingeben, folgen der jeweils eigenen Zeitzone aus den Kontoeinstellungen."
+
+#: aot_flask/forms/forms_dashboard.py
+msgid "Full Width on Mobile"
+msgstr "Volle Breite auf Mobilgeräten"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Computer Screen Size"
+msgstr "Bildschirmgröße am Computer"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Control Surface"
+msgstr "Steuerelementfläche"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line"
+msgstr "Trennlinie"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Divider Line (Soft)"
+msgstr "Trennlinie (weich)"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Mobile Screen Size"
+msgstr "Bildschirmgröße am Mobilgerät"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Toggle Track Off"
+msgstr "Schalterspur Aus"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Unresponsive"
+msgstr "Reagiert nicht"
+
+#: aot_flask/routes_ai_api.py
+msgid "Scheduled"
+msgstr "Geplant"
+
+#: aot_flask/routes_function.py
+msgid "End time must be later than start time on the same day (a window crossing midnight is not supported)."
+msgstr "Die Endzeit muss am selben Tag nach der Startzeit liegen (ein Zeitfenster über Mitternacht hinaus wird nicht unterstützt)."
+
+#: aot_flask/routes_function.py
+msgid "This sequence uses per-weekday times, so the start/end time here was not applied. Change it on the weekday schedule of the sequence widget."
+msgstr "Diese Sequenz verwendet Zeiten pro Wochentag, daher wurde die Start-/Endzeit hier nicht übernommen. Ändern Sie sie im Wochentagszeitplan des Sequenz-Widgets."
+
+#: aot_flask/routes_geo_journal.py
+msgid "Pick daily, weekly or monthly."
+msgstr "Wählen Sie täglich, wöchentlich oder monatlich."
+
+#: aot_flask/routes_settings.py
+msgid "Select a registration target (Input or Output)."
+msgstr "Wählen Sie ein Registrierungsziel (Eingang oder Ausgang) aus."
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert"
+msgstr "Zurücksetzen"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Revert to the settings from when this dialog was opened"
+msgstr "Auf die Einstellungen zurücksetzen, die beim Öffnen dieses Dialogs galten"
+
+#: aot_flask/static/js/app/dashboard-widget-live-preview.js
+msgid "Reverted"
+msgstr "Zurückgesetzt"
+
+#: aot_flask/templates/admin/dependencies_install.html
+msgid "Install Dependencies for"
+msgstr "Abhängigkeiten installieren für"
+
+#: aot_flask/templates/layout.html
+msgid "AoT Homepage"
+msgstr "AoT-Homepage"
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on computers — text, buttons and maps together. Phones and tablets use the setting above."
+msgstr "Vergrößert auf Computern die gesamte Seite — Text, Schaltflächen und Karten gemeinsam. Smartphones und Tablets verwenden die Einstellung oben."
+
+#: aot_flask/templates/layout.html
+msgid "Enlarges the whole page on phones and tablets — text, buttons and maps together. Computers use the setting below."
+msgstr "Vergrößert auf Smartphones und Tablets die gesamte Seite — Text, Schaltflächen und Karten gemeinsam. Computer verwenden die Einstellung unten."
+
+#: aot_flask/templates/layout.html
+msgid "No results"
+msgstr "Keine Ergebnisse"
+
+#: aot_flask/templates/layout.html
+msgid "Nothing selected"
+msgstr "Nichts ausgewählt"
+
+#: aot_flask/templates/layout.html
+msgid "Records"
+msgstr "Aufzeichnungen"
+
+#: aot_flask/templates/layout.html
+msgid "Requests"
+msgstr "Anfragen"
+
+#: aot_flask/templates/layout.html
+msgid "{0} of {1} selected"
+msgstr "{0} von {1} ausgewählt"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Could not load control requests"
+msgstr "Steuerungsanfragen konnten nicht geladen werden"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "Only people who can edit controllers can decide on these."
+msgstr "Nur Personen, die Regler bearbeiten dürfen, können hierüber entscheiden."
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+msgid "These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI."
+msgstr "Diese wurden noch nicht ausgeführt. Mit der Genehmigung wird genau das ausgeführt, was hier beschrieben ist — Sie müssen der KI nicht erneut Bescheid geben."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI Requests"
+msgstr "KI-Anfragen"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "AI advice"
+msgstr "KI-Empfehlungen"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Could not load advice"
+msgstr "Empfehlungen konnten nicht geladen werden"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No advice is waiting."
+msgstr "Es warten keine Empfehlungen."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "No schedule proposals are waiting."
+msgstr "Es warten keine Zeitplanvorschläge."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Opinions from this AI and other connected AIs. Accepting records that you agree — it does not run anything."
+msgstr "Meinungen dieser KI und anderer verbundener KIs. Mit „Annehmen“ halten Sie fest, dass Sie zustimmen — es wird nichts ausgeführt."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Proposed by the AI"
+msgstr "Von der KI vorgeschlagen"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Put this proposal on the schedule?"
+msgstr "Diesen Vorschlag in den Zeitplan aufnehmen?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Reject this proposal?"
+msgstr "Diesen Vorschlag ablehnen?"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Schedule proposals"
+msgstr "Zeitplanvorschläge"
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "Tasks the AI proposed for the schedule. Approving puts them on the schedule — they run at their time."
+msgstr "Aufgaben, die die KI für den Zeitplan vorgeschlagen hat. Mit der Genehmigung werden sie in den Zeitplan aufgenommen — sie laufen zu ihrer festgelegten Zeit."
+
+#: aot_flask/templates/pages/ai/ai.html
+msgid "What the AI is waiting on you for — each item below waits for your decision."
+msgstr "Worauf die KI bei Ihnen wartet — jeder Eintrag unten wartet auf Ihre Entscheidung."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "AI Connection"
+msgstr "KI-Verbindung"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Access keys"
+msgstr "Zugriffsschlüssel"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Advanced"
+msgstr "Erweitert"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Allowed"
+msgstr "Erlaubt"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "An AI app you already use, such as Claude Desktop, can read this farm and ask to control equipment. Equipment control only runs after a person approves it."
+msgstr "Eine KI-App, die Sie bereits nutzen, etwa Claude Desktop, kann die Daten dieses Betriebs lesen und die Steuerung von Geräten anfragen. Die Gerätesteuerung wird erst ausgeführt, nachdem eine Person sie genehmigt hat."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Built-in AI"
+msgstr "Integrierte KI"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Connect your AI app"
+msgstr "KI-App verbinden"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Error loading settings"
+msgstr "Einstellungen konnten nicht geladen werden"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Estimated monthly spend of the built-in AI. You are alerted as it nears the limit, and once the limit is reached it switches to the cheapest model. 0 means no limit."
+msgstr "Geschätzte monatliche Ausgaben der integrierten KI. Sie werden benachrichtigt, wenn das Limit näher rückt; ist es erreicht, wird auf das günstigste Modell umgeschaltet. 0 bedeutet kein Limit."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "External AI access"
+msgstr "Externer KI-Zugriff"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Issue one key per AI app and paste it into that app."
+msgstr "Stellen Sie pro KI-App einen Schlüssel aus und fügen Sie ihn in diese App ein."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
+msgstr "Lässt die integrierte KI die Lage des Betriebs regelmäßig im Hintergrund zusammenfassen."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "MCP bridge servers"
+msgstr "MCP-Bridge-Server"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Manage keys"
+msgstr "Schlüssel verwalten"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Not allowed"
+msgstr "Nicht erlaubt"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Open General Settings"
+msgstr "Allgemeine Einstellungen öffnen"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Run built-in AI"
+msgstr "Integrierte KI ausführen"
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The AI model used by chat and advice inside this app. It runs separately from your own AI app, so you can leave it off if you do not use it."
+msgstr "Das KI-Modell, das Chat und Empfehlungen in dieser App nutzen. Es läuft getrennt von Ihrer eigenen KI-App; Sie können es ausgeschaltet lassen, wenn Sie es nicht verwenden."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "The site the AI uses when a chat or screen does not name one."
+msgstr "Der Standort, den die KI verwendet, wenn ein Chat oder eine Ansicht keinen nennt."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Tool servers the built-in AI calls. One is added automatically when you add an MCP engine above."
+msgstr "Tool-Server, die die integrierte KI aufruft. Einer wird automatisch hinzugefügt, wenn Sie oben eine MCP-Engine hinzufügen."
+
+#: aot_flask/templates/pages/ai/ai_agent.html
+msgid "Turned on or off in Settings > General."
+msgstr "Wird unter Einstellungen > Allgemein ein- oder ausgeschaltet."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
+msgstr "%(n)s von der KI verfasste Notizen warten auf die Bestätigung durch eine Person."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "0 means no automatic sync."
+msgstr "0 bedeutet keine automatische Synchronisierung."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "AI Knowledge"
+msgstr "KI-Wissen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "API Key Header"
+msgstr "API-Schlüssel-Header"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Added"
+msgstr "Hinzugefügt"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All states"
+msgstr "Alle Status"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "All tags"
+msgstr "Alle Tags"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Bearer Token"
+msgstr "Bearer-Token"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Cite confirmed knowledge only"
+msgstr "Nur bestätigtes Wissen zitieren"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Data sources"
+msgstr "Datenquellen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "How the knowledge is used"
+msgstr "Wie das Wissen verwendet wird"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Kind of source"
+msgstr "Art der Quelle"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Knowledge settings"
+msgstr "Wissenseinstellungen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Last synced"
+msgstr "Zuletzt synchronisiert"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Library source"
+msgstr "Bibliotheksquelle"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Looked up on demand"
+msgstr "Bei Bedarf abgefragt"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Needs confirming"
+msgstr "Zu bestätigen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Not synced yet"
+msgstr "Noch nicht synchronisiert"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Open link"
+msgstr "Link öffnen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Save and confirm"
+msgstr "Speichern und bestätigen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Show them"
+msgstr "Diese anzeigen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync error"
+msgstr "Synchronisierungsfehler"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Sync now"
+msgstr "Jetzt synchronisieren"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced"
+msgstr "Synchronisiert"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Synced {time}"
+msgstr "Synchronisiert {time}"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Three ways to fill it: connect a source on the Data sources tab, press Add Knowledge to write in what you already know, or ask the AI to look something up — it saves what it finds."
+msgstr "Es gibt drei Wege, es zu füllen: Verbinden Sie auf dem Tab „Datenquellen“ eine Quelle, klicken Sie auf „Wissen hinzufügen“, um Bekanntes einzutragen, oder bitten Sie die KI, etwas nachzuschlagen — sie speichert, was sie findet."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Times retrieved"
+msgstr "Anzahl der Abrufe"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Title, text or attribution"
+msgstr "Titel, Text oder Quellenangabe"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Trust"
+msgstr "Vertrauen"
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "What people and the AI wrote down for the AI to cite. Data synced from sources is hidden here by default — pick it in the source filter, or manage it on the Data sources tab."
+msgstr "Was Menschen und die KI notiert haben, damit die KI es zitieren kann. Aus Quellen synchronisierte Daten sind hier standardmäßig ausgeblendet — wählen Sie sie im Quellenfilter aus oder verwalten Sie sie auf dem Tab „Datenquellen“."
+
+#: aot_flask/templates/pages/ai/ai_library.html
+msgid "Written by people and the AI"
+msgstr "Von Menschen und der KI verfasst"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "AI Records"
+msgstr "KI-Aufzeichnungen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All severities"
+msgstr "Alle Schweregrade"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "All types"
+msgstr "Alle Typen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Answer"
+msgstr "Antwort"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Applied to the knowledge."
+msgstr "In das Wissen übernommen."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Approved"
+msgstr "Genehmigt"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Awaiting approval"
+msgstr "Wartet auf Genehmigung"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Caller"
+msgstr "Aufrufer"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Carried out"
+msgstr "Ausgeführt"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Conversations"
+msgstr "Unterhaltungen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Corrected"
+msgstr "Korrigiert"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Correction"
+msgstr "Korrektur"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Could not load records"
+msgstr "Aufzeichnungen konnten nicht geladen werden"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Dismissed"
+msgstr "Verworfen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Error reports"
+msgstr "Fehlerberichte"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Expired"
+msgstr "Abgelaufen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Learned"
+msgstr "Ins Wissen übernommen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Looked up"
+msgstr "Nachgeschlagen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "No error reports."
+msgstr "Keine Fehlerberichte."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Questions asked of the built-in AI and its answers."
+msgstr "Fragen an die integrierte KI und ihre Antworten."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Received"
+msgstr "Eingegangen"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Tool calls"
+msgstr "Tool-Aufrufe"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What connected AIs did through the tools — newest first. Requests that needed approval show how they were decided."
+msgstr "Was verbundene KIs über die Tools getan haben — neueste zuerst. Bei Anfragen, die eine Genehmigung brauchten, wird angezeigt, wie entschieden wurde."
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "What the AI said"
+msgstr "Was die KI gesagt hat"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "When"
+msgstr "Wann"
+
+#: aot_flask/templates/pages/ai/ai_manage.html
+msgid "Wrong AI answers people reported, with their corrections. Applying a correction adds it to the AI Knowledge."
+msgstr "Falsche KI-Antworten, die Personen gemeldet haben, samt ihren Korrekturen. Wird eine Korrektur übernommen, gelangt sie in das KI-Wissen."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Could not load the MCP server list."
+msgstr "Die MCP-Serverliste konnte nicht geladen werden."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Delete this server?"
+msgstr "Diesen Server löschen?"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Input schema"
+msgstr "Eingabeschema"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "JSON object, for example {\"API_KEY\": \"...\"}."
+msgstr "JSON-Objekt, zum Beispiel {\"API_KEY\": \"...\"}."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No MCP servers yet."
+msgstr "Noch keine MCP-Server."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "No tools exposed by this server."
+msgstr "Dieser Server stellt keine Tools bereit."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server added."
+msgstr "Server hinzugefügt."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server deleted."
+msgstr "Server gelöscht."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Server updated."
+msgstr "Server aktualisiert."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Servers"
+msgstr "Server"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Stopped"
+msgstr "Gestoppt"
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Tool servers the built-in AI calls. Adding an MCP engine on the AI Connection page creates one automatically."
+msgstr "Tool-Server, die die integrierte KI aufruft. Wenn Sie auf der Seite „KI-Verbindung“ eine MCP-Engine hinzufügen, wird automatisch einer erstellt."
+
+#: aot_flask/templates/pages/ai/mcp_servers.html
+msgid "Waiting to retry"
+msgstr "Wartet auf Wiederholung"
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Changing the role asks whether to refill specialty, system prompt, tier and model with that role's defaults."
+msgstr "Beim Ändern der Rolle wird gefragt, ob Fachgebiet, System-Prompt, Stufe und Modell mit den Standardwerten dieser Rolle neu befüllt werden sollen."
+
+#: aot_flask/templates/pages/ai/options/options_llm.html
+msgid "Fill in this role's default specialty, system prompt, tier and model? What you entered will be replaced."
+msgstr "Standard-Fachgebiet, System-Prompt, Stufe und Modell dieser Rolle eintragen? Ihre bisherigen Eingaben werden ersetzt."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "%(n)s schedule proposals are waiting under AI → Requests."
+msgstr "%(n)s Zeitplanvorschläge warten unter KI → Anfragen."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Cancel this task?"
+msgstr "Diese Aufgabe abbrechen?"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Control requests and AI schedule proposals are decided under AI → Requests."
+msgstr "Steuerungsanfragen und KI-Zeitplanvorschläge werden unter KI → Anfragen entschieden."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Could not load the device timeline"
+msgstr "Die Geräte-Timeline konnte nicht geladen werden"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No devices found."
+msgstr "Keine Geräte gefunden."
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Open requests"
+msgstr "Anfragen öffnen"
+
+#: aot_flask/templates/pages/form_options/Color_Presets.html
+msgid "Preset colors"
+msgstr "Vordefinierte Farben"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All maps"
+msgstr "Alle Karten"
+
+#: aot_flask/templates/pages/form_options/Custom_Options.html
+msgid "All sites"
+msgstr "Alle Standorte"
+
+#: aot_flask/templates/pages/form_options/api_key_macro.html
+msgid "Key"
+msgstr "Schlüssel"
+
+#: aot_flask/templates/pages/function.html
+msgid "Could not load settings"
+msgstr "Einstellungen konnten nicht geladen werden"
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it."
+msgstr "Eine gröbere Einheit ergibt ein kleineres Dokument. Tagesdetails lassen sich später nicht wiederherstellen; wählen Sie eine gröbere Einheit daher nur, wenn Sie diese nicht benötigen."
+
+#: aot_flask/templates/pages/geo/journal.html
+msgid "Record by"
+msgstr "Aufzeichnung nach"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "%(n)s stages, %(m)s periods"
+msgstr "%(n)s Phasen, %(m)s Zeiträume"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Above"
+msgstr "Darüber"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Against target"
+msgstr "Im Vergleich zum Ziel"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Below"
+msgstr "Darunter"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "By stage"
+msgstr "Nach Phase"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Day count"
+msgstr "Anzahl der Tage"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Field sensor and weather station"
+msgstr "Feldsensor und Wetterstation"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measured by the weather station"
+msgstr "Von der Wetterstation gemessen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurement trends"
+msgstr "Verlauf der Messungen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Measurements you did not select when generating this journal are not in it. The caveats above name them."
+msgstr "Messungen, die Sie beim Erstellen dieses Journals nicht ausgewählt haben, sind darin nicht enthalten. Die Vorbehalte oben nennen sie."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Rows marked \"Weather station\" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only."
+msgstr "Zeilen mit der Kennzeichnung „Wetterstation“ und einem linken Rand stammen von der Wetterstation des Standorts, nicht von einem an diesem Ziel platzierten Sensor. Wenn für dieselbe Messung beides vorhanden ist, werden die Ziele nur mit dem Vor-Ort-Sensor verglichen."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Same targets as the previous stage."
+msgstr "Dieselben Ziele wie in der vorherigen Phase."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors disagree"
+msgstr "Sensoren widersprechen sich"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Sensors shown belong to the surrounding area."
+msgstr "Die angezeigten Sensoren gehören zur Umgebung."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Shape and sensor positions are current, not from this period."
+msgstr "Form und Sensorpositionen sind aktuell und stammen nicht aus diesem Zeitraum."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show %(n)s more"
+msgstr "%(n)s weitere anzeigen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show less"
+msgstr "Weniger anzeigen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Show plan"
+msgstr "Plan anzeigen"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Stage timeline"
+msgstr "Phasenverlauf"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
+msgstr "Die Ziele stammen aus dem Programm, das dieser Fläche zugeordnet ist. Δ ist der gemessene Durchschnitt minus dieses Ziel. Tag-/Nacht-Ziele und kurvenbasierte Ziele werden nur markiert und nicht als Differenz ausgewiesen, da ihr Vergleich mit einem Tagesdurchschnitt Fehlalarme erzeugt."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "The outline is derived from the facility."
+msgstr "Der Umriss wird aus der Anlage abgeleitet."
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "accumulated %(v)s"
+msgstr "akkumuliert %(v)s"
+
+#: aot_flask/templates/pages/geo/journal_view.html
+msgid "weather station %(out)s × cover %(tau)s"
+msgstr "Wetterstation %(out)s × Abdeckung %(tau)s"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Confirming colors"
+msgstr "Klicken, um die Farben für „Wird bestätigt“ zu bearbeiten"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Control Surface colors"
+msgstr "Klicken, um die Farben für „Bedienfläche“ zu bearbeiten"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit No response colors"
+msgstr "Klicken, um die Farben für „Keine Antwort“ zu bearbeiten"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle On colors"
+msgstr "Klicken, um die Farben für „Schalter ein“ zu bearbeiten"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Click to edit Toggle Track Off colors"
+msgstr "Klicken, um die Farben für „Schalterspur aus“ zu bearbeiten"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it"
+msgstr "Oberfläche der Elemente, die Sie bedienen — Textfelder, Auswahllisten, Pills. Halten Sie sie vom Seitenhintergrund getrennt, sonst verschwindet ein Bedienelement auf der Seite darin"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Lighter divider for dense lists, where a full-weight line would be noisy"
+msgstr "Hellere Trennlinie für dichte Listen, in denen eine volle Linie unruhig wirken würde"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Line between items inside one container — lists, option rows. Not a border around anything"
+msgstr "Linie zwischen Elementen innerhalb eines Containers — Listen, Optionszeilen. Kein Rahmen um irgendetwas"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Row/card background when a device stops answering — a different thing from Warning State, which is a person pausing it on purpose"
+msgstr "Hintergrund von Zeile/Karte, wenn ein Gerät nicht mehr antwortet — etwas anderes als der Warnzustand, bei dem eine Person es absichtlich pausiert"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide Toggle"
+msgstr "Schiebeschalter"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Slide toggle track when off (on uses Band 3)"
+msgstr "Schiebeschalter-Spur im ausgeschalteten Zustand (eingeschaltet nutzt Band 3)"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Text Field"
+msgstr "Textfeld"
+
+#: aot_flask/templates/settings/custom_ui.html
+msgid "Toggle On"
+msgstr "Schalter ein"
+
+#: aot_flask/templates/settings/role_detail.html
+msgid "Are you sure you want to delete this role?"
+msgstr "Sind Sie sicher, dass Sie diese Rolle löschen möchten?"
+
+#: aot_flask/templates/tools/notice.html
+msgid "No notices match your search."
+msgstr "Keine Mitteilungen entsprechen Ihrer Suche."
+
+#: aot_flask/templates/tools/notice.html
+msgid "Search title, content, category..."
+msgstr "Titel, Inhalt, Kategorie durchsuchen …"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Color Sections"
+msgstr "Farbabschnitte"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Global Band Colors"
+msgstr "Globale Bandfarben"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html
+msgid "Section"
+msgstr "Abschnitt"
+
+#: aot_flask/templates/user_templates/widget_template_AoT_wind_angular_configure_options.html
+msgid "Colors"
+msgstr "Farben"
+
+#: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html
+msgid "Planned"
+msgstr "Geplant"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Body"
+msgstr "Inhalt"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Duration (min)"
+msgstr "Dauer (Min.)"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Edit and approve"
+msgstr "Bearbeiten und genehmigen"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Invalid value in field '{field}'"
+msgstr "Ungültiger Wert im Feld '{field}'"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Save & approve"
+msgstr "Speichern & genehmigen"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Scheduled time"
+msgstr "Geplante Zeit"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "Step"
+msgstr "Schritt"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "This runs real equipment (valves, pumps)."
+msgstr "Dies steuert echte Geräte (Ventile, Pumpen)."
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View"
+msgstr "Anzeigen"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "View details"
+msgstr "Details anzeigen"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{n} pending approval"
+msgstr "{n} Genehmigung(en) ausstehend"
+
+#: aot_flask/templates/user_templates/widget_template_widget_mcp_review_js_ready_end.html
+msgid "{ok}/{total} succeeded"
+msgstr "{ok}/{total} erfolgreich"
+
+#: functions/ext_context_collector.py
+msgid "Collects external temperature, humidity, wind speed, rainfall, solar radiation, dew point, and CO2 from outside the facility. The integrated environment control Function uses this collector as its single source of truth. Select the external sensor for each item. Items left blank are not shared — the integrated control treats them as unknown instead of assuming a value."
+msgstr "Erfasst Außentemperatur, Luftfeuchtigkeit, Windgeschwindigkeit, Niederschlag, Sonneneinstrahlung, Taupunkt und CO2 außerhalb der Anlage. Die integrierte Umgebungsregelungs-Funktion nutzt diesen Kollektor als einzige Datenquelle. Wählen Sie für jeden Eintrag den externen Sensor aus. Leer gelassene Einträge werden nicht geteilt — die integrierte Regelung behandelt sie als unbekannt, statt einen Wert anzunehmen."
+
+#: functions/lorawan_class_scheduler.py
+msgid "Server/token from Settings -> ChirpStack; devices join this scheduler from their own device page (e.g. the AoT-C \"Class Scheduler\" field)."
+msgstr "Server/Token aus Einstellungen -> ChirpStack; Geräte treten diesem Planer auf ihrer eigenen Geräteseite bei (z. B. im AoT-C-Feld „Class Scheduler“)."
+
+#: inputs/nasa_power.py
+msgid "Search Window (days)"
+msgstr "Suchfenster (Tage)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Active Channels"
+msgstr "Aktive Kanäle"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 14 days"
+msgstr "Letzte 14 Tage"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 30 days"
+msgstr "Letzte 30 Tage"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 60 days"
+msgstr "Letzte 60 Tage"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Last 90 days"
+msgstr "Letzte 90 Tage"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Leave empty to auto-match the registered polygon that contains the clicked point."
+msgstr "Leer lassen, um automatisch das registrierte Polygon zuzuordnen, das den angeklickten Punkt enthält."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI (mean)"
+msgstr "NDVI (Mittelwert)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "NDVI Search Window"
+msgstr "NDVI-Suchfenster"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Per-field NDVI statistics and soil moisture / soil temperature for a polygon registered at agromonitoring.com — the only input here that reports soil moisture as a number for your own field boundary rather than as a coarse satellite overlay. Draw the field in the Agromonitoring dashboard (1-3000 ha) and either paste its polygon ID below or leave it empty to match the polygon containing the point you click. Uses the same account as OpenWeatherMap."
+msgstr "NDVI-Statistiken sowie Bodenfeuchte und Bodentemperatur pro Feld für ein bei agromonitoring.com registriertes Polygon — der einzige Eingang hier, der die Bodenfeuchte als Zahl für Ihre eigene Feldgrenze meldet und nicht als grobes Satelliten-Overlay. Zeichnen Sie das Feld im Agromonitoring-Dashboard (1-3000 ha) und fügen Sie unten entweder dessen Polygon-ID ein oder lassen Sie das Feld leer, um das Polygon zuzuordnen, das den angeklickten Punkt enthält. Verwendet dasselbe Konto wie OpenWeatherMap."
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Polygon ID"
+msgstr "Polygon-ID"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (10cm)"
+msgstr "Bodentemperatur (10 cm)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "Soil Temp (surface)"
+msgstr "Bodentemperatur (Oberfläche)"
+
+#: inputs_gis/gis_agromonitoring.py
+msgid "The most recent pass within this window is used. Clouds can leave weeks without a usable scene."
+msgstr "Es wird der jüngste Überflug innerhalb dieses Fensters verwendet. Wolken können dazu führen, dass wochenlang keine brauchbare Aufnahme vorliegt."
+
+#: inputs_gis/gis_esa.py
+msgid "Global surface soil moisture (0-5cm) from NASA's SMAP (Soil Moisture Active Passive) L4 product, delivered as a near-real-time overlay via NASA GIBS. Available at roughly 9km resolution with selectable dates, useful for irrigation planning and drought monitoring."
+msgstr "Globale Oberflächenbodenfeuchte (0-5 cm) aus dem L4-Produkt SMAP (Soil Moisture Active Passive) der NASA, bereitgestellt als Overlay in nahezu Echtzeit über NASA GIBS. Verfügbar mit einer Auflösung von etwa 9 km und wählbaren Datumsangaben, nützlich für die Bewässerungsplanung und die Dürreüberwachung."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clearest scene in window"
+msgstr "Klarste Aufnahme im Fenster"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Clouds leave holes in any single date, so the most recent usable scene within this window is drawn instead."
+msgstr "Wolken hinterlassen an jedem einzelnen Datum Lücken, daher wird stattdessen die jüngste brauchbare Aufnahme innerhalb dieses Fensters dargestellt."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Collection"
+msgstr "Datensammlung"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "False Color (NIR)"
+msgstr "Falschfarben (NIR)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Last 7 days"
+msgstr "Letzte 7 Tage"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Max Cloud Coverage"
+msgstr "Max. Wolkenbedeckung"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Most recent scene"
+msgstr "Jüngste Aufnahme"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDMI (Moisture)"
+msgstr "NDMI (Feuchtigkeit)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "NDWI (Water)"
+msgstr "NDWI (Wasser)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Scene Priority"
+msgstr "Aufnahmepriorität"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Search Window"
+msgstr "Suchfenster"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L1C (top of atmosphere)"
+msgstr "Sentinel-2 L1C (Oberkante der Atmosphäre)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 L2A (atmospherically corrected)"
+msgstr "Sentinel-2 L2A (atmosphärisch korrigiert)"
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "Sentinel-2 imagery at 10 m resolution through Sentinel Hub on the Copernicus Data Space Ecosystem — fine enough to read growth differences inside a single field, unlike the 250 m MODIS NDVI. Register a free CDSE account, create an OAuth client and paste its Client ID and Secret below. The free tier allows 30,000 processing units per month; one map screen costs roughly 4, and tiles are cached for a day."
+msgstr "Sentinel-2-Bilder mit 10 m Auflösung über Sentinel Hub im Copernicus Data Space Ecosystem — fein genug, um Wachstumsunterschiede innerhalb eines einzelnen Feldes zu erkennen, anders als der MODIS-NDVI mit 250 m. Registrieren Sie ein kostenloses CDSE-Konto, erstellen Sie einen OAuth-Client und fügen Sie unten dessen Client-ID und Secret ein. Die kostenlose Stufe erlaubt 30.000 Verarbeitungseinheiten pro Monat; ein Kartenbildschirm kostet etwa 4, und Kacheln werden einen Tag lang zwischengespeichert."
+
+#: inputs_gis/gis_sentinelhub.py
+msgid "True Color"
+msgstr "Echtfarben"
+
+#: widgets/AoT_gauge_angular.py
+msgid "Appearance"
+msgstr "Darstellung"
+
+#: widgets/AoT_graph.py
+msgid "Text Size"
+msgstr "Textgröße"
+
+#: widgets/AoT_plot.py
+msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
+msgstr "Aktuelle Messwerte im Vergleich zu den Zielwerten und Grenzwerten, die diese Phase vorgibt — dieselbe Karte, die das Karten-Widget zeigt, einschließlich DLI und akkumulierter Wärme. [7 Tage] verwandelt jede Zeile in den Bereich, den der Wert in der letzten Woche durchlaufen hat."
+
+#: widgets/AoT_plot.py
+msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
+msgstr "Füllt die Zeilen ohne eigenen Bereich (CO2, Bodenfeuchte, Taupunkt) mit einer aktuellen Trendlinie. Benötigt den Zielwerteblock."
+
+#: widgets/AoT_plot.py
+msgid "How far this stage has come towards the next one in growing degree days. Shown only when the programme moves stages by GDD. The running total since planting is a row in the environment card instead, and follows that card's settings."
+msgstr "Wie weit diese Phase in Wachstumsgradtagen der nächsten näher gekommen ist. Wird nur angezeigt, wenn das Programm die Phasen nach GDD wechselt. Die laufende Summe seit der Pflanzung ist stattdessen eine Zeile in der Umgebungskarte und folgt deren Einstellungen."
+
+#: widgets/AoT_timer.py
+msgid "OFF Failed: {}"
+msgstr "AUS fehlgeschlagen: {}"
+
+#: widgets/widget_mcp_review.py
+msgid "Cap on how many pending requests the list modal shows at once"
+msgstr "Obergrenze, wie viele ausstehende Anfragen das Listenfenster gleichzeitig anzeigt"
+
+#: widgets/widget_mcp_review.py
+msgid "How often to refresh the pending count"
+msgstr "Wie oft die Anzahl ausstehender Anfragen aktualisiert wird"
+
+#: widgets/widget_mcp_review.py
+msgid "MCP Approval Requests"
+msgstr "MCP-Genehmigungsanfragen"
+
+#: widgets/widget_mcp_review.py
+msgid "Max items shown"
+msgstr "Max. angezeigte Einträge"
+
+#: widgets/widget_mcp_review.py
+msgid "Shows how many external AI write requests are waiting for approval. Click the count to open the list and approve, reject, or edit-then-approve them one at a time, or select several and approve/reject them in bulk. Approving runs the request immediately with exactly the values shown."
+msgstr "Zeigt an, wie viele Schreibanfragen externer KI-Systeme auf Genehmigung warten. Klicken Sie auf die Anzahl, um die Liste zu öffnen und die Anfragen einzeln zu genehmigen, abzulehnen oder nach einer Bearbeitung zu genehmigen. Sie können auch mehrere auswählen und gesammelt genehmigen oder ablehnen. Mit der Genehmigung wird die Anfrage sofort und genau mit den angezeigten Werten ausgeführt."
