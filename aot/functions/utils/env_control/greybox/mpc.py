@@ -41,6 +41,17 @@ class MPCConfig:
     # 있는 습한 밤에 VPD 를 좇느라 범위를 2 °C 넘었다(테스트 기록).
     # ⚠ 지평 동안 명령을 하나로 두는(move-blocking) 탓에 끝에서 0.5 °C 쯤은 넘을 수 있다.
     bound_weight: float = 100.0
+    # ── C 단계 (2026-09-22) ────────────────────────────────────────────────
+    # 에너지: 채널 kW(정격전력 × 종류별 단가, 호출부가 계산) × 가동률, 사이클마다.
+    #   5 kW 난방 한 사이클 전량 = 0.1 — 온도 0.5 °C 오차(1.2·0.25 = 0.3)보다 싸다.
+    energy_weight: float = 0.02
+    # 난방·냉방 동시 가동: (u_heat/100)·(u_cool/100) 에 곱한다. 둘 다 전량이면
+    #   사이클당 50 — 어떤 추종 이득으로도 정당화되지 않게.
+    hc_weight: float = 50.0
+    # 마모: 움직인 양(%)과, 직전 움직임과 **반대 방향**으로 움직인 양에 1차 벌점.
+    #   개도 50 % 이동 = 0.025, 반대로 50 % = 추가 0.1. 추종을 막지 않고 흔들림만 누른다.
+    move_weight: float = 0.05
+    reversal_weight: float = 0.2
 
 
 @dataclass
@@ -77,6 +88,8 @@ def optimize_channels(
     config: Optional[MPCConfig] = None,
     fixed_cmds: Optional[Dict[str, float]] = None,
     soft_bounds: Optional[Dict[str, tuple]] = None,
+    channel_kw: Optional[Dict[str, float]] = None,
+    prev_move: Optional[Dict[str, float]] = None,
 ) -> MPCResult:
     """`fixed_cmds`: 최적화하지 않지만 모델이 읽는 입력(예: 차광막 개도) — 지평 동안
     지금 값으로 둔다. 빠뜨리면 모델은 차광막이 걷힌 것으로 보고 일사를 과대 예측한다.
@@ -86,6 +99,9 @@ def optimize_channels(
     채 밀었기 때문인데, MPC 는 온도를 예측하므로 `soft_bounds`
     ({'temperature': (lo, hi), 'humidity': (lo, hi)}, 벗어난 만큼 제곱 벌점)와
     함께 쓰면 극한 고온에서도 VPD 를 아주 덥거나 찬 공기로 맞추지 않는다.
+
+    `channel_kw`: 채널별 에너지 무게(정격 kW × 종류별 단가) — 없으면 에너지 항 없음.
+    `prev_move`: 채널별 직전 움직임(이번 사이클 전 명령 − 그 전 명령) — 반대 방향 벌점.
     """
     cfg = config or MPCConfig()
     avail = available_channels(profiles)
@@ -114,6 +130,8 @@ def optimize_channels(
     soft = {k: v for k, v in (soft_bounds or {}).items()
             if k in ('temperature', 'humidity') and v}
     prev = prev_channel_cmds or {}
+    kw = dict(channel_kw or {})
+    pm = dict(prev_move or {})
 
     fixed = dict(fixed_cmds or {})
 
@@ -142,7 +160,21 @@ def optimize_channels(
                     J += cfg.bound_weight * over * over
         for c, u in zip(avail, uvec):
             J += cfg.effort_weight * (u / 100.0) ** 2
-            J += cfg.slew_weight * ((u - prev.get(c, 0.0)) / 100.0) ** 2
+            du = u - prev.get(c, 0.0)
+            J += cfg.slew_weight * (du / 100.0) ** 2
+            # 에너지 — 명령을 지평 동안 유지하므로 H 사이클치
+            J += cfg.energy_weight * kw.get(c, 0.0) * (u / 100.0) * H
+            # 마모 — 매끄러운 |du| 와, 직전 방향과 반대인 몫
+            J += cfg.move_weight * (_soft_abs(du) / 100.0)
+            last = pm.get(c, 0.0)
+            if abs(last) > 0.5:
+                against = -du if last > 0 else du
+                J += cfg.reversal_weight * (_soft_relu(against) / 100.0)
+        # 난방·냉방 동시 가동
+        if 'heat' in avail and 'cool' in avail:
+            uh = uvec[avail.index('heat')] / 100.0
+            uc = uvec[avail.index('cool')] / 100.0
+            J += cfg.hc_weight * uh * uc * H
         return J
 
     x0 = [float(prev.get(c, 0.0)) for c in avail]
@@ -170,6 +202,18 @@ def optimize_channels(
     except Exception:
         end = None
     return MPCResult(cmds, cost(xbest), converged, method, end)
+
+
+def _soft_abs(x: float, eps: float = 1.0) -> float:
+    """|x| 의 매끄러운 근사(% 단위, eps 1 %) — L-BFGS-B 가 미분할 수 있게."""
+    import math
+    return math.sqrt(x * x + eps * eps) - eps
+
+
+def _soft_relu(x: float, eps: float = 1.0) -> float:
+    """max(0, x) 의 매끄러운 근사 — 항상 0 이상(0 에서 eps/2)."""
+    import math
+    return 0.5 * (x + math.sqrt(x * x + eps * eps))
 
 
 def _vpd(T: float, RH: float) -> float:

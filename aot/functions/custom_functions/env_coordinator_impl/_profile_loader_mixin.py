@@ -30,19 +30,8 @@ _K_PRIMARY = {
 }
 
 # kind 별 전력 소비 기본값 (kW at 100%). 에너지 비용 계산에 사용.
-_KIND_RATED_KW = {
-    'heater':       5.0,
-    'cooler':       2.5,
-    'co2_injector': 0.5,
-    'fogger':       0.3,
-    'lighting':     2.0,
-    'exhaust_fan':  0.75,
-    'intake_fan':   0.75,
-    'circulation_fan': 0.2,
-    'opening':      0.1,   # 모터 소비전력
-    'shade':        0.1,
-    'curtain':      0.1,
-}
+# 종류별 기본 kW — 정본은 `env_control.energy`(PI 비용 순서와 MPC 에너지 항이 함께 쓴다).
+from aot.functions.utils.env_control.energy import KIND_DEFAULT_KW as _KIND_RATED_KW  # noqa: E402
 
 # kind 별 배기팬 기본 정격 풍량 (m³/h). rated_m3h 미설정 시 fallback.
 _KIND_DEFAULT_RATED_M3H = {
@@ -218,14 +207,14 @@ def _build_cost_fn(
     wear_cost = 명령 변화에 비례 (cycle_sec 없이 pct 비례 근사).
     총 비용 = base_cost + energy_cost. 낮을수록 helpers 정렬에서 우선.
     """
-    rated_kw = float(
-        capacity_meta.get('rated_kW_thermal')
-        or _KIND_RATED_KW.get(kind, 1.0)
-    )
+    # 전기 kW(채널 전기소모량 × 사용 전압) → 설비 정격 → 종류 기본값 — `energy.actuator_kw`.
+    # ⚠ capacity_meta 를 **나중에 읽는다** — 전기 kW 는 프로필을 만든 뒤 붙는다
+    #   (`_attach_electric_kw`). 만들 때 값을 고정하면 그 값이 영영 안 들어간다.
+    from aot.functions.utils.env_control.energy import actuator_kw
 
     def cost_fn(env: dict, pct: float) -> float:
         elec = float(env.get('elec_price_per_kWh', 1.0) or 1.0)
-        energy = rated_kw * (pct / 100.0) * elec
+        energy = actuator_kw(kind, capacity_meta) * (pct / 100.0) * elec
         return base_cost + energy
 
     return cost_fn
@@ -1150,9 +1139,56 @@ class ProfileLoaderMixin:
             len(leader_profiles), n_facility, n_paired,
             n_manual_new, n_manual_merged, len(groups))
 
+        self._attach_electric_kw()
+
         # ── Commissioning bridge: consume pending calibration anchors ─────────
         if facility_uuid:
             self._apply_pending_commissioning_anchors(facility_uuid)
+
+    def _attach_electric_kw(self) -> None:
+        """각 장치의 전기소모량(출력 채널 `amps` × 사용 전압)을 capacity_meta['elec_kw'] 로.
+
+        출력 사용량(kWh) 통계가 쓰는 값과 같다(`utils/tools.py`). PI 비용 순서와 MPC
+        에너지 항이 `energy.actuator_kw` 로 이 값을 먼저 쓴다. 값이 없거나 0 이면 붙이지
+        않는다 — 설비 정격·종류 기본값으로 물러난다. 실패해도 적재를 멈추지 않는다.
+        """
+        try:
+            from aot.config import AOT_DB_PATH
+            from aot.databases.models import Misc, OutputChannel
+            from aot.databases.utils import session_scope
+            from aot.functions.utils.env_control.energy import electric_kw
+            ids = [p.actuator_id for p in self._profiles]
+            if not ids:
+                return
+            with session_scope(AOT_DB_PATH) as sess:
+                misc = sess.query(Misc).first()
+                volts = getattr(misc, 'output_usage_volts', None) if misc else None
+                chans = sess.query(OutputChannel).filter(
+                    OutputChannel.output_id.in_(ids)).all()
+                by_out = {}
+                for ch in chans:
+                    try:
+                        opts = json.loads(ch.custom_options or '{}')
+                    except Exception:
+                        opts = {}
+                    by_out.setdefault(ch.output_id, {})[ch.channel] = opts.get('amps')
+                sess.expunge_all()
+            cmap = getattr(self, '_channel_map', {}) or {}
+            for p in self._profiles:
+                chs = by_out.get(p.actuator_id) or {}
+                want = cmap.get(p.actuator_id, 0)
+                want = want if isinstance(want, int) else 0
+                amps = chs.get(want, chs.get(0))
+                kw = electric_kw(amps, volts)
+                if kw > 0.0:
+                    # ⚠ **제자리에서** 고친다 — 비용 함수(`_build_cost_fn`)가 만들 때 받은
+                    #   이 dict 를 들고 있다. 새 dict 로 바꾸면 비용 순서에 영영 안 닿는다.
+                    if p.capacity_meta is None:
+                        p.capacity_meta = {}
+                    p.capacity_meta['elec_kw'] = kw
+        except Exception:
+            self.logger.debug('_reload_profiles: 전기소모량 읽기 실패 — 기본값 사용',
+                              exc_info=True)
 
     def _apply_pending_commissioning_anchors(self, facility_uuid: str) -> None:
         """Read unconsumed commissioning_state anchors and inject into calibration.

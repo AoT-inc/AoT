@@ -578,7 +578,7 @@ per device. Manual actions are merged with the facility-derived list.
 |---------------|---------|-------------|
 | Output Channel | — | The Output channel to control. |
 | Actuator Type | — | Vent/Opening · Cooler · Heater · Fogger/Humidifier · CO₂ Injector · Shade Screen · Thermal Curtain · Supplemental Lighting · Circulation Fan · Exhaust Fan · Intake Fan. |
-| Cost Index | 5.0 | Lower value = higher priority (1 = free natural ventilation, 10 = high-cost device). |
+| Cost Index | 5.0 | Lower value = higher priority (1 = free natural ventilation, 10 = high-cost device). The device's energy cost (kW × opening) is added to it. kW comes first from the output channel's **current draw (A) × the system usage voltage**, then from the rating on the facility drawing, then from a per-type default. The usage voltage is a system setting that defaults to 120 V, so a 220 V installation should set it. |
 | On Time Window End | Do Nothing | What happens to this actuator when the Working Hours window ends: Do Nothing / Turn Off / Turn On / Set Open % (vents only). |
 | End Open % | 0 | Target opening percentage at that moment (vents/openings only). |
 | Cloth Transmittance Override (0–1, Shade only) | 0 | Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. |

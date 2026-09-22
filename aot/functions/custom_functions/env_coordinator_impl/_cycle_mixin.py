@@ -3165,6 +3165,20 @@ class CycleMixin:
         ext_seq = self._build_mpc_ext_seq(situation, cfg.horizon)
         kind_by_aid = {p.actuator_id: getattr(p, 'kind', None) for p in self._profiles}
         prev_ch = aggregate_cmds_by_kind(self._coord_state.prev_commands, kind_by_aid)
+        # 에너지 무게 — 채널에 속한 장치 kW × 종류별 단가의 합(`energy`, C 단계).
+        from aot.functions.utils.env_control.energy import actuator_kw, unit_price
+        ch_kw: dict = {}
+        for p in modeled:
+            ch = channel_for_kind(getattr(p, 'kind', None))
+            ch_kw[ch] = ch_kw.get(ch, 0.0) + (
+                actuator_kw(p.kind, p.capacity_meta) * unit_price(p.kind))
+        # 직전 움직임(마모 항의 반대 방향 판정) — **실제로 나간** 명령(prev_commands)의
+        # 이력이다. 사이클마다 한 번 갱신된다: 그림자 MPC 는 greybox 제어가 꺼진 설치에서만,
+        # 실제 MPC 는 켜진 설치에서만 돌아 한 사이클에 둘이 함께 부르는 일이 없다.
+        last_seen = getattr(self, '_mpc_prev_ch_seen', None) or {}
+        prev_move = {c: prev_ch.get(c, 0.0) - last_seen.get(c, prev_ch.get(c, 0.0))
+                     for c in prev_ch}
+        self._mpc_prev_ch_seen = dict(prev_ch)
 
         res = gbmpc.optimize_channels(
             state=state, targets=targets, profiles=modeled, ext_seq=ext_seq,
@@ -3172,6 +3186,8 @@ class CycleMixin:
             cycle_sec=cycle_sec, config=cfg,
             fixed_cmds=({'shade': prev_ch['shade']} if 'shade' in prev_ch else None),
             soft_bounds=soft,
+            channel_kw=ch_kw,
+            prev_move=prev_move,
         )
         self._last_mpc_result = res
         if res.method == 'noop':
