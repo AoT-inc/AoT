@@ -278,7 +278,9 @@ def stage_guide_range(guide, is_day, facility_guide, band=None,
         humid_min=humid_min, humid_max=humid_max)
     return {'T_min': T_min, 'T_max': T_max, 'RH_min': RH_min, 'RH_max': RH_max,
             'T_source': t_source, 'RH_source': rh_source, 'is_day': is_day,
-            'clamped': clamped}
+            'clamped': clamped,
+            # 단계의 지금 온도 값 그 자체 — 온도 우선 모드의 목표(`basis.py`).
+            'T_stage': (float(guide[t_source]) if t_source != 'facility' else None)}
 
 
 def apply_temp_humid_threshold_overrides(
@@ -1069,6 +1071,96 @@ class CycleMixin:
         except Exception:
             self.logger.debug('EnvCoordinator: 기능 상태 계산 실패', exc_info=True)
 
+    def _control_basis(self) -> str:
+        from aot.functions.utils.env_control.basis import (
+            BASIS_TEMPERATURE, BASIS_VPD)
+        v = str(getattr(self, 'control_basis', None) or BASIS_VPD)
+        return BASIS_TEMPERATURE if v == BASIS_TEMPERATURE else BASIS_VPD
+
+    def _select_control_basis(self, vpd_env_target, vpd_t, co2_t, internal,
+                              guide) -> dict:
+        """제어 기준에 맞는 EnvTarget 을 돌려주고, 다른 기준의 것은 그림자로 둔다.
+
+        두 벌을 **매 사이클 모두** 만든다 — 선택되지 않은 쪽은
+        `_basis_shadow_commands` 가 "그 기준이었다면 나갔을 명령" 으로 요약에 싣는다
+        (계획서 1단계: 전환 전에 두 방식을 같은 사이클에서 비교한다).
+        """
+        from aot.functions.utils.env_control.basis import (
+            BASIS_TEMPERATURE, build_temperature_env_target, temperature_basis)
+        self._alt_env_target = None
+        self._last_basis_summary = None
+        try:
+            stage_T = (getattr(self, '_last_stage_guide', None) or {}).get('T_stage')
+            basis_t = temperature_basis(vpd_t, stage_T, internal.get('T'),
+                                        internal.get('RH'), guide)
+            temp_env = build_temperature_env_target(
+                basis_t, internal.get('VPD'), co2_t,
+                self.tolerance_co2 or 100.0, self.priority_co2 or 0.8)
+        except Exception as exc:                            # noqa: BLE001
+            self.logger.error('EnvCoordinator: 온도 우선 목표 계산 실패 — '
+                              'VPD 기준으로 제어합니다: %s', exc)
+            return vpd_env_target
+        mode = self._control_basis()
+        self._last_basis_summary = {'mode': mode, 'temperature': basis_t}
+        if mode == BASIS_TEMPERATURE:
+            self._alt_env_target = vpd_env_target
+            return temp_env
+        self._alt_env_target = temp_env
+        return vpd_env_target
+
+    def _assess_alternative_basis(self, internal, external_for_control,
+                                  external, cycle_sec, authority):
+        """다른 기준의 목표로 L2 를 한 번 더 — 추세 상태는 복사본을 쓴다."""
+        alt = getattr(self, '_alt_env_target', None)
+        if not alt:
+            return None
+        try:
+            import copy
+            sit, _ = assess(
+                env_target=alt, internal=internal, external=external_for_control,
+                cycle_sec=cycle_sec, now_ts=time.time(),
+                last_ext_ts=external.get('last_ext_ts'), last_int_ts=None,
+                trend_state=copy.deepcopy(self._trend_state),
+                authority=authority, light_sat=self._light_saturation())
+            return sit
+        except Exception:
+            self.logger.debug('EnvCoordinator: 그림자 기준 평가 실패', exc_info=True)
+            return None
+
+    def _basis_shadow_commands(self, situation) -> None:
+        """다른 기준이었다면 나갔을 L3 명령을 요약에 싣는다 — **제어에 쓰지 않는다.**
+
+        같은 프로필·같은 적분 상태(복사본)·같은 사이클 문맥에서 목표만 바꿔
+        `coordinate()` 를 한 번 더 부른다. `unique_id=''` 라 결정 로그를 남기지
+        않는다. 프로필의 `live_effect` 는 곧이어 실제 L3 가 다시 채운다.
+        ⚠ 실제 제어가 MPC/greybox 경로여도 그림자는 legacy L3 다(요약 `engine`).
+        """
+        alt = getattr(self, '_alt_situation', None)
+        summary = getattr(self, '_last_basis_summary', None)
+        if alt is None or summary is None:
+            return
+        try:
+            import copy
+            from aot.functions.utils.env_control.coordinator import coordinate
+            ctx = dict(situation.context or {})
+            ctx['unmeasured'] = (alt.context or {}).get('unmeasured', [])
+            alt.context = ctx
+            cmds, _ = coordinate(alt, self._profiles,
+                                 copy.deepcopy(self._coord_state), unique_id='')
+            kind = {p.actuator_id: p.kind for p in self._profiles}
+            slot = {p.actuator_id: (p.slot_key or p.actuator_id[:8])
+                    for p in self._profiles}
+            summary['shadow_mode'] = ('vpd' if summary['mode'] == 'temperature'
+                                      else 'temperature')
+            summary['engine'] = 'legacy'
+            names = getattr(self, '_actuator_names', None) or {}
+            summary['shadow'] = [
+                {'slot_key': slot.get(aid, aid[:8]), 'name': names.get(aid) or None,
+                 'kind': kind.get(aid), 'pct': round(float(c.control_value()), 1)}
+                for aid, c in cmds.items()][:self._SUMMARY_MAX_COMMANDS]
+        except Exception:
+            self.logger.debug('EnvCoordinator: 그림자 기준 명령 실패', exc_info=True)
+
     def _rebase_integral_after_gate(self) -> None:
         """전체 게이트가 풀린 첫 사이클 — 게이트가 움직인 장치의 적분을 그 위치로.
 
@@ -1374,6 +1466,9 @@ class CycleMixin:
         )
         if co2_t is None:
             env_target.pop('co2', None)
+        env_target = self._select_control_basis(
+            env_target, vpd_t, co2_t, internal,
+            (T_g_min, T_g_max, RH_g_min, RH_g_max))
 
         self._apply_forecast_feedforward(
             env_target, internal, T_int, RH_int,
@@ -1413,6 +1508,8 @@ class CycleMixin:
         # 사이클이 읽히게 두기 위해 둘 다 헬퍼다(`test_env_coordinator_
         # cycle_structure`). 판정과 그 판정을 말하는 일은 여기서 **부르기만**
         # 한다 — 새 단계를 인라인으로 붙이면 727줄 시절로 돌아간다.
+        self._alt_situation = self._assess_alternative_basis(
+            internal, external_for_control, external, cycle_sec, authority)
         self._warn_missing_measurements(situation)
         self._judge_fog_humidity_block(situation, internal)
         self._refresh_capability(internal, situation=situation, authority=authority)
@@ -1490,6 +1587,8 @@ class CycleMixin:
         # 후자는 적분이 64.3 에 실린 채 얼어붙어, 게이트가 풀리는 순간 분무가
         # 60% 로 튀어나오는 상태였다.
         self._apply_cmd_scales(internal, external)
+
+        self._basis_shadow_commands(situation)
 
         # ── L3: Coordination (MPC → greybox-PI → legacy) ──────────────────────
         commands, new_state = self._run_control(situation, uid)
@@ -2599,6 +2698,8 @@ class CycleMixin:
             'stage_guide': getattr(self, '_last_stage_guide', None),
             # 축별 기능 상태(`_refresh_capability`, 1단계 — 표시 전용).
             'capability': getattr(self, '_last_capability', None),
+            # 제어 기준과 다른 기준의 그림자 명령(`_basis_shadow_commands`).
+            'basis': getattr(self, '_last_basis_summary', None),
             'vent': {
                 'effective_area_m2': _r(vent_eff),
                 'total_area_m2':     _r(vent_total),

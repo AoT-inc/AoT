@@ -30668,3 +30668,15 @@ msgstr "chỉ theo dõi"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "Học, với từng thiết bị, mức độ nó thực sự làm thay đổi mỗi giá trị đo so với mô hình tích hợp. Chỉ học từ những chu kỳ mà riêng thiết bị đó thay đổi. Cần dữ liệu vài ngày; trước đó mô hình được dùng nguyên như cũ."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Cơ sở điều khiển"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Ưu tiên nhiệt độ"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: bám trực tiếp mục tiêu VPD. Ưu tiên nhiệt độ: bám nhiệt độ ngày/đêm của giai đoạn và đổi mục tiêu VPD thành mục tiêu độ ẩm ở nhiệt độ đó, để không đuổi theo VPD bằng không khí quá nóng hoặc quá lạnh; khi đó VPD chỉ đóng vai trò giới hạn. Nếu giai đoạn không có nhiệt độ, nhiệt độ chỉ được giữ trong khoảng hướng dẫn."

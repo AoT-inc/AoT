@@ -30613,3 +30613,15 @@ msgstr "tik stebėti"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "Kiekvienam įrenginiui išmoksta, kiek stipriai jis iš tikrųjų keičia kiekvieną rodmenį, palyginti su įtaisytuoju modeliu. Mokosi tik iš ciklų, kuriuose pasikeitė tik tas įrenginys. Reikia kelių dienų duomenų; iki tol modelis naudojamas toks, koks yra."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Valdymo pagrindas"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Pirmiausia temperatūra"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: tiesiogiai siekia VPD tikslo. Pirmiausia temperatūra: siekia etapo dienos/nakties temperatūros ir VPD tikslą paverčia drėgmės tikslu toje temperatūroje, kad VPD nebūtų vejamasi labai karštu ar labai šaltu oru; tada VPD veikia tik kaip riba. Be etapo temperatūros temperatūra tik laikoma orientaciniame intervale."

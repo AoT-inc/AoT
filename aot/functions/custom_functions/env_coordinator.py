@@ -260,6 +260,7 @@ class CustomModule(
 
         # VPD
         self.priority_vpd            = None
+        self.control_basis           = None
         self.tolerance_vpd           = None
 
         # Light

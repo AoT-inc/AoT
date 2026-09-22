@@ -32105,3 +32105,15 @@ msgstr "보기만"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "장치마다, 내장 모델이 예측한 것보다 실제로 각 값을 얼마나 세게 움직이는지 배웁니다. 그 장치만 명령이 바뀐 사이클에서만 배웁니다. 며칠 치 데이터가 필요하고, 그때까지는 모델을 그대로 씁니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "제어 기준"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "온도 우선"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: VPD 목표를 그대로 좇습니다. 온도 우선: 단계의 주간·야간 온도를 좇고, VPD 목표를 그 온도에서의 습도 목표로 바꿉니다 — 아주 덥거나 찬 공기로 VPD 를 맞추지 않습니다. VPD 는 넘지 말아야 할 경계로만 씁니다. 단계에 온도가 없으면 온도는 유도 범위 안에 두기만 합니다."

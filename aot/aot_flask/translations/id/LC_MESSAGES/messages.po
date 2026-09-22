@@ -30235,3 +30235,15 @@ msgstr "hanya memantau"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "Mempelajari, untuk tiap perangkat, seberapa kuat perangkat itu benar-benar menggerakkan tiap pembacaan dibandingkan model bawaan. Hanya belajar dari siklus ketika hanya perangkat itu yang berubah. Butuh data beberapa hari; sampai saat itu model dipakai apa adanya."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Dasar kontrol"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Suhu terlebih dahulu"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: mengikuti target VPD secara langsung. Suhu terlebih dahulu: mengikuti suhu siang/malam tahap dan mengubah target VPD menjadi target kelembapan pada suhu itu, sehingga VPD tidak dikejar dengan udara yang sangat panas atau sangat dingin; VPD hanya berfungsi sebagai batas. Tanpa suhu tahap, suhu hanya dijaga di dalam rentang panduan."

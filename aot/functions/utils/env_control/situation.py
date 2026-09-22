@@ -413,6 +413,11 @@ def _decompose_vpd(target: EnvTarget, ctx: EnvContext) -> EnvTarget:
     vpd_tv  = t.get('vpd')
     vpd_int = ctx.get('VPD_int') or 0.0
 
+    if vpd_tv is not None and getattr(vpd_tv, 'limit', False):
+        # 온도 우선 모드의 VPD **경계** 항(`basis.py`) — 온도·습도가 1차 목표다.
+        # 경계를 넘은 사이클에만 들어오며, 강등하지 않고 함께 결합 drive 에 싣는다.
+        return t
+
     if vpd_tv is not None and vpd_int > 0.05:
         # VPD 직접 제어 — T/RH 제어목표 제외(진단/제약 보존)
         for k in ('temperature', 'humidity'):

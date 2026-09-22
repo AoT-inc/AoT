@@ -513,6 +513,27 @@ FUNCTION_INFORMATION = {
             'type': 'header',
             'name': lazy_gettext('VPD'),
         },
+        # 제어 기준(2026-09-22, `env_control/basis.py`). 기본은 기존 그대로(VPD
+        # 직접). 온도 우선은 코디네이터별로 켜는 opt-in 이다 — 선택하지 않은 쪽도
+        # 매 사이클 그림자로 계산돼 요약에 실린다.
+        {
+            'id': 'control_basis',
+            'type': 'select',
+            'default_value': 'vpd',
+            'required': False,
+            'options_select': [
+                ('vpd',         lazy_gettext('VPD')),
+                ('temperature', lazy_gettext('Temperature first')),
+            ],
+            'name': lazy_gettext('Control Basis'),
+            'phrase': lazy_gettext(
+                'VPD: follows the VPD target directly. Temperature first: follows the '
+                'stage day/night temperature and turns the VPD target into a humidity '
+                'target at that temperature, so VPD is not chased with very hot or very '
+                'cold air; VPD then only acts as a limit. Without a stage temperature, '
+                'temperature is only kept inside the guide range.'
+            ),
+        },
         {
             'id': 'priority_vpd',
             'type': 'float',
@@ -1542,7 +1563,9 @@ _LAYOUT = [
     #   말하면 나머지 사람이 열어 보고 지나갈 수 있다.
     #
     (True, lazy_gettext('Advanced Settings'), [
-        (None, ['sensor_max_age',
+        # `control_basis` 는 시험 단계의 opt-in 이라 여기 둔다 — 현장 관찰 뒤
+        # 기본값을 바꿀지 정하면(계획서 4단계) 목표 쪽으로 올린다.
+        (None, ['sensor_max_age', 'control_basis',
                 'photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
                 'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled']),
         (lazy_gettext('Effect Calibration'),

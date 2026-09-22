@@ -84,6 +84,29 @@ The coordinator has **no end-date option of its own**. Whether growing continues
 plot's business. A date kept in the function could leave the facility stopped even after a
 new crop was planted.
 
+### Control basis — VPD direct / temperature first { #control-basis }
+
+The default is **VPD direct**: the VPD target is followed as described above, and
+temperature and humidity are guides. Setting **Control Basis** in the advanced settings to
+**Temperature first** changes a coordinator as follows.
+
+- **Temperature is the primary target.** It follows the stage day/night temperature (day and
+  night from the facility's sunrise and sunset).
+- **The humidity target comes from the VPD target** — the humidity that gives the VPD target
+  at that temperature (for example about 66 % for VPD 1.0 at 24 °C), cut to the guide range.
+- **VPD is a limit.** It is pushed back only when it falls 0.4 kPa below or rises 0.8 kPa
+  above the target.
+- Without a stage temperature, temperature is **not followed**, only kept inside the guide
+  range.
+
+Following VPD directly turns the same tolerance into ±9 % humidity at 8 °C but ±1.8 % at
+35 °C, and at low temperature it can demand a humidity that cannot be reached. Temperature
+first does not have that difference.
+
+Whichever is chosen, the other one is computed every cycle as "the commands it would have
+sent" and recorded (never used for control), so the two can be compared on the same
+facility.
+
 ### More than one plot in scope { #targets-reference-plot }
 
 Intercropping is normal, so the coordinator never guesses. With two or more plots in its
@@ -513,6 +536,7 @@ growers.
 | Field | Default | Description |
 |-------|---------|-------------|
 | Max Sensor Age (seconds) | 0 | Reject sensor readings older than this. If a sensor (Input) has its own max age set, that value takes precedence over this option. **0 means "not set", not "no limit"** — each sensor is then judged by its own update interval × 2 (at least 300 s). A fixed number shorter than a source's period can never be satisfied: an outdoor station publishing every 300 s under a 120 s limit never has a valid reading. |
+| Control Basis | VPD | `VPD`: follows the VPD target directly. `Temperature first`: follows the stage temperature and turns the VPD target into a humidity target ([Control basis](#control-basis)). |
 | Enable Photosynthesis-Oriented Control | Off | Each cycle, the Big-Leaf model identifies the current limiting factor (light / CO₂ / temperature / VPD) and raises that variable's priority. Requires a light sensor; the crop constants come from the plot's program. |
 | Reference Plot (optional) | (empty) | Which plot this coordinator follows when more than one is growing in its scope. Leave empty when there is only one. |
 | T Weight (0–1) | 0.6 | When the VPD target is split into auxiliary temperature and humidity targets, the share given to temperature (the rest goes to humidity). When VPD can be measured, VPD itself is what is controlled; this value only shapes the auxiliary targets — the never-cross lines and the reference for the wetting-mist lock. |

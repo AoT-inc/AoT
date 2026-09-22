@@ -324,6 +324,10 @@ class TargetVar:
     priority: float = 1.0
     unit: str = ''
     degraded: bool = False   # P5-3: NATURAL 권한으로 완화된 목표
+    # 경계 항 — 좇을 목표가 아니라 넘으면 끌어오는 선이다(`basis.py` 온도 우선
+    # 모드의 VPD 경계). `situation._decompose_vpd` 는 이것 때문에 온도·습도를
+    # 제약으로 강등하지 않는다.
+    limit: bool = False
 
 
 EnvTarget = Dict[str, TargetVar]

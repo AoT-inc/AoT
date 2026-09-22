@@ -30460,3 +30460,15 @@ msgstr "केवल निगरानी"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "हर उपकरण के लिए यह सीखता है कि वह अंतर्निहित मॉडल की तुलना में हर रीडिंग को वास्तव में कितना बदलता है। यह केवल उन चक्रों से सीखता है जिनमें सिर्फ़ वही उपकरण बदला हो। कई दिनों का डेटा चाहिए; तब तक मॉडल को जैसा है वैसा ही उपयोग किया जाता है।"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "नियंत्रण आधार"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "पहले तापमान"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: सीधे VPD लक्ष्य का पालन करता है। पहले तापमान: चरण के दिन/रात के तापमान का पालन करता है और VPD लक्ष्य को उस तापमान पर आर्द्रता लक्ष्य में बदलता है, ताकि बहुत गर्म या बहुत ठंडी हवा से VPD न साधा जाए; तब VPD केवल सीमा का काम करता है। चरण का तापमान न हो तो तापमान को केवल मार्गदर्शी सीमा में रखा जाता है।"

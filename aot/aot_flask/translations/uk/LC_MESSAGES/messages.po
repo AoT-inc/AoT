@@ -30643,3 +30643,15 @@ msgstr "лише спостерігати"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "Для кожного пристрою визначає, наскільки сильно він насправді змінює кожне показання порівняно з вбудованою моделлю. Навчається лише на циклах, у яких змінився тільки цей пристрій. Потрібні дані за кілька днів; доти модель використовується як є."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Основа керування"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Спершу температура"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: безпосередньо стежить за ціллю VPD. Спершу температура: стежить за денною/нічною температурою етапу й перетворює ціль VPD на ціль вологості за цієї температури, щоб не досягати VPD дуже гарячим або дуже холодним повітрям; VPD тоді слугує лише межею. Без температури етапу температуру лише утримують в орієнтовному діапазоні."

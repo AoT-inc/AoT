@@ -30569,3 +30569,15 @@ msgstr "yalnızca izleme"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "Her cihaz için, yerleşik modele kıyasla her ölçümü gerçekte ne kadar güçlü değiştirdiğini öğrenir. Yalnızca o cihazın tek başına değiştiği döngülerden öğrenir. Birkaç günlük veri gerekir; o zamana kadar model olduğu gibi kullanılır."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Kontrol esası"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Önce sıcaklık"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: VPD hedefini doğrudan izler. Önce sıcaklık: evrenin gündüz/gece sıcaklığını izler ve VPD hedefini o sıcaklıktaki bir nem hedefine çevirir; böylece VPD çok sıcak ya da çok soğuk havayla kovalanmaz, VPD yalnızca bir sınır olarak kalır. Evre sıcaklığı yoksa sıcaklık yalnızca rehber aralıkta tutulur."

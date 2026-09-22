@@ -30797,3 +30797,15 @@ msgstr "csak megfigyelni"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "Minden eszköznél megtanulja, hogy a beépített modellhez képest ténylegesen mennyire mozdítja el az egyes mért értékeket. Csak azokból a ciklusokból tanul, amelyekben kizárólag az adott eszköz változott. Több napnyi adat kell hozzá; addig a modellt változatlanul használja."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Szabályozási alap"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Hőmérséklet elsőként"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: közvetlenül a VPD-célt követi. Hőmérséklet elsőként: a szakasz nappali/éjszakai hőmérsékletét követi, a VPD-célt pedig az ezen a hőmérsékleten érvényes páratartalom-céllá alakítja, így nem nagyon meleg vagy nagyon hideg levegővel hajszolja a VPD-t; a VPD ekkor csak határként működik. Szakaszhőmérséklet nélkül a hőmérsékletet csak az irányadó tartományon belül tartja."

@@ -29503,3 +29503,15 @@ msgstr "僅觀察"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "針對每台設備，學習它相對於內建模型實際對各個讀數的影響有多大。只從僅該設備發生變化的週期中學習。需要幾天的資料；在此之前按原樣使用模型。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "控制基準"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "溫度優先"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD：直接追蹤 VPD 目標。溫度優先：追蹤階段的白天/夜間溫度，並把 VPD 目標換算為該溫度下的濕度目標，從而不會用過熱或過冷的空氣去追 VPD；此時 VPD 只作為界限。階段沒有溫度時，只把溫度保持在引導範圍內。"

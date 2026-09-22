@@ -31652,3 +31652,15 @@ msgstr "見るだけ"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "装置ごとに、内蔵モデルの予測と比べて実際に各値をどれだけ強く動かすかを学習します。その装置だけ指令が変わったサイクルからのみ学習します。数日分のデータが必要で、それまではモデルをそのまま使います。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "制御の基準"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "温度優先"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: VPDの目標をそのまま追います。温度優先: ステージの昼間・夜間温度を追い、VPDの目標をその温度での湿度目標に変えます — 極端に暑い空気や冷たい空気でVPDを合わせません。VPDは越えてはならない境界としてだけ使います。ステージに温度がなければ、温度は誘導範囲内に保つだけです。"

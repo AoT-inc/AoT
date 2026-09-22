@@ -30513,3 +30513,15 @@ msgstr "само посматра"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "Learn, for each device, how strongly it actually moves each reading compared with the built-in model. It learns only from cycles in which that device alone changed. Needs several days of data; until then the model is used as it is."
 msgstr "За сваки уређај учи колико он заиста помера свако очитавање у поређењу са уграђеним моделом. Учи само из циклуса у којима се променио само тај уређај. Потребни су подаци за неколико дана; до тада се модел користи онакав какав јесте."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Control Basis"
+msgstr "Основа управљања"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Temperature first"
+msgstr "Прво температура"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr "VPD: директно прати VPD циљ. Прво температура: прати дневну/ноћну температуру фазе и претвара VPD циљ у циљ влажности на тој температури, да се VPD не би јурио веома топлим или веома хладним ваздухом; VPD тада служи само као граница. Без температуре фазе, температура се само држи у оријентационом опсегу."
