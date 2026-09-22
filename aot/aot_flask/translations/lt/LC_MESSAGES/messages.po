@@ -30589,3 +30589,23 @@ msgstr "temperatūros"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "drėgmės"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Reguliuojama"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "abiem kryptimis"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "tik didinti"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "tik mažinti"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "tik stebėti"

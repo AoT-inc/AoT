@@ -292,11 +292,19 @@ values are still submitted and survive being toggled off and on.
 ### Working Hours { #time-control }
 
 Only the toggle is visible until it is switched on. This is a switch, not a schedule:
-outside the window, target tracking (L1–L3) stops **entirely** — heating and cooling
-and the temperature/humidity hard-limit responses included. The
-[Pre-Gate safety checks](#pre-gate-checked-before-l1l3) (rain, strong wind, heat and
-cold emergencies and so on) are still evaluated every cycle: if one fires, its forced
-commands are sent; otherwise each device's end behaviour is sent. The window is judged
+outside the window, target tracking (L1–L3) stops **entirely**, heating and cooling
+included. Protection continues:
+
+- The [Pre-Gate safety checks](#pre-gate-checked-before-l1l3) (rain, strong wind, heat and
+  cold emergencies and so on) are evaluated every cycle, and a gate that fires sends its
+  forced commands. The partial gate that closes only the windward vents in strong wind
+  works the same way.
+- The **protective side** of the temperature/humidity hard limits still acts. If the
+  indoor temperature drops below the minimum, for example, vents and thermal curtains
+  close and cooling is blocked. Hard limits never drive a device (they do not switch the
+  heater on), so this does not conflict with "stopped". Light limits are not used outside
+  the window, because the minimum-light response switches grow lights on.
+- Every device that received none of these protective commands gets its end behaviour. The window is judged
 in the facility's local time, falling back to server time when the facility's timezone
 is unknown.
 
@@ -574,6 +582,24 @@ looks at the combination and adapts on its own.
 | Only one direction exists (a heater but no cooler) | Normal. The device works when demand is in its direction and rests at 0 % otherwise. |
 | A device exists, but that axis cannot be measured | If another axis the device moves can be measured, it keeps controlling through that axis (for example a vent where humidity is unknown but temperature is measured). Only when **none** of the axes it moves can be measured does it **hold where it is**. Moving without knowing the deviation would use equipment without evidence, and closing or opening is a decision too. |
 | Indoor temperature or humidity cannot be measured | That axis leaves control entirely. A missing value is never invented as 0 — that would read as "0 °C indoors" and drive the heating to full. Leaf-wetting misting is locked while humidity is unknown. |
+
+The **Can adjust** line at the top of the function settings shows this combination as one
+word per axis (temperature, humidity, VPD, CO₂, light). The coordinator computes it from
+the equipment and the values measured in the latest cycle; hover over a word to see the
+devices that move that axis.
+
+| Shown | Meaning |
+|-------|---------|
+| both ways | Measured, with devices that raise and devices that lower it. |
+| raise only / lower only | Measured, with devices in one direction only. |
+| watch only | Measured, but nothing can move it (reference value). |
+| no sensor | A device moves this axis directly, but it cannot be measured. |
+
+An axis with neither devices nor a sensor is not shown. An axis that is moved only **as a
+side effect** — a vent lowering CO₂ a little, for example — is not shown either when it has
+no sensor. VPD takes devices on both temperature and humidity into account: humidifying
+mist lowers VPD, and ventilation raises it when the outside air is drier. For now this line
+is **display only**; control follows the rules in the table above.
 
 **The safety gates follow the same rule.** When indoor values are lost, the gate names
 that fact on the screen and in the log, but **creates no forced command.** Driving

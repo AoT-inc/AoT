@@ -119,6 +119,11 @@ def derive_authority(profiles) -> Dict[str, str]:
     return result
 
 
+def kind_authority(kind) -> Dict[str, str]:
+    """이 장치 종류가 올리는 축×방향 등급. 모르는 종류는 빈 dict(영향 없음)."""
+    return dict(_KIND_AUTHORITY.get(kind, {}))
+
+
 def authority_summary(authority: Dict[str, str]) -> str:
     """One-line summary string for logging."""
     parts = []

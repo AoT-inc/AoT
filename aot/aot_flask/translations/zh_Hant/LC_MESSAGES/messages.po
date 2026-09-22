@@ -29479,3 +29479,23 @@ msgstr "溫度"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "濕度"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "可調節"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "雙向"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "只能升高"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "只能降低"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "僅觀察"

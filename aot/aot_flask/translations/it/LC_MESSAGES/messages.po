@@ -30887,3 +30887,23 @@ msgstr "temperatura"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "umidità"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Regolabile"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "in entrambe le direzioni"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "solo aumentare"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "solo diminuire"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "solo osservare"

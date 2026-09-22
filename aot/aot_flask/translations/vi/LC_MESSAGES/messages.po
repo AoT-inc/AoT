@@ -30644,3 +30644,23 @@ msgstr "nhiệt độ"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "độ ẩm"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Điều chỉnh được"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "cả hai chiều"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "chỉ tăng"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "chỉ giảm"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "chỉ theo dõi"

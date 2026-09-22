@@ -483,6 +483,16 @@ class ProfileLoaderMixin:
                 # 조용히 안 걸리고, 사용자는 화면에서 껐는데 왜 도는지 알 수
                 # 없다(이 옵션을 만들 때 실제로 그 상태를 한 번 만들었다).
                 disabled_ids = parse_disabled_actuators(self.disabled_actuators)
+                # 기능 상태(`_refresh_capability`)가 "사람이 뺀 장치" 와 이름을
+                # 말할 수 있게 걸러지기 **전에** 적어 둔다.
+                self._actuator_names = {
+                    ar.get('output_uuid'): (ar.get('output_name') or '')
+                    for ar in actuators_list if ar.get('output_uuid')}
+                self._excluded_actuators = [
+                    {'name': ar.get('output_name') or (ar.get('output_uuid') or '')[:8],
+                     'kind': ar.get('kind'), 'reason': 'disabled'}
+                    for ar in actuators_list
+                    if (ar.get('output_uuid') or '') in disabled_ids]
                 if disabled_ids:
                     n_before_dis = len(actuators_list)
                     actuators_list = [
@@ -1173,6 +1183,8 @@ class ProfileLoaderMixin:
                 if facility is None:
                     return
                 state = dict(facility.commissioning_state or {})
+                # 기능 상태가 점검 판정을 근거로 싣는다(읽기만, 1단계).
+                self._commissioning_state = dict(state)
                 if not state.get('pending_anchors'):
                     # Still apply sensor_suspect flags (idempotent, fast)
                     self._apply_sensor_suspect_flags(state.get('commissioning_flags', {}))

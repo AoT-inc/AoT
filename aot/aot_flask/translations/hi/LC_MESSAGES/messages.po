@@ -30436,3 +30436,23 @@ msgstr "तापमान"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "आर्द्रता"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "समायोज्य"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "दोनों दिशाओं में"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "केवल बढ़ाना"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "केवल घटाना"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "केवल निगरानी"

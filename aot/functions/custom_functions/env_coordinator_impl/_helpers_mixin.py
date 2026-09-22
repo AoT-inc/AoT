@@ -968,8 +968,14 @@ class HelpersMixin:
                 suggestions=[],
             )
 
-    def _apply_end_behaviors(self) -> None:
-        """Send end-of-window commands to each actuator based on its end_behavior setting."""
+    def _apply_end_behaviors(self, skip_ids=None) -> None:
+        """Send end-of-window commands to each actuator based on its end_behavior setting.
+
+        `skip_ids` 의 장치는 건너뛴다 — 같은 사이클에 보호 명령(하드 한계·부분
+        게이트, `_run_outside_window`)을 받은 장치다. 둘이 겨루면 나중에 간 쪽이
+        이기는데, 보호가 이겨야 한다.
+        """
+        skip_ids = set(skip_ids or ())
         actions = db_retrieve_table_daemon(Actions).filter(
             Actions.function_id == self.unique_id,
             Actions.action_type == 'env_actuator',
@@ -986,6 +992,8 @@ class HelpersMixin:
                 continue
             parts      = str(output_val).split(',')
             device_id  = parts[0].strip()
+            if device_id in skip_ids:
+                continue
             channel_id = parts[1].strip() if len(parts) > 1 else None
             ch_obj = 0
             if channel_id:

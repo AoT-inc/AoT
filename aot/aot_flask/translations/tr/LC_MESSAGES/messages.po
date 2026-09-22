@@ -30545,3 +30545,23 @@ msgstr "sıcaklık"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "nem"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Ayarlanabilir"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "iki yönde"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "yalnızca artırma"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "yalnızca azaltma"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "yalnızca izleme"

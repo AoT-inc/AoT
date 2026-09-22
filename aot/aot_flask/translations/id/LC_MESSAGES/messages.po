@@ -30211,3 +30211,23 @@ msgstr "suhu"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "kelembapan"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Dapat diatur"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "dua arah"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "hanya menaikkan"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "hanya menurunkan"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "hanya memantau"

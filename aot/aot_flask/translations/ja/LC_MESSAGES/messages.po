@@ -31628,3 +31628,23 @@ msgstr "%(what)sの誘導範囲(%(guide)s)がハード閾値(%(hard)s)の外に�
 #, python-format
 msgid "The value you set for %(opt)s is not being used: it applies only when %(cond)s is set to the matching option. Change that first, or this value has no effect."
 msgstr "使われていない値 — %(opt)s。%(cond)s の設定が対応する項目のときだけ適用されます。そちらを先に変更しないと、この値は効果がありません。"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "調整可能"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "両方向"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "上げるのみ"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "下げるのみ"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "見るだけ"

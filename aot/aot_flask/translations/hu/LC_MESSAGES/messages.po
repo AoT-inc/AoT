@@ -30773,3 +30773,23 @@ msgstr "hőmérséklet"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "páratartalom"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Szabályozható"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "mindkét irányba"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "csak emelni"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "csak csökkenteni"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "csak megfigyelni"

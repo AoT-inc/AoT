@@ -18,9 +18,9 @@ import pytest
 from aot.functions.custom_functions.env_coordinator import CustomModule
 
 
-def _gate(triggered, forced=None, mask=0):
+def _gate(triggered, forced=None, mask=0, partial=False):
     return SimpleNamespace(triggered=triggered, forced_commands=forced or {},
-                           gate_mask=mask, partial=False)
+                           gate_mask=mask, partial=partial)
 
 
 @pytest.fixture()
@@ -39,6 +39,8 @@ def coord():
     c._pre_gate = MagicMock()
     c._act_on_triggered_gate = MagicMock()
     c._apply_end_behaviors = MagicMock()
+    c._check_hard_constraints = MagicMock()
+    c._dispatch = MagicMock()
     return c
 
 
@@ -60,7 +62,8 @@ def test_end_behavior_when_gate_quiet(coord):
 
     coord._pre_gate.evaluate.assert_called_once()
     coord._act_on_triggered_gate.assert_not_called()
-    coord._apply_end_behaviors.assert_called_once()
+    coord._apply_end_behaviors.assert_called_once_with(skip_ids=set())
+    coord._dispatch.assert_not_called()
 
 
 def test_gate_still_evaluated_without_indoor_values(coord):
@@ -101,3 +104,55 @@ def test_time_window_uses_facility_local_time():
     assert c._in_time_window() is True
     c._facility_local_now.return_value = datetime(2026, 9, 22, 21, 0, tzinfo=kst)
     assert c._in_time_window() is False
+
+
+def _profile(aid, kind):
+    return SimpleNamespace(actuator_id=aid, kind=kind)
+
+
+def test_temp_min_breach_closes_vents_outside_window(coord):
+    """20:00 에 창이 끝나고 20:10 에 실내가 temp_min 아래로 — 창은 닫혀야 한다.
+
+    하드 한계는 금지·예방만 한다(난방기를 켜지는 않는다) — 창 닫기·커튼 치기·
+    냉방 금지. 그 장치들은 종료 동작 대신 보호 명령을 받는다.
+    """
+    coord._profiles = [_profile('v1', 'opening'), _profile('h1', 'heater'),
+                       _profile('c1', 'curtain')]
+    coord._pre_gate.evaluate.return_value = _gate(False)
+
+    def breach(internal):
+        internal['_force_heat'] = True
+    coord._check_hard_constraints.side_effect = breach
+
+    coord._run_cycle(600.0)
+
+    sent = coord._dispatch.call_args[0][0]
+    assert sent['v1']['value'] == 0.0 and sent['c1']['value'] == 0.0
+    assert 'h1' not in sent, '하드 한계는 구동하지 않는다 — 난방은 켜지 않는다'
+    coord._apply_end_behaviors.assert_called_once_with(skip_ids={'v1', 'c1'})
+
+
+def test_partial_gate_applies_outside_window(coord):
+    """풍향 차등 폐쇄는 triggered 가 아니라서 예전엔 시간대 밖에서 빠졌다."""
+    coord._pre_gate.evaluate.return_value = _gate(
+        False, {'v1': {'value': 0.0, 'reason': 21}}, partial=True)
+
+    coord._run_cycle(600.0)
+
+    assert coord._dispatch.call_args[0][0] == {'v1': {'value': 0.0, 'reason': 21}}
+    coord._apply_end_behaviors.assert_called_once_with(skip_ids={'v1'})
+
+
+def test_light_limits_do_not_run_outside_window(coord):
+    """light_min 은 보광등을 켜는 구동이다 — 밤에 불을 켜면 안 된다."""
+    coord._profiles = [_profile('L1', 'lighting')]
+    coord._pre_gate.evaluate.return_value = _gate(False)
+
+    def breach(internal):
+        internal['_force_light_min'] = True
+        internal['_light_below_min'] = True
+    coord._check_hard_constraints.side_effect = breach
+
+    coord._run_cycle(600.0)
+
+    coord._dispatch.assert_not_called()

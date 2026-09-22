@@ -30461,3 +30461,23 @@ msgstr "temperatur"
 #: functions/custom_functions/env_coordinator.py
 msgid "humidity"
 msgstr "luftfuktighet"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Can adjust"
+msgstr "Justerbart"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "both ways"
+msgstr "åt båda hållen"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "raise only"
+msgstr "bara höja"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "lower only"
+msgstr "bara sänka"
+
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "watch only"
+msgstr "bara övervaka"

@@ -1013,8 +1013,53 @@ class CycleMixin:
         #   이 사이클의 것이 아니므로 싣지 않는다 — 낡은 값을 지금 값으로
         #   보이게 하는 것이 침묵보다 나쁘다. 화면은 `gate_only` 를 보고
         #   "환경 데이터는 이 사이클의 것이 아님" 을 말한다.
+        self._refresh_capability(internal)
         self._write_gate_only_summary(gate_result, gate_env, now_ts,
                                       internal=internal)
+
+    def _refresh_capability(self, internal, situation=None,
+                            authority=None) -> None:
+        """축별 기능 상태를 다시 계산해 `_last_capability` 에 둔다(1단계).
+
+        ⚠ **제어는 이 값을 읽지 않는다** — 요약·로그·화면 전용이다
+          (`env_control/capability.py` 머리말). 실패해도 사이클을 죽이지 않는다.
+
+        상태가 **바뀔 때만** 한 줄 남긴다(`authority changed` 와 같은 규칙).
+        `situation` 이 있으면(정상 사이클) 기존 판정과 갈리는 축을 함께 남긴다 —
+        2단계에서 제어가 이 값을 읽기 전에 모으는 그림자 비교다.
+        """
+        try:
+            from aot.functions.utils.env_control.capability import (
+                assess_capability, capability_signature, compare_with_legacy,
+                measured_axes)
+            cap = assess_capability(
+                self._profiles,
+                measured=measured_axes(internal),
+                commissioning_state=getattr(self, '_commissioning_state', None),
+                excluded=getattr(self, '_excluded_actuators', None),
+                names=getattr(self, '_actuator_names', None))
+            self._last_capability = cap
+            sig = capability_signature(cap)
+            if sig != getattr(self, '_last_capability_sig', None):
+                # ⚠ error 등급 — 기본 로거가 ERROR 라 info 는 안 남는다.
+                #   바뀔 때만이라 시끄럽지 않다.
+                self.logger.error('EnvCoordinator 축별 기능 상태: %s', sig)
+                self._last_capability_sig = sig
+            if situation is not None:
+                ctx = situation.context or {}
+                diffs = compare_with_legacy(
+                    cap, authority or getattr(situation, 'authority', {}) or {},
+                    ctx.get('unmeasured'),
+                    [v for v in (situation.target or {}) if not v.startswith('_')])
+                key = '|'.join(diffs)
+                if key != getattr(self, '_last_capability_diff', None):
+                    if diffs:
+                        self.logger.error(
+                            'EnvCoordinator 기능 상태가 기존 판정과 다름(제어는 기존 판정대로): %s',
+                            '; '.join(diffs))
+                    self._last_capability_diff = key
+        except Exception:
+            self.logger.debug('EnvCoordinator: 기능 상태 계산 실패', exc_info=True)
 
     def _intentional_stop(self) -> 'str | None':
         """제어를 **일부러** 쉬는 중인가 — 그렇다면 사유, 아니면 None.
@@ -1056,7 +1101,7 @@ class CycleMixin:
         return None
 
     def _run_outside_window(self, max_age, cycle_sec: float) -> None:
-        """운전 시간대 밖 사이클 — 사전 안전 게이트만 보고, 아니면 종료 동작.
+        """운전 시간대 밖 사이클 — 안전 게이트·하드 한계(막는 쪽)만, 나머지는 종료 동작.
 
         시간대 밖에는 목표 추종(L1~L3)을 통째로 쉰다. 그러나 **비·강풍·폭염·
         한파는 시간을 가리지 않는다.** 예전에는 시간대 판정이 게이트 평가보다
@@ -1091,7 +1136,38 @@ class CycleMixin:
             self._act_on_triggered_gate(gate_result, gate_env, cycle_sec,
                                         time.time(), internal)
             return
-        self._apply_end_behaviors()
+
+        # ── 온·습도 하드 한계의 **막는 쪽**과 부분 게이트 ──────────────────
+        # 시간대 밖에도 "선" 은 선이다. 하드 한계 대응은 원래 구동하지 않고
+        # 금지·예방만 한다(`apply_temp_humid_threshold_overrides` — 난방기 0,
+        # 창·보온커튼 닫기 등). 그래서 여기서 돌려도 "시간대 밖 = 목표 추종
+        # 정지" 와 부딪히지 않는다. 예전에는 20:00 에 창이 끝난 뒤 20:10 에
+        # 실내가 temp_min 아래로 떨어져도 창이 종료 동작 그대로(예: 열린 채)
+        # 남았다.
+        #
+        # 부분 게이트(풍향 차등 폐쇄)도 같다 — `triggered` 가 아니라서 위에서
+        # 걸러지지 않고 빠졌다. 게이트가 마지막이라 최우선이다(정상 사이클의
+        # `apply_threshold_and_gate_overrides` 와 같은 순서).
+        #
+        # ⚠ 광량 한계는 넣지 않는다 — `light_min` 은 보광등을 **켜는** 구동이라
+        #   밤에 불을 켠다.
+        final_cmds: dict = {}
+        try:
+            if internal:
+                self._check_hard_constraints(internal)
+                apply_temp_humid_threshold_overrides(
+                    internal, self._profiles, final_cmds)
+            if gate_result is not None and gate_result.partial:
+                final_cmds.update(gate_result.forced_commands or {})
+        except Exception as exc:
+            self.logger.error(
+                'EnvCoordinator: 운전 시간대 밖 한계 판정 실패 — '
+                '종료 동작만 보냅니다: %s', exc)
+            final_cmds = {}
+        # 같은 장치에 종료 동작과 보호 명령이 겨루지 않게 — 보호가 이긴다.
+        self._apply_end_behaviors(skip_ids=set(final_cmds))
+        if final_cmds:
+            self._dispatch(final_cmds, cycle_sec, emergency=True)
 
     def _run_cycle(self, cycle_sec: float) -> None:
         uid     = self.unique_id
@@ -1308,6 +1384,7 @@ class CycleMixin:
         # 한다 — 새 단계를 인라인으로 붙이면 727줄 시절로 돌아간다.
         self._warn_missing_measurements(situation)
         self._judge_fog_humidity_block(situation, internal)
+        self._refresh_capability(internal, situation=situation, authority=authority)
 
         # 개구부 파킹 관련 옵션 — coordinator 가 ctx 에서 읽는다. ctx 경유인
         # 이유는 coordinate() 시그니처를 늘리지 않기 위해서다(vent_open_frac 과
@@ -2285,6 +2362,7 @@ class CycleMixin:
                     'reasons': reasons[:4],
                 },
                 'photo': self._build_photo_snapshot(internal),
+                'capability': getattr(self, '_last_capability', None),
                 # ⚠ **강제된 장치만 싣지 말 것.** 강우 게이트는 개구부와 분무만
                 # 건드리므로, 그것만 실으면 냉난방기가 목록에서 통째로
                 # 사라진다 — 사용자는 "그 장치는 어디 갔나" 를 묻게 된다
@@ -2469,6 +2547,8 @@ class CycleMixin:
             'targets': {k: _r(tv.value) for k, tv in (env_target or {}).items()},
             # 이 사이클이 쓴 단계 온·습도 가이드 범위(`_apply_stage_guide`). None 이면 시설 guide.
             'stage_guide': getattr(self, '_last_stage_guide', None),
+            # 축별 기능 상태(`_refresh_capability`, 1단계 — 표시 전용).
+            'capability': getattr(self, '_last_capability', None),
             'vent': {
                 'effective_area_m2': _r(vent_eff),
                 'total_area_m2':     _r(vent_total),
