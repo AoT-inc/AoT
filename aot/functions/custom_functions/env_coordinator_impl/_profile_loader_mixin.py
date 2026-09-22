@@ -795,12 +795,73 @@ class ProfileLoaderMixin:
             paired_outputs = []
             KIND_TO_PROFILE_KIND = {}
 
+        # ── 다른 시설 코디네이터가 이미 맡은 액추에이터 제외 ───────────────────
+        # 위 쿼리는 시설 구분 없이 DB 전체의 actuator_paired 출력을 담는다 —
+        # "우리 시설이 아직 등록 안 한 장치"만 노릴 셈이었지만, 실제로는
+        # **다른 시설의 코디네이터가 이미 자기 것으로 삼은 장치**까지 그렇게
+        # 읽는다. 데몬은 모든 코디네이터를 한 프로세스에서 돌리므로, 그 결과
+        # 이 코디네이터가 남의 시설 개구부에 매 사이클 실제 개도 명령을
+        # 내보냈다(실측 2026-09-22: bf1874fb 가 7753aa42 소유 側面窓 左/右·
+        # 天窓·측창 좌/우에 dispatch. 그림자 MPC 요약에는 `_actuator_names`
+        # 우리 시설 actuators_resolved 에서만 채움 에 없어 name=None 으로
+        # 찍혀 발견됨).
+        #
+        # "누가 이 장치를 쓰는가" 는 geo_binding/GeoShape 를 직접 다시 풀지
+        # 않는다 — 같은 지도에 시설이 여럿 겹쳐 있고(예: 맵 하나에 시설 4개),
+        # 레거시 facility.fittings/actuators 폴백까지 섞여 있어 여기서
+        # 다시 판정하면 또 다른 방식으로 틀린다. 대신 **같은 판정을 이미
+        # 하는 곳**(`get_facility_integration` 의 `actuators_resolved`) 을
+        # 다른 시설 코디네이터마다 그대로 불러 "이미 임자가 있다" 는 사실만
+        # 가져온다 — `_bays_claimed_by_siblings` 와 같은 형제 조회 방식이다.
+        foreign_paired_ids: set = set()
+        if paired_outputs:
+            try:
+                from aot.databases.models import CustomController
+                from aot.aot_flask.geo.facility_integration import get_facility_integration
+                cand_ids = {o.unique_id for o in paired_outputs}
+                mine = getattr(self, 'unique_id', None)
+                sibling_facilities: set = set()
+                rows = db_retrieve_table_daemon(CustomController)
+                for row in (rows.all() if hasattr(rows, 'all') else rows):
+                    if row.unique_id == mine or (row.device or '') != 'env_coordinator':
+                        continue
+                    try:
+                        opts = json.loads(row.custom_options or '{}')
+                    except Exception:
+                        continue
+                    linked = (opts.get('geo_facility_id')
+                              or opts.get('geo_facility_id_device_id') or '')
+                    if linked and linked != facility_uuid:
+                        sibling_facilities.add(linked)
+                for sib_uuid in sibling_facilities:
+                    try:
+                        sib_integ, sib_err = get_facility_integration(sib_uuid)
+                    except Exception:
+                        sib_integ, sib_err = None, 'exception'
+                    if sib_err or not sib_integ:
+                        continue
+                    for ar in (sib_integ.get('actuators_resolved') or []):
+                        oid = ar.get('output_uuid')
+                        if oid in cand_ids:
+                            foreign_paired_ids.add(oid)
+                if foreign_paired_ids:
+                    self.logger.info(
+                        '_reload_profiles: 다른 시설 코디네이터 소유 '
+                        'actuator_paired 출력 %d개 자동 등록에서 제외',
+                        len(foreign_paired_ids))
+            except Exception:
+                self.logger.debug(
+                    'actuator_paired 시설 소속 판정 실패 — 필터 없이 진행',
+                    exc_info=True)
+
         for out in paired_outputs:
             out_uuid = out.unique_id
             if out_uuid in by_id:
                 continue
             # bay_scope 로 제외된 시설 액추에이터의 자동 재등록 방지
             if out_uuid in bay_excluded_ids:
+                continue
+            if out_uuid in foreign_paired_ids:
                 continue
 
             try:

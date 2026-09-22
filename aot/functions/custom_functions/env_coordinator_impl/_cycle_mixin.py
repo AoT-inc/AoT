@@ -1218,6 +1218,8 @@ class CycleMixin:
                 'channels': {k: round(v, 1) for k, v in res.channel_cmds.items()},
                 # PI 와 같은 판정으로 막힌 채널(D 단계) — {채널: 상한}
                 'capped': dict(getattr(self, '_last_mpc_caps', None) or {}),
+                # 외기 예측 출처(F 단계) — temp: forecast|persistence, solar: clear_sky|persistence
+                'ext': dict(getattr(self, '_last_mpc_ext_info', None) or {}),
                 'end': (None if end is None else
                         {'T': round(end[0], 2), 'RH': round(end[1], 1)}),
                 'params_n_updates': int(getattr(self._greybox_shadow.params,
@@ -3111,11 +3113,13 @@ class CycleMixin:
         return vent_capacities(getattr(self, '_profiles', None) or [])
 
     def _build_mpc_ext_seq(self, situation: SituationReport, horizon: int) -> list[dict]:
-        """MPC 예측용 외기(ext) 시퀀스. v1: 현재 외기를 지평 동안 유지(persistence).
+        """MPC 예측용 외기 시퀀스(F 단계) — `env_control/mpc_ext.py` 참조.
 
-        예보 기반 곡선 enrichment 는 후속(여기만 교체하면 됨). 짧은 지평(≈수분)에서는
-        persistence 가 합리적 근사다.
+        온·습도는 예보의 **변화량**, 일사는 맑은 날 곡선 × 지금의 맑음 정도. 쓸 수 있는
+        것이 없으면 지금 값 유지(예전 동작). 무엇을 썼는지는 `_last_mpc_ext_info`.
         """
+        from aot.functions.utils.env_control.mpc_ext import (
+            K_MIN_CLEAR, build_ext_seq, kma_curve)
         ctx = situation.context or {}
         base = {
             'T_ext':   ctx.get('T_ext',   20.0),
@@ -3124,7 +3128,53 @@ class CycleMixin:
             'solar':   ctx.get('solar',   0.0) or 0.0,
             'wind':    ctx.get('wind',    0.0) or 0.0,
         }
-        return [dict(base) for _ in range(max(1, horizon))]
+        cycle_sec = float(ctx.get('cycle_sec', 60.0) or 60.0)
+        now = time.time()
+        curve = self._mpc_forecast_curve(now, kma_curve)
+        cs = None
+        try:
+            from datetime import datetime as _dt, timezone as _tz
+            from aot.utils.solar import _resolve_location, clear_sky_irradiance
+            lat, lon = _resolve_location(target_id=self.unique_id)
+            if lat is not None and lon is not None:
+                def cs(t, _lat=lat, _lon=lon):
+                    return clear_sky_irradiance(
+                        at=_dt.fromtimestamp(t, tz=_tz.utc), latitude=_lat, longitude=_lon)
+        except Exception:
+            self.logger.debug('MPC 외기: 시설 좌표 해석 실패 — 일사는 지금 값 유지',
+                              exc_info=True)
+        seq, info = build_ext_seq(base, horizon, cycle_sec, now, curve=curve,
+                                  clear_sky=cs,
+                                  k_memory=getattr(self, '_mpc_k_mem', None))
+        # 맑음 정도는 해가 충분히 높을 때 잰 것만 기억한다(새벽에 쓸 값).
+        try:
+            if info.get('k') is not None and cs is not None and (cs(now) or 0.0) >= K_MIN_CLEAR:
+                self._mpc_k_mem = info['k']
+        except Exception:
+            pass
+        self._last_mpc_ext_info = info
+        return seq
+
+    def _mpc_forecast_curve(self, now: float, kma_curve):
+        """기상청 단기예보 곡선 — **이 시설 시간대가 예보 파일과 같을 때만**.
+
+        `forecast.json` 은 시스템에 하나이고 좌표가 없다. 한 서버가 여러 나라의 시설을
+        돌릴 수 있어서, 시간대가 다른 시설(쿠마모토 등)에 서울 예보를 쓰지 않는다.
+        시설 시간대를 모르면 쓰지 않는다.
+        """
+        try:
+            from aot.functions.utils.env_control.forecast_feedforward import _load_forecast
+            data = _load_forecast() or {}
+            fac_tz = self._get_facility_tz()
+            if not data or fac_tz is None:
+                return None
+            fac_name = getattr(fac_tz, 'zone', None) or str(fac_tz)
+            if fac_name != str(data.get('tz') or 'Asia/Seoul'):
+                return None
+            return kma_curve(data, now)
+        except Exception:
+            self.logger.debug('MPC 외기: 예보 읽기 실패 — 지금 값 유지', exc_info=True)
+            return None
 
     def _run_mpc(
             self, situation: SituationReport,
