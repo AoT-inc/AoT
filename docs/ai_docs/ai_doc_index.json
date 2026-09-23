@@ -159,6 +159,8 @@
     "Extended In-app Assistant Tools",
     "Per-Device AI Inclusion Toggle",
     "Safety & Approval Model",
+    "AI Records",
+    "Call quality",
     "AI Knowledge",
     "Where knowledge comes from",
     "Reviewing what the AI wrote",
@@ -177,6 +179,7 @@
     "What the coordinator reads each cycle",
     "When there is no plot",
     "Day/night temperature and humidity guide the ranges",
+    "Control basis — VPD direct / temperature first",
     "More than one plot in scope",
     "VPD (Vapor Pressure Deficit)",
     "env_coordinator Control Layers",
@@ -197,6 +200,7 @@
     "Advanced Settings",
     "Registering Actuators",
     "Automatic conversion by device type",
+    "Axes without a measurement, axes without a device",
     "Safe default",
     "Methods (Setpoint Curves)",
     "Safety Gates",
@@ -1151,6 +1155,7 @@
     "Where the files are"
   ],
   "Security.md": [
+    "Cookies behind a reverse proxy (Docker)",
     "Password requirements",
     "Account lockout",
     "Two-factor authentication (TOTP)",

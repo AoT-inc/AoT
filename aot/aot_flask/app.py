@@ -821,12 +821,30 @@ def register_extensions(app, run_scheduler=False):
     # 무기한 토큰은 유출 시 영구히 유효하다는 문제가 있다.)
     app.config['WTF_CSRF_TIME_LIMIT'] = 12 * 60 * 60
 
-    # Disable force_https and adjust cookies for Docker environment
+    # Disable force_https and adjust cookies for Docker environment — unless
+    # AOT_BEHIND_TLS=1 says otherwise.
+    #
+    # 이 컨테이너가 nginx proxy manager 같은 리버스 프록시 뒤에서 https 로만
+    # 서비스되는 설치본(ai.aotinc.co.kr, NAS 데모 등)이면 AOT_BEHIND_TLS=1 을
+    # 준다. 기본은 꺼짐 — Docker 설치본 중에는 LAN에서 http 로 직접 붙는 쪽
+    # (lite 장비 등)이 더 많고, 그런 곳에서 켜면 브라우저가 Secure 쿠키를
+    # http 로는 돌려보내지 않아 로그인이 그 자리에서 깨진다.
+    #
+    # 앞단 ProxyFix(x_proto=1, 위 참고)가 리버스 프록시의 X-Forwarded-Proto 를
+    # request.is_secure 로 풀어 주므로, 프록시가 그 헤더를 보내는 한 아래
+    # WTF_CSRF_SSL_STRICT(Referer 가 https 인지 검사)도 정상 동작한다. 프록시가
+    # 그 헤더를 안 보내면 모든 요청이 "http로 온 것"처럼 보여 세션이 저장되지
+    # 않거나 CSRF 검증이 계속 실패한다 — 배포 전 로그인·폼 제출로 반드시 확인.
     from aot.config import DOCKER_CONTAINER
-    if DOCKER_CONTAINER:
+    behind_tls = os.environ.get('AOT_BEHIND_TLS') == '1'
+    if DOCKER_CONTAINER and not behind_tls:
         force_https = False
         app.config['SESSION_COOKIE_SECURE'] = False
         app.config['WTF_CSRF_SSL_STRICT'] = False
+        app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    elif behind_tls:
+        app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['WTF_CSRF_SSL_STRICT'] = True
         app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
     # "90일간 유지"(remember_token)에도 세션 쿠키와 같은 Secure 를 적용한다.
@@ -837,7 +855,11 @@ def register_extensions(app, run_scheduler=False):
     # 자격증명이 가장 약하게 보호되던 셈**이다. 90일짜리 토큰이 평문 HTTP 요청
     # 한 번(주소창에 http:// 를 치거나, 혼합 콘텐츠, 다운그레이드 유도)에 그대로
     # 실려 나간다. 세션 쿠키는 Secure 라 안 나가는데 이쪽만 나간다.
-    app.config['REMEMBER_COOKIE_SECURE'] = force_https
+    #
+    # behind_tls 는 force_https(admin 의 "Force HTTPS" 설정)와 별개로도 켤 수
+    # 있어야 한다 — 관리자가 그 체크박스를 안 켜 놨어도, https 전용 설치본이면
+    # remember 쿠키는 항상 Secure 여야 한다.
+    app.config['REMEMBER_COOKIE_SECURE'] = force_https or behind_tls
 
     # force_https above already accounts for the user's Misc.force_https
     # setting (General Settings → "Force HTTPS") and the Docker override —
