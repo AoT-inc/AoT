@@ -13695,28 +13695,32 @@ msgstr ""
 "を入力してください。"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
-msgstr "PWM最小デューティサイクル % - 最小出力レベルを設定します。0から100の間の値を入力してください"
+msgstr "PWM最小デューティサイクル %% - 最小出力レベルを設定します。0から100の間の値を入力してください"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
-msgstr "PWM最大デューティサイクル % - 最大出力レベルを設定します。0から100の間の値を入力してください"
+msgstr "PWM最大デューティサイクル %% - 最大出力レベルを設定します。0から100の間の値を入力してください"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
-msgstr "PWM最小デューティサイクル % - 最小出力レベルを設定します。許容範囲: 0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
+msgstr "PWM最小デューティサイクル %% - 最小出力レベルを設定します。許容範囲: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
-msgstr "PWM最大デューティサイクル % - 最大出力レベルを設定します。許容範囲: 0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
+msgstr "PWM最大デューティサイクル %% - 最大出力レベルを設定します。許容範囲: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""
@@ -19873,6 +19877,7 @@ msgstr "不明な関数タイプ: '{}'"
 msgid "Function not found"
 msgstr "関数が見つかりません"
 
+#: aot_flask/templates/pages/ai/ai_manage.html:236
 #: aot_flask/utils/utils_function_status.py:94
 #, python-format
 msgid "%(n)s s"
@@ -31664,3 +31669,189 @@ msgstr "温度優先"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: VPDの目標をそのまま追います。温度優先: ステージの昼間・夜間温度を追い、VPDの目標をその温度での湿度目標に変えます — 極端に暑い空気や冷たい空気でVPDを合わせません。VPDは越えてはならない境界としてだけ使います。ステージに温度がなければ、温度は誘導範囲内に保つだけです。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:238
+msgid "90th percentile time"
+msgstr "90%%時間"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:138
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "呼び出しのまとまりとは、1つの会話の中で90秒未満の間隔で続いた呼び出しのことです。サーバーには質問の区切りが見えないため、まとまりは1つの質問の近似にすぎません。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:136
+msgid "About these numbers"
+msgstr "この数字について"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:122
+msgid "All connections"
+msgstr "すべての接続"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:212
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "この期間の直近%(n)s件に基づいています。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:223
+msgid "Bundles that start by looking up tools or targets"
+msgstr "ツールや対象の検索から始まったまとまり"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:220
+msgid "Bundles with 10 or more calls"
+msgstr "呼び出し10回以上のまとまり"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:133
+msgid "By tool drawer"
+msgstr "ツールのドロワー別"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:217
+msgid "Call bundles"
+msgstr "呼び出しのまとまり"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:43
+msgid "Call quality"
+msgstr "呼び出し品質"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:236
+msgid "Calls"
+msgstr "呼び出し数"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:215
+msgid "Calls measured"
+msgstr "計測された呼び出し"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:219
+msgid "Calls per bundle, 90th percentile"
+msgstr "まとまりあたりの呼び出し数、90%%"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:218
+msgid "Calls per bundle, median"
+msgstr "まとまりあたりの呼び出し数、中央値"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:141
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "この計測を加える前に記録された呼び出しは除かれます。この記録はこのシステムにだけ残り、どこにも送られません。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:233
+msgid "Calls that asked which target was meant"
+msgstr "どの対象かを聞き返した呼び出し"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:231
+msgid "Calls waiting for approval"
+msgstr "承認待ちの呼び出し"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:249
+msgid "Device definitions"
+msgstr "デバイス定義"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:235
+msgid "Drawer"
+msgstr "ドロワー"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:240
+msgid "Empty"
+msgstr "空の結果"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:232
+msgid "Empty results (estimate)"
+msgstr "空の結果(推定)"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:140
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "空の結果は、各応答に含まれる項目数から推定した値です。応答サイズには画像を含めません。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:229
+msgid "Failed calls"
+msgstr "失敗した呼び出し"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:111
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "接続されたAIがツールをどのように使ってきたかを示します。1つの依頼に何回呼び出しがかかるか、どれだけ待つか、呼び出しがどのくらいの頻度で失敗したり空の結果で返ったりするか。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:115
+msgid "Last 24 hours"
+msgstr "直近24時間"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:222
+msgid "Longest run of the same tool"
+msgstr "同じツールの最長の連続"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:228
+msgid "Lookup time, 90th percentile"
+msgstr "照会時間、90%%"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:227
+msgid "Lookup time, median"
+msgstr "照会時間、中央値"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:124
+msgid "MCP on this computer"
+msgstr "このコンピューター上のMCP"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:123
+msgid "MCP over HTTP"
+msgstr "HTTP経由のMCP"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:248
+msgid "Map and zones"
+msgstr "地図とゾーン"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:237
+msgid "Median time"
+msgstr "中央値の時間"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:213
+msgid "No measured calls in this period yet."
+msgstr "この期間に計測された呼び出しはまだありません。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:214
+msgid "Not enough data"
+msgstr "データ不足"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:125
+msgid "REST API"
+msgstr "REST API"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:230
+msgid "Refused calls"
+msgstr "拒否された呼び出し"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:234
+msgid "Responses shortened to fit the size limit"
+msgstr "サイズ上限に合わせて短くした応答"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:221
+msgid "Same tool called again right away"
+msgstr "同じツールをすぐにもう一度呼んだ割合"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:216
+msgid "Share of recorded calls that were measured"
+msgstr "記録された呼び出しのうち計測された割合"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:241
+msgid "Shortened"
+msgstr "短縮"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:226
+msgid "Time between calls, 90th percentile"
+msgstr "呼び出しの間隔、90%%"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:225
+msgid "Time between calls, median"
+msgstr "呼び出しの間隔、中央値"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:139
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "時間は実際に実行された照会だけを数えます。人が承認したあとにサーバーが実行した変更は含まれません。"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:251
+msgid "Tool lists"
+msgstr "ツール一覧"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:224
+msgid "Tool lists opened and then used"
+msgstr "ツール一覧を開いて実際に使った割合"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:235
+#, python-format
+msgid "%(n)s ms"
+msgstr "%(n)sミリ秒"

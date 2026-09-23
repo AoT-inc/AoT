@@ -68,10 +68,14 @@ class MCPToolCallResolver(BaseActionResolver):
             # 승인·감사·응답 캡은 tool_execution 이 그대로 건다(같은 게이트다).
             if _is_builtin_server(server_id):
                 from aot.tools import tool_execution
+                from aot.ai import ai_request_context
                 from flask import current_app
+                # 대화 번호를 호출 품질 기록의 세션 열쇠로 넘긴다(해시로만 저장).
+                # 백그라운드 잡은 대화가 없어 None — 집계가 시간 간격으로 묶는다.
                 res = tool_execution.execute_for_agent(
                     current_app._get_current_object(), tool_name, arguments,
-                    agent_unique_id=agent_uid, server_id=server_id)
+                    agent_unique_id=agent_uid, server_id=server_id,
+                    session_key=ai_request_context.get_thread_id())
             else:
                 res = MCPBridgeService.call_tool(server_id, tool_name, arguments,
                                                  agent_unique_id=agent_uid)

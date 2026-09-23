@@ -47,6 +47,28 @@ class MCPAuditLog(CRUDMixin, db.Model):
     result_summary      = db.Column(db.Text, default='')
     error               = db.Column(db.Text, default='')
 
+    # ── 호출 품질 칸(p6_74) ────────────────────────────────────────────────
+    # 전부 nullable. 옛 행과 `AOT_MCP_QUALITY_LEDGER=0` 일 때는 NULL 이고,
+    # 지표(aot/mcp_server/quality.py)는 NULL 행을 빼고 계산한다.
+    # 스코프·게이트·실행·캡·최종 직렬화까지 걸린 시간. 감사 쓰기·전송은 제외.
+    duration_ms         = db.Column(db.Integer, default=None)
+    # 같은 대화의 호출을 묶는 열쇠 — 원문이 아니라 sha256 앞 16자만 저장한다.
+    session_key         = db.Column(db.String(32), default=None)
+    # mcp_stdio | mcp_http | rest | in_app
+    transport           = db.Column(db.String(16), default=None)
+    # use_tool(서랍) 을 거쳐 들어온 호출인가.
+    via_drawer          = db.Column(db.Boolean, default=None)
+    # 캡 **전** 추정 토큰 수(_cap_result 가 이미 계산한 값). 캡이 꺼져 있으면 NULL.
+    response_tokens     = db.Column(db.Integer, default=None)
+    # 실제로 나간 텍스트의 UTF-8 바이트(잘린 뒤). 이미지 블록은 빠진다.
+    response_bytes      = db.Column(db.Integer, default=None)
+    truncated           = db.Column(db.Boolean, default=None)
+    # gate.call_state() 의 7값(executed/already_executed/pending_approval/
+    # refused/rejected/expired/failed). confirmation_status 와 달리 지표의 기준.
+    call_state          = db.Column(db.String(24), default=None)
+    # 결과 건수 근사치(count/total/matched 우선, 없으면 가장 큰 목록 길이).
+    result_items        = db.Column(db.Integer, default=None)
+
     def __repr__(self):
         return (f'<MCPAuditLog tool={self.tool_name} '
                 f'status={self.confirmation_status}>')

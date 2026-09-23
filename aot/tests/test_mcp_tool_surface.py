@@ -226,7 +226,11 @@ class TestExecutionLayerIsShared(unittest.TestCase):
         src = inspect.getsource(exec_mod._execute_tool)
         self.assertIn('gate.gate(', src, '승인 게이트가 실행층에 없다')
         self.assertIn('_record_audit', src, '감사 기록이 실행층에 없다')
-        self.assertIn('_cap_result', src, '응답 캡이 실행층에 없다')
+        # 캡과 직렬화는 _finish_result 로 나뉘었다(감사 행을 캡 뒤에 한 번에
+        # 쓰기 위해). 여전히 _execute_tool 만 부르는 실행층 함수다.
+        self.assertIn('_finish_result(', src, '응답 마무리가 실행층에 없다')
+        self.assertIn('_cap_result', inspect.getsource(exec_mod._finish_result),
+                      '응답 캡이 실행층에 없다')
 
     def test_transport_does_not_own_the_gate(self):
         """전송 계층이 게이트를 자기 안에 다시 들이면 두 벌이 된다."""
@@ -283,6 +287,31 @@ class TestExecutionLayerIsShared(unittest.TestCase):
             self.assertIn("'aot_mcp_server'", src,
                           '%s 가 내장 서버를 command 로 판별하지 않는다'
                           % mod.__name__)
+
+
+class TestTransportsLabelTheirCalls(unittest.TestCase):
+    """전송마다 자기 이름을 실행층에 넘긴다 — 호출 품질을 전송별로 나눠 보는 근거.
+
+    실제로 값이 흘러가는지는 test_mcp_quality_ledger.py 가 본다. 여기서는
+    호출 지점 네 곳이 빠짐없이 이름을 싣는지만 소스로 고정한다(새 전송을 더하고
+    이름을 빼먹으면 그 호출은 전부 transport NULL 로 쌓여 조용히 사라진다).
+    """
+
+    def test_every_call_site_names_its_transport(self):
+        import inspect
+        src = inspect.getsource(_load_server())
+        for label in ('"mcp_stdio"', '"mcp_http"', '"rest"'):
+            self.assertIn('transport=' + label, src, label)
+        exec_src = inspect.getsource(_load_exec().execute_for_agent)
+        self.assertIn('transport="in_app"', exec_src)
+
+    def test_session_header_is_read_only_in_the_transport(self):
+        """실행층은 test_request_context 안이라 원래 헤더를 못 본다."""
+        import inspect
+        self.assertNotIn('Mcp-Session-Id',
+                         inspect.getsource(_load_exec()._execute_tool))
+        self.assertIn('_session_header(request.headers)',
+                      inspect.getsource(_load_server()))
 
 
 class TestStdioProtocolStreamIsClean(unittest.TestCase):

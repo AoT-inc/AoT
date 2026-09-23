@@ -6,8 +6,11 @@ mcp_server/audit.py — P4-3: MCP 도구 호출 감사 로그 기록.
 쓰기 도구는 confirmation_id 로 MCPConfirmation 큐와 연결된다.
 
 공개 API:
+  record_call(tool_name, params, ..., **quality) -> str  (unique_id)
+      실행 경로(tool_execution._execute_tool)가 쓰는 유일한 기록 함수. INSERT 1회.
   log_call(tool_name, params, agent_id, permission, ...) -> str  (unique_id)
   update_status(unique_id, status, user_id, result, error)
+      위 둘은 예전 2단계 기록 방식이다. 호환을 위해 남긴다(현재 호출처 없음).
   get_recent(limit, agent_id, tool_name) -> list[dict]
   purge_old(days) -> int
 """
@@ -54,6 +57,67 @@ def log_call(
         return uid
     except Exception:
         logger.exception('audit.log_call failed — tool=%s', tool_name)
+        return ''
+
+
+#: record_call 이 받는 호출 품질 칸(p6_74). 이 밖의 키는 조용히 버리지 않고
+#: 오류로 남긴다 — 칸 이름 오타가 "NULL 로 쌓이는" 조용한 실패가 되지 않게.
+QUALITY_FIELDS = ('duration_ms', 'session_key', 'transport', 'via_drawer',
+                  'response_tokens', 'response_bytes', 'truncated',
+                  'call_state', 'result_items')
+
+
+def record_call(
+    tool_name: str,
+    params: dict | None = None,
+    agent_id: str = 'unknown',
+    permission: str = 'read',
+    reason: str = '',
+    confirmation_id: str | None = None,
+    confirmation_status: str = 'n/a',
+    result_summary: str = '',
+    error: str = '',
+    **quality,
+) -> str:
+    """호출 결과가 모두 정해진 뒤 감사 행 1개를 **INSERT 한 번**으로 쓴다.
+
+    예전에는 `log_call`(INSERT) 뒤 `update_status`(SELECT+UPDATE)로 두 번
+    커밋했다. 둘 다 실행이 끝난 뒤에 불렸으므로 한 번에 써도 남는 내용은
+    같다(tests/test_mcp_quality_ledger.py 가 행 단위로 대조한다).
+
+    quality: QUALITY_FIELDS 중 일부. 없으면 NULL.
+    실패해도 예외를 올리지 않는다 — 감사 실패가 도구 호출을 깨면 안 된다.
+    """
+    try:
+        unknown = set(quality) - set(QUALITY_FIELDS)
+        if unknown:
+            raise ValueError('unknown quality fields: %s' % sorted(unknown))
+        from aot.databases.models import MCPAuditLog
+        from aot.config import AOT_DB_PATH
+        from aot.databases.utils import session_scope
+        import uuid
+
+        uid = str(uuid.uuid4())
+        with session_scope(AOT_DB_PATH) as sess:
+            row = MCPAuditLog(
+                unique_id=uid,
+                timestamp=datetime.utcnow(),
+                agent_id=agent_id,
+                tool_name=tool_name,
+                params_json=json.dumps(params or {}, ensure_ascii=False),
+                reason=reason,
+                permission=permission,
+                confirmation_status=confirmation_status,
+                confirmation_id=confirmation_id,
+                result_summary=result_summary or '',
+                error=error or '',
+                **{k: v for k, v in quality.items() if v is not None},
+            )
+            sess.add(row)
+            sess.commit()
+        return uid
+    except Exception:
+        logger.exception('audit.record_call failed — tool=%s', tool_name)
         return ''
 
 

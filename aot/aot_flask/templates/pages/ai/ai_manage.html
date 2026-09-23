@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% set active_page = "ai_manage" %}
-{% set help_page = [manual_url("ai/overview/"), _('AI Records')] %}
+{% set help_page = [manual_url("ai/overview/#ai-records"), _('AI Records')] %}
 
 {% block title %} - {{ _('AI Records') }}{% endblock %}
 
@@ -21,6 +21,10 @@
     인자로 만든 사람 말이다(mcp_safety_gate.synthesize_title).
   - 파랑·노랑 배지, 페이지 전용 <style> 을 걷었다. 색은 공용 상태 배지 톤만.
   - 읽기 실패를 "없음" 으로 그리지 않는다.
+
+  2026-09-23 네 번째 탭 "호출 품질"(/api/v1/mcp/quality): 감사 기록의 품질 칸으로
+  계산한 요약. 한 줄에 사실 하나, 표는 서랍 범주 단위(도구 이름은 API 에만 있다).
+  이미지 블록·승인 후 서버 실행은 집계에 없다는 한계를 화면에 적는다.
 #}
 
 {% block body %}
@@ -36,6 +40,7 @@
     <li class="nav-item"><a class="nav-link active" id="tab-calls" data-toggle="tab" href="#calls" role="tab" aria-controls="calls" aria-selected="true">{{ _('Tool calls') }}</a></li>
     <li class="nav-item"><a class="nav-link" id="tab-talks" data-toggle="tab" href="#talks" role="tab" aria-controls="talks" aria-selected="false">{{ _('Conversations') }}</a></li>
     <li class="nav-item"><a class="nav-link" id="tab-errors" data-toggle="tab" href="#errors" role="tab" aria-controls="errors" aria-selected="false">{{ _('Error reports') }}</a></li>
+    <li class="nav-item"><a class="nav-link" id="tab-quality" data-toggle="tab" href="#quality" role="tab" aria-controls="quality" aria-selected="false">{{ _('Call quality') }}</a></li>
   </ul>
 
   <div class="tab-content">
@@ -98,6 +103,43 @@
         {#- 알약 줄과 목록 사이 — 입력·출력 화면과 같은 공용 간격. -#}
         <div class="aot-vspace-lg"></div>
         <div class="aot-settings-card" id="errorList"></div>
+      </section>
+    </div>
+
+    <div class="tab-pane fade" id="quality" role="tabpanel" aria-labelledby="tab-quality">
+      <section>
+        <p class="aot-settings-sub aot-settings-bare">{{ _('How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty.') }}</p>
+        <div class="row aot-main-selection-row" id="qualityFilters">
+          <div class="col-auto">
+            <select class="selectpicker aot-standard-select" data-width="fit" id="qDays" data-style="btn aot-pill-btn aot-pill-btn-primary">
+              <option value="1">{{ _('Last 24 hours') }}</option>
+              <option value="7" selected>{{ _('Last 7 days') }}</option>
+              <option value="30">{{ _('Last 30 days') }}</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <select class="selectpicker aot-standard-select" data-width="fit" id="qTransport" data-style="btn aot-pill-btn aot-pill-btn-primary">
+              <option value="">{{ _('All connections') }}</option>
+              <option value="mcp_http">{{ _('MCP over HTTP') }}</option>
+              <option value="mcp_stdio">{{ _('MCP on this computer') }}</option>
+              <option value="rest">{{ _('REST API') }}</option>
+              <option value="in_app">{{ _('Built-in AI') }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="aot-vspace-lg"></div>
+        <div class="aot-settings-card" id="qualitySummary"></div>
+        <div id="qualityTableWrap" hidden>
+          <div class="aot-settings-group-title">{{ _('By tool drawer') }}</div>
+          <div class="aot-settings-card aot-table-scroll" id="qualityTable"></div>
+        </div>
+        <div class="aot-settings-group-title">{{ _('About these numbers') }}</div>
+        <div class="aot-settings-card">
+          <div class="aot-settings-row"><div class="aot-settings-sub">{{ _('A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question.') }}</div></div>
+          <div class="aot-settings-row"><div class="aot-settings-sub">{{ _('Times are for lookups that ran. Changes carried out by the server after a person approved them are not included.') }}</div></div>
+          <div class="aot-settings-row"><div class="aot-settings-sub">{{ _('Empty results are an estimate from the item count in each response. Response sizes leave out images.') }}</div></div>
+          <div class="aot-settings-row"><div class="aot-settings-sub">{{ _('Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere.') }}</div></div>
+        </div>
       </section>
     </div>
   </div>
@@ -165,6 +207,52 @@
       high:     {{ _('High')|tojson }},
       medium:   {{ _('Medium')|tojson }},
       low:      {{ _('Low')|tojson }}
+    },
+    q: {
+      limited:      {{ _('Based on the most recent %(n)s calls in this period.', n='__N__')|tojson }},
+      none:         {{ _('No measured calls in this period yet.')|tojson }},
+      noValue:      {{ _('Not enough data')|tojson }},
+      measured:     {{ _('Calls measured')|tojson }},
+      measuredRate: {{ _('Share of recorded calls that were measured')|tojson }},
+      bundles:      {{ _('Call bundles')|tojson }},
+      perP50:       {{ _('Calls per bundle, median')|tojson }},
+      perP90:       {{ _('Calls per bundle, 90th percentile')|tojson }},
+      ten:          {{ _('Bundles with 10 or more calls')|tojson }},
+      repeat:       {{ _('Same tool called again right away')|tojson }},
+      longest:      {{ _('Longest run of the same tool')|tojson }},
+      explore:      {{ _('Bundles that start by looking up tools or targets')|tojson }},
+      follow:       {{ _('Tool lists opened and then used')|tojson }},
+      gapP50:       {{ _('Time between calls, median')|tojson }},
+      gapP90:       {{ _('Time between calls, 90th percentile')|tojson }},
+      latP50:       {{ _('Lookup time, median')|tojson }},
+      latP90:       {{ _('Lookup time, 90th percentile')|tojson }},
+      failed:       {{ _('Failed calls')|tojson }},
+      refused:      {{ _('Refused calls')|tojson }},
+      pending:      {{ _('Calls waiting for approval')|tojson }},
+      empty:        {{ _('Empty results (estimate)')|tojson }},
+      disamb:       {{ _('Calls that asked which target was meant')|tojson }},
+      cut:          {{ _('Responses shortened to fit the size limit')|tojson }},
+      ms:           {{ _('%(n)s ms', n='__N__')|tojson }},
+      sec:          {{ _('%(n)s s', n='__N__')|tojson }},
+      colCategory:  {{ _('Drawer')|tojson }},
+      colCalls:     {{ _('Calls')|tojson }},
+      colP50:       {{ _('Median time')|tojson }},
+      colP90:       {{ _('90th percentile time')|tojson }},
+      colFailed:    {{ _('Failed')|tojson }},
+      colEmpty:     {{ _('Empty')|tojson }},
+      colCut:       {{ _('Shortened')|tojson }},
+      cat: {
+        device:      {{ _('Devices')|tojson }},
+        measurement: {{ _('Measurements')|tojson }},
+        'function':  {{ _('Functions')|tojson }},
+        schedule:    {{ _('Schedule')|tojson }},
+        record:      {{ _('Records')|tojson }},
+        space:       {{ _('Map and zones')|tojson }},
+        definition:  {{ _('Device definitions')|tojson }},
+        system:      {{ _('System')|tojson }},
+        drawer:      {{ _('Tool lists')|tojson }},
+        other:       {{ _('Other')|tojson }}
+      }
     },
     est: {
       reported:     {{ _('Received')|tojson }},
@@ -348,12 +436,84 @@
       .catch(function (e) { btn.disabled = false; toast(T.failed + ': ' + e, 'error'); });
   });
 
+  /* ── 호출 품질 ─────────────────────────────────────────────── */
+  function pct(v) { return v == null ? T.q.noValue : (v * 100).toFixed(1) + '%'; }
+  function num(v) { return v == null ? T.q.noValue : String(v); }
+  function dur(ms) {
+    if (ms == null) { return T.q.noValue; }
+    return ms < 1000 ? T.q.ms.replace('__N__', ms) : T.q.sec.replace('__N__', (ms / 1000).toFixed(1));
+  }
+  function stat(label, value) {
+    return '<div class="aot-settings-row aot-settings-row-item"><div class="aot-settings-label">' + esc(label) +
+      '</div><div class="aot-settings-control">' + esc(value) + '</div></div>';
+  }
+  var qualitySeq = 0;
+  function loadQuality() {
+    /* 필터를 빨리 바꾸면 앞선 응답이 늦게 와서 새 결과를 덮을 수 있다 — 마지막 요청만 그린다. */
+    var seq = ++qualitySeq;
+    var sumEl = document.getElementById('qualitySummary');
+    var tblEl = document.getElementById('qualityTable');
+    var wrapEl = document.getElementById('qualityTableWrap');
+    var p = new URLSearchParams({ days: $('#qDays').val() || '7' });
+    if ($('#qTransport').val()) { p.set('transport', $('#qTransport').val()); }
+    getJson('/api/v1/mcp/quality?' + p.toString()).then(function (d) {
+      if (seq !== qualitySeq) { return; }
+      var q = d.quality || {};
+      var o = q.overall || {};
+      if (!q.rows_measured) {
+        note(sumEl, T.q.none);
+        tblEl.innerHTML = '';
+        wrapEl.hidden = true;
+        return;
+      }
+      var html = '';
+      if (q.limited) { html += '<div class="aot-settings-row"><div class="aot-settings-sub">' + esc(T.q.limited.replace('__N__', q.max_rows)) + '</div></div>'; }
+      html += [
+        stat(T.q.measured, num(q.rows_measured)),
+        stat(T.q.measuredRate, pct(q.measured_ratio)),
+        stat(T.q.bundles, num(o.bundles)),
+        stat(T.q.perP50, num(o.calls_per_bundle_p50)),
+        stat(T.q.perP90, num(o.calls_per_bundle_p90)),
+        stat(T.q.ten, pct(o.bundles_10_plus_rate)),
+        stat(T.q.repeat, pct(o.same_tool_repeat_rate)),
+        stat(T.q.longest, num(o.longest_same_tool_run)),
+        stat(T.q.explore, pct(o.discovery_first_rate)),
+        stat(T.q.follow, pct(o.drawer_follow_through_rate)),
+        stat(T.q.gapP50, dur(o.gap_p50_ms)),
+        stat(T.q.gapP90, dur(o.gap_p90_ms)),
+        stat(T.q.latP50, dur(o.latency_p50_ms)),
+        stat(T.q.latP90, dur(o.latency_p90_ms)),
+        stat(T.q.failed, pct(o.error_rate)),
+        stat(T.q.refused, pct(o.refused_rate)),
+        stat(T.q.pending, pct(o.pending_rate)),
+        stat(T.q.empty, pct(o.empty_rate)),
+        stat(T.q.disamb, pct(o.disambiguation_rate)),
+        stat(T.q.cut, pct(o.truncated_rate))
+      ].join('');
+      sumEl.innerHTML = html;
+      /* 서랍 범주 단위만 — 도구 이름(by_tool)은 화면에 싣지 않는다. */
+      var rows = (q.by_category || []).map(function (c) {
+        return '<tr><td>' + esc(T.q.cat[c.category] || T.q.cat.other) + '</td><td>' + esc(num(c.calls)) +
+          '</td><td>' + esc(dur(c.latency_p50_ms)) + '</td><td>' + esc(dur(c.latency_p90_ms)) +
+          '</td><td>' + esc(pct(c.error_rate)) + '</td><td>' + esc(pct(c.empty_rate)) +
+          '</td><td>' + esc(pct(c.truncated_rate)) + '</td></tr>';
+      }).join('');
+      wrapEl.hidden = !rows;
+      tblEl.innerHTML = '<table class="aot-module-table"><thead><tr><th scope="col">' + [T.q.colCategory, T.q.colCalls, T.q.colP50, T.q.colP90, T.q.colFailed, T.q.colEmpty, T.q.colCut].map(esc).join('</th><th scope="col">') +
+        '</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }).catch(function (err) {
+      if (seq !== qualitySeq) { return; }
+      note(sumEl, T.loadFailed + ': ' + err.message); tblEl.innerHTML = ''; wrapEl.hidden = true;
+    });
+  }
+  $('#qualityFilters select').on('change', loadQuality);
+
   /* ── 탭 — 주소 해시로 기억한다. 옛 주소 ?tab=errors 도 받는다. ── */
   var loaded = {};
   function ensure(id) {
     if (loaded[id]) { return; }
     loaded[id] = true;
-    if (id === 'calls') { loadCalls(); } else if (id === 'talks') { loadTalks(false); } else if (id === 'errors') { loadErrors(); }
+    if (id === 'calls') { loadCalls(); } else if (id === 'talks') { loadTalks(false); } else if (id === 'errors') { loadErrors(); } else if (id === 'quality') { loadQuality(); }
   }
   $('#recordTabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
     var h = e.target.getAttribute('href');
@@ -362,7 +522,7 @@
   });
   var start = location.hash.slice(1) || new URLSearchParams(location.search).get('tab') || 'calls';
   if (start === 'manage') { start = 'talks'; }
-  if (['calls', 'talks', 'errors'].indexOf(start) === -1) { start = 'calls'; }
+  if (['calls', 'talks', 'errors', 'quality'].indexOf(start) === -1) { start = 'calls'; }
   if (start !== 'calls') { $('#recordTabs a[href="#' + start + '"]').tab('show'); }
   ensure(start);
 })();

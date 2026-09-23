@@ -13583,27 +13583,31 @@ msgid ""
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
@@ -19663,6 +19667,7 @@ msgstr ""
 msgid "Function not found"
 msgstr ""
 
+#: aot_flask/templates/pages/ai/ai_manage.html:236
 #: aot_flask/utils/utils_function_status.py:94
 #, python-format
 msgid "%(n)s s"
@@ -27511,4 +27516,190 @@ msgstr ""
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:238
+msgid "90th percentile time"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:138
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:136
+msgid "About these numbers"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:122
+msgid "All connections"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:212
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:223
+msgid "Bundles that start by looking up tools or targets"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:220
+msgid "Bundles with 10 or more calls"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:133
+msgid "By tool drawer"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:217
+msgid "Call bundles"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:43
+msgid "Call quality"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:236
+msgid "Calls"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:215
+msgid "Calls measured"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:219
+msgid "Calls per bundle, 90th percentile"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:218
+msgid "Calls per bundle, median"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:141
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:233
+msgid "Calls that asked which target was meant"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:231
+msgid "Calls waiting for approval"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:249
+msgid "Device definitions"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:235
+msgid "Drawer"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:240
+msgid "Empty"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:232
+msgid "Empty results (estimate)"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:140
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:229
+msgid "Failed calls"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:111
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:115
+msgid "Last 24 hours"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:222
+msgid "Longest run of the same tool"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:228
+msgid "Lookup time, 90th percentile"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:227
+msgid "Lookup time, median"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:124
+msgid "MCP on this computer"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:123
+msgid "MCP over HTTP"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:248
+msgid "Map and zones"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:237
+msgid "Median time"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:213
+msgid "No measured calls in this period yet."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:214
+msgid "Not enough data"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:125
+msgid "REST API"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:230
+msgid "Refused calls"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:234
+msgid "Responses shortened to fit the size limit"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:221
+msgid "Same tool called again right away"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:216
+msgid "Share of recorded calls that were measured"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:241
+msgid "Shortened"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:226
+msgid "Time between calls, 90th percentile"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:225
+msgid "Time between calls, median"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:139
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:251
+msgid "Tool lists"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:224
+msgid "Tool lists opened and then used"
+msgstr ""
+
+#: aot_flask/templates/pages/ai/ai_manage.html:235
+#, python-format
+msgid "%(n)s ms"
 msgstr ""

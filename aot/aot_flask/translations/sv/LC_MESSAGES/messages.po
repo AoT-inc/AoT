@@ -14161,36 +14161,40 @@ msgstr ""
 "på endast under den angivna varaktigheten. Ange 0 för att inaktivera."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"PWM minsta pulskvot (i %) – Ange lägsta utgångsnivå. Ange ett värde "
+"PWM minsta pulskvot (i %%) – Ange lägsta utgångsnivå. Ange ett värde "
 "mellan 0 och 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"PWM högsta pulskvot (i %) – Ange högsta utgångsnivå. Ange ett värde "
+"PWM högsta pulskvot (i %%) – Ange högsta utgångsnivå. Ange ett värde "
 "mellan 0 och 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"PWM minsta pulskvot (i %) – Ange lägsta utgångsnivå. Tillåtet intervall: "
-"0~100%"
+"PWM minsta pulskvot (i %%) – Ange lägsta utgångsnivå. Tillåtet intervall:"
+" 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"PWM högsta pulskvot (i %) – Ange högsta utgångsnivå. Tillåtet intervall: "
-"0~100%"
+"PWM högsta pulskvot (i %%) – Ange högsta utgångsnivå. Tillåtet intervall:"
+" 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

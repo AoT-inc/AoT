@@ -14176,36 +14176,40 @@ msgstr ""
 "açılır. Devre dışı bırakmak için 0 girin."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"PWM Minimum Görev Döngüsü (%) - Minimum çıkış seviyesini ayarlayın. 0 ile"
-" 100 arasında bir değer girin."
+"PWM Minimum Görev Döngüsü (%%) - Minimum çıkış seviyesini ayarlayın. 0 "
+"ile 100 arasında bir değer girin."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"PWM Maksimum Görev Döngüsü (%) - Maksimum çıkış seviyesini ayarlayın. 0 "
+"PWM Maksimum Görev Döngüsü (%%) - Maksimum çıkış seviyesini ayarlayın. 0 "
 "ile 100 arasında bir değer girin."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"PWM Minimum Görev Döngüsü (%) - Minimum çıkış seviyesini ayarlayın. İzin "
-"verilen aralık: %0-100"
+"PWM Minimum Görev Döngüsü (%%) - Minimum çıkış seviyesini ayarlayın. İzin"
+" verilen aralık: %%0-100"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"PWM Maksimum Görev Döngüsü (%) - Maksimum çıkış seviyesini ayarlayın. "
-"İzin verilen aralık: %0-100"
+"PWM Maksimum Görev Döngüsü (%%) - Maksimum çıkış seviyesini ayarlayın. "
+"İzin verilen aralık: %%0-100"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

@@ -13848,28 +13848,40 @@ msgid ""
 msgstr "Durasi maksimum (dalam detik) keluaran atas dapat menyala selama satu siklus. Jika durasi ON lebih besar dari ini, keluaran atas hanya menyala selama durasi yang ditetapkan. Masukkan 0 untuk menonaktifkan."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
-msgstr "Duty cycle PWM minimum (dalam %) - Tetapkan tingkat keluaran minimum. Masukkan nilai antara 0 dan 100."
+msgstr ""
+"Duty cycle PWM minimum (dalam %%) - Tetapkan tingkat keluaran minimum. "
+"Masukkan nilai antara 0 dan 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
-msgstr "Duty cycle PWM maksimum (dalam %) - Tetapkan tingkat keluaran maksimum. Masukkan nilai antara 0 dan 100."
+msgstr ""
+"Duty cycle PWM maksimum (dalam %%) - Tetapkan tingkat keluaran maksimum. "
+"Masukkan nilai antara 0 dan 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
-msgstr "Duty cycle PWM minimum (dalam %) - Tetapkan tingkat keluaran minimum. Rentang yang diizinkan: 0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
+msgstr ""
+"Duty cycle PWM minimum (dalam %%) - Tetapkan tingkat keluaran minimum. "
+"Rentang yang diizinkan: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
-msgstr "Duty cycle PWM maksimum (dalam %) - Tetapkan tingkat keluaran maksimum. Rentang yang diizinkan: 0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
+msgstr ""
+"Duty cycle PWM maksimum (dalam %%) - Tetapkan tingkat keluaran maksimum. "
+"Rentang yang diizinkan: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

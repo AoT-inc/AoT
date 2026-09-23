@@ -51,3 +51,86 @@ def test_every_table_entry_is_a_real_endpoint():
                     | set(module._READ_WRITE_ENDPOINTS)) - endpoints)
     assert not stale, (
         f'역할 검사 표의 이름이 실제 엔드포인트와 다릅니다(아무것도 막지 않음): {stale}')
+
+
+def test_call_quality_needs_view_logs():
+    """호출 품질 지표는 감사 목록과 같은 권한(view_logs)으로 막힌다."""
+    from aot.aot_flask import routes_mcp_api
+    assert (routes_mcp_api._REQUIRED_PERMISSION['routes_mcp_api.mcp_call_quality']
+            == 'view_logs')
+
+
+def _guarded_client(monkeypatch, allowed):
+    import flask_login
+    from flask import Flask
+    from aot.aot_flask import routes_mcp_api
+    from aot.aot_flask.utils import utils_general
+
+    from flask_babel import Babel
+
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    Babel(app)                      # 403 본문이 gettext 를 쓴다
+    lm = flask_login.LoginManager(app)
+
+    class _User(flask_login.UserMixin):
+        id = 'guest'
+
+    lm.request_loader(lambda req: _User())
+    app.register_blueprint(routes_mcp_api.blueprint)
+    monkeypatch.setattr(utils_general, 'user_has_permission',
+                        lambda perm, silent=False: allowed)
+    return app.test_client()
+
+
+def test_call_quality_refuses_a_role_without_view_logs(monkeypatch):
+    client = _guarded_client(monkeypatch, allowed=False)
+    assert client.get('/api/v1/mcp/quality').status_code == 403
+
+
+def test_call_quality_response_has_no_identity(monkeypatch):
+    """실제 summarize 출력이 라우트를 지나 나간 본문에 신원 정보가 없는가.
+
+    행에는 agent_id(로그인 이름)·세션 열쇠·UUID 가 들어 있다. 계산을 흉내 내지
+    않고 진짜 summarize 를 거친 값을 돌려받아 본문 전체를 뒤진다.
+    """
+    from datetime import datetime, timedelta
+    from aot.mcp_server import quality
+
+    uuid = '0f8b6c1e-4a52-4c3e-9d2a-7b1e5f3a9c01'
+    t0 = datetime(2026, 9, 1, 12, 0, 0)
+
+    def _row(sec, tool, **kw):
+        r = {'timestamp': t0 + timedelta(seconds=sec),
+             'agent_id': 'user:alice/claude', 'tool_name': tool,
+             'permission': 'read', 'result_summary': 'success',
+             'duration_ms': 120, 'session_key': 'deadbeefcafef00d',
+             'transport': 'mcp_http', 'via_drawer': False,
+             'response_tokens': 10, 'response_bytes': 20, 'truncated': False,
+             'call_state': 'executed', 'result_items': 1,
+             'params_json': '{"device_id": "%s"}' % uuid, 'reason': 'why'}
+        r.update(kw)
+        return r
+
+    rows = [_row(0, 'open_drawer'), _row(5, 'search_devices', via_drawer=True),
+            _row(9, 'get_output_state', session_key=None)]
+    seen = {}
+
+    def _compute(days, transport):
+        seen['args'] = (days, transport)
+        out = quality.summarize(rows)
+        out.update({'days': days, 'transport': transport})
+        return out
+
+    monkeypatch.setattr(quality, 'compute_quality', _compute)
+    client = _guarded_client(monkeypatch, allowed=True)
+    r = client.get('/api/v1/mcp/quality?days=30&transport=mcp_http')
+    assert r.status_code == 200
+    assert seen['args'] == (30, 'mcp_http')
+    body = r.get_json()
+    assert body['quality']['days'] == 30
+    assert body['quality']['overall']['calls'] == 3
+    text = r.get_data(as_text=True)
+    for leaked in ('alice', 'deadbeefcafef00d', uuid, 'params_json', 'why',
+                   'agent_id', 'session_key', '"reason"'):
+        assert leaked not in text, leaked

@@ -714,7 +714,8 @@ select.aot-settings-select:focus {
     border-bottom: none;
 }
 
-.aot-module-table td {
+.aot-module-table td,
+.aot-module-table th {
     padding: var(--aot-space-3) 0;
     font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-primary);
@@ -767,7 +768,8 @@ select.aot-settings-select:focus {
 .aot-module-table thead tr {
     border-bottom: 1px solid var(--aot-border-neutral);
 }
-.aot-module-table thead td {
+.aot-module-table thead td,
+.aot-module-table thead th {
     font-weight: 700;
     padding: var(--aot-space-3) 0;
     color: var(--aot-color-text-primary);

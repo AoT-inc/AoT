@@ -906,7 +906,8 @@ class AIAgentService:
         thread-pool reuse never leak a previous turn's images/mode.
         """
         from aot.ai import ai_request_context as _ai_ctx
-        _token = _ai_ctx.push(attachments=attachments, depth=depth, autonomy=autonomy)
+        _token = _ai_ctx.push(attachments=attachments, depth=depth, autonomy=autonomy,
+                              thread_id=thread_id)
         try:
             return AIAgentService._process_nl_command_impl(
                 agent_id, command_text, thread_id=thread_id, page_context=page_context)

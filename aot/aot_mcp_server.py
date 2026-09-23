@@ -109,6 +109,11 @@ class StdioMCPServer:
         # (2026-07-26 확인: Claude Code는 이 capability를 선언한다).
         self._supports_elicitation = False
         self._next_elicit_id = 0
+        # 호출 품질 기록의 세션 열쇠 — stdio 는 프로세스 하나가 곧 클라이언트
+        # 연결 하나라, 시작할 때 만든 무작위 값 하나로 같은 연결의 호출을 묶는다.
+        # 실행층이 해시해서 저장한다(원문은 어디에도 남지 않는다).
+        import uuid as _uuid
+        self._session_key = _uuid.uuid4().hex
 
     def _send(self, obj):
         """Write a JSON-RPC response line to the protocol stream.
@@ -265,7 +270,9 @@ class StdioMCPServer:
                                         agent_id=self._agent_id, role=self._role,
                                         elicit_fn=None,
                                         scope_user_uuid=getattr(
-                                            self._role, 'user_id', None))
+                                            self._role, 'user_id', None),
+                                        transport="mcp_stdio",
+                                        session_key=self._session_key)
                 self._send({
                     "jsonrpc": "2.0",
                     "id": msg_id,
@@ -310,6 +317,17 @@ class StdioMCPServer:
 #: 능력 선언이 동일하고, 클라이언트가 요구한 버전을 그대로 돌려주면 된다.
 #: 2025-03-26 부터 Streamable HTTP 가 표준 전송이다.
 _SUPPORTED_PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
+
+#: `Mcp-Session-Id` 헤더를 세션 열쇠로 받을 최대 길이. 넘으면 없는 것으로 본다.
+_SESSION_HEADER_MAX_LEN = 128
+
+
+def _session_header(headers):
+    """요청 헤더의 `Mcp-Session-Id` 원문. 없거나 128자를 넘으면 None."""
+    raw = (headers.get("Mcp-Session-Id") or "").strip()
+    if not raw or len(raw) > _SESSION_HEADER_MAX_LEN:
+        return None
+    return raw
 
 
 def _run_http_server(app, port=5700):
@@ -356,12 +374,16 @@ def _run_http_server(app, port=5700):
         return {"jsonrpc": "2.0", "id": msg_id,
                 "error": {"code": code, "message": message}}
 
-    def _handle_rpc(msg, agent_id, role):
+    def _handle_rpc(msg, agent_id, role, session_key=None):
         """One JSON-RPC message → response dict, or None for a notification.
 
         Routes to the same _get_all_tools/_execute_tool the stdio transport and
         the REST API use, so a tool never behaves differently depending on how
         it was reached.
+
+        session_key: 요청의 `Mcp-Session-Id` 헤더 원문(호출 품질 기록용). 헤더는
+        **여기 전송층에서만** 읽는다 — 실행층은 test_request_context 안이라 원래
+        요청의 헤더가 보이지 않는다.
         """
         if not isinstance(msg, dict):
             return _rpc_error(None, -32600, "Invalid Request")
@@ -395,7 +417,9 @@ def _run_http_server(app, port=5700):
                 content = _execute_tool(app, name, params.get("arguments") or {},
                                         agent_id=agent_id, role=role,
                                         scope_user_uuid=getattr(
-                                            role, 'user_id', None))
+                                            role, 'user_id', None),
+                                        transport="mcp_http",
+                                        session_key=session_key)
                 return {"jsonrpc": "2.0", "id": msg_id,
                         "result": {"content": content}}
             except Exception as exc:
@@ -423,9 +447,14 @@ def _run_http_server(app, port=5700):
         if payload is None:
             return jsonify(_rpc_error(None, -32700, "Parse error")), 400
 
+        # 우리가 initialize 에서 준 세션 번호를 클라이언트가 되돌려 보낸다.
+        # 호출 품질 기록에서 같은 대화를 묶는 데만 쓴다(해시로만 저장). 길이가
+        # 비정상이면 버린다 — 임의 길이의 헤더를 해시 입력으로 받지 않는다.
+        session_key = _session_header(request.headers)
         batch = isinstance(payload, list)
         messages = payload if batch else [payload]
-        responses = [r for r in (_handle_rpc(m, agent_id, role) for m in messages)
+        responses = [r for r in (_handle_rpc(m, agent_id, role, session_key)
+                                 for m in messages)
                      if r is not None]
 
         # 알림만 담긴 요청에는 본문 없이 202 로 답한다(스펙 요구사항).
@@ -519,7 +548,8 @@ def _run_http_server(app, port=5700):
             # 그룹 스코프(A2) — 신원은 키 소유자(`RoleInfo.user_id`).
             content = _execute_tool(app, tool_name, arguments,
                                     agent_id=agent_id, role=role,
-                                    scope_user_uuid=getattr(role, 'user_id', None))
+                                    scope_user_uuid=getattr(role, 'user_id', None),
+                                    transport="rest")
             return jsonify({"content": content})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400

@@ -29,25 +29,28 @@ def _snapshot():
         getattr(_local, 'attachments', None),
         getattr(_local, 'depth', None),
         getattr(_local, 'autonomy', None),
+        getattr(_local, 'thread_id', None),
     )
 
 
-def push(attachments=None, depth=None, autonomy=None):
+def push(attachments=None, depth=None, autonomy=None, thread_id=None):
     """Set the current request's AI context and return the previous snapshot
     (an opaque token to hand back to :func:`pop`)."""
     prev = _snapshot()
     _local.attachments = list(attachments) if attachments else []
     _local.depth = depth
     _local.autonomy = autonomy
+    _local.thread_id = thread_id
     return prev
 
 
 def pop(token):
     """Restore the context captured by a prior :func:`push`."""
-    attachments, depth, autonomy = token
+    attachments, depth, autonomy, thread_id = token
     _local.attachments = attachments
     _local.depth = depth
     _local.autonomy = autonomy
+    _local.thread_id = thread_id
 
 
 def get_attachments():
@@ -63,3 +66,36 @@ def get_depth():
 def get_autonomy():
     """'advice' | 'approve' | 'auto' | None."""
     return getattr(_local, 'autonomy', None)
+
+
+def get_thread_id():
+    """The chat thread this turn belongs to, or None (background jobs).
+
+    Used as the session key of the MCP call-quality ledger so that the tool
+    calls of one conversation can be grouped. It is hashed before storage.
+    """
+    return getattr(_local, 'thread_id', None)
+
+
+def bind_thread_id(fn):
+    """Wrap ``fn`` so a worker thread runs it under the CALLER's thread_id.
+
+    Thread pools start with an empty ``threading.local``, so tool calls made
+    from worker threads (the planner's parallel steps) would lose the chat
+    thread and land in the quality ledger without a session key. Only the
+    thread_id is carried over — attachments, depth and autonomy are left
+    exactly as a bare worker thread sees them today (unset), so in-app AI
+    behaviour does not change. The worker's previous thread_id is restored
+    afterwards because pool threads are reused.
+    """
+    tid = get_thread_id()
+
+    def _run(*args, **kwargs):
+        prev = getattr(_local, 'thread_id', None)
+        _local.thread_id = tid
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            _local.thread_id = prev
+
+    return _run

@@ -13615,28 +13615,32 @@ msgid ""
 msgstr "一個週期內上方輸出可保持開啟的最長時間（秒）。若開啟時間超過此值，上方輸出僅會開啟所設定的時間。輸入 0 可停用。"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
-msgstr "PWM 最小工作週期（%）— 設定最小輸出等級。請輸入 0 到 100 之間的數值。"
+msgstr "PWM 最小工作週期（%%）— 設定最小輸出等級。請輸入 0 到 100 之間的數值。"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
-msgstr "PWM 最大工作週期（%）— 設定最大輸出等級。請輸入 0 到 100 之間的數值。"
+msgstr "PWM 最大工作週期（%%）— 設定最大輸出等級。請輸入 0 到 100 之間的數值。"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
-msgstr "PWM 最小工作週期（%）— 設定最小輸出等級。允許範圍：0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
+msgstr "PWM 最小工作週期（%%）— 設定最小輸出等級。允許範圍：0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
-msgstr "PWM 最大工作週期（%）— 設定最大輸出等級。允許範圍：0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
+msgstr "PWM 最大工作週期（%%）— 設定最大輸出等級。允許範圍：0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

@@ -552,6 +552,7 @@ class AIPlanningService:
 
         import threading
         from concurrent.futures import ThreadPoolExecutor, as_completed
+        from aot.ai import ai_request_context as _ai_ctx
 
         state_lock = threading.Lock()
         completed_step_ids = set()
@@ -764,7 +765,10 @@ class AIPlanningService:
                     ready_steps = [pending_steps[0]]
 
                 # Execute ready steps concurrently
-                futures = {pool.submit(execute_single_step, s): s for s in ready_steps}
+                # 대화 thread_id 만 워커로 넘긴다(호출 품질 기록의 세션 열쇠).
+                # 첨부·깊이·자율은 넘기지 않는다 — 지금 동작 그대로.
+                futures = {pool.submit(_ai_ctx.bind_thread_id(execute_single_step), s): s
+                           for s in ready_steps}
                 for f in as_completed(futures):
                     s = futures[f]
                     f.result() # Surface any fatal exceptions not caught in execute_single_step

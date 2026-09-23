@@ -13842,28 +13842,40 @@ msgid ""
 msgstr "Duração máxima (em segundos) em que a saída superior pode ficar ligada durante um ciclo. Se a duração de ativação for maior que esse valor, a saída superior liga apenas pela duração definida. Informe 0 para desativar."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
-msgstr "Ciclo de trabalho mínimo do PWM (em %) - Defina o nível mínimo de saída. Informe um valor entre 0 e 100."
+msgstr ""
+"Ciclo de trabalho mínimo do PWM (em %%) - Defina o nível mínimo de saída."
+" Informe um valor entre 0 e 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
-msgstr "Ciclo de trabalho máximo do PWM (em %) - Defina o nível máximo de saída. Informe um valor entre 0 e 100."
+msgstr ""
+"Ciclo de trabalho máximo do PWM (em %%) - Defina o nível máximo de saída."
+" Informe um valor entre 0 e 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
-msgstr "Ciclo de trabalho mínimo do PWM (em %) - Defina o nível mínimo de saída. Faixa permitida: 0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
+msgstr ""
+"Ciclo de trabalho mínimo do PWM (em %%) - Defina o nível mínimo de saída."
+" Faixa permitida: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
-msgstr "Ciclo de trabalho máximo do PWM (em %) - Defina o nível máximo de saída. Faixa permitida: 0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
+msgstr ""
+"Ciclo de trabalho máximo do PWM (em %%) - Defina o nível máximo de saída."
+" Faixa permitida: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

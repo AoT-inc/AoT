@@ -14217,36 +14217,40 @@ msgstr ""
 " чтобы отключить."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"Минимальный коэффициент заполнения ШИМ (в %) — задаёт минимальный уровень"
-" выхода. Введите значение от 0 до 100."
+"Минимальный коэффициент заполнения ШИМ (в %%) — задаёт минимальный "
+"уровень выхода. Введите значение от 0 до 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"Максимальный коэффициент заполнения ШИМ (в %) — задаёт максимальный "
+"Максимальный коэффициент заполнения ШИМ (в %%) — задаёт максимальный "
 "уровень выхода. Введите значение от 0 до 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"Минимальный коэффициент заполнения ШИМ (в %) — задаёт минимальный уровень"
-" выхода. Допустимый диапазон: 0~100%"
+"Минимальный коэффициент заполнения ШИМ (в %%) — задаёт минимальный "
+"уровень выхода. Допустимый диапазон: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"Максимальный коэффициент заполнения ШИМ (в %) — задаёт максимальный "
-"уровень выхода. Допустимый диапазон: 0~100%"
+"Максимальный коэффициент заполнения ШИМ (в %%) — задаёт максимальный "
+"уровень выхода. Допустимый диапазон: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

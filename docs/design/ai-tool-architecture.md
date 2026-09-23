@@ -794,6 +794,46 @@ T5 의 상한은 **현재값보다 낮게** 잡는다. 지금(87개/12k)을 기�
 
 ---
 
+## 호출 품질 칸 — `mcp_audit_log` (p6_74, 2026-09-23)
+
+평소 호출 품질을 따로 저장소 없이 쌓기 위해 감사 행에 nullable 칸 9개를 더했다.
+옛 행은 NULL 로 남고, 지표는 NULL 행을 빼고 계산한다(측정 비율로 드러낸다).
+
+| 칸 | 타입 | 값 |
+|---|---|---|
+| `duration_ms` | Integer | use_tool 분기 뒤 ~ 캡·최종 직렬화 끝. 스코프·게이트·실행·캡 포함, 감사 쓰기·전송 제외 |
+| `session_key` | String(32) | 원문의 sha256 앞 16자. HTTP=`Mcp-Session-Id` 헤더(전송층에서만 읽음, 128자 초과 시 NULL), stdio=프로세스 시작 시 uuid4, REST=NULL, 인앱=대화 `thread_id`(`ai_request_context`) |
+| `transport` | String(16) | `mcp_stdio` / `mcp_http` / `rest` / `in_app` — 호출 지점 4곳이 넘긴다 |
+| `via_drawer` | Boolean | use_tool 위임으로 들어온 호출 |
+| `response_tokens` | Integer | **캡 전** 추정(`_cap_result(stats=)` 가 이미 잰 값). 캡을 끄면 NULL |
+| `response_bytes` | Integer | 실제로 나간 텍스트의 UTF-8 바이트(**캡 후**). 이미지 블록 제외 |
+| `truncated` | Boolean | 캡이 `_truncated` 를 붙였는가 |
+| `call_state` | String(24) | `gate.call_state()` 7값. 지표는 `confirmation_status` 가 아니라 이것으로 센다 |
+| `result_items` | Integer | 최상위 `count`→`total`→`matched` 정수. 없으면 곁가지 목록(`errors`·`warnings`·`notes`·`hints`·`see` 등)과 `_` 로 시작하는 키를 뺀 최상위 목록이 **정확히 하나**일 때 그 길이, 아니면 NULL. `now`·캡 전에 센다(근사치) |
+
+**쓰기 방식.** 감사 행은 캡·직렬화가 끝난 뒤 `audit.record_call()` 로 INSERT 한 번에
+쓴다(예전: INSERT 뒤 UPDATE, 커밋 2회). 두 쓰기 모두 실행 뒤였으므로 남는 내용은 같고,
+`test_mcp_quality_ledger.py` 가 예전 방식과 행을 칸 단위로 대조한다. `try/finally` 라
+직렬화가 깨져도 행이 남는다 — `call_state='failed'`, `error=repr(exc)`,
+`response_bytes=NULL`, 예외는 그대로 올라간다. 이 통합은 스위치로 되돌리지 않는다.
+`AOT_MCP_QUALITY_LEDGER=0`(기본 1)은 새 칸 채우기만 끈다.
+
+**기록되지 않는 것(변경 없음).** 인증 실패, use_tool 인자 오류, 인앱 ACL 거부,
+도구 이름 누락, 승인 뒤 서버가 실행하는 쓰기(`execute_approved`, 결과는 `MCPConfirmation` 에만).
+
+**지표.** `aot/mcp_server/quality.py` `compute_quality(days, transport, max_rows=20000)`,
+워커별 60초 캐시. `params_json`·`reason` 은 읽지 않는다. 시작 시각 = `timestamp − duration_ms`.
+세션은 (agent_id, 전송, 세션 열쇠), 열쇠가 없으면 (agent_id, 전송)을 10분 간격으로 끊는다. 세션 안에서
+90초 넘게 비면 새 "호출 묶음"(질문의 근사치). 90초는 개발 기록 1,967행에서 10회 이상 묶음이
+13.9%로 실사용 분석(14%)에 가장 가까운 값이다. 지연은 실제로 답한 읽기 호출만 센다 — `executed`, 그리고
+결과 요약이 `needs_disambiguation`·`not_found` 인 것(이 둘은 `error` 키를 함께 실어 `failed` 로 적히기도
+하지만 오류율에서 빼고 되묻기율·빈 결과율에만 센다). 서랍 전환은 서랍 열기 하나에 뒤따르는
+`via_drawer` 호출 하나만 짝짓는다(다음 서랍 열기 전까지).
+
+**노출.** `GET /api/v1/mcp/quality?days=1|7|30&transport=` (`view_logs`). 응답에 UUID·인자·
+agent_id·세션 열쇠가 없다. 도구 이름(`by_tool`)은 API 에만 있고, AI → 기록의 "호출 품질"
+탭은 서랍 범주(`by_category`)만 보여 준다.
+
 ## 기각한 대안
 
 **A. 매니페스트만 줄인다.**

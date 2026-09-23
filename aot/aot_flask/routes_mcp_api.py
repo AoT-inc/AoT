@@ -44,6 +44,9 @@ _REQUIRED_PERMISSION = {
     'routes_mcp_api.mcp_server_tools': 'view_settings',
     'routes_mcp_api.aot_mcp_status': 'view_settings',
     'routes_mcp_api.mcp_audit_recent': 'view_logs',
+    # 호출 품질 지표 — 감사 기록에서 계산하므로 감사 목록과 같은 권한.
+    # (화면 AI → 기록 자체는 edit_controllers 가 있어야 열린다. API 가 더 넓다.)
+    'routes_mcp_api.mcp_call_quality': 'view_logs',
 }
 
 #: 한 엔드포인트가 읽기와 쓰기를 함께 받는 경우 — 읽기는 설정 보기, 쓰기는 설정 편집.
@@ -548,6 +551,29 @@ def mcp_audit_recent():
         return jsonify({"status": "success", "entries": entries})
     except Exception as e:
         logger.error(f"MCP audit query failed: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@blueprint.route('/quality', methods=['GET'])
+@flask_login.login_required
+def mcp_call_quality():
+    """MCP 호출 품질 지표 — 호출 묶음·지연·오류·빈 결과·캡 발동.
+
+    days: 1 | 7 | 30 (그 밖의 값은 7). transport: mcp_stdio | mcp_http | rest |
+    in_app | 비움(전체). 응답에는 UUID·인자·agent_id·세션 열쇠가 없다.
+    도구 이름(by_tool)은 여기에만 싣고 화면은 서랍 범주(by_category)만 쓴다.
+    """
+    from aot.mcp_server import quality
+    try:
+        try:
+            days = int(request.args.get('days', 7))
+        except (TypeError, ValueError):
+            days = 7
+        transport = request.args.get('transport') or None
+        data = quality.compute_quality(days=days, transport=transport)
+        return jsonify({"status": "success", "quality": data})
+    except Exception as e:
+        logger.error(f"MCP call quality failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

@@ -197,6 +197,37 @@ A **dashboard widget** (`aot/widgets/widget_mcp_review.py`, `js/common/aot-mcp-a
 
 ---
 
+## AI Records { #ai-records }
+
+**AI → Records** (`/ai/manage`) looks back at what the AI did. It has four tabs: **Tool calls**, **Conversations**, **Error reports** and **Call quality**.
+
+### Call quality { #call-quality }
+
+The **Call quality** tab summarises how connected AIs have been using the tools. It is calculated from the same tool-call records as the Tool calls tab — nothing extra is stored, and nothing leaves this system.
+
+Pick a period (24 hours, 7 days or 30 days) and, if you like, one connection type (MCP over HTTP, MCP on this computer, REST API, built-in AI). Each line shows one number:
+
+- **Call bundles** — calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question. Shown with calls per bundle (median and 90th percentile) and the share of bundles with 10 or more calls.
+- **Same tool called again right away**, and the longest such run — a sign that a tool did not give the AI what it needed.
+- **Bundles that start by looking up tools or targets**, and **tool lists opened and then used**.
+- **Time between calls** (median, 90th percentile) — roughly how long the AI spends thinking between calls.
+- **Lookup time** (median, 90th percentile) — only for read calls that ran.
+- **Failed**, **refused** and **waiting for approval** calls, **empty results** (an estimate), **calls that asked which target was meant**, and **responses shortened to fit the size limit**. A call that answered "not found" or asked which target was meant is counted as an empty result or a question back, not as a failure, and its time counts as lookup time.
+
+A table below breaks the same numbers down by tool drawer. Tool names are not shown on this screen.
+
+Limits worth knowing:
+
+- Changes the server carried out after a person approved them are not included.
+- Response sizes leave out images.
+- Calls recorded before this measurement was added are left out. The share of measured calls is shown so you can tell.
+
+The same numbers, including a per-tool breakdown, are available from `GET /api/v1/mcp/quality?days=1|7|30&transport=` (requires the *view logs* permission). The response contains no user names, conversation keys or arguments.
+
+Setting `AOT_MCP_QUALITY_LEDGER=0` stops filling in the measurement fields; the tool-call record itself is kept as before.
+
+---
+
 ## AI Knowledge { #knowledge-library }
 
 The `AI -> Knowledge` page (`/ai/library`) holds what grounds the AI's answers,
@@ -502,7 +533,7 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-> State-changing tool calls do not execute immediately here either (`aot/tools/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations and Error Reports.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
+> State-changing tool calls do not execute immediately here either (`aot/tools/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations, Error Reports and Call Quality.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
 
 ---
 

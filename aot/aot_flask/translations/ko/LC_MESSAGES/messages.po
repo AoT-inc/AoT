@@ -13815,28 +13815,32 @@ msgstr ""
 "비활성화하려면 0을 입력하세요."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
-msgstr "PWM 최소 듀티 사이클(%) - 최소 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
+msgstr "PWM 최소 듀티 사이클(%%) - 최소 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
-msgstr "PWM 최대 듀티 사이클(%) - 최대 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
+msgstr "PWM 최대 듀티 사이클(%%) - 최대 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
-msgstr "PWM 최소 듀티 사이클(%) - 최소 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
+msgstr "PWM 최소 듀티 사이클(%%) - 최소 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
-msgstr "PWM 최대 듀티 사이클(%) - 최대 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
+msgstr "PWM 최대 듀티 사이클(%%) - 최대 출력 레벨을 설정합니다. 0에서 100 사이의 값을 입력하세요."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""
@@ -20065,6 +20069,7 @@ msgstr "\"함수 유형을 찾을 수 없습니다: '{}'"
 msgid "Function not found"
 msgstr "함수를 찾을 수 없습니다"
 
+#: aot_flask/templates/pages/ai/ai_manage.html:236
 #: aot_flask/utils/utils_function_status.py:94
 #, python-format
 msgid "%(n)s s"
@@ -32117,3 +32122,189 @@ msgstr "온도 우선"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: VPD 목표를 그대로 좇습니다. 온도 우선: 단계의 주간·야간 온도를 좇고, VPD 목표를 그 온도에서의 습도 목표로 바꿉니다 — 아주 덥거나 찬 공기로 VPD 를 맞추지 않습니다. VPD 는 넘지 말아야 할 경계로만 씁니다. 단계에 온도가 없으면 온도는 유도 범위 안에 두기만 합니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:238
+msgid "90th percentile time"
+msgstr "90%% 시간"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:138
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "호출 묶음은 한 대화에서 90초 안쪽 간격으로 이어진 호출들입니다. 서버는 질문이 어디서 끝나는지 알 수 없으므로, 묶음은 질문 하나의 근사치일 뿐입니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:136
+msgid "About these numbers"
+msgstr "이 숫자에 대해"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:122
+msgid "All connections"
+msgstr "모든 연결"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:212
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "이 기간의 최근 %(n)s건 기준입니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:223
+msgid "Bundles that start by looking up tools or targets"
+msgstr "도구나 대상을 먼저 찾아본 묶음"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:220
+msgid "Bundles with 10 or more calls"
+msgstr "호출 10회 이상인 묶음"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:133
+msgid "By tool drawer"
+msgstr "도구 서랍별"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:217
+msgid "Call bundles"
+msgstr "호출 묶음"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:43
+msgid "Call quality"
+msgstr "호출 품질"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:236
+msgid "Calls"
+msgstr "호출 수"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:215
+msgid "Calls measured"
+msgstr "측정된 호출"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:219
+msgid "Calls per bundle, 90th percentile"
+msgstr "묶음당 호출 수, 90%%"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:218
+msgid "Calls per bundle, median"
+msgstr "묶음당 호출 수, 중앙값"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:141
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "이 측정을 넣기 전에 기록된 호출은 빠집니다. 이 기록은 이 시스템에만 남고 어디로도 보내지 않습니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:233
+msgid "Calls that asked which target was meant"
+msgstr "어느 대상인지 되물은 호출"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:231
+msgid "Calls waiting for approval"
+msgstr "승인 대기 호출"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:249
+msgid "Device definitions"
+msgstr "장치 정의"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:235
+msgid "Drawer"
+msgstr "서랍"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:240
+msgid "Empty"
+msgstr "빈 결과"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:232
+msgid "Empty results (estimate)"
+msgstr "빈 결과(추정)"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:140
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "빈 결과는 응답마다 담긴 항목 수로 추정한 값입니다. 응답 크기에서 이미지는 뺍니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:229
+msgid "Failed calls"
+msgstr "실패한 호출"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:111
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "연결된 AI 가 도구를 어떻게 써 왔는지 보여 줍니다. 요청 하나에 호출이 몇 번 드는지, 얼마나 기다리는지, 호출이 얼마나 자주 실패하거나 빈 결과로 돌아오는지."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:115
+msgid "Last 24 hours"
+msgstr "최근 24시간"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:222
+msgid "Longest run of the same tool"
+msgstr "같은 도구의 가장 긴 연속"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:228
+msgid "Lookup time, 90th percentile"
+msgstr "조회 시간, 90%%"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:227
+msgid "Lookup time, median"
+msgstr "조회 시간, 중앙값"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:124
+msgid "MCP on this computer"
+msgstr "이 컴퓨터의 MCP"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:123
+msgid "MCP over HTTP"
+msgstr "HTTP MCP"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:248
+msgid "Map and zones"
+msgstr "지도와 구역"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:237
+msgid "Median time"
+msgstr "중간 시간"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:213
+msgid "No measured calls in this period yet."
+msgstr "이 기간에 측정된 호출이 아직 없습니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:214
+msgid "Not enough data"
+msgstr "자료 부족"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:125
+msgid "REST API"
+msgstr "REST API"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:230
+msgid "Refused calls"
+msgstr "거부된 호출"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:234
+msgid "Responses shortened to fit the size limit"
+msgstr "크기 제한에 맞춰 줄인 응답"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:221
+msgid "Same tool called again right away"
+msgstr "같은 도구를 바로 다시 부른 비율"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:216
+msgid "Share of recorded calls that were measured"
+msgstr "기록된 호출 중 측정된 비율"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:241
+msgid "Shortened"
+msgstr "줄임"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:226
+msgid "Time between calls, 90th percentile"
+msgstr "호출 사이 간격, 90%%"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:225
+msgid "Time between calls, median"
+msgstr "호출 사이 간격, 중앙값"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:139
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "시간은 실제로 실행된 조회만 셉니다. 사람이 승인한 뒤 서버가 실행한 변경은 포함하지 않습니다."
+
+#: aot_flask/templates/pages/ai/ai_manage.html:251
+msgid "Tool lists"
+msgstr "도구 목록"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:224
+msgid "Tool lists opened and then used"
+msgstr "도구 목록을 열고 실제로 쓴 비율"
+
+#: aot_flask/templates/pages/ai/ai_manage.html:235
+#, python-format
+msgid "%(n)s ms"
+msgstr "%(n)s밀리초"

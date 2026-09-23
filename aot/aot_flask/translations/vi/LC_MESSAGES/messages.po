@@ -14163,36 +14163,40 @@ msgstr ""
 " thời lượng đã đặt. Nhập 0 để tắt."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Enter value "
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"Chu kỳ làm việc tối thiểu của PWM (tính bằng %) - Đặt mức đầu ra tối "
+"Chu kỳ làm việc tối thiểu của PWM (tính bằng %%) - Đặt mức đầu ra tối "
 "thiểu. Nhập giá trị từ 0 đến 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_lower.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Enter value "
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Enter value "
 "between 0 and 100."
 msgstr ""
-"Chu kỳ làm việc tối đa của PWM (tính bằng %) - Đặt mức đầu ra tối đa. "
+"Chu kỳ làm việc tối đa của PWM (tính bằng %%) - Đặt mức đầu ra tối đa. "
 "Nhập giá trị từ 0 đến 100."
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:5
+#, python-format
 msgid ""
-"PWM Minimum Duty Cycle (in %) - Set minimum output level. Allowed range: "
-"0~100%"
+"PWM Minimum Duty Cycle (in %%) - Set minimum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"Chu kỳ làm việc tối thiểu của PWM (tính bằng %) - Đặt mức đầu ra tối "
-"thiểu. Phạm vi cho phép: 0~100%"
+"Chu kỳ làm việc tối thiểu của PWM (tính bằng %%) - Đặt mức đầu ra tối "
+"thiểu. Phạm vi cho phép: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_pwm_raise.html:11
+#, python-format
 msgid ""
-"PWM Maximum Duty Cycle (in %) - Set maximum output level. Allowed range: "
-"0~100%"
+"PWM Maximum Duty Cycle (in %%) - Set maximum output level. Allowed range:"
+" 0~100%%"
 msgstr ""
-"Chu kỳ làm việc tối đa của PWM (tính bằng %) - Đặt mức đầu ra tối đa. "
-"Phạm vi cho phép: 0~100%"
+"Chu kỳ làm việc tối đa của PWM (tính bằng %%) - Đặt mức đầu ra tối đa. "
+"Phạm vi cho phép: 0~100%%"
 
 #: aot_flask/templates/pages/function_options/pid_options/output_value_lower.html:6
 msgid ""

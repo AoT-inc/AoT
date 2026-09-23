@@ -27,10 +27,12 @@
 무방비가 된다(`human_device_control` 이 그렇게 예외가 됐다 — 그때는 승인 토큰이
 MCP 경계를 못 넘어서였고, 이 모듈을 직접 부르면 그 제약 자체가 없다).
 """
+import hashlib
 import json
 import logging
 import os
 import socket
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +278,9 @@ def _exclude_always_listed(names):
 def _open_drawer(app, arguments, role=None):
     """서랍 하나를 열어 그 안 도구들의 완전한 정의를 돌려준다.
 
+    인자 없이 부르면 서랍 목록만 준다 — 서버 안내문이 "인자 없이 부르면 모든
+    서랍을 본다" 고 하므로 오류가 아니다(예전에는 'drawer is required' 오류를
+    함께 실어 안내문과 어긋났고, 호출 품질 기록에서도 실패로 잡혔다).
     모르는 이름이면 **오류로 끝내지 않고 목록을 함께 준다** — "없다"로 끝내면
     LLM 이 포기하는데, 목록을 주면 다시 고른다.
     """
@@ -283,9 +288,11 @@ def _open_drawer(app, arguments, role=None):
 
     drawer = (arguments or {}).get("drawer")
     index = _drawer_index(app, role=role)
-    if not drawer or drawer not in DRAWERS:
+    if not drawer:
+        return {"drawers": index}
+    if drawer not in DRAWERS:
         return {
-            "error": ("unknown drawer: %s" % drawer) if drawer else "drawer is required",
+            "error": "unknown drawer: %s" % drawer,
             "drawers": index,
         }
 
@@ -654,12 +661,16 @@ def _thin_lists(result, target, priority=None):
     return omitted
 
 
-def _cap_result(result, tool_name, max_tokens=None):
+def _cap_result(result, tool_name, max_tokens=None, stats=None):
     """응답을 클라이언트 상한 아래로 줄인다. 이미 작으면 그대로 돌려준다.
 
-    result 를 제자리에서 고친다 — 감사 로그는 이 앞에서 이미 원본을 기록했으므로
-    (진단에는 잘리지 않은 것이 필요하다) 여기서 복사할 이유가 없고, 큰 응답을
-    복사하면 그 순간 메모리를 두 배로 쓴다.
+    result 를 제자리에서 고친다 — 감사 로그에 남기는 결과 요약(status·
+    reason_code)은 이 앞에서 이미 떼어 두었으므로 여기서 복사할 이유가 없고,
+    큰 응답을 복사하면 그 순간 메모리를 두 배로 쓴다.
+
+    stats: dict 를 넘기면 **캡 전** 추정 토큰 수를 `stats['original']` 에 담아
+    돌려준다(호출 품질 기록용). 이미 재는 값을 받아 가는 것뿐이라 추정을 한 번
+    더 돌리지 않는다. 캡이 꺼져 있거나(0) 결과가 dict 가 아니면 비워 둔다.
     """
     # `or` 로 쓰면 0(=끄기)이 falsy 라 기본값으로 되살아난다 — 끄는 수단이
     # 조용히 사라진다.
@@ -676,6 +687,8 @@ def _cap_result(result, tool_name, max_tokens=None):
 
     text = json.dumps(result, ensure_ascii=False)
     total = _estimate_tokens(text)
+    if stats is not None:
+        stats["original"] = total
     if total <= max_tokens:
         return result
 
@@ -823,7 +836,8 @@ def _cap_result(result, tool_name, max_tokens=None):
 
 
 def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
-                  elicit_fn=None, scope_user_uuid=None):
+                  elicit_fn=None, scope_user_uuid=None, transport=None,
+                  session_key=None, via_drawer=False):
     """Execute a named tool and return MCP-format content list.
 
     Every call — read or write, executed or refused — is recorded in
@@ -840,6 +854,12 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         to send the client a mid-call 'elicitation/create' request and block
         for its reply, which a stateless HTTP request/response cycle cannot
         do. See StdioMCPServer._elicit_decision.
+
+    transport / session_key / via_drawer: 호출 품질 칸(p6_74)용. 전송 계층이
+        넘긴다 — transport 는 mcp_stdio|mcp_http|rest|in_app, session_key 는
+        같은 대화를 묶는 **원문**(여기서 해시해 16자만 남긴다), via_drawer 는
+        use_tool 위임이 True 로 넘긴다. 이 함수 안에서 요청 헤더를 읽지 않는다 —
+        여기는 test_request_context 라 원래 요청이 보이지 않는다.
 
     Returns:
         list[dict]: MCP content blocks, e.g. [{"type": "text", "text": "..."}]
@@ -878,7 +898,12 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         # 것만으로 스코프를 벗어난다.** 서랍 안 도구는 전부 이 경로를 지난다.
         return _execute_tool(app, inner, merged, agent_id=agent_id,
                              role=role, elicit_fn=elicit_fn,
-                             scope_user_uuid=scope_user_uuid)
+                             scope_user_uuid=scope_user_uuid,
+                             transport=transport, session_key=session_key,
+                             via_drawer=True)
+    # 호출 품질의 duration_ms 는 여기서부터 잰다 — use_tool 의 인자 검증은
+    # 빼고, 스코프·게이트·실행·캡·최종 직렬화를 넣는다(감사 쓰기·전송은 뺀다).
+    _t0 = time.monotonic()
     # `agent_id` is decided by the transport (API key, or the declared name when
     # auth is off) and is NOT overridable from the arguments. An earlier version
     # honoured a `_agent_id` argument here, which let any caller stamp someone
@@ -890,70 +915,146 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
 
     blocked = None
     error_text = ""
-    # test_request_context (not just app_context): several handlers call
-    # parse_input_information()/parse_output_information() (create_input,
-    # create_output, create_gis_input, list_device_types(kind='input'|'output'),
-    # get_device_type_options(...)), which need flask_babel's request-bound
-    # gettext for translated option labels and raise "Working outside of
-    # request context" under a bare app_context. The in-app AI never hits this
-    # because it always runs inside a real Flask request; this standalone
-    # server previously only pushed an app context, so every one of those
-    # tools was silently broken here until now (found 2026-07-26 testing
-    # create_gis_input). test_request_context() pushes both a request and an
-    # app context, so this is a strict superset of the old app_context() call.
-    with app.test_request_context():
-        try:
-            if tool_name == "open_drawer":
-                # 서랍 열기/스키마 조회는 읽기이고, 게이트가 아는 도구도 아니다
-                # (tool_registry 의 동명 핸들러는 내부 AI 표면용이라 카탈로그가
-                # 다르다 — 이 표면의 원천은 _get_all_tools 하나뿐이어야 한다).
-                result = _open_drawer(app, arguments, role=role)
-            elif tool_name == "get_tool_detail":
-                result = _get_tool_detail(app, arguments, role=role)
-            elif tool_name == _CONFIRMATION_RESPONSE_TOOL:
-                # 승인 큐 응답 자체는 게이트를 거치지 않는다 — "승인하려면 승인이
-                # 필요하다"는 순환을 피하기 위함. 대신 role 체크는 여기서 직접 한다.
-                result = _respond_to_confirmation(arguments, agent_id, role)
-            else:
-                # 그룹 스코프(A2) — **승인 게이트보다 먼저** 묻는다.
-                #
-                # 뒤에 두면 어차피 거부될 호출이 승인 큐에 들어가고, 사람이
-                # 승인한 뒤에야 거부된다 — 승인한 사람에게는 "승인했는데 안
-                # 됐다" 로 보이고 큐에는 답할 수 없는 항목이 쌓인다.
-                # (설계 §6-2)
-                _denied_uuid = _scope_refusal(tool_name, arguments,
-                                              scope_user_uuid)
-                if _denied_uuid:
-                    from aot.aot_flask.access import scope as _scope
-                    result = {"status": "refused",
-                              "reason_code": "group_scope",
-                              "message": _scope.deny_message(),
-                              "target": _denied_uuid}
-                    blocked = result
+    # 무엇이 실패하든 기록은 남는다(아래 finally). 실행에 닿기도 전에 깨지면
+    # 이 초기값 그대로 'failed' 로 적힌다.
+    result = None
+    # ── 감사 기록 — 캡·직렬화까지 끝난 뒤 **한 번에** 쓴다 ──────────────
+    # 예전에는 실행 직후 INSERT 하고 곧바로 UPDATE 했다(커밋 2회). 둘 다
+    # 실행이 끝난 뒤였으므로 캡 뒤로 옮겨 한 번에 써도 남는 내용은 같다 —
+    # 다만 결과 요약은 **캡이 손대기 전**에 떼어 둔다(_audit_outcome).
+    # try/finally 로 감싸는 이유: 직렬화가 깨지면 예전에는 행이 이미 executed
+    # 로 적힌 채 오류가 숨었다. 이제는 failed 로 정확히 남고 예외는 그대로
+    # 올라간다.
+    outcome = None
+    quality = {"call_state": "failed"}
+    record_error = ""
+    cap_stats = {}
+    try:
+        # test_request_context (not just app_context): several handlers call
+        # parse_input_information()/parse_output_information() (create_input,
+        # create_output, create_gis_input, list_device_types(kind='input'|'output'),
+        # get_device_type_options(...)), which need flask_babel's request-bound
+        # gettext for translated option labels and raise "Working outside of
+        # request context" under a bare app_context. The in-app AI never hits this
+        # because it always runs inside a real Flask request; this standalone
+        # server previously only pushed an app context, so every one of those
+        # tools was silently broken here until now (found 2026-07-26 testing
+        # create_gis_input). test_request_context() pushes both a request and an
+        # app context, so this is a strict superset of the old app_context() call.
+        with app.test_request_context():
+            try:
+                if tool_name == "open_drawer":
+                    # 서랍 열기/스키마 조회는 읽기이고, 게이트가 아는 도구도 아니다
+                    # (tool_registry 의 동명 핸들러는 내부 AI 표면용이라 카탈로그가
+                    # 다르다 — 이 표면의 원천은 _get_all_tools 하나뿐이어야 한다).
+                    result = _open_drawer(app, arguments, role=role)
+                elif tool_name == "get_tool_detail":
+                    result = _get_tool_detail(app, arguments, role=role)
+                elif tool_name == _CONFIRMATION_RESPONSE_TOOL:
+                    # 승인 큐 응답 자체는 게이트를 거치지 않는다 — "승인하려면 승인이
+                    # 필요하다"는 순환을 피하기 위함. 대신 role 체크는 여기서 직접 한다.
+                    result = _respond_to_confirmation(arguments, agent_id, role)
                 else:
-                    blocked = gate.gate(tool_name, arguments, agent_id=agent_id,
-                                        role=role, reason=reason,
-                                        elicit_fn=elicit_fn)
-                if blocked is None:
-                    call_args = gate.inject_agent(
-                        tool_name, gate.strip_meta(arguments), agent_id)
-                    if tool_name in _NATIVE_TOOLS:
-                        from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
-                        result = AoTNativeToolEngine.execute(tool_name, call_args)
+                    # 그룹 스코프(A2) — **승인 게이트보다 먼저** 묻는다.
+                    #
+                    # 뒤에 두면 어차피 거부될 호출이 승인 큐에 들어가고, 사람이
+                    # 승인한 뒤에야 거부된다 — 승인한 사람에게는 "승인했는데 안
+                    # 됐다" 로 보이고 큐에는 답할 수 없는 항목이 쌓인다.
+                    # (설계 §6-2)
+                    _denied_uuid = _scope_refusal(tool_name, arguments,
+                                                  scope_user_uuid)
+                    if _denied_uuid:
+                        from aot.aot_flask.access import scope as _scope
+                        result = {"status": "refused",
+                                  "reason_code": "group_scope",
+                                  "message": _scope.deny_message(),
+                                  "target": _denied_uuid}
+                        blocked = result
                     else:
-                        result = _dispatch_virtual_tool(tool_name, call_args)
-                else:
-                    result = blocked
-        except ValueError as exc:
-            error_text = str(exc)
-            result = {"status": "error", "message": error_text}
-        except Exception as exc:
-            error_text = str(exc)
-            logger.error(f"[AoTMCP] Tool '{tool_name}' failed: {exc}", exc_info=True)
-            result = {"status": "error", "message": error_text}
+                        blocked = gate.gate(tool_name, arguments, agent_id=agent_id,
+                                            role=role, reason=reason,
+                                            elicit_fn=elicit_fn)
+                    if blocked is None:
+                        call_args = gate.inject_agent(
+                            tool_name, gate.strip_meta(arguments), agent_id)
+                        if tool_name in _NATIVE_TOOLS:
+                            from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
+                            result = AoTNativeToolEngine.execute(tool_name, call_args)
+                        else:
+                            result = _dispatch_virtual_tool(tool_name, call_args)
+                    else:
+                        result = blocked
+            except ValueError as exc:
+                error_text = str(exc)
+                result = {"status": "error", "message": error_text}
+            except Exception as exc:
+                error_text = str(exc)
+                logger.error(f"[AoTMCP] Tool '{tool_name}' failed: {exc}", exc_info=True)
+                result = {"status": "error", "message": error_text}
 
+        outcome = _audit_outcome(tool_name, permission, blocked, result,
+                                 error_text)
+        record_error = error_text
+        out = _finish_result(result, tool_name, blocked, error_text,
+                             quality, cap_stats)
+    except Exception as exc:
+        quality["call_state"] = "failed"
+        quality["response_bytes"] = None
+        record_error = repr(exc)
+        raise
+    except BaseException as exc:
+        # KeyboardInterrupt·SystemExit·작업 취소 등 — 기록은 failed 로 남기고
+        # 그대로 올려 보낸다(삼키지 않는다). 아래 finally 가 한 번만 적는다.
+        quality["call_state"] = "failed"
+        quality["response_bytes"] = None
+        record_error = repr(exc)
+        raise
+    finally:
+        quality["duration_ms"] = int(round((time.monotonic() - _t0) * 1000))
+        if outcome is None:
+            outcome = _audit_outcome(tool_name, permission, blocked, result,
+                                     error_text)
         _record_audit(audit, tool_name, arguments, agent_id, permission,
-                      reason, blocked, result, error_text)
+                      reason, outcome, record_error, quality,
+                      transport=transport, session_key=session_key,
+                      via_drawer=via_drawer, cap_stats=cap_stats)
+    return out
+
+
+#: 결과 건수를 셀 때 보지 않는 곁가지 목록 — 본 결과가 아니라 경고·안내·
+#: 참고 링크 같은 덧붙임이다. 이것까지 세면 결과가 비었는데도 "경고 1건"
+#: 때문에 빈 결과가 아닌 것으로 잡힌다. `_` 로 시작하는 키도 내부 칸이라 뺀다.
+_RESULT_ITEMS_AUX_KEYS = frozenset({
+    "errors", "warnings", "notes", "hints", "see", "see_also",
+    "available_releases", "controlling_tools", "suggestions", "next_steps",
+})
+
+
+def _result_items(result):
+    """결과 건수 근사치 — 빈 결과율의 분자.
+
+    1. 최상위 `count`·`total`·`matched` 중 정수가 있으면 그 값(도구가 직접 센 값).
+    2. 없으면 곁가지 목록(_RESULT_ITEMS_AUX_KEYS)과 `_` 로 시작하는 키를 뺀
+       최상위 목록을 본다. **정확히 하나**면 그 길이.
+    3. 둘 이상이면 어느 것이 본 결과인지 모르므로 None(모름). 없어도 None.
+    """
+    if not isinstance(result, dict):
+        return None
+    for key in ("count", "total", "matched"):
+        val = result.get(key)
+        if isinstance(val, int) and not isinstance(val, bool):
+            return val
+    lists = [v for k, v in result.items()
+             if isinstance(v, list) and not str(k).startswith("_")
+             and k not in _RESULT_ITEMS_AUX_KEYS]
+    return len(lists[0]) if len(lists) == 1 else None
+
+
+def _finish_result(result, tool_name, blocked, error_text, quality, cap_stats):
+    """실행 결과 → MCP 블록. 호출 품질 칸을 `quality` 에 채운다."""
+    from aot.tools import mcp_safety_gate as gate
+
+    quality["call_state"] = gate.call_state(blocked, result, error_text)
 
     # 텍스트가 아닌 블록(이미지 등)을 실어 보내는 통로. 도구가 결과 dict 에
     # `_content_blocks` 로 담아 두면 여기서 꺼내 MCP 블록으로 나란히 붙인다.
@@ -970,11 +1071,16 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         result.setdefault("server_host", SERVER_HOST)
         # 호출이 실제로 돌았는지를 도구별 어휘와 무관하게 한 키로 알린다.
         # 여기가 stdio/HTTP 양쪽이 반드시 지나는 단일 지점이라 한 번만 찍으면 된다.
-        result["call_state"] = gate.call_state(blocked, result, error_text)
+        result["call_state"] = quality["call_state"]
+        # 건수는 `now`·`_truncated` 를 붙이기 전, 캡이 목록을 줄이기 전에 센다.
+        quality["result_items"] = _result_items(result)
         result["now"] = _farm_now()
-        # 감사 기록(위)이 끝난 뒤에 줄인다 — 진단에는 잘리지 않은 원본이 필요하다.
-        result = _cap_result(result, tool_name)
-    out = [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]
+        result = _cap_result(result, tool_name, stats=cap_stats)
+        quality["truncated"] = "_truncated" in result
+    text = json.dumps(result, ensure_ascii=False)
+    # 실제로 나간 크기 — 잘린 뒤의 텍스트. 이미지 블록은 넣지 않는다.
+    quality["response_bytes"] = len(text.encode("utf-8"))
+    out = [{"type": "text", "text": text}]
     if _blocks:
         out.extend(_blocks)
     return out
@@ -1053,25 +1159,21 @@ def _tool_error(message):
          "server_host": SERVER_HOST}, ensure_ascii=False)}]
 
 
-def _record_audit(audit, tool_name, arguments, agent_id, permission,
-                  reason, blocked, result, error_text):
-    """Write one mcp_audit_log row describing this call's outcome.
+def _audit_outcome(tool_name, permission, blocked, result, error_text):
+    """감사 행의 (confirmation_status, result_summary) — 예전 2단계 기록과 같은 값.
 
-    Never raises: an audit failure must not turn a working tool call into an
-    error for the caller (the audit helpers already swallow and log their own
-    exceptions, but the status mapping below is ours).
+    캡이 결과를 줄이기 **전에** 부른다. 예전 방식에서 이 둘이 정해지는
+    규칙을 그대로 옮긴 것이고, 행 단위 동등성은 테스트가 고정한다.
+
+    요약을 만들다 깨지면(결과가 dict 가 아닌 경우 등) 예전에는 INSERT 만 되고
+    UPDATE 가 빠져 상태가 INSERT 의 기본값('n/a' 또는 'pending')으로 남았다.
+    그 결과도 그대로 재현한다. (그 경로는 error_text 가 빈 경우뿐이라 error
+    칸도 예전과 같다.)
     """
+    from aot.tools import mcp_safety_gate as gate
+    confirmation_id = (blocked or {}).get("confirmation_id") \
+        if isinstance(blocked, dict) else None
     try:
-        from aot.tools import mcp_safety_gate as gate
-        confirmation_id = (blocked or {}).get("confirmation_id")
-        uid = audit.log_call(
-            tool_name=tool_name,
-            params=arguments,
-            agent_id=agent_id,
-            permission=permission,
-            reason=reason,
-            confirmation_id=confirmation_id,
-        )
         if permission == "read":
             status = "n/a"
         elif blocked is None and tool_name in gate.config_only_tools():
@@ -1087,7 +1189,71 @@ def _record_audit(audit, tool_name, arguments, agent_id, permission,
             status = "rejected"
         summary = (blocked or {}).get("reason_code") or (
             "" if error_text else str(result.get("status", ""))[:100])
-        audit.update_status(uid, status, result_summary=summary, error=error_text)
+        return {"status": status, "summary": summary,
+                "confirmation_id": confirmation_id}
+    except Exception:
+        return {"status": "n/a" if permission == "read" else "pending",
+                "summary": "", "confirmation_id": confirmation_id}
+
+
+def _quality_ledger_enabled():
+    """호출 품질 칸을 채울지. 기본 켬 — 끄면 새 칸만 NULL 로 남는다.
+
+    매 호출마다 읽는다(재시작 없이 끌 수 있게). 감사 행 자체와 단일 INSERT
+    는 이 스위치와 무관하다.
+    """
+    return os.environ.get("AOT_MCP_QUALITY_LEDGER", "1") != "0"
+
+
+#: 세션 열쇠 원문의 최대 길이. 넘으면 저장하지 않는다(해시 전 원문 길이 기준).
+SESSION_KEY_MAX_LEN = 128
+
+
+def session_key_hash(raw):
+    """세션 열쇠 원문 → sha256 앞 16자. 비었거나 너무 길면 None."""
+    if raw is None:
+        return None
+    raw = str(raw)
+    if not raw or len(raw) > SESSION_KEY_MAX_LEN:
+        return None
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _record_audit(audit, tool_name, arguments, agent_id, permission,
+                  reason, outcome, error_text, quality, transport=None,
+                  session_key=None, via_drawer=False, cap_stats=None):
+    """Write one mcp_audit_log row describing this call's outcome — one INSERT.
+
+    Never raises: an audit failure must not turn a working tool call into an
+    error for the caller (record_call swallows and logs its own exceptions;
+    the field assembly below is ours).
+    """
+    try:
+        fields = {}
+        if _quality_ledger_enabled():
+            fields = {
+                "duration_ms": quality.get("duration_ms"),
+                "session_key": session_key_hash(session_key),
+                "transport": transport,
+                "via_drawer": bool(via_drawer),
+                "response_tokens": (cap_stats or {}).get("original"),
+                "response_bytes": quality.get("response_bytes"),
+                "truncated": quality.get("truncated"),
+                "call_state": quality.get("call_state"),
+                "result_items": quality.get("result_items"),
+            }
+        audit.record_call(
+            tool_name=tool_name,
+            params=arguments,
+            agent_id=agent_id,
+            permission=permission,
+            reason=reason,
+            confirmation_id=outcome["confirmation_id"],
+            confirmation_status=outcome["status"],
+            result_summary=outcome["summary"],
+            error=error_text,
+            **fields,
+        )
     except Exception:
         logger.exception("[AoTMCP] audit record failed for '%s'", tool_name)
 
@@ -1307,7 +1473,7 @@ def _dispatch_virtual_tool(tool_name, arguments):
 # 같은 게이트를 지나므로 승인·감사·응답 캡이 양쪽에서 동일하다.
 
 def execute_for_agent(app, tool_name, arguments, agent_unique_id=None,
-                      server_id=None, scope_user_uuid=None):
+                      server_id=None, scope_user_uuid=None, session_key=None):
     """내부 AI 의 도구 호출. 반환 형식은 `MCPBridgeService.call_tool` 과 같다.
 
     리졸버가 그 형식을 기대하므로 맞춘다 — 호출 방식이 바뀐 것이지 계약이
@@ -1351,9 +1517,12 @@ def execute_for_agent(app, tool_name, arguments, agent_unique_id=None,
     if scope_user_uuid is None:
         scope_user_uuid = _current_request_user_uuid()
 
+    # session_key: 부른 쪽이 넘긴 대화 번호(인앱 채팅의 thread_id). 이 모듈은
+    # aot.ai 를 import 하지 않으므로(tools-no-ai) 직접 찾지 않고 받기만 한다.
     content = _execute_tool(app, tool_name, arguments,
                             agent_id=agent_unique_id or "internal-ai", role=role,
-                            scope_user_uuid=scope_user_uuid)
+                            scope_user_uuid=scope_user_uuid,
+                            transport="in_app", session_key=session_key)
     try:
         result = json.loads(content[0]["text"])
     except Exception:
