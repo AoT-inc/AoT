@@ -4,6 +4,35 @@ This page covers login protection, API keys, and the audit log. For encrypting t
 web connection itself, see [Force HTTPS](Configuration-Settings.md#general-settings)
 in General Settings.
 
+## Cookies behind a reverse proxy (Docker) { #behind-tls }
+
+The Docker image relaxes a few cookie settings by default — the session cookie
+and the "remember me" cookie are sent without the `Secure` flag, and CSRF
+protection does not require HTTPS. This is on purpose: many Docker installs are
+reached directly over plain `http://` on a local network (small controller
+devices, for example), and a `Secure` cookie would simply never be sent back,
+breaking login.
+
+If this container is instead reached **only** through a reverse proxy that
+always terminates TLS in front of it (nginx, Nginx Proxy Manager, Cloudflare
+Tunnel, and similar), set the environment variable `AOT_BEHIND_TLS=1` on the
+container. This restores the `Secure` flag on both cookies and makes CSRF
+checks require HTTPS, so a cookie can never be sent in the clear — including on
+the very first request a browser makes to `http://` before the proxy redirects
+it to `https://`.
+
+!!! warning "Only set this if every request truly arrives over HTTPS"
+    With `AOT_BEHIND_TLS=1`, a browser will not send these cookies back over a
+    plain `http://` connection at all. If the reverse proxy does not actually
+    forward every request as HTTPS (for example, it does not set the
+    `X-Forwarded-Proto` header, or the container is also reachable directly on
+    plain HTTP), login and form submissions will fail. Leave this unset for any
+    install reached over plain HTTP, including most local/LAN Docker installs.
+
+This is independent of the **Force HTTPS** setting above, which controls
+whether AoT itself redirects `http://` to `https://`; a reverse proxy usually
+already does that redirect, so `AOT_BEHIND_TLS` only needs to fix the cookies.
+
 ## Password requirements { #password-requirements }
 
 A password must be at least 8 characters and may contain only letters, numbers, and
