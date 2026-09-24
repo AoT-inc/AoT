@@ -529,6 +529,121 @@ def _resource_of_uuid(record_uuid):
     return result
 
 
+# ---------------------------------------------------------------- 지도 도형
+
+def _shape_container(shape):
+    """지도 도형을 **담은** 스코프 대상 — [(kind, uuid)] 한 줄.
+
+    구역(zone)·부지(site)·시설 외곽선·시설 내부 구획(facility_bay) 같은 도형은
+    그 자신이 grant 단위가 아니다(`resource_type` 어휘에 없다). 그래서 판정은
+    도형을 담은 자원으로 옮겨서 한다(설계 §6-2a·§8-2, 2026-09-23 결정):
+
+      1. 그 도형을 외곽선으로 쓰는 시설(`GeoFacility.shape_uuid`) — 시설 자신.
+      2. 그 도형을 담은 시설(`geo_hierarchy.owning_facility_uuid` —
+         facility_bay 는 부모 FK, 그 밖은 `containment_point()` 공간 포함,
+         겹치면 가장 작은 시설).
+      3. 없으면 그 지도(`geo_id`). `geo_id` 는 NOT NULL 이라 "부모 없는 구역"
+         은 없다 — 시설 밖이면 지도로 떨어지는 것이 곧 규칙이다.
+    """
+    uid = getattr(shape, 'unique_id', None)
+    if uid:
+        from aot.databases.models import GeoFacility
+        own = [row.unique_id for row in GeoFacility.query.filter(
+            GeoFacility.shape_uuid == uid).all() if row.unique_id]
+        if own:
+            return [('geo_facility', fid) for fid in own]
+    from aot.utils.geo_hierarchy import owning_facility_uuid
+    facility_uuid = owning_facility_uuid(shape)
+    if facility_uuid:
+        return [('geo_facility', facility_uuid)]
+    geo_id = getattr(shape, 'geo_id', None)
+    if geo_id:
+        return [('geo_map', geo_id)]
+    return []
+
+
+def shape_resources(shape):
+    """지도 도형 하나가 걸리는 스코프 대상 전부 — [(kind, uuid)].
+
+    연결된 장치(`GeoShape.device_id` — 그 장치의 탭으로 판정)와, 도형을 담은
+    시설 또는 지도(`_shape_container`). **둘 다** 통과해야 그 도형에 쓸 수
+    있다. 쓰기 시점 강제(`write_scope.enforce`)와 앞 판정
+    (`can_operate_uuid` → `can_operate_tool_call`)이 이 함수 하나를 쓴다 —
+    판정이 두 벌이면 한쪽만 고치고 잊는다(원칙 3).
+    """
+    if shape is None:
+        return []
+    cache = _cache()
+    key = ('shape_res', getattr(shape, 'unique_id', None) or id(shape))
+    if key in cache:
+        return list(cache[key])
+    out = []
+    device_id = getattr(shape, 'device_id', None)
+    if isinstance(device_id, str) and device_id.strip():
+        found = _resource_of_uuid(device_id.strip())
+        if found is not None:
+            out.append(found)
+    out.extend(_shape_container(shape))
+    cache[key] = tuple(out)
+    return out
+
+
+def resources_of_uuid(record_uuid):
+    """uuid 하나 → 판정할 스코프 대상 목록. 스코프 대상이 아니면 [].
+
+    장치·위젯·탭·대시보드·지도·시설은 자기 자신(`_resource_of_uuid`), 지도
+    도형은 `shape_resources()` 로 옮긴다. 그 밖(노트·측정·구획 id 등)은 [].
+    """
+    if not isinstance(record_uuid, str) or not record_uuid:
+        return []
+    found = _resource_of_uuid(record_uuid)
+    if found is not None:
+        return [found]
+    from aot.databases.models import GeoShape
+    shape = GeoShape.query.filter(GeoShape.unique_id == record_uuid).first()
+    if shape is None:
+        return []
+    return shape_resources(shape)
+
+
+def _can_operate_kind(kind, resource_uuid, user=None):
+    if kind == 'device':
+        return can_operate_device(resource_uuid, user=user)
+    if kind == 'widget':
+        return can_operate_widget(resource_uuid, user=user)
+    from aot.databases.models.user_group import (RESOURCE_DASHBOARD,
+                                                 RESOURCE_GEO_FACILITY,
+                                                 RESOURCE_GEO_MAP,
+                                                 RESOURCE_TAB)
+    resource_type = {'tab': RESOURCE_TAB, 'dashboard': RESOURCE_DASHBOARD,
+                     'geo_map': RESOURCE_GEO_MAP,
+                     'geo_facility': RESOURCE_GEO_FACILITY}.get(kind)
+    if resource_type is None:
+        return False                     # 모르는 종류 — 좁은 쪽으로
+    return can_operate(resource_type, resource_uuid, user=user)
+
+
+def can_operate_uuid(record_uuid, user=None):
+    """이 사람이 이 uuid 가 가리키는 것을 조작할 수 있는가.
+
+    `resources_of_uuid()` 가 돌려준 대상 **전부**를 통과해야 한다. 스코프
+    대상이 아닌 uuid 는 통과(판정할 자원이 없다). 지도 도형(구역·부지·시설
+    외곽선·시설 구획)은 그것을 담은 시설, 없으면 지도로 판정한다 — 설계
+    §6-2a·§8-2.
+
+    ⚠ 앞 판정(짐작)용이다. 경계는 처리기가 실제 대상을 쥔 자리의
+    `write_scope.enforce` 이고, 그것도 같은 `shape_resources()` 를 쓴다.
+    """
+    if not scoping_active():
+        return True
+    if is_exempt(user):
+        return True
+    for kind, resource_uuid in resources_of_uuid(record_uuid):
+        if not _can_operate_kind(kind, resource_uuid, user=user):
+            return False
+    return True
+
+
 def can_operate_tool_call(tool_name, arguments, user=None, write_tools=None):
     """AI·MCP 도구 호출 하나를 판정한다 (A2).
 
@@ -566,13 +681,6 @@ def can_operate_tool_call(tool_name, arguments, user=None, write_tools=None):
     if is_exempt(user):
         return True, None
 
-    from aot.databases.models.user_group import (RESOURCE_DASHBOARD,
-                                                 RESOURCE_GEO_FACILITY,
-                                                 RESOURCE_GEO_MAP,
-                                                 RESOURCE_TAB)
-    by_kind = {'tab': RESOURCE_TAB, 'dashboard': RESOURCE_DASHBOARD,
-               'geo_map': RESOURCE_GEO_MAP, 'geo_facility': RESOURCE_GEO_FACILITY}
-
     # 다 훑지 못하는 인자는 거부한다 — 건너뛴 자리가 곧 우회로다. 판정
     # 사본에 덧붙인 풀린 id 목록(`tool_execution.SCOPE_RESOLVED_KEY`)은 호출자가
     # 보낸 것이 아니라 세지 않는다(항목마다 id 가 둘 풀리면 정상 일괄도 넘는다).
@@ -582,19 +690,13 @@ def can_operate_tool_call(tool_name, arguments, user=None, write_tools=None):
     if scan_limits_exceeded(_sent):
         return False, SCAN_LIMIT
 
+    # 판정은 `can_operate_uuid()` 하나에 맡긴다 — 지도 도형(구역 등)을 담은
+    # 시설·지도로 옮기는 규칙도 거기 있다. 돌려주는 "거부된 id" 는 인자에
+    # **실제로 있던 값**이다(안에서 시설·지도로 옮겨 판정했더라도) — 호출자가
+    # 자기가 준 인자에서 원인을 찾을 수 있어야 한다.
     for value in dict.fromkeys(_uuid_values(arguments)):
-        found = _resource_of_uuid(value)
-        if found is None:
-            continue                     # 스코프 대상이 아닌 uuid
-        kind, record_uuid = found
-        if kind == 'device':
-            allowed = can_operate_device(record_uuid, user=user)
-        elif kind == 'widget':
-            allowed = can_operate_widget(record_uuid, user=user)
-        else:
-            allowed = can_operate(by_kind[kind], record_uuid, user=user)
-        if not allowed:
-            return False, record_uuid
+        if not can_operate_uuid(value, user=user):
+            return False, value
     return True, None
 
 

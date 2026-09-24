@@ -218,6 +218,25 @@ def ensure_target_tag(tags_csv, target_id):
     return ','.join(ids)
 
 
+def _note_scope_denied(note, action, tool):
+    """노트 편집 화면의 그룹 스코프 — 그 노트가 붙은 대상에 로그인한 사람이
+    쓸 수 없으면 오류를 띄우고 True.
+
+    노트 API(`routes_notes_api`)·AI·MCP 와 같은 판정(`write_scope`, 설계
+    §6-2a)이다. 구역·시설 외곽선 같은 지도 도형은 담은 시설, 없으면 지도로
+    판정한다. 대상 없는 노트와 그룹을 쓰지 않는 설치는 그대로 통과한다.
+    """
+    target_id = getattr(note, 'target_id', None) if note is not None else None
+    if not isinstance(target_id, str) or not target_id.strip():
+        return False
+    from aot.aot_flask.access import write_scope
+    denied = write_scope.current_user_denial(target_id.strip(), tool=tool)
+    if not denied:
+        return False
+    flash_success_errors([denied], action, url_for('routes_page.page_notes'))
+    return True
+
+
 def note_add(form):
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['add']['title'],
@@ -315,6 +334,8 @@ def note_mod(form):
 
     mod_note = Notes.query.filter(
         Notes.unique_id == form.note_unique_id.data).first()
+    if _note_scope_denied(mod_note, action, 'update_note'):
+        return
 
     # Relaxed validation for modifications
     if not form.note.data and not form.files.data and not mod_note.files:
@@ -448,6 +469,8 @@ def file_rename(form):
 
     mod_note = Notes.query.filter(
         Notes.unique_id == form.note_unique_id.data).first()
+    if _note_scope_denied(mod_note, action, 'update_note'):
+        return
     files_list = mod_note.files.split(",")
 
     new_file_name = "{id}_{name}".format(
@@ -487,6 +510,8 @@ def file_del(form):
 
     mod_note = Notes.query.filter(
         Notes.unique_id == form.note_unique_id.data).first()
+    if _note_scope_denied(mod_note, action, 'update_note'):
+        return
     files_list = mod_note.files.split(",")
 
     if form.file_selected.data in files_list:
@@ -522,6 +547,8 @@ def note_del(form):
 
     note = Notes.query.filter(
         Notes.unique_id == form.note_unique_id.data).first()
+    if _note_scope_denied(note, action, 'delete_note'):
+        return
 
     if note.files:
         delete_string = "{dir}/{id}*".format(

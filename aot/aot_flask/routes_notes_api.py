@@ -196,6 +196,21 @@ def api_notes_target_get(target_id):
 
 from aot.aot_flask.extensions import db, csrf
 
+
+def _note_target_denial(target_id, tool):
+    """이 노트 대상에 로그인한 사람이 쓸 수 없으면 거부 문구, 되면 None.
+
+    웹 노트 만들기·고치기·지우기가 함께 쓴다. 판정은 AI·MCP 의 쓰기 시점
+    강제와 같은 `write_scope` 다 — 그룹을 쓰지 않는 설치와 "모든 그룹 접근"
+    역할은 그대로 통과한다. 고치기·지우기는 클라이언트가 보낸 값이 아니라
+    **그 노트가 이미 붙어 있는** 대상으로 묻는다.
+    """
+    if not isinstance(target_id, str) or not target_id.strip():
+        return None
+    from aot.aot_flask.access import write_scope
+    return write_scope.current_user_denial(target_id.strip(), tool=tool)
+
+
 @blueprint.route('/notes/create', methods=['POST'])
 @login_required
 @csrf.exempt
@@ -223,6 +238,13 @@ def api_notes_create():
         note_text = data.get('note')
         gps_lat = data.get('gps_lat')
         gps_lng = data.get('gps_lng')
+
+        # 그룹 스코프 — MCP·인앱 AI 의 create_note 와 같은 판정(설계 §6-2a).
+        # 구역·시설 외곽선 같은 지도 도형은 그것을 담은 시설, 없으면 지도로
+        # 판정한다. 역할만 보던 동안 화면이 AI 경로보다 넓은 우회로였다.
+        denied = _note_target_denial(target_id, 'create_note')
+        if denied:
+            return jsonify({'error': denied}), 403
 
         if gps_lat is None:
             gps_lat, gps_lng = resolve_target_gps(target_type, target_id)
@@ -441,11 +463,19 @@ def api_notes_geo_get():
 
 @blueprint.route('/notes/toggle_map_visibility', methods=['POST'])
 @login_required
-@csrf.exempt
 def api_notes_toggle_map_visibility():
-    """Toggle visibility of notes on map (Grouped by target_id)"""
+    """Toggle visibility of notes on map (Grouped by target_id)
+
+    노트 편집이다 — 같은 대상의 노트 전부에 숨김 태그를 달거나 뗀다. 그래서
+    웹 노트 고치기와 같은 권한(`edit_settings`)과, 그 노트가 이미 붙은 대상의
+    그룹 스코프(`_note_target_denial`)를 본다. CSRF 도 면제하지 않는다 —
+    부르는 화면(노트 화면·지도 위젯)이 `X-CSRFToken` 을 이미 보낸다.
+    """
     try:
-        data = request.get_json(force=True, silent=True) or {}
+        if not utils_general.user_has_permission('edit_settings'):
+            return jsonify({'error': 'Permission Denied'}), 403
+
+        data = request.get_json(silent=True) or {}
         unique_id = data.get('unique_id')
         visible = data.get('visible') # boolean
         
@@ -456,7 +486,12 @@ def api_notes_toggle_map_visibility():
         ref_note = Notes.query.filter_by(unique_id=unique_id).first()
         if not ref_note:
             return jsonify({'error': 'Note not found'}), 404
-            
+
+        # 같은 대상의 노트를 함께 바꾸므로 그 대상 하나로 묻는다.
+        denied = _note_target_denial(ref_note.target_id, 'toggle_note_map_visibility')
+        if denied:
+            return jsonify({'error': denied}), 403
+
         target_id = ref_note.target_id
         if not target_id:
              # If no target_id, just toggle this note
@@ -660,6 +695,16 @@ def api_note_link_delete(link_id):
         denied = human_task_write_denied()
         if denied:
             return denied
+        # 그룹 스코프 — 지울 예정이 움직이는 대상으로 묻는다(스케줄러 화면의
+        # 삭제·AI `delete_schedule` 과 같은 판정).
+        from aot.aot_flask.access import write_scope
+        from aot.databases.models import SchedulerJobMeta
+        job = SchedulerJobMeta.query.filter_by(unique_id=link.job_uid).first()
+        if job is not None:
+            scope_denied = write_scope.current_user_denial(
+                job, tool='delete_schedule')
+            if scope_denied:
+                return jsonify({'ok': False, 'message': scope_denied}), 403
     try:
         note_links.unlink(link, cancel_job=cancel)
     except Exception as exc:
@@ -700,15 +745,26 @@ def api_notes_tags_get():
         return jsonify({'error': str(e)}), 500
 @blueprint.route('/notes/update/<unique_id>', methods=['POST'])
 @login_required
-@csrf.exempt
 def api_notes_update(unique_id):
-    """Update an existing note (e.g. rename)"""
+    """Update an existing note (e.g. rename)
+
+    웹 노트 고치기(`note_mod`)·지우기와 같은 권한(`edit_settings`)을 요구한다 —
+    예전에는 로그인만 봐서 보기 전용 계정이 이름·본문을 이력 없이 덮어썼다.
+    CSRF 도 면제하지 않는다(지도 위젯이 `X-CSRFToken` 을 보낸다).
+    """
     try:
+        if not utils_general.user_has_permission('edit_settings'):
+            return jsonify({'error': 'Permission Denied'}), 403
+
         note = Notes.query.filter_by(unique_id=unique_id).first()
         if not note:
             return jsonify({'error': 'Note not found'}), 404
-            
-        data = request.get_json(force=True, silent=True) or {}
+
+        denied = _note_target_denial(note.target_id, 'update_note')
+        if denied:
+            return jsonify({'error': denied}), 403
+
+        data = request.get_json(silent=True) or {}
         
         # Update fields if provided
         if 'name' in data:
@@ -776,6 +832,10 @@ def api_notes_delete(unique_id):
         note = Notes.query.filter_by(unique_id=unique_id).first()
         if not note:
             return jsonify({'error': 'Note not found'}), 404
+
+        denied = _note_target_denial(note.target_id, 'delete_note')
+        if denied:
+            return jsonify({'error': denied}), 403
 
         # 링크를 함께 걷는다 — 노트가 없으면 링크는 아무 데서도 안 읽히는 채
         # DB 에 영원히 남는다. 예정 자체는 남긴다(다른 결정이다).

@@ -31911,3 +31911,12 @@ msgstr "AIツールを変更しました。接続中のAIアプリは、再接�
 #: aot_flask/templates/settings/user_detail.html
 msgid "All tools (built-in AI)"
 msgstr "すべてのツール（アプリ内蔵AI）"
+
+#: aot_flask/templates/layout.html
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Googleカレンダーを接続するには「コントローラを編集」権限が必要です。"
+
+#: aot_flask/routes_integrations.py
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "対象を変更する権限がないため、カレンダーの予定%(count)s件をスキップしました。"

@@ -273,8 +273,20 @@ def _create_human_schedule(target_id, kind, label, date_str, time_str,
 
     `/api/geo/schedule`(지도 모달)과 `/notes/<id>/schedule`(노트 구간 선택)이
     **함께 쓴다** — 두 벌로 두면 `propose_job` 의 자가승인 같은 함정을 한쪽
-    에서만 지키게 된다.
+    에서만 지키게 된다. 그룹 스코프도 여기 하나에서 본다 — 두 화면이 함께
+    막힌다.
+
+    그룹 스코프는 MCP·인앱 AI 의 `add_schedule` 과 같은 판정(`write_scope`,
+    설계 §6-2a)이다. 구역·시설 외곽선 같은 지도 도형은 그것을 담은 시설,
+    없으면 지도로 판정한다. 대상 없는(`'none'`) 예정은 판정할 자원이 없다.
     """
+    from aot.aot_flask.access import write_scope
+    denied = write_scope.current_user_denial(
+        target_id if target_id and target_id != 'none' else None,
+        tool='add_schedule')
+    if denied:
+        return jsonify({'ok': False, 'message': denied}), 403
+
     time_str = time_str or '09:00'
 
     from aot.tools.aot_data_tool_service import AoTDataToolService as _T

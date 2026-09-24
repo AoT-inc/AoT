@@ -144,6 +144,9 @@ class AIActionService:
             try:
                 _pushed_req_ctx = current_app.test_request_context()
                 _pushed_req_ctx.push()
+                # 코드가 연 가짜 요청 — 사람의 요청으로 읽히지 않게 표시한다.
+                from aot.ai import ai_request_context as _ai_ctx
+                _ai_ctx.mark_synthetic_request()
             except Exception:
                 pass
 
@@ -604,6 +607,14 @@ class AIActionService:
         except Exception as e:
             logger.exception("Error generating action manifest")
             return {"error": str(e)}
+        finally:
+            # 위에서 밀어 넣은 컨텍스트는 여기서 되돌린다. 빼먹으면 이 스레드에
+            # 가짜 요청 컨텍스트가 남아, 이후 사람이 없는 백그라운드 호출이
+            # 로그인하지 않은 사람의 요청으로 읽혀 쓰기가 거부된다.
+            if _pushed_req_ctx:
+                _pushed_req_ctx.pop()
+            if _pushed_app_ctx:
+                _pushed_app_ctx.pop()
 
     @staticmethod
     def _resolve_target(target_id, action_type, params=None, context=None):

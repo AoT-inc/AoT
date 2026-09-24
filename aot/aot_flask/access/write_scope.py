@@ -226,6 +226,23 @@ def acting_as_current_user(tool=None):
         yield principal
 
 
+def current_user_denial(target, tool=None):
+    """웹 라우트용 한 줄 판정 — 로그인한 사람이 `target` 에 쓸 수 없으면
+    공용 거부 문구, 쓸 수 있으면 None.
+
+    처리기를 거치지 않고 라우트가 직접 행을 쓰는 자리(웹 노트 만들기·고치기·
+    지우기, 사람 예정 만들기)가 쓴다. 판정은 `enforce` 와 **같다** — 같은
+    행 종류 규칙(지도 도형은 담은 시설·지도로), 같은 면제(그룹을 쓰지 않는
+    설치·모든 그룹 접근 역할), 판정이 깨지면 거부.
+    """
+    try:
+        with acting_as_current_user(tool=tool):
+            enforce(target)
+    except WriteScopeDenied:
+        return deny_message()
+    return None
+
+
 # ---------------------------------------------------------------- 대상 풀기
 
 _SCOPED_ROW_MODELS = ('Input', 'Output', 'Function', 'Conditional', 'Trigger',
@@ -265,23 +282,19 @@ def _row_refs(row):
 
 
 def _shape_refs(shape):
-    """지도 도형이 가리키는 스코프 대상 — 연결된 장치와 시설.
+    """지도 도형이 걸리는 스코프 대상 — 연결된 장치, 그리고 도형을 담은
+    시설(없으면 지도).
 
-    도형 자체(구역·자리)의 지도 단위 스코프는 여기서 새로 걸지 않는다 —
-    구역 스코프는 따로 다룬다(설계 §6-2a "스코프 대상이 아닌 종류").
+    구역·부지·시설 외곽선·시설 구획은 그 자신이 grant 단위가 아니다. 그래서
+    그 도형에 붙는 쓰기(노트·일정·도형 삭제)는 도형을 담은 시설, 시설 밖이면
+    그 지도의 스코프를 따른다(설계 §6-2a·§8-2, 2026-09-23 결정). 규칙 자체는
+    `scope.shape_resources()` 한 곳에 있다 — 앞 판정(`can_operate_uuid`)과
+    같은 함수다.
     """
-    out = []
-    device_id = getattr(shape, 'device_id', None)
-    if device_id:
-        out.extend(_id_refs(device_id))
-    try:
-        from aot.databases.models import GeoFacility
-        for fac in GeoFacility.query.filter(
-                GeoFacility.shape_uuid == shape.unique_id).all():
-            out.append(('GeoFacility', fac.unique_id))
-    except Exception:
-        logger.exception('[write-scope] 시설 조회 실패')
-    return out
+    from aot.aot_flask.access import scope
+    return [(_KIND_MODEL[kind], uid)
+            for kind, uid in scope.shape_resources(shape)
+            if kind in _KIND_MODEL and uid]
 
 
 def _job_refs(meta):
@@ -322,23 +335,15 @@ def _id_refs(record_uuid):
 
     장치는 모델을 가리지 않고 `Output` 으로 적는다 — 판정 근거가 **그 장치의
     탭**(`scope.tab_of_device` 가 장치 모델 전부를 본다)이라 같은 결과다.
+    지도 도형 uuid 는 `_shape_refs` 와 같은 규칙(`scope.resources_of_uuid` →
+    `shape_resources`)으로 담은 시설·지도와 연결된 장치로 옮긴다.
     """
     if not isinstance(record_uuid, str) or not record_uuid.strip():
         return []
-    uid = record_uuid.strip()
     from aot.aot_flask.access import scope
-    found = scope._resource_of_uuid(uid)
-    if found is not None:
-        kind, ruid = found
-        return [(_KIND_MODEL[kind], ruid)]
-    try:
-        from aot.databases.models import GeoShape
-        shape = GeoShape.query.filter(GeoShape.unique_id == uid).first()
-    except Exception:
-        shape = None
-    if shape is not None:
-        return _shape_refs(shape)
-    return []
+    return [(_KIND_MODEL[kind], uid)
+            for kind, uid in scope.resources_of_uuid(record_uuid.strip())
+            if kind in _KIND_MODEL and uid]
 
 
 def refs_of(target):

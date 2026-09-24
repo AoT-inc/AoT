@@ -93,10 +93,26 @@ def settings_integrations_config():
     return redirect(url_for('routes_integrations.settings_integrations'))
 
 
+def _calendar_sync_denied():
+    """달력 연결·수동 동기화를 막아야 하면 True(이미 안내를 띄운다).
+
+    연결하면 주기 동기화가 구글 달력 일정을 사람 작업·제어 초안으로 **들여
+    온다** — 스케줄러 화면과 같은 쓰기다. 그래서 같은 편집자 권한
+    (`HUMAN_TASK_PERMISSION`)을 요구한다. 보기 전용 역할(Monitor·Guest·Kiosk)이
+    연결을 걸어 두면 가져오기가 매번 권한으로 건너뛰어질 뿐 아니라, 권한이
+    생기는 순간 확인 없이 들여오기 시작한다.
+    """
+    from aot.ai.services.ai_scheduler_service import HUMAN_TASK_PERMISSION
+    return not utils_general.user_has_permission(HUMAN_TASK_PERMISSION)
+
+
 @blueprint.route('/oauth/google/start', methods=['GET'])
 @login_required
 def oauth_google_start():
-    # Self-scoped (connects the caller's own account) — no view_settings gate.
+    # Self-scoped (connects the caller's own account) — no view_settings gate,
+    # but connecting imports tasks, so it needs the human-task (editor) role.
+    if _calendar_sync_denied():
+        return redirect(url_for('routes_integrations.settings_integrations'))
     if not google_oauth.is_configured():
         flash("Google OAuth is not configured yet (admin must set client credentials).", "warning")
         return redirect(url_for('routes_integrations.settings_integrations'))
@@ -164,6 +180,9 @@ def oauth_google_callback():
     expected = session.pop(_OAUTH_STATE_KEY, None)
     if not expected or expected != got_state:
         flash("Authorization state mismatch — please try connecting again.", "error")
+        return redirect(url_for('routes_integrations.settings_integrations'))
+    # 시작과 같은 문 — 시작 뒤에 역할이 내려갔어도 연결을 만들지 않는다.
+    if _calendar_sync_denied():
         return redirect(url_for('routes_integrations.settings_integrations'))
 
     code = request.args.get('code')
@@ -339,7 +358,10 @@ def api_google_calendar_events():
 @login_required
 def oauth_google_sync_now():
     """Run a two-way sync immediately for the current user's connection.
-    Self-scoped — no view_settings gate beyond being logged in."""
+    Self-scoped — no view_settings gate, but a sync imports tasks, so it
+    needs the human-task (editor) role like connecting does."""
+    if _calendar_sync_denied():
+        return redirect(url_for('routes_integrations.settings_integrations'))
     connection = (UserCalendarConnection.query
                   .filter_by(user_id=flask_login.current_user.id, provider='google')
                   .first())
@@ -356,6 +378,10 @@ def oauth_google_sync_now():
         flash("Synced. Pushed +{}/~{}/-{}, pulled +{}/~{}/-{}.".format(
             push.get('inserted', 0), push.get('updated', 0), push.get('deleted', 0),
             pull.get('imported', 0), pull.get('updated', 0), pull.get('cancelled', 0)), "success")
+        if pull.get('refused'):
+            flash(gettext(
+                "%(count)s calendar event(s) were skipped because you cannot "
+                "change their target.", count=pull['refused']), "warning")
     return redirect(url_for('routes_integrations.settings_integrations'))
 
 

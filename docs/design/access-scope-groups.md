@@ -667,10 +667,30 @@ AI 로 할 수 있었다. 대상 도구는 레지스트리 도메인에서 파�
 | 예약 승인(`/api/v1/scheduler/approve`) | `approve_job(approver=)` | 승인자 |
 | 웹 일정 편집·삭제·거부(`/api/v1/scheduler/jobs/<id>`, 옛 `/api/scheduler/job/<id>`·일괄) | `acting_as_current_user` | 로그인한 사람 |
 | 웹 구획 단계 자원 켜기(`/api/geo/plot/<id>/resources`) | `acting_as_current_user` — 켜기 **전에** 대상 함수 전부 판정 | 로그인한 사람 |
+| 웹 노트 만들기·고치기·지우기(`/notes/create`·`/notes/update/<id>`·`/notes/delete/<id>`, 노트 화면의 고치기·지우기·첨부, REST `POST /api/notes/`) | `write_scope.current_user_denial` — 만들기는 보낸 대상, 고치기·지우기는 **그 노트가 이미 붙은** 대상 | 로그인한 사람 |
+| 웹 노트 지도 숨김(`/notes/toggle_map_visibility`) | `write_scope.current_user_denial` — 기준 노트가 붙은 대상(같은 대상의 노트를 함께 바꾼다) | 로그인한 사람 |
+| 구글 달력 가져오기(`calendar_sync_service.pull_connection` — 주기 작업·"지금 동기화") | 요청자 표지 + `acting_as` 로 묶고, 일정마다 `job_denial` + `enforce(job)`. 고치기·다시 연결은 **고치기 전과 뒤 둘 다**, 취소(보관)는 고치기 전 | 연결 주인 |
+| 웹 사람 예정 만들기(`/api/geo/schedule`·`/notes/<id>/schedule` — `_create_human_schedule`) | `write_scope.current_user_denial` | 로그인한 사람 |
+| 노트 링크 끊으며 예정 취소(`/notes/link/<id>?cancel_job=1`) | `write_scope.current_user_denial` — 지울 예정 행으로 | 로그인한 사람 |
 
 예약은 **실제로 돌 도구**로 판정한다(`AISchedulerService.job_denial` — 안쪽 도구의
 `required_write_permission` + `can_operate_tool_call(scope_arguments(...))`). 겉의
 `target_id` 는 도구 호출이면 도구 이름이라 그것으로 물으면 늘 통과했다.
+
+**후속 검토(2026-09-24) — 표 아래 두 입구.**
+
+- 노트 `/notes/update/<id>`·`/notes/toggle_map_visibility` 는 로그인만 봤다 —
+  Guest·Kiosk·Monitor 가 노트 이름·본문을 이력 없이 덮어쓰고 지도에서 숨겼다.
+  이제 웹 노트 고치기와 같은 `edit_settings` 를 요구하고(숨김은 대상 스코프도),
+  두 라우트의 CSRF 면제를 뗐다 — 부르는 화면(노트 화면·지도 위젯 번들)이 이미
+  `X-CSRFToken` 을 보낸다. JSON 도 `force=True` 없이 읽는다.
+- 구글 달력 가져오기는 신원을 묶지 않아 `enforce` 가 "사람이 없는 호출" 로 보고
+  아무것도 막지 않았다 — 역할은 `pull_allowed` 가 봤지만 그룹 스코프는 안 봤다.
+  이제 연결 주인으로 묶고 일정마다 판정한다. 막힌 일정은 **그것만** 건너뛰고
+  (`stats['refused']`, "지금 동기화" 는 건수를 알린다) 동기화 전체는 실패시키지
+  않는다. 새 일정은 링크를 남기지 않으므로 다시 고쳐지면 그때 다시 판정한다.
+  연결 시작(`/oauth/google/start`·콜백)과 "지금 동기화" 도 `HUMAN_TASK_PERMISSION`
+  (편집자)을 요구하고, 화면은 `can_edit_human_tasks()` 로 그 버튼을 숨긴다.
 
 - **책임자**: 만든 사람. 사람이 만든 예약은 호출자가 `user_id` 를 넘기지 않아도
   묶인 사람(없으면 인앱 요청자)으로 채운다. 책임자가 없는 AI 초안을 사람이
@@ -713,11 +733,13 @@ AI 로 할 수 있었다. 대상 도구는 레지스트리 도메인에서 파�
 - 승인자 uuid 가 없는 확인 행(키에 소유자가 없는 인증 꺼짐 모드).
 - 웹 화면의 일반 쓰기 라우트(장치·함수·대시보드 편집 등)는 이 모듈이 아니라
   라우트 자신의 스코프 판정(§5-2 초크포인트)을 지난다 — 처리기(`AoTDataToolService`)
-  를 곧바로 부르는 라우트만 위 표처럼 묶는다.
+  를 곧바로 부르는 라우트와, 노트·사람 예정처럼 AI 도구와 **같은 쓰기**를 라우트가
+  직접 하는 자리만 위 표처럼 이 모듈로 판정한다(§8-2-후속).
 - `enforce(target)` — 처리기·공용 리졸버가 쓸 행을 손에 쥔 자리에서 부른다. 행
   종류로 판정한다: 장치(자기 탭), 위젯(대시보드), 탭·대시보드·지도·시설(자기
   자신), **자식 행은 부모로**(`Actions` → 함수), **일정은 그것이 움직이는 대상으로**
-  (`SchedulerJobMeta.target_id` + 인자 속 장치), 지도 도형은 연결된 장치·시설로.
+  (`SchedulerJobMeta.target_id` + 인자 속 장치), **지도 도형은 연결된 장치와, 그
+  도형을 담은 시설(없으면 지도)로**(§8-2-후속 — `scope.shape_resources`).
   묶인 사람이 없으면(사람이 없는 호출 — §6-1·§6-2) 아무것도 하지 않는다.
 - 거부는 `WriteScopeDenied` — **`BaseException`** 이다. 처리기 여럿이
   `except Exception:` 으로 조회 실패를 삼키고 다른 길(부분 이름 등)로 넘어가는데,
@@ -734,14 +756,15 @@ AI 로 할 수 있었다. 대상 도구는 레지스트리 도메인에서 파�
 `modify_sequence_step` 단계 → 부모), `modify_function_options`·`delete_function`·
 `create_sequence_function`(만들기 **전에** 장치), 입력·출력 수정·삭제, 위젯
 (대시보드·옮길 대시보드)·탭, `rebind_device`(양쪽 장치), `set_device_location`,
-`delete_geo_shape`(연결된 장치·시설), `create_note`(직접 준 `target_id`),
+`delete_geo_shape`(연결된 장치, 담은 시설·지도), `create_note`(직접 준 `target_id`),
 `set_output_state`(네이티브), 옛 action_type(`_resolve_target` 이 푼 대상,
 `edit_device`, `register_device` 의 도형·지도), 물리 제어 리졸버.
 
 **스코프 대상이 아닌 쓰기**는 그대로다 — 구획·작기 프로그램·단계(웹에서도 그룹
 밖), 노트 보관·공지·지식·라이브러리, AI 에이전트 설정, GIS 레이어, 새로 만드는
-행(탭 없이 생긴다). 지도 도형 자체(구역·자리)의 지도 단위 스코프는 여기서 새로
-걸지 않았다 — 구역 스코프는 따로 다룬다. 이 분류는
+행(탭 없이 생긴다). 구역·부지·시설 외곽선·시설 구획 같은 지도 도형은 스코프
+대상이 **아니지 않다** — 그 자신은 grant 단위가 아니지만 담은 시설·지도로 옮겨
+판정한다(§8-2-후속). 구획(`GeoPlot`)은 여전히 대상 밖이다. 이 분류는
 `aot/tests/test_write_scope_enforcement.py::TestEveryWriteToolIsCovered` 가
 고정한다: 레지스트리에 새 쓰기 도구가 생기면 강제 자리를 지나거나 "스코프 대상
 아님" 에 이유와 함께 적어야 테스트가 통과한다.
@@ -1324,6 +1347,65 @@ B1 의 캐시 검증은 **캐시를 더운 상태로 만든 뒤** 다른 그룹 
 구역 단위는 `device_membership` 소속 판정과 얽히는데, 그 판정은 **겹침이 정상**인
 도메인이라(간작·혼작, 구역이 site 를 이기는 규칙) 접근 제어의 근거로 삼기에는
 아직 이르다. 실제 요구가 나온 뒤에 붙인다.
+
+#### 8-2-후속. 구역(zone) 대상 **쓰기** → **새 resource_type 없이, 담은 시설·지도로 옮겨 판정** (결정 2026-09-23)
+
+위 문단이 미룬 것이 다른 모양으로 났다 — 구역 **자신에** grant 를 붙이자는 요구가
+아니라, 구역에 **붙는 노트·일정**이 조작 게이트를 **우회**하는 구멍이었다. 노트·
+일정은 `target_id`/`target_name` 으로 구역·부지·시설 외곽선·시설 구획 도형을 직접
+가리킬 수 있는데, 판정은 uuid 를 장치·위젯·탭·대시보드·지도·시설로만 분류해 도형은
+"스코프 대상이 아닌 uuid" 로 통과했다. 재현(2026-09-23): `target_id` 로 줘도,
+`target_name` 으로 줘도 그룹이 걸린 지도·시설 안의 구역에 AI 가 제약 없이 썼다.
+웹 노트·예정 화면은 역할만 보고 그룹은 아예 안 봐서 더 넓은 우회로였다.
+
+**정한다: 구역 자신에게 grant 를 붙이지 않는다(`resource_type` 은 그대로 넷).**
+판정할 때 그 도형을 **담은 자원으로 옮긴다** — 순서대로:
+
+1. 그 도형을 외곽선으로 쓰는 시설(`GeoFacility.shape_uuid`) — 시설 자신.
+2. 그 도형을 담은 시설 — 시설 내부 구획(`facility_bay`)은 부모 FK 로 바로(공간
+   계산 없음). 부모가 비었거나 시설 외곽선이 아니면 **공간 포함으로 내려간다**
+   (2026-09-24 — 전에는 곧장 지도로 떨어져 시설 안 구획이 시설 제한을 건너뛰었다).
+   그 밖은 같은 지도 위 시설 외곽선과의
+   공간 포함(`containment_point()` 대표점, 자기보다 작은 시설은 후보 아님, 겹치면
+   가장 작은 시설 — `build_geo_parent_map()` 과 같은 규칙).
+3. 없으면 그 지도(`geo_id` — NOT NULL 이라 "부모 없는 구역" 은 없다). 고아
+   외곽선(시설 행 없음)도 지도로 물러선다.
+
+도형에 장치가 연결돼 있으면(`device_id`) 그 장치의 판정도 **함께** 통과해야 한다.
+시설이 지도보다 구체적이므로, 지도만 걸고 시설은 열어 두면 시설 안 구역은 막히지
+않는다(§8-3 — 시설은 지도에서 상속받지 않는다).
+관리자가 "지도만 걸면 다 막힌다" 로 오해하기 쉬워, 매뉴얼 그룹 절(en/ko/ja)에
+한 줄 안내를 둔다 — 지도만 제한하면 시설 안 노트·작업은 제한되지 않으니 시설도 걸 것.
+
+**판정은 한 곳이다(원칙 3).** 규칙은 `scope.shape_resources()`(+
+`aot/utils/geo_hierarchy.py::owning_facility_uuid()`) 하나이고, 둘이 함께 쓴다:
+
+- 쓰기 시점 강제 — `write_scope.enforce` 가 도형 행·도형 uuid 를 이 규칙으로 푼다.
+  노트·일정 처리기는 이미 풀린 대상에서 `enforce` 를 부르므로(`_target_by_id`·
+  `_resolve_note_target`·`_resolve_schedule_job`·`create_note`·옛 action_type 의
+  `_resolve_target`) id·이름·일정 id 어느 길이든 덮인다. 외부 MCP·인앱 AI·계획
+  실행기 워커·승인 실행·예약 발화는 신원 묶음(위 표)으로 자동으로 따라온다.
+- 앞 판정 — `scope.can_operate_uuid()` → `can_operate_tool_call`(이름은
+  `scope_arguments` 가 풀어 덧붙인다), 예약의 `job_denial`(만들기·승인·발화).
+- 웹 — 노트 API·노트 화면·REST 노트 만들기·`_create_human_schedule` 이
+  `write_scope.current_user_denial`(로그인한 사람으로 묶어 `enforce`), 스케줄러
+  만들기는 `job_denial`, 편집·삭제는 원래대로 `acting_as_current_user`.
+
+그룹을 쓰지 않는 설치(grant 0건)와 "모든 그룹 접근" 역할은 그대로다. 사람이 없는
+호출(백그라운드 잡·시스템 예약)도 그대로 면제다.
+
+부수 효과: `delete_geo_shape` 도 같은 규칙을 지나므로, 그룹이 걸린 지도·시설
+안의 구역을 AI 로 지우려면 그 지도·시설을 조작할 수 있어야 한다.
+
+새 resource_type 을 만들지 않은 이유는 위 문단과 같다: 구역은 겹침이 정상이라
+**grant 단위**로는 이르지만, **판정 단위**로 기존 지도·시설에 얹는 것은 스키마를
+늘리지 않고 구멍만 닫는다. 나중에 한 지도 안에서 구역별로 다른 그룹이 필요해지면
+그때 `resource_type='geo_shape'` 를 더한다 — 이 변경이 그 결정을 앞당기지 않는다.
+
+회귀: `aot/tests/test_scope_groups.py`(`GeoShapeScopeTest`·`OwningFacilityUuidTest`·
+`WebScheduleGatewayTest`·`WebWriteRouteGateSourceTest`·예약 재검사 구역 사례),
+`aot/tests/test_write_scope_zone.py`(입구별 실행 — 외부 MCP·인앱·워커·예약 발화·
+승인 재호출·웹).
 
 ### 8-3. 시설을 지도에서 상속받게 할 것인가 → **따로 부여한다**
 

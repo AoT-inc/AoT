@@ -111,6 +111,15 @@ class MeasurementsCreate(Resource):
             if 'gps_lng' in ns_note.payload:
                 gps_lng = ns_note.payload["gps_lng"]
 
+        # 그룹 스코프 — 웹 노트 API·AI·MCP 와 같은 판정(`write_scope`, 설계
+        # §6-2a). 지도 도형(구역 등)은 담은 시설, 없으면 지도로 판정한다.
+        if isinstance(target_id, str) and target_id.strip():
+            from aot.aot_flask.access import write_scope
+            denied = write_scope.current_user_denial(target_id.strip(),
+                                                     tool='create_note')
+            if denied:
+                abort(403, message=denied)
+
         try:
             error = []
             list_tags = []

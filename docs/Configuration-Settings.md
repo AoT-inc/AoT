@@ -678,6 +678,10 @@ A Group is granted to a resource from that resource's own settings, not from thi
 </tbody>
 </table>
 
+Notes and scheduled tasks can also be attached to a zone, a site outline, a facility's own boundary, or a section inside a facility drawn on a map — not only to a tab, dashboard, map, or facility. Those shapes are not granted to a group directly; there is no "Groups that can operate this ___" section for them. Instead, a note or task attached to one follows the Facility that contains it, if it is inside one; otherwise it follows the Map it is drawn on. So restricting a Facility also restricts writing notes and tasks anywhere inside its outline, and restricting a Map restricts everything drawn on it that is not inside a Facility. This applies the same way on the notes and schedule screens as it does through the AI assistant or an MCP client.
+
+A Facility does not inherit its Map's groups. If you restrict only the Map, notes and tasks inside its Facilities are not restricted — restrict each Facility as well.
+
 A user can belong to more than one group. When a user's groups disagree about a resource, the widest access applies — belonging to any one group the resource is granted to is enough.
 
 On the [Roles](#roles) screen, a Role can be marked "Access all groups". Users with such a Role bypass every group restriction and can operate every resource regardless of what has been granted — intended for the small number of people who manage the whole system rather than one area of it. The built-in Admin role has this enabled by default.

@@ -170,6 +170,93 @@ def _store_parent_map(all_shapes, id_map):
     cc.store(entries)
 
 
+def owning_facility_uuid(shape_row):
+    """이 도형이 속한 시설의 `GeoFacility.unique_id`, 없으면 None.
+
+    그룹 스코프 판정 전용(`docs/design/access-scope-groups.md` §6-2a·§8-2,
+    "구역 대상 쓰기는 그것을 담은 시설, 없으면 지도의 스코프를 따른다" —
+    2026-09-23 결정). 호출자는 `scope.shape_resources()` 하나다.
+    구역(zone)·부지(site) 자체는 grant 단위가 아니다(`resource_type` 어휘에
+    없다) — 그런데 노트·일정이 그 uuid 를 `target_id` 로 받을 수 있어서, 판정이
+    이 관계를 모르면 탭·지도·시설의 그룹 제한을 전부 건너뛴다.
+
+    판정 순서(가장 구체적인 것부터):
+
+      1. **시설 외곽선 자신**(`type == 'facility'`) — 그 시설.
+      2. **시설 내부 구획**(`type == 'facility_bay'`) — 부모 도형은 보통
+         그 외곽선이다(정확한 FK, `facility_io.py` 가 그렇게 쓴다). 공간
+         계산이 필요 없다. 부모가 비었거나 시설 외곽선이 아니거나 그 외곽선의
+         시설 행이 없으면 **3으로 내려간다** — 곧장 None(=지도)으로 돌려주면
+         시설 안에 그려진 구획이 시설 제한을 건너뛰고 지도로만 판정된다.
+      3. **그 외**(zone·site·feature·마커 등) — 같은 지도 위 시설 외곽선들과
+         공간 포함을 본다. 기준점은 `containment_point()` — 이 모듈의 다른
+         모든 포함 판정과 같다. 여러 시설이 겹치면 **가장 작은 것**이 이긴다
+         (가장 구체적인 부모, `build_geo_parent_map()` 과 같은 동점 규칙).
+
+    시설 외곽선이 없거나(고아 `shape_uuid`) 어떤 시설에도 안 걸리면 None —
+    호출자는 그 도형의 지도(`geo_id`)로 물러선다. **zone 이 "부모 없음" 이
+    되는 경우는 없다** — geo_id 는 NOT NULL 이라 지도가 항상 있다.
+    """
+    from aot.databases.models import GeoFacility, GeoShape
+
+    if shape_row is None:
+        return None
+
+    if shape_row.type == 'facility':
+        fac = GeoFacility.query.filter_by(shape_uuid=shape_row.unique_id).first()
+        return fac.unique_id if fac else None
+
+    if shape_row.type == 'facility_bay' and shape_row.parent_id:
+        parent = GeoShape.query.filter_by(id=shape_row.parent_id).first()
+        if parent is not None and parent.type == 'facility':
+            fac = GeoFacility.query.filter_by(shape_uuid=parent.unique_id).first()
+            if fac is not None:
+                return fac.unique_id
+        # 부모 FK 로 시설을 못 찾았다 — 아래 공간 포함으로 내려간다.
+
+    g = _parse_geometry(shape_row)
+    if g is None:
+        return None
+    pt = containment_point(g)
+    if pt is None:
+        return None
+    # 자기보다 작은 시설은 부모가 될 수 없다 — `build_geo_parent_map()` 의
+    # 같은 가드와 같은 근거다. 대표점으로 판정하면 그 보호가 저절로 오지
+    # 않는다(작은 부지가 큰 시설을 대표점 하나로 "담는" 뒤집힘이 가능하다).
+    own_area = getattr(g, 'area', 0.0) or 0.0
+
+    facilities = [fac for fac in
+                  GeoFacility.query.filter_by(geo_id=shape_row.geo_id).all()
+                  if fac.shape_uuid]
+    # 외곽선은 한 번에 읽는다 — 시설마다 한 번씩 읽으면 판정 한 번이 시설
+    # 수만큼 질의가 된다(쓰기 판정은 요청마다 여러 번 돈다).
+    outlines = {}
+    if facilities:
+        for row in GeoShape.query.filter(GeoShape.unique_id.in_(
+                sorted({fac.shape_uuid for fac in facilities}))).all():
+            outlines.setdefault(row.unique_id, row)
+
+    candidates = []
+    for fac in facilities:
+        fshape = outlines.get(fac.shape_uuid)
+        if fshape is None:
+            continue
+        fg = _parse_geometry(fshape)
+        if fg is None or fg.geom_type not in ('Polygon', 'MultiPolygon'):
+            continue
+        if fg.area < own_area:
+            continue
+        try:
+            if fg.contains(pt):
+                candidates.append((fac.unique_id, fg.area))
+        except Exception:
+            continue
+    if not candidates:
+        return None
+    candidates.sort(key=lambda c: c[1])
+    return candidates[0][0]
+
+
 def geo_descendant_shapes(root_shape, all_shapes=None, use_cache=True):
     """Every GeoShape nested under root_shape (e.g. a site's child zones),
     breadth-first, deepest levels included. Returns GeoShape rows.

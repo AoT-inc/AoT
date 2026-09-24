@@ -1123,6 +1123,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
               </div>
             </div>
             {% elif google_connection and google_connection.is_active %}
+            {% if can_edit_human_tasks() %}
             <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">
                 {{ _('Sync Google Calendar Now') }}
@@ -1135,6 +1136,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 </form>
               </div>
             </div>
+            {% endif %}
             <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">{{ _('Disconnect Google Account') }}</div>
               <div class="aot-modal-option-control aot-control-hug">
@@ -1151,9 +1153,15 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                 {{ _('Connect Google Account') }}
                 <div class="aot-modal-body-text">{{ _('Sign in with Google and sync your AoT schedule to Google Calendar.') }}</div>
               </div>
+              {% if can_edit_human_tasks() %}
               <div class="aot-modal-option-control aot-control-hug">
                 <a class="btn aot-pill-btn aot-pill-btn-primary" href="{{ url_for('routes_integrations.oauth_google_start') }}">{{ _('Connect') }}</a>
               </div>
+              {% else %}
+              <div class="aot-modal-body-text text-right">
+                {{ _('Connecting Google Calendar requires the Edit Controllers permission.') }}
+              </div>
+              {% endif %}
             </div>
             {% endif %}
           </div>

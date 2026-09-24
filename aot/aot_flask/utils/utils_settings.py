@@ -711,7 +711,14 @@ def user_mod(form):
             mod_user.password_hash = bcrypt.hashpw(
                 form.password_new.data.encode('utf-8'),
                 bcrypt.gensalt())
-            if flask_login.current_user.id == form.user_id.data:
+            # `user_id` 칸은 unique_id(문자열)다 — `current_user.id`(정수)와
+            # 비교하면 늘 달라 자기 자신의 비밀번호를 바꿔도 로그아웃되지
+            # 않았다(user_del 의 같은 버그와 동일 패턴). 다른 기기의 세션·
+            # remember 토큰은 password_hash 변경만으로 session_auth_hash 가
+            # 달라져 다음 요청에서 이미 끊긴다(User.session_auth_hash 참조) —
+            # 여기서 로그아웃시키는 것은 지금 이 탭이 그 순간까지 들고 있는
+            # 세션을 즉시 정리해 주는 것뿐이다.
+            if flask_login.current_user.unique_id == form.user_id.data:
                 logout = True
 
         current_user_name = User.query.filter(

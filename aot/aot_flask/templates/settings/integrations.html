@@ -64,10 +64,12 @@
 
         {# 커밋 동작이 오른쪽 끝이다 — 되돌릴 수 없는 연결 해제가 마지막(§4-7). #}
         <div class="aot-settings-actions">
+          {% if can_edit_human_tasks() %}
           <form method="post" action="{{ url_for('routes_integrations.oauth_google_sync_now') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Sync Now')}}</button>
           </form>
+          {% endif %}
           <form method="post" action="{{ url_for('routes_integrations.oauth_google_disconnect') }}"
                 onsubmit="return confirm({{ _('Disconnect Google Calendar? Synced events already in Google are not deleted.')|tojson|forceescape }});">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -80,10 +82,16 @@
             {{_('Connect your Google account to sync farm schedule events with your Google Calendar (two-way).')}}
           </div>
         </div>
+        {% if can_edit_human_tasks() %}
         <div class="aot-settings-actions">
           <a href="{{ url_for('routes_integrations.oauth_google_start') }}"
              class="btn aot-pill-btn aot-pill-btn-primary">{{_('Connect Google Calendar')}}</a>
         </div>
+        {% else %}
+        <div class="aot-settings-row">
+          <div class="aot-settings-text">{{_('Connecting Google Calendar requires the Edit Controllers permission.')}}</div>
+        </div>
+        {% endif %}
       {% endif %}
     </div>
 
