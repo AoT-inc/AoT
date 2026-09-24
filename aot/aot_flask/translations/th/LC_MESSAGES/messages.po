@@ -3590,7 +3590,7 @@ msgstr "ชื่อโฮสต์"
 #: outputs/on_off_mqtt_multi.py:118 outputs/pwm_mqtt.py:104
 #: outputs/value_mqtt.py:83
 msgid "Keep Alive"
-msgstr "Keep Alive"
+msgstr "คงการเชื่อมต่อ"
 
 #: actions/input_action_mqtt_publish.py:92 actions/mqtt_publish.py:108
 #: aot_flask/forms/forms_authentication.py:30
@@ -6882,11 +6882,11 @@ msgstr "เปิดใช้งานบัญชี"
 #: inputs/kma_weather_forecast.py:167 inputs/kma_weather_stn_L.py:80
 #: inputs/openweathermap_onecall.py:87 inputs/openweathermap_weather.py:68
 msgid "API Key"
-msgstr "API Key"
+msgstr "คีย์ API"
 
 #: aot_flask/forms/forms_settings.py:584
 msgid "API Key (Base64)"
-msgstr "API Key (Base64)"
+msgstr "คีย์ API (Base64)"
 
 #: aot_flask/forms/forms_settings.py:591
 msgid "Generate API Key"
@@ -18845,11 +18845,11 @@ msgstr "URL หลักสาธารณะ"
 
 #: aot_flask/templates/settings/integrations.html:115
 msgid "OAuth Client ID"
-msgstr "OAuth Client ID"
+msgstr "รหัสไคลเอนต์ OAuth"
 
 #: aot_flask/templates/settings/integrations.html:124
 msgid "OAuth Client Secret"
-msgstr "OAuth Client Secret"
+msgstr "รหัสลับไคลเอนต์ OAuth"
 
 #: aot_flask/templates/settings/integrations.html:133
 msgid "Google Picker API Key"
@@ -30550,3 +30550,203 @@ msgstr "ให้อุณหภูมิมาก่อน"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: ติดตามเป้าหมาย VPD โดยตรง ให้อุณหภูมิมาก่อน: ติดตามอุณหภูมิกลางวัน/กลางคืนของระยะ และแปลงเป้าหมาย VPD เป็นเป้าหมายความชื้นที่อุณหภูมินั้น เพื่อไม่ไล่ VPD ด้วยอากาศที่ร้อนหรือเย็นจัด VPD จะทำหน้าที่เป็นขอบเขตเท่านั้น หากระยะไม่มีอุณหภูมิ จะรักษาอุณหภูมิไว้ในช่วงแนวทางเท่านั้น"
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "ข้ามกิจกรรมในปฏิทิน %(count)s รายการ เพราะคุณไม่สามารถเปลี่ยนเป้าหมายของกิจกรรมเหล่านั้นได้"
+
+msgid "Use AI Chat"
+msgstr "ใช้แชท AI"
+
+msgid "AI Tools"
+msgstr "เครื่องมือ AI"
+
+msgid "Operations"
+msgstr "การปฏิบัติการ"
+
+msgid "Operations + configuration"
+msgstr "การปฏิบัติการ + การกำหนดค่า"
+
+msgid "Import skipped"
+msgstr "ข้ามการนำเข้า"
+
+msgid "Partly imported"
+msgstr "นำเข้าบางส่วน"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "ข้ามการนำเข้าจาก Google → AoT เพราะบทบาทของคุณไม่สามารถแก้ไขตารางเวลาได้ (ต้องมีสิทธิ์แก้ไขตัวควบคุม)"
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "การเชื่อมต่อ Google ปฏิทินต้องมีสิทธิ์แก้ไขตัวควบคุม"
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "ส่งคำสั่งแล้ว แต่ยังไม่ยืนยันว่ามีผลหรือไม่ — โปรดตรวจสอบสถานะอุปกรณ์"
+
+msgid "Bearer Token"
+msgstr "โทเคน Bearer"
+
+msgid "Call quality"
+msgstr "คุณภาพการเรียกใช้"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "AI ที่เชื่อมต่อใช้เครื่องมืออย่างไร: หนึ่งคำขอเรียกใช้กี่ครั้ง รอนานเท่าใด และการเรียกใช้ล้มเหลวหรือได้ผลลัพธ์ว่างบ่อยเพียงใด"
+
+msgid "Last 24 hours"
+msgstr "24 ชั่วโมงที่ผ่านมา"
+
+msgid "All connections"
+msgstr "การเชื่อมต่อทั้งหมด"
+
+msgid "MCP over HTTP"
+msgstr "MCP ผ่าน HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP บนคอมพิวเตอร์เครื่องนี้"
+
+msgid "By tool drawer"
+msgstr "แยกตามกลุ่มเครื่องมือ"
+
+msgid "About these numbers"
+msgstr "เกี่ยวกับตัวเลขเหล่านี้"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "กลุ่มการเรียกใช้คือชุดการเรียกใช้จากการสนทนาเดียวกันที่ห่างกันไม่ถึง 90 วินาที เซิร์ฟเวอร์ไม่สามารถทราบว่าคำถามหนึ่งสิ้นสุดตรงไหน กลุ่มการเรียกใช้จึงเป็นเพียงค่าประมาณของหนึ่งคำถาม"
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "เวลาคือของการค้นหาที่ทำงานแล้ว ไม่รวมการเปลี่ยนแปลงที่เซิร์ฟเวอร์ดำเนินการหลังจากมีผู้อนุมัติ"
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "ผลลัพธ์ว่างเป็นค่าประมาณจากจำนวนรายการในแต่ละการตอบกลับ ขนาดการตอบกลับไม่รวมรูปภาพ"
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "การเรียกใช้ที่บันทึกก่อนเพิ่มการวัดนี้จะไม่ถูกรวม บันทึกเหล่านี้เก็บอยู่ในระบบนี้และไม่ถูกส่งไปที่ใด"
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "อ้างอิงจากการเรียกใช้ %(n)s ครั้งล่าสุดในช่วงเวลานี้"
+
+msgid "No measured calls in this period yet."
+msgstr "ยังไม่มีการเรียกใช้ที่วัดผลในช่วงเวลานี้"
+
+msgid "Not enough data"
+msgstr "ข้อมูลไม่เพียงพอ"
+
+msgid "Calls measured"
+msgstr "การเรียกใช้ที่วัดผล"
+
+msgid "Share of recorded calls that were measured"
+msgstr "สัดส่วนของการเรียกใช้ที่บันทึกไว้และได้วัดผล"
+
+msgid "Call bundles"
+msgstr "กลุ่มการเรียกใช้"
+
+msgid "Calls per bundle, median"
+msgstr "การเรียกใช้ต่อกลุ่ม ค่ามัธยฐาน"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "การเรียกใช้ต่อกลุ่ม เปอร์เซ็นไทล์ที่ 90"
+
+msgid "Bundles with 10 or more calls"
+msgstr "กลุ่มที่มีการเรียกใช้ตั้งแต่ 10 ครั้งขึ้นไป"
+
+msgid "Same tool called again right away"
+msgstr "เรียกใช้เครื่องมือเดิมซ้ำทันที"
+
+msgid "Longest run of the same tool"
+msgstr "จำนวนครั้งติดต่อกันสูงสุดของเครื่องมือเดียวกัน"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "กลุ่มที่เริ่มด้วยการค้นหาเครื่องมือหรือเป้าหมาย"
+
+msgid "Tool lists opened and then used"
+msgstr "รายการเครื่องมือที่เปิดแล้วนำไปใช้"
+
+msgid "Time between calls, median"
+msgstr "เวลาระหว่างการเรียกใช้ ค่ามัธยฐาน"
+
+msgid "Time between calls, 90th percentile"
+msgstr "เวลาระหว่างการเรียกใช้ เปอร์เซ็นไทล์ที่ 90"
+
+msgid "Lookup time, median"
+msgstr "เวลาค้นหา ค่ามัธยฐาน"
+
+msgid "Lookup time, 90th percentile"
+msgstr "เวลาค้นหา เปอร์เซ็นไทล์ที่ 90"
+
+msgid "Failed calls"
+msgstr "การเรียกใช้ที่ล้มเหลว"
+
+msgid "Refused calls"
+msgstr "การเรียกใช้ที่ถูกปฏิเสธ"
+
+msgid "Calls waiting for approval"
+msgstr "การเรียกใช้ที่รอการอนุมัติ"
+
+msgid "Empty results (estimate)"
+msgstr "ผลลัพธ์ว่าง (ค่าประมาณ)"
+
+msgid "Calls that asked which target was meant"
+msgstr "การเรียกใช้ที่ถามว่าหมายถึงเป้าหมายใด"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "การตอบกลับที่ถูกตัดให้สั้นลงตามขีดจำกัดขนาด"
+
+msgid "Drawer"
+msgstr "กลุ่ม"
+
+msgid "Calls"
+msgstr "การเรียกใช้"
+
+msgid "Median time"
+msgstr "เวลามัธยฐาน"
+
+msgid "90th percentile time"
+msgstr "เวลาเปอร์เซ็นไทล์ที่ 90"
+
+msgid "Empty"
+msgstr "ว่าง"
+
+msgid "Shortened"
+msgstr "ถูกตัดให้สั้นลง"
+
+msgid "Functions"
+msgstr "ฟังก์ชัน"
+
+msgid "Map and zones"
+msgstr "แผนที่และโซน"
+
+msgid "Device definitions"
+msgstr "คำจำกัดความอุปกรณ์"
+
+msgid "Tool lists"
+msgstr "รายการเครื่องมือ"
+
+msgid "No owner"
+msgstr "ไม่มีผู้รับผิดชอบ"
+
+msgid "Owner"
+msgstr "ผู้รับผิดชอบ"
+
+msgid "Assign owner"
+msgstr "มอบหมายผู้รับผิดชอบ"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "เลือกผู้ที่จะรับผิดชอบงานนี้"
+
+msgid "All tools (built-in AI)"
+msgstr "เครื่องมือทั้งหมด (AI ในระบบ)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "เครื่องมือ AI ที่แอปซึ่งเชื่อมต่อด้วยคีย์นี้มองเห็นได้"
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "การปฏิบัติการ: เครื่องมือใช้งานประจำวันสำหรับการอ่านข้อมูล การควบคุม ตารางเวลา โน้ต และขั้นตอนของแปลง การปฏิบัติการ + การกำหนดค่า เพิ่มเครื่องมือตั้งค่า (คำจำกัดความอุปกรณ์ ระบบอัตโนมัติ แปลงและโปรแกรม แผนที่ แดชบอร์ด การตั้งค่า AI) และส่งรายการเครื่องมือที่ยาวกว่ามากไปยัง AI ในทุกการสนทนา"
+
+msgid "Choose a tool set for this key."
+msgstr "เลือกชุดเครื่องมือสำหรับคีย์นี้"
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "เครื่องมือ AI มีการเปลี่ยนแปลง แอป AI ที่เชื่อมต่ออยู่อาจต้องเชื่อมต่อใหม่เพื่อดูรายการเครื่องมือใหม่"
+
+msgid "Polygon ID"
+msgstr "ID รูปหลายเหลี่ยม"

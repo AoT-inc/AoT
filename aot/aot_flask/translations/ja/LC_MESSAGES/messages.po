@@ -4663,7 +4663,7 @@ msgstr "%(min)s から %(max)s の間の整数を入力してください。自�
 
 #: aot_flask/routes_page.py:944 aot_flask/routes_page.py:1023
 msgid "label"
-msgstr ""
+msgstr "ラベル"
 
 #: aot_flask/routes_page.py:962
 #, python-format
@@ -4676,7 +4676,7 @@ msgstr "ファイルが見つかりません"
 
 #: aot_flask/routes_page.py:1025
 msgid "error"
-msgstr ""
+msgstr "エラー"
 
 #: aot_flask/routes_password_reset.py:88
 msgid ""
@@ -31932,3 +31932,6 @@ msgstr "一部のみインポートしました"
 #: aot_flask/templates/settings/integrations.html
 msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
 msgstr "ロールが予定を編集できないため、Google → AoT のインポートをスキップしました(「コントローラを編集」権限が必要です)。"
+
+msgid "Use AI Chat"
+msgstr "AI チャットを使用"

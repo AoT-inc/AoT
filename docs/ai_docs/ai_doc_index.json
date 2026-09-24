@@ -151,6 +151,8 @@
     "AI System Architecture",
     "MCP Tool List",
     "Two layers: `tools/list` vs. drawers",
+    "Tool profiles per API key",
+    "Names, several targets and argument checks",
     "Observation (read — immediate)",
     "Record / Task",
     "Control (user approval required)",

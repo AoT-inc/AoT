@@ -30684,3 +30684,200 @@ msgstr "Ưu tiên nhiệt độ"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: bám trực tiếp mục tiêu VPD. Ưu tiên nhiệt độ: bám nhiệt độ ngày/đêm của giai đoạn và đổi mục tiêu VPD thành mục tiêu độ ẩm ở nhiệt độ đó, để không đuổi theo VPD bằng không khí quá nóng hoặc quá lạnh; khi đó VPD chỉ đóng vai trò giới hạn. Nếu giai đoạn không có nhiệt độ, nhiệt độ chỉ được giữ trong khoảng hướng dẫn."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Đã bỏ qua %(count)s sự kiện lịch vì bạn không thể thay đổi đối tượng của chúng."
+
+msgid "Use AI Chat"
+msgstr "Dùng trò chuyện AI"
+
+msgid "AI Tools"
+msgstr "Công cụ AI"
+
+msgid "Operations"
+msgstr "Vận hành"
+
+msgid "Operations + configuration"
+msgstr "Vận hành + cấu hình"
+
+msgid "Import skipped"
+msgstr "Đã bỏ qua nhập"
+
+msgid "Partly imported"
+msgstr "Đã nhập một phần"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Đã bỏ qua việc nhập Google → AoT vì vai trò của bạn không thể chỉnh sửa lịch trình (cần quyền Chỉnh sửa bộ điều khiển)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Kết nối Google Calendar yêu cầu quyền Chỉnh sửa bộ điều khiển."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Đã gửi lệnh nhưng chưa xác nhận được lệnh có hiệu lực hay không — hãy kiểm tra trạng thái thiết bị."
+
+msgid "Bearer Token"
+msgstr "Token Bearer"
+
+msgid "Call quality"
+msgstr "Chất lượng lệnh gọi"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Cách các AI đã kết nối sử dụng công cụ: một yêu cầu cần bao nhiêu lệnh gọi, phải chờ bao lâu, và lệnh gọi thất bại hoặc trả về kết quả trống thường xuyên đến mức nào."
+
+msgid "Last 24 hours"
+msgstr "24 giờ qua"
+
+msgid "All connections"
+msgstr "Tất cả kết nối"
+
+msgid "MCP over HTTP"
+msgstr "MCP qua HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP trên máy tính này"
+
+msgid "By tool drawer"
+msgstr "Theo nhóm công cụ"
+
+msgid "About these numbers"
+msgstr "Về các con số này"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Một gói lệnh gọi là chuỗi các lệnh gọi từ một cuộc trò chuyện, cách nhau dưới 90 giây. Máy chủ không thể biết một câu hỏi kết thúc ở đâu, nên một gói chỉ xấp xỉ một câu hỏi."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Thời gian tính cho các lượt tra cứu đã chạy. Không bao gồm các thay đổi do máy chủ thực hiện sau khi có người phê duyệt."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Kết quả trống là ước tính dựa trên số mục trong mỗi phản hồi. Kích thước phản hồi không tính hình ảnh."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Các lệnh gọi được ghi lại trước khi có phép đo này sẽ bị loại trừ. Các bản ghi này nằm trên hệ thống này và không được gửi đi đâu."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Dựa trên %(n)s lệnh gọi gần nhất trong khoảng thời gian này."
+
+msgid "No measured calls in this period yet."
+msgstr "Chưa có lệnh gọi nào được đo trong khoảng thời gian này."
+
+msgid "Not enough data"
+msgstr "Chưa đủ dữ liệu"
+
+msgid "Calls measured"
+msgstr "Lệnh gọi đã đo"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Tỷ lệ lệnh gọi đã ghi được đo lường"
+
+msgid "Call bundles"
+msgstr "Gói lệnh gọi"
+
+msgid "Calls per bundle, median"
+msgstr "Số lệnh gọi mỗi gói, trung vị"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Số lệnh gọi mỗi gói, bách phân vị thứ 90"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Gói có từ 10 lệnh gọi trở lên"
+
+msgid "Same tool called again right away"
+msgstr "Cùng một công cụ được gọi lại ngay"
+
+msgid "Longest run of the same tool"
+msgstr "Chuỗi dài nhất của cùng một công cụ"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Gói bắt đầu bằng việc tra cứu công cụ hoặc đối tượng"
+
+msgid "Tool lists opened and then used"
+msgstr "Danh sách công cụ được mở rồi sử dụng"
+
+msgid "Time between calls, median"
+msgstr "Thời gian giữa các lệnh gọi, trung vị"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Thời gian giữa các lệnh gọi, bách phân vị thứ 90"
+
+msgid "Lookup time, median"
+msgstr "Thời gian tra cứu, trung vị"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Thời gian tra cứu, bách phân vị thứ 90"
+
+msgid "Failed calls"
+msgstr "Lệnh gọi thất bại"
+
+msgid "Refused calls"
+msgstr "Lệnh gọi bị từ chối"
+
+msgid "Calls waiting for approval"
+msgstr "Lệnh gọi đang chờ phê duyệt"
+
+msgid "Empty results (estimate)"
+msgstr "Kết quả trống (ước tính)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Lệnh gọi hỏi lại đối tượng được nhắm đến"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Phản hồi bị rút gọn để vừa giới hạn kích thước"
+
+msgid "Drawer"
+msgstr "Nhóm"
+
+msgid "Calls"
+msgstr "Lệnh gọi"
+
+msgid "Median time"
+msgstr "Thời gian trung vị"
+
+msgid "90th percentile time"
+msgstr "Thời gian bách phân vị thứ 90"
+
+msgid "Empty"
+msgstr "Trống"
+
+msgid "Shortened"
+msgstr "Đã rút gọn"
+
+msgid "Functions"
+msgstr "Chức năng"
+
+msgid "Map and zones"
+msgstr "Bản đồ và khu vực"
+
+msgid "Device definitions"
+msgstr "Định nghĩa thiết bị"
+
+msgid "Tool lists"
+msgstr "Danh sách công cụ"
+
+msgid "No owner"
+msgstr "Chưa có người phụ trách"
+
+msgid "Owner"
+msgstr "Người phụ trách"
+
+msgid "Assign owner"
+msgstr "Giao người phụ trách"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Chọn người chịu trách nhiệm cho tác vụ này."
+
+msgid "All tools (built-in AI)"
+msgstr "Tất cả công cụ (AI tích hợp)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Những công cụ AI mà ứng dụng kết nối bằng khóa này có thể thấy."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Vận hành: các công cụ hằng ngày để đọc, điều khiển, lịch trình, ghi chú và giai đoạn của khu đất. Vận hành + cấu hình bổ sung các công cụ thiết lập (định nghĩa thiết bị, tự động hóa, khu đất và chương trình, bản đồ, bảng điều khiển, cài đặt AI) và gửi danh sách công cụ dài hơn nhiều cho AI trong mỗi cuộc trò chuyện."
+
+msgid "Choose a tool set for this key."
+msgstr "Chọn bộ công cụ cho khóa này."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Công cụ AI đã thay đổi. Ứng dụng AI đang kết nối có thể cần kết nối lại để thấy danh sách công cụ mới."

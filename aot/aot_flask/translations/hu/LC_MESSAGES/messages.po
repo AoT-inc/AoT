@@ -30813,3 +30813,197 @@ msgstr "Hőmérséklet elsőként"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: közvetlenül a VPD-célt követi. Hőmérséklet elsőként: a szakasz nappali/éjszakai hőmérsékletét követi, a VPD-célt pedig az ezen a hőmérsékleten érvényes páratartalom-céllá alakítja, így nem nagyon meleg vagy nagyon hideg levegővel hajszolja a VPD-t; a VPD ekkor csak határként működik. Szakaszhőmérséklet nélkül a hőmérsékletet csak az irányadó tartományon belül tartja."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s naptáresemény kimaradt, mert nem módosíthatja a célpontjukat."
+
+msgid "Use AI Chat"
+msgstr "AI-csevegés használata"
+
+msgid "AI Tools"
+msgstr "AI-eszközök"
+
+msgid "Operations"
+msgstr "Műveletek"
+
+msgid "Operations + configuration"
+msgstr "Műveletek + konfiguráció"
+
+msgid "Import skipped"
+msgstr "Importálás kihagyva"
+
+msgid "Partly imported"
+msgstr "Részben importálva"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "A Google → AoT importálás kimaradt, mert a szerepköre nem szerkeszthet ütemezéseket (a Vezérlők szerkesztése jogosultság szükséges)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "A Google Naptár csatlakoztatásához a Vezérlők szerkesztése jogosultság szükséges."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "A parancs elküldve, de hogy érvénybe lépett-e, nem megerősített – ellenőrizze az eszköz állapotát."
+
+msgid "Call quality"
+msgstr "Hívások minősége"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Hogyan használták a csatlakoztatott AI-k az eszközöket: hány hívásból áll egy kérés, mennyit várnak, és milyen gyakran hiúsul meg egy hívás vagy jön vissza üresen."
+
+msgid "Last 24 hours"
+msgstr "Elmúlt 24 óra"
+
+msgid "All connections"
+msgstr "Minden kapcsolat"
+
+msgid "MCP over HTTP"
+msgstr "MCP HTTP-n keresztül"
+
+msgid "MCP on this computer"
+msgstr "MCP ezen a számítógépen"
+
+msgid "By tool drawer"
+msgstr "Eszközcsoportonként"
+
+msgid "About these numbers"
+msgstr "Ezekről a számokról"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "A hívási köteg egyetlen beszélgetés hívásainak sorozata, amelyek között kevesebb mint 90 másodperc telik el. A szerver nem látja, hol ér véget egy kérdés, ezért egy köteg csak megközelítőleg felel meg egy kérdésnek."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Az idők a lefutott lekérdezésekre vonatkoznak. A szerver által, személyi jóváhagyás után végrehajtott módosítások nem szerepelnek benne."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Az üres eredmények becslések, a válaszokban lévő elemek számából számítva. A válaszméretek nem tartalmazzák a képeket."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "A mérés bevezetése előtt rögzített hívások kimaradnak. Ezek a rekordok ezen a rendszeren maradnak, és sehová nem kerülnek elküldésre."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Az időszak legutóbbi %(n)s hívása alapján."
+
+msgid "No measured calls in this period yet."
+msgstr "Ebben az időszakban még nincs mért hívás."
+
+msgid "Not enough data"
+msgstr "Nincs elég adat"
+
+msgid "Calls measured"
+msgstr "Mért hívások"
+
+msgid "Share of recorded calls that were measured"
+msgstr "A rögzített hívások mért hányada"
+
+msgid "Call bundles"
+msgstr "Hívási kötegek"
+
+msgid "Calls per bundle, median"
+msgstr "Hívások kötegenként, medián"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Hívások kötegenként, 90. percentilis"
+
+msgid "Bundles with 10 or more calls"
+msgstr "10 vagy több hívást tartalmazó kötegek"
+
+msgid "Same tool called again right away"
+msgstr "Ugyanazon eszköz azonnali újrahívása"
+
+msgid "Longest run of the same tool"
+msgstr "Ugyanazon eszköz leghosszabb egymás utáni sorozata"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Eszközök vagy célpontok lekérdezésével induló kötegek"
+
+msgid "Tool lists opened and then used"
+msgstr "Megnyitott, majd használt eszközlisták"
+
+msgid "Time between calls, median"
+msgstr "Hívások közti idő, medián"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Hívások közti idő, 90. percentilis"
+
+msgid "Lookup time, median"
+msgstr "Lekérdezési idő, medián"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Lekérdezési idő, 90. percentilis"
+
+msgid "Failed calls"
+msgstr "Sikertelen hívások"
+
+msgid "Refused calls"
+msgstr "Elutasított hívások"
+
+msgid "Calls waiting for approval"
+msgstr "Jóváhagyásra váró hívások"
+
+msgid "Empty results (estimate)"
+msgstr "Üres eredmények (becslés)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Hívások, amelyek rákérdeztek a célpontra"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "A méretkorlát miatt lerövidített válaszok"
+
+msgid "Drawer"
+msgstr "Csoport"
+
+msgid "Calls"
+msgstr "Hívások"
+
+msgid "Median time"
+msgstr "Medián idő"
+
+msgid "90th percentile time"
+msgstr "90. percentilis idő"
+
+msgid "Empty"
+msgstr "Üres"
+
+msgid "Shortened"
+msgstr "Lerövidítve"
+
+msgid "Functions"
+msgstr "Funkciók"
+
+msgid "Map and zones"
+msgstr "Térkép és zónák"
+
+msgid "Device definitions"
+msgstr "Eszközdefiníciók"
+
+msgid "Tool lists"
+msgstr "Eszközlisták"
+
+msgid "No owner"
+msgstr "Nincs felelős"
+
+msgid "Owner"
+msgstr "Felelős"
+
+msgid "Assign owner"
+msgstr "Felelős kijelölése"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Válasszon egy személyt, aki felelős ezért a feladatért."
+
+msgid "All tools (built-in AI)"
+msgstr "Minden eszköz (beépített AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Mely AI-eszközöket látja az ezzel a kulccsal csatlakoztatott alkalmazás."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Műveletek: mindennapi eszközök olvasáshoz, vezérléshez, ütemezésekhez, jegyzetekhez és parcellaszakaszokhoz. A Műveletek + konfiguráció beállítási eszközöket (eszközdefiníciók, automatizálások, parcellák és programok, térkép, irányítópultok, AI-beállítások) is hozzáad, és minden beszélgetésben jóval hosszabb eszközlistát küld az AI-nak."
+
+msgid "Choose a tool set for this key."
+msgstr "Eszközkészlet kiválasztása ehhez a kulcshoz."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Az AI-eszközök megváltoztak. Előfordulhat, hogy a csatlakoztatott AI-alkalmazásnak újra kell csatlakoznia az új eszközlista megtekintéséhez."

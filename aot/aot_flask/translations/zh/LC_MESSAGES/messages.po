@@ -1776,7 +1776,7 @@ msgstr "电压"
 #: aot_flask/forms/forms_settings.py:242
 #: aot_flask/templates/layout-settings.html:21 config_translations.py:216
 msgid "Widget"
-msgstr "Widget"
+msgstr "小部件"
 
 #: config_translations.py:220
 msgid "1-Wire Device ID"
@@ -3060,7 +3060,7 @@ msgstr "AoT内置对 RainViewer（气象雷达）和 ISRIC（Soil Grids）等服
 
 #: config_translations_docs.py:126
 msgid "5. AoT_map Widget"
-msgstr "5. AoT_map Widget"
+msgstr "5. AoT_map 小部件"
 
 #: config_translations_docs.py:127
 msgid ""
@@ -29513,3 +29513,201 @@ msgstr "温度优先"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD：直接跟踪 VPD 目标。温度优先：跟踪阶段的白天/夜间温度，并把 VPD 目标换算为该温度下的湿度目标，从而不会用过热或过冷的空气去追 VPD；此时 VPD 只作为界限。阶段没有温度时，只把温度保持在引导范围内。"
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "有 %(count)s 个日历事件因您无法更改其目标而被跳过。"
+
+msgid "Use AI Chat"
+msgstr "使用 AI 聊天"
+
+msgid "AI Tools"
+msgstr "AI 工具"
+
+msgid "Operations"
+msgstr "运行"
+
+msgid "Operations + configuration"
+msgstr "运行 + 配置"
+
+msgid "Import skipped"
+msgstr "已跳过导入"
+
+msgid "Partly imported"
+msgstr "部分已导入"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "由于您的角色无法编辑计划（需要“编辑控制器”权限），已跳过 Google → AoT 导入。"
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "连接 Google 日历需要“编辑控制器”权限。"
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "命令已发送，但尚未确认是否生效——请检查设备状态。"
+
+msgid "Call quality"
+msgstr "调用质量"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "已连接的 AI 如何使用这些工具：一次请求需要多少次调用、等待多久，以及调用失败或返回空结果的频率。"
+
+msgid "Last 24 hours"
+msgstr "最近 24 小时"
+
+msgid "All connections"
+msgstr "所有连接"
+
+msgid "MCP over HTTP"
+msgstr "基于 HTTP 的 MCP"
+
+msgid "MCP on this computer"
+msgstr "本机上的 MCP"
+
+msgid "By tool drawer"
+msgstr "按工具抽屉"
+
+msgid "About these numbers"
+msgstr "关于这些数据"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "调用包是同一对话中相邻调用间隔不足 90 秒的一连串调用。服务器无法得知一个问题在哪里结束，因此调用包只能近似代表一个问题。"
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "耗时仅针对已执行的查询。经人工批准后由服务器执行的更改不计入。"
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "空结果是根据每个响应中的条目数估算的。响应大小不包含图片。"
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "在添加此项测量之前记录的调用不计入。这些记录保存在本系统中，不会发送到任何地方。"
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "基于此期间最近的 %(n)s 次调用。"
+
+msgid "No measured calls in this period yet."
+msgstr "此期间暂无已测量的调用。"
+
+msgid "Not enough data"
+msgstr "数据不足"
+
+msgid "Calls measured"
+msgstr "已测量的调用"
+
+msgid "Share of recorded calls that were measured"
+msgstr "已测量的记录调用占比"
+
+msgid "Call bundles"
+msgstr "调用包"
+
+msgid "Calls per bundle, median"
+msgstr "每个调用包的调用数（中位数）"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "每个调用包的调用数（第 90 百分位）"
+
+msgid "Bundles with 10 or more calls"
+msgstr "包含 10 次及以上调用的调用包"
+
+msgid "Same tool called again right away"
+msgstr "立即重复调用同一工具"
+
+msgid "Longest run of the same tool"
+msgstr "同一工具的最长连续调用次数"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "以查找工具或目标开头的调用包"
+
+msgid "Tool lists opened and then used"
+msgstr "打开后又被使用的工具列表"
+
+msgid "Time between calls, median"
+msgstr "调用间隔（中位数）"
+
+msgid "Time between calls, 90th percentile"
+msgstr "调用间隔（第 90 百分位）"
+
+msgid "Lookup time, median"
+msgstr "查询耗时（中位数）"
+
+msgid "Lookup time, 90th percentile"
+msgstr "查询耗时（第 90 百分位）"
+
+msgid "Failed calls"
+msgstr "失败的调用"
+
+msgid "Refused calls"
+msgstr "被拒绝的调用"
+
+msgid "Calls waiting for approval"
+msgstr "等待批准的调用"
+
+msgid "Empty results (estimate)"
+msgstr "空结果（估算）"
+
+msgid "Calls that asked which target was meant"
+msgstr "询问指的是哪个目标的调用"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "因超出大小限制而被截断的响应"
+
+#, python-format
+msgid "%(n)s ms"
+msgstr "%(n)s 毫秒"
+
+msgid "Drawer"
+msgstr "抽屉"
+
+msgid "Calls"
+msgstr "调用次数"
+
+msgid "Median time"
+msgstr "耗时中位数"
+
+msgid "90th percentile time"
+msgstr "第 90 百分位耗时"
+
+msgid "Empty"
+msgstr "空"
+
+msgid "Shortened"
+msgstr "已截断"
+
+msgid "Functions"
+msgstr "功能"
+
+msgid "Map and zones"
+msgstr "地图和区域"
+
+msgid "Device definitions"
+msgstr "设备定义"
+
+msgid "Tool lists"
+msgstr "工具列表"
+
+msgid "No owner"
+msgstr "无负责人"
+
+msgid "Owner"
+msgstr "负责人"
+
+msgid "Assign owner"
+msgstr "指派负责人"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "选择一位负责此任务的人员。"
+
+msgid "All tools (built-in AI)"
+msgstr "所有工具（内置 AI）"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "使用此密钥连接的应用可以看到哪些 AI 工具。"
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "运行：用于读取、控制、计划、备注和地块阶段的日常工具。“运行 + 配置”会增加设置类工具（设备定义、自动化、地块和程序、地图、仪表板、AI 设置），并在每次对话中向 AI 发送长得多的工具列表。"
+
+msgid "Choose a tool set for this key."
+msgstr "为此密钥选择一个工具集。"
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI 工具已更改。已连接的 AI 应用可能需要重新连接才能看到新的工具列表。"

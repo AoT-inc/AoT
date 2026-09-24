@@ -30529,3 +30529,200 @@ msgstr "Прво температура"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: директно прати VPD циљ. Прво температура: прати дневну/ноћну температуру фазе и претвара VPD циљ у циљ влажности на тој температури, да се VPD не би јурио веома топлим или веома хладним ваздухом; VPD тада служи само као граница. Без температуре фазе, температура се само држи у оријентационом опсегу."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Догађаји календара који су прескочени: %(count)s — не можете да промените њихов циљ."
+
+msgid "Use AI Chat"
+msgstr "Користи AI ћаскање"
+
+msgid "AI Tools"
+msgstr "AI алати"
+
+msgid "Operations"
+msgstr "Операције"
+
+msgid "Operations + configuration"
+msgstr "Операције + подешавање"
+
+msgid "Import skipped"
+msgstr "Увоз је прескочен"
+
+msgid "Partly imported"
+msgstr "Делимично увезено"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Увоз Google → AoT је прескочен јер ваша улога не може да мења распореде (потребна је дозвола „Уређивање контролера“)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "За повезивање Google календара потребна је дозвола „Уређивање контролера“."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Команда је послата, али није потврђено да ли је дејствовала — проверите стање уређаја."
+
+msgid "URL"
+msgstr "URL адреса"
+
+msgid "Call quality"
+msgstr "Квалитет позива"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Како повезани AI користе алате: колико позива је потребно по захтеву, колико дуго чекају и колико често позив не успе или врати празан резултат."
+
+msgid "Last 24 hours"
+msgstr "Последња 24 сата"
+
+msgid "All connections"
+msgstr "Све везе"
+
+msgid "MCP over HTTP"
+msgstr "MCP преко HTTP-а"
+
+msgid "MCP on this computer"
+msgstr "MCP на овом рачунару"
+
+msgid "By tool drawer"
+msgstr "По групама алата"
+
+msgid "About these numbers"
+msgstr "О овим бројевима"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Пакет позива је низ позива из једног разговора са паузама краћим од 90 секунди. Сервер не види где се питање завршава, па пакет само приближно одговара једном питању."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Времена се односе на упите за читање који су извршени. Измене које је сервер извршио након одобрења особе нису укључене."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Празни резултати су процена на основу броја ставки у сваком одговору. Величине одговора не укључују слике."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Позиви записани пре додавања овог мерења нису укључени. Ови записи остају на овом систему и не шаљу се никуда."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "На основу последњих %(n)s позива у овом периоду."
+
+msgid "No measured calls in this period yet."
+msgstr "У овом периоду још нема измерених позива."
+
+msgid "Not enough data"
+msgstr "Нема довољно података"
+
+msgid "Calls measured"
+msgstr "Измерени позиви"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Удео записаних позива који су измерени"
+
+msgid "Call bundles"
+msgstr "Пакети позива"
+
+msgid "Calls per bundle, median"
+msgstr "Позива по пакету, медијана"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Позива по пакету, 90. перцентил"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Пакети са 10 или више позива"
+
+msgid "Same tool called again right away"
+msgstr "Исти алат поново позван одмах"
+
+msgid "Longest run of the same tool"
+msgstr "Најдужи низ позива истог алата"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Пакети који почињу тражењем алата или циљева"
+
+msgid "Tool lists opened and then used"
+msgstr "Спискови алата који су отворени а затим коришћени"
+
+msgid "Time between calls, median"
+msgstr "Време између позива, медијана"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Време између позива, 90. перцентил"
+
+msgid "Lookup time, median"
+msgstr "Време тражења, медијана"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Време тражења, 90. перцентил"
+
+msgid "Failed calls"
+msgstr "Неуспели позиви"
+
+msgid "Refused calls"
+msgstr "Одбијени позиви"
+
+msgid "Calls waiting for approval"
+msgstr "Позиви који чекају одобрење"
+
+msgid "Empty results (estimate)"
+msgstr "Празни резултати (процена)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Позиви који су питали који циљ је замишљен"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Одговори скраћени због ограничења величине"
+
+msgid "Drawer"
+msgstr "Група"
+
+msgid "Calls"
+msgstr "Позиви"
+
+msgid "Median time"
+msgstr "Медијана времена"
+
+msgid "90th percentile time"
+msgstr "Време 90. перцентила"
+
+msgid "Empty"
+msgstr "Празно"
+
+msgid "Shortened"
+msgstr "Скраћено"
+
+msgid "Functions"
+msgstr "Функције"
+
+msgid "Map and zones"
+msgstr "Мапа и зоне"
+
+msgid "Device definitions"
+msgstr "Дефиниције уређаја"
+
+msgid "Tool lists"
+msgstr "Спискови алата"
+
+msgid "No owner"
+msgstr "Без власника"
+
+msgid "Owner"
+msgstr "Власник"
+
+msgid "Assign owner"
+msgstr "Додели власника"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Изаберите особу одговорну за овај задатак."
+
+msgid "All tools (built-in AI)"
+msgstr "Сви алати (уграђени AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Које AI алате види апликација повезана овом кључем."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Операције: свакодневни алати за читање, управљање, распореде, белешке и фазе парцела. „Операције + подешавање“ додаје алате за подешавање (дефиниције уређаја, аутоматизације, парцеле и програми, мапа, контролне табле, AI подешавања) и шаље AI-у много дужи списак алата у сваком разговору."
+
+msgid "Choose a tool set for this key."
+msgstr "Изаберите скуп алата за овај кључ."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI алати су промењени. Повезаној AI апликацији можда је потребно поновно повезивање да би видела нови списак алата."

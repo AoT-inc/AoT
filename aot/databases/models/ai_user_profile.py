@@ -41,7 +41,14 @@ class AIUserProfile(CRUDMixin, db.Model):
     user_requirement = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), nullable=True)
 
     # Relationship
-    user = db.relationship('User', backref=db.backref('ai_profile', uselist=False))
+    # user_id 는 NOT NULL 이라 cascade 없이 두면, User 를 지울 때 SQLAlchemy 가
+    # 기본 동작(부모가 지워지면 자식의 FK를 NULL로 떼어내는 것)을 시도하다가
+    # NOT NULL 제약에 걸려 IntegrityError 로 500 이 난다. AI 프로필은 감사(audit)
+    # 대상이 아니라 사용자 개인화 상태일 뿐이므로, 사용자가 지워지면 함께 지운다.
+    user = db.relationship(
+        'User',
+        backref=db.backref('ai_profile', uselist=False,
+                            cascade='all, delete-orphan'))
 
     def __repr__(self):
         return f"<AIUserProfile(user_id={self.user_id}, level={self.proficiency_level})>"

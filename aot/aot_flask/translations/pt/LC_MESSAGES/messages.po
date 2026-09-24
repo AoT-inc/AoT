@@ -325,7 +325,7 @@ msgstr "Saturação"
 #: functions/pid_autotune.py:94 widgets/AoT_PID.py:461
 #: widgets/widget_function_status.py:54
 msgid "Setpoint"
-msgstr "Setpoint"
+msgstr "Ponto de ajuste"
 
 #: config_devices_units.py:289
 msgid "Band Min"
@@ -1143,7 +1143,7 @@ msgstr "Diagnóstico"
 #: actions/display_backlight_on.py:37 actions/display_flash_off.py:37
 #: actions/display_flash_on.py:37 config_translations.py:64
 msgid "Display"
-msgstr "Display"
+msgstr "Tela"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:202
 #: config_translations.py:66
@@ -2236,7 +2236,7 @@ msgstr "Intervalo entre medições ou ações"
 
 #: config_translations.py:322 config_translations.py:323
 msgid "Clock"
-msgstr "Clock"
+msgstr "Relógio"
 
 #: config_translations.py:325 config_translations.py:326
 msgid "Cable Select"
@@ -8882,7 +8882,7 @@ msgstr "Modelo"
 
 #: aot_flask/templates/500.html:15
 msgid "Release"
-msgstr "Release"
+msgstr "Versão"
 
 #: aot_flask/templates/500.html:17
 msgid "Error (Entire traceback)"
@@ -8990,7 +8990,7 @@ msgstr "Entrar com senha"
 #: aot_flask/templates/settings/integrations.html:84
 #: aot_flask/templates/settings/users.html:322
 msgid "Admin"
-msgstr "Admin"
+msgstr "Administrador"
 
 #: aot_flask/templates/layout-remote.html:60
 msgid "Setup"
@@ -9235,7 +9235,7 @@ msgstr "Gerenciamento de pacotes"
 #: aot_flask/templates/layout_default.html:733
 #: aot_flask/templates/settings/custom_ui.html:202
 msgid "Upgrade"
-msgstr "Upgrade"
+msgstr "Atualização"
 
 #: aot_flask/templates/admin/backup.html:3
 #: aot_flask/templates/admin/backup.html:5 aot_flask/templates/layout.html:734
@@ -20491,7 +20491,7 @@ msgstr "Período: %(label)s"
 #: aot_flask/utils/utils_notes_report.py:241
 #, python-format
 msgid "Tags: %(label)s"
-msgstr "Tags: %(label)s"
+msgstr "Etiquetas: %(label)s"
 
 #: aot_flask/utils/utils_notes_report.py:242
 #, python-format
@@ -20514,7 +20514,7 @@ msgstr "Sem data"
 #: aot_flask/utils/utils_notes_report.py:275
 #, python-format
 msgid "Tags: %(names)s"
-msgstr "Tags: %(names)s"
+msgstr "Etiquetas: %(names)s"
 
 #: aot_flask/utils/utils_notes_report.py:278
 #, python-format
@@ -30339,3 +30339,197 @@ msgstr "Temperatura primeiro"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: segue diretamente a meta de VPD. Temperatura primeiro: segue a temperatura diurna/noturna da etapa e transforma a meta de VPD em uma meta de umidade nessa temperatura, para não perseguir o VPD com ar muito quente ou muito frio; o VPD passa a atuar só como limite. Sem temperatura da etapa, a temperatura é apenas mantida dentro da faixa de referência."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s evento(s) do calendário foram ignorados porque você não pode alterar o destino deles."
+
+msgid "Use AI Chat"
+msgstr "Usar o chat de IA"
+
+msgid "AI Tools"
+msgstr "Ferramentas de IA"
+
+msgid "Operations"
+msgstr "Operações"
+
+msgid "Operations + configuration"
+msgstr "Operações + configuração"
+
+msgid "Import skipped"
+msgstr "Importação ignorada"
+
+msgid "Partly imported"
+msgstr "Importado parcialmente"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "A importação do Google → AoT foi ignorada porque sua função não pode editar agendamentos (é necessária a permissão Editar controladores)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Conectar o Google Calendar exige a permissão Editar controladores."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Comando enviado, mas não foi confirmado se teve efeito — verifique o estado do dispositivo."
+
+msgid "Call quality"
+msgstr "Qualidade das chamadas"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Como as IAs conectadas têm usado as ferramentas: quantas chamadas uma solicitação exige, quanto tempo esperam e com que frequência uma chamada falha ou retorna vazia."
+
+msgid "Last 24 hours"
+msgstr "Últimas 24 horas"
+
+msgid "All connections"
+msgstr "Todas as conexões"
+
+msgid "MCP over HTTP"
+msgstr "MCP via HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP neste computador"
+
+msgid "By tool drawer"
+msgstr "Por grupo de ferramentas"
+
+msgid "About these numbers"
+msgstr "Sobre estes números"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Um pacote de chamadas é uma sequência de chamadas de uma mesma conversa com menos de 90 segundos entre elas. O servidor não consegue saber onde termina uma pergunta, então um pacote apenas aproxima uma pergunta."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Os tempos se referem às consultas que foram executadas. Não incluem as alterações feitas pelo servidor após a aprovação de uma pessoa."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Os resultados vazios são uma estimativa com base no número de itens de cada resposta. Os tamanhos das respostas não incluem imagens."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "As chamadas registradas antes da adição desta medição ficam de fora. Esses registros permanecem neste sistema e não são enviados a lugar nenhum."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Com base nas %(n)s chamadas mais recentes deste período."
+
+msgid "No measured calls in this period yet."
+msgstr "Ainda não há chamadas medidas neste período."
+
+msgid "Not enough data"
+msgstr "Dados insuficientes"
+
+msgid "Calls measured"
+msgstr "Chamadas medidas"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Proporção das chamadas registradas que foram medidas"
+
+msgid "Call bundles"
+msgstr "Pacotes de chamadas"
+
+msgid "Calls per bundle, median"
+msgstr "Chamadas por pacote, mediana"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Chamadas por pacote, percentil 90"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Pacotes com 10 ou mais chamadas"
+
+msgid "Same tool called again right away"
+msgstr "Mesma ferramenta chamada novamente em seguida"
+
+msgid "Longest run of the same tool"
+msgstr "Maior sequência da mesma ferramenta"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Pacotes que começam consultando ferramentas ou alvos"
+
+msgid "Tool lists opened and then used"
+msgstr "Listas de ferramentas abertas e depois usadas"
+
+msgid "Time between calls, median"
+msgstr "Tempo entre chamadas, mediana"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Tempo entre chamadas, percentil 90"
+
+msgid "Lookup time, median"
+msgstr "Tempo de consulta, mediana"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Tempo de consulta, percentil 90"
+
+msgid "Failed calls"
+msgstr "Chamadas com falha"
+
+msgid "Refused calls"
+msgstr "Chamadas recusadas"
+
+msgid "Calls waiting for approval"
+msgstr "Chamadas aguardando aprovação"
+
+msgid "Empty results (estimate)"
+msgstr "Resultados vazios (estimativa)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Chamadas que perguntaram a qual alvo se referia"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Respostas encurtadas para caber no limite de tamanho"
+
+msgid "Drawer"
+msgstr "Grupo"
+
+msgid "Calls"
+msgstr "Chamadas"
+
+msgid "Median time"
+msgstr "Tempo mediano"
+
+msgid "90th percentile time"
+msgstr "Tempo do percentil 90"
+
+msgid "Empty"
+msgstr "Vazias"
+
+msgid "Shortened"
+msgstr "Encurtadas"
+
+msgid "Functions"
+msgstr "Funções"
+
+msgid "Map and zones"
+msgstr "Mapa e zonas"
+
+msgid "Device definitions"
+msgstr "Definições de dispositivos"
+
+msgid "Tool lists"
+msgstr "Listas de ferramentas"
+
+msgid "No owner"
+msgstr "Sem responsável"
+
+msgid "Owner"
+msgstr "Responsável"
+
+msgid "Assign owner"
+msgstr "Atribuir responsável"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Escolha uma pessoa responsável por esta tarefa."
+
+msgid "All tools (built-in AI)"
+msgstr "Todas as ferramentas (IA integrada)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Quais ferramentas de IA um aplicativo conectado com esta chave pode ver."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operações: ferramentas do dia a dia para leitura, controle, agendamentos, notas e etapas de talhão. Operações + configuração adiciona ferramentas de configuração (definições de dispositivos, automações, talhões e programas, mapa, painéis, configurações de IA) e envia à IA uma lista de ferramentas muito mais longa em cada conversa."
+
+msgid "Choose a tool set for this key."
+msgstr "Escolha um conjunto de ferramentas para esta chave."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "As ferramentas de IA foram alteradas. Um aplicativo de IA conectado pode precisar se reconectar para ver a nova lista de ferramentas."

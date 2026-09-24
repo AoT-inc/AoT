@@ -1776,7 +1776,7 @@ msgstr "電壓"
 #: aot_flask/forms/forms_settings.py:242
 #: aot_flask/templates/layout-settings.html:21 config_translations.py:216
 msgid "Widget"
-msgstr "Widget"
+msgstr "小工具"
 
 #: config_translations.py:220
 msgid "1-Wire Device ID"
@@ -3060,7 +3060,7 @@ msgstr "AoT 內建對 RainViewer（氣象雷達）與 ISRIC（土壤網格）等
 
 #: config_translations_docs.py:126
 msgid "5. AoT_map Widget"
-msgstr "5. AoT_map Widget"
+msgstr "5. AoT_map 小工具"
 
 #: config_translations_docs.py:127
 msgid ""
@@ -4658,7 +4658,7 @@ msgstr "請輸入介於 %(min)s 到 %(max)s 之間的整數，若要自動設定
 
 #: aot_flask/routes_page.py:944 aot_flask/routes_page.py:1023
 msgid "label"
-msgstr ""
+msgstr "標籤"
 
 #: aot_flask/routes_page.py:962
 #, python-format
@@ -4671,7 +4671,7 @@ msgstr "找不到檔案"
 
 #: aot_flask/routes_page.py:1025
 msgid "error"
-msgstr ""
+msgstr "錯誤"
 
 #: aot_flask/routes_password_reset.py:88
 msgid ""
@@ -29519,3 +29519,201 @@ msgstr "溫度優先"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD：直接追蹤 VPD 目標。溫度優先：追蹤階段的白天/夜間溫度，並把 VPD 目標換算為該溫度下的濕度目標，從而不會用過熱或過冷的空氣去追 VPD；此時 VPD 只作為界限。階段沒有溫度時，只把溫度保持在引導範圍內。"
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "有 %(count)s 個行事曆事件因您無法變更其目標而被略過。"
+
+msgid "Use AI Chat"
+msgstr "使用 AI 聊天"
+
+msgid "AI Tools"
+msgstr "AI 工具"
+
+msgid "Operations"
+msgstr "營運"
+
+msgid "Operations + configuration"
+msgstr "營運 + 設定"
+
+msgid "Import skipped"
+msgstr "已略過匯入"
+
+msgid "Partly imported"
+msgstr "部分已匯入"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "由於您的角色無法編輯排程（需要「編輯控制器」權限），已略過 Google → AoT 匯入。"
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "連結 Google 行事曆需要「編輯控制器」權限。"
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "指令已送出，但尚未確認是否生效——請檢查裝置狀態。"
+
+msgid "Call quality"
+msgstr "呼叫品質"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "已連線的 AI 如何使用這些工具：一次請求需要多少次呼叫、等待多久，以及呼叫失敗或回傳空結果的頻率。"
+
+msgid "Last 24 hours"
+msgstr "最近 24 小時"
+
+msgid "All connections"
+msgstr "所有連線"
+
+msgid "MCP over HTTP"
+msgstr "基於 HTTP 的 MCP"
+
+msgid "MCP on this computer"
+msgstr "本機上的 MCP"
+
+msgid "By tool drawer"
+msgstr "依工具抽屜"
+
+msgid "About these numbers"
+msgstr "關於這些數據"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "呼叫包是同一段對話中相鄰呼叫間隔不到 90 秒的一連串呼叫。伺服器無法得知一個問題在哪裡結束，因此呼叫包只能近似代表一個問題。"
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "耗時僅針對已執行的查詢。經人員核准後由伺服器執行的變更不計入。"
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "空結果是依每個回應中的項目數估算的。回應大小不含圖片。"
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "在加入此項量測之前記錄的呼叫不計入。這些記錄保存在本系統中，不會傳送到任何地方。"
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "依據此期間最近的 %(n)s 次呼叫。"
+
+msgid "No measured calls in this period yet."
+msgstr "此期間尚無已量測的呼叫。"
+
+msgid "Not enough data"
+msgstr "資料不足"
+
+msgid "Calls measured"
+msgstr "已量測的呼叫"
+
+msgid "Share of recorded calls that were measured"
+msgstr "已量測的記錄呼叫占比"
+
+msgid "Call bundles"
+msgstr "呼叫包"
+
+msgid "Calls per bundle, median"
+msgstr "每個呼叫包的呼叫數（中位數）"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "每個呼叫包的呼叫數（第 90 百分位）"
+
+msgid "Bundles with 10 or more calls"
+msgstr "包含 10 次以上呼叫的呼叫包"
+
+msgid "Same tool called again right away"
+msgstr "立即重複呼叫同一工具"
+
+msgid "Longest run of the same tool"
+msgstr "同一工具的最長連續呼叫次數"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "以查詢工具或目標開頭的呼叫包"
+
+msgid "Tool lists opened and then used"
+msgstr "開啟後又被使用的工具清單"
+
+msgid "Time between calls, median"
+msgstr "呼叫間隔（中位數）"
+
+msgid "Time between calls, 90th percentile"
+msgstr "呼叫間隔（第 90 百分位）"
+
+msgid "Lookup time, median"
+msgstr "查詢耗時（中位數）"
+
+msgid "Lookup time, 90th percentile"
+msgstr "查詢耗時（第 90 百分位）"
+
+msgid "Failed calls"
+msgstr "失敗的呼叫"
+
+msgid "Refused calls"
+msgstr "被拒絕的呼叫"
+
+msgid "Calls waiting for approval"
+msgstr "等待核准的呼叫"
+
+msgid "Empty results (estimate)"
+msgstr "空結果（估算）"
+
+msgid "Calls that asked which target was meant"
+msgstr "詢問指的是哪個目標的呼叫"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "因超出大小限制而被截斷的回應"
+
+#, python-format
+msgid "%(n)s ms"
+msgstr "%(n)s 毫秒"
+
+msgid "Drawer"
+msgstr "抽屜"
+
+msgid "Calls"
+msgstr "呼叫次數"
+
+msgid "Median time"
+msgstr "耗時中位數"
+
+msgid "90th percentile time"
+msgstr "第 90 百分位耗時"
+
+msgid "Empty"
+msgstr "空"
+
+msgid "Shortened"
+msgstr "已截斷"
+
+msgid "Functions"
+msgstr "功能"
+
+msgid "Map and zones"
+msgstr "地圖與區域"
+
+msgid "Device definitions"
+msgstr "裝置定義"
+
+msgid "Tool lists"
+msgstr "工具清單"
+
+msgid "No owner"
+msgstr "無負責人"
+
+msgid "Owner"
+msgstr "負責人"
+
+msgid "Assign owner"
+msgstr "指派負責人"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "選擇一位負責此工作的人員。"
+
+msgid "All tools (built-in AI)"
+msgstr "所有工具（內建 AI）"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "使用此金鑰連線的應用程式可以看到哪些 AI 工具。"
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "營運：用於讀取、控制、排程、備註和地塊階段的日常工具。「營運 + 設定」會加入設定類工具（裝置定義、自動化、地塊與程式、地圖、儀表板、AI 設定），並在每次對話中向 AI 傳送長得多的工具清單。"
+
+msgid "Choose a tool set for this key."
+msgstr "為此金鑰選擇一組工具。"
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI 工具已變更。已連線的 AI 應用程式可能需要重新連線才能看到新的工具清單。"

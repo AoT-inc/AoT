@@ -30629,3 +30629,197 @@ msgstr "Pirmiausia temperatūra"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: tiesiogiai siekia VPD tikslo. Pirmiausia temperatūra: siekia etapo dienos/nakties temperatūros ir VPD tikslą paverčia drėgmės tikslu toje temperatūroje, kad VPD nebūtų vejamasi labai karštu ar labai šaltu oru; tada VPD veikia tik kaip riba. Be etapo temperatūros temperatūra tik laikoma orientaciniame intervale."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Praleisti %(count)s kalendoriaus įvykiai, nes negalite pakeisti jų paskirties."
+
+msgid "Use AI Chat"
+msgstr "Naudoti DI pokalbį"
+
+msgid "AI Tools"
+msgstr "DI įrankiai"
+
+msgid "Operations"
+msgstr "Operacijos"
+
+msgid "Operations + configuration"
+msgstr "Operacijos + konfigūracija"
+
+msgid "Import skipped"
+msgstr "Importavimas praleistas"
+
+msgid "Partly imported"
+msgstr "Importuota iš dalies"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Google → AoT importavimas praleistas, nes jūsų rolė negali redaguoti tvarkaraščių (reikalingas leidimas Redaguoti kontrolerius)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Norint prijungti Google kalendorių, reikalingas leidimas Redaguoti kontrolerius."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Komanda išsiųsta, bet nepatvirtinta, ar ji įsigaliojo — patikrinkite įrenginio būseną."
+
+msgid "Call quality"
+msgstr "Iškvietimų kokybė"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Kaip prijungti DI naudoja įrankius: kiek iškvietimų reikia vienai užklausai, kiek jų laukiama ir kaip dažnai iškvietimas nepavyksta arba grąžina tuščią rezultatą."
+
+msgid "Last 24 hours"
+msgstr "Paskutinės 24 valandos"
+
+msgid "All connections"
+msgstr "Visi ryšiai"
+
+msgid "MCP over HTTP"
+msgstr "MCP per HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP šiame kompiuteryje"
+
+msgid "By tool drawer"
+msgstr "Pagal įrankių grupę"
+
+msgid "About these numbers"
+msgstr "Apie šiuos skaičius"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Iškvietimų paketas – tai vieno pokalbio iškvietimų seka, tarp kurių praėjo mažiau nei 90 sekundžių. Serveris nemato, kur baigiasi klausimas, todėl paketas tik apytiksliai atitinka vieną klausimą."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Laikai skirti įvykdytoms paieškoms. Pakeitimai, kuriuos serveris atliko asmeniui patvirtinus, neįtraukti."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Tušti rezultatai yra įvertis pagal elementų skaičių kiekviename atsakyme. Atsakymų dydžiai neapima paveikslėlių."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Iškvietimai, užregistruoti prieš pridedant šį matavimą, praleidžiami. Šie įrašai lieka šioje sistemoje ir niekur nesiunčiami."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Remiantis paskutiniais %(n)s šio laikotarpio iškvietimais."
+
+msgid "No measured calls in this period yet."
+msgstr "Šiuo laikotarpiu dar nėra išmatuotų iškvietimų."
+
+msgid "Not enough data"
+msgstr "Nepakanka duomenų"
+
+msgid "Calls measured"
+msgstr "Išmatuoti iškvietimai"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Užregistruotų iškvietimų, kurie buvo išmatuoti, dalis"
+
+msgid "Call bundles"
+msgstr "Iškvietimų paketai"
+
+msgid "Calls per bundle, median"
+msgstr "Iškvietimų vienam paketui, mediana"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Iškvietimų vienam paketui, 90-asis procentilis"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Paketai su 10 ar daugiau iškvietimų"
+
+msgid "Same tool called again right away"
+msgstr "Tas pats įrankis iškviestas iš karto iš naujo"
+
+msgid "Longest run of the same tool"
+msgstr "Ilgiausia to paties įrankio serija"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Paketai, prasidedantys įrankių ar paskirčių paieška"
+
+msgid "Tool lists opened and then used"
+msgstr "Atidaryti ir vėliau panaudoti įrankių sąrašai"
+
+msgid "Time between calls, median"
+msgstr "Laikas tarp iškvietimų, mediana"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Laikas tarp iškvietimų, 90-asis procentilis"
+
+msgid "Lookup time, median"
+msgstr "Paieškos laikas, mediana"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Paieškos laikas, 90-asis procentilis"
+
+msgid "Failed calls"
+msgstr "Nepavykę iškvietimai"
+
+msgid "Refused calls"
+msgstr "Atmesti iškvietimai"
+
+msgid "Calls waiting for approval"
+msgstr "Iškvietimai, laukiantys patvirtinimo"
+
+msgid "Empty results (estimate)"
+msgstr "Tušti rezultatai (įvertis)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Iškvietimai, kuriais klausta, kokia paskirtis turėta omenyje"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Atsakymai, sutrumpinti dėl dydžio limito"
+
+msgid "Drawer"
+msgstr "Grupė"
+
+msgid "Calls"
+msgstr "Iškvietimai"
+
+msgid "Median time"
+msgstr "Medianinis laikas"
+
+msgid "90th percentile time"
+msgstr "90-ojo procentilio laikas"
+
+msgid "Empty"
+msgstr "Tuščia"
+
+msgid "Shortened"
+msgstr "Sutrumpinta"
+
+msgid "Functions"
+msgstr "Funkcijos"
+
+msgid "Map and zones"
+msgstr "Žemėlapis ir zonos"
+
+msgid "Device definitions"
+msgstr "Įrenginių apibrėžtys"
+
+msgid "Tool lists"
+msgstr "Įrankių sąrašai"
+
+msgid "No owner"
+msgstr "Nėra savininko"
+
+msgid "Owner"
+msgstr "Savininkas"
+
+msgid "Assign owner"
+msgstr "Priskirti savininką"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Pasirinkite asmenį, atsakingą už šią užduotį."
+
+msgid "All tools (built-in AI)"
+msgstr "Visi įrankiai (integruotas DI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Kuriuos DI įrankius mato programa, prijungta šiuo raktu."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operacijos: kasdieniai įrankiai skaitymui, valdymui, tvarkaraščiams, pastaboms ir sklypų etapams. Operacijos + konfigūracija prideda sąrankos įrankius (įrenginių apibrėžtys, automatizavimai, sklypai ir programos, žemėlapis, prietaisų skydeliai, DI nustatymai) ir kiekviename pokalbyje siunčia DI daug ilgesnį įrankių sąrašą."
+
+msgid "Choose a tool set for this key."
+msgstr "Pasirinkite šio rakto įrankių rinkinį."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "DI įrankiai pasikeitė. Prijungtai DI programai gali reikėti prisijungti iš naujo, kad matytų naują įrankių sąrašą."

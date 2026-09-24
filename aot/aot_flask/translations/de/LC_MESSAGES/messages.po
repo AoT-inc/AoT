@@ -7372,7 +7372,7 @@ msgstr "Band 2 (Niedrig)"
 #: aot_flask/forms/forms_settings.py:737
 #: aot_flask/templates/settings/custom_ui.html:669
 msgid "Band 3 (Optimal)"
-msgstr "Band 3 (Optimal)"
+msgstr "Band 3 (optimal)"
 
 #: aot_flask/forms/forms_settings.py:738
 #: aot_flask/templates/settings/custom_ui.html:670
@@ -7841,7 +7841,7 @@ msgstr "Basiskarte"
 #: aot_flask/static/js/geo/design/aot-geo-ui.js:1329
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:11125
 msgid "Overlay"
-msgstr "Overlay"
+msgstr "Überlagerung"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:729
 msgid "hide_panel"
@@ -10917,7 +10917,7 @@ msgstr "Modern"
 
 #: aot_flask/templates/pages/camera.html:69
 msgid "Legacy"
-msgstr "Legacy"
+msgstr "Veraltet"
 
 #: aot_flask/templates/pages/camera.html:92
 msgid "Auto-detect"
@@ -12834,7 +12834,7 @@ msgstr "Pipeline-Rolle"
 #: aot_flask/templates/pages/ai/ai_modals.html:98
 #: aot_flask/templates/pages/ai/options/options_llm.html:95
 msgid "Worker (Legacy)"
-msgstr "Worker (Legacy)"
+msgstr "Worker (veraltet)"
 
 #: aot_flask/templates/pages/ai/ai_modals.html:110
 msgid "Lightweight"
@@ -30943,3 +30943,203 @@ msgstr "Temperatur zuerst"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: folgt direkt dem VPD-Ziel. Temperatur zuerst: folgt der Tag-/Nachttemperatur der Phase und wandelt das VPD-Ziel in ein Feuchteziel bei dieser Temperatur um, damit das VPD nicht mit sehr heißer oder sehr kalter Luft erzwungen wird; das VPD wirkt dann nur noch als Grenze. Ohne Phasentemperatur wird die Temperatur nur im Führungsbereich gehalten."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s Kalendereintrag/-einträge wurden übersprungen, da Sie deren Ziel nicht ändern können."
+
+msgid "Use AI Chat"
+msgstr "KI-Chat verwenden"
+
+msgid "AI Tools"
+msgstr "KI-Werkzeuge"
+
+msgid "Operations"
+msgstr "Betrieb"
+
+msgid "Operations + configuration"
+msgstr "Betrieb + Konfiguration"
+
+msgid "Import skipped"
+msgstr "Import übersprungen"
+
+msgid "Partly imported"
+msgstr "Teilweise importiert"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Der Import von Google → AoT wurde übersprungen, da Ihre Rolle Zeitpläne nicht bearbeiten kann (die Berechtigung „Controller bearbeiten“ ist erforderlich)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Für die Verbindung mit Google Kalender ist die Berechtigung „Controller bearbeiten“ erforderlich."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Befehl gesendet, aber es ist nicht bestätigt, ob er wirksam wurde – prüfen Sie den Gerätestatus."
+
+msgid "Call quality"
+msgstr "Aufrufqualität"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Wie verbundene KIs die Werkzeuge genutzt haben: wie viele Aufrufe eine Anfrage benötigt, wie lange sie warten und wie oft ein Aufruf fehlschlägt oder leer zurückkommt."
+
+msgid "Last 24 hours"
+msgstr "Letzte 24 Stunden"
+
+msgid "All connections"
+msgstr "Alle Verbindungen"
+
+msgid "MCP over HTTP"
+msgstr "MCP über HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP auf diesem Computer"
+
+msgid "REST API"
+msgstr "REST-API"
+
+msgid "By tool drawer"
+msgstr "Nach Werkzeuggruppe"
+
+msgid "About these numbers"
+msgstr "Zu diesen Zahlen"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Ein Aufrufbündel ist eine Folge von Aufrufen aus einer Unterhaltung mit weniger als 90 Sekunden Abstand. Der Server kann nicht erkennen, wo eine Frage endet, daher entspricht ein Bündel nur näherungsweise einer Frage."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Die Zeiten gelten für Abfragen, die ausgeführt wurden. Änderungen, die der Server nach Freigabe durch eine Person durchgeführt hat, sind nicht enthalten."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Leere Ergebnisse sind eine Schätzung anhand der Elementanzahl in jeder Antwort. Bei den Antwortgrößen sind Bilder nicht berücksichtigt."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Aufrufe, die vor Einführung dieser Messung aufgezeichnet wurden, sind nicht enthalten. Diese Aufzeichnungen verbleiben auf diesem System und werden nirgendwohin gesendet."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Basierend auf den letzten %(n)s Aufrufen in diesem Zeitraum."
+
+msgid "No measured calls in this period yet."
+msgstr "In diesem Zeitraum gibt es noch keine gemessenen Aufrufe."
+
+msgid "Not enough data"
+msgstr "Nicht genügend Daten"
+
+msgid "Calls measured"
+msgstr "Gemessene Aufrufe"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Anteil der aufgezeichneten Aufrufe, die gemessen wurden"
+
+msgid "Call bundles"
+msgstr "Aufrufbündel"
+
+msgid "Calls per bundle, median"
+msgstr "Aufrufe pro Bündel, Median"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Aufrufe pro Bündel, 90. Perzentil"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Bündel mit 10 oder mehr Aufrufen"
+
+msgid "Same tool called again right away"
+msgstr "Dasselbe Werkzeug sofort erneut aufgerufen"
+
+msgid "Longest run of the same tool"
+msgstr "Längste Folge desselben Werkzeugs"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Bündel, die mit dem Nachschlagen von Werkzeugen oder Zielen beginnen"
+
+msgid "Tool lists opened and then used"
+msgstr "Geöffnete und anschließend genutzte Werkzeuglisten"
+
+msgid "Time between calls, median"
+msgstr "Zeit zwischen Aufrufen, Median"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Zeit zwischen Aufrufen, 90. Perzentil"
+
+msgid "Lookup time, median"
+msgstr "Abfragezeit, Median"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Abfragezeit, 90. Perzentil"
+
+msgid "Failed calls"
+msgstr "Fehlgeschlagene Aufrufe"
+
+msgid "Refused calls"
+msgstr "Abgelehnte Aufrufe"
+
+msgid "Calls waiting for approval"
+msgstr "Aufrufe, die auf Freigabe warten"
+
+msgid "Empty results (estimate)"
+msgstr "Leere Ergebnisse (Schätzung)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Aufrufe, die nachfragten, welches Ziel gemeint war"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Antworten, die wegen der Größenbeschränkung gekürzt wurden"
+
+msgid "Drawer"
+msgstr "Gruppe"
+
+msgid "Calls"
+msgstr "Aufrufe"
+
+msgid "Median time"
+msgstr "Medianzeit"
+
+msgid "90th percentile time"
+msgstr "Zeit im 90. Perzentil"
+
+msgid "Empty"
+msgstr "Leer"
+
+msgid "Shortened"
+msgstr "Gekürzt"
+
+msgid "Functions"
+msgstr "Funktionen"
+
+msgid "Map and zones"
+msgstr "Karte und Zonen"
+
+msgid "Device definitions"
+msgstr "Gerätedefinitionen"
+
+msgid "Tool lists"
+msgstr "Werkzeuglisten"
+
+msgid "Tools"
+msgstr "Werkzeuge"
+
+msgid "No owner"
+msgstr "Kein Verantwortlicher"
+
+msgid "Owner"
+msgstr "Verantwortlicher"
+
+msgid "Assign owner"
+msgstr "Verantwortlichen zuweisen"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Wählen Sie eine Person, die für diese Aufgabe verantwortlich ist."
+
+msgid "All tools (built-in AI)"
+msgstr "Alle Werkzeuge (integrierte KI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Welche KI-Werkzeuge eine mit diesem Schlüssel verbundene App sehen kann."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Betrieb: Alltagswerkzeuge zum Lesen, Steuern, für Zeitpläne, Notizen und Flächenphasen. Betrieb + Konfiguration ergänzt Einrichtungswerkzeuge (Gerätedefinitionen, Automatisierungen, Flächen und Programme, Karte, Dashboards, KI-Einstellungen) und sendet in jeder Unterhaltung eine deutlich längere Werkzeugliste an die KI."
+
+msgid "Choose a tool set for this key."
+msgstr "Wählen Sie einen Werkzeugsatz für diesen Schlüssel."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "KI-Werkzeuge geändert. Eine verbundene KI-App muss sich möglicherweise neu verbinden, um die neue Werkzeugliste zu sehen."

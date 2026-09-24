@@ -30585,3 +30585,200 @@ msgstr "Önce sıcaklık"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: VPD hedefini doğrudan izler. Önce sıcaklık: evrenin gündüz/gece sıcaklığını izler ve VPD hedefini o sıcaklıktaki bir nem hedefine çevirir; böylece VPD çok sıcak ya da çok soğuk havayla kovalanmaz, VPD yalnızca bir sınır olarak kalır. Evre sıcaklığı yoksa sıcaklık yalnızca rehber aralıkta tutulur."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Hedeflerini değiştiremeyeceğiniz için %(count)s takvim etkinliği atlandı."
+
+msgid "Use AI Chat"
+msgstr "AI Sohbetini Kullan"
+
+msgid "AI Tools"
+msgstr "AI Araçları"
+
+msgid "Operations"
+msgstr "Operasyonlar"
+
+msgid "Operations + configuration"
+msgstr "Operasyonlar + yapılandırma"
+
+msgid "Import skipped"
+msgstr "İçe aktarma atlandı"
+
+msgid "Partly imported"
+msgstr "Kısmen içe aktarıldı"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Rolünüz programları düzenleyemediği için Google → AoT içe aktarması atlandı (Kontrolörleri Düzenle izni gerekir)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Google Takvimi'ni bağlamak için Kontrolörleri Düzenle izni gerekir."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Komut gönderildi ancak etkili olup olmadığı doğrulanamadı — cihaz durumunu kontrol edin."
+
+msgid "Bearer Token"
+msgstr "Bearer Jetonu"
+
+msgid "Call quality"
+msgstr "Çağrı kalitesi"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Bağlı AI'ların araçları nasıl kullandığı: bir istek kaç çağrı sürüyor, ne kadar bekliyorlar ve bir çağrı ne sıklıkla başarısız oluyor veya boş dönüyor."
+
+msgid "Last 24 hours"
+msgstr "Son 24 saat"
+
+msgid "All connections"
+msgstr "Tüm bağlantılar"
+
+msgid "MCP over HTTP"
+msgstr "HTTP üzerinden MCP"
+
+msgid "MCP on this computer"
+msgstr "Bu bilgisayarda MCP"
+
+msgid "By tool drawer"
+msgstr "Araç grubuna göre"
+
+msgid "About these numbers"
+msgstr "Bu sayılar hakkında"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Çağrı paketi, aynı konuşmadan gelen ve aralarında 90 saniyeden az süre olan çağrılar dizisidir. Sunucu bir sorunun nerede bittiğini göremez; bu yüzden bir paket yalnızca bir soruyu yaklaşık olarak temsil eder."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Süreler çalışan sorgulara aittir. Bir kişi onayladıktan sonra sunucunun gerçekleştirdiği değişiklikler dahil değildir."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Boş sonuçlar, her yanıttaki öğe sayısından yapılan bir tahmindir. Yanıt boyutlarına görseller dahil değildir."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Bu ölçüm eklenmeden önce kaydedilen çağrılar dışarıda bırakılır. Bu kayıtlar bu sistemde kalır ve hiçbir yere gönderilmez."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Bu dönemdeki en son %(n)s çağrıya dayanır."
+
+msgid "No measured calls in this period yet."
+msgstr "Bu dönemde henüz ölçülmüş çağrı yok."
+
+msgid "Not enough data"
+msgstr "Yeterli veri yok"
+
+msgid "Calls measured"
+msgstr "Ölçülen çağrılar"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Kaydedilen çağrıların ölçülen payı"
+
+msgid "Call bundles"
+msgstr "Çağrı paketleri"
+
+msgid "Calls per bundle, median"
+msgstr "Paket başına çağrı, medyan"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Paket başına çağrı, 90. yüzdelik"
+
+msgid "Bundles with 10 or more calls"
+msgstr "10 veya daha fazla çağrılı paketler"
+
+msgid "Same tool called again right away"
+msgstr "Aynı aracın hemen tekrar çağrılması"
+
+msgid "Longest run of the same tool"
+msgstr "Aynı aracın en uzun ardışık çağrı serisi"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Araçları veya hedefleri sorgulayarak başlayan paketler"
+
+msgid "Tool lists opened and then used"
+msgstr "Açılıp sonra kullanılan araç listeleri"
+
+msgid "Time between calls, median"
+msgstr "Çağrılar arası süre, medyan"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Çağrılar arası süre, 90. yüzdelik"
+
+msgid "Lookup time, median"
+msgstr "Sorgu süresi, medyan"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Sorgu süresi, 90. yüzdelik"
+
+msgid "Failed calls"
+msgstr "Başarısız çağrılar"
+
+msgid "Refused calls"
+msgstr "Reddedilen çağrılar"
+
+msgid "Calls waiting for approval"
+msgstr "Onay bekleyen çağrılar"
+
+msgid "Empty results (estimate)"
+msgstr "Boş sonuçlar (tahmin)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Hangi hedefin kastedildiğini soran çağrılar"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Boyut sınırına sığması için kısaltılan yanıtlar"
+
+msgid "Drawer"
+msgstr "Grup"
+
+msgid "Calls"
+msgstr "Çağrılar"
+
+msgid "Median time"
+msgstr "Medyan süre"
+
+msgid "90th percentile time"
+msgstr "90. yüzdelik süre"
+
+msgid "Empty"
+msgstr "Boş"
+
+msgid "Shortened"
+msgstr "Kısaltıldı"
+
+msgid "Functions"
+msgstr "İşlevler"
+
+msgid "Map and zones"
+msgstr "Harita ve bölgeler"
+
+msgid "Device definitions"
+msgstr "Cihaz tanımları"
+
+msgid "Tool lists"
+msgstr "Araç listeleri"
+
+msgid "No owner"
+msgstr "Sahibi yok"
+
+msgid "Owner"
+msgstr "Sahip"
+
+msgid "Assign owner"
+msgstr "Sahip ata"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Bu görevden sorumlu olacak bir kişi seçin."
+
+msgid "All tools (built-in AI)"
+msgstr "Tüm araçlar (yerleşik AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Bu anahtarla bağlanan bir uygulamanın görebileceği AI araçları."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operasyonlar: okuma, kontrol, programlar, notlar ve ekim alanı aşamaları için günlük araçlar. Operasyonlar + yapılandırma kurulum araçlarını (cihaz tanımları, otomasyonlar, ekim alanları ve programlar, harita, panolar, AI ayarları) ekler ve her konuşmada AI'a çok daha uzun bir araç listesi gönderir."
+
+msgid "Choose a tool set for this key."
+msgstr "Bu anahtar için bir araç seti seçin."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI araçları değişti. Yeni araç listesini görmek için bağlı bir AI uygulamasının yeniden bağlanması gerekebilir."

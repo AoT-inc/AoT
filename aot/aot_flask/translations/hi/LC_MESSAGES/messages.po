@@ -30476,3 +30476,197 @@ msgstr "पहले तापमान"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: सीधे VPD लक्ष्य का पालन करता है। पहले तापमान: चरण के दिन/रात के तापमान का पालन करता है और VPD लक्ष्य को उस तापमान पर आर्द्रता लक्ष्य में बदलता है, ताकि बहुत गर्म या बहुत ठंडी हवा से VPD न साधा जाए; तब VPD केवल सीमा का काम करता है। चरण का तापमान न हो तो तापमान को केवल मार्गदर्शी सीमा में रखा जाता है।"
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s कैलेंडर इवेंट छोड़ दिए गए क्योंकि आप उनका लक्ष्य नहीं बदल सकते।"
+
+msgid "Use AI Chat"
+msgstr "AI चैट का उपयोग करें"
+
+msgid "AI Tools"
+msgstr "AI टूल्स"
+
+msgid "Operations"
+msgstr "ऑपरेशन्स"
+
+msgid "Operations + configuration"
+msgstr "ऑपरेशन्स + कॉन्फ़िगरेशन"
+
+msgid "Import skipped"
+msgstr "आयात छोड़ा गया"
+
+msgid "Partly imported"
+msgstr "आंशिक रूप से आयात किया गया"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Google → AoT आयात छोड़ दिया गया क्योंकि आपकी भूमिका शेड्यूल संपादित नहीं कर सकती (नियंत्रक संपादित करें अनुमति आवश्यक है)।"
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Google कैलेंडर कनेक्ट करने के लिए नियंत्रक संपादित करें अनुमति आवश्यक है।"
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "कमांड भेजी गई, लेकिन प्रभावी हुई या नहीं, इसकी पुष्टि नहीं हुई — डिवाइस की स्थिति जाँचें।"
+
+msgid "Call quality"
+msgstr "कॉल की गुणवत्ता"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "कनेक्टेड AI टूल्स का उपयोग कैसे करते रहे हैं: एक अनुरोध में कितनी कॉल लगती हैं, वे कितनी देर प्रतीक्षा करते हैं, और कितनी बार कॉल विफल होती है या खाली परिणाम लौटाती है।"
+
+msgid "Last 24 hours"
+msgstr "पिछले 24 घंटे"
+
+msgid "All connections"
+msgstr "सभी कनेक्शन"
+
+msgid "MCP over HTTP"
+msgstr "HTTP पर MCP"
+
+msgid "MCP on this computer"
+msgstr "इस कंप्यूटर पर MCP"
+
+msgid "By tool drawer"
+msgstr "टूल समूह के अनुसार"
+
+msgid "About these numbers"
+msgstr "इन आँकड़ों के बारे में"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "कॉल बंडल एक ही बातचीत की कॉलों का ऐसा क्रम है जिनके बीच 90 सेकंड से कम का अंतर हो। सर्वर यह नहीं देख सकता कि प्रश्न कहाँ समाप्त होता है, इसलिए एक बंडल केवल एक प्रश्न का अनुमान है।"
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "समय उन लुकअप के हैं जो चले। किसी व्यक्ति की स्वीकृति के बाद सर्वर द्वारा किए गए बदलाव शामिल नहीं हैं।"
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "खाली परिणाम प्रत्येक प्रतिक्रिया में आइटम की संख्या से लगाया गया अनुमान है। प्रतिक्रिया के आकार में इमेज शामिल नहीं हैं।"
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "यह माप जोड़े जाने से पहले दर्ज की गई कॉलें शामिल नहीं हैं। ये रिकॉर्ड इसी सिस्टम पर रहते हैं और कहीं नहीं भेजे जाते।"
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "इस अवधि की सबसे हाल की %(n)s कॉलों पर आधारित।"
+
+msgid "No measured calls in this period yet."
+msgstr "इस अवधि में अभी तक कोई मापी गई कॉल नहीं है।"
+
+msgid "Not enough data"
+msgstr "पर्याप्त डेटा नहीं"
+
+msgid "Calls measured"
+msgstr "मापी गई कॉल"
+
+msgid "Share of recorded calls that were measured"
+msgstr "दर्ज कॉलों में से मापी गई कॉलों का हिस्सा"
+
+msgid "Call bundles"
+msgstr "कॉल बंडल"
+
+msgid "Calls per bundle, median"
+msgstr "प्रति बंडल कॉल, माध्यिका"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "प्रति बंडल कॉल, 90वाँ पर्सेंटाइल"
+
+msgid "Bundles with 10 or more calls"
+msgstr "10 या अधिक कॉल वाले बंडल"
+
+msgid "Same tool called again right away"
+msgstr "वही टूल तुरंत दोबारा कॉल किया गया"
+
+msgid "Longest run of the same tool"
+msgstr "एक ही टूल की सबसे लंबी लगातार कॉल"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "वे बंडल जो टूल या लक्ष्य खोजने से शुरू होते हैं"
+
+msgid "Tool lists opened and then used"
+msgstr "टूल सूचियाँ जो खोली गईं और फिर उपयोग हुईं"
+
+msgid "Time between calls, median"
+msgstr "कॉलों के बीच का समय, माध्यिका"
+
+msgid "Time between calls, 90th percentile"
+msgstr "कॉलों के बीच का समय, 90वाँ पर्सेंटाइल"
+
+msgid "Lookup time, median"
+msgstr "लुकअप समय, माध्यिका"
+
+msgid "Lookup time, 90th percentile"
+msgstr "लुकअप समय, 90वाँ पर्सेंटाइल"
+
+msgid "Failed calls"
+msgstr "विफल कॉल"
+
+msgid "Refused calls"
+msgstr "अस्वीकृत कॉल"
+
+msgid "Calls waiting for approval"
+msgstr "स्वीकृति की प्रतीक्षा में कॉल"
+
+msgid "Empty results (estimate)"
+msgstr "खाली परिणाम (अनुमान)"
+
+msgid "Calls that asked which target was meant"
+msgstr "वे कॉल जिनमें पूछा गया कि कौन-सा लक्ष्य अभिप्रेत था"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "आकार सीमा में फिट करने के लिए छोटी की गई प्रतिक्रियाएँ"
+
+msgid "Drawer"
+msgstr "समूह"
+
+msgid "Calls"
+msgstr "कॉल"
+
+msgid "Median time"
+msgstr "माध्यिका समय"
+
+msgid "90th percentile time"
+msgstr "90वाँ पर्सेंटाइल समय"
+
+msgid "Empty"
+msgstr "खाली"
+
+msgid "Shortened"
+msgstr "छोटा किया गया"
+
+msgid "Functions"
+msgstr "फ़ंक्शन"
+
+msgid "Map and zones"
+msgstr "मानचित्र और ज़ोन"
+
+msgid "Device definitions"
+msgstr "डिवाइस परिभाषाएँ"
+
+msgid "Tool lists"
+msgstr "टूल सूचियाँ"
+
+msgid "No owner"
+msgstr "कोई स्वामी नहीं"
+
+msgid "Owner"
+msgstr "स्वामी"
+
+msgid "Assign owner"
+msgstr "स्वामी असाइन करें"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "इस कार्य के लिए ज़िम्मेदार व्यक्ति चुनें।"
+
+msgid "All tools (built-in AI)"
+msgstr "सभी टूल्स (अंतर्निहित AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "इस कुंजी से जुड़ा ऐप कौन-से AI टूल्स देख सकता है।"
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "ऑपरेशन्स: पढ़ने, नियंत्रण, शेड्यूल, नोट्स और प्लॉट चरणों के रोज़मर्रा के टूल्स। ऑपरेशन्स + कॉन्फ़िगरेशन सेटअप टूल्स (डिवाइस परिभाषाएँ, ऑटोमेशन, प्लॉट और प्रोग्राम, मानचित्र, डैशबोर्ड, AI सेटिंग्स) जोड़ता है और हर बातचीत में AI को बहुत लंबी टूल सूची भेजता है।"
+
+msgid "Choose a tool set for this key."
+msgstr "इस कुंजी के लिए टूल सेट चुनें।"
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI टूल्स बदल गए हैं। नई टूल सूची देखने के लिए कनेक्टेड AI ऐप को फिर से कनेक्ट करना पड़ सकता है।"

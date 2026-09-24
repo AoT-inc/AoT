@@ -13395,7 +13395,7 @@ msgstr "Nattförhandsvisning"
 
 #: aot_flask/templates/pages/camera_options/picamera.html:127
 msgid "Spotlight"
-msgstr "Spotlight"
+msgstr "Strålkastare"
 
 #: aot_flask/templates/pages/camera_options/picamera.html:128
 msgid "Sports"
@@ -18844,7 +18844,7 @@ msgstr "Importerade ingångsmoduler"
 #: aot_flask/templates/settings/integrations.html:18
 #: aot_flask/templates/user_templates/widget_template_widget_calendar_js_ready_end.html:21
 msgid "Google Calendar"
-msgstr "Google Calendar"
+msgstr "Google Kalender"
 
 #: aot_flask/templates/settings/integrations.html:24
 msgid "Google Calendar is not configured yet."
@@ -30501,3 +30501,197 @@ msgstr "Temperatur först"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: följer VPD-målet direkt. Temperatur först: följer fasens dag-/natttemperatur och gör om VPD-målet till ett fuktmål vid den temperaturen, så att VPD inte jagas med mycket varm eller mycket kall luft; VPD fungerar då bara som en gräns. Utan fastemperatur hålls temperaturen bara inom riktområdet."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s kalenderhändelse(r) hoppades över eftersom du inte kan ändra deras mål."
+
+msgid "Use AI Chat"
+msgstr "Använd AI-chatt"
+
+msgid "AI Tools"
+msgstr "AI-verktyg"
+
+msgid "Operations"
+msgstr "Drift"
+
+msgid "Operations + configuration"
+msgstr "Drift + konfiguration"
+
+msgid "Import skipped"
+msgstr "Import hoppades över"
+
+msgid "Partly imported"
+msgstr "Delvis importerad"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Importen från Google → AoT hoppades över eftersom din roll inte kan redigera scheman (behörigheten Redigera styrenheter krävs)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Att ansluta Google Kalender kräver behörigheten Redigera styrenheter."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Kommandot skickades, men det är inte bekräftat om det fick effekt — kontrollera enhetens status."
+
+msgid "Call quality"
+msgstr "Anropskvalitet"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Hur anslutna AI har använt verktygen: hur många anrop en förfrågan kräver, hur länge de väntar och hur ofta ett anrop misslyckas eller ger tomt svar."
+
+msgid "Last 24 hours"
+msgstr "Senaste 24 timmarna"
+
+msgid "All connections"
+msgstr "Alla anslutningar"
+
+msgid "MCP over HTTP"
+msgstr "MCP över HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP på den här datorn"
+
+msgid "By tool drawer"
+msgstr "Per verktygsgrupp"
+
+msgid "About these numbers"
+msgstr "Om siffrorna"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Ett anropspaket är en följd av anrop från en konversation med mindre än 90 sekunder mellan sig. Servern kan inte se var en fråga slutar, så ett paket är bara en uppskattning av en fråga."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Tiderna gäller sökningar som kördes. Ändringar som servern utfört efter att en person godkänt dem ingår inte."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Tomma resultat är en uppskattning baserad på antalet poster i varje svar. Svarsstorlekarna omfattar inte bilder."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Anrop som registrerades innan den här mätningen lades till ingår inte. Dessa poster stannar i det här systemet och skickas ingenstans."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Baserat på de senaste %(n)s anropen under perioden."
+
+msgid "No measured calls in this period yet."
+msgstr "Inga uppmätta anrop under perioden ännu."
+
+msgid "Not enough data"
+msgstr "Otillräckligt med data"
+
+msgid "Calls measured"
+msgstr "Uppmätta anrop"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Andel registrerade anrop som mättes"
+
+msgid "Call bundles"
+msgstr "Anropspaket"
+
+msgid "Calls per bundle, median"
+msgstr "Anrop per paket, median"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Anrop per paket, 90:e percentilen"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Paket med 10 eller fler anrop"
+
+msgid "Same tool called again right away"
+msgstr "Samma verktyg anropas igen direkt"
+
+msgid "Longest run of the same tool"
+msgstr "Längsta följd av samma verktyg"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Paket som börjar med att slå upp verktyg eller mål"
+
+msgid "Tool lists opened and then used"
+msgstr "Verktygslistor som öppnats och sedan använts"
+
+msgid "Time between calls, median"
+msgstr "Tid mellan anrop, median"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Tid mellan anrop, 90:e percentilen"
+
+msgid "Lookup time, median"
+msgstr "Uppslagstid, median"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Uppslagstid, 90:e percentilen"
+
+msgid "Failed calls"
+msgstr "Misslyckade anrop"
+
+msgid "Refused calls"
+msgstr "Nekade anrop"
+
+msgid "Calls waiting for approval"
+msgstr "Anrop som väntar på godkännande"
+
+msgid "Empty results (estimate)"
+msgstr "Tomma resultat (uppskattning)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Anrop som frågade vilket mål som avsågs"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Svar som förkortats för att rymmas inom storleksgränsen"
+
+msgid "Drawer"
+msgstr "Grupp"
+
+msgid "Calls"
+msgstr "Anrop"
+
+msgid "Median time"
+msgstr "Mediantid"
+
+msgid "90th percentile time"
+msgstr "Tid, 90:e percentilen"
+
+msgid "Empty"
+msgstr "Tomt"
+
+msgid "Shortened"
+msgstr "Förkortat"
+
+msgid "Functions"
+msgstr "Funktioner"
+
+msgid "Map and zones"
+msgstr "Karta och zoner"
+
+msgid "Device definitions"
+msgstr "Enhetsdefinitioner"
+
+msgid "Tool lists"
+msgstr "Verktygslistor"
+
+msgid "No owner"
+msgstr "Ingen ägare"
+
+msgid "Owner"
+msgstr "Ägare"
+
+msgid "Assign owner"
+msgstr "Tilldela ägare"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Välj en person som ansvarar för den här uppgiften."
+
+msgid "All tools (built-in AI)"
+msgstr "Alla verktyg (inbyggd AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Vilka AI-verktyg en app som anslutits med den här nyckeln kan se."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Drift: vardagliga verktyg för avläsning, styrning, scheman, anteckningar och odlingsytornas stadier. Drift + konfiguration lägger till installationsverktyg (enhetsdefinitioner, automatiseringar, odlingsytor och program, karta, instrumentpaneler, AI-inställningar) och skickar en mycket längre verktygslista till AI:n i varje konversation."
+
+msgid "Choose a tool set for this key."
+msgstr "Välj en verktygsuppsättning för den här nyckeln."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI-verktygen har ändrats. En ansluten AI-app kan behöva ansluta på nytt för att se den nya verktygslistan."

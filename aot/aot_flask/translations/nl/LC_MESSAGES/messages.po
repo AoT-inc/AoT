@@ -30811,3 +30811,200 @@ msgstr "Temperatuur eerst"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: volgt het VPD-doel rechtstreeks. Temperatuur eerst: volgt de dag-/nachttemperatuur van de fase en zet het VPD-doel om in een vochtdoel bij die temperatuur, zodat VPD niet met zeer warme of zeer koude lucht wordt nagejaagd; VPD werkt dan alleen als grens. Zonder fasetemperatuur wordt de temperatuur alleen binnen het richtbereik gehouden."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s agenda-item(s) zijn overgeslagen omdat u hun doel niet kunt wijzigen."
+
+msgid "Use AI Chat"
+msgstr "AI-chat gebruiken"
+
+msgid "AI Tools"
+msgstr "AI-tools"
+
+msgid "Operations"
+msgstr "Bediening"
+
+msgid "Operations + configuration"
+msgstr "Bediening + configuratie"
+
+msgid "Import skipped"
+msgstr "Import overgeslagen"
+
+msgid "Partly imported"
+msgstr "Gedeeltelijk geïmporteerd"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "De import van Google → AoT is overgeslagen omdat uw rol schema's niet kan bewerken (het recht ‘Controllers bewerken’ is vereist)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Voor het koppelen van Google Agenda is het recht ‘Controllers bewerken’ vereist."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Opdracht verzonden, maar of deze is uitgevoerd is niet bevestigd — controleer de status van het apparaat."
+
+msgid "Call quality"
+msgstr "Aanroepkwaliteit"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Hoe verbonden AI's de tools hebben gebruikt: hoeveel aanroepen een verzoek nodig heeft, hoe lang ze wachten en hoe vaak een aanroep mislukt of leeg terugkomt."
+
+msgid "Last 24 hours"
+msgstr "Laatste 24 uur"
+
+msgid "All connections"
+msgstr "Alle verbindingen"
+
+msgid "MCP over HTTP"
+msgstr "MCP via HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP op deze computer"
+
+msgid "REST API"
+msgstr "REST-API"
+
+msgid "By tool drawer"
+msgstr "Per toolgroep"
+
+msgid "About these numbers"
+msgstr "Over deze cijfers"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Een aanroepbundel is een reeks aanroepen uit één gesprek met minder dan 90 seconden ertussen. De server kan niet zien waar een vraag eindigt, dus een bundel benadert slechts één vraag."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "De tijden gelden voor opzoekingen die zijn uitgevoerd. Wijzigingen die de server heeft doorgevoerd nadat een persoon ze had goedgekeurd, zijn niet inbegrepen."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Lege resultaten zijn een schatting op basis van het aantal items in elk antwoord. Antwoordgroottes zijn exclusief afbeeldingen."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Aanroepen die zijn vastgelegd voordat deze meting werd toegevoegd, zijn niet inbegrepen. Deze gegevens blijven op dit systeem en worden nergens naartoe verzonden."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Gebaseerd op de meest recente %(n)s aanroepen in deze periode."
+
+msgid "No measured calls in this period yet."
+msgstr "Nog geen gemeten aanroepen in deze periode."
+
+msgid "Not enough data"
+msgstr "Onvoldoende gegevens"
+
+msgid "Calls measured"
+msgstr "Gemeten aanroepen"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Aandeel van de vastgelegde aanroepen dat is gemeten"
+
+msgid "Call bundles"
+msgstr "Aanroepbundels"
+
+msgid "Calls per bundle, median"
+msgstr "Aanroepen per bundel, mediaan"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Aanroepen per bundel, 90e percentiel"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Bundels met 10 of meer aanroepen"
+
+msgid "Same tool called again right away"
+msgstr "Dezelfde tool direct opnieuw aangeroepen"
+
+msgid "Longest run of the same tool"
+msgstr "Langste reeks van dezelfde tool"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Bundels die beginnen met het opzoeken van tools of doelen"
+
+msgid "Tool lists opened and then used"
+msgstr "Geopende en vervolgens gebruikte toollijsten"
+
+msgid "Time between calls, median"
+msgstr "Tijd tussen aanroepen, mediaan"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Tijd tussen aanroepen, 90e percentiel"
+
+msgid "Lookup time, median"
+msgstr "Opzoektijd, mediaan"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Opzoektijd, 90e percentiel"
+
+msgid "Failed calls"
+msgstr "Mislukte aanroepen"
+
+msgid "Refused calls"
+msgstr "Geweigerde aanroepen"
+
+msgid "Calls waiting for approval"
+msgstr "Aanroepen die op goedkeuring wachten"
+
+msgid "Empty results (estimate)"
+msgstr "Lege resultaten (schatting)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Aanroepen die vroegen welk doel bedoeld werd"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Antwoorden die zijn ingekort om binnen de groottelimiet te blijven"
+
+msgid "Drawer"
+msgstr "Groep"
+
+msgid "Calls"
+msgstr "Aanroepen"
+
+msgid "Median time"
+msgstr "Mediane tijd"
+
+msgid "90th percentile time"
+msgstr "Tijd op 90e percentiel"
+
+msgid "Empty"
+msgstr "Leeg"
+
+msgid "Shortened"
+msgstr "Ingekort"
+
+msgid "Functions"
+msgstr "Functies"
+
+msgid "Map and zones"
+msgstr "Kaart en zones"
+
+msgid "Device definitions"
+msgstr "Apparaatdefinities"
+
+msgid "Tool lists"
+msgstr "Toollijsten"
+
+msgid "No owner"
+msgstr "Geen eigenaar"
+
+msgid "Owner"
+msgstr "Eigenaar"
+
+msgid "Assign owner"
+msgstr "Eigenaar toewijzen"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Kies een persoon die verantwoordelijk is voor deze taak."
+
+msgid "All tools (built-in AI)"
+msgstr "Alle tools (ingebouwde AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Welke AI-tools een app die met deze sleutel is verbonden kan zien."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Bediening: alledaagse tools voor uitlezen, aansturen, schema's, notities en perceelfasen. Bediening + configuratie voegt installatietools toe (apparaatdefinities, automatiseringen, percelen en programma's, kaart, dashboards, AI-instellingen) en stuurt in elk gesprek een veel langere toollijst naar de AI."
+
+msgid "Choose a tool set for this key."
+msgstr "Kies een toolset voor deze sleutel."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI-tools gewijzigd. Een verbonden AI-app moet mogelijk opnieuw verbinding maken om de nieuwe toollijst te zien."

@@ -23610,7 +23610,7 @@ msgstr "Dirección basada en cero dentro de la tabla seleccionada. La documentac
 
 #: inputs/modbus_tcp.py:164
 msgid "Bit (coil / discrete input)"
-msgstr ""
+msgstr "Bit (bobina / entrada discreta)"
 
 #: inputs/modbus_tcp.py:172
 msgid "Data Type"
@@ -30465,3 +30465,197 @@ msgstr "Temperatura primero"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: sigue directamente el objetivo de VPD. Temperatura primero: sigue la temperatura diurna/nocturna de la etapa y convierte el objetivo de VPD en un objetivo de humedad a esa temperatura, para no perseguir el VPD con aire muy caliente o muy frío; el VPD solo actúa como límite. Sin temperatura de etapa, la temperatura solo se mantiene dentro del rango guía."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Se omitieron %(count)s evento(s) del calendario porque no puede cambiar su destino."
+
+msgid "Use AI Chat"
+msgstr "Usar el chat de IA"
+
+msgid "AI Tools"
+msgstr "Herramientas de IA"
+
+msgid "Operations"
+msgstr "Operaciones"
+
+msgid "Operations + configuration"
+msgstr "Operaciones + configuración"
+
+msgid "Import skipped"
+msgstr "Importación omitida"
+
+msgid "Partly imported"
+msgstr "Importado parcialmente"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Se omitió la importación de Google → AoT porque su rol no puede editar programaciones (se requiere el permiso Editar controladores)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Conectar Google Calendar requiere el permiso Editar controladores."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Comando enviado, pero no se ha confirmado si surtió efecto: compruebe el estado del dispositivo."
+
+msgid "Call quality"
+msgstr "Calidad de las llamadas"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Cómo han usado las herramientas las IA conectadas: cuántas llamadas requiere una solicitud, cuánto esperan y con qué frecuencia una llamada falla o devuelve un resultado vacío."
+
+msgid "Last 24 hours"
+msgstr "Últimas 24 horas"
+
+msgid "All connections"
+msgstr "Todas las conexiones"
+
+msgid "MCP over HTTP"
+msgstr "MCP sobre HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP en este equipo"
+
+msgid "By tool drawer"
+msgstr "Por grupo de herramientas"
+
+msgid "About these numbers"
+msgstr "Sobre estas cifras"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Un paquete de llamadas es una serie de llamadas de una misma conversación con menos de 90 segundos entre ellas. El servidor no puede saber dónde termina una pregunta, así que un paquete solo aproxima una pregunta."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Los tiempos corresponden a consultas que se ejecutaron. No se incluyen los cambios que realizó el servidor tras la aprobación de una persona."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Los resultados vacíos son una estimación a partir del número de elementos de cada respuesta. Los tamaños de respuesta no incluyen las imágenes."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Se excluyen las llamadas registradas antes de añadir esta medición. Estos registros permanecen en este sistema y no se envían a ningún sitio."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Basado en las %(n)s llamadas más recientes de este período."
+
+msgid "No measured calls in this period yet."
+msgstr "Aún no hay llamadas medidas en este período."
+
+msgid "Not enough data"
+msgstr "Datos insuficientes"
+
+msgid "Calls measured"
+msgstr "Llamadas medidas"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Proporción de llamadas registradas que se midieron"
+
+msgid "Call bundles"
+msgstr "Paquetes de llamadas"
+
+msgid "Calls per bundle, median"
+msgstr "Llamadas por paquete, mediana"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Llamadas por paquete, percentil 90"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Paquetes con 10 o más llamadas"
+
+msgid "Same tool called again right away"
+msgstr "Misma herramienta llamada de nuevo de inmediato"
+
+msgid "Longest run of the same tool"
+msgstr "Serie más larga de la misma herramienta"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Paquetes que empiezan consultando herramientas u objetivos"
+
+msgid "Tool lists opened and then used"
+msgstr "Listas de herramientas abiertas y luego usadas"
+
+msgid "Time between calls, median"
+msgstr "Tiempo entre llamadas, mediana"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Tiempo entre llamadas, percentil 90"
+
+msgid "Lookup time, median"
+msgstr "Tiempo de consulta, mediana"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Tiempo de consulta, percentil 90"
+
+msgid "Failed calls"
+msgstr "Llamadas fallidas"
+
+msgid "Refused calls"
+msgstr "Llamadas rechazadas"
+
+msgid "Calls waiting for approval"
+msgstr "Llamadas pendientes de aprobación"
+
+msgid "Empty results (estimate)"
+msgstr "Resultados vacíos (estimación)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Llamadas que preguntaron a qué objetivo se refería"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Respuestas acortadas para ajustarse al límite de tamaño"
+
+msgid "Drawer"
+msgstr "Grupo"
+
+msgid "Calls"
+msgstr "Llamadas"
+
+msgid "Median time"
+msgstr "Tiempo mediano"
+
+msgid "90th percentile time"
+msgstr "Tiempo del percentil 90"
+
+msgid "Empty"
+msgstr "Vacías"
+
+msgid "Shortened"
+msgstr "Acortadas"
+
+msgid "Functions"
+msgstr "Funciones"
+
+msgid "Map and zones"
+msgstr "Mapa y zonas"
+
+msgid "Device definitions"
+msgstr "Definiciones de dispositivos"
+
+msgid "Tool lists"
+msgstr "Listas de herramientas"
+
+msgid "No owner"
+msgstr "Sin responsable"
+
+msgid "Owner"
+msgstr "Responsable"
+
+msgid "Assign owner"
+msgstr "Asignar responsable"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Elija una persona responsable de esta tarea."
+
+msgid "All tools (built-in AI)"
+msgstr "Todas las herramientas (IA integrada)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Qué herramientas de IA puede ver una aplicación conectada con esta clave."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operaciones: herramientas cotidianas de lectura, control, programaciones, notas y etapas de parcela. Operaciones + configuración añade herramientas de configuración (definiciones de dispositivos, automatizaciones, parcelas y programas, mapa, paneles, ajustes de IA) y envía a la IA una lista de herramientas mucho más larga en cada conversación."
+
+msgid "Choose a tool set for this key."
+msgstr "Elija un conjunto de herramientas para esta clave."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Las herramientas de IA cambiaron. Puede que una aplicación de IA conectada deba reconectarse para ver la nueva lista de herramientas."

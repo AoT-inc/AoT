@@ -31000,3 +31000,200 @@ msgstr "Température d’abord"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD : suit directement la consigne de VPD. Température d’abord : suit la température jour/nuit de l’étape et convertit la consigne de VPD en consigne d’humidité à cette température, pour ne pas poursuivre le VPD avec un air très chaud ou très froid ; le VPD ne sert alors que de limite. Sans température d’étape, la température est seulement maintenue dans la plage guide."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s événement(s) de calendrier ont été ignorés, car vous ne pouvez pas modifier leur cible."
+
+msgid "Use AI Chat"
+msgstr "Utiliser le chat IA"
+
+msgid "AI Tools"
+msgstr "Outils IA"
+
+msgid "Operations"
+msgstr "Exploitation"
+
+msgid "Operations + configuration"
+msgstr "Exploitation + configuration"
+
+msgid "Import skipped"
+msgstr "Importation ignorée"
+
+msgid "Partly imported"
+msgstr "Importation partielle"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "L'importation Google → AoT a été ignorée, car votre rôle ne peut pas modifier les plannings (l'autorisation « Modifier les contrôleurs » est requise)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "La connexion à Google Agenda nécessite l'autorisation « Modifier les contrôleurs »."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Commande envoyée, mais son effet n'est pas confirmé — vérifiez l'état de l'appareil."
+
+msgid "Call quality"
+msgstr "Qualité des appels"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Comment les IA connectées ont utilisé les outils : nombre d'appels par requête, temps d'attente et fréquence des appels échoués ou renvoyant un résultat vide."
+
+msgid "Last 24 hours"
+msgstr "Dernières 24 heures"
+
+msgid "All connections"
+msgstr "Toutes les connexions"
+
+msgid "MCP over HTTP"
+msgstr "MCP via HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP sur cet ordinateur"
+
+msgid "REST API"
+msgstr "API REST"
+
+msgid "By tool drawer"
+msgstr "Par groupe d'outils"
+
+msgid "About these numbers"
+msgstr "À propos de ces chiffres"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Un lot d'appels est une série d'appels d'une même conversation espacés de moins de 90 secondes. Le serveur ne peut pas savoir où se termine une question, un lot ne correspond donc qu'approximativement à une question."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Les durées concernent les consultations exécutées. Les modifications effectuées par le serveur après approbation par une personne ne sont pas incluses."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Les résultats vides sont une estimation basée sur le nombre d'éléments de chaque réponse. La taille des réponses n'inclut pas les images."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Les appels enregistrés avant l'ajout de cette mesure ne sont pas inclus. Ces enregistrements restent sur ce système et ne sont envoyés nulle part."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Basé sur les %(n)s appels les plus récents de cette période."
+
+msgid "No measured calls in this period yet."
+msgstr "Aucun appel mesuré pour cette période pour le moment."
+
+msgid "Not enough data"
+msgstr "Données insuffisantes"
+
+msgid "Calls measured"
+msgstr "Appels mesurés"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Part des appels enregistrés qui ont été mesurés"
+
+msgid "Call bundles"
+msgstr "Lots d'appels"
+
+msgid "Calls per bundle, median"
+msgstr "Appels par lot, médiane"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Appels par lot, 90e percentile"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Lots de 10 appels ou plus"
+
+msgid "Same tool called again right away"
+msgstr "Même outil rappelé immédiatement"
+
+msgid "Longest run of the same tool"
+msgstr "Plus longue série du même outil"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Lots commençant par la recherche d'outils ou de cibles"
+
+msgid "Tool lists opened and then used"
+msgstr "Listes d'outils ouvertes puis utilisées"
+
+msgid "Time between calls, median"
+msgstr "Délai entre les appels, médiane"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Délai entre les appels, 90e percentile"
+
+msgid "Lookup time, median"
+msgstr "Durée de consultation, médiane"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Durée de consultation, 90e percentile"
+
+msgid "Failed calls"
+msgstr "Appels échoués"
+
+msgid "Refused calls"
+msgstr "Appels refusés"
+
+msgid "Calls waiting for approval"
+msgstr "Appels en attente d'approbation"
+
+msgid "Empty results (estimate)"
+msgstr "Résultats vides (estimation)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Appels ayant demandé quelle cible était visée"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Réponses raccourcies pour respecter la limite de taille"
+
+msgid "Drawer"
+msgstr "Groupe"
+
+msgid "Calls"
+msgstr "Appels"
+
+msgid "Median time"
+msgstr "Durée médiane"
+
+msgid "90th percentile time"
+msgstr "Durée au 90e percentile"
+
+msgid "Empty"
+msgstr "Vide"
+
+msgid "Shortened"
+msgstr "Raccourcies"
+
+msgid "Functions"
+msgstr "Fonctions"
+
+msgid "Map and zones"
+msgstr "Carte et zones"
+
+msgid "Device definitions"
+msgstr "Définitions d'appareils"
+
+msgid "Tool lists"
+msgstr "Listes d'outils"
+
+msgid "No owner"
+msgstr "Aucun responsable"
+
+msgid "Owner"
+msgstr "Responsable"
+
+msgid "Assign owner"
+msgstr "Attribuer un responsable"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Choisissez la personne responsable de cette tâche."
+
+msgid "All tools (built-in AI)"
+msgstr "Tous les outils (IA intégrée)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Quels outils IA une application connectée avec cette clé peut voir."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Exploitation : outils courants de lecture, de contrôle, de planning, de notes et d'étapes de parcelle. Exploitation + configuration ajoute des outils de mise en place (définitions d'appareils, automatisations, parcelles et programmes, carte, tableaux de bord, paramètres IA) et envoie à l'IA une liste d'outils beaucoup plus longue à chaque conversation."
+
+msgid "Choose a tool set for this key."
+msgstr "Choisissez un ensemble d'outils pour cette clé."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Outils IA modifiés. Une application IA connectée devra peut-être se reconnecter pour voir la nouvelle liste d'outils."

@@ -325,7 +325,7 @@ msgstr "Saturasi"
 #: functions/pid_autotune.py:94 widgets/AoT_PID.py:461
 #: widgets/widget_function_status.py:54
 msgid "Setpoint"
-msgstr "Setpoint"
+msgstr "Titik setel"
 
 #: config_devices_units.py:289
 msgid "Band Min"
@@ -2236,7 +2236,7 @@ msgstr "Durasi antar pengukuran atau tindakan"
 
 #: config_translations.py:322 config_translations.py:323
 msgid "Clock"
-msgstr "Clock"
+msgstr "Jam"
 
 #: config_translations.py:325 config_translations.py:326
 msgid "Cable Select"
@@ -7700,7 +7700,7 @@ msgstr "Peta Dasar"
 #: aot_flask/static/js/geo/design/aot-geo-ui.js:1329
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-vector.js:11125
 msgid "Overlay"
-msgstr "Overlay"
+msgstr "Lapisan"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:729
 msgid "hide_panel"
@@ -8063,7 +8063,7 @@ msgstr "Hisap"
 
 #: aot_flask/static/js/geo/aot-geo-panel.js:635
 msgid "Elbow"
-msgstr "Elbow"
+msgstr "Siku"
 
 #: aot_flask/static/js/geo/aot-geo-panel.js:636
 msgid "Tee"
@@ -9243,7 +9243,7 @@ msgstr "Manajemen paket"
 #: aot_flask/templates/layout_default.html:733
 #: aot_flask/templates/settings/custom_ui.html:202
 msgid "Upgrade"
-msgstr "Upgrade"
+msgstr "Tingkatkan"
 
 #: aot_flask/templates/admin/backup.html:3
 #: aot_flask/templates/admin/backup.html:5 aot_flask/templates/layout.html:734
@@ -10033,7 +10033,7 @@ msgstr "Versi baru tersedia dan image-nya telah dipublikasikan."
 #: aot_flask/templates/admin/upgrade.html:317
 #: aot_flask/templates/admin/upgrade.html:385
 msgid "Changelog"
-msgstr "Changelog"
+msgstr "Catatan perubahan"
 
 #: aot_flask/templates/admin/upgrade.html:200
 #: aot_flask/templates/admin/upgrade.html:317
@@ -13357,7 +13357,7 @@ msgstr "Tidak ditemukan"
 #: aot_flask/templates/pages/form_options/Measurements_Configure.html:8
 #: aot_flask/templates/pages/method_options/build_daily_multipoint.html:169
 msgid "Linear"
-msgstr "Linear"
+msgstr "Linier"
 
 #: aot_flask/templates/pages/form_options/Measurements_Configure.html:56
 #: functions/lorawan_class_scheduler.py:211
@@ -21004,7 +21004,7 @@ msgstr "Spasi kosong"
 
 #: config/__init__.py:304
 msgid "Gauge"
-msgstr "Gauge"
+msgstr "Pengukur"
 
 #: config/__init__.py:309
 msgid "PID Control"
@@ -30259,3 +30259,197 @@ msgstr "Suhu terlebih dahulu"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: mengikuti target VPD secara langsung. Suhu terlebih dahulu: mengikuti suhu siang/malam tahap dan mengubah target VPD menjadi target kelembapan pada suhu itu, sehingga VPD tidak dikejar dengan udara yang sangat panas atau sangat dingin; VPD hanya berfungsi sebagai batas. Tanpa suhu tahap, suhu hanya dijaga di dalam rentang panduan."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s acara kalender dilewati karena target-nya tidak dapat Anda ubah."
+
+msgid "Use AI Chat"
+msgstr "Gunakan Obrolan AI"
+
+msgid "AI Tools"
+msgstr "Alat AI"
+
+msgid "Operations"
+msgstr "Operasional"
+
+msgid "Operations + configuration"
+msgstr "Operasional + konfigurasi"
+
+msgid "Import skipped"
+msgstr "Impor dilewati"
+
+msgid "Partly imported"
+msgstr "Sebagian diimpor"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Impor Google → AoT dilewati karena peran Anda tidak dapat mengedit jadwal (izin Edit Pengontrol diperlukan)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Menghubungkan Google Kalender memerlukan izin Edit Pengontrol."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Perintah terkirim, tetapi belum dipastikan apakah perintah berlaku — periksa status perangkat."
+
+msgid "Call quality"
+msgstr "Kualitas panggilan"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Cara AI yang terhubung menggunakan alat: berapa banyak panggilan dalam satu permintaan, berapa lama menunggu, dan seberapa sering panggilan gagal atau mengembalikan hasil kosong."
+
+msgid "Last 24 hours"
+msgstr "24 jam terakhir"
+
+msgid "All connections"
+msgstr "Semua koneksi"
+
+msgid "MCP over HTTP"
+msgstr "MCP melalui HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP di komputer ini"
+
+msgid "By tool drawer"
+msgstr "Menurut kelompok alat"
+
+msgid "About these numbers"
+msgstr "Tentang angka-angka ini"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Kelompok panggilan adalah rangkaian panggilan dari satu percakapan dengan jeda kurang dari 90 detik di antaranya. Server tidak dapat mengetahui di mana sebuah pertanyaan berakhir, sehingga satu kelompok hanya mendekati satu pertanyaan."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Waktu berlaku untuk pencarian yang dijalankan. Perubahan yang dilakukan server setelah disetujui seseorang tidak disertakan."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Hasil kosong adalah perkiraan berdasarkan jumlah item di setiap respons. Ukuran respons tidak mencakup gambar."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Panggilan yang dicatat sebelum pengukuran ini ditambahkan tidak disertakan. Catatan ini tetap berada di sistem ini dan tidak dikirim ke mana pun."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Berdasarkan %(n)s panggilan terbaru dalam periode ini."
+
+msgid "No measured calls in this period yet."
+msgstr "Belum ada panggilan terukur dalam periode ini."
+
+msgid "Not enough data"
+msgstr "Data belum cukup"
+
+msgid "Calls measured"
+msgstr "Panggilan terukur"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Persentase panggilan tercatat yang terukur"
+
+msgid "Call bundles"
+msgstr "Kelompok panggilan"
+
+msgid "Calls per bundle, median"
+msgstr "Panggilan per kelompok, median"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Panggilan per kelompok, persentil ke-90"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Kelompok dengan 10 panggilan atau lebih"
+
+msgid "Same tool called again right away"
+msgstr "Alat yang sama dipanggil ulang seketika"
+
+msgid "Longest run of the same tool"
+msgstr "Rangkaian terpanjang dari alat yang sama"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Kelompok yang diawali dengan mencari alat atau target"
+
+msgid "Tool lists opened and then used"
+msgstr "Daftar alat yang dibuka lalu digunakan"
+
+msgid "Time between calls, median"
+msgstr "Jeda antar panggilan, median"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Jeda antar panggilan, persentil ke-90"
+
+msgid "Lookup time, median"
+msgstr "Waktu pencarian, median"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Waktu pencarian, persentil ke-90"
+
+msgid "Failed calls"
+msgstr "Panggilan gagal"
+
+msgid "Refused calls"
+msgstr "Panggilan ditolak"
+
+msgid "Calls waiting for approval"
+msgstr "Panggilan menunggu persetujuan"
+
+msgid "Empty results (estimate)"
+msgstr "Hasil kosong (perkiraan)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Panggilan yang menanyakan target yang dimaksud"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Respons yang dipersingkat agar sesuai batas ukuran"
+
+msgid "Drawer"
+msgstr "Kelompok"
+
+msgid "Calls"
+msgstr "Panggilan"
+
+msgid "Median time"
+msgstr "Waktu median"
+
+msgid "90th percentile time"
+msgstr "Waktu persentil ke-90"
+
+msgid "Empty"
+msgstr "Kosong"
+
+msgid "Shortened"
+msgstr "Dipersingkat"
+
+msgid "Functions"
+msgstr "Fungsi"
+
+msgid "Map and zones"
+msgstr "Peta dan zona"
+
+msgid "Device definitions"
+msgstr "Definisi perangkat"
+
+msgid "Tool lists"
+msgstr "Daftar alat"
+
+msgid "No owner"
+msgstr "Tanpa pemilik"
+
+msgid "Owner"
+msgstr "Pemilik"
+
+msgid "Assign owner"
+msgstr "Tetapkan pemilik"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Pilih orang yang bertanggung jawab atas tugas ini."
+
+msgid "All tools (built-in AI)"
+msgstr "Semua alat (AI bawaan)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Alat AI mana yang dapat dilihat aplikasi yang terhubung dengan kunci ini."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operasional: alat sehari-hari untuk membaca, mengontrol, jadwal, catatan, dan tahap petak. Operasional + konfigurasi menambahkan alat penyiapan (definisi perangkat, otomatisasi, petak dan program, peta, dasbor, pengaturan AI) dan mengirim daftar alat yang jauh lebih panjang ke AI di setiap percakapan."
+
+msgid "Choose a tool set for this key."
+msgstr "Pilih set alat untuk kunci ini."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Alat AI berubah. Aplikasi AI yang terhubung mungkin perlu tersambung ulang untuk melihat daftar alat yang baru."

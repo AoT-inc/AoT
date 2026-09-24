@@ -325,7 +325,7 @@ msgstr "Saturazione"
 #: functions/pid_autotune.py:94 widgets/AoT_PID.py:461
 #: widgets/widget_function_status.py:54
 msgid "Setpoint"
-msgstr "Setpoint"
+msgstr "Valore impostato"
 
 #: config_devices_units.py:289
 msgid "Band Min"
@@ -24950,7 +24950,7 @@ msgstr "Densità apparente (cg/cm³)"
 #: inputs_gis/gis_kakao.py:7 inputs_gis/gis_naver.py:7
 #: inputs_gis/gis_vworld.py:14
 msgid "Satellite"
-msgstr "Satellite"
+msgstr "Satellitare"
 
 #: inputs_gis/gis_kakao.py:8 inputs_gis/gis_vworld.py:15
 msgid "Hybrid"
@@ -30927,3 +30927,197 @@ msgstr "Prima la temperatura"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: segue direttamente l’obiettivo di VPD. Prima la temperatura: segue la temperatura diurna/notturna della fase e trasforma l’obiettivo di VPD in un obiettivo di umidità a quella temperatura, così da non inseguire il VPD con aria molto calda o molto fredda; il VPD agisce solo come limite. Senza temperatura di fase, la temperatura viene solo mantenuta nell’intervallo guida."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s evento/i del calendario sono stati saltati perché non puoi modificarne la destinazione."
+
+msgid "Use AI Chat"
+msgstr "Usa la chat IA"
+
+msgid "AI Tools"
+msgstr "Strumenti IA"
+
+msgid "Operations"
+msgstr "Operazioni"
+
+msgid "Operations + configuration"
+msgstr "Operazioni + configurazione"
+
+msgid "Import skipped"
+msgstr "Importazione saltata"
+
+msgid "Partly imported"
+msgstr "Importata parzialmente"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "L'importazione Google → AoT è stata saltata perché il tuo ruolo non può modificare le programmazioni (è richiesto il permesso Modifica controller)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Per collegare Google Calendar serve il permesso Modifica controller."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Comando inviato, ma non è confermato che abbia avuto effetto: controlla lo stato del dispositivo."
+
+msgid "Call quality"
+msgstr "Qualità delle chiamate"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Come le IA collegate hanno usato gli strumenti: quante chiamate richiede una richiesta, quanto attendono e con quale frequenza una chiamata fallisce o restituisce un risultato vuoto."
+
+msgid "Last 24 hours"
+msgstr "Ultime 24 ore"
+
+msgid "All connections"
+msgstr "Tutte le connessioni"
+
+msgid "MCP over HTTP"
+msgstr "MCP su HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP su questo computer"
+
+msgid "By tool drawer"
+msgstr "Per gruppo di strumenti"
+
+msgid "About these numbers"
+msgstr "Informazioni su questi numeri"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Un gruppo di chiamate è una serie di chiamate della stessa conversazione con meno di 90 secondi tra l'una e l'altra. Il server non può sapere dove finisce una domanda, quindi un gruppo è solo un'approssimazione di una domanda."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "I tempi si riferiscono alle ricerche eseguite. Non includono le modifiche eseguite dal server dopo l'approvazione di una persona."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "I risultati vuoti sono una stima basata sul numero di elementi in ogni risposta. Le dimensioni delle risposte non includono le immagini."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Le chiamate registrate prima dell'aggiunta di questa misurazione sono escluse. Questi dati restano su questo sistema e non vengono inviati altrove."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Basato sulle %(n)s chiamate più recenti di questo periodo."
+
+msgid "No measured calls in this period yet."
+msgstr "Nessuna chiamata misurata in questo periodo."
+
+msgid "Not enough data"
+msgstr "Dati insufficienti"
+
+msgid "Calls measured"
+msgstr "Chiamate misurate"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Quota di chiamate registrate che sono state misurate"
+
+msgid "Call bundles"
+msgstr "Gruppi di chiamate"
+
+msgid "Calls per bundle, median"
+msgstr "Chiamate per gruppo, mediana"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Chiamate per gruppo, 90º percentile"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Gruppi con 10 o più chiamate"
+
+msgid "Same tool called again right away"
+msgstr "Stesso strumento richiamato subito dopo"
+
+msgid "Longest run of the same tool"
+msgstr "Serie più lunga dello stesso strumento"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Gruppi che iniziano cercando strumenti o destinazioni"
+
+msgid "Tool lists opened and then used"
+msgstr "Elenchi di strumenti aperti e poi usati"
+
+msgid "Time between calls, median"
+msgstr "Tempo tra le chiamate, mediana"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Tempo tra le chiamate, 90º percentile"
+
+msgid "Lookup time, median"
+msgstr "Tempo di ricerca, mediana"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Tempo di ricerca, 90º percentile"
+
+msgid "Failed calls"
+msgstr "Chiamate non riuscite"
+
+msgid "Refused calls"
+msgstr "Chiamate rifiutate"
+
+msgid "Calls waiting for approval"
+msgstr "Chiamate in attesa di approvazione"
+
+msgid "Empty results (estimate)"
+msgstr "Risultati vuoti (stima)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Chiamate che hanno chiesto a quale destinazione ci si riferisse"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Risposte abbreviate per rientrare nel limite di dimensione"
+
+msgid "Drawer"
+msgstr "Gruppo"
+
+msgid "Calls"
+msgstr "Chiamate"
+
+msgid "Median time"
+msgstr "Tempo mediano"
+
+msgid "90th percentile time"
+msgstr "Tempo del 90º percentile"
+
+msgid "Empty"
+msgstr "Vuote"
+
+msgid "Shortened"
+msgstr "Abbreviate"
+
+msgid "Functions"
+msgstr "Funzioni"
+
+msgid "Map and zones"
+msgstr "Mappa e zone"
+
+msgid "Device definitions"
+msgstr "Definizioni dei dispositivi"
+
+msgid "Tool lists"
+msgstr "Elenchi di strumenti"
+
+msgid "No owner"
+msgstr "Nessun responsabile"
+
+msgid "Owner"
+msgstr "Responsabile"
+
+msgid "Assign owner"
+msgstr "Assegna responsabile"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Scegli una persona responsabile di questa attività."
+
+msgid "All tools (built-in AI)"
+msgstr "Tutti gli strumenti (IA integrata)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Quali strumenti IA può vedere un'app collegata con questa chiave."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operazioni: strumenti di uso quotidiano per lettura, controllo, programmazioni, note e fasi degli appezzamenti. Operazioni + configurazione aggiunge strumenti di configurazione (definizioni dei dispositivi, automazioni, appezzamenti e programmi, mappa, dashboard, impostazioni IA) e invia all'IA un elenco di strumenti molto più lungo in ogni conversazione."
+
+msgid "Choose a tool set for this key."
+msgstr "Scegli un set di strumenti per questa chiave."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Gli strumenti IA sono cambiati. Un'app IA connessa potrebbe doversi ricollegare per vedere il nuovo elenco di strumenti."

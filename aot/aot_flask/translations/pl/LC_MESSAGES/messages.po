@@ -30719,3 +30719,197 @@ msgstr "Najpierw temperatura"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: bezpośrednio realizuje cel VPD. Najpierw temperatura: realizuje dzienną/nocną temperaturę etapu i zamienia cel VPD na cel wilgotności w tej temperaturze, aby nie gonić VPD bardzo gorącym lub bardzo zimnym powietrzem; VPD działa wtedy tylko jako granica. Bez temperatury etapu temperatura jest jedynie utrzymywana w zakresie orientacyjnym."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Pominięto %(count)s zdarzeń kalendarza, ponieważ nie możesz zmienić ich celu."
+
+msgid "Use AI Chat"
+msgstr "Użyj czatu SI"
+
+msgid "AI Tools"
+msgstr "Narzędzia SI"
+
+msgid "Operations"
+msgstr "Operacje"
+
+msgid "Operations + configuration"
+msgstr "Operacje + konfiguracja"
+
+msgid "Import skipped"
+msgstr "Import pominięty"
+
+msgid "Partly imported"
+msgstr "Zaimportowano częściowo"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Import Google → AoT został pominięty, ponieważ Twoja rola nie pozwala edytować harmonogramów (wymagane uprawnienie Edycja kontrolerów)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Połączenie z Kalendarzem Google wymaga uprawnienia Edycja kontrolerów."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Polecenie wysłano, ale nie potwierdzono, czy zostało wykonane — sprawdź stan urządzenia."
+
+msgid "Call quality"
+msgstr "Jakość wywołań"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Jak połączone SI korzystają z narzędzi: ile wywołań zajmuje jedno żądanie, jak długo trwa oczekiwanie oraz jak często wywołanie kończy się błędem lub pustym wynikiem."
+
+msgid "Last 24 hours"
+msgstr "Ostatnie 24 godziny"
+
+msgid "All connections"
+msgstr "Wszystkie połączenia"
+
+msgid "MCP over HTTP"
+msgstr "MCP przez HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP na tym komputerze"
+
+msgid "By tool drawer"
+msgstr "Według grupy narzędzi"
+
+msgid "About these numbers"
+msgstr "O tych liczbach"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Pakiet wywołań to seria wywołań z jednej rozmowy, między którymi minęło mniej niż 90 sekund. Serwer nie widzi, gdzie kończy się pytanie, więc pakiet jedynie przybliża jedno pytanie."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Czasy dotyczą wyszukiwań, które zostały wykonane. Zmiany wykonane przez serwer po zatwierdzeniu przez osobę nie są uwzględnione."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Puste wyniki są szacowane na podstawie liczby elementów w każdej odpowiedzi. Rozmiary odpowiedzi nie obejmują obrazów."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Wywołania zarejestrowane przed dodaniem tego pomiaru są pominięte. Te zapisy pozostają w tym systemie i nie są nigdzie wysyłane."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Na podstawie %(n)s ostatnich wywołań w tym okresie."
+
+msgid "No measured calls in this period yet."
+msgstr "W tym okresie nie ma jeszcze zmierzonych wywołań."
+
+msgid "Not enough data"
+msgstr "Za mało danych"
+
+msgid "Calls measured"
+msgstr "Zmierzone wywołania"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Odsetek zarejestrowanych wywołań, które zmierzono"
+
+msgid "Call bundles"
+msgstr "Pakiety wywołań"
+
+msgid "Calls per bundle, median"
+msgstr "Wywołań na pakiet, mediana"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Wywołań na pakiet, 90. percentyl"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Pakiety z 10 lub więcej wywołaniami"
+
+msgid "Same tool called again right away"
+msgstr "To samo narzędzie wywołane ponownie od razu"
+
+msgid "Longest run of the same tool"
+msgstr "Najdłuższa seria tego samego narzędzia"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Pakiety zaczynające się od wyszukiwania narzędzi lub celów"
+
+msgid "Tool lists opened and then used"
+msgstr "Listy narzędzi otwarte, a następnie użyte"
+
+msgid "Time between calls, median"
+msgstr "Czas między wywołaniami, mediana"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Czas między wywołaniami, 90. percentyl"
+
+msgid "Lookup time, median"
+msgstr "Czas wyszukiwania, mediana"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Czas wyszukiwania, 90. percentyl"
+
+msgid "Failed calls"
+msgstr "Nieudane wywołania"
+
+msgid "Refused calls"
+msgstr "Odrzucone wywołania"
+
+msgid "Calls waiting for approval"
+msgstr "Wywołania oczekujące na zatwierdzenie"
+
+msgid "Empty results (estimate)"
+msgstr "Puste wyniki (szacunek)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Wywołania z pytaniem o cel"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Odpowiedzi skrócone do limitu rozmiaru"
+
+msgid "Drawer"
+msgstr "Grupa"
+
+msgid "Calls"
+msgstr "Wywołania"
+
+msgid "Median time"
+msgstr "Czas mediany"
+
+msgid "90th percentile time"
+msgstr "Czas 90. percentyla"
+
+msgid "Empty"
+msgstr "Puste"
+
+msgid "Shortened"
+msgstr "Skrócone"
+
+msgid "Functions"
+msgstr "Funkcje"
+
+msgid "Map and zones"
+msgstr "Mapa i strefy"
+
+msgid "Device definitions"
+msgstr "Definicje urządzeń"
+
+msgid "Tool lists"
+msgstr "Listy narzędzi"
+
+msgid "No owner"
+msgstr "Brak właściciela"
+
+msgid "Owner"
+msgstr "Właściciel"
+
+msgid "Assign owner"
+msgstr "Przypisz właściciela"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Wybierz osobę odpowiedzialną za to zadanie."
+
+msgid "All tools (built-in AI)"
+msgstr "Wszystkie narzędzia (wbudowana SI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Które narzędzia SI widzi aplikacja połączona za pomocą tego klucza."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Operacje: codzienne narzędzia do odczytu, sterowania, harmonogramów, notatek i etapów działek. Operacje + konfiguracja dodaje narzędzia konfiguracyjne (definicje urządzeń, automatyzacje, działki i programy, mapa, pulpity, ustawienia SI) i w każdej rozmowie wysyła do SI znacznie dłuższą listę narzędzi."
+
+msgid "Choose a tool set for this key."
+msgstr "Wybierz zestaw narzędzi dla tego klucza."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "Narzędzia SI zostały zmienione. Połączona aplikacja SI może wymagać ponownego połączenia, aby zobaczyć nową listę narzędzi."

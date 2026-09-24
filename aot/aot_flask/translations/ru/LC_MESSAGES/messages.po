@@ -30759,3 +30759,200 @@ msgstr "Сначала температура"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: напрямую следует цели VPD. Сначала температура: следует дневной/ночной температуре этапа и превращает цель VPD в цель влажности при этой температуре, чтобы не добиваться VPD очень горячим или очень холодным воздухом; VPD тогда служит только границей. Без температуры этапа температура лишь удерживается в ориентировочном диапазоне."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "Событий календаря пропущено: %(count)s — вы не можете изменить их цель."
+
+msgid "Use AI Chat"
+msgstr "Использовать ИИ-чат"
+
+msgid "AI Tools"
+msgstr "ИИ-инструменты"
+
+msgid "Operations"
+msgstr "Операции"
+
+msgid "Operations + configuration"
+msgstr "Операции + настройка"
+
+msgid "Import skipped"
+msgstr "Импорт пропущен"
+
+msgid "Partly imported"
+msgstr "Импортировано частично"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Импорт Google → AoT пропущен: ваша роль не может редактировать расписания (требуется разрешение «Редактирование контроллеров»)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Для подключения Google Календаря требуется разрешение «Редактирование контроллеров»."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Команда отправлена, но неизвестно, сработала ли она — проверьте состояние устройства."
+
+msgid "URL"
+msgstr "Ссылка (URL)"
+
+msgid "Call quality"
+msgstr "Качество вызовов"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Как подключённые ИИ используют инструменты: сколько вызовов требуется на запрос, как долго они ждут и как часто вызов завершается ошибкой или возвращает пустой результат."
+
+msgid "Last 24 hours"
+msgstr "Последние 24 часа"
+
+msgid "All connections"
+msgstr "Все подключения"
+
+msgid "MCP over HTTP"
+msgstr "MCP по HTTP"
+
+msgid "MCP on this computer"
+msgstr "MCP на этом компьютере"
+
+msgid "By tool drawer"
+msgstr "По группам инструментов"
+
+msgid "About these numbers"
+msgstr "Об этих числах"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Пакет вызовов — это серия вызовов из одного разговора с паузами менее 90 секунд. Сервер не видит, где заканчивается вопрос, поэтому пакет лишь приблизительно соответствует одному вопросу."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Время указано для выполненных запросов на чтение. Изменения, выполненные сервером после одобрения человеком, не учитываются."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Пустые результаты — оценка по числу элементов в каждом ответе. Размеры ответов не учитывают изображения."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Вызовы, записанные до добавления этого измерения, не учитываются. Эти записи остаются в этой системе и никуда не отправляются."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "На основе последних %(n)s вызовов за этот период."
+
+msgid "No measured calls in this period yet."
+msgstr "За этот период измеренных вызовов пока нет."
+
+msgid "Not enough data"
+msgstr "Недостаточно данных"
+
+msgid "Calls measured"
+msgstr "Измеренных вызовов"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Доля записанных вызовов, которые были измерены"
+
+msgid "Call bundles"
+msgstr "Пакеты вызовов"
+
+msgid "Calls per bundle, median"
+msgstr "Вызовов в пакете, медиана"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Вызовов в пакете, 90-й процентиль"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Пакеты с 10 и более вызовами"
+
+msgid "Same tool called again right away"
+msgstr "Тот же инструмент вызван повторно сразу же"
+
+msgid "Longest run of the same tool"
+msgstr "Самая длинная серия вызовов одного инструмента"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Пакеты, начинающиеся с поиска инструментов или целей"
+
+msgid "Tool lists opened and then used"
+msgstr "Списки инструментов, которые открыли и затем использовали"
+
+msgid "Time between calls, median"
+msgstr "Время между вызовами, медиана"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Время между вызовами, 90-й процентиль"
+
+msgid "Lookup time, median"
+msgstr "Время поиска, медиана"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Время поиска, 90-й процентиль"
+
+msgid "Failed calls"
+msgstr "Неудачные вызовы"
+
+msgid "Refused calls"
+msgstr "Отклонённые вызовы"
+
+msgid "Calls waiting for approval"
+msgstr "Вызовы, ожидающие одобрения"
+
+msgid "Empty results (estimate)"
+msgstr "Пустые результаты (оценка)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Вызовы с уточнением, какая цель имелась в виду"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Ответы, сокращённые из-за ограничения размера"
+
+msgid "Drawer"
+msgstr "Группа"
+
+msgid "Calls"
+msgstr "Вызовы"
+
+msgid "Median time"
+msgstr "Медианное время"
+
+msgid "90th percentile time"
+msgstr "Время 90-го процентиля"
+
+msgid "Empty"
+msgstr "Пустые"
+
+msgid "Shortened"
+msgstr "Сокращённые"
+
+msgid "Functions"
+msgstr "Функции"
+
+msgid "Map and zones"
+msgstr "Карта и зоны"
+
+msgid "Device definitions"
+msgstr "Определения устройств"
+
+msgid "Tool lists"
+msgstr "Списки инструментов"
+
+msgid "No owner"
+msgstr "Нет ответственного"
+
+msgid "Owner"
+msgstr "Ответственный"
+
+msgid "Assign owner"
+msgstr "Назначить ответственного"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Выберите человека, ответственного за эту задачу."
+
+msgid "All tools (built-in AI)"
+msgstr "Все инструменты (встроенный ИИ)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Какие ИИ-инструменты видит приложение, подключённое с этим ключом."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Операции: повседневные инструменты для чтения, управления, расписаний, заметок и этапов участков. «Операции + настройка» добавляет инструменты настройки (определения устройств, автоматизации, участки и программы, карта, панели, настройки ИИ) и отправляет ИИ намного более длинный список инструментов в каждом разговоре."
+
+msgid "Choose a tool set for this key."
+msgstr "Выберите набор инструментов для этого ключа."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "ИИ-инструменты изменены. Подключённому ИИ-приложению может потребоваться переподключиться, чтобы увидеть новый список инструментов."

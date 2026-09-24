@@ -23751,7 +23751,7 @@ msgstr "Skriv inn måleintervallet i sekund."
 #: inputs/ecowitt_soil_moisture.py:44 inputs/ecowitt_temp_and_humidity.py:44
 #: inputs/ecowitt_weather.py:64
 msgid "Application Key"
-msgstr "Application Key"
+msgstr "Applikasjonsnøkkel"
 
 #: inputs/ecowitt_soil_moisture.py:45 inputs/ecowitt_temp_and_humidity.py:45
 #: inputs/ecowitt_weather.py:65
@@ -30502,3 +30502,194 @@ msgstr "Temperatur først"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py
 msgid "VPD: follows the VPD target directly. Temperature first: follows the stage day/night temperature and turns the VPD target into a humidity target at that temperature, so VPD is not chased with very hot or very cold air; VPD then only acts as a limit. Without a stage temperature, temperature is only kept inside the guide range."
 msgstr "VPD: følgjer VPD-målet direkte. Temperatur først: følgjer dag-/nattemperaturen i fasen og gjer VPD-målet om til eit fuktmål ved den temperaturen, så VPD ikkje vert jaga med svært varm eller svært kald luft; VPD verkar då berre som ei grense. Utan fasetemperatur vert temperaturen berre halden innanfor rettleiingsområdet."
+
+#, python-format
+msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
+msgstr "%(count)s kalenderhending(ar) vart hoppa over fordi du ikkje kan endre målet deira."
+
+msgid "Use AI Chat"
+msgstr "Bruk AI-chat"
+
+msgid "AI Tools"
+msgstr "AI-verktøy"
+
+msgid "Operations"
+msgstr "Drift"
+
+msgid "Operations + configuration"
+msgstr "Drift + konfigurasjon"
+
+msgid "Import skipped"
+msgstr "Import hoppa over"
+
+msgid "Partly imported"
+msgstr "Delvis importert"
+
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "Importen frå Google → AoT vart hoppa over fordi rolla di ikkje kan redigere tidsplanar (løyvet Rediger kontrollarar er påkravd)."
+
+msgid "Connecting Google Calendar requires the Edit Controllers permission."
+msgstr "Å kopla til Google Kalender krev løyvet Rediger kontrollarar."
+
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "Kommandoen vart send, men det er ikkje stadfesta om han fekk verknad — sjekk tilstanden til eininga."
+
+msgid "Call quality"
+msgstr "Kallkvalitet"
+
+msgid "How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty."
+msgstr "Korleis tilkopla AI har brukt verktya: kor mange kall ei førespurnad tek, kor lenge dei ventar, og kor ofte eit kall mislukkast eller gir tomt svar."
+
+msgid "Last 24 hours"
+msgstr "Siste 24 timane"
+
+msgid "All connections"
+msgstr "Alle tilkoplingar"
+
+msgid "MCP on this computer"
+msgstr "MCP på denne datamaskina"
+
+msgid "By tool drawer"
+msgstr "Etter verktøygruppe"
+
+msgid "About these numbers"
+msgstr "Om desse tala"
+
+msgid "A call bundle is a run of calls from one conversation with less than 90 seconds between them. The server cannot see where a question ends, so a bundle only approximates one question."
+msgstr "Ein kallpakke er ei rekkje kall frå éi samtale med mindre enn 90 sekund mellom seg. Tenaren kan ikkje sjå kvar eit spørsmål sluttar, så ein pakke er berre eit anslag på eitt spørsmål."
+
+msgid "Times are for lookups that ran. Changes carried out by the server after a person approved them are not included."
+msgstr "Tidene gjeld oppslag som vart kjørde. Endringar tenaren utførte etter at ein person godkjende dei, er ikkje med."
+
+msgid "Empty results are an estimate from the item count in each response. Response sizes leave out images."
+msgstr "Tomme resultat er eit anslag basert på talet på element i kvart svar. Svarstorleikane tek ikkje med bilete."
+
+msgid "Calls recorded before this measurement was added are left out. These records stay on this system and are not sent anywhere."
+msgstr "Kall som vart registrerte før denne målinga vart lagd til, er ikkje med. Desse oppføringane blir verande på dette systemet og blir ikkje sende nokon stad."
+
+#, python-format
+msgid "Based on the most recent %(n)s calls in this period."
+msgstr "Basert på dei siste %(n)s kalla i denne perioden."
+
+msgid "No measured calls in this period yet."
+msgstr "Ingen målte kall i denne perioden enno."
+
+msgid "Not enough data"
+msgstr "For lite data"
+
+msgid "Calls measured"
+msgstr "Målte kall"
+
+msgid "Share of recorded calls that were measured"
+msgstr "Del av registrerte kall som vart målte"
+
+msgid "Call bundles"
+msgstr "Kallpakkar"
+
+msgid "Calls per bundle, median"
+msgstr "Kall per pakke, median"
+
+msgid "Calls per bundle, 90th percentile"
+msgstr "Kall per pakke, 90. persentil"
+
+msgid "Bundles with 10 or more calls"
+msgstr "Pakkar med 10 eller fleire kall"
+
+msgid "Same tool called again right away"
+msgstr "Same verktøy kalla på nytt med ein gong"
+
+msgid "Longest run of the same tool"
+msgstr "Lengste rekkje med same verktøy"
+
+msgid "Bundles that start by looking up tools or targets"
+msgstr "Pakkar som startar med å slå opp verktøy eller mål"
+
+msgid "Tool lists opened and then used"
+msgstr "Verktøylister som vart opna og deretter brukte"
+
+msgid "Time between calls, median"
+msgstr "Tid mellom kall, median"
+
+msgid "Time between calls, 90th percentile"
+msgstr "Tid mellom kall, 90. persentil"
+
+msgid "Lookup time, median"
+msgstr "Oppslagstid, median"
+
+msgid "Lookup time, 90th percentile"
+msgstr "Oppslagstid, 90. persentil"
+
+msgid "Failed calls"
+msgstr "Mislukka kall"
+
+msgid "Refused calls"
+msgstr "Avviste kall"
+
+msgid "Calls waiting for approval"
+msgstr "Kall som ventar på godkjenning"
+
+msgid "Empty results (estimate)"
+msgstr "Tomme resultat (anslag)"
+
+msgid "Calls that asked which target was meant"
+msgstr "Kall som spurde kva mål som var meint"
+
+msgid "Responses shortened to fit the size limit"
+msgstr "Svar som vart forkorta for å passe innanfor storleiksgrensa"
+
+msgid "Drawer"
+msgstr "Gruppe"
+
+msgid "Calls"
+msgstr "Kall"
+
+msgid "Median time"
+msgstr "Mediantid"
+
+msgid "90th percentile time"
+msgstr "Tid, 90. persentil"
+
+msgid "Empty"
+msgstr "Tom"
+
+msgid "Shortened"
+msgstr "Forkorta"
+
+msgid "Functions"
+msgstr "Funksjonar"
+
+msgid "Map and zones"
+msgstr "Kart og soner"
+
+msgid "Device definitions"
+msgstr "Einingsdefinisjonar"
+
+msgid "Tool lists"
+msgstr "Verktøylister"
+
+msgid "No owner"
+msgstr "Ingen eigar"
+
+msgid "Owner"
+msgstr "Eigar"
+
+msgid "Assign owner"
+msgstr "Tildel eigar"
+
+msgid "Choose a person to be responsible for this task."
+msgstr "Vel ein person som er ansvarleg for denne oppgåva."
+
+msgid "All tools (built-in AI)"
+msgstr "Alle verktøy (innebygd AI)"
+
+msgid "Which AI tools an app connected with this key can see."
+msgstr "Kva AI-verktøy ein app som er kopla til med denne nøkkelen kan sjå."
+
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "Drift: kvardagsverktøy for lesing, styring, tidsplanar, notat og stadium for teigar. Drift + konfigurasjon legg til oppsettsverktøy (einingsdefinisjonar, automatiseringar, teigar og program, kart, kontrollpanel, AI-innstillingar) og sender ei mykje lengre verktøyliste til AI-en i kvar samtale."
+
+msgid "Choose a tool set for this key."
+msgstr "Vel eit verktøysett for denne nøkkelen."
+
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AI-verktøya er endra. Ein tilkopla AI-app kan måtte kopla til på nytt for å sjå den nye verktøylista."
