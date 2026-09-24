@@ -14,6 +14,22 @@ from flask import has_app_context, has_request_context
 
 logger = logging.getLogger(__name__)
 
+
+def _not_performed(result, state=None):
+    """인앱 쓰기 거부에도 외부 MCP 와 같은 표시(performed:false + _reading)를 싣는다.
+
+    거부 뒤 "완료했습니다" 라고 보고하는 실패는 모델이 어느 통로로 불렀든 같다
+    (`mcp_safety_gate.mark_not_performed` 가 정본). state='pending_approval'
+    이면 "아직 안 됨 — 승인 대기" 로 읽게 한다.
+    """
+    try:
+        from aot.tools.mcp_safety_gate import mark_not_performed
+        return mark_not_performed(result, state)
+    except Exception:
+        logger.exception('[requester-guard] 미실행 표시 실패 — 거부는 그대로 낸다')
+        return result
+
+
 # E-2: Module-level parsing cache
 _INPUT_MODULE_CACHE = None
 _OUTPUT_MODULE_CACHE = None
@@ -709,6 +725,125 @@ class AIActionService:
         # Fallback to original if no match found
         return target_id, None
 
+    # 옛 action_type 중 상태를 바꾸지 않는 것. 여기 없는 옛 action_type 은
+    # 쓰기로 본다(`AIAgentService._approval_is_write` 와 같은 방향).
+    _READ_ACTION_TYPES = frozenset({
+        'read_manual', 'knowledge_search', 'get_detailed_manifest',
+        'mcp_resource_read', 'mcp_prompt_get',
+        # 'abstract_plan' 은 활동 표지를 로그에 남길 뿐 아무것도 저장하지
+        # 않는다(NoteResolver — 성공 문자열만 돌려준다). 쓰기로 보면 Monitor
+        # 의 계획이 이 표지 하나 때문에 거부된다.
+        'abstract_plan'})
+
+    @staticmethod
+    def _action_tool_and_args(action_type, target_id, params):
+        """(도구 이름, 판정용 인자). 도구 호출이 아니면 이름은 action_type 이다."""
+        p = params if isinstance(params, dict) else {}
+        if action_type in ('mcp_tool_call', 'virtual_tool_call'):
+            # 실행 리졸버와 **같은 함수**로 푼다(tool_call_args). 예전에는 여기서
+            # 따로 풀어 `{'arguments': {}, 'params': {...}}` 를 빈 인자로 봤고,
+            # 실행은 `params` 를 썼다 — 판정이 아무것도 안 본 채 통과했다.
+            #
+            # `use_tool` 은 벗겨 **안쪽 도구**로 판정한다 — 겉 이름으로 보면
+            # 읽기로 분류돼 역할·신원 묶음이 통째로 빠졌다(2026-09-23 재현:
+            # Monitor 의 `use_tool{create_note}`, 익명 요청자의
+            # `use_tool{add_schedule}`).
+            from aot.tools.tool_call_args import (extract_tool_call,
+                                                  unwrap_use_tool)
+            virtual = action_type == 'virtual_tool_call'
+            tool, args = extract_tool_call(p, target_id, flatten=virtual,
+                                           unwrap=virtual)
+            return unwrap_use_tool(tool, args)
+        _p = {k: v for k, v in p.items() if k not in ('context', 'page_context')}
+        return action_type, {'target_id': target_id, 'params': _p}
+
+    @staticmethod
+    def _is_write_action(action_type, tool):
+        if action_type in ('mcp_tool_call', 'virtual_tool_call'):
+            # 벗기지 못한 use_tool(한도 초과·모양 불명)은 무엇이 돌지 모르므로
+            # 쓰기로 본다.
+            from aot.tools.tool_call_args import USE_TOOL
+            if tool == USE_TOOL:
+                return True
+            # record_write_tools() 는 레지스트리를 못 읽으면 고정 폴백 목록을
+            # 준다 — write_tools() 의 폴백(네이티브 목록)에는 노트가 없다.
+            from aot.tools.mcp_safety_gate import record_write_tools, write_tools
+            return tool in write_tools() or tool in record_write_tools()
+        # 옛 action_type — 읽기 목록 밖은 전부 쓰기다. 레지스트리 이름으로
+        # 판정하면 안 된다: 'pid'·'function' 은 레지스트리에 읽기처럼 올라
+        # 있지만 이 경로에서는 설정값을 바꾸고 함수를 돌린다.
+        return action_type not in AIActionService._READ_ACTION_TYPES
+
+    @staticmethod
+    def _requester_denial(action_type, target_id, params, requester):
+        """요청한 사람이 이 쓰기를 해도 되는가. 막으면 (사유 코드, 문구), 통과면 None.
+
+        외부 MCP 게이트(`mcp_safety_gate.gate`)와 같은 역할 기준이다:
+
+          - 기록 쓰기(노트·지식, `record_write`) → `edit_settings`
+            (웹 노트·지식 화면과 같다)
+          - 작기 운영(구획·단계·자원·작기 프로그램·구획 일지) → `edit_plots`
+            (웹 구획 화면과 같다 — 설정 편집이 함의)
+          - 그 밖의 쓰기(`write_tools()` — 설정 편집·물리 제어 포함, 옛
+            action_type 도 읽기 목록 밖이면 쓰기) → `edit_controllers`
+
+        그다음 그룹 스코프. 단 AoT 내장 MCP 서버로 가는 `mcp_tool_call` 은
+        `tool_execution._scope_refusal` 이 같은 판정을 감사 기록과 함께 하므로
+        여기서는 역할만 본다.
+
+        **요청자가 없으면(사람이 없는 백그라운드 AI 잡) 면제다** — 그룹 스코프
+        §6-1 과 같은 근거다. 요청자는 `ai_request_context` 의 명시적 표지로
+        판정한다(요청 컨텍스트 유무가 아니다 — 워커 스레드도 사람을 이어받는다).
+        로그인하지 않은 요청자는 거부한다. 판정이 깨지면 거부로 닫는다.
+        """
+        tool, args = AIActionService._action_tool_and_args(action_type, target_id, params)
+        try:
+            if not AIActionService._is_write_action(action_type, tool):
+                return None
+        except Exception:
+            logger.exception('[requester-guard] 도구 분류 실패 — 쓰기로 본다')
+        if requester is None:
+            return None
+        try:
+            from aot.tools.mcp_safety_gate import required_write_permission
+            perm = required_write_permission(tool)
+        except Exception:
+            logger.exception('[requester-guard] 권한 분류 실패 — 폴백 목록')
+            from aot.tools.mcp_safety_gate import _RECORD_WRITE_FALLBACK
+            perm = ('edit_settings' if tool in _RECORD_WRITE_FALLBACK
+                    else 'edit_controllers')
+        try:
+            from aot.databases.models import Role, User
+            from aot.tools.mcp_auth import role_row_allows
+            uid = requester.user_uuid
+            if not uid:
+                return ('insufficient_role',
+                        'this change requires a signed-in user')
+            user = User.query.filter(User.unique_id == uid).first()
+            role = Role.query.filter(Role.id == user.role_id).first() if user else None
+            # 웹과 같은 함의 규칙(설정 편집 ⇒ 작기 운영)으로 본다.
+            if role is None or not role_row_allows(role, perm):
+                return ('insufficient_role', 'Insufficient permission: %s' % perm)
+
+            if action_type == 'mcp_tool_call':
+                return None              # 스코프는 tool_execution 이 본다(감사 포함)
+            from aot.aot_flask.access import scope
+            from aot.tools.tool_execution import scope_arguments
+            _keys = (('device_id', 'output_id', 'unique_id')
+                     if action_type == 'virtual_tool_call' else ('target_id',))
+            for key in _keys:
+                if isinstance(args.get(key), str):
+                    args[key] = scope.resolve_device_token(args[key])
+            allowed, _denied = scope.can_operate_tool_call(
+                tool, scope_arguments(tool, args, is_write=True), user=user,
+                write_tools=frozenset({tool}))
+            if not allowed:
+                return ('group_scope', scope.deny_message())
+            return None
+        except Exception:
+            logger.exception('[requester-guard] 권한 판정 실패 — 거부로 닫는다')
+            return ('insufficient_role', 'permission check failed')
+
     @staticmethod
     def requires_approval(tool_name: str) -> bool:
         """True if `tool_name` is a physical-control or mutating tool that must
@@ -873,6 +1008,69 @@ class AIActionService:
 
     @staticmethod
     def execute_action(action_type, target_id=None, params=None, context=None, _approved=False, **kwargs):
+        """Executes an action — see `_execute_action_body` for the dispatch.
+
+        이 겉껍질은 **쓰기 시점 그룹 스코프**의 신원을 묶는다(설계 §6-2a,
+        `aot.aot_flask.access.write_scope`). 요청자가 있는 쓰기라면 호출 동안
+        그 사람을 묶어 두고, 처리기·공용 리졸버가 실제 대상을 손에 쥔 자리에서
+        `write_scope.enforce` 로 묻는다. 거부(`WriteScopeDenied`)는 여기서
+        잡아 `_requester_denial` 과 같은 모양의 거부로 바꾼다.
+
+        요청자가 없으면(백그라운드 AI 잡·예약 발화) 묶지 않는다 — 그대로 면제다.
+        읽기도 묶지 않는다(읽기 리졸버가 거부를 던지면 안 된다). 바깥에서 이미
+        묶었으면(외부 MCP 의 `set_output_state` 가 여기로 들어오는 경우) 그
+        묶음을 그대로 쓴다.
+        """
+        from aot.ai import ai_request_context as _ai_ctx
+        from aot.aot_flask.access import write_scope
+
+        _at = str(action_type).lower().strip() if action_type else action_type
+        principal = None
+        _rq = _ai_ctx.current_requester()
+        if _rq is not None:
+            try:
+                _tool, _args = AIActionService._action_tool_and_args(
+                    _at, target_id, params)
+                _is_write = AIActionService._is_write_action(_at, _tool)
+            except Exception:
+                logger.exception('[write-scope] 쓰기 분류 실패 — 쓰기로 본다')
+                _tool, _is_write = _at, True
+            if _is_write:
+                principal = write_scope._Principal(
+                    user_uuid=_rq.user_uuid, anonymous=not _rq.user_uuid,
+                    tool=_tool or _at)
+
+        _prev = write_scope.bind(principal) if principal is not None else None
+        try:
+            result = AIActionService._execute_action_body(
+                action_type, target_id=target_id, params=params,
+                context=context, _approved=_approved, **kwargs)
+        except write_scope.WriteScopeDenied:
+            AIActionService._rollback_after_scope_denial()
+            return _not_performed(
+                {"status": "error", "reason_code": "group_scope",
+                 "message": write_scope.deny_message(), "blocked": True})
+        finally:
+            if principal is not None:
+                write_scope.restore(_prev)
+        if principal is not None and principal.denied:
+            # 처리기가 거부를 문자열로 바꿔 삼켰다 — 결과를 거부로 바로잡는다.
+            AIActionService._rollback_after_scope_denial()
+            return _not_performed(
+                {"status": "error", "reason_code": "group_scope",
+                 "message": write_scope.deny_message(), "blocked": True})
+        return result
+
+    @staticmethod
+    def _rollback_after_scope_denial():
+        try:
+            from aot.aot_flask.extensions import db
+            db.session.rollback()
+        except Exception:
+            logger.exception('[write-scope] 세션 되돌리기 실패')
+
+    @staticmethod
+    def _execute_action_body(action_type, target_id=None, params=None, context=None, _approved=False, **kwargs):
         """
         Executes a specific action via the corresponding Action Module.
         Supports outputs, pid, functions, and composite system commands.
@@ -888,6 +1086,12 @@ class AIActionService:
         if action_type:
             action_type = str(action_type).lower().strip()
 
+        # 누가 낸 요청인지 — 아래에서 test_request_context 를 밀어 넣기 **전에**
+        # 본다. 밀어 넣은 뒤에는 백그라운드 호출도 요청이 있는 것처럼 보인다.
+        # 워커 스레드(계획 실행기)는 요청 컨텍스트가 없지만 bind_worker 로 받은
+        # 요청자 표지가 있다. 둘 다 없으면 사람이 없는 호출이다.
+        from aot.ai import ai_request_context as _ai_ctx
+        _requester = _ai_ctx.current_requester()
 
         logger.info(f"[AI Action] Requesting: {action_type} on {target_id} with {params}")
         # B-2: Ensure Flask app and request context for utils that need current_app and Babel
@@ -909,9 +1113,13 @@ class AIActionService:
                 # Flask-Babel context is needed for modules using gettext()
                 _pushed_req_ctx = current_app.test_request_context()
                 _pushed_req_ctx.push()
+                _ai_ctx.mark_synthetic_request()
             except Exception as e:
                 logger.warning(f"Could not push test request context: {e}")
 
+        # 이 호출 동안 요청자를 묶어 둔다 — 안쪽 리졸버(내장 MCP 의 그룹 스코프)가
+        # 같은 사람을 보게 한다. 끝나면 되돌린다(finally).
+        _prev_requester = _ai_ctx.set_requester(_requester)
         try:
             logger.info(f"[execute_action] Type: {action_type}, Target: {target_id}, Params: {params}")
             daemon = DaemonControl(pyro_uri=PYRO_URI)
@@ -936,6 +1144,15 @@ class AIActionService:
             target_id = resolved_id # Update with resolved ID
             # ----------------------------------
 
+            # 쓰기 시점 그룹 스코프 — 옛 action_type 은 여기서 푼 대상
+            # (`_resolve_target` 이 이름·부분 이름·함수 이름까지 푼 id)에 곧바로
+            # 쓴다. 도구 호출은 처리기·리졸버가 각자 실제 대상에서 묻는다.
+            # 묶인 사람이 없으면(백그라운드·읽기) 아무것도 하지 않는다.
+            if (action_type not in ('mcp_tool_call', 'virtual_tool_call')
+                    and isinstance(target_id, str) and target_id.strip()):
+                from aot.aot_flask.access import write_scope as _ws
+                _ws.enforce(target_id)
+
             # [PC-089-GATE][TASK_43] Physical control gate — all execution paths
             # mcp_tool_call / virtual_tool_call 로 physical tool 호출 시
             # _approved=True 토큰을 실어 오는 경로만 허용(execute_logged_action의
@@ -957,11 +1174,24 @@ class AIActionService:
                         f"[PC-089-GATE] Blocked unauthorized physical execution of '{_tool_name}'. "
                         f"Call path lacks an _approved=True approval token."
                     )
-                    return {
+                    return _not_performed({
                         "status": "error",
                         "message": "User approval is pending for physical safety.",
                         "blocked": True
-                    }
+                    }, 'pending_approval')
+
+            # 요청자 쓰기 권한 — 역할과 그룹 스코프. 승인 없이 바로 도는 쓰기
+            # (노트·지식, 일정·함수 옵션·프로그램 같은 설정 편집)는 여기서 막지
+            # 않으면 보기 전용 역할이 채팅으로 바꾼다. 외부 MCP 게이트
+            # (mcp_safety_gate.gate)와 같은 역할 기준.
+            _rq_denial = AIActionService._requester_denial(
+                action_type, target_id, params, _requester)
+            if _rq_denial:
+                _code, _msg = _rq_denial
+                logger.warning("[requester-guard] refused %s: %s", action_type, _msg)
+                return _not_performed(
+                    {"status": "error", "reason_code": _code,
+                     "message": _msg, "blocked": True})
 
             # [TASK_8 054_] Critical Fix 2: Symbolic Mapping Enforcement
             # Before registry dispatch, ensure target_id is a valid physical ID for CONTROL.
@@ -1117,7 +1347,11 @@ class AIActionService:
                 res = AoTDataToolService._set_entity_activation(target_id, action_type == 'activate')
                 if isinstance(res, dict) and res.get('error'):
                     return {"status": "error", "message": res['error'], "result": res}
-                return {"status": "success", "result": res}
+                out = {"status": "success", "result": res}
+                # 저장은 됐는데 데몬이 받았는지 모름 — 맨 위에서도 보이게 싣는다.
+                if isinstance(res, dict) and res.get('performed') == 'unknown':
+                    out['performed'] = 'unknown'
+                return out
 
             elif action_type == 'read_manual':
                 # Phase 6: RAG Search for AI Documents (Hybrid Markdown Parse)
@@ -1306,6 +1540,12 @@ class AIActionService:
                         parent_node = GeoShape.query.filter(GeoShape.feature.contains(target_id)).first()
                     
                     if parent_node:
+                        # 쓰기 시점 그룹 스코프 — 장치를 붙일 도형(연결된
+                        # 장치·시설)과 그 지도로 묻는다.
+                        from aot.aot_flask.access import write_scope as _ws
+                        _ws.enforce(parent_node)
+                        if parent_node.geo_id:
+                            _ws.enforce(('GeoMap', parent_node.geo_id))
                         parent_id = parent_node.id
                         # If AI didn't specify category in params, default to 'input'
                         device_category = params.get('category', 'input') 
@@ -1313,6 +1553,8 @@ class AIActionService:
                         # Maybe it is a Map UUID?
                         parent_map = GeoMap.query.filter_by(unique_id=target_id).first()
                         if parent_map:
+                            from aot.aot_flask.access import write_scope as _ws
+                            _ws.enforce(parent_map)
                             device_category = params.get('category', 'input')
                 
                 # Final fallback for validation
@@ -1542,6 +1784,9 @@ class AIActionService:
                 device = model_cls.query.filter_by(unique_id=target_id).first()
                 if not device:
                     return {"status": "error", "message": "Device not found"}
+                # 쓰기 시점 그룹 스코프 — 고칠 장치 행으로 묻는다.
+                from aot.aot_flask.access import write_scope as _ws
+                _ws.enforce(device)
                 
                 # B-1: 안전 필드 화이트리스트 적용
                 SAFE_FIELDS = {
@@ -1678,12 +1923,12 @@ class AIActionService:
                     logger.error(
                         "[PC-089-GATE-EXT] Blocked control_output on %s: call path lacks "
                         "an _approved=True approval token.", target_id)
-                    return {
+                    return _not_performed({
                         "status": "error",
                         "message": "control_output requires an approval token (_approved=True); "
                                    "it is reachable only through the approved MCP dispatch path.",
                         "blocked": True,
-                    }
+                    })
                 from aot.tools.aot_data_tool_service import AoTDataToolService
                 state = params.get('state', 'off')
                 duration_minutes = params.get('duration_minutes')
@@ -1712,6 +1957,7 @@ class AIActionService:
             logger.exception(f"Error executing {action_type} action on {target_id}")
             return {"status": "error", "message": str(e)}
         finally:
+            _ai_ctx.restore_requester(_prev_requester)
             # B-2: Pop contexts if we pushed them
             if _pushed_req_ctx:
                 _pushed_req_ctx.pop()

@@ -6,6 +6,16 @@ logger = logging.getLogger(__name__)
 from aot.aot_flask.extensions import db
 
 
+def _runtime_unconfirmed(result):
+    """저장은 됐는데 데몬이 켜기/끄기를 받았는지 모른다 — `performed: "unknown"`.
+
+    `daemon_warning` 만 싣던 시절에는 success_with_warning 이 그대로 실행으로
+    읽혀, 데몬이 계속 돌고 있는데도 모델이 "껐다" 고 말할 수 있었다.
+    """
+    from aot.tools.mcp_safety_gate import mark_runtime_unconfirmed
+    return mark_runtime_unconfirmed(result)
+
+
 class FunctionToolsMixin:
 
     @classmethod
@@ -249,7 +259,7 @@ class FunctionToolsMixin:
                 (CustomController.unique_id == function_id) | (CustomController.name == function_id)
             ).first()
             if ctrl:
-                return {
+                detail = {
                     "function_id": ctrl.unique_id,
                     "name": ctrl.name,
                     "function_type": "custom",
@@ -259,6 +269,8 @@ class FunctionToolsMixin:
                     "log_level_debug": getattr(ctrl, 'log_level_debug', None),
                     "tab_id": getattr(ctrl, 'tab_id', None),
                 }
+                detail.update(cls._function_options_view(ctrl))
+                return detail
 
             return {"error": f"Function not found: {function_id}"}
         except Exception as e:
@@ -348,6 +360,11 @@ class FunctionToolsMixin:
             if mod is None:
                 return {"error": f"Function not found: {function_id}"}
 
+            # 쓰기 시점 그룹 스코프 — id·이름 어느 쪽으로 찾았든 **찾은 행**으로
+            # 묻는다(쓰기 호출이 묶여 있을 때만; write_scope.enforce).
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(mod)
+
             # A trigger_sequence with no steps has nothing to run — activating it
             # would flip is_activated on real device control with no configured
             # actions. create_sequence_function already refuses to create one
@@ -356,8 +373,10 @@ class FunctionToolsMixin:
             if activate and controller_type == 'Trigger' and getattr(mod, 'trigger_type', None) == 'trigger_sequence':
                 has_steps = Actions.query.filter(Actions.function_id == mod.unique_id).first()
                 if not has_steps:
-                    return {"error": f"'{mod.name}' has no steps yet — add devices to it "
-                                      "before activating (create_sequence_function / modify_sequence_step)."}
+                    # 도구 이름을 싣지 않는다 — 단계 편집은 설정 묶음이라 운영
+                    # 키의 목록에 없는 이름을 가리키게 된다.
+                    return {"error": f"'{mod.name}' has no steps yet — add devices to "
+                                      "its sequence before activating it."}
 
             # Update DB
             mod.is_activated = activate
@@ -376,7 +395,7 @@ class FunctionToolsMixin:
                     logger.warning(
                         f"[_set_function_activation] Daemon warning for {mod.unique_id}: {ret_msg}"
                     )
-                    return {
+                    return _runtime_unconfirmed({
                         "status": "success_with_warning",
                         "function_id": mod.unique_id,
                         "name": mod.name,
@@ -384,13 +403,13 @@ class FunctionToolsMixin:
                         "is_activated": activate,
                         "daemon_warning": ret_msg,
                         "message": f"DB update complete. Daemon response: {ret_msg}",
-                    }
+                    })
             except Exception as daemon_err:
                 # Daemon may be offline — DB update succeeded, log warning
                 logger.warning(
                     f"[_set_function_activation] Daemon call failed for {mod.unique_id}: {daemon_err}"
                 )
-                return {
+                return _runtime_unconfirmed({
                     "status": "success_with_warning",
                     "function_id": mod.unique_id,
                     "name": mod.name,
@@ -398,7 +417,7 @@ class FunctionToolsMixin:
                     "is_activated": activate,
                     "daemon_warning": str(daemon_err),
                     "message": "DB update complete. The daemon may be offline.",
-                }
+                })
 
             logger.info(
                 f"[_set_function_activation] {action_label} OK: "
@@ -520,6 +539,15 @@ class FunctionToolsMixin:
             logger.warning(f"[create_function] ignoring unexpected args {ignored_args} "
                            f"(only function_type/name/params are accepted)")
 
+        # 쓰기 시점 그룹 스코프 — 새 함수 행 자체는 탭 없이 생기지만, `params`
+        # 에 적은 장치(select_measurement 의 'device_id,measurement_id' 등)를
+        # 이 함수가 읽고 움직이게 된다. 만들기 **전에** 그 값들로 묻는다.
+        # 스코프 대상이 아닌 uuid 는 그냥 지나간다.
+        if params:
+            from aot.aot_flask.access import scope as _scope
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(list(dict.fromkeys(_scope._uuid_values(params))))
+
         # Minimal form shim — function_add only reads .function_type.data
         class _FakeForm:
             class _Field:
@@ -638,6 +666,11 @@ class FunctionToolsMixin:
         import json as _json
         if not function_id or not params:
             return {"error": "function_id and params are required"}
+        # 실행층이 게이트 앞에서 이미 부르지만(_pre_gate_validation), 처리기를
+        # 직접 부르는 경로도 틀린 키를 저장하지 않게 한 번 더 본다.
+        problem = cls.validate_function_options(function_id, params)
+        if problem:
+            return problem
 
         from aot.databases.models.controller import CustomController
         from aot.databases.models.function import Conditional, Function, Trigger
@@ -655,6 +688,14 @@ class FunctionToolsMixin:
 
         if func is None:
             return {"error": f"Function not found: {function_id}"}
+
+        # 쓰기 시점 그룹 스코프(write_scope.enforce) — 고칠 함수 행으로 묻고,
+        # 새로 적는 값 속 장치로도 묻는다(함수를 그룹 밖 장치에 연결하는 것도
+        # 그 장치를 움직이게 하는 쓰기다).
+        from aot.aot_flask.access import scope as _scope
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(func)
+        write_scope.enforce(list(dict.fromkeys(_scope._uuid_values(params))))
 
         # Only CustomController and Conditional have a custom_options column. For
         # PID/Trigger/Function the settings are real columns, so the write below
@@ -717,6 +758,343 @@ class FunctionToolsMixin:
                               "Activate with activate_function (requires approval).")
         return result
 
+    #: 옵션 정의 중 값이 아닌 것 — 키로 받지 않는다. 정본은 파서의
+    #: DISPLAY_ONLY_TYPES(abstract_base_controller)이고 이것은 그 사본이다
+    #: (test_function_option_view 가 둘이 같은지 본다). 예전 사본은 네 종류뿐이라
+    #: 접힘 앵커(grp_*_fold)와 범위 밴드 id('temperature' 등)가 옵션 키로
+    #: 통과했다 — 프로필 벤치마크(26-09-24) lat_24 에서 모델이 목표 온도를
+    #: 'temperature' 에 적으라고 안내한 원인이다(값을 싣지 않는 표식이라 저장돼도
+    #: 아무것도 바뀌지 않는다).
+    _NON_VALUE_OPTION_TYPES = (
+        'new_line', 'header', 'collapse_start', 'collapse_end', 'env_status',
+        'scale_group', 'range_band', 'actuator_enable', 'message', 'button')
+
+    #: get_function_detail 이 싣는 옵션 수 상한과 뜻 한 줄의 글자 수.
+    _OPTION_VIEW_CAP = 80
+    _OPTION_MEANING_CHARS = 90
+    _OPTION_CHOICES_CAP = 8
+    #: 값만 보고 종류를 알 수 있는 옵션 — get_function_detail 에서 type 을 뺀다.
+    _PLAIN_OPTION_TYPES = ('float', 'integer', 'bool', 'text')
+
+    @classmethod
+    def _function_module_info(cls, func):
+        """함수 모듈 정의(FUNCTION_INFORMATION). CustomController 가 아니면 None."""
+        from aot.databases.models.controller import CustomController
+        if not isinstance(func, CustomController) or not getattr(func, 'device', None):
+            return None
+        try:
+            from aot.utils.functions import parse_function_information
+            return parse_function_information().get(func.device) or None
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("option spec lookup failed: %s", e)
+            return None
+
+    @classmethod
+    def _function_option_spec(cls, func):
+        """이 함수가 받는 옵션 → {option_id: 정의}. 알 수 없으면 None.
+
+        정의는 함수 모듈의 custom_options(웹 설정 화면과 같은 원천)다.
+        CustomController 만 모듈이 있다 — 나머지 종류는 None(검사 생략)."""
+        info = cls._function_module_info(func)
+        if not info:
+            return None
+        spec = {}
+        for opt in info.get('custom_options') or []:
+            if isinstance(opt, dict) and opt.get('id') \
+                    and opt.get('type') not in cls._NON_VALUE_OPTION_TYPES:
+                spec[opt['id']] = opt
+        return spec or None
+
+    @classmethod
+    def _marker_ids(cls, info):
+        """모듈 옵션 중 값을 싣지 않는 표식의 id(범위 밴드·접힘 앵커 등)."""
+        return {o['id'] for o in (info or {}).get('custom_options') or []
+                if isinstance(o, dict) and o.get('id')
+                and o.get('type') in cls._NON_VALUE_OPTION_TYPES}
+
+    @staticmethod
+    def _is_fold_anchor(key):
+        """접힘 앵커 id(grp_<첫 옵션>_fold). 배치가 바뀌면 옛 앵커가 저장값에
+        남는다 — 지금 모듈 표식에 없어도 값이 아니다."""
+        return key.startswith('grp_') and key.endswith('_fold')
+
+    @staticmethod
+    def _option_ranges(info):
+        """모듈의 범위 밴드 → {밴드 id: {min_key, max_key, hard_min_key, hard_max_key, unit, name}}.
+
+        범위 밴드(type 'range_band')는 화면의 손잡이 둘짜리 막대다 — 값을 싣지
+        않고, 실제 값은 guide_min/guide_max(머무르려는 범위)와 hard_min/hard_max
+        (넘지 않는 한계) 옵션에 있다."""
+        out = {}
+        for opt in (info or {}).get('custom_options') or []:
+            if not isinstance(opt, dict) or opt.get('type') != 'range_band' \
+                    or not opt.get('id'):
+                continue
+            band = {}
+            for src, dst in (('guide_min', 'min_key'), ('guide_max', 'max_key'),
+                             ('hard_min', 'hard_min_key'),
+                             ('hard_max', 'hard_max_key')):
+                if opt.get(src):
+                    band[dst] = opt[src]
+            if not band:
+                continue
+            if opt.get('name'):
+                band['name'] = str(opt['name'])
+            if opt.get('unit'):
+                band['unit'] = str(opt['unit']).strip()
+            out[opt['id']] = band
+        return out
+
+    @staticmethod
+    def _first_sentence(text, limit):
+        # 문구에는 gettext 서식용 '%%' 가 있다 — 모델에게는 '%' 로 보인다.
+        text = ' '.join(str(text or '').replace('%%', '%').split())
+        if not text:
+            return ''
+        cut = text.find('. ')
+        if 0 < cut < limit:
+            return text[:cut + 1]
+        return text if len(text) <= limit else text[:limit - 1].rstrip() + '…'
+
+    @classmethod
+    def _function_options_view(cls, func):
+        """get_function_detail 에 싣는 옵션 목록 — modify_function_options 의 키.
+
+        프로필 벤치마크(26-09-24) lat_24 에서 모델은 옵션 키를 볼 곳이 없어
+        target_temperature 같은 키를 지어냈다(거절 응답의 valid_keys 로만 알 수
+        있었고, 거기엔 이름뿐이라 'temperature' 를 목표값으로 읽었다). 원천은
+        모듈의 옵션 정의(웹 설정 화면과 같다) — 키·종류·이름(단위)·뜻 한 줄·
+        지금 값. 범위 밴드는 키가 아니므로 `ranges` 로 따로 싣고 어느 키가 그
+        양 끝인지 알린다. 모듈이 `ai_options_note` 를 두면 함께 싣는다.
+
+        모듈 정의가 없으면(조건·PID·트리거, 모르는 모듈) 빈 dict."""
+        import json as _json
+        info = cls._function_module_info(func)
+        spec = cls._function_option_spec(func) if info else None
+        if not spec:
+            return {}
+        try:
+            stored = _json.loads(getattr(func, 'custom_options', None) or '{}')
+        except Exception:                                   # noqa: BLE001
+            stored = {}
+        if not isinstance(stored, dict):
+            stored = {}
+        options = []
+        for key, opt in spec.items():
+            row = {"key": key}
+            # 종류는 값만 봐서 알 수 없을 때만 싣는다(선택형·장치/측정 선택 등).
+            if opt.get('type') not in cls._PLAIN_OPTION_TYPES:
+                row["type"] = opt.get('type')
+            if opt.get('name'):
+                row["name"] = str(opt['name'])
+            if opt.get('unit') and str(opt['unit']).strip() not in row.get("name", ""):
+                row["unit"] = str(opt['unit']).strip()
+            row["value"] = stored.get(key, opt.get('default_value'))
+            # 뜻 한 줄은 기본 화면에 보이는 옵션에만 — 세부 조정(advanced_only)은
+            # 이름으로 충분하고, 다 실으면 통합환경제어 한 건이 6천 토큰을 넘었다.
+            if not opt.get('advanced_only'):
+                meaning = cls._first_sentence(opt.get('phrase'),
+                                              cls._OPTION_MEANING_CHARS)
+                if meaning:
+                    row["meaning"] = meaning
+            if opt.get('type') == 'select':
+                choices = []
+                for o in opt.get('options_select') or []:
+                    v = o[0] if isinstance(o, (list, tuple)) and o else o
+                    if isinstance(v, (str, int, float)):
+                        choices.append(v)
+                if choices:
+                    row["choices"] = choices[:cls._OPTION_CHOICES_CAP]
+            options.append(row)
+        view = {"options": options[:cls._OPTION_VIEW_CAP]}
+        if len(options) > cls._OPTION_VIEW_CAP:
+            view["options_omitted"] = len(options) - cls._OPTION_VIEW_CAP
+        notes = ["Keys for modify_function_options are options[].key."]
+        ranges = cls._option_ranges(info)
+        if ranges:
+            for band in ranges.values():
+                for k in ('min_key', 'max_key', 'hard_min_key', 'hard_max_key'):
+                    if band.get(k) in spec:
+                        band[k[:-4]] = stored.get(band[k],
+                                                  spec[band[k]].get('default_value'))
+            view["ranges"] = ranges
+            notes.append("A range (%s) is not a key and not a target value: "
+                         "change its min/max keys." % ", ".join(sorted(ranges)))
+        extra = info.get('ai_options_note')
+        if extra:
+            notes.append(str(extra))
+        view["options_note"] = " ".join(notes)
+        return view
+
+    @staticmethod
+    def _option_value_problem(opt, value):
+        """정의에 비춰 값이 틀렸으면 이유 문자열, 아니면 None. 모르는 종류는 통과."""
+        kind = opt.get('type')
+        if kind == 'integer':
+            if isinstance(value, bool):
+                return 'expects an integer'
+            try:
+                if float(value) != int(float(value)):
+                    return 'expects an integer'
+            except (TypeError, ValueError):
+                return 'expects an integer'
+        elif kind == 'float':
+            if isinstance(value, bool):
+                return 'expects a number'
+            try:
+                float(value)
+            except (TypeError, ValueError):
+                return 'expects a number'
+        elif kind == 'bool':
+            if not (isinstance(value, bool) or value in (0, 1)
+                    or str(value).strip().lower() in ('true', 'false', '0', '1')):
+                return 'expects true or false'
+        elif kind == 'select':
+            allowed = []
+            for o in opt.get('options_select') or []:
+                allowed.append(o[0] if isinstance(o, (list, tuple)) and o else o)
+            allowed = [a for a in allowed if isinstance(a, (str, int, float))]
+            if allowed and value not in allowed and str(value) not in map(str, allowed):
+                return 'must be one of: %s' % ', '.join(map(str, allowed[:20]))
+        return None
+
+    #: 정의(custom_options)에 없지만 모듈이 저장값에서 직접 읽는 키 — 모듈이
+    #: get_custom_option/set_custom_option 으로 쓰는 상태값. modify_function_options
+    #: 는 정의 키와, 저장돼 있는 이 키들만 받는다. 모듈 소스에서 읽는 것을 확인한
+    #: 것만 적는다(test_function_option_view 가 소스와 맞춰 본다). 통합환경제어
+    #: (env_coordinator)는 없다 — 옛 버전의 target_*·tolerance_*·priority_*·
+    #: actuator_N_* 등은 26-09-24 에 모듈 코드를 뒤져 아무도 읽지 않음을 확인했다.
+    _STORED_KEYS_READ = {
+        'CAMERA_LIBCAMERA': frozenset((
+            'still_last_file', 'still_last_ts', 'timer_loop', 'tl_active',
+            'tl_capture_number', 'tl_duration_sec', 'tl_end_str', 'tl_last_file',
+            'tl_last_ts', 'tl_pause', 'tl_period_sec', 'tl_start_epoch',
+            'tl_start_str', 'video_last_file', 'video_last_ts')),
+        'REGULATE_PH_EC': frozenset((
+            'ml_ec_a', 'ml_ec_b', 'ml_ec_c', 'ml_ec_d', 'ml_ph_lower',
+            'ml_ph_raise', 'sec_ec_a', 'sec_ec_b', 'sec_ec_c', 'sec_ec_d',
+            'sec_ph_lower', 'sec_ph_raise')),
+        'SUM_ACCUMULATE': frozenset(('last_processed_instant', 'last_sum_time')),
+        'lorawan_class_scheduler': frozenset((
+            'device_slot_map', 'override_until', 'sched_last_transition_ts',
+            'sched_state')),
+    }
+
+    @classmethod
+    def validate_function_options(cls, function_id=None, params=None, **_extra):
+        """modify_function_options 의 인자를 **승인·조언 전용 거절보다 먼저**
+        검사한다(tool_execution._pre_gate_validation). 문제 없으면 None.
+
+        재측정(26-09-23 lat_24): 조언 전용 모드에서 모델이 없는 옵션 키를 지어내
+        보냈고, 서버는 인자를 보기 전에 "쓰기 불가" 로 답해 모델은 키가 틀렸다는
+        것을 끝내 몰랐다. 처리기는 키를 검사하지 않고 그대로 저장한다 — 틀린
+        키가 조용히 남는 것도 여기서 막는다.
+
+        유효한 키 = 모듈의 옵션 정의 ∪ (저장된 키 중 모듈이 아직 읽는 것 —
+        `_STORED_KEYS_READ`). 예전엔 저장된 키를 다 받았는데, 옛 버전이 남긴
+        키(통합환경제어의 target_temperature 등)도 받아 저장하고 "성공" 했다 —
+        지금 모듈은 그 키를 읽지 않아 아무 효과가 없는 거짓 성공이었다. 그런
+        키는 효과가 없다고 말하고 지금 키를 가리켜 거절한다. 정의를 모르는
+        종류는 키 검사를 하지 않는다(거짓 거절보다 낫다)."""
+        import json as _json
+        if not isinstance(params, dict) or not params:
+            return {"error": "params must be a non-empty object of {option_id: value}"}
+        if not function_id:
+            return None
+        from aot.databases.models.controller import CustomController
+        from aot.databases.models.function import Conditional, Function, Trigger
+        from aot.databases.models.pid import PID
+        func = None
+        for Model in (CustomController, Conditional, PID, Trigger, Function):
+            try:
+                func = Model.query.filter_by(unique_id=function_id).first()
+            except Exception:                               # noqa: BLE001
+                func = None
+            if func is not None:
+                break
+        if func is None:
+            return {"error": "Function not found: %s" % function_id}
+        if not hasattr(type(func), 'custom_options'):
+            return {"error": ("This function is a %s; its settings are columns, not "
+                              "options, so modify_function_options cannot change "
+                              "them.%s" % (type(func).__name__,
+                                          " For a sequence's timing use "
+                                          "modify_sequence_schedule."
+                                          if isinstance(func, Trigger) else ""))}
+        spec = cls._function_option_spec(func)
+        if spec is None:
+            return None
+        try:
+            stored = _json.loads(getattr(func, 'custom_options', None) or '{}')
+        except Exception:                                   # noqa: BLE001
+            stored = {}
+        if not isinstance(stored, dict):
+            stored = {}
+        # 정의 밖의 저장된 키는 모듈이 저장값에서 직접 읽는다고 확인한 것만
+        # 받는다(모듈이 스스로 적는 상태값 등). 표식 id(범위 밴드
+        # 'temperature'·접힘 앵커 grp_*_fold)나 옛 버전이 남긴 키는 저장돼
+        # 있어도 아무도 읽지 않는다.
+        still_read = cls._STORED_KEYS_READ.get(getattr(func, 'device', None) or '', ())
+        known = set(spec) | {k for k in stored if k in still_read}
+        unknown = sorted(k for k in params if k not in known)
+        markers = cls._marker_ids(cls._function_module_info(func))
+        stale = [k for k in unknown if k in stored and k not in markers
+                 and not cls._is_fold_anchor(k)]
+        bad = {}
+        for k, v in params.items():
+            if k in spec:
+                why = cls._option_value_problem(spec[k], v)
+                if why:
+                    bad[k] = why
+        if not unknown and not bad:
+            return None
+        parts = []
+        if unknown:
+            parts.append("unknown option key(s): %s" % ', '.join(unknown))
+        if stale:
+            parts.append("%s %s left over in this function's saved settings from "
+                         "an older version; the current function does not read "
+                         "%s, so changing %s would have no effect — use the "
+                         "current keys (get_function_detail options[].key)"
+                         % (', '.join(stale),
+                            'is' if len(stale) == 1 else 'are',
+                            'it' if len(stale) == 1 else 'them',
+                            'it' if len(stale) == 1 else 'them'))
+        if bad:
+            parts.append("invalid value(s): %s" % '; '.join(
+                '%s %s' % (k, why) for k, why in sorted(bad.items())))
+        out = {"error": "; ".join(parts) + ". Nothing was changed.",
+               # 이름만, 정렬해서 — 옵션이 수십 개인 함수가 있어 설명을 붙이면
+               # 응답이 불어난다. 뜻은 가까운 후보(did_you_mean)로 좁힌다.
+               "valid_keys": sorted(known)}
+        if unknown:
+            import difflib
+            near = {k: difflib.get_close_matches(k, sorted(known), n=3, cutoff=0.5)
+                    for k in unknown}
+            # 범위 이름(temperature 등)이나 그것을 품은 지어낸 키
+            # (target_temperature — 벤치마크 lat_24)는 목표값 칸을 찾는 것이다.
+            # 그런 칸은 없고, 범위의 양 끝 키를 가리킨다.
+            ranges = cls._option_ranges(cls._function_module_info(func))
+            ranged = False
+            for k in unknown:
+                for rid in sorted(ranges, key=len, reverse=True):
+                    if rid == k or rid in k.lower():
+                        band = ranges[rid]
+                        near[k] = [band[x] for x in ('min_key', 'max_key',
+                                                      'hard_min_key',
+                                                      'hard_max_key')
+                                   if band.get(x)]
+                        ranged = True
+                        break
+            near = {k: v for k, v in near.items() if v}
+            if near:
+                out["did_you_mean"] = near
+            if ranged:
+                out["error"] += (" There is no single target-value option for a "
+                                 "range: set its min/max keys (see "
+                                 "get_function_detail ranges and options_note).")
+        return out
+
     @classmethod
     def configure_sequence_day(cls, function_id, day, slots, start=None, end=None,
                                period_seconds=None, repeat=False):
@@ -760,6 +1138,9 @@ class FunctionToolsMixin:
             (Trigger.unique_id == function_id) | (Trigger.name == function_id)).first()
         if not trig:
             return {"error": f"Sequence not found: {function_id}"}
+        # 쓰기 시점 그룹 스코프 — 이름으로 찾았어도 찾은 시퀀스로 묻는다.
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(trig)
         if trig.trigger_type != 'trigger_sequence':
             return {"error": f"'{trig.name}' is a {trig.trigger_type}, not a sequence."}
 
@@ -1036,6 +1417,10 @@ class FunctionToolsMixin:
         action = Actions.query.filter_by(unique_id=action_id).first()
         if not action:
             return {"error": f"Step not found: {action_id}"}
+        # 쓰기 시점 그룹 스코프 — 단계(자식 행)는 **부모 함수**로 묻는다
+        # (write_scope 가 Actions.function_id 를 따라간다).
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(action)
 
         try:
             opts = _json.loads(action.custom_options) if action.custom_options else {}
@@ -1208,6 +1593,9 @@ class FunctionToolsMixin:
             (Trigger.unique_id == function_id) | (Trigger.name == function_id)).first()
         if not trig:
             return {"error": f"Sequence not found: {function_id}"}
+        # 쓰기 시점 그룹 스코프 — 이름으로 찾았어도 찾은 시퀀스로 묻는다.
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(trig)
         if trig.trigger_type != 'trigger_sequence':
             return {"error": f"'{trig.name}' is a {trig.trigger_type}, not a sequence."}
 
@@ -1341,6 +1729,15 @@ class FunctionToolsMixin:
         if not device_ids or not isinstance(device_ids, (list, tuple)):
             return {"error": "device_ids (ordered list of Output ids) is required"}
 
+        # 쓰기 시점 그룹 스코프 — 이 시퀀스가 움직일 장치 전부를 **만들기 전에**
+        # 묻는다(만든 뒤에 거부하면 빈 시퀀스가 남는다).
+        from aot.aot_flask.access import write_scope
+        for _did in device_ids:
+            _row = Output.query.filter_by(unique_id=_did).first() \
+                if isinstance(_did, str) else None
+            if _row is not None:
+                write_scope.enforce(_row)
+
         # 1. Create the trigger_sequence. function_add does NOT activate (activation is
         #    a separate step), so actions can be added while it is deactivated.
         form = cls._FakeForm(function_type='trigger_sequence')
@@ -1426,6 +1823,9 @@ class FunctionToolsMixin:
         controller_type = determine_controller_type(function_id)
         if not controller_type or controller_type == 'Input':
             return {"error": f"No function/controller found with id '{function_id}'"}
+        # 쓰기 시점 그룹 스코프 — 지울 함수로 묻는다.
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(function_id)
 
         try:
             if controller_type == "Conditional":

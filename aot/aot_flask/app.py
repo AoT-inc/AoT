@@ -480,6 +480,21 @@ def create_app(config=ProdConfig, run_scheduler=False):
             'google_login_configured': google_oauth.is_configured(),
         }
 
+    @app.template_global('can_edit_human_tasks')
+    def _can_edit_human_tasks():
+        """사람 작업을 만들·고치·지울 수 있는가 — 화면이 그 버튼을 숨길 때만
+        쓴다(서버 라우트가 따로 막는다). 편집자(`HUMAN_TASK_PERMISSION`) 아래
+        역할은 보기만 한다."""
+        from flask_login import current_user
+        if not current_user.is_authenticated:
+            return False
+        try:
+            from aot.ai.services.ai_scheduler_service import HUMAN_TASK_PERMISSION
+            from aot.aot_flask.utils.utils_general import user_has_permission
+            return bool(user_has_permission(HUMAN_TASK_PERMISSION, silent=True))
+        except Exception:
+            return False
+
     @app.template_global('disambiguated_name')
     def _disambiguated_name(row):
         """이름이 겹칠 때만 소속 탭을 덧붙인 표시용 이름.
@@ -604,6 +619,16 @@ def register_extensions(app, run_scheduler=False):
             from aot.utils.code_verification import purge_orphan_user_code
             purge_orphan_user_code()
 
+            # 책임자 없는 예약에 기록으로 알 수 있는 책임자를 채운다(몇 번
+            # 돌아도 같다). 예약을 실행하는 데몬만 — 여러 프로세스가 같은
+            # 행을 동시에 고치지 않게. 설계 §6-2a "책임자 없는 예약".
+            if run_scheduler and os.environ.get("ALEMBIC_RUNNING") != "1":
+                try:
+                    from aot.ai.services.ai_scheduler_service import AISchedulerService
+                    AISchedulerService.backfill_job_owners()
+                except Exception:
+                    logger.exception("[Startup] 예약 책임자 채우기 실패")
+
             # Ensure AoT system MCP server entry exists and is active on every startup
             try:
                 from aot.databases.models.mcp_server import MCPServer
@@ -698,8 +723,10 @@ def register_extensions(app, run_scheduler=False):
                             # 남겨 두면 어느 것이 실제로 쓰이는 키인지 모른다.
                             for old in service_user.active_api_keys():
                                 old.revoke()
+                            # 내부 경로가 도구를 잃지 않게 설정 묶음으로 발급한다.
                             raw_key = service_user.issue_api_key(
-                                'AoT System Expert Server')
+                                'AoT System Expert Server',
+                                tool_profile='configuration')
                             env_vars['AOT_MCP_API_KEY'] = base64_encode_bytes(raw_key)
                             _aot_mcp.env_vars = env_vars
                             db.session.commit()
@@ -715,6 +742,17 @@ def register_extensions(app, run_scheduler=False):
                                     f"Expert Server (service account: '{service_user.name}')")
             except Exception as e:
                 logger.warning(f"[Startup] AOT_MCP_API_KEY auto-provision failed: {e}")
+
+            # API 키 도구 묶음 — 칸(p6_75)이 생기기 전에 발급된 키에 한 번 값을
+            # 채운다. 최근 90일에 설정 도구를 쓴 사람의 키는 'configuration',
+            # 나머지는 'operations'. 값이 있는 키는 건드리지 않아 매 기동 불러도
+            # 같다(채울 것이 없으면 조회 한 번으로 끝난다).
+            try:
+                from aot.tools.mcp_auth import backfill_key_tool_profiles
+                backfill_key_tool_profiles()
+            except Exception as e:
+                db.session.rollback()
+                logger.warning(f"[Startup] API key tool profile backfill failed: {e}")
 
             # Auto-activate InfluxDB MCP Server if measurement_db_password is set.
             # This removes the need for users to manually visit InfluxDB web UI to configure.

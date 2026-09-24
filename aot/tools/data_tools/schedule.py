@@ -48,7 +48,7 @@ class ScheduleToolsMixin:
 
     @classmethod
     def add_schedule_tool(cls, date, content, worker=None, time="09:00", tags=None,
-                          target_name=None, **extra):
+                          target_name=None, target_id=None, **extra):
         """
         [분류 B - 일정/계획 전용 도구]
         사람의 작업/이벤트 일정(제초·방제·정식·수확·점검·출하 등)을 등록합니다.
@@ -59,38 +59,43 @@ class ScheduleToolsMixin:
         위치 연결: target_name(구역/시설/장치 이름, 예 '온실', '3-1', '1포장 1-1')을 주면
         _resolve_note_target로 실제 엔티티(target_id)에 붙여 지도·위치별 조회가 성립합니다.
         모호/미해석이면 available_targets를 돌려주니 ask_user로 확인 후 재시도하세요.
+        이름이 여러 곳에 걸리면 candidates 를 돌려준다 — 고른 후보의 use_name 을
+        target_name 으로, use_name 이 없는 후보는 target_id 로 다시 부른다.
+        target_id(지도 도형·구획·Input·Output 의 unique_id)를 직접 주면 이름 해석을
+        건너뛴다. 이름 경로와 같은 대상만 받는다(모르는 id 는 거절).
         위치를 특정하지 않는 농장 전체 일정이면 target_name 없이 등록합니다(떠 있는 일정).
         """
         try:
             scheduler = providers.get('job_scheduler')
 
-            # LLM aliases for the location name.
+            # LLM aliases for the location name — 목록은 aot/tools/target_names.py
+            # 하나다(그룹 스코프 판정이 같은 목록을 읽는다).
+            from aot.tools.target_names import pop_target_name_alias
+            _alias = pop_target_name_alias(extra)
             if not target_name:
-                target_name = extra.pop('location', None) or extra.pop('zone_name', None) \
-                    or extra.pop('place', None) or extra.pop('entity_name', None)
+                target_name = _alias
 
             # 1. Resolve location FIRST — the target's tz is the wall-clock anchor
             #    (device-local is the confirmed policy, timezone-management.md §6).
             #    run_at is computed in step 2 once the anchor is known. Do NOT
             #    silently create a floating (target_id='none') schedule when the user
             #    named a place — same orphan footgun the notes tool guards against.
-            target_id = 'none'
             target_type = None
             resolved_name = None
-            if target_name:
-                _tid, _tt, resolved_name, _lat, _lng = \
-                    cls._resolve_note_target(target_name)
-                if not _tid:
-                    return {
-                        "status": "needs_disambiguation",
-                        "error": "target_not_found",
-                        "message": (f"위치 '{target_name}'를 특정하지 못했습니다. "
-                                    f"available_targets에서 정확한 이름을 고르도록 ask_user로 "
-                                    f"확인한 뒤 다시 등록하세요."),
-                        "available_targets": cls._geoshape_name_candidates(),
-                    }
-                target_id = _tid
-                target_type = _tt
+            if target_id and str(target_id).strip() and str(target_id) != 'none':
+                _hit = cls._target_by_id(target_id)
+                if _hit is None:
+                    return cls._unknown_target_id(target_id)
+                target_id, target_type, resolved_name = _hit
+            else:
+                target_id = 'none'
+                if target_name:
+                    _tid, _tt, resolved_name, _lat, _lng = \
+                        cls._resolve_note_target(target_name)
+                    if not _tid:
+                        return cls._schedule_target_refusal(target_name, _tt)
+                    target_id = _tid
+                    target_type = _tt
 
             # 2. Anchor the wall-clock to the target's local tz, then store as UTC.
             _anchor_tz, _anchor_name, _anchor_src = \
@@ -158,12 +163,91 @@ class ScheduleToolsMixin:
             return {"error": f"Error while registering schedule: {str(e)}"}
 
     @classmethod
+    def _schedule_target_refusal(cls, target_name, target_type=None):
+        """add/edit_schedule 이 이름을 못 쓸 때의 응답. 다른 MCP 도구들처럼
+        영어 문장 + 구조화 필드다(화면 i18n 문구가 아니라 모델이 읽는 값)."""
+        if target_type == 'ambiguous':
+            amb = cls._ambiguous_places(target_name)
+            if amb:
+                return cls._ambiguity_refusal(target_name, amb)
+        return {
+            "status": "needs_disambiguation",
+            "error": "target_not_found",
+            "message": (f"Location '{target_name}' could not be matched to a known "
+                        "place, so nothing was written. Ask the user to pick the exact "
+                        "name from 'available_targets', then retry."),
+            "available_targets": cls._geoshape_name_candidates(),
+        }
+
+    @staticmethod
+    def _unknown_target_id(target_id):
+        return {
+            "status": "error",
+            "error": "target_not_found",
+            "message": (f"target_id '{target_id}' is not a map shape, plot, input or "
+                        "output, so nothing was written. Use a 'target_id' returned "
+                        "by resolve_target (its candidates or also_inside)."),
+        }
+
+    @classmethod
     def _hhmm_to_minutes(cls, hhmm):
         try:
             h, m = str(hhmm).split(':')
             return int(h) * 60 + int(m)
         except Exception:
             return None
+
+    @classmethod
+    def _name_agrees_with_id(cls, name, hit):
+        """target_name 과 target_id 가 같은 것을 가리키는가.
+
+        같다고 보는 경우: 이름이 그 id 로 풀린다 / 이름이 여러 곳에 걸렸고 id 가
+        그 후보 중 하나다(사람이 고른 것) / 이름이 바깥을 가리키고 id 가 안쪽
+        같은 이름 도형이다 / 이름이 그 대상의 이름 그대로다.
+        """
+        tid, _tt, hit_name = hit
+        if (hit_name or '').strip().lower() == name.strip().lower():
+            return True
+        try:
+            d = cls._resolve_explain(name)
+        except Exception:
+            return False
+        r = d['result']
+        if r[0] == tid:
+            return True
+        if r[1] == 'ambiguous':
+            try:
+                cands = cls._describe_places(d['places'], d['devices'])
+            except Exception:
+                cands = []
+            return any(c.get('target_id') == tid for c in cands)
+        if r[0]:
+            try:
+                inner = cls._also_inside(d.get('place'))
+            except Exception:
+                inner = []
+            return any(e.get('target_id') == tid for e in inner)
+        return False
+
+    @classmethod
+    def _site_zone_children(cls, target_id):
+        """부지 도형 안의 이름 있는 구역들 [{name, type:'zone'}] — resolve_target
+        의 children 중 구역 부분과 같은 판정."""
+        try:
+            from aot.databases.models import GeoShape
+            site = GeoShape.query.filter_by(unique_id=target_id).first()
+            if site is None:
+                return []
+            out, seen = [], set()
+            for c in cls._geo_shape_descendants(site):
+                if c.type != 'zone' or not c.name or c.name in seen:
+                    continue
+                seen.add(c.name)
+                out.append({"name": c.name, "type": c.type})
+            return out
+        except Exception:
+            logger.debug("_site_zone_children failed", exc_info=True)
+            return []
 
     @classmethod
     def validate_schedule_batch(cls, entries, content=None, window_start=None,
@@ -178,9 +262,16 @@ class ScheduleToolsMixin:
         Checks, in order:
           1. entries is a non-empty list.
           2. content is available (shared or per-entry) for every entry.
-          3. No target_name repeated within the batch.
-          4. LEAF-ONLY: no entry's target_name may resolve to a container
-             (a site with child zones). Confirmed 2026-07-26: an advisory
+          3. Each entry is resolved to the target add_schedule would write to
+             (target_id first, else target_name). An unknown target_id, or a
+             target_name that points elsewhere than the entry's target_id, is
+             rejected; so is the same resolved target twice in the batch.
+          4. LEAF-ONLY: no entry may resolve to a container
+             with child ZONES (a site with sub-zones). Plots inside a zone or a
+             same-name shape inside a site (`also_inside`) do not make it a
+             container here — add_schedule accepts those as one target, and
+             the batch must answer the same. An entry whose name is ambiguous
+             is rejected with its candidates. Confirmed 2026-07-26: an advisory
              warning here was not enough - a different model called
              resolve_target, saw the child zones, and used the site name
              anyway. A batch's whole purpose is one entry per leaf unit, so
@@ -199,27 +290,105 @@ class ScheduleToolsMixin:
             return {"status": "error",
                     "message": "content is required (either shared, or set per-entry on every entry)"}
 
-        names = [e.get('target_name') for e in entries]
-        dupes = sorted({n for n in names if n and names.count(n) > 1})
+        # 각 항목을 **실제로 쓰일 대상**으로 푼다 — add_schedule 은 target_id 를
+        # 이름보다 먼저 쓴다. 이름만 보던 때는 id 만 준 항목(또는 잎 이름에
+        # 부지 id)이 잎 규칙과 중복 검사를 그대로 빠져나갔다.
+        resolved, ambiguous, mismatched, unknown_ids = [], [], [], []
+        for idx, e in enumerate(entries):
+            n = e.get('target_name')
+            n = str(n).strip() if n and str(n).strip() else None
+            tid = e.get('target_id')
+            tid = str(tid).strip() if tid and str(tid).strip() and str(tid) != 'none' else None
+            if tid:
+                hit = cls._target_by_id(tid)
+                if not hit:
+                    unknown_ids.append({"index": idx, "target_name": n, "target_id": tid})
+                    continue
+                if n and not cls._name_agrees_with_id(n, hit):
+                    got = cls._resolve_note_target(n)
+                    mismatched.append({
+                        "index": idx, "target_name": n, "target_id": tid,
+                        "id_points_to": {"type": hit[1], "name": hit[2]},
+                        "name_points_to": (
+                            "several places" if got[1] == 'ambiguous'
+                            else ({"type": got[1], "name": got[2]} if got[0]
+                                  else "nothing known")),
+                    })
+                    continue
+                resolved.append((idx, n or hit[2], hit[0], hit[1]))
+                continue
+            if not n:
+                continue
+            try:
+                got = cls._resolve_note_target(n)
+            except Exception:
+                got = (None, None, None, None, None)
+            if got[1] == 'ambiguous':
+                ambiguous.append({"target_name": n,
+                                  "candidates": cls._ambiguous_places(n) or []})
+                continue
+            # 못 푼 이름은 여기서 막지 않는다 — add_schedule 이 항목별로 거절한다.
+            # 중복 검사는 이름 그대로로 한다.
+            resolved.append((idx, n, got[0] or ('name:' + n), got[1]))
+
+        if unknown_ids:
+            return {
+                "status": "error",
+                "error": "target_not_found",
+                "message": (f"{len(unknown_ids)} entr(y/ies) carry a target_id that is not "
+                            "a map shape, plot, input or output. Nothing was created. Use "
+                            "a 'target_id' returned by resolve_target."),
+                "unknown_entries": unknown_ids,
+            }
+        if mismatched:
+            return {
+                "status": "error",
+                "error": "target_name_id_mismatch",
+                "message": (f"{len(mismatched)} entr(y/ies) give a target_name and a "
+                            "target_id that point at different things. Nothing was "
+                            "created. The target_id wins when a schedule is written, so "
+                            "ask the user which one is meant, then send only that "
+                            "target_id (or only a target_name that resolves to it)."),
+                "mismatched_entries": mismatched,
+            }
+
+        seen, dupes = {}, []
+        for idx, label, key, _tt in resolved:
+            if key in seen:
+                dupes.append(label if label == seen[key] else '%s = %s' % (seen[key], label))
+            else:
+                seen[key] = label
         if dupes:
             return {
                 "status": "error",
                 "error": "duplicate_target",
-                "message": f"target_name repeated within the same batch: {dupes}",
+                "message": f"the same target is repeated within the batch: {sorted(set(dupes))}",
             }
 
+        # 잎 규칙의 대상은 **하위 구역이 있는 곳**이다. 구획(plot)만 든 구역,
+        # 안쪽에 같은 이름 도형이 있는 부지(`also_inside`)는 add_schedule 이
+        # 그대로 받는 단일 대상이다 — 일괄로 부를 때만 거절하면 두 도구가
+        # 같은 이름에 다른 답을 한다.
         containers = []
-        for n in sorted({n for n in names if n}):
-            try:
-                r = cls.resolve_target_tool(n)
-            except Exception:
+        for idx, label, key, ttype in resolved:
+            if ttype != 'site':
                 continue
-            if r.get('children'):
-                containers.append({
-                    "target_name": n,
-                    "target_type": r.get('target_type'),
-                    "children": r.get('children'),
-                })
+            kids = cls._site_zone_children(key)
+            if kids:
+                containers.append({"target_name": label, "target_type": ttype,
+                                   "children": kids})
+        if ambiguous:
+            return {
+                "status": "needs_disambiguation",
+                "error": "ambiguous_target_in_batch",
+                "message": (
+                    f"{len(ambiguous)} entr(y/ies) name several different places: "
+                    f"{[a['target_name'] for a in ambiguous]}. Nothing was created. Ask "
+                    f"the user which place each one means, then retry with that "
+                    f"candidate's 'use_name' as target_name (or its 'target_id' as "
+                    f"target_id)."),
+                "ambiguous_entries": ambiguous,
+            }
         if containers:
             return {
                 "status": "error",
@@ -288,7 +457,10 @@ class ScheduleToolsMixin:
             entries (list[dict]): [{target_name (required), time (required,
                 HH:MM), content (optional, overrides the shared `content`),
                 worker (optional, overrides the shared `worker`)}, ...].
-                Duplicate target_name within the same batch is rejected.
+                An entry may give target_id (from resolve_target) instead of,
+                or together with, target_name; the id wins, and a name that
+                points elsewhere is rejected. The same target twice in one
+                batch is rejected.
             content/worker/tags: Shared defaults used by any entry that omits
                 its own content/worker. `content` is required unless every
                 entry supplies its own.
@@ -316,6 +488,7 @@ class ScheduleToolsMixin:
                 time=e.get('time', '09:00'),
                 tags=tags,
                 target_name=e.get('target_name'),
+                target_id=e.get('target_id'),
             )
             results.append({"target_name": e.get('target_name'), "time": e.get('time'), "result": r})
 
@@ -349,7 +522,11 @@ class ScheduleToolsMixin:
         "내일 일몰 30분 전에 밸브 열어줘" 같은 요청에서, 일몰 시각을 사람이나 모델이
         직접 계산해 ISO 로 넘길 필요가 없다 — 계절마다 달라지는 값이라 그렇게 하면
         틀린다. solar_event 를 쓰면 장치 위치의 실제 태양시로 해석한다.
+
+        실패 응답의 `dispatched`: False = 예약을 등록하기 전의 확정 실패, True =
+        등록을 시도하다 실패(등록됐는지 모른다 — 실행층이 "모름" 으로 알린다).
         """
+        sent = False
         try:
             from aot.utils.tz_utils import now_utc, to_utc
             from datetime import datetime, timedelta
@@ -361,10 +538,10 @@ class ScheduleToolsMixin:
             from aot.services.resolvers.device_resolver import resolve_output
             match = resolve_output(device_id, allow_partial=True)
             if match.error:
-                return {"error": match.error}
+                return {"error": match.error, "dispatched": False}
             output = match.row
             if not output:
-                return {"error": f"Device not found: {device_id}"}
+                return {"error": f"Device not found: {device_id}", "dispatched": False}
 
             # 2. 시간 파싱 — scheduled_time 또는 delay_seconds 지원
             now = now_utc()
@@ -372,7 +549,7 @@ class ScheduleToolsMixin:
                 from aot.utils.solar import SUN_EVENTS, next_sun_event
                 if solar_event not in SUN_EVENTS:
                     return {"error": (f"Unknown solar_event: {solar_event}. "
-                                      f"Use one of: {', '.join(SUN_EVENTS)}")}
+                                      f"Use one of: {', '.join(SUN_EVENTS)}"), "dispatched": False}
                 scheduled_dt = next_sun_event(
                     solar_event,
                     target_id=output.unique_id,
@@ -382,7 +559,7 @@ class ScheduleToolsMixin:
                 if scheduled_dt is None:
                     return {"error": (f"'{solar_event}' does not occur at this device's "
                                       f"location in the coming days (polar day/night), "
-                                      f"or the location has no coordinates.")}
+                                      f"or the location has no coordinates."), "dispatched": False}
             elif delay_seconds is not None:
                 scheduled_dt = now + timedelta(seconds=int(delay_seconds))
             elif scheduled_time is not None:
@@ -390,7 +567,7 @@ class ScheduleToolsMixin:
                     try:
                         scheduled_dt = datetime.fromisoformat(scheduled_time.replace('Z', '+00:00'))
                     except Exception:
-                        return {"error": f"Invalid time format: {scheduled_time}. Use ISO 8601 format."}
+                        return {"error": f"Invalid time format: {scheduled_time}. Use ISO 8601 format.", "dispatched": False}
                 else:
                     scheduled_dt = scheduled_time
                 if scheduled_dt.tzinfo is None:
@@ -404,9 +581,9 @@ class ScheduleToolsMixin:
                     scheduled_dt = resolve_location_tz(output.unique_id).localize(scheduled_dt)
                 scheduled_dt = to_utc(scheduled_dt)  # normalise to UTC-aware
                 if scheduled_dt <= now:
-                    return {"error": f"Requested schedule time {scheduled_time} is in the past. Please provide a future time."}
+                    return {"error": f"Requested schedule time {scheduled_time} is in the past. Please provide a future time.", "dispatched": False}
             else:
-                return {"error": "You must provide one of: scheduled_time, delay_seconds, solar_event."}
+                return {"error": "You must provide one of: scheduled_time, delay_seconds, solar_event.", "dispatched": False}
 
             # 3. 시간 변환 — duration_seconds 지원
             if duration_seconds is not None:
@@ -428,6 +605,7 @@ class ScheduleToolsMixin:
 
             # 3. SchedulerJobMeta 생성 + 자동 승인 (APScheduler 등록)
             #    proposed_by='HUMAN' + approval_required=False → propose_job() 내부에서 approve_job() 자동 호출
+            sent = True
             meta = scheduler.propose_job(
                 action_type='control_output',
                 target_id=output.unique_id,
@@ -459,7 +637,8 @@ class ScheduleToolsMixin:
             }
         except Exception as e:
             logger.error(f"Error in schedule_device_control_tool: {e}")
-            return {"error": f"Error while scheduling device control: {str(e)}"}
+            return {"error": f"Error while scheduling device control: {str(e)}",
+                    "dispatched": sent}
 
     @classmethod
     def _resolve_schedule_anchor(cls, target_id):
@@ -499,7 +678,22 @@ class ScheduleToolsMixin:
 
     @classmethod
     def _resolve_schedule_job(cls, job_id):
-        """일정을 unique_id(우선) 또는 정수 PK로 조회. 없으면 None."""
+        """일정을 unique_id(우선) 또는 정수 PK로 조회. 없으면 None.
+
+        쓰기 호출이 묶여 있으면 찾은 일정이 **움직이는 대상**(겉 target_id·
+        인자 속 장치)으로 그룹 스코프를 묻는다(write_scope.enforce). 일정 id 는
+        대상과 이어지는 흔적이 호출 인자에 없어서 앞 단계 짐작 검사가 볼 수
+        없던 자리다(2026-09-23 재현).
+        """
+        meta = cls._lookup_schedule_job(job_id)
+        if meta is not None:
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(meta)
+        return meta
+
+    @classmethod
+    def _lookup_schedule_job(cls, job_id):
+        """`_resolve_schedule_job` 의 조회부 — 판정 없이 찾기만 한다."""
         from aot.databases.models.scheduler import SchedulerJobMeta
         if job_id is None:
             return None
@@ -624,6 +818,9 @@ class ScheduleToolsMixin:
             }
             if scope is not None:
                 out["scope"] = scope
+                _amb = cls._ambiguous_scope_reading(scope)
+                if _amb:
+                    out.setdefault("_reading", []).append(_amb)
                 if not scope['resolved']:
                     # 0건을 "예정 없음" 으로 읽으면 "충돌 없습니다" 라는 틀린
                     # 답이 확신에 찬 문장으로 나간다. 못 찾은 것은 없는 것이 아니다.
@@ -640,7 +837,7 @@ class ScheduleToolsMixin:
     @classmethod
     def edit_schedule_tool(cls, job_id, date=None, time=None, content=None,
                            worker=None, target_name=None, duration_minutes=None,
-                           at=None, **extra):
+                           at=None, target_id=None, **extra):
         """
         [일정 수정 — 변이(승인 필요)]
         기존 일정의 시각/소요시간/내용/담당자/위치를 수정한다. 먼저 search_schedule로 job_id를 얻는다.
@@ -653,7 +850,9 @@ class ScheduleToolsMixin:
             content (str): 새 내용/설명.
             worker (str): 새 담당자.
             target_name (str): 새 위치(구역/시설/장치 이름)로 재연결. 미해석이면
-                available_targets를 돌려주니 ask_user로 확인 후 재시도.
+                available_targets를, 여러 곳에 걸리면 candidates 를 돌려준다.
+            target_id (str): 새 위치의 unique_id 로 재연결(이름 대신). 모호한 이름의
+                후보 중 use_name 이 없는 것을 고를 때 쓴다.
             duration_minutes (int): 새 소요시간(분). 기존 duration_sec/end_time을 대체한다.
             at (str): 화면 전용 — 오프셋이 붙은 절대순간(ISO 8601). 주면 date/time
                 대신 쓴다. 캘린더는 보는 사람의 시계로 시각을 고르므로 벽시계로
@@ -674,27 +873,25 @@ class ScheduleToolsMixin:
             except Exception:
                 params = {}
 
-            # 0. 위치 재연결 (target_name) — 미해석이면 disambiguation 요청
-            if target_name:
+            # 0. 위치 재연결 (target_id 또는 target_name) — 미해석이면 disambiguation 요청
+            relink = None
+            if target_id and str(target_id).strip():
+                relink = cls._target_by_id(target_id)
+                if relink is None:
+                    return cls._unknown_target_id(target_id)
+            elif target_name:
                 _tid, _tt, _rn, _lat, _lng = \
                     cls._resolve_note_target(target_name)
                 if not _tid:
-                    return {
-                        "status": "needs_disambiguation",
-                        "error": "target_not_found",
-                        "message": (f"위치 '{target_name}'를 특정하지 못했습니다. "
-                                    f"available_targets에서 정확한 이름을 고르도록 ask_user로 "
-                                    f"확인한 뒤 다시 수정하세요."),
-                        "available_targets": cls._geoshape_name_candidates(),
-                    }
-                meta.target_id = _tid
-                params['target_type'] = _tt
-                params['target_name'] = _rn
+                    return cls._schedule_target_refusal(target_name, _tt)
+                relink = (_tid, _tt, _rn)
+            if relink is not None:
+                meta.target_id, params['target_type'], params['target_name'] = relink
 
             # 앵커 tz(장치 현지) — 위치가 바뀌었으면 새 위치 기준. §6
             _anchor_tz, _anchor_name, _anchor_src = \
                 cls._resolve_schedule_anchor(meta.target_id)
-            if target_name:
+            if relink is not None:
                 # 위치 재연결: 발화 순간(UTC)은 유지하되 표시 앵커를 새 장치로 갱신.
                 meta.anchor_tz = _anchor_name
                 meta.anchor_source = _anchor_src
@@ -725,7 +922,7 @@ class ScheduleToolsMixin:
             if worker is not None:
                 params['worker'] = worker
             # params가 바뀐 경우(위치 재연결 포함) 저장
-            if content is not None or worker is not None or target_name:
+            if content is not None or worker is not None or relink is not None:
                 meta.params_json = _json.dumps(params)
 
             # 2b. 소요시간 변경 — end_time은 (변경됐을 수 있는) schedule_time 기준으로
@@ -831,6 +1028,9 @@ class ScheduleToolsMixin:
             from aot.databases.models.pid import PID
             from aot.aot_flask.extensions import db as _db
             from aot.aot_client import DaemonControl
+            # 저장은 됐는데 데몬이 받았는지 모르면 performed:"unknown"
+            # (function.py _set_function_activation 과 같은 판정).
+            from aot.tools.mcp_safety_gate import mark_runtime_unconfirmed
 
             if not entity_id:
                 return {"error": "entity_id is required."}
@@ -850,6 +1050,11 @@ class ScheduleToolsMixin:
             if mod is None:
                 return {"error": f"Activatable entity not found: {entity_id}"}
 
+            # 쓰기 시점 그룹 스코프 — 이름으로 찾았어도 **찾은 행**으로 묻는다
+            # (쓰기 호출이 묶여 있을 때만; write_scope.enforce).
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(mod)
+
             mod.is_activated = bool(activate)
             _db.session.commit()
 
@@ -860,14 +1065,16 @@ class ScheduleToolsMixin:
                 else:
                     ret_err, ret_msg = daemon.controller_deactivate(mod.unique_id)
                 if ret_err:
-                    return {"status": "success_with_warning", "entity_id": mod.unique_id,
-                            "name": mod.name, "type": kind, "is_activated": bool(activate),
-                            "daemon_warning": ret_msg}
+                    return mark_runtime_unconfirmed(
+                        {"status": "success_with_warning", "entity_id": mod.unique_id,
+                         "name": mod.name, "type": kind, "is_activated": bool(activate),
+                         "daemon_warning": ret_msg})
             except Exception as daemon_err:
                 logger.warning("[_set_entity_activation] Daemon call failed for %s: %s", mod.unique_id, daemon_err)
-                return {"status": "success_with_warning", "entity_id": mod.unique_id,
-                        "name": mod.name, "type": kind, "is_activated": bool(activate),
-                        "daemon_warning": str(daemon_err)}
+                return mark_runtime_unconfirmed(
+                    {"status": "success_with_warning", "entity_id": mod.unique_id,
+                     "name": mod.name, "type": kind, "is_activated": bool(activate),
+                     "daemon_warning": str(daemon_err)})
 
             return {"status": "success", "entity_id": mod.unique_id, "name": mod.name,
                     "type": kind, "is_activated": bool(activate),

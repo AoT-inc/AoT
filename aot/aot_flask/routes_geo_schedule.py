@@ -224,9 +224,13 @@ def api_schedule_create():
     `/notes/<id>/schedule` 이 같은 헬퍼(`_create_human_schedule`)를 부른다.
     이 라우트는 API 계약으로 남긴다. **여기에 기대어 새 UI 를 만들지 말 것** —
     화면에 두 번째 입력 경로가 생기는 순간 "쓰기 전에 종류 고르기" 로 되돌아간다.
+
+    사람 작업은 편집자(`HUMAN_TASK_PERMISSION`)만 만든다 — 설정 편집만 있는
+    역할도 보기만 한다(2026-09-23 결정).
     """
-    if not utils_general.user_has_permission('edit_settings'):
-        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+    denied = human_task_write_denied()
+    if denied:
+        return denied
 
     data = request.get_json(silent=True) or {}
     target_id = (data.get('target_id') or '').strip()
@@ -247,6 +251,20 @@ def api_schedule_create():
         target_id, kind, label, date_str,
         (data.get('time') or '').strip(),
         content, (data.get('worker') or '').strip())
+
+
+def human_task_write_denied():
+    """사람 작업을 만들·고치·지울 수 없는 역할이면 403 응답, 되면 None.
+
+    지도(`/api/geo/schedule`)와 노트(`/notes/<id>/schedule`, 예정 취소)가 함께
+    쓴다. 권한은 스케줄러 화면·AI 예약 도구와 같은 `HUMAN_TASK_PERMISSION`
+    (편집자) — 입구마다 다르면 "보기 전용인데 여기서는 된다" 가 생긴다.
+    """
+    from aot.ai.services.ai_scheduler_service import HUMAN_TASK_PERMISSION
+    if not utils_general.user_has_permission(HUMAN_TASK_PERMISSION):
+        return jsonify({'ok': False, 'error': 'Permission Denied',
+                        'message': 'Permission Denied'}), 403
+    return None
 
 
 def _create_human_schedule(target_id, kind, label, date_str, time_str,

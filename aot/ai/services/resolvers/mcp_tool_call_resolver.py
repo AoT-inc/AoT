@@ -53,8 +53,11 @@ class MCPToolCallResolver(BaseActionResolver):
 
         if action_type == 'mcp_tool_call':
             server_id = target_id
+            # 인자 풀기는 권한 판정과 같은 함수(aot/tools/tool_call_args.py).
+            from aot.tools.tool_call_args import extract_tool_call
+            _tool, arguments = extract_tool_call(params, flatten=False,
+                                                 unwrap=False)
             tool_name = params.get('tool_name')
-            arguments = params.get('arguments') or params.get('params') or {}
             agent_uid = params.get('agent_unique_id')
 
             if not server_id or not tool_name:
@@ -72,9 +75,15 @@ class MCPToolCallResolver(BaseActionResolver):
                 from flask import current_app
                 # 대화 번호를 호출 품질 기록의 세션 열쇠로 넘긴다(해시로만 저장).
                 # 백그라운드 잡은 대화가 없어 None — 집계가 시간 간격으로 묶는다.
+                # 그룹 스코프의 신원은 요청자 표지에서 준다 — 계획 실행기의
+                # 워커 스레드에는 요청 컨텍스트가 없어 execute_for_agent 가
+                # 스스로는 사람을 찾지 못한다. 표지가 없으면(백그라운드) None
+                # 이고, 그때만 execute_for_agent 가 요청 컨텍스트를 본다.
+                _rq = ai_request_context.get_requester()
                 res = tool_execution.execute_for_agent(
                     current_app._get_current_object(), tool_name, arguments,
                     agent_unique_id=agent_uid, server_id=server_id,
+                    scope_user_uuid=_rq.user_uuid if _rq is not None else None,
                     session_key=ai_request_context.get_thread_id())
             else:
                 res = MCPBridgeService.call_tool(server_id, tool_name, arguments,

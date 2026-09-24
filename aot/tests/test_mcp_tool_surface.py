@@ -17,6 +17,7 @@ DB·데몬·네트워크를 쓰지 않는다. 앱이 필요한 것(_get_all_tool
 """
 import json
 import os
+from unittest import mock
 import unittest
 
 from aot.tools import tool_registry as registry
@@ -148,38 +149,41 @@ class TestDrawerSurface(unittest.TestCase):
         self.assertEqual(lost, [], '서랍을 켜면 닿을 수 없어지는 MCP 도구: %s' % lost)
 
     def test_listed_surface_stays_small(self):
-        """**진짜 고정비** — tools/list 에 실제로 나가는 것의 크기.
+        """서랍을 **켰을 때**(AOT_MCP_TOOL_TIERING=1, 선택 기능) 상시 노출의 크기.
 
-        `test_tool_cost_budget.py` 의 MCP 상한은 서랍을 **끈** 카탈로그 전량을
-        잰다. 도구를 더하면 그 숫자는 반드시 오르므로, 서랍을 켠 뒤로는 그것이
-        곧 비용이 아니다 — 대화마다 실제로 나가는 것은 여기서 재는 값이다.
-        (2026-08-21 실측: 전량 108개 21,363토큰. 상시 노출은 core 를 넓힌 뒤
-        30개 6,958토큰 — core 5개일 때는 2,783토큰이었지만 그 크기로는 외부
-        클라이언트가 요청을 끝내지 못했다. test_core_stays_bounded 참조.)
+        기본은 서랍 끔이고, 그때의 고정비는 API 키의 도구 묶음이 정한다 —
+        상한은 test_mcp_tool_profiles 의 TestOperationsBudget 에 있다. 이
+        검사는 서랍을 다시 켜는 배포를 위한 것이다.
 
-        네이티브 도구(get_sensor_reading 등)는 스키마가 DB 의 장치 목록에서
-        만들어져 시스템마다 크기가 다르므로 여기서 빼고 잰다 — 앱 없이 도는
-        검사로 남기기 위해서다. 그만큼 상한에 여유를 두었다.
+        (역사: 2026-08-21 core 30개 6,958토큰 — core 5개일 때는 2,783토큰이었지만
+        그 크기로는 외부 클라이언트가 요청을 끝내지 못했다. test_core_stays_bounded
+        참조. 2026-08-24 core 31개 7,164토큰으로 상한까지 36토큰이었다.
+        2026-09-24 설명·스키마 줄이기로 약 4,600토큰이 됐고, 자를 저장소 추정기
+        `_estimate_tokens` 로 바꿔 다시 잡았다.)
 
-        2026-08-24: `knowledge_search` 를 core 로 올려 31개 7,164토큰이 됐다
-        (근거는 tool_registry `_TIER_ASSIGNMENT` 의 해당 항목 주석). **상한까지
-        36토큰 남았다** — 다음에 core 도구를 더하거나 설명을 늘리려면 무엇을
-        서랍으로 내릴지 함께 정해야 한다. 상한을 올리는 것은 마지막 수단이다:
-        이 숫자가 곧 대화마다 나가는 고정비다.
+        네이티브 도구의 스키마는 더는 장치 목록을 싣지 않으므로(R1) 앱 없이
+        함께 잰다.
         """
         import importlib
         server = importlib.import_module('aot.aot_mcp_server')
+        from aot.tools.aot_native_tool_engine import AoTNativeToolEngine as N
+        from aot.tools.tool_execution import _estimate_tokens
 
         core = registry.core_tools()
         listed = [{'name': t['tool_name'], 'description': t['description'],
                    'inputSchema': t['input_schema']}
                   for t in registry.virtual_tools() if t['tool_name'] in core]
+        for name in ('get_sensor_reading', 'list_available_devices',
+                     'set_output_state'):
+            if name in core:
+                listed.append({k: v for k, v in getattr(
+                    N, '_schema_' + name)([]).items() if not k.startswith('_')})
         listed += [dict(t) for t in server._EXTRA_TOOLS]
-        tokens = len(json.dumps(listed, ensure_ascii=False)) // 4
+        tokens = _estimate_tokens(json.dumps(listed, ensure_ascii=False))
         self.assertLessEqual(
-            tokens, 7_200,
-            '상시 노출이 %d토큰이다(도구 %d개). 도구를 core 로 올렸거나 core '
-            '도구의 설명이 길어졌다 — 무엇을 대신 서랍으로 내릴지 함께 정할 것: %s'
+            tokens, 11_500,
+            '서랍 켬 상시 노출이 %d 추정 토큰이다(도구 %d개). 도구를 core 로 올렸거나 '
+            'core 도구의 설명이 길어졌다 — 무엇을 대신 서랍으로 내릴지 함께 정할 것: %s'
             % (tokens, len(listed), sorted(t['name'] for t in listed)))
 
     def test_exempt_tools_are_the_drawer_machinery(self):
@@ -224,7 +228,11 @@ class TestExecutionLayerIsShared(unittest.TestCase):
         import inspect
         exec_mod = _load_exec()
         src = inspect.getsource(exec_mod._execute_tool)
-        self.assertIn('gate.gate(', src, '승인 게이트가 실행층에 없다')
+        # 스코프·게이트·실행은 `_run_gated_tool` 로 나뉘었다(쓰기 시점 스코프의
+        # 신원을 호출 동안 묶기 위해). 여전히 _execute_tool 만 부르는 실행층 함수다.
+        self.assertIn('_run_gated_tool(', src, '게이트 실행이 실행층에 없다')
+        self.assertIn('gate.gate(', inspect.getsource(exec_mod._run_gated_tool),
+                      '승인 게이트가 실행층에 없다')
         self.assertIn('_record_audit', src, '감사 기록이 실행층에 없다')
         # 캡과 직렬화는 _finish_result 로 나뉘었다(감사 행을 캡 뒤에 한 번에
         # 쓰기 위해). 여전히 _execute_tool 만 부르는 실행층 함수다.
@@ -450,10 +458,15 @@ class TestResponseCap(unittest.TestCase):
         """기본값이 주석과 어긋나면 그 주석은 다음 사람을 속인다."""
         self.assertNotIn('AOT_MCP_TOOL_TIERING', os.environ,
                          '테스트 환경에 스위치가 켜져 있으면 판정이 무의미하다')
-        self.assertTrue(self.server._tiering_enabled(),
-                        'MCP 표면의 서랍은 기본 **켜짐**이다 — core 31개 지점에서 '
-                        '전량 노출과 동등한 성능을 크기 33%로 냈다(2026-08-21, '
-                        '20건 실측). _tiering_enabled 의 표 참조')
+        self.assertFalse(self.server._tiering_enabled(),
+                         'MCP 표면의 서랍은 기본 **꺼짐**이다(2026-09-24) — 서랍이 '
+                         '필요한 질문에서 서랍을 거치는 쪽이 여러 배 느렸고, 목록 '
+                         '크기는 API 키의 도구 묶음이 정한다. _tiering_enabled (4) 참조')
+        with mock.patch.dict(os.environ, {'AOT_MCP_TOOL_TIERING': '1'}):
+            self.assertTrue(self.server._tiering_enabled(), '다시 켜는 스위치')
+        # 인앱 AI 의 내장 MCP 목록은 따로 고정된다 — 기본 켬(예전 동작).
+        self.assertNotIn('AOT_AI_BUILTIN_MCP_TIERING', os.environ)
+        self.assertTrue(self.server._builtin_tiering_enabled())
         self.assertGreater(self.server._MAX_RESPONSE_TOKENS, 0)
 
 
@@ -682,6 +695,39 @@ class TestSpatialTreeDepth(unittest.TestCase):
         depth = spec['input_schema']['properties']['depth']['description']
         self.assertIn('children_omitted', depth)
         self.assertIn('0', depth, '무제한을 어떻게 주는지 없다')
+        self.assertIn('places only', depth.lower(), '기본 보기를 말하지 않는다')
+
+    def test_default_lists_every_place_at_every_depth(self):
+        """기본(depth 없음)은 곳을 **모든 깊이**에서 싣고 장치는 개수로 접는다.
+
+        재측정(26-09-23 lat_21): 대지 > 구역 > 구역(3포장 > 1구역 > 3-1) 에서
+        옛 기본 depth=2 가 3-1 을 숫자로만 남겨, 모델이 "3-1 은 없다" 고 답했다.
+        """
+        nested = [{'name': '3포장', 'type': 'site', 'unique_id': 's3',
+                   'children': [
+                       {'name': '1구역', 'type': 'zone', 'unique_id': 'z31',
+                        'children': [
+                            {'name': '3-1', 'type': 'zone', 'unique_id': 'z311',
+                             'children': [
+                                 {'name': 't1', 'type': 'aot_device',
+                                  'unique_id': 'd9', 'children': []}]}]}]}]
+        self.tree = nested
+        out = self._patched()
+        site = out['hierarchy'][0]
+        leaf = site['children'][0]['children'][0]
+        self.assertEqual('3-1', leaf['name'])
+        self.assertEqual(1, leaf['devices'])
+        self.assertNotIn('children', leaf, '장치 노드가 펼쳐졌다')
+        self.assertIn('Places only', out['_reading'])
+
+    def test_default_folds_devices_and_keeps_facilities(self):
+        out = self._patched()
+        zone = out['hierarchy'][0]['children'][0]
+        self.assertEqual(2, zone['devices'], '장치 둘(v111·v112)을 세지 않았다')
+        self.assertNotIn('children', zone)
+        self.assertEqual('펌프실', out['hierarchy'][0]['children'][1]['name'])
+        # 곳 노드에는 이름·종류·id 만 남는다(속성·장치 id 는 빠진다).
+        self.assertEqual({'name', 'type', 'unique_id', 'devices'}, set(zone))
 
 
 
@@ -1065,7 +1111,7 @@ class TestSystemBriefIsSummaryNotUnion(unittest.TestCase):
     def test_subtool_responses_are_not_embedded_whole(self):
         """하위 도구를 그대로 대입하는 형태가 되살아나면 상한을 다시 넘는다."""
         src = self._src()
-        for call in ('S.get_spatial_tree(depth=2)',
+        for call in ('S.get_spatial_tree()',
                      'S.get_crop_status()',
                      'S.get_control_state()'):
             self.assertNotIn('lambda: %s' % call, src,

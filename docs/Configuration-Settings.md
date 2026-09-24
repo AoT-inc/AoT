@@ -608,7 +608,7 @@ Roles define the permissions of each user. Four default roles are provided that 
 </tbody>
 </table>
 
-The `Edit Controllers` permission protects editing of Conditionals, Graphs, LCDs, Methods, PIDs, Outputs, and Inputs.
+The `Edit Controllers` permission protects editing of Conditionals, Graphs, LCDs, Methods, PIDs, Outputs, and Inputs. It also protects work tasks for people (weeding, inspection and the like): creating, editing or cancelling one needs this permission wherever it happens — the Scheduler, a note passage, the AI assistant or MCP, or a Google Calendar import. Roles without it can see work tasks but not change them, even if they can edit settings.
 
 The `View Stats` permission protects viewing of the Usage Statistics, System Information, and Energy Usage pages.
 
@@ -621,6 +621,8 @@ Roles and Groups answer two different questions. A Role decides **what** a user 
 By default, no resource belongs to any group, so behavior is unchanged from before Groups existed\: anyone whose Role allows an action can perform it on anything. This only changes once you grant a Group to a specific resource. From that point on, only members of the granted Group(s) — plus any user whose Role has "Access all groups" enabled — can operate that one resource. Everyone else immediately loses the ability to operate it, so check who currently uses a resource before granting a Group to it.
 
 Groups restrict **operating** a resource only\: turning a device on or off, changing its settings, deleting it, or opening its dashboard/map/facility/tab page. They do not restrict **viewing**. Sensor readings, history, and exported data remain visible to every logged-in user whether or not they belong to the relevant group.
+
+The same limit applies when you ask the AI assistant or an external MCP client to change something\: a change that touches another group's resource is refused, whether that resource is named, given by id, reached through a schedule or sequence step, or only mentioned in the text of a note or request. A scheduled job is checked again each time it runs, against the person responsible for it.
 
 This page (the Groups tab under Users) is only for creating groups and choosing their members. Resources are not granted to a group here.
 

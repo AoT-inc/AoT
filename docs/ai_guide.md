@@ -22,20 +22,24 @@ Four meta-tools for working with drawers are always listed.
 
 > **Open the matching drawer before concluding something isn't possible.** Before answering "this system can't do that," or working around it with a core tool that only roughly fits, open the drawer for that purpose first. Drawer tools behave exactly like ordinary tools.
 
-Setting the environment variable `AOT_MCP_TOOL_TIERING=0` exposes all 128 tools with no drawers (tiering is on by default).
+**External MCP connections no longer use drawers by default:** `tools/list` returns the API key's whole tool profile (below), and the drawer tools above are not listed. Set `AOT_MCP_TOOL_TIERING=1` (or `true`/`yes`/`on`) to bring the drawer layout back (it works inside the key's profile). The in-app assistant's built-in list keeps drawers (`AOT_AI_BUILTIN_MCP_TIERING`, on by default).
+
+**Names and several targets.** Read tools take names where they used to need an id — devices (`get_output_state`, `get_device_measurements`, `get_sensor_detail`, `get_sensor_reading`), zones and sites (`get_zone_sensor_summary`, `list_plots`) and growing plots (`get_plot`: name, crop or variety); a shared name returns candidates instead of a guess. `device_ids`, `loc_ids`, `plot_ids`, `target_names` and `zone_ids` take up to 10 targets in one call. Write tools report missing arguments and likely typos (`reason_code: invalid_arguments`, with the valid names) before any permission or approval step; other unknown arguments are ignored and listed in `_ignored_arguments`. Details: [AI Features Overview](ai/overview.md#tool-arguments).
+
+**Tool profiles.** Over MCP, each API key lists only its tool profile: **operations** (the default — everyday reading, control, scheduling, records and plot-stage events) or **operations + configuration** (adds device definitions, building automations, plot and program setup, map placement, screens, AI settings and archive/library management). Drawers follow the same profile. A call outside the key's profile is refused with `reason_code: tool_profile`; an administrator with user-edit permission switches it under `Settings > Users`. `set_output_state` and `list_available_devices` are not listed for API keys (use `operate_device`, `get_device_list`, `search_devices`). The in-app assistant and the built-in AI's own service-account key are not limited by profiles. Details: [AI Features Overview](ai/overview.md#tool-profiles).
 
 ### 1.1 Always-Listed Tools (27)
 
 | Category | Tool | Description | Approval |
 |------|------|------|------|
 | Starting point | `get_system_brief` | One-glance system summary — start here | Not required |
-| Resolve | `resolve_target` | Resolves a name to an entity, and whether it's a container (has child zones) | Not required |
+| Resolve | `resolve_target` | Resolves a name to an entity, and whether it's a container (has child zones). A name shared by several different places or devices returns the candidates instead of a guess — each with a name that points at only that one when there is one, otherwise its `target_id` to pass on | Not required |
 | Space | `get_spatial_tree` | Site > zone > device hierarchy | Not required |
 | Space | `get_map_equipment` | Equipment/devices placed on the map | Not required |
 | Device | `get_device_list` / `search_devices` | Full list / search by name, type, or measurement kind | Not required |
 | Device | `get_device_measurements` | List of a device's measurement channels | Not required |
 | Device | `get_device_detail` | Everything about ONE device in a single call — what/where/measures/controls/communication/space/constraints, instead of chaining search_devices + get_device_measurements + get_device_location | Not required |
-| Device | `get_output_state` | Current state of an output (valve, pump, light) | Not required |
+| Device | `get_output_state` | Current state of an output (valve, pump, light). For a motor-driven vent or curtain it also gives how far open it is | Not required |
 | Measurement | `get_sensor_detail` | Sensor history (min/max/avg), including Function aggregate values | Not required |
 | Measurement | `get_zone_sensor_summary` | Latest values plus period stats for an entire zone, in one call | Not required |
 | Measurement | `get_weather` / `get_weather_forecast` | Current weather / forecast | Not required |
@@ -89,7 +93,7 @@ Tools fall into three tiers.
 
 1. **Reads** — execute immediately.
 2. **Config-only writes (approval-exempt)** — `add_schedule`, `add_schedule_batch`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`, `create_program`/`modify_program`, `create_gis_input`, `create_ai_agent`. They move no equipment and are always created inactive, so they save immediately. A person still has to activate them separately before they do anything, and that activation (`activate_function`, `activate_gis_input`) does require approval. Creating or deleting a Function itself — `create_function`, `delete_function` — is not in this tier: those require approval.
-   `create_note` and `knowledge_shelve` are not counted as write tools at all. They are low-risk records that save immediately, and are treated as non-authoritative until a person confirms them.
+   `create_note` and `knowledge_shelve` are **record writes**: they also save immediately without approval, and knowledge is treated as non-authoritative until a person confirms it. They are still writes — they need the same settings-edit permission as the web notes page, are refused for read-only keys and in advice-only mode, and respect group scope. Approval-exempt is not permission-exempt: in the in-app assistant and over MCP alike, every write — config-only ones included — runs only if the person asking has the role for it (settings-edit permission for notes, knowledge and map edits — deleting a map shape or placing a device, as on the web map editor; plot-edit permission — the same one the web plot pages use — for plots, stage records, plot resources, crop programmes and plot journals; control permission for everything else; with the default roles, Monitor, Guest and Kiosk cannot) and only on targets inside that person's group scope, whether the target is given by id or by name. The group check is made on what the tool actually changes — the device, function, schedule or step it resolves to — not only on the arguments, so naming a target, giving a schedule or step id, or mentioning another group's resource in free text does not get around it. Approving a pending request needs the same permission as the request itself (plot-edit for plot requests, settings-edit for map edits, control for the rest), on both the web and `respond_to_confirmation`. If an approver is outside the target's group, the request is not run and goes back to the pending list for someone who may decide it. Scheduled jobs are checked again every time they fire, as the person responsible for them (whoever created the job, or whoever approved an AI-proposed one): if that person has since lost the permission or the group, the job does not run and is marked failed. Background AI jobs with no person behind them (periodic summaries and the like) are exempt.
 3. **Writes that require approval** — all physical control and all ledger changes.
 
 ### In-App Assistant
@@ -108,8 +112,8 @@ Rules to follow:
 - The arguments must be **exactly identical** to what was approved for the call to go through (this prevents approval substitution).
 - Expiry: a pending confirmation lasts **15 minutes** (`AOT_MCP_CONFIRM_TTL_SEC=900`); once approved, the execution window is another **5 minutes** (`AOT_MCP_APPROVED_TTL_SEC=300`, counted from the moment of approval).
 - Call caps: `operate_device`, `set_output_state`, `schedule_device_control` — 20 per hour; `modify_sequence_step` — 60 per hour; everything else defaults to 10. Since the approval request and the re-call each count separately, the number of tasks you can actually complete is half of that.
-- With `AOT_MCP_WRITE_ENABLED=0`, write tools don't even create an approval queue entry — they're refused outright and serve advice only.
-- Connecting with a read-only API key forcibly disables write permission, and `respond_to_confirmation` only works with an Admin/Editor key.
+- With `AOT_MCP_WRITE_ENABLED=0`, write tools (including notes and knowledge) don't even create an approval queue entry — they're refused outright and serve advice only. `submit_advice` stays available.
+- Connecting with a read-only API key forcibly disables write permission (notes and knowledge included; such tools are not listed), and `respond_to_confirmation` only works with a key whose role may decide the request (control, plot-edit or settings-edit, matching the request) — never with a read-only key. A read-only key can still use `submit_advice`; roles that cannot use the AI assistant (Guest and Kiosk by default) cannot.
 
 ### Other Restrictions
 
@@ -230,7 +234,7 @@ python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
 
 - Endpoint: `POST/GET/DELETE /mcp` (Streamable HTTP). REST equivalents for compatibility: `GET /mcp/info`, `GET /mcp/tools/list`, `POST /mcp/tools/call`.
 - Auth: the API key goes in the `X-API-KEY` header (base64). `Authorization: Basic`/`Bearer` is also accepted. Keys are issued from user settings, and **the key's owner is the caller's identity** — the call follows that user's permissions exactly.
-- Turning off auth with `AOT_MCP_REQUIRE_AUTH=0` treats the caller as having no permissions, making it read-only.
+- Turning off auth with `AOT_MCP_REQUIRE_AUTH=0` treats the caller as having no permissions, making it read-only (it can still submit advice).
 - Turning off the MCP HTTP server toggle under **Settings → General** returns 503 without a restart.
 
 ---

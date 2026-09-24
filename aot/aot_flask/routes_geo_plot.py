@@ -1519,7 +1519,17 @@ def api_plot_resources_apply(plot_uuid):
     if denied:
         return denied
 
-    result, error = plot_io.apply_stage_resources(plot_uuid)
+    # 함수를 켜는 처리기를 곧바로 부르므로 로그인한 사람으로 묶는다 — 묶지
+    # 않으면 쓰기 시점 그룹 스코프가 "사람이 없는 호출" 로 보고 남의 그룹
+    # 함수까지 켠다(설계 §6-2a).
+    from aot.aot_flask.access import write_scope
+    try:
+        with write_scope.acting_as_current_user(tool='apply_plot_resources'):
+            result, error = plot_io.apply_stage_resources(plot_uuid)
+    except write_scope.WriteScopeDenied:
+        db.session.rollback()
+        return jsonify({'ok': False, 'reason_code': 'group_scope',
+                        'message': write_scope.deny_message()}), 403
     if error:
         status = 404 if '찾을 수 없습니다' in error else 400
         return jsonify({'ok': False, 'message': error}), status

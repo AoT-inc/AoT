@@ -765,9 +765,11 @@ class AIPlanningService:
                     ready_steps = [pending_steps[0]]
 
                 # Execute ready steps concurrently
-                # 대화 thread_id 만 워커로 넘긴다(호출 품질 기록의 세션 열쇠).
+                # 대화 thread_id(호출 품질 기록의 세션 열쇠)와 요청자를 워커로
+                # 넘긴다. 요청자가 빠지면 워커의 단계가 사람 없는 백그라운드로
+                # 보여 쓰기 권한 검사(역할·그룹 스코프)를 건너뛴다.
                 # 첨부·깊이·자율은 넘기지 않는다 — 지금 동작 그대로.
-                futures = {pool.submit(_ai_ctx.bind_thread_id(execute_single_step), s): s
+                futures = {pool.submit(_ai_ctx.bind_worker(execute_single_step), s): s
                            for s in ready_steps}
                 for f in as_completed(futures):
                     s = futures[f]

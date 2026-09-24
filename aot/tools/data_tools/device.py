@@ -122,7 +122,12 @@ class DeviceToolsMixin:
                 if not candidate_ids:
                     return {"results": [], "count": 0,
                             "message": ("No device has a measurement matching "
-                                        "'%s'." % measurement_type)}
+                                        "'%s'. Stored names are rarely the "
+                                        "everyday word (soil moisture = "
+                                        "'volumetric_water_content') — check a "
+                                        "device's real names with "
+                                        "get_device_measurements before saying "
+                                        "there are none." % measurement_type)}
 
             # 측정 종류만 물은 경우. 이름 검색 경로(토큰 확장·별칭·구역 확장)를
             # 태울 근거가 없으므로 후보를 그대로 낸다.
@@ -145,7 +150,9 @@ class DeviceToolsMixin:
                                     "type": "function", "device": item.device})
                 results = cls._annotate_device_zone(results)
                 results = cls._annotate_device_membership(results)
-                return {"results": results, "count": len(results)}
+                out = {"results": results, "count": len(results)}
+                cls._mark_same_names(out)
+                return out
 
             def _normalize_variants(term):
                 """Generate search variants for a term to handle spacing differences.
@@ -404,9 +411,66 @@ class DeviceToolsMixin:
                 notes.append(note)
             if notes:
                 out["_reading"] = notes
+            cls._mark_same_names(out)
             return out
         except Exception as e:
             return {"error": str(e)}
+
+    #: 같은 이름 표시에서 셀 종류 — 구역 도형은 장치가 아니다.
+    _SAME_NAME_KINDS = ('input', 'output', 'device', 'camera', 'function')
+
+    @classmethod
+    def _mark_same_names(cls, out):
+        """결과 안에 이름이 같은 장치가 여럿이면 표시한다(제자리 수정).
+
+        벤치(26-09-23 lat_14): 'v111' 이 둘인데 목록에서 하나만 읽고 답했다.
+        목록에는 둘 다 있었지만 같은 이름이라는 사실이 어디에도 없었다.
+        행마다 `same_name_count` 와 사람이 가를 단서 `where` 를 붙이고, 위에
+        `same_name_groups`(이름·개수)와 `_reading` 한 줄을 싣는다."""
+        results = out.get("results") or []
+        groups = {}
+        for r in results:
+            if r.get("type") not in cls._SAME_NAME_KINDS:
+                continue
+            key = str(r.get("name") or "").strip().lower()
+            if key:
+                groups.setdefault(key, []).append(r)
+        dup = {k: rows for k, rows in groups.items() if len(rows) > 1}
+        if not dup:
+            return out
+        models = {'input': Input, 'output': Output, 'device': CustomController,
+                  'function': CustomController, 'camera': Camera}
+        for rows in dup.values():
+            pairs = []
+            for r in rows:
+                model = models.get(r.get("type"))
+                row = (model.query.filter_by(unique_id=r.get("id")).first()
+                       if model is not None else None)
+                pairs.append((row, r))
+            known = [(row, r.get("type")) for row, r in pairs if row is not None]
+            try:
+                wheres = iter(cls._device_candidates_where(known))
+            except Exception:                               # noqa: BLE001
+                wheres = iter(())
+            for row, r in pairs:
+                r["same_name_count"] = len(rows)
+                if row is not None:
+                    w = next(wheres, None)
+                    if w:
+                        r["where"] = w
+        out["same_name_groups"] = [
+            {"name": rows[0].get("name"), "count": len(rows)}
+            for rows in dup.values()]
+        reading = out.get("_reading") or []
+        if isinstance(reading, str):
+            reading = [reading]
+        reading.append(
+            "'same_name_groups': more than one device has the same name here. "
+            "They are different devices — do not answer from just one. Cover "
+            "each (tell them apart by 'where', not by id) or ask which one the "
+            "user means.")
+        out["_reading"] = reading
+        return out
 
     @classmethod
     def _zone_scope_note(cls, zone_scoped_query):
@@ -514,16 +578,23 @@ class DeviceToolsMixin:
         """
         [분류 A - 물리 제어 전용 도구]
         장치를 직접 제어합니다. (on, off, open, close, set_value 등)
+
+        실패 응답에는 `dispatched` 를 싣는다 — False 는 데몬에 보내기 전에 멈춘
+        확정 실패, True 는 보냈거나 보내다 끊긴 것(시간 초과·통신 오류·데몬
+        오류)이다. 뒤쪽은 장치가 이미 움직였을 수 있으므로 실행층이 "안 됨" 이
+        아니라 "모름" 으로 알린다(`mcp_safety_gate.annotate_write_outcome`).
         """
+        sent = False
         try:
             if not device_id or not state:
-                return {"error": "Missing device_id or state"}
+                return {"error": "Missing device_id or state", "dispatched": False}
 
             # 1. 상태값 검증
             ALLOWED_STATES = ['on', 'off', 'open', 'close', 'set_value']
             state = state.lower()
             if state not in ALLOWED_STATES:
-                return {"error": f"Invalid state value: {state}. Allowed values: {ALLOWED_STATES}"}
+                return {"error": f"Invalid state value: {state}. Allowed values: {ALLOWED_STATES}",
+                        "dispatched": False}
 
             # 2. 장치 존재 여부 확인 (UUID 또는 이름)
             # 이름이 겹치면 고르지 않는다 — `.first()` 로 아무거나 집으면
@@ -531,10 +602,11 @@ class DeviceToolsMixin:
             from aot.services.resolvers.device_resolver import resolve_output
             match = resolve_output(device_id)
             if match.error:
-                return {"error": match.error}
+                return {"error": match.error, "dispatched": False}
             target = match.row
             if not target:
-                return {"error": f"Device (output) to control not found: {device_id}"}
+                return {"error": f"Device (output) to control not found: {device_id}",
+                        "dispatched": False}
 
             # 3. 시간/값 파라미터 정규화 (Deep Discovery)
             # duration_seconds, duration_minutes, duration, value 등 다양한 variant 대응
@@ -593,6 +665,8 @@ class DeviceToolsMixin:
                 source_type=TYPE_AI,
                 source_id=kwargs.get('agent_id') or 'operate_device')
             try:
+                # 여기서부터는 명령이 데몬으로 나간다 — 이후 실패는 결과를 모른다.
+                sent = True
                 if state in ('on', 'open'):
                     out_err, out_msg = daemon.output_on_off(
                         resolved_uid, 'on', output_type='sec', amount=duration,
@@ -609,35 +683,37 @@ class DeviceToolsMixin:
                         output_channel=output_channel
                     )
                 else:
-                    return {"error": f"Unsupported state: {state}"}
+                    return {"error": f"Unsupported state: {state}",
+                            "dispatched": False}
             finally:
                 clear_execution_context()
 
             if out_err:
                 logger.error(f"[operate_device_tool] Daemon error: {out_msg}")
-                return {"error": f"Device control failed: {out_msg}"}
+                return {"error": f"Device control failed: {out_msg}",
+                        "dispatched": True}
             
             logger.info(f"[operate_device_tool] OK: device={resolved_uid}({target.name}), state={state}, duration={duration}s")
             return {"status": "success", "execution_result": out_msg, "resolved_duration": duration}
         except Exception as e:
             logger.error(f"Error in operate_device_tool: {e}")
-            return {"error": f"Error while controlling device: {str(e)}"}
+            return {"error": f"Error while controlling device: {str(e)}",
+                    "dispatched": sent}
 
     @classmethod
     def get_device_measurements(cls, device_id):
         """
         Returns all measurement channels for a given Input or CustomController device_id.
-        Also accepts a search_devices result dict — extracts the first device_id automatically.
+        device_id may be the unique_id or the device's name (ambiguous names
+        return candidates). Also accepts a search_devices result dict — extracts
+        the first device_id automatically.
         Used by the AI to resolve measurement IDs needed for select_measurement options.
         """
         try:
-            # Accept search_devices result dict (e.g. {"results": [{"id": "..."}], "count": 1})
-            if isinstance(device_id, dict):
-                results = device_id.get('results') or device_id.get('result', {}).get('results', [])
-                if results and isinstance(results, list):
-                    device_id = results[0].get('id') or results[0].get('unique_id') or results[0].get('device_id')
-            if not device_id or not isinstance(device_id, str):
-                return {"error": "device_id is required (string UUID)"}
+            row, _kind, err = cls._read_device(device_id)
+            if err:
+                return err
+            device_id = row.unique_id
 
             rows = DeviceMeasurements.query.filter_by(device_id=device_id).all()
             if not rows:
@@ -736,8 +812,9 @@ class DeviceToolsMixin:
                 "candidates": [
                     {"id": r.unique_id, "name": r.name, "kind": k,
                      "module_type": getattr(r, 'device', None)
-                                    or getattr(r, 'output_type', None)}
-                    for (r, k) in listed
+                                    or getattr(r, 'output_type', None),
+                     "where": w}
+                    for (r, k), w in zip(listed, cls._device_candidates_where(listed))
                 ],
                 "candidates_shown": len(listed),
                 "candidates_total": len(candidates),
@@ -745,6 +822,82 @@ class DeviceToolsMixin:
 
         row, kind = candidates[0]
         return row, kind, None
+
+    @classmethod
+    def _device_candidates_where(cls, rows_kinds):
+        """이름이 같은 장치 후보마다 사람이 구분할 단서 — 구역·지도·소속 장치·탭.
+
+        이것이 없던 때는 후보가 id 로만 갈려, 모델이 되물을 때 uuid 를 그대로
+        보여 줬다(2026-09-23 재측정 lat_14). 조회가 실패해도 후보는 낸다.
+
+        - 지도: 정본 경로(`device_binding.shapes_for_devices` — 바인딩 우선,
+          없으면 레거시 `GeoShape.device_id`)로 찾는다. 도형이 여럿이면 지도
+          이름을 정렬해 모두 적는다(첫 도형은 DB 순서라 호출마다 달랐다).
+        - 구역: `device_zone_map` 은 도형 feature 의 장치 표시(레거시 쪽)로
+          잡는다 — 바인딩과 어긋날 수 있다. 구역이 잡혔는데 바인딩 도형이
+          없으면 "지도에 없음" 이라고 쓰지 않는다(구역이 곧 지도 위라는 뜻이다).
+        - 문장은 모델이 읽는 영어라 번역하지 않는다. 탭 이름이 없으면 뺀다.
+        - 단서가 똑같은 후보끼리는 종류·모듈을 덧붙여 가른다.
+        """
+        try:
+            from aot.tools import providers
+            zmap = providers.get('device_zone_map')() or {}
+        except Exception:
+            zmap = {}
+        pmap = cls._device_parent_map()
+        tabs = {}
+        try:
+            from aot.databases.models import Tab
+            tab_ids = {getattr(r, 'tab_id', None) for r, _k in rows_kinds} - {None, ''}
+            if tab_ids:
+                tabs = {t.unique_id: (t.name or '').strip()
+                        for t in Tab.query.filter(Tab.unique_id.in_(tab_ids)).all()}
+        except Exception:
+            tabs = {}
+        placed = {}
+        try:
+            from aot.aot_flask.geo import device_binding
+            from aot.databases.models import GeoMap
+            by_dev = device_binding.shapes_for_devices(
+                [r.unique_id for r, _k in rows_kinds])
+            geo_ids = {sh.geo_id for shs in by_dev.values() for sh in shs}
+            maps = {m.unique_id: (m.name or '').strip()
+                    for m in GeoMap.query.filter(
+                        GeoMap.unique_id.in_(geo_ids)).all()} if geo_ids else {}
+            for dev, shs in by_dev.items():
+                if shs:
+                    placed[dev] = sorted({maps.get(sh.geo_id) or '' for sh in shs} - {''})
+        except Exception:
+            placed = {}
+        out = []
+        for r, _k in rows_kinds:
+            parts = []
+            zone = zmap.get(r.unique_id)
+            if zone:
+                parts.append('zone %s' % zone)
+            if r.unique_id in placed:
+                names = placed[r.unique_id]
+                parts.append('on map %s' % ', '.join(names) if names else 'on the map')
+            elif not zone:
+                parts.append('not on a map')
+            if r.unique_id in pmap:
+                pname = (pmap[r.unique_id][1] or '').strip()
+                parts.append('part of %s' % pname if pname
+                             else 'part of an unnamed device')
+            tab = tabs.get(getattr(r, 'tab_id', None))
+            if tab:
+                parts.append('tab %s' % tab)
+            out.append(', '.join(parts))
+        # 단서가 겹치면 종류·모듈로 가른다(같은 탭·같은 구역의 입력과 출력 등).
+        seen = {}
+        for w in out:
+            seen[w] = seen.get(w, 0) + 1
+        for i, (r, k) in enumerate(rows_kinds):
+            if seen[out[i]] > 1:
+                mod = getattr(r, 'device', None) or getattr(r, 'output_type', None)
+                extra = '%s %s' % (k, mod) if mod else k
+                out[i] = '%s, %s' % (out[i], extra) if out[i] else extra
+        return out
 
     @classmethod
     def _summarize_connection_fields(cls, custom_options_json):
@@ -828,7 +981,9 @@ class DeviceToolsMixin:
         from aot.tools.tool_registry import approval_required_tools
 
         if kind == 'output':
-            controlling_tools = ['operate_device', 'set_output_state']
+            # operate_device 가 즉시 제어의 정식 경로다. 네이티브 set_output_state
+            # 는 외부 키 목록에 없으므로 여기서 가리키지 않는다.
+            controlling_tools = ['operate_device']
         elif kind in ('device', 'function'):
             controlling_tools = ['activate_function', 'deactivate_function']
         else:
@@ -1030,6 +1185,12 @@ class DeviceToolsMixin:
 
         if not old_device_id or not new_device_id:
             return {"error": "old_device_id and new_device_id are required"}
+        # 쓰기 시점 그룹 스코프 — 옮기는 쪽과 받는 쪽 장치 둘 다(채널 꼬리
+        # '::채널' 은 떼고 장치로 묻는다).
+        from aot.aot_flask.access import write_scope
+        for _dev in (old_device_id, new_device_id):
+            if isinstance(_dev, str):
+                write_scope.enforce(_dev.split('::', 1)[0].strip())
         try:
             result = device_binding.rebind_device(
                 old_device_id, new_device_id, commit=True)
@@ -1171,7 +1332,8 @@ class DeviceToolsMixin:
             return {"status": "error", "message": str(e)}
 
     @classmethod
-    def get_output_state(cls, device_id, channel=None, **extra):
+    def get_output_state(cls, device_id=None, channel=None, device_ids=None,
+                         **extra):
         """[읽기전용] 출력장치(밸브/펌프/릴레이 등)의 현재 ON/OFF 상태.
 
         set_output_state(쓰기)의 짝이 되는 읽기 도구 — 이게 없으면 AI가 장치를
@@ -1191,18 +1353,25 @@ class DeviceToolsMixin:
 
         과거 on/off 반복 이력(언제 껐다 켰다 했는지)은 다루지 않는다 — 그건
         InfluxDB를 직접 시계열로 조회해야 하는 별개 질문이다.
-        """
-        try:
-            if isinstance(device_id, dict):
-                results = device_id.get('results') or device_id.get('result', {}).get('results', [])
-                if results and isinstance(results, list):
-                    device_id = results[0].get('id') or results[0].get('unique_id') or results[0].get('device_id')
-            if not device_id or not isinstance(device_id, str):
-                return {"error": "device_id is required (string UUID)"}
 
-            output = Output.query.filter_by(unique_id=device_id).first()
-            if not output:
-                return {"error": f"No Output found with unique_id {device_id}"}
+        대상은 unique_id 또는 이름(`_read_device`), 여러 개면 `device_ids`
+        (최대 MAX_READ_TARGETS) — 같은 도구를 장치마다 되풀이 부르던 왕복을 줄인다.
+        """
+        tokens, err = cls._targets_arg(device_id, device_ids, 'device_id')
+        if err:
+            return err
+        if len(tokens) == 1:
+            return cls._output_state_one(tokens[0], channel)
+        return cls._for_each_target(
+            tokens, lambda t: cls._output_state_one(t, channel))
+
+    @classmethod
+    def _output_state_one(cls, token, channel=None):
+        try:
+            output, _kind, err = cls._read_device(token, kinds=('output',))
+            if err:
+                return err
+            device_id = output.unique_id
 
             from aot.aot_client import DaemonControl
             from aot.widgets.AoT_timer import _read_latest_started_at
@@ -1211,8 +1380,12 @@ class DeviceToolsMixin:
             all_states = daemon.output_states_all() or {}
             channel_states = all_states.get(device_id, {})
 
+            # 모터로 여닫는 장치면 **얼마나 열려 있는지**를 따로 싣는다 —
+            # 데몬이 죽어 있어도 저장된 위치는 읽힌다.
+            position = cls._actuator_position(output, channel_states)
+
             if not channel_states:
-                return {
+                out = {
                     "status": "success",
                     "device_id": device_id,
                     "name": output.name,
@@ -1220,6 +1393,10 @@ class DeviceToolsMixin:
                     "message": "No live state available (daemon may be down, or this "
                                "output hasn't been read since it started)."
                 }
+                if position is not None:
+                    out["position"] = position
+                    out["_reading"] = cls._actuator_position_reading(position)
+                return out
 
             wanted_channels = [channel] if channel is not None else sorted(channel_states.keys())
             channels_out = {}
@@ -1260,13 +1437,123 @@ class DeviceToolsMixin:
                     pass
                 channels_out[str(ch)] = entry
 
-            return {
+            out = {
                 "status": "success",
                 "device_id": device_id,
                 "name": output.name,
                 "channels": channels_out,
             }
+            if position is not None:
+                out["position"] = position
+                out["_reading"] = cls._actuator_position_reading(position)
+            return out
         except Exception as e:
             logger.exception("Error in get_output_state")
             return {"error": str(e)}
+
+    @classmethod
+    def _actuator_position(cls, output, channel_states):
+        """모터로 여닫는 장치(측창·천창·커튼) → 개도 dict. 그런 장치가 아니면 None.
+
+        벤치(26-09-23): "측창 얼마나 열려 있어?" 에 응답이 채널 `off`·
+        `seconds_on 0` 뿐이라 모델 대부분이 "닫힘(0%)" 으로 답했다. 저장된
+        위치는 50% 였다. 모터가 멈춰 있다는 것과 닫혀 있다는 것은 다르다.
+
+        **알아보는 기준은 장치 종류 이름이 아니라 `last_position_pct` 옵션**
+        이다 — 환경 코디네이터가 같은 기준으로 장치 위치를 읽는다
+        (`_sync_prev_from_devices`: "actuator_paired 만 보유"). 이 값은 장치
+        모듈이 이동·정지마다 저장해 재시작 뒤에도 남는다.
+
+        출처 순서: 데몬이 **숫자**로 준 현재 위치(이동 중이면 경과 시간으로
+        추정한 값) → 저장된 마지막 위치. 데몬의 `off` 는 이 모듈에서 0% 를
+        뜻하지만 저장값과 어긋나면 **둘 다** 보인다 — 하나를 골라 말하면
+        틀린 쪽을 고른 사실이 사라진다. 제어 로직은 건드리지 않는다(읽기만).
+
+        `value_logged_then` 은 `last_moved_at` 에 기록된 duty_cycle 이다 —
+        모듈은 이동을 **시작할 때 목표값**을, **멈출 때 위치**를 같은 계열에
+        쓴다. 그래서 그 값은 목표일 수도 위치일 수도 있다(`_reading` 이 밝힌다).
+
+        ⚠ 원격 출력(`remote_output_pwm`/`remote_output_on_off`)으로 감싼 다른
+        서버의 개폐기는 알아보지 못한다 — 위치 옵션이 이 서버에 없고, 알려면
+        원격 서버에 물어야 해서 싸지 않다. 그런 출력은 종전처럼 채널 상태만 낸다.
+        """
+        import json as _json
+        try:
+            from aot.databases.models import OutputChannel
+            ch0 = OutputChannel.query.filter_by(
+                output_id=output.unique_id, channel=0).first()
+            opts = _json.loads((ch0.custom_options if ch0 else '') or '{}')
+        except Exception:
+            return None
+        if not isinstance(opts, dict) or 'last_position_pct' not in opts:
+            return None
+
+        def _num(v):
+            try:
+                return None if v is None or isinstance(v, bool) else float(v)
+            except (TypeError, ValueError):
+                return None
+
+        saved = _num(opts.get('last_position_pct'))
+        target = _num(opts.get('last_target_pct'))
+        live_raw = (channel_states or {}).get(0, (channel_states or {}).get('0'))
+        live = _num(live_raw)
+
+        pos = {"percent": None, "source": None,
+               "meaning": "0 = fully closed, 100 = fully open"}
+        if live is not None:
+            pos.update(percent=round(live, 1), source="live")
+        elif saved is not None:
+            pos.update(percent=round(saved, 1), source="saved")
+            if live_raw == 'off' and saved > 0:
+                pos["live_state_disagrees"] = True
+        if target is not None and target >= 0:
+            pos["last_target_percent"] = round(target, 1)
+
+        # 마지막으로 움직이거나 멈춘 시각 — 모듈이 그때마다 duty_cycle 로
+        # 기록한다(정지 시에는 위치, 출발 시에는 목표값).
+        try:
+            from aot.utils.influx import read_influxdb_single
+            ts, val = read_influxdb_single(
+                output.unique_id, 'percent', 0, measure='duty_cycle',
+                duration_sec=30 * 86400, value='LAST')
+            if ts is not None:
+                pos["last_moved_at"] = serialize_ts(datetime.utcfromtimestamp(ts))
+                if _num(val) is not None:
+                    pos["value_logged_then"] = round(float(val), 1)
+        except Exception:
+            pass
+        return pos
+
+    @staticmethod
+    def _actuator_position_reading(position):
+        notes = [
+            "This output is a motor-driven opening (vent/curtain). How open it "
+            "is lives in 'position.percent', not in the channel 'state': "
+            "'seconds_on' 0 means the motor is not running right now, NOT that "
+            "it is closed. Answer 'how open' from 'position' and say which "
+            "'source' it came from ('live' = the running daemon, 'saved' = the "
+            "last position the device stored after it moved).",
+            "What the environment controller is trying to set it to is a "
+            "different number — read it with get_control_state "
+            "if the question is about control.",
+        ]
+        if position.get("value_logged_then") is not None:
+            notes.append(
+                "'value_logged_then' is the number the device logged at "
+                "'last_moved_at'. It logs its TARGET when a move starts and its "
+                "POSITION when the move ends, so it may be where the opening was "
+                "heading rather than where it stopped — use 'percent' for how "
+                "open it is.")
+        if position.get("percent") is None:
+            notes.append(
+                "The position is unknown — nothing live and nothing saved. Say "
+                "that; do not report it as closed.")
+        if position.get("live_state_disagrees"):
+            notes.append(
+                "'live_state_disagrees': the channel reports 'off' (which this "
+                "device uses for 0%%) but the saved position is %s%%. Tell the "
+                "user both numbers; the device may need checking."
+                % position.get("percent"))
+        return notes
 

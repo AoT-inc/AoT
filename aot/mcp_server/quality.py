@@ -62,7 +62,7 @@ DISCOVERY_TOOLS = frozenset({'open_drawer', 'get_tool_detail',
 #: 서랍을 연 호출. 뒤에 서랍 경유(via_drawer) 호출이 오면 "전환" 이다.
 DRAWER_OPEN_TOOLS = frozenset({'open_drawer', 'get_tool_detail'})
 
-_REFUSED_STATES = frozenset({'refused', 'rejected', 'expired'})
+_REFUSED_STATES = frozenset({'refused', 'approval_rejected', 'approval_expired'})
 
 #: 결과 요약(result_summary)이 이것이면 "도구가 제대로 답한 것" 이다 — 대상이
 #: 없다, 또는 어느 대상인지 되묻는다. 몇몇 도구는 이때 `error` 키도 함께 실어

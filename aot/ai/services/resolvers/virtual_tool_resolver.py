@@ -30,21 +30,12 @@ class VirtualToolResolver(BaseActionResolver):
         context: Optional[Dict[str, Any]],
         approved: bool = False,
     ) -> Dict[str, Any]:
-        # [TASK_37] LLM sometimes puts tool_name in target_id — fallback
-        tool_name = params.get('tool_name') or target_id
-        arguments = params.get('arguments') or params.get('params') or {}
-
-        # Flattened params fallback: LLM sometimes puts args directly in params
-        if not arguments:
-            # Exclude internal framework keys that are NOT tool arguments
-            _meta_keys = {'tool_name', 'server_id', 'agent_unique_id', 'context'}
-            _flat = {k: v for k, v in params.items() if k not in _meta_keys}
-            if _flat:
-                arguments = _flat
-                logger.debug(
-                    f"[VirtualToolResolver] Flattened params fallback for '{tool_name}': "
-                    f"{list(arguments.keys())}"
-                )
+        # [TASK_37] LLM sometimes puts tool_name in target_id — fallback.
+        # 인자 풀기(`arguments` → `params` → 펼친 키, 두 겹 벗기기)는 권한
+        # 판정과 **같은 함수**를 쓴다 — 따로 풀면 판정이 보는 인자와 처리기가
+        # 받는 인자가 갈라진다(aot/tools/tool_call_args.py).
+        from aot.tools.tool_call_args import extract_tool_call
+        tool_name, arguments = extract_tool_call(params, target_id, unwrap=False)
 
         if not tool_name:
             return {"status": "error", "message": "Missing tool_name for virtual_tool_call"}
@@ -73,18 +64,8 @@ class VirtualToolResolver(BaseActionResolver):
         #
         # **핸들러가 실제로 `arguments` 를 받는 도구는 벗기지 않는다** —
         # use_tool(tool_name, arguments) 이 그렇다. 서명을 보고 판단한다.
-        if (isinstance(arguments, dict) and len(arguments) == 1
-                and isinstance(arguments.get('arguments'), dict)):
-            try:
-                import inspect
-                _takes_arguments = 'arguments' in inspect.signature(handler).parameters
-            except (TypeError, ValueError):
-                _takes_arguments = False
-            if not _takes_arguments:
-                logger.debug(
-                    f"[VirtualToolResolver] unwrapped double-nested arguments for "
-                    f"'{tool_name}': {list(arguments['arguments'].keys())}")
-                arguments = arguments['arguments']
+        tool_name, arguments = extract_tool_call(params, target_id,
+                                                 handler=handler)
 
         # @ANCHOR: ARGUMENT_ALIAS_NORMALIZERS
         # LLM sometimes generates parameter names that differ from the actual

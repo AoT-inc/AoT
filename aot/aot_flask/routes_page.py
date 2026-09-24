@@ -1086,7 +1086,7 @@ AUDIT_ACTION_CHOICES = [
     'login.success', 'login.failure', 'login.locked', 'logout',
     'password.reset', 'user.create', 'user.modify', 'user.delete',
     'settings.change', 'output.control', 'data.export', 'data.import',
-    'apikey.issue', 'remote.token_issue',
+    'apikey.issue', 'apikey.profile_change', 'remote.token_issue',
 ]
 
 

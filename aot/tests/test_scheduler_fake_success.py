@@ -416,6 +416,12 @@ def test_execute_scheduled_action_state(monkeypatch, name, result, expect_comple
                         staticmethod(lambda *a, **k: result))
     monkeypatch.setattr(svc, 'set_execution_context', lambda **k: None)
     monkeypatch.setattr(svc, 'clear_execution_context', lambda: None)
+    # 이 시험은 상태 기록만 본다 — 책임자·스코프 판정(DB 필요)은 따로
+    # (test_write_scope_entry_points). 책임자 없는 시스템 예약으로 둔다.
+    monkeypatch.setattr(svc.AISchedulerService, '_scope_denies',
+                        staticmethod(lambda *a, **k: None))
+    monkeypatch.setattr(svc.AISchedulerService, 'job_owner_uuid',
+                        staticmethod(lambda *a, **k: None))
 
     written = {}
 

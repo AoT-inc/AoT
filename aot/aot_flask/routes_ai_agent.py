@@ -46,6 +46,12 @@ def page_ai_dashboard():
                            # 플래시가 쌓여 **다음 화면**에 뜬다.
                            can_decide=user_has_permission('edit_controllers',
                                                           silent=True),
+                           # 제어 요청 승인 — 도구마다 권한이 다르다(작기 운영은
+                           # edit_plots). 하나라도 결정할 수 있으면 버튼을 그리고,
+                           # 항목별 판정은 목록 API 의 can_decide 가 한다.
+                           can_decide_requests=(
+                               user_has_permission('edit_controllers', silent=True)
+                               or user_has_permission('edit_plots', silent=True)),
                            # 물리 제어 목록은 게이트가 정본이다(화면에 하드코딩 금지).
                            physical_tools=sorted(gate.PHYSICAL_TOOLS))
 

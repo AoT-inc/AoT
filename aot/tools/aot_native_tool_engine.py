@@ -135,29 +135,35 @@ class AoTNativeToolEngine:
             "_native_devices_snapshot": devices,  # pre-computed for execute()
         }
 
+    # 장치 id 를 선택지(enum)로 싣지 않는다 — 현장 장치 수만큼 도구 정의가
+    # 커지고(장치 140대에 약 3천 토큰), 대화마다 그 값을 치른다. 대신 이름도
+    # 받아 서버가 푼다(모호하면 후보). 인자 모양은 device_ids 를 받는 것 말고는
+    # 그대로다. 옛 서명(device_ids 인자)은 호출자 호환으로 남긴다.
     @staticmethod
-    def _schema_get_sensor_reading(device_ids: List[str]) -> Dict:
+    def _schema_get_sensor_reading(device_ids: List[str] = None) -> Dict:
         return {
             "name": "get_sensor_reading",
             "description": (
-                "Retrieve the latest measurement value(s) for a specific sensor device. "
-                "Returns timestamp, value, and unit."
+                "Latest value of one or more sensors (value, unit, timestamp). "
+                "For history or statistics use get_sensor_detail."
             ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "device_id": {
                         "type": "string",
-                        "description": "The unique_id of the Input (sensor) device.",
-                        "enum": device_ids,
-                    }
+                        "description": "Sensor unique_id or name.",
+                    },
+                    "device_ids": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Several sensors at once (max 10).",
+                    },
                 },
-                "required": ["device_id"],
             },
         }
 
     @staticmethod
-    def _schema_set_output_state(device_ids: List[str]) -> Dict:
+    def _schema_set_output_state(device_ids: List[str] = None) -> Dict:
         return {
             "name": "set_output_state",
             "description": (
@@ -169,8 +175,7 @@ class AoTNativeToolEngine:
                 "properties": {
                     "device_id": {
                         "type": "string",
-                        "description": "The unique_id of the Output device.",
-                        "enum": device_ids,
+                        "description": "Output unique_id or exact name.",
                     },
                     "state": {
                         "type": "string",
@@ -198,13 +203,35 @@ class AoTNativeToolEngine:
 
     @staticmethod
     def _exec_get_sensor_reading(params: Dict) -> Dict:
-        device_id = params.get("device_id")
-        if not device_id:
-            return {"status": "error", "message": "device_id is required"}
-        
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+        from flask import current_app
+        with current_app.app_context():
+            tokens, err = S._targets_arg(params.get("device_id"),
+                                         params.get("device_ids"), "device_id")
+            if err:
+                return dict({"status": "error",
+                             "message": err.get("error")}, **err)
+            if len(tokens) == 1:
+                return AoTNativeToolEngine._sensor_reading_one(tokens[0])
+            return S._for_each_target(tokens, AoTNativeToolEngine._sensor_reading_one)
+
+    @staticmethod
+    def _sensor_reading_one(token) -> Dict:
         from flask import current_app
         with current_app.app_context():
             try:
+                from aot.tools.aot_data_tool_service import AoTDataToolService as S
+                from aot.databases.models import CustomController, Input
+                # 이름이면 센서(Input)나 집계 함수로 푼다 — 모호하면 후보.
+                row = (Input.query.filter_by(unique_id=token).first()
+                       or CustomController.query.filter_by(unique_id=token).first())
+                if row is None:
+                    row, _kind, rerr = S._read_device(token)
+                    if rerr:
+                        return dict({"status": "error",
+                                     "message": rerr.get("error") or rerr.get("message")},
+                                    **rerr)
+                device_id = row.unique_id
                 # Delegate to the InfluxDB-backed reader used by get_sensor_detail —
                 # there is no SQLite Measurement.input_id/timestamp/value column;
                 # live readings live in InfluxDB, not in the measurement-type table.
@@ -224,6 +251,7 @@ class AoTNativeToolEngine:
                 return {
                     "status": "success",
                     "device_id": device_id,
+                    "name": getattr(row, "name", None),
                     "timestamp": latest["t"],
                     "value": latest["v"],
                     "unit": latest["u"],
@@ -237,22 +265,40 @@ class AoTNativeToolEngine:
         device_id = params.get("device_id")
         state = params.get("state")
         duration = params.get("duration", 0)
+        # 실패 응답의 `dispatched`: False = 명령을 보내기 전의 확정 실패. 보낸 뒤의
+        # 실패는 안쪽 operate_device 결과가 dispatched=True 를 싣는다(실행층이
+        # "모름" 으로 알린다 — mcp_safety_gate.annotate_write_outcome).
         if not device_id:
-            return {"status": "error", "message": "device_id is required"}
+            return {"status": "error", "message": "device_id is required",
+                    "dispatched": False}
         # `state` is required by the schema, so a missing value is a caller bug —
         # not a reason to fall back to "off". Defaulting here would turn a
         # malformed "turn it on" into an actual valve close.
         if state not in ("on", "off"):
             return {"status": "error",
-                    "message": f"state must be 'on' or 'off', got {state!r}"}
+                    "message": f"state must be 'on' or 'off', got {state!r}",
+                    "dispatched": False}
         
         from flask import current_app
+        sent = False
         with current_app.app_context():
             try:
                 from aot.databases.models.output import Output
                 output = Output.query.filter_by(unique_id=device_id).first()
                 if not output:
-                    return {"status": "error", "message": f"Output device '{device_id}' not found"}
+                    # 이름으로 왔으면 푼다 — 모호하면 고르지 않는다(물리 명령이다).
+                    from aot.tools.aot_data_tool_service import AoTDataToolService as S
+                    output, _kind, rerr = S._read_device(device_id, kinds=('output',))
+                    if rerr:
+                        return dict({"status": "error",
+                                     "message": rerr.get("error") or rerr.get("message"),
+                                     "dispatched": False},
+                                    **{k: v for k, v in rerr.items()
+                                       if k not in ("status", "_reading")})
+                    device_id = output.unique_id
+                # 쓰기 시점 그룹 스코프 — 켜고 끌 출력으로 묻는다(묶여 있을 때만).
+                from aot.aot_flask.access import write_scope
+                write_scope.enforce(output)
 
                 # Delegate to the daemon control channel via AIActionService.
                 # _approved=True: this static method is only ever reached AFTER
@@ -264,6 +310,7 @@ class AoTNativeToolEngine:
                 # mcp_tool_audit_tracker.md #17) that approval already happened, instead of
                 # leaving that branch unguarded for every caller.
                 from aot.tools import providers
+                sent = True
                 result = providers.get('action_service').execute_action(
                     "control_output",
                     device_id,
@@ -276,4 +323,4 @@ class AoTNativeToolEngine:
                 return {"status": "success", "device_id": device_id, "state": state, "result": result}
             except Exception as exc:
                 logger.error(f"[NativeToolEngine] set_output_state error: {exc}")
-                return {"status": "error", "message": str(exc)}
+                return {"status": "error", "message": str(exc), "dispatched": sent}

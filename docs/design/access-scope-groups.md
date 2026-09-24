@@ -557,11 +557,259 @@ def execute_for_agent(app, tool_name, arguments, agent_unique_id=None, server_id
 > 백그라운드 AI 를 통해서는 일어날 수 있다. 면제를 조용히 두지 말고 이 표에
 > 남기고 매뉴얼에도 적는다.
 
-⚠ **예약 발화는 여기 들어가지 않는다.** 겉모습은 같지만(발화 시점에 사람이
-없다) §8-7 이 **생성 시점의 사람 uuid 를 실어 두기로** 정했으므로 답할 사람이
-있다. 예약을 "사람 없는 호출" 로 묶는 순간 §6-3 의 우회로가 다시 열린다 —
-**둘을 같은 규칙으로 다루지 말 것.** 예외는 그 uuid 가 없는 기존 예약뿐이고,
-그것은 `legacy-schedule` 이 0 이 될 때까지의 한시 면제다.
+**"사람이 있는가" 는 요청자 표지로 판정한다(2026-09-23).** 예전 인앱 경로는
+Flask 의 `has_request_context()` 로 판정했는데, 계획 실행기의 병렬 단계처럼
+요청 스레드에서 **워커 스레드로 넘어간** 호출은 요청 컨텍스트가 없어 백그라운드로
+오인되고 역할·그룹 검사를 통째로 건너뛰었다. 이제 요청 스레드에서 부른 사람을
+`ai_request_context` 에 잡아 두고(`current_requester`), 워커로 넘길 때 함께 넘긴다
+(`bind_worker` — 대화 번호와 요청자만, 첨부·깊이·자율은 넘기지 않는다). 표지가
+없으면 사람이 없는 호출이다. 코드가 gettext 때문에 스스로 여는 가짜 요청
+(`test_request_context`)은 environ 표지로 구분해 사람으로 치지 않는다.
+
+인앱 쓰기의 판정 자리는 `AIActionService.execute_action` 의 `_requester_denial`
+하나다: 역할(기록 쓰기 `edit_settings`, 작기 운영 `edit_plots`, 나머지 쓰기
+`edit_controllers` — 외부 MCP 게이트와 같은 표 `mcp_safety_gate.required_write_permission`)
+→ 그룹 스코프. 내장 MCP 서버로 가는 호출은 스코프를
+`tool_execution._scope_refusal` 이 감사 기록과 함께 보고, 신원은 요청자 표지에서
+받는다.
+
+**이름으로 준 대상도 판정 전에 푼다**(`tool_execution.scope_arguments`, 2026-09-23
+보강). uuid 만 훑으면 이름으로 주는 것만으로 스코프를 벗어난다.
+
+- 위치 이름 키는 처리기와 **같은 목록** `aot/tools/target_names.py` 를 읽는다
+  (`target_name` + 옛 별칭 `location`·`zone_name`·`entity_name`·`place`). 예전에는
+  판정이 `create_note` 의 별칭만 알아 `add_schedule(location=…)` 이 빠져나갔다.
+- 장치 id 자리(`device_id`·`output_id`·`unique_id`)의 이름도 `resolve_output`
+  으로 푼다 — 외부 MCP 경로는 예전에 이것을 풀지 않았다.
+- 함수 id 자리(`function_id`)의 이름, 자식 행 id(`action_id` → 부모 함수,
+  `job_id` → 그 일정이 움직이는 대상)도 푼다.
+- 모든 쓰기 도구에, 맨 위만이 아니라 **중첩 dict·목록 항목**까지 적용한다.
+  옛 action_type 은 `{'target_id', 'params': {...}}` 로 한 겹 싸서 온다.
+  **한계(깊이 8·목록 200)를 넘는 인자는 거부한다**(`scope.SCAN_LIMIT`) — 예전에는
+  넘는 부분을 조용히 건너뛰어 일괄 도구의 201번째 항목이 판정 밖에서 실행됐다.
+- 승인자 판정(`_approval_scope_denial`)도 같은 함수를 지난다.
+- 인앱 도구 호출의 인자는 실행 리졸버와 판정이 **같은 함수**로 푼다
+  (`aot/tools/tool_call_args.extract_tool_call`). 따로 풀던 때는
+  `{'arguments': {}, 'params': {...}}` 를 판정은 빈 인자로, 실행은 `params` 로 봤다.
+
+하지만 이 모든 것은 **짐작**이다. 위 목록이 매번 길어진 것 자체가 증거다 — 다음
+절(§6-2a)이 경계다.
+
+**uuid 는 문자열 속 조각까지 찾는다**(`scope._uuid_values`). 처리기는 값을
+`strip()` 해서 쓰고, 함수 동작 옵션은 `'<출력>,<채널>'` 처럼 붙여 담는데, 판정은
+정확히 36자인 문자열만 봤다 — `' ' + uuid` 가 판정을 빠져나갔다. 대가로 본문에
+다른 그룹 자원의 uuid 를 적은 쓰기도 거부된다(일부러 넓게 본다).
+
+**작기 운영은 `edit_plots` 다(2026-09-23).** 웹 구획 화면·구획 일지·작기
+프로그램이 `edit_plots`(설정 편집이 함의)를 요구하는데 AI 경로는 `edit_controllers`
+를 요구해, 작기만 맡은 사람은 막히고 제어만 가진 사람은 웹에서 못 하는 구획 편집을
+AI 로 할 수 있었다. 대상 도구는 레지스트리 도메인에서 파생한다
+(`tool_registry.plot_write_tools` = space 서랍의 쓰기 − 지도 편집
+`_SPACE_NON_PLOT_WRITES`). 지도 편집(`delete_geo_shape`·`set_device_location`)은
+웹과 같은 `edit_settings` 다(`tool_registry.map_edit_tools`, 2026-09-23 결정).
+
+**승인도 도구별 권한이다(2026-09-23 결정).** 승인은 "대신 눌러 주는 것" 이라
+직접 할 자격보다 넓을 수 없다. 승인자는 그 도구의 `required_write_permission` 을
+가져야 한다 — 작기 운영 `edit_plots`(설정 편집이 함의), 노트·지식·지도 편집
+`edit_settings`, 나머지 `edit_controllers`. 판정 자리는 `mcp_safety_gate._decide`
+하나이고(웹 승인 API·MCP `respond_to_confirmation` 공통, 승인·거부 모두), 채팅
+제안 승인(`AIAgentService._approval_denial`)도 같은 표다. 웹 승인 엔드포인트는
+"하나라도 결정할 수 있는 역할"(제어 또는 작기 운영)만 들이고, 목록 API 는 항목마다
+`can_decide` 를 실어 화면이 누를 수 없는 버튼을 그리지 않는다. MCP 에서는
+`respond_to_confirmation` 이 작기 운영·설정 편집만 가진 키에도 보이며, 키 역할과
+키 소유자의 DB 역할을 둘 다 본다(읽기 전용 키는 결정하지 못한다).
+
+> **TODO(미해결) — 인앱 채팅의 제3자 MCP 서버 도구.** 인앱 요청자 판정
+> (`AIActionService._is_write_action`)은 `mcp_tool_call` 의 도구 이름을 AoT 레지스트리
+> (`write_tools()`)로 분류한다. 사용자가 붙인 **외부(제3자) MCP 서버의 도구**는 그
+> 목록에 없으므로 전부 읽기로 분류되고, Monitor 도 채팅으로 그 도구를 부를 수 있다.
+> 그 서버가 쓰기 도구를 내놓으면 역할 검사가 없다. 서버 도구의 읽기/쓰기 표지
+> (MCP `annotations.readOnlyHint` 등)를 읽거나, 모르면 쓰기로 보는 방향으로 고쳐야
+> 한다(2026-09-23 검토에서 확인, 이번 변경에서는 고치지 않음).
+
+### 6-2a. 쓰기 시점 강제 — 판정은 **실제로 쓸 대상** 위에서 (2026-09-23)
+
+> **불변식: 그룹 스코프는 처리기가 쓰기 직전에 손에 쥔 행(해석된 대상)에서
+> 강제된다. 인자를 훑는 앞 판정(§6-2)은 이른 거부일 뿐 경계가 아니다.**
+
+검토 세 차례가 매번 새 우회를 찾았다. 전부 같은 모양이다 — 판정은 처리기보다
+**먼저** 인자를 훑어 대상을 짐작하는데, 처리기는 대상을 제각각 푼다:
+
+| 우회 | 처리기가 실제로 한 일 |
+|---|---|
+| 함수 id 자리에 **이름** | `Conditional`·`Trigger`·`PID`·`CustomController` 를 `unique_id == x OR name == x` 로 찾음 |
+| 일괄 항목 201개 | 판정은 앞 200개만 봄, 처리기는 전부 씀 |
+| 인앱 `{'arguments': {}, 'params': {...}}` | 판정은 빈 인자, 실행은 `params` |
+| 일정 id(정수)·시퀀스 단계 id | 판정은 uuid 모양만 봄, 처리기는 그 행을 찾아 **대상·부모**에 씀 |
+
+짐작을 아무리 넓혀도 다음 처리기가 다른 길로 대상을 풀면 다시 샌다. 그래서
+판정을 처리기 쪽으로 옮겼다.
+
+**강제 지점 — `aot/aot_flask/access/write_scope.py`.**
+
+- `acting_as(user_uuid)` — 실행층이 호출 동안 **누가 쓰는가** 를 스레드에 묶는다.
+  **쓰기 도구일 때만** 묶는다 — 읽기 경로의 리졸버가 거부를 던지면 안 된다.
+  `bind_worker` 가 워커 스레드로 넘긴다. `also_acting_as` 는 한 사람을 **더**
+  붙인다(붙은 사람 전원이 통과해야 쓴다).
+
+**사람이 시킨 쓰기의 입구와 묶는 신원**(2026-09-23 전수):
+
+| 입구 | 묶는 자리 | 신원 |
+|---|---|---|
+| 외부 MCP(stdio·HTTP·REST) | `tool_execution._run_gated_tool` | 키 소유자 |
+| 외부 MCP — 승인된 확인 번호로 재호출 | 같은 자리 + `also_acting_as` | 키 소유자 **와** 승인자 |
+| 승인 화면·`respond_to_confirmation` 뒤 서버 실행 | `mcp_safety_gate.execute_approved` | 승인자 |
+| 인앱 AI(`virtual_tool_call`·`mcp_tool_call`·옛 action_type) | `AIActionService.execute_action` | 요청자(로그인 안 했으면 익명 — 쓰기는 거부) |
+| 인앱 `mcp_tool_call` → 내장 서버 `use_tool` | 위와 같음 — 판정·분류는 **안쪽 도구**로(`tool_call_args.unwrap_use_tool`) | 요청자 |
+| 채팅 제안 승인 | `AIAgentService.execute_logged_action` → `execute_action` | 승인 누른 사람 |
+| 예약 발화 | `ai_scheduler_service._execute_scheduled_action` | 예약 책임자(`SchedulerJobMeta.user_id`) |
+| 예약 만들기(`/api/v1/scheduler/propose`) | 만들기 전 `job_denial` | 로그인한 사람 |
+| 예약 승인(`/api/v1/scheduler/approve`) | `approve_job(approver=)` | 승인자 |
+| 웹 일정 편집·삭제·거부(`/api/v1/scheduler/jobs/<id>`, 옛 `/api/scheduler/job/<id>`·일괄) | `acting_as_current_user` | 로그인한 사람 |
+| 웹 구획 단계 자원 켜기(`/api/geo/plot/<id>/resources`) | `acting_as_current_user` — 켜기 **전에** 대상 함수 전부 판정 | 로그인한 사람 |
+
+예약은 **실제로 돌 도구**로 판정한다(`AISchedulerService.job_denial` — 안쪽 도구의
+`required_write_permission` + `can_operate_tool_call(scope_arguments(...))`). 겉의
+`target_id` 는 도구 호출이면 도구 이름이라 그것으로 물으면 늘 통과했다.
+
+- **책임자**: 만든 사람. 사람이 만든 예약은 호출자가 `user_id` 를 넘기지 않아도
+  묶인 사람(없으면 인앱 요청자)으로 채운다. 책임자가 없는 AI 초안을 사람이
+  승인하면 **승인자가 책임자가 된다**. 책임자가 이미 있으면 그대로 두고 승인자는
+  승인할 때 판정한다 — 승인자는 지금, 책임자는 발화할 때마다 판정받으므로 **둘 다**
+  통과해야 돈다.
+- **발화**: 책임자의 역할·스코프로 앞 판정 → 책임자로 묶고 요청자 표지도 같은
+  사람으로 걸어 실행 → 거부는 `FAILED`(`NOT EXECUTED: …`)로 남기고 스케줄러
+  스레드로 올려 보내지 않는다.
+- **승인 실행이 승인자의 그룹 밖이면** 확인 행을 `pending` 으로 되돌린다(승인자·
+  수정 인자는 지운다). 요청이 틀린 것이 아니라 그 승인자에게 권한이 없는 것이므로
+  권한 있는 다른 사람이 대기 목록에서 결정할 수 있어야 한다. 거부당한 승인자는
+  감사 로그(`mcp.approval_returned`)에 남고, 유효시간은 **처음 만든 때의 마감**을
+  그대로 쓴다 — 되돌릴 때마다 새로 세면 승인→거부를 되풀이해 요청을 끝없이 살려 둘
+  수 있다. 마감이 지났으면 대기로 돌리지 않고 `expired` 로 닫는다.
+- **`execute_approved` 는 `approved` 이고 승인자가 기록된(지금 있는 계정인) 행만**
+  실행한다. 아니면 `reason_code: not_approved` 로 거부한다 — 실행 신원이 승인자라
+  승인자가 없으면 쓰기 시점 판정이 "사람이 없는 호출" 로 면제된다.
+- ⚠ **물리 동작은 되돌릴 수 없다.** 위 되돌림은 처리기가 **쓰기 전에** 거부했을
+  때만 온다. 여러 대상을 한 번에 움직이는 도구는 모든 대상을 먼저 판정한 뒤
+  움직여야 하고, 중간 대상에서 막히면 이미 움직인 대상은 그대로 남는다(되돌림은
+  기록만 고친다).
+- **옛 일정 API**(`/api/scheduler/job/<id>` PUT·`/api/scheduler/jobs/batch`, 화면은
+  쓰지 않는다): 편집은 **초안(DRAFT)만** 받는다 — 승인된 예약은 APScheduler 에
+  인자가 이미 등록돼 있어 행만 바꾸면 기록과 실행이 어긋난다(409, 새 API
+  `/api/v1/scheduler/jobs/<id>` 를 쓸 것). 고친 뒤에는 **고친 사람**으로
+  `job_denial` 을 돌린다(대상 자리를 이름으로 준 경우도 처리기와 같은 리졸버로
+  푼다 — 전에는 장치 자리만 풀어 `function_id` 에 함수 이름을 주면 통과했다).
+  일괄 승인은 단건 승인과 같은 `approve_job(approver=…)` 을 거친다(판정·책임자
+  기록·APScheduler 등록).
+- **앞 판정(`_scope_refusal`)이 깨지면 쓰기는 거부**한다(읽기는 통과).
+
+**남은 면제 — 묶는 사람이 없는 쓰기**(전부 "물을 사람이 없다" 는 같은 이유):
+
+- 데몬·함수·조건의 자체 동작, 백그라운드 AI 잡·주기 요약(§6-1·§6-2).
+- **시스템 예약** — `SchedulerJobMeta.user_id` 가 NULL 인 행: 함수·데몬이 만든 것,
+  사람이 승인한 적 없는 AI 초안, 이 규칙 이전의 기존 예약(§8-7 `legacy-schedule`).
+  책임자가 지워진 예약도 여기 든다 — 다만 **말없이 들지 않는다**(아래 "책임자 없는
+  예약").
+- 승인자 uuid 가 없는 확인 행(키에 소유자가 없는 인증 꺼짐 모드).
+- 웹 화면의 일반 쓰기 라우트(장치·함수·대시보드 편집 등)는 이 모듈이 아니라
+  라우트 자신의 스코프 판정(§5-2 초크포인트)을 지난다 — 처리기(`AoTDataToolService`)
+  를 곧바로 부르는 라우트만 위 표처럼 묶는다.
+- `enforce(target)` — 처리기·공용 리졸버가 쓸 행을 손에 쥔 자리에서 부른다. 행
+  종류로 판정한다: 장치(자기 탭), 위젯(대시보드), 탭·대시보드·지도·시설(자기
+  자신), **자식 행은 부모로**(`Actions` → 함수), **일정은 그것이 움직이는 대상으로**
+  (`SchedulerJobMeta.target_id` + 인자 속 장치), 지도 도형은 연결된 장치·시설로.
+  묶인 사람이 없으면(사람이 없는 호출 — §6-1·§6-2) 아무것도 하지 않는다.
+- 거부는 `WriteScopeDenied` — **`BaseException`** 이다. 처리기 여럿이
+  `except Exception:` 으로 조회 실패를 삼키고 다른 길(부분 이름 등)로 넘어가는데,
+  거부가 거기 삼켜지면 그 다른 길이 쓴다. 묶은 실행층만 잡아 앞 판정과 같은 모양의
+  거부(`reason_code: group_scope`)로 바꾸고 세션을 되돌린다. 처리기가 어떻게든
+  삼켜도 묶음에 거부가 기록되므로 실행층이 결과를 거부로 바로잡는다.
+- 판정이 깨지면 **거부**로 닫는다(이미 사람이 쓰려는 자리다).
+
+**강제가 걸린 자리**(공용 리졸버에 걸면 그것을 쓰는 처리기가 전부 덮인다):
+`device_resolver.resolve_device`(출력·입력 — `operate_device`·`schedule_device_control`·
+옛 경로), `_target_by_id`·`_resolve_note_target`(일정·노트 대상, 일괄 검증),
+`_resolve_schedule_job`(일정 id), `_set_function_activation`·`_set_entity_activation`
+(함수 이름), 시퀀스 조회(`configure_sequence_day`·`modify_sequence_schedule`·
+`modify_sequence_step` 단계 → 부모), `modify_function_options`·`delete_function`·
+`create_sequence_function`(만들기 **전에** 장치), 입력·출력 수정·삭제, 위젯
+(대시보드·옮길 대시보드)·탭, `rebind_device`(양쪽 장치), `set_device_location`,
+`delete_geo_shape`(연결된 장치·시설), `create_note`(직접 준 `target_id`),
+`set_output_state`(네이티브), 옛 action_type(`_resolve_target` 이 푼 대상,
+`edit_device`, `register_device` 의 도형·지도), 물리 제어 리졸버.
+
+**스코프 대상이 아닌 쓰기**는 그대로다 — 구획·작기 프로그램·단계(웹에서도 그룹
+밖), 노트 보관·공지·지식·라이브러리, AI 에이전트 설정, GIS 레이어, 새로 만드는
+행(탭 없이 생긴다). 지도 도형 자체(구역·자리)의 지도 단위 스코프는 여기서 새로
+걸지 않았다 — 구역 스코프는 따로 다룬다. 이 분류는
+`aot/tests/test_write_scope_enforcement.py::TestEveryWriteToolIsCovered` 가
+고정한다: 레지스트리에 새 쓰기 도구가 생기면 강제 자리를 지나거나 "스코프 대상
+아님" 에 이유와 함께 적어야 테스트가 통과한다.
+
+**새 쓰기 처리기를 쓸 때:** 쓸 행을 찾은 직후 `write_scope.enforce(row)` 를
+부르거나, 이미 강제하는 공용 리졸버로 찾는다. 인자 짐작 쪽(`scope_arguments`)을
+넓히는 것으로 대신하지 말 것.
+
+**책임자 없는 예약 (결정 2026-09-23).** 면제는 두되 보이게 한다.
+
+- **채우기** — 데몬이 기동할 때 한 번 `AISchedulerService.backfill_job_owners()`
+  (몇 번 돌아도 같다, 새 컬럼·마이그레이션 없음). 책임자 := `decided_by` →
+  `proposed_by` → `last_edited_by` 중 **uuid 모양이고 지금 있는 켜진 사람 계정의
+  `unique_id` 와 같은** 첫 값(내부 AI 서비스 계정 제외). **이름으로는 잇지 않는다**
+  — 칸에 분류어(`AI`·`HUMAN`·`SYSTEM`·`CALENDAR` 등)가 섞여 있어, 계정 이름을 그
+  낱말로 바꾸면 남의 예약을 가져갈 수 있다. 찾은 사람으로 `job_denial` 이 통과할
+  때만 쓰고, 막히면 책임자 없음으로 두고 로그에 남긴다(다음 칸의 다른 사람으로
+  넘어가지 않는다). 없는 계정·꺼진 계정을 가리키는 `user_id` 는 먼저 NULL 로 풀고
+  예약 감사(`OWNER_REMOVED`)에 남긴다.
+  ⚠ 현재 스키마에서 이 세 칸은 `String(10)` 이고 쓰는 곳이 전부 분류어만 적는다 —
+  운영 DB 복사본으로 돌려 본 결과 채워진 행은 없었다. 채우기는 uuid 가 들어간 옛
+  행이 있을 때를 위한 것이고, 실제 해소는 아래 지정이다.
+- **계정 삭제** — `user_del` 이 `release_owner_jobs` 로 그 사람의 예약을 책임자
+  없음으로 돌리고 감사에 남긴다. 풀기와 삭제는 **한 커밋**이다 — 삭제가 실패하면
+  풀기도 되돌린다. **예약은 멈추지 않는다**(현장 예약을 한꺼번에 세우지 않는다는
+  결정). 자기 자신은 지울 수 없다(`unique_id` 끼리 비교).
+- **계정 끄기**(`is_enabled=False`) — 지워진 계정과 같게 본다. `user_mod` 가 끄는
+  것과 같은 커밋으로 그 사람의 예약을 풀고(감사 `OWNER_REMOVED`, 사유 disabled),
+  예약은 계속 돈다. 꺼진 사람의 권한으로 예약이 도는 일도, 끄는 것만으로 예약이
+  멈추는 일도 없게 하려는 것이다. 이 규칙 이전에 꺼진 계정이 책임자인 행은
+  `job_owner_uuid` 가 None 으로 보고(발화는 책임자 없음으로), 기동 때 채우기가
+  푼다. 꺼진 계정은 지정 후보에 나오지 않고, 지정 API 는 409 로 거부한다. 계정을
+  다시 켜도 예약은 되돌아가지 않는다 — 관리자가 다시 지정한다.
+- **남은 것** — 계속 돈다(시스템 예약 면제). 스케줄러 화면의 활성 작업 목록에
+  책임자 열이 "책임자 없음" 으로 보이고, 사용자 관리 권한(`edit_users`)이 있는
+  사람은 작업 자세히에서 책임자를 지정한다(`POST /api/v1/scheduler/jobs/<id>/owner`).
+  지정은 새 책임자로 `job_denial` 을 돌려 역할·그룹 밖이면 거부하고(403), 예약
+  감사(`OWNER_ASSIGNED`)와 감사 로그(`schedule.owner_assign`)에 남는다. 이미
+  책임자가 있는 예약은 바꾸지 않는다(409).
+- **책임자 자격 = 그 예약을 만들 수 있었던 사람** — 켜진 사람 계정이고, 그 종류의
+  예약을 만드는 입구의 권한을 가진 역할이어야 한다(`owner_role_denial`: 지금은
+  모든 종류가 `edit_controllers` — 사람 작업도 같다, 아래).
+  `job_denial` 만으로는 모자라다 — 안쪽 도구가 읽기인 예약은 누구에게나 통과해서
+  Guest·Kiosk 를 책임자로 세울 수 있었다. 지정 API(403)·기동 채우기·지정 상자
+  후보가 모두 이 자격을 본다. 후보 상자는 `job_denial` 의 역할 단계
+  (`job_write_permission`)까지 함께 걸러, 누르면 거부될 사람을 내놓지 않는다
+  (그룹 스코프는 지정 때 본다).
+- **사람 작업은 편집자만(2026-09-23 결정)** — `action_type='human'` 을 만들고·고치고·
+  지우는 모든 입구가 `HUMAN_TASK_PERMISSION`(= `edit_controllers`)을 본다. 그 아래
+  역할은 보기만 한다 — "보기 전용인데 이것만은 된다" 는 예외가 현장에서 헷갈려서
+  두 층(보기만 / 편집자)으로만 나눈다. 입구: 스케줄러 화면·API(원래 제어),
+  AI·MCP `add_schedule`·`add_schedule_batch`·`edit_schedule`·`delete_schedule`
+  (`required_write_permission` → 제어), 지도 `/api/geo/schedule`·노트
+  `/notes/<id>/schedule`(`human_task_write_denied`, 예전 `edit_settings`),
+  노트 링크 해제의 `cancel_job`(링크만 끊기는 노트 편집 `edit_settings` 그대로),
+  구글 달력 가져오기(`calendar_sync_service.pull_allowed` — 연결은 자기 계정
+  동작이라 권한 문이 없어, 전에는 어떤 역할이든 달력으로 사람 작업·제어 초안을
+  만들고 내보낸 예약의 시각을 고칠 수 있었다; 내보내기는 그대로). 화면은
+  `can_edit_human_tasks()`(템플릿 전역)로 노트 위젯의 "예정으로"·"예정 취소"와
+  노트 편집 대화상자의 취소 버튼을 숨긴다. `job_denial` 도 `human` 을 쓰기로 보고
+  `edit_controllers` 를 요구하므로 입구·판정·책임자 자격이 한 값으로 맞는다(전에
+  있던 "설정 편집만으로 만들 수 있지만 책임자는 못 된다" 어긋남은 사라졌다).
+  구획 삭제가 그 구획의 예약을 보관으로 내리는 것은 구획 정리의 부수 효과라
+  구획 권한(`edit_plots`) 그대로다.
+
+⚠ **예약 발화를 "사람이 없는 호출" 로 다루지 말 것.** 겉모습은 같지만(발화
+시점에 사람이 없다) §8-7 이 **책임자 uuid 를 실어 두기로** 정했으므로 답할 사람이
+있다 — 발화는 그 사람으로 묶는다(위 표). 면제는 책임자가 없는 시스템 예약뿐이다.
 
 `mcp_auth.resolve_key()` 가 이미 키 행을 돌려주므로 **외부 MCP 축은 자리가 있다.**
 없는 것은 인앱 채팅 축이다.
@@ -966,7 +1214,9 @@ id 가 생기면 그 인자는 후보에서 조용히 빠진다 —
 소유자만 확인했고 역할도 그룹도 보지 않아서, **Monitor 가 자기 채팅의 출력
 켜기 제안을 승인해 장치를 실제로 켰다**(E2E 스택 재현). 이제
 `execute_logged_action` 이 실행 직전에 승인자(로그인한 사람)를 본다 — 쓰기
-제안이면 `edit_controllers`, 그다음 ③과 같은 `can_operate_tool_call` 로 대상.
+제안이면 웹과 같은 역할 권한(`required_write_permission` — 대부분
+`edit_controllers`, 노트·지식 `edit_settings`, 작기 운영 `edit_plots`), 그다음 ③과
+같은 `can_operate_tool_call` 로 대상.
 단건·`'all'` 배치·autonomy=`auto` 자동 실행이 모두 이 함수를 지난다. 읽기 제안
 (도구 레지스트리에서 쓰기가 아닌 것)은 막지 않고, 레지스트리에 없는 이름은
 쓰기로 본다. `execute_action` 자체에 걸지 않은 이유: 예약 발화처럼 사람이 없는

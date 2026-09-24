@@ -78,6 +78,20 @@ FUNCTION_INFORMATION = {
         'outdoor sensors, or optionally from the ext_context_collector function.'
     ),
 
+    # AI 가 옵션을 고를 때 읽는 한 줄(get_function_detail 의 options_note) —
+    # 화면 문구가 아니라 번역하지 않는다. 프로필 벤치마크(26-09-24) lat_24:
+    # "목표 온도 25도로" 에 모델이 없는 target_temperature 나 범위 이름
+    # 'temperature' 를 목표값 칸으로 골랐다. 목표는 옵션이 아니다 — 온도 우선
+    # 기준(control_basis)에서는 단계의 주간/야간 온도를 따르고, 이 옵션들은
+    # 그 목표가 머무를 범위와 한계만 정한다(basis.temperature_basis).
+    'ai_options_note': (
+        "No option holds a target temperature or humidity. Targets come from the "
+        "linked plot's crop and current stage (with control_basis 'temperature', "
+        "the stage's day/night temperature); these options only set the range "
+        "they are kept in (guide_T_min/guide_T_max, guide_RH_min/guide_RH_max) "
+        "and hard limits (temp_min/temp_max, humid_min/humid_max)."
+    ),
+
     'options_enabled': ['custom_options', 'enable_actions'],
     'options_disabled': ['measurements_select', 'measurements_configure'],
 

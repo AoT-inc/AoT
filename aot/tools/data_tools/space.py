@@ -47,12 +47,43 @@ class SpaceToolsMixin:
 
         return [cut(n, 1) for n in nodes]
 
+    #: 공간 트리에서 장치로 치는 노드 종류 — 기본 보기에서 개수로 접는다.
+    _TREE_DEVICE_TYPES = ('aot_device', 'device')
+
     @classmethod
-    def get_spatial_tree(cls, depth=2, filter_type=None):
+    def _fold_devices(cls, nodes):
+        """곳(대지·구역·시설…)은 **모든 깊이**에서 남기고, 장치 노드는 그 곳의
+        `devices` 개수로 접는다. 노드에는 이름·종류·unique_id 만 남긴다."""
+        def fold(node):
+            kids = node.get('children') or []
+            places = [fold(c) for c in kids
+                      if c.get('type') not in cls._TREE_DEVICE_TYPES]
+            ndev = sum(1 for c in kids
+                       if c.get('type') in cls._TREE_DEVICE_TYPES)
+            out = {k: node.get(k) for k in ('name', 'type', 'unique_id')
+                   if node.get(k) is not None}
+            if places:
+                out['children'] = places
+            if ndev:
+                out['devices'] = ndev
+            return out
+        return [fold(n) for n in nodes]
+
+    @classmethod
+    def get_spatial_tree(cls, depth=None, filter_type=None):
         """[읽기전용] 공간 계층(대지 > 구역 > 장치) 트리.
 
-        `depth` 는 **최대 깊이**다(루트가 1). 기본 2 — 대지와 그 바로 아래
-        구역까지다. 장치까지 펴려면 3 이상, 전부 보려면 0 을 준다.
+        **기본(depth 없음)은 곳만 전부다** — 대지·구역·시설을 모든 깊이에서
+        싣고, 장치는 곳마다 `devices` 개수로 접는다(2026-09-24).
+
+        예전 기본은 depth=2 였다. 대지 안에 구역이 두 겹(3포장 > 1구역 > 3-1)
+        이면 3-1 이 `children_omitted` 의 숫자로만 남아, 모델이 "3-1 구역은
+        없다" 고 답했다(재측정 lat_21). 게다가 깊이 2 까지의 장치 노드와 속성
+        때문에 응답이 오히려 컸다 — 벤치 DB 실측: depth 2 약 14.3k 추정 토큰,
+        곳만 약 6.3k. 곳을 다 싣는 쪽이 작고 빠짐이 없다.
+
+        `depth` 를 주면 예전처럼 **최대 깊이**(루트가 1)로 자르고 장치도
+        싣는다 — 장치까지 펴려면 3 이상, 전부 보려면 0.
 
         기본값을 얕게 두는 이유. 이 트리는 농장이 커질수록 장치 노드가
         대부분을 차지한다(실측 2026-08-26: 노드 154개 중 68개가 장치, 전체
@@ -86,6 +117,14 @@ class SpaceToolsMixin:
                 full_tree = [n for n in (filter_node(root) for root in full_tree) if n is not None]
 
             out = {"hierarchy": full_tree}
+            if (depth is None or depth == '') and not filter_type:
+                out["hierarchy"] = cls._fold_devices(full_tree)
+                out["_reading"] = (
+                    "Places only: every site, zone and facility at every level. "
+                    "'devices' is how many devices sit directly in that place — "
+                    "call again with depth (0 = everything) to list them, or "
+                    "use search_devices / get_device_list by name.")
+                return out
             try:
                 lvl = int(depth)
             except (TypeError, ValueError):
@@ -776,6 +815,9 @@ class SpaceToolsMixin:
         obj, kind = cls._find_placeable_device(device_id)
         if not obj:
             return {"error": f"Device not found: {device_id}"}
+        # 쓰기 시점 그룹 스코프 — 옮길 장치로 묻는다.
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(obj)
         try:
             if hasattr(obj, 'latitude'):
                 obj.latitude = float(lat)
@@ -833,6 +875,19 @@ class SpaceToolsMixin:
                 if not target_id and target_name:
                     target_id, _tt, resolved_name, _lat, _lng = \
                         cls._resolve_note_target(target_name)
+                    if not target_id and _tt == 'ambiguous':
+                        # 여러 곳에 걸린 이름을 "못 찾음" 이라 하면 사용자가
+                        # 이름을 고치려 든다. 고를 것은 이름이 아니라 곳이다.
+                        amb = cls._ambiguous_places(target_name) or []
+                        return {
+                            "status": "needs_disambiguation",
+                            "error": "ambiguous_name",
+                            "message": (f"'{target_name}' names {len(amb)} different "
+                                        "places. Ask which one, then retry with that "
+                                        "candidate's 'use_name' as target_name or its "
+                                        "'target_id' as target_id."),
+                            "candidates": amb,
+                        }
                     if not target_id:
                         return {
                             "status": "error",
@@ -874,6 +929,13 @@ class SpaceToolsMixin:
         from aot.aot_flask.geo.device_placement import delete_shape
         if not shape_id:
             return {"error": "shape_id is required"}
+        # 쓰기 시점 그룹 스코프 — 도형에 연결된 장치·시설로 묻는다(도형 자체의
+        # 지도 단위 스코프는 구역 스코프와 함께 따로 다룬다 — write_scope).
+        from aot.aot_flask.access import write_scope
+        _shape = GeoShape.query.filter(
+            GeoShape.unique_id == str(shape_id).strip()).first()
+        if _shape is not None:
+            write_scope.enforce(_shape)
         try:
             stype = delete_shape(shape_id, commit=True)
             if stype is None:
@@ -1022,6 +1084,21 @@ class SpaceToolsMixin:
                     "for what grew on the same spot before.")
             if registry_note:
                 result["growth_stage_unavailable"] = registry_note
+            # 도구 설명에 있던 읽는 법을 응답으로 옮겼다(B′) — 구획이 있을 때만.
+            plots = list(open_plots) + list(bay_plots)
+            if plots:
+                has_guidance = any((p.get('stage') or {}).get('guidance')
+                                   for p in plots)
+                result["_reading"] = [
+                    ("'stage.guidance' is what THAT plot's programme says to do "
+                     "in its current stage — quote it instead of generic crop "
+                     "advice." if has_guidance else
+                     "No plot here has programme guidance for its current stage "
+                     "('stage.guidance' is null) — say so; do not present generic "
+                     "crop advice as if it came from the programme."),
+                    "'facilities[].stage' is a stage NAME only; guidance is on the "
+                    "plots.",
+                ]
             return result
         except Exception as e:
             logger.exception("Error in get_crop_status")
@@ -1399,6 +1476,13 @@ class SpaceToolsMixin:
                 except (ValueError, TypeError):
                     return {"error": "on must be YYYY-MM-DD"}
 
+            if zone_id:
+                # unique_id 또는 이름(3-A) — 모호하면 후보를 돌려준다.
+                place, perr = cls._read_place(zone_id)
+                if perr:
+                    return perr
+                zone_id = place.unique_id
+
             if include_ended:
                 q = GeoPlot.query
                 if map_id:
@@ -1493,7 +1577,7 @@ class SpaceToolsMixin:
     def get_plot(cls, plot_id=None, row_spacing_cm=None,
                      plant_spacing_cm=None, edge_margin_cm=None,
                      bed_pitch_cm=None, rows_per_bed=None,
-                     recent_days=None, **extra):
+                     recent_days=None, plot_ids=None, **extra):
         """[읽기전용] 구획 하나의 상세 — 작물·기간·면적·치수 + 참조 센서 출처.
 
         간격 두 개를 주면 `capacity_estimate`(줄 수·그루 수)까지 센다.
@@ -1536,14 +1620,29 @@ class SpaceToolsMixin:
         위 경고는 여전히 유효하므로 **설명에 한 줄 포인터를 남겼다** — "응답의
         `_reading` 을 따르라". 그 한 줄까지 지우면 이 주석이 적어 둔 실패로
         그대로 돌아간다. 지우지 말 것.
+
+        대상은 unique_id 또는 이름(재배 중인 구획의 이름·작물·품종, 3-A).
+        여럿이면 `plot_ids`(최대 MAX_READ_TARGETS, 3-F).
         """
+        tokens, err = cls._targets_arg(plot_id, plot_ids, 'plot_id')
+        if err:
+            return err
+        kw = dict(row_spacing_cm=row_spacing_cm,
+                  plant_spacing_cm=plant_spacing_cm,
+                  edge_margin_cm=edge_margin_cm, bed_pitch_cm=bed_pitch_cm,
+                  rows_per_bed=rows_per_bed, recent_days=recent_days)
+        if len(tokens) == 1:
+            return cls._plot_one(tokens[0], **kw)
+        return cls._for_each_target(tokens, lambda t: cls._plot_one(t, **kw))
+
+    @classmethod
+    def _plot_one(cls, plot_id, row_spacing_cm=None, plant_spacing_cm=None,
+                  edge_margin_cm=None, bed_pitch_cm=None, rows_per_bed=None,
+                  recent_days=None):
         try:
-            from aot.databases.models import GeoPlot
-            if not plot_id:
-                return {"error": "plot_id is required"}
-            row = GeoPlot.query.filter_by(unique_id=plot_id).first()
-            if row is None:
-                return {"error": f"plot not found: {plot_id}"}
+            row, perr = cls._read_plot(plot_id)
+            if perr:
+                return perr
             try:
                 brief = cls._plot_brief(
                     row, with_sensors=True,
@@ -1660,6 +1759,10 @@ class SpaceToolsMixin:
                     continue
 
             meas = str(t.get('measurement') or t.get('key')).strip().lower()
+            # 흙 목표(사용자가 만든 '지온' 항목 등)만 흙 채널과 견준다. 고정
+            # 항목(주·야간 온도·습도·VPD)은 전부 공기다.
+            if cls._is_soil_text(t.get('key'), t.get('label')):
+                meas = 'soil:' + meas
             got = current.get(meas)
             if got is None:
                 no_reading.append(label)
@@ -1671,6 +1774,8 @@ class SpaceToolsMixin:
                    # 'temperature' 라 이름만으로는 갈리지 않는다. 사람이 보고
                    # 판단할 수 있게 출처를 밝힌다.
                    'sensor': got.get('sensor'), 'measured_at': got.get('at')}
+            if got.get('channel'):
+                row['channel'] = got['channel']
             if got.get('others'):
                 row['other_sensors'] = got['others']
             try:
@@ -1717,9 +1822,11 @@ class SpaceToolsMixin:
                     'below': d['below'], 'below_hi': d['below_hi'],
                     'mean': d['mean'], 'mean_hi': d['mean_hi'],
                     'one_way': d['one_way'], 'agree': d.get('agree'),
-                    'sensors': [{'sensor': x['sensor'], 'days': x['days'],
-                                 'above': x['above'], 'below': x['below'],
-                                 'mean': x['mean'], 'one_way': x['one_way']}
+                    'sensors': [dict({'sensor': x['sensor'], 'days': x['days'],
+                                      'above': x['above'], 'below': x['below'],
+                                      'mean': x['mean'], 'one_way': x['one_way']},
+                                     **({'channel': x['channel_name']}
+                                        if x.get('channel_name') else {}))
                                 for x in (d.get('sensors') or [])],
                 } for d in (recent.get('drift') or [])]}
             # 지금은 해당 없는 항목에 **직전 그 시간대의 값**을 붙인다.
@@ -1739,12 +1846,15 @@ class SpaceToolsMixin:
 
         out['note'] = ("target vs current for THIS stage. 'delta' is current minus "
                        "target. There is no tolerance band in the data — do NOT invent "
-                       "one. Check 'sensor' before trusting a row: several sensors can "
-                       "report the same measurement (air vs soil temperature), and "
-                       "'other_sensors' lists the rest. 'not_this_period' targets do "
+                       "one. Check 'sensor' and 'channel' before trusting a row: several "
+                       "sensors can report the same measurement (air vs soil temperature), "
+                       "'other_sensors' lists the rest, and in 'rows' channels named as "
+                       "soil are kept out of air targets. 'not_this_period' targets do "
                        "not apply right now — their 'last_seen' is the most recent "
                        "reading from the window they DO apply to, so answer with that "
-                       "instead of dropping them. 'follows_curve' targets track a "
+                       "instead of dropping them. 'recent' and 'last_seen' follow the "
+                       "plot journal's calculation, which does NOT separate soil "
+                       "channels: check each entry's 'sensor'/'channel' there. 'follows_curve' targets track a "
                        "curve, not a fixed number — but 'recent' still counts "
                        "them, split by 'when'. 'recent' counts the last N days per "
                        "sensor: 'days'..'mean' are the LOW end of the per-sensor "
@@ -1780,6 +1890,106 @@ class SpaceToolsMixin:
             logger.debug('[StageTargetCheck] recent drift unavailable: %s', e)
             return None
 
+    # 채널 이름에 이 낱말이 있으면 **흙(배지) 속을 재는 채널**로 본다. 측정
+    # 이름만으로는 못 가른다 — 토양 노드는 공기 온·습도 채널과 토양온도 채널을
+    # 함께 갖고, 둘 다 'temperature' 다(`auto_vpd` 가 같은 이유로 채널 순서에
+    # 기댄다). 채널 이름은 사람이 붙인 것이라 언어가 섞인다: 화면이 지원하는
+    # 23개 언어(+영어)의 흙·땅·근권 낱말과 배지 재료 이름을 **한 목록**에 둔다.
+    # 배터리 채널을 이름으로 알아보는 `facility_sensors._BATTERY_NAME_TOKENS`
+    # 와 같은 방식이다.
+    #
+    # 표기 규칙(`_soil_word_patterns`):
+    #   - 띄어쓰기가 있는 문자(라틴·키릴)는 **낱말 단위**로만 맞춘다 — 'sol'
+    #     (프랑스어 흙)이 'solar' 에, 'jord'(노르웨이어)가 'jordbær'(딸기)에
+    #     걸리면 안 된다. 경계는 **글자**로 판정한다('soil_temp' 의 '_' 는 경계).
+    #   - 끝에 '*' 를 붙인 것은 **낱말 앞머리**로 맞춘다 — 합성어·굴절이 붙는
+    #     말('Bodentemperatur', 'почвы', 'talajhő…').
+    #   - 띄어쓰기가 없는 문자(한·중·일·태국·데바나가리)는 부분 문자열로
+    #     맞춘다('토양온도', '地温'). 한 글자짜리 '土' 처럼 다른 낱말('土曜')
+    #     안에 흔한 것은 넣지 않는다.
+    _SOIL_CHANNEL_WORDS = (
+        # en
+        'soil*', 'ground', 'root zone', 'rootzone', 'root-zone', 'substrate*',
+        'rockwool', 'stonewool', 'coir', 'cocopeat', 'coco peat', 'growing medium',
+        # de
+        'boden*', 'erde', 'substrat*', 'wurzelraum*', 'steinwolle', 'kokos*',
+        # es / pt / it
+        'suelo', 'sustrato', 'tierra', 'lana de roca', 'fibra de coco',
+        'zona radicular', 'solo', 'lã de rocha', 'suolo', 'terreno',
+        'substrato', 'lana di roccia', 'fibra di cocco', 'zona radicale',
+        # fr
+        'sol', 'terre', 'laine de roche', 'fibre de coco', 'zone racinaire',
+        # nl / sv / nn
+        'bodem*', 'grond*', 'substraat', 'steenwol', 'jord', 'jordtemp*',
+        'jordfukt*', 'stenull', 'steinull',
+        # pl / lt / hu / tr / id / vi
+        'gleb*', 'podłoż*', 'grunt*', 'wełna mineralna', 'dirvožem*',
+        'talaj*', 'kőzetgyapot', 'toprak*', 'toprağ*', 'taş yünü',
+        'tanah', 'media tanam', 'sabut kelapa', 'đất', 'giá thể', 'vùng rễ',
+        # ru / uk / sr
+        'почв*', 'грунт*', 'ґрунт*', 'субстрат*', 'минват*', 'мінват*',
+        'земљишт*', 'тло', 'zemljišt*', 'tlo', 'supstrat*',
+        # ko / ja / zh / zh_Hant
+        '토양', '지온', '배지', '근권', '흙', '암면', '코코피트', '상토',
+        '土壌', '地温', '培地', '根域', 'ロックウール', 'ココピート',
+        '土壤', '基质', '根区', '岩棉', '椰糠', '地溫', '基質', '根區',
+        # th / hi
+        'ดิน', 'วัสดุปลูก', 'मिट्टी', 'मृदा',
+    )
+
+    _soil_regex = None
+
+    @classmethod
+    def _soil_word_patterns(cls):
+        if cls._soil_regex is None:
+            import re
+            parts = []
+            for w in cls._SOIL_CHANNEL_WORDS:
+                prefix = w.endswith('*')
+                word = w.rstrip('*').lower()
+                # 라틴(베트남어 확장 포함)·키릴 = 띄어 쓰는 문자.
+                spaced = all(ch.isspace() or ord(ch) < 0x0590
+                             or 0x1E00 <= ord(ch) <= 0x1EFF for ch in word)
+                body = re.escape(word)
+                if not spaced:
+                    parts.append(body)
+                elif prefix:
+                    parts.append(r'(?<![^\W\d_])' + body)
+                else:
+                    parts.append(r'(?<![^\W\d_])' + body + r'(?![^\W\d_])')
+            cls._soil_regex = re.compile('|'.join(parts))
+        return cls._soil_regex
+
+    @classmethod
+    def _is_soil_text(cls, *texts):
+        low = ' '.join(str(t or '') for t in texts).lower()
+        return bool(low.strip()) and bool(cls._soil_word_patterns().search(low))
+
+    _module_channel_names_cache = {}
+
+    @classmethod
+    def _module_channel_name(cls, input_row, channel):
+        """사용자가 채널 이름을 비워 둔 경우 **모듈이 정한 채널 이름**
+        (`measurements_dict[ch]['name']`, 예: 'Soil Temperature'). 없으면 ''."""
+        dev = getattr(input_row, 'device', None) if input_row is not None else None
+        if not dev:
+            return ''
+        cache = cls._module_channel_names_cache
+        if dev not in cache:
+            names = {}
+            try:
+                from aot.utils.inputs import parse_input_information
+                info = (parse_input_information() or {}).get(dev) or {}
+                for ch, meta in (info.get('measurements_dict') or {}).items():
+                    nm = (meta or {}).get('name')
+                    if nm:
+                        names[str(ch)] = nm
+            except Exception:
+                names = {}
+            cache[dev] = names
+        nm = cache[dev].get(str(channel))
+        return str(nm).strip() if nm else ''
+
     @classmethod
     def _latest_by_measurement(cls, in_plot_ids, zone_ids=None, wanted=None):
         """측정 종류별 최신값 — {measurement: {'value','at','sensor','others'}}.
@@ -1794,6 +2004,13 @@ class SpaceToolsMixin:
         평균이 어느 쪽도 아닌 값이 되기 때문이고, 같은 측정을 여러 센서가
         재면 나머지를 `others` 로 함께 낸다 — 실측에서 공기 온도 목표가 토양
         센서 값과 비교됐다. 어느 센서인지 보이지 않으면 그것을 알 길이 없다.
+
+        **흙 속을 재는 채널은 따로 둔다**(`soil:<measurement>` 키). 채널 이름이
+        토양·지온 등을 말하면(`_is_soil_text`) 공기 쪽 후보에 섞지 않는다 —
+        벤치(26-09-23)에서 토양온도 채널이 공기 온도 행에 장치 이름만 달고
+        끼어 있었다. 버리지 않고 따로 두는 것은 흙 목표를 둔 프로그램이 그
+        값을 써야 하기 때문이다. 각 후보에 **채널 이름**(`channel`)을 싣는다:
+        같은 장치가 두 번 나오면 그것 말고는 무엇이 무엇인지 알 길이 없다.
         """
         out = {}
         try:
@@ -1809,8 +2026,9 @@ class SpaceToolsMixin:
             if not ordered:
                 return out
             rank = {d: n for n, d in enumerate(ordered)}
-            names = {i.unique_id: i.name for i in Input.query.filter(
+            inputs = {i.unique_id: i for i in Input.query.filter(
                 Input.unique_id.in_(ordered)).all()}
+            names = {k: i.name for k, i in inputs.items()}
 
             dms = DeviceMeasurements.query.filter(
                 DeviceMeasurements.device_id.in_(ordered)).all()
@@ -1831,6 +2049,7 @@ class SpaceToolsMixin:
             # 한 번 물어 계열마다 `last()` 를 내주므로 **1회**면 된다 —
             # 지도 위젯이 같은 이유로 이미 쓰고 있다.
             picks = []
+            ch_label = {}
             for m in dms:
                 conv = convs.get(m.conversion_id) if m.conversion_id else None
                 channel, unit, meas = return_measurement_info(m, conv)
@@ -1841,6 +2060,11 @@ class SpaceToolsMixin:
                 if want is not None and str(meas).strip().lower() not in want:
                     continue
                 picks.append((m.device_id, unit, channel, meas))
+                # 사용자가 채널 이름을 비워 두면 모듈이 정한 이름으로 본다 —
+                # 토양 노드의 흙 채널이 이름 없이 공기 목표에 끼는 것을 막는다.
+                ch_label[(m.device_id, channel, meas)] = (
+                    (m.name or '').strip()
+                    or cls._module_channel_name(inputs.get(m.device_id), m.channel))
 
             # `ok` 가 False 면 **쿼리가 못 돌았다**는 뜻이다. 그것과 "돌았는데
             # 그 계열에 값이 없다" 를 가르지 않으면, 값이 없는 정상 상태에서
@@ -1867,22 +2091,43 @@ class SpaceToolsMixin:
                 if got is None:
                     continue
                 at, value = got
-                found.setdefault(str(meas).strip().lower(), []).append({
-                    'value': value, 'at': str(at),
-                    'sensor': names.get(dev, dev),
-                    '_rank': rank.get(dev, 99)})
+                label = ch_label.get((dev, channel, meas)) or ''
+                key = str(meas).strip().lower()
+                if cls._is_soil_text(label):
+                    key = 'soil:' + key
+                cand = {'value': value, 'at': str(at),
+                        'sensor': names.get(dev, dev),
+                        '_rank': rank.get(dev, 99)}
+                if label:
+                    cand['channel'] = label
+                found.setdefault(key, []).append(cand)
+
+            def _pub(c, *fields):
+                d = {f: c[f] for f in fields}
+                if c.get('channel'):
+                    d['channel'] = c['channel']
+                return d
 
             for meas, cands in found.items():
                 cands.sort(key=lambda c: c['_rank'])
                 best = cands[0]
-                out[meas] = {'value': best['value'], 'at': best['at'],
-                             'sensor': best['sensor']}
-                rest = [{'sensor': c['sensor'], 'value': c['value']} for c in cands[1:]]
+                out[meas] = _pub(best, 'value', 'at', 'sensor')
+                rest = [_pub(c, 'sensor', 'value') for c in cands[1:]]
                 if rest:
                     out[meas]['others'] = rest
         except Exception as e:
             logger.debug("[StageTargetCheck] latest values unavailable: %s", e)
         return out
+
+    #: confirm_plot_stage 와 reschedule_plot_stage 중 무엇을 쓰나 — 둘의 설명이
+    #: stage_proposal 이 null 일 때 서로 어긋나 모델이 골라내지 못했다(재측정
+    #: lat_20). 기준은 **이미 일어났는가** 하나다. 도구 설명·응답이 이 문장을 쓴다.
+    STAGE_TOOL_RULE = (
+        "Stage tools: a change that ALREADY happened (the grower says so, or "
+        "'stage_proposal' suggests it) -> confirm_plot_stage, stage_key from "
+        "'stage_proposal' or 'stage_schedule', started_on = the day it happened. "
+        "A boundary still AHEAD (delay, bring forward, 'raise seedlings 20 days') "
+        "-> reschedule_plot_stage.")
 
     @classmethod
     def _plot_reading_notes(cls, brief):
@@ -1916,6 +2161,19 @@ class SpaceToolsMixin:
                 "suits the crop, or how it is doing, answer FROM THAT — do not list "
                 "raw sensor values instead. There is no tolerance band in the data, "
                 "so report the gap; do not invent 'good/bad' thresholds.")
+        # 습도 목표는 **공기** 상대습도다. 벤치(26-09-23)에서 이 행의 토양
+        # 노드 습도 채널(62%)을 흙 수분으로 읽은 답이 나왔다 — 실제 흙 수분은
+        # 22~25% 였다. 흙 수분은 목표 대조에 없으니 어디서 읽는지 말한다.
+        if any(str(r.get('key') or '') == 'rh'
+               or str(r.get('label') or '').lower() == 'humidity'
+               for r in (_tc.get('rows') or [])):
+            notes.append(
+                "The 'Humidity' row in 'target_check' is AIR relative humidity, "
+                "even when the sensor's name mentions soil — it is NOT soil "
+                "moisture. Soil moisture is measurement "
+                "'volumetric_water_content' and is not in target_check: read it "
+                "with get_zone_sensor_summary(measurement_type="
+                "'volumetric_water_content').")
         # 한 시점만 보면 "오늘 좀 높네" 로 끝난다. 며칠째 같은 쪽으로 벗어나고
         # 있다는 것은 **그 사람이 받아야 할 발견**이다 — 문헌 기준의 목표가 이
         # 현장에서 성립하지 않는다는 뜻일 수 있고, 그러면 고칠 것은 현장이
@@ -1964,6 +2222,14 @@ class SpaceToolsMixin:
                 notes.append(
                     "'capacity_estimate.ask_user' is an instruction, not a "
                     "remark. Follow it BEFORE reporting any plant count.")
+
+        # 단계 사건 도구 두 개의 경계(P3). 설명에도 같은 규칙을 한 줄로 둔다.
+        if 'stage_schedule' in brief or 'stage_proposal' in brief:
+            notes.append(cls.STAGE_TOOL_RULE + (
+                " 'stage_proposal' is null here — nothing is suggested, so "
+                "confirm only a change the grower says happened."
+                if brief.get('stage_proposal') is None and 'stage_proposal' in brief
+                else ""))
 
         if any(v.get('unassigned') for v in (brief.get('valves') or [])):
             notes.append(
@@ -2573,6 +2839,13 @@ class SpaceToolsMixin:
             if geometry and zone_id:
                 return {"status": "error",
                         "message": "give either geometry or zone_id, not both"}
+            # 쓰기 시점 그룹 스코프 — 구획을 놓을 지도·시설로 묻는다(스코프
+            # 대상인 지도·시설이 아니면 그냥 지나간다). 구획 자체는 웹에서도
+            # 그룹 밖이지만, 남의 지도·시설 안에 행을 만드는 것은 그 자원에
+            # 쓰는 일이다.
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce([v for v in (map_id, facility_id)
+                                 if isinstance(v, str) and v.strip()])
             if facility_id and (geometry or zone_id):
                 return {"status": "error",
                         "message": ("give either facility_id or a geometry "
@@ -2606,7 +2879,9 @@ class SpaceToolsMixin:
                 if not geometry:
                     return {"status": "error",
                             "message": f"shape {zone_id} has no polygon to copy"}
-                map_id = map_id or shape.geo_id
+                if not map_id and shape.geo_id:
+                    map_id = shape.geo_id
+                    write_scope.enforce(map_id)
                 # bay 스냅샷과 같은 이유로 **복사**다: zone 도형이 나중에 바뀌어도
                 # 과거 작기의 기하가 따라가면 "여기 뭐가 있었나" 의 답이 조용히
                 # 달라진다. 출처만 남긴다.
@@ -2884,8 +3159,10 @@ class SpaceToolsMixin:
         그래서 날짜를 지어내지 말 것: `get_plot` 의 `stage_proposal.started_on`
         이 자료에서 되짚은 날이고, 사람이 다른 날을 말하면 그것을 쓴다.
 
-        무엇을 확인할지는 `stage_proposal` 이 말해 준다. 제안이 없으면(=null)
-        확인할 전환이 없다는 뜻이다.
+        무엇을 확인할지는 `stage_proposal` 이 말해 준다. 제안이 없어도(=null)
+        사람이 "이미 넘어갔다" 고 말하면 확인한다 — 단계 키는 `stage_schedule`
+        에서, 날짜는 그 사람이 말한 날. 아직 오지 않은 경계를 옮기는 것은
+        `reschedule_plot_stage` 다(STAGE_TOOL_RULE).
         """
         try:
             from aot.aot_flask.geo import plot_io
@@ -2895,7 +3172,13 @@ class SpaceToolsMixin:
             if not stage_key:
                 return {"status": "error",
                         "message": ("stage_key is required — read it from "
-                                    "get_plot's stage_proposal.stage_key")}
+                                    "get_plot's stage_proposal.stage_key, or "
+                                    "stage_schedule for a change the grower "
+                                    "reports")}
+            started_on, derr = cls._confirm_stage_date(plot_id, stage_key,
+                                                       started_on)
+            if derr:
+                return {"status": "error", "message": derr}
             result, err = plot_io.accept_stage(
                 plot_id, stage_key=stage_key, started_on=started_on,
                 source='manual', decided_by='AI')
@@ -2907,6 +3190,50 @@ class SpaceToolsMixin:
         except Exception as e:
             logger.exception("Error in confirm_plot_stage")
             return {"status": "error", "message": str(e)}
+
+    _STAGE_DATE_REQUIRED = (
+        "started_on is required: get_plot has no pending stage_proposal for "
+        "this stage, so there is no date on record. Ask the grower which day "
+        "it happened ('YYYY-MM-DD') — do not assume today.")
+
+    @classmethod
+    def _confirm_stage_date(cls, plot_id, stage_key, started_on):
+        """confirm_plot_stage 의 전환일 → (날짜|None, 오류|None).
+
+        날짜를 주면 그대로. 없으면 그 단계에 대한 제안(stage_proposal)이 자료에서
+        되짚은 날을 쓰고, 제안이 없거나 다른 단계면 **묻는다** — 예전에는
+        처리기 아래(accept_stage)가 오늘로 채워, 재배자가 "지난주에 넘어갔다"
+        고 한 전환이 오늘 날짜로 기준점을 옮겼다(리뷰 26-09-24).
+        구획이 없거나 프로그램이 없으면 판단하지 않는다(처리기가 그 오류를 낸다)."""
+        if started_on and str(started_on).strip():
+            return started_on, None
+        try:
+            from aot.databases.models import GeoPlot
+            from aot.aot_flask.geo import plot_context
+            row = GeoPlot.query.filter_by(unique_id=plot_id).first()
+            if row is None or not row.program_uuid:
+                return None, None
+            # stage_proposal 은 프로그램 **요약 dict**(program_brief)를 받는다 — 모델 행을
+            # 넘기면 .get 에서 터지고, 그 예외가 삼켜져 늘 날짜를 되묻게 된다(26-09-24).
+            prop = plot_context.stage_proposal(
+                row, program=plot_context.program_brief(row))
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("_confirm_stage_date proposal failed: %s", e)
+            prop = None
+        if prop and prop.get('stage_key') == stage_key and prop.get('started_on'):
+            return prop['started_on'], None
+        return None, cls._STAGE_DATE_REQUIRED
+
+    @classmethod
+    def validate_confirm_plot_stage(cls, plot_id=None, stage_key=None,
+                                    started_on=None, **_extra):
+        """승인 앞 검사(tool_execution._PRE_GATE_VALIDATORS) — 날짜가 없고
+        제안에도 없으면 승인을 받기 전에 묻게 한다(승인 뒤에 실패하면 사람의
+        승인이 헛걸음이 된다)."""
+        if not plot_id or not stage_key:
+            return None
+        _d, err = cls._confirm_stage_date(plot_id, stage_key, started_on)
+        return {"error": err} if err else None
 
     @classmethod
     def reschedule_plot_stage(cls, plot_id=None, stage_key=None, started_on=None,
@@ -3151,7 +3478,23 @@ class SpaceToolsMixin:
             result, err = plot_io.apply_stage_resources(plot_id)
             if err:
                 return {"status": "error", "message": err}
-            return {"status": "success", "result": result}
+            out = {"status": "success", "result": result}
+            # 결과 읽는 법 — 도구 설명에서 옮겼다(B′). 해당하는 것만.
+            r = result if isinstance(result, dict) else {}
+            notes = []
+            if r.get('failed'):
+                notes.append("'failed' functions did NOT start — name them; "
+                             "only 'activated' ones are running.")
+            if r.get('unresolved'):
+                notes.append("'unresolved': this site has no device for that "
+                             "role, so nothing started for it — placing one is "
+                             "a human job.")
+            if r.get('ambiguous'):
+                notes.append("'ambiguous': several functions fit that role, so "
+                             "none was picked — ask which one.")
+            if notes:
+                out["_reading"] = notes
+            return out
         except Exception as e:
             logger.exception("Error in apply_plot_resources")
             return {"status": "error", "message": str(e)}

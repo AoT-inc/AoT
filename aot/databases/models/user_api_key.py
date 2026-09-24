@@ -38,6 +38,13 @@ SCOPE_FULL = 'full'
 SCOPE_READONLY = 'readonly'
 SCOPES = (SCOPE_FULL, SCOPE_READONLY)
 
+#: 도구 묶음(외부 MCP 에 보여 줄 도구의 범위). 값은
+#: `aot.tools.tool_registry.TOOL_PROFILES` 와 같아야 한다(검사가 대조한다).
+#: 모델이 도구 계층을 import 하지 않도록 여기에도 적는다.
+TOOL_PROFILE_OPERATIONS = 'operations'
+TOOL_PROFILE_CONFIGURATION = 'configuration'
+TOOL_PROFILES = (TOOL_PROFILE_OPERATIONS, TOOL_PROFILE_CONFIGURATION)
+
 
 class UserAPIKey(CRUDMixin, db.Model):
     """한 사용자가 가진 API 키 하나.
@@ -77,6 +84,16 @@ class UserAPIKey(CRUDMixin, db.Model):
     scope = db.Column(db.String(16), nullable=False, default=SCOPE_FULL,
                       server_default=SCOPE_FULL)
 
+    # 외부 MCP 에 보여 줄 도구 묶음 — 'operations'(일상 운영) 또는
+    # 'configuration'(운영 + 설정·작성). scope 와 다른 축이다: scope 는 무엇을
+    # 해도 되는가(보안 경계), 이것은 무엇을 목록에 싣는가(표면)다.
+    #
+    # NULL 은 "아직 배정 전" 이다. 칸이 생기기 전에 발급된 키는 기동 때
+    # `mcp_auth.backfill_key_tool_profiles` 가 최근 사용 기록을 보고 한 번
+    # 채운다 — 발급된 키의 동작을 업그레이드로 조용히 바꾸지 않기 위해서다.
+    # 채워지기 전에 들어온 연결은 운영으로 본다(mcp_auth.key_tool_profile).
+    tool_profile = db.Column(db.String(16), default=None, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # 폐기 시각. 행을 지우지 않고 여기에 시각을 적는다 — 지우면 "이 키는 언제
@@ -96,6 +113,12 @@ class UserAPIKey(CRUDMixin, db.Model):
     @property
     def is_readonly(self):
         return self.scope == SCOPE_READONLY
+
+    @property
+    def effective_tool_profile(self):
+        """화면에 보일 묶음 — 배정 전(NULL)이면 연결이 실제로 받는 운영."""
+        return (self.tool_profile if self.tool_profile in TOOL_PROFILES
+                else TOOL_PROFILE_OPERATIONS)
 
     @classmethod
     def find_active(cls, raw_key):

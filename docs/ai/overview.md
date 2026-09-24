@@ -65,7 +65,35 @@ The catalog is not one flat list. Listing every tool up front costs roughly 20K 
 - **4 meta tools, always listed alongside core:** `open_drawer` (lists a drawer's tools, or all drawers with no argument), `get_tool_detail` (one tool's full schema by name), `use_tool` (actually *calls* a drawer tool by name — the only way to execute one; `open_drawer`/`get_tool_detail` only return definitions), `respond_to_confirmation` (approve/reject a pending confirmation).
 - **101 tools live in 8 drawers**, grouped by purpose, and only appear once `open_drawer` is called: `device` (device control/state), `measurement` (sensors, environment, weather, energy), `function` (functions/controllers/sequences), `schedule` (scheduling), `record` (notes/notices/knowledge/advice), `space` (map/zones/facilities/plots), `definition` (device-definition CRUD), `system` (AI settings, system status, diagnostics, screens).
 
-This tiering is on by default; set `AOT_MCP_TOOL_TIERING=0` to fall back to listing the whole catalog flat (`aot/tools/tool_execution.py:132-239`, `aot/tools/tool_registry.py:1342-1560`).
+Drawers are now optional. External MCP connections list the key's whole tool profile (next section) with no drawers — that is the default. Set `AOT_MCP_TOOL_TIERING=1` (or `true`/`yes`/`on`) to bring the drawer layout back; it then works inside the key's profile and `open_drawer`, `get_tool_detail` and `use_tool` are listed again. The in-app assistant's built-in tool list keeps the drawer layout (`AOT_AI_BUILTIN_MCP_TIERING`, on by default).
+
+### Tool profiles per API key { #tool-profiles }
+
+Each API key also chooses which tools an external AI app sees — its **tool profile**. This is separate from the key's permissions: permissions decide what the key may do, the profile decides what is listed.
+
+- **Operations** (the default for new keys) — everyday work: reading devices, sensors, weather, schedules, notes and plots; controlling devices and functions; adjusting function options, sequence run times and existing sequence steps; scheduling; recording notes, notices, advice and plot-stage events.
+- **Operations + configuration** — adds setup tools: device definitions, creating or deleting automations and sequence steps, creating or editing plots and programs, map placement, dashboards and tabs, AI settings, archive and library-source management. The tool list sent to the AI in every conversation becomes much longer, so choose it only for keys that do setup work.
+
+Pick the profile when you issue a key under `Settings > Users` (API Key section, **AI Tools**), or change it later on the same screen without reissuing the key. Changing it takes the same permission as revoking a key (user editing) and is recorded in the audit log; issuing a new key additionally asks for a recent sign-in. A connected app may need to reconnect before it sees the new list. With drawers on, a drawer only holds tools from the key's profile.
+
+If a key on the operations profile calls a setup tool anyway, the server refuses it (`call_state: refused`, `reason_code: tool_profile`) with a message that says who can switch it and where; nothing is queued for approval. `get_tool_detail` and `open_drawer` answer the same way for tools and drawers outside the profile instead of reporting them as unknown or empty. When the key's permissions would block the tool anyway (for example a write tool on a read-only key), the message does not suggest switching, since that would not help. Other refusals — advice-only mode, the key's role, approval — never suggest switching: advice-only mode is a server-wide setting that no profile changes. Pending approvals for tools outside the profile are listed without the tool name (a neutral label and the area instead); the key can reject them but not approve them. The server instructions and `get_system_brief` also tell the AI which profile it is on, so it can point the user to the switch instead of saying the system cannot do something.
+
+- Keys issued before profiles existed are assigned once, on the first start after the upgrade: a key whose owner called a setup tool in the last 90 days gets operations + configuration, every other key gets operations. The audit log does not record which key made a call, so this is decided per person — all of one person's keys get the same profile. Adjust individual keys afterwards if needed.
+- The in-app assistant is not limited by profiles, and neither is the built-in AI's own service-account key (in-app device control goes through it). The screen shows no profile selector for that account's keys.
+- `knowledge_search` suggests saving findings with `knowledge_shelve` only on connections that can use it (the configuration profile, or the in-app assistant, with note-editing permission).
+- `set_output_state` and `list_available_devices` are no longer listed for API keys — `operate_device`, `get_device_list` and `search_devices` do the same jobs.
+- `AOT_MCP_TOOL_PROFILES=0` turns profiles off (every key sees the full list, as before). `AOT_MCP_DEFAULT_TOOL_PROFILE` sets the profile of a server that runs without authentication (default `operations`).
+
+### Names, several targets and argument checks { #tool-arguments }
+
+- **Names where an id used to be needed.** `get_output_state`, `get_device_measurements`, `get_sensor_detail` and `get_sensor_reading` take a device name; `get_zone_sensor_summary` and `list_plots` take a zone or site name; `get_plot` takes the name, crop or variety of a growing plot. An id still works and is checked first. A name shared by several things returns `needs_disambiguation` with candidates described by where they are, instead of a guess.
+- **Several targets in one call** (up to 10): `device_ids` (`get_output_state`, `get_sensor_reading`), `loc_ids` (`get_sensor_detail`), `plot_ids` (`get_plot`), `target_names` (`search_notes`), `zone_ids` (`get_zone_sensor_summary`). The reply is `{count, results}` — one entry per target, shaped like a single call.
+- **Argument checks come first.** Write tools check their arguments before any permission or approval step: missing arguments, argument names that look like a typo of a valid one, and for `modify_function_options` unknown option keys or invalid values come back as `reason_code: invalid_arguments` with the valid names — also in advice-only mode (`get_function_detail` lists a function's option keys, current values and ranges up front; a range such as `temperature` is not a key — its min/max keys are), and the reply says so when the key could not run the call anyway. Other unknown arguments are ignored and listed in `_ignored_arguments`.
+- `get_sensor_reading` no longer lists every device id in its schema, so the tool list does not grow with the number of devices.
+- `search_devices` marks devices that share a name (`same_name_count`, `where`, `same_name_groups`).
+- `get_spatial_tree` without `depth` lists every site, zone and facility at every level and counts the devices in each; pass `depth` to list devices.
+- Plot stages: a change that already happened is `confirm_plot_stage`; a boundary still ahead is `reschedule_plot_stage`. `confirm_plot_stage` needs a date (`started_on`) unless `get_plot` proposes that stage.
+- Tool descriptions are short. How to read a particular result comes in the reply's `_reading` field, which the AI should follow.
 
 The tables in this section describe tools regardless of which layer they're in — a **Drawer** column marks the ones that are *not* in `tools/list` and must be opened first. For the complete tool list, including every drawer-only tool with its full argument schema, see the AI Agent Guide (`docs/ai_guide.md`) — this page does not duplicate that reference.
 
@@ -73,8 +101,8 @@ The tables in this section describe tools regardless of which layer they're in �
 
 | Tool | Description | Drawer |
 |------|-------------|--------|
-| `get_spatial_tree` | Spatial hierarchy (Site > Zone > Device) tree | — (core) |
-| `resolve_target` | Resolve a place/device name to its exact entity — check upfront whether it's a container (has children) | — (core) |
+| `get_spatial_tree` | Every site, zone and facility with device counts (`depth` lists devices) | — (core) |
+| `resolve_target` | Resolve a place/device name to its exact entity — check upfront whether it's a container (has children). When the name belongs to several different places or devices it picks none and lists the candidates with where each one is, plus a name that points at only that one when there is one — otherwise pass its `target_id` (`add_schedule`, `edit_schedule`, `create_note` accept one). Same-name shapes nested inside each other count as one place: the name means the outer one, and the inner one is listed as `also_inside` | — (core) |
 | `get_device_list` | List of all registered devices (inputs/outputs/cameras) | — (core) |
 | `search_devices` | Find devices by name or type keyword | — (core) |
 | `get_sensor_detail` | Sensor time-series history (min/max/avg stats) | — (core) |
@@ -86,7 +114,7 @@ The tables in this section describe tools regardless of which layer they're in �
 | `list_notices` | Notice board post list | `record` |
 | `get_system_update_status` | Installed version vs latest GitHub release | `system` |
 | `list_available_devices` | Devices available for AI judgment (native bridge) | — (in-app only) |
-| `get_sensor_reading` | Latest reading for a specific sensor (native bridge) | — (in-app only) |
+| `get_sensor_reading` | Latest reading of one or more sensors, by id or name (native bridge) | — (core) |
 
 ### Record / Task
 
@@ -151,6 +179,42 @@ actually ran** without having to know each tool's own `status` vocabulary
 The existing `status` values are unchanged — code and deployed configs already
 branch on them, so this adds an axis rather than redefining one.
 
+When a state-changing call did **not** take effect (any state other than
+`executed`/`already_executed`, or an approval-time run that failed), the response
+also carries `performed: false` and a short `_reading`: tell the user plainly that
+nothing was applied — or, for `pending_approval`, that it is still waiting for a
+person — and describe things by name, not by id. A few tools report "not done"
+through their own `status` word rather than an error; for state-changing tools
+these count as not applied too: `refused` (call state `refused`), and
+`rejected`, `quota_exceeded`, `not_found`, `target_not_found`, `orphan_archive`,
+`needs_disambiguation`, `ambiguous` and `unavailable` (call state `failed`).
+The refusal rate in the call-quality metrics therefore counts only permission,
+policy and human refusals.
+
+Device commands (`operate_device`, `set_output_state`, `schedule_device_control`)
+are the exception. If the command may already have reached the device — a
+timeout, a communication error or a controller error after sending —
+`performed` is `"unknown"` instead of `false`. A timeout only means the caller
+stopped waiting, so check the current state (`get_output_state`, or
+`search_schedule` for a schedule) before retrying, and do not tell the user it
+was done or not done until that check confirms it. A failure that stopped before
+anything was sent (unknown device, bad argument, refusal) is still
+`performed: false`. The in-app assistant reads the same result the same way, and
+the web approval screen shows "command sent, but whether it took effect is
+unconfirmed — check the device state" instead of a plain failure.
+
+Turning a function or input on or off saves the setting first and then tells
+the running controller. If the controller does not confirm (it may be offline or
+busy), the response keeps the saved values, its call state stays `executed`,
+and `performed` is `"unknown"`: say the setting was saved but is not yet
+confirmed live, not that it is now on or off. `get_active_functions_summary`
+shows only the saved setting, so it cannot confirm this.
+
+A `submit_advice` reply likewise says that only a suggestion was saved, not the
+change that was asked for. When a name matches several places or devices, each
+of those candidates has a `where` so they can be told apart without ids
+(distance lookups list their candidates without one).
+
 ### Extended In-app Assistant Tools
 
 Beyond the tools above, the in-app AI assistant (and, for the ones that are `core`, the external MCP server directly) uses additional tools for entity assembly, automation, and knowledge. Most state-changing tools require approval; the `config_only` ones noted below don't — see Safety & Approval Model.
@@ -187,7 +251,7 @@ New inputs and outputs are created with this enabled by default (`is_ai_enabled=
 Non-mutating **read tools** run immediately. Writes split into two categories.
 
 - **Approval required (mutation / physical control)**: device control (`operate_device`, `set_output_state`, `schedule_device_control`), create/edit/delete of inputs/outputs/functions/notices, `modify_gis_input`·`delete_gis_input`·`activate_gis_input`, `modify_ai_agent`·`delete_ai_agent`, map placement changes (`set_device_location`, `delete_geo_shape`), device replacement (`rebind_device`), `configure_library_source`, etc.
-- **Config-only writes (approval exempt)**: `add_schedule`, `add_schedule_batch`, `create_gis_input`, `create_ai_agent`, `create_program`, `modify_program`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`. These save immediately, without approval, because they never move equipment by themselves: most of them (`create_gis_input`, `create_ai_agent`, the sequence tools, etc.) only ever produce something that is created **inactive**, with its own separate activation step that *is* still gated — `create_gis_input` saves at once but stays off until `activate_gis_input` (approval required), and a sequence's schedule can be edited freely but only takes effect on the ground once `activate_function` (approval required) runs it. `create_note` and `knowledge_shelve` are not classed as write tools at all in the registry: they have no activation step and save as unconfirmed/non-authoritative until a person confirms them (see AI Knowledge below) — reversible personal memos and unconfirmed knowledge, not standing configuration.
+- **Config-only writes (approval exempt)**: `add_schedule`, `add_schedule_batch`, `create_gis_input`, `create_ai_agent`, `create_program`, `modify_program`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`. These save immediately, without approval, because they never move equipment by themselves: most of them (`create_gis_input`, `create_ai_agent`, the sequence tools, etc.) only ever produce something that is created **inactive**, with its own separate activation step that *is* still gated — `create_gis_input` saves at once but stays off until `activate_gis_input` (approval required), and a sequence's schedule can be edited freely but only takes effect on the ground once `activate_function` (approval required) runs it. `create_note` and `knowledge_shelve` are **record writes**: they also save without approval — they have no activation step and knowledge stays unconfirmed/non-authoritative until a person confirms it (see AI Knowledge below). They are still writes: they need the same settings-edit permission as the web notes page, are refused for read-only keys and in advice-only mode, and respect group scope. Approval-exempt is not permission-exempt: in the in-app assistant and over MCP alike, every write — config-only ones included — runs only if the person asking has the role for it (settings-edit permission for notes, knowledge and map edits — deleting a map shape or placing a device, as on the web map editor; plot-edit permission — the same one the web plot pages use — for plots, stage records, plot resources, crop programmes and plot journals; control permission for everything else; with the default roles, Monitor, Guest and Kiosk cannot) and only on targets inside that person's group scope, whether the target is given by id or by name. The group check is made on what the tool actually changes — the device, function, schedule or step it resolves to — not only on the arguments, so naming a target, giving a schedule or step id, or mentioning another group's resource in free text does not get around it. Approving a pending request needs the same permission as the request itself (plot-edit for plot requests, settings-edit for map edits, control for the rest), on both the web and `respond_to_confirmation`. If an approver is outside the target's group, the request is not run and goes back to the pending list for someone who may decide it. Scheduled jobs are checked again every time they fire, as the person responsible for them (whoever created the job, or whoever approved an AI-proposed one): if that person has since lost the permission or the group, the job does not run and is marked failed. Background AI jobs with no person behind them (periodic summaries and the like) are exempt.
 
 Actions requiring approval are not applied immediately. In the **in-app assistant** they are presented in chat as an **approval card**, executed only once the user approves. Through the **external MCP server** they come back as a `pending_approval` response (a queued confirmation_id) and only proceed once the user explicitly approves or rejects that id — either path, nothing changes if the user rejects.
 
@@ -396,11 +460,12 @@ accounts cannot use this path at all.
 1. **Issue an API key** — under `Settings > Users`, generate a new API key for
    your account (name it something like "ChatGPT" so you can revoke just this
    connection later). If this GPT should only ever read, pick scope
-   `readonly` at issue time — write tool calls are then refused server-side,
+   `readonly` at issue time — write tool calls (notes and knowledge included) are then refused server-side,
    so a Custom GPT misconfiguration cannot touch a device by accident. If
    more than one person will use it, issue a separate key per person — the
    audit log then shows who called what, and a leaked key can be revoked
-   without cutting off everyone else.
+   without cutting off everyone else. Leave **AI Tools** on Operations
+   unless this GPT will do setup work ([tool profiles](#tool-profiles)).
 2. **Confirm HTTP mode is on and reachable** — the server must be running
    with `--http --port 5700`, and ChatGPT must be able to reach that port (or
    whatever path your reverse proxy exposes it at). Check unauthenticated
@@ -533,7 +598,7 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-> State-changing tool calls do not execute immediately here either (`aot/tools/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations, Error Reports and Call Quality.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright (advice-only mode). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
+> State-changing tool calls do not execute immediately here either (`aot/tools/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations, Error Reports and Call Quality.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright, notes and knowledge included (advice-only mode; `submit_advice` still works). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
 
 ---
 

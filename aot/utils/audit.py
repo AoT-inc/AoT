@@ -51,6 +51,7 @@ DATA_EXPORT = 'data.export'
 DATA_IMPORT = 'data.import'
 API_KEY_ISSUE = 'apikey.issue'
 API_KEY_REVOKE = 'apikey.revoke'
+API_KEY_PROFILE_CHANGE = 'apikey.profile_change'   # 도구 묶음 변경(p6_75)
 API_KEY_URL_AUTH = 'apikey.url_auth'   # 폐기 예정 경로 사용 추적 (S15)
 REMOTE_TOKEN_ISSUE = 'remote.token_issue'
 

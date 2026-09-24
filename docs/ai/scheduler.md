@@ -27,7 +27,11 @@ When an AI agent proposes a scheduling action (e.g. via `add_schedule` or `sched
 - **Reject** — moves the job to `Archived`.
 - **Details** lets you adjust time, worker, content, or location before approving it.
 
-Deciding on proposals requires permission to edit controllers.
+Deciding on proposals requires permission to edit controllers. When groups are in use, you can only create, approve, edit or cancel a job whose target is inside your groups. Approving an AI proposal makes you the person responsible for it: every time the job runs it is checked again against that person's permission and groups, and it is recorded as failed instead of running if they no longer apply.
+
+**Work tasks for people** (weeding, inspection and the like) follow the same rule wherever they are created — here, from a note passage, through the AI assistant or MCP, or imported from Google Calendar: creating, editing or cancelling one needs the Editor role (permission to edit controllers). Roles below Editor can see work tasks but cannot change them, even if they can edit settings.
+
+**Jobs with no owner.** Some jobs have no responsible person — jobs created by functions or the system, jobs created before this check existed, and jobs whose owner's account was deleted or disabled. These jobs keep running as before; deleting or disabling a user does not stop the jobs they were responsible for. Re-enabling the account does not restore the owner — assign it again. In the Active Jobs list the owner column shows **No owner** for them. A user who can manage users can open the job's details, choose a person under **Owner** and press **Assign owner**. Disabled accounts cannot be chosen. Only people whose role could create that kind of job are offered, and the assignment is refused if the job's target is outside that person's permissions or groups, and it is recorded in the audit log. From then on every run is checked against that person.
 
 ---
 

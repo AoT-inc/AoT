@@ -412,7 +412,13 @@ def generate_api_key(form):
         # 첫 번째 연동이 아무 에러 없이 죽었다(p6_32).
         key_name = getattr(getattr(form, 'api_key_name', None), 'data', None)
         key_scope = getattr(getattr(form, 'api_key_scope', None), 'data', None)
-        api_key = mod_user.issue_api_key(key_name, key_scope)
+        # 도구 묶음 — 모르는 값·빈 값은 issue_api_key 가 운영으로 좁힌다.
+        key_profile = getattr(getattr(form, 'api_key_tool_profile', None),
+                              'data', None)
+        api_key = mod_user.issue_api_key(key_name, key_scope,
+                                         tool_profile=key_profile)
+        key_profile = (key_profile if key_profile in ('operations', 'configuration')
+                       else 'operations')
         db.session.commit()
         # The key itself is never written to the audit trail — only the fact
         # that one was issued, for whom, under what name, and with what scope.
@@ -420,9 +426,9 @@ def generate_api_key(form):
         # 생기는 사실이고, 키 행이 폐기돼도 이 기록은 남는다.
         audit_log(audit.API_KEY_ISSUE, target_type='User',
                   target_id=mod_user.unique_id, target_name=mod_user.name,
-                  detail='{} [{}]'.format(
+                  detail='{} [{}, {}]'.format(
                       (key_name or '').strip()[:64] or '-',
-                      key_scope or 'full'))
+                      key_scope or 'full', key_profile))
         messages["success"].append(gettext(
             "API key generated. Copy it now — it is shown only once and "
             "cannot be retrieved later."))
@@ -440,6 +446,48 @@ def generate_api_key(form):
         messages["error"].append(except_msg)
 
     return messages, base64_encode_bytes(api_key) if api_key else None
+
+
+def change_api_key_profile(form):
+    """발급된 키 하나의 도구 묶음을 바꾼다 — 재발급 없이.
+
+    바꾼 값은 그 키로 들어오는 다음 요청(목록·호출)부터 반영된다. 호스트가
+    도구 목록을 기억해 두면 다시 연결해야 새 목록을 받는다. 무엇이 언제 바뀌었는지
+    감사 기록에 이전·이후 값으로 남긴다(키 자체는 남기지 않는다).
+    """
+    from aot.databases.models import UserAPIKey
+    from aot.databases.models.user_api_key import TOOL_PROFILES
+
+    messages = {"success": [], "info": [], "warning": [], "error": []}
+    try:
+        new_value = (form.api_key_profile_value.data or '').strip()
+        if new_value not in TOOL_PROFILES:
+            messages["error"].append(gettext("Choose a tool set for this key."))
+            return messages
+        row = UserAPIKey.query.filter(
+            UserAPIKey.unique_id == form.api_key_id.data).first()
+        if row is None or row.revoked_at is not None:
+            messages["error"].append(gettext("API key not found."))
+            return messages
+
+        before = row.effective_tool_profile
+        mod_user = User.query.filter(User.id == row.user_id).first()
+        row.tool_profile = new_value
+        db.session.commit()
+        audit_log(audit.API_KEY_PROFILE_CHANGE, target_type='User',
+                  target_id=mod_user.unique_id if mod_user else None,
+                  target_name=mod_user.name if mod_user else None,
+                  detail=row.name or None,
+                  before={'tool_profile': before},
+                  after={'tool_profile': new_value})
+        messages["success"].append(gettext(
+            "AI tools changed. A connected AI app may need to reconnect to see "
+            "the new tool list."))
+    except Exception as except_msg:
+        db.session.rollback()
+        messages["error"].append(except_msg)
+
+    return messages
 
 
 def revoke_api_key(form):
@@ -700,6 +748,13 @@ def user_mod(form):
             mod_user.role_id = form.role_id.data
             mod_user.is_enabled = bool(form.is_enabled.data)
             mod_user.theme = form.theme.data
+            if previous_enabled and not mod_user.is_enabled:
+                # 꺼진 계정은 지워진 계정과 같게 본다 — 이 사람이 책임자인
+                # 예약은 멈추지 않고 "책임자 없음" 으로 돌려 드러낸다. 끄기와
+                # 한 커밋으로 묶는다(설계 §6-2a).
+                from aot.ai.services.ai_scheduler_service import AISchedulerService
+                AISchedulerService.release_owner_jobs(
+                    mod_user, reason='owner account disabled', commit=False)
             db.session.commit()
             # Role changes are the security-relevant part here — record the
             # role transition explicitly rather than dumping the whole row
@@ -761,14 +816,19 @@ def user_del(form):
         "error": []
     }
 
-    if form.user_id.data == flask_login.current_user.id:
+    # `user_id` 칸은 계정의 unique_id(문자열)다 — 정수 `id` 와 비교하면
+    # 늘 달라 자기 자신을 지울 수 있었다.
+    if form.user_id.data == flask_login.current_user.unique_id:
         messages["error"].append("Cannot delete the currently-logged in user")
 
     if not messages["error"]:
         try:
             user = User.query.filter(
                 User.unique_id == form.user_id.data).first()
-            
+            if user is None:
+                messages["error"].append(gettext("User not found"))
+                return messages
+
             # [Security] Prevent deleting the last Admin
             if user.role_id == 1:
                 admin_count = User.query.filter_by(role_id=1).count()
@@ -779,7 +839,17 @@ def user_del(form):
             deleted_name = user.name
             deleted_uid = user.unique_id
             deleted_role = user.role_id
-            user.delete()
+            # 이 사람이 책임자인 예약은 멈추지 않고 "책임자 없음" 으로 돌려
+            # 스케줄러 화면에 드러낸다 — 말없이 면제되지 않게(설계 §6-2a).
+            # 풀기와 삭제는 한 커밋이다 — 삭제가 실패하면 풀기도 되돌린다.
+            from aot.ai.services.ai_scheduler_service import AISchedulerService
+            try:
+                AISchedulerService.release_owner_jobs(user, commit=False)
+                db.session.delete(user)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                raise
             audit_log(audit.USER_DELETE, target_type='User',
                       target_id=deleted_uid, target_name=deleted_name,
                       before={'name': deleted_name, 'role_id': deleted_role})

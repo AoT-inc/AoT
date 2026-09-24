@@ -87,7 +87,7 @@ AoT creates three separate Google calendars for your account, one per [Scheduler
 Each event carries its schedule content — location, device, state, notes — as a structured, human-editable `Label: Value` text block in the event description, written and read in your interface language. Editing that text (or the event's time) in Google and syncing brings the change back into the matching AoT job.
 
 - **AoT → Google (push)**: every pushable job (Pending, Running, Completed, or Failed) is written or updated on its category's calendar.
-- **Google → AoT (pull)**: edits, reschedules, and cancellations on a previously synced event update or archive the matching AoT job; new events on the User/Device calendars create new jobs as described above.
+- **Google → AoT (pull)**: edits, reschedules, and cancellations on a previously synced event update or archive the matching AoT job; new events on the User/Device calendars create new jobs as described above. This direction changes AoT jobs, so it only runs when the connected AoT account has the Editor role (permission to edit controllers); for other roles only AoT → Google runs.
 - **Direction toggles**: sync direction shown as **AoT → Google** / **Google → AoT** — both are on by default, giving true two-way sync.
 - **Conflicts**: if the same job/event changed on both sides, the more recently modified side wins.
 

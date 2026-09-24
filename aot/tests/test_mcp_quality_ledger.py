@@ -93,8 +93,10 @@ def _legacy_record(tool_name, arguments, agent_id, permission, reason,
 
 
 def _patch_exec(monkeypatch, result=None, blocked=None, raises=None):
-    """게이트·디스패치를 고정값으로. 스코프 판정은 통과."""
+    """게이트·디스패치를 고정값으로. 스코프 판정·인자 사전 검증은 통과
+    (여기 인자는 자리표시다 — 기록 행이 같은지만 본다)."""
     monkeypatch.setattr(te, '_scope_refusal', lambda *a, **k: None)
+    monkeypatch.setattr(te, '_pre_gate_validation', lambda *a, **k: None)
     monkeypatch.setattr(gate, 'gate', lambda *a, **k: blocked)
 
     def _dispatch(name, args):
@@ -454,7 +456,7 @@ def test_planner_submits_steps_with_the_thread_id():
     import inspect
     from aot.ai.services import ai_planning_service as mod
     src = inspect.getsource(mod)
-    assert 'pool.submit(_ai_ctx.bind_thread_id(execute_single_step), s)' in src
+    assert 'pool.submit(_ai_ctx.bind_worker(execute_single_step), s)' in src
 
 
 def test_execute_for_agent_passes_in_app_transport(app, monkeypatch):
@@ -633,7 +635,7 @@ def test_record_call_rejects_unknown_quality_fields(app):
 
 def test_open_drawer_without_argument_returns_the_index_without_error(app, monkeypatch):
     index = [{'drawer': 'device', 'description': 'd', 'tools': ['search_devices']}]
-    monkeypatch.setattr(te, '_drawer_index', lambda a, role=None: index)
+    monkeypatch.setattr(te, '_drawer_index', lambda a, role=None, profile=None: index)
     assert te._open_drawer(app, {}) == {'drawers': index}
     assert te._open_drawer(app, None) == {'drawers': index}
     wrong = te._open_drawer(app, {'drawer': 'nope'})
@@ -643,9 +645,39 @@ def test_open_drawer_without_argument_returns_the_index_without_error(app, monke
 
 def test_open_drawer_without_argument_is_recorded_as_executed(app, monkeypatch):
     index = [{'drawer': 'device', 'description': 'd', 'tools': ['search_devices']}]
-    monkeypatch.setattr(te, '_drawer_index', lambda a, role=None: index)
+    monkeypatch.setattr(te, '_drawer_index', lambda a, role=None, profile=None: index)
     out = te._execute_tool(app, 'open_drawer', {}, agent_id='a', transport='mcp_http')
     body = json.loads(out[0]['text'])
     assert 'error' not in body
     assert body['call_state'] == 'executed'
     assert _rows()[0]['call_state'] == 'executed'
+
+
+def test_refused_states_use_the_official_call_state_vocabulary():
+    """지표가 세는 거부 상태는 게이트의 공식 call_state 에서만 온다.
+
+    옛 값('rejected', 'expired')은 기록된 적이 없는 단어라, 사람이 거절하거나
+    만료된 승인이 거부율에서 빠졌다(2026-09-23 발견).
+    """
+    from aot.mcp_server import quality
+    from aot.tools import mcp_safety_gate as gate
+    assert quality._REFUSED_STATES <= set(gate.CALL_STATES)
+    assert {'refused', 'approval_rejected', 'approval_expired'} <= quality._REFUSED_STATES
+
+
+@pytest.mark.parametrize('status', ['rejected', 'quota_exceeded'])
+def test_knowledge_shelve_validation_and_quota_count_as_failed(app, monkeypatch, status):
+    """지식 적재의 입력 검증 실패·하루 한도는 거부가 아니라 실패다.
+
+    거부율은 권한·정책·사람의 거부만 세야 한다 — 내용이 비었거나 한도에 닿은
+    적재를 거부로 세면 "막혔다" 는 신호가 흐려진다(2026-09-23 검토 4).
+    """
+    _patch_exec(monkeypatch, result={'status': status, 'message': 'x',
+                                     'chunk_id': None})
+    te._execute_tool(app, 'knowledge_shelve', {'content': 'c', 'tags': 't'},
+                     agent_id='a')
+    row = _rows()[0]
+    assert row['call_state'] == 'failed'
+    m = quality._row_metrics([row])
+    assert m['refused_rate'] == 0
+    assert m['error_rate'] == 1

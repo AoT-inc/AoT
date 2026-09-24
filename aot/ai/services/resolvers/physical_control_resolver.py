@@ -128,6 +128,12 @@ class PhysicalControlResolver(BaseActionResolver):
         # Resolve the physical output channel (relay_index) from OutputChannel model
         # before delegating to MCPBridgeService. Eliminates 'output channel doesn't exist: None'.
         device_id = arguments.get('device_id') or arguments.get('output_id')
+        # 쓰기 시점 그룹 스코프 — 움직일 장치로 묻는다(이름이면 풀어서).
+        # 묶인 사람이 없으면(백그라운드) 아무것도 하지 않는다.
+        if isinstance(device_id, str) and device_id.strip():
+            from aot.aot_flask.access import scope as _scope
+            from aot.aot_flask.access import write_scope as _ws
+            _ws.enforce(_scope.resolve_device_token(device_id.strip()))
         if device_id and 'channel' not in arguments:
             try:
                 from aot.databases.models.output import OutputChannel
@@ -184,6 +190,11 @@ class PhysicalControlResolver(BaseActionResolver):
              정확히 PC-099 가 금지하는 것이다.
         """
         if result.get('status') == 'error':
+            # 요청이 서버에 닿은 뒤 끊겼다(시간 초과·크래시·실행 중 예외) — 도구가
+            # 이미 장치를 움직였을 수 있다. "실패" 라고 하면 재시도로 두 번 움직인다.
+            if result.get('dispatched') is True:
+                return self._unconfirmed(
+                    tool_name, result.get('message') or 'MCP bridge error', result)
             logger.error(
                 f"[PC-099-ERROR][LAW_3][PHYSICAL_FAILED] MCP bridge returned error for tool='{tool_name}': "
                 f"{result.get('message', '')}"
@@ -211,6 +222,13 @@ class PhysicalControlResolver(BaseActionResolver):
                 'message': f"[PC-099-ERROR] Physical Execution Failed: {reason[:300]}",
                 'physical_outcome': 'failed',
             }
+
+        # (0) 도구 스스로 "됐는지 모른다" 고 했다(performed:"unknown" — 명령을
+        # 보낸 뒤 시간 초과·통신 오류). call_state 는 failed 로 오지만 미실행이
+        # 아니다. 그 판정과 해석 규칙(_reading)을 그대로 넘긴다.
+        _payload = self._unknown_payload(content_list, outcome_text)
+        if _payload is not None:
+            return self._unconfirmed(tool_name, outcome_text, result, _payload)
 
         # (2) MCP 표준 오류 플래그
         if mcp_result.get('isError'):
@@ -240,6 +258,56 @@ class PhysicalControlResolver(BaseActionResolver):
         )
         result['physical_outcome'] = 'success'
         return result
+
+    _PERFORMED_UNKNOWN_RE = re.compile(
+        r'["\']performed["\']\s*:\s*["\']unknown["\']')
+
+    @classmethod
+    def _unknown_payload(cls, content_list, outcome_text) -> Optional[Dict[str, Any]]:
+        """텍스트 블록 중 performed:"unknown" 인 결과 dict. 없으면 None.
+
+        JSON 으로 못 읽는 블록이라도 그 표시가 보이면 빈 dict 를 돌려준다 —
+        "모름" 을 "안 됨" 으로 낮추지 않는 것이 이 검사의 전부다.
+        """
+        import json as _json
+        for item in content_list:
+            if not (isinstance(item, dict) and item.get('type') == 'text'):
+                continue
+            try:
+                body = _json.loads(item.get('text') or '')
+            except (TypeError, ValueError):
+                continue
+            if isinstance(body, dict) and body.get('performed') == 'unknown':
+                return body
+        if outcome_text and cls._PERFORMED_UNKNOWN_RE.search(outcome_text):
+            return {}
+        return None
+
+    @staticmethod
+    def _unconfirmed(tool_name, reason, raw, payload=None) -> Dict[str, Any]:
+        """명령은 나갔는데 결과를 모른다 — 실패로 싸되 "실행 안 됨" 이라 하지 않는다.
+
+        status 는 'error' 로 둔다(성공 경로로 새면 안 된다). 대신
+        physical_outcome·performed 를 'unknown' 으로 싣고 해석 규칙을 넘긴다.
+        """
+        from aot.tools import mcp_safety_gate as gate
+        logger.warning(
+            "[PC-099-UNCONFIRMED][LAW_3] tool='%s' command sent, outcome unconfirmed: %s",
+            tool_name, str(reason)[:300])
+        out = {
+            'status': 'error',
+            'message': ("[PC-099-UNCONFIRMED] Command was sent but whether it took "
+                        f"effect is unconfirmed: {str(reason)[:200]}"),
+            'physical_outcome': 'unknown',
+            'result': raw,
+        }
+        payload = payload or {}
+        if payload.get('call_state'):
+            out['call_state'] = payload['call_state']
+        if payload.get('_reading'):
+            out['_reading'] = payload['_reading']
+        # 도구가 규칙을 싣지 않았으면(브리지 시간 초과 등) 게이트의 규칙을 붙인다.
+        return gate.mark_unconfirmed(out, tool_name)
 
     # 승인 게이트/거부 어휘. call_state 가 정본이고, 그 키가 없는 (구버전이거나
     # 서드파티) 서버를 위해 reason_code·status 문자열도 함께 본다.

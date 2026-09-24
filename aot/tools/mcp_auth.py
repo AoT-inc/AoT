@@ -56,7 +56,111 @@ SERVICE_ACCOUNT_PROVIDER = 'system'
 # flask_login.current_user.unique_id를 MCPConfirmation.user_id에 적어 넣는 것과
 # 동일한 규약이라, MCP 쪽에서 승인할 때도 이 값을 그대로 쓰면 "누가 승인했는지"가
 # 웹 승인과 동일한 방식으로 귀속된다.
-RoleInfo = namedtuple('RoleInfo', ['name', 'can_write', 'user_id'])
+#
+# can_edit_settings / can_use_ai_chat (2026-09-23): 기록 쓰기(노트·지식)와 조언
+# 제출의 기준. 웹과 같은 역할 권한을 본다 — 노트·지식은 `edit_settings`,
+# AI 사용은 `use_ai_chat`(제어 권한이 함의). None 이면 옛 방식으로 만든 스냅샷
+# 이라는 뜻이다 — role_can_record 는 can_write 로, role_can_advise 는 허용으로
+# 읽는다(아래 두 함수 참고). 운영 경로의 스냅샷은 전부 _role_for 가 채운다.
+#
+# can_edit_plots (2026-09-23): 작기 운영 쓰기(구획·단계·자원·작기 프로그램)의
+# 기준 — 웹 구획 화면과 같은 `edit_plots`(설정 편집이 함의). None 이면 옛
+# 스냅샷이라 can_write 로 읽는다(role_can_edit_plots).
+#
+# tool_profile (2026-09-24): 이 연결에 보여 줄 도구 묶음 — 'operations' 또는
+# 'configuration'(tool_registry.TOOL_PROFILES). **None 은 "제한 없음"** 이다 —
+# 인앱 AI 가 _role_for 로 만든 스냅샷이 그렇다. 외부 키로 들어온 연결은
+# authenticate_http/authenticate_stdio 가 키에서 읽어 **반드시 채운다**(비어
+# 있으면 운영). 내부 AI 서비스 계정의 키로 들어온 연결은
+# 'unrestricted'(tool_registry.TOOL_PROFILE_UNRESTRICTED) — 인앱 물리 제어가
+# 그 키로 stdio 하위 프로세스를 거치므로, 인앱과 같이 제한이 없다.
+# 권한 판단에는 쓰지 않는다 — 표면(무엇을 보여 주는가)이다.
+RoleInfo = namedtuple('RoleInfo', ['name', 'can_write', 'user_id',
+                                   'can_edit_settings', 'can_use_ai_chat',
+                                   'can_edit_plots', 'tool_profile'],
+                      defaults=(None, None, None, None))
+
+
+def role_row_allows(row, permission) -> bool:
+    """DB `Role` 행이 이 권한을 갖는가 — 웹 `utils_general.user_has_permission`
+    과 **같은 함의 규칙**이다(설정 편집 ⇒ 작기 운영, 제어 ⇒ AI 사용).
+
+    요청 컨텍스트 없이(워커 스레드·MCP) 역할 행으로 판정할 때 쓴다. 규칙을
+    자리마다 다시 적으면 한 곳만 함의를 빠뜨려 웹과 갈라진다."""
+    if row is None:
+        return False
+    if permission == 'edit_plots':
+        return bool(getattr(row, 'edit_plots', False)
+                    or getattr(row, 'edit_settings', False))
+    if permission == 'use_ai_chat':
+        return bool(getattr(row, 'use_ai_chat', False)
+                    or getattr(row, 'edit_controllers', False))
+    return bool(getattr(row, permission, False))
+
+
+def tool_profiles_enabled() -> bool:
+    """키별 도구 묶음을 적용할지. 기본 켬 — `AOT_MCP_TOOL_PROFILES=0` 이면 모든
+    키가 예전처럼 전체 표면을 본다(되돌리기용). 매 호출 읽는다. 환경변수인
+    이유: 안전 스위치는 DB 가 이상해도 동작해야 한다."""
+    return os.environ.get('AOT_MCP_TOOL_PROFILES', '1') not in ('0', 'false', 'False')
+
+
+def default_tool_profile() -> str:
+    """키 없이 들어온 연결(인증을 끈 서버)의 묶음. 기본 운영."""
+    from aot.tools.tool_registry import normalize_tool_profile
+    return normalize_tool_profile(
+        os.environ.get('AOT_MCP_DEFAULT_TOOL_PROFILE', 'operations'))
+
+
+def is_service_account(user) -> bool:
+    return bool(user is not None and
+                getattr(user, 'auth_provider', None) == SERVICE_ACCOUNT_PROVIDER)
+
+
+def key_tool_profile(user, key_row) -> str:
+    """이 키로 들어온 연결의 묶음.
+
+    - 내부 AI 서비스 계정의 키는 'unrestricted'(제한 없음). 인앱 물리 제어
+      (PhysicalControlResolver → MCPBridgeService)가 이 키로 stdio 하위
+      프로세스에 붙어 set_output_state 를 부른다 — 설정 묶음으로 두면 외부
+      키에서 뺀(retired) 그 도구가 거절돼 인앱 제어가 끊긴다. 키 행의 값은
+      보지 않는다(화면도 이 키의 묶음 선택을 숨긴다).
+    - 키 행의 값이 있으면 그 값(모르는 값은 운영으로 좁힌다).
+    - 행이 없는 레거시 키, 아직 배정 전(NULL)인 키는 운영.
+    """
+    from aot.tools.tool_registry import (TOOL_PROFILE_OPERATIONS,
+                                         TOOL_PROFILE_UNRESTRICTED,
+                                         normalize_tool_profile)
+    if is_service_account(user):
+        return TOOL_PROFILE_UNRESTRICTED
+    value = getattr(key_row, 'tool_profile', None) if key_row is not None else None
+    if not value:
+        return TOOL_PROFILE_OPERATIONS
+    return normalize_tool_profile(value)
+
+
+def tool_profile_of(role):
+    """외부 전송이 목록·실행·안내문에 넘길 묶음. None = 제한 없음.
+
+    role 이 없으면(인증을 끈 서버, 역할 행이 없는 계정) 기본 묶음이다.
+    서비스 계정 키의 'unrestricted' 는 None 이다(key_tool_profile).
+    스위치(AOT_MCP_TOOL_PROFILES)가 꺼져 있으면 언제나 None 이다."""
+    from aot.tools.tool_registry import TOOL_PROFILE_UNRESTRICTED
+    if not tool_profiles_enabled():
+        return None
+    if role is None:
+        return default_tool_profile()
+    value = getattr(role, 'tool_profile', None)
+    if value == TOOL_PROFILE_UNRESTRICTED:
+        return None
+    return value or default_tool_profile()
+
+
+def _with_key_profile(role, user, key_row):
+    """인증된 스냅샷에 키의 묶음을 싣는다. role 이 없으면 그대로 None."""
+    if role is None:
+        return None
+    return role._replace(tool_profile=key_tool_profile(user, key_row))
 
 
 def require_auth() -> bool:
@@ -95,6 +199,49 @@ def role_can_write(role) -> bool:
     False로 이미 사용자가 원하는 "admin/editor=쓰기, 나머지=조회" 구분과 일치한다.
     role이 없으면(미인증/인증 끔) 안전한 기본값으로 조회 전용 취급한다."""
     return bool(role is not None and getattr(role, 'can_write', False))
+
+
+def role_can_record(role) -> bool:
+    """기록 쓰기(노트·지식 — tool_registry 의 record_write)를 할 자격.
+
+    웹에서 같은 기록을 쓰는 화면(`routes_notes_api.api_notes_create`,
+    `routes_ai_library` 의 지식 추가)이 `edit_settings` 를 요구하므로 같은 것을
+    본다. 읽기 전용 키면 _role_for 가 이미 꺼 두었다. role 이 없으면(미인증·
+    인증 끔) 조회 전용이다."""
+    if role is None:
+        return False
+    flag = getattr(role, 'can_edit_settings', None)
+    if flag is None:
+        flag = getattr(role, 'can_write', False)
+    return bool(flag)
+
+
+def role_can_edit_plots(role) -> bool:
+    """작기 운영 쓰기(tool_registry 의 plot_write_tools)를 할 자격.
+
+    웹 구획 화면(`routes_geo_plot._require_edit`)·구획 일지·작기 프로그램이
+    `edit_plots` 를 요구하므로 같은 것을 본다(설정 편집이 함의). 읽기 전용
+    키면 _role_for 가 이미 꺼 두었다. role 이 없으면 조회 전용이다."""
+    if role is None:
+        return False
+    flag = getattr(role, 'can_edit_plots', None)
+    if flag is None:
+        flag = getattr(role, 'can_write', False)
+    return bool(flag)
+
+
+def role_can_advise(role) -> bool:
+    """조언 원장(submit_advice)에 의견을 낼 자격.
+
+    읽기 전용 키도 낼 수 있다 — 쓰기를 거부할 때 "대신 조언으로 남겨라" 고
+    안내하기 때문이다. 막는 것은 AI 자체를 쓸 수 없는 역할뿐이다(웹 채팅과
+    같은 `use_ai_chat`, 기본 표에서 Guest·Kiosk). role 이 없으면(인증을 끈
+    서버) 판단 근거가 없으므로 예전처럼 허용한다 — 그 서버는 운영자가 일부러
+    연 것이다."""
+    if role is None:
+        return True
+    flag = getattr(role, 'can_use_ai_chat', None)
+    return True if flag is None else bool(flag)
 
 
 def ensure_service_account():
@@ -208,13 +355,25 @@ def _role_for(user, key_row=None):
     if row is None:
         return None
     can_write = bool(row.edit_controllers)
-    if can_write and key_row is not None and getattr(key_row, 'is_readonly', False):
+    can_edit_settings = bool(getattr(row, 'edit_settings', False))
+    # AI 사용 권한 — 웹의 user_has_permission('use_ai_chat') 과 같은 규칙
+    # (제어 권한이 함의한다). 읽기 전용 키와는 무관하다(조언은 쓰기가 아니다).
+    can_use_ai_chat = role_row_allows(row, 'use_ai_chat')
+    # 작기 운영 — 웹과 같이 설정 편집이 함의한다.
+    can_edit_plots = role_row_allows(row, 'edit_plots')
+    if key_row is not None and getattr(key_row, 'is_readonly', False) \
+            and (can_write or can_edit_settings or can_edit_plots):
         logger.info(
             "[MCP] 읽기 전용 키 '%s' — 역할 %s 의 쓰기 권한을 이 연결에서는 끕니다.",
             key_row.name or (key_row.unique_id or '')[:8], row.name)
         can_write = False
+        can_edit_settings = False
+        can_edit_plots = False
     return RoleInfo(name=row.name, can_write=can_write,
-                     user_id=user.unique_id)
+                     user_id=user.unique_id,
+                     can_edit_settings=can_edit_settings,
+                     can_use_ai_chat=can_use_ai_chat,
+                     can_edit_plots=can_edit_plots)
 
 
 def authenticate_http(headers, declared_agent_id=None):
@@ -261,7 +420,8 @@ def authenticate_http(headers, declared_agent_id=None):
     if label and label != agent_id:
         # 클라이언트 이름은 참고 정보로만 남긴다(같은 사용자 키로 여러 AI가 붙을 수 있다).
         agent_id = f"user:{user.name}/{label}"
-    return True, agent_id, _role_for(user, key_row), None
+    return True, agent_id, _with_key_profile(
+        _role_for(user, key_row), user, key_row), None
 
 
 def authenticate_stdio(declared_agent_id=None):
@@ -290,4 +450,80 @@ def authenticate_stdio(declared_agent_id=None):
     label = _clean_label(declared_agent_id)
     if label:
         agent_id = f"user:{user.name}/{label}"
-    return True, agent_id, _role_for(user, key_row), None
+    return True, agent_id, _with_key_profile(
+        _role_for(user, key_row), user, key_row), None
+
+
+#: 기존 키에 묶음을 한 번 배정할 때 보는 사용 기록의 기간(일).
+PROFILE_BACKFILL_DAYS = 90
+
+
+def agent_id_belongs_to(agent_id, user_name) -> bool:
+    """감사 기록의 agent_id 가 이 사용자 키로 들어온 호출인가.
+
+    authenticate_http/authenticate_stdio 가 적는 형식은 `user:<이름>` 또는
+    `user:<이름>/<클라이언트 표지>` 다. 인증을 끈 서버의 `unauthenticated:` 는
+    자기 신고라 누구의 것으로도 치지 않는다."""
+    if not agent_id or not user_name:
+        return False
+    head = 'user:%s' % user_name
+    return agent_id == head or agent_id.startswith(head + '/')
+
+
+def backfill_key_tool_profiles(now=None):
+    """묶음이 비어 있는(NULL) 키에 한 번 값을 채운다 — 기동 때 부른다.
+
+    발급된 키의 동작을 업그레이드로 조용히 바꾸지 않는다는 원칙(user_api_key)
+    을 따라, 근거로 정한다: 키 소유자가 최근 90일에 설정 묶음에만 있는 도구를
+    부른 적이 있으면 'configuration', 아니면 'operations'. 감사 기록에는 어느
+    키였는지가 없으므로 **사람 단위**로 본다 — 그 사람의 키는 모두 같은 값이다.
+    내부 AI 서비스 계정의 키는 언제나 'configuration' 이다.
+
+    이미 값이 있는 키는 건드리지 않으므로 몇 번 불러도 같다. Flask 앱
+    컨텍스트 안에서 불러야 한다. 반환: {'operations': n, 'configuration': m}.
+
+    서비스 계정 키에 적는 값은 표시용일 뿐이다 — 연결은 키 행을 보지 않고
+    제한 없음으로 들어온다(key_tool_profile).
+    """
+    from datetime import datetime, timedelta
+
+    from aot.aot_flask.extensions import db
+    from aot.databases.models import MCPAuditLog, User, UserAPIKey
+    from aot.tools.tool_registry import (TOOL_PROFILE_CONFIGURATION,
+                                         TOOL_PROFILE_OPERATIONS,
+                                         profile_tools)
+
+    counts = {TOOL_PROFILE_OPERATIONS: 0, TOOL_PROFILE_CONFIGURATION: 0}
+    rows = UserAPIKey.query.filter(UserAPIKey.tool_profile.is_(None)).all()
+    if not rows:
+        return counts
+
+    config_only = sorted(profile_tools(TOOL_PROFILE_CONFIGURATION)
+                         - profile_tools(TOOL_PROFILE_OPERATIONS))
+    since = (now or datetime.utcnow()) - timedelta(days=PROFILE_BACKFILL_DAYS)
+    agent_ids = {
+        aid for (aid,) in db.session.query(MCPAuditLog.agent_id)
+        .filter(MCPAuditLog.timestamp >= since)
+        .filter(MCPAuditLog.tool_name.in_(config_only))
+        .filter(MCPAuditLog.agent_id.like('user:%'))
+        .distinct()
+        if aid}
+    users = {u.id: u for u in
+             User.query.filter(User.id.in_({r.user_id for r in rows})).all()}
+
+    for row in rows:
+        user = users.get(row.user_id)
+        used_config = user is not None and any(
+            agent_id_belongs_to(aid, user.name) for aid in agent_ids)
+        if is_service_account(user) or used_config:
+            row.tool_profile = TOOL_PROFILE_CONFIGURATION
+        else:
+            row.tool_profile = TOOL_PROFILE_OPERATIONS
+        counts[row.tool_profile] += 1
+    db.session.commit()
+    logger.info(
+        "[MCP] API 키 도구 묶음을 배정했습니다: 운영 %d개, 설정 %d개 "
+        "(최근 %d일 사용 기록 기준)",
+        counts[TOOL_PROFILE_OPERATIONS], counts[TOOL_PROFILE_CONFIGURATION],
+        PROFILE_BACKFILL_DAYS)
+    return counts

@@ -133,6 +133,39 @@ class AgentLoopService:
         return None
 
     @staticmethod
+    def _schedule_pick_labels(tname):
+        """모호한 이름의 후보 → [(보기 글자, 후보)].
+
+        use_name 이 있으면 그것이 보기다. 없으면 '이름 (where) #번호' — 이름으로는
+        되풀리지 않으므로 `_schedule_pick_target_id` 가 번호로 후보를 되찾는다.
+        """
+        from aot.tools.aot_data_tool_service import AoTDataToolService
+        try:
+            cands = AoTDataToolService._ambiguous_places(tname) or []
+        except Exception:
+            cands = []
+        out = []
+        for i, c in enumerate(cands, 1):
+            lbl = c.get('use_name') or '%s (%s) #%d' % (c.get('name'), c.get('where') or '?', i)
+            out.append((lbl, c))
+        return out
+
+    @staticmethod
+    def _schedule_pick_target_id(label):
+        """`_schedule_pick_labels` 가 만든 번호 보기 → 그 후보의 target_id. 아니면 None."""
+        m = re.match(r'^(.*) #(\d+)$', str(label or '').strip())
+        if not m:
+            return None
+        rest, idx = m.group(1), int(m.group(2))
+        pos = rest.find(' (')
+        while pos > 0:
+            labels = AgentLoopService._schedule_pick_labels(rest[:pos])
+            if 0 < idx <= len(labels) and labels[idx - 1][0] == str(label).strip():
+                return labels[idx - 1][1].get('target_id')
+            pos = rest.find(' (', pos + 1)
+        return None
+
+    @staticmethod
     def _schedule_ambiguity_gate(actions):
         """@ANCHOR: SCHEDULE_ASK_USER_NUDGE
         If a schedule create/edit action names a LOCATION that does not resolve to
@@ -159,15 +192,32 @@ class AgentLoopService:
                      or args.get('zone_name') or args.get('place'))
             if not tname:
                 continue  # farm-wide schedule — nothing to disambiguate
+            if args.get('target_id'):
+                continue  # 이름 대신 id 로 지정 — 처리기가 존재를 확인한다
             try:
                 tid, _tt, _rn, _lat, _lng = AoTDataToolService._resolve_note_target(tname)
             except Exception:
-                tid = None
+                tid, _tt = None, None
             if not tid:
-                try:
-                    cands = AoTDataToolService._geoshape_name_candidates(limit=12)
-                except Exception:
-                    cands = []
+                # 앞서 이 게이트가 내놓은 보기 중 하나를 사람이 고른 것이면 그
+                # 후보의 id 로 바꿔 끼운다(보기 글자는 이름으로 되풀리지 않는다).
+                picked = AgentLoopService._schedule_pick_target_id(tname)
+                if picked:
+                    for k in ('target_name', 'location', 'zone_name', 'place'):
+                        args.pop(k, None)
+                    args['target_id'] = picked
+                    continue
+                cands = []
+                if _tt == 'ambiguous':
+                    # 이름이 여러 곳에 걸렸다 — 지도 이름 목록 대신 **그 후보들**을
+                    # 보여야 사람이 고를 수 있다. use_name 이 있으면 그것(그 하나로
+                    # 되풀린다), 없으면 번호 붙은 보기 — 고르면 위에서 id 로 바뀐다.
+                    cands = [lbl for lbl, _c in AgentLoopService._schedule_pick_labels(tname)]
+                if not cands:
+                    try:
+                        cands = AoTDataToolService._geoshape_name_candidates(limit=12)
+                    except Exception:
+                        cands = []
                 try:
                     from flask_babel import gettext as _
                     q = _("'%(name)s' doesn't match a single known place in the system. "

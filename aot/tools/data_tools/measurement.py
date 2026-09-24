@@ -188,7 +188,62 @@ class MeasurementToolsMixin:
         return note
 
     @classmethod
-    def get_sensor_detail(cls, loc_id, sensor_type=None, time_range="24h", limit=None):
+    def get_sensor_detail(cls, loc_id=None, sensor_type=None, time_range="24h",
+                          limit=None, loc_ids=None):
+        """센서 이력 — 대상 하나(`loc_id`) 또는 여럿(`loc_ids`, 최대
+        MAX_READ_TARGETS). 대상은 unique_id 또는 이름(장치·구역·작물)이다.
+        여럿이면 {"count", "results": [대상마다 단수 응답 + requested]}."""
+        tokens, err = cls._targets_arg(loc_id, loc_ids, 'loc_id')
+        if err:
+            return err
+        if len(tokens) == 1:
+            return cls._sensor_detail_one(tokens[0], sensor_type=sensor_type,
+                                          time_range=time_range, limit=limit)
+        return cls._for_each_target(tokens, lambda t: cls._sensor_detail_one(
+            t, sensor_type=sensor_type, time_range=time_range, limit=limit))
+
+    @classmethod
+    def _sensor_loc_by_name(cls, name):
+        """이름 → 장치·구역 unique_id, 모호하면 후보 dict, 못 찾으면 None.
+
+        장치 이름 정확일치가 먼저다(get_device_detail 과 같은 해석 — 센서·
+        집계 함수·출력). 장치 표식 도형도 같은 이름을 갖기 때문에, 곳 리졸버를
+        먼저 쓰면 센서 이름이 "센서 없는 구역" 으로 풀린다. 장치가 아니면 쓰기
+        도구와 같은 곳 리졸버(`_resolve_explain` — 정확일치·한정어·작물 이름).
+        그래도 없으면 None — 아래 옛 부분일치(구역 이름)로 넘어간다."""
+        row, kind, derr = cls._resolve_device_target(name)
+        if row is not None:
+            if kind == 'output':
+                return {"error": ("'%s' is an output (actuator), not a sensor — "
+                                  "use get_output_state for its state." % name)}
+            return row.unique_id
+        if derr and derr.get("needs_disambiguation"):
+            derr = dict(derr, status="needs_disambiguation",
+                        _reading=[cls._READ_AMBIGUOUS_READING])
+            return derr
+        try:
+            detail = cls._resolve_explain(name)
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("_sensor_loc_by_name resolve failed: %s", e)
+            detail = None
+        if detail is not None:
+            tid, ttype = detail['result'][0], detail['result'][1]
+            if ttype == 'ambiguous':
+                return cls._read_ambiguity(name, cls._public_places(
+                    cls._describe_places(detail['places'], detail['devices'])))
+            if ttype == 'output':
+                return {"error": ("'%s' is an output (actuator), not a sensor — "
+                                  "use get_output_state for its state." % name)}
+            if tid and ttype == 'plot':
+                place, _err = cls._read_place(name)
+                return place.unique_id if place is not None else None
+            if tid:
+                return tid
+        return None
+
+    @classmethod
+    def _sensor_detail_one(cls, loc_id, sensor_type=None, time_range="24h",
+                           limit=None):
         """
         특정 위치/장치의 상세 센서 이력을 조회합니다.
         :param loc_id: 장치(Input) 또는 구역(GeoShape)의 unique_id
@@ -209,6 +264,13 @@ class MeasurementToolsMixin:
         `get_zone_sensor_summary`).
         """
         try:
+            # 이름으로 왔으면 먼저 id 로 푼다(3-A). id 모양이면 아래가 직접 본다.
+            if loc_id and not _looks_like_uuid(loc_id):
+                by_name = cls._sensor_loc_by_name(str(loc_id).strip())
+                if isinstance(by_name, dict):
+                    return by_name
+                if by_name:
+                    loc_id = by_name
             # 측정 이름 정규화를 **장치 선택보다 먼저** 한다. 예전에는 장치를
             # 먼저 고르고 나서 걸렀기 때문에, 구역에 습도 센서가 있어도 먼저
             # 뽑힌 장치에 습도가 없으면 "No measurements matching type" 이
@@ -493,12 +555,48 @@ class MeasurementToolsMixin:
 
             if isinstance(zone_ids, str):
                 zone_ids = [zone_ids]
+            unresolved, available = [], None
             if zone_ids:
+                # id 가 아니면 이름으로 푼다(3-A). 이름이 여럿에 걸리면 고르지
+                # 않는다 — 하나뿐이면 후보를 그대로, 여럿 중 일부면 나머지는
+                # 답하고 걸린 이름을 `unresolved` 로 함께 낸다.
+                tokens = []
+                for z in zone_ids:
+                    t = str(z or '').strip()
+                    if t and t not in tokens:
+                        tokens.append(t)
+                if len(tokens) > cls.MAX_READ_TARGETS:
+                    return {"error": ("At most %d zones per call (%d given) — "
+                                      "split them into several calls."
+                                      % (cls.MAX_READ_TARGETS, len(tokens)))}
                 shapes = GeoShape.query.filter(
-                    GeoShape.unique_id.in_(list(zone_ids))).all()
-                missing = set(zone_ids) - {s.unique_id for s in shapes}
-                if missing and not shapes:
-                    return {"error": "zone not found: %s" % ', '.join(sorted(missing))}
+                    GeoShape.unique_id.in_(tokens)).all()
+                found = {s.unique_id for s in shapes}
+                for tok in tokens:
+                    if tok in found:
+                        continue
+                    place, perr = cls._read_place(tok, arg='zone_ids')
+                    if place is not None:
+                        if place.unique_id not in found:
+                            found.add(place.unique_id)
+                            shapes.append(place)
+                    else:
+                        unresolved.append(dict({"requested": tok}, **perr))
+                # 곳 이름 목록(available_targets)은 이름마다 같은 것이 붙는다 —
+                # 한 번만 위로 올린다.
+                for u in unresolved:
+                    av = u.pop("available_targets", None)
+                    if av is not None and available is None:
+                        available = av
+                if unresolved and not shapes:
+                    if len(unresolved) == 1:
+                        out = dict(unresolved[0])
+                    else:
+                        out = {"error": "none of the zones could be resolved",
+                               "unresolved": unresolved}
+                    if available is not None:
+                        out["available_targets"] = available
+                    return out
             else:
                 shapes = [s for s in GeoShape.query.filter(
                     GeoShape.type.in_(('site', 'zone'))).order_by(GeoShape.id).all()
@@ -520,10 +618,15 @@ class MeasurementToolsMixin:
                 per_zone.append((shape, ids))
 
             if not all_ids:
-                return {"count": 0, "zones": [],
-                        "message": ("No sensor with that measurement was found in "
-                                    "the requested area." if measurement_type else
-                                    "No sensor was found in the requested area.")}
+                empty = {"count": 0, "zones": [],
+                         "message": ("No sensor with that measurement was found in "
+                                     "the requested area." if measurement_type else
+                                     "No sensor was found in the requested area.")}
+                if unresolved:
+                    empty["unresolved"] = unresolved
+                if available is not None:
+                    empty["available_targets"] = available
+                return empty
 
             mq = DeviceMeasurements.query.filter(
                 DeviceMeasurements.device_id.in_(list(all_ids)))
@@ -643,6 +746,14 @@ class MeasurementToolsMixin:
                     "'warning' is present: the readings may be missing because "
                     "InfluxDB could not be read, NOT because there is no data. "
                     "Say that rather than reporting zero.")
+            if unresolved:
+                out["unresolved"] = unresolved
+                notes.append(
+                    "'unresolved' lists requested zones that were NOT included "
+                    "(a name that matched several places, or none). Say which, "
+                    "and ask about an ambiguous one by its candidates' 'where'.")
+            if available is not None:
+                out["available_targets"] = available
             if notes:
                 out["_reading"] = notes
             return out

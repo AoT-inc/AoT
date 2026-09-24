@@ -1688,6 +1688,12 @@ def apply_stage_resources(plot_uuid):
         if not fn.get('active'):
             todo.append({'role': r['role'], **fn})
 
+    # 그룹 스코프는 **켜기 전에 전부** 묻는다(설계 §6-2a). 하나씩 켜다가
+    # 중간에 거부되면 앞의 것은 이미 켜진 채 남는다 — 물이 나오는 일이라
+    # 반쯤 적용은 없어야 한다. 묶인 사람이 없으면(백그라운드) 아무것도 안 한다.
+    from aot.aot_flask.access import write_scope
+    write_scope.enforce([r['id'] for r in todo])
+
     done, failed = [], []
     for r in todo:
         try:

@@ -240,7 +240,7 @@ class User(UserMixin, CRUDMixin, db.Model):
         """
         return cls.resolve_api_key(raw_key)[0]
 
-    def issue_api_key(self, name=None, scope=None):
+    def issue_api_key(self, name=None, scope=None, tool_profile=None):
         """이 사용자에게 새 API 키를 하나 **추가** 발급한다.
 
         기존 키는 건드리지 않는다 — 그것이 이 테이블이 생긴 이유다. 반환값은
@@ -251,10 +251,15 @@ class User(UserMixin, CRUDMixin, db.Model):
         모르는 값이 오면 'full' 로 떨어뜨리지 않고 'readonly' 로 좁힌다 —
         오타 하나가 조용히 전 권한 키를 만드는 쪽이 훨씬 위험하다.
 
+        tool_profile 은 외부 MCP 에 보여 줄 도구 묶음 — 'operations'(기본) 또는
+        'configuration'. 모르는 값·빈 값은 운영으로 좁힌다(scope 와 같은 원칙).
+
         커밋은 하지 않는다. 호출자가 자기 트랜잭션 경계에서 커밋한다.
         """
         from aot.databases import set_api_key
-        from .user_api_key import SCOPE_FULL, SCOPE_READONLY, SCOPES, UserAPIKey
+        from .user_api_key import (SCOPE_FULL, SCOPE_READONLY, SCOPES,
+                                   TOOL_PROFILE_OPERATIONS, TOOL_PROFILES,
+                                   UserAPIKey)
 
         raw_key = set_api_key(128)
         row = UserAPIKey()
@@ -265,6 +270,8 @@ class User(UserMixin, CRUDMixin, db.Model):
             row.scope = SCOPE_FULL
         else:
             row.scope = scope if scope in SCOPES else SCOPE_READONLY
+        row.tool_profile = (tool_profile if tool_profile in TOOL_PROFILES
+                            else TOOL_PROFILE_OPERATIONS)
         db.session.add(row)
         return raw_key
 

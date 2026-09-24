@@ -84,6 +84,19 @@ def _ambiguous(kind: str, token: str, rows) -> str:
         kind=_t(kind), name=token, tabs=_tab_names(rows))
 
 
+def _found(row) -> DeviceMatch:
+    """찾은 장치를 돌려주기 전에 쓰기 시점 그룹 스코프를 묻는다.
+
+    쓰기 도구 호출이 묶여 있을 때만 판정한다(`write_scope.enforce` — 묶인
+    사람이 없으면 아무것도 하지 않는다). id·이름·부분 이름 어느 단계로
+    찾았든 **찾은 행**으로 묻는다 — 이름으로 지목하면 앞 단계 짐작 검사를
+    지나던 구멍이 여기서 닫힌다.
+    """
+    from aot.aot_flask.access import write_scope
+    write_scope.enforce(row)
+    return DeviceMatch(row=row)
+
+
 def resolve_device(model, token: Optional[str], kind: Optional[str] = None,
                    allow_partial: bool = False) -> DeviceMatch:
     """id 또는 이름으로 장치 한 건. 이름이 겹치면 고르지 않는다.
@@ -102,11 +115,11 @@ def resolve_device(model, token: Optional[str], kind: Optional[str] = None,
 
     exact_id = model.query.filter(model.unique_id == token).first()
     if exact_id is not None:
-        return DeviceMatch(row=exact_id)
+        return _found(exact_id)
 
     by_name = model.query.filter(model.name == token).all()
     if len(by_name) == 1:
-        return DeviceMatch(row=by_name[0])
+        return _found(by_name[0])
     if len(by_name) > 1:
         logger.warning(
             "[resolve_device] 이름이 겹쳐 고르지 않았습니다: %s %r (%d건)",
@@ -116,7 +129,7 @@ def resolve_device(model, token: Optional[str], kind: Optional[str] = None,
     if allow_partial:
         partial = model.query.filter(model.name.ilike(f'%{token}%')).all()
         if len(partial) == 1:
-            return DeviceMatch(row=partial[0])
+            return _found(partial[0])
         if len(partial) > 1:
             logger.warning(
                 "[resolve_device] 부분 이름이 겹쳐 고르지 않았습니다: %s %r (%d건)",

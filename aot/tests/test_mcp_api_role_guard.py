@@ -34,7 +34,10 @@ def _rules():
 
 def test_every_write_route_names_a_permission():
     module, rules = _rules()
-    guarded = set(module._REQUIRED_PERMISSION) | set(module._READ_WRITE_ENDPOINTS)
+    # 승인·거부는 도구마다 권한이 달라 표 대신 `_DECIDE_ENDPOINTS` 로 막는다
+    # (하나라도 결정할 수 있는 역할만 통과, 항목별 판정은 gate._decide).
+    guarded = (set(module._REQUIRED_PERMISSION) | set(module._READ_WRITE_ENDPOINTS)
+               | set(module._DECIDE_ENDPOINTS))
     open_writes = sorted(
         f'{r.rule} {sorted(r.methods - _READ_ONLY)}'
         for r in rules
@@ -48,7 +51,8 @@ def test_every_table_entry_is_a_real_endpoint():
     module, rules = _rules()
     endpoints = {r.endpoint for r in rules}
     stale = sorted((set(module._REQUIRED_PERMISSION)
-                    | set(module._READ_WRITE_ENDPOINTS)) - endpoints)
+                    | set(module._READ_WRITE_ENDPOINTS)
+                    | set(module._DECIDE_ENDPOINTS)) - endpoints)
     assert not stale, (
         f'역할 검사 표의 이름이 실제 엔드포인트와 다릅니다(아무것도 막지 않음): {stale}')
 

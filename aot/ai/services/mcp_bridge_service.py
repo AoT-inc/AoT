@@ -70,9 +70,15 @@ class MCPBridgeService:
             return None
 
     @classmethod
-    def _send_request(cls, process: subprocess.Popen, method: str, params: dict = None, request_id: str = None) -> Optional[dict]:
+    def _send_request(cls, process: subprocess.Popen, method: str, params: dict = None,
+                      request_id: str = None, sent: Optional[list] = None) -> Optional[dict]:
         """
         Send a JSON-RPC 2.0 request and read the response.
+
+        `sent` 목록을 넘기면 요청을 파이프에 다 쓴 뒤 True 를 하나 넣는다. 응답이
+        없을 때(None) 그것이 **보내기 전**(파이프 끊김 — 서버가 받지 못함)인지
+        **보낸 뒤**(시간 초과·EOF·깨진 JSON — 서버가 이미 실행했을 수 있음)인지를
+        호출자가 가를 수 있게 한다.
         """
         rid = request_id or cls._next_request_id()
         request = {
@@ -86,6 +92,8 @@ class MCPBridgeService:
         try:
             process.stdin.write(json.dumps(request) + "\n")
             process.stdin.flush()
+            if sent is not None:
+                sent.append(True)
             return cls._read_response(process)
         except (BrokenPipeError, OSError) as e:
             logger.error(f"[MCPBridge] Pipe error sending {method}: {e}")
@@ -381,18 +389,28 @@ class MCPBridgeService:
         if not cls._check_tool_access(agent_unique_id, server_id, tool_name):
             return {"status": "error", "message": f"Access denied: tool '{tool_name}' not permitted."}
 
+        # `dispatched` — 위의 거부들(프로세스 없음·미초기화·ACL)은 보내기 전이라
+        # 확정 실패다(표시 없음 = 보내지 않음). 아래 둘은 요청이 서버에 닿은 뒤라
+        # 도구가 이미 돌았을 수 있다: 응답 없음(시간 초과·크래시)과 실행 중 예외
+        # (-32603). 물리 도구를 "안 됨" 으로 말하면 재시도로 두 번 움직인다.
+        sent = []
         response = cls._send_request(process, "tools/call", params={
             "name": tool_name,
             "arguments": arguments
-        })
+        }, sent=sent)
 
         if not response:
             # Process may have died - clean up for next attempt
             cls._cleanup_server(server_id)
-            return {"status": "error", "message": "No response from MCP server (timeout or crash)"}
+            return {"status": "error", "message": "No response from MCP server (timeout or crash)",
+                    "dispatched": bool(sent)}
 
         if "error" in response:
-            return {"status": "error", "message": response["error"].get("message", "Unknown MCP error")}
+            err = response["error"] if isinstance(response["error"], dict) else {}
+            # 파싱·요청 형식·메서드 없음·인자 오류는 도구를 부르기 전에 난다.
+            pre_exec = err.get("code") in (-32700, -32600, -32601, -32602)
+            return {"status": "error", "message": err.get("message", "Unknown MCP error"),
+                    "dispatched": not pre_exec}
 
         result = response.get("result", {})
         # v21: Validate tool result schema (Non-fatal)

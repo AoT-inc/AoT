@@ -22,20 +22,24 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 > **없다고 단정하기 전에 서랍을 열 것.** "그건 이 시스템에서 안 됩니다"라고 답하거나, 어중간하게 맞는 상시 도구로 우회하기 전에 목적에 맞는 서랍을 먼저 여세요. 서랍 도구도 보통 도구와 똑같이 동작합니다.
 
-환경변수 `AOT_MCP_TOOL_TIERING=0`을 주면 서랍 없이 128개를 전량 노출합니다(기본은 켜짐).
+**외부 MCP 연결은 이제 기본으로 서랍을 쓰지 않습니다:** `tools/list` 는 API 키의 도구 묶음(아래) 전체를 돌려주고, 위의 서랍 도구는 목록에 나오지 않습니다. `AOT_MCP_TOOL_TIERING=1`(또는 `true`·`yes`·`on`) 이면 서랍 구조로 돌아갑니다(키의 묶음 안에서 동작). 앱 안 AI 비서의 내장 목록은 서랍을 그대로 씁니다(`AOT_AI_BUILTIN_MCP_TIERING`, 기본 켬).
+
+**이름으로, 여러 대상 한 번에.** 조회 도구는 id 가 필요하던 자리에 이름을 받습니다 — 장치(`get_output_state`·`get_device_measurements`·`get_sensor_detail`·`get_sensor_reading`), 구역·부지(`get_zone_sensor_summary`·`list_plots`), 재배 중인 구획(`get_plot`: 이름·작물·품종). 이름이 여럿에 걸리면 고르지 않고 후보를 돌려줍니다. `device_ids`·`loc_ids`·`plot_ids`·`target_names`·`zone_ids` 는 한 번에 최대 10개 대상을 받습니다. 쓰기 도구는 권한·승인 단계보다 먼저 빠진 인자와 오타로 보이는 인자를 알려 주고(`reason_code: invalid_arguments`, 맞는 이름 목록 포함), 그 밖의 모르는 인자는 무시하고 `_ignored_arguments` 로 알려 줍니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-arguments).
+
+**도구 묶음.** MCP 에서는 API 키마다 자기 묶음의 도구만 목록에 나옵니다: **운영**(기본 — 조회·제어·일정·기록·구획 단계 사건) 또는 **운영 + 설정**(장치 정의, 자동화 작성, 구획·프로그램 설정, 지도 배치, 화면 구성, AI 설정, 보관 문서·라이브러리 관리를 더함). 서랍도 같은 묶음을 따릅니다. 묶음 밖 도구를 부르면 `reason_code: tool_profile` 로 거절되고, 사용자 편집 권한이 있는 관리자가 `설정 > 사용자`에서 바꿉니다. `set_output_state`·`list_available_devices` 는 API 키의 목록에 나오지 않습니다(`operate_device`·`get_device_list`·`search_devices` 를 쓰세요). 앱 안의 AI 비서와 내장 AI 자신의 서비스 계정 키는 묶음의 제한을 받지 않습니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-profiles).
 
 ### 1.1 상시 노출 도구 (27)
 
 | 분류 | 도구 | 설명 | 승인 |
 |------|------|------|------|
 | 시작점 | `get_system_brief` | 시스템 한눈 요약 — 여기서 시작 | 불필요 |
-| 해소 | `resolve_target` | 이름→엔티티 해석, 컨테이너(하위 구역 보유) 여부 | 불필요 |
+| 해소 | `resolve_target` | 이름→엔티티 해석, 컨테이너(하위 구역 보유) 여부. 같은 이름이 서로 다른 곳·장치 여럿에 있으면 짐작하지 않고 후보를 돌려줌 — 그 하나만 가리키는 이름이 있으면 함께, 없으면 넘길 `target_id` | 불필요 |
 | 공간 | `get_spatial_tree` | 사이트 > 구역 > 장치 계층 | 불필요 |
 | 공간 | `get_map_equipment` | 지도에 놓인 설비·장치 | 불필요 |
 | 장치 | `get_device_list` / `search_devices` | 전체 목록 / 이름·유형·측정종류 검색 | 불필요 |
 | 장치 | `get_device_measurements` | 장치의 측정 채널 목록 | 불필요 |
 | 장치 | `get_device_detail` | 장치 하나의 정체·위치·측정·제어·통신·담당구역·제약을 한 번에 — search_devices + get_device_measurements + get_device_location 을 잇달아 부르지 않아도 됨 | 불필요 |
-| 장치 | `get_output_state` | 출력(밸브·펌프·조명) 현재 상태 | 불필요 |
+| 장치 | `get_output_state` | 출력(밸브·펌프·조명) 현재 상태. 모터로 여닫는 창·커튼은 몇 % 열려 있는지도 함께 | 불필요 |
 | 측정 | `get_sensor_detail` | 센서 이력(min/max/avg), Function 집계값 포함 | 불필요 |
 | 측정 | `get_zone_sensor_summary` | 구역 전체 최신값+기간 통계를 한 번에 | 불필요 |
 | 측정 | `get_weather` / `get_weather_forecast` | 현재 기상 / 예보 | 불필요 |
@@ -89,7 +93,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 1. **읽기** — 즉시 실행.
 2. **설정만 바꾸는 쓰기(승인 면제)** — `add_schedule`, `add_schedule_batch`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`, `create_program`·`modify_program`, `create_gis_input`, `create_ai_agent`. 장비를 움직이지 않고 항상 비활성 상태로 만들어지기 때문에 즉시 저장됩니다. 실제로 작동하려면 사람이 따로 활성화해야 하고, 그 활성화(`activate_function`, `activate_gis_input`)는 승인 대상입니다. 함수를 새로 만들거나 지우는 `create_function`·`delete_function`은 여기 들지 않습니다 — 승인이 필요합니다.
-   `create_note`·`knowledge_shelve`는 아예 쓰기 도구로 치지 않는 저위험 기록이라 즉시 저장되며, 사람이 확정하기 전까지 권위 없는 정보로 다룹니다.
+   `create_note`·`knowledge_shelve`는 **기록 쓰기**입니다 — 역시 승인 없이 즉시 저장되고, 지식은 사람이 확정하기 전까지 권위 없는 정보로 다룹니다. 그래도 쓰기이므로 웹 노트 화면과 같은 설정 편집 권한이 필요하고, 읽기 전용 키와 조언 전용 모드에서는 거부되며, 그룹 범위를 따릅니다. 승인 면제가 권한 면제는 아닙니다. 인앱 어시스턴트와 MCP 모두, config-only 를 포함한 모든 쓰기는 요청한 사람에게 그 권한이 있을 때만 실행되고(노트·지식과 지도 편집 — 지도 도형 삭제·장치 배치, 웹 지도 편집과 같음 — 은 설정 편집 권한, 구획·단계 기록·구획 자원·작기 프로그램·구획 일지는 웹 구획 화면과 같은 작기 편집 권한, 나머지는 제어 권한 — 기본 역할로는 Monitor·Guest·Kiosk 는 불가), 대상을 id 로 주든 이름으로 주든 그 사람의 그룹 범위 안에서만 실행됩니다. 그룹 판정은 인자만이 아니라 도구가 **실제로 바꾸는 대상**(찾아낸 장치·함수·일정·단계)에서 하므로, 이름으로 지목하거나 일정·단계 id 를 주거나 다른 그룹 자원을 글 속에 적는 것으로는 피할 수 없습니다. 대기 중인 요청을 승인하려면 그 요청과 같은 권한이 필요합니다(구획 요청은 작기 편집, 지도 편집은 설정 편집, 나머지는 제어 — 웹과 `respond_to_confirmation` 모두). 승인자가 대상 그룹 밖이면 요청은 실행되지 않고, 결정할 수 있는 다른 사람을 위해 대기 목록으로 돌아갑니다. 예약 작업은 실행될 때마다 그 책임자(만든 사람, AI 가 제안한 예약은 승인한 사람)의 권한과 그룹으로 다시 확인합니다 — 그사이 권한이나 그룹을 잃었으면 실행하지 않고 실패로 기록합니다. 뒤에 사람이 없는 백그라운드 AI 작업(주기 요약 등)은 예외입니다.
 3. **승인이 필요한 쓰기** — 물리 제어와 원장 변경 전부.
 
 ### 인앱 어시스턴트
@@ -108,8 +112,8 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 - 승인 시점과 **인자가 완전히 같아야** 통과합니다(승인 바꿔치기 방지).
 - 만료: 승인 대기 **15분**(`AOT_MCP_CONFIRM_TTL_SEC=900`), 승인 후 실행 유효 **5분**(`AOT_MCP_APPROVED_TTL_SEC=300`, 승인 시점부터 다시 셈).
 - 호출 상한: `operate_device`·`set_output_state`·`schedule_device_control` 시간당 20회, `modify_sequence_step` 60회, 그 외 기본 10회. 승인 요청과 재호출이 각각 카운트되므로 실제 완료 가능한 작업 수는 그 절반입니다.
-- `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구는 승인 큐조차 만들지 않고 조언 전용으로 거부됩니다.
-- 읽기 전용 API 키로 접속하면 쓰기 권한이 강제로 꺼지고, `respond_to_confirmation`은 Admin/Editor 키에서만 동작합니다.
+- `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구(노트·지식 포함)는 승인 큐조차 만들지 않고 조언 전용으로 거부됩니다. `submit_advice`는 그대로 쓸 수 있습니다.
+- 읽기 전용 API 키로 접속하면 쓰기 권한이 강제로 꺼지고(노트·지식 포함, 해당 도구는 목록에도 나오지 않음), `respond_to_confirmation`은 그 요청을 결정할 권한(요청에 맞는 제어·작기 편집·설정 편집)이 있는 키에서만 동작하며 읽기 전용 키로는 동작하지 않습니다. 읽기 전용 키도 `submit_advice`는 쓸 수 있지만, AI 사용 권한이 없는 역할(기본값으로 Guest·Kiosk)은 쓸 수 없습니다.
 
 ### 그 밖의 차단
 
@@ -230,7 +234,7 @@ python3 /opt/AoT/aot/aot_mcp_server.py --http --port 5700
 
 - 엔드포인트: `POST/GET/DELETE /mcp` (Streamable HTTP). 호환용 REST로 `GET /mcp/info`, `GET /mcp/tools/list`, `POST /mcp/tools/call`.
 - 인증: `X-API-KEY` 헤더에 API 키(base64). `Authorization: Basic`/`Bearer`도 받습니다. 키는 사용자 설정에서 발급하며, **키 소유자가 곧 호출자 신원**이고 그 사용자의 권한을 그대로 따릅니다.
-- `AOT_MCP_REQUIRE_AUTH=0`으로 인증을 끄면 권한이 없는 것으로 취급되어 조회 전용이 됩니다.
+- `AOT_MCP_REQUIRE_AUTH=0`으로 인증을 끄면 권한이 없는 것으로 취급되어 조회 전용이 됩니다(조언 제출은 가능).
 - `설정 → 일반`의 MCP HTTP 서버 토글을 끄면 재시작 없이 503을 반환합니다.
 
 ---

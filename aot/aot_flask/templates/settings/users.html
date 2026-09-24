@@ -577,6 +577,7 @@
       if (action === 'settings_user_save' ||
           action === 'user_generate_api_key' ||
           action === 'user_revoke_api_key' ||
+          action === 'user_api_key_profile_save' ||
           action === 'user_delete' ||
           action === 'user_save' ||
           action === 'user_approve' ||
@@ -593,6 +594,15 @@
           $(this).find('input[name="api_key_id"]').val(submitter_btn.data('revoke-key'));
           // API 키 목록은 <tr> 표가 아니라 한 줄에 하나씩인 .aot-list-row 다.
           $revoked_row = submitter_btn.closest('.aot-list-row');
+        }
+        // 도구 묶음 바꾸기도 같은 방식이다 — 누른 줄의 키 id 와 그 줄에서 고른
+        // 값을 숨은 칸으로 옮긴다. 줄의 select 에는 name 이 없어 그대로는
+        // 전송되지 않는다(모든 줄의 값이 섞이지 않게).
+        if (action === 'user_api_key_profile_save') {
+          let key_id = submitter_btn.data('profile-key');
+          $(this).find('input[name="api_key_id"]').val(key_id);
+          $(this).find('input[name="api_key_profile_value"]').val(
+            $(this).find('select[data-profile-select="' + key_id + '"]').val());
         }
         // Saving a user changes several things the card shows at once — name,
         // role, the disabled badge and tint — and a role rename changes every

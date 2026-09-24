@@ -15,14 +15,33 @@ from aot.utils.time_utils import serialize_ts, to_local
 from aot.utils.timekit import iso_utc
 from aot.databases.models.scheduler import SchedulerJobMeta, SchedulerAuditLog
 from aot.ai.services.ai_scheduler_service import (
-    AISchedulerService, JOB_STATE_DRAFT, JOB_STATE_PENDING,
+    AISchedulerService, JobPermissionDenied, JOB_STATE_DRAFT, JOB_STATE_PENDING,
     JOB_STATE_COMPLETED, JOB_STATE_FAILED, JOB_STATE_ARCHIVED
 )
+from aot.aot_flask.access import write_scope
 from aot.aot_flask.utils.utils_general import current_user_id
 from aot.aot_flask.utils.utils_general import user_has_permission
 
 logger = logging.getLogger(__name__)
 blueprint = Blueprint('routes_scheduler', __name__)
+
+
+def _current_user_row():
+    """로그인한 사람의 User 행(요청마다 새로 읽는다)."""
+    from aot.databases.models import User
+    uid = write_scope.current_user_uuid()
+    if not uid:
+        return None
+    return User.query.filter(User.unique_id == uid).first()
+
+
+def _scope_refused_response():
+    try:
+        db.session.rollback()
+    except Exception:
+        logger.exception('[scheduler-guard] 세션 되돌리기 실패')
+    return jsonify({'error': write_scope.deny_message(),
+                    'reason_code': 'group_scope'}), 403
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +150,39 @@ def page_scheduler():
     for j in jobs:
         _enrich_job_display(j)
 
+    # 책임자 — 없으면(시스템 예약·지워진 책임자) 화면에 "책임자 없음" 으로
+    # 드러내고, 사용자 관리 권한이 있는 사람은 여기서 지정한다(설계 §6-2a).
+    _owner_names = {}
+    try:
+        from aot.databases.models import User
+        _ids = {j.user_id for j in jobs if j.user_id is not None}
+        if _ids:
+            _owner_names = {u.id: u.name for u in
+                            User.query.filter(User.id.in_(_ids)).all()}
+    except Exception:
+        logger.exception('[scheduler] 책임자 이름 조회 실패')
+    for j in jobs:
+        j.display_owner = _owner_names.get(j.user_id)
+    # 후보는 예약마다 — 그 예약을 만들 수 있었던 사람만(Guest·Kiosk·Monitor
+    # 는 빠진다, `owner_candidates`). 지정 라우트도 같은 판정으로 거부한다.
+    can_assign_owner = user_has_permission('edit_users', silent=True)
+    _people = _roles = None
+    for j in jobs:
+        j.owner_candidates = []
+        if not can_assign_owner or j.display_owner:
+            continue
+        try:
+            if _people is None:
+                from aot.databases.models import Role
+                _people = AISchedulerService.human_users()
+                _roles = {r.id: r for r in Role.query.all()}
+            j.owner_candidates = [
+                {'unique_id': u.unique_id, 'name': u.name}
+                for u in AISchedulerService.owner_candidates(
+                    j, users=_people, roles=_roles)]
+        except Exception:
+            logger.exception('[scheduler] 책임자 후보 조회 실패')
+
     drafts = [j for j in jobs if j.state == JOB_STATE_DRAFT]
     active_jobs = [j for j in jobs if j.state in (JOB_STATE_PENDING, 'RUNNING')]
     completed_jobs = [j for j in jobs if j.state in (JOB_STATE_COMPLETED, JOB_STATE_FAILED, JOB_STATE_ARCHIVED)]
@@ -203,6 +255,7 @@ def page_scheduler():
                            functions=manual_functions,
                            zones=manual_zones,
                            active_agents=active_agents,
+                           can_assign_owner=can_assign_owner,
                            active_page='ai_scheduler',
                            settings=Misc.query.first())
 
@@ -320,6 +373,17 @@ def api_propose_job():
                 _p['duration_sec'] = params.get('amount')
             params = _p
 
+        # 만드는 사람의 역할·그룹 스코프 — **실제로 돌 도구와 인자**로 묻는다
+        # (설계 §6-2a). 이 엔드포인트는 action_type·params 를 그대로 받으므로
+        # 도구 호출 예약(`virtual_tool_call` 등)도 여기로 들어온다. 겉의
+        # edit_controllers 만 보면 그룹 밖 함수·장치를 고치는 예약을 걸고
+        # 발화 때 그대로 돌았다. 발화할 때도 같은 판정을 다시 한다.
+        _denial = AISchedulerService.job_denial(
+            _current_user_row(), action_type, target_id, params)
+        if _denial:
+            logger.warning('[scheduler-guard] propose refused (%s)', action_type)
+            return jsonify({'error': _denial}), 403
+
         meta = AISchedulerService.propose_job(
             action_type=action_type,
             target_id=target_id,
@@ -358,13 +422,22 @@ def api_approve_job(job_id):
         return jsonify({'error': 'Permission denied'}), 403
 
     data = request.get_json(silent=True) or {}
+    approver = _current_user_row()
+    if approver is None:
+        return jsonify({'error': 'Permission denied'}), 403
     try:
+        # 승인자의 역할·그룹 스코프를 실행될 최종 인자로 판정하고, 책임자가
+        # 없는 AI 초안이면 승인자를 책임자로 적는다(발화 때 다시 판정).
         meta = AISchedulerService.approve_job(
             job_id,
             adjusted_params=data.get('adjusted_params'),
-            user_feedback=data.get('feedback')
+            user_feedback=data.get('feedback'),
+            approver=approver,
         )
         return jsonify(_serialize_job(meta))
+    except JobPermissionDenied as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 403
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -381,11 +454,16 @@ def api_reject_job(job_id):
 
     data = request.get_json(silent=True) or {}
     try:
-        meta = AISchedulerService.reject_job(
-            job_id,
-            user_feedback=data.get('feedback')
-        )
+        # 거부도 그 예약(이 움직이는 대상)에 대한 쓰기다 — 웹의 일정 삭제와 같다.
+        with write_scope.acting_as_current_user(tool='reject_job'):
+            write_scope.enforce(SchedulerJobMeta.query.get(job_id))
+            meta = AISchedulerService.reject_job(
+                job_id,
+                user_feedback=data.get('feedback')
+            )
         return jsonify(_serialize_job(meta))
+    except write_scope.WriteScopeDenied:
+        return _scope_refused_response()
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -410,16 +488,23 @@ def api_update_job(job_id):
 
     data = request.get_json(silent=True) or {}
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    result = AoTDataToolService.edit_schedule_tool(
-        job_id=str(job_id),
-        date=data.get('date'),
-        time=data.get('time'),
-        content=data.get('content'),
-        worker=data.get('worker'),
-        target_name=data.get('target_name'),
-        duration_minutes=data.get('duration_minutes'),
-        at=data.get('at'),
-    )
+    # 처리기를 곧바로 부르므로 여기서 로그인한 사람으로 묶는다 — 묶지 않으면
+    # 처리기의 쓰기 시점 강제(`_resolve_schedule_job`·`_target_by_id`)가
+    # "사람이 없는 호출" 로 보고 아무것도 막지 않는다(설계 §6-2a).
+    try:
+        with write_scope.acting_as_current_user(tool='edit_schedule'):
+            result = AoTDataToolService.edit_schedule_tool(
+                job_id=str(job_id),
+                date=data.get('date'),
+                time=data.get('time'),
+                content=data.get('content'),
+                worker=data.get('worker'),
+                target_name=data.get('target_name'),
+                duration_minutes=data.get('duration_minutes'),
+                at=data.get('at'),
+            )
+    except write_scope.WriteScopeDenied:
+        return _scope_refused_response()
     if result.get('error'):
         status = 404 if 'not found' in result['error'].lower() else 400
         return jsonify(result), status
@@ -441,14 +526,66 @@ def api_delete_job(job_id):
     # 보내는 호출부가 정상인데도 실패한다(지도 위젯의 [예약 취소] 가 그랬다).
     data = request.get_json(silent=True) or {}
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    result = AoTDataToolService.delete_schedule_tool(
-        job_id=str(job_id),
-        reason=data.get('reason'),
-    )
+    # 편집과 같은 이유로 로그인한 사람으로 묶는다.
+    try:
+        with write_scope.acting_as_current_user(tool='delete_schedule'):
+            result = AoTDataToolService.delete_schedule_tool(
+                job_id=str(job_id),
+                reason=data.get('reason'),
+            )
+    except write_scope.WriteScopeDenied:
+        return _scope_refused_response()
     if result.get('error'):
         status = 404 if 'not found' in result['error'].lower() else 400
         return jsonify(result), status
     return jsonify(result)
+
+
+@blueprint.route('/api/v1/scheduler/jobs/<int:job_id>/owner', methods=['POST'])
+@login_required
+def api_assign_job_owner(job_id):
+    """책임자 없는 예약에 책임자를 지정한다 — 사용자 관리 권한(edit_users).
+
+    사람을 책임자로 세우는 일은 그 사람의 권한으로 예약을 돌리게 하는
+    일이라 사용자 관리와 같은 권한으로 막는다(설정 → 사용자와 같은 판정).
+    새 책임자는 그 종류의 예약을 **만들 수 있는 역할**이어야 하고
+    (`owner_role_denial` — 만드는 입구와 같은 권한), 그 사람으로 `job_denial`
+    이 통과해야 한다. 아니면 403. 지정은 예약 감사 기록과 감사 로그에 남는다.
+    """
+    if not user_has_permission('edit_users', silent=True):
+        return jsonify({'error': 'Permission denied'}), 403
+    data = request.get_json(silent=True) or {}
+    owner_uuid = data.get('user_id')
+    if not isinstance(owner_uuid, str) or not owner_uuid.strip():
+        return jsonify({'error': 'user_id is required'}), 400
+    from aot.databases.models import User
+    new_owner = User.query.filter(User.unique_id == owner_uuid.strip()).first()
+    if new_owner is None:
+        return jsonify({'error': 'User not found'}), 404
+    meta = SchedulerJobMeta.query.get(job_id)
+    if meta is None:
+        return jsonify({'error': 'Job not found'}), 404
+    try:
+        with write_scope.acting_as_current_user(tool='assign_schedule_owner'):
+            write_scope.enforce(meta)
+    except write_scope.WriteScopeDenied:
+        return _scope_refused_response()
+    try:
+        meta = AISchedulerService.assign_job_owner(
+            job_id, new_owner, assigned_by=_current_user_row())
+    except JobPermissionDenied as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 403
+    except LookupError as e:
+        return jsonify({'error': str(e)}), 404
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 409
+    from aot.utils import audit
+    audit.audit_log('schedule.owner_assign', target_type='SchedulerJob',
+                    target_id=meta.id, target_name=new_owner.name,
+                    after={'owner': new_owner.name})
+    return jsonify({'status': 'success', 'job_id': meta.id,
+                    'owner': new_owner.name})
 
 
 @blueprint.route('/api/v1/scheduler/jobs/<int:job_id>/location', methods=['GET'])

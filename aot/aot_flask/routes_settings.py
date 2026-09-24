@@ -694,6 +694,14 @@ def settings_users_submit():
         elif form_mod_user.user_revoke_api_key.data:
             messages = utils_settings.revoke_api_key(form_mod_user)
             user_id = form_mod_user.user_id.data
+        elif form_mod_user.user_api_key_profile_save.data:
+            # 키 폐기와 같은 문턱이다(사용자 편집 권한 — 위에서 이미 봤다, CSRF,
+            # 감사 기록). 발급과 달리 신선한 로그인을 요구하지 않는다: 묶음은
+            # 권한을 넓히지 않고(역할·스코프가 그대로 경계다) 새 자격증명을
+            # 만들지도 않는다 — 발급이 막으려는 "영구 자격증명을 남기고 빠져
+            # 나가기" 가 여기서는 생기지 않는다(2026-09-24 결정).
+            user_id = form_mod_user.user_id.data
+            messages = utils_settings.change_api_key_profile(form_mod_user)
         elif form_mod_user.user_delete.data:
             user_id = form_mod_user.user_id.data
             messages = utils_settings.user_del(form_mod_user)
@@ -801,8 +809,12 @@ def settings_user_detail(unique_id):
     if not user:
         return '', 404
 
+    from aot.tools.mcp_auth import is_service_account
     return render_template('settings/user_detail.html',
                            user=user,
+                           # 내부 AI 서비스 계정의 키는 묶음과 무관하게 제한이
+                           # 없다(mcp_auth.key_tool_profile) — 고르는 칸을 숨긴다.
+                           service_account=is_service_account(user),
                            themes=THEMES,
                            user_roles=Role.query.all(),
                            # 폐기된 키는 보내지 않는다 — 화면에 남으면 "아직

@@ -101,6 +101,7 @@ AoTMcpApproval.mount('#mcprev-slot-{{each_widget.unique_id}}', {
     confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
     executed: {{ _('Approved and carried out.')|tojson }},
     exec_failed: {{ _('Approved, but it failed to run')|tojson }},
+    exec_unconfirmed: {{ _('Command sent, but whether it took effect is unconfirmed — check the device state.')|tojson }},
     failed: {{ _('Request failed')|tojson }},
     batch_summary: {{ _('{ok}/{total} succeeded')|tojson }},
     invalid_json: {{ _("Invalid value in field '{field}'")|tojson }},

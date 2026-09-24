@@ -20,7 +20,8 @@ class RecordToolsMixin:
 
     @classmethod
     def search_notes_tool(cls, query=None, category=None, limit=10,
-                          target_name=None, target_id=None, **extra):
+                          target_name=None, target_id=None, target_names=None,
+                          **extra):
         """
         [분류 C - 노트/일정 읽기 도구]
         노트(메모, 일정, 작업 기록)를 조회합니다. 두 가지 모드:
@@ -37,10 +38,22 @@ class RecordToolsMixin:
             limit (int): 최대 반환 건수(기본 10).
             target_name (str): 노트가 붙은 위치/장치 이름(예: '3-1', '1포장 1-1', '밸브1').
             target_id (str): 대상 unique_id(이미 아는 경우 target_name 대신).
+            target_names (list): 여러 곳을 한 번에(최대 MAX_READ_TARGETS, 3-F).
+                곳마다 target_name 하나로 부른 응답을 results 에 담는다.
         """
+        if target_names:
+            tokens, err = cls._targets_arg(target_name, target_names,
+                                           'target_names')
+            if err:
+                return err
+            if len(tokens) > 1:
+                return cls._for_each_target(tokens, lambda t: cls.search_notes_tool(
+                    query=query, category=category, limit=limit, target_name=t))
+            target_name = tokens[0]
         try:
             if not target_name:
-                target_name = extra.get('location') or extra.get('zone_name') or extra.get('place')
+                from aot.tools.target_names import get_target_name_alias
+                target_name = get_target_name_alias(extra)
 
             from aot.databases.models.notes import Notes
             from sqlalchemy import or_
@@ -117,6 +130,9 @@ class RecordToolsMixin:
                 # 찾았다" 가 구분된다.
                 if scope is not None:
                     out["scope"] = scope
+                    _amb = cls._ambiguous_scope_reading(scope)
+                    if _amb:
+                        out.setdefault("_reading", []).append(_amb)
                 return out
 
             # Each note displays in ITS OWN location tz (the device/zone/site it is
@@ -238,6 +254,9 @@ class RecordToolsMixin:
                     "would settle, and before saying a note has no detail.")
             if scope is not None:
                 out["scope"] = scope
+                _amb = cls._ambiguous_scope_reading(scope)
+                if _amb:
+                    out.setdefault("_reading", []).append(_amb)
             return out
         except Exception as e:
             logger.error(f"Error in search_notes_tool: {e}")
@@ -484,10 +503,12 @@ class RecordToolsMixin:
             except (TypeError, ValueError):
                 return None
 
-        # LLM aliases for the location name.
+        # LLM aliases for the location name — 목록은 aot/tools/target_names.py
+        # 하나다(그룹 스코프 판정이 같은 목록을 읽는다).
+        from aot.tools.target_names import pop_target_name_alias
+        _alias = pop_target_name_alias(extra)
         if not target_name:
-            target_name = extra.pop('location', None) or extra.pop('zone_name', None) \
-                or extra.pop('entity_name', None) or extra.pop('place', None)
+            target_name = _alias
 
         gps_lat = _to_float(gps_lat)
         gps_lng = _to_float(gps_lng)
@@ -498,6 +519,9 @@ class RecordToolsMixin:
         if not target_id and target_name:
             _tid, _tt, resolved_name, _lat, _lng = cls._resolve_note_target(target_name)
             if not _tid:
+                _amb = cls._ambiguous_places(target_name) if _tt == 'ambiguous' else None
+                if _amb:
+                    return cls._ambiguity_refusal(target_name, _amb)
                 # Fail LOUD with candidates rather than silently create an
                 # invisible floating note (the exact bug the user hit).
                 candidates = []
@@ -526,6 +550,13 @@ class RecordToolsMixin:
                 gps_lat = _to_float(_lat)
             if gps_lng is None:
                 gps_lng = _to_float(_lng)
+
+        # 쓰기 시점 그룹 스코프 — 노트를 붙일 대상으로 묻는다. 이름으로 풀린
+        # 대상은 리졸버가 이미 물었고, 직접 준 target_id 는 여기서 묻는다
+        # (쓰기 호출이 묶여 있을 때만; write_scope.enforce).
+        if isinstance(target_id, str) and target_id.strip():
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(target_id.strip())
 
         # 대상 자신의 태그는 서버가 보장한다 — AI 가 태그를 안 주는 것이 보통이라
         # (실측: 구획 노트 넷이 태그 없이 남았다) 여기서 붙이지 않으면 그 노트는
@@ -735,9 +766,8 @@ class RecordToolsMixin:
                                    "retry with other keywords. Either answer from your "
                                    "own general knowledge AND say plainly that it is "
                                    "unverified — never pass it off as a citation in a "
-                                   "source_note — or tell the user a source can be "
-                                   "added (list_library_source_types shows what is "
-                                   "available)." + _pointer),
+                                   "source_note — or tell the user a knowledge source "
+                                   "can be added in the AI library settings." + _pointer),
                         "library_empty": True}
             return {"result": f"No documentation section matched '{query}'. "
                               f"Try different keywords." + _pointer}
@@ -1341,6 +1371,15 @@ class RecordToolsMixin:
                 "message": ("Advice recorded in the ledger. Nothing was executed; a human "
                             "will review it. Use list_advice to compare with other AI "
                             "opinions on the same target."),
+                # 조언 ≠ 실행. 쓰기가 거부된 뒤 이 도구를 부른 모델이 "완료했습니다"
+                # 라고 보고했다(2026-09-23 재측정 lat_22, 3건) — 조언이 저장된
+                # 것을 요청한 노트·변경이 된 것으로 말했다. 그 구분을 응답에 싣는다.
+                "_reading": [
+                    "Only a suggestion was saved, for a person to review. It is "
+                    "not the note or change the user asked for, and nothing it "
+                    "proposes was carried out. Say that plainly (e.g. 'not "
+                    "applied; left as a suggestion for review') - do not report "
+                    "the request as done. Refer to things by name, not id."],
             }
         except Exception as e:
             logger.exception("Error in submit_advice")

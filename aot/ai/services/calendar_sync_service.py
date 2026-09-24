@@ -578,6 +578,15 @@ def _build_imported_job(connection, fields, event, start, end):
                 target_id = tid
                 params['target_type'] = ttype
                 params['target_name'] = rname
+            elif ttype == 'ambiguous':
+                # 이름이 여러 곳에 걸렸다 — 고르지 않고 위치 없이 들이되, 그
+                # 사실을 일정에 남겨 사람이 붙일 수 있게 한다(조용히 비우지 않는다).
+                amb = AoTDataToolService._ambiguous_places(fields['location']) or []
+                params['location_ambiguous'] = fields['location']
+                params['location_candidates'] = [
+                    c.get('use_name') or c.get('where') or c.get('name') for c in amb][:10]
+                logger.warning("[CalendarSync] location '%s' matches %d places — "
+                               "imported without a location", fields['location'], len(amb))
         except Exception:
             pass
     return _new_google_job(connection, 'human', target_id, params, start, end,
@@ -675,6 +684,30 @@ def _connection_locale(connection):
     return 'en'
 
 
+def pull_allowed(connection):
+    """이 연결의 주인이 구글 달력에서 예약을 들여올 수 있는 역할인가.
+
+    가져오기는 사람 작업(`human`)과 제어 초안을 **그 주인 이름으로** 만들고,
+    내보냈던 예약의 시각을 고치고, 취소된 일정을 보관으로 내린다 — 스케줄러
+    화면과 같은 쓰기다. 그래서 같은 편집자 권한(`HUMAN_TASK_PERMISSION`)을
+    요구한다. 연결은 자기 계정 동작이라 권한 문 없이 누구나 걸 수 있으므로,
+    여기서 안 보면 보기 전용 계정이 달력으로 사람 작업을 만든다. 판정이
+    깨지면 막는다(모르면 좁게). 내보내기(읽기 전용 사본)는 막지 않는다.
+    """
+    try:
+        from aot.ai.services.ai_scheduler_service import HUMAN_TASK_PERMISSION
+        from aot.databases.models import Role, User
+        from aot.tools.mcp_auth import role_row_allows
+        user = User.query.get(connection.user_id)
+        if user is None or not getattr(user, 'is_enabled', False):
+            return False
+        role = Role.query.filter(Role.id == user.role_id).first()
+        return role is not None and role_row_allows(role, HUMAN_TASK_PERMISSION)
+    except Exception:
+        logger.exception("[CalendarSync] 가져오기 권한 판정 실패 — 막는다")
+        return False
+
+
 def sync_connection(connection_id):
     connection = UserCalendarConnection.query.get(connection_id)
     if connection is None or not connection.is_active:
@@ -706,7 +739,11 @@ def sync_connection(connection_id):
         with force_locale(_connection_locale(connection)):
             if connection.push_enabled:
                 result['push'] = push_connection(connection, token, cc)
-            if connection.pull_enabled:
+            if connection.pull_enabled and not pull_allowed(connection):
+                # 보기 전용 역할 — 달력에서 예약을 만들거나 고치지 않는다.
+                result['pull'] = {'skipped': 'permission',
+                                  'requires': 'edit_controllers'}
+            elif connection.pull_enabled:
                 # push may have created calendars/links; reload the freshest cc
                 result['pull'] = pull_connection(connection, token, connection.category_calendars or cc)
         connection.last_synced_at = utc_now().replace(tzinfo=None)

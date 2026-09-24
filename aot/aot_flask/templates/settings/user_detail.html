@@ -143,12 +143,33 @@
               {% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}
               · {{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}
             </div>
+            {# 도구 묶음은 재발급 없이 바꾼다. select 에 name 을 주지 않는다 —
+               폼은 하나라 이름이 있으면 모든 줄의 값이 함께 전송된다. 누른
+               줄의 값은 제출 직전에 숨은 칸(api_key_profile_value)으로 옮긴다
+               (users.html). #}
+            {% if service_account %}
+            <div class="aot-modal-body-text w-100">{{_('AI Tools')}}: {{_('All tools (built-in AI)')}}</div>
+            {% else %}
+            <div class="aot-api-key-group">
+              <select class="form-control aot-modern-input"
+                data-profile-select="{{each_key.unique_id}}"
+                aria-label="{{_('AI Tools')}}"
+                title="{{_('Which AI tools an app connected with this key can see.')}}">
+                <option value="operations" {% if each_key.effective_tool_profile == 'operations' %}selected{% endif %}>{{_('Operations')}}</option>
+                <option value="configuration" {% if each_key.effective_tool_profile == 'configuration' %}selected{% endif %}>{{_('Operations + configuration')}}</option>
+              </select>
+              <button type="submit" name="user_api_key_profile_save" value="1"
+                class="btn aot-pill-btn aot-pill-btn-secondary"
+                data-profile-key="{{each_key.unique_id}}">{{_('Change')}}</button>
+            </div>
+            {% endif %}
           </div>
           {% endfor %}
           {% else %}
           <div class="aot-modal-body-text">{{_('No API keys issued.')}}</div>
           {% endif %}
           {{form_mod_user.api_key_id(class_='api_key_id_' ~ user.unique_id)}}
+          {{form_mod_user.api_key_profile_value()}}
         </div>
       </div>
 
@@ -163,6 +184,20 @@
           {{form_mod_user.api_key_scope(class_='form-control aot-modern-input')}}
         </div>
       </div>
+
+      {# 외부 AI 앱이 이 키로 볼 도구 묶음. 기본은 운영 — 설정 묶음은 장치 정의·
+         자동화 작성 같은 설정 도구를 더하는 대신, 대화마다 AI 에 보내는 도구
+         설명이 크게 늘어난다. 권한(위)과는 다른 축이다: 권한은 무엇을 해도
+         되는가, 이것은 무엇을 보여 주는가. #}
+      {% if not service_account %}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label"
+          title="{{_('Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation.')}}">{{_('AI Tools')}}</label>
+        <div class="aot-modal-option-control">
+          {{form_mod_user.api_key_tool_profile(class_='form-control aot-modern-input')}}
+        </div>
+      </div>
+      {% endif %}
 
       <div class="aot-modal-option-row">
         <label class="aot-modal-option-label"

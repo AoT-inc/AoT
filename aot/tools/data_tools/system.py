@@ -160,6 +160,44 @@ class SystemToolsMixin:
             if not target_id and target_name:
                 target_id, _tt, resolved_name, _lat, _lng = \
                     cls._resolve_note_target(target_name)
+                if not target_id and _tt == 'ambiguous':
+                    # 이름이 여러 곳에 걸렸다. 농장 기본 시간대로 "성공" 이라
+                    # 답하면 다른 시간대의 곳을 두고 틀린 시각을 확신하게 된다.
+                    # 후보들의 시간대가 모두 같으면 그 답은 어느 쪽이든 맞다.
+                    amb = cls._ambiguous_places(target_name) or []
+                    tzs = {}
+                    for c in amb:
+                        try:
+                            c["timezone"] = str(resolve_location_tz(c["target_id"]))
+                        except Exception:
+                            c["timezone"] = None
+                        tzs.setdefault(c["timezone"], []).append(c)
+                    if amb and len(tzs) == 1 and None not in tzs:
+                        tz = resolve_location_tz(amb[0]["target_id"])
+                        now_local = _dt.now(_tzinfo.utc).astimezone(tz)
+                        return {
+                            "status": "success",
+                            "location": target_name,
+                            "timezone": str(tz),
+                            "local_time": now_local.strftime('%Y-%m-%d %H:%M:%S'),
+                            "utc_offset": now_local.strftime('%z'),
+                            "note": (f"'{target_name}' names {len(amb)} different "
+                                     "places, all in this same timezone — the "
+                                     "time is the same for each. Sunrise/sunset "
+                                     "differ per place: pass one candidate's "
+                                     "target_id for those."),
+                            "candidates": amb,
+                        }
+                    return {
+                        "status": "needs_disambiguation",
+                        "error": "ambiguous_name",
+                        "message": (f"'{target_name}' names {len(amb)} different "
+                                    "places in different timezones. Ask which one, "
+                                    "or answer for each using its 'timezone'; "
+                                    "retry with a candidate's 'use_name' or "
+                                    "'target_id' for its local time and sun."),
+                        "candidates": amb,
+                    }
                 if not target_id:
                     return {
                         "status": "success",
@@ -507,8 +545,37 @@ class SystemToolsMixin:
         if not target_name or not str(target_name).strip():
             return {"status": "error", "message": "target_name is empty"}
 
-        target_id, target_type, resolved_name, _lat, _lng = \
-            cls._resolve_note_target(target_name)
+        # 같은 이름이 서로 다른 곳 여럿이면 고르지 않는다(`_resolve_core`).
+        # 예전에는 정렬 순서로 하나를 골라 "exactly one entity" 라고 답했다.
+        # 쓰기 도구와 **같은 해석**을 한 번만 돌린다 — 정확일치뿐 아니라
+        # 한정어('산양삼 1')·부분일치('육묘장에') 단계의 모호함도 여기서 나온다.
+        detail = cls._resolve_explain(target_name)
+        target_id, target_type, resolved_name, _lat, _lng = detail['result']
+        if target_type == 'ambiguous':
+            ambiguous = cls._public_places(
+                cls._describe_places(detail['places'], detail['devices']))
+            no_name = [c for c in ambiguous if not c.get('use_name')]
+            return {
+                "status": "needs_disambiguation",
+                "error": "ambiguous_name",
+                "message": (f"'{target_name}' names {len(ambiguous)} different "
+                            "things — see 'candidates'."),
+                "candidates": ambiguous,
+                "_reading": [
+                    "Several different places/devices share this name, so "
+                    "nothing was picked. Do not choose one yourself: ask the user "
+                    "which one they mean, describing each candidate by its "
+                    "'where'. If the question only reads data, you may instead "
+                    "answer for EACH candidate, labelled by its 'where'.",
+                    "After the user chooses, pass that candidate's 'use_name' as "
+                    "target_name (it names only that one), or its 'target_id' "
+                    "as target_id (add_schedule, edit_schedule, create_note and "
+                    "get_local_time take one). A write tool given the bare name "
+                    "will refuse."
+                    + (" Some candidates have no 'use_name' — no name points at "
+                       "only that one, so use its 'target_id'." if no_name else ""),
+                ],
+            }
 
         if not target_id:
             # A subject name found in two zones resolves to nothing above (a
@@ -593,7 +660,7 @@ class SystemToolsMixin:
             "'children', using that child's exact name as target_name."
         )
 
-        return {
+        out = {
             "status": "success",
             "target_id": target_id,
             "target_type": target_type,
@@ -601,6 +668,20 @@ class SystemToolsMixin:
             "children": children,
             "note": note,
         }
+        # 같은 이름이 안팎으로 겹치면 이름은 바깥을 가리킨다. 안쪽(예: 부지
+        # '육묘장' 안의 시설 '육묘장')을 원하는 도구가 그것을 잃지 않게 알린다.
+        try:
+            inner = cls._also_inside(detail.get('place'))
+        except Exception:
+            inner = []
+        if inner:
+            out["also_inside"] = inner
+            out["note"] += (
+                " The same name is also used by the shape(s) in 'also_inside', "
+                "which sit inside this one; the name means this outer one. If a "
+                "tool needs the inner one (e.g. a facility-only tool), pass its "
+                "'target_id'.")
+        return out
 
     @classmethod
     def _forecast_is_usable(cls):
@@ -678,13 +759,17 @@ class SystemToolsMixin:
             return names[:_NAME_CAP] + ["… +%d more" % (len(names) - _NAME_CAP)]
 
         def _spatial_summary():
-            tree = S.get_spatial_tree(depth=2) or {}
+            # 기본 보기 = 곳은 모든 깊이, 장치는 개수. 예전 depth=2 는 대지 안
+            # 두 겹째 구역(3포장 > 1구역 > 3-1)의 이름을 빠뜨렸다.
+            tree = S.get_spatial_tree() or {}
             nodes = tree.get("hierarchy") or []
             by_type, names = {}, {}
             def _walk(items):
                 for n in items:
                     t = n.get("type") or "unknown"
                     by_type[t] = by_type.get(t, 0) + 1
+                    if n.get("devices"):
+                        by_type["device"] = by_type.get("device", 0) + n["devices"]
                     # 장치는 이름을 싣지 않는다 — 수가 많고 get_device_list 가 있다.
                     if t in ("site", "zone", "facility") and n.get("name"):
                         names.setdefault(t, []).append(n["name"])
@@ -1102,6 +1187,14 @@ class SystemToolsMixin:
             if not tab:
                 return {"status": "error",
                         "message": "no dashboard with id %s" % tab_id}
+            # 쓰기 시점 그룹 스코프 — 위젯을 놓을 대시보드로, 그리고 옵션에
+            # 적은 장치·다른 대시보드로 묻는다(위젯 버튼이 그 장치를 움직인다).
+            from aot.aot_flask.access import scope as _scope
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(tab)
+            if options:
+                write_scope.enforce(
+                    list(dict.fromkeys(_scope._uuid_values(options))))
             if tab.locked:
                 return {"status": "error",
                         "message": "the dashboard '%s' is locked — the UI hides the "
@@ -1217,6 +1310,9 @@ class SystemToolsMixin:
             w = Widget.query.filter(Widget.unique_id == widget_id).first()
             if not w:
                 return {"status": "error", "message": "no widget with id %s" % widget_id}
+            # 쓰기 시점 그룹 스코프 — 위젯이 놓인 대시보드로 묻는다.
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(w)
 
             catalog = cls._widget_catalog()
             info = catalog.get(w.graph_type)
@@ -1255,6 +1351,7 @@ class SystemToolsMixin:
                 if not target:
                     return {"status": "error",
                             "message": "no dashboard with id %s" % tab_id}
+                write_scope.enforce(target)   # 옮겨 갈 대시보드도
                 if target.locked:
                     return {"status": "error",
                             "message": "the target dashboard '%s' is locked"
@@ -1321,6 +1418,9 @@ class SystemToolsMixin:
             w = Widget.query.filter(Widget.unique_id == widget_id).first()
             if not w:
                 return {"status": "error", "message": "no widget with id %s" % widget_id}
+            # 쓰기 시점 그룹 스코프 — 위젯이 놓인 대시보드로 묻는다.
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(w)
 
             removed = cls._widget_brief(w)
             catalog = cls._widget_catalog()
@@ -1424,6 +1524,9 @@ class SystemToolsMixin:
             if not tab_id or not (name or '').strip():
                 return {"status": "error",
                         "message": "tab_id and name are required"}
+            # 쓰기 시점 그룹 스코프 — 탭은 그 자신이 부여 단위다.
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(('Tab', tab_id))
             ok = TabService.rename_tab(tab_id, name)
             if not ok:
                 return {"status": "error", "message": "rename failed — tab not found?"}
@@ -1445,6 +1548,9 @@ class SystemToolsMixin:
 
             if not tab_id:
                 return {"status": "error", "message": "tab_id is required"}
+            # 쓰기 시점 그룹 스코프 — 탭은 그 자신이 부여 단위다.
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(('Tab', tab_id))
             result = TabService.delete_tab(tab_id)
             if not result.get('success'):
                 return {"status": "error", "message": result.get('message')}

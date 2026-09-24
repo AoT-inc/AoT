@@ -103,7 +103,9 @@
         <div class="modal-footer">
           <button type="button" class="btn aot-pill-btn" data-dismiss="modal">{{ _('Cancel') }}</button>
           <button type="button" class="btn aot-pill-btn" id="note_orphaned_keep">{{ _('Keep the schedules') }}</button>
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="note_orphaned_cancel">{{ _('Cancel the schedules') }}</button>
+          {# 예정 취소는 사람 작업을 지우는 일 — 편집자만(서버도 403). 버튼은
+             남겨 두고 숨긴다: note-orphaned-links.js 가 id 로 찾는다. #}
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="note_orphaned_cancel"{% if not can_edit_human_tasks() %} hidden{% endif %}>{{ _('Cancel the schedules') }}</button>
         </div>
       </div>
     </div>

@@ -208,8 +208,9 @@ def test_p6_74_upgrade_downgrade_is_idempotent(tmp_path):
     assert tuple(row) == ('search_devices', None, None)
 
 
-def test_p6_74_is_the_head_the_app_expects():
-    from aot.config import ALEMBIC_VERSION
+def test_p6_74_follows_p6_73():
+    # 머리(head) 검사는 뒤에 온 마이그레이션의 몫이다(p6_75 는
+    # test_mcp_tool_profiles). 여기서는 사슬의 자리만 본다.
     mod = _load_migration()
-    assert mod.revision == ALEMBIC_VERSION
+    assert mod.revision == _P6_74
     assert mod.down_revision == 'p6_73_role_use_ai_chat_20260922'

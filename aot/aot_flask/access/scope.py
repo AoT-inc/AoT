@@ -423,13 +423,72 @@ def _looks_like_uuid(value):
     return bool(_UUID_RE.match(value))
 
 
+_UUID_FIND_RE = None
+
+
+def _uuid_candidates(text):
+    """문자열 안의 uuid 모양 조각 전부 — 앞뒤 공백·다른 글자에 붙은 것까지.
+
+    예전에는 문자열 **전체**가 정확히 36자 uuid 일 때만 봤다. 그런데 처리기는
+    값을 `strip()` 해서 쓰고(`_target_by_id`), 함수 동작 옵션은 장치를
+    `'<출력 uuid>,<채널 uuid>'` 처럼 붙여 담는다. 그래서 `' ' + uuid` 나 붙인
+    값은 판정을 빠져나가고 처리기에서는 그대로 쓰였다(2026-09-23 재현).
+    이제 문자열 속 uuid 조각을 전부 찾는다 — hex·하이픈이 아닌 글자가 경계다.
+    대소문자는 소문자로 맞춘 값도 함께 낸다(DB 의 uuid 는 소문자다).
+
+    본문(노트 내용 등)에 다른 그룹 자원의 uuid 를 적어 넣은 쓰기도 거부된다.
+    일부러 넓게 본다 — 좁게 보는 쪽의 실패는 남의 장치가 움직이는 것이다.
+    """
+    global _UUID_FIND_RE
+    if _UUID_FIND_RE is None:
+        import re
+        _UUID_FIND_RE = re.compile(
+            r'(?<![0-9A-Fa-f-])[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-'
+            r'[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}(?![0-9A-Fa-f-])')
+    for match in _UUID_FIND_RE.finditer(text):
+        value = match.group(0)
+        yield value
+        lowered = value.lower()
+        if lowered != value:
+            yield lowered
+
+
+#: 인자 훑기의 한계 — 중첩 깊이와 목록 하나의 길이. 넘으면 **거부**한다
+#: (`scan_limits_exceeded`). 예전에는 넘는 부분을 조용히 건너뛰어, 일괄 도구에
+#: 항목 201개를 주면 201번째가 판정 밖에서 실행됐다(2026-09-23 재현).
+SCAN_MAX_DEPTH = 8
+SCAN_MAX_ITEMS = 200
+
+#: 한계를 넘어 판정하지 못했다는 표지 — `can_operate_tool_call` 이 거부 uuid
+#: 자리에 돌려준다(빈 값이 아니어야 호출자가 통과로 오인하지 않는다).
+SCAN_LIMIT = 'scan-limit'
+
+
+def scan_limits_exceeded(payload, depth=0):
+    """인자가 훑기 한계(깊이·목록 길이)를 넘는가."""
+    if isinstance(payload, dict):
+        if depth > SCAN_MAX_DEPTH:
+            return True
+        return any(scan_limits_exceeded(v, depth + 1) for v in payload.values())
+    if isinstance(payload, (list, tuple, set)):
+        if depth > SCAN_MAX_DEPTH or len(payload) > SCAN_MAX_ITEMS:
+            return True
+        return any(scan_limits_exceeded(v, depth + 1) for v in payload)
+    return False
+
+
 def _uuid_values(payload, depth=0):
-    """인자 안에 있는 uuid 모양 문자열 전부 (중첩 포함)."""
-    if depth > 6:                        # 순환·과도한 중첩 방어
+    """인자 안에 있는 uuid 값 전부 (중첩·문자열 속 조각 포함).
+
+    한계(`SCAN_MAX_DEPTH`)를 넘는 부분은 보지 않는다 — 그런 인자는
+    `can_operate_tool_call` 이 먼저 `scan_limits_exceeded` 로 거부한다.
+    """
+    if depth > SCAN_MAX_DEPTH:           # 순환·과도한 중첩 방어
         return
     if isinstance(payload, str):
-        if _looks_like_uuid(payload):
-            yield payload
+        if len(payload) >= 36:
+            for found in _uuid_candidates(payload):
+                yield found
     elif isinstance(payload, dict):
         for value in payload.values():
             for found in _uuid_values(value, depth + 1):
@@ -477,7 +536,13 @@ def can_operate_tool_call(tool_name, arguments, user=None, write_tools=None):
 
     **읽기 도구는 보지 않는다** — A 범위에서 보기는 전원 공개다(§1-A).
     쓰기 도구만 대상이고, 인자 안의 uuid 를 전부 훑어 그중 스코프 대상이
-    하나라도 거부되면 거부한다.
+    하나라도 거부되면 거부한다. 다 훑지 못하는 인자(`scan_limits_exceeded`)는
+    `(False, SCAN_LIMIT)` 로 거부한다.
+
+    ⚠ **이것은 짐작이다 — 경계가 아니다.** 처리기는 대상을 이름·별칭·자식
+    행 id 로도 풀기 때문에 인자만 보고는 다 알 수 없다. 경계는 처리기가 실제
+    대상을 손에 쥔 자리의 `write_scope.enforce` 다(설계 §6-2a). 이 함수는 어차피
+    거부될 호출이 승인 큐에 들어가지 않게 하는 이른 거부로 남는다.
 
     `user` 가 `None` 이고 요청 컨텍스트도 없으면 **사람이 없는 호출**이라
     면제다(§6-1·§6-2 — 백그라운드 AI 잡·주기 요약). 그 면제는 A1 이 막은 것을
@@ -507,6 +572,15 @@ def can_operate_tool_call(tool_name, arguments, user=None, write_tools=None):
                                                  RESOURCE_TAB)
     by_kind = {'tab': RESOURCE_TAB, 'dashboard': RESOURCE_DASHBOARD,
                'geo_map': RESOURCE_GEO_MAP, 'geo_facility': RESOURCE_GEO_FACILITY}
+
+    # 다 훑지 못하는 인자는 거부한다 — 건너뛴 자리가 곧 우회로다. 판정
+    # 사본에 덧붙인 풀린 id 목록(`tool_execution.SCOPE_RESOLVED_KEY`)은 호출자가
+    # 보낸 것이 아니라 세지 않는다(항목마다 id 가 둘 풀리면 정상 일괄도 넘는다).
+    _sent = ({k: v for k, v in arguments.items()
+              if k != '_scope_resolved_targets'}
+             if isinstance(arguments, dict) else arguments)
+    if scan_limits_exceeded(_sent):
+        return False, SCAN_LIMIT
 
     for value in dict.fromkeys(_uuid_values(arguments)):
         found = _resource_of_uuid(value)

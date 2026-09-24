@@ -4029,7 +4029,12 @@ def target_drift(view_buckets):
                     order.append(key)
                 box = acc[key]['sensors'].get(who)
                 if box is None:
-                    box = {'sensor': row.get('sensor'), 'days': {}}
+                    # 채널 이름은 **표시용으로만** 싣는다 — 세는 단위(`who`)도
+                    # 숫자도 바꾸지 않는다. 한 장치가 같은 측정을 두 채널로
+                    # 재면(토양 노드의 공기·흙 온도) 이것 없이는 어느 줄이
+                    # 무엇인지 알 수 없다.
+                    box = {'sensor': row.get('sensor'), 'days': {},
+                           'channel_name': row.get('channel_name')}
                     acc[key]['sensors'][who] = box
                     acc[key]['order'].append(who)
                 # ⚠ **하루는 한 번만 센다** — 주간 버킷을 일 단위로 펼쳐 보는
@@ -4057,8 +4062,10 @@ def target_drift(view_buckets):
             deltas = list(box['sensors'][who]['days'].values())
             if not deltas:
                 continue
-            sensors.append(dict(_stats(deltas),
-                                sensor=box['sensors'][who]['sensor']))
+            entry = dict(_stats(deltas), sensor=box['sensors'][who]['sensor'])
+            if box['sensors'][who].get('channel_name'):
+                entry['channel_name'] = box['sensors'][who]['channel_name']
+            sensors.append(entry)
         if not sensors:
             continue
 
@@ -4300,6 +4307,8 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
                     continue
                 latest[key] = {'value': value, 'on': bucket['key'],
                                'sensor': row.get('sensor')}
+                if row.get('channel_name'):
+                    latest[key]['channel'] = row['channel_name']
 
     drift = target_drift(buckets)
     out = None

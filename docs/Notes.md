@@ -59,6 +59,8 @@ You don't retype anything — the selected text *is* the schedule's content, so 
 
 If the note is edited later and that highlighted passage disappears from the text, the link isn't silently dropped or silently kept: it's marked so you can decide — **`Unlink only`** leaves the already-scheduled event in place and just forgets the connection, while **`Cancel the schedule`** removes the event too.
 
+Making a schedule from a passage and **`Cancel the schedule`** need the Editor role (permission to edit controllers) — the same permission as creating a work task anywhere else. With a role below that you can still see the linked schedules, but these controls are not shown; **`Unlink only`** stays available to anyone who can edit notes.
+
 ## Searching and exporting { #search }
 
 The Notes Manager (`Additional Features -> Notes`) lists every note in the system, newest first, and loads more as you scroll. Use it to:

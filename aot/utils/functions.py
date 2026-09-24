@@ -138,6 +138,8 @@ def _parse_function_information_cached(exclude_custom, custom_only, locale):
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'camera_video')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'camera_stream')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'message')
+            # AI 에게만 보이는 옵션 안내 한 줄(get_function_detail 의 options_note).
+            dict_controllers = dict_has_value(dict_controllers, function_custom, 'ai_options_note')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'options_enabled')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'options_disabled')
             dict_controllers = dict_has_value(dict_controllers, function_custom, 'dependencies_module')

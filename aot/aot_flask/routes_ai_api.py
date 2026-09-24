@@ -1315,22 +1315,91 @@ def get_proposed_jobs():
         logger.exception(f"Failed to fetch proposed jobs: {e}")
         return jsonify({'error': str(e)}), 500
 
+def _scheduler_write_denied():
+    """일정 행을 고치는 옛 API 의 역할 판정 — 새 API(routes_scheduler)와 같다."""
+    from aot.aot_flask.utils.utils_general import user_has_permission
+    if not user_has_permission('edit_controllers', silent=True):
+        return jsonify({'error': 'Permission denied'}), 403
+    return None
+
+
+def _scheduler_scope_refused():
+    from aot.aot_flask.access import write_scope
+    db.session.rollback()
+    return jsonify({'error': write_scope.deny_message(),
+                    'reason_code': 'group_scope'}), 403
+
+
 @blueprint.route('/api/scheduler/job/<int:job_id>', methods=['PUT'])
 @login_required
 def update_scheduler_job(job_id):
-    """AI 제안 작업 편집"""
+    """AI 제안 작업 편집
+
+    예전에는 로그인만 보고 action_type·target_id·params 를 통째로 바꿨다 —
+    보기 전용 역할이 AI 초안을 그룹 밖 장치 예약으로 바꿔 두면, 모르고
+    승인한 사람의 권한으로 돌았다. 이제 새 API 와 같은 역할(edit_controllers)
+    을 요구하고, 바꾸기 전과 후의 대상 모두 그룹 스코프로 묻는다.
+
+    **초안(DRAFT)만 고친다.** 승인된 예약(PENDING 등)은 APScheduler 에 이미
+    인자와 시각이 등록돼 있어, 이 라우트가 행만 바꾸면 기록과 실제 실행이
+    어긋난다(행은 새 인자, 발화는 옛 인자). 화면(스케줄러·달력·AI 요청)은
+    이 라우트를 쓰지 않고 `/api/v1/scheduler/jobs/<id>` PUT(시각 변경 시
+    등록된 잡도 고친다)을 쓰므로 초안 전용으로 좁혀도 잃는 것이 없다.
+
+    고친 뒤의 예약은 **고친 사람**으로 `job_denial` 을 돌린다 — 발화 때와
+    같은 "실제로 돌 도구" 의 역할·그룹 판정이다. 대상 자리를 이름으로 준
+    경우(`function_id` 에 함수 이름)도 처리기와 같은 리졸버로 풀어 묻는다.
+    """
+    _deny = _scheduler_write_denied()
+    if _deny:
+        return _deny
+    from aot.aot_flask.access import write_scope
+    from aot.ai.services.ai_scheduler_service import AISchedulerService
     job = SchedulerJobMeta.query.get_or_404(job_id)
-    
-    # DRAFT 상태만 편집 가능 (또는 특수한 경우)
-    if job.state != 'DRAFT' and not job.is_editable:
-        return jsonify({'error': 'Job is not in an editable state'}), 400
-        
+
+    if job.state != 'DRAFT':
+        return jsonify({'error': 'Only draft jobs can be edited here. '
+                                 'Use /api/v1/scheduler/jobs/<id> for '
+                                 'approved jobs.'}), 409
+
     data = request.json or {}
-    
-    # 필드 업데이트
-    if 'action_type' in data: job.action_type = data['action_type']
-    if 'target_id' in data: job.target_id = data['target_id']
-    if 'params_json' in data: job.params_json = data['params_json']
+    if 'params_json' in data:
+        try:
+            _parsed = (json.loads(data['params_json'])
+                       if isinstance(data['params_json'], str)
+                       else data['params_json'])
+        except (TypeError, ValueError):
+            _parsed = None
+        if not isinstance(_parsed, dict):
+            return jsonify({'error': 'params_json must be a JSON object'}), 400
+        data['params_json'] = json.dumps(_parsed)
+
+    editor = None
+    try:
+        from aot.databases.models import User
+        editor = User.query.filter(
+            User.unique_id == write_scope.current_user_uuid()).first()
+    except Exception:
+        logger.exception('[scheduler-guard] 편집자 조회 실패')
+    if editor is None:
+        return jsonify({'error': 'Permission denied'}), 403
+
+    try:
+        with write_scope.acting_as_current_user(tool='edit_schedule'):
+            write_scope.enforce(job)
+            # 필드 업데이트
+            if 'action_type' in data: job.action_type = data['action_type']
+            if 'target_id' in data: job.target_id = data['target_id']
+            if 'params_json' in data: job.params_json = data['params_json']
+            write_scope.enforce(job)
+            denial = AISchedulerService.job_denial(
+                editor, job.action_type, job.target_id,
+                json.loads(job.params_json or '{}'))
+    except write_scope.WriteScopeDenied:
+        return _scheduler_scope_refused()
+    if denial:
+        db.session.rollback()
+        return jsonify({'error': denial}), 403
     if 'schedule_time' in data: 
         try:
             job.schedule_time = datetime.fromisoformat(data['schedule_time'].replace('Z', '+00:00'))
@@ -1362,7 +1431,16 @@ def update_scheduler_job(job_id):
 @login_required
 def delete_scheduler_job(job_id):
     """AI 제안 작업 삭제 (Archived로 상태 변경)"""
+    _deny = _scheduler_write_denied()
+    if _deny:
+        return _deny
+    from aot.aot_flask.access import write_scope
     job = SchedulerJobMeta.query.get_or_404(job_id)
+    try:
+        with write_scope.acting_as_current_user(tool='delete_schedule'):
+            write_scope.enforce(job)
+    except write_scope.WriteScopeDenied:
+        return _scheduler_scope_refused()
     
     data = request.json or {}
     reason = data.get('reason', 'User deleted')
@@ -1392,6 +1470,10 @@ def delete_scheduler_job(job_id):
 @login_required
 def batch_process_scheduler_jobs():
     """여러 작업 일괄 처리 (Approve, Reject, Delete)"""
+    _deny = _scheduler_write_denied()
+    if _deny:
+        return _deny
+    from aot.aot_flask.access import write_scope
     data = request.json or {}
     job_ids = data.get('job_ids', [])
     action = data.get('action') # 'approve', 'reject', 'delete'
@@ -1400,23 +1482,54 @@ def batch_process_scheduler_jobs():
         return jsonify({'error': 'job_ids and action are required'}), 400
         
     results = {'success': [], 'failed': []}
-    
+
+    # 승인은 단건 승인(`/api/v1/scheduler/approve/<id>`)과 같은 한 벌
+    # (`approve_job(approver=…)`)을 거친다 — 승인자의 역할·그룹을 실행될
+    # 인자로 판정하고, 책임자 없는 초안이면 승인자를 책임자로 적고,
+    # APScheduler 에 실제로 등록한다. 예전에는 상태만 PENDING 으로 바꿔
+    # 판정도 등록도 없이 "승인됨" 으로 보였다.
+    approver = None
+    if action == 'approve':
+        from aot.databases.models import User
+        from aot.ai.services.ai_scheduler_service import (
+            AISchedulerService, JobPermissionDenied)
+        approver = User.query.filter(
+            User.unique_id == write_scope.current_user_uuid()).first()
+        if approver is None:
+            return jsonify({'error': 'Permission denied'}), 403
+
     for jid in job_ids:
         try:
             job = SchedulerJobMeta.query.get(jid)
             if not job:
                 results['failed'].append({'id': jid, 'error': 'Not found'})
                 continue
+            try:
+                with write_scope.acting_as_current_user(tool='batch_' + str(action)):
+                    write_scope.enforce(job)
+            except write_scope.WriteScopeDenied:
+                results['failed'].append({'id': jid,
+                                          'error': write_scope.deny_message()})
+                continue
                 
             previous_state = job.state
-            
+
             if action == 'approve':
-                # TODO: Phase 1에서 구현한 실제 스케줄링 로직 연동 필요
-                # 여기서는 상태만 변경
-                job.state = 'PENDING'
-                job.decided_by = 'HUMAN'
-                job.decided_at = utc_now()
-                decision = 'APPROVED'
+                # approve_job 이 커밋하고 감사 기록(APPROVED)도 남긴다.
+                try:
+                    AISchedulerService.approve_job(
+                        jid, user_feedback='Batch approve by user',
+                        approver=approver)
+                except JobPermissionDenied as exc:
+                    db.session.rollback()
+                    results['failed'].append({'id': jid, 'error': str(exc)})
+                    continue
+                except ValueError as exc:
+                    db.session.rollback()
+                    results['failed'].append({'id': jid, 'error': str(exc)})
+                    continue
+                results['success'].append(jid)
+                continue
             elif action == 'reject':
                 job.state = 'ARCHIVED'
                 decision = 'REJECTED'

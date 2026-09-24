@@ -28,7 +28,7 @@ def _with_translated_alias(fn):
     @functools.wraps(fn)
     def wrapper(target_name):
         result = fn(target_name)
-        if result and result[0]:
+        if result and (result[0] or result[1] == 'ambiguous'):
             return result
         try:
             from aot.tools import providers

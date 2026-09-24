@@ -90,6 +90,11 @@
             <input class="form-control aot-entry-name-input" disabled
                    value="{{ job.display_location or _('General') }}" type="text">
         </div>
+        {#- 책임자는 자기 열 — 없으면 "책임자 없음"(시스템 예약·지워진 책임자). -#}
+        <div class="aot-entry-content-item aot-col-grow">
+            <input class="form-control aot-entry-name-input" disabled
+                   value="{{ job.display_owner or _('No owner') }}" type="text">
+        </div>
         <div class="aot-entry-content-item aot-col-btn">
             <input class="form-control btn btn-block aot-pill-btn aot-pill-btn-secondary"
                    type="button" disabled
@@ -236,6 +241,21 @@
                         </div>
                     </div>
                     <div class="aot-modal-option-row">
+                        <label class="aot-modal-option-label">{{ _('Owner') }}</label>
+                        <div class="aot-modal-option-control">
+                            {% if not job.display_owner and can_assign_owner %}
+                            <select id="edit-owner-{{ job.id }}" class="form-control selectpicker aot-standard-select" data-style="btn-white" data-live-search="true">
+                                <option value="" selected>{{ _('No owner') }}</option>
+                                {% for u in job.owner_candidates %}
+                                <option value="{{ u.unique_id }}">{{ u.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <input type="text" class="form-control aot-modern-input" value="{{ job.display_owner or _('No owner') }}" readonly>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="aot-modal-option-row">
                         <label class="aot-modal-option-label">{{ _('Location') }}</label>
                         <div class="aot-modal-option-control">
                             <input type="text" class="form-control aot-modern-input" id="edit-location-{{ job.id }}"
@@ -303,6 +323,9 @@
                 <button type="button" class="btn aot-pill-btn aot-pill-btn-danger mr-auto" onclick="deleteJob('{{ job.id }}')">{{ _('Delete') }}</button>
                 {% endif %}
                 <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{ _('Close') }}</button>
+                {% if not job.display_owner and can_assign_owner %}
+                <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" onclick="assignOwner('{{ job.id }}')">{{ _('Assign owner') }}</button>
+                {% endif %}
                 {% if job.display_editable %}
                 <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" onclick="saveJob('{{ job.id }}')">{{ _('Save') }}</button>
                 {% endif %}
@@ -763,6 +786,17 @@ function saveJob(jobId) {
     if (locationEl && locationEl.value) data.target_name = locationEl.value;
 
     apiCall('/api/v1/scheduler/jobs/' + jobId, 'PUT', data);
+}
+
+/* 책임자 없는 예약에 책임자를 지정한다(사용자 관리 권한). 새 책임자의
+   권한·그룹으로 돌 수 없는 예약이면 서버가 거부하고 사유를 알린다. */
+function assignOwner(jobId) {
+    var userId = $('#edit-owner-' + jobId).val();
+    if (!userId) {
+        if (window.showToast) { window.showToast({{ _('Choose a person to be responsible for this task.')|tojson }}, 'warning'); }
+        return;
+    }
+    apiCall('/api/v1/scheduler/jobs/' + jobId + '/owner', 'POST', { user_id: userId });
 }
 
 /* 브라우저 prompt·alert 대신 앱 공용 확인창과 알림을 쓴다. 취소 사유는 선택이었다. */

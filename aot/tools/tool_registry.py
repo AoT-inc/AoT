@@ -26,6 +26,7 @@ execute_action chain / special action types like read_manual). Tools whose `hand
 None are known-but-not-VirtualToolResolver-dispatched — they stay out of `tool_map`.
 """
 import copy
+import functools
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
@@ -50,6 +51,17 @@ class Tool:
                  activated, and activation is separately gated. Such a tool is still a
                  write (role check + audit still apply) but is exempt from human
                  approval. See _CONFIG_ONLY note below before adding one.
+    record_write: persists a RECORD (note, knowledge entry) with no device or
+                 configuration effect. It is a write — role, read-only key,
+                 group scope, advice-only mode and audit all apply exactly as
+                 for other writes — but it never needs human approval. The
+                 required role permission mirrors the web page that writes the
+                 same record (`edit_settings`). See _RECORD_WRITE note below.
+    advisory_write: persists an ADVICE row (submit_advice) — the channel a
+                 refused caller is told to use instead. Audited as a write, but
+                 NOT in write_tools(): read-only keys and advice-only mode may
+                 still submit; only roles that cannot use the AI at all
+                 (`use_ai_chat` off — Guest/Kiosk by default) are refused.
     manifest   : the VERBATIM manifest dict emitted into get_action_manifest()'s
                  system_tools list, or None to omit the tool from the LLM manifest.
                  Stored verbatim so the derived manifest is byte-identical to the
@@ -75,7 +87,28 @@ class Tool:
     mutating: bool = False
     physical: bool = False
     config_only: bool = False
+    record_write: bool = False
+    advisory_write: bool = False
     manifest: Optional[Dict[str, Any]] = None
+
+
+# ---------------------------------------------------------------------------
+# _RECORD_WRITE — 승인은 없지만 쓰기인 기록 도구 (2026-09-23).
+#
+# create_note·knowledge_shelve 는 "승인이 필요 없다"는 판단(2026-07-18/19)을
+# "쓰기가 아니다"로 표현해 왔다(플래그 없음 = 읽기). 그 결과 게이트가 읽기로
+# 분류해 읽기 전용 API 키, 보기 전용 역할, 조언 전용 모드에서도 노트와 지식을
+# 저장할 수 있었고 그룹 스코프도 보지 않았다. 웹은 같은 기록에 `edit_settings`
+# 를 요구한다(routes_notes_api·routes_ai_library).
+#
+# '쓰기인가'와 '승인이 필요한가'는 다른 질문이다(config_only 와 같은 구분).
+# record_write 는 앞의 답만 예로 바꾼다 — 승인 면제는 그대로다. 필요 권한은
+# 웹과 같은 edit_settings(mcp_auth.role_can_record)이고, 제어 권한
+# (edit_controllers)과 일부러 다르게 둔다.
+#
+# 새 도구가 기록만 남긴다면 여기에 넣고, 아무 플래그 없이 두지 말 것 —
+# 플래그 없음은 '읽기'이고, 읽기는 누구에게나 열린다.
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +230,7 @@ TOOLS: List[Tool] = [
         # Corrected 2026-07-08: add_schedule_tool proposes a SchedulerJobMeta
         # job (source_type='human'), NOT a Notes row — verified against the
         # actual implementation. Use create_note for a plain memo/journal entry.
-        "usage_hint": "For a DATED work task/event (weeding, spraying, harvest, inspection) use this — it registers a human work item. Params: {date, content, worker, time, tags, target_name}. PASS target_name (a zone/facility/device name like '온실', '3-1', '1포장 1-1') whenever the user names a place, so the schedule links to that real location (map + location search). If the name is ambiguous/not found the tool returns available_targets — call ask_user to pick, then retry. Omit target_name only for a farm-wide event with no specific place. This is a GIS-based system: target_name resolves to exactly ONE entity and never auto-expands to its children. Before writing, if the request could apply per sub-unit ('각 구역별', 'each zone') call resolve_target(target_name) first — read-only, no approval — to see whether the name is a container with 'children'; if so, use add_schedule_batch to write all of them in one call instead of one add_schedule call per child. For an undated memo/note, use create_note instead.",
+        "usage_hint": "For a DATED work task/event (weeding, spraying, harvest, inspection) use this — it registers a human work item. Params: {date, content, worker, time, tags, target_name, target_id?}. PASS target_name (a zone/facility/device name like '온실', '3-1', '1포장 1-1') whenever the user names a place, so the schedule links to that real location (map + location search). If the name is not found the tool returns available_targets; if it names several places it returns candidates — call ask_user to pick, then retry with the chosen candidate's use_name (or pass its target_id as target_id when it has no use_name). Omit target_name only for a farm-wide event with no specific place. This is a GIS-based system: target_name resolves to exactly ONE entity and never auto-expands to its children. Before writing, if the request could apply per sub-unit ('각 구역별', 'each zone') call resolve_target(target_name) first — read-only, no approval — to see whether the name is a container with 'children'; if so, use add_schedule_batch to write all of them in one call instead of one add_schedule call per child. For an undated memo/note, use create_note instead.",
     }),
     Tool('add_schedule_batch', handler='add_schedule_batch_tool', physical=True, config_only=True, manifest={
         "action_type": "add_schedule_batch",
@@ -243,7 +276,7 @@ TOOLS: List[Tool] = [
         "tool_name": "edit_schedule",
         "action_type": "virtual_tool_call",
         "description": "Edits an existing schedule's time, duration, content, or worker. Requires human approval. If the schedule is an already-registered device reservation, its trigger is rescheduled too. First call search_schedule to get the job_id.",
-        "usage_hint": "params.arguments: {job_id (required — from search_schedule), date (optional YYYY-MM-DD, keeps existing date if omitted), time (optional HH:MM, keeps existing time if omitted), duration_minutes (optional — new duration in minutes, replaces the existing one), content (optional new text), worker (optional new assignee), target_name (optional — re-link to a different zone/facility/device by name; ambiguous name returns available_targets → ask_user then retry)}.",
+        "usage_hint": "params.arguments: {job_id (required — from search_schedule), date (optional YYYY-MM-DD, keeps existing date if omitted), time (optional HH:MM, keeps existing time if omitted), duration_minutes (optional — new duration in minutes, replaces the existing one), content (optional new text), worker (optional new assignee), target_name (optional — re-link to a different zone/facility/device by name; an unknown name returns available_targets, a name shared by several places returns candidates → ask_user then retry with the chosen use_name), target_id (optional — re-link by unique_id instead)}.",
     }),
     Tool('delete_schedule', handler='delete_schedule_tool', mutating=True, manifest={
         "tool_name": "delete_schedule",
@@ -1131,7 +1164,10 @@ TOOLS: List[Tool] = [
     # them (they were intercepted as pending_approval, never auto-saved, then
     # surfaced as a "technical error"). Notes save immediately like a safe write;
     # create_notice (PUBLIC board post) stays approval-gated.
-    Tool('create_note', handler='create_note', manifest={
+    # record_write (2026-09-23): still no approval, but it IS a write — role
+    # (edit_settings, as on the web), read-only key, group scope and advice-only
+    # mode apply. See _RECORD_WRITE.
+    Tool('create_note', handler='create_note', record_write=True, manifest={
         "tool_name": "create_note",
         "action_type": "virtual_tool_call",
         "description": "Creates a memo/note and SAVES it immediately (no approval). In AoT there is NO 'note widget' — every device, land/facility, and zone/shape has its OWN notes, viewed per-entity. A note is only visible on an entity when it is attached to it. So when the user asks to note something 'at 1포장 1-1' or 'on 밸브1', ALWAYS pass target_name with that location/entity name — the tool resolves it to the entity and attaches the note. Do NOT just say you will create it; emit this tool call.",
@@ -1146,7 +1182,8 @@ TOOLS: List[Tool] = [
     # knowledge_shelve_service.py) and is never presented with authority until a
     # human confirms it or it corroborates against a real source (P5, not built
     # yet) — a low-risk, reversible write, not a state-changing entity mutation.
-    Tool('knowledge_shelve', handler='knowledge_shelve', manifest={
+    # record_write (2026-09-23): not approval-gated, but a write — see _RECORD_WRITE.
+    Tool('knowledge_shelve', handler='knowledge_shelve', record_write=True, manifest={
         "tool_name": "knowledge_shelve",
         "action_type": "virtual_tool_call",
         "description": "Saves a piece of knowledge into this system's knowledge library so a later query can retrieve it (the write counterpart to knowledge_search). Shelve what you derived, observed, were told, **or researched yourself** — a summary of material you looked up outside this system is exactly what this is for. ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
@@ -1309,8 +1346,12 @@ TOOLS: List[Tool] = [
     # 다자 AI 의견 원장. submit_advice 는 DB에 행을 쓰지만 의도적으로 mutating 이
     # 아니다 — AI가 '의견을 말하는 것'에까지 사람 승인을 요구하면 조언 원장의
     # 목적이 사라진다. 승인이 필요한 것은 실행(operate_device 등)이며, 이 원장은
-    # 실행 대신 제안을 남기는 통로다. create_note 도 같은 이유로 비변이다.
-    Tool('submit_advice', handler='submit_advice'),
+    # 실행 대신 제안을 남기는 통로다. 다만 행을 저장하므로 '읽기'도 아니다 —
+    # advisory_write 로 선언해 감사에는 쓰기로 남고, AI 를 못 쓰는 역할
+    # (use_ai_chat 없음)은 거부된다. 읽기 전용 키·조언 전용 모드에는 열려 있다
+    # (거부 안내가 조언 제출을 권하기 때문이다). create_note 는 record_write
+    # (_RECORD_WRITE 주석)로 옮겼다.
+    Tool('submit_advice', handler='submit_advice', advisory_write=True),
     Tool('list_advice', handler='list_advice'),
 
     # 오리엔테이션 진입점 — 외부 AI가 접속 직후 한 번 호출해 무엇을 언제 쓸지 파악한다.
@@ -1321,7 +1362,7 @@ TOOLS: List[Tool] = [
     # native tool bridge, the legacy execute_action if/elif chain, or as special
     # action types. handler=None keeps them out of the VirtualToolResolver tool_map.
     Tool('abstract_plan', handler=None),
-    Tool('note', handler=None),
+    Tool('note', handler=None, record_write=True),   # 옛 action_type 'note' (NoteResolver)
     Tool('function', handler=None),
     Tool('pid', handler=None),
     Tool('get_sensor_reading', handler=None),      # native bridge
@@ -1575,6 +1616,284 @@ def tier_of(name):
 
 
 # ---------------------------------------------------------------------------
+# API 키별 도구 묶음(tool profile) — 외부 MCP 표면에서 **무엇을 보여 주는가**.
+#
+# 키의 scope(full/readonly)는 "무엇을 해도 되는가"(보안 경계)이고, 묶음은
+# "무엇을 목록에 싣는가"(표면)다. 둘은 다른 축이라 섞지 않는다 — 묶음 밖 도구를
+# 부르면 거절하지만, 그것은 목록과 실행을 맞추는 일관성일 뿐 권한 판단이 아니다.
+#
+#   operations    — 일상 운영(기본). 조회·제어·일정·기록·작기 단계 사건.
+#   configuration — 운영 + 설정·작성(장치 정의, 자동화·시퀀스 작성, 구획·
+#                   프로그램 작성, 지도 배치, 화면 구성, AI 설정, 보관 문서·
+#                   라이브러리 소스). **더하기 방식**이라 운영을 항상 포함한다.
+#
+# 표 값은 넷 중 하나다:
+#   'operations' / 'configuration' — 그 묶음부터 보인다.
+#   'retired'   — 외부 MCP 목록에서 뺀 도구(같은 일을 하는 운영 도구가 있다).
+#                 인앱 AI 처럼 묶음이 없는(제한 없는) 호출자에게는 그대로 있다.
+#   'drawer'    — 서랍 기구(open_drawer·get_tool_detail·use_tool). 묶음과
+#                 무관하게 서랍 스위치를 따른다.
+#
+# **왜 Tool(...) 안이 아니라 표인가** — 서랍 배정표와 같은 이유다. 이 분류는
+# 사람이 주기적으로 다시 보는 판단이고, 표 하나가 곧 검토 단위다. 서랍(도메인)과
+# 묶음(용도)은 다른 축이라 _TIER_ASSIGNMENT 에 칸을 더하지 않는다. MCP 표면의
+# 도구마다 정확히 한 번 배정돼 있는지는 test_mcp_tool_profiles 가 양방향으로 본다.
+# **실행할 수 있는 도구는 전부** 표에 있다(카탈로그에 없어도 use_tool 로 닿는
+# 것 포함) — 표에 없는 이름을 설정으로 치는 규칙(tool_in_profile)은 새 도구가
+# 배정 없이 들어올 때를 위한 안전장치일 뿐, 배정을 대신하지 않는다.
+TOOL_PROFILE_OPERATIONS = 'operations'
+TOOL_PROFILE_CONFIGURATION = 'configuration'
+TOOL_PROFILES = (TOOL_PROFILE_OPERATIONS, TOOL_PROFILE_CONFIGURATION)
+_PROFILE_RETIRED = 'retired'
+_PROFILE_DRAWER = 'drawer'
+#: 인증 스냅샷에만 싣는 표지 — 내부 AI 서비스 계정의 연결(인앱 물리 제어가
+#: stdio 하위 프로세스로 들어오는 길)이다. 키에 저장하는 값이 아니며
+#: (normalize_tool_profile 은 이 값을 운영으로 좁힌다), mcp_auth.tool_profile_of
+#: 가 None(제한 없음)으로 바꿔 넘긴다. None 을 그대로 쓰지 않는 이유: 스냅샷의
+#: None 은 "묶음이 비었다 → 기본 묶음" 으로 읽힌다.
+TOOL_PROFILE_UNRESTRICTED = 'unrestricted'
+
+_OPS = TOOL_PROFILE_OPERATIONS
+_CFG = TOOL_PROFILE_CONFIGURATION
+
+_MCP_PROFILE = {
+    # --- 장치 ---------------------------------------------------------------
+    'search_devices':            _OPS,
+    'get_output_state':          _OPS,
+    'operate_device':            _OPS,
+    'get_device_measurements':   _OPS,
+    'get_device_detail':         _OPS,
+    'get_control_state':         _OPS,
+    'get_device_list':           _OPS,
+    # 카탈로그(tools/list)에는 없지만 use_tool 로 실행되는 도구 — 표에 없으면
+    # 설정으로 쳐지는 안전장치에 기대지 않고 명시한다(test_mcp_tool_profiles).
+    'list_unbound_slots':        _OPS,
+    'rebind_device':             _CFG,
+    # operate_device 와 같은 일을 하는 네이티브 도구. 인앱 AI 에는 남는다.
+    'set_output_state':          _PROFILE_RETIRED,
+    # get_device_list·search_devices 와 겹치는 네이티브 도구.
+    'list_available_devices':    _PROFILE_RETIRED,
+    # --- 측정 ---------------------------------------------------------------
+    'get_sensor_detail':         _OPS,
+    'get_zone_sensor_summary':   _OPS,
+    'get_weather':               _OPS,
+    'get_sensor_reading':        _OPS,
+    'get_weather_forecast':      _OPS,
+    'get_anomalies':             _OPS,
+    'get_device_freshness':      _OPS,
+    'get_energy_report':         _OPS,
+    'get_cumulative_status':     _OPS,
+    # --- 함수 ---------------------------------------------------------------
+    'get_function_detail':       _OPS,
+    'get_function_list':         _OPS,
+    'get_active_functions_summary': _OPS,
+    'activate_function':         _OPS,
+    'deactivate_function':       _OPS,
+    # 제어기 옵션·시퀀스 운전 시간 조정("관수 5분 늘려")은 현장의 일상이다.
+    'modify_function_options':   _OPS,
+    'modify_sequence_schedule':  _OPS,
+    'create_function':           _CFG,
+    'delete_function':           _CFG,
+    'create_sequence_function':  _CFG,
+    'configure_sequence_day':    _CFG,
+    # 기존 단계 하나의 시간·순서·켜짐 조정("관수 5분 늘려")도 현장의 일상이다.
+    # 운영 안내문이 "시퀀스 운전 시간" 을 약속하는데 이것이 설정에만 있어서
+    # 프로필 벤치마크(26-09-24, 432회) lat_19 가 운영 키에서 실패했다. 단계를
+    # 새로 깔거나 지우는 일(configure_sequence_day·create_sequence_function)은
+    # 설정에 남는다.
+    'modify_sequence_step':      _OPS,
+    # --- 일정 ---------------------------------------------------------------
+    'search_schedule':           _OPS,
+    'add_schedule':              _OPS,
+    'add_schedule_batch':        _OPS,
+    'edit_schedule':             _OPS,
+    'delete_schedule':           _OPS,
+    'schedule_device_control':   _OPS,
+    # --- 기록 ---------------------------------------------------------------
+    'search_notes':              _OPS,
+    'create_note':               _OPS,
+    'get_note_attachment':       _OPS,
+    'knowledge_search':          _OPS,
+    'query_data_source':         _OPS,
+    'list_lookup_sources':       _OPS,
+    'query_reference_table':     _OPS,
+    'list_notices':              _OPS,
+    'create_notice':             _OPS,
+    # 거부 응답이 "대신 조언으로 남겨라" 고 안내하므로 운영 키에 있어야 한다.
+    'submit_advice':             _OPS,
+    'list_advice':               _OPS,
+    # search_notes 응답이 보관 문서 검색을 가리킨다.
+    'search_archives':           _OPS,
+    'get_archived_document':     _CFG,
+    'archive_note':              _CFG,
+    'restore_note_from_archive': _CFG,
+    'set_document_tier':         _CFG,
+    'delete_archive':            _CFG,
+    'modify_notice':             _CFG,
+    'delete_notice':             _CFG,
+    'knowledge_shelve':          _CFG,
+    'list_library_source_types': _CFG,
+    'smartfarmkorea_lookup':     _CFG,
+    'configure_library_source':  _CFG,
+    # --- 공간 ---------------------------------------------------------------
+    'list_plots':                _OPS,
+    'get_plot':                  _OPS,
+    'get_map_equipment':         _OPS,
+    'get_map_equipment_detail':  _OPS,
+    'get_spatial_tree':          _OPS,
+    'list_geo_maps':             _OPS,
+    'get_device_location':       _OPS,
+    'get_crop_status':           _OPS,
+    'get_facility_capacity':     _OPS,
+    'get_plot_history':          _OPS,
+    'list_plot_journals':        _OPS,
+    'get_plot_journal':          _OPS,
+    'create_plot_journal':       _OPS,
+    # 작기 단계 사건 — 사용자가 직접 말하는 일("육묘기 끝났어", "관수 시작해").
+    'end_plot':                  _OPS,
+    'confirm_plot_stage':        _OPS,
+    'reschedule_plot_stage':     _OPS,
+    'undo_plot_stage':           _OPS,
+    'apply_plot_resources':      _OPS,
+    'create_plot':               _CFG,
+    'modify_plot':               _CFG,
+    'delete_plot':               _CFG,
+    'copy_plot':                 _CFG,
+    'propose_plot_split':        _CFG,
+    'apply_plot_split':          _CFG,
+    'set_plot_stage_guidance':   _CFG,
+    'add_plot_stage':            _CFG,
+    'remove_plot_stage':         _CFG,
+    'save_plot_schedule_as_program': _CFG,
+    'list_programs':             _CFG,
+    'get_program':               _CFG,
+    'create_program':            _CFG,
+    'modify_program':            _CFG,
+    'delete_program':            _CFG,
+    'get_address':               _CFG,
+    'distance_between':          _CFG,
+    'nearest':                   _CFG,
+    'set_device_location':       _CFG,
+    'delete_geo_shape':          _CFG,
+    # --- 장치 정의 ----------------------------------------------------------
+    'list_device_types':         _CFG,
+    'get_device_type_options':   _CFG,
+    'create_input':              _CFG,
+    'modify_input':              _CFG,
+    'delete_input':              _CFG,
+    'create_output':             _CFG,
+    'modify_output':             _CFG,
+    'delete_output':             _CFG,
+    'list_gis_inputs':           _CFG,
+    'create_gis_input':          _CFG,
+    'modify_gis_input':          _CFG,
+    'activate_gis_input':        _CFG,
+    'delete_gis_input':          _CFG,
+    # --- 시스템 -------------------------------------------------------------
+    'resolve_target':            _OPS,
+    'get_system_brief':          _OPS,
+    'list_pending_confirmations': _OPS,
+    # 운영 묶음에 승인이 필요한 도구가 있는 한 필수다.
+    'respond_to_confirmation':   _OPS,
+    # 서버 안내문(TIME 단락)이 이름으로 부른다 — 빠지면 없는 도구를 가리킨다.
+    'get_local_time':            _OPS,
+    # 선언만 있고 MCP 실행층에는 처리기가 없다(인앱 action_type). 읽기라 운영.
+    'read_manual':               _OPS,
+    'analyze_system_failure':    _OPS,
+    'get_system_update_status':  _CFG,
+    'get_storage_tier_status':   _CFG,
+    'list_dashboards':           _CFG,
+    'list_widget_types':         _CFG,
+    'get_widget':                _CFG,
+    'create_widget':             _CFG,
+    'modify_widget':             _CFG,
+    'delete_widget':             _CFG,
+    'list_tabs':                 _CFG,
+    'create_tab':                _CFG,
+    'modify_tab':                _CFG,
+    'delete_tab':                _CFG,
+    'list_ai_agents':            _CFG,
+    'list_ai_entries':           _CFG,
+    'create_ai_agent':           _CFG,
+    'modify_ai_agent':           _CFG,
+    'delete_ai_agent':           _CFG,
+    # 서랍 기구 — 묶음이 아니라 서랍 스위치를 따른다.
+    'open_drawer':               _PROFILE_DRAWER,
+    'get_tool_detail':           _PROFILE_DRAWER,
+    'use_tool':                  _PROFILE_DRAWER,
+}
+
+_PROFILE_VALUES = frozenset(TOOL_PROFILES) | {_PROFILE_RETIRED, _PROFILE_DRAWER}
+for _name, _value in _MCP_PROFILE.items():
+    if _value not in _PROFILE_VALUES:
+        raise ValueError(
+            f"tool_registry: 묶음 표에 모르는 값이 있습니다 — {_name}: {_value}")
+
+
+def normalize_tool_profile(value):
+    """키에 저장할 묶음 값. 모르는 값·빈 값은 운영으로 좁힌다.
+
+    scope 와 같은 원칙이다 — 오타 하나가 조용히 넓은 표면을 만들지 않게 한다."""
+    return value if value in TOOL_PROFILES else TOOL_PROFILE_OPERATIONS
+
+
+def mcp_profile_of(name):
+    """MCP 표면 도구의 묶음 배정. 표에 없으면 None."""
+    return _MCP_PROFILE.get(name)
+
+
+def mcp_profile_table():
+    """배정표 사본(검사·문서용)."""
+    return dict(_MCP_PROFILE)
+
+
+def profile_tools(profile):
+    """그 묶음이 보여 주는 도구 이름. 설정은 운영을 포함한다(운영 ⊆ 설정).
+
+    서랍 기구와 retired 는 어느 묶음에도 들지 않는다 — 앞의 것은 서랍 스위치가,
+    뒤의 것은 "묶음 없음(제한 없음)" 호출자만 본다."""
+    return _profile_tools(normalize_tool_profile(profile))
+
+
+@functools.lru_cache(maxsize=None)
+def _profile_tools(profile):
+    wanted = {TOOL_PROFILE_OPERATIONS}
+    if profile == TOOL_PROFILE_CONFIGURATION:
+        wanted.add(TOOL_PROFILE_CONFIGURATION)
+    return frozenset(n for n, v in _MCP_PROFILE.items() if v in wanted)
+
+
+def is_declared_tool(name):
+    """TOOLS 에 선언된 이름인가(MCP 카탈로그 밖의 내부 도구 포함)."""
+    return name in _BY_NAME
+
+
+def is_drawer_machinery(name):
+    return _MCP_PROFILE.get(name) == _PROFILE_DRAWER
+
+
+def is_retired_from_mcp(name):
+    return _MCP_PROFILE.get(name) == _PROFILE_RETIRED
+
+
+def tool_in_profile(name, profile):
+    """묶음 `profile` 인 호출자에게 이 도구를 보여 주는가.
+
+    profile 이 None 이면 제한이 없다(인앱 AI). 서랍 기구는 묶음과 무관하게
+    참이다 — 서랍 스위치가 따로 정한다. 표에 없는 이름은 설정으로 친다(새
+    도구가 배정 없이 들어와도 운영 키 표면이 조용히 커지지 않게)."""
+    if profile is None:
+        return True
+    value = _MCP_PROFILE.get(name, TOOL_PROFILE_CONFIGURATION)
+    if value == _PROFILE_DRAWER:
+        return True
+    return name in profile_tools(profile) or (
+        value == TOOL_PROFILE_CONFIGURATION
+        and name not in _MCP_PROFILE
+        and normalize_tool_profile(profile) == TOOL_PROFILE_CONFIGURATION)
+
+
+# ---------------------------------------------------------------------------
 # MCP tool payloads — the JSON-Schema catalog exposed to the mcp_aot engine and
 # the standalone stdio MCP server (aot_mcp_server.py). This USED to be a second,
 # independently hand-maintained list (`VIRTUAL_TOOLS` in aot/ai/agents/mcp_aot.py):
@@ -1600,87 +1919,116 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 안 보이는 상태로 한참 헤맸다).
     {
         "tool_name": "list_plots",
-        "description": "Lists vegetation plots — what crop is planted where, with area, size (width x length), period and the zone each plot sits in. Growing plots only unless include_ended=true. This is the ONLY source for open-field crops; get_crop_status covers greenhouses. For row/plant counts at a given spacing, call get_plot on the one plot. Pass with_sensors=true to get every plot's sensors in ONE call instead of calling get_plot per plot. Irrigation valves are NOT included here (they are the expensive part); call get_plot on the single plot when you need them. zone_id answers whether one zone has a crop. The reply carries a '_reading' list: the rules for reading THIS result, narrowed to what it actually returned. Follow it — it is instruction, not commentary. Read-only.",
+        "description": (
+            "Vegetation plots: crop, zone, area, size, period. Growing only "
+            "unless include_ended. The only source for open-field crops; "
+            "greenhouse crops → get_crop_status. with_sensors adds each plot's sensors; valves, stages and capacity "
+            "are in get_plot. Follow the reply's `_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "map_id": {"type": "string", "description": "Map (farm) unique_id. Omit for all maps."},
-                "zone_id": {"type": "string", "description": "Zone or site unique_id (from get_spatial_tree/resolve_target). Only plots spatially inside it."},
-                "include_ended": {"type": "boolean", "description": "Include finished plots (history). Default: false."},
-                "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD' — what was growing on that day."},
-                "with_sensors": {"type": "boolean", "description": "Include each plot's referenced sensors (in_plot / from_zone / source). Default false. Use this instead of calling get_plot once per plot when the question spans several plots ('which plots are too wet'). Valves are still excluded."}
-            }
-        }
+                "map_id": {"type": "string", "description": "Map unique_id. Omit for all maps."},
+                "zone_id": {"type": "string", "description": "Zone or site unique_id or name — only plots inside it."},
+                "include_ended": {"type": "boolean", "description": "Include finished plots (history)."},
+                "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD'."},
+                "with_sensors": {"type": "boolean", "description": "Include each plot's sensors (not valves)."},
+            },
+        },
     },
     {
         "tool_name": "get_plot",
-        "description": "One vegetation plot in detail: crop, variety, planted/expected-end dates, area, dimensions (width x length, for any 'how many rows / will it fit' question that area alone cannot answer), the sensors it reads, the irrigation valves covering it, and its current programme stage. Pass plant_spacing_cm — with row_spacing_cm for a flat layout, or bed_pitch_cm + rows_per_bed for beds — to also get 'capacity_estimate' counted here rather than in your head. The reply carries a '_reading' list: the rules for reading THIS result, already narrowed to the fields it actually returned. Follow it — it is instruction, not commentary. Read-only.",
+        "description": (
+            "One plot in detail: crop, dates, area, dimensions, sensors, "
+            "irrigation valves, current stage, stage schedule and target check. "
+            "Give spacings to get 'capacity_estimate' counted here rather than in"
+            " your head. Follow the reply's `_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "plot_id": {"type": "string", "description": "Plot unique_id."},
+                "plot_id": {"type": "string", "description": "Plot unique_id or name (plot name, crop or variety)."},
                 "row_spacing_cm": {"type": "number", "description": "Spacing between rows in cm (e.g. 40), for a FLAT layout only. Rows are counted across the plot's SHORT side. Not needed — and not used — when a bed layout (bed_pitch_cm + rows_per_bed) is given, because rows_per_bed takes its place."},
                 "plant_spacing_cm": {"type": "number", "description": "Spacing between plants within a row in cm (e.g. 15). Plants are counted along the plot's LONG side. Required for any count, in both flat and bed layouts."},
                 "edge_margin_cm": {"type": "number", "description": "Extra margin left free at every edge, in cm — headland for machinery turning, bed shoulders, a path. Default 0. Half a spacing is ALREADY free at each edge without this, so only pass it when the plot genuinely needs more (e.g. 200 for a 2 m turning strip). Requires both spacings."},
                 "bed_pitch_cm": {"type": "number", "description": "Bed spacing (두둑 간격) in cm, centre to centre — the furrow is INCLUDED, e.g. 160 for a 120 cm bed with a 40 cm furrow. Ask the grower for this as ONE number: they do not count a bed and its furrow separately, and asking for both invites two different readings of the same field. Give it with rows_per_bed to count the layout as actually planted; without it the count assumes a flat layout and OVERSTATES a bedded one by 20-30%."},
-                "rows_per_bed": {"type": "integer", "description": "How many rows go on ONE bed, e.g. 2. Whole number, 1 or more. Crop-dependent — peppers take one row, lettuce or cabbage two or three. Must be given together with bed_pitch_cm; the bed spacing alone cannot say how many rows fit. When this is given, row_spacing_cm is not used."}
+                "rows_per_bed": {"type": "integer", "description": "How many rows go on ONE bed, e.g. 2. Whole number, 1 or more. Crop-dependent — peppers take one row, lettuce or cabbage two or three. Must be given together with bed_pitch_cm; the bed spacing alone cannot say how many rows fit. When this is given, row_spacing_cm is not used."},
+                "plot_ids": {"type": "array", "items": {"type": "string"}, "description": "Several at once (max 10)."},
             },
-            "required": ["plot_id"]
-        }
+        },
     },
     {
         "tool_name": "get_plot_history",
-        "description": "What was grown on this same ground before — the basis for crop-rotation and soil-borne disease judgement. Give either a plot or a zone; returns every plot whose area overlaps it, past and present, with the overlapping area. Always check this before advising whether a crop can be planted again. Read-only.",
+        "description": (
+            "What grew on the same ground before — every past or present plot "
+            "overlapping a plot or zone, with the overlap area. Check it before "
+            "advising on replanting or rotation. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "plot_id": {"type": "string", "description": "Use this plot's outline as the reference area."},
-                "zone_id": {"type": "string", "description": "Or use a zone's outline (GeoShape unique_id)."},
-                "map_id": {"type": "string", "description": "Optional map hint."}
-            }
-        }
+                "plot_id": {"type": "string", "description": "Plot unique_id — its outline is the reference."},
+                "zone_id": {"type": "string", "description": "Or a zone's unique_id."},
+                "map_id": {"type": "string", "description": "Optional map hint."},
+            },
+        },
     },
     {
         "tool_name": "list_plot_journals",
-        "description": "Saved journals — title, period, status only, no content. Omit target_type/target_id to list every journal on this system; give both to list one plot/zone/site. A journal is a point-in-time snapshot of what was grown, measured, and controlled (never recomputed after generation). journal_id here is an internal handle for get_plot_journal — do not show it to the user, refer to journals by their title and period instead. Read-only.",
+        "description": (
+            "Saved journals: title, period, status (no content). Omit "
+            "target_type/target_id for all, or give both for one plot/zone/site. "
+            "journal_id is an internal handle — refer to journals by title and "
+            "period. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "What the journal is about. Omit for all journals."},
-                "target_id": {"type": "string", "description": "unique_id of the plot/zone/site. Requires target_type."},
-                "limit": {"type": "integer", "description": "Newest first. Default 50, max 200."}
+                "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "Omit for all journals."},
+                "target_id": {"type": "string", "description": "unique_id of that plot/zone/site."},
+                "limit": {"type": "integer", "description": "Newest first. Default 50, max 200."},
             },
-            "required": []
-        }
+            "required": [],
+        },
     },
     {
         "tool_name": "get_plot_journal",
-        "description": "One saved journal — the exact snapshot from when it was generated (environment, control runtime, notes, stage targets and deltas). IMPORTANT: a journal covering more than a few days does not fit the response limit, and the measurements (env) are the first thing dropped — pass granularity='week'|'month'|'all' to fold the periods, or date_from/date_to to narrow, whenever the period is longer than about three days. Folding is a view-time calculation; the stored snapshot is never altered. status may be pending/running/error; only 'done' carries data. Read-only.",
+        "description": (
+            "One saved journal snapshot (environment, control runtime, notes, "
+            "stage targets). Beyond ~3 days pass granularity or "
+            "date_from/date_to, or the measurements are dropped to fit. Only "
+            "status 'done' has data. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "journal_id": {"type": "string", "description": "From list_plot_journals — an internal handle, not something to show the user."},
-                "granularity": {"type": "string", "enum": ["day", "week", "month", "all"], "description": "Fold the daily records into coarser periods. Cannot be finer than the journal was stored at."},
-                "date_from": {"type": "string", "description": "YYYY-MM-DD — drop periods before this date."},
-                "date_to": {"type": "string", "description": "YYYY-MM-DD — drop periods after this date."}
+                "journal_id": {"type": "string", "description": "From list_plot_journals."},
+                "granularity": {"type": "string", "enum": ["day", "week", "month", "all"], "description": "Fold days into coarser periods (not finer than stored)."},
+                "date_from": {"type": "string", "description": "YYYY-MM-DD, first period kept."},
+                "date_to": {"type": "string", "description": "YYYY-MM-DD, last period kept."},
             },
-            "required": ["journal_id"]
-        }
+            "required": ["journal_id"],
+        },
     },
     {
         "tool_name": "create_plot_journal",
-        "description": "Builds a journal for a plot/zone/site over a period — a snapshot of what was grown, measured and controlled, meant to be handed to someone else or printed. Reading that much sensor history is expensive, so this requires human approval and runs in the background: it returns a journal_id with status 'pending', and you poll get_plot_journal until status is 'done'. Pass granularity to store weekly or monthly instead of daily when the period is long — that is what makes a season-length journal possible. Requires human approval.",
+        "description": (
+            "Builds a journal (what was grown, measured, controlled) for a "
+            "plot/zone/site and period, to hand over or print. Runs in the "
+            "background: returns journal_id, status 'pending' — poll "
+            "get_plot_journal. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "target_type": {"type": "string", "enum": ["plot", "zone", "site"], "description": "What the journal is about."},
                 "target_id": {"type": "string", "description": "unique_id of the plot/zone/site."},
-                "start": {"type": "string", "description": "YYYY-MM-DD, first day covered."},
-                "end": {"type": "string", "description": "YYYY-MM-DD, last day covered."},
-                "granularity": {"type": "string", "enum": ["day", "week", "month"], "description": "How finely to record. Omit to let the system choose (daily, or weekly if that would be too much data). Coarser makes a smaller document; daily detail cannot be recovered later."}
+                "start": {"type": "string", "description": "YYYY-MM-DD, first day."},
+                "end": {"type": "string", "description": "YYYY-MM-DD, last day."},
+                "granularity": {"type": "string", "enum": ["day", "week", "month"], "description": "Week/month for long periods. Omit to let the system choose."},
             },
-            "required": ["target_type", "target_id", "start", "end"]
-        }
+            "required": ["target_type", "target_id", "start", "end"],
+        },
     },
     {
         "tool_name": "create_plot",
@@ -1725,7 +2073,14 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "propose_plot_split",
-        "description": "Works out how a zone or site would divide into plots, WITHOUT creating anything. Pick the mode with parts, strip_width_cm or widths_cm; direction needs no input in the common case — each parameter below states its own rule, including the mode-dependent default on 'orientation' and when angle_deg may be used. Irregular edges are clipped, so pieces differ in length. You get counts, widths and lengths back, not coordinates. If a parts-only split comes back with aspect_ratio much above ~4:1 the pieces are unusually long and narrow — try orientation='long' or 'short' (whichever was not already used) for squarer pieces. Tell the grower they can SEE the proposal drawn on the map design page (plot mode) before deciding. Read-only.",
+        "description": (
+            "Works out how a zone or site would divide into plots WITHOUT "
+            "creating anything — counts, widths and lengths, no coordinates. "
+            "Choose parts, strip_width_cm or widths_cm; each parameter states its"
+            " own rule. An aspect_ratio far above ~4:1 means long narrow pieces —"
+            " try the other orientation. The grower can see the proposal drawn on"
+            " the map design page (plot mode). Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1735,14 +2090,21 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "widths_cm": {"type": "array", "items": {"type": "number"}, "description": "Give each piece its own width in cm instead of equal pieces, e.g. [200, 500, 300] for three different widths in that order. Overrides parts/strip_width_cm entirely. If the widths add up to more than the shape's short axis, only the LAST piece is shortened to fit (see widths_clamped_from_cm in the response) rather than rejecting the whole request; if the earlier pieces alone already don't fit, the request is rejected."},
                 "edge_margin_m": {"type": "number", "description": "Leave this much free inside the whole outline, in METERS — headland for machinery. Default 0."},
                 "orientation": {"type": "string", "enum": ["long", "short"], "description": "Which side the pieces run along. Optional — if omitted, the default depends on mode: 'long' when strip_width_cm is given (furrows must follow the shape's long side), 'short' when only parts (or only widths_cm) is given (squarer pieces, better for splitting between different crops). Pass explicitly to override that default. Ignored if angle_deg is given."},
-                "angle_deg": {"type": "number", "description": "Direction in degrees (0 up to but excluding 180) for the pieces, overriding orientation entirely. Only meaningful when a human has looked at the map and chosen a specific angle (e.g. to match an adjacent field's existing beds) — do not invent a value yourself; the grower must supply it."}
+                "angle_deg": {"type": "number", "description": "Direction in degrees (0 up to but excluding 180) for the pieces, overriding orientation entirely. Only meaningful when a human has looked at the map and chosen a specific angle (e.g. to match an adjacent field's existing beds) — do not invent a value yourself; the grower must supply it."},
             },
-            "required": ["zone_id"]
-        }
+            "required": ["zone_id"],
+        },
     },
     {
         "tool_name": "apply_plot_split",
-        "description": "Creates one vegetation plot per piece of a split — the write half of propose_plot_split. Pass the SAME zone_id and parts/strip_width_cm/widths_cm, edge_margin_m, orientation and angle_deg used in the proposal (including leaving orientation/angle_deg out if you left them out there) — the split is recomputed, not replayed from a stored proposal, and the same arguments must produce the same default direction. Each piece becomes its own plot row, so check the piece count first: 41 pieces means 41 plots to manage, each with its own notes and history. For one crop over a whole zone use create_plot with zone_id instead. Requires human approval.",
+        "description": (
+            "Creates one plot per piece of a split — the write half of "
+            "propose_plot_split. Pass exactly the SAME arguments as the proposal,"
+            " leaving out what was left out there: the split is recomputed and "
+            "must match. Check the piece count first (41 pieces = 41 plots). One "
+            "crop over a whole zone is create_plot with zone_id. Requires human "
+            "approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1758,10 +2120,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "variety": {"type": "string"},
                 "name": {"type": "string", "description": "Base name; pieces are numbered from it, e.g. 'A' becomes 'A 1', 'A 2'."},
                 "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
-                "color": {"type": "string", "description": "'#rrggbb'"}
+                "color": {"type": "string", "description": "'#rrggbb'"},
             },
-            "required": ["zone_id", "subject", "started_on"]
-        }
+            "required": ["zone_id", "subject", "started_on"],
+        },
     },
     {
         "tool_name": "copy_plot",
@@ -1778,16 +2140,20 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "end_plot",
-        "description": "Marks a plot as finished (harvested / failed / replaced / removed). The record is KEPT as history — it only leaves the map, so later crop-rotation checks still see it. Prefer this over delete_plot for anything that was actually grown. Requires human approval.",
+        "description": (
+            "Marks a plot finished. The record is KEPT as history (rotation "
+            "checks still see it) — use this, not deletion, for anything actually"
+            " grown. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "Plot unique_id."},
-                "ended_on": {"type": "string", "description": "End date 'YYYY-MM-DD'. Default: today."},
-                "reason": {"type": "string", "description": "harvested | failed | replaced | removed. Default: harvested."}
+                "ended_on": {"type": "string", "description": "'YYYY-MM-DD'. Default today."},
+                "reason": {"type": "string", "description": "Default harvested.", "enum": ["harvested", "failed", "replaced", "removed"]},
             },
-            "required": ["plot_id"]
-        }
+            "required": ["plot_id"],
+        },
     },
     # --- 구획 단계 원장 (@ANCHOR: PLOT_STAGE_MCP_PAYLOADS, 2026-08-25) --------
     # 도구 8종은 2026-08-24 (624fa873) 부터 있었지만 **이 목록에 없어 어떤 MCP
@@ -1799,31 +2165,43 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 이름을 아는 클라이언트가 없으니 무의미하다).
     {
         "tool_name": "confirm_plot_stage",
-        "description": "Records that a plot has moved into a new stage. This MOVES THE ANCHOR — every remaining stage is recomputed from the date given, so do not invent one: use get_plot's stage_proposal.started_on (which is derived from the data) unless the grower states a different day. If stage_proposal is null there is nothing to confirm. To record a stage that is still ahead, use reschedule_plot_stage instead — this tool is for what already happened. Requires human approval.",
+        "description": (
+            "Records that a plot HAS entered a stage; the remaining stages are "
+            "recomputed from that date. For a change that already happened (the "
+            "grower says so, or get_plot's stage_proposal suggests it). A "
+            "boundary still ahead is reschedule_plot_stage. Requires human "
+            "approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "Plot unique_id."},
-                "stage_key": {"type": "string", "description": "Which stage was entered — take it from get_plot's stage_proposal.stage_key. Stage keys are not guessable; do not compose one."},
-                "started_on": {"type": "string", "description": "The day the change happened, 'YYYY-MM-DD'. Default: stage_proposal's own date. Only override it when the grower names a different day."}
+                "stage_key": {"type": "string", "description": "From get_plot's stage_proposal or stage_schedule. Never compose one."},
+                "started_on": {"type": "string", "description": "'YYYY-MM-DD' it happened: stage_proposal.started_on unless the grower names a day. Never invent one."},
             },
-            "required": ["plot_id", "stage_key"]
-        }
+            "required": ["plot_id", "stage_key"],
+        },
     },
     {
         "tool_name": "reschedule_plot_stage",
-        "description": "Moves a stage boundary for THIS plot — 'transplanting slipped a week'. The programme is a reference only and is never changed, so other plots on it are untouched. Boundaries after the one you move shift with it; pin the next one too if it must stay put. Only boundaries still AHEAD can be moved — a change that already happened is confirm_plot_stage. Read get_plot's stage_schedule first for the current dates and keys. Requires human approval.",
+        "description": (
+            "Moves a stage boundary that is still AHEAD, for this plot only "
+            "('transplanting slipped a week'); later boundaries shift with it and"
+            " the programme is unchanged. A change that already happened is "
+            "confirm_plot_stage. Keys and dates: get_plot's stage_schedule. "
+            "Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "Plot unique_id."},
-                "stage_key": {"type": "string", "description": "Which stage to move — from get_plot's stage_schedule."},
-                "days": {"type": "integer", "description": "Make THAT stage last this many days, e.g. 20 for 'raise the seedlings for 20 days'. Same wording as the programme, so the grower need not compute a date. Cannot be used on the last stage — when the season ends is decided by ending the plot."},
-                "shift_days": {"type": "integer", "description": "Move that stage's START boundary by this many days: positive to delay (+7), negative to bring forward (-3)."},
-                "started_on": {"type": "string", "description": "Or set that boundary to an absolute date 'YYYY-MM-DD' — for when the grower names the day."}
+                "stage_key": {"type": "string", "description": "From get_plot's stage_schedule."},
+                "days": {"type": "integer", "description": "Make that stage last N days (not the last stage)."},
+                "shift_days": {"type": "integer", "description": "Move its start by N days: +7 delay, -3 earlier."},
+                "started_on": {"type": "string", "description": "Or set its start to 'YYYY-MM-DD'."},
             },
-            "required": ["plot_id", "stage_key"]
-        }
+            "required": ["plot_id", "stage_key"],
+        },
     },
     {
         "tool_name": "set_plot_stage_guidance",
@@ -1867,37 +2245,50 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "save_plot_schedule_as_program",
-        "description": "Registers THIS PLOT's schedule as a reusable programme — the stages it actually follows, with the lengths as edited and the plot's own guidance. Targets are copied from the source programme unchanged. The plot is NOT moved onto the new programme: registering is a copy, and changing a running season's interpretation would silently change what it was grown for. Use modify_plot(program_uuid=...) if the grower does want to switch it. Requires human approval.",
+        "description": (
+            "Saves THIS plot's schedule (its stages, edited lengths and guidance)"
+            " as a reusable programme; targets are copied unchanged. The plot is "
+            "NOT moved onto it — use modify_plot(program_uuid=...) if the grower "
+            "wants that. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "plot_id": {"type": "string", "description": "The plot whose schedule to register."},
-                "name": {"type": "string", "description": "Name for the new programme. Omit to derive one from the plot."}
+                "name": {"type": "string", "description": "Name for the new programme. Omit to derive one from the plot."},
             },
-            "required": ["plot_id"]
-        }
+            "required": ["plot_id"],
+        },
     },
     {
         "tool_name": "undo_plot_stage",
-        "description": "Undoes the most recently confirmed stage change. The row is KEPT (marked undone); the previous confirmation becomes the anchor again and later stages are recomputed from it. Only the last confirmation can be undone. Requires human approval.",
+        "description": (
+            "Undoes the most recent stage confirmation (kept, marked undone); the"
+            " previous one becomes the anchor again. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "plot_id": {"type": "string", "description": "Plot unique_id."}
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
             },
-            "required": ["plot_id"]
-        }
+            "required": ["plot_id"],
+        },
     },
     {
         "tool_name": "apply_plot_resources",
-        "description": "Starts the irrigation/fertigation Functions that the current stage needs, as resolved FROM THE SITE (the programme declares roles, not functions). THIS MAKES WATER FLOW — it is a physical action. Nothing is ever switched off, and only what the stage declares is touched. Read get_plot's stage.resources first, and then check the reply: 'failed' (did not start), 'unresolved' (no device for that role here — placement is a human job), 'ambiguous' (several candidates, so nothing was picked). Requires human approval.",
+        "description": (
+            "Starts the irrigation/fertigation Functions the plot's current stage"
+            " declares, resolved from the site. PHYSICAL — water flows. Nothing "
+            "is switched off. Check get_plot's stage.resources first. Follow the "
+            "reply's `_reading`. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "plot_id": {"type": "string", "description": "Plot unique_id."}
+                "plot_id": {"type": "string", "description": "Plot unique_id."},
             },
-            "required": ["plot_id"]
-        }
+            "required": ["plot_id"],
+        },
     },
     {
         "tool_name": "delete_plot",
@@ -1943,82 +2334,61 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_program",
-        "description": "Creates a management programme (subject -> stages with lengths). 'subject' is whatever it manages — crop, tree species, turf, herd, structure; AoT is not farm-only. RECIPE: 1) list_programs — does it exist already? 2) research it (knowledge_search; if the library is empty, say so rather than passing your own knowledge off as a source). 3) Map what you find onto YOUR stage keys — sources split stages their own way; never bend a day count to fit one. 4) Blank beats a guess. Display/advice only until a person marks it checked — that check is what gates control, and only a person can give it.",
+        "description": (
+            "Creates a management programme (subject -> stages with lengths); the"
+            " subject may be a crop, tree, turf, herd or structure. RECIPE: 1) "
+            "list_programs — does it exist? 2) research with knowledge_search "
+            "(empty library: say so, never pass your own knowledge off as a "
+            "source). 3) Map findings onto YOUR stage keys; never bend a day "
+            "count to fit. 4) Blank beats a guess. It drives nothing until a "
+            "person marks it checked — only a person can."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "name": {"type": "string", "description": "Programme name."},
                 "subject": {"type": "string", "description": "What it manages."},
                 "source_note": {"type": "string", "description": "REQUIRED. What this is based on, and how that source's stages were mapped onto these ones — without it nobody can later judge whether a number is right."},
-                "stages": {
-                    "type": "array",
-                    "description": "Ordered stages. 'days' is that stage's LENGTH, not a cumulative day; only the LAST stage may leave it blank (= until the end).",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "key": {"type": "string", "description": "Stage key, e.g. transplant / vegetative / flowering / fruiting / harvest."},
-                            "name": {"type": "string", "description": "Display name."},
-                            "days": {"type": "integer", "description": "Length of this stage in days. Blank only on the last stage."},
-                            "targets": {"type": "object", "description": "{item_key: number}, this stage only. Keys MUST exist in target_defs — vegetation already has temp_day, temp_night, rh, co2, dli, vpd. Out-of-range values are refused."},
-                            "guidance": {"type": "string", "description": "The half no sensor can do — what to LOOK at and DO BY HAND this stage. This is what a beginner opens the programme for, so fill it when you have a real basis."}
-                        }
-                    }
-                },
-                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"],
-                         "description": "Default 'vegetation'. Only vegetation has fixed target items; other kinds need target_defs before targets."},
+                "stages": {"type": "array", "description": "Ordered stages. 'days' is that stage's LENGTH, not a cumulative day; only the LAST stage may leave it blank (= until the end).", "items": {"type": "object", "properties": {"key": {"type": "string", "description": "Stage key, e.g. transplant / vegetative / flowering / fruiting / harvest."}, "name": {"type": "string", "description": "Display name."}, "days": {"type": "integer", "description": "Length of this stage in days. Blank only on the last stage."}, "targets": {"type": "object", "description": "{item_key: number}, this stage only. Keys MUST exist in target_defs — vegetation already has temp_day, temp_night, rh, co2, dli, vpd. Out-of-range values are refused."}, "guidance": {"type": "string", "description": "The half no sensor can do — what to LOOK at and DO BY HAND this stage. This is what a beginner opens the programme for, so fill it when you have a real basis."}}}},
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"], "description": "Default 'vegetation'. Only vegetation has fixed target items; other kinds need target_defs before targets."},
                 "variety": {"type": "string", "description": "Cultivar / breed."},
                 "notes": {"type": "string", "description": "Free notes."},
-                "target_defs": {
-                    "type": "array",
-                    "description": "Extra target ITEMS, only for a value the fixed vocabulary lacks.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "key": {"type": "string", "description": "lowercase a-z0-9_ ."},
-                            "label": {"type": "string"},
-                            "unit": {"type": "string"},
-                            "measurement": {"type": "string", "description": "Sensor measurement name this maps to — without it the value is display/advice only (control cannot act on a quantity it has no meaning for)."}
-                        }
-                    }
-                },
+                "target_defs": {"type": "array", "description": "Extra target ITEMS, only for a value the fixed vocabulary lacks.", "items": {"type": "object", "properties": {"key": {"type": "string", "description": "lowercase a-z0-9_ ."}, "label": {"type": "string"}, "unit": {"type": "string"}, "measurement": {"type": "string", "description": "Sensor measurement name this maps to — without it the value is display/advice only (control cannot act on a quantity it has no meaning for)."}}}},
                 "base_temp_c": {"type": "number", "description": "GDD base temperature. Vegetation only."},
-                "resource_defs": {
-                    "type": "array",
-                    "description": "What the subject NEEDS (roles), never which function does it — that is a fact about a place, so the site resolves it and one programme serves several greenhouses.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "role": {"type": "string", "enum": ["irrigation", "fertigation", "other"]}
-                        }
-                    }
-                },
-                "tab_id": {"type": "string", "description": "Tab on the Programs page."}
+                "resource_defs": {"type": "array", "description": "What the subject NEEDS (roles), never which function does it — that is a fact about a place, so the site resolves it and one programme serves several greenhouses.", "items": {"type": "object", "properties": {"role": {"type": "string", "enum": ["irrigation", "fertigation", "other"]}}}},
+                "tab_id": {"type": "string", "description": "Tab on the Programs page."},
             },
-            "required": ["name", "subject", "source_note"]
-        }
+            "required": ["name", "subject", "source_note"],
+        },
     },
     {
         "tool_name": "modify_program",
-        "description": "Edits a programme, or moves it to another tab. THIS is how an empty programme a person made in the UI gets filled in — same stage shape and same RECIPE as create_program; call get_program first because 'stages' replaces the whole list. Send only the fields you are changing. Built-in/external programmes are refused for anything but tab_id (they must be copied first). Writing stages, target items or base_temp_c sends the programme back for a person to check before it drives control again — that is expected, say so rather than working around it.",
+        "description": (
+            "Edits a programme or moves it to another tab — also how an empty "
+            "programme made in the UI gets filled (same stage shape and RECIPE as"
+            " create_program). Call get_program first: 'stages' replaces the "
+            "whole list. Send only changed fields. Built-in/external programmes "
+            "accept only tab_id. Changing stages, targets or base_temp_c sends it"
+            " back for a person to check — expected; say so rather than working "
+            "around it."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "program_id": {"type": "string", "description": "Programme unique_id."},
                 "name": {"type": "string"},
                 "variety": {"type": "string"},
-                "stages": {"type": "array", "description": "Replaces the WHOLE stage list — same item shape as create_program (key, name, days, targets, guidance).",
-                           "items": {"type": "object"}},
-                "target_defs": {"type": "array", "items": {"type": "object"},
-                                "description": "Target item definitions — same shape as create_program."},
+                "stages": {"type": "array", "description": "Replaces the WHOLE stage list — same item shape as create_program (key, name, days, targets, guidance).", "items": {"type": "object"}},
+                "target_defs": {"type": "array", "items": {"type": "object"}, "description": "Target item definitions — same shape as create_program."},
                 "resource_defs": {"type": "array", "items": {"type": "object"}},
                 "base_temp_c": {"type": "number"},
                 "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"]},
                 "notes": {"type": "string"},
                 "source_note": {"type": "string", "description": "Update the basis when you change what the programme says."},
-                "tab_id": {"type": "string"}
+                "tab_id": {"type": "string"},
             },
-            "required": ["program_id"]
-        }
+            "required": ["program_id"],
+        },
     },
     {
         "tool_name": "delete_program",
@@ -2041,15 +2411,19 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "search_archives",
-        "description": "Searches ARCHIVED documents by their stored metadata. Only returns documents whose content was really moved to the archive — a document marked tier 3 that was never moved will NOT appear here. An empty result is a normal state, not an error.",
+        "description": (
+            "Searches archived documents by stored metadata. A document only "
+            "marked tier 3 but never moved does not appear; an empty result is "
+            "normal. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Keyword matched against stored metadata values. Optional — omit to list all archives."},
-                "limit": {"type": "integer", "description": "Max results (1-200). Default: 50"},
-                "offset": {"type": "integer", "description": "Pagination offset. Default: 0"}
-            }
-        }
+                "query": {"type": "string", "description": "Keyword. Omit to list all."},
+                "limit": {"type": "integer", "description": "1-200. Default 50."},
+                "offset": {"type": "integer", "description": "Default 0."},
+            },
+        },
     },
     {
         "tool_name": "get_archived_document",
@@ -2113,215 +2487,251 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_sensor_detail",
-        "description": "Query detailed sensor history for a specific location/device. Returns time-series readings with min/max/avg statistics.",
+        "description": (
+            "Sensor history with min/max/avg for a device or a zone. For many "
+            "zones at once use get_zone_sensor_summary. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "loc_id": {"type": "string", "description": "unique_id of the Input device or GeoShape zone"},
-                "sensor_type": {"type": "string", "description": "Filter by measurement type (e.g. temperature, humidity). Optional."},
-                "time_range": {"type": "string", "description": "Duration string: '1h', '24h', '7d'. Default: '24h'"}
+                "loc_id": {"type": "string", "description": "Device or zone unique_id or name."},
+                "sensor_type": {"type": "string", "description": "Measurement filter, e.g. temperature."},
+                "time_range": {"type": "string", "description": "'1h', '24h', '7d'. Default 24h."},
+                "loc_ids": {"type": "array", "items": {"type": "string"}, "description": "Several at once (max 10)."},
             },
-            "required": ["loc_id"]
-        }
+        },
     },
     {
         "tool_name": "get_spatial_tree",
-        "description": "Retrieve the spatial hierarchy (Site > Zone > Device) tree structure with optional depth and type filtering. Answers how the farm is divided; to find a device by name use get_device_list or search_devices instead.",
+        "description": (
+            "How the farm is divided: every site, zone and facility, with how "
+            "many devices each holds. To find a device by name use "
+            "search_devices. Follow the reply's `_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "depth": {"type": "integer", "description": "Maximum tree depth, root = 1. Default 2 (sites and their zones). Use 3+ to expand devices, 0 for no limit. Cut nodes carry 'children_omitted' — a per-type count of what is below them."},
-                "filter_type": {"type": "string", "description": "Filter nodes by type (e.g. 'zone', 'device'). Optional. When given, depth is not applied — otherwise the matches could be cut away before they are found."}
-            }
-        }
+                "depth": {"type": "integer", "description": "Omit = places only. N cuts at depth N (root 1) with devices; 0 = all. Cut nodes: 'children_omitted'."},
+                "filter_type": {"type": "string", "description": "Only this node type, e.g. 'zone' (depth not applied)."},
+            },
+        },
     },
     {
         "tool_name": "resolve_target",
-        "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Write tools sit behind a human-approval gate that only checks the tool name - the actual name resolution runs only AFTER approval, too late to catch a wrong hierarchy level. Call this first whenever the request could apply per sub-unit ('each zone', '구역별', 'per section'). The reply gives target_type, any 'children', and a 'note' saying exactly what a write to this target would and would not touch - follow it.",
+        "description": (
+            "Resolves a place, device or crop name to one entity — read-only, no "
+            "approval. Call it before a write that takes target_name when unsure"
+            " of the name or when it could mean each sub-unit ('each zone'): the reply lists "
+            "'children' and a 'note' on what a write would touch. Shared names "
+            "return candidates."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_name": {"type": "string", "description": "Name of the place/device to resolve (e.g. '3-1', '1포장 1-1', '온실'). A CROP name works too ('콩밭', '상추 재배지') and resolves to the zone that crop currently grows in — pass the user's own words instead of guessing a map name."}
+                "target_name": {"type": "string", "description": "The user's own words, e.g. '3-1', '1포장 1-1', '콩밭'."},
             },
-            "required": ["target_name"]
-        }
+            "required": ["target_name"],
+        },
     },
     {
         "tool_name": "get_zone_sensor_summary",
-        "description": "Latest reading plus period statistics (min/max/avg/count) for the sensors of MANY zones in ONE call. Use this whenever a question spans more than one zone or the whole farm — 'which plots are too dry', 'soil moisture across the farm', 'compare the zones' — instead of calling get_sensor_detail once per zone. Narrow it with measurement_type (e.g. 'volumetric_water_content' for soil moisture), otherwise every measurement in those zones comes back and the answer gets long. The reply carries a '_reading' list when this particular result needs care (repeated channels, zones that returned nothing, a degraded read) — follow it. Read-only; it computes on the fly and stores nothing.",
+        "description": (
+            "Latest value and period statistics for the sensors of MANY zones in "
+            "one call — for any question across zones or the farm ('which plots "
+            "are dry'). Narrow with measurement_type. Follow the reply's "
+            "`_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "zone_ids": {"type": "array", "items": {"type": "string"}, "description": "Zone/site unique_ids to report on. Omit for every named zone and site. Get ids from get_spatial_tree or resolve_target."},
-                "measurement_type": {"type": "string", "description": "Restrict to one measurement, e.g. 'volumetric_water_content' (soil moisture), 'temperature', 'humidity'. Substring match. Strongly recommended."},
-                "time_range": {"type": "string", "description": "Window for the statistics, e.g. '24h', '7d', '30d'. Default '7d'. The latest value is looked up within the same window."}
-            }
-        }
+                "zone_ids": {"type": "array", "items": {"type": "string"}, "description": "Zone/site unique_ids or names (max 10). Omit for every zone."},
+                "measurement_type": {"type": "string", "description": "e.g. 'volumetric_water_content' (soil moisture), 'temperature'. Substring. Recommended."},
+                "time_range": {"type": "string", "description": "e.g. '24h', '30d'. Default '7d'."},
+            },
+        },
     },
     {
         "tool_name": "search_devices",
-        "description": "Search for devices (inputs, outputs, cameras, complex devices) by name or type keyword, and/or by the measurement they actually record. When the results contain a complex device (e.g. a PLC), the reply carries a '_reading' note saying how to treat it — follow it. IMPORTANT: to find every sensor of a kind (all soil-moisture sensors, all thermometers), use measurement_type — device names are not reliable for this, the same soil probe may be called '토양온습도_1' on one plot and '온습도_1' on the next, so a name search silently misses sensors.",
+        "description": (
+            "Finds devices by name/type keyword and/or by the measurement they "
+            "record. To find every sensor of a kind use measurement_type — names "
+            "are not reliable. Follow the reply's `_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Search keyword for device name or type. Optional when measurement_type is given."},
-                "measurement_type": {"type": "string", "description": "Measurement the device records. Substring match on the STORED name, which is rarely the everyday word: soil moisture = 'volumetric_water_content' ('moisture' matches nothing), rain = 'precipitation', wind = 'speed'/'direction'; also 'temperature', 'humidity', 'pressure', 'co2', 'dewpoint', 'battery_voltage', 'vapor_pressure_deficit'. Alone it returns every such device; with query it intersects (query='1포장' + measurement_type='temperature'). On 0 results check the real names with get_device_measurements instead of concluding there are none."}
-            }
-        }
+                "query": {"type": "string", "description": "Name or type keyword."},
+                "measurement_type": {"type": "string", "description": "Stored measurement name, substring: soil moisture = 'volumetric_water_content', rain = 'precipitation', wind = 'speed'/'direction'; 'temperature', 'humidity', 'co2', 'battery_voltage'. With query it intersects."},
+            },
+        },
     },
     {
         "tool_name": "get_device_list",
-        "description": "List all registered devices (inputs, outputs, cameras, complex devices) in the AoT system. Use this when the user asks for a full device listing without a specific keyword. When the list contains a complex device (e.g. a PLC), the reply carries a '_reading' note saying how to treat it — follow it.",
+        "description": (
+            "Every registered device (inputs, outputs, cameras, complex devices) "
+            "— for a full listing without a keyword. Follow the reply's "
+            "`_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
-            "properties": {}
-        }
+            "properties": {},
+        },
     },
     {
         "tool_name": "get_energy_report",
-        "description": "Generate an energy usage analysis report for a specific period and/or zone.",
+        "description": "Energy usage report for a period and/or zone. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "period": {"type": "string", "description": "Analysis period: 'daily', 'weekly', 'monthly'. Default: 'daily'"},
-                "zone_id": {"type": "string", "description": "Filter by zone unique_id. Optional (omit for all zones)."}
-            }
-        }
+                "period": {"type": "string", "description": "Default daily.", "enum": ["daily", "weekly", "monthly"]},
+                "zone_id": {"type": "string", "description": "Zone unique_id. Omit for all."},
+            },
+        },
     },
     {
         "tool_name": "operate_device",
-        "description": "[INTENT A] Direct physical control of devices. Use this for immediate operations like opening valves or turning on lights.",
+        "description": (
+            "Switches an output now (valve, pump, light): on, off, or set_value "
+            "for PWM/setpoint. PHYSICAL. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "unique_id of the output device"},
-                "state": {"type": "string", "enum": ["on", "off", "set_value"], "description": "Target state"},
-                "value": {"type": "number", "description": "Numeric value for PWM/Setpoints (optional)"}
+                "device_id": {"type": "string", "description": "Output unique_id or name."},
+                "state": {"type": "string", "enum": ["on", "off", "set_value"], "description": "Target state."},
+                "value": {"type": "number", "description": "Number for set_value (PWM/setpoint)."},
             },
-            "required": ["device_id", "state"]
-        }
+            "required": ["device_id", "state"],
+        },
     },
     {
         "tool_name": "add_schedule",
-        "description": "[Human task / memo] Record a work schedule or memo for a person to carry out - weeding, inspection, cleaning and other manual tasks. For system control (valves, pumps, ...) use schedule_device_control instead.",
+        "description": (
+            "Records a dated task or memo for a PERSON (weeding, inspection). "
+            "Device control at a time is schedule_device_control. Saved without "
+            "an approval step."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "date": {"type": "string", "description": "Target date (YYYY-MM-DD)"},
-                "time": {"type": "string", "description": "Target time (HH:MM). Default '09:00'"},
-                "content": {"type": "string", "description": "Description of the work or schedule"},
-                "worker": {"type": "string", "description": "Name of the person assigned (optional)"},
-                "tags": {"type": "string", "description": "Comma-separated tags (optional). If not provided, spatial tags are automatically extracted from content."},
-                "target_name": {"type": "string", "description": "Name of the zone/facility/device this work applies to (e.g. '3-1', '1포장 1-1', '온실'). PASS this whenever the user names a place, so the schedule links to the real entity for map/location queries instead of relying on free-text tag extraction. If the name is ambiguous or not found, the tool returns status 'needs_disambiguation' with an available_targets list - show these to the user, then retry with the exact name. Omit only for a farm-wide event with no specific place. This is a GIS-based system: a name resolves to exactly ONE entity and never fans out to its children automatically. If the request could apply per sub-unit (each zone/구역, each device under a site), call resolve_target(target_name) FIRST - it is read-only, needs no approval, and returns 'children' when the resolved entity contains finer-grained sub-entities. If so, use add_schedule_batch instead of calling this tool once per child."}
+                "date": {"type": "string", "description": "YYYY-MM-DD."},
+                "time": {"type": "string", "description": "HH:MM. Default '09:00'."},
+                "content": {"type": "string", "description": "The work."},
+                "worker": {"type": "string", "description": "Assignee."},
+                "tags": {"type": "string", "description": "Comma-separated. Default: taken from content."},
+                "target_name": {"type": "string", "description": "Name of the zone/facility/device this work applies to (e.g. '3-1', '1포장 1-1', '온실'). PASS this whenever the user names a place, so the schedule links to the real entity for map/location queries instead of relying on free-text tag extraction. If the name is ambiguous or not found, the tool returns status 'needs_disambiguation' with available_targets or candidates - ask the user, then retry with the exact name or use_name. Omit only for a farm-wide event with no specific place. This is a GIS-based system: a name resolves to exactly ONE entity and never fans out to its children automatically. If the request could apply per sub-unit (each zone/구역, each device under a site), call resolve_target(target_name) FIRST - it is read-only, needs no approval, and returns 'children' when the resolved entity contains finer-grained sub-entities. If so, use add_schedule_batch instead of calling this tool once per child."},
+                "target_id": {"type": "string", "description": "Instead of target_name: a resolve_target candidate's target_id."},
             },
-            "required": ["date", "content"]
-        }
+            "required": ["date", "content"],
+        },
     },
     {
         "tool_name": "add_schedule_batch",
-        "description": "Register MULTIPLE per-entity work schedules in ONE call - use instead of N separate add_schedule calls whenever a request applies per sub-unit ('각 구역별로', 'each zone'). Saves immediately (no approval, like add_schedule); still worth batching over N separate calls because it rejects a duplicate target_name up front and runs one capacity check across all entries that per-call add_schedule cannot see. Call resolve_target on the container name first to get the exact child names for entries. If entries.length * duration_minutes would not fit inside window_start-window_end, the call is rejected up front with the exact numbers (nothing created) - this is checked by the server, not something you need to compute yourself, but if it rejects, the request needs more than one date and you must either split entries across multiple add_schedule_batch calls (one per date) or ask the user how to compress/parallelize the work.",
+        "description": (
+            "Per-target human tasks in ONE call for 'each zone' requests (not "
+            "repeated add_schedule); exact child names come from resolve_target. "
+            "With window_start/window_end it checks entries x duration_minutes "
+            "fit and rejects up front with the numbers — then split across dates "
+            "or ask. No approval step."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "date": {"type": "string", "description": "Shared date (YYYY-MM-DD) for every entry."},
-                "entries": {
-                    "type": "array",
-                    "description": "One item per target. Duplicate target_name within the same batch is rejected.",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "target_name": {"type": "string", "description": "Exact zone/facility/device name (e.g. a child name returned by resolve_target)."},
-                            "time": {"type": "string", "description": "Time for this entry (HH:MM)."},
-                            "content": {"type": "string", "description": "Overrides the shared content for this entry only. Optional."},
-                            "worker": {"type": "string", "description": "Overrides the shared worker for this entry only. Optional."}
-                        },
-                        "required": ["target_name", "time"]
-                    }
-                },
-                "content": {"type": "string", "description": "Shared work description, used by any entry that omits its own content. Required unless every entry supplies its own."},
-                "worker": {"type": "string", "description": "Shared worker name, used by any entry that omits its own worker. Optional."},
-                "tags": {"type": "string", "description": "Comma-separated tags applied to every entry. Optional."},
-                "window_start": {"type": "string", "description": "'HH:MM' - start of the work window. Combined with window_end, enables the capacity check (entries.length * duration_minutes vs. available window minutes). Optional but recommended whenever the request implies a bounded work window (e.g. '07:00~11:00')."},
-                "window_end": {"type": "string", "description": "'HH:MM' - end of the work window. Alone: every entry's time must be <= this or the whole batch is rejected. Together with window_start: also rejects up front if entries.length * duration_minutes exceeds the window's total minutes, before any approval is created."},
-                "duration_minutes": {"type": "integer", "description": "Assumed minutes needed per entry, used only for the window_start+window_end capacity check. Default 60."}
+                "date": {"type": "string", "description": "YYYY-MM-DD for every entry."},
+                "entries": {"type": "array", "description": "One per target; the same target twice is rejected.", "items": {"type": "object", "properties": {"target_name": {"type": "string", "description": "Exact place name, e.g. a resolve_target child."}, "target_id": {"type": "string", "description": "Instead: a candidate's target_id (wins over target_name)."}, "time": {"type": "string", "description": "HH:MM."}, "content": {"type": "string", "description": "Overrides the shared content."}, "worker": {"type": "string", "description": "Overrides the shared worker."}}, "required": ["target_name", "time"]}},
+                "content": {"type": "string", "description": "Shared work text for entries without their own."},
+                "worker": {"type": "string", "description": "Shared assignee."},
+                "tags": {"type": "string", "description": "Comma-separated, for every entry."},
+                "window_start": {"type": "string", "description": "'HH:MM' start of the work window (enables the fit check)."},
+                "window_end": {"type": "string", "description": "'HH:MM' end; every entry's time must be at or before it."},
+                "duration_minutes": {"type": "integer", "description": "Minutes per entry for the fit check. Default 60."},
             },
-            "required": ["date", "entries"]
-        }
+            "required": ["date", "entries"],
+        },
     },
     {
         "tool_name": "search_notes",
-        "description": "[Read notes] Query notes, memos and work records. Read-only, so no approval is needed (summarising is data processing). To read or summarise notes attached to a particular zone or device (e.g. 'summarise notes for zone 3-1'), you MUST pass that location/device name in target_name - notes are attached to an entity by target_id and their text may not contain the zone name, so a keyword search will not find them. If target_name is a site, notes from every zone under it are returned as well (use each result's target_name to tell them apart). Use query for free keyword search.",
+        "description": (
+            "Reads notes, memos and work records. For notes about a place or "
+            "device pass target_name — notes are attached to the entity and may "
+            "not mention it, so a keyword search misses them. A site includes its"
+            " zones. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_name": {"type": "string", "description": "Name of the location/device the notes are attached to (e.g. '3-1', '1포장 1-1', '밸브1'). Use this when reading or summarising notes for a zone or device."},
-                "query": {"type": "string", "description": "Free keyword search (e.g. 'bean field', 'weeding'). When given together with target_name it further filters within that entity."},
-                "category": {"type": "string", "description": "Category filter: 'schedule', 'general', etc. Omit for all."},
-                "limit": {"type": "integer", "description": "Maximum number of results (default 10)."}
-            }
-        }
+                "target_name": {"type": "string", "description": "Place/device the notes are attached to, e.g. '3-1', '밸브1'."},
+                "query": {"type": "string", "description": "Keyword. With target_name it filters within."},
+                "category": {"type": "string", "description": "e.g. 'schedule', 'general'. Omit for all."},
+                "limit": {"type": "integer", "description": "Default 10."},
+                "target_names": {"type": "array", "items": {"type": "string"}, "description": "Several at once (max 10)."},
+            },
+        },
     },
     {
         "tool_name": "get_note_attachment",
-        "description": "Shows one photo/image attached to a note — the actual picture, returned as an image you can look at. Read-only. search_notes only lists attachment FILENAMES; a filename is not the content, so call this whenever a note's photo could settle the question (what the damage looks like, which row is which, what was written on a board). One image per call by design: images are large, so ask for the next filename in a second call. Non-image attachments come back as status 'not_an_image' with their name and size, which is a normal answer, not a failure.",
+        "description": (
+            "Shows one photo attached to a note, as an image. search_notes lists "
+            "only filenames — call this when the picture could settle the "
+            "question. One image per call; a non-image returns 'not_an_image' "
+            "(normal). Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "note_id": {"type": "string", "description": "unique_id of the note holding the attachment (from search_notes)."},
-                "filename": {"type": "string", "description": "Which attachment to show — one of the names in that note's 'files'. Omit to get the first one. A name that is not attached to this note is refused and the real list is returned."},
-                "max_dimension": {"type": "integer", "description": "Longest edge in pixels for the returned image (default 1024, clamped 256-2048). Lower it for a quick look, raise it only when fine detail matters (reading small text, spotting lesions)."}
+                "note_id": {"type": "string", "description": "The note's unique_id (from search_notes)."},
+                "filename": {"type": "string", "description": "One of that note's 'files'. Omit for the first."},
+                "max_dimension": {"type": "integer", "description": "Longest edge in px. Default 1024 (256-2048)."},
             },
-            "required": ["note_id"]
-        }
+            "required": ["note_id"],
+        },
     },
     {
         "tool_name": "schedule_device_control",
-        "description": "[Device control scheduling only] Schedule control of a system device - valve, pump, sprinkler and so on - at a specific time. It is registered with the scheduler after user approval.",
+        "description": (
+            "Schedules an output (valve, pump, sprinkler) to switch at a set "
+            "time. PHYSICAL — registered after approval. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "unique_id of the output device to control"},
-                "scheduled_time": {"type": "string", "description": "ISO 8601 format datetime (e.g., '2026-02-27T09:00:00+09:00')"},
-                "state": {"type": "string", "enum": ["on", "off"], "description": "Target state"},
-                "duration_minutes": {"type": "number", "description": "Duration in minutes (optional, default: 5)"}
+                "device_id": {"type": "string", "description": "Output unique_id or name."},
+                "scheduled_time": {"type": "string", "description": "ISO 8601 with offset, e.g. '2026-02-27T09:00:00+09:00'."},
+                "state": {"type": "string", "enum": ["on", "off"], "description": "Target state."},
+                "duration_minutes": {"type": "number", "description": "Default 5."},
             },
-            "required": ["device_id", "scheduled_time", "state"]
-        }
+            "required": ["device_id", "scheduled_time", "state"],
+        },
     },
     {
         "tool_name": "get_weather",
-        "description": "Current weather for a site or zone, read from the weather station serving it (KMA / SenseCAP / Ecowitt / OpenWeatherMap, or any input recording wind or rain). 'weather_source' says where the numbers came from. When it is not a real station, or the station does not stand in the requested zone, the reply carries 'weather_source_warning' / 'weather_device_note' spelling out what you must say instead — follow them. Read-only.",
+        "description": (
+            "Current weather for a site or zone from the station serving it; "
+            "'weather_source' says which. Follow 'weather_source_warning' / "
+            "'weather_device_note' when present. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "zone_name": {
-                    "type": "string",
-                    "description": "Name of the site or zone to query (e.g. '1포장', '2포장'). Usable instead of zone_id."
-                },
-                "zone_id": {
-                    "type": "string",
-                    "description": "unique_id of the GeoShape. Usable instead of zone_name."
-                }
-            }
-        }
+                "zone_name": {"type": "string", "description": "Site or zone name, e.g. '1포장'."},
+                "zone_id": {"type": "string", "description": "Or its unique_id."},
+            },
+        },
     },
     {
         "tool_name": "get_cumulative_status",
-        "description": "Daily cumulative DLI (daily light integral) and GDD (growing degree days) for an EnvCoordinator function, with the running deficit. Use it to check whether light and temperature targets are being met and what compensation is suggested.",
+        "description": (
+            "Daily DLI and GDD for an environment coordinator function, with the "
+            "running deficit and suggested compensation. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "function_id": {
-                    "type": "string",
-                    "description": "unique_id of the EnvCoordinator function."
-                },
-                "days": {
-                    "type": "integer",
-                    "description": "How many recent days to report (default 7)."
-                }
+                "function_id": {"type": "string", "description": "The coordinator function's unique_id."},
+                "days": {"type": "integer", "description": "Recent days. Default 7."},
             },
-            "required": ["function_id"]
-        }
+            "required": ["function_id"],
+        },
     },
     {
         "tool_name": "get_system_update_status",
@@ -2333,43 +2743,48 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_note",
-        "description": "Create and store a note immediately (an undated memo - for dated work use add_schedule). No approval needed. AoT has no 'note widget'; every device, plot and zone shape carries its own notes and they are read per entity. A note is only visible on the entity it is attached to. So when the user asks to record something 'on 1포장 1-1' or 'on 밸브1', always put that location/device name in target_name (the tool resolves it to the real target and attaches the note). Do not merely say you will create it - actually call this tool.",
+        "description": (
+            "Saves a note now (an undated memo; dated work is add_schedule). No "
+            "approval step. A note is visible only on the entity it is attached "
+            "to, so name the place or device in target_name. Call the tool — do "
+            "not just say you will."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "note": {"type": "string", "description": "Body text of the note."},
-                "name": {"type": "string", "description": "Short note title. Optional."},
+                "note": {"type": "string", "description": "Body text."},
+                "name": {"type": "string", "description": "Short title."},
                 "target_name": {"type": "string", "description": "Name of the location/device to attach the note to (e.g. '1포장 1-1', '밸브1'). The tool resolves it to a unique_id. Strongly recommended, otherwise the note will not be visible anywhere. This is a GIS-based system: the name resolves to exactly ONE entity and never fans out to its children, and this tool saves immediately with no approval step to catch a wrong hierarchy level afterward. If the request could apply per sub-unit (each zone/구역 under a site), call resolve_target(target_name) FIRST (read-only, no approval) and, if it returns 'children', call this tool once per child name."},
-                "tags": {"type": "string", "description": "Tags, comma separated. Optional."},
-                "category": {"type": "string", "description": "Category (default 'general'). Optional."},
-                "target_id": {"type": "string", "description": "Target unique_id directly, when you already know it (instead of target_name). Optional."},
-                "target_type": {"type": "string", "description": "Type of the linked target (e.g. 'zone', 'input', 'output'). Optional."}
+                "tags": {"type": "string", "description": "Comma separated."},
+                "category": {"type": "string", "description": "Default 'general'."},
+                "target_id": {"type": "string", "description": "Target unique_id, instead of target_name."},
+                "target_type": {"type": "string", "description": "Type of that target, e.g. 'zone', 'input', 'output'."},
             },
-            "required": ["note"]
-        }
+            "required": ["note"],
+        },
     },
     {
         "tool_name": "list_notices",
-        "description": "List notice-board posts (title, pinned flag, date). Read-only.",
+        "description": "Notice-board posts (title, pinned, date). Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "limit": {"type": "integer", "description": "Maximum number of results (default 10)."}
-            }
-        }
+                "limit": {"type": "integer", "description": "Default 10."},
+            },
+        },
     },
     {
         "tool_name": "create_notice",
-        "description": "Creates a notice board post (title + body). Requires human approval.",
+        "description": "Creates a notice-board post. Requires human approval.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "title": {"type": "string", "description": "Notice title."},
-                "body": {"type": "string", "description": "Notice body text."},
-                "pinned": {"type": "boolean", "description": "Pin to top (admin-only). Optional."}
+                "title": {"type": "string", "description": "Title."},
+                "body": {"type": "string", "description": "Body text."},
+                "pinned": {"type": "boolean", "description": "Pin to top (admin only)."},
             },
-            "required": ["title", "body"]
-        }
+            "required": ["title", "body"],
+        },
     },
     {
         "tool_name": "modify_notice",
@@ -2396,34 +2811,47 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_facility_capacity",
-        "description": "Design-derived performance and capacity of facilities (greenhouses/structures) drawn in geo/design: reference heating and cooling capacity (kW), floor/volume/glazing area, ventilation (ACH and opening m2), irrigation summary (pipes, emitter count, flow L/min) and the number of bound controllers. Read-only - engineering reference estimates computed on demand (+/-5-10%). Use for capacity and design questions ('is cooling sufficient?', 'what is the irrigation flow?', 'heating capacity').",
+        "description": (
+            "Design capacity of facilities drawn in geo/design: heating/cooling "
+            "kW, floor/volume/glazing area, ventilation, irrigation summary, "
+            "bound controllers. Engineering estimates (+/-5-10%). Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "facility_name": {"type": "string", "description": "Facility name (e.g. '육묘장'). Omit to return every facility."}
-            }
-        }
+                "facility_name": {"type": "string", "description": "e.g. '육묘장'. Omit for all."},
+            },
+        },
     },
     {
         "tool_name": "get_map_equipment",
-        "description": "Equipment drawn on the geo/design map plus a per-zone irrigation design summary. Separate from controllers (Outputs). `sprinklers` (spray heads) and `drip_emitters` (from drip pipe length / spacing) are counted separately and `method` says sprinkler | drip | mixed; when both are present the reply carries a '_reading' note — follow it. Individual equipment (irrigation valves, ventilation fans, heaters/chillers, window and curtain motors) is returned with its specs (flow_lph, pressure_kpa, capacity_kw, airflow_cmh, power_w). Read-only. Use for 'what irrigation equipment is there' and 'flow / sprinklers / drip / piping in zone X'. Report sprinklers and drip separately. (For a greenhouse's calculated heating and cooling design capacity use get_facility_capacity.)",
+        "description": (
+            "Equipment drawn on the map with specs (flow, pressure, kW, airflow) "
+            "plus a per-zone irrigation summary; sprinklers and drip are counted "
+            "separately. Not controllers. Follow the reply's `_reading`. "
+            "Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "area_name": {"type": "string", "description": "Site or zone name (e.g. '1-1'). Omit for the whole map."}
-            }
-        }
+                "area_name": {"type": "string", "description": "Site or zone name. Omit for the whole map."},
+            },
+        },
     },
     {
         "tool_name": "get_map_equipment_detail",
-        "description": "One level below the get_map_equipment summary: geometry detail for a single zone - individual sprinkler head positions (lat/lng), radius and flow, computed sprinkler spacing (median of neighbours), and for drip the per-pipe spacing and emitter count, plus each pipe's length and start/end coordinates. Sprinklers and drip stay separate. Read-only. Call it only for specific questions the summary cannot answer (exact position, spacing, radius, a particular pipe); counts, total flow and total length are already in the summary.",
+        "description": (
+            "Per-zone geometry below get_map_equipment: sprinkler positions, "
+            "radius and spacing; drip pipes with length, spacing and emitters. "
+            "Only for what the summary lacks. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "area_name": {"type": "string", "description": "Site or zone name (e.g. '1-1'). Required."}
+                "area_name": {"type": "string", "description": "Site or zone name."},
             },
-            "required": ["area_name"]
-        }
+            "required": ["area_name"],
+        },
     },
 
     # =========================================================================
@@ -2446,51 +2874,66 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # ── (A) 실행은 되나 광고가 빠져 있던 읽기 도구 ───────────────────────────
     {
         "tool_name": "knowledge_search",
-        "description": "Search the knowledge layer - system manuals, synced domain knowledge from external authorities, and notes shelved by you or a colleague - with a free-text query. Read-only. Call this FIRST when asked to research or look something up — it may already be here. If it returns nothing, say so rather than passing your own knowledge off as a source, then knowledge_shelve what you research.",
+        "description": (
+            "Searches the knowledge layer — manuals, synced domain knowledge, "
+            "shelved notes. Call it FIRST when asked to research something. If it"
+            " finds nothing, say so rather than presenting your own knowledge as "
+            "a source. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "What to look for, in natural language. E.g. 'tomato irrigation interval', 'setting a VPD target'."},
-                "top_k": {"type": "integer", "description": "Maximum number of results (default 3)."},
-                "tags": {"type": "string", "description": "Narrow the search by tag. Optional."}
+                "query": {"type": "string", "description": "Natural language, e.g. 'tomato irrigation interval'."},
+                "top_k": {"type": "integer", "description": "Default 3."},
+                "tags": {"type": "string", "description": "Narrow by tag."},
             },
-            "required": ["query"]
-        }
+            "required": ["query"],
+        },
     },
     {
         "tool_name": "search_schedule",
-        "description": "Query the schedule ledger (device reservations, human tasks, AI-registered jobs). Essential before advising anything: it shows what is already planned, preventing duplicate or conflicting instructions. Read-only.",
+        "description": (
+            "Queries the schedule ledger (device reservations, human tasks, AI "
+            "jobs) — check it before advising, to avoid duplicate or conflicting "
+            "plans. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Search term matched against schedule content. Omit for all."},
-                "target_name": {"type": "string", "description": "Restrict to a particular zone or device name."},
-                "include_past": {"type": "boolean", "description": "Include past entries as well (default false)."},
-                "limit": {"type": "integer", "description": "Maximum number of results (default 20)."}
-            }
-        }
+                "query": {"type": "string", "description": "Matches content. Omit for all."},
+                "target_name": {"type": "string", "description": "Only this place or device."},
+                "include_past": {"type": "boolean", "description": "Include past entries."},
+                "limit": {"type": "integer", "description": "Default 20."},
+            },
+        },
     },
     {
         "tool_name": "get_function_list",
-        "description": "List registered control Functions with name, type, trigger_type (e.g. trigger_sequence) and activation state. The entry point for understanding what automation is configured. Read-only.",
+        "description": (
+            "Control Functions with type, trigger_type and activation state — "
+            "what automation exists. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "function_type": {"type": "string", "description": "Filter by type (e.g. pid, conditional, trigger). Optional."},
-                "active_only": {"type": "boolean", "description": "Active functions only (default false)."}
-            }
-        }
+                "function_type": {"type": "string", "description": "e.g. pid, conditional, trigger."},
+                "active_only": {"type": "boolean", "description": "Active only."},
+            },
+        },
     },
     {
         "tool_name": "get_function_detail",
-        "description": "Full configuration of one control Function - includes the setpoint for PID controllers. Use it to judge why control behaves the way it does. Read-only.",
+        "description": (
+            "Full configuration of one control Function (e.g. PID setpoint, "
+            "sequence plan) — to judge why control behaves as it does. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "function_id": {"type": "string", "description": "unique_id of the function (obtain it from get_function_list)."}
+                "function_id": {"type": "string", "description": "unique_id or exact name."},
             },
-            "required": ["function_id"]
-        }
+            "required": ["function_id"],
+        },
     },
     {
         "tool_name": "create_function",
@@ -2527,15 +2970,20 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "modify_function_options",
-        "description": "Updates custom_options of an existing function and reloads it in the daemon. Requires human approval. Does NOT work on Triggers (including sequences) — their settings are columns, not custom_options; use modify_sequence_schedule for a sequence's timing.",
+        "description": (
+            "Changes a function's options and reloads it if running. Unknown "
+            "option keys are refused with the valid list. Not for sequences — "
+            "their timing is modify_sequence_schedule. Saved without an approval "
+            "step (settings only)."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "function_id": {"type": "string", "description": "unique_id of the function (from get_function_list)."},
-                "params": {"type": "object", "description": "Dict of {option_id: value} to update."}
+                "function_id": {"type": "string", "description": "unique_id (from get_function_list)."},
+                "params": {"type": "object", "description": "{option_id: value} to change; keys are get_function_detail options[].key."},
             },
-            "required": ["function_id", "params"]
-        }
+            "required": ["function_id", "params"],
+        },
     },
     {
         "tool_name": "configure_sequence_day",
@@ -2568,40 +3016,50 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         }
     },
     {
+        # 운영 묶음에 있다(프로필 벤치마크 26-09-24 lat_19) — 운영 크기 상한
+        # 안에 들도록 설명을 줄였다. 자세한 규칙은 인앱 매니페스트의 usage_hint.
         "tool_name": "modify_sequence_step",
-        "description": "Configures ONE step of a trigger_sequence: device group, duration, single/total mode, total-step margins, enabled state, label. Steps sharing a group name run SIMULTANEOUSLY as one slot. Requires human approval.",
+        "description": (
+            "Changes ONE step of a sequence (steps: get_function_detail): run "
+            "time, order, on/off, group, label. Same group = run together. Saved "
+            "without an approval step (settings only)."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "action_id": {"type": "string", "description": "The step's id — get_function_detail returns it as steps[].action_id."},
-                "group_name": {"type": "string", "description": "Device group. Steps sharing a name fire together as one slot with one common duration. Empty string ungroups. Not allowed on a 'total' step. Optional."},
-                "duration_seconds": {"type": "number", "description": "How long this step stays on. On a grouped step this sets the whole group, since a group has one shared duration. Optional."},
-                "mode": {"type": "string", "enum": ["single", "total"], "description": "'single' takes its turn in the running order; 'total' spans the whole cycle (a field's pump). Optional."},
-                "enabled": {"type": "boolean", "description": "Whether this step runs at all. Optional."},
-                "display_name": {"type": "string", "description": "Label shown in the widget. Empty string clears it back to the device name. Optional."},
-                "lead_seconds": {"type": "number", "description": "'total' steps only: start this many seconds after the sequence begins, so the valve opens before the pump runs. Optional."},
-                "lag_seconds": {"type": "number", "description": "'total' steps only: stop this many seconds before the sequence ends, so the pump stops before the valve closes. Optional."},
-                "order": {"type": "integer", "description": "Run order — the step with the lowest value goes first. Slots follow the order of their first member, so to move a whole group forward set it on that group's earliest step. Optional."},
-                "day": {"type": "integer", "description": "Scope this change to ONE weekday (0=Mon..6=Sun) instead of every day. Only enabled, group_name and duration_seconds can be per-weekday — this is how one sequence runs different valves on different days (e.g. an evening pass Thu and a dawn pass Fri) without creating a second sequence. Optional."}
+                "action_id": {"type": "string", "description": "steps[].action_id."},
+                "duration_seconds": {"type": "number", "description": "Run time; on a grouped step, the whole group's."},
+                "order": {"type": "integer", "description": "Lowest runs first."},
+                "enabled": {"type": "boolean"},
+                "group_name": {"type": "string", "description": "Same name = run together; '' ungroups."},
+                "mode": {"type": "string", "enum": ["single", "total"], "description": "'total' spans the whole cycle (a pump)."},
+                "lead_seconds": {"type": "number", "description": "'total' only: start delay."},
+                "lag_seconds": {"type": "number", "description": "'total' only: early stop."},
+                "display_name": {"type": "string", "description": "Label; '' resets it."},
+                "day": {"type": "integer", "description": "0=Mon..6=Sun: enabled/group_name/duration_seconds for that weekday only."}
             },
             "required": ["action_id"]
         }
     },
     {
         "tool_name": "modify_sequence_schedule",
-        "description": "Changes WHEN a trigger_sequence runs — daily window, cycle period, and which weekdays. Use this (not modify_function_options) for any sequence timing change. The running cycle is kept, not restarted. Requires human approval.",
+        "description": (
+            "Changes WHEN a sequence runs: daily window, cycle period, weekdays "
+            "(the running cycle is kept). Saved without an approval step "
+            "(settings only)."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "function_id": {"type": "string", "description": "unique_id or exact name of the sequence (from get_function_list)."},
-                "start": {"type": "string", "description": "Window start, 'HH:MM' (device local time). Optional."},
-                "end": {"type": "string", "description": "Window end, 'HH:MM'. '24:00' means end of day. Optional."},
-                "period_seconds": {"type": "number", "description": "Seconds between cycle starts. One full pass of the steps must fit inside the window, or the cycle is cut short. Optional."},
-                "weekdays": {"type": "array", "items": {"type": "integer"}, "description": "Days the sequence runs, 0=Mon..6=Sun. Replaces the current set. Optional."},
-                "day": {"type": "integer", "description": "Apply start/end/period_seconds to this ONE weekday (0=Mon..6=Sun) instead of every enabled day. Optional."}
+                "function_id": {"type": "string", "description": "Sequence unique_id or exact name."},
+                "start": {"type": "string", "description": "'HH:MM' window start (device local time)."},
+                "end": {"type": "string", "description": "'HH:MM'. '24:00' = end of day."},
+                "period_seconds": {"type": "number", "description": "Seconds between cycle starts (a pass must fit the window)."},
+                "weekdays": {"type": "array", "items": {"type": "integer"}, "description": "Days it runs, 0=Mon..6=Sun. Replaces the set."},
+                "day": {"type": "integer", "description": "Apply start/end/period_seconds to this weekday only (0-6)."},
             },
-            "required": ["function_id"]
-        }
+            "required": ["function_id"],
+        },
     },
     {
         "tool_name": "delete_function",
@@ -2614,64 +3072,89 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "activate_function",
-        "description": "Activates an existing function by function_id. Requires human approval. Refuses a trigger_sequence with no steps.",
+        "description": (
+            "Activates a function. Refuses a sequence with no steps. Requires "
+            "human approval."
+        ),
         "input_schema": {
             "type": "object",
-            "properties": {"function_id": {"type": "string", "description": "unique_id of the function to activate."}},
-            "required": ["function_id"]
-        }
+            "properties": {
+                "function_id": {"type": "string", "description": "unique_id or exact name."},
+            },
+            "required": ["function_id"],
+        },
     },
     {
         "tool_name": "deactivate_function",
-        "description": "Deactivates an existing function by function_id. Requires human approval.",
+        "description": "Deactivates a function. Requires human approval.",
         "input_schema": {
             "type": "object",
-            "properties": {"function_id": {"type": "string", "description": "unique_id of the function to deactivate."}},
-            "required": ["function_id"]
-        }
+            "properties": {
+                "function_id": {"type": "string", "description": "unique_id or exact name."},
+            },
+            "required": ["function_id"],
+        },
     },
     {
         "tool_name": "get_active_functions_summary",
-        "description": "Summary of currently active control Functions - what is running automatically right now. Read-only.",
-        "input_schema": {"type": "object", "properties": {}}
+        "description": (
+            "What is running automatically right now (active Functions). "
+            "Read-only."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
     },
     {
         "tool_name": "get_device_measurements",
-        "description": "Measurement channels and units a device actually reports. Use before querying sensor values to learn which metrics exist. Read-only.",
+        "description": "Measurement channels and units a device actually reports. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "unique_id of an Input or CustomController."}
+                "device_id": {"type": "string", "description": "Device unique_id or name."},
             },
-            "required": ["device_id"]
-        }
+            "required": ["device_id"],
+        },
     },
     {
         "tool_name": "get_device_detail",
-        "description": "One device's full picture in a single call: what it is (kind/module type/name/active), where it is (map location), what it measures (channels), what it controls (OutputChannel list), what communication it uses (the owning complex device's connection fields — secrets come back only as 'set'/'unset', never their value), which space it's bound to (GeoBinding: site/zone/facility), and what it can't do (whether its controlling tool needs human approval, or it's inactive). Do NOT call search_devices -> get_device_measurements -> get_device_location in sequence when you only need one device's picture — this single tool replaces that chain. Missing pieces come back as null/[] with a sibling '*_note' key explaining why, never by dropping the key. Read-only.",
+        "description": (
+            "One device's whole picture in one call: kind, map location, "
+            "channels, controlled outputs, connection fields (secrets only as "
+            "set/unset), bound place, approval needs. Use it instead of chaining "
+            "lookups. Missing parts come as null with a '*_note'. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "unique_id or the device's name (as Input/Output/CustomController). An ambiguous name returns needs_disambiguation with candidates — pass the unique_id back."}
+                "device_id": {"type": "string", "description": "unique_id or name. An ambiguous name returns candidates."},
             },
-            "required": ["device_id"]
-        }
+            "required": ["device_id"],
+        },
     },
     {
         "tool_name": "get_local_time",
-        "description": "Current local time and timezone at a location (zone/facility/device). Devices may sit in different timezones, so check this before advising anything time-related (scheduling, day/night reasoning). Read-only.",
+        "description": (
+            "Local time and timezone at a zone, facility or device — check before"
+            " any time-of-day reasoning; places can be in different timezones. "
+            "Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_name": {"type": "string", "description": "Name of the zone, facility or device."},
-                "target_id": {"type": "string", "description": "unique_id of the target (instead of the name)."}
-            }
-        }
+                "target_name": {"type": "string", "description": "Zone, facility or device name."},
+                "target_id": {"type": "string", "description": "Or its unique_id."},
+            },
+        },
     },
     {
         "tool_name": "list_geo_maps",
-        "description": "List registered maps (farms) with geo_id, name and centre coordinates. Entry point for spatial queries. Read-only.",
-        "input_schema": {"type": "object", "properties": {}}
+        "description": "Registered maps (farms) with id, name and centre. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
     },
     {
         "tool_name": "list_gis_inputs",
@@ -2727,38 +3210,51 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_device_location",
-        "description": "A device's current map position (latitude/longitude). Use when advising based on spatial layout. Read-only.",
+        "description": "A device's map position (latitude/longitude). Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "unique_id of the device."}
+                "device_id": {"type": "string", "description": "Device unique_id."},
             },
-            "required": ["device_id"]
-        }
+            "required": ["device_id"],
+        },
     },
     {
         "tool_name": "distance_between",
-        "description": "How far apart two things on the map are, in metres. DO NOT work distances out yourself from coordinates — that goes wrong quietly and the wrong number becomes a real decision about where to plant or place something. Takes either the name the grower uses ('관리사무소', '3-1', a crop name) or a unique_id; pass the user's own words rather than guessing a map name. If a name matches several things the reply is 'needs_disambiguation' with the candidates and their ids — a crop planted in five plots is the usual cause, and 'how far to the black beans' genuinely has no single answer then. Show those candidates and ask which one; do NOT pick one yourself. Measured centre point to centre point, so two plots that touch along an edge are still reported as tens of metres apart; pass that caveat on rather than presenting the number as a gap between boundaries. Read-only.",
+        "description": (
+            "Distance in metres between two things on the map, by name (the "
+            "user's own words — '3-1', '관리사무소', a crop) or unique_id. Never work "
+            "it out from coordinates yourself. Centre to centre, so touching "
+            "plots still read tens of metres apart — pass that caveat on. An "
+            "ambiguous name returns candidates: ask which, do not pick. "
+            "Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "target_a": {"type": "string", "description": "Name or unique_id of the first entity (zone/site/facility, vegetation plot, or device)."},
-                "target_b": {"type": "string", "description": "Name or unique_id of the second entity."}
+                "target_b": {"type": "string", "description": "Name or unique_id of the second entity."},
             },
-            "required": ["target_a", "target_b"]
-        }
+            "required": ["target_a", "target_b"],
+        },
     },
     {
         "tool_name": "nearest",
-        "description": "Ranks things by how far they are from one reference thing — 'which plots are closest to the office', 'which valve is nearest this bed'. Answers the whole question in ONE call: do not loop distance_between over the candidates and sort the numbers yourself. Names or unique_ids both work. Candidates that could not be placed come back in 'unresolved' (nothing of that name) or 'ambiguous' (several matches, with their ids) instead of being dropped — relay BOTH, because a shorter list otherwise reads as 'those were further away', and an ambiguous one is a question you can still get answered by asking which was meant. Distances are centre point to centre point, not edge to edge. Read-only.",
+        "description": (
+            "Ranks things by distance from one reference ('which plots are "
+            "closest to the office') in ONE call — do not loop distance_between. "
+            "Names or unique_ids. Relay both 'unresolved' and 'ambiguous' — a "
+            "shorter list otherwise reads as 'further away'. Centre to centre. "
+            "Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "reference": {"type": "string", "description": "Name or unique_id of the thing to measure from (e.g. the office)."},
-                "candidates": {"type": "array", "items": {"type": "string"}, "description": "Names or unique_ids to rank, closest first. Max 200."}
+                "candidates": {"type": "array", "items": {"type": "string"}, "description": "Names or unique_ids to rank, closest first. Max 200."},
             },
-            "required": ["reference", "candidates"]
-        }
+            "required": ["reference", "candidates"],
+        },
     },
     {
         "tool_name": "set_device_location",
@@ -2886,32 +3382,39 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # search_schedule/add_schedule were already exposed; edit/delete were not.
     {
         "tool_name": "edit_schedule",
-        "description": "Edits an existing schedule's time, duration, content, or worker. Requires human approval. If the schedule is an already-registered device reservation, its trigger is rescheduled too. First call search_schedule to get the job_id.",
+        "description": (
+            "Edits a schedule (time, duration, text, worker, place); a device "
+            "reservation is rescheduled too. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "job_id": {"type": "string", "description": "From search_schedule."},
-                "date": {"type": "string", "description": "Optional YYYY-MM-DD, keeps existing date if omitted."},
-                "time": {"type": "string", "description": "Optional HH:MM, keeps existing time if omitted."},
-                "duration_minutes": {"type": "number", "description": "Optional new duration in minutes."},
-                "content": {"type": "string", "description": "Optional new text."},
-                "worker": {"type": "string", "description": "Optional new assignee."},
-                "target_name": {"type": "string", "description": "Optional — re-link to a different zone/facility/device by name."}
+                "date": {"type": "string", "description": "YYYY-MM-DD. Omit to keep."},
+                "time": {"type": "string", "description": "HH:MM. Omit to keep."},
+                "duration_minutes": {"type": "number", "description": "New duration."},
+                "content": {"type": "string", "description": "New text."},
+                "worker": {"type": "string", "description": "New assignee."},
+                "target_name": {"type": "string", "description": "Re-link to a place/device by name."},
+                "target_id": {"type": "string", "description": "Or by a resolve_target target_id."},
             },
-            "required": ["job_id"]
-        }
+            "required": ["job_id"],
+        },
     },
     {
         "tool_name": "delete_schedule",
-        "description": "Cancels/deletes a schedule. Requires human approval. Soft-deletes (archived, reversible) and removes any registered device trigger so it no longer fires. First call search_schedule to get the job_id.",
+        "description": (
+            "Cancels a schedule (archived, reversible) and removes its device "
+            "trigger. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "job_id": {"type": "string", "description": "From search_schedule."},
-                "reason": {"type": "string", "description": "Optional cancellation reason."}
+                "reason": {"type": "string", "description": "Why."},
             },
-            "required": ["job_id"]
-        }
+            "required": ["job_id"],
+        },
     },
     # --- AI agent / library management (@ANCHOR: AI_AGENT_LIBRARY_TOOLS, 2026-07-26)
     {
@@ -2967,7 +3470,13 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "knowledge_shelve",
-        "description": "Saves a piece of knowledge into this system's knowledge library so a later query can retrieve it (the write counterpart to knowledge_search). Shelve what you derived, observed, were told, **or researched yourself** — a summary of material you looked up outside this system is exactly what this is for. ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
+        "description": (
+            "Saves knowledge into the library so a later search finds it (write "
+            "side of knowledge_search) — including a summary of what you "
+            "researched outside this system. Always stored as "
+            "unconfirmed/ai_curated: you MUST tell the user it is an unconfirmed "
+            "note, not fact. Only reusable findings, not chit-chat."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -2979,44 +3488,61 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "source_url": {"type": "string", "description": "The http(s) address you got this from. A reviewer opens it to check the note; without it the note stays unconfirmed."},
                 "source_ref": {"type": "string", "description": "When this came from a lookup here, the 'source_ref' that query_reference_table / query_data_source returned. Marks the note as checkable against a source this system has."},
                 "content_kind": {"type": "string", "enum": ["prose", "structured"], "description": "Default 'prose'."},
-                "ttl_hours": {"type": "number", "description": "Optional — set for time-sensitive info so it expires."}
+                "ttl_hours": {"type": "number", "description": "Optional — set for time-sensitive info so it expires."},
             },
-            "required": ["content", "tags"]
-        }
+            "required": ["content", "tags"],
+        },
     },
     {
         "tool_name": "list_lookup_sources",
-        "description": "Lists everything this system can LOOK THINGS UP IN: reference tables the operator registered (crop requirements, spec sheets) and connected data APIs (measured farm data). Read-only. These are queried on demand, so they are NOT in knowledge_search results — when a question asks for a per-item value or for external measured data and knowledge_search found nothing, check here before answering from your own memory. Each entry has kind: 'table' -> query_reference_table, 'api' -> query_data_source.",
-        "input_schema": {"type": "object", "properties": {}}
+        "description": (
+            "Lists what can be looked up on demand — registered reference tables "
+            "and connected data APIs (not in knowledge_search). Check here before"
+            " answering a per-item value or external data from memory. kind "
+            "'table' -> query_reference_table, 'api' -> query_data_source. "
+            "Read-only."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
     },
     {
         "tool_name": "query_data_source",
-        "description": "Runs one operation against a connected data API right now, instead of relying on what was synced earlier. Read-only. Answers 'what did other farms measure' — questions the stored digest cannot cover because it holds one fixed selection. Report 'total_available' honestly: a truncated result is not the complete set.",
+        "description": (
+            "Runs one operation on a connected data API now (e.g. what other "
+            "farms measured). A truncated result is not the whole set — report "
+            "'total_available'. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "source_id": {"type": "string", "description": "From list_lookup_sources."},
                 "operation": {"type": "string", "description": "One of that source's operations."},
-                "params": {"type": "object", "description": "That operation's parameters. Codes (userId/facilityId/croppingSerlNo) come from smartfarmkorea_lookup, never from the user."},
+                "params": {"type": "object", "description": "Its parameters. Codes come from the source, not the user."},
                 "limit": {"type": "integer", "description": "Default 5, max 25."},
-                "columns": {"type": "string", "description": "Comma-separated columns, or '*'."}
+                "columns": {"type": "string", "description": "Comma-separated, or '*'."},
             },
-            "required": ["operation"]
-        }
+            "required": ["operation"],
+        },
     },
     {
         "tool_name": "query_reference_table",
-        "description": "Looks a row up in a registered reference table by name. Read-only. Names are matched in the table's own language (see name_language/aliases). Returns matching rows plus the table's attribution and caveat — quote the caveat when it changes what the numbers mean (e.g. a suitability range is not a greenhouse setpoint). If nothing matches, say so; do not fill the gap from memory.",
+        "description": (
+            "Looks up rows by name in a registered reference table (names in the "
+            "table's own language). Quote the returned caveat when it changes the"
+            " meaning; if nothing matches, say so. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "table_id": {"type": "string", "description": "From list_lookup_sources. Omit only when exactly one table is registered."},
-                "query": {"type": "string", "description": "The name to look up — species, part, variety."},
-                "limit": {"type": "integer", "description": "Maximum rows (default 5)."},
-                "columns": {"type": "string", "description": "Comma-separated columns to return; omit for the table's summary set, '*' for all. Ask only for what the question needs — a full row can be several times larger."}
+                "table_id": {"type": "string", "description": "From list_lookup_sources. Omit if only one table exists."},
+                "query": {"type": "string", "description": "Name to look up — species, part, variety."},
+                "limit": {"type": "integer", "description": "Default 5."},
+                "columns": {"type": "string", "description": "Omit for the summary set, '*' for all. Ask only for what you need."},
             },
-            "required": ["query"]
-        }
+            "required": ["query"],
+        },
     },
     {
         "tool_name": "list_library_source_types",
@@ -3075,8 +3601,14 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "list_pending_confirmations",
-        "description": "Lists write/control requests currently awaiting human approval (each returned earlier by some other tool call as 'pending_approval', with a confirmation_id). Read-only. Use this to look up a confirmation_id you no longer have, or to show the user everything that's outstanding.",
-        "input_schema": {"type": "object", "properties": {}}
+        "description": (
+            "Write/control requests awaiting human approval, with their "
+            "confirmation_id. Read-only."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
     },
     # NOTE: respond_to_confirmation is intentionally NOT here. It has handler=None
     # in TOOLS (special-dispatched by aot_mcp_server.py, same as the native-bridge
@@ -3086,125 +3618,171 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # rather than through this payload list.
     {
         "tool_name": "analyze_system_failure",
-        "description": "Diagnose system failures - recent failed AI tasks and MCP connection health. Use to find out why something did not work. This covers system/integration faults, not sensor or environment anomalies (use get_anomalies for those). Read-only.",
+        "description": (
+            "Diagnoses system faults — recent failed AI tasks and MCP connection "
+            "health. Sensor or environment anomalies are get_anomalies. "
+            "Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "Restrict to a particular device. Optional."},
-                "tool_name": {"type": "string", "description": "Restrict to a particular tool. Optional."},
-                "lookback_minutes": {"type": "integer", "description": "Look-back window in minutes (default 60)."}
-            }
-        }
+                "device_id": {"type": "string", "description": "One device only."},
+                "tool_name": {"type": "string", "description": "One tool only."},
+                "lookback_minutes": {"type": "integer", "description": "Default 60."},
+            },
+        },
     },
 
     # ── (B) 신설 읽기 도구 ────────────────────────────────────────────────────
     {
         "tool_name": "get_control_state",
-        "description": "Current targets and latest decision of the environment-control coordinators - target VPD/temperature/humidity/CO2, tolerances, priorities, safety ranges, operating windows, plus the latest cycle's actually-applied targets, limiting factor, safety-gate status and actuator commands with reason codes. Read this before advising on control: it shows what the system is currently trying to do. Read-only.",
+        "description": (
+            "Current targets and latest decision of the environment-control "
+            "coordinators: targets, tolerances, safety ranges, applied targets, "
+            "limiting factor, actuator commands with reasons. Read it before "
+            "advising on control. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "facility_name": {"type": "string", "description": "Filter by facility name. Omit for all."},
-                "facility_id": {"type": "string", "description": "Filter by facility unique_id."},
-                "include_inactive": {"type": "boolean", "description": "Include inactive coordinators as well (default false)."}
-            }
-        }
+                "facility_name": {"type": "string", "description": "Facility name. Omit for all."},
+                "facility_id": {"type": "string", "description": "Facility unique_id."},
+                "include_inactive": {"type": "boolean", "description": "Include inactive coordinators."},
+            },
+        },
     },
     {
         "tool_name": "get_weather_forecast",
-        "description": "KMA short-term hourly forecast. get_weather returns only current values, so pre-emptive advice (temperature about to drop - warm up in advance) needs this. The reply carries the issue time and its age, and a 'warning' when the forecast is too old to advise on — follow it. Read-only.",
+        "description": (
+            "Short-term hourly forecast, for advice ahead of a change "
+            "(get_weather is current only). Follow the 'warning' when it is too "
+            "old. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "hours": {"type": "integer", "description": "How many hours ahead to return (default 24)."}
-            }
-        }
+                "hours": {"type": "integer", "description": "Hours ahead. Default 24."},
+            },
+        },
     },
     {
         "tool_name": "get_anomalies",
-        "description": "On-demand check for anomalies right now - threshold violations, device-offline ratio and an alert level (none/info/warning/critical). It only evaluates; it sends no notifications. Read 'metrics_definitions' in the reply before quoting a number: total_devices counts inputs only (get_system_brief's device_count also counts outputs/cameras, so the two differ by definition), and comm_offline_devices counts only drivers that report a fault themselves - a device that just went silent is never in it, use get_device_freshness for those. For system/integration faults use analyze_system_failure. Read-only.",
+        "description": (
+            "On-demand anomaly check: threshold violations, offline ratio, alert "
+            "level. Evaluates only, sends nothing. Read 'metrics_definitions' "
+            "before quoting a number. Silent sensors: get_device_freshness; "
+            "system faults: analyze_system_failure. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "scope_type": {"type": "string", "description": "Scope: system | farm | zone | facility (default system)."},
-                "scope_id": {"type": "string", "description": "unique_id of the scope target (omit for system)."}
-            }
-        }
+                "scope_type": {"type": "string", "description": "Default system.", "enum": ["system", "farm", "zone", "facility"]},
+                "scope_id": {"type": "string", "description": "Scope unique_id. Omit for system."},
+            },
+        },
     },
     {
         "tool_name": "get_device_freshness",
-        "description": "Which sensors have stopped reporting - the question get_anomalies cannot answer (comm_offline_devices only counts drivers that report a fault themselves). Returns last_seen, age_readable and periods_late per device; stale means the newest value is older than 3x that device's OWN sampling period (minimum 300s), since periods range from 15 seconds to a full day and a fixed threshold would mark healthy daily sensors as broken. Switched-off devices go to inactive_devices, devices with no stored value to no_data_devices. These are observations, not a verdict: silence is not proof of failure, so report what is late and by how many periods rather than calling it a fault. Read-only.",
+        "description": (
+            "Which sensors stopped reporting — last_seen and periods_late, judged"
+            " by each device's own sampling period. Follow 'basis' and 'caveat' "
+            "in the reply. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "Check one input only. Omit to check every input."},
-                "include_fresh": {"type": "boolean", "description": "Also return the devices that are reporting normally (default false - only counts are given)."}
-            }
-        }
+                "device_id": {"type": "string", "description": "One input only. Omit for all."},
+                "include_fresh": {"type": "boolean", "description": "Also list devices reporting normally."},
+            },
+        },
     },
     {
         "tool_name": "get_crop_status",
-        "description": "Crop and growth stage per facility - taken from the plot program growing there (crop, stage, growing-season window) and, when the domain registry is configured, stage-specific optimal ranges. Optimal-growing advice is not possible without knowing the crop, so check this before advising on cultivation. If the growth stage is missing, the reason is returned with it. Every plot entry carries 'stage.guidance' — what THIS programme says to do in the stage it is in now; quote it instead of generic crop advice, and when it is null say the programme has none rather than inventing one. (facilities[].stage is a stage NAME only — guidance never rides the control path.) Read-only.",
+        "description": (
+            "Crop and growth stage per facility and plot, from the plot "
+            "programmes (with optimal ranges when configured). Check it before "
+            "cultivation advice. Follow the reply's `_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "facility_id": {"type": "string", "description": "Filter by facility unique_id."},
-                "facility_name": {"type": "string", "description": "Filter by facility name. Omit for all."}
-            }
-        }
+                "facility_id": {"type": "string", "description": "Facility unique_id."},
+                "facility_name": {"type": "string", "description": "Facility name. Omit for all."},
+            },
+        },
     },
     {
         "tool_name": "get_output_state",
-        "description": "Current ON/OFF state of an output device (valve, pump, relay, etc.) - the read counterpart to set_output_state, which has no way to check what it just toggled. For each channel, returns the live state, how many seconds it has been on, and (when available) the timestamp it actually turned on - taken from the same start-of-session marker the timer widget uses, so confirmation-based outputs (e.g. LoRaWAN) reflect the confirmed time, not the dispatch time. A null state is ambiguous - it can mean never commanded, the driver's own setup is incomplete (e.g. a LoRaWAN downlink missing its API token), or that driver never reports state at all; a channel entry carries a 'note' spelling this out, but this tool cannot tell which cause applies - say so rather than guessing, and point to the device's own configuration if it matters. get_control_state only covers actuators registered to an environment-control coordinator; use this for any other output. Does not cover on/off history - only the current session. Read-only.",
+        "description": (
+            "Current on/off state of outputs (valve, pump, relay) with seconds on"
+            " and start time; a vent/curtain also gets 'position'. No history. "
+            "(get_control_state covers only climate-coordinator actuators.) "
+            "Follow the reply's `_reading`. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "device_id": {"type": "string", "description": "Output unique_id. Required."},
-                "channel": {"type": "integer", "description": "Restrict to one channel index. Omit for all channels on this device."}
+                "device_id": {"type": "string", "description": "Output unique_id or name."},
+                "channel": {"type": "integer", "description": "One channel index. Omit for all."},
+                "device_ids": {"type": "array", "items": {"type": "string"}, "description": "Several at once (max 10)."},
             },
-            "required": ["device_id"]
-        }
+        },
     },
 
     # ── (C) 오리엔테이션 + 의견 원장 ──────────────────────────────────────────
     {
         "tool_name": "get_system_brief",
-        "description": "Start here. Returns what this farm is and how it is doing right now in one call - spatial hierarchy (site/zone/facility), crop and growth stage, active environment-control targets, current anomalies, device count and advice-ledger status. devices.device_count counts every registered entity (inputs+outputs+cameras+complex devices, broken down in count_by_type) while the anomalies block's total_devices counts inputs only - they differ by design. The how_to_proceed list at the end names the next tools to use in order. It does not replace the individual query tools; it tells you where to dig. Read-only.",
-        "input_schema": {"type": "object", "properties": {}}
+        "description": (
+            "Start here: what this farm is and how it is doing — places, crops "
+            "and stages, control targets, anomalies, device counts, advice ledger"
+            " — with 'how_to_proceed' naming the tools to dig further. Read-only."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
     },
     {
         "tool_name": "submit_advice",
-        "description": "Submit advice grounded in observation to the advice ledger. Nothing is executed; a human reviews it. If you conclude control is needed, do not try to execute it - use this tool and put what should be done and why in proposed_action. That is the normal way to deliver advice in this system. Conflicting opinions are kept side by side rather than overwritten, so submit yours even if another AI disagrees.",
+        "description": (
+            "Records advice for a human to review; nothing is executed. When "
+            "control seems needed, put it in proposed_action instead of "
+            "executing. Differing opinions are kept side by side."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "advice": {"type": "string", "description": "The advice itself. Required - what you observe and how you read it."},
-                "title": {"type": "string", "description": "One-line title. If omitted, the first sentence of the body is used."},
-                "rationale": {"type": "string", "description": "Evidence - which tool results or readings this is based on. This is what a human uses to weigh conflicting opinions."},
-                "proposed_action": {"type": "string", "description": "Suggested action, in natural language. It is not executed."},
-                "scope_type": {"type": "string", "description": "Target scope: system | farm | zone | facility | device (default system)."},
-                "scope_id": {"type": "string", "description": "unique_id of the target. Set it whenever you can - advice with no target is hard to compare."},
-                "severity": {"type": "string", "description": "info | advice | warning | urgent (default info)."},
-                "confidence": {"type": "number", "description": "Self-assessed confidence, 0.0-1.0."},
-                "agent_kind": {"type": "string", "description": "main | external | subordinate (default external)."}
+                "advice": {"type": "string", "description": "What you observe and how you read it."},
+                "title": {"type": "string", "description": "One line. Default: the first sentence."},
+                "rationale": {"type": "string", "description": "Which readings or tool results it rests on."},
+                "proposed_action": {"type": "string", "description": "Suggested action, in words. Not executed."},
+                "scope_type": {"type": "string", "description": "system|farm|zone|facility|device (default system)."},
+                "scope_id": {"type": "string", "description": "Target unique_id — set it whenever you can."},
+                "severity": {"type": "string", "description": "Default info.", "enum": ["info", "advice", "warning", "urgent"]},
+                "confidence": {"type": "number", "description": "0.0-1.0."},
+                "agent_kind": {"type": "string", "description": "main|external|subordinate (default external)."},
             },
-            "required": ["advice"]
-        }
+            "required": ["advice"],
+        },
     },
     {
         "tool_name": "list_advice",
-        "description": "Read the advice ledger - opinions from the main AI, external AI and subordinate node AIs. Check it before submitting so you avoid duplicates and can point at where judgements differ. The response flags targets where more than one agent has advised. Read-only.",
+        "description": (
+            "Reads the advice ledger (main, external and node AIs). Check it "
+            "before submitting to avoid duplicates; targets with several opinions"
+            " are flagged. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
-                "scope_type": {"type": "string", "description": "Filter by scope: system | farm | zone | facility | device."},
-                "scope_id": {"type": "string", "description": "Filter by target unique_id."},
-                "status": {"type": "string", "description": "pending | accepted | rejected | superseded"},
-                "agent_id": {"type": "string", "description": "Filter by a particular submitter."},
-                "severity": {"type": "string", "description": "Filter by severity."},
-                "limit": {"type": "integer", "description": "Maximum number of results (default 20, max 100)."}
-            }
-        }
+                "scope_type": {"type": "string", "description": "system|farm|zone|facility|device."},
+                "scope_id": {"type": "string", "description": "Target unique_id."},
+                "status": {"type": "string", "description": "pending|accepted|rejected|superseded."},
+                "agent_id": {"type": "string", "description": "Submitter."},
+                "severity": {"type": "string", "description": "Severity."},
+                "limit": {"type": "integer", "description": "Default 20, max 100."},
+            },
+        },
     },
 
     # ── (D) 화면 구성 — 대시보드 위젯과 탭 ────────────────────────────────────
@@ -3212,14 +3790,18 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # 여기 없으면 서버에는 등록됐는데 클라이언트는 도구를 아예 못 본다.
     {
         "tool_name": "list_dashboards",
-        "description": "The dashboard tabs and the widgets on each one - what the user actually sees when they open AoT. Use it before changing anything on a dashboard, so you are working from the real layout rather than assuming one. Widget settings are omitted by default because a single widget (a map, a facility) can carry a large configuration; pass with_options only when you need them, or use get_widget for one widget. Read-only.",
+        "description": (
+            "Dashboard tabs and their widgets — what the user sees. Read it "
+            "before changing a dashboard. Widget settings are omitted unless "
+            "with_options; get_widget reads one. Read-only."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "tab_id": {"type": "string", "description": "Restrict to one dashboard tab. Omit for all of them."},
-                "with_options": {"type": "boolean", "description": "Include each widget's full settings. Off by default - it can make the response very large."}
-            }
-        }
+                "with_options": {"type": "boolean", "description": "Include each widget's full settings. Off by default - it can make the response very large."},
+            },
+        },
     },
     {
         "tool_name": "list_widget_types",
@@ -3244,7 +3826,12 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "create_widget",
-        "description": "Adds a widget to a dashboard tab. Requires human approval. Get tab_id from list_dashboards and the option ids from list_widget_types first: an option name that is not in that type's schema is REJECTED, not ignored, so a typo comes back as an error instead of a widget that silently does nothing. The widget is placed at the bottom of the tab so it never displaces what the user is currently looking at. If it is the first widget of its type on this system the reply sets requires_restart - tell the user, and do not restart anything yourself.",
+        "description": (
+            "Adds a widget to a dashboard tab, placed at the bottom. tab_id from "
+            "list_dashboards, option ids from list_widget_types — unknown options"
+            " are rejected. If the reply sets requires_restart, tell the user; do"
+            " not restart anything yourself. Requires human approval."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -3253,10 +3840,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "name": {"type": "string", "description": "Title shown on the widget. Defaults to the type's name."},
                 "options": {"type": "object", "description": "The type's own settings, keyed by the option ids from list_widget_types. Anything not in that schema is rejected."},
                 "width": {"type": "integer", "description": "Grid columns. Defaults to the type's own default."},
-                "height": {"type": "integer", "description": "Grid rows. Defaults to the type's own default."}
+                "height": {"type": "integer", "description": "Grid rows. Defaults to the type's own default."},
             },
-            "required": ["tab_id", "widget_type"]
-        }
+            "required": ["tab_id", "widget_type"],
+        },
     },
     {
         "tool_name": "modify_widget",
@@ -3367,8 +3954,52 @@ def write_tools() -> frozenset:
     separate, narrower question; use approval_required_tools() for that.
     Keeping the two apart is the point: a config_only tool must still be
     refused for a read-only key and must still land in the audit log as a
-    write, even though nobody has to click Approve for it."""
-    return frozenset(t.name for t in TOOLS if t.mutating or t.physical)
+    write, even though nobody has to click Approve for it. record_write tools
+    (notes, knowledge) are writes for the same reason — see _RECORD_WRITE."""
+    return frozenset(t.name for t in TOOLS
+                     if t.mutating or t.physical or t.record_write)
+
+
+def record_write_tools() -> frozenset:
+    """Writes that only persist a record (note/knowledge) — see _RECORD_WRITE.
+    A subset of write_tools(); never in approval_required_tools()."""
+    return frozenset(t.name for t in TOOLS if t.record_write)
+
+
+#: 공간(space) 서랍의 쓰기 중 **작기 운영이 아닌 것** — 지도 도형·장치 배치.
+#: 웹은 이 둘을 설계 권한(`edit_settings`, routes_geo_shape)으로 연다. 구획·
+#: 작기 프로그램·단계·자원·구획 일지는 `edit_plots`(routes_geo_plot._require_edit,
+#: routes_geo_journal)다. 새 space 쓰기 도구가 지도 편집이면 여기에 넣을 것 —
+#: 안 넣으면 작기 운영 권한만으로 열린다(test_plot_write_permission 이 목록을
+#: 고정해 새 도구가 들어오면 분류를 묻는다).
+_SPACE_NON_PLOT_WRITES = frozenset({'delete_geo_shape', 'set_device_location'})
+
+
+def plot_write_tools() -> frozenset:
+    """작기 운영 쓰기 — 웹과 같은 `edit_plots` 가 필요하다(`edit_settings` 가 함의).
+
+    레지스트리의 도메인(space)에서 파생한다: space 서랍의 쓰기 전부에서 지도
+    편집(_SPACE_NON_PLOT_WRITES)을 뺀 것. 구획 생성·수정·종료·삭제·복제·분할,
+    단계 이벤트, 자원 적용, 작기 프로그램, 구획 일지가 들어간다. 제어 권한
+    (`edit_controllers`)과 일부러 다르다 — 웹이 작기 운영을 그 권한으로 나눴다
+    (p6_51). 기록 쓰기와 겹치지 않는다."""
+    return frozenset(
+        name for name in write_tools()
+        if tier_of(name)[0] == 'space' and name not in _SPACE_NON_PLOT_WRITES
+    ) - record_write_tools()
+
+
+def map_edit_tools() -> frozenset:
+    """지도 편집 쓰기(도형 삭제·장치 배치) — 웹과 같은 `edit_settings` 가
+    필요하다(mcp_safety_gate.required_write_permission). _SPACE_NON_PLOT_WRITES
+    중 실제로 등록된 쓰기 도구만."""
+    return frozenset(_SPACE_NON_PLOT_WRITES) & write_tools()
+
+
+def advisory_write_tools() -> frozenset:
+    """The advice ledger (submit_advice) — audited as a write, but open to
+    read-only keys and advice-only mode. NOT in write_tools()."""
+    return frozenset(t.name for t in TOOLS if t.advisory_write)
 
 
 def config_only_tools() -> frozenset:

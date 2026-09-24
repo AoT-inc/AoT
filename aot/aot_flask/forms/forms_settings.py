@@ -612,9 +612,20 @@ class UserMod(FlaskForm):
         choices=[('full', lazy_gettext('Full access')),
                  ('readonly', lazy_gettext('Read only'))],
         default='full')
-    # 폐기 대상 키의 unique_id.
+    # 외부 MCP 에 보여 줄 도구 묶음. 기본은 운영 — 설정 묶음은 대화마다 AI 에
+    # 보내는 도구 설명이 크게 늘어나므로 고르는 사람이 정해야 한다.
+    api_key_tool_profile = SelectField(
+        lazy_gettext('AI Tools'),
+        choices=[('operations', lazy_gettext('Operations')),
+                 ('configuration', lazy_gettext('Operations + configuration'))],
+        default='operations')
+    # 폐기·묶음 변경 대상 키의 unique_id.
     api_key_id = StringField(widget=widgets.HiddenInput())
     user_revoke_api_key = SubmitField(lazy_gettext('Revoke'))
+    # 발급된 키의 묶음 바꾸기 — 누른 줄의 선택값을 제출 직전에 옮겨 담는다
+    # (users.html). 키를 다시 발급하지 않아도 다음 목록 요청부터 반영된다.
+    api_key_profile_value = StringField(widget=widgets.HiddenInput())
+    user_api_key_profile_save = SubmitField(lazy_gettext('Change'))
     full_name = StringField(lazy_gettext('Display Name'))
     is_enabled = BooleanField(lazy_gettext('Account Enabled'))
     email = EmailField(

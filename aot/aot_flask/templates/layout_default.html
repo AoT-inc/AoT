@@ -1414,7 +1414,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   {% endif %}
 
   <!-- AoT Notes Widget (Global Integration) -->
-  <div id="aot-notes-widget-root"></div>
+  <div id="aot-notes-widget-root" data-can-human-task="{{ '1' if can_edit_human_tasks() else '0' }}"></div>
   <script type="module" src="/static/js/notes/notes-widget.js?v=prod_v24"></script>
   
   {% if ai_operational %}

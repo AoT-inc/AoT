@@ -568,9 +568,14 @@ def api_note_schedule(note_id):
 
     대상(어디)은 **노트에서 승계한다.** 노트가 구획에 붙어 있으면 그 예정도
     같은 구획에 붙는다 — 사용자가 장소를 다시 고를 일이 없다.
+
+    예정(사람 작업)을 만드는 일이라 노트 쓰기(`edit_settings`)가 아니라 편집자
+    권한(`human_task_write_denied`)을 본다.
     """
-    if not utils_general.user_has_permission('edit_settings'):
-        return jsonify({'error': 'Permission Denied'}), 403
+    from aot.aot_flask.routes_geo_schedule import human_task_write_denied
+    denied = human_task_write_denied()
+    if denied:
+        return denied
 
     note = Notes.query.filter_by(unique_id=note_id).first()
     if not note:
@@ -648,6 +653,13 @@ def api_note_link_delete(link_id):
         return jsonify({'error': 'Link not found'}), 404
     cancel = (request.args.get('cancel_job') in ('1', 'true', 'True')
               or (request.get_json(silent=True) or {}).get('cancel_job') is True)
+    if cancel:
+        # 링크만 끊는 것은 노트 편집이지만, 예정 취소는 사람 작업을 지우는
+        # 일이다 — 만드는 입구와 같은 편집자 권한.
+        from aot.aot_flask.routes_geo_schedule import human_task_write_denied
+        denied = human_task_write_denied()
+        if denied:
+            return denied
     try:
         note_links.unlink(link, cancel_job=cancel)
     except Exception as exc:

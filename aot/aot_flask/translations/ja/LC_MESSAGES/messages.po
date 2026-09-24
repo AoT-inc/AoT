@@ -31855,3 +31855,59 @@ msgstr "ツール一覧を開いて実際に使った割合"
 #, python-format
 msgid "%(n)s ms"
 msgstr "%(n)sミリ秒"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Owner"
+msgstr "責任者"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "No owner"
+msgstr "責任者なし"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Assign owner"
+msgstr "責任者を指定"
+
+#: aot_flask/templates/pages/ai/scheduler.html
+msgid "Choose a person to be responsible for this task."
+msgstr "このタスクの責任者を選んでください。"
+
+#: aot_flask/templates/pages/ai/_mcp_pending_approvals.html
+#: widgets/widget_mcp_review.py
+msgid "Command sent, but whether it took effect is unconfirmed — check the device state."
+msgstr "コマンドは送信しましたが、反映されたかは確認できませんでした — 機器の状態を確認してください。"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/user_detail.html
+msgid "AI Tools"
+msgstr "AIツール"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/user_detail.html
+msgid "Operations"
+msgstr "運用"
+
+#: aot_flask/forms/forms_settings.py
+#: aot_flask/templates/settings/user_detail.html
+msgid "Operations + configuration"
+msgstr "運用 + 設定"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Which AI tools an app connected with this key can see."
+msgstr "このキーで接続したアプリのAIが使えるツールです。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation."
+msgstr "運用：参照・制御・スケジュール・ノート・区画ステージなど、日常的に使うツールです。運用 + 設定：デバイス定義、自動化、区画とプログラム、地図、ダッシュボード、AI設定などの設定ツールを追加します。その分、会話ごとにAIへ送るツール一覧がかなり長くなります。"
+
+#: aot_flask/utils/utils_settings.py
+msgid "Choose a tool set for this key."
+msgstr "このキーで使うツールセットを選んでください。"
+
+#: aot_flask/utils/utils_settings.py
+msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
+msgstr "AIツールを変更しました。接続中のAIアプリは、再接続すると新しいツール一覧が表示されます。"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "All tools (built-in AI)"
+msgstr "すべてのツール（アプリ内蔵AI）"

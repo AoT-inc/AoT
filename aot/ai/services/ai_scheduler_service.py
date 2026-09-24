@@ -9,6 +9,7 @@ import logging
 import json
 import re
 import threading
+import uuid
 import pytz
 from datetime import datetime, timezone, timedelta
 from aot.utils.time_utils import utc_now, get_local_now, to_local
@@ -28,6 +29,21 @@ logger = logging.getLogger(__name__)
 SCHEDULER_DB_PATH = f'sqlite:///{DATABASE_PATH}/aot_scheduler.db'
 
 # Job state constants
+class JobPermissionDenied(PermissionError):
+    """이 사람은 이 예약을 만들거나 승인할 수 없다(역할·그룹 스코프)."""
+
+
+class InactiveOwner(ValueError):
+    """꺼진 계정은 예약의 책임자가 될 수 없다."""
+
+
+#: 사람 작업(`action_type='human'`)을 만들고·고치고·지우는 역할 권한.
+#: 편집자(제어) 이상만 — 그 아래 역할은 보기만 한다(2026-09-23 결정). "보기
+#: 전용인데 이것만은 된다" 는 예외가 현장 작업자를 헷갈리게 해서, 지도·노트·
+#: 스케줄러·AI 도구·구글 달력 가져오기가 모두 이 한 값을 본다.
+HUMAN_TASK_PERMISSION = 'edit_controllers'
+
+
 JOB_STATE_DRAFT = 'DRAFT'
 JOB_STATE_PENDING = 'PENDING'
 JOB_STATE_RUNNING = 'RUNNING'
@@ -957,6 +973,8 @@ class AISchedulerService:
         # 않는다. `_scope_denies()`(위, §8-7 발화 시점 재검사)와는 다른
         # 자리지만 같은 뜻이라, 둘 다 "미실행"으로 잡아야 한다.
         'group_scope_denied',
+        # 승인되지 않았거나 승인자가 기록되지 않은 요청(`execute_approved`).
+        'not_approved',
     )
 
     # AoT MCP 서버가 **모든** tools/call 응답에 찍는 단일 판정 축
@@ -968,72 +986,172 @@ class AISchedulerService:
     _IS_ERROR_RE = re.compile(r'["\']isError["\']\s*:\s*(?:True|true)')
 
     @staticmethod
+    def job_owner_uuid(meta_id):
+        """예약의 책임자(`SchedulerJobMeta.user_id`)의 uuid. 없으면 None.
+
+        None 이면 **시스템 예약**이다 — 사람이 만든 적도, 사람이 승인한 적도
+        없는 행(함수·데몬·백그라운드 AI 가 만든 것, 이 규칙 이전의 기존 예약).
+        사람이 승인하면 `approve_job` 이 승인자를 책임자로 적으므로 그 뒤로는
+        None 이 아니다. 책임자가 지워졌거나 **꺼진**(`is_enabled=False`)
+        경우도 None(판정 근거가 사라졌다 — 여기서 거부하면 사람을 지우거나
+        끄는 것만으로 남의 예약이 멈추고, 꺼진 사람의 권한으로 돌게 둘 수도
+        없다). 다만 말없이 면제되지는 않는다 — 계정 삭제·끄기는
+        `release_owner_jobs` 로, 남아 있는 끊긴 책임자는 기동 때
+        `backfill_job_owners` 로 "책임자 없음" 으로 돌려 스케줄러 화면에
+        드러내고 관리자가 지정한다.
+        """
+        if not meta_id:
+            return None
+        from aot.databases.models import User
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        meta = SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.id == meta_id).first()
+        if meta is None or meta.user_id is None:
+            return None
+        owner = User.query.filter(User.id == meta.user_id).first()
+        if owner is None or not owner.is_enabled:
+            return None
+        return owner.unique_id
+
+    @staticmethod
+    def job_is_write(action_type, target_id, params):
+        """이 예약을 실행하면 무언가를 바꾸는가 — 인앱 실행과 같은 분류."""
+        from aot.ai.services.ai_action_service import AIActionService
+        at = str(action_type).lower().strip() if action_type else action_type
+        try:
+            tool, _args = AIActionService._action_tool_and_args(
+                at, target_id, params)
+            return AIActionService._is_write_action(at, tool)
+        except Exception:
+            logger.exception('[scheduler-guard] 쓰기 분류 실패 — 쓰기로 본다')
+            return True
+
+    @staticmethod
+    def job_write_permission(action_type, target_id, params):
+        """`job_denial` 의 1단계(역할)가 요구할 권한 — 읽기 예약이면 None.
+
+        지정 화면이 후보를 거를 때 쓴다(그룹 스코프는 사람마다 달라 지정
+        때 `job_denial` 이 따로 본다). 판정이 깨지면 'edit_controllers'
+        — 모르면 좁게.
+        """
+        from aot.ai.services.ai_action_service import AIActionService
+        at = str(action_type).lower().strip() if action_type else action_type
+        try:
+            tool, _args = AIActionService._action_tool_and_args(
+                at, target_id, params)
+            if not AIActionService._is_write_action(at, tool):
+                return None
+            from aot.tools.mcp_safety_gate import required_write_permission
+            return required_write_permission(tool)
+        except Exception:
+            logger.exception('[scheduler-guard] 필요 권한 판정 실패')
+            return 'edit_controllers'
+
+    @staticmethod
+    def job_denial(user, action_type, target_id, params):
+        """`user` 가 이 예약(을 만들기·승인하기·발화하기)을 해도 되는가.
+
+        막으면 사유 문자열, 통과면 None. 정본 설계: `docs/design/
+        access-scope-groups.md` §6-2a·§8-7.
+
+        **실제로 돌 도구**로 판정한다 — 겉의 `target_id` 가 아니다. 도구
+        호출 예약(`virtual_tool_call`·`mcp_tool_call`)은 겉이 서버·도구
+        이름이고 대상은 인자 안에 있다. 인자 풀기는 인앱 실행과 같은 한 벌
+        (`tool_call_args` — `use_tool` 도 벗긴다)이다:
+
+          1. 역할 — 안쪽 도구의 `required_write_permission`(웹의 같은 동작과
+             같은 권한). 읽기 도구면 통과.
+          2. 그룹 스코프 — `scope.can_operate_tool_call(scope_arguments(...))`
+             (이름으로 준 대상도 처리기와 같은 리졸버로 풀어 본다).
+
+        판정이 깨지면 **거부**로 닫는다 — 사람이 책임지는 예약이다.
+        `user` 가 None 이면(사람이 없는 시스템 예약) 부르지 말 것.
+        """
+        from aot.ai.services.ai_action_service import AIActionService
+        at = str(action_type).lower().strip() if action_type else action_type
+        try:
+            tool, args = AIActionService._action_tool_and_args(
+                at, target_id, params)
+            if not AIActionService._is_write_action(at, tool):
+                return None
+            if user is None:
+                return 'a signed-in user is required'
+            from aot.databases.models import Role
+            from aot.tools.mcp_auth import role_row_allows
+            from aot.tools.mcp_safety_gate import required_write_permission
+            perm = required_write_permission(tool)
+            role = Role.query.filter(Role.id == user.role_id).first()
+            if role is None or not role_row_allows(role, perm):
+                return 'Insufficient permission: %s' % perm
+
+            from aot.aot_flask.access import scope
+            from aot.tools.tool_execution import scope_arguments
+            _keys = (('device_id', 'output_id', 'unique_id')
+                     if at in ('virtual_tool_call', 'mcp_tool_call')
+                     else ('target_id',))
+            for key in _keys:
+                if isinstance(args.get(key), str):
+                    args[key] = scope.resolve_device_token(args[key])
+                    # 장치 자리의 값은 uuid 모양이 아니어도 장치로 묻는다 —
+                    # 아래 판정은 uuid 모양의 값만 훑는다.
+                    if (scope.tab_of_device(args[key]) is not None
+                            and not scope.can_operate_device(args[key],
+                                                             user=user)):
+                        return scope.deny_message()
+            allowed, _denied = scope.can_operate_tool_call(
+                tool, scope_arguments(tool, args, is_write=True), user=user,
+                write_tools=frozenset({tool}))
+            if not allowed:
+                return scope.deny_message()
+            return None
+        except Exception:
+            logger.exception('[scheduler-guard] 권한 판정 실패 — 거부로 닫는다')
+            return 'permission check failed'
+
+    @staticmethod
     def _scope_denies(meta_id, action_type, target_id, params=None):
-        """발화 시점의 그룹 스코프 재검사. 막으면 사유 문자열, 통과면 None.
+        """발화 시점 재검사 — 책임자의 역할과 그룹 스코프. 막으면 사유, 통과면 None.
 
-        정본 설계: `docs/design/access-scope-groups.md` §8-7
+        정본 설계: `docs/design/access-scope-groups.md` §6-2a·§8-7
 
-        판정 신원은 **예약을 만든 사람**(`SchedulerJobMeta.user_id`)이다.
-        APScheduler 는 신원 없이 발화하므로 그 자리에서 물을 사람이 없고,
-        `job_kwargs` 에 새로 싣는 대신 이미 있는 컬럼을 쓴다 — 그래야
-        **이 변경 이전에 만들어진 예약도 같은 검사를 받는다**(kwargs 를 쓰면
-        잡스토어에 이미 직렬화된 예약은 영영 검사 밖에 남는다).
+        판정 신원은 **예약의 책임자**(`job_owner_uuid` — 만든 사람, 없으면
+        승인한 사람)다. APScheduler 는 신원 없이 발화하므로 이미 있는 컬럼을
+        쓴다 — 그래야 **이 변경 이전에 만들어진 예약도 같은 검사를 받는다**.
 
-        면제는 셋이다. 전부 "물을 사람이 없다" 는 같은 이유다:
+        예전에는 겉의 `target_id`(도구 호출이면 인자의 `device_id`)만 봤다.
+        도구 호출 예약의 겉은 도구 이름이라 "대상 없음 = 통과" 가 됐고,
+        `modify_function_options` 로 그룹 밖 조건 함수를 고치는 예약이 그대로
+        돌았다(2026-09-23 재현). 이제 `job_denial` 이 실제로 돌 도구와 인자로
+        묻는다. 발화 자체도 책임자로 묶어 처리기가 실제 대상에서 다시 묻는다.
 
-        - `meta_id` 가 없다 — 원장에 행이 없는 호출.
-        - `user_id` 가 NULL 이다 — 시스템이 만든 예약(§6-1 데몬과 동급).
-          **여기에 기존 예약 전부가 들어간다**(한시 면제). 그 건수는
-          `check_scope_grants.py` 의 `legacy-schedule` 이 0 이 될 때까지
-          계속 보여준다 — 0 이 되기 전에는 "예약 우회로가 닫혔다" 고
-          말하지 않는다.
-        - 그 사용자가 지워졌다 — 판정 근거가 사라졌다. 여기서 **거부**하면
-          사람을 지우는 것만으로 남의 예약이 멈추는데, 그것은 이 함수가
-          막으려는 것과 다른 종류의 사고다.
+        면제는 **시스템 예약**(책임자 없음)뿐이다 — "물을 사람이 없다".
+        기존 예약 중 책임자가 없는 것이 여기 들어가며, 그 건수는
+        `check_scope_grants.py` 의 `legacy-schedule` 이 보여준다.
 
         ⚠ **반복(cron) 예약은 회차마다 이 검사를 받는다.** 한 번 거부됐다고
         잡을 지우지 않는다 — 그룹이 다시 부여되면 그대로 이어져야 하고,
         지우면 사람이 만든 것을 시스템이 없앤 것이 된다.
+
+        판정이 깨지면 거부로 닫는다(책임자가 있는 예약만 여기까지 온다).
         """
         if not meta_id:
             return None
         try:
-            from aot.aot_flask.access import scope
             from aot.databases.models import User
-            from aot.databases.models.scheduler import SchedulerJobMeta
-
-            meta = SchedulerJobMeta.query.filter(
-                SchedulerJobMeta.id == meta_id).first()
-            if meta is None or meta.user_id is None:
+            owner_uuid = AISchedulerService.job_owner_uuid(meta_id)
+            if owner_uuid is None:
                 return None
-            owner = User.query.filter(User.id == meta.user_id).first()
-            if owner is None:
-                return None
-
-            device_id = target_id
-            # MCP 도구 호출은 대상이 인자 안에 있다 — 겉의 target_id 는 도구
-            # 이름이라 그것으로 물으면 늘 통과한다(존재하지 않는 장치 =
-            # 탭 없음 = 전원 공개).
-            if action_type == 'mcp_tool_call' and isinstance(params, dict):
-                args = params.get('arguments') or {}
-                device_id = args.get('device_id') or args.get('unique_id') or target_id
-                # device_id 가 uuid 가 아니라 이름이면 can_operate_device 가
-                # 그 값으로 탭을 못 찾아 "탭 없음 = 전원 공개" 로 통과시킨다 —
-                # 이름으로 지정한 예약이 재검사를 조용히 우회하는 구멍이었다
-                # (2026-09-18). 실행 단계와 같은 폭으로 이름을 먼저 풀어둔다.
-                device_id = scope.resolve_device_token(device_id)
-
-            if scope.can_operate_device(device_id, user=owner):
-                return None
-            return ('group scope: %s cannot operate %s'
-                    % (owner.name, device_id))
-        except Exception as exc:
-            # **검사가 실패했다고 실행을 막지 않는다.** 막으면 스코프를 쓰지
-            # 않는 설치에서 이 코드의 버그 하나가 모든 예약을 멈춘다. 대신
-            # 시끄럽게 남긴다 — 조용히 통과시키면 게이트가 언제부터 없었는지
-            # 알 방법이 없다.
-            logger.error("[scope] 예약 재검사 실패, 실행은 계속합니다: %s", exc)
+            owner = User.query.filter(User.unique_id == owner_uuid).first()
+        except Exception:
+            logger.exception('[scheduler-guard] 책임자 조회 실패 — 거부로 닫는다')
+            return 'permission check failed'
+        if owner is None:
             return None
+        denial = AISchedulerService.job_denial(owner, action_type, target_id,
+                                               params)
+        if denial:
+            return 'owner %s: %s' % (owner.name, denial)
+        return None
 
     @staticmethod
     def _retval_indicates_not_executed(retval):
@@ -1425,13 +1543,43 @@ class AISchedulerService:
             end_time=end_time,
             schedule_cron=json.dumps(schedule_cron) if schedule_cron else None,
             schedule_type=kwargs.get('schedule_type', ScheduleType.ai_system),
-            user_id=kwargs.get('user_id', None)
+            user_id=(kwargs['user_id'] if 'user_id' in kwargs
+                     else AISchedulerService._bound_person_id())
         )
         db.session.add(meta)
         return meta
 
     @staticmethod
-    def approve_job(meta_id, adjusted_params=None, user_feedback=None, decided_by='HUMAN'):
+    def _bound_person_id():
+        """지금 쓰기를 하는 사람(`write_scope` 묶음, 없으면 인앱 요청자)의
+        `User.id`. 사람이 없는 호출이면 None.
+
+        호출자가 `user_id` 를 넘기지 않은 예약에 책임자를 채운다 — 인앱 AI 의
+        `schedule_device_control`·`add_schedule` 처럼 사람이 시킨 예약이
+        "시스템 예약" 으로 남아 발화 시 재검사를 빠져나가지 않게.
+        """
+        try:
+            from aot.aot_flask.access import write_scope
+            uid = None
+            principal = write_scope.current()
+            if principal is not None and not principal.anonymous:
+                uid = principal.user_uuid
+            if not uid:
+                from aot.ai import ai_request_context
+                rq = ai_request_context.get_requester()
+                uid = rq.user_uuid if rq is not None else None
+            if not uid:
+                return None
+            from aot.databases.models import User
+            row = User.query.filter(User.unique_id == uid).first()
+            return row.id if row is not None else None
+        except Exception:
+            logger.exception('[scheduler-guard] 예약 책임자 확인 실패')
+            return None
+
+    @staticmethod
+    def approve_job(meta_id, adjusted_params=None, user_feedback=None,
+                    decided_by='HUMAN', approver=None):
         """
         Approve a DRAFT job → promote to PENDING and schedule in APScheduler.
 
@@ -1443,6 +1591,15 @@ class AISchedulerService:
         Returns:
             updated SchedulerJobMeta
 
+            approver: 승인한 사람(User 행). 사람이 화면에서 승인할 때 넘긴다.
+                있으면 그 사람의 역할·그룹 스코프로 **실행될 최종 인자**를
+                판정하고(`job_denial`), 막히면 `JobPermissionDenied` 를 던진다
+                (상태는 DRAFT 그대로 — 권한 있는 다른 사람이 승인할 수 있다).
+                책임자가 없는 예약(AI 초안)이면 승인자를 책임자로 적는다 —
+                발화 때 그 사람으로 다시 판정한다. 책임자가 이미 있으면 그대로
+                둔다: 승인자는 지금, 책임자는 발화할 때마다 판정받으므로 **둘 다**
+                통과해야 돈다(설계 §6-2a).
+
         Note: Jobs with action_type='human' are never scheduled in APScheduler —
         they represent human work items that require no automated execution.
         """
@@ -1451,6 +1608,24 @@ class AISchedulerService:
         meta = SchedulerJobMeta.query.get(meta_id)
         if not meta or meta.state != JOB_STATE_DRAFT:
             raise ValueError(f"Job {meta_id} is not in DRAFT state")
+
+        if approver is not None:
+            try:
+                effective = (adjusted_params if adjusted_params
+                             else json.loads(meta.params_json or '{}'))
+            except Exception:
+                effective = None
+            denial = ('stored job parameters are unreadable'
+                      if effective is None else
+                      AISchedulerService.job_denial(
+                          approver, meta.action_type, meta.target_id,
+                          effective))
+            if denial:
+                logger.warning('[scheduler-guard] approval refused for job %s',
+                               meta_id)
+                raise JobPermissionDenied(denial)
+            if meta.user_id is None:
+                meta.user_id = approver.id
 
         if adjusted_params:
             meta.params_json = json.dumps(adjusted_params)
@@ -1592,6 +1767,295 @@ class AISchedulerService:
             meta.executed_at = utc_now()
 
             db.session.commit()
+
+    # ------------------------------------------------------------------
+    # 책임자 없는 예약 — 채우기·풀기·지정 (설계 §6-2a "책임자 없는 예약")
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _audit_owner(meta, decision, feedback, actor='SYSTEM'):
+        """책임자 변경을 예약 감사 기록에 남긴다(커밋은 호출자가)."""
+        from aot.databases.models.scheduler import SchedulerAuditLog
+        db.session.add(SchedulerAuditLog(
+            job_meta_id=meta.id, actor=actor, decision=decision,
+            feedback=feedback or '', previous_state=meta.state or '',
+            new_state=meta.state or ''))
+
+    @staticmethod
+    def owner_eligible(user):
+        """책임자가 될 수 있는 계정인가 — 사람이고, 켜져 있다.
+
+        내부 AI 서비스 계정은 사람이 아니다. 꺼진 계정(`is_enabled=False`)은
+        지워진 계정과 같게 본다 — 로그인할 수 없는 사람의 권한으로 예약이
+        돌면 안 된다.
+        """
+        from aot.tools.mcp_auth import SERVICE_ACCOUNT_PROVIDER
+        return (user is not None
+                and bool(getattr(user, 'is_enabled', False))
+                and (user.auth_provider or '') != SERVICE_ACCOUNT_PROVIDER)
+
+    #: 예약 종류별로 **그 예약을 만들 수 있는 역할 권한**(어느 하나면 된다).
+    #: 만드는 입구의 권한을 그대로 옮긴 표다 — 입구가 바뀌면 여기도 바꾼다.
+    #: 지금은 모든 종류가 `edit_controllers`(편집자)다. 사람 작업('human')도
+    #: 같다(2026-09-23 결정 — "보기만 / 편집자" 둘로만 나눈다): 스케줄러 화면·
+    #: AI `add_schedule`·지도와 노트의 예정(`_create_human_schedule`)·구글
+    #: 달력 가져오기가 모두 `HUMAN_TASK_PERMISSION` 을 요구한다.
+    _CREATE_PERMISSIONS = {'human': (HUMAN_TASK_PERMISSION,)}
+    _CREATE_PERMISSIONS_DEFAULT = ('edit_controllers',)
+
+    @staticmethod
+    def create_permissions(action_type):
+        """이 종류의 예약을 만들 수 있는 역할 권한들(어느 하나면 된다)."""
+        at = str(action_type or '').lower().strip()
+        return AISchedulerService._CREATE_PERMISSIONS.get(
+            at, AISchedulerService._CREATE_PERMISSIONS_DEFAULT)
+
+    @staticmethod
+    def owner_role_denial(user, action_type):
+        """`user` 가 이 종류의 예약을 **만들 수 있는 역할**인가. 막으면 사유.
+
+        책임자는 예약을 자기 권한으로 돌리는 사람이다. 만들 수 없는 사람을
+        책임자로 세우면 그 사람 이름으로 못 할 일을 돌리게 된다 — 안쪽 도구가
+        읽기 수준인 예약(`job_denial` 이 누구에게나 통과시키는 것)도 마찬가지다.
+        역할 판정은 웹과 같은 함의 규칙(`mcp_auth.role_row_allows`)이다.
+        """
+        from aot.databases.models import Role
+        from aot.tools.mcp_auth import role_row_allows
+        perms = AISchedulerService.create_permissions(action_type)
+        role = (Role.query.filter(Role.id == user.role_id).first()
+                if user is not None else None)
+        if role is not None and any(role_row_allows(role, p) for p in perms):
+            return None
+        return ('owner cannot create this kind of job — requires %s'
+                % ' or '.join(perms))
+
+    @staticmethod
+    def human_users():
+        """책임자 후보 — 켜져 있는 사람 계정만(`owner_eligible`)."""
+        from aot.databases.models import User
+        return [u for u in User.query.order_by(User.name).all()
+                if AISchedulerService.owner_eligible(u)]
+
+    @staticmethod
+    def owner_candidates(meta, users=None, roles=None):
+        """이 예약의 책임자 지정 상자에 내놓을 사람.
+
+        켜진 사람 계정(`owner_eligible`) 중 이 종류의 예약을 **만들 수 있는
+        역할**(`owner_role_denial`)이고, `job_denial` 의 역할 단계
+        (`job_write_permission`)도 통과하는 사람만. 그룹 스코프는 지정 때
+        `job_denial` 이 본다. `users`·`roles`(id→Role)는 화면이 여러 예약에
+        한 번만 읽어 넘긴다.
+        """
+        from aot.databases.models import Role
+        from aot.tools.mcp_auth import role_row_allows
+        params = AISchedulerService._stored_params(meta)
+        if params is None:
+            return []
+        if users is None:
+            users = AISchedulerService.human_users()
+        if roles is None:
+            roles = {r.id: r for r in Role.query.all()}
+        creates = AISchedulerService.create_permissions(meta.action_type)
+        perm = AISchedulerService.job_write_permission(
+            meta.action_type, meta.target_id, params)
+        out = []
+        for u in users:
+            role = roles.get(u.role_id)
+            if role is None or not any(role_row_allows(role, p)
+                                       for p in creates):
+                continue
+            if perm and not role_row_allows(role, perm):
+                continue
+            out.append(u)
+        return out
+
+    @staticmethod
+    def owner_person(value, users):
+        """기록 칸의 값 하나 → 그 값이 가리키는 사람 계정. 아니면 None.
+
+        **uuid 모양이고 지금 있는 사람 계정의 `unique_id` 와 같을 때만**
+        사람이다. 이름으로는 잇지 않는다 — 기록 칸에는 분류어('AI'·'HUMAN'·
+        'SYSTEM'·'CALENDAR' …)가 섞여 있고, 누군가 계정 이름을 그 낱말로
+        바꾸면 남의 예약이 그 사람 것이 된다.
+        """
+        if not isinstance(value, str):
+            return None
+        token = value.strip()
+        try:
+            uuid.UUID(token)
+        except (ValueError, AttributeError, TypeError):
+            return None
+        for u in users:
+            if u.unique_id == token:
+                return u
+        return None
+
+    @staticmethod
+    def _stored_params(meta):
+        """예약에 저장된 인자 — 읽을 수 없으면 None."""
+        try:
+            params = json.loads(meta.params_json or '{}')
+        except Exception:
+            return None
+        return params if isinstance(params, dict) else None
+
+    @staticmethod
+    def backfill_job_owners():
+        """책임자 없는 예약에 기록으로 알 수 있는 책임자를 한 번 채운다.
+
+        기동 때 데몬이 부른다. 몇 번 불러도 결과가 같다(책임자가 있는 행은
+        건드리지 않는다). `decided_by` → `proposed_by` → `last_edited_by`
+        순서로 **처음 사람을 가리키는 칸**(`owner_person` — uuid 만, 이름은
+        보지 않는다)을 찾고, 그 사람이 이 종류의 예약을 만들 수 있는 역할이고
+        (`owner_role_denial`) 그 사람으로 `job_denial` 이 통과할 때만 쓴다.
+        막히면 그대로 두고 로그를 남긴다(다음 칸의 다른 사람으로 넘어가지
+        않는다 — 기록된 사람이 못 하는 일을 다른 사람에게 떠넘기지 않는다).
+        채우지 못한 예약은 계속 돌고(시스템 예약 면제), 스케줄러 화면에
+        "책임자 없음" 으로 보여 관리자가 지정한다(`assign_job_owner`).
+
+        먼저 **지워졌거나 꺼진 계정**을 가리키는 책임자를 풀어 책임자 없는
+        예약으로 돌린다(SQLite 는 외래 키 `ON DELETE SET NULL` 을 강제하지
+        않을 수 있고, 이 규칙 이전에 꺼진 계정도 있다).
+
+        Returns: {'assigned': n, 'released': n, 'denied': n, 'remaining': n}
+        """
+        from aot.databases.models import User
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        users = AISchedulerService.human_users()
+        by_id = {u.id: u for u in User.query.all()}
+        released = assigned = denied = 0
+        try:
+            for meta in SchedulerJobMeta.query.filter(
+                    SchedulerJobMeta.user_id.isnot(None)).all():
+                owner = by_id.get(meta.user_id)
+                if owner is None:
+                    reason = 'owner account no longer exists'
+                elif not owner.is_enabled:
+                    reason = 'owner account disabled'
+                else:
+                    continue
+                meta.user_id = None
+                AISchedulerService._audit_owner(meta, 'OWNER_REMOVED', reason)
+                released += 1
+            for meta in SchedulerJobMeta.query.filter(
+                    SchedulerJobMeta.user_id.is_(None)).all():
+                person = column = None
+                for column in ('decided_by', 'proposed_by', 'last_edited_by'):
+                    person = AISchedulerService.owner_person(
+                        getattr(meta, column, None), users)
+                    if person is not None:
+                        break
+                if person is None:
+                    continue
+                params = AISchedulerService._stored_params(meta)
+                denial = (AISchedulerService.owner_role_denial(
+                              person, meta.action_type)
+                          or ('stored job parameters are unreadable'
+                              if params is None else AISchedulerService.job_denial(
+                                  person, meta.action_type, meta.target_id,
+                                  params)))
+                if denial:
+                    denied += 1
+                    logger.warning('[scheduler-owner] 예약 #%s: 기록된 사람(%s, %s)'
+                                   '으로 판정이 막혀 책임자 없음으로 둔다 — %s',
+                                   meta.id, person.name, column, denial)
+                    continue
+                meta.user_id = person.id
+                AISchedulerService._audit_owner(
+                    meta, 'OWNER_BACKFILL',
+                    'owner %s from %s' % (person.name, column))
+                assigned += 1
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception('[scheduler-owner] 책임자 채우기 실패 — 그대로 둔다')
+            return {'assigned': 0, 'released': 0, 'denied': 0,
+                    'remaining': None}
+        remaining = SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.user_id.is_(None)).count()
+        logger.info('[scheduler-owner] 책임자 채우기: 채움 %d, 해제 %d, '
+                    '판정 막힘 %d, 책임자 없음 %d',
+                    assigned, released, denied, remaining)
+        return {'assigned': assigned, 'released': released,
+                'denied': denied, 'remaining': remaining}
+
+    @staticmethod
+    def release_owner_jobs(user, reason='owner account deleted', commit=True):
+        """사람 계정을 지우거나 끌 때 부른다 — 그 사람이 책임자인 예약을
+        "책임자 없음" 으로 돌리고 감사 기록을 남긴다.
+
+        예약은 **멈추지 않는다**(현장 예약을 한꺼번에 세우지 않는다는 결정).
+        책임자 없는 예약과 같이 계속 돌고, 스케줄러 화면에 드러나 관리자가
+        새 책임자를 지정한다. 말없이 면제되는 대신 보이는 면제가 된다.
+
+        `commit=False` 면 커밋하지 않는다 — 계정 삭제·끄기와 **한 커밋**으로
+        묶어, 삭제가 실패했는데 예약만 풀려 있는 일이 없게 한다(호출자가
+        실패 때 되돌린다).
+        Returns: 풀린 예약 수.
+        """
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        if user is None or getattr(user, 'id', None) is None:
+            return 0
+        rows = SchedulerJobMeta.query.filter(
+            SchedulerJobMeta.user_id == user.id).all()
+        for meta in rows:
+            meta.user_id = None
+            AISchedulerService._audit_owner(
+                meta, 'OWNER_REMOVED', '%s: %s' % (reason, user.name or ''))
+        if rows:
+            if commit:
+                db.session.commit()
+            logger.warning('[scheduler-owner] 계정(%s)의 예약 %d건을 '
+                           '책임자 없음으로 돌림', reason, len(rows))
+        return len(rows)
+
+    @staticmethod
+    def assign_job_owner(meta_id, new_owner, assigned_by=None):
+        """책임자 없는 예약에 책임자를 지정한다(관리자 동작).
+
+        새 책임자가 이 종류의 예약을 만들 수 있는 역할인지(`owner_role_denial`)
+        보고, 새 책임자로 `job_denial` 을 돌려 — 발화 때마다 받을 것과 같은
+        역할·그룹 판정 — 막히면 `JobPermissionDenied` 를 던지고 아무것도
+        바꾸지 않는다. 지정 뒤로는 발화마다 그 사람으로 다시 판정한다.
+        없는 예약이면 `LookupError`, 책임자가 이미 있거나 보관된 예약이면
+        `ValueError`(바꾸기는 이 동작의 범위가 아니다). 꺼진 계정은
+        `InactiveOwner`(`ValueError`)로 거부한다.
+        """
+        from aot.databases.models.scheduler import SchedulerJobMeta
+        from aot.tools.mcp_auth import SERVICE_ACCOUNT_PROVIDER
+        meta = SchedulerJobMeta.query.get(meta_id)
+        if meta is None:
+            raise LookupError('job not found')
+        if meta.state == JOB_STATE_ARCHIVED:
+            raise ValueError('job is archived')
+        if AISchedulerService.job_owner_uuid(meta_id) is not None:
+            raise ValueError('job already has an owner')
+        if (new_owner is None
+                or (new_owner.auth_provider or '') == SERVICE_ACCOUNT_PROVIDER):
+            raise JobPermissionDenied('owner must be a person')
+        if not new_owner.is_enabled:
+            raise InactiveOwner('owner account is disabled — enable the '
+                                'account first or choose another person')
+        # 만들 수 있는 사람만 책임자가 된다 — 안쪽 도구가 읽기 수준이라
+        # `job_denial` 이 통과시키는 예약도 여기서 막힌다.
+        role_denial = AISchedulerService.owner_role_denial(
+            new_owner, meta.action_type)
+        if role_denial:
+            raise JobPermissionDenied(role_denial)
+        params = AISchedulerService._stored_params(meta)
+        denial = ('stored job parameters are unreadable' if params is None
+                  else AISchedulerService.job_denial(
+                      new_owner, meta.action_type, meta.target_id, params))
+        if denial:
+            raise JobPermissionDenied(denial)
+        meta.user_id = new_owner.id
+        AISchedulerService._audit_owner(
+            meta, 'OWNER_ASSIGNED',
+            'owner %s assigned by %s' % (
+                new_owner.name, getattr(assigned_by, 'name', None) or '-'),
+            actor='HUMAN')
+        db.session.commit()
+        return meta
 
     @staticmethod
     def get_jobs(state=None):
@@ -1786,26 +2250,54 @@ def _execute_scheduled_action(action_type, target_id, params, meta_id=None):
             _denied = AISchedulerService._scope_denies(meta_id, action_type,
                                                        target_id, params)
             if _denied:
-                logger.error("Scheduled action %s on %s did NOT execute: %s",
-                             action_type, target_id, _denied)
+                logger.error("Scheduled action %s did NOT execute: %s",
+                             action_type, _denied)
                 if meta_id:
                     AISchedulerService.update_job_state(
                         meta_id, JOB_STATE_FAILED,
-                        result='NOT EXECUTED: %s' % _denied)
+                        'NOT EXECUTED: %s' % _denied)
                 return {"status": "error", "message": _denied,
                         "call_state": "refused"}
 
             # Safety validation first
             SafetyService.validate(action_type, target_id, params)
 
+            # 발화를 **책임자로 묶는다**(설계 §6-2a) — 처리기가 실제로 쓸 행을
+            # 손에 쥔 자리에서 그 사람의 그룹 스코프로 다시 묻는다. 위의 앞
+            # 판정은 인자를 훑는 짐작이라, 처리기가 이름·일정 id 등으로 대상을
+            # 푸는 길까지 다 알 수 없다. 요청자 표지도 함께 묶어 인앱 실행층
+            # (`execute_action`)이 역할·스코프를 같은 사람으로 판정하게 한다.
+            # 책임자가 없으면(시스템 예약) 아무것도 묶지 않는다 — 지금과 같다.
+            from aot.ai import ai_request_context as _ai_ctx
+            from aot.aot_flask.access import write_scope as _ws
+            _owner = AISchedulerService.job_owner_uuid(meta_id)
+            _bind = bool(_owner) and AISchedulerService.job_is_write(
+                action_type, target_id, params)
+            _prev_rq = (_ai_ctx.set_requester(_ai_ctx.Requester(_owner))
+                        if _owner else None)
+
             # Set execution context for the scheduled job
             set_execution_context(source_type='scheduler', source_id=target_id)
             try:
-                # _approved=True: job was approved by human via approve_job(); bypass PC-089 gate.
-                result = AIActionService.execute_action(action_type, target_id, params, _approved=True)
+                with _ws.acting_as(_owner if _bind else None,
+                                   tool=action_type) as _principal:
+                    # _approved=True: job was approved by human via approve_job(); bypass PC-089 gate.
+                    result = AIActionService.execute_action(action_type, target_id, params, _approved=True)
+                    if _bind and _ws.was_denied(_principal):
+                        result = dict(_ws.refusal(), status='error')
                 logger.info(f"Scheduled action executed: {action_type} on {target_id} -> {result.get('status')}")
+            except _ws.WriteScopeDenied as exc:
+                # 실행층이 잡지 못한 거부 — 스케줄러 스레드로 올려 보내지 않고
+                # 이 예약만 거부로 끝낸다.
+                try:
+                    db.session.rollback()
+                except Exception:
+                    logger.exception('[scheduler-guard] 세션 되돌리기 실패')
+                result = dict(_ws.refusal(exc), status='error')
             finally:
                 clear_execution_context()
+                if _owner:
+                    _ai_ctx.restore_requester(_prev_rq)
 
             # Update SchedulerJobMeta state after execution.
             #

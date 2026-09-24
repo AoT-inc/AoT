@@ -102,6 +102,8 @@ class StdioMCPServer:
         self._agent_id = "unknown"
         # 인증된 호출자의 Role 행(mcp_auth._role_for). None = 조회 전용 취급.
         self._role = None
+        # 이 연결의 도구 묶음(mcp_auth.tool_profile_of). initialize 에서 정한다.
+        self._tool_profile = None
         # initialize 에서 인증에 성공해야 True. 실패하면 tools/* 를 거부한다.
         self._authed = False
         # 클라이언트가 initialize에서 capabilities.elicitation을 선언했는가.
@@ -221,6 +223,7 @@ class StdioMCPServer:
             self._authed = True
             self._agent_id = agent_id
             self._role = role
+            self._tool_profile = mcp_auth.tool_profile_of(role)
             logger.info(f"[AoTMCP] Client identified as '{self._agent_id}' "
                         f"(role={getattr(role, 'name', None)})")
             self._send({
@@ -231,7 +234,7 @@ class StdioMCPServer:
                     "capabilities": {"tools": {}},
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                    "host": SERVER_HOST},
-                    "instructions": _server_instructions(),
+                    "instructions": _server_instructions(self._tool_profile),
                 },
             })
 
@@ -245,7 +248,8 @@ class StdioMCPServer:
                                   "message": "인증되지 않은 세션입니다. initialize 를 먼저 수행하세요."}})
 
         elif method == "tools/list":
-            tools = _get_all_tools(self._app, role=self._role)
+            tools = _get_all_tools(self._app, role=self._role,
+                                   profile=self._tool_profile)
             self._send({"jsonrpc": "2.0", "id": msg_id, "result": {"tools": tools}})
 
         elif method == "tools/call":
@@ -272,7 +276,8 @@ class StdioMCPServer:
                                         scope_user_uuid=getattr(
                                             self._role, 'user_id', None),
                                         transport="mcp_stdio",
-                                        session_key=self._session_key)
+                                        session_key=self._session_key,
+                                        tool_profile=self._tool_profile)
                 self._send({
                     "jsonrpc": "2.0",
                     "id": msg_id,
@@ -387,6 +392,8 @@ def _run_http_server(app, port=5700):
         """
         if not isinstance(msg, dict):
             return _rpc_error(None, -32600, "Invalid Request")
+        # 이 키의 도구 묶음 — 목록·실행·안내문이 같은 값을 본다.
+        profile = mcp_auth.tool_profile_of(role)
         method = msg.get("method", "")
         msg_id = msg.get("id")
         params = msg.get("params") or {}
@@ -399,7 +406,7 @@ def _run_http_server(app, port=5700):
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                "host": SERVER_HOST},
-                "instructions": _server_instructions(),
+                "instructions": _server_instructions(profile),
             }}
         if method.startswith("notifications/"):
             return None                      # 알림에는 응답하지 않는다
@@ -407,7 +414,8 @@ def _run_http_server(app, port=5700):
             return {"jsonrpc": "2.0", "id": msg_id, "result": {}}
         if method == "tools/list":
             return {"jsonrpc": "2.0", "id": msg_id,
-                    "result": {"tools": _get_all_tools(app, role=role)}}
+                    "result": {"tools": _get_all_tools(app, role=role,
+                                                       profile=profile)}}
         if method == "tools/call":
             name = params.get("name", "")
             if not name:
@@ -419,7 +427,8 @@ def _run_http_server(app, port=5700):
                                         scope_user_uuid=getattr(
                                             role, 'user_id', None),
                                         transport="mcp_http",
-                                        session_key=session_key)
+                                        session_key=session_key,
+                                        tool_profile=profile)
                 return {"jsonrpc": "2.0", "id": msg_id,
                         "result": {"content": content}}
             except Exception as exc:
@@ -501,7 +510,8 @@ def _run_http_server(app, port=5700):
             ok, _agent, role, err = mcp_auth.authenticate_http(request.headers)
         if not ok:
             return jsonify(err), 401
-        tools = _get_all_tools(app, role=role)
+        tools = _get_all_tools(app, role=role,
+                               profile=mcp_auth.tool_profile_of(role))
         return jsonify({"tools": tools})
 
     @http_app.route("/mcp/tools/call", methods=["POST"])
@@ -549,7 +559,8 @@ def _run_http_server(app, port=5700):
             content = _execute_tool(app, tool_name, arguments,
                                     agent_id=agent_id, role=role,
                                     scope_user_uuid=getattr(role, 'user_id', None),
-                                    transport="rest")
+                                    transport="rest",
+                                    tool_profile=mcp_auth.tool_profile_of(role))
             return jsonify({"content": content})
         except Exception as exc:
             return jsonify({"error": str(exc)}), 400

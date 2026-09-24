@@ -27,14 +27,21 @@ blueprint = Blueprint('routes_mcp_api', __name__, url_prefix='/api/v1/mcp')
 #:   - MCP 서버의 실행 명령과 환경변수(API 키가 들어가는 자리)를 읽는다.
 #:   - MCP 서버를 등록·시험·재시작한다 — 등록한 명령은 서버 프로세스로 실행된다.
 #:
-#: 승인 권한을 `edit_controllers` 로 둔 이유: MCP 쪽이 쓰기 도구를 허용하는 기준
-#: (`mcp_auth.role_can_write`)과 출력 직접 제어의 기준이 모두 그것이다. 승인은
-#: "대신 눌러 주는 것" 이므로 직접 누를 자격보다 넓을 수 없다.
+#: 승인은 "대신 눌러 주는 것" 이므로 직접 누를 자격보다 넓을 수 없다. 그 자격은
+#: **도구마다** 다르다(`mcp_safety_gate.required_write_permission` — 노트·지식·
+#: 지도 편집 `edit_settings`, 작기 운영 `edit_plots`, 나머지 `edit_controllers`).
+#: 그래서 승인·거부 엔드포인트는 여기서 "무엇이든 하나는 결정할 수 있는 사람"
+#: 인지만 보고(`_DECIDE_ENDPOINTS`), 항목별 판정은 `mcp_safety_gate._decide` 가
+#: 한다. 예전에는 전부 `edit_controllers` 여서 작기 운영만 맡은 사람은 자기
+#: 구획 요청도 못 결정했고, 제어만 가진 사람이 구획 편집을 승인했다.
+_DECIDE_ENDPOINTS = frozenset({
+    'routes_mcp_api.mcp_confirmation_approve',
+    'routes_mcp_api.mcp_confirmation_reject',
+    'routes_mcp_api.mcp_confirmation_batch_approve',
+    'routes_mcp_api.mcp_confirmation_batch_reject',
+})
+
 _REQUIRED_PERMISSION = {
-    'routes_mcp_api.mcp_confirmation_approve': 'edit_controllers',
-    'routes_mcp_api.mcp_confirmation_reject': 'edit_controllers',
-    'routes_mcp_api.mcp_confirmation_batch_approve': 'edit_controllers',
-    'routes_mcp_api.mcp_confirmation_batch_reject': 'edit_controllers',
     'routes_mcp_api.mcp_server_test': 'edit_settings',
     'routes_mcp_api.mcp_server_stop': 'edit_settings',
     'routes_mcp_api.mcp_server_restart': 'edit_settings',
@@ -62,6 +69,18 @@ def _require_role_permission():
     # 여기서 403 을 먼저 주면 그 흐름이 깨진다.
     if not flask_login.current_user.is_authenticated:
         return None
+
+    if request.endpoint in _DECIDE_ENDPOINTS:
+        from aot.aot_flask.utils import utils_general
+        if (utils_general.user_has_permission('edit_controllers', silent=True)
+                or utils_general.user_has_permission('edit_plots', silent=True)):
+            return None
+        from flask_babel import gettext
+        return jsonify({
+            "status": "error",
+            "message": gettext("Insufficient permission: %(permission)s",
+                               permission='edit_controllers'),
+        }), 403
 
     permission = _REQUIRED_PERMISSION.get(request.endpoint)
     if request.endpoint in _READ_WRITE_ENDPOINTS:
@@ -343,16 +362,35 @@ def mcp_review_page():
     return redirect(url_for('routes_ai_agent.page_ai_dashboard'))
 
 
+def _current_role_row():
+    """로그인한 사람의 DB 역할 행. 못 찾으면 None."""
+    try:
+        from aot.databases.models import Role
+        role_id = getattr(flask_login.current_user, 'role_id', None)
+        return Role.query.filter(Role.id == role_id).first() if role_id else None
+    except Exception:
+        return None
+
+
 @blueprint.route('/confirmations', methods=['GET'])
 @flask_login.login_required
 def mcp_confirmations_list():
     """승인 대기 중인 외부 AI 쓰기 요청 목록."""
     from aot.tools import mcp_safety_gate as gate
     try:
-        return jsonify({"status": "success", "pending": gate.list_pending()})
+        # 항목마다 이 사람이 결정할 수 있는지(can_decide)를 싣는다 — 화면이
+        # 누를 수 없는 버튼을 그리지 않게. 막는 것은 승인 엔드포인트다.
+        return jsonify({"status": "success",
+                        "pending": gate.list_pending(viewer=_current_role_row())})
     except Exception as e:
         logger.error(f"MCP confirmations list failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _execution_unconfirmed(exec_status, exec_result):
+    """승인 실행이 실패로 끝났지만 명령이 나갔을 수 있는가(performed "unknown")."""
+    return (exec_status == 'failed' and isinstance(exec_result, dict)
+            and exec_result.get('performed') == 'unknown')
 
 
 @blueprint.route('/confirmations/<confirmation_id>/approve', methods=['POST'])
@@ -393,6 +431,9 @@ def mcp_confirmation_approve(confirmation_id):
         exec_status, exec_result = gate.execute_approved(confirmation_id)
         result['executed'] = (exec_status == 'executed')
         result['execution'] = exec_result
+        # 명령은 나갔는데 결과를 모른다(시간 초과 등) — 화면이 "실패" 대신
+        # "적용 여부 미확인 — 장치 상태를 확인" 을 보이게 한다. 행 상태는 failed.
+        result['unconfirmed'] = _execution_unconfirmed(exec_status, exec_result)
         # 실행이 실패해도 승인 자체는 처리된 것이므로 200 으로 돌려주고, 화면이
         # 실패 사유를 그대로 보여준다. 400 으로 만들면 "승인이 안 됐다"로 오인된다.
         return jsonify(result), 200
@@ -447,6 +488,7 @@ def mcp_confirmation_batch_approve():
                 "confirmation_id": cid,
                 "ok": True,
                 "executed": exec_status == 'executed',
+                "unconfirmed": _execution_unconfirmed(exec_status, exec_result),
                 "execution": exec_result,
             })
         except Exception as e:
@@ -457,6 +499,7 @@ def mcp_confirmation_batch_approve():
     return jsonify({
         "status": "success", "results": results,
         "succeeded": succeeded, "total": len(ids),
+        "unconfirmed": sum(1 for r in results if r.get('unconfirmed')),
     }), 200
 
 

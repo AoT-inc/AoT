@@ -64,7 +64,35 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 - **메타 도구 4개, core와 함께 항상 노출:** `open_drawer`(서랍 하나의 도구 목록, 인자 없이 부르면 전체 서랍 인덱스), `get_tool_detail`(도구 하나의 완전한 스키마를 이름으로 조회), `use_tool`(서랍 도구를 이름으로 실제 **실행** — 서랍 도구를 실행하는 유일한 방법이며, `open_drawer`·`get_tool_detail`은 정의만 돌려줍니다), `respond_to_confirmation`(대기 중인 확인을 승인/거부).
 - **나머지 101개는 목적별 8개 서랍**에 들어 있고, `open_drawer`를 불러야 비로소 보입니다: `device`(장치 조작·상태), `measurement`(센서·환경·날씨·에너지), `function`(함수·제어기·시퀀스), `schedule`(일정·예약), `record`(노트·공지·지식·조언), `space`(지도·구역·시설·구획), `definition`(장치 정의 CRUD), `system`(AI 설정·시스템 상태·진단·화면).
 
-이 구조는 기본으로 켜져 있으며, 환경변수 `AOT_MCP_TOOL_TIERING=0`으로 되돌리면 예전처럼 전량이 평면 목록으로 노출됩니다(`aot/tools/tool_execution.py:132-239`, `aot/tools/tool_registry.py:1342-1560`).
+서랍은 이제 선택 사항입니다. 외부 MCP 연결은 서랍 없이 키의 도구 묶음(다음 절) 전체를 목록으로 받습니다 — 이것이 기본입니다. `AOT_MCP_TOOL_TIERING=1`(또는 `true`·`yes`·`on`) 이면 서랍 구조로 돌아가며, 이때도 키의 묶음 안에서 동작하고 `open_drawer`·`get_tool_detail`·`use_tool` 이 다시 목록에 나옵니다. 앱 안 AI 비서의 내장 도구 목록은 서랍 구조를 그대로 씁니다(`AOT_AI_BUILTIN_MCP_TIERING`, 기본 켬).
+
+### API 키별 도구 묶음 { #tool-profiles }
+
+API 키마다 외부 AI 앱에 보여 줄 도구의 범위, 곧 **도구 묶음**을 고릅니다. 키의 권한과는 다른 설정입니다 — 권한은 그 키로 무엇을 해도 되는지를, 묶음은 무엇을 목록에 싣는지를 정합니다.
+
+- **운영**(새 키의 기본값) — 날마다 하는 일: 장치·센서·날씨·일정·노트·구획 조회, 장치와 함수 제어, 함수 옵션·시퀀스 운전 시간·기존 시퀀스 단계 조정, 일정 등록, 노트·공지·조언·구획 단계 기록.
+- **운영 + 설정** — 설정 도구를 더합니다: 장치 정의, 자동화와 시퀀스 단계의 생성·삭제, 구획과 프로그램의 생성·편집, 지도 배치, 대시보드와 탭, AI 설정, 보관 문서와 라이브러리 소스 관리. 대화마다 AI 에 보내는 도구 목록이 훨씬 길어지므로 설정 작업을 하는 키에만 고르세요.
+
+`설정 > 사용자`의 API 키 단락(**AI 도구**)에서 키를 발급할 때 고르고, 나중에 같은 화면에서 키를 다시 발급하지 않고 바꿀 수 있습니다. 바꾸는 데는 키 폐기와 같은 권한(사용자 편집)이 필요하고, 바꾼 기록은 감사 로그에 남습니다. 새 키 발급은 여기에 더해 최근 로그인을 요구합니다. 이미 연결된 앱은 다시 연결해야 새 목록을 볼 수 있습니다. 서랍을 켜 둔 경우 서랍에도 그 키의 묶음에 든 도구만 들어 있습니다.
+
+운영 묶음 키가 설정 도구를 부르면 서버는 호출을 거절하고(`call_state: refused`, `reason_code: tool_profile`), 누가 어디서 바꾸는지 메시지로 알려 줍니다. 승인 대기열에는 들어가지 않습니다. `get_tool_detail` 과 `open_drawer` 도 묶음 밖 도구·서랍을 "모르는 도구"나 빈 서랍으로 답하지 않고 같은 메시지로 답합니다. 키의 권한 때문에 어차피 쓸 수 없는 도구(예: 읽기 전용 키의 쓰기 도구)라면 바꿔도 소용이 없으므로 바꾸라는 안내를 붙이지 않습니다. 다른 거절(조언 전용 모드·키의 역할·승인)에도 묶음 전환을 권하지 않습니다 — 조언 전용 모드는 어떤 묶음으로도 바뀌지 않는 서버 전체 설정입니다. 묶음 밖 도구의 승인 대기 항목은 도구 이름 없이(중립 표시와 분야만) 보이며, 그 키로 거절은 할 수 있지만 승인은 할 수 없습니다. 서버 안내문과 `get_system_brief` 도 AI 에게 지금 묶음을 알려 주므로, AI 는 "할 수 없다" 대신 묶음을 바꾸라고 안내할 수 있습니다.
+
+- 묶음이 생기기 전에 발급된 키는 업그레이드 뒤 처음 기동할 때 한 번 배정됩니다: 최근 90일 안에 키 소유자가 설정 도구를 부른 적이 있으면 운영 + 설정, 나머지는 운영입니다. 감사 로그에는 어느 키로 불렀는지가 남지 않으므로 **사람 단위**로 정합니다 — 한 사람의 키는 모두 같은 값을 받습니다. 필요하면 배정 뒤에 키마다 바꾸세요.
+- 앱 안의 AI 비서는 묶음의 제한을 받지 않습니다. 내장 AI 자신의 서비스 계정 키(앱 안의 장치 제어가 이 키를 거칩니다)도 마찬가지이며, 화면은 이 계정의 키에 묶음 선택을 보여 주지 않습니다.
+- `knowledge_search` 는 찾아낸 내용을 `knowledge_shelve` 로 보관하라는 안내를 그것을 쓸 수 있는 연결(운영 + 설정 묶음, 또는 앱 안의 AI 비서 — 노트 편집 권한이 있을 때)에만 붙입니다.
+- `set_output_state`·`list_available_devices` 는 API 키의 목록에서 빠졌습니다 — 같은 일은 `operate_device`·`get_device_list`·`search_devices` 가 합니다.
+- `AOT_MCP_TOOL_PROFILES=0` 이면 묶음을 끕니다(예전처럼 모든 키가 전체 목록을 봅니다). `AOT_MCP_DEFAULT_TOOL_PROFILE` 은 인증 없이 도는 서버의 묶음입니다(기본 `operations`).
+
+### 이름으로 부르기, 여러 대상 한 번에, 인자 먼저 확인 { #tool-arguments }
+
+- **id 대신 이름.** `get_output_state`·`get_device_measurements`·`get_sensor_detail`·`get_sensor_reading` 은 장치 이름을, `get_zone_sensor_summary`·`list_plots` 는 구역·부지 이름을, `get_plot` 은 재배 중인 구획의 이름·작물·품종을 받습니다. id 도 그대로 되고 먼저 확인합니다. 이름이 여러 대상에 걸리면 하나를 고르지 않고 `needs_disambiguation` 과 함께 어디에 있는지로 구분한 후보를 돌려줍니다.
+- **여러 대상을 한 번에**(최대 10개): `device_ids`(`get_output_state`·`get_sensor_reading`), `loc_ids`(`get_sensor_detail`), `plot_ids`(`get_plot`), `target_names`(`search_notes`), `zone_ids`(`get_zone_sensor_summary`). 응답은 `{count, results}` 이고, 대상마다 한 번 부른 것과 같은 모양입니다.
+- **인자를 먼저 확인합니다.** 쓰기 도구는 권한·승인 단계보다 먼저 인자를 봅니다. 빠진 인자, 맞는 이름의 오타로 보이는 인자, `modify_function_options` 의 없는 옵션 키나 틀린 값은 `reason_code: invalid_arguments` 와 맞는 이름 목록으로 돌아옵니다(`get_function_detail` 이 함수의 옵션 키·지금 값·범위를 미리 보여 줍니다. `temperature` 같은 범위는 키가 아니고 그 아래·위 끝 키를 씁니다) — 조언 전용 모드에서도 같고, 그 키로는 어차피 실행할 수 없는 호출이면 그 사실도 함께 알려 줍니다. 그 밖의 모르는 인자는 무시하고 `_ignored_arguments` 로 알려 줍니다.
+- `get_sensor_reading` 의 스키마에 장치 id 목록을 더는 싣지 않습니다. 장치가 늘어도 도구 목록이 커지지 않습니다.
+- `search_devices` 는 이름이 같은 장치를 표시합니다(`same_name_count`·`where`·`same_name_groups`).
+- `get_spatial_tree` 를 `depth` 없이 부르면 모든 깊이의 부지·구역·시설과 곳마다 장치 수를 줍니다. 장치까지 보려면 `depth` 를 줍니다.
+- 구획 단계: 이미 일어난 전환은 `confirm_plot_stage`, 아직 오지 않은 경계를 옮기는 것은 `reschedule_plot_stage` 입니다. `confirm_plot_stage` 는 `get_plot` 이 그 단계를 제안하지 않았으면 날짜(`started_on`)가 필요합니다.
+- 도구 설명은 짧게 줄였습니다. 결과를 읽는 법은 응답의 `_reading` 칸에 실리며, AI 는 그것을 따릅니다.
 
 아래 표들은 어느 층에 있는지와 무관하게 도구를 설명합니다 — **서랍** 칸은 `tools/list`에 없어서 먼저 열어야 하는 도구를 표시합니다. 인자까지 포함한 전체 도구 목록(서랍 안 도구 포함)은 AI 에이전트 가이드(`docs/ai_guide.md`)에 있으니 그쪽을 참고하세요 — 이 문서에서는 표를 장황하게 복제하지 않습니다.
 
@@ -72,8 +100,8 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 
 | 도구 | 설명 | 서랍 |
 |------|------|------|
-| `get_spatial_tree` | 공간 계층(사이트 > 구역 > 장치) 트리 | — (core) |
-| `resolve_target` | 장치/구역 이름을 정확한 엔티티로 해석 — 컨테이너(하위 구역 보유)인지 미리 확인 | — (core) |
+| `get_spatial_tree` | 모든 부지·구역·시설과 곳마다 장치 수(`depth` 를 주면 장치까지) | — (core) |
+| `resolve_target` | 장치/구역 이름을 정확한 엔티티로 해석 — 컨테이너(하위 구역 보유)인지 미리 확인. 같은 이름이 서로 다른 곳·장치 여럿에 있으면 하나를 고르지 않고 후보와 각 위치, 그 하나만 가리키는 이름(있을 때)을 돌려줌 — 없으면 후보의 `target_id` 를 넘긴다(`add_schedule`·`edit_schedule`·`create_note` 가 받음). 안팎으로 겹친 같은 이름은 한 곳으로 보아 바깥을 가리키고, 안쪽은 `also_inside` 로 알림 | — (core) |
 | `get_device_list` | 등록된 전체 장치(입력·출력·카메라) 목록 | — (core) |
 | `search_devices` | 이름·유형 키워드로 장치 검색 | — (core) |
 | `get_sensor_detail` | 센서 시계열 이력 (min/max/avg 통계) | — (core) |
@@ -85,7 +113,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 | `list_notices` | 공지 게시판 글 목록 | `record` |
 | `get_system_update_status` | 설치 버전 vs GitHub 최신 릴리스 비교 | `system` |
 | `list_available_devices` | AI 판단 대상 장치 목록 (네이티브 브리지) | — (인앱 전용) |
-| `get_sensor_reading` | 특정 센서의 최신 측정값 (네이티브 브리지) | — (인앱 전용) |
+| `get_sensor_reading` | 센서 하나 이상의 최신값, id 또는 이름으로 (네이티브 브리지) | — (core) |
 
 ### 기록·작업
 
@@ -150,6 +178,39 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 기존 `status` 값은 그대로 둡니다 — 이미 그 값으로 분기하는 코드와 배포된 설정이
 있어서, 통일하는 대신 축을 하나 더 두었습니다.
 
+상태를 바꾸는 호출이 **적용되지 않았으면**(`executed`·`already_executed` 가 아닌
+모든 경우, 또는 승인 시점 실행이 실패한 경우) 응답에 `performed: false` 와 짧은
+`_reading` 이 함께 실립니다. 사용자에게 적용되지 않았다고(`pending_approval` 이면
+아직 사람의 승인을 기다린다고) 분명히 말하고, 대상은 id 가 아니라 이름으로
+말하라는 내용입니다. 몇몇 도구는 오류 대신 자기 `status` 단어로 "하지 않음" 을
+알립니다. 상태를 바꾸는 도구에서는 이것도 적용되지 않은 것으로 봅니다:
+`refused`(호출 상태 `refused`), `rejected`·`quota_exceeded`·`not_found`·
+`target_not_found`·`orphan_archive`·`needs_disambiguation`·`ambiguous`·
+`unavailable`(호출 상태 `failed`). 그래서 호출 품질 지표의 거부율은 권한·정책·
+사람의 거부만 셉니다.
+
+장치 명령(`operate_device`·`set_output_state`·`schedule_device_control`)은
+예외입니다. 명령이 이미 장치에 닿았을 수 있는 실패 — 시간 초과, 통신 오류,
+보낸 뒤의 제어기 오류 — 이면 `performed` 가 `false` 가 아니라 `"unknown"`
+입니다. 시간 초과는 호출한 쪽이 기다리기를 그만뒀다는 뜻일 뿐이므로, 다시
+부르기 전에 현재 상태를 확인하고(`get_output_state`, 예약이면
+`search_schedule`) 확인되기 전에는 됐다고도 안 됐다고도 말하지 않습니다.
+아무것도 보내기 전에 멈춘 실패(없는 장치, 잘못된 인자, 거부)는 그대로
+`performed: false` 입니다. 앱 안의 AI 도 같은 결과를 같은 뜻으로 읽고, 웹 승인
+화면은 단순 실패 대신 "명령을 보냈지만 적용 여부를 확인하지 못했습니다 — 장치
+상태를 확인하세요" 를 보여 줍니다.
+
+함수·입력을 켜거나 끄면 설정을 먼저 저장한 뒤 실행 중인 제어기에 알립니다.
+제어기가 확인해 주지 않으면(꺼져 있거나 바쁠 수 있음) 응답은 저장된 값을 그대로
+싣고 호출 상태도 `executed` 로 남지만 `performed` 는 `"unknown"` 입니다. 지금
+켜졌다·꺼졌다고 말하지 말고, 설정은 저장됐지만 실제 동작에 반영됐는지는 아직
+확인되지 않았다고 말합니다. `get_active_functions_summary` 는 저장된 설정만
+보여 주므로 이것을 확인해 주지 못합니다.
+
+`submit_advice` 응답도 요청한 변경이 아니라 제안만 저장됐다고 밝힙니다. 이름
+하나가 여러 곳이나 장치에 걸리면 그 후보마다 `where` 가 있어 id 없이 구분할 수
+있습니다(거리 조회의 후보에는 없습니다).
+
 ### 인앱 어시스턴트 확장 도구
 
 위 도구 외에 인앱 AI 어시스턴트는(그리고 그중 `core`인 것은 외부 MCP 서버도 직접) 엔티티 조립·자동화·지식까지 다루는 확장 도구를 추가로 사용합니다. 대부분의 상태 변경 도구는 승인이 필요하지만, 아래 `config_only`로 표시한 것은 필요하지 않습니다 — 안전·승인 모델 절 참고.
@@ -186,7 +247,7 @@ AoT의 AI는 두 가지 경로로 도구를 사용합니다.
 상태를 바꾸지 않는 **읽기 도구**는 즉시 실행됩니다. 쓰기 도구는 둘로 나뉩니다.
 
 - **승인 필요(변이·물리 제어)**: 장치 제어(`operate_device`, `set_output_state`, `schedule_device_control`), 입력/출력/함수/공지의 생성·수정·삭제, `modify_gis_input`·`delete_gis_input`·`activate_gis_input`, `modify_ai_agent`·`delete_ai_agent`, 지도 배치 변경(`set_device_location`, `delete_geo_shape`), 장치 교체(`rebind_device`), `configure_library_source` 등.
-- **config-only 쓰기(승인 면제)**: `add_schedule`, `add_schedule_batch`, `create_gis_input`, `create_ai_agent`, `create_program`, `modify_program`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`. 이들은 그 자체로는 장비를 움직이지 않으므로 승인 없이 즉시 저장됩니다 — 대부분(`create_gis_input`, `create_ai_agent`, 시퀀스 도구 등)은 만들어진 결과물이 항상 **비활성 상태**이고, 그 결과물을 실제로 켜는 별도의 활성화 단계가 따로 있으며 그 단계는 여전히 승인 대상입니다. 예를 들어 `create_gis_input`은 즉시 저장되지만 `activate_gis_input`(승인 필요)을 거쳐야 켜지고, 시퀀스의 시간표는 자유롭게 편집할 수 있지만 실제로 도는 것은 `activate_function`(승인 필요)을 지난 뒤입니다. `create_note`·`knowledge_shelve`는 레지스트리에서 아예 쓰기 도구로 치지 않습니다 — 활성화 단계가 없는 대신, 사람이 확인하기 전까지 미확인·비권위 정보로 저장됩니다(아래 AI 지식 절 참고) — 되돌릴 수 있는 개인 메모나 미확인 지식일 뿐, 상시 반영되는 설정이 아니기 때문입니다.
+- **config-only 쓰기(승인 면제)**: `add_schedule`, `add_schedule_batch`, `create_gis_input`, `create_ai_agent`, `create_program`, `modify_program`, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day`. 이들은 그 자체로는 장비를 움직이지 않으므로 승인 없이 즉시 저장됩니다 — 대부분(`create_gis_input`, `create_ai_agent`, 시퀀스 도구 등)은 만들어진 결과물이 항상 **비활성 상태**이고, 그 결과물을 실제로 켜는 별도의 활성화 단계가 따로 있으며 그 단계는 여전히 승인 대상입니다. 예를 들어 `create_gis_input`은 즉시 저장되지만 `activate_gis_input`(승인 필요)을 거쳐야 켜지고, 시퀀스의 시간표는 자유롭게 편집할 수 있지만 실제로 도는 것은 `activate_function`(승인 필요)을 지난 뒤입니다. `create_note`·`knowledge_shelve`는 **기록 쓰기**입니다 — 역시 승인 없이 저장되고 활성화 단계가 없으며, 지식은 사람이 확인하기 전까지 미확인·비권위 정보로 다룹니다(아래 AI 지식 절 참고). 그래도 쓰기이므로 웹 노트 화면과 같은 설정 편집 권한이 필요하고, 읽기 전용 키와 조언 전용 모드에서는 거부되며, 그룹 범위를 따릅니다. 승인 면제가 권한 면제는 아닙니다. 인앱 어시스턴트와 MCP 모두, config-only 를 포함한 모든 쓰기는 요청한 사람에게 그 권한이 있을 때만 실행되고(노트·지식과 지도 편집 — 지도 도형 삭제·장치 배치, 웹 지도 편집과 같음 — 은 설정 편집 권한, 구획·단계 기록·구획 자원·작기 프로그램·구획 일지는 웹 구획 화면과 같은 작기 편집 권한, 나머지는 제어 권한 — 기본 역할로는 Monitor·Guest·Kiosk 는 불가), 대상을 id 로 주든 이름으로 주든 그 사람의 그룹 범위 안에서만 실행됩니다. 그룹 판정은 인자만이 아니라 도구가 **실제로 바꾸는 대상**(찾아낸 장치·함수·일정·단계)에서 하므로, 이름으로 지목하거나 일정·단계 id 를 주거나 다른 그룹 자원을 글 속에 적는 것으로는 피할 수 없습니다. 대기 중인 요청을 승인하려면 그 요청과 같은 권한이 필요합니다(구획 요청은 작기 편집, 지도 편집은 설정 편집, 나머지는 제어 — 웹과 `respond_to_confirmation` 모두). 승인자가 대상 그룹 밖이면 요청은 실행되지 않고, 결정할 수 있는 다른 사람을 위해 대기 목록으로 돌아갑니다. 예약 작업은 실행될 때마다 그 책임자(만든 사람, AI 가 제안한 예약은 승인한 사람)의 권한과 그룹으로 다시 확인합니다 — 그사이 권한이나 그룹을 잃었으면 실행하지 않고 실패로 기록합니다. 뒤에 사람이 없는 백그라운드 AI 작업(주기 요약 등)은 예외입니다.
 
 승인이 필요한 동작은 즉시 적용되지 않습니다. **인앱 어시스턴트**에서는 채팅에 **승인 카드**로 제시되어 사용자가 승인해야 실제로 실행됩니다. **외부 MCP 서버**에서는 `pending_approval` 응답(대기열)으로 나가고, 사용자가 그 confirmation_id를 명시적으로 승인/거부해야 처리됩니다 — 어느 경로든 거부하면 아무 변경도 일어나지 않습니다.
 
@@ -386,10 +447,11 @@ Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유
 1. **API 키 발급** — `설정 > 사용자`에서 본인 계정의 API 키를 새로 만듭니다
    (이름을 "ChatGPT"처럼 구분되게 붙여 두면 나중에 이 연결만 따로 폐기하기
    편합니다). 조회만 시킬 계획이면 발급 시 스코프를 `readonly`로 선택하세요 —
-   쓰기 도구 호출 자체가 서버에서 거부되어, Custom GPT 설정 실수로 장치를
+   쓰기 도구 호출(노트·지식 포함) 자체가 서버에서 거부되어, Custom GPT 설정 실수로 장치를
    잘못 건드릴 위험이 원천 차단됩니다. 여러 사람이 쓴다면 각자 이름으로
    따로 발급하세요 — 감사 로그에 누가 호출했는지 남고, 유출됐을 때 그
-   키 하나만 폐기하면 됩니다.
+   키 하나만 폐기하면 됩니다. 이 GPT 가 설정 작업을 하지 않는다면 **AI 도구**는
+   운영으로 두세요([도구 묶음](#tool-profiles)).
 2. **HTTP 모드가 켜져 있고 외부에서 닿는지 확인** — 서버가
    `--http --port 5700`으로 떠 있어야 하고, ChatGPT 가 그 포트(또는 리버스
    프록시 경로)에 접속할 수 있어야 합니다. 인증 없이 아래를 먼저 열어
@@ -519,7 +581,7 @@ Action**으로 등록합니다. Custom GPT 생성·Actions 기능은 ChatGPT 유
 }
 ```
 
-> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/tools/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화 또는 **AI → 요청** 화면(`/ai`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다(`/api/v1/mcp/review_page`는 지금도 존재하지만 `/ai`로 넘겨주는 리다이렉트일 뿐입니다 — 북마크 호환용입니다. 감사 로그 자체는 **AI → 기록**(`/ai/manage`)의 "도구 호출" 탭으로 옮겨졌고, "대화"·"오류 보고"·"호출 품질" 탭과 나란히 있습니다). 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체가 조언 전용으로 거부됩니다. 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
+> 상태를 바꾸는 도구 호출은 이 서버에서도 곧장 실행되지 않습니다(`aot/tools/mcp_safety_gate.py`). 최초 호출은 `pending_approval` + `confirmation_id`로 응답하고, 사용자가 그 대화 또는 **AI → 요청** 화면(`/ai`)에서 명시적으로 승인/거부해야 `respond_to_confirmation` 호출로 처리됩니다(`/api/v1/mcp/review_page`는 지금도 존재하지만 `/ai`로 넘겨주는 리다이렉트일 뿐입니다 — 북마크 호환용입니다. 감사 로그 자체는 **AI → 기록**(`/ai/manage`)의 "도구 호출" 탭으로 옮겨졌고, "대화"·"오류 보고"·"호출 품질" 탭과 나란히 있습니다). 승인 후 같은 인자에 `_confirmation_id`를 붙여 재호출해야 실제로 실행됩니다 — 호출한 AI가 스스로 승인 여부를 판단하거나 대신 답할 수 없습니다. `AOT_MCP_WRITE_ENABLED=0`이면 쓰기 도구 자체(노트·지식 포함)가 조언 전용으로 거부됩니다(`submit_advice`는 그대로 동작). 유효시간은 두 구간으로 나뉩니다 — 사람이 승인할 때까지 기본 15분(`AOT_MCP_CONFIRM_TTL_SEC`), 승인 이후 실행할 때까지 승인 시점부터 다시 기본 5분(`AOT_MCP_APPROVED_TTL_SEC`). 그래도 제어 도구가 노출되는 서버이므로 신뢰할 수 있는 클라이언트에만 연결하세요.
 
 ---
 

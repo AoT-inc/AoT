@@ -41,9 +41,11 @@ _NOT_TOOLS = {
     # model columns / flags
     'is_ai_enabled', 'config_only', 'mcp_http_enabled',
     # call arguments
-    'target_name', 'function_type', 'device_id', 'unique_id', 'note_id',
+    'target_name', 'target_id', 'function_type', 'device_id', 'unique_id', 'note_id',
     'tool_name', 'sensor_type', 'time_range', 'measurement_type',
     'include_ended', 'top_k', 'with_sensors',
+    # 여러 대상 인자(3-F)
+    'device_ids', 'loc_ids', 'plot_ids', 'target_names', 'zone_ids',
     # module / page identifiers
     'env_coordinator', 'edit_controllers', 'target_defs', 'review_page',
 }

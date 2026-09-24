@@ -2474,7 +2474,9 @@ class AIAgentService:
 
     # 승인해도 상태를 바꾸지 않는 옛 action_type. 여기 없는 것은 전부 쓰기로 본다.
     _READ_ONLY_ACTION_TYPES = frozenset({
-        'read_manual', 'knowledge_search', 'get_detailed_manifest'})
+        'read_manual', 'knowledge_search', 'get_detailed_manifest',
+        # 로그에 활동 표지만 남긴다(NoteResolver) — AIActionService 와 같다.
+        'abstract_plan'})
 
     @staticmethod
     def _approval_is_write(action_type, target_id, params):
@@ -2485,9 +2487,11 @@ class AIAgentService:
         새 도구가 생길 때마다 보기 전용 역할에 조용히 열린다.
         """
         if action_type in ('mcp_tool_call', 'virtual_tool_call'):
-            tool = (params or {}).get('tool_name') or (
-                target_id if isinstance(target_id, str) else None)
             try:
+                # 실행 판정과 같은 풀이 — `use_tool` 은 안쪽 도구로 본다.
+                from aot.ai.services.ai_action_service import AIActionService
+                tool, _args = AIActionService._action_tool_and_args(
+                    action_type, target_id, params)
                 from aot.tools.tool_registry import TOOLS
                 from aot.tools.mcp_safety_gate import write_tools
                 known = {t.name for t in TOOLS}
@@ -2502,7 +2506,9 @@ class AIAgentService:
         """채팅 제안을 승인해 실행해도 되는 사람인가. 막으면 사유, 통과면 None.
 
         직접 제어(`routes_general.output_mod`)·MCP 승인 대기(`routes_ai_agent`)와
-        **같은 기준**이다: 쓰기는 `edit_controllers` 역할, 그다음 대상이 그
+        **같은 기준**이다: 쓰기는 웹과 같은 역할 권한(`required_write_permission`
+        — 대부분 `edit_controllers`, 노트·지식 `edit_settings`, 작기 운영
+        `edit_plots`), 그다음 대상이 그
         사람의 그룹 스코프 안인지. 이 관문이 없어서 Monitor 가 채팅 제안 승인
         (`/api/v1/ai/portal/chat/action`)으로 출력을 실제로 켰다(2026-09-22
         E2E 스택 재현).
@@ -2528,15 +2534,34 @@ class AIAgentService:
             user = flask_login.current_user if has_request_context() else None
             if user is None or not user.is_authenticated:
                 return 'approval requires a signed-in user'
-            if not user_has_permission('edit_controllers', silent=True):
-                return 'Insufficient permission: edit_controllers'
+            # 웹의 같은 동작과 같은 권한 — 기록 쓰기(노트·지식) edit_settings,
+            # 작기 운영(구획·프로그램 등) edit_plots, 나머지 edit_controllers.
+            # 표는 mcp_safety_gate.required_write_permission 하나다.
+            if action_type in ('mcp_tool_call', 'virtual_tool_call'):
+                # 실행 판정과 같은 풀이 — `use_tool` 은 안쪽 도구로 본다.
+                from aot.ai.services.ai_action_service import AIActionService
+                _tool, _ = AIActionService._action_tool_and_args(
+                    action_type, target_id, params)
+            else:
+                _tool = action_type
+            try:
+                from aot.tools.mcp_safety_gate import required_write_permission
+                _perm = required_write_permission(_tool)
+            except Exception:
+                logger.exception('[chat-approval] 권한 분류 실패 — 제어 권한으로 본다')
+                _perm = 'edit_controllers'
+            if not user_has_permission(_perm, silent=True):
+                return 'Insufficient permission: %s' % _perm
 
             # 그룹 스코프 — 대상은 인자 안에 있다(도구 호출은 겉 target_id 가
             # 서버/도구 이름이다). 값으로 uuid 를 훑는 정본 판정을 그대로 쓴다.
             p = params if isinstance(params, dict) else {}
             if action_type in ('mcp_tool_call', 'virtual_tool_call'):
-                tool = p.get('tool_name') or target_id
-                args = dict(p.get('arguments') or p.get('params') or {})
+                # 실행 리졸버와 같은 함수로 인자를 푼다(tool_call_args) —
+                # `use_tool` 은 안쪽 도구·인자로.
+                from aot.ai.services.ai_action_service import AIActionService
+                tool, args = AIActionService._action_tool_and_args(
+                    action_type, target_id, p)
                 for key in ('device_id', 'output_id', 'unique_id'):
                     if isinstance(args.get(key), str):
                         args[key] = scope.resolve_device_token(args[key])
@@ -2545,8 +2570,12 @@ class AIAgentService:
                 args = {'target_id': scope.resolve_device_token(target_id)
                         if isinstance(target_id, str) else target_id,
                         'params': p}
+            # 이름(target_name)으로만 준 대상도 처리기와 같은 리졸버로 풀어 본다
+            # — uuid 만 훑으면 이름으로 주는 것만으로 스코프를 벗어난다.
+            from aot.tools.tool_execution import scope_arguments
             allowed, denied = scope.can_operate_tool_call(
-                tool, args, write_tools=frozenset({tool}))
+                tool, scope_arguments(tool, args, is_write=True),
+                write_tools=frozenset({tool}))
             if not allowed:
                 return scope.deny_message()
             return None
@@ -2684,7 +2713,11 @@ class AIAgentService:
             else:
                 history.status = 'failed'
                 _err = result.get('message', str(result))
-                history.execution_result = f"[EXECUTION FAILED] {_err}"
+                # 명령은 나갔는데 결과를 모르면(performed "unknown") 실패라 적지 않는다 —
+                # 상태 값은 'failed' 그대로(소비처 호환), 기록 문구만 구분한다.
+                _tag = ("[EXECUTION UNCONFIRMED]" if result.get('performed') == 'unknown'
+                        else "[EXECUTION FAILED]")
+                history.execution_result = f"{_tag} {_err}"
                 logger.error(f"[PB-086] Action {action_index} FAILED: {_err}")
             history.save()
 

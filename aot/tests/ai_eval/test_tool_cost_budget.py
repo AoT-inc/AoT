@@ -297,7 +297,20 @@ AGENT_MANIFEST_TOKEN_CEILING = 32_200
 # list_plot_journals 695자로 `SINGLE_TOOL_CHAR_CEILING` 의 20%다.
 #
 # 여유는 관례대로 좁게 둔다(0.6%).
-MCP_CATALOG_TOKEN_CEILING = 52_800
+#
+# ── 2026-09-24 재기준선 (7) — 설명·스키마 줄이기(도구 묶음 2단계) ───────────
+#
+#   무엇                          MCP     도구
+#   직전(09-17, 상한 초과·xfail)   53,091  128
+#   현재                           43,210  129
+#
+# 운영 묶음 도구의 설명에서 결과 읽는 법을 응답의 `_reading` 으로 옮기고(B′),
+# 인자 설명을 줄이고, 설정 묶음의 긴 설명 몇 개를 줄였다. 늘어난 1개는 이 목록
+# 밖에 있던 것이 아니라 그 사이 배선된 도구다. 외부 MCP 의 실제 고정비는 이제
+# API 키의 도구 묶음이 정하며, 그 상한은 test_mcp_tool_profiles 의
+# TestOperationsBudget(운영 20,000 · 운영+설정 45,000)이 잰다. 이 전량 상한은
+# 묶음을 끈 배포(AOT_MCP_TOOL_PROFILES=0)의 크기다. xfail 은 걷었다.
+MCP_CATALOG_TOKEN_CEILING = 43_500
 
 # 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측
 # 19항목 · 14,064자 · 약 3,516토큰 — 끈 상태의 **25%** 다.
@@ -379,7 +392,6 @@ class TestToolSurfaceBudget(unittest.TestCase):
             'docs/design/ai-tool-architecture.md §노출 등급과 서랍'
             % (block['tokens'], AGENT_MANIFEST_TOKEN_CEILING, block['count']))
 
-    @pytest.mark.xfail(strict=True, reason=_BUDGET_DECISION_PENDING)
     def test_mcp_catalog_within_budget(self):
         block = self.manifest['mcp_catalog']
         self.assertLessEqual(

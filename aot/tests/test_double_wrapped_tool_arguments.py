@@ -77,8 +77,16 @@ class TestDoubleWrappedArguments:
         from aot.ai.services.resolvers import virtual_tool_resolver as vtr
         import inspect
 
+        from aot.tools import tool_call_args
         body = inspect.getsource(vtr.VirtualToolResolver.execute)
-        assert 'len(arguments) == 1' in body
+        # 풀기는 판정과 같은 함수(tool_call_args.extract_tool_call)로 옮겼다.
+        assert 'extract_tool_call(' in body
+        assert 'len(arguments) == 1' in inspect.getsource(
+            tool_call_args.extract_tool_call)
+        tool, args = tool_call_args.extract_tool_call(
+            {'tool_name': 'get_plot',
+             'arguments': {'arguments': {'plot_id': 'p'}, 'other': 1}})
+        assert args == {'arguments': {'plot_id': 'p'}, 'other': 1}
 
     def test_a_handler_that_really_takes_arguments_is_left_alone(self, app):
         """use_tool(tool_name, arguments) 같은 도구가 생기면 벗기면 안 된다.
@@ -86,8 +94,18 @@ class TestDoubleWrappedArguments:
         from aot.ai.services.resolvers import virtual_tool_resolver as vtr
         import inspect
 
+        from aot.tools import tool_call_args
         body = inspect.getsource(vtr.VirtualToolResolver.execute)
-        assert 'inspect.signature(handler).parameters' in body
+        assert 'handler=handler' in body
+        assert "'arguments' in inspect.signature(handler).parameters" in \
+            inspect.getsource(tool_call_args.extract_tool_call)
+
+        def _takes(tool_name, arguments):
+            return arguments
+        _tool, args = tool_call_args.extract_tool_call(
+            {'tool_name': 'x', 'arguments': {'arguments': {'a': 1}}},
+            handler=_takes)
+        assert args == {'arguments': {'a': 1}}
 
 
 class TestTheEngineAdaptersAreTheSource:

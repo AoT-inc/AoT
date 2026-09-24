@@ -119,6 +119,8 @@ class DefinitionToolsMixin:
         inp = Input.query.filter_by(unique_id=input_id).first()
         if not inp:
             return {"error": f"Input not found: {input_id}"}
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(inp)  # 쓰기 시점 그룹 스코프(묶여 있을 때만)
         changed = []
         if name:
             inp.name = name; changed.append("name")
@@ -156,6 +158,8 @@ class DefinitionToolsMixin:
         from aot.aot_flask.utils.utils_input import input_del
         if not input_id:
             return {"error": "input_id is required"}
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(input_id)  # 쓰기 시점 그룹 스코프(묶여 있을 때만)
         try:
             messages = input_del(input_id)
         except Exception as e:
@@ -235,6 +239,8 @@ class DefinitionToolsMixin:
         out = Output.query.filter_by(unique_id=output_id).first()
         if not out:
             return {"error": f"Output not found: {output_id}"}
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(out)  # 쓰기 시점 그룹 스코프(묶여 있을 때만)
         changed = []
         if name:
             out.name = name; changed.append("name")
@@ -272,6 +278,8 @@ class DefinitionToolsMixin:
         from aot.aot_flask.utils.utils_output import output_del
         if not output_id:
             return {"error": "output_id is required"}
+        from aot.aot_flask.access import write_scope
+        write_scope.enforce(output_id)  # 쓰기 시점 그룹 스코프(묶여 있을 때만)
         form = cls._FakeForm(output_id=output_id)
         try:
             messages = output_del(form)
