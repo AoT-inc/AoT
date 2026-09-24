@@ -138,6 +138,32 @@ def tag_add(form):
     flash_success_errors(error, action, url_for('routes_page.page_notes'))
 
 
+def _tag_scope_denial(tag, tool):
+    """태그 이름을 바꿔도 되는가 — 그 태그가 달린 **모든** 노트의 대상에 쓸 수
+    있어야 한다. 아니면 거부 문구.
+
+    태그는 노트가 아니라 공용 어휘라서 이름을 바꾸면 그 태그를 단 모든 노트의
+    표시가 함께 바뀐다(다른 그룹의 구역 노트까지). 그래서 노트 고치기와 같은
+    그룹 스코프 판정(`write_scope`)을 **그 태그를 쓰는 모든 대상**에 건다. 대상
+    없는 노트만 쓰는 태그와 그룹을 쓰지 않는 설치·모든 그룹 접근 역할은 그대로
+    통과한다. 태그 지우기는 노트가 하나라도 쓰면 어차피 거부되므로(쓰는 노트가
+    없으면 영향받는 대상도 없다) 역할 판정만으로 충분하다. 설계 §6-2a.
+    """
+    from aot.aot_flask.access import write_scope
+    targets = set()
+    rows = Notes.query.filter(Notes.tags.ilike("%{0}%".format(tag.unique_id))).all()
+    for note in rows:
+        ids = [t.strip() for t in (note.tags or '').split(',')]
+        target = (note.target_id or '').strip()
+        if tag.unique_id in ids and target:
+            targets.add(target)
+    for target in sorted(targets):
+        denied = write_scope.current_user_denial(target, tool=tool)
+        if denied:
+            return denied
+    return None
+
+
 def tag_rename(form):
     action = '{action} {controller}'.format(
         action=TRANSLATIONS['rename']['title'],
@@ -146,6 +172,8 @@ def tag_rename(form):
 
     mod_tag = NoteTags.query.filter(NoteTags.unique_id == form.tag_unique_id.data).first()
 
+    if mod_tag is None:
+        error.append("Tag not found")
     if not form.rename.data:
         error.append("Tag name is empty")
     if ' ' in form.rename.data:
@@ -153,6 +181,11 @@ def tag_rename(form):
 
     if NoteTags.query.filter(NoteTags.name == form.rename.data).count():
         error.append("Tag already exists")
+
+    if not error:
+        denied = _tag_scope_denial(mod_tag, 'rename_note_tag')
+        if denied:
+            error.append(denied)
 
     if not error:
         mod_tag.name = form.rename.data

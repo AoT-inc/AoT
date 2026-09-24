@@ -64,8 +64,13 @@ class UserCalendarConnection(CRUDMixin, db.Model):
 
     is_active = db.Column(db.Boolean, default=True)
     last_synced_at = db.Column(db.DateTime, nullable=True)
-    last_sync_status = db.Column(db.String(16), nullable=True)   # 'ok' | 'error'
+    # 'ok' | 'error' | 'no_permission'(주인 역할이 가져오기를 못 함) |
+    # 'partial'(가져오기는 돌았으나 일정 일부를 막았다)
+    last_sync_status = db.Column(db.String(16), nullable=True)
     last_sync_error = db.Column(db.Text, nullable=True)
+    # 마지막 동기화에서 막힌 일정 수(막힌 취소 대기 포함). 'partial' 일 때
+    # last_sync_error 에는 마지막으로 막힌 사유가 담긴다.
+    last_sync_refused = db.Column(db.Integer, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -112,6 +117,11 @@ class CalendarEventLink(CRUDMixin, db.Model):
     # Which side created this link first — 'aot' (pushed out) or 'google'
     # (pulled in as a SchedulerJobMeta with source_type='google_calendar').
     origin = db.Column(db.String(8), nullable=False, default='aot')
+
+    # NULL = 정상. 'cancel_refused' = 구글에서 취소됐으나 연결 주인이 그 예약을
+    # 보관할 수 없어 예약은 그대로 두고 연결만 남긴 상태 — 다음 동기화가 다시
+    # 판정한다(양쪽이 조용히 어긋난 채 굳지 않게).
+    sync_state = db.Column(db.String(16), nullable=True)
 
     last_synced_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

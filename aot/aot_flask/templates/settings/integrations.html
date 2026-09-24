@@ -56,9 +56,18 @@
           <div class="aot-settings-control">
             {% if connection.last_sync_status == 'error' %}
               <span class="aot-status-badge aot-status-fail">{{_('Error')}}</span>
+            {% elif connection.last_sync_status == 'no_permission' %}
+              <span class="aot-status-badge aot-status-warn">{{_('Import skipped')}}</span>
+            {% elif connection.last_sync_status == 'partial' %}
+              <span class="aot-status-badge aot-status-warn">{{_('Partly imported')}}</span>
             {% endif %}
           </div>
           <div class="aot-settings-sub">{{ connection.last_synced_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          {% if connection.last_sync_status == 'no_permission' %}
+          <div class="aot-settings-sub">{{_('Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required).')}}</div>
+          {% elif connection.last_sync_status == 'partial' %}
+          <div class="aot-settings-sub">{{_('%(count)s calendar event(s) were skipped because you cannot change their target.', count=connection.last_sync_refused or 0)}}{% if connection.last_sync_error %} ({{ connection.last_sync_error }}){% endif %}</div>
+          {% endif %}
         </div>
         {% endif %}
 

@@ -315,7 +315,13 @@ def _calendar_sync_job(connection_id):
                 else:
                     logger.warning("[CalendarSync] connection_id=%s errors: %s", connection_id, messages["error"])
             else:
-                logger.debug("[CalendarSync] connection_id=%s synced: %s", connection_id, messages)
+                pull = messages.get("pull") or {}
+                if pull.get("skipped") or pull.get("refused"):
+                    # 화면에는 연결 상태(last_sync_status)로 남는다 — 로그에도 남긴다.
+                    logger.warning("[CalendarSync] connection_id=%s import restricted: %s",
+                                   connection_id, pull)
+                else:
+                    logger.debug("[CalendarSync] connection_id=%s synced: %s", connection_id, messages)
         except Exception as exc:
             logger.exception("[CalendarSync] Unhandled error for connection_id=%s: %s", connection_id, exc)
 

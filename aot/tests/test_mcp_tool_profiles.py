@@ -1520,8 +1520,9 @@ def test_p6_75_upgrade_downgrade_is_idempotent(tmp_path):
     assert tuple(row) == ('h1', 'full', None)
 
 
-def test_p6_75_is_the_head_the_app_expects():
-    from aot.config import ALEMBIC_VERSION
+def test_p6_75_follows_p6_74():
+    # 머리(head) 검사는 뒤에 온 마이그레이션의 몫이다(p6_76 은
+    # test_calendar_sync_status). 여기서는 사슬의 자리만 본다.
     mod = _load_p6_75()
-    assert mod.revision == ALEMBIC_VERSION == _P6_75
+    assert mod.revision == _P6_75
     assert mod.down_revision == 'p6_74_mcp_audit_quality_20260923'

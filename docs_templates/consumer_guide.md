@@ -105,17 +105,30 @@ AoT의 **노트(Note)** 시스템은 센서 데이터 외에 **사용자의 관�
 - **장치별 알림**: 특정 센서/장치에 대한 알림만 활성화/비활성화
 - **시간대별**: 야간(밤 10시~오전 6시) 알림 자동 묵음 설정 가능
 
-### 2.4 REST API
+### 2.4 노트 API
+
+외부 프로그램(API 키)이 쓸 수 있는 REST 엔드포인트는 아래 네 개뿐입니다. 경로는
+`/api` 아래에 있고 API 문서(Swagger)에도 나옵니다.
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| GET | `/notes/target/<target_id>` | 특정 장치의 모든 노트 조회 |
-| GET | `/notes/geo` | GPS 좌표가 있는 모든 노트 조회 (지도 표시용) |
-| POST | `/notes/create` | 새 노트 생성 |
-| POST | `/notes/update/<unique_id>` | 노트 수정 |
+| GET | `/api/notes/target/<target_id>` | 특정 장치·구역의 모든 노트 조회 |
+| GET | `/api/notes/geo` | GPS 좌표가 있는 모든 노트 조회 (지도 표시용) |
+| POST | `/api/notes/create` | 새 노트 생성 |
+| GET | `/api/notes/tags` | 모든 태그 목록 조회 |
+
+아래 `/notes/...` 경로는 **웹 화면(로그인 세션)이 쓰는 내부 경로**이며 외부용
+REST API가 아닙니다. 수정·삭제·지도 표시 전환은 외부용 대응 경로가 없습니다.
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/notes/update/<unique_id>` | 노트 수정 (CSRF 토큰 필요) |
 | DELETE | `/notes/delete/<unique_id>` | 노트 삭제 |
-| POST | `/notes/toggle_map_visibility` | 지도 표시/숨김 전환 |
-| GET | `/notes/tags` | 모든 태그 목록 조회 |
+| POST | `/notes/toggle_map_visibility` | 지도 표시/숨김 전환 (CSRF 토큰 필요) |
+
+수정·지도 표시 전환은 로그인 세션과 함께 `X-CSRFToken` 헤더(또는 폼의
+`csrf_token`)가 없으면 거부됩니다. 모든 쓰기는 역할 권한과, 그룹을 쓰는
+설치에서는 노트가 붙은 대상의 그룹 범위를 함께 검사합니다.
 
 ### 2.5 사용 시나리오
 

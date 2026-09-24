@@ -221,6 +221,7 @@ def oauth_google_callback():
     connection.is_active = True
     connection.last_sync_status = None
     connection.last_sync_error = None
+    connection.last_sync_refused = None
     if not connection.google_calendar_id:
         connection.google_calendar_id = 'primary'
     db.session.commit()

@@ -236,8 +236,10 @@ def push_connection(connection, access_token, cc):
         if not cal_id:
             stats['errors'] += 1
             continue
-        body = _job_event_body(job)
         link = links.get(job.id)
+        if link is not None and link.sync_state:
+            continue    # 구글 쪽 취소가 아직 정리되지 않았다 — 되살리지 않는다
+        body = _job_event_body(job)
         if link is None:
             data, err = google_calendar_api.insert_event(access_token, cal_id, body)
             if err:
@@ -270,7 +272,7 @@ def push_connection(connection, access_token, cc):
 
     # Delete remote events whose AoT job is no longer pushable (origin='aot' only).
     for job_id, link in list(links.items()):
-        if job_id in pushable_ids or link.origin != 'aot':
+        if job_id in pushable_ids or link.origin != 'aot' or link.sync_state:
             continue
         target_cal = link.google_calendar_id or (cc.get('user') or {}).get('calendar_id')
         if not target_cal:
@@ -475,7 +477,14 @@ _JOB_EDIT_FIELDS = ('target_id', 'params_json', 'schedule_time', 'end_time',
                     'duration_sec', 'last_edited_at', 'last_edited_by')
 
 
-def _apply_if_allowed(owner, job, event, allow_relink):
+def _refuse(stats, reason=None):
+    """막힌 일정 하나를 센다. 사유는 마지막 것만 남긴다(화면에 한 줄)."""
+    stats['refused'] += 1
+    if reason:
+        stats['refused_reason'] = str(reason)[:200]
+
+
+def _apply_if_allowed(owner, job, event, allow_relink, stats=None):
     """구글에서 고친 내용을 예약에 옮기되, 주인이 **고치기 전 대상과 고친 뒤
     대상 둘 다** 쓸 수 있을 때만. 옮겼으면 True.
 
@@ -483,19 +492,49 @@ def _apply_if_allowed(owner, job, event, allow_relink):
     보면 그룹 밖 예약의 시각·내용을 바꾸는 편집이 지나간다.
     """
     from aot.aot_flask.access import write_scope
-    if _job_import_denial(owner, job):
+    reason = _job_import_denial(owner, job)
+    if reason:
+        if stats is not None:
+            stats['refused_reason'] = str(reason)[:200]
         return False
     before = {f: getattr(job, f) for f in _JOB_EDIT_FIELDS}
     try:
         _apply_google_event_to_job(job, event, allow_relink=allow_relink)
-        allowed = not _job_import_denial(owner, job)
+        reason = _job_import_denial(owner, job)
     except write_scope.WriteScopeDenied:
         # 대상 이름을 푸는 리졸버가 쓰기 시점 강제로 막았다.
-        allowed = False
-    if not allowed:
+        reason = write_scope.deny_message()
+    if reason:
         for f, v in before.items():
             setattr(job, f, v)
-    return allowed
+        if stats is not None:
+            stats['refused_reason'] = str(reason)[:200]
+        return False
+    return True
+
+
+def _retry_held_cancellations(connection, owner, links_by_event, stats):
+    """구글에서 취소됐지만 그때 못 받아들인 일정(`sync_state='cancel_refused'`)을
+    다시 판정한다. 증분 동기화는 취소를 한 번만 알려 주므로, 연결만 남겨 두고
+    다음 동기화가 다시 묻지 않으면 AoT 와 구글이 영영 어긋난다. 이제 쓸 수 있으면
+    보관하고 연결을 지우며, 아직 못 쓰면 계속 막힌 것으로 센다."""
+    held = CalendarEventLink.query.filter_by(
+        connection_id=connection.id, sync_state='cancel_refused').all()
+    for link in held:
+        job = SchedulerJobMeta.query.get(link.job_id)
+        if job is None or job.state == 'ARCHIVED':
+            links_by_event.pop(link.google_event_id, None)
+            db.session.delete(link)
+            continue
+        reason = _job_import_denial(owner, job)
+        if reason:
+            _refuse(stats, reason)
+            continue
+        job.state = 'ARCHIVED'
+        job.deletion_reason = 'Cancelled in Google Calendar'
+        stats['cancelled'] += 1
+        links_by_event.pop(link.google_event_id, None)
+        db.session.delete(link)
 
 
 def pull_connection(connection, access_token, cc):
@@ -512,6 +551,7 @@ def pull_connection(connection, access_token, cc):
 
     cc = dict(cc)
     with _acting_as_owner(owner):
+        _retry_held_cancellations(connection, owner, links_by_event, stats)
         for key, _summary, allow_create in _CATEGORY_DEFS:
             entry = dict(cc.get(key) or {})
             cal_id = entry.get('calendar_id')
@@ -566,7 +606,7 @@ def _pull_one_calendar(connection, access_token, cal_id, sync_token, allow_creat
                 # 장치·장소 이름을 푸는 리졸버가 주인의 그룹 밖 대상을 막았다
                 # (BaseException 이라 아래의 `except Exception` 들이 못 잡는다).
                 # 그 일정만 건너뛴다 — 쓰기 전에 난 거부라 남은 변경이 없다.
-                stats['refused'] += 1
+                _refuse(stats, write_scope.deny_message())
         page_token = data.get('nextPageToken')
         new_sync_token = data.get('nextSyncToken') or new_sync_token
         if not page_token:
@@ -728,14 +768,22 @@ def _process_pulled_event(connection, cal_id, event, allow_create, links_by_even
         if link is not None:
             job = SchedulerJobMeta.query.get(link.job_id)
             if job is not None and link.origin == 'google' and job.state != 'ARCHIVED':
-                if _job_import_denial(owner, job):
-                    stats['refused'] += 1
-                else:
-                    job.state = 'ARCHIVED'
-                    job.deletion_reason = 'Cancelled in Google Calendar'
-                    stats['cancelled'] += 1
+                reason = _job_import_denial(owner, job)
+                if reason:
+                    # 연결을 지우면 예약은 PENDING 인데 구글에는 없는 채로 굳는다.
+                    # 연결을 남기고 표시해 다음 동기화가 다시 판정하게 한다.
+                    _refuse(stats, reason)
+                    link.sync_state = 'cancel_refused'
+                    return
+                job.state = 'ARCHIVED'
+                job.deletion_reason = 'Cancelled in Google Calendar'
+                stats['cancelled'] += 1
             db.session.delete(link)
         return
+
+    if link is not None and link.sync_state:
+        # 취소를 못 받아들인 채 남았던 일정이 구글에서 되살아났다.
+        link.sync_state = None
 
     event_updated = _rfc3339_to_naive_utc(event.get('updated'))
 
@@ -749,7 +797,8 @@ def _process_pulled_event(connection, cal_id, event, allow_create, links_by_even
         if (hw is None or event_updated > hw) and (job_mtime is None or event_updated > job_mtime):
             # AoT-origin (our push): never re-link the target from the event —
             # target_id is authoritative on the AoT side.
-            if not _apply_if_allowed(owner, job, event, allow_relink=False):
+            if not _apply_if_allowed(owner, job, event, allow_relink=False,
+                                     stats=stats):
                 stats['refused'] += 1
                 return
             link.last_synced_at = utc_now().replace(tzinfo=None)
@@ -763,7 +812,8 @@ def _process_pulled_event(connection, cal_id, event, allow_create, links_by_even
         job = SchedulerJobMeta.query.get(link.job_id)
         if job is not None and event_updated and (link.last_synced_at is None or event_updated > link.last_synced_at):
             if not _apply_if_allowed(owner, job, event,
-                                     allow_relink=(link.origin == 'google')):
+                                     allow_relink=(link.origin == 'google'),
+                                     stats=stats):
                 stats['refused'] += 1
                 return
             link.last_synced_at = utc_now().replace(tzinfo=None)
@@ -789,10 +839,11 @@ def _process_pulled_event(connection, cal_id, event, allow_create, links_by_even
     job = _build_imported_job(connection, fields, event, start, end)
     if job is None:
         return
-    if _job_import_denial(owner, job):
+    reason = _job_import_denial(owner, job)
+    if reason:
         # 들이지 않는다. 링크도 남기지 않으므로 그 일정이 구글에서 다시
         # 고쳐지거나 전체 동기화가 돌면 그때 다시 판정한다.
-        stats['refused'] += 1
+        _refuse(stats, reason)
         return
     db.session.add(job)
     db.session.flush()
@@ -844,6 +895,26 @@ def pull_allowed(connection):
         return False
 
 
+def _record_pull_outcome(connection, pull):
+    """가져오기 결과를 연결에 남겨 화면이 보여 주게 한다.
+
+    'no_permission' — 주인 역할이 가져오기를 못 한다(전체 건너뜀).
+    'partial'       — 일부 일정을 막았다(수는 `last_sync_refused`, 마지막 사유는
+                      `last_sync_error`). 그 밖은 'ok'. 주기 작업은 화면 없이
+                      돌기 때문에 여기 남기지 않으면 아무도 모른다."""
+    refused = int(pull.get('refused') or 0)
+    connection.last_sync_refused = refused or None
+    if pull.get('skipped') == 'permission':
+        connection.last_sync_status = 'no_permission'
+        connection.last_sync_error = None
+    elif refused:
+        connection.last_sync_status = 'partial'
+        connection.last_sync_error = pull.get('refused_reason')
+    else:
+        connection.last_sync_status = 'ok'
+        connection.last_sync_error = None
+
+
 def sync_connection(connection_id):
     connection = UserCalendarConnection.query.get(connection_id)
     if connection is None or not connection.is_active:
@@ -883,8 +954,7 @@ def sync_connection(connection_id):
                 # push may have created calendars/links; reload the freshest cc
                 result['pull'] = pull_connection(connection, token, connection.category_calendars or cc)
         connection.last_synced_at = utc_now().replace(tzinfo=None)
-        connection.last_sync_status = 'ok'
-        connection.last_sync_error = None
+        _record_pull_outcome(connection, result.get('pull') or {})
         db.session.commit()
     except Exception as exc:
         db.session.rollback()

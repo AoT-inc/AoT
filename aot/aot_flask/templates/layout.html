@@ -1123,6 +1123,20 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
               </div>
             </div>
             {% elif google_connection and google_connection.is_active %}
+            {% if google_connection.last_sync_status in ('no_permission', 'partial') %}
+            <div class="aot-modal-option-row">
+              <div class="aot-modal-option-label">
+                {% if google_connection.last_sync_status == 'no_permission' %}{{ _('Import skipped') }}{% else %}{{ _('Partly imported') }}{% endif %}
+                <div class="aot-modal-body-text">
+                  {% if google_connection.last_sync_status == 'no_permission' %}
+                  {{ _('Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required).') }}
+                  {% else %}
+                  {{ _('%(count)s calendar event(s) were skipped because you cannot change their target.', count=google_connection.last_sync_refused or 0) }}{% if google_connection.last_sync_error %} ({{ google_connection.last_sync_error }}){% endif %}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
             {% if can_edit_human_tasks() %}
             <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">

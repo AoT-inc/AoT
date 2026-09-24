@@ -31920,3 +31920,15 @@ msgstr "Googleカレンダーを接続するには「コントローラを編集
 #, python-format
 msgid "%(count)s calendar event(s) were skipped because you cannot change their target."
 msgstr "対象を変更する権限がないため、カレンダーの予定%(count)s件をスキップしました。"
+
+#: aot_flask/templates/settings/integrations.html
+msgid "Import skipped"
+msgstr "インポートをスキップしました"
+
+#: aot_flask/templates/settings/integrations.html
+msgid "Partly imported"
+msgstr "一部のみインポートしました"
+
+#: aot_flask/templates/settings/integrations.html
+msgid "Google → AoT import was skipped because your role cannot edit schedules (the Edit Controllers permission is required)."
+msgstr "ロールが予定を編集できないため、Google → AoT のインポートをスキップしました(「コントローラを編集」権限が必要です)。"
