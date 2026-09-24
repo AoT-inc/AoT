@@ -1,6 +1,6 @@
 # AoT
 
-Latest version: 26.09.06 · [한국어](README.ko.md) · [User manual](https://aot-inc.github.io/AoT) · [Changelog](CHANGELOG.md)
+Latest version: 26.09.07 · [한국어](README.ko.md) · [User manual](https://aot-inc.github.io/AoT) · [Changelog](CHANGELOG.md)
 
 **AoT puts your space on a map and links the records and devices that belong to it. It then lets AI look at that space together with people, make judgments, and get work done.**
 It is open source, anything that moves a device runs only after you approve it, and which features you use is up to you.

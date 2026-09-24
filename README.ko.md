@@ -1,6 +1,6 @@
 # AoT
 
-최신 버전: 26.09.06 · [English](README.md) · [사용자 매뉴얼](https://aot-inc.github.io/AoT/ko/) · [변경 이력](CHANGELOG.md)
+최신 버전: 26.09.07 · [English](README.md) · [사용자 매뉴얼](https://aot-inc.github.io/AoT/ko/) · [변경 이력](CHANGELOG.md)
 
 **AoT 는 내 공간을 지도에 담고, 그곳의 기록과 장치를 연결합니다. 그리고 그 공간을 AI 가 사람과 함께 보고, 판단하고, 작업할 수 있게 만듭니다.**
 오픈소스이며, 장치를 움직이는 일은 사용자가 승인해야 실행됩니다. 어떤 기능을 쓸지는 사용자가 정합니다.
