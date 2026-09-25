@@ -76,6 +76,10 @@ INPUT_INFORMATION = {
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
 
+    # Runs on its own listener thread (see listener() below); the live-view
+    # and input-list pages use this flag to stop judging it against a period
+    # it doesn't actually poll on.
+    'listener': True,
     'options_enabled': [
         'measurements_select',
         'period'

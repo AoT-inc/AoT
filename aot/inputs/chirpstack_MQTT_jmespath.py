@@ -60,6 +60,10 @@ INPUT_INFORMATION = {
     'channel_quantity_same_as_measurements': True,
     'measurements_use_same_timestamp': False,
 
+    # Runs on its own listener thread (see listener() below); the live-view
+    # and input-list pages use this flag to stop judging it against a period
+    # it doesn't actually poll on.
+    'listener': True,
     'options_enabled': [
         'measurements_select',
         'period',      # listener-based, so period isn't used for polling, but is

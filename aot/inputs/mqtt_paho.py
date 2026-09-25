@@ -44,8 +44,13 @@ INPUT_INFORMATION = {
                'can convert to other units in the Convert Measurement section. Warning: If using '
                'multiple MQTT Inputs or Functions, ensure the Client IDs are unique.',
 
+    # This input runs on its own listener thread (see listener() below) and
+    # never polls on a period, so the standard period field is left out —
+    # only the measurement-freshness override is exposed (max_age_only).
+    'listener': True,
     'options_enabled': [
-        'measurements_select'
+        'measurements_select',
+        'max_age_only'
     ],
     'options_disabled': ['interface'],
 

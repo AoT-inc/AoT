@@ -1,7 +1,11 @@
 {% if 'period' in dict_options['options_disabled'] or
-      'period' in dict_options['options_enabled']
+      'period' in dict_options['options_enabled'] or
+      'max_age_only' in dict_options['options_enabled']
   %}
 
+{% if 'period' in dict_options['options_disabled'] or
+      'period' in dict_options['options_enabled']
+  %}
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label">{{form.period.label(class_='mb-0')}}</label>
   <div class="aot-modal-option-control">
@@ -12,6 +16,7 @@
     {%- endif -%}
   </div>
 </div>
+{% endif %}
 
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label">{{form.max_age_s.label(class_='mb-0')}}</label>
