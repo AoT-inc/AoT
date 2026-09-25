@@ -28,6 +28,7 @@ from aot.utils import audit, google_oauth
 from aot.utils.audit import audit_log
 from aot.utils.time_utils import utc_now
 from aot.utils.totp import verify_totp
+from aot.aot_flask.utils import credential_rules
 from aot.utils.utils import test_password, test_username
 
 _GOOGLE_LOGIN_STATE_KEY = 'google_login_oauth_state'
@@ -45,6 +46,24 @@ blueprint = Blueprint(
     static_folder='../static',
     template_folder='../templates'
 )
+
+
+def _display_host():
+    """Name shown in the page header: the override, else the machine hostname.
+
+    Inside a container the hostname is a random ID that means nothing to the
+    person reading the page, so it is left out (empty string) unless the
+    administrator set an override.
+    """
+    try:
+        host = Misc.query.first().hostname_override
+    except Exception:
+        host = None
+    if host:
+        return host
+    if os.path.exists('/.dockerenv'):
+        return ''
+    return socket.gethostname()
 
 
 @blueprint.route('/create_admin', methods=('GET', 'POST'))
@@ -66,12 +85,7 @@ def create_admin():
 
     language = None
 
-    try:
-        host = Misc.query.first().hostname_override
-    except:
-        host = None
-    if not host:
-        host = socket.gethostname()
+    host = _display_host()
 
     # Find user-selected language in AoT/.language
     try:
@@ -103,16 +117,10 @@ def create_admin():
                       "error")
                 error = True
             if not test_username(username):
-                flash(gettext(
-                    "Invalid username. Must be between 3 and 64 characters "
-                    "and only contain letters and numbers."),
-                    "error")
+                flash(credential_rules.invalid_username(), "error")
                 error = True
             if not test_password(form_create_admin.password.data):
-                flash(gettext(
-                    "Invalid password. Must be between 4 and 64 characters "
-                    "and only contain letters and numbers."),
-                      "error")
+                flash(credential_rules.invalid_password(), "error")
                 error = True
             if error:
                 return render_template('create_admin.html',
@@ -122,6 +130,7 @@ def create_admin():
                                        form_language=form_language,
                                        form_notice=form_notice,
                                        host=host,
+                                       credential_rules_hint=credential_rules.rules_hint(),
                                        language=language,
                                        languages=LANGUAGES)
 
@@ -169,6 +178,7 @@ def create_admin():
                            form_language=form_language,
                            form_notice=form_notice,
                            host=host,
+                           credential_rules_hint=credential_rules.rules_hint(),
                            language=language,
                            languages=LANGUAGES)
 
@@ -211,12 +221,7 @@ def login_password():
 
     language = None
 
-    try:
-        host = Misc.query.first().hostname_override
-    except:
-        host = None
-    if not host:
-        host = socket.gethostname()
+    host = _display_host()
 
     # Find user-selected language in AoT/.language
     try:
@@ -224,7 +229,7 @@ def login_password():
         if os.path.exists(lang_path):
             with open(lang_path) as f:
                 language_read = f.read().split(":")[0]
-                if language and language in LANGUAGES:
+                if language_read and language_read in LANGUAGES:
                     language = language_read
     except:
         pass
@@ -396,12 +401,7 @@ def login_keypad():
               "error")
         return redirect(url_for('routes_general.home'))
 
-    try:
-        host = Misc.query.first().hostname_override
-    except:
-        host = None
-    if not host:
-        host = socket.gethostname()
+    host = _display_host()
 
     # Lockout is per-account now, and the keypad login page doesn't yet know
     # which account is being attempted — the check happens in
@@ -430,12 +430,7 @@ def login_keypad_code(code):
               "error")
         return redirect(url_for('routes_general.home'))
 
-    try:
-        host = Misc.query.first().hostname_override
-    except:
-        host = None
-    if not host:
-        host = socket.gethostname()
+    host = _display_host()
 
     user = User.query.filter(User.code == code).first()
     user_ip = utils_general.get_ip_address()

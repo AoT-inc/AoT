@@ -35,8 +35,7 @@ already does that redirect, so `AOT_BEHIND_TLS` only needs to fix the cookies.
 
 ## Password requirements { #password-requirements }
 
-A password must be at least 8 characters and may contain only letters, numbers, and
-symbols. Common passwords (`password`, `qwerty123`, and similar lists used in
+A password must be at least 8 characters. Common passwords (`password`, `qwerty123`, and similar lists used in
 credential-stuffing attacks) are rejected even if they meet the length requirement.
 
 AoT does not force periodic password changes. Forcing regular changes is no longer

@@ -64,6 +64,7 @@ from aot.databases.models import Widget
 from aot.aot_client import DaemonControl
 from aot.aot_flask.extensions import db
 from aot.aot_flask.routes_static import invalidate_misc_cache
+from aot.aot_flask.utils import credential_rules
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.utils.utils_general import choices_measurements
 from aot.aot_flask.utils.utils_general import choices_units
@@ -342,9 +343,7 @@ def user_add(form):
         new_user = User()
         new_user.name = form.user_name.data.lower()
         if not test_username(new_user.name):
-            error.append(gettext(
-                "Invalid user name. Must be between 2 and 64 characters "
-                "and only contain letters and numbers."))
+            error.append(str(credential_rules.invalid_username()))
 
         new_user.full_name = (form.full_name.data or '').strip() or None
         new_user.email = form.email.data
@@ -353,10 +352,7 @@ def user_add(form):
                 "Another user already has that email address."))
 
         if not test_password(form.password_new.data):
-            error.append(gettext(
-                "Invalid password. Must be at least 8 characters, contain "
-                "only letters, numbers, and symbols, and not be a commonly "
-                "used password."))
+            error.append(str(credential_rules.invalid_password()))
 
         if form.password_new.data != form.password_repeat.data:
             error.append(gettext("Passwords do not match. Please try again."))
@@ -575,9 +571,7 @@ def account_self_update(form):
         rename = new_name and new_name != user.name
         if rename:
             if not test_username(new_name):
-                error.append(gettext(
-                    "Invalid username. Must be between 3 and 64 characters "
-                    "and only contain letters and numbers."))
+                error.append(str(credential_rules.invalid_username()))
             elif User.query.filter(User.name == new_name, User.id != user.id).count():
                 error.append(gettext("That username is already taken."))
 
@@ -590,7 +584,7 @@ def account_self_update(form):
         change_password = bool(form.password_new.data)
         if change_password:
             if not test_password(form.password_new.data):
-                error.append(gettext("Invalid password"))
+                error.append(str(credential_rules.invalid_password()))
             elif form.password_new.data != form.password_repeat.data:
                 error.append(gettext(
                     "Passwords do not match. Please try again."))
@@ -704,7 +698,8 @@ def user_mod(form):
             if not utils_general.user_has_permission('reset_password'):
                 messages["error"].append("Cannot change user password")
             if not test_password(form.password_new.data):
-                messages["error"].append(gettext("Invalid password"))
+                messages["error"].append(
+                    str(credential_rules.invalid_password()))
             if form.password_new.data != form.password_repeat.data:
                 messages["error"].append(gettext(
                     "Passwords do not match. Please try again."))

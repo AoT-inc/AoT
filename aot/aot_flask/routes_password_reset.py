@@ -17,6 +17,7 @@ from aot.utils.time_utils import utc_now, to_local
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import forms_authentication
 from aot.utils.send_data import send_email
+from aot.aot_flask.utils import credential_rules
 from aot.utils.utils import test_password
 
 logger = logging.getLogger(__name__)
@@ -127,10 +128,7 @@ def reset_password():
         if form_reset_password.password.data != form_reset_password.password_repeat.data:
             error.append("Passwords do not match")
         if not test_password(form_reset_password.password.data):
-            error.append(gettext(
-                "Invalid password. Must be at least 8 characters, contain "
-                "only letters, numbers, and symbols, and not be a commonly "
-                "used password."))
+            error.append(str(credential_rules.invalid_password()))
 
         if not error:
             wrong_code_msg = gettext("Code expired or invalid")

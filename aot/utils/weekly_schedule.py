@@ -35,6 +35,7 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 import pytz
+from flask_babel import gettext as _
 
 logger = logging.getLogger(__name__)
 
@@ -499,6 +500,13 @@ def build_warnings(schedule: dict) -> list:
     Return human-readable warnings for a valid schedule (e.g. period > window length).
     Does not re-validate structure.
     """
+    # DAY_NAMES itself must stay plain English — the daemon controller and the
+    # AI/MCP tool layer both consume it outside any Flask request (see its
+    # other call sites), where gettext() has no locale to translate into.
+    # This is the only caller that renders the value as UI text, so build a
+    # translated label list here instead of changing DAY_NAMES.
+    day_labels_i18n = [_('Mon'), _('Tue'), _('Wed'), _('Thu'), _('Fri'), _('Sat'), _('Sun')]
+
     warnings = []
     days = schedule.get("days", {})
     for i in range(7):
@@ -512,8 +520,8 @@ def build_warnings(schedule: dict) -> list:
             win_sec = (e_min - s_min) * 60
             if period > win_sec:
                 warnings.append(
-                    f"{DAY_NAMES[i]}: period ({period}s) > window length ({win_sec}s) — "
-                    "cycle will be cut short"
+                    _('%(day)s: period (%(period)ss) > window length (%(win_sec)ss) — cycle will be cut short',
+                      day=day_labels_i18n[i], period=period, win_sec=win_sec)
                 )
         except (ValueError, KeyError):
             pass

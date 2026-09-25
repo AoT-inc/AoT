@@ -86,7 +86,7 @@
         <div class="aot-modal-option-control">
           <select name="role_id" class="form-control aot-modern-select">
             {% for each_role in user_roles %}
-            <option value="{{each_role.id}}" {% if user.role_id == each_role.id %}selected{% endif %}>{{each_role.name}}</option>
+            <option value="{{each_role.id}}" {% if user.role_id == each_role.id %}selected{% endif %}>{{each_role.name|role_name}}</option>
             {% endfor %}
           </select>
         </div>

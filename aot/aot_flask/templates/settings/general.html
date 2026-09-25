@@ -44,7 +44,7 @@
             <select class="form-control aot-modern-select form-tooltip form-dropdown" data-placement="top" id="landing_page" name="landing_page" title="{{_('Page to display after login')}}">
               <option value="dashboard"{% if current_user.landing_page == 'dashboard' %} selected{% endif %}>{{_('Dashboard')}}</option>
               <option value="live"{% if current_user.landing_page == 'live' %} selected{% endif %}>{{_('Real-time Measurement')}}</option>
-              <option value="info"{% if current_user.landing_page == 'system_information' %} selected{% endif %}>{{_('System Information')}}</option>
+              <option value="info"{% if current_user.landing_page == 'info' %} selected{% endif %}>{{_('System Information')}}</option>
             </select>
           </div>
         </div>

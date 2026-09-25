@@ -10,7 +10,7 @@
   <meta name="author" content="">
   <link rel="icon" href="/favicon.png">
 
-  <title>{{host}} -  {{dict_translation['login']['title']}}</title>
+  <title>{% if host %}{{host}} - {% endif %}{{dict_translation['login']['title']}}</title>
 
   <!-- Bootstrap core CSS -->
   <link href="{{ url_for('static', filename='css/vendor-layer.css') }}" rel="stylesheet">
@@ -41,7 +41,7 @@
 
     <div class="text-center">
       <h2 class="form-signin-heading">{{_('Pinpad Log In')}} {{dict_translation['title']}}</h2>
-      <h4 class="signin-center">{{host}}</h4>
+      {% if host %}<h4 class="signin-center">{{host}}</h4>{% endif %}
       <div class="btn-group-vertical btn-group-justified" role="group" aria-label="Keypad Login">
         <div class="btn-group">
           <input class="text-center form-control-lg mb-2" id="code" type="password">

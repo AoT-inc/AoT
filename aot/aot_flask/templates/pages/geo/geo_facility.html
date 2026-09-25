@@ -1226,6 +1226,9 @@ window._IEC = {
   plot_subject:{{ _('What is here')|tojson }}, plot_variety:{{ _('Variety')|tojson }},
   plot_started_on:{{ _('Start date')|tojson }},
   plot_expected_end:{{ _('Expected end')|tojson }},
+  {#- 계획 종료일이 지나도 제어는 멈추지 않는다(구획은 사람이 끝낼 때까지 끝나지
+     않는 경우가 정상이다) — 표시 전용 배지다. docs/design/coordinator-plot-targets.md. -#}
+  plot_overdue_n:{{ _('{n}d past planned end')|tojson }},
   plot_add:{{ _('Add a plot')|tojson }},
   plot_end:{{ _('End')|tojson }},
   plot_empty:{{ _('Nothing recorded here yet.')|tojson }},

@@ -66,7 +66,7 @@
 - **[설정] > 단계 일정** — 실제 일정을 고치는 곳입니다. 프로그램 기간은 참고일 뿐이라 단계를 **연기하거나 앞당길** 수 있고, 이 구획만 자동 전환으로 둘 수도 있습니다. [단계 일정 고치기](programs.ko.md#stage-schedule)를 참고하세요.
 
 !!! 참고 "목표는 여기서 읽기 전용입니다"
-    이 팝업은 각 단계의 목표를 보여주기만 하고 고치지는 않습니다 — [구획 자신의 목표 override](programs.ko.md#plot-override)는 [`/plots` 페이지](programs.ko.md#plots-page)나 [AoT Plot 위젯](plot-widget.ko.md)에서 하며, 지도에서는 할 수 없습니다.
+    이 팝업은 각 단계의 목표를 보여주기만 하고 고치지는 않습니다 — [구획 자신의 목표 override](programs.ko.md#plot-override)는 [`/plots` 페이지](programs.ko.md#plots-page)나 [AoT 구획 위젯](plot-widget.ko.md)에서 하며, 지도에서는 할 수 없습니다.
 
 - **[개요] > 구획 정보**
 - **면적과 치수** — 가로·세로를 함께 보여줍니다. 면적만으로는 "몇 줄 심을 수 있나"에 답할 수 없기 때문입니다.
@@ -271,4 +271,4 @@ on/off 출력 장치의 **설정** 버튼을 누르면 시작·종료 시각을 
 - [시설 위젯](facility-widget.md) — 3D 시설 전용 위젯
 - [GIS 레이어](layers.md) — 오버레이 레이어 등록
 - [일지](journal.ko.md) — 같은 GDD·DLI·관수량 자료로 만드는 스냅샷 문서
-- [AoT Plot 위젯](plot-widget.ko.md) — 구획 하나를 계속 보는 대시보드 위젯, 이 팝업엔 없는 목표 편집 기능이 있습니다
+- [AoT 구획 위젯](plot-widget.ko.md) — 구획 하나를 계속 보는 대시보드 위젯, 이 팝업엔 없는 목표 편집 기능이 있습니다

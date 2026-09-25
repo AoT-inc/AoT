@@ -57,7 +57,14 @@ def is_email(email):
         return True
 
 
-def pass_length_min(pw, min_len=8):
+# Single source of truth for the account rules. Hints, error messages, form
+# validators and the docs all read these; change them here only.
+USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 64
+PASSWORD_MIN_LENGTH = 8
+
+
+def pass_length_min(pw, min_len=PASSWORD_MIN_LENGTH):
     """Validate that a password meets the minimum length requirement.
 
     @phase active
@@ -106,7 +113,7 @@ def characters(un):
         return True
 
 
-def user_length_min(un, min_len=3):
+def user_length_min(un, min_len=USERNAME_MIN_LENGTH):
     """Validate that a username meets the minimum length requirement.
 
     @phase active
@@ -120,7 +127,7 @@ def user_length_min(un, min_len=3):
         return True
 
 
-def user_length_max(un, max_len=64):
+def user_length_max(un, max_len=USERNAME_MAX_LENGTH):
     """Validate that a username does not exceed the maximum length.
 
     @phase active

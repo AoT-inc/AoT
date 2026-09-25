@@ -1647,6 +1647,23 @@ def plot_brief_for_control(row, on=None, capacities=None):
     하나에 N+1 이 된다.
     """
     due, _src = expected_end(row)
+    ref = on or date.today()
+    # 계획 종료일이 지나도 제어는 멈추지 않는다 — `ended_on`(사람이 확정한
+    # 실제 종료)만 근거로 삼기로 한 결정은 그대로 맞다(2026-09-01, 영양·
+    # 쿠마모토 사고 이후). 다만 **지난 사실 자체를 아무도 계산해 보여주지
+    # 않던 것**은 별개의 구멍이었다 — 마지막 단계가 열린 구획(수확기처럼
+    # "사람이 끝낼 때까지")은 계획 종료일이 몇 주 지나도 화면·MCP 어디에도
+    # 표가 나지 않는다(실측 2026-09-25, 김제 3포장 육묘장3 상추 청치마
+    # 수확기: 계획 종료 2026-08-31 이후 25일 경과, `today_pct` 는 이미
+    # 226% 를 넘겼는데 이 사실을 말하는 필드가 없었다).
+    #
+    # `ended_on` 이 있으면 애초에 이 함수까지 오지 않는다 — 호출부
+    # (`plots_in_facility`)가 이미 종료된 구획을 걸러낸다. 그래도 여기서
+    # 한 번 더 확인하는 이유는 이 함수가 "활성 구획만 온다" 는 호출부의
+    # 계약에 기대지 않고 스스로 옳은 답을 내기 위해서다.
+    overdue_days = None
+    if row.ended_on is None and due is not None and due < ref:
+        overdue_days = (ref - due).days
     out = {
         'unique_id': row.unique_id,
         'subject': row.subject,
@@ -1661,9 +1678,12 @@ def plot_brief_for_control(row, on=None, capacities=None):
         # 아직 시작 전인 구획(계획). 목록에 함께 보이므로 **자기가 계획이라는
         # 사실을 스스로 말해야** 한다 — 날짜만 보고 사람이 계산하게 두면
         # 자라는 것과 예정된 것이 같은 줄로 읽힌다.
-        'planned': row.started_on is not None and row.started_on > (on or date.today()),
+        'planned': row.started_on is not None and row.started_on > ref,
         'days_until_start': days_until_start(row, on=on),
         'expected_end_on': due.isoformat() if due else None,
+        # 계획 종료일이 지난 날수. **제어를 멈추는 근거가 아니다** — 표시
+        # 전용이다. 지나지 않았거나 계획 종료일 자체가 없으면 None.
+        'expected_end_overdue_days': overdue_days,
     }
     # 제어 화면이 "지금 어느 단계인가" 를 함께 말할 수 있어야 설정값의 근거가
     # 생긴다 — 같은 24℃ 가 육묘기와 착과기에서 다른 뜻이다.

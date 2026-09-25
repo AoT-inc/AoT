@@ -15,7 +15,7 @@ from aot.utils.send_data import send_email
 
 ACTION_INFORMATION = {
     'name_unique': 'photo_email',
-    'name': 'Send Email with Photo',
+    'name': lazy_gettext('Send Email with Photo'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -38,15 +38,15 @@ ACTION_INFORMATION = {
                 'Camera'
             ],
             'name': lazy_gettext('Camera'),
-            'phrase': 'Select the Camera to take a photo with'
+            'phrase': lazy_gettext('Select the Camera to take a photo with')
         },
         {
             'id': 'email',
             'type': 'text',
             'default_value': 'email@domain.com',
             'required': True,
-            'name': 'E-Mail Address',
-            'phrase': 'E-mail recipient(s). Separate multiple with commas.'
+            'name': lazy_gettext('E-Mail Address'),
+            'phrase': lazy_gettext('E-mail recipient(s). Separate multiple with commas.')
         }
     ]
 }

@@ -8,6 +8,27 @@ from datetime import timedelta
 
 import os
 from flask_babel import lazy_gettext as lg
+from flask_babel.speaklater import LazyString
+
+
+def lazy_join(*parts):
+    """Combine lazy_gettext()/T[...] values (and literal strings) into one
+    label without freezing it under whatever locale happens to be active
+    when this module is first imported.
+
+    A plain f-string or `"{}".format(...)` calls `str()` on every part
+    immediately -- at *import* time, before Babel has a request to read a
+    locale from -- so the joined result gets permanently baked in under
+    the default locale (English) for the rest of the process. flask_babel's
+    LazyString never caches (it re-runs gettext() on every access), so
+    wrapping the whole composition in one more layer of laziness keeps the
+    result reactive to each request's actual locale instead of freezing it.
+    Confirmed with a running worker: FUNCTION_INFO['trigger_edge']['name']
+    (an f-string of two T[...] values) stayed English under force_locale('ko')
+    while T['trigger']['title'] on its own translated correctly.
+    """
+    return LazyString(lambda: ''.join(str(p) for p in parts))
+
 
 # Determine if running in a Docker container
 DOCKER_CONTAINER = os.environ.get('DOCKER_CONTAINER', False) == 'TRUE'
@@ -312,15 +333,21 @@ MAP_DEFAULT_CENTER = (0.0, 0.0)  # lat, lng default center
 MAP_DEFAULT_ZOOM = 2  # wide world view by default
 MAP_GEOCODER = 'none'  # none, nominatim, mapbox, google (future)
 
+# pybabel's Python extractor cannot see a lazy_gettext()/lg() call sitting
+# inside an f-string's {...} expression (same blind spot as JS template
+# literals — see docs/i18n_translation_guide.md). Pull each call out into a
+# module-level constant first, then interpolate the constant.
+_LABEL_PWM_SLIDER = lg('PWM Slider')
+
 DASHBOARD_WIDGETS = [
-    ('', f"{lg('Add')} {lg('Dashboard')} {lg('Widget')}"),
+    ('', lazy_join(T['add']['title'], ' ', T['dashboard']['title'], ' ', T['widget']['title'])),
     ('spacer', lg('Spacer')),
     ('graph', lg('Graph')),
     ('gauge', lg('Gauge')),
     ('indicator', T['indicator']['title']),
     ('measurement', T['measurement']['title']),
     ('output', T['output']['title']),
-    ('output_pwm_slider', f"{T['output']['title']}: {lg('PWM Slider')}"),
+    ('output_pwm_slider', lazy_join(T['output']['title'], ': ', _LABEL_PWM_SLIDER)),
     ('pid_control', lg('PID Control')),
     ('python_code', lg('Python Code')),
     ('camera', T['camera']['title'])
@@ -401,6 +428,14 @@ CAMERA_INFO = {
 # 배포되는 ECharts 맞춤 빌드로 그리므로 따로 내려받을 것이 없다.
 METHOD_DEP_BASE = []
 
+# f-string-embedded lg() calls are invisible to pybabel's extractor (see
+# docs/i18n_translation_guide.md) — pull each call out into a constant first.
+_LABEL_DAILY = lg('Daily')
+_LABEL_TIME_BASED = lg('Time-Based')
+_LABEL_SINE_WAVE = lg('Sine Wave')
+_LABEL_BEZIER_CURVE = lg('Bezier Curve')
+_LABEL_MULTI_POINT = lg('Multi-Point')
+
 # Method info
 METHOD_INFO = {
     'Date': {
@@ -412,15 +447,15 @@ METHOD_INFO = {
         'dependencies_module': METHOD_DEP_BASE
     },
     'Daily': {
-        'name': f"{lg('Daily')} ({lg('Time-Based')})",
+        'name': lazy_join(_LABEL_DAILY, ' (', _LABEL_TIME_BASED, ')'),
         'dependencies_module': METHOD_DEP_BASE
     },
     'DailySine': {
-        'name': f"{lg('Daily')} ({lg('Sine Wave')})",
+        'name': lazy_join(_LABEL_DAILY, ' (', _LABEL_SINE_WAVE, ')'),
         'dependencies_module': METHOD_DEP_BASE
     },
     'DailyBezier': {
-        'name': f"{lg('Daily')} ({lg('Bezier Curve')})",
+        'name': lazy_join(_LABEL_DAILY, ' (', _LABEL_BEZIER_CURVE, ')'),
         # libatlas-base-dev 는 뺐다(2026-08-10). numpy 는 이미 requirements.txt
         # 에 있어 이미지에 baked-in 이고, manylinux 휠이 OpenBLAS 를 자체 번들
         # (site-packages/numpy.libs/libopenblas64_*.so)해서 시스템 BLAS 가 필요
@@ -439,7 +474,7 @@ METHOD_INFO = {
         'dependencies_module': METHOD_DEP_BASE
     },
     'DailyMultiPoint': {
-        'name': f"{lg('Daily')} ({lg('Multi-Point')})",
+        'name': lazy_join(_LABEL_DAILY, ' (', _LABEL_MULTI_POINT, ')'),
         'dependencies_module': METHOD_DEP_BASE
     }
 }
@@ -455,24 +490,27 @@ METHODS = [
     ('DailyMultiPoint', METHOD_INFO['DailyMultiPoint']['name'])
 ]
 
+_LABEL_BAND_MIN = lg('Band Min')
+_LABEL_BAND_MAX = lg('Band Max')
+
 PID_INFO = {
     'measure': {
         0: {
             'measurement': '',
             'unit': '',
-            'name': f"{T['setpoint']['title']}",
+            'name': T['setpoint']['title'],
             'measurement_type': 'setpoint'
         },
         1: {
             'measurement': '',
             'unit': '',
-            'name': f"{T['setpoint']['title']} ({lg('Band Min')})",
+            'name': lazy_join(T['setpoint']['title'], ' (', _LABEL_BAND_MIN, ')'),
             'measurement_type': 'setpoint'
         },
         2: {
             'measurement': '',
             'unit': '',
-            'name': f"{T['setpoint']['title']} ({lg('Band Max')})",
+            'name': lazy_join(T['setpoint']['title'], ' (', _LABEL_BAND_MAX, ')'),
             'measurement_type': 'setpoint'
         },
         3: {
@@ -547,6 +585,14 @@ SUN_EVENTS = [
     ('civil_dusk', lg('Civil Dusk')),
 ]
 
+# f-string-embedded lg() calls are invisible to pybabel's extractor — pull
+# each call out into a constant first (see docs/i18n_translation_guide.md).
+_LABEL_DAILY_TIME_POINT = lg('Daily Time Point')
+_LABEL_DAILY_TIME_SPAN = lg('Daily Time Span')
+_LABEL_RUN_PWM_METHOD = lg('Run PWM Method')
+_LABEL_SUNRISE_SUNSET = lg('Sunrise/Sunset')
+_LABEL_SEQUENCE = lg('Sequence')
+
 FUNCTION_INFO = {
     'function_actions': {
         'name': lg('Execute Actions'),
@@ -582,12 +628,12 @@ FUNCTION_INFO = {
         'dependencies_module': []
     },
     'trigger_timer_daily_time_point': {
-        'name': f"{T['trigger']['title']}: {lg('Daily Time Point')}",
+        'name': lazy_join(T['trigger']['title'], ': ', _LABEL_DAILY_TIME_POINT),
         'message': lg('Time Point Trigger Functions will execute Actions every day at the specified Time.'),
         'dependencies_module': []
     },
     'trigger_timer_daily_time_span': {
-        'name': f"{T['trigger']['title']}: {lg('Daily Time Span')}",
+        'name': lazy_join(T['trigger']['title'], ': ', _LABEL_DAILY_TIME_SPAN),
         'message': lg('Time Span Trigger Functions will execute Actions every day within the set Start and End times, every Period. The first execution will be the Start Time.'),
         'dependencies_module': []
     },
@@ -597,17 +643,17 @@ FUNCTION_INFO = {
         'dependencies_module': []
     },
     'trigger_run_pwm_method': {
-        'name': f"{T['trigger']['title']}: {lg('Run PWM Method')}",
+        'name': lazy_join(T['trigger']['title'], ': ', _LABEL_RUN_PWM_METHOD),
         'dependencies_module': []
     },
     'trigger_sunrise_sunset': {
-        'name': f"{T['trigger']['title']}: {lg('Sunrise/Sunset')}",
+        'name': lazy_join(T['trigger']['title'], ': ', _LABEL_SUNRISE_SUNSET),
         # 태양시는 시스템 전반의 기본값(aot.utils.solar)이라 선택 설치가 아니라
         # 정식 의존성(astral, requirements.txt)이다.
         'dependencies_module': []
     },
     'trigger_sequence': {
-        'name': f"{T['trigger']['title']}: {lg('Sequence')}",
+        'name': lazy_join(T['trigger']['title'], ': ', _LABEL_SEQUENCE),
         'message': lg(
             'A Sequence Trigger runs an ordered list of Actions one step at a time '
             'when activated. Add Actions to the sequence and they execute from top '

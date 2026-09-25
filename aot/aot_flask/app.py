@@ -506,6 +506,13 @@ def create_app(config=ProdConfig, run_scheduler=False):
         from aot.services.device_references import disambiguated_name
         return disambiguated_name(row)
 
+    @app.template_filter('role_name')
+    def role_name(name):
+        """Display name of a role: built-in roles are translated, custom
+        roles (named by the administrator) are shown exactly as typed."""
+        from aot.config_translations import BUILTIN_ROLE_NAMES
+        return BUILTIN_ROLE_NAMES.get(name, name)
+
     @app.template_filter('from_json_safe')
     def from_json_safe(value):
         import json

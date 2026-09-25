@@ -95,7 +95,7 @@
           </div>
           <div class="aot-entry-content-item aot-col-grow">
             <div class="form-control aot-entry-name-input">
-              {%- for each_role in user_roles if each_role.id == user.role_id -%}{{each_role.name}}{%- endfor -%}
+              {%- for each_role in user_roles if each_role.id == user.role_id -%}{{each_role.name|role_name}}{%- endfor -%}
             </div>
           </div>
           <div class="aot-entry-settings">
@@ -118,16 +118,16 @@
 
         <div class="grid-stack aot-entry-container" id="roles-grid">
         {% for each_role in user_roles %}
-        {% set role_editable = user_roles|length > 4 and each_role.id > 1 %}
+        {% set role_editable = each_role.id > 1 %}
         <div id="gridstack_role_{{each_role.unique_id}}" class="grid-stack-item" gs-id="{{each_role.unique_id}}"
           gs-x="0" gs-y="{{loop.index0}}" gs-w="24" gs-h="1" gs-no-resize="true">
         <div class="grid-stack-item-content row small-gutters aot-entry-item"
           data-config-uid="{{each_role.unique_id}}"
           {% if role_editable %}data-open-detail="role" data-uid="{{each_role.unique_id}}"
-          data-drawer-title="{{_('Edit Role')}}: {{each_role.name}}"{% endif %}>
+          data-drawer-title="{{_('Edit Role')}}: {{each_role.name|role_name}}"{% endif %}>
           <div class="aot-entry-drag-handle"><i class="fa fa-grip-lines"></i></div>
           <div class="aot-entry-content-item aot-col-grow">
-            <div class="form-control aot-entry-name-input">{{each_role.name}}</div>
+            <div class="form-control aot-entry-name-input">{{each_role.name|role_name}}</div>
           </div>
           <div class="aot-entry-content-item aot-col-grow">
             <div class="form-control aot-entry-name-input">
@@ -306,7 +306,7 @@
                   <select name="addRole" class="form-control aot-modern-select">
                     <option value="Admin">{{_('Admin')}}</option>
                     {% for each_role in user_roles if each_role.name != 'Admin' %}
-                    <option value="{{each_role.name}}">{{each_role.name}}</option>
+                    <option value="{{each_role.name}}">{{each_role.name|role_name}}</option>
                     {% endfor -%}
                   </select>
                 </div>

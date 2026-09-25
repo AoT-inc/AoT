@@ -493,3 +493,13 @@ TRANSLATIONS = {
     'fcst_load_error': {
         'title': lazy_gettext('Unable to load forecast data.')},
 }
+
+
+# Built-in role names are stored in English; these are their display names.
+BUILTIN_ROLE_NAMES = {
+    'Admin': lazy_gettext('Admin'),
+    'Editor': lazy_gettext('Editor'),
+    'Monitor': lazy_gettext('Monitor'),
+    'Guest': lazy_gettext('Guest'),
+    'Kiosk': lazy_gettext('Kiosk'),
+}

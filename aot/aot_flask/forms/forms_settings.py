@@ -24,6 +24,9 @@ from wtforms.validators import Optional
 from wtforms.widgets import NumberInput
 from wtforms.widgets import TextArea
 
+from aot.aot_flask.utils import credential_rules
+from aot.utils.utils import PASSWORD_MIN_LENGTH
+
 from aot.config_translations import TRANSLATIONS
 from aot.aot_flask.forms.forms_authentication import _strip_whitespace
 import json
@@ -535,8 +538,8 @@ class UserAdd(FlaskForm):
             validators.EqualTo('password_repeat',
                                message=lazy_gettext('Passwords must match.')),
             validators.Length(
-                min=6,
-                message=lazy_gettext('Password must be at least 6 characters.')
+                min=PASSWORD_MIN_LENGTH,
+                message=credential_rules.password_too_short()
             )
         ]
     )
@@ -644,8 +647,8 @@ class UserMod(FlaskForm):
                 message=lazy_gettext('Passwords must match.')
             ),
             validators.Length(
-                min=6,
-                message=lazy_gettext('Password must be at least 6 characters.')
+                min=PASSWORD_MIN_LENGTH,
+                message=credential_rules.password_too_short()
             )
         ]
     )

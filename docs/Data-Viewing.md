@@ -87,14 +87,14 @@ Turns an output on for a set time, then off again automatically — the simplest
 **Key options**
 
 -   **Output** — the output channel to control.
--   **Sync (Seconds)** — how often the widget refreshes the operation status from the server.
+-   **Sync (seconds)** — how often the widget refreshes the operation status from the server.
 -   **Timer** — on (default): shows the timed controls below. Off: the toggle simply switches the output on or off, ignoring any run/rest/cycle/scheduled-start settings — use this if you only want the widget as a plain switch for this output.
 -   **Operation Mode** — **Simple** (default; a single run, `0` = run until stopped) or **Cycle** (repeat run/rest for a number of cycles).
--   **Cycle settings** — the run time, rest time, and cycle count to use the first time you start a timer on this output. After that, the widget remembers and reuses whatever values you actually ran last, so these defaults won't reappear once you've started it at least once.
+-   **Cycle Settings** — the run time, rest time, and cycle count to use the first time you start a timer on this output. After that, the widget remembers and reuses whatever values you actually ran last, so these defaults won't reappear once you've started it at least once.
 -   **Scheduled Start (hh:mm)** — a wall-clock start time in the device's timezone (`00:00` = start immediately; a past time schedules for the next day).
 -   **Show Status** — display the current phase (running / resting / scheduled) in the title bar.
 
-*Notable:* a background worker on the server drives the run/rest cycle, so closing the dashboard tab never stops it. If the app restarts while a timer is still waiting for its scheduled start time, that schedule re-arms itself automatically the next time the dashboard checks in — but a cycle that was already actively running or resting at the moment of the restart is **not** resumed, so check the output manually after an app restart.
+*Notable:* a background worker on the server drives the run/rest cycle, so closing the dashboard tab never stops it. If the app restarts while a timer is running (an update, for example), the timer carries on from where it should be by then: a timer still waiting for its scheduled start keeps that schedule, and a cycle that was running or resting continues. Phases that would have ended during the restart are skipped, and a timer that finished in the meantime is shown as completed.
 
 ### AoT Graph { #widget-graph }
 

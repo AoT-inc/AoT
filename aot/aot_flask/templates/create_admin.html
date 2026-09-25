@@ -10,7 +10,7 @@
   <meta name="author" content="">
   <link rel="icon" href="/favicon.png">
 
-  <title>AoT - {{_('Create Admin')}} - {{host}}</title>
+  <title>AoT - {{_('Create Admin')}}{% if host %} - {{host}}{% endif %}</title>
 
   <!-- Bootstrap core CSS -->
   <link href="{{ url_for('static', filename='css/vendor-layer.css') }}" rel="stylesheet">
@@ -41,7 +41,7 @@
     <div class="col-12 signin-col-wide">
 
       <p class="signin-title">{{_('Welcome to AoT')}}</p>
-      <h4 class="form-signin-heading signin-center">{{host}}</h4>
+      {% if host %}<h4 class="form-signin-heading signin-center">{{host}}</h4>{% endif %}
 
       <p></p>
 
@@ -75,13 +75,13 @@
     <div class="col-12 signin-col">
 
       <h2 class="form-signin-heading signin-center">AoT</h2>
-      <h4 class="form-signin-heading signin-center">{{host}}</h4>
+      {% if host %}<h4 class="form-signin-heading signin-center">{{host}}</h4>{% endif %}
       <h3 class="form-signin-heading signin-center">{{_('Create Admin')}}</h3>
 
       <p></p>
 
       <h6 class="signin-center">{{_('Login information is stored locally')}}</h6>
-      <h6 class="signin-center">{{_('Usernames must be 3 to 64 characters, passwords >3 characters, and contain only letters and numbers')}}</h6>
+      <h6 class="signin-center">{{credential_rules_hint}}</h6>
 
       <form id='create_admin_form' class="form-signin" name="create_admin" action="/create_admin" method="POST">
         <input type="hidden" name="form-name" value="create_admin">

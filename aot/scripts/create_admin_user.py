@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(__file__, "../../..")))
 from aot.databases.models import User
 from aot.databases.utils import session_scope
 from aot.databases import set_uuid
-from aot.utils.utils import test_username
+from aot.utils.utils import USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, test_username
 
 from aot.config import AOT_DB_PATH
 
@@ -31,8 +31,9 @@ def set_password(new_password):
 while not user_valid:
     user_name = input("User Name: ")
     if not test_username(user_name):
-        print("Invalid user name. Must be between 2 and 64 characters and "
-              "only contain letters and numbers.")
+        print("Invalid user name. Must be between {} and {} characters and "
+              "only contain letters and numbers.".format(
+                  USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH))
     else:
         user_valid = True
 

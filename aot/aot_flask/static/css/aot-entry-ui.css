@@ -594,6 +594,14 @@
   color: var(--aot-color-text-tertiary);
 }
 
+/* 계획 종료일이 지난 구획을 알리는 배지 — 제어를 멈추지 않는다, 표시 전용
+   (docs/design/coordinator-plot-targets.md). 상태 배지와 같은 경고 톤
+   (scheduler.css 의 draft 이벤트와 동일 변수). */
+.aot-badge-inline.badge-warn {
+  background-color: var(--aot-tint-warning-bg);
+  color: var(--aot-tint-warning-fg);
+}
+
 /* ===== Drag Handle ===== */
 .aot-entry-drag-handle {
   width: 40px;

@@ -165,7 +165,8 @@ def dashboard_copy(form):
 
         # Clone dashboard with new unique ID and name.
         new_dashboard = clone_model(
-            dashboard, unique_id=set_uuid(), name=gettext("New Dashboard"))
+            dashboard, unique_id=set_uuid(),
+            name=gettext("%(name)s Copy", name=dashboard.name))
 
         # Clone all widgets and assign them to the new dashboard.
         for each_widget in widgets:
@@ -258,7 +259,10 @@ def widget_add(form_base, request_form):
     new_widget = Widget()
     new_widget.tab_id = form_base.dashboard_id.data
     new_widget.graph_type = widget_name
-    new_widget.name = form_base.name.data
+    # 이름을 비우고 제출해도 위젯 종류의 이름으로 채운다(빈 이름 위젯 방지).
+    new_widget.name = (form_base.name.data or '').strip() or str(
+        (dict_widgets.get(widget_name) or {}).get('widget_name')
+        or widget_name)
     # font_em_name 은 더 이상 폼에 없다(2026-09-06, 죽은 노브 제거). 여기서
     # 읽으면 제출되지 않은 필드라 None 이 되어 Float 열을 덮는다 — 모델
     # 기본값 1.0 을 그대로 둔다. 열 자체는 기존 행 호환을 위해 남겨 둔다.
@@ -526,7 +530,7 @@ def widget_duplicate(form_base):
         new_widget = clone_model(
             orig_widget,
             unique_id=set_uuid(),
-            name=f"{orig_widget.name} (copy)",
+            name=gettext("%(name)s Copy", name=orig_widget.name),
             position_y=position_y_start,
         )
 

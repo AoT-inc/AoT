@@ -44,6 +44,13 @@ def _action(uid, opts):
 def _switch_to_shared(old_schedule, actions):
     """저장된 per_day 스케줄을 두고, shared 스케줄을 저장 요청한다."""
     app = flask.Flask(__name__)
+    # build_warnings()가 gettext()로 요일 라벨을 번역한다 — 맨 Flask 에는
+    # Babel 이 안 붙어 있어 current_app.extensions['babel'] 조회가
+    # KeyError 로 죽는다(aot/tests/geo/test_geo_invariants_attack.py 의
+    # 같은 함정 참고). 이 테스트가 보는 건 스케줄 저장 로직이지 i18n 배선이
+    # 아니므로 그냥 붙여 둔다.
+    from flask_babel import Babel
+    Babel(app)
     trigger = MagicMock(unique_id='fn-1', timer_schedule=json.dumps(old_schedule))
 
     new_schedule = {

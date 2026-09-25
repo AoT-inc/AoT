@@ -5,6 +5,7 @@ import os
 import textwrap
 
 from flask import flash
+from flask_babel import lazy_gettext
 
 from aot.actions.base_action import AbstractFunctionAction
 from aot.config import PATH_PYTHON_CODE_USER, INSTALL_DIRECTORY
@@ -59,7 +60,7 @@ class PythonActionRun:
 
 ACTION_INFORMATION = {
     'name_unique': 'action_input_execute_python_code',
-    'name': "Execute Python 3 Code",
+    'name': lazy_gettext("Execute Python 3 Code"),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['inputs'],
@@ -87,8 +88,8 @@ self.logger.info(f"Input measurements: {dict_vars['measurements_dict']}")
 return dict_vars""",
             'required': True,
             'col_width': 12,
-            'name': 'Python 3 Code',
-            'phrase': 'The code to execute'
+            'name': lazy_gettext('Python 3 Code'),
+            'phrase': lazy_gettext('The code to execute')
         },
     ]
 }

@@ -1,7 +1,7 @@
 <div class="aot-modal-option-row">
   <label class="aot-modal-option-label" for="name">{{form_base.name.label.text}}</label>
   <div class="aot-modal-option-control">
-    {{form_base.name(class_='form-control aot-modern-input', value="Widget Name")}}
+    {{form_base.name(class_='form-control aot-modern-input', value=(dict_options.get('widget_name') or '')|string)}}
   </div>
 </div>
 

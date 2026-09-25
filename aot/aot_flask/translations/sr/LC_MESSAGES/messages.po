@@ -30727,25 +30727,117 @@ msgstr "Изаберите скуп алата за овај кључ."
 msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
 msgstr "AI алати су промењени. Повезаној AI апликацији можда је потребно поновно повезивање да би видела нови списак алата."
 
+msgid "Send Email"
+msgstr ""
+
+msgid "Send Email with Photo"
+msgstr ""
+
+msgid "Environment Control"
+msgstr ""
+
+msgid "Execute Python 3 Code"
+msgstr ""
+
+msgid "E-Mail Address"
+msgstr ""
+
+msgid "Python 3 Code"
+msgstr ""
+
+msgid "The code to execute"
+msgstr ""
+
+msgid "Select the Camera to take a photo with"
+msgstr ""
+
+msgid "Daily Time Point"
+msgstr ""
+
+msgid "Daily Time Span"
+msgstr ""
+
+msgid "Run PWM Method"
+msgstr ""
+
+msgid "Sunrise/Sunset"
+msgstr ""
+
+msgid "Time-Based"
+msgstr ""
+
+msgid "Sine Wave"
+msgstr ""
+
+msgid "Bezier Curve"
+msgstr ""
+
+msgid "Multi-Point"
+msgstr ""
+
+msgid "PWM Slider"
+msgstr ""
+
+msgid "E-mail recipient(s) (separate multiple addresses with commas)"
+msgstr ""
+
+msgid "E-mail recipient(s). Separate multiple with commas."
+msgstr ""
+
+#, python-format
+msgid "%(day)s: period (%(period)ss) > window length (%(win_sec)ss) — cycle will be cut short"
+msgstr ""
+
+msgid "%(name)s Copy"
+msgstr "%(name)s копија"
+
+#: aot_flask/utils/credential_rules.py:14
+msgid "Usernames must be %(min)d to %(max)d characters and contain only letters and numbers. Passwords must be at least %(pw_min)d characters and must not be a commonly used password."
+msgstr "Korisničko ime mora imati od %(min)d do %(max)d znakova i sme da sadrži samo slova i brojeve. Lozinka mora imati najmanje %(pw_min)d znakova i ne sme biti često korišćena lozinka."
+
+#: aot_flask/utils/credential_rules.py:25
+msgid "Invalid username. Must be between %(min)d and %(max)d characters and only contain letters and numbers."
+msgstr "Neispravno korisničko ime. Mora imati od %(min)d do %(max)d znakova i sme da sadrži samo slova i brojeve."
+
+#: aot_flask/utils/credential_rules.py:33
+msgid "Invalid password. Must be at least %(min)d characters and not be a commonly used password."
+msgstr "Neispravna lozinka. Mora imati najmanje %(min)d znakova i ne sme biti često korišćena lozinka."
+
+#: aot_flask/utils/credential_rules.py:41
+msgid "Password must be at least %(min)d characters."
+msgstr "Lozinka mora imati najmanje %(min)d znakova."
+
+#: config_translations.py:1
+msgid "Editor"
+msgstr "Urednik"
+
+#: config_translations.py:1
+msgid "Monitor"
+msgstr "Nadzornik"
+
+#: config_translations.py:1
+msgid "Guest"
+msgstr "Gost"
+
+#: config_translations.py:1
+msgid "Kiosk"
+msgstr "Kiosk"
+
 #: outputs/on_off_chirpstack.py:225
 msgid "Always send command regardless of current state"
 msgstr ""
-
 
 #: outputs/on_off_python.py:200 outputs/pwm_python.py:216
 msgid "Analyze your Python code with pylint when saving"
 msgstr ""
 
-
 #: outputs/motor_stepper_bipolar_generic.py:119
 msgid "Choose when to pull the enable pin high to energize the motor."
 msgstr ""
 
-
 #: outputs/motor_stepper_bipolar_generic.py:130
 msgid "Choose whether the enable pin in pulled high (Enable) or low (Disable) when AoT shuts down."
 msgstr ""
-
 
 #: outputs/pump_atlas_ezo_pmp.py:94 outputs/pump_gpio.py:131
 #: outputs/pump_grove_motor_driver_v1_0.py:140
@@ -30754,83 +30846,67 @@ msgstr ""
 msgid "Desired flow rate in ml/minute when Specify Flow Rate set"
 msgstr ""
 
-
 #: outputs/pump_l298n.py:113 outputs/pump_l298n_pi5.py:109
 msgid "Enable the use of the Enable Pin"
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:186 outputs/on_off_mqtt_multi.py:158
 #: outputs/pwm_mqtt.py:144 outputs/value_mqtt.py:131
 msgid "Encrypt the connection with TLS (broker port is usually 8883). Required when the broker is reachable over the internet."
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:86
 msgid "Enter the GPIO Pin connected to your device data wire (BCM numbering)."
 msgstr ""
-
 
 #: outputs/on_off_chirpstack.py:126
 msgid "Enter the JWT token value (without Bearer prefix)"
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:232
 msgid "Execute trigger function when output switches at startup"
 msgstr ""
-
 
 #: outputs/remote_output_on_off.py:115
 msgid "HTTP read timeout for ON/OFF commands. Must be longer than the slowest command on the remote host (e.g. if the remote command has time.sleep(15), set this to at least 20)."
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:118
 msgid "Host:port format (e.g., 127.0.0.1:8080) or http(s)://host:port"
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:93 outputs/on_off_neopixel_rgb_spi.py:85
 msgid "How many LEDs in the string?"
 msgstr ""
-
 
 #: outputs/on_off_ecowitt.py:99 outputs/remote_output_on_off.py:108
 #: outputs/remote_output_pwm.py:131
 msgid "How often to query the state of the output"
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:136 outputs/on_off_neopixel_rgb_spi.py:128
 msgid "How the rainbow is displayed"
 msgstr ""
-
 
 #: outputs/on_off_ecowitt.py:73
 msgid "ID of WFC01/WFC02/AC1100 (e.g., 11044)"
 msgstr ""
 
-
 #: outputs/value_dac_mcp4728.py:164 outputs/value_gp8xxx_iic_dual_dac.py:123
 msgid "If Specified Value is selected, set the shutdown state value"
 msgstr ""
-
 
 #: outputs/value_dac_mcp4728.py:145 outputs/value_gp8xxx_iic_dual_dac.py:104
 msgid "If Specified Value is selected, set the start state value"
 msgstr ""
 
-
 #: outputs/value_gp8xxx_iic_dual_dac.py:131
 msgid "If Specified Value to apply when turned off"
 msgstr ""
 
-
 #: outputs/pump_l298n.py:149 outputs/pump_l298n_pi5.py:137
 msgid "If a pump, the measured flow rate (ml/min) at the set Duty Cycle"
 msgstr ""
-
 
 #: outputs/pwm_gpio.py:157 outputs/pwm_mqtt.py:231 outputs/pwm_pca9685.py:169
 #: outputs/pwm_python.py:294 outputs/pwm_rpi_gpio.py:144
@@ -30838,115 +30914,93 @@ msgstr ""
 msgid "Invert the value that is saved to the measurement database"
 msgstr ""
 
-
 #: outputs/pwm_gpio.py:92 outputs/pwm_mqtt.py:186 outputs/pwm_pca9685.py:122
 #: outputs/pwm_python.py:249 outputs/pwm_rpi_gpio.py:90 outputs/pwm_shell.py:79
 #: outputs/remote_output_pwm.py:151
 msgid "Last Known Value"
 msgstr ""
 
-
 #: outputs/on_off_ecowitt.py:65
 msgid "Local IP address of the Ecowitt hub (e.g., 192.168.1.100)"
 msgstr ""
-
 
 #: outputs/on_off_chirpstack.py:190
 msgid "Log connection/enqueue/confirmation notices (INFO/WARNING) for this device. Errors are always logged. Leave off in production."
 msgstr ""
 
-
 #: outputs/on_off_mqtt_multi.py:77
 msgid "Number of channels. Save to add or remove channel rows."
 msgstr ""
-
 
 #: outputs/pwm_mqtt.py:136 outputs/value_mqtt.py:123
 msgid "Password for connecting to the server."
 msgstr ""
 
-
 #: outputs/on_off_mqtt.py:178 outputs/on_off_mqtt_multi.py:150
 msgid "Password for connecting to the server. Leave blank to disable."
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:195 outputs/on_off_mqtt_multi.py:167
 #: outputs/pwm_mqtt.py:153 outputs/value_mqtt.py:140
 msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
 msgstr ""
 
-
 #: outputs/pwm_python.py:232
 msgid "Python code to execute to set the PWM duty cycle (%)"
 msgstr ""
-
 
 #: outputs/potentiometer_ds3502.py:68
 msgid "Round direction to the nearest step value"
 msgstr ""
 
-
 #: outputs/pwm_mqtt.py:176
 msgid "Round the payload value to an integer."
 msgstr ""
-
 
 #: outputs/on_off_sequent_8_relay_hat.py:78
 msgid "Select the board stack number when multiple boards are used"
 msgstr ""
 
-
 #: outputs/value_dac_mcp4728.py:126
 msgid "Select the channel Gain"
 msgstr ""
-
 
 #: outputs/value_dac_mcp4728.py:115
 msgid "Select the channel VREF"
 msgstr ""
 
-
 #: outputs/value_dac_mcp4728.py:156 outputs/value_gp8xxx_iic_dual_dac.py:115
 msgid "Select the channel shutdown state"
 msgstr ""
-
 
 #: outputs/value_dac_mcp4728.py:137 outputs/value_gp8xxx_iic_dual_dac.py:96
 msgid "Select the channel start state"
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:161
 msgid "Select the payload encoding format"
 msgstr ""
-
 
 #: outputs/value_gp8xxx_iic_dual_dac.py:82
 msgid "Select your GP8XXX device"
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:150
 msgid "Send command as confirmed (await acknowledgment)"
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:162 outputs/on_off_mqtt_multi.py:134
 #: outputs/pwm_mqtt.py:120 outputs/value_mqtt.py:107
 msgid "Send login credentials"
 msgstr ""
 
-
 #: outputs/value_dac_mcp4728.py:93
 msgid "Set the VREF voltage"
 msgstr ""
 
-
 #: outputs/on_off_mqtt_multi.py:235
 msgid "Set the channel state when AoT starts"
 msgstr ""
-
 
 #: outputs/on_off_mcp23017.py:92 outputs/on_off_pcf8574.py:89
 #: outputs/on_off_pcf8575.py:89 outputs/on_off_sequent_8_relay_hat.py:111
@@ -30954,180 +31008,145 @@ msgstr ""
 msgid "Set the state of the GPIO when AoT shuts down"
 msgstr ""
 
-
 #: outputs/on_off_mcp23017.py:81 outputs/on_off_pcf8574.py:78
 #: outputs/on_off_pcf8575.py:78 outputs/on_off_sequent_8_relay_hat.py:100
 #: outputs/on_off_sparkfun_board_4_relays.py:81 outputs/on_off_xl9535.py:78
 msgid "Set the state of the GPIO when AoT starts"
 msgstr ""
 
-
 #: outputs/on_off_grove_multichannel_relay.py:153
 msgid "Set the state of the relay when AoT shuts down"
 msgstr ""
-
 
 #: outputs/on_off_grove_multichannel_relay.py:142
 msgid "Set the state of the relay when AoT starts"
 msgstr ""
 
-
 #: outputs/on_off_52pi_4ch.py:114
 msgid "Set the state of the relay when aot shuts down"
 msgstr ""
-
 
 #: outputs/on_off_52pi_4ch.py:103
 msgid "Set the state of the relay when aot starts"
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:218
 msgid "State to apply when AoT shuts down"
 msgstr ""
-
 
 #: outputs/on_off_chirpstack.py:206
 msgid "State to apply when AoT starts"
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:111 outputs/on_off_neopixel_rgb_spi.py:103
 msgid "The Color when turning on in Single Color Mode, RGB format (red, green, blue), 0 - 255 each."
 msgstr ""
-
 
 #: outputs/pump_l298n.py:122 outputs/pump_l298n_pi5.py:118
 msgid "The Enable pin of the controller (BCM numbering)"
 msgstr ""
 
-
 #: outputs/motor_stepper_bipolar_generic.py:87
 msgid "The Full Step Delay of the controller"
 msgstr ""
-
 
 #: outputs/pwm_gpio.py:143
 msgid "The Herts to output the PWM signal (0 - 70,000)"
 msgstr ""
 
-
 #: outputs/pwm_pca9685.py:102
 msgid "The Herts to output the PWM signal (40 - 1600)"
 msgstr ""
-
 
 #: outputs/pwm_rpi_gpio.py:130
 msgid "The Hertz to output the PWM signal"
 msgstr ""
 
-
 #: outputs/pump_l298n.py:97 outputs/pump_l298n_pi5.py:93
 msgid "The Input Pin 1 of the controller (BCM numbering)"
 msgstr ""
-
 
 #: outputs/pump_l298n.py:106 outputs/pump_l298n_pi5.py:102
 msgid "The Input Pin 2 of the controller (BCM numbering)"
 msgstr ""
 
-
 #: outputs/on_off_mqtt_multi.py:109
 msgid "The MQTT topic to subscribe to for confirming each channel's operating state. Leave blank to disable status feedback."
 msgstr ""
-
 
 #: outputs/on_off_mqtt_multi.py:101
 msgid "The MQTT topic used to publish on/off commands (control direction)."
 msgstr ""
 
-
 #: outputs/remote_output_on_off.py:125 outputs/remote_output_pwm.py:141
 msgid "The Remote AoT Output to control"
 msgstr ""
 
-
 #: outputs/motor_stepper_uln2003.py:109
 msgid "The Step Delay of the controller"
 msgstr ""
-
 
 #: outputs/motor_stepper_bipolar_generic.py:150
 #: outputs/motor_stepper_uln2003.py:126
 msgid "The Step Resolution of the controller"
 msgstr ""
 
-
 #: outputs/motor_stepper_bipolar_generic.py:79
 msgid "The Step pin of the controller (BCM numbering)"
 msgstr ""
-
 
 #: outputs/pump_atlas_ezo_pmp.py:139
 msgid "The actual volume (ml) that was dispensed"
 msgstr ""
 
-
 #: outputs/on_off_kasa_rgb_bulbs.py:98
 msgid "The brightness to set, in percent (0 - 100)"
 msgstr ""
-
 
 #: outputs/on_off_neopixel_rgb_spi.py:69
 msgid "The color (e.g 10, 0 0)"
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:69
 msgid "The color (e.g 10, 0, 0)"
 msgstr ""
-
 
 #: outputs/on_off_neopixel_rgb.py:104 outputs/on_off_neopixel_rgb_spi.py:96
 msgid "The color mode when turned on"
 msgstr ""
 
-
 #: outputs/output_spacer.py:27
 msgid "The color of the name text"
 msgstr ""
-
 
 #: outputs/on_off_kasa_rgb_bulbs.py:167
 msgid "The color temperature to set, in degrees Kelvin"
 msgstr ""
 
-
 #: outputs/on_off_virtual_multi.py:65 outputs/on_off_virtual_single.py:66
 msgid "The current draw of the virtual device"
 msgstr ""
-
 
 #: outputs/pump_l298n.py:141 outputs/pump_l298n_pi5.py:129
 msgid "The direction to turn the motor"
 msgstr ""
 
-
 #: outputs/pump_l298n.py:130
 msgid "The duty cycle to apply to the Enable Pin (percent, 1 - 100)"
 msgstr ""
-
 
 #: outputs/pwm_gpio.py:64 outputs/pwm_mqtt.py:63 outputs/pwm_python.py:200
 #: outputs/pwm_rpi_gpio.py:62 outputs/remote_output_pwm.py:62
 msgid "The duty cycle to set"
 msgstr ""
 
-
 #: outputs/remote_output_pwm.py:180
 msgid "The duty cycle to set at shutdown, if enabled"
 msgstr ""
 
-
 #: outputs/remote_output_pwm.py:161
 msgid "The duty cycle to set at startup, if enabled"
 msgstr ""
-
 
 #: outputs/pump_gpio.py:104 outputs/pump_grove_motor_driver_v1_0.py:148
 #: outputs/pump_grove_motor_driver_v1_3.py:149 outputs/pump_mcp23017.py:115
@@ -31135,12 +31154,10 @@ msgstr ""
 msgid "The fastest rate that the pump can dispense (ml/min)"
 msgstr ""
 
-
 #: outputs/on_off_mqtt.py:60 outputs/on_off_mqtt_multi.py:85
 #: outputs/pwm_mqtt.py:80 outputs/value_mqtt.py:59
 msgid "The hostname of the MQTT server"
 msgstr ""
-
 
 #: outputs/on_off_kasa_rgb_bulbs.py:91 outputs/on_off_kasa_rgb_bulbs.py:114
 #: outputs/on_off_kasa_rgb_bulbs.py:137 outputs/on_off_kasa_rgb_bulbs.py:160
@@ -31148,122 +31165,99 @@ msgstr ""
 msgid "The hsv transition period"
 msgstr ""
 
-
 #: outputs/on_off_kasa_rgb_bulbs.py:121
 msgid "The hue to set, in degrees (0 - 360)"
 msgstr ""
 
-
 #: outputs/on_off_kasa_rgb_bulbs.py:190
 msgid "The hue, saturation, brightness to set, e.g. \"200, 20, 50\""
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:85 outputs/on_off_mqtt_multi.py:119
 #: outputs/pwm_mqtt.py:105 outputs/value_mqtt.py:84
 msgid "The keepalive timeout value for the client. Set to 0 to disable."
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:125 outputs/on_off_neopixel_rgb_spi.py:117
 msgid "The maximum brightness of LEDs in Rainbow Mode (1 - 255)"
 msgstr ""
-
 
 #: outputs/pump_gpio.py:112 outputs/pump_mcp23017.py:123
 #: outputs/pump_pcf8574.py:114
 msgid "The minimum duration the pump should be turned on for every 60 second period"
 msgstr ""
 
-
 #: outputs/pump_grove_motor_driver_v1_0.py:156
 msgid "The minimum duration the pump turns on for every 60 second period (only used for Specify Flow Rate mode)."
 msgstr ""
-
 
 #: outputs/pump_grove_motor_driver_v1_0.py:121
 #: outputs/pump_grove_motor_driver_v1_3.py:122
 msgid "The motor output that determines the speed"
 msgstr ""
 
-
 #: outputs/pump_grove_motor_driver_v1_0.py:171
 msgid "The new I2C to set the sensor to"
 msgstr ""
-
 
 #: outputs/on_off_mqtt_multi.py:205
 msgid "The payload published to the Control Topic to turn this channel OFF."
 msgstr ""
 
-
 #: outputs/on_off_mqtt_multi.py:197
 msgid "The payload published to the Control Topic to turn this channel ON."
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:109
 msgid "The payload to send when turned off"
 msgstr ""
 
-
 #: outputs/on_off_mqtt.py:101
 msgid "The payload to send when turned on"
 msgstr ""
 
-
 #: outputs/on_off_kasa_hs300.py:79 outputs/on_off_kasa_kp303.py:79
 msgid "The period between checking if connected and output states."
 msgstr ""
-
 
 #: outputs/on_off_kasa_hs300_0_4_2.py:83 outputs/on_off_kasa_kp303_0_4_2.py:83
 #: outputs/on_off_kasa_plugs.py:84 outputs/on_off_kasa_rgb_bulbs.py:249
 msgid "The period between checking if connected and output states. 0 disables."
 msgstr ""
 
-
 #: outputs/motor_stepper_uln2003.py:74
 msgid "The pin (BCM numbering) connected to IN1 of the ULN2003"
 msgstr ""
-
 
 #: outputs/motor_stepper_uln2003.py:83
 msgid "The pin (BCM numbering) connected to IN2 of the ULN2003"
 msgstr ""
 
-
 #: outputs/motor_stepper_uln2003.py:92
 msgid "The pin (BCM numbering) connected to IN3 of the ULN2003"
 msgstr ""
 
-
 #: outputs/motor_stepper_uln2003.py:101
 msgid "The pin (BCM numbering) connected to IN4 of the ULN2003"
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:68 outputs/on_off_mqtt_multi.py:93
 #: outputs/pwm_mqtt.py:88 outputs/value_mqtt.py:67
 msgid "The port of the MQTT server"
 msgstr ""
 
-
 #: outputs/on_off_kasa_hs300_0_4_2.py:92 outputs/on_off_kasa_kp303_0_4_2.py:92
 #: outputs/on_off_kasa_plugs.py:93 outputs/on_off_kasa_rgb_bulbs.py:258
 msgid "The port to start the asyncio RPC server. Must be unique from other Kasa Outputs."
 msgstr ""
 
-
 #: outputs/on_off_kasa_rgb_bulbs.py:144
 msgid "The saturation to set, in percent (0 - 100)"
 msgstr ""
 
-
 #: outputs/on_off_neopixel_rgb.py:118 outputs/on_off_neopixel_rgb_spi.py:110
 msgid "The speed to change colors in Rainbow Mode"
 msgstr ""
-
 
 #: outputs/on_off_52pi_4ch.py:125 outputs/on_off_gpio.py:92
 #: outputs/on_off_grove_multichannel_relay.py:164
@@ -31275,55 +31269,45 @@ msgstr ""
 msgid "The state of the GPIO that corresponds to an On state"
 msgstr ""
 
-
 #: outputs/pump_mcp23017.py:107 outputs/pump_pcf8574.py:98
 msgid "The state of the output channel that corresponds to the pump being on"
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:76 outputs/pwm_mqtt.py:96 outputs/value_mqtt.py:75
 msgid "The topic to publish with"
 msgstr ""
 
-
 #: outputs/on_off_kasa_rgb_bulbs.py:206 outputs/on_off_kasa_rgb_bulbs.py:222
 msgid "The transition period"
 msgstr ""
-
 
 #: outputs/value_mqtt.py:100
 msgid "The value to send when an Off command is given"
 msgstr ""
 
-
 #: outputs/pump_atlas_ezo_pmp.py:124
 msgid "The volume (ml) that is instructed to be dispensed"
 msgstr ""
-
 
 #: outputs/pump_gpio.py:71 outputs/pump_mcp23017.py:83
 #: outputs/pump_pcf8574.py:82
 msgid "To accurately dispense specific volumes, the following options need to be correctly set. To determine the flow rate of your pump, first purge the fluid line to remove air. Next, turn the pump on for 60 seconds and collect the fluid that's dispensed. Last, measure and enter the amount of fluid that was dispensed, in ml, into the Fastest Rate (ml/min) field. Your pump should now be calibrated to dispense volumes accurately."
 msgstr ""
 
-
 #: outputs/pump_grove_motor_driver_v1_0.py:95
 #: outputs/pump_grove_motor_driver_v1_3.py:96
 msgid "To accurately dispense specific volumes, the following options need to be correctly set. To determine the flow rate of your pump, first purge the fluid line to remove air. Next, turn the pump on for 60 seconds and collect the fluid that's dispensed. Last, measure and enter the amount of fluid that was dispensed, in ml, into the Fastest Rate (ml/min) field. Your pump should now be calibrated to dispense volumes accurately. Since Peristaltic Pump Output controllers are capable of accepting multiple different dispersal value types, Default Dispersal Method must be set in order to specify whether the peristaltic pump should output for a duration or a specific volume when other controllers (such as PID controllers) send a value instructing it to dispense."
 msgstr ""
-
 
 #: outputs/on_off_mqtt.py:93 outputs/on_off_mqtt_multi.py:127
 #: outputs/pwm_mqtt.py:113 outputs/value_mqtt.py:92
 msgid "Unique client ID for connecting to the MQTT server"
 msgstr ""
 
-
 #: outputs/on_off_mqtt.py:205 outputs/on_off_mqtt_multi.py:177
 #: outputs/pwm_mqtt.py:163 outputs/value_mqtt.py:150
 msgid "Use websockets to connect to the server."
 msgstr ""
-
 
 #: outputs/pwm_gpio.py:91 outputs/pwm_gpio.py:112 outputs/pwm_mqtt.py:185
 #: outputs/pwm_mqtt.py:206 outputs/pwm_pca9685.py:121
@@ -31334,33 +31318,26 @@ msgstr ""
 msgid "User Set Value"
 msgstr ""
 
-
 #: outputs/on_off_mqtt_multi.py:222
 msgid "When this exact value is received on the Status Topic, the channel is marked OFF. Leave blank to disable OFF detection for this channel."
 msgstr ""
-
 
 #: outputs/on_off_mqtt_multi.py:213
 msgid "When this exact value is received on the Status Topic, the channel is marked ON. Leave blank to disable ON detection for this channel."
 msgstr ""
 
-
 #: outputs/on_off_ecowitt.py:92
 msgid "When turning on, open valve to this percent (0-100)"
 msgstr ""
-
 
 #: outputs/on_off_neopixel_rgb.py:62 outputs/on_off_neopixel_rgb_spi.py:62
 msgid "Which LED in the strip to change"
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:169
 msgid "e.g., 010110 (Hex) or JSON string"
 msgstr ""
 
-
 #: outputs/on_off_chirpstack.py:177
 msgid "e.g., 010210 (Hex) or JSON string"
 msgstr ""
-

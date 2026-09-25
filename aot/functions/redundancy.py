@@ -25,6 +25,7 @@ import time
 
 from flask_babel import lazy_gettext
 
+from aot.config import lazy_join
 from aot.databases.models import CustomController
 from aot.functions.base_function import AbstractFunction
 from aot.aot_client import DaemonControl
@@ -39,6 +40,13 @@ measurements_dict = {
         'name': 'Redundancy'
     }
 }
+
+# f-string-embedded lazy_gettext() calls are invisible to pybabel's
+# extractor — pull each call out into a constant first (see
+# docs/i18n_translation_guide.md).
+_LABEL_MEASUREMENT = lazy_gettext('Measurement')
+_LABEL_MAX_AGE = lazy_gettext('Max Age')
+_LABEL_SECONDS = lazy_gettext('Seconds')
 
 FUNCTION_INFORMATION = {
     'function_name_unique': 'REDUNDANCY',
@@ -80,7 +88,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': f'{lazy_gettext("Measurement")} A: {lazy_gettext("Max Age")} ({lazy_gettext("Seconds")})',
+            'name': lazy_join(_LABEL_MEASUREMENT, ' A: ', _LABEL_MAX_AGE, ' (', _LABEL_SECONDS, ')'),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -99,7 +107,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': f'{lazy_gettext("Measurement")} B: {lazy_gettext("Max Age")} ({lazy_gettext("Seconds")})',
+            'name': lazy_join(_LABEL_MEASUREMENT, ' B: ', _LABEL_MAX_AGE, ' (', _LABEL_SECONDS, ')'),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -118,7 +126,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': f'{lazy_gettext("Measurement")} C: {lazy_gettext("Max Age")} ({lazy_gettext("Seconds")})',
+            'name': lazy_join(_LABEL_MEASUREMENT, ' C: ', _LABEL_MAX_AGE, ' (', _LABEL_SECONDS, ')'),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         }
     ]

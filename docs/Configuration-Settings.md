@@ -516,7 +516,7 @@ At least one Admin user is required for AoT's login system to be enabled. If no 
 <tbody>
 <tr>
 <td>User Name</td>
-<td>Choose a user name between 2 and 64 characters. It is case-insensitive and converted to all lowercase.</td>
+<td>Choose a user name between 3 and 64 characters, using only letters and numbers. It is case-insensitive and converted to all lowercase.</td>
 </tr>
 <tr>
 <td>Email</td>
@@ -524,7 +524,7 @@ At least one Admin user is required for AoT's login system to be enabled. If no 
 </tr>
 <tr>
 <td>Password/Repeat</td>
-<td>Choose a password of at least 8 characters, containing only letters, numbers, and symbols. Commonly used passwords are rejected even if they meet this length. See [Security](Security.md#password-requirements).</td>
+<td>Choose a password of at least 8 characters. Commonly used passwords are rejected even if they meet this length. See [Security](Security.md#password-requirements).</td>
 </tr>
 <tr>
 <td>Keypad Code</td>
@@ -543,7 +543,7 @@ At least one Admin user is required for AoT's login system to be enabled. If no 
 
 ### Roles { #roles }
 
-Roles define the permissions of each user. Four default roles are provided that determine whether a user can view or edit specific areas of AoT. In addition to the default roles, you can create custom roles.
+Roles define the permissions of each user. Five default roles are provided (Admin, Editor, Monitor, Guest, and Kiosk, a display-only role that can view the camera and statistics) that determine whether a user can view or edit specific areas of AoT. In addition to the default roles, you can create custom roles.
 
 <table>
 <thead>
@@ -553,12 +553,14 @@ Roles define the permissions of each user. Four default roles are provided that 
 <th>Editor</th>
 <th>Monitor</th>
 <th>Guest</th>
+<th>Kiosk</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Edit Users</td>
 <td>X</td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -569,11 +571,13 @@ Roles define the permissions of each user. Four default roles are provided that 
 <td>X</td>
 <td></td>
 <td></td>
+<td></td>
 </tr>
 <tr>
 <td>Edit Settings</td>
 <td>X</td>
 <td>X</td>
+<td></td>
 <td></td>
 <td></td>
 </tr>
@@ -583,6 +587,7 @@ Roles define the permissions of each user. Four default roles are provided that 
 <td>X</td>
 <td>X</td>
 <td></td>
+<td></td>
 </tr>
 <tr>
 <td>View Camera</td>
@@ -590,6 +595,7 @@ Roles define the permissions of each user. Four default roles are provided that 
 <td>X</td>
 <td>X</td>
 <td></td>
+<td>X</td>
 </tr>
 <tr>
 <td>View Stats</td>
@@ -597,12 +603,14 @@ Roles define the permissions of each user. Four default roles are provided that 
 <td>X</td>
 <td>X</td>
 <td></td>
+<td>X</td>
 </tr>
 <tr>
 <td>View Logs</td>
 <td>X</td>
 <td>X</td>
 <td>X</td>
+<td></td>
 <td></td>
 </tr>
 </tbody>

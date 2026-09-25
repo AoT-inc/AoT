@@ -1,6 +1,8 @@
 # coding=utf-8
 import time
 
+from flask_babel import lazy_gettext
+
 from aot.databases.models import Actions
 from aot.databases.models import SMTP
 from aot.actions.base_action import AbstractFunctionAction
@@ -10,7 +12,7 @@ from aot.utils.send_data import send_email
 
 ACTION_INFORMATION = {
     'name_unique': 'email',
-    'name': 'Send Email',
+    'name': lazy_gettext('Send Email'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -31,8 +33,8 @@ ACTION_INFORMATION = {
             'type': 'text',
             'default_value': 'email@domain.com',
             'required': True,
-            'name': 'E-Mail Address',
-            'phrase': 'E-mail recipient(s) (separate multiple addresses with commas)'
+            'name': lazy_gettext('E-Mail Address'),
+            'phrase': lazy_gettext('E-mail recipient(s) (separate multiple addresses with commas)')
         }
     ]
 }

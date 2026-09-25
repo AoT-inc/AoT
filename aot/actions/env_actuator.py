@@ -18,7 +18,7 @@ from aot.utils.database import db_retrieve_table_daemon
 
 ACTION_INFORMATION = {
     'name_unique': 'env_actuator',
-    'name': 'Environment Control',
+    'name': lazy_gettext('Environment Control'),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
