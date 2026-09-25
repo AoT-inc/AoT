@@ -70,6 +70,35 @@ def _note_fallback(kind, detail=''):
 def reset_fallback_log():
     """폴백 로그 기억을 비운다(테스트·진단용)."""
     _fallback_seen.clear()
+    _vacated_seen.clear()
+
+
+class _Vacated:
+    """원장이 **비운** 슬롯 — 바인딩이 있었다가 끝났고, 지금 유효한 것이 없다.
+
+    "바인딩이 없다" 는 두 가지다. 둘은 처방이 정반대다.
+
+      한 번도 원장에 오른 적 없음   백필 전 레거시 데이터 → 저장값으로 폴백
+      원장에 있었는데 끝남          사람(또는 게이트웨이)이 비운 것 → **빈 슬롯**
+
+    예전 리졸버는 현재 행만 조회해서 둘을 구분하지 못했고, 뒤의 경우에도
+    레거시 컬럼(`fittings[].actuator_id`)을 돌려줬다. 그 컬럼은 바인딩이 끝날
+    때 정리되지 않으므로 **끊긴 연결이 되살아난다.** 실측(2026-09-25 로컬):
+    イチゴ 의 측창 슬롯이 9/6 에 끊긴 `측창: 좌/우`(육묘장3 소유)를 레거시
+    값으로 되돌려 받아, 쿠마모토 코디네이터가 19일간 육묘장3 의 측창을 제어했다.
+    두 코디네이터가 같은 장치를 반대로 밀어 10분 주기 톱니가 났는데, 원장은
+    그동안 내내 "그건 이제 네 것이 아니다" 라고 말하고 있었다.
+    """
+    __slots__ = ()
+
+    def __repr__(self):
+        return '<VACATED>'
+
+
+VACATED = _Vacated()
+
+# 비운 슬롯에 레거시 값이 남아 있음을 슬롯마다 한 번만 알린다(핫패스).
+_vacated_seen = set()
 
 
 def _any_device_exists(device_ids):
@@ -1311,11 +1340,16 @@ def _legacy_role(column, item):
 
 
 def build_facility_index(facility_uuids):
-    """{(spatial_id, role): GeoBinding} — 시설 여러 개의 바인딩을 한 번에.
+    """{(spatial_id, role): GeoBinding | VACATED} — 시설 여러 개의 바인딩을 한 번에.
 
     시설 목록 직렬화가 시설마다 조회하면 N+1 이 된다(실측: 시설 11개 →
     쿼리 11회). 목록 경로는 이 색인을 만들어 `resolve_facility_payload` 에
     넘긴다.
+
+    값은 셋 중 하나다 — 유효한 바인딩(행) · `VACATED`(이력은 있는데 지금
+    유효한 것이 없음) · 키 없음(원장에 오른 적 없음). ⚠ **끝난 행을 빼고
+    조회하지 말 것** — 그러면 둘째와 셋째가 같아져, 비운 슬롯이 레거시 값으로
+    되살아난다(`_Vacated` 주석).
     """
     uuids = [u for u in (facility_uuids or []) if u]
     if not uuids:
@@ -1324,9 +1358,15 @@ def build_facility_index(facility_uuids):
     from sqlalchemy import or_
     rows = GeoBinding.query.filter(
         GeoBinding.spatial_kind.in_(('fitting', 'actuator')),
-        GeoBinding.valid_to.is_(None),
         or_(*[GeoBinding.spatial_id.like(p) for p in prefixes])).all()
-    return {(b.spatial_id, b.role): b for b in rows}
+    index = {}
+    for b in rows:
+        key = (b.spatial_id, b.role)
+        if b.valid_to is None:
+            index[key] = b                     # 유효한 것이 언제나 이긴다
+        elif key not in index:
+            index[key] = VACATED
+    return index
 
 
 def _cow(payload, column, seen):
@@ -1355,6 +1395,38 @@ def _cow(payload, column, seen):
     return payload[column]
 
 
+def resolved_refs(facility):
+    """시설의 (fittings, actuators) 를 원장 기준으로 해석해 돌려준다.
+
+    `GeoFacility.fittings` 를 **직접 읽지 말 것** — 그것은 레거시 저장값이고,
+    원장이 끊은 연결이 그대로 남아 있다(`_Vacated` 주석). 시설 JSON 전체가
+    필요하면 `FacilityManager._to_dict`, 장치 참조만 필요하면 이것을 쓴다.
+    둘 다 같은 `resolve_facility_payload` 를 지나므로 판정은 한 벌이다.
+
+    ORM 객체는 고치지 않는다(사본을 돌려준다 — `_cow`).
+    """
+    if facility is None:
+        return [], []
+    payload = {'fittings': facility.fittings or [],
+               'actuators': facility.actuators or []}
+    resolve_facility_payload(facility.unique_id, payload)
+    acts = payload.get('actuators')
+    if isinstance(acts, str):
+        try:
+            acts = json.loads(acts)
+        except (ValueError, TypeError):
+            acts = []
+    if isinstance(acts, dict) and not any(isinstance(v, dict) for v in acts.values()):
+        # 옛 `{slot_key: uuid}` 형식은 **그대로** 돌려준다. 항목에 `id` 가 없어
+        # 원장이 주소를 매길 수 없으므로(`actuator` 슬롯 = 시설:id) 해석할
+        # 것도 없다. `_items` 로 펴면 문자열 값이 전부 버려져, 그 형식을 쓰는
+        # 시설의 액추에이터가 통째로 사라진다.
+        actuators = acts
+    else:
+        actuators = list(_items(acts))
+    return list(_items(payload.get('fittings'))), actuators
+
+
 def resolve_facility_payload(facility_uuid, payload, index=None):
     """시설 직렬화 dict 의 장치 참조를 바인딩 기준으로 맞춘다(제자리 수정).
 
@@ -1364,8 +1436,10 @@ def resolve_facility_payload(facility_uuid, payload, index=None):
     그 소비처들은 JSON 을 인자로 받는 순수 함수라, 각각을 고치면 같은 규칙을
     다섯 벌 구현하게 된다.
 
-    바인딩이 없는 항목은 저장된 값을 그대로 둔다(폴백). 값이 실제로 달라진
-    경우에만 기록한다 — 전환기에 두 저장처가 갈린 지점이 곧 버그 후보다.
+    원장에 **한 번도 오른 적 없는** 항목은 저장된 값을 그대로 둔다(폴백 —
+    백필 전 데이터). 원장에 있었다가 **끝난** 항목은 빈 슬롯으로 읽는다 —
+    둘을 같이 폴백하면 끊긴 연결이 되살아난다(`_Vacated` 주석). 값이 실제로
+    달라진 경우에만 기록한다 — 전환기에 두 저장처가 갈린 지점이 곧 버그 후보다.
     """
     if not facility_uuid or not isinstance(payload, dict):
         return payload
@@ -1381,7 +1455,26 @@ def resolve_facility_payload(facility_uuid, payload, index=None):
             item_id = item.get('id')
             if not item_id:
                 continue
-            b = by_slot.get(('%s:%s' % (facility_uuid, item_id), role))
+            slot = '%s:%s' % (facility_uuid, item_id)
+            b = by_slot.get((slot, role))
+            if b is VACATED:
+                # 원장이 비운 슬롯 — 레거시 값을 **되살리지 않는다**.
+                if item.get(key):
+                    if (slot, role) not in _vacated_seen:
+                        _vacated_seen.add((slot, role))
+                        logger.warning(
+                            '[GeoBinding] 시설 %s 의 %s[%s].%s=%s 는 원장에서 끝난 '
+                            '연결이다 — 빈 슬롯으로 읽는다(저장값은 고치지 않는다). '
+                            '`check_geo_integrity` 의 stale-legacy-ref 로 전수 확인.',
+                            facility_uuid, column, item_id, key, item.get(key))
+                    lst = _cow(payload, column, copied)
+                    patched = dict(item)
+                    patched[key] = None
+                    if role == 'sensor' and 'measurement_id' in patched:
+                        # 장치 없는 채널 번호만 남으면 반쪽 참조다.
+                        patched['measurement_id'] = None
+                    lst[idx] = patched
+                continue
             if b is None:
                 if item.get(key):
                     used_fallback.append(item[key])

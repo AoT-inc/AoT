@@ -1242,10 +1242,74 @@ class ProfileLoaderMixin:
             n_manual_new, n_manual_merged, len(groups))
 
         self._attach_electric_kw()
+        self._warn_shared_actuators(facility_uuid)
 
         # ── Commissioning bridge: consume pending calibration anchors ─────────
         if facility_uuid:
             self._apply_pending_commissioning_anchors(facility_uuid)
+
+    def _warn_shared_actuators(self, facility_uuid: str) -> None:
+        """내가 제어하는 장치를 **다른 시설의 활성 코디네이터도** 제어하는가.
+
+        두 코디네이터가 같은 장치를 잡으면 서로의 명령을 덮어쓴다. 판단이
+        반대인 날에는 한쪽이 열고 다른 쪽이 닫는 톱니가 되는데, 양쪽 로그에는
+        각자 정상 근거(`주작용`·`무구배`)만 남아 **아무 에러도 없다.**
+        실측(2026-09-25 로컬): 쿠마모토가 육묘장3 의 측창을 19일간 함께 제어해
+        10분 주기로 0→12→6→0 이 반복됐는데, 한 번도 보고되지 않았다.
+
+        ⚠ **빼지 않고 알리기만 한다.** 어느 쪽이 주인인지는 시스템이 모른다 —
+          원장을 정본으로 읽게 고친 뒤에도 두 시설에 동시에 유효한 바인딩이
+          있으면 여기 걸린다. 임의로 한쪽을 빼면 멀쩡한 시설의 장치가 멈춘다.
+        ⚠ 같은 시설의 코디네이터끼리는 보지 않는다 — 구역(bay) 분할이 정상
+          구성이고, 그 판정은 `_bays_claimed_by_siblings` 가 따로 맡는다.
+        ⚠ **바뀔 때만** 찍고, 등급은 error — 컨트롤러 로거는 `log_level_debug`
+          가 꺼져 있으면 ERROR 라 warning 은 기본 설치에서 안 남는다.
+        """
+        try:
+            mine = set(getattr(self, '_by_id', {}) or {})
+            if not mine:
+                self._last_shared_actuators = []
+                return
+            from aot.databases.models import CustomController, Output
+            from aot.aot_flask.geo.facility_integration import get_facility_integration
+            shared: dict = {}
+            rows = db_retrieve_table_daemon(CustomController)
+            for row in (rows.all() if hasattr(rows, 'all') else rows):
+                if (row.unique_id == getattr(self, 'unique_id', None)
+                        or (row.device or '') != 'env_coordinator'
+                        or not row.is_activated):
+                    continue
+                try:
+                    opts = json.loads(row.custom_options or '{}')
+                except Exception:
+                    continue
+                linked = (opts.get('geo_facility_id')
+                          or opts.get('geo_facility_id_device_id') or '')
+                if not linked or linked == facility_uuid:
+                    continue
+                integ, err = get_facility_integration(linked)
+                if err or not integ:
+                    continue
+                for ar in (integ.get('actuators_resolved') or []):
+                    oid = ar.get('output_uuid')
+                    if oid in mine and ar.get('kind'):
+                        shared.setdefault(oid, []).append(row.name)
+            key = sorted((k, tuple(sorted(v))) for k, v in shared.items())
+            if key != getattr(self, '_last_shared_actuators', None):
+                if shared:
+                    names = {o.unique_id: o.name for o in Output.query.filter(
+                        Output.unique_id.in_(list(shared))).all()}
+                    self.logger.error(
+                        '다른 시설의 코디네이터와 같은 장치를 제어하고 있습니다: %s '
+                        '— 두 코디네이터가 서로의 명령을 덮어씁니다. 어느 시설의 '
+                        '장치인지 시설 편집기에서 한쪽 연결을 정리하세요.',
+                        '; '.join('%s ↔ %s' % (names.get(k, k[:8]), ', '.join(v))
+                                  for k, v in sorted(shared.items())))
+                elif getattr(self, '_last_shared_actuators', None):
+                    self.logger.error('장치 공유가 풀렸습니다 — 이제 이 코디네이터만 제어합니다.')
+                self._last_shared_actuators = key
+        except Exception:
+            self.logger.debug('공유 장치 점검 실패', exc_info=True)
 
     def _attach_electric_kw(self) -> None:
         """각 장치의 전기소모량(출력 채널 `amps` × 사용 전압)을 capacity_meta['elec_kw'] 로.

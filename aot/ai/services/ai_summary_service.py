@@ -150,7 +150,9 @@ class AISummaryService:
                 for s in (facility.sensors or []):
                     if s.get('device_id'):
                         device_ids.add(s['device_id'])
-                for f in (facility.fittings or []):
+                # 원장 기준 — 끊긴 연결의 장치를 이 시설 몫으로 세지 않는다.
+                from aot.aot_flask.geo.device_binding import resolved_refs
+                for f in resolved_refs(facility)[0]:
                     if f.get('input_id'):
                         device_ids.add(f['input_id'])
                     if f.get('actuator_id'):

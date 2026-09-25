@@ -529,7 +529,56 @@ def _check_settings(opts, facility_uuid, row=None):
     findings.extend(_check_sensor_freshness(opts, facility_uuid))
     findings.extend(_check_light_band(opts, facility_uuid))
     findings.extend(_check_combinations(opts, facility_uuid, row))
+    findings.extend(_check_shared_actuators(facility_uuid, row))
     return findings
+
+
+def _check_shared_actuators(facility_uuid, row=None):
+    """이 코디네이터의 장치를 **다른 시설의 활성 코디네이터도** 제어하는가.
+
+    두 코디네이터가 같은 장치를 잡으면 서로의 명령을 덮어쓴다. 양쪽 결정
+    로그에는 각자 정상 근거만 남아서 **근거 분포만 봐서는 절대 안 보인다** —
+    실측(2026-09-25 로컬): 쿠마모토가 육묘장3 의 측창을 19일간 함께 제어해
+    10분 주기 톱니가 났는데, 이 점검기 출력에는 두 코디네이터 모두 멀쩡했다.
+
+    같은 시설의 코디네이터끼리는 보지 않는다(구역 분할이 정상 구성).
+    """
+    if not facility_uuid:
+        return []
+    try:
+        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        mine_integ, err = get_facility_integration(facility_uuid)
+        if err or not isinstance(mine_integ, dict):
+            return []
+        mine = {a.get('output_uuid'): a.get('output_name')
+                for a in (mine_integ.get('actuators_resolved') or [])
+                if a.get('output_uuid') and a.get('kind')}
+        shared = {}
+        for other in CustomController.query.filter_by(device='env_coordinator').all():
+            if (row is not None and other.unique_id == row.unique_id) \
+                    or not other.is_activated:
+                continue
+            try:
+                o = json.loads(other.custom_options or '{}')
+            except (TypeError, ValueError):
+                continue
+            linked = o.get('geo_facility_id') or o.get('geo_facility_id_device_id') or ''
+            if not linked or linked == facility_uuid:
+                continue
+            integ, err = get_facility_integration(linked)
+            if err or not isinstance(integ, dict):
+                continue
+            for a in (integ.get('actuators_resolved') or []):
+                oid = a.get('output_uuid')
+                if oid in mine and a.get('kind'):
+                    shared.setdefault(oid, []).append(other.name)
+    except Exception:                                        # noqa: BLE001
+        return []
+    return [('severe',
+             f'장치 "{mine.get(oid) or oid[:8]}" 를 다른 시설의 코디네이터'
+             f'({", ".join(sorted(names))})도 제어 중입니다 — 서로의 명령을 '
+             f'덮어써 개도가 톱니처럼 오갑니다. 시설 편집기에서 한쪽 연결을 정리하세요')
+            for oid, names in sorted(shared.items())]
 
 
 # ── 센서·장치 조합 ──────────────────────────────────────────────────────────

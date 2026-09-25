@@ -446,8 +446,9 @@ def irrigation_flow_for_plot(plot):
         return {}
 
     try:
+        from aot.aot_flask.geo.device_binding import resolved_refs
         by_actuator = irrigation_nozzles.nozzles_by_actuator(
-            facility.fittings or [])
+            resolved_refs(facility)[0])
     except Exception:
         logger.exception('journal: 노즐 유량 조회 실패 (%s)', facility_uuid)
         return {}

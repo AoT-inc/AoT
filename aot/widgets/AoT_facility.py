@@ -82,6 +82,10 @@ def widget_variables(widget_unique_id, widget_options):
 
     facility_data = None
     if facility:
+        # 장치 참조는 원장 기준으로 — 레거시 컬럼을 그대로 내보내면 제어는
+        # "빈 슬롯" 인데 화면은 끊긴 장치 이름을 말한다(2026-09-25).
+        from aot.aot_flask.geo.device_binding import resolved_refs
+        _fittings, _actuators = resolved_refs(facility)
         facility_data = {
             'unique_id': facility.unique_id,
             'name': facility.name,
@@ -90,10 +94,10 @@ def widget_variables(widget_unique_id, widget_options):
             'bay_count': facility.bay_count or 1,
             'geometry_3d': facility.geometry_3d,
             'envelope': facility.envelope,
-            'actuators': facility.actuators,
+            'actuators': _actuators,
             'bays': facility.bays,
             'computed': facility.computed,
-            'fittings': facility.fittings,
+            'fittings': _fittings,
         }
 
     all_facilities = GeoFacility.query.order_by(GeoFacility.updated_at.desc()).all()

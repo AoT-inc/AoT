@@ -82,17 +82,84 @@ class TestFacilityResolution(unittest.TestCase):
         got = [f for f in out['fittings'] if f['id'] == FIT][0]['actuator_id']
         self.assertEqual(got, LEGACY_DEV)
 
-    def test_ended_binding_is_not_current(self):
-        self._bind()
+    def _end(self):
         b = GeoBinding.query.first()
         b.valid_to = utc_now()
         b.ended_reason = 'unbound'
         db.session.commit()
 
+    def test_ended_binding_vacates_the_slot(self):
+        """원장이 끊은 연결은 **빈 슬롯**이다 — 레거시 값을 되살리지 않는다.
+
+        ⚠ 이 테스트는 2026-09-25 에 뒤집혔다. 예전 기대는 정반대였다:
+
+            '종료된 바인딩은 현재가 아니므로 레거시로 폴백해야 한다'
+
+        그 규칙은 "원장에 오른 적 없음"(백필 전)과 "원장에 있었는데 끝남"을
+        같은 것으로 봤다. 뒤의 경우 레거시 컬럼은 **끝날 때 정리되지 않은
+        사본**이라, 폴백하면 끊은 연결이 되살아난다. 실측(로컬): イチゴ 의
+        측창 슬롯이 9/6 에 끊긴 `측창: 좌/우`(육묘장3 소유)를 되돌려 받아,
+        쿠마모토 코디네이터가 19일간 육묘장3 의 측창을 제어했다 — 두
+        코디네이터가 같은 장치를 반대로 밀어 10분 주기 톱니가 났다.
+        """
+        self._bind()
+        self._end()
+
         out = B.resolve_facility_payload(FAC, self._payload())
         got = [f for f in out['fittings'] if f['id'] == FIT][0]['actuator_id']
-        self.assertEqual(got, LEGACY_DEV,
-                         '종료된 바인딩은 현재가 아니므로 레거시로 폴백해야 한다')
+        self.assertIsNone(got, '원장이 비운 슬롯에 끊긴 연결이 되살아났다')
+
+    def test_vacating_does_not_mutate_the_orm_object(self):
+        """빈 슬롯으로 읽어도 저장값은 그대로다(읽기는 쓰지 않는다)."""
+        self._bind()
+        self._end()
+        B.resolve_facility_payload(FAC, self._payload())
+        stored = [f for f in self.fac.fittings if f['id'] == FIT][0]['actuator_id']
+        self.assertEqual(stored, LEGACY_DEV)
+
+    def test_rebound_slot_uses_the_current_binding(self):
+        """끝난 행과 유효한 행이 함께 있으면 유효한 것이 이긴다(행 순서 무관)."""
+        self._bind(device_id='dev-old')
+        self._end()
+        self._bind(device_id=BOUND_DEV)
+        out = B.resolve_facility_payload(FAC, self._payload())
+        got = [f for f in out['fittings'] if f['id'] == FIT][0]['actuator_id']
+        self.assertEqual(got, BOUND_DEV)
+
+    def test_list_index_marks_vacated_slots(self):
+        """목록 경로(색인을 미리 만들어 넘기는 쪽)도 같은 규칙이어야 한다.
+
+        색인이 유효한 행만 담으면 단건 조회와 목록 조회가 서로 다른 답을
+        낸다 — 시설 편집기(단건)는 비었는데 지도(목록)는 장치가 붙어 보인다.
+        """
+        self._bind()
+        self._end()
+        index = B.build_facility_index([FAC])
+        self.assertIs(index[('%s:%s' % (FAC, FIT), 'actuator')], B.VACATED)
+        out = B.resolve_facility_payload(FAC, self._payload(), index=index)
+        got = [f for f in out['fittings'] if f['id'] == FIT][0]['actuator_id']
+        self.assertIsNone(got)
+
+    def test_vacated_sensor_slot_drops_its_channel_too(self):
+        """장치 없는 채널 번호만 남으면 반쪽 참조다."""
+        self.fac.fittings = [{'id': FIT, 'kind': 'sensor',
+                              'input_id': LEGACY_DEV, 'measurement_id': 'm-1'}]
+        self.fac.save()
+        GeoBinding(spatial_kind='fitting', spatial_id='%s:%s' % (FAC, FIT),
+                   role='sensor', device_kind='input', device_id=LEGACY_DEV,
+                   channel_id='0', valid_from=utc_now(), valid_to=utc_now(),
+                   ended_reason='unbound').save()
+        out = B.resolve_facility_payload(FAC, self._payload())
+        fit = out['fittings'][0]
+        self.assertIsNone(fit['input_id'])
+        self.assertIsNone(fit['measurement_id'])
+
+    def test_resolved_refs_reads_through_the_same_rule(self):
+        """화면·AI 가 쓰는 헬퍼도 같은 판정을 지난다(두 번째 판정자 금지)."""
+        self._bind()
+        self._end()
+        fittings, _ = B.resolved_refs(self.fac)
+        self.assertIsNone([f for f in fittings if f['id'] == FIT][0]['actuator_id'])
 
     # -- 인메모리 격리 (핵심) ---------------------------------------------
     def test_resolution_does_not_mutate_the_orm_object(self):

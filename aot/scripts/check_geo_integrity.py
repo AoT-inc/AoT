@@ -284,6 +284,71 @@ def _binding_drift(shapes, device_ids):
     return out
 
 
+def _stale_legacy_refs(device_ids):
+    """원장에서 **끝난** 연결이 시설 레거시 컬럼에 그대로 남은 자리를 찾는다.
+
+    바인딩이 끝날 때(`unbind`·`rebind`·장치 삭제) 시설 JSON 의
+    `fittings[].actuator_id` 같은 레거시 사본은 정리되지 않는다. 예전
+    리졸버는 "지금 유효한 바인딩이 없다" 를 "원장에 오른 적 없다" 와 같이
+    봐서 그 사본을 폴백으로 되돌려 줬고, 끊은 연결이 되살아났다.
+
+    실측(2026-09-25 로컬): イチゴ 의 측창 슬롯이 9/6 에 끊긴 `측창: 좌/우`
+    (육묘장3 소유)를 되돌려 받아, 쿠마모토 코디네이터가 19일간 육묘장3 의
+    측창을 제어했다. 원장은 그동안 내내 정답을 갖고 있었다.
+
+    지금 리졸버는 이런 슬롯을 빈 슬롯으로 읽는다(`device_binding.VACATED`).
+    그래도 이 검사를 severe 로 두는 이유는 둘이다 — ① 이 검사는 업그레이드
+    **전** 운영 서버에도 돌리는데, 거기서는 옛 리졸버가 아직 끊긴 장치를
+    제어하고 있다. ② 빈 슬롯이 됐다는 것 자체를 사람이 알아야 한다 — 그
+    시설은 그 창을 **아무도 제어하지 않는** 상태다.
+
+    죽은 참조(장치가 아예 없음)는 `dangling-fitting` 이 맡는다.
+    """
+    from aot.aot_flask.extensions import db
+    from sqlalchemy import inspect as sa_inspect
+    try:
+        if 'geo_binding' not in sa_inspect(db.engine).get_table_names():
+            return []
+    except Exception:
+        return []
+
+    from aot.aot_flask.geo.device_binding import _FACILITY_REFS
+    history = {}          # (spatial_kind, spatial_id, role) -> (유효 여부, 마지막 장치, 끝난 시각)
+    for b in GeoBinding.query.filter(
+            GeoBinding.spatial_kind.in_(('fitting', 'actuator'))).all():
+        key = (b.spatial_kind, b.spatial_id, b.role)
+        live, last_dev, ended = history.get(key, (False, None, None))
+        if b.valid_to is None:
+            history[key] = (True, b.device_id, None)
+        elif not live and (ended is None or b.valid_to > ended):
+            history[key] = (False, b.device_id, b.valid_to)
+
+    out = []
+    for fac in GeoFacility.query.all():
+        for column, key, kind, role in _FACILITY_REFS:
+            for item in _json_items(getattr(fac, column, None)):
+                raw = str(item.get(key) or '').strip()
+                if not raw or not item.get('id'):
+                    continue
+                if raw.split('::')[0] not in device_ids:
+                    continue               # 죽은 참조 — dangling-fitting 담당
+                slot = (kind, '%s:%s' % (fac.unique_id, item['id']), role)
+                live, last_dev, ended = history.get(slot, (None, None, None))
+                if live is False:          # 이력은 있는데 지금 유효한 것이 없다
+                    out.append({
+                        'facility': fac.name,
+                        'facility_uuid': fac.unique_id,
+                        'column': column,
+                        'key': key,
+                        'item_id': item.get('id'),
+                        'kind': item.get('kind') or item.get('role'),
+                        'legacy_device': raw,
+                        'ended_device': last_dev,
+                        'ended_at': ended.isoformat() if ended else None,
+                    })
+    return out
+
+
 def collect(map_uuid=None, tolerance=1e-6):
     """모든 검사를 돌리고 {검사이름: [문제, ...]} 를 돌려준다. 읽기 전용."""
     shapes = (GeoShape.query.filter_by(geo_id=map_uuid).all() if map_uuid
@@ -471,6 +536,13 @@ def collect(map_uuid=None, tolerance=1e-6):
                         'device_id': raw,
                         'map': map_names.get(fac.geo_id, fac.geo_id),
                     })
+
+    # ── 원장이 끊은 연결이 시설 레거시 컬럼에 남음 (2026-09-25) ──────────
+    # `binding-drift` 는 **지도 도형만** 본다. 시설 fitting·actuators 의
+    # 레거시 참조와 원장을 대조하는 검사는 처음부터 없었다 — 그래서 이
+    # 부류가 한 번도 보고된 적이 없다.
+    for item in _stale_legacy_refs(device_ids):
+        findings['stale-legacy-ref'].append(item)
 
     # ── 레거시 저장처 ↔ geo_binding 드리프트 ────────────────────────────
     # 이중 저장 기간(Phase B 완료 전)의 감시자. 백필 이후 새로 생긴 연결이
@@ -796,6 +868,7 @@ HEADINGS = {
     'orphan-device-shape': '실존하지 않는 장치를 가리키는 도형 (고아 도형)',
     'dangling-fitting':    '실존하지 않는 장치를 가리키는 시설 참조',
     'duplicate-fitting-id': '같은 id 를 쓰는 설비 (identical=True 면 내용도 동일)',
+    'stale-legacy-ref':    '원장이 끊은 연결이 시설 레거시 컬럼에 남음 (그 슬롯은 지금 빈 자리)',
     'binding-drift':       '레거시 저장처에는 있는데 geo_binding 에 없는 연결',
     'plot-bad-geometry': '식생 구획이 폴리곤이 아님 (VP-1)',
     'plot-bad-dates':    '식생 구획의 종료일이 파종일보다 빠름 (VP-2)',
@@ -827,8 +900,11 @@ HEADINGS = {
 # 그 값이 제어로 흐른다 — 틀렸다는 표시가 어디에도 없다.
 # plot-dangling-program 은 severe 가 아니다: 구획은 계속 보이고 파생 정보만
 # 사라지므로 "화면에 없는" 것도 "잘못 붙은" 것도 아니다.
+# stale-legacy-ref 를 넣는 이유: 업그레이드 전 서버(옛 리졸버)에서는 끊긴
+# 장치를 **실제로 제어한다** — 남의 시설 장치를 움직이는 "잘못 붙는" 쪽이다.
+# 새 리졸버에서도 그 시설 슬롯이 비어 있다는 사실은 사람이 봐야 한다.
 SEVERE = ('type-mismatch', 'dangling-link', 'orphan-facility',
-          'orphan-device-shape', 'dangling-fitting',
+          'orphan-device-shape', 'dangling-fitting', 'stale-legacy-ref',
           'plot-bad-geometry', 'plot-no-location',
           'plot-dangling-facility', 'plot-program-kind-mismatch')
 

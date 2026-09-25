@@ -741,7 +741,11 @@ def api_facility_estop(facility_uuid):
     }
 
     daemon = DaemonControl()
-    actuators_raw = facility.actuators or {}
+    # ⚠ 원장 기준이어야 한다. 레거시 목록을 그대로 쓰면 원장이 **다른 시설로
+    #   넘긴** 장치까지 이 시설의 안전 상태 명령을 받는다 — 한 시설을 멈추려다
+    #   남의 시설 창을 닫는다(2026-09-25, 측창 좌/우 사례).
+    from aot.aot_flask.geo.device_binding import resolved_refs
+    actuators_raw = resolved_refs(facility)[1] or {}
     applied = []
     failed  = []
 

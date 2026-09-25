@@ -1164,7 +1164,9 @@ def api_facility_apply(facility_uuid):
         pass  # VEE failure never blocks execution
 
     # ── actuators → device_uuid index by kind ──────────────────────────────
-    actuators_raw = facility.actuators or {}
+    # 원장 기준 — 끊긴 연결의 장치에 명령을 보내지 않는다(2026-09-25).
+    from aot.aot_flask.geo.device_binding import resolved_refs
+    actuators_raw = resolved_refs(facility)[1] or {}
     kind_to_uuids: dict = {}
 
     if isinstance(actuators_raw, list):
