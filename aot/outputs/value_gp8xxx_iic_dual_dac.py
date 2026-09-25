@@ -79,7 +79,7 @@ OUTPUT_INFORMATION = {
                 ('1', 'GP8413 15-bit'),
             ],
             'name': 'Device',
-            'phrase': 'Select your GP8XXX device'
+            'phrase': lazy_gettext('Select your GP8XXX device')
         }
     ],
 
@@ -93,7 +93,7 @@ OUTPUT_INFORMATION = {
                 ('value', 'Specified Value')
             ],
             'name': 'Start State',
-            'phrase': 'Select the channel start state'
+            'phrase': lazy_gettext('Select the channel start state')
         },
         {
             'id': 'state_start_value',
@@ -101,7 +101,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Start Value (volts)',
-            'phrase': 'If Specified Value is selected, set the start state value'
+            'phrase': lazy_gettext('If Specified Value is selected, set the start state value')
         },
         {
             'id': 'state_shutdown',
@@ -112,7 +112,7 @@ OUTPUT_INFORMATION = {
                 ('value', 'Specified Value')
             ],
             'name': 'Shutdown State',
-            'phrase': 'Select the channel shutdown state'
+            'phrase': lazy_gettext('Select the channel shutdown state')
         },
         {
             'id': 'state_shutdown_value',
@@ -120,7 +120,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Shutdown Value (volts)',
-            'phrase': 'If Specified Value is selected, set the shutdown state value'
+            'phrase': lazy_gettext('If Specified Value is selected, set the shutdown state value')
         },
         {
             'id': 'off_value',
@@ -128,7 +128,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Off Value (volts)',
-            'phrase': 'If Specified Value to apply when turned off'
+            'phrase': lazy_gettext('If Specified Value to apply when turned off')
         }
     ]
 }

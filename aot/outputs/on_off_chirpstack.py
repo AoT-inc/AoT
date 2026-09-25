@@ -115,7 +115,7 @@ OUTPUT_INFORMATION = {
             'default_value': '127.0.0.1:8080',
             'required': False,
             'name': 'ChirpStack gRPC Server',
-            'phrase': 'Host:port format (e.g., 127.0.0.1:8080) or http(s)://host:port'
+            'phrase': lazy_gettext('Host:port format (e.g., 127.0.0.1:8080) or http(s)://host:port')
         },
         {
             'id': 'cs_api_token',
@@ -123,7 +123,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': 'API Key',
-            'phrase': 'Enter the JWT token value (without Bearer prefix)'
+            'phrase': lazy_gettext('Enter the JWT token value (without Bearer prefix)')
         },
         {
             'id': 'dev_eui',
@@ -131,7 +131,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': 'DevEUI',
-            'phrase': '16-digit hexadecimal DevEUI (separators allowed)'
+            'phrase': lazy_gettext('16-digit hexadecimal DevEUI (separators allowed)')
         },
         {
             'id': 'f_port',
@@ -147,7 +147,7 @@ OUTPUT_INFORMATION = {
             'default_value': False,
             'required': False,
             'name': 'Confirmed',
-            'phrase': 'Send command as confirmed (await acknowledgment)'
+            'phrase': lazy_gettext('Send command as confirmed (await acknowledgment)')
         },
         {
             'id': 'payload_format',
@@ -158,7 +158,7 @@ OUTPUT_INFORMATION = {
                 ('json', 'JSON Object (UTF-8 encoded)')
             ],
             'name': 'Payload Format',
-            'phrase': 'Select the payload encoding format'
+            'phrase': lazy_gettext('Select the payload encoding format')
         },
         {
             'id': 'on_payload',
@@ -166,7 +166,7 @@ OUTPUT_INFORMATION = {
             'default_value': '000000',
             'required': False,
             'name': 'On Payload',
-            'phrase': 'e.g., 010110 (Hex) or JSON string'
+            'phrase': lazy_gettext('e.g., 010110 (Hex) or JSON string')
         },
         {
             'id': 'off_payload',
@@ -174,7 +174,7 @@ OUTPUT_INFORMATION = {
             'default_value': '000000',
             'required': False,
             'name': 'Off Payload',
-            'phrase': 'e.g., 010210 (Hex) or JSON string'
+            'phrase': lazy_gettext('e.g., 010210 (Hex) or JSON string')
         },
         # NOTE: ACK Timeout / Max Retries are unified into the common
         # "Command Timeout (seconds)" field injected for all on/off outputs
@@ -187,8 +187,8 @@ OUTPUT_INFORMATION = {
             'default_value': False,
             'required': False,
             'name': 'Enable Debug Logging',
-            'phrase': 'Log connection/enqueue/confirmation notices (INFO/WARNING) for this '
-                      'device. Errors are always logged. Leave off in production.'
+            'phrase': lazy_gettext('Log connection/enqueue/confirmation notices (INFO/WARNING) for this '
+                      'device. Errors are always logged. Leave off in production.')
         }
     ],
 
@@ -203,7 +203,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': 'Startup State',
-            'phrase': 'State to apply when AoT starts'
+            'phrase': lazy_gettext('State to apply when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -215,21 +215,21 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': 'Shutdown State',
-            'phrase': 'State to apply when AoT shuts down'
+            'phrase': lazy_gettext('State to apply when AoT shuts down')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': 'Force Command',
-            'phrase': 'Always send command regardless of current state'
+            'phrase': lazy_gettext('Always send command regardless of current state')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': 'Trigger Functions at Startup',
-            'phrase': 'Execute trigger function when output switches at startup'
+            'phrase': lazy_gettext('Execute trigger function when output switches at startup')
         }
     ]
 }

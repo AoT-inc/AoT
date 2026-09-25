@@ -62,7 +62,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the virtual device'
+            'phrase': lazy_gettext('The current draw of the virtual device')
         }
     ]
 }

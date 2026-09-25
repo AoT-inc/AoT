@@ -75,8 +75,8 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value'),
-                ('last_duty_cycle', 'Last Known Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value')),
+                ('last_duty_cycle', lazy_gettext('Last Known Value'))
             ],
             'name': lazy_gettext('Startup State'),
             'phrase': lazy_gettext('Set the state when AoT starts')
@@ -96,7 +96,7 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value'))
             ],
             'name': lazy_gettext('Shutdown State'),
             'phrase': lazy_gettext('Set the state when AoT shuts down')
@@ -121,7 +121,7 @@ OUTPUT_INFORMATION = {
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Stored Signal'),
-            'phrase': 'Invert the value that is saved to the measurement database'
+            'phrase': lazy_gettext('Invert the value that is saved to the measurement database')
         },
         {
             'id': 'command_force',

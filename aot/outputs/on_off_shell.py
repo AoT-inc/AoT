@@ -49,7 +49,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'col_width': 12,
             'name': lazy_gettext('On Command'),
-            'phrase': 'Command to execute when the output is instructed to turn on'
+            'phrase': lazy_gettext('Command to execute when the output is instructed to turn on')
         },
         {
             'id': 'off_command',
@@ -58,7 +58,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'col_width': 12,
             'name': lazy_gettext('Off Command'),
-            'phrase': 'Command to execute when the output is instructed to turn off'
+            'phrase': lazy_gettext('Command to execute when the output is instructed to turn off')
         },
         {
             'id': 'linux_command_user',
@@ -77,7 +77,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -89,21 +89,21 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Force Command'),
-            'phrase': 'Always send the command if instructed, regardless of the current state'
+            'phrase': lazy_gettext('Always send the command if instructed, regardless of the current state')
         },
         {
             'id': 'amps',
@@ -111,7 +111,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

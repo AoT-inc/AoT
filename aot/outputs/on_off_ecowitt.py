@@ -62,7 +62,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': 'Ecowitt Device IP',
-            'phrase': 'Local IP address of the Ecowitt hub (e.g., 192.168.1.100)'
+            'phrase': lazy_gettext('Local IP address of the Ecowitt hub (e.g., 192.168.1.100)')
         },
         {
             'id': 'ecowitt_device_id',
@@ -70,7 +70,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': True,
             'name': 'Ecowitt Sub-device ID',
-            'phrase': 'ID of WFC01/WFC02/AC1100 (e.g., 11044)'
+            'phrase': lazy_gettext('ID of WFC01/WFC02/AC1100 (e.g., 11044)')
         },
         {
             'id': 'ecowitt_model',
@@ -89,14 +89,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': 100,
             'name': 'Valve Open %',
-            'phrase': 'When turning on, open valve to this percent (0-100)'
+            'phrase': lazy_gettext('When turning on, open valve to this percent (0-100)')
         },
         {
             'id': 'state_query_period',
             'type': 'integer',
             'default_value': 60,
             'name': "State Query Period (Seconds)",
-            'phrase': 'How often to query the state of the output'
+            'phrase': lazy_gettext('How often to query the state of the output')
         }
     ],
 
@@ -110,7 +110,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -121,14 +121,14 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         }
     ]
 }

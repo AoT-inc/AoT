@@ -60,7 +60,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0,
             'name': 'Duty Cycle',
-            'phrase': 'The duty cycle to set'
+            'phrase': lazy_gettext('The duty cycle to set')
         },
         {
             'id': 'set_duty_cycle',
@@ -77,7 +77,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'localhost',
             'required': True,
             'name': lazy_gettext('Hostname'),
-            'phrase': 'The hostname of the MQTT server'
+            'phrase': lazy_gettext('The hostname of the MQTT server')
         },
         {
             'id': 'port',
@@ -85,7 +85,7 @@ OUTPUT_INFORMATION = {
             'default_value': 1883,
             'required': True,
             'name': lazy_gettext('Port'),
-            'phrase': 'The port of the MQTT server'
+            'phrase': lazy_gettext('The port of the MQTT server')
         },
         {
             'id': 'topic',
@@ -93,7 +93,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'paho/test/single',
             'required': True,
             'name': 'Topic',
-            'phrase': 'The topic to publish with'
+            'phrase': lazy_gettext('The topic to publish with')
         },
         {
             'id': 'keepalive',
@@ -102,7 +102,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': lazy_gettext('Keep Alive'),
-            'phrase': 'The keepalive timeout value for the client. Set to 0 to disable.'
+            'phrase': lazy_gettext('The keepalive timeout value for the client. Set to 0 to disable.')
         },
         {
             'id': 'clientid',
@@ -110,14 +110,14 @@ OUTPUT_INFORMATION = {
             'default_value': 'client_{}'.format(random_alphanumeric(8)),
             'required': True,
             'name': 'Client ID',
-            'phrase': 'Unique client ID for connecting to the MQTT server'
+            'phrase': lazy_gettext('Unique client ID for connecting to the MQTT server')
         },
         {
             'id': 'login',
             'type': 'bool',
             'default_value': False,
             'name': 'Use Login',
-            'phrase': 'Send login credentials'
+            'phrase': lazy_gettext('Send login credentials')
         },
         {
             'id': 'username',
@@ -125,7 +125,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'user',
             'required': False,
             'name': lazy_gettext('Username'),
-            'phrase': 'Username for connecting to the server'
+            'phrase': lazy_gettext('Username for connecting to the server')
         },
         {
             'id': 'password',
@@ -133,7 +133,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': False,
             'name': lazy_gettext('Password'),
-            'phrase': 'Password for connecting to the server.'
+            'phrase': lazy_gettext('Password for connecting to the server.')
         },
         {
             'id': 'mqtt_use_tls',
@@ -141,8 +141,8 @@ OUTPUT_INFORMATION = {
             'default_value': False,
             'required': False,
             'name': 'Use TLS',
-            'phrase': 'Encrypt the connection with TLS (broker port is usually 8883). '
-                      'Required when the broker is reachable over the internet.'
+            'phrase': lazy_gettext('Encrypt the connection with TLS (broker port is usually 8883). '
+                      'Required when the broker is reachable over the internet.')
         },
         {
             'id': 'mqtt_tls_ca_cert',
@@ -150,9 +150,9 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': False,
             'name': lazy_gettext('TLS CA Certificate'),
-            'phrase': 'Path to the CA certificate file that signed the broker certificate. '
+            'phrase': lazy_gettext('Path to the CA certificate file that signed the broker certificate. '
                       'Leave blank to use the system CA store (for brokers with a '
-                      'publicly-trusted certificate, e.g. Let\'s Encrypt).'
+                      'publicly-trusted certificate, e.g. Let\'s Encrypt).')
         },
         {
             'id': 'mqtt_use_websockets',
@@ -160,7 +160,7 @@ OUTPUT_INFORMATION = {
             'default_value': False,
             'required': False,
             'name': 'Use Websockets',
-            'phrase': 'Use websockets to connect to the server.'
+            'phrase': lazy_gettext('Use websockets to connect to the server.')
         },
         {
             'id': 'round_integer',
@@ -173,7 +173,7 @@ OUTPUT_INFORMATION = {
                 ('down', 'Round Down')
             ],
             'name': 'Round Integer',
-            'phrase': 'Round the payload value to an integer.'
+            'phrase': lazy_gettext('Round the payload value to an integer.')
         },
         {
             'id': 'state_startup',
@@ -182,11 +182,11 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value'),
-                ('last_duty_cycle', 'Last Known Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value')),
+                ('last_duty_cycle', lazy_gettext('Last Known Value'))
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'startup_value',
@@ -194,7 +194,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': lazy_gettext('Startup Value'),
-            'phrase': 'The value when AoT starts'
+            'phrase': lazy_gettext('The value when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -203,10 +203,10 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value'))
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'shutdown_value',
@@ -214,21 +214,21 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': lazy_gettext('Shutdown Value'),
-            'phrase': 'The value when AoT shuts down'
+            'phrase': lazy_gettext('The value when AoT shuts down')
         },
         {
             'id': 'pwm_invert_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Signal'),
-            'phrase': 'Invert the PWM signal'
+            'phrase': lazy_gettext('Invert the PWM signal')
         },
         {
             'id': 'pwm_invert_stored_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Stored Signal'),
-            'phrase': 'Invert the value that is saved to the measurement database'
+            'phrase': lazy_gettext('Invert the value that is saved to the measurement database')
         },
         {
             'id': 'amps',
@@ -236,7 +236,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

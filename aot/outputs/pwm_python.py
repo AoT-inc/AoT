@@ -197,7 +197,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0,
             'name': 'Duty Cycle',
-            'phrase': 'The duty cycle to set'
+            'phrase': lazy_gettext('The duty cycle to set')
         },
         {
             'id': 'set_duty_cycle',
@@ -213,7 +213,7 @@ OUTPUT_INFORMATION = {
             'type': 'bool',
             'default_value': True,
             'name': 'Analyze Python Code with Pylint',
-            'phrase': 'Analyze your Python code with pylint when saving'
+            'phrase': lazy_gettext('Analyze your Python code with pylint when saving')
         }
     ],
 
@@ -229,7 +229,7 @@ self.logger.info(log_string)""",
             'required': True,
             'col_width': 12,
             'name': 'Python 3 Code',
-            'phrase': 'Python code to execute to set the PWM duty cycle (%)'
+            'phrase': lazy_gettext('Python code to execute to set the PWM duty cycle (%)')
         },
         {
             'id': 'linux_command_user',
@@ -245,11 +245,11 @@ self.logger.info(log_string)""",
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value'),
-                ('last_duty_cycle', 'Last Known Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value')),
+                ('last_duty_cycle', lazy_gettext('Last Known Value'))
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'startup_value',
@@ -257,7 +257,7 @@ self.logger.info(log_string)""",
             'default_value': 0.0,
             'required': True,
             'name': lazy_gettext('Startup Value'),
-            'phrase': 'The value when AoT starts'
+            'phrase': lazy_gettext('The value when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -266,10 +266,10 @@ self.logger.info(log_string)""",
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value'))
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'shutdown_value',
@@ -277,28 +277,28 @@ self.logger.info(log_string)""",
             'default_value': 0.0,
             'required': True,
             'name': lazy_gettext('Shutdown Value'),
-            'phrase': 'The value when AoT shuts down'
+            'phrase': lazy_gettext('The value when AoT shuts down')
         },
         {
             'id': 'pwm_invert_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Signal'),
-            'phrase': 'Invert the PWM signal'
+            'phrase': lazy_gettext('Invert the PWM signal')
         },
         {
             'id': 'pwm_invert_stored_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Stored Signal'),
-            'phrase': 'Invert the value that is saved to the measurement database'
+            'phrase': lazy_gettext('Invert the value that is saved to the measurement database')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Force Command'),
-            'phrase': 'Always send the command if instructed, regardless of the current state'
+            'phrase': lazy_gettext('Always send the command if instructed, regardless of the current state')
         },
         {
             'id': 'amps',
@@ -306,7 +306,7 @@ self.logger.info(log_string)""",
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

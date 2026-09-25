@@ -59,7 +59,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0,
             'name': 'Duty Cycle',
-            'phrase': 'The duty cycle to set'
+            'phrase': lazy_gettext('The duty cycle to set')
         },
         {
             'id': 'set_duty_cycle',
@@ -128,7 +128,7 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': 120,
             'name': "State Query Period (Seconds)",
-            'phrase': 'How often to query the state of the output'
+            'phrase': lazy_gettext('How often to query the state of the output')
         }
     ],
 
@@ -138,7 +138,7 @@ OUTPUT_INFORMATION = {
             'type': 'select_custom_choices',
             'default_value': '',
             'name': 'Remote AoT Output',
-            'phrase': 'The Remote AoT Output to control'
+            'phrase': lazy_gettext('The Remote AoT Output to control')
         },
         {
             'id': 'state_startup',
@@ -147,18 +147,18 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value'),
-                ('last_duty_cycle', 'Last Known Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value')),
+                ('last_duty_cycle', lazy_gettext('Last Known Value'))
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'startup_value',
             'type': 'float',
             'default_value': 0.0,
             'name': "Start Duty Cycle",
-            'phrase': 'The duty cycle to set at startup, if enabled'
+            'phrase': lazy_gettext('The duty cycle to set at startup, if enabled')
         },
         {
             'id': 'state_shutdown',
@@ -167,31 +167,31 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value'))
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'shutdown_value',
             'type': 'float',
             'default_value': 0.0,
             'name': "Shutdown Duty Cycle",
-            'phrase': 'The duty cycle to set at shutdown, if enabled'
+            'phrase': lazy_gettext('The duty cycle to set at shutdown, if enabled')
         },
         {
             'id': 'pwm_invert_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Signal'),
-            'phrase': 'Invert the PWM signal'
+            'phrase': lazy_gettext('Invert the PWM signal')
         },
         {
             'id': 'pwm_invert_stored_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Stored Signal'),
-            'phrase': 'Invert the value that is saved to the measurement database'
+            'phrase': lazy_gettext('Invert the value that is saved to the measurement database')
         }
     ]
 }

@@ -88,14 +88,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '0',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The hsv transition period'
+            'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'brightness',
             'type': 'integer',
             'default_value': '',
             'name': "{} ({})".format(lazy_gettext('Brightness'), lazy_gettext('Percent')),
-            'phrase': 'The brightness to set, in percent (0 - 100)'
+            'phrase': lazy_gettext('The brightness to set, in percent (0 - 100)')
         },
         {
             'id': 'set_brightness',
@@ -111,14 +111,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '0',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The hsv transition period'
+            'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'hue',
             'type': 'integer',
             'default_value': '',
             'name': "{} ({})".format(lazy_gettext('Hue'), lazy_gettext('Degree')),
-            'phrase': 'The hue to set, in degrees (0 - 360)'
+            'phrase': lazy_gettext('The hue to set, in degrees (0 - 360)')
         },
         {
             'id': 'set_hue',
@@ -134,14 +134,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '0',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The hsv transition period'
+            'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'saturation',
             'type': 'integer',
             'default_value': '',
             'name': "{} ({})".format(lazy_gettext('Saturation'), lazy_gettext('Percent')),
-            'phrase': 'The saturation to set, in percent (0 - 100)'
+            'phrase': lazy_gettext('The saturation to set, in percent (0 - 100)')
         },
         {
             'id': 'set_saturation',
@@ -157,14 +157,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '0',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The hsv transition period'
+            'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'color_temperature',
             'type': 'integer',
             'default_value': '',
             'name': "{} ({})".format(lazy_gettext('Color Temperature'), lazy_gettext('Kelvin')),
-            'phrase': 'The color temperature to set, in degrees Kelvin'
+            'phrase': lazy_gettext('The color temperature to set, in degrees Kelvin')
         },
         {
             'id': 'set_color_temperature',
@@ -180,14 +180,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '0',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The hsv transition period'
+            'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'hsv',
             'type': 'text',
             'default_value': '220, 20, 45',
             'name': "HSV",
-            'phrase': 'The hue, saturation, brightness to set, e.g. "200, 20, 50"'
+            'phrase': lazy_gettext('The hue, saturation, brightness to set, e.g. "200, 20, 50"')
         },
         {
             'id': 'set_hsv',
@@ -203,7 +203,7 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '1000',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The transition period'
+            'phrase': lazy_gettext('The transition period')
         },
         {
             'id': 'turn_on',
@@ -219,7 +219,7 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': '1000',
             'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
-            'phrase': 'The transition period'
+            'phrase': lazy_gettext('The transition period')
         },
         {
             'id': 'turn_off',
@@ -246,7 +246,7 @@ OUTPUT_INFORMATION = {
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'required': True,
             'name': 'Status Update (Seconds)',
-            'phrase': 'The period between checking if connected and output states. 0 disables.'
+            'phrase': lazy_gettext('The period between checking if connected and output states. 0 disables.')
         },
         {
             'id': 'asyncio_rpc_port',
@@ -255,7 +255,7 @@ OUTPUT_INFORMATION = {
             'constraints_pass': constraints_pass_positive_value,
             'required': True,
             'name': 'Asyncio RPC Port',
-            'phrase': 'The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.'
+            'phrase': lazy_gettext('The port to start the asyncio RPC server. Must be unique from other Kasa Outputs.')
         }
     ],
 
@@ -270,7 +270,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -282,21 +282,21 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Force Command'),
-            'phrase': 'Always send the command if instructed, regardless of the current state'
+            'phrase': lazy_gettext('Always send the command if instructed, regardless of the current state')
         },
         {
             'id': 'amps',
@@ -304,7 +304,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

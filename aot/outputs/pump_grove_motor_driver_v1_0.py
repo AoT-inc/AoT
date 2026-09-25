@@ -92,7 +92,7 @@ OUTPUT_INFORMATION = {
     'i2c_address_editable': True,
     'i2c_address_default': '0x14',
 
-    'custom_options_message': "To accurately dispense specific volumes, the following options need to be correctly "
+    'custom_options_message': lazy_gettext("To accurately dispense specific volumes, the following options need to be correctly "
                               "set. To determine the flow rate of your pump, first purge the fluid line to remove "
                               "air. Next, turn the pump on for 60 seconds and collect the fluid that's dispensed. "
                               "Last, measure and enter the amount of fluid that was dispensed, in ml, into the "
@@ -101,7 +101,7 @@ OUTPUT_INFORMATION = {
                               "Since Peristaltic Pump Output controllers are capable of accepting multiple different "
                               "dispersal value types, Default Dispersal Method must be set in order to specify whether "
                               "the peristaltic pump should output for a duration or a specific volume when other "
-                              "controllers (such as PID controllers) send a value instructing it to dispense.",
+                              "controllers (such as PID controllers) send a value instructing it to dispense."),
 
     'custom_channel_options': [
         {
@@ -118,7 +118,7 @@ OUTPUT_INFORMATION = {
             'default_value': 255,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Motor Speed (0 - 255)',
-            'phrase': 'The motor output that determines the speed'
+            'phrase': lazy_gettext('The motor output that determines the speed')
         },
         {
             'id': 'flow_mode',
@@ -129,7 +129,7 @@ OUTPUT_INFORMATION = {
                 ('specify_flow_rate', 'Specify Flow Rate')
             ],
             'name': 'Flow Rate Method',
-            'phrase': 'The flow rate to use when pumping a volume'
+            'phrase': lazy_gettext('The flow rate to use when pumping a volume')
         },
         {
             'id': 'flow_rate',
@@ -137,7 +137,7 @@ OUTPUT_INFORMATION = {
             'default_value': 10.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Desired Flow Rate (ml/min)',
-            'phrase': 'Desired flow rate in ml/minute when Specify Flow Rate set'
+            'phrase': lazy_gettext('Desired flow rate in ml/minute when Specify Flow Rate set')
         },
         {
             'id': 'dispense_rate_ml_min',
@@ -145,7 +145,7 @@ OUTPUT_INFORMATION = {
             'default_value': 100.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Fastest Rate (ml/min)',
-            'phrase': 'The fastest rate that the pump can dispense (ml/min)'
+            'phrase': lazy_gettext('The fastest rate that the pump can dispense (ml/min)')
         },
         {
             'id': 'minimum_sec_on_per_min',
@@ -153,7 +153,7 @@ OUTPUT_INFORMATION = {
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Minimum On (Seconds)',
-            'phrase': 'The minimum duration the pump turns on for every 60 second period (only used for Specify Flow Rate mode).'
+            'phrase': lazy_gettext('The minimum duration the pump turns on for every 60 second period (only used for Specify Flow Rate mode).')
         }
     ],
 
@@ -168,7 +168,7 @@ OUTPUT_INFORMATION = {
             'type': 'text',
             'default_value': '0x14',
             'name': lazy_gettext('New I2C Address'),
-            'phrase': 'The new I2C to set the sensor to'
+            'phrase': lazy_gettext('The new I2C to set the sensor to')
         },
         {
             'id': 'set_i2c_address',

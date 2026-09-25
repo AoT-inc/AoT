@@ -105,14 +105,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': 120,
             'name': "State Query Period (Seconds)",
-            'phrase': 'How often to query the state of the output'
+            'phrase': lazy_gettext('How often to query the state of the output')
         },
         {
             'id': 'request_timeout',
             'type': 'integer',
             'default_value': 60,
             'name': "Request Timeout (Seconds)",
-            'phrase': 'HTTP read timeout for ON/OFF commands. Must be longer than the slowest command on the remote host (e.g. if the remote command has time.sleep(15), set this to at least 20).'
+            'phrase': lazy_gettext('HTTP read timeout for ON/OFF commands. Must be longer than the slowest command on the remote host (e.g. if the remote command has time.sleep(15), set this to at least 20).')
         }
     ],
 
@@ -122,7 +122,7 @@ OUTPUT_INFORMATION = {
             'type': 'select_custom_choices',
             'default_value': '',
             'name': 'Remote AoT Output',
-            'phrase': 'The Remote AoT Output to control'
+            'phrase': lazy_gettext('The Remote AoT Output to control')
         },
         {
             'id': 'state_startup',
@@ -134,7 +134,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -146,21 +146,21 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Force Command'),
-            'phrase': 'Always send the command if instructed, regardless of the current state'
+            'phrase': lazy_gettext('Always send the command if instructed, regardless of the current state')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         }
     ]
 }
