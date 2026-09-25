@@ -49,11 +49,17 @@ another.
 
 Separate from all four, there is the **host OS clock**.
 
-- **The host OS clock is the sole source of "now" — it is not a timezone.** Docker
-  containers are always treated as UTC and never depend on the OS's local tz. Its only
-  job is to give `timekit.utc_now()` the **current UTC instant**. Scheduler firing is
-  decided purely by `fire_utc <= utc_now()`; no timezone is involved in that
-  comparison.
+- **The host OS clock is the sole source of "now" — it is not a timezone.** Scheduling
+  code must not depend on the OS's (or container's) local tz. Its only job is to give
+  `timekit.utc_now()` the **current UTC instant**. Scheduler firing is decided purely
+  by `fire_utc <= utc_now()`; no timezone is involved in that comparison.
+- **The container `TZ` variable is not part of the resolution chain.** Its only
+  effect is the **first-run default**: when the database is first created, `TZ` is
+  copied into the system tz (`misc.timezone`). After that the *System timezone*
+  setting governs, and changing `TZ` on an existing install does nothing. Log
+  timestamps also follow the system tz, not `TZ`. So: set `TZ` for the first-run
+  default; set the *System timezone* and place sites/zones on the map (or set device
+  timezones) for scheduling.
 - **`misc.timezone` (the system tz) is only the "farm default" fallback of last
   resort — it does not interpret intent.** Once a device or shape has a location, it
   never falls back to the system tz. When the system tz genuinely is used, that fact
