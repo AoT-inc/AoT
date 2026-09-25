@@ -1,4 +1,4 @@
-Page\: `[Gear Icon] -> System Information`
+Page\: `Manage -> System Information`
 
 This page serves to provide information about the AoT frontend and backend as well as the linux system it's running on. Several commands and their output are listed to give the user information about how their system is running.
 

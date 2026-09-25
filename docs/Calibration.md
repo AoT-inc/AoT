@@ -19,7 +19,7 @@ Atlas Scientific sensors support a structured one-, two-, or three-point calibra
 
 ### Verification
 
-You can verify the calibration status by checking the **Slope** and **Calibrated?** messages in the **Daemon Log** (`[Manage] -> AoT Logs -> Daemon Log`). 
+You can verify the calibration status by checking the **Slope** and **Calibrated?** messages in the **Daemon Log** (`Manage -> System Log -> Daemon`). 
 
 - A slope near 100% indicates a healthy probe and successful calibration.
 - The `Cal,?` command returns the number of points calibrated.
