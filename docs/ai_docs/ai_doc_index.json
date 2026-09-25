@@ -117,7 +117,10 @@
     "Daily (Bezier Curve) Method",
     "Cascade Method"
   ],
-  "Alerts.md": [],
+  "Alerts.md": [
+    "The hourly email limit",
+    "Sending once until the condition clears"
+  ],
   "Notes.md": [
     "Opening notes",
     "Writing a note",
@@ -1127,6 +1130,9 @@
     "Groups",
     "Raspberry Pi Settings",
     "Alert Settings",
+    "Send a test email",
+    "Using Gmail",
+    "The hourly limit",
     "Camera Settings",
     "Diagnostic Settings"
   ],

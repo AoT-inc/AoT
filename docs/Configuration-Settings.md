@@ -715,9 +715,9 @@ pigpiod is required to use PWM outputs and PWM, RPM, DHT22, DHT11, and HTU21D in
 
 ## Alert Settings { #alert-settings }
 
-Page\: `[Admin] -> System Configuration -> Alerts`
+Page\: `Manage -> System Management -> Alerts`
 
-The Alert settings configure the credentials for sending email notifications.
+The Alert settings hold the SMTP account AoT uses to send email. Nothing is emailed until a [Conditional function](Functions.md#conditional) with a Send Email [action](Actions.md) (or one of the other email paths described in [Alerts](Alerts.md)) runs, so configuring this page alone sends no alerts.
 
 <table>
 <thead>
@@ -733,34 +733,46 @@ The Alert settings configure the credentials for sending email notifications.
 </tr>
 <tr>
 <td>SMTP Port</td>
-<td>The port used to communicate with the SMTP server (465 for SSL, 587 for TSL).</td>
+<td>The port used to communicate with the SMTP server. Leave blank to use the default for the selected protocol (465 for SSL, 587 for TLS, 25 for unencrypted).</td>
 </tr>
 <tr>
-<td>Enable SSL</td>
-<td>Check to enable SSL, or uncheck to enable TSL.</td>
+<td>SMTP Protocol</td>
+<td>A dropdown with four choices: <strong>SSL</strong>, <strong>TLS</strong>, <strong>Unencrypted</strong>, and <strong>Unencrypted (No Login)</strong>. The last option skips the SMTP login entirely, for internal relays that do not require one. A warning is shown when an unencrypted protocol is selected.</td>
 </tr>
 <tr>
 <td>SMTP User</td>
-<td>The user name used to send email. You can enter just the name or the full email address.</td>
+<td>The user name used to sign in to the SMTP server. You can enter just the name or the full email address.</td>
 </tr>
 <tr>
 <td>SMTP Password</td>
-<td>The user's password.</td>
+<td>The account's password. The saved password is never shown; enter a value only when you want to change it.</td>
 </tr>
 <tr>
 <td>From Email</td>
-<td>The value to set as the sending email address. This value must be an actual user email address.</td>
+<td>The address shown as the sender. Most providers require it to be the login account itself or an address that account is allowed to send as.</td>
 </tr>
 <tr>
-<td>Max Emails (per Hour)</td>
-<td>Sets the maximum number of emails that can be sent per hour. If more alerts than this number occur within one hour, the excess alerts are discarded.</td>
-</tr>
-<tr>
-<td>Send Test Email</td>
-<td>Sends a test email to test the email configuration.</td>
+<td>Max Emails per Hour</td>
+<td>The maximum number of emails the Send Email actions may send per hour (at least 1). Emails beyond the limit are dropped, not queued. See <a href="#email-hourly-limit">the hourly limit</a> below.</td>
 </tr>
 </tbody>
 </table>
+
+Click **Save** to store the settings.
+
+### Send a test email
+
+The **Send Test Email** section sends one message to the address you type in **Test recipient**. The test uses the settings that are **already saved**, not the values currently typed in the form, so click **Save** first and then send the test. A success or failure message appears at the top of the page.
+
+### Using Gmail
+
+Google does not accept a normal account password for SMTP. Turn on 2-step verification for the Google account, create an **app password** (Google Account -> Security -> App passwords), and enter that 16-character password as the SMTP password. Use `smtp.gmail.com` with **SSL** (port 465) or **TLS** (port 587), enter the full Gmail address as the SMTP user, and set From Email to the same address, because Gmail rewrites or rejects other sender addresses.
+
+### The hourly limit { #email-hourly-limit }
+
+The limit applies to the **Send Email** and **Send Email with Photo** actions. The counter starts a one-hour window; once the number of emails in that window reaches the limit, further emails are dropped until the window ends. Dropped emails are not sent later. Each one leaves an error line in the daemon log (`Wait N seconds to email again`; see [Log Viewer](Log-Viewer.md)). The counter also counts attempts made while the limit was already reached.
+
+To clear the counter and start a fresh window immediately, use **Reset Email Counter** on the [Diagnostic](#diagnostic-settings) page.
 
 ## Camera Settings
 
@@ -878,7 +890,7 @@ Problems can occur in the system due to incompatible configurations. These can r
 </tr>
 <tr>
 <td>Reset Email Counter</td>
-<td>Resets the hourly email counter.</td>
+<td>Clears the hourly email counter and starts a new one-hour window. Use it when emails are being held back by the hourly limit.</td>
 </tr>
 <tr>
 <td>Install Dependencies</td>

@@ -1,6 +1,6 @@
 # Log Viewer
 
-`[Gear Icon] -> AoT Logs` (`/logview`) shows the system's logs in the browser,
+`Manage -> System Log` (`/logview`; the page title is **Log View**) shows the system's logs in the browser,
 with filtering, live tail, and — when the AI service is enabled — a way to ask
 the AI about the lines you are looking at.
 
@@ -14,14 +14,25 @@ The **Log** dropdown groups the available sources:
 |-------|--------|------------------|
 | AI | AI | Everything the AI services log (agent, planner, scheduler, MCP bridge, safety gate). |
 | AI | MCP Server | The external MCP server process — the one AI assistants connect to. |
-| System | Daemon | The full daemon log: inputs, outputs, functions, controllers. |
+| System | Daemon | The full daemon log: inputs, outputs, functions, controllers, and email sending (SMTP connection and login failures, dropped emails). |
 | System | Daemon (PID settings) | Only the PID controller setting lines, for tuning. |
 | System | Daemon keepup | The keepup service. |
 | Web | Web app | The web application's own log lines. |
 | Web | Web login | Login attempts, successful and not. |
-| Web | Web access / Web error | The web server's access and error logs. |
-| Web | Web / Nginx | The service journals, where the host provides them. |
-| Maintenance | Dependency, Import settings, AoT backup / restore / upgrade | One-off maintenance runs. |
+| Web | Web access | The web server's access log. |
+| Web | Web error | The web server's error log. |
+| Web | Web | The web service journal, where the host provides it. |
+| Web | Nginx | The Nginx journal, where the host provides it. |
+| Maintenance | Dependency | Dependency installation runs. |
+| Maintenance | Import settings | Settings import runs. |
+| Maintenance | AoT backup | Backup runs. |
+| Maintenance | AoT restore | Restore runs. |
+| Maintenance | AoT upgrade | Upgrade runs. |
+
+!!! tip "Email problems show up under Daemon"
+    When an alert email does not arrive, choose **Daemon** and search for the
+    error. SMTP connection and login failures, and emails dropped by the hourly
+    limit, are logged there. See [Alerts](Alerts.md).
 
 A source that is not available on this installation is shown greyed out with
 the reason — either the file does not exist yet, or the command needed to read
@@ -35,6 +46,8 @@ an error; it tells you the log is genuinely unreachable here rather than empty.
     are far older than the last few hundred lines of the daemon log.
 
 ## Filtering
+
+The toolbar has **Log**, **Minimum level**, **Search**, **Lines**, **Live**, **Refresh**, and **Download**.
 
 - **Minimum level** — show only entries at that level or above. Lines with no
   recognizable level (login records, access logs) are not shown when a minimum
