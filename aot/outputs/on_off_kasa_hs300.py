@@ -76,7 +76,7 @@ OUTPUT_INFORMATION = {
             'constraints_pass': constraints_pass_positive_value,
             'required': True,
             'name': 'Status Update (Seconds)',
-            'phrase': 'The period between checking if connected and output states.'
+            'phrase': lazy_gettext('The period between checking if connected and output states.')
         }
     ],
 
@@ -99,7 +99,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -111,21 +111,21 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Force Command'),
-            'phrase': 'Always send the command if instructed, regardless of the current state'
+            'phrase': lazy_gettext('Always send the command if instructed, regardless of the current state')
         },
         {
             'id': 'amps',
@@ -133,7 +133,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

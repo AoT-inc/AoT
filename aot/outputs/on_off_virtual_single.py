@@ -44,7 +44,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -55,7 +55,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'amps',
@@ -63,7 +63,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the virtual device'
+            'phrase': lazy_gettext('The current draw of the virtual device')
         }
     ]
 }

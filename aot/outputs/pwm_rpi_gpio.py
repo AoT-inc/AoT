@@ -59,7 +59,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0,
             'name': 'Duty Cycle',
-            'phrase': 'The duty cycle to set'
+            'phrase': lazy_gettext('The duty cycle to set')
         },
         {
             'id': 'set_duty_cycle',
@@ -86,11 +86,11 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value'),
-                ('last_duty_cycle', 'Last Known Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value')),
+                ('last_duty_cycle', lazy_gettext('Last Known Value'))
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'startup_value',
@@ -98,7 +98,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': lazy_gettext('Startup Value'),
-            'phrase': 'The value when AoT starts'
+            'phrase': lazy_gettext('The value when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -107,10 +107,10 @@ OUTPUT_INFORMATION = {
             'options_select': [
                 (-1, 'Do Nothing'),
                 (0, 'Off'),
-                ('set_duty_cycle', 'User Set Value')
+                ('set_duty_cycle', lazy_gettext('User Set Value'))
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'shutdown_value',
@@ -118,7 +118,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': lazy_gettext('Shutdown Value'),
-            'phrase': 'The value when AoT shuts down'
+            'phrase': lazy_gettext('The value when AoT shuts down')
         },
         {
             'id': 'pwm_hertz',
@@ -127,21 +127,21 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('Frequency (Hertz)'),
-            'phrase': 'The Hertz to output the PWM signal'
+            'phrase': lazy_gettext('The Hertz to output the PWM signal')
         },
         {
             'id': 'pwm_invert_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Signal'),
-            'phrase': 'Invert the PWM signal'
+            'phrase': lazy_gettext('Invert the PWM signal')
         },
         {
             'id': 'pwm_invert_stored_signal',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Invert Stored Signal'),
-            'phrase': 'Invert the value that is saved to the measurement database'
+            'phrase': lazy_gettext('Invert the value that is saved to the measurement database')
         },
         {
             'id': 'amps',
@@ -149,7 +149,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

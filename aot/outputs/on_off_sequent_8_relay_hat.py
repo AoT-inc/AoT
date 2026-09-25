@@ -75,7 +75,7 @@ OUTPUT_INFORMATION = {
                 (7, 'Board 8'),
             ],
             'name': 'Board Stack Number',
-            'phrase': 'Select the board stack number when multiple boards are used'
+            'phrase': lazy_gettext('Select the board stack number when multiple boards are used')
         }
     ],
 
@@ -97,7 +97,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state of the GPIO when AoT starts'
+            'phrase': lazy_gettext('Set the state of the GPIO when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -108,7 +108,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state of the GPIO when AoT shuts down'
+            'phrase': lazy_gettext('Set the state of the GPIO when AoT shuts down')
         },
         {
             'id': 'on_state',
@@ -119,14 +119,14 @@ OUTPUT_INFORMATION = {
                 (0, 'LOW')
             ],
             'name': lazy_gettext('On State'),
-            'phrase': 'The state of the GPIO that corresponds to an On state'
+            'phrase': lazy_gettext('The state of the GPIO that corresponds to an On state')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         },
         {
             'id': 'amps',
@@ -134,7 +134,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

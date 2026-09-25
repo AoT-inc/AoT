@@ -197,7 +197,7 @@ OUTPUT_INFORMATION = {
             'type': 'bool',
             'default_value': True,
             'name': 'Analyze Python Code with Pylint',
-            'phrase': 'Analyze your Python code with pylint when saving'
+            'phrase': lazy_gettext('Analyze your Python code with pylint when saving')
         }
     ],
 

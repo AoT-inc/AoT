@@ -80,12 +80,12 @@ OUTPUT_INFORMATION = {
     'i2c_address_editable': False,
     'i2c_address_default': '0x20',
 
-    'custom_options_message': "To accurately dispense specific volumes, the following options need to be correctly "
+    'custom_options_message': lazy_gettext("To accurately dispense specific volumes, the following options need to be correctly "
                               "set. To determine the flow rate of your pump, first purge the fluid line to remove "
                               "air. Next, turn the pump on for 60 seconds and collect the fluid that's dispensed. "
                               "Last, measure and enter the amount of fluid that was dispensed, in ml, into the "
                               "Fastest Rate (ml/min) field. Your pump should now be calibrated to dispense volumes "
-                              "accurately." ,
+                              "accurately.") ,
     'custom_channel_options': [
         {
             'id': 'name',
@@ -104,7 +104,7 @@ OUTPUT_INFORMATION = {
                 (0, 'LOW')
             ],
             'name': lazy_gettext('On State'),
-            'phrase': 'The state of the output channel that corresponds to the pump being on'
+            'phrase': lazy_gettext('The state of the output channel that corresponds to the pump being on')
         },
         {
             'id': 'fastest_dispense_rate_ml_min',
@@ -112,7 +112,7 @@ OUTPUT_INFORMATION = {
             'default_value': 150.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Fastest Rate (ml/min)',
-            'phrase': 'The fastest rate that the pump can dispense (ml/min)'
+            'phrase': lazy_gettext('The fastest rate that the pump can dispense (ml/min)')
         },
         {
             'id': 'minimum_sec_on_per_min',
@@ -120,7 +120,7 @@ OUTPUT_INFORMATION = {
             'default_value': 1.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Minimum On (Seconds)',
-            'phrase': 'The minimum duration the pump should be turned on for every 60 second period'
+            'phrase': lazy_gettext('The minimum duration the pump should be turned on for every 60 second period')
         },
         {
             'id': 'flow_mode',
@@ -131,7 +131,7 @@ OUTPUT_INFORMATION = {
                 ('specify_flow_rate', 'Specify Flow Rate')
             ],
             'name': 'Flow Rate Method',
-            'phrase': 'The flow rate to use when pumping a volume'
+            'phrase': lazy_gettext('The flow rate to use when pumping a volume')
         },
         {
             'id': 'flow_rate',
@@ -139,7 +139,7 @@ OUTPUT_INFORMATION = {
             'default_value': 10.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Desired Flow Rate (ml/min)',
-            'phrase': 'Desired flow rate in ml/minute when Specify Flow Rate set'
+            'phrase': lazy_gettext('Desired flow rate in ml/minute when Specify Flow Rate set')
         },
         {
             'id': 'amps',
@@ -147,7 +147,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]
 }

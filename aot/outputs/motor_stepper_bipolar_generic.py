@@ -76,7 +76,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Step Pin',
-            'phrase': 'The Step pin of the controller (BCM numbering)'
+            'phrase': lazy_gettext('The Step pin of the controller (BCM numbering)')
         },
         {
             'id': 'full_step_delay',
@@ -84,7 +84,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.005,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Full Step Delay',
-            'phrase': 'The Full Step Delay of the controller'
+            'phrase': lazy_gettext('The Full Step Delay of the controller')
         },
         {
             'id': 'pin_dir',
@@ -116,7 +116,7 @@ OUTPUT_INFORMATION = {
                 ('always', 'Always'),
             ],
             'name': 'Enable Mode',
-            'phrase': 'Choose when to pull the enable pin high to energize the motor.'
+            'phrase': lazy_gettext('Choose when to pull the enable pin high to energize the motor.')
         },
         {
             'id': 'enable_shutdown',
@@ -127,7 +127,7 @@ OUTPUT_INFORMATION = {
                 ('disable', 'Disable'),
             ],
             'name': 'Enable at Shutdown',
-            'phrase': 'Choose whether the enable pin in pulled high (Enable) or low (Disable) when AoT shuts down.'
+            'phrase': lazy_gettext('Choose whether the enable pin in pulled high (Enable) or low (Disable) when AoT shuts down.')
         },
         {'type': 'new_line'},
         {
@@ -147,7 +147,7 @@ OUTPUT_INFORMATION = {
                 ('1/32', '1/32 (modes 1, 0, 1)')
             ],
             'name': 'Step Resolution',
-            'phrase': 'The Step Resolution of the controller'
+            'phrase': lazy_gettext('The Step Resolution of the controller')
         },
         {
             'id': 'pin_mode_1',

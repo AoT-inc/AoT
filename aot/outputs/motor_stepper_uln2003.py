@@ -71,7 +71,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Pin IN1',
-            'phrase': 'The pin (BCM numbering) connected to IN1 of the ULN2003'
+            'phrase': lazy_gettext('The pin (BCM numbering) connected to IN1 of the ULN2003')
         },
         {
             'id': 'pin_in2',
@@ -80,7 +80,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Pin IN2',
-            'phrase': 'The pin (BCM numbering) connected to IN2 of the ULN2003'
+            'phrase': lazy_gettext('The pin (BCM numbering) connected to IN2 of the ULN2003')
         },
         {
             'id': 'pin_in3',
@@ -89,7 +89,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Pin IN3',
-            'phrase': 'The pin (BCM numbering) connected to IN3 of the ULN2003'
+            'phrase': lazy_gettext('The pin (BCM numbering) connected to IN3 of the ULN2003')
         },
         {
             'id': 'pin_in4',
@@ -98,7 +98,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Pin IN4',
-            'phrase': 'The pin (BCM numbering) connected to IN4 of the ULN2003'
+            'phrase': lazy_gettext('The pin (BCM numbering) connected to IN4 of the ULN2003')
         },
         {
             'id': 'step_delay',
@@ -106,7 +106,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.001,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Step Delay',
-            'phrase': 'The Step Delay of the controller'
+            'phrase': lazy_gettext('The Step Delay of the controller')
         },
         {'type': 'new_line'},
         {
@@ -123,7 +123,7 @@ OUTPUT_INFORMATION = {
                 ('wave', 'Wave')
             ],
             'name': 'Step Resolution',
-            'phrase': 'The Step Resolution of the controller'
+            'phrase': lazy_gettext('The Step Resolution of the controller')
         }
     ]
 }

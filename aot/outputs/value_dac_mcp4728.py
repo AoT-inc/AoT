@@ -90,7 +90,7 @@ OUTPUT_INFORMATION = {
             'default_value': 4.096,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'VREF (volts)',
-            'phrase': 'Set the VREF voltage'
+            'phrase': lazy_gettext('Set the VREF voltage')
         }
     ],
 
@@ -112,7 +112,7 @@ OUTPUT_INFORMATION = {
                 ('vdd', 'VDD')
             ],
             'name': 'VREF',
-            'phrase': 'Select the channel VREF'
+            'phrase': lazy_gettext('Select the channel VREF')
         },
         {
             'id': 'gain',
@@ -123,7 +123,7 @@ OUTPUT_INFORMATION = {
                 (2, '2X')
             ],
             'name': 'Gain',
-            'phrase': 'Select the channel Gain'
+            'phrase': lazy_gettext('Select the channel Gain')
         },
         {
             'id': 'state_start',
@@ -134,7 +134,7 @@ OUTPUT_INFORMATION = {
                 ('value', 'Specified Value')
             ],
             'name': 'Start State',
-            'phrase': 'Select the channel start state'
+            'phrase': lazy_gettext('Select the channel start state')
         },
         {
             'id': 'state_start_value',
@@ -142,7 +142,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Start Value (volts)',
-            'phrase': 'If Specified Value is selected, set the start state value'
+            'phrase': lazy_gettext('If Specified Value is selected, set the start state value')
         },
         {
             'id': 'state_shutdown',
@@ -153,7 +153,7 @@ OUTPUT_INFORMATION = {
                 ('value', 'Specified Value')
             ],
             'name': 'Shutdown State',
-            'phrase': 'Select the channel shutdown state'
+            'phrase': lazy_gettext('Select the channel shutdown state')
         },
         {
             'id': 'state_shutdown_value',
@@ -161,7 +161,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Shutdown Value (volts)',
-            'phrase': 'If Specified Value is selected, set the shutdown state value'
+            'phrase': lazy_gettext('If Specified Value is selected, set the shutdown state value')
         }
     ]
 }

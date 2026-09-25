@@ -83,7 +83,7 @@ OUTPUT_INFORMATION = {
                 ('specify_flow_rate', 'Specify Flow Rate')
             ],
             'name': 'Flow Rate Method',
-            'phrase': 'The flow rate to use when pumping a volume'
+            'phrase': lazy_gettext('The flow rate to use when pumping a volume')
         },
         {
             'id': 'flow_rate',
@@ -91,7 +91,7 @@ OUTPUT_INFORMATION = {
             'default_value': 10.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Desired Flow Rate (ml/min)',
-            'phrase': 'Desired flow rate in ml/minute when Specify Flow Rate set'
+            'phrase': lazy_gettext('Desired flow rate in ml/minute when Specify Flow Rate set')
         },
         {
             'id': 'amps',
@@ -99,7 +99,7 @@ OUTPUT_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
-            'phrase': 'The current draw of the device being controlled'
+            'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ],
 
@@ -121,7 +121,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 10.0,
             'name': 'Volume to Dispense (ml)',
-            'phrase': 'The volume (ml) that is instructed to be dispensed'
+            'phrase': lazy_gettext('The volume (ml) that is instructed to be dispensed')
         },
         {
             'id': 'dispense_ml',
@@ -136,7 +136,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 10.0,
             'name': 'Actual Volume Dispensed (ml)',
-            'phrase': 'The actual volume (ml) that was dispensed'
+            'phrase': lazy_gettext('The actual volume (ml) that was dispensed')
         },
         {
             'id': 'calibrate_ml',

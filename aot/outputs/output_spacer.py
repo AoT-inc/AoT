@@ -24,7 +24,7 @@ OUTPUT_INFORMATION = {
             'default_value': '#000000',
             'required': True,
             'name': lazy_gettext('Color'),
-            'phrase': 'The color of the name text'
+            'phrase': lazy_gettext('The color of the name text')
         }
     ]
 }

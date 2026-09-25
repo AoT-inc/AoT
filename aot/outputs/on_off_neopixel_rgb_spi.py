@@ -59,14 +59,14 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': 0,
             'name': f"LED Position",
-            'phrase': 'Which LED in the strip to change'
+            'phrase': lazy_gettext('Which LED in the strip to change')
         },
         {
             'id': 'led_color',
             'type': 'text',
             'default_value': '10, 0, 0',
             'name': f"RGB Color",
-            'phrase': 'The color (e.g 10, 0 0)'
+            'phrase': lazy_gettext('The color (e.g 10, 0 0)')
         },
         {
             'id': 'set_led',
@@ -82,7 +82,7 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': 1,
             'name': f"Number of LEDs",
-            'phrase': 'How many LEDs in the string?'
+            'phrase': lazy_gettext('How many LEDs in the string?')
         },
         {
             'id': 'on_mode',
@@ -93,28 +93,28 @@ OUTPUT_INFORMATION = {
                 ('rainbow', 'Rainbow')
             ],
             'name': 'On Mode',
-            'phrase': 'The color mode when turned on'
+            'phrase': lazy_gettext('The color mode when turned on')
         },
         {
             'id': 'on_color',
             'type': 'text',
             'default_value': "30, 30, 30",
             'name': "Single Color",
-            'phrase': 'The Color when turning on in Single Color Mode, RGB format (red, green, blue), 0 - 255 each.'
+            'phrase': lazy_gettext('The Color when turning on in Single Color Mode, RGB format (red, green, blue), 0 - 255 each.')
         },
         {
             'id': 'rainbow_speed_s',
             'type': 'float',
             'default_value': 0.01,
             'name': "Rainbow Speed (Seconds)",
-            'phrase': 'The speed to change colors in Rainbow Mode'
+            'phrase': lazy_gettext('The speed to change colors in Rainbow Mode')
         },
         {
             'id': 'rainbow_brightness',
             'type': 'integer',
             'default_value': 20,
             'name': "Rainbow Brightness",
-            'phrase': 'The maximum brightness of LEDs in Rainbow Mode (1 - 255)'
+            'phrase': lazy_gettext('The maximum brightness of LEDs in Rainbow Mode (1 - 255)')
         },
         {
             'id': 'rainbow_mode',
@@ -125,7 +125,7 @@ OUTPUT_INFORMATION = {
                 ('single_led', 'One LED Changes at a time')
             ],
             'name': 'Rainbow Mode',
-            'phrase': 'How the rainbow is displayed'
+            'phrase': lazy_gettext('How the rainbow is displayed')
         },
     ],
 
@@ -140,7 +140,7 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Startup State'),
-            'phrase': 'Set the state when AoT starts'
+            'phrase': lazy_gettext('Set the state when AoT starts')
         },
         {
             'id': 'state_shutdown',
@@ -152,21 +152,21 @@ OUTPUT_INFORMATION = {
                 (1, 'On')
             ],
             'name': lazy_gettext('Shutdown State'),
-            'phrase': 'Set the state when AoT shuts down'
+            'phrase': lazy_gettext('Set the state when AoT shuts down')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Trigger Functions at Startup'),
-            'phrase': 'Whether to trigger functions when the output switches at startup'
+            'phrase': lazy_gettext('Whether to trigger functions when the output switches at startup')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
             'name': lazy_gettext('Force Command'),
-            'phrase': 'Always send the command if instructed, regardless of the current state'
+            'phrase': lazy_gettext('Always send the command if instructed, regardless of the current state')
         }
     ]
 }

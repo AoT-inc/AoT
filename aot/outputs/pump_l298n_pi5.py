@@ -90,7 +90,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Input Pin 1',
-            'phrase': 'The Input Pin 1 of the controller (BCM numbering)'
+            'phrase': lazy_gettext('The Input Pin 1 of the controller (BCM numbering)')
         },
         {
             'id': 'pin_2',
@@ -99,14 +99,14 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Input Pin 2',
-            'phrase': 'The Input Pin 2 of the controller (BCM numbering)'
+            'phrase': lazy_gettext('The Input Pin 2 of the controller (BCM numbering)')
         },
         {
             'id': 'use_enable',
             'type': 'bool',
             'default_value': True,
             'name': 'Use Enable Pin',
-            'phrase': 'Enable the use of the Enable Pin'
+            'phrase': lazy_gettext('Enable the use of the Enable Pin')
         },
         {
             'id': 'pin_enable',
@@ -115,7 +115,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Enable Pin',
-            'phrase': 'The Enable pin of the controller (BCM numbering)'
+            'phrase': lazy_gettext('The Enable pin of the controller (BCM numbering)')
         },
         {
             'id': 'direction',
@@ -126,7 +126,7 @@ OUTPUT_INFORMATION = {
                 (0, 'Backward')
             ],
             'name': lazy_gettext('Direction'),
-            'phrase': 'The direction to turn the motor'
+            'phrase': lazy_gettext('The direction to turn the motor')
         },
         {
             'id': 'flow_rate_ml_min',
@@ -134,7 +134,7 @@ OUTPUT_INFORMATION = {
             'default_value': 150.0,
             'constraints_pass': constraints_pass_positive_value,
             'name': 'Volume Rate (ml/min)',
-            'phrase': 'If a pump, the measured flow rate (ml/min) at the set Duty Cycle'
+            'phrase': lazy_gettext('If a pump, the measured flow rate (ml/min) at the set Duty Cycle')
         },
     ]
 }

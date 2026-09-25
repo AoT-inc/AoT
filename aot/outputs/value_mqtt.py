@@ -56,7 +56,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'localhost',
             'required': True,
             'name': lazy_gettext('Hostname'),
-            'phrase': 'The hostname of the MQTT server'
+            'phrase': lazy_gettext('The hostname of the MQTT server')
         },
         {
             'id': 'port',
@@ -64,7 +64,7 @@ OUTPUT_INFORMATION = {
             'default_value': 1883,
             'required': True,
             'name': lazy_gettext('Port'),
-            'phrase': 'The port of the MQTT server'
+            'phrase': lazy_gettext('The port of the MQTT server')
         },
         {
             'id': 'topic',
@@ -72,7 +72,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'paho/test/single',
             'required': True,
             'name': 'Topic',
-            'phrase': 'The topic to publish with'
+            'phrase': lazy_gettext('The topic to publish with')
         },
         {
             'id': 'keepalive',
@@ -81,7 +81,7 @@ OUTPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': lazy_gettext('Keep Alive'),
-            'phrase': 'The keepalive timeout value for the client. Set to 0 to disable.'
+            'phrase': lazy_gettext('The keepalive timeout value for the client. Set to 0 to disable.')
         },
         {
             'id': 'clientid',
@@ -89,7 +89,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'client_{}'.format(random_alphanumeric(8)),
             'required': True,
             'name': 'Client ID',
-            'phrase': 'Unique client ID for connecting to the MQTT server'
+            'phrase': lazy_gettext('Unique client ID for connecting to the MQTT server')
         },
         {
             'id': 'off_value',
@@ -97,14 +97,14 @@ OUTPUT_INFORMATION = {
             'default_value': 0,
             'required': True,
             'name': lazy_gettext('Off Value'),
-            'phrase': 'The value to send when an Off command is given'
+            'phrase': lazy_gettext('The value to send when an Off command is given')
         },
         {
             'id': 'login',
             'type': 'bool',
             'default_value': False,
             'name': 'Use Login',
-            'phrase': 'Send login credentials'
+            'phrase': lazy_gettext('Send login credentials')
         },
         {
             'id': 'username',
@@ -112,7 +112,7 @@ OUTPUT_INFORMATION = {
             'default_value': 'user',
             'required': False,
             'name': lazy_gettext('Username'),
-            'phrase': 'Username for connecting to the server'
+            'phrase': lazy_gettext('Username for connecting to the server')
         },
         {
             'id': 'password',
@@ -120,7 +120,7 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': False,
             'name': lazy_gettext('Password'),
-            'phrase': 'Password for connecting to the server.'
+            'phrase': lazy_gettext('Password for connecting to the server.')
         },
         {
             'id': 'mqtt_use_tls',
@@ -128,8 +128,8 @@ OUTPUT_INFORMATION = {
             'default_value': False,
             'required': False,
             'name': 'Use TLS',
-            'phrase': 'Encrypt the connection with TLS (broker port is usually 8883). '
-                      'Required when the broker is reachable over the internet.'
+            'phrase': lazy_gettext('Encrypt the connection with TLS (broker port is usually 8883). '
+                      'Required when the broker is reachable over the internet.')
         },
         {
             'id': 'mqtt_tls_ca_cert',
@@ -137,9 +137,9 @@ OUTPUT_INFORMATION = {
             'default_value': '',
             'required': False,
             'name': lazy_gettext('TLS CA Certificate'),
-            'phrase': 'Path to the CA certificate file that signed the broker certificate. '
+            'phrase': lazy_gettext('Path to the CA certificate file that signed the broker certificate. '
                       'Leave blank to use the system CA store (for brokers with a '
-                      'publicly-trusted certificate, e.g. Let\'s Encrypt).'
+                      'publicly-trusted certificate, e.g. Let\'s Encrypt).')
         },
         {
             'id': 'mqtt_use_websockets',
@@ -147,7 +147,7 @@ OUTPUT_INFORMATION = {
             'default_value': False,
             'required': False,
             'name': 'Use Websockets',
-            'phrase': 'Use websockets to connect to the server.'
+            'phrase': lazy_gettext('Use websockets to connect to the server.')
         }
     ]
 }

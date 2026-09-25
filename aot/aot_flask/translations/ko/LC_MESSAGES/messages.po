@@ -32388,3 +32388,641 @@ msgstr "역할이 일정을 편집할 수 없어 Google → AoT 가져오기를 
 
 msgid "Use AI Chat"
 msgstr "AI 채팅 사용"
+
+#: outputs/on_off_chirpstack.py:225
+msgid "Always send command regardless of current state"
+msgstr "현재 상태와 관계없이 항상 명령을 전송합니다"
+
+
+#: outputs/on_off_python.py:200 outputs/pwm_python.py:216
+msgid "Analyze your Python code with pylint when saving"
+msgstr "저장할 때 pylint로 Python 코드를 분석합니다"
+
+
+#: outputs/motor_stepper_bipolar_generic.py:119
+msgid "Choose when to pull the enable pin high to energize the motor."
+msgstr "모터에 전원을 공급하기 위해 Enable 핀을 High로 만들 시점을 선택하세요."
+
+
+#: outputs/motor_stepper_bipolar_generic.py:130
+msgid "Choose whether the enable pin in pulled high (Enable) or low (Disable) when AoT shuts down."
+msgstr "AoT가 종료될 때 Enable 핀을 High(활성화)로 할지 Low(비활성화)로 할지 선택하세요."
+
+
+#: outputs/pump_atlas_ezo_pmp.py:94 outputs/pump_gpio.py:131
+#: outputs/pump_grove_motor_driver_v1_0.py:140
+#: outputs/pump_grove_motor_driver_v1_3.py:141 outputs/pump_mcp23017.py:142
+#: outputs/pump_pcf8574.py:133
+msgid "Desired flow rate in ml/minute when Specify Flow Rate set"
+msgstr "Specify Flow Rate 설정 시 원하는 유량(ml/분)"
+
+
+#: outputs/pump_l298n.py:113 outputs/pump_l298n_pi5.py:109
+msgid "Enable the use of the Enable Pin"
+msgstr "Enable 핀 사용을 활성화합니다"
+
+
+#: outputs/on_off_mqtt.py:186 outputs/on_off_mqtt_multi.py:158
+#: outputs/pwm_mqtt.py:144 outputs/value_mqtt.py:131
+msgid "Encrypt the connection with TLS (broker port is usually 8883). Required when the broker is reachable over the internet."
+msgstr "TLS로 연결을 암호화합니다(브로커 포트는 보통 8883). 브로커가 인터넷을 통해 접근 가능한 경우 필수입니다."
+
+
+#: outputs/on_off_neopixel_rgb.py:86
+msgid "Enter the GPIO Pin connected to your device data wire (BCM numbering)."
+msgstr "장치의 데이터 배선에 연결된 GPIO 핀을 입력하세요(BCM 번호 체계)."
+
+
+#: outputs/on_off_chirpstack.py:126
+msgid "Enter the JWT token value (without Bearer prefix)"
+msgstr "JWT 토큰 값을 입력하세요(Bearer 접두사 제외)"
+
+
+#: outputs/on_off_chirpstack.py:232
+msgid "Execute trigger function when output switches at startup"
+msgstr "시작 시 출력이 전환될 때 작동 함수를 실행합니다"
+
+
+#: outputs/remote_output_on_off.py:115
+msgid "HTTP read timeout for ON/OFF commands. Must be longer than the slowest command on the remote host (e.g. if the remote command has time.sleep(15), set this to at least 20)."
+msgstr "ON/OFF 명령에 대한 HTTP 읽기 제한 시간입니다. 원격 호스트에서 가장 느린 명령보다 길게 설정해야 합니다(예: 원격 명령에 time.sleep(15)가 있으면 최소 20으로 설정)."
+
+
+#: outputs/on_off_chirpstack.py:118
+msgid "Host:port format (e.g., 127.0.0.1:8080) or http(s)://host:port"
+msgstr "Host:port 형식(예: 127.0.0.1:8080) 또는 http(s)://host:port"
+
+
+#: outputs/on_off_neopixel_rgb.py:93 outputs/on_off_neopixel_rgb_spi.py:85
+msgid "How many LEDs in the string?"
+msgstr "스트립의 LED 개수는 몇 개입니까?"
+
+
+#: outputs/on_off_ecowitt.py:99 outputs/remote_output_on_off.py:108
+#: outputs/remote_output_pwm.py:131
+msgid "How often to query the state of the output"
+msgstr "출력 상태를 조회할 주기"
+
+
+#: outputs/on_off_neopixel_rgb.py:136 outputs/on_off_neopixel_rgb_spi.py:128
+msgid "How the rainbow is displayed"
+msgstr "무지개가 표시되는 방식"
+
+
+#: outputs/on_off_ecowitt.py:73
+msgid "ID of WFC01/WFC02/AC1100 (e.g., 11044)"
+msgstr "WFC01/WFC02/AC1100의 ID(예: 11044)"
+
+
+#: outputs/value_dac_mcp4728.py:164 outputs/value_gp8xxx_iic_dual_dac.py:123
+msgid "If Specified Value is selected, set the shutdown state value"
+msgstr "Specified Value가 선택된 경우 종료 시 상태 값을 설정하세요"
+
+
+#: outputs/value_dac_mcp4728.py:145 outputs/value_gp8xxx_iic_dual_dac.py:104
+msgid "If Specified Value is selected, set the start state value"
+msgstr "Specified Value가 선택된 경우 시작 시 상태 값을 설정하세요"
+
+
+#: outputs/value_gp8xxx_iic_dual_dac.py:131
+msgid "If Specified Value to apply when turned off"
+msgstr "Specified Value 선택 시 꺼졌을 때 적용할 값입니다"
+
+
+#: outputs/pump_l298n.py:149 outputs/pump_l298n_pi5.py:137
+msgid "If a pump, the measured flow rate (ml/min) at the set Duty Cycle"
+msgstr "펌프인 경우, 설정된 듀티 사이클에서 측정된 유량(ml/분)"
+
+
+#: outputs/pwm_gpio.py:157 outputs/pwm_mqtt.py:231 outputs/pwm_pca9685.py:169
+#: outputs/pwm_python.py:294 outputs/pwm_rpi_gpio.py:144
+#: outputs/pwm_shell.py:124 outputs/remote_output_pwm.py:194
+msgid "Invert the value that is saved to the measurement database"
+msgstr "측정 데이터베이스에 저장되는 값을 반전합니다"
+
+
+#: outputs/pwm_gpio.py:92 outputs/pwm_mqtt.py:186 outputs/pwm_pca9685.py:122
+#: outputs/pwm_python.py:249 outputs/pwm_rpi_gpio.py:90 outputs/pwm_shell.py:79
+#: outputs/remote_output_pwm.py:151
+msgid "Last Known Value"
+msgstr "마지막으로 확인된 값"
+
+
+#: outputs/on_off_ecowitt.py:65
+msgid "Local IP address of the Ecowitt hub (e.g., 192.168.1.100)"
+msgstr "Ecowitt 허브의 로컬 IP 주소(예: 192.168.1.100)"
+
+
+#: outputs/on_off_chirpstack.py:190
+msgid "Log connection/enqueue/confirmation notices (INFO/WARNING) for this device. Errors are always logged. Leave off in production."
+msgstr "이 장치의 연결/전송 대기열/확인 알림(INFO/WARNING)을 기록합니다. 오류는 항상 기록됩니다. 운영 환경에서는 꺼두세요."
+
+
+#: outputs/on_off_mqtt_multi.py:77
+msgid "Number of channels. Save to add or remove channel rows."
+msgstr "채널 수입니다. 저장하면 채널 행이 추가되거나 제거됩니다."
+
+
+#: outputs/pwm_mqtt.py:136 outputs/value_mqtt.py:123
+msgid "Password for connecting to the server."
+msgstr "서버 연결에 사용할 비밀번호입니다."
+
+
+#: outputs/on_off_mqtt.py:178 outputs/on_off_mqtt_multi.py:150
+msgid "Password for connecting to the server. Leave blank to disable."
+msgstr "서버 연결에 사용할 비밀번호입니다. 비워두면 비활성화됩니다."
+
+
+#: outputs/on_off_mqtt.py:195 outputs/on_off_mqtt_multi.py:167
+#: outputs/pwm_mqtt.py:153 outputs/value_mqtt.py:140
+msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
+msgstr "브로커 인증서에 서명한 CA 인증서 파일의 경로입니다. 비워두면 시스템 CA 저장소를 사용합니다(Let's Encrypt 등 공인 인증서를 사용하는 브로커의 경우)."
+
+
+#: outputs/pwm_python.py:232
+msgid "Python code to execute to set the PWM duty cycle (%)"
+msgstr "PWM 듀티 사이클(%)을 설정하기 위해 실행할 Python 코드"
+
+
+#: outputs/potentiometer_ds3502.py:68
+msgid "Round direction to the nearest step value"
+msgstr "가장 가까운 스텝 값으로 반올림하는 방향"
+
+
+#: outputs/pwm_mqtt.py:176
+msgid "Round the payload value to an integer."
+msgstr "페이로드 값을 정수로 반올림합니다."
+
+
+#: outputs/on_off_sequent_8_relay_hat.py:78
+msgid "Select the board stack number when multiple boards are used"
+msgstr "여러 보드를 사용할 때 보드 스택 번호를 선택하세요"
+
+
+#: outputs/value_dac_mcp4728.py:126
+msgid "Select the channel Gain"
+msgstr "채널 Gain을 선택하세요"
+
+
+#: outputs/value_dac_mcp4728.py:115
+msgid "Select the channel VREF"
+msgstr "채널 VREF를 선택하세요"
+
+
+#: outputs/value_dac_mcp4728.py:156 outputs/value_gp8xxx_iic_dual_dac.py:115
+msgid "Select the channel shutdown state"
+msgstr "채널 종료 상태를 선택하세요"
+
+
+#: outputs/value_dac_mcp4728.py:137 outputs/value_gp8xxx_iic_dual_dac.py:96
+msgid "Select the channel start state"
+msgstr "채널 시작 상태를 선택하세요"
+
+
+#: outputs/on_off_chirpstack.py:161
+msgid "Select the payload encoding format"
+msgstr "페이로드 인코딩 형식을 선택하세요"
+
+
+#: outputs/value_gp8xxx_iic_dual_dac.py:82
+msgid "Select your GP8XXX device"
+msgstr "사용 중인 GP8XXX 장치를 선택하세요"
+
+
+#: outputs/on_off_chirpstack.py:150
+msgid "Send command as confirmed (await acknowledgment)"
+msgstr "확인 응답을 기다리는 확인형(Confirmed) 명령으로 전송합니다"
+
+
+#: outputs/on_off_mqtt.py:162 outputs/on_off_mqtt_multi.py:134
+#: outputs/pwm_mqtt.py:120 outputs/value_mqtt.py:107
+msgid "Send login credentials"
+msgstr "로그인 자격 증명을 전송합니다"
+
+
+#: outputs/value_dac_mcp4728.py:93
+msgid "Set the VREF voltage"
+msgstr "VREF 전압을 설정하세요"
+
+
+#: outputs/on_off_mqtt_multi.py:235
+msgid "Set the channel state when AoT starts"
+msgstr "AoT가 시작될 때 채널의 상태를 설정하세요"
+
+
+#: outputs/on_off_mcp23017.py:92 outputs/on_off_pcf8574.py:89
+#: outputs/on_off_pcf8575.py:89 outputs/on_off_sequent_8_relay_hat.py:111
+#: outputs/on_off_sparkfun_board_4_relays.py:92 outputs/on_off_xl9535.py:89
+msgid "Set the state of the GPIO when AoT shuts down"
+msgstr "AoT가 종료될 때 GPIO의 상태를 설정하세요"
+
+
+#: outputs/on_off_mcp23017.py:81 outputs/on_off_pcf8574.py:78
+#: outputs/on_off_pcf8575.py:78 outputs/on_off_sequent_8_relay_hat.py:100
+#: outputs/on_off_sparkfun_board_4_relays.py:81 outputs/on_off_xl9535.py:78
+msgid "Set the state of the GPIO when AoT starts"
+msgstr "AoT가 시작될 때 GPIO의 상태를 설정하세요"
+
+
+#: outputs/on_off_grove_multichannel_relay.py:153
+msgid "Set the state of the relay when AoT shuts down"
+msgstr "AoT가 종료될 때 릴레이의 상태를 설정하세요"
+
+
+#: outputs/on_off_grove_multichannel_relay.py:142
+msgid "Set the state of the relay when AoT starts"
+msgstr "AoT가 시작될 때 릴레이의 상태를 설정하세요"
+
+
+#: outputs/on_off_52pi_4ch.py:114
+msgid "Set the state of the relay when aot shuts down"
+msgstr "AoT가 종료될 때 릴레이의 상태를 설정하세요"
+
+
+#: outputs/on_off_52pi_4ch.py:103
+msgid "Set the state of the relay when aot starts"
+msgstr "AoT가 시작될 때 릴레이의 상태를 설정하세요"
+
+
+#: outputs/on_off_chirpstack.py:218
+msgid "State to apply when AoT shuts down"
+msgstr "AoT가 종료될 때 적용할 상태"
+
+
+#: outputs/on_off_chirpstack.py:206
+msgid "State to apply when AoT starts"
+msgstr "AoT가 시작될 때 적용할 상태"
+
+
+#: outputs/on_off_neopixel_rgb.py:111 outputs/on_off_neopixel_rgb_spi.py:103
+msgid "The Color when turning on in Single Color Mode, RGB format (red, green, blue), 0 - 255 each."
+msgstr "Single Color Mode로 켤 때의 색상입니다. RGB 형식(빨강, 초록, 파랑), 각 0 - 255."
+
+
+#: outputs/pump_l298n.py:122 outputs/pump_l298n_pi5.py:118
+msgid "The Enable pin of the controller (BCM numbering)"
+msgstr "컨트롤러의 Enable 핀(BCM 번호 체계)"
+
+
+#: outputs/motor_stepper_bipolar_generic.py:87
+msgid "The Full Step Delay of the controller"
+msgstr "컨트롤러의 Full Step Delay"
+
+
+#: outputs/pwm_gpio.py:143
+msgid "The Herts to output the PWM signal (0 - 70,000)"
+msgstr "PWM 신호를 출력할 주파수(Hz, 0 - 70,000)"
+
+
+#: outputs/pwm_pca9685.py:102
+msgid "The Herts to output the PWM signal (40 - 1600)"
+msgstr "PWM 신호를 출력할 주파수(Hz, 40 - 1600)"
+
+
+#: outputs/pwm_rpi_gpio.py:130
+msgid "The Hertz to output the PWM signal"
+msgstr "PWM 신호를 출력할 주파수(Hz)"
+
+
+#: outputs/pump_l298n.py:97 outputs/pump_l298n_pi5.py:93
+msgid "The Input Pin 1 of the controller (BCM numbering)"
+msgstr "컨트롤러의 Input Pin 1(BCM 번호 체계)"
+
+
+#: outputs/pump_l298n.py:106 outputs/pump_l298n_pi5.py:102
+msgid "The Input Pin 2 of the controller (BCM numbering)"
+msgstr "컨트롤러의 Input Pin 2(BCM 번호 체계)"
+
+
+#: outputs/on_off_mqtt_multi.py:109
+msgid "The MQTT topic to subscribe to for confirming each channel's operating state. Leave blank to disable status feedback."
+msgstr "각 채널의 작동 상태를 확인하기 위해 구독할 MQTT 토픽입니다. 비워두면 상태 피드백이 비활성화됩니다."
+
+
+#: outputs/on_off_mqtt_multi.py:101
+msgid "The MQTT topic used to publish on/off commands (control direction)."
+msgstr "on/off 명령을 게시하는 데 사용되는 MQTT 토픽입니다(제어 방향)."
+
+
+#: outputs/remote_output_on_off.py:125 outputs/remote_output_pwm.py:141
+msgid "The Remote AoT Output to control"
+msgstr "제어할 원격 AoT 출력"
+
+
+#: outputs/motor_stepper_uln2003.py:109
+msgid "The Step Delay of the controller"
+msgstr "컨트롤러의 Step Delay"
+
+
+#: outputs/motor_stepper_bipolar_generic.py:150
+#: outputs/motor_stepper_uln2003.py:126
+msgid "The Step Resolution of the controller"
+msgstr "컨트롤러의 Step Resolution"
+
+
+#: outputs/motor_stepper_bipolar_generic.py:79
+msgid "The Step pin of the controller (BCM numbering)"
+msgstr "컨트롤러의 Step 핀(BCM 번호 체계)"
+
+
+#: outputs/pump_atlas_ezo_pmp.py:139
+msgid "The actual volume (ml) that was dispensed"
+msgstr "실제로 배출된 용량(ml)"
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:98
+msgid "The brightness to set, in percent (0 - 100)"
+msgstr "설정할 밝기(%, 0 - 100)"
+
+
+#: outputs/on_off_neopixel_rgb_spi.py:69
+msgid "The color (e.g 10, 0 0)"
+msgstr "색상(예: 10, 0 0)"
+
+
+#: outputs/on_off_neopixel_rgb.py:69
+msgid "The color (e.g 10, 0, 0)"
+msgstr "색상(예: 10, 0, 0)"
+
+
+#: outputs/on_off_neopixel_rgb.py:104 outputs/on_off_neopixel_rgb_spi.py:96
+msgid "The color mode when turned on"
+msgstr "켜졌을 때의 색상 모드"
+
+
+#: outputs/output_spacer.py:27
+msgid "The color of the name text"
+msgstr "이름 텍스트의 색상"
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:167
+msgid "The color temperature to set, in degrees Kelvin"
+msgstr "설정할 색온도(켈빈)"
+
+
+#: outputs/on_off_virtual_multi.py:65 outputs/on_off_virtual_single.py:66
+msgid "The current draw of the virtual device"
+msgstr "가상 장치의 전류 소비량"
+
+
+#: outputs/pump_l298n.py:141 outputs/pump_l298n_pi5.py:129
+msgid "The direction to turn the motor"
+msgstr "모터를 회전시킬 방향"
+
+
+#: outputs/pump_l298n.py:130
+msgid "The duty cycle to apply to the Enable Pin (percent, 1 - 100)"
+msgstr "Enable 핀에 적용할 듀티 사이클(%, 1 - 100)"
+
+
+#: outputs/pwm_gpio.py:64 outputs/pwm_mqtt.py:63 outputs/pwm_python.py:200
+#: outputs/pwm_rpi_gpio.py:62 outputs/remote_output_pwm.py:62
+msgid "The duty cycle to set"
+msgstr "설정할 듀티 사이클"
+
+
+#: outputs/remote_output_pwm.py:180
+msgid "The duty cycle to set at shutdown, if enabled"
+msgstr "활성화된 경우 종료 시 설정할 듀티 사이클"
+
+
+#: outputs/remote_output_pwm.py:161
+msgid "The duty cycle to set at startup, if enabled"
+msgstr "활성화된 경우 시작 시 설정할 듀티 사이클"
+
+
+#: outputs/pump_gpio.py:104 outputs/pump_grove_motor_driver_v1_0.py:148
+#: outputs/pump_grove_motor_driver_v1_3.py:149 outputs/pump_mcp23017.py:115
+#: outputs/pump_pcf8574.py:106
+msgid "The fastest rate that the pump can dispense (ml/min)"
+msgstr "펌프가 배출할 수 있는 최대 속도(ml/분)"
+
+
+#: outputs/on_off_mqtt.py:60 outputs/on_off_mqtt_multi.py:85
+#: outputs/pwm_mqtt.py:80 outputs/value_mqtt.py:59
+msgid "The hostname of the MQTT server"
+msgstr "MQTT 서버의 호스트 이름"
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:91 outputs/on_off_kasa_rgb_bulbs.py:114
+#: outputs/on_off_kasa_rgb_bulbs.py:137 outputs/on_off_kasa_rgb_bulbs.py:160
+#: outputs/on_off_kasa_rgb_bulbs.py:183
+msgid "The hsv transition period"
+msgstr "HSV 전환 기간"
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:121
+msgid "The hue to set, in degrees (0 - 360)"
+msgstr "설정할 색상(Hue, 0 - 360도)"
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:190
+msgid "The hue, saturation, brightness to set, e.g. \"200, 20, 50\""
+msgstr "설정할 색상(Hue), 채도(Saturation), 밝기(Brightness), 예: \"200, 20, 50\""
+
+
+#: outputs/on_off_mqtt.py:85 outputs/on_off_mqtt_multi.py:119
+#: outputs/pwm_mqtt.py:105 outputs/value_mqtt.py:84
+msgid "The keepalive timeout value for the client. Set to 0 to disable."
+msgstr "클라이언트의 keepalive 제한 시간 값입니다. 0으로 설정하면 비활성화됩니다."
+
+
+#: outputs/on_off_neopixel_rgb.py:125 outputs/on_off_neopixel_rgb_spi.py:117
+msgid "The maximum brightness of LEDs in Rainbow Mode (1 - 255)"
+msgstr "Rainbow Mode에서 LED의 최대 밝기(1 - 255)"
+
+
+#: outputs/pump_gpio.py:112 outputs/pump_mcp23017.py:123
+#: outputs/pump_pcf8574.py:114
+msgid "The minimum duration the pump should be turned on for every 60 second period"
+msgstr "60초마다 펌프가 켜져 있어야 하는 최소 시간"
+
+
+#: outputs/pump_grove_motor_driver_v1_0.py:156
+msgid "The minimum duration the pump turns on for every 60 second period (only used for Specify Flow Rate mode)."
+msgstr "60초마다 펌프가 켜지는 최소 시간입니다(Specify Flow Rate 모드에서만 사용)."
+
+
+#: outputs/pump_grove_motor_driver_v1_0.py:121
+#: outputs/pump_grove_motor_driver_v1_3.py:122
+msgid "The motor output that determines the speed"
+msgstr "속도를 결정하는 모터 출력"
+
+
+#: outputs/pump_grove_motor_driver_v1_0.py:171
+msgid "The new I2C to set the sensor to"
+msgstr "센서에 설정할 새 I2C 주소"
+
+
+#: outputs/on_off_mqtt_multi.py:205
+msgid "The payload published to the Control Topic to turn this channel OFF."
+msgstr "이 채널을 OFF로 전환하기 위해 Control Topic에 게시되는 페이로드입니다."
+
+
+#: outputs/on_off_mqtt_multi.py:197
+msgid "The payload published to the Control Topic to turn this channel ON."
+msgstr "이 채널을 ON으로 전환하기 위해 Control Topic에 게시되는 페이로드입니다."
+
+
+#: outputs/on_off_mqtt.py:109
+msgid "The payload to send when turned off"
+msgstr "꺼졌을 때 전송할 페이로드"
+
+
+#: outputs/on_off_mqtt.py:101
+msgid "The payload to send when turned on"
+msgstr "켜졌을 때 전송할 페이로드"
+
+
+#: outputs/on_off_kasa_hs300.py:79 outputs/on_off_kasa_kp303.py:79
+msgid "The period between checking if connected and output states."
+msgstr "연결 상태와 출력 상태를 확인하는 주기입니다."
+
+
+#: outputs/on_off_kasa_hs300_0_4_2.py:83 outputs/on_off_kasa_kp303_0_4_2.py:83
+#: outputs/on_off_kasa_plugs.py:84 outputs/on_off_kasa_rgb_bulbs.py:249
+msgid "The period between checking if connected and output states. 0 disables."
+msgstr "연결 상태와 출력 상태를 확인하는 주기입니다. 0이면 비활성화됩니다."
+
+
+#: outputs/motor_stepper_uln2003.py:74
+msgid "The pin (BCM numbering) connected to IN1 of the ULN2003"
+msgstr "ULN2003의 IN1에 연결된 핀(BCM 번호 체계)"
+
+
+#: outputs/motor_stepper_uln2003.py:83
+msgid "The pin (BCM numbering) connected to IN2 of the ULN2003"
+msgstr "ULN2003의 IN2에 연결된 핀(BCM 번호 체계)"
+
+
+#: outputs/motor_stepper_uln2003.py:92
+msgid "The pin (BCM numbering) connected to IN3 of the ULN2003"
+msgstr "ULN2003의 IN3에 연결된 핀(BCM 번호 체계)"
+
+
+#: outputs/motor_stepper_uln2003.py:101
+msgid "The pin (BCM numbering) connected to IN4 of the ULN2003"
+msgstr "ULN2003의 IN4에 연결된 핀(BCM 번호 체계)"
+
+
+#: outputs/on_off_mqtt.py:68 outputs/on_off_mqtt_multi.py:93
+#: outputs/pwm_mqtt.py:88 outputs/value_mqtt.py:67
+msgid "The port of the MQTT server"
+msgstr "MQTT 서버의 포트"
+
+
+#: outputs/on_off_kasa_hs300_0_4_2.py:92 outputs/on_off_kasa_kp303_0_4_2.py:92
+#: outputs/on_off_kasa_plugs.py:93 outputs/on_off_kasa_rgb_bulbs.py:258
+msgid "The port to start the asyncio RPC server. Must be unique from other Kasa Outputs."
+msgstr "asyncio RPC 서버를 시작할 포트입니다. 다른 Kasa 출력과 겹치지 않는 고유한 값이어야 합니다."
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:144
+msgid "The saturation to set, in percent (0 - 100)"
+msgstr "설정할 채도(%, 0 - 100)"
+
+
+#: outputs/on_off_neopixel_rgb.py:118 outputs/on_off_neopixel_rgb_spi.py:110
+msgid "The speed to change colors in Rainbow Mode"
+msgstr "Rainbow Mode에서 색상이 바뀌는 속도"
+
+
+#: outputs/on_off_52pi_4ch.py:125 outputs/on_off_gpio.py:92
+#: outputs/on_off_grove_multichannel_relay.py:164
+#: outputs/on_off_mcp23017.py:103 outputs/on_off_pcf8574.py:100
+#: outputs/on_off_pcf8575.py:100 outputs/on_off_pinctrl.py:89
+#: outputs/on_off_sequent_8_relay_hat.py:122
+#: outputs/on_off_sparkfun_board_4_relays.py:103 outputs/on_off_xl9535.py:100
+#: outputs/pump_gpio.py:96
+msgid "The state of the GPIO that corresponds to an On state"
+msgstr "On 상태에 해당하는 GPIO의 상태"
+
+
+#: outputs/pump_mcp23017.py:107 outputs/pump_pcf8574.py:98
+msgid "The state of the output channel that corresponds to the pump being on"
+msgstr "펌프가 켜진 상태에 해당하는 출력 채널의 상태"
+
+
+#: outputs/on_off_mqtt.py:76 outputs/pwm_mqtt.py:96 outputs/value_mqtt.py:75
+msgid "The topic to publish with"
+msgstr "게시에 사용할 토픽"
+
+
+#: outputs/on_off_kasa_rgb_bulbs.py:206 outputs/on_off_kasa_rgb_bulbs.py:222
+msgid "The transition period"
+msgstr "전환 기간"
+
+
+#: outputs/value_mqtt.py:100
+msgid "The value to send when an Off command is given"
+msgstr "Off 명령이 내려졌을 때 전송할 값"
+
+
+#: outputs/pump_atlas_ezo_pmp.py:124
+msgid "The volume (ml) that is instructed to be dispensed"
+msgstr "배출하도록 지시된 용량(ml)"
+
+
+#: outputs/pump_gpio.py:71 outputs/pump_mcp23017.py:83
+#: outputs/pump_pcf8574.py:82
+msgid "To accurately dispense specific volumes, the following options need to be correctly set. To determine the flow rate of your pump, first purge the fluid line to remove air. Next, turn the pump on for 60 seconds and collect the fluid that's dispensed. Last, measure and enter the amount of fluid that was dispensed, in ml, into the Fastest Rate (ml/min) field. Your pump should now be calibrated to dispense volumes accurately."
+msgstr "정확한 용량을 배출하려면 다음 옵션을 올바르게 설정해야 합니다. 펌프의 유량을 확인하려면 먼저 관 내의 공기를 제거하도록 배관을 비우세요. 다음으로 펌프를 60초 동안 켜고 배출된 액체를 모으세요. 마지막으로 배출된 액체의 양을 ml 단위로 측정하여 Fastest Rate (ml/min) 필드에 입력하세요. 이제 펌프가 정확한 용량을 배출하도록 보정됩니다."
+
+
+#: outputs/pump_grove_motor_driver_v1_0.py:95
+#: outputs/pump_grove_motor_driver_v1_3.py:96
+msgid "To accurately dispense specific volumes, the following options need to be correctly set. To determine the flow rate of your pump, first purge the fluid line to remove air. Next, turn the pump on for 60 seconds and collect the fluid that's dispensed. Last, measure and enter the amount of fluid that was dispensed, in ml, into the Fastest Rate (ml/min) field. Your pump should now be calibrated to dispense volumes accurately. Since Peristaltic Pump Output controllers are capable of accepting multiple different dispersal value types, Default Dispersal Method must be set in order to specify whether the peristaltic pump should output for a duration or a specific volume when other controllers (such as PID controllers) send a value instructing it to dispense."
+msgstr "정확한 용량을 배출하려면 다음 옵션을 올바르게 설정해야 합니다. 펌프의 유량을 확인하려면 먼저 관 내의 공기를 제거하도록 배관을 비우세요. 다음으로 펌프를 60초 동안 켜고 배출된 액체를 모으세요. 마지막으로 배출된 액체의 양을 ml 단위로 측정하여 Fastest Rate (ml/min) 필드에 입력하세요. 이제 펌프가 정확한 용량을 배출하도록 보정됩니다. 연동 펌프(Peristaltic Pump) 출력 컨트롤러는 여러 종류의 배출 값 형식을 받아들일 수 있으므로, 다른 컨트롤러(예: PID 컨트롤러)가 배출을 지시하는 값을 보낼 때 지속 시간으로 출력할지 특정 용량으로 출력할지를 지정하기 위해 Default Dispersal Method를 설정해야 합니다."
+
+
+#: outputs/on_off_mqtt.py:93 outputs/on_off_mqtt_multi.py:127
+#: outputs/pwm_mqtt.py:113 outputs/value_mqtt.py:92
+msgid "Unique client ID for connecting to the MQTT server"
+msgstr "MQTT 서버에 연결할 때 사용할 고유 클라이언트 ID"
+
+
+#: outputs/on_off_mqtt.py:205 outputs/on_off_mqtt_multi.py:177
+#: outputs/pwm_mqtt.py:163 outputs/value_mqtt.py:150
+msgid "Use websockets to connect to the server."
+msgstr "서버에 연결할 때 웹소켓을 사용합니다."
+
+
+#: outputs/pwm_gpio.py:91 outputs/pwm_gpio.py:112 outputs/pwm_mqtt.py:185
+#: outputs/pwm_mqtt.py:206 outputs/pwm_pca9685.py:121
+#: outputs/pwm_pca9685.py:143 outputs/pwm_python.py:248
+#: outputs/pwm_python.py:269 outputs/pwm_rpi_gpio.py:89
+#: outputs/pwm_rpi_gpio.py:110 outputs/pwm_shell.py:78 outputs/pwm_shell.py:99
+#: outputs/remote_output_pwm.py:150 outputs/remote_output_pwm.py:170
+msgid "User Set Value"
+msgstr "사용자 설정 값"
+
+
+#: outputs/on_off_mqtt_multi.py:222
+msgid "When this exact value is received on the Status Topic, the channel is marked OFF. Leave blank to disable OFF detection for this channel."
+msgstr "Status Topic에서 이 값을 정확히 수신하면 채널이 OFF로 표시됩니다. 비워두면 이 채널의 OFF 감지가 비활성화됩니다."
+
+
+#: outputs/on_off_mqtt_multi.py:213
+msgid "When this exact value is received on the Status Topic, the channel is marked ON. Leave blank to disable ON detection for this channel."
+msgstr "Status Topic에서 이 값을 정확히 수신하면 채널이 ON으로 표시됩니다. 비워두면 이 채널의 ON 감지가 비활성화됩니다."
+
+
+#: outputs/on_off_ecowitt.py:92
+msgid "When turning on, open valve to this percent (0-100)"
+msgstr "켤 때 밸브를 이 비율(%, 0-100)까지 엽니다"
+
+
+#: outputs/on_off_neopixel_rgb.py:62 outputs/on_off_neopixel_rgb_spi.py:62
+msgid "Which LED in the strip to change"
+msgstr "스트립에서 변경할 LED"
+
+
+#: outputs/on_off_chirpstack.py:169
+msgid "e.g., 010110 (Hex) or JSON string"
+msgstr "예: 010110 (Hex) 또는 JSON 문자열"
+
+
+#: outputs/on_off_chirpstack.py:177
+msgid "e.g., 010210 (Hex) or JSON string"
+msgstr "예: 010210 (Hex) 또는 JSON 문자열"
+

@@ -65,7 +65,7 @@ OUTPUT_INFORMATION = {
                 ('down', 'Down')
             ],
             'name': 'Round Step',
-            'phrase': 'Round direction to the nearest step value'
+            'phrase': lazy_gettext('Round direction to the nearest step value')
         }
     ]
 }
