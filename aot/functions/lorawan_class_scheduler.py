@@ -52,7 +52,9 @@ from aot.databases.models import CustomController, Misc
 from aot.functions.base_function import AbstractFunction
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.device_tz import resolve_location_tz
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.timekit import utc_now, wall_to_utc
 
 from aot.functions._lorawan_common import (
     ChirpStackClient, MODE_A, MODE_C)
@@ -330,8 +332,9 @@ class CustomModule(AbstractFunction):
         else:
             until = self._today_time_epoch(getattr(self, 'manual_c_expire', '17:00'))
         self.set_custom_option('override_until', str(until))
+        until_local = datetime.fromtimestamp(until, self._local_tz())
         return "Override active (Class C) until {}".format(
-            datetime.fromtimestamp(until).strftime('%Y-%m-%d %H:%M'))
+            until_local.strftime('%Y-%m-%d %H:%M'))
 
     def clear_override(self, args_dict):
         self.set_custom_option('override_until', '0')
@@ -348,8 +351,22 @@ class CustomModule(AbstractFunction):
 
     def _today_time_epoch(self, hhmm):
         h, m = self._parse_hhmm(hhmm, 17, 0)
-        now = datetime.now()
-        return now.replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
+        tz = self._local_tz()
+        wall = self._local_now().replace(
+            tzinfo=None, hour=h, minute=m, second=0, microsecond=0)
+        return wall_to_utc(wall, tz).timestamp()
+
+    def _local_tz(self):
+        """이 스케줄러의 위치 시간대. 컨테이너 시계(TZ)에 기대지 않는다."""
+        from datetime import timezone
+        try:
+            return resolve_location_tz(self.unique_id)
+        except Exception as e:
+            self.logger.debug("위치 tz 해석 실패, UTC 사용: %s", e)
+            return timezone.utc
+
+    def _local_now(self) -> datetime:
+        return utc_now().astimezone(self._local_tz())
 
     def _in_manual_window(self, now: datetime) -> bool:
         sh, sm = self._parse_hhmm(getattr(self, 'manual_c_start', '05:00'), 5, 0)
@@ -452,7 +469,7 @@ class CustomModule(AbstractFunction):
                 "No devices assigned - assign a device to this scheduler from its own "
                 "device page (e.g. the AoT-C 'Class Scheduler' field).")
             return
-        now = datetime.now()
+        now = self._local_now()
         self._state_cache = {}  # fresh per-tick cache (interlock/reconcile/telemetry share it)
 
         # --- decide target state (precedence: override > winter > MANUAL > AUTO) ---

@@ -50,7 +50,7 @@ Review these values in `docker/.env`:
 
 *   `AOT_IMAGE_TAG` — the version to install. Pinning an exact [release](https://github.com/AoT-inc/AoT/releases) is recommended.
 *   `AOT_PORT` — host port for the web interface (default `8084`).
-*   `TZ` — container timezone (default `Asia/Seoul`). Data is stored in UTC; this affects log display and local-time scheduling.
+*   `TZ` — container timezone (default `Asia/Seoul`). It only sets the **first-run default** of the System timezone setting (copied into the database once, when it is first created); changing it later has no effect. Log timestamps and scheduling follow the System timezone setting and the map site/zone locations, so after the first login check the System timezone and place your sites and zones on the map. Data is always stored in UTC.
 *   `HARDWARE_PROFILE` — `LOW` (Raspberry Pi, small VM) or `HIGH`.
 
 Start the stack:
