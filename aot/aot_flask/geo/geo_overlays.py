@@ -1213,39 +1213,42 @@ class GeoOverlayManager:
     def find_containing_shape(lat, lng, map_uuid):
         """
         Finds the smallest (most specific) shape containing the given point.
-        Priority: Zone > Site.
+
+        The tie-break for overlapping candidates lives in one place —
+        `aot.utils.geo_hierarchy.pick_smallest_container()` (smallest area
+        wins, site vs zone included) — instead of a local "zone replaces
+        site, first match otherwise" rule that used to disagree with it
+        whenever two zones overlapped (no caller currently depends on the
+        old rule; see aot/tests/geo/test_geo_overlap_containment_tiebreak.py).
         """
         if not lat or not lng or not map_uuid:
             return None
-            
+
         try:
             # point = Point(lng, lat) # Shapely uses (x, y) -> (lng, lat)
-            # Actually, check if shape uses [lng, lat] or [lat, lng]. 
+            # Actually, check if shape uses [lng, lat] or [lat, lng].
             # Standard GeoJSON is [lng, lat], Turf is [lng, lat].
             p = Point(float(lng), float(lat))
-            
+
             # Fetch all Sites and Zones for this map
             shapes = GeoShape.query.filter(
                 GeoShape.geo_id == map_uuid,
                 GeoShape.type.in_(['site', 'zone'])
             ).all()
-            
-            best_match = None
-            
+
+            from aot.utils.geo_hierarchy import pick_smallest_container
+
+            by_id, candidates = {}, []
             for s in shapes:
                 feat = s.feature
                 if not feat or 'geometry' not in feat:
                     continue
-                    
                 geom = shape(feat['geometry'])
-                if geom.contains(p):
-                    # Priority logic: Zone replaces Site
-                    if not best_match:
-                        best_match = s
-                    elif s.type == 'zone' and best_match.type == 'site':
-                        best_match = s
-                    
-            return best_match # Return object to allow robust property access (e.g. name via feature)
+                by_id[s.id] = s
+                candidates.append((s.id, geom, getattr(geom, 'area', 0.0) or 0.0))
+
+            winner_id = pick_smallest_container(p, candidates)
+            return by_id.get(winner_id)  # Return object to allow robust property access (e.g. name via feature)
         except Exception as e:
             current_app.logger.error(f"Error finding containing shape: {e}")
             return None

@@ -12,8 +12,10 @@
 유일성은 DB 계층(I2 부분 유니크 인덱스, p6_22)이 보장한다 — 오염된
 입력 위의 계산이 아니다.
 
-규칙은 find_containing_shape 와 동일하다: 겹치면 zone 이 site 를 이긴다.
-컨테이너 후보는 Polygon/MultiPolygon 기하의 site/zone 도형뿐이다.
+겹치는 후보 사이의 동점 규칙은 `aot.utils.geo_hierarchy.pick_smallest_container()`
+하나가 정본이다(가장 작은 면적 = 가장 구체적인 것이 이긴다, site/zone 구분
+없이). `find_containing_shape` 도 같은 함수를 쓴다. 컨테이너 후보는
+Polygon/MultiPolygon 기하의 site/zone 도형뿐이다.
 
 이 모듈이 소속 판정의 유일한 정본이다. map_overlay_id 를 새로 읽거나
 쓰는 코드를 추가하지 말 것 — 컬럼은 사망 상태이며 추후 마이그레이션에서
@@ -80,20 +82,25 @@ def load_containers(map_uuid):
 
 
 def _best_container(point, containers):
-    """zone 이 site 를 이긴다 (find_containing_shape 와 동일 규칙)."""
+    """겹치는 site/zone 후보 중 가장 작은(가장 구체적인) 것이 이긴다.
+
+    동점 규칙은 `geo_hierarchy.pick_smallest_container()` 하나가 정본이다
+    (`find_containing_shape` 도 같은 함수를 쓴다). 예전에는 "zone 이 site
+    를 이기되, zone 끼리 겹치면 `load_containers()` 가 먼저 돌려준 쪽" 이었다
+    — 그 쿼리에는 `order_by` 가 없어 순서가 기하가 아니라 DB 반환 순서였고,
+    zone 끼리 겹치는 지도(김제 site '3포장' 등)에서는 `geo_hierarchy` 쪽
+    (면적 기준)과 다른 답을 냈다(`aot/tests/geo/test_geo_overlap_containment_tiebreak.py`
+    실증). zone 끼리 겹치지 않으면(zone 이 보통 site 보다 작으므로) 결과는
+    이전과 동일하다.
+    """
     from shapely.geometry import Point
 
+    from aot.utils.geo_hierarchy import pick_smallest_container
+
     p = Point(point[0], point[1])
-    best = None
-    for s, kind, poly in containers:
-        try:
-            if not poly.contains(p):
-                continue
-        except Exception:
-            continue
-        if best is None or (kind == 'zone' and best[1] == 'site'):
-            best = (s, kind)
-    return best[0] if best else None
+    candidates = [(s, poly, getattr(poly, 'area', 0.0) or 0.0)
+                 for s, kind, poly in containers]
+    return pick_smallest_container(p, candidates)
 
 
 def membership_for_map(map_uuid):

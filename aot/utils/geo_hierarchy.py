@@ -56,6 +56,48 @@ def containment_point(g):
         return None
 
 
+def pick_smallest_container(point, candidates, own_area=0.0):
+    """point 를 담는 candidates 중 가장 작은(가장 구체적인) 것의 key.
+
+    **포함 판정에서 승자를 고르는 유일한 정본.** 겹치는 site/zone 후보
+    사이의 동점 규칙이 예전에는 세 곳에 따로 있었고 셋이 서로 달랐다
+    (2026-09-25 실측): 이 파일의 `build_geo_parent_map()` 은 면적으로,
+    `device_membership._best_container()` 는 "zone 이 site 를 이기되 zone
+    끼리는 먼저 반환된 쪽" 으로, `geo_overlays.find_containing_shape()` 도
+    같은 "먼저 반환된 쪽" 이었다 — 셋 다 문서에는 "가장 작은/구체적인 것"
+    이라고 적어 뒀는데 실제로 그렇게 동작한 것은 이 파일 하나뿐이었다.
+    zone 끼리 겹치지 않는 한(정상적인 지도 대부분) 세 규칙의 답은 우연히
+    같았지만(zone 이 보통 site 보다 작으므로), 김제 site '3포장' 처럼
+    zone 끼리 겹치면 갈렸다(`aot/tests/geo/test_geo_overlap_containment_tiebreak.py`
+    실증). 이제 그 세 곳 모두 이 함수 하나를 부른다.
+
+    `candidates` 는 `(key, polygon, area)` 튜플의 iterable이다. `key` 는
+    호출자가 돌려받고 싶은 값(예: 도형 id, GeoShape 행, GeoShape.id)일 뿐,
+    이 함수는 그 정체를 모른 채 면적만 본다.
+
+    `own_area` 보다 작은 candidate 는 제외한다 — 자기보다 작은 도형은
+    부모가 될 수 없다(`build_geo_parent_map()` 의 기존 가드와 동일한 근거,
+    대표점 판정이 완전 포함처럼 암묵적으로 이것을 보장하지 않기 때문).
+    점(마커)처럼 자기 면적이 없는 대상은 기본값 0 이 그대로 통과시킨다.
+
+    면적이 정확히 같은 candidate 끼리는 여전히 먼저 나온 쪽이 이긴다 —
+    그런 동점은 이 함수가 생기기 전부터 `build_geo_parent_map()` 에도
+    있던, 실측 0건인 자리라 새로 만드는 문제가 아니다.
+    """
+    best = None
+    for key, polygon, area in candidates:
+        if area < own_area:
+            continue
+        try:
+            if not polygon.contains(point):
+                continue
+        except Exception:
+            continue
+        if best is None or area < best[1]:
+            best = (key, area)
+    return best[0] if best else None
+
+
 def build_geo_parent_map(all_shapes, use_cache=True):
     """Map every GeoShape.id -> its parent's id (or None), across the given
     shape rows. parent_id wins when set; otherwise the smallest site/zone
@@ -99,23 +141,9 @@ def build_geo_parent_map(all_shapes, use_cache=True):
         # 대표점으로 바꾸면 그 보호가 사라진다 — 실측에서 site '2포장' 의
         # 대표점이 하필 자기 안의 zone '2-2' 에 떨어져, 자식이 부모로 뒤집혔다.
         own_area = getattr(g, 'area', 0.0) or 0.0
-        matches = []
-        for cid, cg in containers:
-            if cid == s.id:
-                continue
-            try:
-                if cg.area < own_area:
-                    continue
-                if cg.contains(pt):
-                    matches.append((cid, cg.area))
-            except Exception:
-                continue
-        if not matches:
-            return None
-        # Smallest containing polygon = most specific parent (a zone before
-        # the site it sits in).
-        matches.sort(key=lambda m: m[1])
-        return matches[0][0]
+        candidates = [(cid, cg, getattr(cg, 'area', 0.0) or 0.0)
+                     for cid, cg in containers if cid != s.id]
+        return pick_smallest_container(pt, candidates, own_area=own_area)
 
     result = {s.id: _find_parent(s) for s in all_shapes}
     if use_cache:
@@ -244,17 +272,8 @@ def owning_facility_uuid(shape_row):
         fg = _parse_geometry(fshape)
         if fg is None or fg.geom_type not in ('Polygon', 'MultiPolygon'):
             continue
-        if fg.area < own_area:
-            continue
-        try:
-            if fg.contains(pt):
-                candidates.append((fac.unique_id, fg.area))
-        except Exception:
-            continue
-    if not candidates:
-        return None
-    candidates.sort(key=lambda c: c[1])
-    return candidates[0][0]
+        candidates.append((fac.unique_id, fg, getattr(fg, 'area', 0.0) or 0.0))
+    return pick_smallest_container(pt, candidates, own_area=own_area)
 
 
 def geo_descendant_shapes(root_shape, all_shapes=None, use_cache=True):
