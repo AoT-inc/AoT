@@ -68,11 +68,17 @@ class _Driver:
 
 
 class _Gate:
-    """OutputController 에서 게이트 부분만 떼어낸 최소 구성."""
+    """OutputController 에서 게이트 부분만 떼어낸 최소 구성.
+
+    짝 액추에이터 인터락(`_interlock_paired_legs`)은 이 파일의 관심사가
+    아니라 아무것도 안 하게 둔다 — 그 동작은
+    `test_paired_actuator_leg_interlock_guard.py` 가 따로 지킨다.
+    """
 
     output_on_off = OutputController.output_on_off
     _audit_command = OutputController._audit_command
     _audit_lifecycle = OutputController._audit_lifecycle
+    _interlock_paired_legs = lambda self, *a, **k: None  # noqa: E731
 
     def __init__(self, driver=None):
         self.output = {'out-1': driver} if driver is not None else {}

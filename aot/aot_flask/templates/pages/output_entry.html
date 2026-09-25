@@ -98,6 +98,22 @@
         </span>
       {%- endif %}
         </div>
+        {%- if not _is_paired and paired_leg_usage is defined %}
+        {%- set _leg_uses = paired_leg_usage.get((each_output.unique_id, each_output_channel)) %}
+        {%- if _leg_uses %}
+        {# 이 채널은 다른 출력(짝 액추에이터)의 열기/닫기/selector 다리다 — 여기서
+           직접 켜면 게이트가 그 짝의 반대쪽(또는 같은 버스의 다른 selector)을
+           먼저 끈다(controller_output.py 의 인터락 가드). 그 이유를 화면에 안
+           남기면 "내가 안 껐는데 꺼졌다"는 문의만 남는다. #}
+        {%- set _leg_labels = {'open': _('open'), 'close': _('close'), 'selector': _('selector')} %}
+        <div class="text-muted aot-form-hint">
+          {% for _use in _leg_uses %}
+          {{_('Used by paired actuator "%(name)s" (%(leg)s leg)', name=_use.owner_name,
+              leg=_leg_labels[_use.leg])}}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </div>
+        {%- endif %}
+        {%- endif %}
       </div>
       <div class="aot-entry-actions aot-output-col-6 aot-entry-button-group aot-ch-col-right">
         {% if _is_paired %}

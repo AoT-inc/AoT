@@ -318,6 +318,25 @@ def page_output():
         c.unique_id: c.channel for c in all_output_channels
     }
 
+    # 밑단 on/off 채널 (output_id, channel) -> 그것을 다리로 쓰는 짝
+    # 액추에이터 목록. 카드에 켜고 끄는 버튼만 있고 그 채널이 사실은 다른
+    # 액추에이터의 열기/닫기/selector 릴레이라는 정보가 화면 어디에도 없어서,
+    # 사용자가 직접 켰을 때 게이트가 반대쪽을 끄는 이유를 알 수 없었다
+    # (services/duplication.py 와 같은 이유로 파싱은 paired_actuator_common
+    # 하나만 쓴다 — 인터락 가드도 같은 함수를 쓴다).
+    from aot.outputs.paired_actuator_common import (
+        PAIRED_ACTUATOR_OUTPUT_TYPES, paired_leg_relations)
+    output_type_by_id = {o.unique_id: o.output_type for o in all_outputs}
+    output_name_by_id = {o.unique_id: o.name for o in all_outputs}
+    _paired_channel_rows = [
+        (c.output_id,
+         custom_options_values_output_channels.get(c.output_id, {}).get(c.channel, {}))
+        for c in all_output_channels
+        if output_type_by_id.get(c.output_id) in PAIRED_ACTUATOR_OUTPUT_TYPES
+    ]
+    paired_leg_usage = paired_leg_relations(
+        _paired_channel_rows, output_channels_by_uid, output_names=output_name_by_id)
+
     # output_id -> its OutputChannel rows. output_options.html used to run
     # `output_channel.query.filter(...)` once per card's settings modal
     # (N+1 — every card carried this query even though the modal usually
@@ -395,6 +414,7 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               paired_leg_usage=paired_leg_usage,
                                dict_output_channels_by_output=dict_output_channels_by_output,
                                dict_device_names=dict_device_names,
                                dict_member_devices=dict_member_devices,
@@ -456,6 +476,7 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               paired_leg_usage=paired_leg_usage,
                                dict_output_channels_by_output=dict_output_channels_by_output,
                                dict_device_names=dict_device_names,
                                dict_member_devices=dict_member_devices,
@@ -522,6 +543,7 @@ def page_output():
                                custom_options_values_outputs=custom_options_values_outputs,
                                custom_options_values_output_channels=custom_options_values_output_channels,
                                output_channels_by_uid=output_channels_by_uid,
+                               paired_leg_usage=paired_leg_usage,
                                dict_output_channels_by_output=dict_output_channels_by_output,
                                dict_device_names=dict_device_names,
                                dict_member_devices=dict_member_devices,

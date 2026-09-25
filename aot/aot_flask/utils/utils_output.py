@@ -386,6 +386,7 @@ def output_duplicate(form_mod):
         dev_channels = OutputChannel.query.filter(
             OutputChannel.output_id == form_mod.output_id.data).all()
         is_paired = source_output.output_type in PAIRED_ACTUATOR_OUTPUT_TYPES
+        legs_were_blanked = False
         for each_dev in dev_channels:
             new_ch = clone_model(
                 each_dev, unique_id=set_uuid(),
@@ -397,6 +398,7 @@ def output_duplicate(form_mod):
             # 않아 조용히 되돌아가기도 했다.
             if is_paired and new_ch and blank_paired_channel_refs(new_ch):
                 new_ch.save()
+                legs_were_blanked = True
 
         # [I10/I12] 복제본은 '미배치'로 시작한다 — 지도 도형을 복사하지 않는다.
         # 과거에는 clone_model 이 geo_id 를 그대로 물려줘, 복제된 밸브의 마커가
@@ -404,6 +406,15 @@ def output_duplicate(form_mod):
         # 같은 좌표에 있는 서로 다른 물리 장치는 성립하지 않는다 — 복제된
         # 장치는 사용자가 지도에서 새로 배치해야 한다.
         # 배치가 필요하면 geo.device_placement.place_device 를 쓸 것.
+
+    if legs_were_blanked:
+        # 사본은 열기/닫기/선택 릴레이가 비어 있다 — 채널 설정에서 다시
+        # 골라야 한다는 것을 여기서 말해 두지 않으면, 사용자는 사본을 켰을
+        # 때 아무 반응이 없는 이유를 모른다.
+        messages["warning"].append(gettext(
+            "The copy's open/close/select relays were cleared — they point to "
+            "the same physical relays as the original. Re-select them in the "
+            "copy's channel settings before using it."))
 
     messages["success"].append(
         f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['output']['title']}")

@@ -137,6 +137,7 @@ class TestPairedChannelRefs:
                 "actuator_kind": "side_vent",
                 "output_open_id": "a,b", "output_close_id": "c,d",
                 "selector_output_id": "e,f", "last_position_pct": 100.0,
+                "last_target_pct": 40.0,
                 "travel_time_open_sec": 8.0,
             })
 
@@ -147,8 +148,39 @@ class TestPairedChannelRefs:
         assert opts["output_close_id"] == ""
         assert opts["selector_output_id"] == ""
         assert opts["last_position_pct"] == 0.0
+        # last_target_pct 의 "안 정한" 상태는 0.0 이 아니라 -1.0 이다
+        # (actuator_paired.py:242, actuator_paired_bus.py:385 모두 `>= 0.0`
+        # 으로 읽는다) — 0.0 을 넣으면 아무도 안 정한 목표가 "사용자가 0%로
+        # 정함" 으로 보인다.
+        assert opts["last_target_pct"] == -1.0
         # 설정은 사본에도 그대로 있어야 한다 — 비우는 것은 참조뿐이다.
         assert opts["travel_time_open_sec"] == 8.0
+
+    def test_last_target_pct_already_unset_is_left_alone(self):
+        """이미 -1.0(안 정함)이면 '바뀐 것' 취급하지 않는다."""
+        from aot.services.duplication import blank_paired_channel_refs
+
+        class _Ch:
+            custom_options = json.dumps({
+                "output_open_id": "", "last_target_pct": -1.0,
+            })
+
+        ch = _Ch()
+        assert blank_paired_channel_refs(ch) is False
+
+    def test_last_target_pct_zero_is_not_mistaken_for_unset(self):
+        """이미 0.0 으로 저장돼 있어도(과거 버그의 잔재) 센티널로 다시 맞춘다."""
+        from aot.services.duplication import blank_paired_channel_refs
+
+        class _Ch:
+            custom_options = json.dumps({
+                "output_open_id": "a", "last_target_pct": 0.0,
+            })
+
+        ch = _Ch()
+        assert blank_paired_channel_refs(ch) is True
+        opts = json.loads(ch.custom_options)
+        assert opts["last_target_pct"] == -1.0
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +364,62 @@ class TestDuplicateOutputTab:
                 DeviceMeasurements.device_id == copy.unique_id).count() == 1
             db.session.remove()
 
+    def test_paired_actuator_copy_via_tab_duplication_does_not_share_physical_channels(self, app):
+        """탭 복제 경로도 개별 복제와 같은 함수를 쓰므로 짝 액추에이터 참조를 비워야 한다.
+
+        `clone_output_entry` 는 `entry.output_type` 으로 `paired` 를 자동
+        판정하므로(`services/duplication.py`) `TabService.duplicate_tab` 이
+        따로 넘기지 않아도 걸린다 — 이 테스트는 그 자동판정이 실제로 개별
+        복제(`output_duplicate`)와 같은 결과(참조 비우기 + `last_target_pct`
+        의 -1.0 센티널)를 내는지 탭 복제 경로에서 고정해 둔다.
+        """
+        from aot.aot_flask.extensions import db
+        from aot.databases import set_uuid
+        from aot.databases.models import Output, OutputChannel
+        from aot.outputs.paired_actuator_common import (
+            PAIRED_ACTUATOR_OUTPUT_TYPES)
+        from aot.services.tab_service import TabService
+
+        with app.app_context():
+            src = TabService.create_tab('output', name='육묘장')
+
+            out = Output(unique_id=set_uuid())
+            out.name = '측창'
+            out.tab_id = src.unique_id
+            out.output_type = sorted(PAIRED_ACTUATOR_OUTPUT_TYPES)[0]
+            db.session.add(out)
+            db.session.commit()
+
+            ch = OutputChannel(unique_id=set_uuid())
+            ch.output_id = out.unique_id
+            ch.channel = 0
+            ch.custom_options = json.dumps({
+                'output_open_id': 'open-a',
+                'output_close_id': 'close-a',
+                'last_position_pct': 100.0,
+                'last_target_pct': 40.0,
+            })
+            db.session.add(ch)
+            db.session.commit()
+
+            new_tab = TabService.duplicate_tab(src.unique_id)
+            copy = Output.query.filter(Output.tab_id == new_tab.unique_id).one()
+            copy_ch = OutputChannel.query.filter(
+                OutputChannel.output_id == copy.unique_id).one()
+            opts = json.loads(copy_ch.custom_options)
+
+            assert opts['output_open_id'] == ''
+            assert opts['output_close_id'] == ''
+            assert opts['last_position_pct'] == 0.0
+            assert opts['last_target_pct'] == -1.0
+
+            # 원본은 그대로다.
+            orig_ch = OutputChannel.query.filter(
+                OutputChannel.output_id == out.unique_id).one()
+            orig_opts = json.loads(orig_ch.custom_options)
+            assert orig_opts['output_open_id'] == 'open-a'
+            db.session.remove()
+
 
 class TestDuplicateConditional:
     def test_the_copys_code_calls_the_copys_own_action(self, app):
@@ -450,12 +538,13 @@ class TestIndividualDuplicateNames:
                 'output_open_id': 'open-a,open-b',
                 'output_close_id': 'close-a,close-b',
                 'last_position_pct': 100.0,
+                'last_target_pct': 55.0,
                 'travel_time_open_sec': 8.0,
             })
             db.session.add(ch)
             db.session.commit()
 
-            utils_output.output_duplicate(_Form(out.unique_id))
+            messages, _new_output_id = utils_output.output_duplicate(_Form(out.unique_id))
             db.session.commit()
 
             copy = Output.query.filter(Output.name == 'Copy of 측창').one()
@@ -465,7 +554,14 @@ class TestIndividualDuplicateNames:
             assert opts['output_open_id'] == ''
             assert opts['output_close_id'] == ''
             assert opts['last_position_pct'] == 0.0
+            # 0.0 이 아니라 "안 정함" 센티널이어야 사본이 "목표 0%" 로
+            # 잘못 보이지 않는다.
+            assert opts['last_target_pct'] == -1.0
             assert opts['travel_time_open_sec'] == 8.0
+
+            # 다리를 다시 골라야 한다는 것을 화면에 남긴다 — 안 그러면
+            # 사본을 켰을 때 반응이 없는 이유를 사용자가 알 길이 없다.
+            assert any('re-select' in w.lower() for w in messages['warning'])
 
             # 원본은 그대로다.
             src_ch = OutputChannel.query.filter(

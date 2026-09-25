@@ -84,6 +84,13 @@ class OutputController(AbstractController, threading.Thread):
         # (output_id, channel) -> 자동 OFF 재시도를 허용할 최소 시각(monotonic).
         self._auto_off_retry_at = {}
 
+        # 짝 액추에이터 다리 인터락용 캐시. `paired_leg_relations` 조회는
+        # OutputChannel 을 전부 훑으므로 명령마다 새로 하지 않는다 — 짧은
+        # TTL 만 준다(_interlock_paired_legs 참조).
+        self._paired_leg_relations = {}
+        self._paired_leg_relations_at = 0.0
+        self._PAIRED_LEG_RELATIONS_TTL_S = 3.0
+
     def initialize_variables(self):
         """Begin initializing output parameters."""
         self.sample_rate = db_retrieve_table_daemon(Misc, entry='first').sample_rate_controller_output
@@ -528,6 +535,16 @@ class OutputController(AbstractController, threading.Thread):
                                 amount, origin, result='failure')
             return 1, msg
 
+        # 짝 액추에이터의 열기/닫기(또는 버스의 selector) 다리로 쓰이는 채널을
+        # 직접 켜는 경로 — 출력 페이지, Conditional 액션, MCP `operate_device`
+        # 전부 결국 여기로 수렴하므로(파일 docstring 참조) 한 곳에서만 지키면
+        # 된다. **이 함수 자신을 다시 부르기 전에** 실행 컨텍스트가 아직
+        # 심어지지 않은 지금 자리에서 처리한다 — 아래에서 컨텍스트를 심은
+        # 뒤에 재귀 호출하면, 재귀 호출 쪽 `finally` 가 그 컨텍스트를 지워
+        # 버려서 이 명령 자신의 드라이버 호출이 컨텍스트 없이 나간다.
+        if state in ('on', 1, True):
+            self._interlock_paired_legs(output_id, output_channel, origin)
+
         # # TODO: Unimplemented until speed of current_amp_load() execution can be tested
         # # Checks if device is not on and instructed to turn on and will exceed max amp load
         # if (state == 'on' and
@@ -580,6 +597,69 @@ class OutputController(AbstractController, threading.Thread):
         self._audit_command(output_id, state, output_channel, output_type, amount,
                             origin, result='failure' if failed else 'success')
         return ret
+
+    def _paired_leg_relations_cached(self):
+        """`paired_actuator_common.fetch_paired_leg_relations()` 를 짧은 TTL 로 캐시."""
+        now = time.time()
+        if now - self._paired_leg_relations_at > self._PAIRED_LEG_RELATIONS_TTL_S:
+            try:
+                from aot.outputs.paired_actuator_common import (
+                    fetch_paired_leg_relations)
+                self._paired_leg_relations = fetch_paired_leg_relations()
+            except Exception as err:
+                self.logger.warning("짝 액추에이터 다리 관계 조회 실패: %s", err)
+                self._paired_leg_relations = {}
+            self._paired_leg_relations_at = now
+        return self._paired_leg_relations
+
+    def _interlock_paired_legs(self, output_id, output_channel, origin):
+        """이 채널이 짝 액추에이터의 열기/닫기/selector 다리라면, 반대쪽(또는
+        같은 버스의 다른 selector)이 켜져 있을 때 먼저 끈다.
+
+        짝 액추에이터 드라이버 자신의 인터락(반대 릴레이를 먼저 끄고 방향
+        전환 사이에 정지 시간을 둠, `actuator_paired.py` 의 `_drive` 참조)을
+        **드라이버를 거치지 않고 밑단 채널을 직접 켜는 경로에도** 적용한다.
+        하나라도 실패해도 본 명령(ON)은 계속 진행한다 — 인터락 조회·해제
+        실패로 원래 하려던 제어까지 막으면 더 나쁘다. 대신 로그를 남긴다.
+        """
+        try:
+            relations = self._paired_leg_relations_cached()
+            entries = relations.get((output_id, output_channel)) or []
+        except Exception as err:
+            self.logger.warning("짝 액추에이터 인터락 조회 실패: %s", err)
+            return
+
+        seen = set()
+        for entry in entries:
+            for other_id, other_channel in entry.get('partners') or []:
+                key = (other_id, other_channel)
+                if key == (output_id, output_channel) or key in seen:
+                    continue
+                seen.add(key)
+                driver = self.output.get(other_id)
+                if driver is None:
+                    continue
+                try:
+                    if not driver.is_on(output_channel=other_channel):
+                        continue
+                except Exception as err:
+                    self.logger.warning(
+                        "짝 액추에이터 인터락: %s(CH%s) 상태 확인 실패: %s",
+                        other_id, other_channel, err)
+                    continue
+                self.logger.info(
+                    "짝 액추에이터 인터락: %s(CH%s) 를 켜기 전에 %s 다리인 "
+                    "%s(CH%s) 를 먼저 끕니다 (owner=%s)",
+                    output_id, output_channel, entry.get('leg'),
+                    other_id, other_channel, entry.get('owner_name'))
+                try:
+                    self.output_on_off(
+                        other_id, 'off', output_channel=other_channel,
+                        trigger_conditionals=False, origin=origin)
+                except Exception as err:
+                    self.logger.warning(
+                        "짝 액추에이터 인터락: %s(CH%s) 를 끄지 못했습니다: %s",
+                        other_id, other_channel, err)
 
     def _audit_command(self, output_id, state, output_channel, output_type,
                        amount, origin, result):
