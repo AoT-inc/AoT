@@ -451,7 +451,13 @@ ventilation stops helping. With no outdoor readings it is not lifted.
 
 Three guarantees hold: **safety gates win** (a summer night's heat still opens the
 vents), the hard temperature/humidity limits break the parking, and if no coordinates
-are available to compute solar time, nothing is parked at all. Times are read in the
+are available to compute solar time, nothing is parked at all. A fourth guarantee sits
+above all of these and is not specific to night closing: if the outdoor reading itself
+is unavailable — no cache, only a synthetic fallback that assumes outdoor equals indoor
+— the coordinator does not close vents at all; it holds them exactly where they are,
+overriding any close decision this or another rule already made for that cycle.
+Closing on a fabricated outdoor-equals-indoor guess could otherwise leave vents shut
+through a hot day once the weather source dies. Times are read in the
 facility's local timezone, not the server's. On the facility popup, a device parked by
 this option reads *Closed for the night — heating and cooling take over*, kept separate
 from *Nothing this device can change right now*.

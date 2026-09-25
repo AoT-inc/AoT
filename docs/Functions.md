@@ -1,4 +1,4 @@
-Page: `Setup -> Function`
+Page: `Settings -> Function`
 
 For a full list of supported functions, see [Supported Functions](Supported-Functions.md).
 
@@ -14,7 +14,7 @@ and Custom Functions. The search box matches both the displayed name and the mod
 
 ## Custom Functions
 
-AoT has a custom function import system that lets user-created functions be used within the AoT system. Custom functions can be uploaded on the `[Gear Icon] -> Configure -> Custom Functions` page. Once imported, they become available on the `Setup -> Function` page.
+AoT has a custom function import system that lets user-created functions be used within the AoT system. Custom functions can be uploaded on the `[Gear Icon] -> Configure -> Custom Functions` page. Once imported, they become available on the `Settings -> Function` page.
 
 If you have developed a working function module, consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. The module may be included in the built-in set.
 
@@ -595,7 +595,7 @@ If an action is a type that receives a message (E-Mail or Note), you can modify 
 ```python
 # Example 1
 measurement = self.measure("asdf1234")
-if measurement is None and measurement > 23:
+if measurement is not None and measurement > 23:
     self.message += "The measurement is {}".format(measurement)
     self.run_action("uiop5678", message=self.message)
 
@@ -614,7 +614,7 @@ Logging can also be used to record messages to the daemon log using `self.logger
 ```python
 # Example 1
 measurement = self.measure("asdf1234")
-if measurement is None and measurement > 23:
+if measurement is not None and measurement > 23:
     self.logger.error("Warning, the measurement is {}".format(measurement))
     self.message += "The measurement is {}".format(measurement)
     self.run_action("uiop5678", message=self.message)
@@ -944,7 +944,7 @@ If the margins are larger than the cycle itself — leaving the pump no time to 
 
 - **Dynamic Duration**: Via the `action_duration_id` option, the measurement of a particular Input can be used as the run time.
     - Format: `Input_UUID` or `Input_UUID,Measurement_UUID`.
-    - Validity: Only the latest measurement within `time_offset_minutes` is used; if none exists, the configured base `action_duration` is used.
+    - Validity: Only the latest measurement within `time_offset_minutes` (shown in the UI as **Input Validity (seconds)**) is used; if none exists, the configured base `action_duration` is used.
 - **Overlaps**: The `output_duration` setting determines the transition time between steps. The first action has only a `Tail Overlap`, middle actions have both `Head & Tail Overlap`, and the last action has only a `Head Overlap`.
 - **Constraints (Window & Latency)**:
     - **Execution Window**: The sequence starts or runs only between `timer_start_time` and `timer_end_time`. Outside this range it is forcibly terminated.
@@ -957,7 +957,7 @@ If the margins are larger than the cycle itself — leaving the pump no time to 
 | `period` | The repeat period of the entire sequence cycle (in seconds). |
 | `output_duration` | The overlap time between actions (in seconds). |
 | `timer_start_offset` | The delay from activation to sequence start. |
-| `time_offset_minutes` | The maximum validity age of a dynamic-duration measurement (in minutes). |
+| `time_offset_minutes` | The maximum validity age of a dynamic-duration measurement (in seconds, despite the field name — labeled **Input Validity (seconds)** in the UI). |
 | `enabled` | Whether an individual action is enabled. |
 | `sequence_mode` | Select 'single' or 'total'. |
 | `total_lead` | (Total mode only) Switch on this many seconds after the sequence begins. Default 0. |

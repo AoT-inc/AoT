@@ -1,6 +1,6 @@
 # Scheduler
 
-The Scheduler is AoT's collaborative farm event ledger — a single timeline where AI-drafted proposals and human-entered work tasks (weeding, inspection, cleaning, device operations, etc.) are reviewed, approved, and tracked side by side. It is available under `Scheduler` in the main menu and requires the `edit_controllers` permission.
+The Scheduler is AoT's collaborative farm event ledger — a single timeline where AI-drafted proposals and human-entered work tasks (weeding, inspection, cleaning, device operations, etc.) are reviewed, approved, and tracked side by side. It is available under `Additional Features -> Schedule` in the main menu and requires the `edit_controllers` permission.
 
 ---
 

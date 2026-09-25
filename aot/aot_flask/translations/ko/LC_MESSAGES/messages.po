@@ -21074,12 +21074,15 @@ msgstr "지속 트리거 함수는 활성화된 시점부터 주기마다 동작
 #: config/__init__.py:634
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr ""
-"시퀀스 트리거는 활성화되면 정렬된 동작 목록을 한 단계씩 실행합니다. 시퀀스에 동작을 추가하면 위에서 아래로 실행되며, 단계 사이에"
-" 지연을 둘 수 있습니다. 예를 들어 환기구를 열고, 기다린 뒤, 팬을 켜는 다단계 루틴 자동화에 사용하세요."
+"시퀀스 트리거는 활성화되면 정렬된 동작 목록을 한 단계씩 실행합니다. 동작은 개별로 실행되거나 그룹으로 묶여 동시에 실행될 수"
+" 있고, 각 단계의 지속 시간은 고정 지연일 수도 입력 측정값으로 실시간 결정될 수도 있으며, 단계는 서로 겹칠 수 있고 요일별"
+" 일정을 따를 수 있습니다. 예를 들어 환기구를 열고, 기다린 뒤, 팬을 켜는 다단계 루틴 자동화에 사용하세요."
 
 #: functions/AoT_VPD.py:50
 msgid "AoT VPD"

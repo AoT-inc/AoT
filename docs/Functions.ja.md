@@ -594,7 +594,7 @@ if None not in [measure_1, measure_2]:
 ```python
 # 例1
 measurement = self.measure("asdf1234")
-if measurement is None and measurement > 23:
+if measurement is not None and measurement > 23:
     self.message += "The measurement is {}".format(measurement)
     self.run_action("uiop5678", message=self.message)
 
@@ -613,7 +613,7 @@ if None not in [measure_1, measure_2]:
 ```python
 # 例1
 measurement = self.measure("asdf1234")
-if measurement is None and measurement > 23:
+if measurement is not None and measurement > 23:
     self.logger.error("Warning, the measurement is {}".format(measurement))
     self.message += "The measurement is {}".format(measurement)
     self.run_action("uiop5678", message=self.message)
@@ -932,7 +932,7 @@ PWM出力の状態を監視します。
 
 - **動的な継続時間**: `action_duration_id` オプションを使うと、特定の入力の測定値を実行時間として使うことができます。
     - 形式: `Input_UUID` または `Input_UUID,Measurement_UUID`。
-    - 有効性: `time_offset_minutes` の範囲内にある最新の測定値のみが使われます。存在しない場合は、設定した基本の `action_duration` が使われます。
+    - 有効性: `time_offset_minutes`(UIでは**入力有効性(秒)**と表示)の範囲内にある最新の測定値のみが使われます。存在しない場合は、設定した基本の `action_duration` が使われます。
 - **オーバーラップ**: `output_duration` の設定は、ステップ間の切り替え時間を決めます。最初のアクションには `末尾オーバーラップ` のみ、途中のアクションには `先頭オーバーラップ` と `末尾オーバーラップ` の両方、最後のアクションには `先頭オーバーラップ` のみが適用されます。
 - **制約(実行可能な時間帯とレイテンシ)**:
     - **実行可能な時間帯**: シーケンスは `timer_start_time` から `timer_end_time` までの間でのみ開始・実行されます。この範囲外では強制的に終了します。
@@ -945,7 +945,7 @@ PWM出力の状態を監視します。
 | `period` | シーケンス全体のサイクルが繰り返される周期です(秒単位)。 |
 | `output_duration` | アクション間のオーバーラップ時間です(秒単位)。 |
 | `timer_start_offset` | 有効化からシーケンス開始までの遅延です。 |
-| `time_offset_minutes` | 動的な継続時間の測定値が有効とみなされる最大経過時間です(分単位)。 |
+| `time_offset_minutes` | 動的な継続時間の測定値が有効とみなされる最大経過時間です(フィールド名に反して秒単位 — UIでは**入力有効性(秒)**と表示)。 |
 | `enabled` | 個々のアクションが有効かどうかです。 |
 | `sequence_mode` | 'single' または 'total' を選択します。 |
 | `total_lead` | (全体モードのみ) シーケンスの開始からこの秒数だけ経過してからオンにします。初期値は0です。 |

@@ -20707,11 +20707,14 @@ msgid ""
 msgstr "持續時間觸發函式會自啟用時起,依照週期執行動作。可加入啟動偏移時間以延遲首次執行。"
 
 #: config/__init__.py:634
+#, fuzzy
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr "序列觸發器在啟用時,會依序逐步執行一份動作清單。將動作加入序列後,會由上到下依序執行,各步驟之間可設定選擇性的延遲。可用於自動化多步驟流程,例如先開啟通風口、等待,再啟動風扇。"
 
 #: functions/AoT_VPD.py:50

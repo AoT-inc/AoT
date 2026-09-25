@@ -21630,11 +21630,14 @@ msgstr ""
 " สามารถเพิ่มค่าออฟเซ็ตเริ่มต้นเพื่อหน่วงการทำงานครั้งแรกได้"
 
 #: config/__init__.py:634
+#, fuzzy
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr ""
 "ทริกเกอร์แบบลำดับขั้นตอนจะรันรายการแอ็กชันที่จัดลำดับไว้ทีละขั้นเมื่อถูกเปิดใช้งาน"
 " เพิ่มแอ็กชันลงในลำดับ แล้วระบบจะดำเนินการจากบนลงล่าง "

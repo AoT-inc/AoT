@@ -20710,11 +20710,14 @@ msgid ""
 msgstr "持续时间触发函数将从激活时刻起,按周期执行动作。可添加起始偏移量以延迟首次执行。"
 
 #: config/__init__.py:634
+#, fuzzy
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr "序列触发器在激活时按顺序逐步执行动作列表。将动作添加到序列后,它们会从上到下依次执行,步骤之间可设置可选的延迟。可用于自动化多步骤流程——例如先打开通风口,等待,再打开风扇。"
 
 #: functions/AoT_VPD.py:50

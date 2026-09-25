@@ -20873,10 +20873,12 @@ msgstr "継続時間トリガー機能は、有効化された時点から周期
 #: config/__init__.py:634
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
-msgstr "シーケンストリガーは、有効化されると順序付けられたアクションのリストを1ステップずつ実行します。シーケンスにアクションを追加すると、上から下へ順に実行され、ステップ間に任意の遅延を設定できます。例えば、通気口を開け、待機してから、ファンをオンにするといった複数ステップのルーチンの自動化に使用します。"
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
+msgstr "シーケンストリガーは、有効化されると順序付けられたアクションのリストを1ステップずつ実行します。アクションは個別に実行することも、グループとしてまとめて同時に実行することもでき、各ステップの継続時間は固定の遅延にすることも、入力の測定値によってリアルタイムに決めることもできます。また、ステップ同士をオーバーラップさせたり、曜日ごとのスケジュールに従わせたりできます。例えば、通気口を開け、待機してから、ファンをオンにするといった複数ステップのルーチンの自動化に使用します。"
 
 #: functions/AoT_VPD.py:50
 msgid "AoT VPD"

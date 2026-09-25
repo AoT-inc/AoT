@@ -21092,11 +21092,14 @@ msgstr ""
 "inicial para atrasar a primeira execução."
 
 #: config/__init__.py:634
+#, fuzzy
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr ""
 "Um gatilho de sequência executa uma lista ordenada de ações, uma etapa de"
 " cada vez, quando ativado. Adicione ações à sequência e elas serão "
