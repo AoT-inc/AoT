@@ -68,13 +68,18 @@
     </div>
     {% endif %}
 
-    {# (Sub-title) Unit conversion setting (name changed) #}
+    {# 이 분기는 변환이 아니라 이 원시값이 어떤 측정/단위인지 "지정"하는 선택자다
+       (Bash Command 등 options_enabled 에 measurements_select_measurement_unit 를
+       쓰는 입력들). '단위 변환' 이라는 라벨을 그대로 쓰면 아래 else 분기의 실제
+       단위 변환 선택자와 같은 문구가 되어 오해를 준다 — config_translations.py 에
+       이미 등록된 select_measurement_unit 라벨을 쓴다. #}
     {% if 'measurements_select_measurement_unit' in dict_options['options_enabled'] %}
     <div class="aot-modal-option-row">
-      <label class="aot-modal-option-label">{{_('Unit Conversion')}}</label>
+      <label class="aot-modal-option-label">{{dict_translation['select_measurement_unit']['title']}}</label>
       <div class="aot-modal-option-control">
-        <select class="form-control aot-modern-select selectpicker" 
-                id="measurement_meas_unit_{{each_measurement.unique_id}}" 
+        <select class="form-control aot-modern-select selectpicker"
+                id="measurement_meas_unit_{{each_measurement.unique_id}}"
+                title="{{dict_translation['select_measurement_unit']['phrase']}}"
                 name="measurement_meas_unit_{{each_measurement.unique_id}}"
                 data-style="btn-white">
           <option value="">{{dict_translation['select_one']['title']}}</option>

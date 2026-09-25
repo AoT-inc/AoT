@@ -137,8 +137,8 @@ INPUT_INFORMATION = {
             'type': 'text',
             'default_value': 'gw',
             'required': True,
-            'name': 'Topic',
-            'phrase': 'The topic to subscribe to'
+            'name': lazy_gettext('Topic'),
+            'phrase': lazy_gettext('The topic to subscribe to')
         },
         {
             'id': 'mqtt_keepalive',
@@ -147,29 +147,31 @@ INPUT_INFORMATION = {
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('Keep Alive'),
-            'phrase': 'Maximum amount of time between received signals. Set to 0 to disable.'
+            'phrase': lazy_gettext('Maximum amount of time between received signals. Set to 0 to disable.')
         },
         {
             'id': 'mqtt_clientid',
             'type': 'text',
             'default_value': 'client_{}'.format(random_alphanumeric(8)),
             'required': True,
-            'name': 'Client ID',
-            'phrase': 'Unique client ID for connecting to the server'
+            'name': lazy_gettext('Client ID'),
+            'phrase': lazy_gettext('Unique client ID for connecting to the server')
         },
         {
             'id': 'mqtt_login',
             'type': 'bool',
             'default_value': False,
-            'name': 'Use Login',
-            'phrase': 'Send login credentials'
+            'name': lazy_gettext('Use Login'),
+            'phrase': lazy_gettext('Send login credentials')
         },
         {
             'id': 'mqtt_use_tls',
             'type': 'bool',
             'default_value': False,
-            'name': 'Use TLS',
-            'phrase': 'Send login credentials using TLS'
+            'name': lazy_gettext('Use TLS'),
+            # TLS 는 로그인 여부와 무관하게 연결 자체를 암호화한다 — mqtt_paho_json.py
+            # 와 같은 이유로 문구를 Use Login 에 종속되지 않게 고친다.
+            'phrase': lazy_gettext('Encrypt the connection to the broker with TLS')
         },
         {
             'id': 'mqtt_username',
@@ -185,15 +187,15 @@ INPUT_INFORMATION = {
             'default_value': '',
             'required': False,
             'name': lazy_gettext('Password'),
-            'phrase': 'Password for connecting to the server. Leave blank to disable.'
+            'phrase': lazy_gettext('Password for connecting to the server. Leave blank to disable.')
         },
         {
             'id': 'mqtt_use_websockets',
             'type': 'bool',
             'default_value': False,
             'required': False,
-            'name': 'Use Websockets',
-            'phrase': 'Use websockets to connect to the server.'
+            'name': lazy_gettext('Use Websockets'),
+            'phrase': lazy_gettext('Use websockets to connect to the server.')
         }
     ],
 
@@ -211,8 +213,8 @@ INPUT_INFORMATION = {
             'type': 'text',
             'default_value': '',
             'required': True,
-            'name': 'JMESPATH Expression',
-            'phrase': 'JMESPATH expression to find value in JSON response'
+            'name': lazy_gettext('JMESPATH Expression'),
+            'phrase': lazy_gettext('JMESPATH expression to find value in JSON response')
         }
     ]
 }

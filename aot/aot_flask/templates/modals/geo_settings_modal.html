@@ -163,9 +163,17 @@
                                 </label>
                             </div>
                         </div>
+                        {#- 78번째 줄의 theme_color_labels 와 같은 이유로 낱개로 부른다 —
+                            조립한 msgid(`'Max ' + type.capitalize() + ' Polygons'`)는
+                            추출기가 못 보고, 세 문구 모두 카탈로그에 등록된 적이 없어
+                            한국어 화면에 영어로 남아 있었다. -#}
+                        {% set max_polygons_labels = {
+                             'site':   _('Max Site Polygons'),
+                             'zone':   _('Max Zone Polygons'),
+                             'device': _('Max Device Polygons') } %}
                         {% for type in ['site', 'zone', 'device'] %}
                         <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _('Max ' + type.capitalize() + ' Polygons') }}</label>
+                            <label class="aot-modal-option-label">{{ max_polygons_labels[type] }}</label>
                             <div class="aot-modal-option-control">
                                 <input type="number" class="form-control aot-modern-input" name="max_polygons_{{ type }}">
                             </div>

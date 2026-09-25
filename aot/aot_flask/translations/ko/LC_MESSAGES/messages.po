@@ -3056,9 +3056,7 @@ msgid ""
 "Manages common GIS parameters used across the system, including map "
 "center, zoom levels, search providers, and theme colors (Site, Zone, "
 "Device)."
-msgstr ""
-"시스템 전역에서 사용되는 공통 GIS 파라미터를 관리합니다. 맵 중심점, 줌 레벨, 검색 서비스 제공자, 그리고 테마 색상(사이트,"
-" 구역, 장치) 등이 포함됩니다."
+msgstr "시스템 전역에서 사용되는 공통 GIS 파라미터를 관리합니다. 맵 중심점, 줌 레벨, 검색 서비스 제공자, 그리고 테마 색상(대지, 구역, 장치) 등이 포함됩니다."
 
 #: config_translations_docs.py:117
 msgid "2. geo/layer (GIS Layer Management)"
@@ -3081,9 +3079,7 @@ msgid ""
 "An interactive editing tool for placing devices and setting up areas. "
 "Includes features like Spatial Join (auto-detecting zones for devices), "
 "Shape Editing (drawing sites/zones/pipes), and layout saving."
-msgstr ""
-"실제 기기를 배치하고 구역을 설정하는 인터랙티브 편집 도구입니다. 공간 조인(Spatial Join, 장치의 구역 자동 인식), "
-"도형 편집(사이트/구역/배관 그리기), 레이아웃 저장 등의 기능을 제공합니다."
+msgstr "실제 기기를 배치하고 구역을 설정하는 인터랙티브 편집 도구입니다. 공간 조인(Spatial Join, 장치의 구역 자동 인식), 도형 편집(대지/구역/배관 그리기), 레이아웃 저장 등의 기능을 제공합니다."
 
 #: config_translations_docs.py:123
 msgid "4. GIS Capabilities (Proxy & Search)"
@@ -6493,7 +6489,7 @@ msgstr "측정 추가"
 #: aot_flask/forms/forms_settings.py:383 inputs/modbus_tcp.py:98
 #: outputs/on_off_modbus.py:123
 msgid "Unit ID"
-msgstr "단위 ID"
+msgstr "유닛 ID"
 
 #: aot_flask/forms/forms_settings.py:375 aot_flask/forms/forms_settings.py:384
 msgid "Unit Name"
@@ -7649,7 +7645,7 @@ msgstr "지도를 불러오지 못했습니다. 다시 시도해 주세요."
 # 기존 GIS 모듈 (24개)
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2624
 msgid "saved_successfully"
-msgstr "저장 성"
+msgstr "저장되었습니다."
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2631
 msgid "save_failed"
@@ -7866,7 +7862,7 @@ msgstr "만들어진 배관을 지워 처음부터 다시 할 수 있게 합니�
 #: aot_flask/templates/pages/geo/geo_facility.html:136
 #: aot_flask/templates/pages/geo/geo_facility.html:162
 msgid "Irrigation"
-msgstr "관개"
+msgstr "관수"
 
 #: aot_flask/static/js/geo/aot-geo-panel.js:585
 #: aot_flask/templates/pages/ai/ai_manage.html:199
@@ -8046,11 +8042,11 @@ msgstr "RainViewer 레이더"
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:113
 #: aot_flask/templates/pages/geo/geo_design.html:478
 msgid "Site List"
-msgstr "사이트 목록"
+msgstr "대지 목록"
 
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:109
 msgid "No registered sites."
-msgstr "등록된 사이트가 없습니다."
+msgstr "등록된 대지가 없습니다."
 
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:177
 msgid "Distance measurement"
@@ -8141,7 +8137,7 @@ msgstr "새 지도 생성 중"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:110
 msgid "confirm_delete_map"
-msgstr "지도 삭제 승인"
+msgstr "이 지도를 삭제하시겠습니까?"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:117
 msgid "enter_new_map_name"
@@ -11676,7 +11672,7 @@ msgstr "정기 상황 요약"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:835
 msgid "Default Site"
-msgstr "기본 사이트"
+msgstr "기본 대지"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:842
 msgid "(none)"
@@ -12158,7 +12154,7 @@ msgstr "관련 문서"
 
 #: aot_flask/templates/pages/ai/ai_library.html:541
 msgid "Source Site"
-msgstr "원본 사이트"
+msgstr "원본 대지"
 
 #: aot_flask/templates/pages/ai/ai_library.html:543
 msgid "Usage:"
@@ -12804,7 +12800,7 @@ msgstr "대상 함수"
 
 #: aot_flask/templates/pages/ai/scheduler.html:788
 msgid "Target Zone/Site"
-msgstr "대상 구역/사이트"
+msgstr "대상 구역/대지"
 
 #: aot_flask/templates/pages/ai/scheduler.html:798
 msgid "No items available"
@@ -14123,7 +14119,7 @@ msgstr "데이터 분석 중..."
 
 #: aot_flask/templates/pages/geo/geo_design.html:583
 msgid "Data Processing"
-msgstr "데이터 처리 중"
+msgstr "데이터 처리"
 
 #: aot_flask/templates/pages/geo/geo_design.html:595
 msgid "Export Map"
@@ -14217,7 +14213,7 @@ msgstr "자동 입력됨"
 
 #: aot_flask/templates/pages/geo/geo_design.html:862
 msgid "Save as Site"
-msgstr "Site로 저장"
+msgstr "대지로 저장"
 
 #: aot_flask/templates/pages/geo/geo_design.html:1138
 msgid "Map Settings"
@@ -14402,7 +14398,7 @@ msgstr "시설물"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:136
 msgid "Irrigation layers, pipes and devices"
-msgstr "관개 레이어, 배관, 장치"
+msgstr "관수 레이어, 배관, 장치"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:137
 msgid "Sensor — click a position to place"
@@ -14682,11 +14678,11 @@ msgstr "시설 복제"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:345
 msgid "Map & Site"
-msgstr "지도 및 사이트"
+msgstr "지도 및 대지"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:371
 msgid "Sites belonging to the selected map"
-msgstr "선택된 지도에 속한 사이트"
+msgstr "선택된 지도에 속한 대지"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:375
 msgid "Select a Map first"
@@ -15437,7 +15433,7 @@ msgstr "히트펌프"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1217
 msgid "Irrigation valve"
-msgstr "관개밸브"
+msgstr "관수 밸브"
 
 # ── design.js full i18n pass ──
 #: aot_flask/templates/pages/geo/geo_facility.html:1218
@@ -15940,7 +15936,7 @@ msgstr "기본값으로 재설정"
 
 #: aot_flask/templates/pages/geo/geo_setting.html:155
 msgid "Site Color"
-msgstr "사이트 색상"
+msgstr "대지 색상"
 
 #: aot_flask/templates/pages/geo/geo_setting.html:164
 msgid "Zone Color"
@@ -22411,7 +22407,7 @@ msgstr "mV"
 
 #: inputs/aot_test_input_save_value.py:79
 msgid "Store Measurement"
-msgstr "측정값 없음"
+msgstr "측정값 저장"
 
 #: inputs/atlas_co2.py:87 inputs/atlas_do.py:103 inputs/atlas_o2.py:140
 #: inputs/atlas_orp.py:103 inputs/atlas_ph.py:110
@@ -22919,7 +22915,7 @@ msgstr "Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MA
 #: inputs/ecowitt_weather.py:56 inputs/kma_weather_500.py:195
 #: inputs/sensecap_weather.py:114
 msgid "Measurement Period (sec)"
-msgstr "측정 기간(초)"
+msgstr "측정 주기(초)"
 
 #: inputs/ecowitt_soil_moisture.py:37 inputs/ecowitt_temp_and_humidity.py:37
 #: inputs/ecowitt_weather.py:57 inputs/kma_weather_500.py:196
@@ -23194,7 +23190,7 @@ msgstr "명령 제한 시간"
 
 #: inputs/linux_command.py:66
 msgid "Current Working Directory"
-msgstr "현재 작업 시간"
+msgstr "현재 작업 디렉터리"
 
 #: inputs/modbus_tcp.py:49
 msgid ""
@@ -31458,7 +31454,7 @@ msgid "Run built-in AI"
 msgstr "내장 AI 작동"
 
 msgid "The site the AI uses when a chat or screen does not name one."
-msgstr "대화나 화면에 사이트가 정해지지 않았을 때 AI가 기준으로 삼는 사이트입니다."
+msgstr "대화나 화면에 대지가 정해지지 않았을 때 AI가 기준으로 삼는 대지입니다."
 
 msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
 msgstr "내장 AI가 백그라운드에서 농장 상황을 주기적으로 요약해 둡니다."
@@ -32388,3 +32384,75 @@ msgstr "역할이 일정을 편집할 수 없어 Google → AoT 가져오기를 
 
 msgid "Use AI Chat"
 msgstr "AI 채팅 사용"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:171
+msgid "Max Site Polygons"
+msgstr "최대 대지 폴리곤 수"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:172
+msgid "Max Zone Polygons"
+msgstr "최대 구역 폴리곤 수"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:173
+msgid "Max Device Polygons"
+msgstr "최대 장치 폴리곤 수"
+
+#: inputs/ecowitt_mqtt.py:140 inputs/mqtt_paho_json.py:87
+msgid "Topic"
+msgstr "토픽"
+
+#: inputs/ecowitt_mqtt.py:141 inputs/mqtt_paho_json.py:88
+msgid "The topic to subscribe to"
+msgstr "구독할 토픽입니다."
+
+#: inputs/ecowitt_mqtt.py:158 inputs/mqtt_paho.py:90 inputs/mqtt_paho_json.py:105
+msgid "Unique client ID for connecting to the server"
+msgstr "서버 연결에 사용할 고유 클라이언트 ID입니다."
+
+#: inputs/ecowitt_mqtt.py:164 inputs/mqtt_paho.py:96 inputs/mqtt_paho_json.py:111
+msgid "Use Login"
+msgstr "로그인 사용"
+
+#: inputs/ecowitt_mqtt.py:165 inputs/mqtt_paho.py:97 inputs/mqtt_paho_json.py:112
+msgid "Send login credentials"
+msgstr "로그인 자격 증명을 전송합니다."
+
+#: inputs/ecowitt_mqtt.py:171 inputs/mqtt_paho.py:103 inputs/mqtt_paho_json.py:118
+msgid "Use TLS"
+msgstr "TLS 사용"
+
+#: inputs/ecowitt_mqtt.py:174 inputs/mqtt_paho.py:106 inputs/mqtt_paho_json.py:122
+msgid "Encrypt the connection to the broker with TLS"
+msgstr "TLS로 브로커 연결을 암호화합니다."
+
+#: inputs/ecowitt_mqtt.py:190 inputs/mqtt_paho.py:133 inputs/mqtt_paho_json.py:149
+msgid "Password for connecting to the server. Leave blank to disable."
+msgstr "서버 연결에 사용할 비밀번호입니다. 비워 두면 사용하지 않습니다."
+
+#: inputs/ecowitt_mqtt.py:197 inputs/mqtt_paho.py:140 inputs/mqtt_paho_json.py:156
+msgid "Use Websockets"
+msgstr "웹소켓 사용"
+
+#: inputs/ecowitt_mqtt.py:198 inputs/mqtt_paho.py:141 inputs/mqtt_paho_json.py:157
+msgid "Use websockets to connect to the server."
+msgstr "서버 연결에 웹소켓을 사용합니다."
+
+#: inputs/ecowitt_mqtt.py:216 inputs/mqtt_paho_json.py:175
+msgid "JMESPATH Expression"
+msgstr "JMESPath 표현식"
+
+#: inputs/ecowitt_mqtt.py:217 inputs/mqtt_paho_json.py:176
+msgid "JMESPATH expression to find value in JSON response"
+msgstr "JSON 응답에서 값을 찾기 위한 JMESPath 표현식입니다."
+
+#: inputs/mqtt_paho.py:114 inputs/mqtt_paho_json.py:130
+msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
+msgstr "브로커 인증서에 서명한 CA 인증서 파일의 경로입니다. 비워 두면 시스템 CA 저장소를 사용합니다(Let's Encrypt 등 공인 인증서를 쓰는 브로커의 경우)."
+
+#: inputs/mqtt_paho.py:159
+msgid "Subscription Topic"
+msgstr "구독 토픽"
+
+#: inputs/mqtt_paho.py:160
+msgid "The MQTT topic to subscribe to"
+msgstr "구독할 MQTT 토픽입니다."

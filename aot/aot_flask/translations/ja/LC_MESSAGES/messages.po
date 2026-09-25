@@ -7798,7 +7798,7 @@ msgstr "生成した配管を削除してやり直せるようにします。"
 #: aot_flask/templates/pages/geo/geo_facility.html:136
 #: aot_flask/templates/pages/geo/geo_facility.html:162
 msgid "Irrigation"
-msgstr "灌漑"
+msgstr "灌水"
 
 #: aot_flask/static/js/geo/aot-geo-panel.js:585
 #: aot_flask/templates/pages/ai/ai_manage.html:199
@@ -14087,7 +14087,7 @@ msgstr "自動入力済み"
 
 #: aot_flask/templates/pages/geo/geo_design.html:862
 msgid "Save as Site"
-msgstr "Siteとして保存"
+msgstr "サイトとして保存"
 
 #: aot_flask/templates/pages/geo/geo_design.html:1138
 msgid "Map Settings"
@@ -14267,7 +14267,7 @@ msgstr "設備"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:136
 msgid "Irrigation layers, pipes and devices"
-msgstr "灌漑レイヤー・配管・機器"
+msgstr "灌水レイヤー・配管・機器"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:137
 msgid "Sensor — click a position to place"
@@ -31935,3 +31935,75 @@ msgstr "ロールが予定を編集できないため、Google → AoT のイン
 
 msgid "Use AI Chat"
 msgstr "AI チャットを使用"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:171
+msgid "Max Site Polygons"
+msgstr "サイトポリゴンの最大数"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:172
+msgid "Max Zone Polygons"
+msgstr "ゾーンポリゴンの最大数"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:173
+msgid "Max Device Polygons"
+msgstr "デバイスポリゴンの最大数"
+
+#: inputs/ecowitt_mqtt.py:140 inputs/mqtt_paho_json.py:87
+msgid "Topic"
+msgstr "トピック"
+
+#: inputs/ecowitt_mqtt.py:141 inputs/mqtt_paho_json.py:88
+msgid "The topic to subscribe to"
+msgstr "購読するトピックです。"
+
+#: inputs/ecowitt_mqtt.py:158 inputs/mqtt_paho.py:90 inputs/mqtt_paho_json.py:105
+msgid "Unique client ID for connecting to the server"
+msgstr "サーバー接続に使う固有のクライアントIDです。"
+
+#: inputs/ecowitt_mqtt.py:164 inputs/mqtt_paho.py:96 inputs/mqtt_paho_json.py:111
+msgid "Use Login"
+msgstr "ログインを使用"
+
+#: inputs/ecowitt_mqtt.py:165 inputs/mqtt_paho.py:97 inputs/mqtt_paho_json.py:112
+msgid "Send login credentials"
+msgstr "ログイン認証情報を送信します。"
+
+#: inputs/ecowitt_mqtt.py:171 inputs/mqtt_paho.py:103 inputs/mqtt_paho_json.py:118
+msgid "Use TLS"
+msgstr "TLSを使用"
+
+#: inputs/ecowitt_mqtt.py:174 inputs/mqtt_paho.py:106 inputs/mqtt_paho_json.py:122
+msgid "Encrypt the connection to the broker with TLS"
+msgstr "TLSでブローカーへの接続を暗号化します。"
+
+#: inputs/ecowitt_mqtt.py:190 inputs/mqtt_paho.py:133 inputs/mqtt_paho_json.py:149
+msgid "Password for connecting to the server. Leave blank to disable."
+msgstr "サーバー接続に使うパスワードです。空欄にすると無効になります。"
+
+#: inputs/ecowitt_mqtt.py:197 inputs/mqtt_paho.py:140 inputs/mqtt_paho_json.py:156
+msgid "Use Websockets"
+msgstr "ウェブソケットを使用"
+
+#: inputs/ecowitt_mqtt.py:198 inputs/mqtt_paho.py:141 inputs/mqtt_paho_json.py:157
+msgid "Use websockets to connect to the server."
+msgstr "サーバー接続にウェブソケットを使用します。"
+
+#: inputs/ecowitt_mqtt.py:216 inputs/mqtt_paho_json.py:175
+msgid "JMESPATH Expression"
+msgstr "JMESPath式"
+
+#: inputs/ecowitt_mqtt.py:217 inputs/mqtt_paho_json.py:176
+msgid "JMESPATH expression to find value in JSON response"
+msgstr "JSONレスポンスから値を探すためのJMESPath式です。"
+
+#: inputs/mqtt_paho.py:114 inputs/mqtt_paho_json.py:130
+msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
+msgstr "ブローカー証明書に署名したCA証明書ファイルのパスです。空欄にするとシステムのCAストアを使用します(Let's Encryptなど公的に信頼された証明書を使うブローカーの場合)。"
+
+#: inputs/mqtt_paho.py:159
+msgid "Subscription Topic"
+msgstr "購読トピック"
+
+#: inputs/mqtt_paho.py:160
+msgid "The MQTT topic to subscribe to"
+msgstr "購読するMQTTトピックです。"

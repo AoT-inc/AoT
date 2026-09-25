@@ -30913,3 +30913,75 @@ msgstr "Wybierz zestaw narzędzi dla tego klucza."
 
 msgid "AI tools changed. A connected AI app may need to reconnect to see the new tool list."
 msgstr "Narzędzia SI zostały zmienione. Połączona aplikacja SI może wymagać ponownego połączenia, aby zobaczyć nową listę narzędzi."
+
+#: aot_flask/templates/modals/geo_settings_modal.html:171
+msgid "Max Site Polygons"
+msgstr ""
+
+#: aot_flask/templates/modals/geo_settings_modal.html:172
+msgid "Max Zone Polygons"
+msgstr ""
+
+#: aot_flask/templates/modals/geo_settings_modal.html:173
+msgid "Max Device Polygons"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:140 inputs/mqtt_paho_json.py:87
+msgid "Topic"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:141 inputs/mqtt_paho_json.py:88
+msgid "The topic to subscribe to"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:158 inputs/mqtt_paho.py:90 inputs/mqtt_paho_json.py:105
+msgid "Unique client ID for connecting to the server"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:164 inputs/mqtt_paho.py:96 inputs/mqtt_paho_json.py:111
+msgid "Use Login"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:165 inputs/mqtt_paho.py:97 inputs/mqtt_paho_json.py:112
+msgid "Send login credentials"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:171 inputs/mqtt_paho.py:103 inputs/mqtt_paho_json.py:118
+msgid "Use TLS"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:174 inputs/mqtt_paho.py:106 inputs/mqtt_paho_json.py:122
+msgid "Encrypt the connection to the broker with TLS"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:190 inputs/mqtt_paho.py:133 inputs/mqtt_paho_json.py:149
+msgid "Password for connecting to the server. Leave blank to disable."
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:197 inputs/mqtt_paho.py:140 inputs/mqtt_paho_json.py:156
+msgid "Use Websockets"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:198 inputs/mqtt_paho.py:141 inputs/mqtt_paho_json.py:157
+msgid "Use websockets to connect to the server."
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:216 inputs/mqtt_paho_json.py:175
+msgid "JMESPATH Expression"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:217 inputs/mqtt_paho_json.py:176
+msgid "JMESPATH expression to find value in JSON response"
+msgstr ""
+
+#: inputs/mqtt_paho.py:114 inputs/mqtt_paho_json.py:130
+msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
+msgstr ""
+
+#: inputs/mqtt_paho.py:159
+msgid "Subscription Topic"
+msgstr ""
+
+#: inputs/mqtt_paho.py:160
+msgid "The MQTT topic to subscribe to"
+msgstr ""
