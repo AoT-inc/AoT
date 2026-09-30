@@ -73,7 +73,7 @@ jobs:
             pytz python-dateutil requests \
             sqlalchemy flask flask-sqlalchemy flask-marshmallow marshmallow-sqlalchemy \
             flask-wtf flask-caching flask-babel flask-login bcrypt \
-            influxdb-client Pyro5 importlib-metadata shapely
+            influxdb-client Pyro5 importlib-metadata shapely cryptography
 
       - name: Check tool_map dispatch resolution
         run: python3 -m aot.tests.ai_eval.test_tool_registry_ssot

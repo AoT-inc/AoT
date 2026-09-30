@@ -366,6 +366,8 @@ class TestSensorDetailMultiChannelDefault(_DBTestCase):
         db.session.add(DeviceMeasurements(device_id='single-1', channel=0,
                                           measurement='temperature', unit='C'))
 
+    # get_sensor_detail 은 읽기 전에 InfluxDB /health 를 실제 HTTP 로 확인한다. 그
+    # 점검을 가짜로 두지 않으면 서버가 떠 있는 개발 PC 에서만 통과하고 CI 에서 깨진다.
     def _fake_rows(self, n=30):
         from datetime import timezone
         now = datetime.now(timezone.utc)
@@ -374,7 +376,9 @@ class TestSensorDetailMultiChannelDefault(_DBTestCase):
 
     def test_multi_channel_device_keeps_fewer_readings_by_default(self):
         with mock.patch('aot.tools.data_tools.measurement.read_influxdb_list',
-                        return_value=self._fake_rows()):
+                        return_value=self._fake_rows()), \
+                mock.patch.object(self.S, '_check_influxdb_available',
+                                  return_value=(True, 'OK')):
             out = self.S.get_sensor_detail(loc_id='multi-1')
         self.assertIsInstance(out, list)
         self.assertEqual(5, len(out[0]['readings']))
@@ -382,13 +386,17 @@ class TestSensorDetailMultiChannelDefault(_DBTestCase):
 
     def test_single_channel_device_keeps_the_full_default(self):
         with mock.patch('aot.tools.data_tools.measurement.read_influxdb_list',
-                        return_value=self._fake_rows()):
+                        return_value=self._fake_rows()), \
+                mock.patch.object(self.S, '_check_influxdb_available',
+                                  return_value=(True, 'OK')):
             out = self.S.get_sensor_detail(loc_id='single-1')
         self.assertEqual(20, len(out[0]['readings']))
 
     def test_explicit_limit_overrides_the_default(self):
         with mock.patch('aot.tools.data_tools.measurement.read_influxdb_list',
-                        return_value=self._fake_rows()):
+                        return_value=self._fake_rows()), \
+                mock.patch.object(self.S, '_check_influxdb_available',
+                                  return_value=(True, 'OK')):
             out = self.S.get_sensor_detail(loc_id='multi-1', limit=12)
         self.assertEqual(12, len(out[0]['readings']))
 

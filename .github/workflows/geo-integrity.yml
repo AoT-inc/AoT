@@ -84,7 +84,7 @@ jobs:
             shapely bcrypt requests importlib-metadata Pyro5 influxdb-client pytest \
             flask-compress flask-limiter flask-session flask-talisman \
             flask-restx flask-accept apscheduler \
-            distro geocoder influxdb Pillow pillow-heif beautifulsoup4
+            distro geocoder influxdb Pillow pillow-heif beautifulsoup4 cryptography
 
       # 우회 공격이 DB 계층에서 막히는지 — 불변식의 실제 차단력.
       - name: 불변식 공격 테스트
