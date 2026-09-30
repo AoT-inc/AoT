@@ -473,6 +473,70 @@
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/settings/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g01-start/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g01-start/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g01-start/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g01-start/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g02-ask-ai/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g02-ask-ai/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g02-ask-ai/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g02-ask-ai/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g03-install/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g03-install/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g03-install/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g03-install/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g04-first-value/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g04-first-value/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g04-first-value/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g04-first-value/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g05-dashboard/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g05-dashboard/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g05-dashboard/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g05-dashboard/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g06-map/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g06-map/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g06-map/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g06-map/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g07-facility/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g07-facility/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g07-facility/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g07-facility/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/guide/g08-output/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g08-output/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g08-output/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g08-output/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ko/</loc>
         <lastmod>2026-09-30</lastmod>
         <changefreq>daily</changefreq>
@@ -945,6 +1009,70 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/settings/"/>
     </url>
     <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g01-start/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g01-start/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g01-start/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g01-start/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g02-ask-ai/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g02-ask-ai/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g02-ask-ai/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g02-ask-ai/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g03-install/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g03-install/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g03-install/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g03-install/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g04-first-value/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g04-first-value/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g04-first-value/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g04-first-value/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g05-dashboard/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g05-dashboard/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g05-dashboard/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g05-dashboard/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g06-map/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g06-map/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g06-map/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g06-map/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g07-facility/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g07-facility/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g07-facility/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g07-facility/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ko/guide/g08-output/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g08-output/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g08-output/"/>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g08-output/"/>
+    </url>
+    <url>
         <loc>https://aot-inc.github.io/AoT/ja/</loc>
         <lastmod>2026-09-30</lastmod>
         <changefreq>daily</changefreq>
@@ -1415,5 +1543,69 @@
         <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/geo/settings/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/geo/settings/"/>
         <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/geo/settings/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g01-start/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g01-start/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g01-start/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g01-start/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g02-ask-ai/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g02-ask-ai/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g02-ask-ai/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g02-ask-ai/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g03-install/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g03-install/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g03-install/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g03-install/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g04-first-value/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g04-first-value/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g04-first-value/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g04-first-value/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g05-dashboard/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g05-dashboard/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g05-dashboard/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g05-dashboard/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g06-map/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g06-map/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g06-map/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g06-map/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g07-facility/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g07-facility/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g07-facility/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g07-facility/"/>
+    </url>
+    <url>
+        <loc>https://aot-inc.github.io/AoT/ja/guide/g08-output/</loc>
+        <lastmod>2026-09-30</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ja" href="https://aot-inc.github.io/AoT/ja/guide/g08-output/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://aot-inc.github.io/AoT/guide/g08-output/"/>
+        <xhtml:link rel="alternate" hreflang="ko" href="https://aot-inc.github.io/AoT/ko/guide/g08-output/"/>
     </url>
 </urlset>
