@@ -20,9 +20,13 @@ plugins:
         - locale: ko
           name: 한국어
           build: true
+          nav_translations:
+            User Guide: 사용자 가이드
         - locale: ja
           name: 日本語
           build: true
+          nav_translations:
+            User Guide: ユーザーガイド
   - minify:
       minify_html: true
 
@@ -93,6 +97,15 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - User Guide:
+    - guide/g01-start.md
+    - guide/g02-ask-ai.md
+    - guide/g03-install.md
+    - guide/g04-first-value.md
+    - guide/g05-dashboard.md
+    - guide/g06-map.md
+    - guide/g07-facility.md
+    - guide/g08-output.md
   - About: About.md
   - Usage:
     - Data Viewing: Data-Viewing.md

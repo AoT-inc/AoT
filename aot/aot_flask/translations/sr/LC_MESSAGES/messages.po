@@ -9228,6 +9228,11 @@ msgstr "Помоћ"
 msgid "Online Manual"
 msgstr "Онлајн упутство"
 
+#: aot_flask/templates/layout.html:712
+#: aot_flask/templates/layout_default.html:712
+msgid "User Guide"
+msgstr "Водич за кориснике"
+
 #: aot_flask/templates/layout.html:713
 #: aot_flask/templates/layout_default.html:713
 msgid "API Info"

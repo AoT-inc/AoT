@@ -9230,6 +9230,11 @@ msgstr "Hjelp"
 msgid "Online Manual"
 msgstr "Nettbasert brukarhandbok"
 
+#: aot_flask/templates/layout.html:712
+#: aot_flask/templates/layout_default.html:712
+msgid "User Guide"
+msgstr "Brukarrettleiing"
+
 #: aot_flask/templates/layout.html:713
 #: aot_flask/templates/layout_default.html:713
 msgid "API Info"

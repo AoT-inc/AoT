@@ -8910,6 +8910,11 @@ msgstr "說明"
 msgid "Online Manual"
 msgstr "線上手冊"
 
+#: aot_flask/templates/layout.html:712
+#: aot_flask/templates/layout_default.html:712
+msgid "User Guide"
+msgstr "使用者指南"
+
 #: aot_flask/templates/layout.html:713
 #: aot_flask/templates/layout_default.html:713
 msgid "API Info"

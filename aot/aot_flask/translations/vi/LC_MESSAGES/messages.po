@@ -9232,6 +9232,11 @@ msgstr "Trợ giúp"
 msgid "Online Manual"
 msgstr "Hướng dẫn sử dụng trực tuyến"
 
+#: aot_flask/templates/layout.html:712
+#: aot_flask/templates/layout_default.html:712
+msgid "User Guide"
+msgstr "Hướng dẫn người dùng"
+
 #: aot_flask/templates/layout.html:713
 #: aot_flask/templates/layout_default.html:713
 msgid "API Info"

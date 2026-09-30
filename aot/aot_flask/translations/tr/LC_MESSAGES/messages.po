@@ -9235,6 +9235,11 @@ msgstr "Yardım"
 msgid "Online Manual"
 msgstr "Çevrimiçi Kılavuz"
 
+#: aot_flask/templates/layout.html:712
+#: aot_flask/templates/layout_default.html:712
+msgid "User Guide"
+msgstr "Kullanıcı Kılavuzu"
+
 #: aot_flask/templates/layout.html:713
 #: aot_flask/templates/layout_default.html:713
 msgid "API Info"

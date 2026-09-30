@@ -9304,6 +9304,11 @@ msgstr "Aide"
 msgid "Online Manual"
 msgstr "Manuel en ligne"
 
+#: aot_flask/templates/layout.html:712
+#: aot_flask/templates/layout_default.html:712
+msgid "User Guide"
+msgstr "Guide de l'utilisateur"
+
 #: aot_flask/templates/layout.html:713
 #: aot_flask/templates/layout_default.html:713
 msgid "API Info"
