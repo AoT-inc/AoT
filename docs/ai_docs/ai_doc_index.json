@@ -1,4 +1,12 @@
 {
+  "guide/g01-start.md": [],
+  "guide/g02-ask-ai.md": [],
+  "guide/g03-install.md": [],
+  "guide/g04-first-value.md": [],
+  "guide/g05-dashboard.md": [],
+  "guide/g06-map.md": [],
+  "guide/g07-facility.md": [],
+  "guide/g08-output.md": [],
   "Data-Viewing.md": [
     "Data Visualization Tools",
     "Live Measurements",
