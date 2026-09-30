@@ -39,4 +39,4 @@ jq -r '.tarball_url' | sudo wget -i - -O aot-latest.tar.gz
 sudo tar xzf aot-latest.tar.gz -C AoT --strip-components=1
 sudo rm -f aot-latest.tar.gz
 cd AoT/install
-sudo /bin/bash ./setup.sh
+sudo env AOT_MQTT_LISTEN_ALL="${AOT_MQTT_LISTEN_ALL:-0}" /bin/bash ./setup.sh
