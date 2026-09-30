@@ -9,11 +9,11 @@ from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.execution_context import run_in_thread
+from aot.utils.lazy_text import lazy_format, lazy_join
 
 ACTION_INFORMATION = {
     'name_unique': 'output_on_off',
-    'name': f"{TRANSLATIONS['output']['title']}: "
-            f"{TRANSLATIONS['on']['title']}/{TRANSLATIONS['off']['title']}/{TRANSLATIONS['duration']['title']}",
+    'name': lazy_join(TRANSLATIONS['output']['title'], ': ', TRANSLATIONS['on']['title'], '/', TRANSLATIONS['off']['title'], '/', TRANSLATIONS['duration']['title']),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -43,7 +43,7 @@ ACTION_INFORMATION = {
         {
             'id': 'state',
             'type': 'select',
-            'default_value': '',
+            'default_value': 'on',
             'required': True,
             'options_select': [
                 ('on', 'On'),
@@ -58,7 +58,7 @@ ACTION_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{} ({})".format(lazy_gettext('Duration'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Duration'), lazy_gettext('Seconds')),
             'phrase': 'If On, you can set a duration to turn the output on. 0 stays on.'
         }
     ]

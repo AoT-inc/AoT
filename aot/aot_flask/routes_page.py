@@ -188,6 +188,8 @@ def page_notes():
         elif form_note_show.notes_export.data:
             notes, data = utils_notes.export_notes(form_note_show)
             if data:
+                # ⚠ 이 이름은 이 함수에 없었다 — 노트 내보내기가 NameError 로 죽었다.
+                from aot.utils.time_utils import get_local_now
                 # Send zip file to user
                 return send_file(
                     data,
@@ -945,7 +947,7 @@ def _logview_source_groups():
     buckets = OrderedDict()
     for key in log_reader.CATEGORY_ORDER:
         buckets[key] = {'key': key,
-                        'label': gettext(log_reader.CATEGORY_LABELS[key]),
+                        'label': str(log_reader.CATEGORY_LABELS[key]),
                         'sources': []}
 
     for source in log_reader.list_sources():
@@ -957,7 +959,7 @@ def _logview_source_groups():
                  'sources': []})
         group['sources'].append({
             'id': source['id'],
-            'label': gettext(source['label']),
+            'label': str(source['label']),
             'available': source['available'],
             'reason': _logview_reason_text(source['reason']),
             'origin': source['origin'],
@@ -1036,9 +1038,14 @@ def page_logview_data():
 
     result = log_reader.read_log(source, lines=lines, search=search,
                                  min_level=min_level, offset=offset)
-    result['label'] = gettext(result['label'])
+    result['label'] = str(result['label'])
     if result.get('error'):
-        result['error'] = gettext(result['error'])
+        error = result['error']
+        if isinstance(error, (tuple, list)):
+            # 소스를 쓸 수 없는 사유는 (사유키, 인자) 로 온다.
+            result['error'] = _logview_reason_text(error)
+        else:
+            result['error'] = str(error)
 
     return utils_http.json_conditional(jsonify(result), request)
 

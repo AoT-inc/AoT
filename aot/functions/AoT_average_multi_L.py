@@ -22,6 +22,7 @@ from aot.utils.influx import add_measurements_influxdb
 from aot.utils.influx import read_influxdb_single
 from aot.utils.system_pi import get_measurement
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -65,7 +66,7 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('seconds')),
             'phrase': lazy_gettext('The period (in seconds) between measurements and calculations')
         },
         {
@@ -73,7 +74,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 10,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Start Offset'), lazy_gettext('seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Start Offset'), lazy_gettext('seconds')),
             'phrase': lazy_gettext('The wait time (in seconds) before the first measurement')
         },
         {
@@ -81,7 +82,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Max Age'), lazy_gettext('seconds')),
             'phrase': lazy_gettext(
                 'Default maximum age (in seconds). '
                 'If set separately in an individual input action, that value takes precedence.'

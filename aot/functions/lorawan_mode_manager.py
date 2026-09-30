@@ -28,6 +28,7 @@ from aot.utils.device_tz import resolve_location_tz
 from aot.utils.timekit import utc_now
 
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 try:
     import grpc  # type: ignore[import-not-found]
@@ -77,12 +78,12 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('Evaluation and apply period (seconds)')
         },
         {
             'type': 'message',
-            'default_value': '<b>{}</b>'.format(lazy_gettext('Server Connection'))
+            'default_value': lazy_format('<b>{}</b>', lazy_gettext('Server Connection'))
         },
         {
             'id': 'cs_server',
@@ -113,7 +114,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'type': 'message',
-            'default_value': '<b>{}</b>'.format(lazy_gettext('Measurement Inputs'))
+            'default_value': lazy_format('<b>{}</b>', lazy_gettext('Measurement Inputs'))
         },
         {
             'id': 'cs_rest_port',
@@ -129,7 +130,7 @@ FUNCTION_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 4000,
             'required': True,
-            'name': "{}: {} ({})".format(lazy_gettext('Measurement'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Measurement'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('How far back (seconds) to look in ChirpStack metrics history')
         },
         {
@@ -168,7 +169,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'type': 'message',
-            'default_value': '<b>{}</b><br/><small>{}</small>'.format(lazy_gettext('Operating Hours'), lazy_gettext('Sets the hours during which performance mode operates. Enter 0–24, or if the start and end times are equal it means 24 hours.'))
+            'default_value': lazy_format('<b>{}</b><br/><small>{}</small>', lazy_gettext('Operating Hours'), lazy_gettext('Sets the hours during which performance mode operates. Enter 0–24, or if the start and end times are equal it means 24 hours.'))
         },
         {
             'id': 'day_window_mode',
@@ -230,7 +231,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'type': 'message',
-            'default_value': '<b>{}</b><br/><small>{}</small>'.format(lazy_gettext('HB Period per Mode'), lazy_gettext('Sets the heartbeat period for each mode.'))
+            'default_value': lazy_format('<b>{}</b><br/><small>{}</small>', lazy_gettext('HB Period per Mode'), lazy_gettext('Sets the heartbeat period for each mode.'))
         },
         {
             'id': 'c_mode_class',
@@ -302,7 +303,7 @@ FUNCTION_INFORMATION = {
         },
         {
             'type': 'message',
-            'default_value': '<b>{}</b><br/><small>{}</small>'.format(lazy_gettext('Threshold Options'), lazy_gettext('Sets the mode-switching thresholds. Defaults assume a 4S LiFePO4 pack (12.8 V nominal). For a 12 V lead-acid pack use 12.00 / 11.70 / 11.40 instead — the two chemistries have completely different voltage curves.'))
+            'default_value': lazy_format('<b>{}</b><br/><small>{}</small>', lazy_gettext('Threshold Options'), lazy_gettext('Sets the mode-switching thresholds. Defaults assume a 4S LiFePO4 pack (12.8 V nominal). For a 12 V lead-acid pack use 12.00 / 11.70 / 11.40 instead — the two chemistries have completely different voltage curves.'))
         },
         {
             'id': 'battery_policy_enabled',

@@ -299,6 +299,7 @@ def parse_input_information(exclude_custom=False, custom_only=False):
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'url_manufacturer', force_type='list')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'url_product_purchase', force_type='list')
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'url_additional', force_type='list')
+            dict_inputs = dict_has_value(dict_inputs, input_custom, 'url_api_key', force_type='list')
 
             # Dependencies
             dict_inputs = dict_has_value(dict_inputs, input_custom, 'dependencies_module')

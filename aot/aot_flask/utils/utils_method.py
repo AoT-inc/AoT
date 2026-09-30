@@ -41,7 +41,9 @@ def validate_method_data(form_data, this_method):
         if (not form_data.time_start.data or
                 not form_data.time_end.data or
                 form_data.setpoint_start.data == ''):
-            flash(f"{gettext('Required')}: {gettext('Start date/time, end date/time, start setpoint')}", "error")
+            msg_required = gettext('Required')
+            msg_fields = gettext('Start date/time, end date/time, start setpoint')
+            flash(f"{msg_required}: {msg_fields}", "error")
             return 1
         try:
             start_time = datetime.strptime(
@@ -49,8 +51,10 @@ def validate_method_data(form_data, this_method):
             end_time = datetime.strptime(
                 form_data.time_end.data, '%Y-%m-%d %H:%M:%S')
         except ValueError:
-            flash(f'{gettext("Invalid Date/Time format")}. {gettext("Required")}: {gettext("YYYY/MM/DD HH:MM:SS")}',
-                  "error")
+            msg_invalid = gettext("Invalid Date/Time format")
+            msg_required = gettext("Required")
+            msg_format = gettext("YYYY/MM/DD HH:MM:SS")
+            flash(f'{msg_invalid}. {msg_required}: {msg_format}', "error")
             return 1
         if end_time <= start_time:
             flash(gettext("The end time must be after the start time."), "error")
@@ -60,7 +64,9 @@ def validate_method_data(form_data, this_method):
         if (not form_data.daily_time_start.data or
                 not form_data.daily_time_end.data or
                 form_data.setpoint_start.data == ''):
-            flash(f"{gettext('Required')}: {gettext('Start time, end time, start setpoint')}", "error")
+            msg_required = gettext('Required')
+            msg_fields = gettext('Start time, end time, start setpoint')
+            flash(f"{msg_required}: {msg_fields}", "error")
             return 1
         try:
             start_time = datetime.strptime(
@@ -68,7 +74,10 @@ def validate_method_data(form_data, this_method):
             end_time = datetime.strptime(
                 form_data.daily_time_end.data, '%H:%M:%S')
         except ValueError:
-            flash(f'{gettext("Invalid Date/Time format")}. {gettext("Required")}: {gettext("HH:MM:SS")}', "error")
+            msg_invalid = gettext("Invalid Date/Time format")
+            msg_required = gettext("Required")
+            msg_format = gettext("HH:MM:SS")
+            flash(f'{msg_invalid}. {msg_required}: {msg_format}', "error")
             return 1
         if end_time <= start_time:
             flash(gettext("The end time must be after the start time."), "error")
@@ -86,13 +95,19 @@ def validate_method_data(form_data, this_method):
         except Exception:
             pass
         if not form_data.duration.data:
-            flash(f"{gettext('Required')}: {gettext('Duration')}", "error")
+            msg_required = gettext('Required')
+            msg_field = gettext('Duration')
+            flash(f"{msg_required}: {msg_field}", "error")
             return 1
         elif not is_positive_integer(form_data.duration.data):
-            flash(f"{gettext('Required')}: {gettext('Duration must be positive')}", "error")
+            msg_required = gettext('Required')
+            msg_field = gettext('Duration must be positive')
+            flash(f"{msg_required}: {msg_field}", "error")
             return 1
         if form_data.setpoint_start.data is None:
-            flash(f"{gettext('Required')}: {gettext('Start Setpoint')}", "error")
+            msg_required = gettext('Required')
+            msg_field = gettext('Start Setpoint')
+            flash(f"{msg_required}: {msg_field}", "error")
             return 1
 
 

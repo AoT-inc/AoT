@@ -7,10 +7,11 @@ from aot.databases.models import Camera
 from aot.devices.camera import camera_record
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'photo',
-    'name': "{}: {}".format(TRANSLATIONS['camera']['title'], lazy_gettext('Capture Photo')),
+    'name': lazy_format("{}: {}", TRANSLATIONS['camera']['title'], lazy_gettext('Capture Photo')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

@@ -63,6 +63,7 @@ class AIActionService:
     and execute actions via the AoT Daemon.
     """
 
+    # @manual ai/overview#device-ai-toggle
     @staticmethod
     def get_registered_devices():
         """
@@ -728,10 +729,22 @@ class AIActionService:
             _ID_TTL_CACHE[input_match.row.unique_id] = time.time()
             return input_match.row.unique_id, 'input'
 
-        func_match = Function.query.filter(or_(Function.unique_id == target_id, Function.name == target_id)).first()
-        if func_match:
-            logger.info(f"[TargetResolver] Resolved '{target_id}' to Function: {func_match.unique_id}")
-            return func_match.unique_id, 'function'
+        # Conditional/Trigger/PID/CustomController(+plain Function) — 이름이
+        # 겹치면 여기도 고르지 않고 멈춘다(위 Output/Input 과 같은 규율).
+        # 옛 코드는 `Function` 모델 하나만 봐서 나머지 네 종류는 이름으로
+        # 아예 못 찾았고, 그마저도 이름이 겹치면 `.first()` 로 아무거나
+        # 집었다(로컬 서버에 활성/비활성 "Env Coordinator" 둘 — 실제 사례).
+        from aot.services.resolvers.function_resolver import (
+            resolve_function, _default_models)
+        # 옛 코드가 보던 순수 Function(function_actions) 테이블도 그대로
+        # 포함한다 — create_function_tool 등이 그 테이블에 행을 만든다.
+        func_match = resolve_function(
+            target_id, models=list(_default_models()) + [(Function, 'Function')])
+        if func_match.error:
+            raise ValueError(func_match.error)
+        if func_match.row:
+            logger.info(f"[TargetResolver] Resolved '{target_id}' to Function: {func_match.row.unique_id}")
+            return func_match.row.unique_id, 'function'
 
         # Fallback to original if no match found
         return target_id, None

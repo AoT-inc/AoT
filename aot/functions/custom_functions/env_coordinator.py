@@ -46,6 +46,7 @@ from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
 )
 
 
+# @manual ai/env-control#settings-screen
 def execute_at_modification(
         messages,
         mod_controller,
@@ -397,6 +398,7 @@ class CustomModule(
             self.try_initialize()
 
     # ─────────────────────────────────────────────────────────────────────────
+    # @manual ai/env-control#pre-gate-checked-before-l1l3, ai/env-control#settings-hvac
     def initialize(self) -> None:
         # 육묘장 모드: 지하수처럼 경도·철분이 높고 수온이 낮은 원수를 쓰면
         # 물방울 렌즈 집광 외에 염류 잔류·저온 충격까지 겹쳐 피해가 커진다.
@@ -415,8 +417,7 @@ class CustomModule(
         cfg = PreGateConfig(
             wind_threshold=self.gate_wind_threshold or 12.0,
             rain_threshold=0.5,
-            heat_ext_threshold=45.0,
-            cold_ext_threshold=-5.0,
+            # 폭염·한파 외부 문턱은 넘기지 않는다 — 정본은 PreGateConfig 기본값.
             nursery_mode=bool(self.nursery_mode),
             nursery_solar_lockout=_lockout,
             nursery_solar_release=_release,
@@ -460,6 +461,7 @@ class CustomModule(
         super().stop_function()
 
     # ─────────────────────────────────────────────────────────────────────────
+    # @manual ai/env-control#commands
     def cmd_reload(self, args_dict: dict) -> str:
         """실행 중 custom_options 변경을 재기동 없이 다음 사이클에 반영.
 
@@ -480,6 +482,7 @@ class CustomModule(
         self._force_immediate = True
         return f'Reloaded — {len(self._profiles)} actuator(s)'
 
+    # @manual ai/env-control#commands
     def cmd_run_now(self, args_dict: dict) -> str:
         """다음 사이클을 즉시 실행. 단, 긴급정지 보류 중에는 거부한다."""
         now = time.time()
@@ -532,6 +535,7 @@ class CustomModule(
                 out[o['id']] = o['default_value']
         return out
 
+    # @manual ai/env-control#commands, ai/env-control#emergency-stop, ai/env-control#actuators-safe-default
     def cmd_emergency_stop(self, args_dict: dict) -> str:
         """긴급정지: 모든 액추에이터를 safe_default 또는 OFF로 즉시 이동 + 60s 지연.
 
@@ -565,6 +569,7 @@ class CustomModule(
         self.logger.warning(msg)
         return msg
 
+    # @manual ai/env-control#emergency-stop, ai/env-control#actuators-safe-default
     def force_safe_state(self) -> None:
         """외부 트리거(Conditional, Trigger) 에서 직접 호출하는 E-stop 진입점.
 

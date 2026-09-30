@@ -52,8 +52,8 @@ def measurement_mod_form(messages, page_refresh, form):
                 continue
 
             if mod_device.is_activated:
-                messages["error"].append(
-                    f"{gettext('Deactivate controller before modifying its settings')}: {mod_device.name}")
+                msg_deactivate = gettext('Deactivate controller before modifying its settings')
+                messages["error"].append(f"{msg_deactivate}: {mod_device.name}")
                 break
 
             if ("measurement_id_{}".format(each_meas_id) in form and

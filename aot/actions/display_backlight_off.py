@@ -9,10 +9,11 @@ from aot.databases.models import Actions
 from aot.databases.models import CustomController
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.functions import parse_function_information
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'display_backlight_off',
-    'name': "{}: {}: {}".format(TRANSLATIONS['display']['title'], lazy_gettext('Backlight'), lazy_gettext('Off')),
+    'name': lazy_format("{}: {}: {}", TRANSLATIONS['display']['title'], lazy_gettext('Backlight'), lazy_gettext('Off')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

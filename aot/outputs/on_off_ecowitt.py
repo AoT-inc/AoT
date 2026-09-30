@@ -12,6 +12,7 @@ from aot.utils.influx import add_measurements_influxdb
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -35,7 +36,7 @@ channels_dict = {
 # Output information (kept small)
 OUTPUT_INFORMATION = {
     'output_name_unique': 'ecowitt_output',
-    'output_name': "{}: Ecowitt Local HTTP".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Ecowitt Local HTTP", lazy_gettext('On/Off')),
     'output_library': 'requests',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,

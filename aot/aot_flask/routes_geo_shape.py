@@ -92,6 +92,7 @@ def _shapes_to_geojson(shape_type, default_color, map_uuid=None):
     return {'type': 'FeatureCollection', 'features': features}
 
 
+# @manual geo/api-reference#overlays-shapes-geojson
 @blueprint.route('/api/geo/sites', methods=['GET'])
 @login_required
 def api_geo_sites():
@@ -103,6 +104,7 @@ def api_geo_sites():
         return jsonify({'error': str(e)}), 500
 
 
+# @manual geo/api-reference#overlays-shapes-geojson
 @blueprint.route('/api/geo/zones', methods=['GET'])
 @login_required
 def api_geo_zones():
@@ -114,6 +116,7 @@ def api_geo_zones():
         return jsonify({'error': str(e)}), 500
 
 
+# @manual geo/api-reference#overlays-shapes-geojson
 @blueprint.route('/api/geo/shapes/<string:category>', methods=['GET'])
 @login_required
 def api_geo_shapes_by_category(category):
@@ -125,6 +128,7 @@ def api_geo_shapes_by_category(category):
         return jsonify({'error': str(e)}), 500
 
 
+# @manual geo/api-reference#zones
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/photo', methods=['POST'])
 @login_required
 def api_geo_zone_photo(zone_uuid):
@@ -193,6 +197,7 @@ def serve_geo_zone_photo(filename):
     return send_file(file_path)
 
 
+# @manual geo/api-reference#zones
 @blueprint.route('/api/geo/shape/<string:shape_uuid>/description',
                  methods=['POST'])
 @login_required
@@ -252,6 +257,7 @@ def api_geo_shape_description(shape_uuid):
     return jsonify({'ok': True, 'description': desc})
 
 
+# @manual geo/map-widget#representative-measurement, geo/api-reference#zones
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/rep_key', methods=['POST'])
 @login_required
 def api_geo_zone_rep_key(zone_uuid):
@@ -340,6 +346,7 @@ def _save_hidden_rows(shape, body):
     return None, None, hidden_rows_of(shape)
 
 
+# @manual geo/api-reference#zones
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/hidden_rows', methods=['POST'])
 @login_required
 def api_geo_zone_hidden_rows(zone_uuid):

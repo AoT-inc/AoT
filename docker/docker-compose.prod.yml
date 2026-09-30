@@ -42,11 +42,22 @@ services:
       # User-authored scripts (Export/Import + admin/backup both cover this
       # dir, but with no volume it's still wiped on every image swap).
       - aot_user_scripts:/app/aot/user_scripts
-      # User/commercial extension modules are NOT baked into the public image.
-      # Mount them from the host (repo custom_* dirs); empty for stock installs.
+      # User/commercial extension modules are NOT baked into the public image
+      # (the one actual case: aot/outputs/custom_outputs/on_off_mqtt_farmon_v1.py,
+      # gitignored). Mount them from the host (repo custom_* dirs); empty for
+      # stock installs.
+      # NOT aot/functions/custom_functions — unlike the dirs below, that one
+      # already holds real, git-tracked code (env_coordinator.py + device_*.py)
+      # that ships baked into the public image; "custom_functions" here is
+      # just this app's directory-naming convention (aot/config/__init__.py
+      # PATH_FUNCTIONS_CUSTOM), not a third-party/commercial extension point.
+      # Bind-mounting it would shadow that image code with an empty host dir
+      # on a no-clone install, or with whatever commit the host happens to be
+      # on (not necessarily matching the pinned image tag) on a cloned one.
+      # Added by mistake 2026-07-20 (094cd5865), generalizing from the single
+      # real custom_outputs case above — removed 2026-09-28.
       - ../aot/inputs/custom_inputs:/app/aot/inputs/custom_inputs
       - ../aot/outputs/custom_outputs:/app/aot/outputs/custom_outputs
-      - ../aot/functions/custom_functions:/app/aot/functions/custom_functions
       - ../aot/actions/custom_actions:/app/aot/actions/custom_actions
       - ../aot/widgets/custom_widgets:/app/aot/widgets/custom_widgets
       - ../aot/user_python_code:/app/aot/user_python_code
@@ -65,6 +76,17 @@ services:
       # base file alone — an overlay-only value would vanish at exactly the
       # moment the health gate needs it. Empty unless the overlay is in use.
       - AOT_HEALTH_KEY=${AOT_HEALTH_KEY:-}
+      # Cookie/CSRF hardening for installs reached only through a TLS-terminating
+      # reverse proxy or tunnel (see docs/Security.md#behind-tls). Empty = off,
+      # matching the plain-HTTP LAN default. Only aot-app reads this (cookie
+      # code lives in aot_flask), so it's not set on aot_daemon/aot_mcp.
+      - AOT_BEHIND_TLS=${AOT_BEHIND_TLS:-}
+      # Instance-wide Google OAuth client, shared across a fleet via deployment
+      # config instead of each admin entering it in Settings > Integrations
+      # (see docs/Integrations.md). Empty = fall back to the Settings value.
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID:-}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      - OAUTH_PUBLIC_BASE_URL=${OAUTH_PUBLIC_BASE_URL:-}
       - HARDWARE_PROFILE=${HARDWARE_PROFILE:-LOW}
       - AOT_LOCAL_DIR=/app/aot_local
       - INFLUXDB_HOST=influxdb
@@ -86,10 +108,11 @@ services:
       # Same named volume as aot-app: daemon and UI must open the SAME aot.db.
       - aot_data:/app/aot_local
       - aot_logs:/var/log/aot
-      # User/commercial extension modules (see aot-app) — the daemon runs outputs.
+      # User/commercial extension modules (see aot-app; custom_functions is
+      # deliberately NOT in this list — see the comment there) — the daemon
+      # runs outputs.
       - ../aot/inputs/custom_inputs:/app/aot/inputs/custom_inputs
       - ../aot/outputs/custom_outputs:/app/aot/outputs/custom_outputs
-      - ../aot/functions/custom_functions:/app/aot/functions/custom_functions
       - ../aot/actions/custom_actions:/app/aot/actions/custom_actions
       - ../aot/widgets/custom_widgets:/app/aot/widgets/custom_widgets
       - ../aot/user_python_code:/app/aot/user_python_code

@@ -6,6 +6,7 @@ from flask_babel import lazy_gettext
 from aot.inputs.base_input import AbstractInput
 from aot.utils.atlas_calibration import setup_atlas_device
 from aot.utils.system_pi import str_is_float
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -73,7 +74,7 @@ INPUT_INFORMATION = {
             'id': 'calibrate_temp_c',
             'type': 'float',
             'default_value': 100.0,
-            'name': "{} (°C)".format(lazy_gettext('Temperature')),
+            'name': lazy_format("{} (°C)", lazy_gettext('Temperature')),
             'phrase': 'Temperature for single point calibration'
         },
         {

@@ -102,6 +102,7 @@ class ModelAssetManager:
 
     # ── Create ─────────────────────────────────────────────────────────────────
 
+    # @manual geo/facility#3d-asset-mode
     @staticmethod
     def create_asset(data, file_storage=None, owner_user_id=None):
         """Create a new GeoModelAsset.
@@ -234,6 +235,7 @@ class ModelAssetManager:
 
     # ── Facility attach / detach ───────────────────────────────────────────────
 
+    # @manual geo/facility#3d-asset-mode
     @staticmethod
     def attach_to_facility(facility_uuid, asset_uuid, transform=None):
         """Link a GeoModelAsset to a GeoFacility and switch render_mode='asset'."""
@@ -256,6 +258,7 @@ class ModelAssetManager:
             logger.error("ModelAssetManager.attach error: %s", e)
             return None, str(e)
 
+    # @manual geo/facility#3d-asset-mode
     @staticmethod
     def detach_from_facility(facility_uuid):
         """Remove asset link and revert render_mode to 'parametric'."""

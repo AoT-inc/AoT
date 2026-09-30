@@ -87,6 +87,7 @@
 
   <div class="asset-toolbar">
     <input type="text" id="asset-search" placeholder="{{ _('Search by name…') }}" oninput="filterAssets(this.value)">
+    {# @manual geo/settings#unit-settings #}
     <select id="unit-select"
             onchange="saveUnit(this.value)">
       <option value="mm">mm</option>
@@ -95,6 +96,7 @@
       <option value="in">in</option>
       <option value="ft">ft</option>
     </select>
+    {# @manual-end #}
     <button class="btn-primary" onclick="openUploadModal()">+ {{ _('Upload GLTF') }}</button>
   </div>
 
@@ -147,6 +149,7 @@
     loadAssets();
   });
 
+  {# @manual geo/settings#unit-settings #}
   // ── Unit preference ──────────────────────────────────────────────────────────
   function loadUnit() {
     fetch('/api/geo/settings/length_unit')
@@ -164,6 +167,7 @@
       body: JSON.stringify({length_unit: unit}),
     }).catch(() => {});
   }
+  {# @manual-end #}
 
   // ── Asset list ───────────────────────────────────────────────────────────────
   let _allAssets = [];

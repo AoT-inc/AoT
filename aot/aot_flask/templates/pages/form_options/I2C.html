@@ -17,9 +17,53 @@
     <div class="input-group">
       {{form.i2c_location(class_='form-control aot-modern-input', value=each_device.i2c_location)}}
       <div class="input-group-append">
-        <button onclick="return $(this).processRequest(this, 'i2c_scan');" class="btn aot-pill-btn aot-pill-btn-primary ml-1" type="button"><i class="fas fa-search"></i></button>
+        <button onclick="return aotI2cScan(this);" class="btn aot-pill-btn aot-pill-btn-primary ml-1" type="button" title="{{_('Scan the I2C bus for connected devices')}}"
+                data-msg-scanning="{{_('Scanning...')}}"
+                data-msg-none="{{_('No I2C devices found on this bus.')}}"
+                data-msg-found="{{_('Found (click to use):')}}"
+                data-msg-in-use="{{_('In use by a driver:')}}"
+                data-msg-unsupported="{{_('I2C scan is only available on a native Raspberry Pi install.')}}"
+                data-msg-no-bus="{{_('This I2C bus does not exist. Check the bus number and that I2C is enabled.')}}"
+                data-msg-error="{{_('I2C scan failed.')}}"><i class="fas fa-search"></i></button>
       </div>
     </div>
+    <div class="aot-i2c-scan-result small mt-1"></div>
+    <script>
+    if (!window.aotI2cScan) {
+      window.aotI2cScan = function (btn) {
+        var d = btn.dataset;
+        var $form = $(btn).closest('form');
+        var $addr = $form.find('[name=i2c_location]').first();
+        var $out = $(btn).closest('.aot-modal-option-control').find('.aot-i2c-scan-result').first();
+        var bus = $form.find('[name=i2c_bus]').first().val();
+        $out.text(d.msgScanning);
+        fetch('/i2c_scan?bus=' + encodeURIComponent(bus || 1), {credentials: 'same-origin'})
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            $out.empty();
+            if (!res.ok) {
+              var key = {unsupported: 'msgUnsupported', no_bus: 'msgNoBus'}[res.error] || 'msgError';
+              $out.text(d[key]);
+              return;
+            }
+            if (!res.addresses.length && !res.in_use.length) { $out.text(d.msgNone); return; }
+            if (res.addresses.length) {
+              $out.append($('<span>').text(d.msgFound + ' '));
+              res.addresses.forEach(function (a) {
+                $('<button type="button" class="btn btn-sm aot-pill-btn mr-1">').text(a)
+                  .on('click', function () { $addr.val(a).trigger('change'); })
+                  .appendTo($out);
+              });
+            }
+            if (res.in_use.length) {
+              $out.append($('<div>').text(d.msgInUse + ' ' + res.in_use.join(', ')));
+            }
+          })
+          .catch(function () { $out.text(d.msgError); });
+        return false;
+      };
+    }
+    </script>
   {%- endif -%}
   </div>
 </div>

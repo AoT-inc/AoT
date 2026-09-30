@@ -742,6 +742,12 @@ class SpaceToolsMixin:
         obj, kind = cls._find_placeable_device(device_id)
         if not obj:
             return {"error": f"Device not found: {device_id}"}
+        # 'AI 판단에 포함' 을 끈 장치는 AI 조회 대상이 아니다(device_resolver).
+        from aot.services.resolvers.device_resolver import (
+            AI_EXCLUDED, ai_excluded_error)
+        refusal = ai_excluded_error(obj)
+        if refusal:
+            return {"error": refusal, "reason_code": AI_EXCLUDED}
         return {"device_id": device_id, "kind": kind, "name": getattr(obj, 'name', None),
                 "lat": getattr(obj, 'latitude', None), "lng": getattr(obj, 'longitude', None),
                 # [P2] 배치된 지도는 마커에서 파생한다.
@@ -946,7 +952,8 @@ class SpaceToolsMixin:
         return {"shape_id": shape_id, "shape_type": stype, "status": "deleted"}
 
     @classmethod
-    def get_crop_status(cls, facility_id=None, facility_name=None, **extra):
+    def get_crop_status(cls, facility_id=None, facility_name=None, limit=None,
+                            **extra):
         """[읽기전용] 시설별 작물과 생육단계 — 재배 조언의 전제.
 
         작물을 모르면 최적 재배 조언 자체가 성립하지 않는다. 인앱 AI는 도메인
@@ -962,6 +969,12 @@ class SpaceToolsMixin:
         레지스트리가 없는 설치도 실제로 존재하므로(이 저장소의 개발 환경이 그렇다),
         2)가 없으면 1)만 반환하고 무엇이 왜 빠졌는지 명시한다 — 조용히 빈 값을
         주면 AI가 작물이 없는 것으로 오해한다.
+
+        `open_field_plots`/`facility_bay_plots` 는 `limit`(기본 10, 목록 하나당)
+        을 넘으면 앞에서부터 그만큼만 낸다 — 벤치 실측(2026-09-24): 노지 구획
+        44건을 필터 없이 다 실어 이 도구 하나가 중앙값 22,904자였다(상한 4,000자
+        목표엔 10건 안팎이라야 닿는다 — 30건은 한 자리 감소율에 그쳤다).
+        `facilities`(env_coordinator 시설)는 대개 몇 개뿐이라 자르지 않는다.
         """
         import json as _json
         try:
@@ -1044,14 +1057,36 @@ class SpaceToolsMixin:
                         # get_plot 이 낸다. 상세를 행마다 실으면 상한을 넘고,
                         # 넘으면 캡이 목록을 잘라 "31건 중 1건" 이 나간다.
                         d = cls._plot_brief(row, summary=True)
-                        d['map_id'] = m.unique_id
+                        # `map_id`(raw uuid)는 안 싣는다 — zone_name/zone_kind
+                        # 로 이미 어디인지 이름으로 답하고, 아무 코드도 이
+                        # 값을 읽지 않는다(2026-09-29 실측: 유일한 참조가
+                        # 이 줄 자신이었다).
                         (bay_plots if _in_facility(row) else
                          open_plots).append(d)
             except Exception as exc:
                 logger.warning("get_crop_status: 식생 구획 조회 실패: %s", exc)
 
+            # 목록 하나마다(노지·시설 베이 각각) 상한을 둔다 — `plot_count`/
+            # `facility_bay_plot_count` 는 자르기 **전** 참값이라 get_system_brief
+            # 의 합산이 잘려도 어긋나지 않는다.
+            total_open, total_bay = len(open_plots), len(bay_plots)
+            _lim = int(limit) if limit else cls._PLOT_LIST_DEFAULT_LIMIT
+            open_truncated = total_open > _lim
+            bay_truncated = total_bay > _lim
+            if open_truncated:
+                open_plots = open_plots[:_lim]
+            if bay_truncated:
+                bay_plots = bay_plots[:_lim]
+
             result = {"status": "success", "count": len(rows), "facilities": rows,
-                      "open_field_plots": open_plots, "plot_count": len(open_plots)}
+                      "open_field_plots": open_plots, "plot_count": total_open}
+            if open_truncated or bay_truncated:
+                result["truncated"] = True
+                result["truncated_note"] = (
+                    "Showing the first %d of %d open-field plot(s) and the "
+                    "first %d of %d facility-bay plot(s). Call again with a "
+                    "higher limit for the rest." % (
+                        len(open_plots), total_open, len(bay_plots), total_bay))
             if open_plots or bay_plots:
                 # 요약이라는 사실을 응답이 직접 말한다. 이것이 없으면 모델은
                 # 목록에 없는 필드를 "없는 값" 으로 읽고 — 단계 일정도 치수도
@@ -1065,6 +1100,7 @@ class SpaceToolsMixin:
                     "here does not mean the plot lacks it.")
             if bay_plots:
                 result["facility_bay_plots"] = bay_plots
+                result["facility_bay_plot_count"] = total_bay
                 result["facility_bay_plot_note"] = (
                     "These grow inside facilities (greenhouse bays), not in the open "
                     "field, and each carries its own start date and history. Their "
@@ -1213,6 +1249,48 @@ class SpaceToolsMixin:
         if cap:
             d['capacity_estimate'] = cap
         return d
+
+    @classmethod
+    def _thin_plot_detail(cls, brief):
+        """get_plot 응답에서 반복되는 큰 열 둘을 줄인다. 제자리에서 고친다.
+
+        벤치 실측(2026-09-29, get_plot 단건, 6단계 프로그램): `stage_schedule`
+        이 최대 4,946자 — 단계마다 `guidance` 문장(현재 단계 것은 이미
+        `stage.guidance` 에 있다)과 목표 4개짜리 `targets` 배열(현재 단계
+        것은 이미 `stage.targets` 에 있다)을 **6단계 전부** 실은 탓이다.
+        날짜·상태(`starts_on`/`ends_on`/`state`)는 그대로 둔다 — 프로그램
+        조회 도구(`get_program`/`list_programs`)는 운영 키의 도구 묶음
+        밖(설정 전용)이라, 여기서마저 빼면 그 키로는 전체 일정을 **어디서도
+        다시 볼 수 없다**(2026-09-29 리뷰: 처음엔 개수만 남기려 했다가,
+        `get_program` 을 가리키는 문구가 운영 도구 응답에 설정 전용 도구를
+        가리켜서는 안 된다는 검사에 걸려 되돌렸다 — 되찾을 데가 없는 값은
+        가볍게라도 남겨야 한다). `timeline.stages`(1,071자, 6단계의 시작일·
+        진행률)는 `stage_schedule` 의 날짜와 겹치므로 그대로 뺀다 —
+        get_control_state 의 구획 요약과 같은 규칙(`_plot_ctl_brief`).
+
+        뺀 것은 **뺐다는 사실**을 응답에 남긴다 — 없는 값처럼 보이면 안 된다.
+        """
+        if not isinstance(brief, dict):
+            return brief
+        sched = brief.get('stage_schedule')
+        if isinstance(sched, list) and sched:
+            brief['stage_schedule'] = [
+                {k: v for k, v in st.items() if k not in ('guidance', 'targets')}
+                for st in sched if isinstance(st, dict)]
+            brief['stage_schedule_note'] = (
+                "Per-stage guidance text and target values are not repeated "
+                "here (only dates/state) — 'stage.guidance'/'stage.targets' "
+                "already carry the CURRENT stage's in full.")
+        tl = brief.get('timeline')
+        if isinstance(tl, dict) and 'stages' in tl:
+            brief['timeline'] = {k: v for k, v in tl.items() if k != 'stages'}
+            brief['timeline_note'] = (
+                "'timeline' here is summary scalars only (today_pct, "
+                "elapsed_days, total_days...) — the full per-stage start "
+                "dates are in 'stage_schedule' and current position in "
+                "'stage.index'/'stage.total'; a stage-by-stage percentage "
+                "breakdown is not repeated a third time.")
+        return brief
 
     @classmethod
     def list_programs(cls, kind=None, subject=None, crop=None, tab_id=None, **extra):
@@ -1441,13 +1519,25 @@ class SpaceToolsMixin:
             logger.exception("Error in delete_program")
             return {"status": "error", "message": str(e)}
 
+    #: list_plots/get_crop_status 공용 기본 상한. 필터 없이 부르면 활성
+    #: 구획 전부가 나가는데, 큰 농장은 그것만으로 응답이 벤치 실측 중앙값
+    #: 18~22K자까지 갔다(요약 필드로 줄여도 개수 자체가 크면 소용없다) —
+    #: 개수 상한이 없었기 때문. 30으로는 실측 감소율이 30~40%에 그쳐(목표
+    #: 4,000자·70% 미달) 10으로 낮췄다 — "한눈에 보는" 크기다.
+    _PLOT_LIST_DEFAULT_LIMIT = 10
+
     @classmethod
     def list_plots(cls, map_id=None, zone_id=None, include_ended=False, on=None,
-                       with_sensors=False, **extra):
+                       with_sensors=False, limit=None, **extra):
         """[읽기전용] 식생 구획(작기) 목록 — 어디에 무엇이 심겨 있는가.
 
         기본은 **재배 중인 것만**. `include_ended=True` 면 종료된 작기까지
         준다(연작 판단용). `on='YYYY-MM-DD'` 로 과거 시점을 물을 수 있다.
+
+        `limit`(기본 10)이 상한이다 — 넘으면 앞에서부터 그만큼만 내고
+        `truncated`를 켠다. `zone_id`/`map_id` 로 좁히거나 `limit` 을 올려
+        나머지를 본다. 항목 자체를 요약해도(2026-09-24) 큰 농장은 구획
+        **개수**가 응답을 키운다 — 이 상한은 그 축을 막는다.
 
         `with_sensors=True` 면 구획마다 참조 센서(`in_plot`/`from_zone`/
         `source`)를 함께 낸다. 밸브 교차는 **포함하지 않는다** — 그쪽이 비용의
@@ -1523,10 +1613,22 @@ class SpaceToolsMixin:
                 items.append(cls._plot_brief(
                     r, with_sensors=with_sensors, with_valves=False,
                     containers=_c, markers=_mk, summary=True))
+            total_matched = len(items)
+            _lim = int(limit) if limit else cls._PLOT_LIST_DEFAULT_LIMIT
+            truncated = total_matched > _lim
+            if truncated:
+                items = items[:_lim]
             out = {"count": len(items), "plots": items,
                    "note": ("Only plots currently growing are listed. "
                             "Pass include_ended=true for history.")
                            if not include_ended else None}
+            if truncated:
+                out["truncated"] = True
+                out["total_matched"] = total_matched
+                out["truncated_note"] = (
+                    "Showing the first %d of %d matching plots. Narrow with "
+                    "zone_id/map_id, or call again with a higher limit, for "
+                    "the rest." % (_lim, total_matched))
             if zone_id and not items:
                 out["note"] = (
                     "0 plots matched zone_id (checked by spatial containment "
@@ -1653,6 +1755,7 @@ class SpaceToolsMixin:
                     rows_per_bed=rows_per_bed)
             except ValueError as ve:
                 return {"error": str(ve)}
+            cls._thin_plot_detail(brief)
             _check = cls._stage_target_check(
                 brief, plot_row=row, recent_days=recent_days)
             if _check:
@@ -1777,7 +1880,12 @@ class SpaceToolsMixin:
             if got.get('channel'):
                 row['channel'] = got['channel']
             if got.get('others'):
-                row['other_sensors'] = got['others']
+                # 다른 센서들의 값 전체(이름·값·채널)는 안 싣는다 — 실측:
+                # 구획 하나의 target_check 가 4,657자였고 이 열이 그중 큰
+                # 몫이었다. "여럿이 있다/갈린다" 는 사실만 남기고, 실제
+                # 값이 필요하면 get_zone_sensor_summary/get_sensor_detail 로
+                # 그 구역·센서를 짚어 보게 한다.
+                row['other_sensors_count'] = len(got['others'])
             try:
                 row['delta'] = round(float(got['value']) - float(t['value']), 2)
             except (TypeError, ValueError):
@@ -1811,24 +1919,25 @@ class SpaceToolsMixin:
             # 화면이 쓰는 필드를 그대로 넘기지 않고 **말할 것만** 남긴다 —
             # 응답에 실리는 글자가 곧 매 호출의 비용이다(극값·on_target 은
             # 문장으로 옮길 일이 없다).
+            # 항목마다(day/night 온도 등) 그 안의 센서별 내역(`sensors`)은
+            # 뺀다 — 실측: 구획 하나의 target_check 4,657자 중 큰 몫이 이
+            # 열이었다. 몇 센서가 갈렸는지는 `agree`('mixed'면 갈림)로 이미
+            # 말하므로 뜻은 남는다 — 어느 센서가 어떻게 갈렸는지는
+            # get_zone_sensor_summary/get_sensor_detail 로 그 구역·기간을
+            # 다시 짚어 본다.
+            drift = [{
+                'label': d['label'], 'when': d.get('when'),
+                'unit': d.get('unit_label') or d.get('unit'),
+                'days': d['days'], 'days_hi': d['days_hi'],
+                'above': d['above'], 'above_hi': d['above_hi'],
+                'below': d['below'], 'below_hi': d['below_hi'],
+                'mean': d['mean'], 'mean_hi': d['mean_hi'],
+                'one_way': d['one_way'], 'agree': d.get('agree'),
+                'sensor_count': len(d.get('sensors') or []),
+            } for d in (recent.get('drift') or [])]
             out['recent'] = {
                 'days': recent['days'], 'from': recent['from'],
-                'to': recent['to'],
-                'drift': [{
-                    'label': d['label'], 'when': d.get('when'),
-                    'unit': d.get('unit_label') or d.get('unit'),
-                    'days': d['days'], 'days_hi': d['days_hi'],
-                    'above': d['above'], 'above_hi': d['above_hi'],
-                    'below': d['below'], 'below_hi': d['below_hi'],
-                    'mean': d['mean'], 'mean_hi': d['mean_hi'],
-                    'one_way': d['one_way'], 'agree': d.get('agree'),
-                    'sensors': [dict({'sensor': x['sensor'], 'days': x['days'],
-                                      'above': x['above'], 'below': x['below'],
-                                      'mean': x['mean'], 'one_way': x['one_way']},
-                                     **({'channel': x['channel_name']}
-                                        if x.get('channel_name') else {}))
-                                for x in (d.get('sensors') or [])],
-                } for d in (recent.get('drift') or [])]}
+                'to': recent['to'], 'drift': drift}
             # 지금은 해당 없는 항목에 **직전 그 시간대의 값**을 붙인다.
             # 붙이지 않으면 "지금은 해당 없음" 이 "모른다" 로 읽힌다.
             for item in off_period:
@@ -1847,9 +1956,14 @@ class SpaceToolsMixin:
         out['note'] = ("target vs current for THIS stage. 'delta' is current minus "
                        "target. There is no tolerance band in the data — do NOT invent "
                        "one. Check 'sensor' and 'channel' before trusting a row: several "
-                       "sensors can report the same measurement (air vs soil temperature), "
-                       "'other_sensors' lists the rest, and in 'rows' channels named as "
-                       "soil are kept out of air targets. 'not_this_period' targets do "
+                       "sensors can report the same measurement (air vs soil temperature); "
+                       "'other_sensors_count' says how many others exist (their actual "
+                       "values are NOT here — call get_zone_sensor_summary/"
+                       "get_sensor_detail for those), and in 'rows' channels named as "
+                       "soil are kept out of air targets. Likewise 'recent.drift[].sensors' "
+                       "is replaced by 'sensor_count' — 'agree' already says whether they "
+                       "disagreed ('mixed'), so the finding survives; only the per-sensor "
+                       "breakdown behind it does not. 'not_this_period' targets do "
                        "not apply right now — their 'last_seen' is the most recent "
                        "reading from the window they DO apply to, so answer with that "
                        "instead of dropping them. 'recent' and 'last_seen' follow the "

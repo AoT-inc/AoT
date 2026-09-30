@@ -50,6 +50,7 @@ class ExtContextCache:
         return not self.values
 
 
+# @manual ai/env-control#settings-ventilation
 def build_fallback_context(
     cache: ExtContextCache,
     internal: dict,

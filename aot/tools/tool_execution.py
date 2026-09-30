@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 SERVER_HOST = socket.gethostname()
 
 
+# @manual ai/overview#tool-profiles
 def _server_instructions(profile=None):
     """initialize 응답의 result.instructions.
 
@@ -108,12 +109,13 @@ def _server_instructions(profile=None):
 _PROFILE_ENFORCED_TRANSPORTS = frozenset({"mcp_stdio", "mcp_http", "rest"})
 
 #: 묶음을 바꾸는 곳 — 화면 경로와 같은 말을 쓴다(영문 화면 기준).
-_PROFILE_SWITCH_PLACE = "Settings > Users > API keys"
+_PROFILE_SWITCH_PLACE = "Manage > System Management > Users > API Key"
 #: 누가 바꾸는가 — 키 폐기와 같은 문턱(사용자 편집 권한)이다. 키 소유자가
-#: 아니다: 소유자라도 그 권한이 없으면 못 바꾼다.
+#: 아니다: 소유자라도 그 권한이 없으면 못 바꾼다. 무엇을 바꾸는가 — 키 전체를
+#: 설정 묶음으로가 아니라 **필요한 모듈 하나**를 켠다(2026-09-29 모듈 분할).
 _PROFILE_SWITCH_WHO = (
-    "an administrator (user-edit permission) can switch this key to the "
-    "configuration set in " + _PROFILE_SWITCH_PLACE)
+    "an administrator (user-edit permission) can turn that setup module on "
+    "for this key in " + _PROFILE_SWITCH_PLACE)
 
 
 def _effective_profile(profile):
@@ -127,32 +129,43 @@ def _effective_profile(profile):
     return normalize_tool_profile(profile)
 
 
+# @manual ai/overview#tool-profiles
 def _profile_note(profile):
     """이 연결의 묶음을 모델에게 알리는 한 단락. 제한이 없으면 빈 문자열.
 
     **도구 이름을 싣지 않는다** — 목록에 없는 이름을 가리키는 안내는 모델이
-    주입으로 오인했다. 설정 묶음이 더하는 일을 분야로만 말한다."""
-    from aot.tools.tool_registry import TOOL_PROFILE_CONFIGURATION
+    주입으로 오인했다. 모듈은 분야(TOOL_MODULE_SUMMARIES)로만 말한다.
+
+    켠 모듈은 이름만(도구는 이미 목록에 있다), **꺼진 모듈은 한 줄씩 무엇을
+    담는지** 싣는다 — 모델이 "이 키로는 X 모듈이 꺼져 있어 관리자에게 키
+    설정을 바꿔 달라" 고 말할 수 있어야 한다. 운영 키가 받는 크기에는 상한이
+    있어(test_mcp_tool_profiles, 여유 수십 토큰) 줄마다 짧게 둔다."""
+    from aot.tools import tool_registry as registry
     if profile is None:
         return ""
-    if profile == TOOL_PROFILE_CONFIGURATION:
-        return ("TOOL PROFILE — this API key uses the 'operations + "
-                "configuration' tool profile: day-to-day tools plus setup tools.")
+    on = registry.profile_modules(profile)
+    off = [m for m in registry.TOOL_MODULES if m not in on]
+    if not off:
+        return ("TOOL PROFILE — this API key uses the 'configuration' tool "
+                "profile: day-to-day tools plus every setup module (%s)."
+                % ", ".join(registry.TOOL_MODULES))
+    on_line = ("Setup modules on: %s. " % ", ".join(
+        m for m in registry.TOOL_MODULES if m in on)) if on else ""
     return (
-        "TOOL PROFILE — this API key uses the 'operations' tool profile: tools for "
+        "TOOL PROFILE — this API key uses the '%s' tool profile: tools for "
         "day-to-day work (reading devices, sensors, weather, schedules, notes and "
         "plots; controlling devices and functions; adjusting function options and "
         "sequence run times; scheduling; recording notes, notices, advice and "
-        "plot-stage events). Setup work is in the 'configuration' profile and is "
-        "not offered on this key: adding or editing device definitions, creating "
-        "or deleting automations and sequence steps, creating or editing plots and "
-        "programs, map placement, dashboards and tabs, AI settings, and "
-        "archive or library-source management. If the user asks for that, do not "
-        "say this system cannot do it — tell them " + _PROFILE_SWITCH_WHO +
+        "plot-stage events). %sSetup modules off:\n%s\n"
+        "If asked for work in an off module, do not say this system "
+        "cannot do it — tell them " % (profile, on_line, "\n".join(
+            "- %s: %s" % (m, registry.TOOL_MODULE_SUMMARIES[m]) for m in off))
+        + _PROFILE_SWITCH_WHO +
         ", and to reconnect afterwards so the tool list refreshes. Only for setup "
         "work or a 'tool_profile' refusal — never for other refusals.")
 
 
+# @manual ai/overview#tool-profiles
 def _profile_refusal(tool_name, profile, transport, role=None):
     """묶음 밖 호출의 거절 본문. 통과면 None.
 
@@ -173,6 +186,7 @@ def _profile_refusal(tool_name, profile, transport, role=None):
     return _profile_refusal_body(tool_name, profile, role)
 
 
+# @manual ai/overview#tool-profiles
 def _profile_refusal_body(tool_name, profile, role=None):
     """묶음 밖 도구에 대한 거절 본문(전송·통과 판정 없이 본문만).
 
@@ -187,6 +201,7 @@ def _profile_refusal_body(tool_name, profile, role=None):
     from aot.tools.mcp_safety_gate import classify_permission
 
     subject = "'%s'" % tool_name
+    module = registry.mcp_module_of(tool_name)
     if registry.is_retired_from_mcp(tool_name):
         message = (
             "%s is not offered to API keys. Use the listed tools instead — "
@@ -198,12 +213,14 @@ def _profile_refusal_body(tool_name, profile, role=None):
             "permissions do not allow it either, so switching the profile would "
             "not help. Nothing was changed." % (subject, profile))
     else:
-        message = (
-            "%s is not in this API key's tool profile (%s). It belongs to the "
-            "configuration profile. %s Nothing was changed."
-            % (subject, profile, _switch_sentence()))
+        which, who = _module_sentences(module)
+        message = ("%s is not in this API key's tool profile (%s). %s %s "
+                   "Nothing was changed." % (subject, profile, which, who))
     body = {"status": "refused", "reason_code": "tool_profile",
             "tool_profile": profile, "message": message}
+    if module is not None:
+        # 기계가 읽는 칸 — 호스트·평가가 메시지를 파싱하지 않고 모듈을 안다.
+        body["tool_module"] = module
     # 쓰기 도구는 실행층이 performed:false 와 해석 규칙을 함께 붙인다
     # (mcp_safety_gate.annotate_write_outcome). 읽기 도구에는 여기서 적는다.
     if classify_permission(tool_name) != "write":
@@ -211,12 +228,28 @@ def _profile_refusal_body(tool_name, profile, role=None):
     return body
 
 
-def _switch_sentence():
+# @manual ai/overview#tool-profiles
+def _switch_sentence(what="that setup module"):
     """거절 메시지의 "누가 어디서 바꾸는가" 한 문장."""
+    who = _PROFILE_SWITCH_WHO.replace("that setup module", what)
     return ("%s%s; reconnect afterwards so the tool list refreshes."
-            % (_PROFILE_SWITCH_WHO[0].upper(), _PROFILE_SWITCH_WHO[1:]))
+            % (who[0].upper(), who[1:]))
 
 
+# @manual ai/overview#tool-profiles
+def _module_sentences(module):
+    """(어느 모듈인가, 누가 켜는가) 두 문장. 모듈이 없으면(표에 없는 이름 —
+    tool_in_profile 이 모듈 전부를 켠 키에만 보이게 하는 것) 전부를 말한다."""
+    from aot.tools import tool_registry as registry
+    if module is None:
+        return ("It is offered only on keys with every setup module on.",
+                _switch_sentence("every setup module"))
+    return ("It belongs to the '%s' setup module (%s)."
+            % (module, registry.TOOL_MODULE_SUMMARIES[module]),
+            _switch_sentence())
+
+
+# @manual ai/overview#tool-profiles
 def _profile_enforced(profile, transport):
     """이 연결에 묶음을 적용하는가 → 적용할 묶음, 아니면 None."""
     if transport not in _PROFILE_ENFORCED_TRANSPORTS:
@@ -229,6 +262,7 @@ def _profile_enforced(profile, transport):
 _OUT_OF_PROFILE_LABEL = "a tool outside this key's tool profile"
 
 
+# @manual ai/overview#tool-profiles
 def _mask_out_of_profile_pending(result, profile):
     """list_pending_confirmations 응답에서 묶음 밖 항목의 도구 이름을 가린다.
 
@@ -259,8 +293,8 @@ def _mask_out_of_profile_pending(result, profile):
         result["out_of_profile_note"] = (
             "%d pending request(s) are for tools outside this API key's tool "
             "profile (%s). You may reject them here if the user asks; approving "
-            "them needs the web review page or a key on the configuration set — "
-            "%s." % (masked, profile, _PROFILE_SWITCH_WHO))
+            "them needs the web review page or a key with the tool's setup "
+            "module on — %s." % (masked, profile, _PROFILE_SWITCH_WHO))
     return result
 
 
@@ -302,6 +336,7 @@ KNOWLEDGE_SHELVE_READING = (
     "stored as an unconfirmed note.")
 
 
+# @manual ai/overview#tool-profiles
 def _attach_shelve_hint(result, profile, role):
     """보관할 수 있는 연결에만 knowledge_search 응답에 안내를 붙인다.
 
@@ -445,6 +480,7 @@ _DRAWER_MACHINERY = frozenset({"open_drawer", "get_tool_detail", "use_tool"})
 _TIER_EXEMPT_TOOLS = frozenset({_CONFIRMATION_RESPONSE_TOOL}) | _DRAWER_MACHINERY
 
 
+# @manual ai/overview#tool-drawers
 def _tiering_enabled():
     """서랍 적용 여부. **기본은 꺼짐이다**(2026-09-24, 아래 (4)).
 
@@ -503,6 +539,7 @@ def _env_flag_on(name, default=""):
     return os.environ.get(name, default).strip().lower() in _FLAG_ON_VALUES
 
 
+# @manual ai/overview#tool-drawers
 def _builtin_tiering_enabled():
     """인앱 AI 의 내장 MCP 목록(`tools_for_agent`)에 서랍을 쓰는가. 기본 켬.
 
@@ -512,6 +549,7 @@ def _builtin_tiering_enabled():
     return os.environ.get("AOT_AI_BUILTIN_MCP_TIERING", "1") != "0"
 
 
+# @manual ai/overview#tool-drawers
 def _drawer_index(app, role=None, profile=None):
     """서랍 목록 — 이 표면이 실제로 가진 도구만.
 
@@ -525,6 +563,7 @@ def _drawer_index(app, role=None, profile=None):
     return [d for d in drawer_index(available=names) if d["tools"]]
 
 
+# @manual ai/overview#tool-drawers
 def _drawer_contents(app, role=None, profile=None):
     """서랍에 담길 수 있는 도구 이름 — 전체 표면에서 **상시 노출을 뺀 것**.
 
@@ -548,6 +587,7 @@ def _exclude_always_listed(names):
     return {n for n in names if n not in _TIER_EXEMPT_TOOLS}
 
 
+# @manual ai/overview#tool-drawers
 def _open_drawer(app, arguments, role=None, profile=None):
     """서랍 하나를 열어 그 안 도구들의 완전한 정의를 돌려준다.
 
@@ -598,21 +638,27 @@ def _empty_drawer_refusal(app, drawer, role, profile):
     from aot.tools import tool_registry as registry
     from aot.tools.tool_registry import tools_in_drawer
     profile = _effective_profile(profile)
-    if profile is None or profile == registry.TOOL_PROFILE_CONFIGURATION:
+    if profile is None or not (
+            set(registry.TOOL_MODULES) - registry.profile_modules(profile)):
         return None
     wider = tools_in_drawer(drawer, available=_drawer_contents(
         app, role=role, profile=registry.TOOL_PROFILE_CONFIGURATION))
     if not wider:
         return None
     # wider 는 역할 숨김을 거친 뒤라, 바꾸면 이 역할로 쓸 도구가 실제로 있다.
+    modules = {registry.mcp_module_of(n) for n in wider}
+    names = [m for m in registry.TOOL_MODULES if m in modules]
+    where = ("the setup module(s) %s" % ", ".join("'%s'" % m for m in names)
+             if names else "setup modules not on this key")
     return {"status": "refused", "reason_code": "tool_profile",
             "tool_profile": profile, "performed": False,
             "message": ("The '%s' drawer has no tools in this API key's tool "
-                        "profile (%s). Its tools belong to the configuration "
-                        "profile. %s" % (drawer, profile, _switch_sentence())),
+                        "profile (%s). Its tools belong to %s. %s"
+                        % (drawer, profile, where, _switch_sentence())),
             "drawers": _drawer_index(app, role=role, profile=profile)}
 
 
+# @manual ai/overview#tool-drawers
 def _get_tool_detail(app, arguments, role=None, profile=None):
     """도구 하나의 완전한 정의. 서랍 인덱스가 준 이름을 확인하는 자리.
 
@@ -626,7 +672,16 @@ def _get_tool_detail(app, arguments, role=None, profile=None):
     name = str(name).strip()
     for t in _get_all_tools(app, role=role, tiered=False, profile=profile):
         if t["name"] == name:
-            return {"tool": t, "how_to_call": (
+            full = dict(t)
+            detail = _tool_detail(name)
+            if detail:
+                # 상시 목록은 가볍게 두고, 이 도구 하나를 콕 집어 물었을 때만
+                # 중첩 item 모양·결정 규칙·RECIPE 를 얹는다(설계 §1).
+                if detail.get("input_schema") is not None:
+                    full["inputSchema"] = detail["input_schema"]
+                if detail.get("description"):
+                    full["description"] = detail["description"]
+            return {"tool": full, "how_to_call": (
                 "Call it via use_tool({tool_name: '%s', arguments: {...}}) "
                 "unless it is already listed in tools/list." % name)}
     eff = _effective_profile(profile)
@@ -1547,6 +1602,10 @@ def _run_gated_tool(tool_name, arguments, agent_id, role, reason, elicit_fn,
 _PRE_GATE_VALIDATORS = {
     'modify_function_options': 'validate_function_options',
     'confirm_plot_stage': 'validate_confirm_plot_stage',
+    # 'AI 판단에 포함' 을 끈 출력 — 승인 큐에 넣지 않고 이유와 함께 거절한다.
+    'operate_device': 'validate_ai_control_target',
+    'schedule_device_control': 'validate_ai_control_target',
+    'set_output_state': 'validate_ai_control_target',
 }
 
 #: 스키마 검사에서 인자로 치지 않는 전송·메타 키.
@@ -1572,6 +1631,32 @@ def _tool_schema(tool_name):
             except TypeError:
                 return builder().get("inputSchema")
     return None
+
+
+def _tool_detail(tool_name):
+    """그 도구의 상세 동반물(tool_registry.tool_detail), 없으면 None.
+
+    실패해도 조용히 None — 상세는 거들 뿐, 검사 자체를 깨면 안 된다."""
+    try:
+        from aot.tools import tool_registry as registry
+        return registry.tool_detail(tool_name)
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _attach_detail(body, tool_name):
+    """인자 문제 거절 본문에 그 도구의 상세(schema/hint)를 얹는다(있으면).
+
+    **처음부터 상세를 실어 보내지 않는다** — tools/list 는 가볍게 두고, 실제로
+    인자를 틀렸을 때만 중첩 item 모양·결정 규칙·RECIPE 를 보여준다."""
+    detail = _tool_detail(tool_name)
+    if not detail:
+        return body
+    if detail.get("input_schema") is not None:
+        body["schema"] = detail["input_schema"]
+    if detail.get("description"):
+        body["hint"] = detail["description"]
+    return body
 
 
 def _handler_takes_any_key(tool_name):
@@ -1634,6 +1719,7 @@ _CLIENT_META_ARGS = frozenset({"reason", "title", "confirm", "confirmed",
                                "dry_run"})
 
 
+# @manual ai/overview#tool-arguments
 def _likely_typo(key, valid):
     """모르는 인자 이름이 맞는 이름의 오타로 보이면 그 이름, 아니면 None.
 
@@ -1659,6 +1745,7 @@ def _likely_typo(key, valid):
     return close[0] if close else None
 
 
+# @manual ai/overview#tool-arguments
 def _pre_gate_validation(tool_name, arguments, role=None):
     """쓰기 호출의 인자를 게이트 앞에서 본다. 문제 없으면 None, 있으면 거절 본문.
 
@@ -1709,6 +1796,7 @@ def _pre_gate_validation(tool_name, arguments, role=None):
             body = {"error": "; ".join(problems) + "."}
             if valid:
                 body["valid_arguments"] = valid
+            body = _attach_detail(body, tool_name)
         else:
             method = _PRE_GATE_VALIDATORS.get(tool_name)
             if method:
@@ -1856,6 +1944,7 @@ def _current_request_user_uuid():
         return None
 
 
+# @manual ai/overview#safety-approval-model
 def _scope_refusal(tool_name, arguments, scope_user_uuid):
     """그룹 스코프가 이 도구 호출을 막는가. 막으면 거부된 자원 uuid, 아니면 None.
 
@@ -2014,6 +2103,7 @@ def _resolve_child_for_scope(d):
     return [u for u in out if u]
 
 
+# @manual ai/overview#safety-approval-model
 def scope_arguments(tool_name, arguments, is_write=None):
     """그룹 스코프 판정에 넘길 인자 — 이름으로 준 대상을 id 로 풀어 덧붙인다.
 
@@ -2143,6 +2233,7 @@ def _audit_outcome(tool_name, permission, blocked, result, error_text):
                 "summary": "", "confirmation_id": confirmation_id}
 
 
+# @manual ai/overview#call-quality
 def _quality_ledger_enabled():
     """호출 품질 칸을 채울지. 기본 켬 — 끄면 새 칸만 NULL 로 남는다.
 
@@ -2205,6 +2296,7 @@ def _record_audit(audit, tool_name, arguments, agent_id, permission,
         logger.exception("[AoTMCP] audit record failed for '%s'", tool_name)
 
 
+# @manual ai/overview#safety-approval-model
 def _respond_to_confirmation(arguments, agent_id, role, profile=None):
     """respond_to_confirmation 의 실제 실행부.
 
@@ -2401,7 +2493,7 @@ def _dispatch_virtual_tool(tool_name, arguments):
     except (TypeError, ValueError):
         _missing = []
     if _missing:
-        return {
+        return _attach_detail({
             "status": "error",
             "message": (
                 f"Missing required argument(s) for '{tool_name}': "
@@ -2410,7 +2502,7 @@ def _dispatch_virtual_tool(tool_name, arguments):
                 f"Check this tool's input schema in tools/list for the "
                 f"exact parameter names — a near-miss name (e.g. 'query' instead of "
                 f"'target_name') is silently NOT what you meant."),
-        }
+        }, tool_name)
 
     result = handler(**kwargs)
     if ignored and isinstance(result, dict):

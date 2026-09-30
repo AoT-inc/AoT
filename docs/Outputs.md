@@ -13,13 +13,13 @@ the measurement names in your own language.
 
 ## Custom Outputs
 
-AoT has a custom output import system that lets you create and use custom outputs within the AoT system. Custom outputs can be uploaded and imported on the `[gear icon] -> Configure -> Custom Outputs` page. Once imported, they can be used on the `Setup -> Output` page.
+AoT has a custom output import system that lets you create and use custom outputs within the AoT system. Custom outputs can be uploaded and imported on the `Manage -> System Management -> User Output` page. Once imported, they can be used on the `Setup -> Output` page.
 
 If you have developed a working module, consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. The module may be included in the built-in set.
 
 For examples of the proper format, you can open the built-in modules in the [AoT/aot/outputs](https://github.com/AoT-inc/AoT/tree/main/aot/outputs/) directory. Additionally, the [AoT/aot/outputs/examples](https://github.com/AoT-inc/AoT/tree/main/aot/outputs/examples) directory contains custom output examples.
 
-For outputs that require a new measurement/unit, you can add them on the `[gear icon] -> Configure -> Measurements` page.
+For outputs that require a new measurement/unit, you can add them on the `Manage -> System Management -> Measurement` page.
 
 ## Output Options
 
@@ -143,7 +143,7 @@ A relay is an electromechanical or solid-state device that uses a small voltage 
 
 Add and configure outputs on the Output tab. An output must be configured correctly before it can be used elsewhere in the system.
 
-To set up a wired relay, set the "GPIO Pin" (using the BCM numbering scheme) to the pin that will switch to HIGH (5 volts) and LOW (0 volts). This is used to activate relays and other devices. *On Trigger* must be set to the signal state (HIGH or LOW) that turns the device on. For example, if the relay is activated when the coil's potential is 0 volts, set *On Trigger* to "LOW". Conversely, if the relay is activated when the coil's potential is 5 volts, set it to "HIGH".
+To set up a wired relay, set the "GPIO Pin" (using the BCM numbering scheme) to the pin that will switch to HIGH (3.3 volts) and LOW (0 volts). This is used to activate relays and other devices. *On State* must be set to the signal state (HIGH or LOW) that turns the device on. For example, if the relay is activated when the coil's potential is 0 volts, set *On State* to "LOW". Conversely, if the relay is activated when the coil's potential is 3.3 volts, set it to "HIGH".
 
 ## Pulse-Width Modulation (PWM)
 

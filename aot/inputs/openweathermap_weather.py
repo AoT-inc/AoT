@@ -102,10 +102,10 @@ class InputModule(AbstractInput):
     def initialize(self):
         if self.api_key:
             if self.latitude and self.longitude:
-                self.api_url = "http://api.openweathermap.org/data/2.5/weather?appid={key}&units=metric&lat={lat}&lon={lon}".format(
+                self.api_url = "https://api.openweathermap.org/data/2.5/weather?appid={key}&units=metric&lat={lat}&lon={lon}".format(
                     key=self.api_key, lat=self.latitude, lon=self.longitude)
             elif self.city:
-                self.api_url = "http://api.openweathermap.org/data/2.5/weather?appid={key}&units=metric&q={city}".format(
+                self.api_url = "https://api.openweathermap.org/data/2.5/weather?appid={key}&units=metric&q={city}".format(
                     key=self.api_key, city=self.city)
             
             if self.api_url:

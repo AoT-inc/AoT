@@ -8,6 +8,7 @@ from aot.config_translations import TRANSLATIONS
 from aot.inputs.base_input import AbstractInput
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -49,7 +50,7 @@ INPUT_INFORMATION = {
             'default_value': None,
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{}: {} ({})".format(lazy_gettext('Pin'), lazy_gettext('GPIO'), lazy_gettext('BCM')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Pin'), lazy_gettext('GPIO'), lazy_gettext('BCM')),
             'phrase': 'The pin to measure pulses from'
         },
         {
@@ -58,7 +59,7 @@ INPUT_INFORMATION = {
             'default_value': 5.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(TRANSLATIONS['sample_time']['title'], lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", TRANSLATIONS['sample_time']['title'], lazy_gettext('Seconds')),
             'phrase': TRANSLATIONS['sample_time']['phrase']
         },
         {

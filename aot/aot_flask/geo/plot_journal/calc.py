@@ -156,6 +156,7 @@ MEASUREMENT_ORDER_TAIL = ('pressure', 'visibility', 'altitude', 'unitless',
                           'version')
 
 
+# @manual geo/journal#contents
 def measurement_rank(key):
     """측정 키 → 정렬 순위. 모르는 값은 알려진 것들 **사이**에 놓는다."""
     name = str(key or '')
@@ -189,6 +190,7 @@ from aot.utils.timekit import (                                    # noqa: E402
 )
 
 
+# @manual geo/journal#dli
 def photosynthesis_targets(plot):
     """구획 → 광합성 목표 중 **일지가 견줄 수 있는 것** 목록.
 
@@ -225,6 +227,7 @@ def photosynthesis_targets(plot):
     return out
 
 
+# @manual geo/journal#gdd
 def gdd_for_journal(plot, end_date, start_date=None):
     """구획 → 일지에 실을 적산온도 → dict.
 
@@ -320,6 +323,7 @@ def _pace(started_at):
     return nap
 
 
+# @manual geo/journal#daylight
 def sun_lookup(target_id):
     """대상 → `(현지날짜) → (일출, 일몰, 일장시간)` 조회 함수. 못 구하면 `None`.
 
@@ -396,6 +400,7 @@ def _round(value, decimals=None):
         return None
 
 
+# @manual geo/journal#granularity
 def choose_granularity(start_date, end_date, rows=None, requested=None):
     """**저장할** 단위 → `'day'` | `'week'` | `'month'`.
 
@@ -473,6 +478,7 @@ def _journal_date(value):
         return None
 
 
+# @manual geo/journal#curve-target
 def _sun_window(bucket):
     """버킷의 `sunrise`/`sunset`('HH:MM') → `(일출초, 일몰초)`. 못 구하면 None.
 
@@ -491,6 +497,7 @@ def _sun_window(bucket):
     return rise, set_
 
 
+# @manual geo/journal#curve-target
 def _curve_profile(handler, weeks, tz, ref_date, start_dt=None):
     """곡선 하나 → 하루치 값 목록(`CURVE_SAMPLE_SEC` 간격, 현지 벽시계 순).
 
@@ -544,6 +551,7 @@ def _curve_profile(handler, weeks, tz, ref_date, start_dt=None):
     return out if any(v is not None for v in out) else None
 
 
+# @manual geo/journal#curve-target
 def _phase_means(profile, sunrise_sec, sunset_sec):
     """하루치 곡선 → `(주간 평균, 야간 평균)`. 값이 없는 쪽은 None."""
     day, night = [], []
@@ -556,6 +564,7 @@ def _phase_means(profile, sunrise_sec, sunset_sec):
             (sum(night) / len(night)) if night else None)
 
 
+# @manual geo/journal#curve-target
 def _merge_phases(boxes):
     """여러 버킷·센서의 `target_phases` → 하나로. 없으면 None.
 
@@ -582,6 +591,7 @@ def _merge_phases(boxes):
     return out or None
 
 
+# @manual geo/journal#curve-target
 def with_curve_deltas(journal_data):
     """저장 스냅샷 → 곡선 목표의 주야 목표·Δ가 붙은 **열람용 사본**.
 
@@ -608,6 +618,7 @@ def with_curve_deltas(journal_data):
         return journal_data
 
 
+# @manual geo/journal#curve-target
 def _with_curve_deltas(journal_data):
     from aot.utils.method import load_method_handler, local_noon, weeks_elapsed_at
     from aot.utils.timekit import as_tz
@@ -777,12 +788,14 @@ def _phase_text(phases, pick):
     return ' · '.join(parts)
 
 
+# @manual geo/journal#curve-target
 def phase_target_text(phases):
     """주야 목표 한 줄. 접힌 구간에서 값이 갈리면 평균이고, 그 사실은 Δ 범위가 말한다."""
     return _phase_text(phases, lambda box: (
         '' if box.get('target') is None else str(box['target'])))
 
 
+# @manual geo/journal#curve-target
 def phase_delta_text(phases):
     """주야 Δ 한 줄. 접힌 구간은 범위(`min ~ max`)로 낸다.
 
@@ -816,6 +829,7 @@ def stage_fold_available(journal_data):
     return len([st for st in stages if st.get('starts_on')]) > 1
 
 
+# @manual geo/journal#granularity
 def fold_buckets(buckets, to='week', granularity='day', stages=None):
     """저장된 버킷 목록 → 더 굵은 단위로 접은 버킷 목록. **순수 계산**이다.
 
@@ -915,6 +929,7 @@ def fold_buckets(buckets, to='week', granularity='day', stages=None):
     return out
 
 
+# @manual geo/journal#granularity, geo/journal#irrigation
 def _merge_bucket_group(box, to):
     """같은 구간에 드는 버킷들 → 하나로 접은 버킷.
 
@@ -1132,6 +1147,7 @@ def _merge_bucket_group(box, to):
     }
 
 
+# @manual geo/journal#granularity
 def bucket_labels(start_date, end_date, granularity):
     """구간 전체의 버킷 키 목록 → [date]. **값이 없는 버킷도 빠뜨리지 않는다.**
 
@@ -1207,6 +1223,7 @@ def _channel_info(dm_row):
     return channel, unit, display, measurement
 
 
+# @manual geo/journal#dli
 def daily_channel_stats(dm_row, start_str, end_str, tz,
                         granularity='day', bucket_sec=3600, sun_fn=None,
                         stats=('min', 'max', 'mean')):
@@ -1254,6 +1271,7 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
     if measurement in LIGHT_MEASUREMENTS:
         light_factor, light_assumed = ppfd_factor(unit)
 
+    # @manual geo/journal#daylight
     def _phase(rec_time):
         """이 시간 조각이 낮인가 밤인가 → 'day'|'night'|None.
 
@@ -1425,6 +1443,7 @@ def _source_channel_series(sources, start_str, end_str, tz, granularity,
     return series, errors
 
 
+# @manual geo/journal#generating-a-journal
 def _wanted_measurement(dm_row, wanted, scope=None):
     """이 채널을 일지에 실을 것인가 → bool.
 
@@ -1452,6 +1471,7 @@ def _wanted_measurement(dm_row, wanted, scope=None):
     return bool(scope) and (scope + ':' + name) in wanted
 
 
+# @manual geo/journal#generating-a-journal
 def available_measurement_groups(target_type, target_id):
     """이 대상이 실제로 재는 measurement 목록 → 화면의 선택지, **스코프별로**.
 
@@ -1562,6 +1582,7 @@ def available_measurement_groups(target_type, target_id):
     return groups
 
 
+# @manual geo/journal#weather-readings
 def _circular_channel_stats(dm_row, channel, unit, measurement,
                             start_str, end_str, tz, granularity='day',
                             measure_filter=None):
@@ -1799,6 +1820,7 @@ def cumulative_meter_series(series):
             in CUMULATIVE_METER_MEASUREMENTS]
 
 
+# @manual geo/journal#contents
 def usage_from_stats(stat):
     """누적 계량 채널 하나 → 버킷별 사용량 `{date: {'amount','unit'} | None}`.
 
@@ -1821,6 +1843,7 @@ def usage_from_stats(stat):
 
 # ── 목표 대비 편차 ──────────────────────────────────────────────────────────
 
+# @manual geo/journal#contents, geo/journal#daylight
 def delta_for(target, avg, avg_day=None, avg_night=None):
     """목표 항목 하나와 그날 평균 → `(delta, skipped_reason)`.
 
@@ -1870,6 +1893,7 @@ def delta_for(target, avg, avg_day=None, avg_night=None):
         return None, 'no-reading'
 
 
+# @manual geo/journal#contents
 def _unobservable_targets(targets, env_rows):
     """단계 목표 중 **정말로 잴 수 없는 것**만 → list.
 
@@ -1891,6 +1915,7 @@ def _unobservable_targets(targets, env_rows):
     return out
 
 
+# @manual geo/journal#dli
 def journal_target_view(targets):
     """프로그램의 목표 선언 → **일지가 견줄 수 있는 모양**(새 목록).
 
@@ -1927,6 +1952,7 @@ def journal_target_view(targets):
     return out
 
 
+# @manual geo/journal#contents
 def attach_targets(env_rows, targets):
     """한 버킷의 환경 행들에 그 시기의 목표를 붙인다(제자리 수정) → env_rows.
 
@@ -1995,6 +2021,7 @@ def attach_targets(env_rows, targets):
 
 # ── 버킷 조립 ───────────────────────────────────────────────────────────────
 
+# @manual geo/journal#dli
 def cover_light_factor(plot):
     """구획이 든 시설의 **피복 광 투과율**. 시설 밖이거나 알 수 없으면 None.
 
@@ -2045,6 +2072,7 @@ def cover_light_factor(plot):
             'shade': bool(env.get('curtain_shade_enabled'))}
 
 
+# @manual geo/journal#contents, geo/journal#dli
 def env_rows_by_bucket(series, labels, tz=None, bucket_sec=3600,
                        granularity='day', period_start=None, period_end=None,
                        cover=None):
@@ -2200,6 +2228,7 @@ def env_rows_by_bucket(series, labels, tz=None, bucket_sec=3600,
     return out
 
 
+# @manual geo/journal#irrigation
 def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
                            granularity='day', bucket_sec=3600, labels=None,
                            flows=None):
@@ -2357,6 +2386,7 @@ def _parse_files(raw):
     return media, others
 
 
+# @manual geo/journal#contents
 def note_scope_for_target(target_type, target_row, device_ids=None):
     """대상 → 노트를 거는 근거 묶음. 판정 자체는 전부 기존 정본이 한다.
 
@@ -2490,6 +2520,7 @@ def _anchor_of(note, scope):
 _DEVICE_NOTE_TYPES = frozenset({'device', 'input', 'output', 'function'})
 
 
+# @manual geo/journal#contents
 def _attached_device_name(note):
     """장치에 붙은 노트 → 그 장치 이름. 못 찾으면 None.
 
@@ -2524,6 +2555,7 @@ def _naive_utc(dt):
     return ensure_utc(dt).replace(tzinfo=None)
 
 
+# @manual geo/journal#contents
 def notes_for_target(target_type, target_row, start_utc, end_utc,
                      device_ids=None, tz=None):
     """대상+기간 → `(notes, meta)`. `notes` 는 계약(§6)의 노트 payload 목록.
@@ -2745,6 +2777,7 @@ def _target_kind_label(target_type, kind):
     return _gettext_safe(_AREA_KIND_LABELS.get(target_type, target_type))
 
 
+# @manual geo/journal#contents
 def _target_summary(target_type, target_row, unassigned_areas=0):
     """대상 하나 → §6 계약의 `target` 절.
 
@@ -2803,6 +2836,7 @@ def _target_summary(target_type, target_row, unassigned_areas=0):
     return out
 
 
+# @manual geo/journal#contents
 def _plot_stages(plot):
     """구획의 단계 목록(§6 `stages`) → list | None.
 
@@ -3917,6 +3951,7 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     return out
 
 
+# @manual geo/journal#drift, geo/journal#drift-sensors
 def target_drift(view_buckets):
     """버킷 목록 → **목표 항목별 이탈 요약**. 열람 시점 순수 계산이다.
 
@@ -4322,6 +4357,7 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
     return out
 
 
+# @manual geo/programs#register
 def measured_stage_targets(plot, on=None):
     """구획 → **단계별 목표 옆에 이 현장의 실측 분포**. 못 내면 None.
 
@@ -4632,6 +4668,7 @@ def stage_timeline_data(stages, tz_name=None, on=None):
             'label': label, 'value_text': value_text}
 
 
+# @manual geo/journal#contents
 def stage_sections(journal_data, granularity=None, stored=None):
     """저장된 스냅샷 → **단계별 실제 기록** 목록. 열람 시점 순수 계산이다.
 
@@ -4843,6 +4880,7 @@ COMPASS_16 = (
 )
 
 
+# @manual geo/journal#weather-readings
 def compass_label(index):
     """16방위 번호 → 뷰어 언어의 방위 이름. 범위를 벗어나면 `None`."""
     try:
@@ -4979,6 +5017,7 @@ def _display_avg(e):
     return ('%s %s' % (avg, unit_label(e.get('unit')))).strip()
 
 
+# @manual geo/journal#contents
 def group_env_rows(rows):
     """버킷 하나의 env 행 → **측정값별로 묶은 표시용 그룹** 목록.
 
@@ -5233,6 +5272,7 @@ def mark_primary_groups(groups, top_n=None):
     return groups
 
 
+# @manual geo/journal#gdd
 def gdd_display_group(bucket):
     """버킷 → 표에 넣을 **적산온도 그룹** 하나(또는 `None`).
 
@@ -5300,6 +5340,7 @@ def cover_material_label(key):
     return _gettext_safe(name) if name else str(key or '?')
 
 
+# @manual geo/journal#contents
 def has_any_target(journal_data):
     """이 문서에 목표가 **하나라도** 있는가 → bool.
 

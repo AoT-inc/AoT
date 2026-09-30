@@ -109,7 +109,7 @@
       "max_on_seconds_raise": {"type": "decimal", "desc": "상승 출력 최대 켜짐 시간"},
       "min_on_seconds_lower": {"type": "decimal", "desc": "하강 출력 최소 켜짐 시간"},
       "max_on_seconds_lower": {"type": "decimal", "desc": "하강 출력 최대 켜짐 시간"},
-      "max_age_seconds": {"type": "integer", "default": 360, "desc": "허용되는 센서 데이터 최대 연령(초)"}
+      "max_age_seconds": {"type": "integer", "default": 360, "desc": "허용되는 센서 데이터 최대 수명(초)"}
     },
     "actions_supported": false,
     "use_cases": [

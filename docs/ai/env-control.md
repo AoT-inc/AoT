@@ -41,10 +41,11 @@ Two limits are deliberate:
 |-------|----------|
 | VPD target (number or curve) | The primary control target |
 | CO₂ target (number or curve) | CO₂ enrichment; when absent, CO₂ control rests |
+| Stage Day temp · Night temp · Humidity | The [guide ranges](#stage-guide) for this cycle |
 | DLI target · daily GDD target | The cumulative tracker |
 | `T_base` | GDD accumulation |
 | Plot start date | Elapsed weeks, which drive stage-based curves |
-| Photosynthesis constants (`A_max`, `K_L`, `T_opt`, `VPD_half`) | The Big-Leaf model, and the light saturation point derived from `K_L` |
+| Photosynthesis constants (`A_max`, `K_L`, `K_C`, `T_opt`, `T_sigma`, `VPD_half`) | The Big-Leaf model, and the light saturation point derived from `K_L` |
 
 Targets are matched to a control axis by **measurement and shape**, not by the key
 name — a user-named item such as "Indoor CO₂" still reaches CO₂ control as long as its
@@ -54,9 +55,9 @@ shown as *For reference*.
 ### When there is no plot { #targets-no-plot }
 
 The coordinator does **not** stop. With no plot, no program, an AI draft that has not
-been reviewed, or no stage running today, there are simply no targets: control keeps
-running inside its own guide ranges, which is already the defined behaviour — an empty
-greenhouse still needs heating.
+been reviewed, a program whose kind does not match the plot's, or no stage running
+today, there are simply no targets: control keeps running inside its own guide ranges,
+which is already the defined behaviour — an empty greenhouse still needs heating.
 
 ### Day/night temperature and humidity guide the ranges { #stage-guide }
 
@@ -196,7 +197,30 @@ cmd    = clamp(1.0 × e_eff × 100 + I, 0, 100)
 - **A device that cannot help rests.** If running it at 100 % would move the variable by
   less than 2.5 % of the proportional band (for example ventilation with almost no
   indoor/outdoor difference), or it is parked, it moves toward its safe position,
-  keeping 60 % of the remaining distance each cycle.
+  keeping 60 % of the remaining distance each cycle. A thermal curtain is the exception
+  and **holds its position** — relaxing it to its safe position (open) would release the
+  insulation at night as soon as the indoor/outdoor difference narrows. The judgement has
+  hysteresis: a device that was judged able to help only rests once its effect falls below
+  half of that threshold (1.25 %), so an effect hovering near 2.5 % does not make the vent
+  open and close repeatedly (reason *primary* ↔ *no gradient*).
+- **Thermal curtains stay open in the daytime.** The effect model knows only the curtain's
+  heat exchange, not that it blocks light, so from sunrise to sunset at the facility's
+  location the curtain stays open and is decided only at night. Safety gates such as
+  extreme cold take precedence over this rule.
+- **Curtains and shade screens are fully closed or fully open.** To move from the side it
+  is on, the command must pass 60 % (to open) or 40 % (to close), so a command near 50 %
+  does not swing it end to end. The log and the screen show the 0/100 actually sent.
+- **When the direction flips, it waits to see if the flip lasts.** A vent's effect on VPD
+  is the sum of cooling and dry outdoor air working against each other, so when the two
+  are close a few points of outdoor humidity flip the direction every cycle. The new
+  direction is followed only once it has lasted at least 10 minutes (and two cycles);
+  until then the device holds its position. The temperature term added as the indoor
+  temperature reaches the guide ceiling also gains weight **gradually** with the excess,
+  so hovering around that line does not step the vents up and down.
+- **Side vents facing the wind open wider.** A side vent facing away from the wind is
+  reduced to as little as 20 % of the command. Below 0.5 m/s this does not apply, and up
+  to 3 m/s it strengthens gradually with wind pressure (speed²), so a light, shifting wind
+  does not cut and restore the side vents from one cycle to the next.
 - **It does not freeze past the target.** Even inside the deadzone, if the deviation keeps
   saying "less" for three cycles, the device backs off by keeping 60 % of its command each
   cycle. Thermal curtains and shade screens do the same: their effect is proportional to
@@ -213,9 +237,11 @@ cmd    = clamp(1.0 × e_eff × 100 + I, 0, 100)
 a control target — left alone, nothing would open the vents as the house heats up. So
 when the temperature expected at the next decision (current + rate of rise × period)
 comes within 1 °C of the guide ceiling, a temperature term is added for the ventilation
-devices, weighted more the further it goes over. At the **Max Temperature** hard limit
-the term also applies to coolers, and terms from other axes that oppose cooling are
-dropped. It is still a PI proportional to the deviation and forces nothing to 100 % —
+devices, weighted more the further it goes over. Once the term is on it stays until the
+expected temperature falls a further 0.5 °C below that line, so a temperature sitting on
+the line does not swing the vents between cooling and resting. At the **Max Temperature**
+hard limit the term also applies to coolers, and terms from other axes that oppose cooling
+are dropped. It is still a PI proportional to the deviation and forces nothing to 100 % —
 when outdoor air is hotter, the vents move toward closing instead.
 
 ---
@@ -223,15 +249,16 @@ when outdoor air is hotter, the vents move toward closing instead.
 ## Actuator Domains { #domains }
 
 Load sharing happens **within** a domain, and domains are separated by where the
-energy ends up — not by how similar the devices look. The settings screen follows the
-same split.
+energy ends up — not by how similar the devices look. The settings screen is grouped
+along similar lines, except that supplemental lighting is set together with the
+screens under Light and Shading.
 
 | Domain | Devices | Nature |
 |--------|---------|--------|
 | Ventilation | Vents/openings, exhaust fan, intake fan | Can only push the inside toward the outside |
 | Heating, cooling and misting | Heater, cooler, fogger | Adds or removes directly, regardless of outdoor air |
-| Light and shading | Shade screen, thermal curtain, supplemental lighting | Blocks or adds incoming/outgoing radiation |
-| CO₂ | CO₂ injector | Its own axis, with nothing to compete against. When vents are open, though, injected CO₂ leaves straight away, so the injection effect is reduced by the average vent opening (zero at 30 %). If the effect becomes too small, the injector rests |
+| Screens | Shade screen, thermal curtain | Blocks incoming and outgoing radiation |
+| Auxiliary | CO₂ injector, supplemental lighting, circulation fan | Each has its axis to itself, with nothing to share the load with. When vents are open, though, injected CO₂ leaves straight away, so the injection effect is reduced by the average vent opening (zero at 30 %). If the effect becomes too small, the injector rests |
 
 Because domains do not see each other's work, coordination between them is done by
 **declared interlocks** (see [Ventilation](#settings-ventilation)), never by implicit
@@ -263,12 +290,17 @@ auto-discovered from the linked facility.
 Five things are worth knowing before reading the tables below.
 
 **A status header sits at the top.** Under the facility picker the screen shows what
-control is doing right now — the current VPD against its target, the position of each
-device kind (Vents, Heating, Cooling, Misting, Shade …), and how long ago the last
-decision was made. Below it, a two-line summary names the plot being followed, the
-stage it is in, and the targets in effect. States where nothing can run are spelled
-out separately: no facility linked, control switched off, no recent decision. If the
-plot ends within two weeks, one extra line says so.
+control is doing right now — each axis it is tracking as its current value against the
+target (VPD, temperature, humidity, CO₂, light), the position of each device kind
+(Vents, Heating, Cooling, Misting, Shade …), and how long ago the last decision was
+made. A second line says what this facility can actually adjust on each axis: both ways,
+raise only, lower only, watch only, or no sensor. Below it, a two-line summary names the
+plot being followed, the stage it is in, and the targets in effect. States where nothing
+can run are spelled out separately: no environment control linked to this facility,
+control switched off (naming the coordinator that runs the facility instead, if there is
+one), no decision for longer than this coordinator's own limit, and not having run a
+cycle yet. Before a facility is picked the header stays empty — the picker is right
+above it. If the plot ends within two weeks, one extra line says so.
 
 **Settings are arranged in four layers, not by option type.**
 
@@ -293,8 +325,10 @@ with it by a fixed margin (±5 °C, ±5 %RH); if you never drag, the hard limits
 their factory values (5–35 °C, 30–90 %). The band cannot put a hard limit inside the
 guide range, so "grow at 12–32 °C but never exceed 30 °C" cannot be expressed — that
 combination is what sets a heater and a cooler against each other. If you type numbers
-under [Advanced] that do this anyway, the coordinator narrows the guide range to fit
-inside the hard limits and logs that it did.
+under [Advanced] that do this anyway, saving warns you on the spot — naming the axis,
+the two ranges, and the range targets will actually be built in — whenever one of that
+axis's four values was part of what you just saved; the coordinator then narrows the
+guide range to fit inside the hard limits and logs that it did.
 
 **One [Advanced] switch opens every numeric field.** It turns each step scale into a
 step scale plus its number box, reveals every advanced-only row, and expands the folded
@@ -312,16 +346,20 @@ values are still submitted and survive being toggled off and on.
 
 | Command | Effect |
 |---------|--------|
-| Reload Actuators | Re-reads the Actions table and rebuilds actuator profiles. |
-| Run Now | Executes one coordination cycle immediately using current sensor readings. |
+| Reload Actuators | Re-reads the Actions table and this function's own settings, then rebuilds actuator profiles — no restart needed. |
+| Run Now | Executes one coordination cycle immediately using current sensor readings. Ignored while an emergency stop is still holding control; the reply then says how many seconds remain. |
 | Emergency Stop | Immediately sets all actuators to their safe default and pauses control for 60 s. |
+
+After either of the first two, the next cycle is treated as urgent once, so vents may
+move without waiting out their actuation profile interval.
 
 ### Facility Settings { #settings-facility }
 
 | Field | Default | Description |
 |-------|---------|-------------|
 | Linked Facility | (none) | Which facility this coordinator runs. Actuators and sensors come from it — envelope, side/roof vents, curtains, fans, indoor and outdoor sensors. GIS metadata (azimuth, area, U-value) is attached to each actuator profile so wind direction and facility geometry can be considered. Without this, the remaining settings have nothing to act on. |
-| Bay Scope (optional) | (empty) | Limits this coordinator to one bay. Only sensors and actuators inside that bay are used, and facility volume/area are scaled to the bay's share. Leave blank for the whole facility; create one coordinator per bay to control several bays independently. This is a **dropdown** of the linked facility's bays — a saved value that no longer exists in the facility is kept and marked, rather than silently dropped. |
+| Bay Scope (optional) | (empty) | Limits this coordinator to one bay. Only sensors and actuators inside that bay are used — a device that belongs to no single bay is left out, so it stays with the facility-wide coordinator — and facility volume, envelope and vent area are scaled to that bay's share of the combined width of all bays (by bay count instead, with a warning, when the widths are unknown). Leave blank for the whole facility; create one coordinator per bay to control several bays independently. A coordinator left blank steps around the bays that sibling coordinators on the same facility have already claimed, so one device never takes orders from two of them. This is a **dropdown** of the linked facility's bays — a saved value that no longer exists in the facility is kept and marked, rather than silently dropped; while it points at a bay that is not there, this coordinator takes on **no devices at all** instead of widening to the whole facility. |
+| Devices under automatic control | (none excluded) | A folded box just under the facility settings lists every actuator of the linked facility with a toggle. Switching one off removes it from automatic control entirely — no commands, and the safety gates stop forcing it too, which is what a device under repair or held by hand needs. It is an exclusion list, so a device added to the facility later is controlled from the start. A device switched off that later disappears from the facility keeps its off state. If the list cannot be read, the box says so and the stored setting is left as it is rather than overwritten with an empty one. |
 
 ### Working Hours { #time-control }
 
@@ -346,7 +384,7 @@ is unknown.
 |-------|---------|-------------|
 | Enable Time Window | Off | When enabled, target tracking only runs between Start and End. |
 | Start Time (HH:MM) | 06:00 | When the coordinator starts working each day. |
-| End Time (HH:MM) | 20:00 | When it stops. What each device does outside the window is set in its Action (On Time Window End). |
+| End Time (HH:MM) | 20:00 | When it stops. An end time earlier than the start time is read as a window that crosses midnight. What each device does outside the window is set in its Action (On Time Window End). |
 | Photoperiod Method | (none) | Sets the window from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs only for those hours, so nothing is heated overnight. |
 | Photoperiod Anchor (HH:MM) | 12:00 | Solar-noon equivalent — the window is centred on this time. |
 
@@ -357,7 +395,7 @@ is unknown.
 | Temperature Range | 12–32 °C | The range to grow in. Past a limit, control stops whatever pushes the wrong way — too warm: heating off and the shade screen drawn; too cold: cooling off, vents and thermal curtain closed. It does not slam anything to full. |
 | Humidity Range | 40–85 % | Same rule for humidity — too damp: misting off; too dry: exhaust fans off. |
 | CO₂ Tolerance (ppm) | 100 | Within half this value of the target, CO₂ injection is left as it is. The value also sets how strongly control responds: at six times this value off target, it responds fully ([L3](#l3-coordinator-actuator-command)). Typical: 50–150 ppm. |
-| Control Temperament | (Custom) | How hard the system chases the target. One step sets the cycle period, the vent actuation profile, the VPD tolerance and both emergency thresholds together. A newly added function's factory values match no step, so the control reads *Custom* until you pick one. |
+| Control Temperament | Standard | How hard the system chases the target. One step sets the cycle period, the vent actuation profile, the VPD tolerance and both emergency thresholds together. A newly added function's factory values are exactly the *Standard* step; change one of them by hand to a value that is on no step and the control reads *Custom*, with a line telling you to look under [Advanced]. |
 
 Under [Advanced], each range band also shows the four numbers behind it
 (`Guide T Min/Max`, `Min/Max Temperature`, and the humidity equivalents), and Control
@@ -377,9 +415,13 @@ used only when the profile is *Custom* — and **Emergency Minimum Interval (sec
 default 60, the floor between two vent commands even during an emergency.
 
 The actuation profile governs only how often side/roof vents are allowed to *move*.
-Sensing and computation always run every cycle period, curtains and shade screens are
-unaffected (they open or close in one motion), and sudden weather changes or a safety
-gate move the vents immediately regardless.
+Sensing and computation always run every cycle period, and curtains and shade screens are
+unaffected (they open or close in one motion). A safety gate's forced command (closing
+for rain or strong wind, for example) reaches **that device** immediately regardless;
+vents that are not being forced keep this interval. The interval is skipped altogether
+only when indoor temperature changes fast, or when a deviation exceeds the emergency
+threshold **and is still widening** — merely staying far from the target is not an
+emergency.
 
 ### Ventilation { #settings-ventilation }
 
@@ -451,7 +493,14 @@ ventilation stops helping. With no outdoor readings it is not lifted.
 
 Three guarantees hold: **safety gates win** (a summer night's heat still opens the
 vents), the hard temperature/humidity limits break the parking, and if no coordinates
-are available to compute solar time, nothing is parked at all. Times are read in the
+are available to compute solar time, nothing is parked at all. A fourth rule is not
+specific to night closing: if the outdoor reading itself
+is unavailable — no cache, only a synthetic fallback that assumes outdoor equals indoor
+— the coordinator does not close vents at all; it holds them exactly where they are,
+overriding any close decision this or another control rule already made for that
+cycle. Emergency safety gates (rain, wind) still win over this hold and can close vents.
+Closing on a fabricated outdoor-equals-indoor guess could otherwise leave vents shut
+through a hot day once the weather source dies. Times are read in the
 facility's local timezone, not the server's. On the facility popup, a device parked by
 this option reads *Closed for the night — heating and cooling take over*, kept separate
 from *Nothing this device can change right now*.
@@ -460,7 +509,7 @@ from *Nothing this device can change right now*.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Use Micro Sprinklers to Raise Humidity | On | Use the wetting-type misters for humidity too. Turn off when the same nozzles are your irrigation — a sprinkler sized for irrigation leaves a film of water on the leaves after even one short burst. |
+| Use Micro Sprinklers to Raise Humidity | On | Use the wetting-type misters for humidity too. Turn off when the same nozzles are your irrigation — a sprinkler sized for irrigation leaves a film of water on the leaves after even one short burst. With it off those misters are left out of automatic environment control altogether — no commands are sent to them at all, so a separate irrigation control keeps them. |
 | Enable Sunburn/Evening Protection | Off | Blocks wetting-type misting in strong light (droplets can lens sunlight onto leaves) and, optionally, before sunset. Independent of how often misting runs. |
 | Misting Frequency | Frequent | How often the misting runs — the run time and the gap until the next run. |
 
@@ -480,9 +529,9 @@ lets you ask for "spray often but lock out in strong sun".
 
 | Field (shown when protection is on) | Default | Description |
 |-------|---------|-------------|
-| Misting by Sunlight Level | 150–250 W/m² | A band with two handles: below the lower value misting runs freely, above the upper it stops, and in between it tapers off linearly. The gap keeps the mist from switching on and off as clouds pass. **Applies to leaf-wetting misting only** — fog-type misting runs in strong sun too. The estimated *indoor* level is used, so closing the shade screen relaxes the lockout. With the default water source (groundwater) the values actually used are lowered to 100–150 W/m². |
+| Misting by Sunlight Level | 150–250 W/m² | A band with two handles: below the lower value misting runs freely, above the upper it stops, and in between it tapers off linearly. The gap keeps the mist from switching on and off as clouds pass. **Applies to leaf-wetting misting only** — fog-type misting runs in strong sun too. The estimated *indoor* level is used, so closing the shade screen relaxes the lockout. With no light reading at all, a clear-sky estimate from the sun's position stands in, so a facility without a light sensor is still protected. With the default water source (groundwater) the values actually used are lowered to 100–150 W/m². |
 | Allow Misting Before Sunset | On | Turn off to leave the leaves dry overnight. The longer leaves stay wet, the higher the risk of gray mold and downy mildew. |
-| Stop Misting Before Sunset (min) | 120 | How long before sunset misting stops. |
+| Stop Misting Before Sunset (min) | 120 | How long before sunset misting stops. The block then holds until the next sunrise; where the site coordinates are unknown sunset cannot be worked out, and no evening block is applied. |
 | Misting Water Source | Groundwater (untreated) | Untreated groundwater is usually hard and cold: drying droplets leave mineral spots and can chill a sunlit leaf. While it is selected (the default), the lockout/release thresholds are lowered automatically (to at most 150/100 W/m²). |
 
 Whether or not protection is on, a wetting-type mister is dosed in pulses rather than
@@ -507,6 +556,14 @@ Either end can be switched off, and off means different things at the two ends: 
 lower handle at 0 is *no supplemental light*, and the upper handle turned off is
 *no shading*. If the facility has no shade screen or no supplemental lighting
 registered, the screen says so rather than offering a handle that does nothing.
+
+The shading line is judged on how bright it would be **with the screen drawn back**, not
+on the light under a closed screen — otherwise closing it would darken the reading,
+release the decision and open it again the next cycle. Where outdoor light is unknown
+(an indoor sensor only), the current reading is used instead. While shading is in force,
+supplemental light and screen opening are not forced at the same time: if the two lines
+cannot both be met — a closed screen leaves the place darker than the supplemental-light
+line — shading wins and the contradiction is written to the log once, for you to resolve.
 
 The underlying values are **Min Light Threshold (Supplemental)** (default 0) and
 **Max Light Threshold** (default 800), both visible under [Advanced].
@@ -542,22 +599,22 @@ growers.
 | T Weight (0–1) | 0.6 | When the VPD target is split into auxiliary temperature and humidity targets, the share given to temperature (the rest goes to humidity). When VPD can be measured, VPD itself is what is controlled; this value only shapes the auxiliary targets — the never-cross lines and the reference for the wetting-mist lock. |
 | VPD Priority | 1.2 | The weight used when a device that affects several axes combines their deviations — higher means this axis counts more in the command. The order in which devices are settled is set by cost index, not by priority ([L3](#l3-coordinator-actuator-command)). |
 | CO₂ Priority | 0.8 | The same weight for CO₂, lower than VPD because enrichment is secondary. |
-| Enable DLI / GDD Tracker | Off | Tracks daily light integral and growing degree-days, rolling over at facility-local midnight. Light is converted to PPFD by sensor unit. Targets come from the plot's program; requires a light sensor for DLI. |
+| Enable DLI / GDD Tracker | Off | Tracks daily light integral and growing degree-days, rolling over at facility-local midnight. Light is converted to PPFD by sensor unit. Targets come from the plot's program; requires a light sensor for DLI. At the day's end a gap either way against the target is recorded as a compensation suggestion — how much to make up per day, spread over three days, and whether the devices present can deliver it. |
 
 #### Effect Calibration { #settings-calibration }
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Effect Engine | Legacy | `Legacy`: built-in K_* constants (default, safe). `Shadow`: runs the grey-box model in parallel for logging only — no control change. It also records the commands MPC would have sent, with their prediction. `Grey-box`: physics-model control. Each cycle it tries MPC (an optimisation that looks several steps ahead) first, then falls back to the physics-model PI, then to Legacy. MPC looks ahead at the outdoor conditions like this. Solar radiation follows the clear-sky curve from the sun position, scaled by how clear it is right now (works anywhere the facility has coordinates). Outdoor temperature and humidity move from the current measurement by **the change the forecast predicts** when a KMA short-term forecast is available, issued within the last 6 hours, and in the same time zone as the facility; otherwise they stay at their current values. It uses the forecast change rather than the forecast value itself, to cancel the difference between the forecast (a wide grid average) and this facility's weather station. MPC follows **the same rules** as the PI: night closing, ventilation that cannot reach the target with the outdoor air, locking openings while heating or cooling runs, ventilation first, and heating or cooling that works against the temperature. A device held by one of these rules is not opened or switched on by MPC. MPC treats windows and fans by **airflow** (window area, rated fan airflow). For the same airflow it opens roof vents first when it is warmer inside, and side vents first when it is warmer outside. If the fans move more air than the windows, it uses the fans and keeps the windows closed (a wall fan cannot pull air once the windows are open). MPC does not move the shade screen or the thermal curtain; it takes their current position into its prediction, including the lower heat loss of a closed thermal curtain. Recommended flow: Shadow first, then Grey-box. The physics model **learns from the data Shadow collects, and Grey-box control switches on only when its 10-cycle-ahead prediction beats the simple "stays as it is now" prediction**. The comparison is made separately for each weather regime (hot day, mild day, sunrise/sunset, night and so on), and it must win in every regime observed — until then control stays on Legacy. After an update that changes the model's equations, this learning and validation starts again on the new equations. Change only while testing. |
+| Effect Engine | Legacy | `Legacy`: built-in K_* constants (default, safe). `Shadow`: runs the grey-box model in parallel for logging only — no control change. It also records the commands MPC would have sent, with their prediction. `Grey-box`: physics-model control. Each cycle it tries MPC (an optimisation that looks several steps ahead) first, then falls back to the physics-model PI, then to Legacy. MPC looks ahead at the outdoor conditions like this. Solar radiation follows the clear-sky curve from the sun position, scaled by how clear it is right now (works anywhere the facility has coordinates). Outdoor temperature and humidity move from the current measurement by **the change the forecast predicts** when a KMA short-term forecast is available, issued within the last 6 hours, and in the same time zone as the facility; otherwise they stay at their current values. It uses the forecast change rather than the forecast value itself, to cancel the difference between the forecast (a wide grid average) and this facility's weather station. MPC follows **the same rules** as the PI: night closing, ventilation that cannot reach the target with the outdoor air, locking openings while heating or cooling runs, ventilation first, and heating or cooling that works against the temperature. A device held by one of these rules is not opened or switched on by MPC. MPC treats windows and fans by **airflow** (window area, rated fan airflow). For the same airflow it opens roof vents first when it is warmer inside, and side vents first when it is warmer outside. If the fans move more air than the windows, it uses the fans and keeps the windows closed (a wall fan cannot pull air once the windows are open). MPC does not move the shade screen or the thermal curtain; it takes their current position into its prediction, including the lower heat loss of a closed thermal curtain. Recommended flow: Shadow first, then Grey-box. The collected data and scores carry over when the app or the daemon restarts (changing the control period, or a stop of more than a week, starts them over). The physics model **learns from the data Shadow collects, and Grey-box control switches on only when its 10-cycle-ahead prediction beats the simple "stays as it is now" prediction**. The comparison is made separately for each weather regime (hot day, mild day, sunrise/sunset, night and so on), and it must win in every regime that has collected enough observations, with at least two such regimes — until then control stays on Legacy. After an update that changes the model's equations, this learning and validation starts again on the new equations. While Shadow or Grey-box is selected, this parallel run has to keep working for any of that to progress — if it fails three cycles in a row the log reports it, and again every 60 cycles after that, so a stalled model does not stay silent. Change only while testing. |
 | Enable RLS Calibration | Off | Learns, per device, how strongly it actually moves each reading (temperature, humidity, CO₂) compared with the built-in model, as a **scale factor** (1.0 = the model as it is). The model's condition terms (indoor/outdoor difference, wind, area) stay; only the size is corrected. It learns only from cycles in which that device alone changed — when several move together, their shares cannot be told apart. Needs several days of data; until then the model is used as it is. |
-| Enable Active Probing | Off | Periodically perturbs one actuator by ±10 % to improve calibration identifiability. Only triggers when load is low and no safety gate is active. Requires RLS Calibration. |
+| Enable Active Probing | Off | Periodically perturbs one actuator by ±10 % to improve calibration identifiability. Only triggers when load is low and no safety gate is active. A circulation fan is never picked. Requires RLS Calibration. |
 | Probe Interval (seconds) | 3600 | Minimum time between probing events. Steps: Often (1800) / Standard (3600) / Rare (10800). |
 
 #### Forecast Feedforward { #settings-forecast }
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Enable Forecast Feedforward | Off | Uses the short-term weather forecast to proactively shift temperature/humidity setpoints and inhibit ventilation before adverse weather arrives. |
+| Enable Forecast Feedforward | Off | Uses the short-term weather forecast to proactively shift temperature/humidity setpoints before adverse weather arrives. A forecast more than 3 °C above the current indoor temperature lowers the temperature target by 1.5 °C, more than 3 °C below it raises the target by 1.0 °C, and a forecast above 85 %RH lowers the humidity target by 5 %RH; a shifted target still stays inside the range you set. Rain or strong wind in the forecast is reported with the decision summary but does not close the vents on its own — measured wind and rain do that. |
 | Forecast Lookahead (hours) | 3 | How far ahead to check. Steps: Short (1) / Standard (3) / Long (6). Longer gives earlier warning but may over-correct. Hours are counted **from now**: if the forecast file is updated late, forecasts for hours that have already passed are not used, and if the file has no upcoming hours no correction is made. When the facility has its own forecast source linked, that source's forecast is used as is and this value is not used. |
 
 > **Debug logging is no longer a separate option.** It duplicated the framework's own
@@ -581,7 +638,7 @@ per device. Manual actions are merged with the facility-derived list.
 | Cost Index | 5.0 | Lower value = higher priority (1 = free natural ventilation, 10 = high-cost device). The device's energy cost (kW × opening) is added to it. kW comes first from the output channel's **current draw (A) × the system usage voltage**, then from the rating on the facility drawing, then from a per-type default. The usage voltage is a system setting that defaults to 120 V, so a 220 V installation should set it. |
 | On Time Window End | Do Nothing | What happens to this actuator when the Working Hours window ends: Do Nothing / Turn Off / Turn On / Set Open % (vents only). |
 | End Open % | 0 | Target opening percentage at that moment (vents/openings only). |
-| Cloth Transmittance Override (0–1, Shade only) | 0 | Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. |
+| Cloth Transmittance Override (0–1, Shade only) | 0 | Only for this screen, when its cloth differs from the rest. Leave 0 to use the value set on the linked facility. The value is used when there is no indoor light sensor: the indoor level is then estimated from outdoor irradiance and the screen position. |
 | Effect Coefficient Override (K_*) | 0 | 0 = use default. Enter only when calibrating from measured data. |
 | Full Stroke Time (s) | 0 | Seconds for this actuator to travel 0→100 %. Used to cap the command change per cycle so a physically impossible command is never sent. A vent motor taking 10 min → 600. |
 | Min Repeat Interval (s) | 0 | Minimum seconds between repeated commands to this actuator even when the target has not changed. 0 = system default (600 s watchdog). Raise it for slow motorised actuators to extend relay life. |
@@ -609,9 +666,14 @@ A wetting-type mister is additionally wrapped in pulse dosing: one spray is cut 
 maximum on-time, and nothing sprays at all until the drying interval has passed.
 
 Irrigation flow is aggregated from the facility drawing — every emitter under a layer is
-summed into that actuator's `flow_lpm`, and the volumetric adapter and the fogger effect
-model use it directly. The fallback order is per-actuator flow, then the facility total,
-then 1.0 L/min.
+summed into that actuator's `flow_lpm`, and the volumetric adapter uses it directly. The
+fallback order is per-actuator flow, then the facility total, then 1.0 L/min.
+
+The fogger effect model uses a **different** flow: only that actuator's non-drip spray
+nozzles, and it never falls back. A dosed volume properly includes the drip lines that go
+to the roots, but what evaporates into the air does not — so a mister with no nozzle
+information on the drawing is credited with no cooling or humidifying effect at all,
+rather than inheriting the facility total.
 
 ### Axes without a measurement, axes without a device { #actuators-missing }
 
@@ -670,9 +732,9 @@ reference value is.
 ### Safe default { #actuators-safe-default }
 
 Each actuator has a safe position it moves to when a safety gate fires, on emergency
-stop, or on an external `force_safe_state()` call. For actuators discovered from the
-facility this follows the device kind: thermal curtains and shade screens park at
-100 %, everything else at 0 (off).
+stop, or on an external `force_safe_state()` call. This follows the device kind —
+thermal curtains and shade screens park at 100 %, everything else at 0 (off) — whether
+the actuator came from the facility drawing or from an Action.
 
 ---
 
@@ -712,7 +774,10 @@ before L1–L3, and a Post-Gate that sanity-checks the L3 result before it is di
 Once triggered, a Pre-Gate stays active for at least 300 s after its last trigger
 (prevents rapid on/off flapping). When a gate releases, the devices it moved find their
 equilibrium again **from where the gate left them** rather than jumping back to the
-pre-gate opening, because conditions may have changed in the meantime.
+pre-gate opening, because conditions may have changed in the meantime. A gate's forced
+commands go out at once, and are re-sent every cycle while the gate holds, without
+waiting for the actuation interval. Devices the gate did not force keep their normal
+interval — a gate standing on one device does not speed up the rest of the facility.
 
 ### Pre-Gate (checked before L1–L3) { #pre-gate-checked-before-l1l3 }
 
@@ -738,10 +803,11 @@ strong wind); vents then close unconditionally regardless of direction.
 
 **A gated cycle is still a cycle.** When a gate ends the cycle early, a reduced summary
 is written and the cycle is stamped, so the facility widget keeps showing what happened
-instead of reporting the coordinator as unresponsive. The reduced summary deliberately
-omits environment values that were not computed this cycle, and lists only the devices
-the gate actually forced — a device that was not touched carries no command at all,
-rather than 0 %.
+instead of reporting the coordinator as unresponsive. The reduced summary still carries
+the environment values measured this cycle — sensors keep measuring while a gate holds —
+and leaves out only what L1–L3 would have produced, such as targets and deviations.
+Every device stays listed, not just the ones the gate forced — a device that was not
+touched carries no command at all, rather than 0 %.
 
 ### Post-Gate (checked after L3, before dispatch) { #post-gate-checked-after-l3-before-dispatch }
 

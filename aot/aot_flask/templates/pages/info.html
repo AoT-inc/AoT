@@ -59,14 +59,14 @@
           <br>{{_('Daemon RAM Usage')}}: <span class="aot-kv-value">{{ram_use_daemon}} MB</span>
           <br>{{_('Daemon Virtualenv')}}:&nbsp
             {%- if virtualenv_daemon -%}<span class="aot-kv-value">{{_('Yes')}}</span>
-            {%- else -%}<span class="aot-kv-alert">{{_('No')}}</span>
+            {%- else -%}<span class="{{ 'aot-kv-value' if system_env.platform_type == 'docker' else 'aot-kv-alert' }}">{{_('No')}}</span>
             {%- endif -%}
         {% endif %}
         <br>{{_('Frontend Process ID')}}: <span class="aot-kv-value">{{frontend_pid}}</span>
         <br>{{_('Frontend RAM Usage')}}: <span class="aot-kv-value">{{ram_use_flask}} MB</span>
         <br>{{_('Frontend Virtualenv')}}:&nbsp
         {%- if virtualenv_flask -%}<span class="aot-kv-value">{{_('Yes')}}</span>
-        {%- else -%}<span class="aot-kv-alert">{{_('No')}}</span>
+        {%- else -%}<span class="{{ 'aot-kv-value' if system_env.platform_type == 'docker' else 'aot-kv-alert' }}">{{_('No')}}</span>
         {%- endif -%}
       </div>
     </div>

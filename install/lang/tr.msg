@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** AoT kurulumu sıras�
 install_begin=#### AoT kurulumu başlıyor. %s\n
 mosquitto_installing=#### Kuruluyor: mosquitto MQTT broker\n
 mosquitto_already_installed=#### mosquitto zaten kurulu - kurulum atlanıyor\n
-mosquitto_configuring=#### mosquitto, harici bağlantılara izin verecek şekilde yapılandırılıyor\n
 mosquitto_conf_checking=#### mosquitto yapılandırma dosyası oluşturuluyor/doğrulanıyor\n
 mosquitto_conf_created=#### %s oluşturuldu\n
 mosquitto_conf_exists=#### %s zaten var - üzerine yazılmadı\n

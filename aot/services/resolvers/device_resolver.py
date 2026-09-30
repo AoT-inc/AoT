@@ -51,9 +51,12 @@ class DeviceMatch(NamedTuple):
       그대로 사용자에게 보여도 된다.
     - 둘 다 없으면 그런 이름이 없다 — "못 찾음" 은 호출자가 자기 문구로
       말한다(도구마다 표현이 다르다).
+    - `reason` 은 `error` 의 종류다. 지금은 'ai_excluded'(AI 도구에서 뺀
+      장치를 지목했다) 하나만 적고, 이름 겹침은 None 이다.
     """
     row: object = None
     error: Optional[str] = None
+    reason: Optional[str] = None
 
     @property
     def ambiguous(self) -> bool:
@@ -97,8 +100,105 @@ def _found(row) -> DeviceMatch:
     return DeviceMatch(row=row)
 
 
+# ── AI 도구에서 뺀 장치(입력·출력 모달의 'AI 판단에 포함' 끔) ───────────────
+#
+# 매뉴얼(docs/ai/overview.md#device-ai-toggle): 끈 장치는 AI 판단·제어 도구의
+# 조회와 제어 대상에서 빠진다. 예전에는 인앱 컨텍스트 조립만 이것을 봤고, AI
+# 도구(aot/tools — 외부 MCP 와 인앱 도구 호출이 함께 쓴다)는 전혀 보지 않아 끈
+# 장치를 그대로 찾고 움직였다. AI 도구의 장치 해석·목록은 아래 헬퍼만 쓴다.
+# 사람 경로(웹 화면·사람 API·캘린더 동기화)는 `ai=False`(기본)라 영향이 없다.
+
+#: `DeviceMatch.reason`·도구 오류의 `reason_code` 값.
+AI_EXCLUDED = 'ai_excluded'
+
+#: 끈 장치를 대상으로 받았을 때 AI 에게 돌려주는 이유. 모델이 읽는 문장이라
+#: 번역하지 않는다(UI 문구가 아니다).
+AI_EXCLUDED_MESSAGE = (
+    "'%s' is excluded from AI: its 'Include in AI judgment' setting is off, "
+    "so AI tools may not read or control it. Nothing was done. A person can "
+    "turn the setting back on in the device's settings, or operate the device "
+    "from the web screen.")
+
+
+def ai_excluded(row) -> bool:
+    """이 행이 AI 도구에서 빠진 장치인가. 칸이 없는 행(함수·카메라)은 아니다.
+
+    값이 명시적으로 거짓일 때만 뺀다 — 칸이 없거나 비어 있으면(NULL) 기본값
+    (켜짐)으로 본다."""
+    value = getattr(row, 'is_ai_enabled', None)
+    return value is not None and not bool(value)
+
+
+def ai_excluded_error(row) -> Optional[str]:
+    """빠진 장치면 AI 에게 줄 이유 문장, 아니면 None."""
+    if row is None or not ai_excluded(row):
+        return None
+    return AI_EXCLUDED_MESSAGE % (getattr(row, 'name', None)
+                                  or getattr(row, 'unique_id', None) or '?')
+
+
+def ai_excluded_ids() -> set:
+    """AI 도구에서 빠진 입력·출력의 unique_id 집합(목록 도구가 거를 때)."""
+    from aot.databases.models import Input, Output
+    out = set()
+    for model in (Input, Output):
+        try:
+            out.update(uid for (uid,) in model.query.with_entities(
+                model.unique_id).filter(model.is_ai_enabled == False).all())  # noqa: E712
+        except Exception as exc:                            # noqa: BLE001
+            logger.warning("[ai_excluded_ids] %s 조회 실패: %s",
+                           getattr(model, '__name__', model), exc)
+    return out
+
+
+def _pick(rows, ai):
+    """AI 해석이면 빠진 장치를 후보에서 덜어 낸다. (남은 후보, 덜어 낸 후보)."""
+    if not ai:
+        return rows, []
+    kept = [r for r in rows if not ai_excluded(r)]
+    return kept, [r for r in rows if ai_excluded(r)]
+
+
+def _match(model, token, kind, allow_partial, ai) -> DeviceMatch:
+    """`resolve_device` 의 판정만 — 찾은 행에 스코프를 묻지 않는다."""
+    exact_id = model.query.filter(model.unique_id == token).first()
+    if exact_id is not None:
+        if ai and ai_excluded(exact_id):
+            return DeviceMatch(error=ai_excluded_error(exact_id),
+                               reason=AI_EXCLUDED)
+        return DeviceMatch(row=exact_id)
+
+    by_name, hidden = _pick(model.query.filter(model.name == token).all(), ai)
+    if len(by_name) == 1:
+        return DeviceMatch(row=by_name[0])
+    if len(by_name) > 1:
+        logger.warning(
+            "[resolve_device] 이름이 겹쳐 고르지 않았습니다: %s %r (%d건)",
+            kind, token, len(by_name))
+        return DeviceMatch(error=_ambiguous(kind, token, by_name))
+    if hidden:
+        return DeviceMatch(error=ai_excluded_error(hidden[0]),
+                           reason=AI_EXCLUDED)
+
+    if allow_partial:
+        partial, hidden = _pick(
+            model.query.filter(model.name.ilike(f'%{token}%')).all(), ai)
+        if len(partial) == 1:
+            return DeviceMatch(row=partial[0])
+        if len(partial) > 1:
+            logger.warning(
+                "[resolve_device] 부분 이름이 겹쳐 고르지 않았습니다: %s %r (%d건)",
+                kind, token, len(partial))
+            return DeviceMatch(error=_ambiguous(kind, token, partial))
+        if hidden:
+            return DeviceMatch(error=ai_excluded_error(hidden[0]),
+                               reason=AI_EXCLUDED)
+
+    return DeviceMatch()
+
+
 def resolve_device(model, token: Optional[str], kind: Optional[str] = None,
-                   allow_partial: bool = False) -> DeviceMatch:
+                   allow_partial: bool = False, ai: bool = False) -> DeviceMatch:
     """id 또는 이름으로 장치 한 건. 이름이 겹치면 고르지 않는다.
 
     순서는 좁은 것부터다: 정확한 unique_id → 정확한 이름 → (허용 시)
@@ -107,42 +207,38 @@ def resolve_device(model, token: Optional[str], kind: Optional[str] = None,
 
     `allow_partial` 은 `%token%` 부분일치까지 본다. 이 단계는 겹칠 확률이
     훨씬 높으므로, 여기서도 둘 이상이면 마찬가지로 멈춘다.
+
+    `ai=True`(AI 도구 경로)면 'AI 판단에 포함' 을 끈 장치는 후보가 아니다 —
+    id 로 지목했거나 그 이름에 걸리는 것이 그런 장치뿐이면 이유를 담은
+    `error`(reason='ai_excluded')를 돌려준다(못 찾았다고 하지 않는다).
     """
     if not token:
         return DeviceMatch()
-
     kind = kind or getattr(model, '__name__', 'device')
-
-    exact_id = model.query.filter(model.unique_id == token).first()
-    if exact_id is not None:
-        return _found(exact_id)
-
-    by_name = model.query.filter(model.name == token).all()
-    if len(by_name) == 1:
-        return _found(by_name[0])
-    if len(by_name) > 1:
-        logger.warning(
-            "[resolve_device] 이름이 겹쳐 고르지 않았습니다: %s %r (%d건)",
-            kind, token, len(by_name))
-        return DeviceMatch(error=_ambiguous(kind, token, by_name))
-
-    if allow_partial:
-        partial = model.query.filter(model.name.ilike(f'%{token}%')).all()
-        if len(partial) == 1:
-            return _found(partial[0])
-        if len(partial) > 1:
-            logger.warning(
-                "[resolve_device] 부분 이름이 겹쳐 고르지 않았습니다: %s %r (%d건)",
-                kind, token, len(partial))
-            return DeviceMatch(error=_ambiguous(kind, token, partial))
-
-    return DeviceMatch()
+    match = _match(model, token, kind, allow_partial, ai)
+    return _found(match.row) if match.row is not None else match
 
 
-def resolve_output(token, allow_partial: bool = False) -> DeviceMatch:
+def ai_control_refusal(token, allow_partial: bool = True) -> Optional[str]:
+    """AI 제어 도구의 출력 인자가 AI 에서 뺀 장치를 가리키면 그 이유, 아니면 None.
+
+    승인 큐에 넣기 전에 묻는 자리(`tool_execution._pre_gate_validation`)가
+    쓴다 — 어차피 실행에서 거절될 요청이 사람의 승인을 기다리지 않게. 찾은
+    행에 스코프를 묻지 않는다(판정만 한다). 부분 이름까지 보는 것은 승인
+    게이트의 스코프 정규화와 같다(`mcp_safety_gate._normalize_device_id_for_scope`).
+    """
+    from aot.databases.models import Output
+    if not isinstance(token, str) or not token.strip():
+        return None
+    match = _match(Output, token.strip(), 'output', allow_partial, True)
+    return match.error if match.reason == AI_EXCLUDED else None
+
+
+def resolve_output(token, allow_partial: bool = False,
+                   ai: bool = False) -> DeviceMatch:
     from aot.databases.models import Output
     return resolve_device(Output, token, kind='output',
-                          allow_partial=allow_partial)
+                          allow_partial=allow_partial, ai=ai)
 
 
 def resolve_input(token, allow_partial: bool = False) -> DeviceMatch:

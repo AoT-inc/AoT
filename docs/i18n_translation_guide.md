@@ -81,6 +81,12 @@ Keyword functions recognized during extraction: `_`, `gettext`, `ngettext`,
 `lazy_gettext`, and the alias `lg` (`from flask_babel import lazy_gettext as lg`,
 used by `config/__init__.py` and ~39 other files — omitting `-k lg` silently drops
 their msgids and `pybabel update` will obsolete the existing translations).
+The same goes for the request-context-safe wrappers `_t()` (`services/device_references.py`,
+`services/resolvers/device_resolver.py`, `utils_device_connection.py`, `routes_mcp_api.py`,
+`agent_loop_service.py`) and `_gettext_safe()` (`geo/plot_journal/calc.py`): pass
+`-k _t -k _gettext_safe`, or their msgids never enter the catalog. A new wrapper needs a
+new `-k` in the docs command and in `generate_translations_pybabel.sh`;
+`check_i18n_extraction.py` exempts only the wrapper body (`WRAPPER_FUNCS`).
 
 > **GOTCHA — JS template literals.** Babel's JS extractor does NOT extract
 > `_('…')` calls inside template-literal interpolations (`` `${_('key')}` ``).
@@ -109,7 +115,7 @@ pybabel extract \
   --project "AoT" --version "<version>" \
   --copyright "Kyle T. Gabriel" \
   --msgid-bugs-address "aot@kylegabriel.com" \
-  -s -F babel.cfg -k _ -k gettext -k ngettext -k lazy_gettext -k lg \
+  -s -F babel.cfg -k _ -k gettext -k ngettext -k lazy_gettext -k lg -k _t -k _gettext_safe \
   -o aot_flask/translations/messages.pot .
 ```
 

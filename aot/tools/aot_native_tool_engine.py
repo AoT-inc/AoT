@@ -2,8 +2,8 @@
 """
 AoTNativeToolEngine — TASK_30 / Pillar 1
 Dynamically generates MCP-compatible tool schemas from the AoT Device DB.
-Only devices with is_ai_enabled=True are exposed (falls back to all active
-devices if the column has not yet been migrated).
+Devices whose 'Include in AI judgment' toggle is off (is_ai_enabled=False) are
+not exposed (`device_resolver.ai_excluded` — the one test every AI tool uses).
 """
 import logging
 from typing import List, Dict, Any
@@ -65,9 +65,8 @@ class AoTNativeToolEngine:
     @staticmethod
     def _get_ai_devices() -> List[Dict[str, Any]]:
         """
-        Query Input + Output tables.
-        Prefer rows where is_ai_enabled=True; fall back to all is_activated=True
-        if the column does not yet exist (pre-migration).
+        Query Input + Output tables — active inputs and all outputs, minus the
+        ones switched out of AI judgment (`device_resolver.ai_excluded`).
         """
         from flask import current_app
         with current_app.app_context():
@@ -76,6 +75,7 @@ class AoTNativeToolEngine:
             try:
                 from aot.databases.models.input import Input
                 from aot.databases.models.output import Output
+                from aot.services.resolvers.device_resolver import ai_excluded
 
                 # --- Inputs (sensors) ---
                 try:
@@ -86,6 +86,8 @@ class AoTNativeToolEngine:
                     logger.debug("[NativeToolEngine] Input scan failed; using empty list")
 
                 for inp in inputs:
+                    if ai_excluded(inp):
+                        continue
                     results.append({
                         "device_id":   inp.unique_id,
                         "name":        inp.name or inp.device or inp.unique_id,
@@ -102,6 +104,8 @@ class AoTNativeToolEngine:
                     logger.debug("[NativeToolEngine] Output scan failed; using empty list")
 
                 for out in outputs:
+                    if ai_excluded(out):
+                        continue
                     results.append({
                         "device_id":   out.unique_id,
                         "name":        out.name or out.unique_id,
@@ -221,16 +225,14 @@ class AoTNativeToolEngine:
         with current_app.app_context():
             try:
                 from aot.tools.aot_data_tool_service import AoTDataToolService as S
-                from aot.databases.models import CustomController, Input
-                # 이름이면 센서(Input)나 집계 함수로 푼다 — 모호하면 후보.
-                row = (Input.query.filter_by(unique_id=token).first()
-                       or CustomController.query.filter_by(unique_id=token).first())
-                if row is None:
-                    row, _kind, rerr = S._read_device(token)
-                    if rerr:
-                        return dict({"status": "error",
-                                     "message": rerr.get("error") or rerr.get("message")},
-                                    **rerr)
+                # id·이름 모두 공용 해석(_read_device)으로 푼다 — 모호하면 후보,
+                # 'AI 판단에 포함' 을 끈 장치면 그 이유(예전에는 id 로 오면 해석을
+                # 건너뛰어 그 판정도 건너뛰었다).
+                row, _kind, rerr = S._read_device(token)
+                if rerr:
+                    return dict({"status": "error",
+                                 "message": rerr.get("error") or rerr.get("message")},
+                                **rerr)
                 device_id = row.unique_id
                 # Delegate to the InfluxDB-backed reader used by get_sensor_detail —
                 # there is no SQLite Measurement.input_id/timestamp/value column;
@@ -283,19 +285,17 @@ class AoTNativeToolEngine:
         sent = False
         with current_app.app_context():
             try:
-                from aot.databases.models.output import Output
-                output = Output.query.filter_by(unique_id=device_id).first()
-                if not output:
-                    # 이름으로 왔으면 푼다 — 모호하면 고르지 않는다(물리 명령이다).
-                    from aot.tools.aot_data_tool_service import AoTDataToolService as S
-                    output, _kind, rerr = S._read_device(device_id, kinds=('output',))
-                    if rerr:
-                        return dict({"status": "error",
-                                     "message": rerr.get("error") or rerr.get("message"),
-                                     "dispatched": False},
-                                    **{k: v for k, v in rerr.items()
-                                       if k not in ("status", "_reading")})
-                    device_id = output.unique_id
+                # id·이름 모두 공용 해석으로 푼다 — 모호하면 고르지 않고(물리
+                # 명령이다), 'AI 판단에 포함' 을 끈 출력이면 이유를 돌려준다.
+                from aot.tools.aot_data_tool_service import AoTDataToolService as S
+                output, _kind, rerr = S._read_device(device_id, kinds=('output',))
+                if rerr:
+                    return dict({"status": "error",
+                                 "message": rerr.get("error") or rerr.get("message"),
+                                 "dispatched": False},
+                                **{k: v for k, v in rerr.items()
+                                   if k not in ("status", "_reading")})
+                device_id = output.unique_id
                 # 쓰기 시점 그룹 스코프 — 켜고 끌 출력으로 묻는다(묶여 있을 때만).
                 from aot.aot_flask.access import write_scope
                 write_scope.enforce(output)

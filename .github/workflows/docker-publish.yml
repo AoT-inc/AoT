@@ -5,8 +5,15 @@ name: Publish Docker image
 # The image tag is derived from AOT_VERSION in aot/config/__init__.py so the
 # zero-padded scheme (e.g. 26.07.3 / 26.07) is preserved (semver would drop the 0).
 #
+# Runs ONLY on the public repository (AoT-inc/AoT): the job below is guarded by
+# `github.repository`. The private working repository (AoT-inc/AoT-dev) keeps
+# Actions disabled, and if someone ever enables them there, the guard stops this
+# job from pushing an image built from the private tree. Forks are skipped too.
+# The tag that triggers it is the one pushed to the public repo by the release
+# procedure (CLAUDE.md "릴리스"), not the private tag of the same name.
+#
 # Prerequisites (one-time):
-#   - Repo hosted on GitHub (this workflow does NOT run on Gitea).
+#   - Repo hosted on GitHub.
 #   - GHCR: after the first publish, set the package visibility to Public
 #     (repo → Packages → aot → Package settings), or configure org policy.
 #   - Docker Hub: create the aotinckr/aot repository, generate an access token
@@ -24,6 +31,7 @@ permissions:
 
 jobs:
   build-and-push:
+    if: github.repository == 'AoT-inc/AoT'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

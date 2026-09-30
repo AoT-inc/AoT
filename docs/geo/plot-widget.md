@@ -4,7 +4,7 @@
 
 ---
 
-## Adding the Widget
+## Adding the Widget { #adding-the-widget }
 
 1. On the dashboard, select **Add Widget → AoT Plot**.
 2. Click **Save** — the widget opens on the plot list.
@@ -14,7 +14,7 @@
 
 ---
 
-## Plot List
+## Plot List { #plot-list }
 
 One card per plot that is currently growing — planned plots (not yet started) and ended plots aren't listed. Each card shows:
 
@@ -29,19 +29,19 @@ Tap a card to open that plot's detail.
 
 The header is the same as the [map widget](map-widget.md#plot)'s plot modal: a back arrow (←) on the left returns to the plot list, and the plot name sits next to it. Below the header are three tabs carried over from that same modal: **Stages**, **Environment**, and **Notes**.
 
-### Stages
+### Stages { #stages }
 
-The stage-change confirmation, if one is waiting, sits at the top. Below it is the stage card — **the same timeline axis** the map widget's plot modal draws (stage names, date scale, today as a vertical line, past transitions as dots). Segments are tappable — the picked one unfolds that stage's period, targets and guidance below, and, when the programme advances by [GDD](journal.md#gdd) rather than dates, that stage's GDD progress as well.
+The stage-change confirmation, if one is waiting, sits at the top — the stage the plot looks to have moved on to, with the date it appears to have started; correct that date if you need to, then press **Confirm**. Below it is the stage card — **the same timeline axis** the map widget's plot modal draws (stage names, date scale, today as a vertical line, past transitions as dots). Segments are tappable — the picked one unfolds that stage's period, targets and guidance below, and, when the programme advances by [GDD](journal.md#gdd) rather than dates, that stage's GDD progress as well. Tap the same segment again, or the **Back to now** link, to come back to the current stage.
 
 An **Edit** button appears at the right end of the tab bar, shown only on this tab, and only if you can edit the plot.
 
-### Environment
+### Environment { #environment }
 
 The same environment card the map widget's plot modal shows — current readings against this stage's targets and limits, with a row and axis per measurement, plus DLI and [accumulated heat](journal.md#gdd) alongside. Rows with no natural range of their own (CO2, soil moisture, dew point) get a trend sparkline instead, when *Trends* is on.
 
 **[Today][Daily][Weekly]** sit at the right end of the tab bar while this tab is open — Daily is the last 7 days, Weekly the last 8 weeks. Picking a stage on the Stages axis makes that stage's span the window, as before.
 
-Readings show **three per page**; with more than three, swipe (or drag with the mouse, or use the arrow keys once focused) left or right to move a whole page. A "1 / 3" page indicator sits below the readings.
+Readings show **three per page**; with more than three, swipe (or drag with the mouse, or use the arrow keys once focused) left or right to move a whole page. A row of dots sits below the card, one per page with the current one filled — press a dot to jump straight to that page.
 
 ### Notes
 
@@ -49,26 +49,26 @@ The latest photo from the plot's notes, then upcoming schedule and recent notes 
 
 ---
 
-## Editing
+## Editing { #editing }
 
-**Edit** opens the same drawer as the [`/plots` page](programs.md#plots-page) — literally the same two components, so there is nothing separate to learn. Change the schedule, stage guidance, or this plot's own [target overrides](programs.md#plot-override), then press **Save**. Nothing is sent until you do; closing the modal without saving discards the change. The button itself lives at the right end of the tab bar, on the **Stages** tab.
-
----
-
-## Remembering Your Place
-
-The widget saves whether the list or a plot's detail was open, which plot, which tab, and the environment view unit ([Today]/[Daily]/[Weekly]) — and restores all of it after a page reload. Saving needs the dashboard's edit permission; without it you can still navigate freely, it just won't be remembered next time.
+**Edit** opens the same drawer as the [`/plots` page](programs.md#plots-page) — literally the same two components, so there is nothing separate to learn. The first block is this plot's basics — kind, what is planted and its variety, an optional plot name, the program, and the start and expected end dates (a plot inside a facility also has its zone and share) — and the stage track follows below it. Change the schedule, stage guidance, or this plot's own [target overrides](programs.md#plot-override), then press **Save**. Nothing is sent until you do; closing the modal without saving discards the change. The button itself lives at the right end of the tab bar, on the **Stages** tab.
 
 ---
 
-## Widget Settings
+## Remembering Your Place { #remembering-your-place }
+
+The widget saves whether the list or a plot's detail was open, which plot, which tab, and the environment view unit ([Today]/[Daily]/[Weekly]) — and restores all of it after a page reload. Saving needs the **Edit Controllers** permission, the same one that saves widget settings; without it you can still navigate freely, it just won't be remembered next time.
+
+---
+
+## Widget Settings { #widget-settings }
 
 | Option | Description | Default |
 |---|---|---|
 | Map or site | Narrow the plot list to one map, or one site within it — the select groups options by map, each group starting with **[map] · All sites** (the whole map) followed by its sites. Leave empty (**All maps**) to show every plot in progress, across every map. | All maps |
 | Program stages | Show the stage axis in the Stages tab. | On |
 | Targets vs now | Show the Environment tab. | On |
-| Trends | Fill rows with no gauge of their own with a recent trend line, in the Environment tab. Needs *Targets vs now*. | On |
+| Trends | Fill rows with no range of their own with a recent trend line, in the Environment tab. Needs *Targets vs now*. | On |
 | Accumulated heat | Show this stage's GDD progress in the Stages tab (the running total since planting lives in the environment card). | On |
 | Refresh Interval | Minutes between reloads of whichever screen is open — the plot list or the open plot's detail. | 5 |
 

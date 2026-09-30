@@ -6,10 +6,11 @@ from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.utils import random_alphanumeric
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'mqtt_publish',
-    'name': "MQTT: {}".format(lazy_gettext('Publish')),
+    'name': lazy_format("MQTT: {}", lazy_gettext('Publish')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

@@ -13,6 +13,7 @@ from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 
 
 
+# @manual geo/api-reference#other
 @blueprint.route('/api/tools/kma_lookup', methods=['POST'])
 @login_required
 def api_tools_kma_lookup():
@@ -139,6 +140,7 @@ def page_programs():
 # (실측: 3포장 '오늘 0' / 3-2 구역 8/19 08:00 제초). 위 계층이 아래를 덮지
 # 못하면 롤업이라고 부를 수 없다.
 
+# @manual geo/api-reference#manual-schedule
 @blueprint.route('/api/geo/schedule/<string:target_id>', methods=['GET'])
 @login_required
 def api_schedule_for_target(target_id):
@@ -205,6 +207,7 @@ def _schedule_payload(target_id):
     return None
 
 
+# @manual geo/api-reference#manual-schedule
 @blueprint.route('/api/geo/schedule', methods=['POST'])
 @login_required
 def api_schedule_create():
@@ -359,6 +362,7 @@ def _schedule_target_label(target_id):
     return None, None
 
 
+# @manual geo/api-reference#output-control-map-popups
 @blueprint.route('/api/geo/function/<string:kind>/<string:func_uuid>/activate', methods=['POST'])
 @login_required
 def api_geo_function_activate(kind, func_uuid):
@@ -426,6 +430,7 @@ def api_geo_function_activate(kind, func_uuid):
 _LOCAL_TIME_COORD_ROUND = 3
 
 
+# @manual geo/map-widget#map, geo/api-reference#time-solar
 @blueprint.route('/api/geo/local_time', methods=['GET'])
 @login_required
 def api_geo_local_time():
@@ -507,6 +512,7 @@ def api_geo_local_time():
 # 좌표+날짜 단위로 캐시돼 있어 같은 장소의 여러 장치가 물어도 astral 재계산은
 # 한 번뿐이다.
 # ──────────────────────────────────────────────────────────────────────────
+# @manual geo/map-widget#map, geo/api-reference#time-solar
 @blueprint.route('/api/geo/sun_event', methods=['GET'])
 @login_required
 def api_geo_sun_event():

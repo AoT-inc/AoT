@@ -51,6 +51,7 @@ CHANNELS = {
     3: {'name': lg('Soil Temp (10cm)'),   'options': {'key': 't10',      'unit': '°C'}},
 }
 
+# @manual geo/layers#specialized-data, geo/layers#agromonitoring-field-ndvi-soil
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_agromonitoring',
     'input_manufacturer': 'Agromonitoring',
@@ -213,6 +214,7 @@ def list_polygons(api_key, logger=None):
     return polygons
 
 
+# @manual geo/layers#agromonitoring-field-ndvi-soil
 def resolve_polygon_id(api_key, lat, lng, explicit_id='', logger=None):
     """조회에 쓸 폴리곤 id. 명시값이 있으면 그대로 쓴다."""
     if explicit_id:
@@ -242,6 +244,7 @@ def resolve_polygon_id(api_key, lat, lng, explicit_id='', logger=None):
     return best
 
 
+# @manual geo/layers#agromonitoring-field-ndvi-soil
 def fetch_soil(api_key, polygon_id, logger=None):
     """{moisture, t0, t10, dt} — 지온은 °C 로 변환해 돌려준다."""
     try:
@@ -274,6 +277,7 @@ def fetch_soil(api_key, polygon_id, logger=None):
     return result
 
 
+# @manual geo/layers#agromonitoring-field-ndvi-soil
 def fetch_ndvi(api_key, polygon_id, window_days=30, logger=None):
     """가장 최근 통과의 NDVI 통계 {ndvi, ndvi_min, ndvi_max, dt}."""
     try:
@@ -406,6 +410,7 @@ class InputModule(AbstractGisInput):
                  'unit': info['options']['unit']}
                 for info in CHANNELS.values()]
 
+    # @manual geo/layers#agromonitoring-field-ndvi-soil
     def get_data_at_location(self, lat, lng, **kwargs):
         """이 좌표를 담은 필지의 토양값·NDVI. 폴리곤을 못 찾으면 None."""
         self.api_key = self.get_custom_option('api_key') or ''

@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** GREŠKA tokom instal
 install_begin=#### Instalacija AoT-a počinje. %s\n
 mosquitto_installing=#### Instaliranje: mosquitto MQTT broker\n
 mosquitto_already_installed=#### mosquitto je već instaliran - preskačem instalaciju\n
-mosquitto_configuring=#### Podešavanje mosquitto-a da dozvoli spoljne veze\n
 mosquitto_conf_checking=#### Kreiranje/provera konfiguracione datoteke mosquitto-a\n
 mosquitto_conf_created=#### %s kreiran\n
 mosquitto_conf_exists=#### %s već postoji - nije prepisan\n

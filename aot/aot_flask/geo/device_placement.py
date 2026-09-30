@@ -62,6 +62,7 @@ def build_marker_feature(device_id, channel_id, lat, lng,
     }
 
 
+# @manual geo/design-tool#device-a
 def place_device(device_id, map_uuid, lat, lng, channel_id=0,
                  device_type=None, name=None, commit=False):
     """장치를 지도에 배치(또는 이동)한다. 마커 GeoShape 를 반환.
@@ -143,6 +144,7 @@ def _record_marker_binding(marker, device_id, channel_id):
                        device_id, channel_id, exc)
 
 
+# @manual geo/design-tool#device-a
 def unplace_device(device_id, map_uuid, channel_id=0, commit=False):
     """지도에서 장치 마커를 제거한다. 없으면 무동작."""
     ch = str(channel_id if channel_id is not None else 0)

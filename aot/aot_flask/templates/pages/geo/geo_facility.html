@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 {% set help_page = [manual_url("geo/facility/"), _('Facility Management')] %}
-{% block title %}Facility Design{% endblock %}
+{% block title %}{{ _('Facility Design') }}{% endblock %}
 
 {% block head %}
 <!-- MapLibre GL 은 layout.html head 에서 제공됨 (GIS 설정의 로컬/CDN 옵션 적용).
@@ -37,6 +37,7 @@
   <!-- ── Step bar ───────────────────────────────────────────────────────────
        Each step opens the settings drawer on the right while the stage (3D or
        map) stays visible, so a change can be watched as it is made. -->
+  {# @manual geo/facility#facility-registration-flow #}
   <div class="fac-stepbar" role="tablist" aria-label="{{ _('Setup steps') }}">
     <button type="button" class="btn aot-pill-btn fac-step" data-step="basic"    role="tab"
             data-issue="{{ _('Enter a name') }}">{{ _('Basics') }}</button>
@@ -50,6 +51,7 @@
     <button type="button" class="btn aot-pill-btn fac-step" data-step="check"    role="tab"
             data-issue="{{ _('Not saved yet') }}">{{ _('Review') }}</button>
 
+  {# @manual-end #}
     <!-- Stage picker — on every step. Which view opens first is per step
          (see _DEFAULT_STAGE); the choice is remembered for the session. -->
     <div class="fac-stage-toggle" id="fac-stage-toggle" role="group"
@@ -253,11 +255,13 @@
     </div>
 
     <!-- Viewport (canvas wrapper — only this area sizes the WebGL canvas) -->
+    {# @manual geo/facility#3d-preview #}
     <div id="facility-3d-viewport">
       <canvas id="facility-3d-canvas"></canvas>
       <div class="aot-3d-asset-status"></div>
       <div id="facility-3d-hint">{{ _('Right-click: rotate · Left-click: pan/select · Scroll: zoom') }}</div>
     </div>
+    {# @manual-end #}
 
 
     <input type="file" id="import-spec-input" accept=".json" style="display:none" onchange="facilityImportSpec(this.files[0]);this.value=''">
@@ -311,7 +315,7 @@
                  onclick="FacilityIO.select(this.dataset.uuid)">
               <div class="fac-item-info">
                 <div class="fac-item-name">{{ f.name }}</div>
-                <small class="text-muted fac-item-sub">{{ f.preset }} · {{ f.structure }}{% if f.structure == 'connected' %} (N={{ f.bay_count }}){% endif %}</small>
+                <small class="text-muted fac-item-sub">{% if f.preset == 'standard_arch' %}{{ _('Standard Arch') }}{% else %}{{ f.preset }}{% endif %} · {% if f.structure == 'connected' %}{{ _('Multi-span') }}{% elif f.structure == 'single' %}{{ _('Single-span') }}{% else %}{{ f.structure }}{% endif %}{% if f.structure == 'connected' %} (N={{ f.bay_count }}){% endif %}</small>
               </div>
               <button class="btn aot-pill-btn aot-pill-btn-danger fac-item-del"
                       data-uuid="{{ f.unique_id }}"
@@ -373,6 +377,7 @@
 
   </div>
 
+  {# @manual geo/facility#structure-type #}
   <div class="aot-modal-group-title">{{ _('Position & Structure') }}</div>
   <div class="aot-modal-container">
 
@@ -381,15 +386,17 @@
       <div class="aot-modal-option-control">
         <div class="btn-group btn-group-sm" role="group">
           <label class="btn fac-seg-btn active">
-            <input type="radio" name="structure" value="single" checked> {{ _('Single') }}
+            <input type="radio" name="structure" value="single" checked> {{ _('Single-span') }}
           </label>
           <label class="btn fac-seg-btn">
-            <input type="radio" name="structure" value="connected"> {{ _('Connected') }}
+            <input type="radio" name="structure" value="connected"> {{ _('Multi-span') }}
           </label>
         </div>
       </div>
     </div>
+  {# @manual-end #}
 
+    {# @manual geo/facility#bay-configuration #}
     <div class="aot-modal-option-row" id="bay-count-container">
       <label class="aot-modal-option-label">{{ _('Bays') }} (N)</label>
       <div class="aot-modal-option-control">
@@ -403,6 +410,7 @@
         <input type="number" id="spacing-m" class="form-control aot-modern-input" min="0" step="0.1" value="1.0">
       </div>
     </div>
+    {# @manual-end #}
 
     <!-- ── Zone(구역) editor — split/merge bays into control zones ─────────────
          Visible only when bay_count ≥ 2. Boundaries between bays toggle on
@@ -492,6 +500,7 @@
       </div>
     </div>
 
+    {# @manual geo/facility#bay-configuration #}
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label">{{ _('Span (m)') }}</label>
       <div class="aot-modal-option-control">
@@ -519,6 +528,7 @@
         <input type="number" id="length-m" class="form-control aot-modern-input" value="30" step="0.5">
       </div>
     </div>
+    {# @manual-end #}
 
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label">{{ _('Roof Type') }}</label>
@@ -791,6 +801,7 @@
           </div>
         </div>
 
+        {# @manual geo/facility#actuator-roles #}
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-actuator">
           <label class="aot-modal-option-label">{{ _('Actuator') }}</label>
           <div class="aot-modal-option-control">
@@ -804,6 +815,7 @@
             <button type="button" id="fi-actuator-swap" class="btn aot-pill-btn mt-1 d-none">{{ _('Replace hardware') }}</button>
           </div>
         </div>
+        {# @manual-end #}
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-input">
           <label class="aot-modal-option-label">{{ _('Device') }}</label>
           <div class="aot-modal-option-control">
@@ -818,6 +830,7 @@
            now (sensor-ui.js, grouped by device, multi-select); this copy was
            hidden by .fi-dup and unreachable, and the table pointed users at it
            anyway. Removed 2026-08-12 — do not re-add a second one. #}
+        {# @manual geo/facility#sensor-roles #}
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-sensor-role">
           <label class="aot-modal-option-label">{{ _('Location') }}</label>
           <div class="aot-modal-option-control">
@@ -828,6 +841,8 @@
             </select>
           </div>
         </div>
+        {# @manual geo/facility#actuator-roles #}
+        {# @manual-end #}
         <div class="aot-modal-option-row fi-dup d-none" id="fi-group-fan-role">
           <label class="aot-modal-option-label">{{ _('Fan Role') }}</label>
           <div class="aot-modal-option-control">
@@ -839,6 +854,7 @@
             </select>
           </div>
         </div>
+        {# @manual-end #}
         <!-- measurement_type: auto-set on channel selection — hidden, keeps data only -->
         <select id="fi-measurement-type" style="display:none;" aria-hidden="true"></select>
         <div class="aot-modal-option-row">
@@ -849,6 +865,7 @@
         </div>
       </div>
     </div>
+  {# @manual geo/facility#sensor-actuator-binding #}
   <div class="aot-modal-group-title">{{ _('Add Component') }}</div>
   <div class="aot-modal-container">
     <div class="aot-modal-option-row">
@@ -898,6 +915,7 @@
       </tbody>
     </table>
   </div>
+  {# @manual-end #}
   </div><!-- /#fac-tab-sensors -->
 
   <!-- ── Weather tab ── -->
@@ -1049,6 +1067,7 @@
     {{ _('Save the facility first to see the integration summary and run a device check.') }}
   </div>
 
+  {# @manual geo/facility#engineering-calculations #}
   <div class="aot-modal-group-title">{{ _('Capacity Preview') }}</div>
   <div class="aot-modal-container">
     <div class="aot-modal-detail-fields">
@@ -1066,6 +1085,7 @@
       {{ _('Hover heating/cooling for nameplate vs theoretical comparison.') }}
     </div>
   </div>
+  {# @manual-end #}
 
   <!-- ── IEC integration summary ─────────────────────────────────────────── -->
   <div id="integ-panel" style="display:none;">
@@ -1084,6 +1104,7 @@
   </div>
 
   <!-- ── Device Check ─────────────────────────────────────────────────────── -->
+  {# @manual geo/facility#device-check #}
   <div id="comm-panel" style="display:none;">
     <div class="aot-modal-group-title">{{ _('Device Check') }}</div>
     <div class="aot-modal-container">
@@ -1120,6 +1141,7 @@
 
     </div>
   </div>
+  {# @manual-end #}
 
   </div><!-- /step check -->
 
@@ -1144,7 +1166,7 @@
     losing: {{ _('Losing operation')|tojson }},
     nobody: {{ _('Nobody loses operation with this change.')|tojson }},
     comm_error: {{ _('Error: Unable to communicate with server.')|tojson }},
-    no_groups: {{ _('No groups yet. Create one in Settings > Users > Groups.')|tojson }},
+    no_groups: {{ _('No groups yet. Create one in Manage > System Management > Users > Groups.')|tojson }},
     saved: {{ _('Saved')|tojson }}
   };
 </script>
@@ -1189,6 +1211,7 @@ window._IEC = {
   volume:{{ _('Volume')|tojson }}, envelope:{{ _('Envelope')|tojson }}, u_eff:{{ _('U-effective')|tojson }},
   absorptance:{{ _('Absorptance')|tojson }}, solar_absorbed:{{ _('solar absorbed')|tojson }},
   vent_area:{{ _('Vent area')|tojson }}, none:{{ _('None')|tojson }},
+  preset_standard_arch:{{ _('Standard Arch')|tojson }}, structure_single:{{ _('Single-span')|tojson }}, structure_connected:{{ _('Multi-span')|tojson }},
   sec_actuators:{{ _('Actuator links')|tojson }}, sec_openings:{{ _('Openings')|tojson }},
   sec_sensors:{{ _('Sensor links')|tojson }}, sec_irrigation:{{ _('Irrigation system')|tojson }},
   layer_word:{{ _('layer')|tojson }}, th_sensor:{{ _('Sensor')|tojson }},
@@ -1226,9 +1249,6 @@ window._IEC = {
   plot_subject:{{ _('What is here')|tojson }}, plot_variety:{{ _('Variety')|tojson }},
   plot_started_on:{{ _('Start date')|tojson }},
   plot_expected_end:{{ _('Expected end')|tojson }},
-  {#- 계획 종료일이 지나도 제어는 멈추지 않는다(구획은 사람이 끝낼 때까지 끝나지
-     않는 경우가 정상이다) — 표시 전용 배지다. docs/design/coordinator-plot-targets.md. -#}
-  plot_overdue_n:{{ _('{n}d past planned end')|tojson }},
   plot_add:{{ _('Add a plot')|tojson }},
   plot_end:{{ _('End')|tojson }},
   plot_empty:{{ _('Nothing recorded here yet.')|tojson }},
@@ -1278,8 +1298,8 @@ window._IEC = {
   insp_position:{{ _('Position')|tojson }},
   env_ceiling:{{ _('Ceiling')|tojson }},
   env_vent_curtain:{{ _('Vent/Curtain')|tojson }},
-  stage_upper:{{ _('Upper')|tojson }},
-  stage_lower:{{ _('Lower')|tojson }},
+  stage_upper:{{ _('Upper stage')|tojson }},
+  stage_lower:{{ _('Lower stage')|tojson }},
   {#- Envelope-generated component names. These get their own msgids rather than
       reusing 'Lower'/'Upper'/'L'/'R': those already mean other things elsewhere
       ("Lower" is the PID direction, translated 하강) and a one-letter msgid would
@@ -1313,6 +1333,8 @@ window._IEC = {
   cat_hide:{{ _('Hide category')|tojson }},
   catalog_hint:{{ _('Select equipment from the current map to add as a fitting.')|tojson }},
   select_map_first:{{ _('Please select a map first.')|tojson }},
+  place_first:{{ _('Use "Place on Map" to set the facility location first.')|tojson }},
+  save_error:{{ _('Save error')|tojson }},
   no_fittings:{{ _('No fittings added yet.')|tojson }},
   no_actuators:{{ _('No actuators. Add one below.')|tojson }},
   load_fail:{{ _('Load failed: ')|tojson }},

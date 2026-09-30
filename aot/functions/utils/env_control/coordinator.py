@@ -78,6 +78,7 @@ from .log_channels import (
     REASON_WRONG_DIRECTION, REASON_SIDE_EFFECT, REASON_MANUAL_OVERRIDE,
     REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA, REASON_OPPOSING_PARKED,
     REASON_DEADZONE_BACKOFF, REASON_NIGHT_PARKED, REASON_NO_MEASUREMENT,
+    REASON_CURTAIN_DAY_OPEN, REASON_DIRECTION_UNSETTLED,
 )
 from .authority import is_natural_var
 from .types import (
@@ -91,6 +92,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 # Control-law tuning constants (profile.gains 로 액추에이터별 오버라이드 가능)
 # ─────────────────────────────────────────────────────────────────────────────
+# @manual ai/env-control#l3-coordinator-actuator-command
 PBAND_MULT = 6.0     # 비례 밴드 폭 = PBAND_MULT × tolerance (native). 편차가 이만큼이면 P=100%.
                      # 6 = 허용오차의 6배 편차에서 완전동작 → 작은 편차엔 부드럽게 반응
                      # (작게 할수록 민감/급격, 크게 할수록 완만). 평형개도는 적분이 찾음.
@@ -107,6 +109,14 @@ HOLD_FRAC  = 0.5     # 데드존 반폭 = tolerance×HOLD_FRAC. 이 안에서는
 # 3 = 잡음으로 세 번 연속 같은 쪽이 나올 확률이 낮으면서, 편차가 허용오차 안이라
 #     그동안의 손해가 제한적인 지점.
 DEADZONE_BACKOFF_CYCLES = 3
+# 미는 방향이 뒤집히면 새 방향이 이만큼 **이어져야** 따른다 — 사이클 수와 시간을
+# 둘 다 채워야 한다(60초 주기면 10사이클, 600초 주기면 2사이클). 그 전에는 제자리.
+# 창의 VPD 효과는 식힘(↓)과 건조한 외기(↑)가 겨룬 합이라, 둘이 비슷하면 실외 습도
+# 몇 %p 로 부호가 사이클마다 바뀐다 — 실측(2026-09-24 영양, 실외 RH 44↔53 %):
+# 천창이 10분마다 열림·닫힘을 번갈아 6시간 24회 반전했다. 효과 **크기**는 그때도
+# 0.12~0.27 kPa 로 작지 않아 유효도 하한(G_MIN_EFFECT)으로는 걸러지지 않는다.
+DRIVE_FLIP_MIN_CYCLES = 2
+DRIVE_FLIP_MIN_SEC = 600.0
 
 RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. **세** 자리가 쓴다 —
                      #  (a) 무구배·파킹: safe_default 로 수렴
@@ -115,6 +125,7 @@ RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. **세** 자리가 쓴
                      # 100 → 1 미만까지 약 11 사이클.
 AW_BETA    = 0.5     # back-calculation anti-windup 강도 (포화 **직후** 한정)
 RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
+# @manual-end
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 액추에이터 도메인 — 부하분담이 미치는 범위 (2026-08-26)
@@ -155,6 +166,7 @@ RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
 # 판정 문턱 — 잡음으로 게이트가 깜빡이지 않게 한다.
 #   need  : |목표-측정| 이 tolerance×VENT_NEED_FRAC 미만이면 '중립'(찬반 근거 아님)
 #   avail : |실외-측정| 이 tolerance 미만이면 환기로 의미 있게 못 옮긴다고 본다
+# @manual ai/env-control#settings-ventilation
 VENT_NEED_FRAC = HOLD_FRAC   # 데드존과 같은 기준 — 제어가 쉬는 구간은 판정도 쉰다
 
 # ── 환기 우선 (사용자 옵션 vent_first) ────────────────────────────────────────
@@ -194,11 +206,27 @@ VENT_HEADROOM_PCT  = 90.0    # 직전 **최대** 개도가 이보다 낮아야 '
 # 흔들림과 가른다" 는 같은 이유이고, 다르게 두면 화면이 "못 따라가고 있다"고
 # 말하는 동안에도 냉난방은 파킹돼 있는 구간이 생긴다.
 VENT_FIRST_PATIENCE_S = 900.0
+# @manual-end
 
+# @manual ai/env-control#l3-coordinator-actuator-command
 G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 변수를 비례밴드의
                      # 2.5%/cycle 미만으로밖에 못 움직이면(예: 환기인데 내외차 거의 없음)
                      # 권한 없음으로 보고 idle — 헛돌며 적분 와인드업 하는 것 방지.
                      # 측정상 무구배 g≈0.008~0.011, 약구배(ΔT≥1°C) g≳0.05 로 명확히 분리.
+
+# 유효도 문턱의 **이력(히스테리시스)**. 한 번 '구동력 있음' 으로 판정한 장치는
+# g 가 G_MIN_EFFECT 아래로 내려가도 이 비율 아래로 가기 전에는 그 판정을 유지한다.
+#
+# 문턱 하나로 가르면 g 가 문턱 근처에서 오르내릴 때 판정이 사이클마다 뒤집힌다.
+# 뒤집힐 때마다 무구배 경로가 명령과 적분을 RELAX_FACTOR 로 깎고, 다음 사이클에
+# PI 가 그 깎인 자리에서 다시 출발한다 — 톱니가 된다.
+#
+# 실측(2026-09-30 로컬 3포장, 갱신 60초): 측창이 100→0→70→0 % 를 20~30분
+# 주기로 오갔다. 내외 VPD 차 0.2 kPa · 풍속 0.7~1.4 m/s 에서 g 가 0.018~0.034 로
+# 문턱(0.025) 양쪽에 걸려 있었고, 실제 판정 로그(근거 1↔15)와 분 단위로 겹쳤다.
+# 진짜 무구배는 g≈0.008~0.011 이라 이 이력 폭(문턱의 절반 = 0.0125) 아래이므로
+# 그대로 걸러진다. 반대 방향 진입 문턱은 종전과 같다(G_MIN_EFFECT).
+GRADIENT_EXIT_FRAC = 0.5
 
 # ── 온도 상한 (2026-09-14) ───────────────────────────────────────────────────
 # VPD 를 직접 제어하면 `_decompose_vpd` 가 온도를 제어목표에서 뺀다. 그래서
@@ -223,10 +251,18 @@ G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 �
 # 효과 방향이 ↑ 라 창은 **닫히는** 쪽으로 간다.
 T_CEILING_TOL      = 1.0   # `_cycle_mixin` 의 T_tol 과 같다 — 비례 밴드 기준
 T_CEILING_PRIORITY = 1.0   # 초과 0 에서의 우선순위. (1 + 초과/허용오차) 배로 커진다
+# 한 번 켜진 온도 상한 항은 진입선보다 이만큼 더 내려가야 꺼진다(°C). 항이 켜지고
+# 꺼지는 것은 창이 "PI 로 식힌다" 와 "환기 무익 — 파킹(60 %씩 닫기)" 사이를 오가는
+# 것이다 — 실측(2026-09-24 영양 천창 리플레이): 실내 27.7~28.8 °C 가 진입선 28 °C 를
+# 오르내리며 85 → 65(파킹) → 85 → 65 % 로 10분마다 오르내렸다. 다른 하드 임계
+# 판정(0.5 °C)과 같은 폭이다.
+T_CEILING_HYST = 0.5
 _T_CEILING_DOMAINS      = frozenset({'vent'})
 _T_CEILING_HARD_DOMAINS = frozenset({'vent', 'hvac'})
+# @manual-end
 
 
+# @manual ai/env-control#l3-coordinator-actuator-command
 def _temperature_ceiling(situation: SituationReport, ctx: Dict,
                          cycle_sec: float) -> Optional[Tuple[float, bool]]:
     """(유도 상한 초과분 °C, 하드 상한 도달) — 걸린 것이 없으면 None.
@@ -245,7 +281,12 @@ def _temperature_ceiling(situation: SituationReport, ctx: Dict,
     # 선에 **닿기 전에** 반응한다 — 허용오차만큼 앞에서 시작한다. 선에서
     # 시작하면 유도 상한 = 하드 상한(하드 임계로 좁혀진 경우)일 때 막 넘은
     # 초과분이 데드존(허용오차 × HOLD_FRAC) 안이라 아무 일도 안 일어난다.
-    excess = max(0.0, projected - (float(ceiling) - T_CEILING_TOL))
+    start = float(ceiling) - T_CEILING_TOL
+    if ctx.get('_t_ceiling_active_prev'):
+        # 켜져 있던 항은 HYST 만큼 더 내려가야 꺼진다 — 그 구간의 초과분은 작아서
+        # 무게도 작다(가중치 연속화, `coordinate`).
+        start -= T_CEILING_HYST
+    excess = max(0.0, projected - start)
     hard_max = ctx.get('temp_max')
     hard = (bool((ctx.get('internal') or {}).get('_force_cool'))
             or (bool(hard_max) and projected >= float(hard_max)))
@@ -283,6 +324,15 @@ class CoordinatorState:
     # `drive_sign` 과 같은 이유로 **영속화하지 않는다**(재시작 후 한 사이클만
     # 보수적으로 쉬면 된다).
     deadzone_wrong_side: Dict[str, int] = field(default_factory=dict)
+    # 뒤집힌 구동 방향이 확정을 기다리는 중: {actuator_id: (새 부호, 지난 초, 사이클 수)}.
+    # 한 번이라도 옛 방향으로 돌아오면 지운다. `drive_sign` 과 같은 이유로 영속화하지 않는다.
+    drive_flip_pending: Dict[str, tuple] = field(default_factory=dict)
+    # 직전 사이클에 온도 상한 항이 켜져 있었나(T_CEILING_HYST). 영속화하지 않는다.
+    t_ceiling_active: bool = False
+    # 액추에이터가 직전 사이클에 '구동력 있음'(g 가 문턱 이상)이었나 — 유효도 문턱의
+    # 이력(GRADIENT_EXIT_FRAC). 없는 항목은 False(=종전대로 G_MIN_EFFECT 로 진입).
+    # 영속화하지 않는다 — 재시작 직후 한 사이클만 종전 규칙으로 돌면 된다.
+    gradient_active: Dict[str, bool] = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -312,6 +362,7 @@ CoordResult = Dict[str, ActuatorCommand]
 # Main entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#settings-ventilation
 @dataclass
 class ParkDecision:
     """한 사이클의 파킹·제자리 판정 — PI(`coordinate`)와 MPC(`_run_mpc`)가 함께 읽는다.
@@ -331,8 +382,10 @@ class ParkDecision:
     futile_ids: set = field(default_factory=set)       # 환기 무익
     interlock_ids: set = field(default_factory=set)    # 냉난방 연동 잠금
     vent_first_ids: set = field(default_factory=set)   # 환기 우선으로 쉬는 냉난방
+    day_open_ids: set = field(default_factory=set)     # 낮 — 걷어 두는 보온커튼
 
 
+# @manual ai/env-control#settings-ventilation
 def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
                    ctx: Dict, cycle_sec: float, prev_commands: Dict[str, float],
                    vent_first_held_s: float = 0.0,
@@ -556,13 +609,25 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
             '실외 측정 없음(지어낸 값) — 개구부 %d개 제자리 유지: %s',
             len(hold_ids), sorted(i[:8] for i in hold_ids))
 
+    # ── 낮에는 보온커튼을 걷어 둔다 ───────────────────────────────────────────
+    # 효과 모델은 커튼의 **열 교환**만 안다(걷힘 = 외기와 섞임). 빛을 막는다는
+    # 사실은 모델 밖에 있어서, 맡겨 두면 VPD 를 올리려 낮에도 닫는다 — 실측
+    # (2026-09-25 영양): 오전 8시 22분에 닫혀 다음 날 정오까지 그대로였다. 낮·밤은
+    # 시설 위치의 일출·일몰로 가른다(호출자, `curtain_day_open`). 모르면(좌표 없음)
+    # 걸지 않는다. 차광막은 빛을 다루는 장치라 대상이 아니다.
+    day_open_ids = ({p.actuator_id for p in available
+                     if getattr(p, 'kind', '') == 'curtain'}
+                    if bool(ctx.get('curtain_day_open', False)) else set())
+
     return ParkDecision(
         park_ids=park_ids, night_parked=night_parked, opposing_ids=opposing_ids,
         hold_ids=hold_ids, ceiling_ids=ceiling_ids, vent_credit=vent_credit,
         t_ceiling=t_ceiling, vent_first_held_s=held, futile_ids=futile_ids,
-        interlock_ids=interlock_ids, vent_first_ids=vent_first_ids)
+        interlock_ids=interlock_ids, vent_first_ids=vent_first_ids,
+        day_open_ids=day_open_ids)
 
 
+# @manual ai/env-control#l3-coordinator-actuator-command, ai/env-control#actuators-missing
 def coordinate(
     situation: SituationReport,
     profiles: List[ActuatorProfile],
@@ -603,6 +668,9 @@ def coordinate(
         integral=migrated_integral,
         active_vars=dict(state.active_vars),
         drive_sign=dict(state.drive_sign or {}),
+        drive_flip_pending=dict(getattr(state, 'drive_flip_pending', None) or {}),
+        t_ceiling_active=bool(getattr(state, 't_ceiling_active', False)),
+        gradient_active=dict(getattr(state, 'gradient_active', None) or {}),
         vent_first_held_s=float(getattr(state, 'vent_first_held_s', 0.0) or 0.0),
         # ⚠ **복사하지 않는다 — 매 사이클 새로 센다.** 이 카운터는 "지금
         # 데드존 안에서 반대쪽에 있다" 의 연속 횟수인데, 복사해 들고 다니면
@@ -652,15 +720,22 @@ def coordinate(
     }
 
     # ── 2.5~2.6. 파킹·제자리 판정 — `decide_parking` 한 곳에서(MPC 도 같은 것을 읽는다)
+    # 그림자 계산(`unique_id=''` — 제어 기준 비교 등)은 판정 로그를 남기지 않는다.
+    # 남기면 본 계산과 다른 기준의 인내 시간이 매 사이클 "판정이 풀렸습니다(N분
+    # 지속)" 로 찍힌다(2026-09-26 리플레이에서 1분마다 N 이 1씩 늘며 반복).
+    ctx['_t_ceiling_active_prev'] = bool(getattr(state, 't_ceiling_active', False))
     _pk = decide_parking(available, situation, ctx, cycle_sec,
                          state.prev_commands,
-                         getattr(state, 'vent_first_held_s', 0.0) or 0.0)
+                         getattr(state, 'vent_first_held_s', 0.0) or 0.0,
+                         log=bool(unique_id))
     new_state.vent_first_held_s = _pk.vent_first_held_s
+    new_state.t_ceiling_active = _pk.t_ceiling is not None
     park_ids = _pk.park_ids
     night_parked = _pk.night_parked
     opposing_ids = _pk.opposing_ids
     hold_ids = _pk.hold_ids
     ceiling_ids = _pk.ceiling_ids
+    day_open_ids = _pk.day_open_ids
     vent_credit = _pk.vent_credit
     t_ceiling = _pk.t_ceiling
 
@@ -849,6 +924,14 @@ def coordinate(
                     _e_t = (-_resid_t * _sign_t) / _pband_t
                     _g_t = _eff_t.magnitude_native / _pband_t
                     _pri_t = T_CEILING_PRIORITY * (1.0 + _excess / T_CEILING_TOL)
+                    if not _hard:
+                        # 선에 막 닿았을 때 가중치가 0 에서 **연속으로** 커지게 한다.
+                        # 예전에는 초과 0⁺ 에서 바로 우선순위 1 로 들어와, 오차가 0 에
+                        # 가까운 이 항이 결합 오차(가중 평균)를 한 사이클에 절반쯤으로
+                        # 희석했다 — 실내가 선 근처를 오르내리면 창이 사이클마다 계단으로
+                        # 오르내렸다(2026-09-24 영양 천창, 14:05 39.7 → 19.7 %). 허용오차
+                        # 1개 이상 넘으면 종전과 같다. 하드 상한은 그대로(안전).
+                        _pri_t *= min(1.0, _excess / T_CEILING_TOL)
                     terms.append(('temperature', _pri_t * _g_t, _e_t, _g_t,
                                   _excess / T_CEILING_TOL * _pri_t + 1e6 * _hard))
                     if _hard and _e_t > 0.0:
@@ -861,20 +944,34 @@ def coordinate(
             max_g = max((tm[3] for tm in terms), default=0.0)
             primary_var = (max(terms, key=lambda tm: tm[4])[0] if terms else None)
 
-            if p.actuator_id in hold_ids:
+            # 유효도 문턱은 이력을 갖는다(GRADIENT_EXIT_FRAC 주석). 구동력이 있던
+            # 장치는 문턱의 절반 아래로 내려가야 '없음' 이 되고, 없던 장치는 문턱을
+            # 넘어야 '있음' 이 된다 — 문턱 근처의 흔들림이 판정을 뒤집지 못한다.
+            _was_active = bool(
+                (getattr(state, 'gradient_active', None) or {}).get(p.actuator_id))
+            _g_floor = G_MIN_EFFECT * (GRADIENT_EXIT_FRAC if _was_active else 1.0)
+            weak_gradient = den <= 1e-12 or max_g < _g_floor
+            new_state.gradient_active[p.actuator_id] = not weak_gradient
+
+            if p.actuator_id in day_open_ids:
+                # 낮 — 보온커튼은 걷어 둔다(`decide_parking` 주석). 적분도 그 자리로
+                # 맞춘다 — 해가 진 뒤 코디네이터가 '걷혀 있다' 에서 출발해야 한다.
+                I = 100.0
+                cmd_raw = 100.0
+                reason = REASON_CURTAIN_DAY_OPEN
+            elif p.actuator_id in hold_ids:
                 # 실외 근거 없음 → **제자리**. 감쇠하지 않는다(그건 닫는 것이다).
                 # 적분도 그대로 둔다 — 모르는 동안 '평형 개도 기억'을 흔들면 실외가
                 # 돌아왔을 때 엉뚱한 자리에서 다시 출발한다.
                 cmd_raw = _clamp(prev_val, 0.0, 100.0)
                 reason = REASON_NO_OUTDOOR_DATA
-            elif (p.actuator_id in blind_ids
-                    and (den <= 1e-12 or max_g < G_MIN_EFFECT)):
+            elif p.actuator_id in blind_ids and weak_gradient:
                 # 실내 측정 없음(2.8) → 제자리. hold_ids 와 같은 처리다 —
                 # 감쇠하지 않고 적분도 그대로 둔다(모르는 동안 '평형 개도
                 # 기억' 을 흔들면 센서가 돌아왔을 때 엉뚱한 자리에서 출발한다).
                 cmd_raw = _clamp(prev_val, 0.0, 100.0)
                 reason = REASON_NO_MEASUREMENT
-            elif den <= 1e-12 or max_g < G_MIN_EFFECT or p.actuator_id in park_ids:
+            elif weak_gradient or p.actuator_id in park_ids:
                 # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
                 # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle
                 # 위치(safe_default)로 부드럽게 수렴하고 적분을 풀어준다. 100% 가동해도
@@ -892,8 +989,18 @@ def coordinate(
                 # 명령 급변이 발생한다(2026-07-29 aot-005 폭염 중 보온커튼 오폐쇄 사건의
                 # 원인). prev_val 은 dispatch 좌표 그대로이므로 이 괴리가 없다.
                 sd = p.safe_default
-                I = sd + (prev_val - sd) * RELAX_FACTOR
-                cmd_raw = _clamp(I, 0.0, 100.0)
+                if getattr(p, 'kind', '') == 'curtain' and p.actuator_id not in park_ids:
+                    # 보온커튼은 **제자리**다. safe_default(100 = 걷힘)는 고장·게이트
+                    # 때 돌아갈 자리이지 제어 방향이 아니다(데드존 물러남과 같은
+                    # 이유, 2026-09-22). 이리로 풀면 밤에 안팎 온도차가 작아지는
+                    # 순간 커튼이 걷힌다 — 실측(2026-09-24 영양): 실내 14~18°C·VPD
+                    # 목표보다 0.8 낮은 채 밤새 100 %. 한 사이클 풀림이 정확히 40 %
+                    # (100 + (0−100)×0.6)로 찍혀 "왜 40 인가" 도 이것이었다.
+                    I = prev_val
+                    cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                else:
+                    I = sd + (prev_val - sd) * RELAX_FACTOR
+                    cmd_raw = _clamp(I, 0.0, 100.0)
                 # 같은 감쇠 경로를 쓰되 **사유는 나눈다** — 맞서는 짝의 진 쪽은
                 # "밀어도 안 움직인다"(무구배)가 아니라 "지금 밀 방향이 아니다"다.
                 # 야간 파킹은 사용자가 켠 옵션의 결과다 — 무구배로 뭉치면
@@ -966,61 +1073,83 @@ def coordinate(
                     # 같은 뜻을 갖는 조치는 **실제 서 있는 자리로 되앉히는 것**이다:
                     # 옛 방향의 기억은 지우면서 물리적 연속성은 지킨다.
                     _sign = 1 if e_eff > 0 else -1
-                    if new_state.drive_sign.get(p.actuator_id, 0) == -_sign:
-                        I = _clamp(prev_val, 0.0, 100.0)
-                    new_state.drive_sign[p.actuator_id] = _sign
-
-                    _I_entry = I      # 이번 사이클 누적 전(방향 전환 되앉힘 후)
-                    I = _clamp(I + ki * e_eff, 0.0, 100.0)
-                    p_term = kp * e_eff * 100.0
-                    cmd_unclamped = p_term + I
-                    cmd_raw = _clamp(cmd_unclamped, 0.0, 100.0)
-                    if cmd_unclamped != cmd_raw:
-                        if abs(prev_val - cmd_raw) <= RAIL_EPS:
-                            # ── 레일 고착 회복 경로 ────────────────────────────
-                            # 직전 dispatch 가 이미 이 레일이다 = 최소 한 사이클
-                            # 이상 여기 눌러붙어 있었다. 그 상태의 적분은 '기억된
-                            # 평형 개도'가 아니라 **포화 부산물**이라 값에 뜻이 없다.
-                            # 실제 개도(cmd_raw) 쪽으로 기하 감쇠시켜 적분이 자기
-                            # 정의(=이 액추에이터가 서 있는 자리)를 되찾게 한다.
-                            I = cmd_raw + (I - cmd_raw) * RELAX_FACTOR
-                        elif cmd_unclamped < 0.0:
-                            # ── 아래쪽 레일 갓 포화 — 적분 **동결** (2026-09-19) ──
-                            # back-calculation `I −= (u − c)·β` 은 여기서 I 를
-                            # **위로** 민다(u < 0). 교과서에서는 P + I 를 레일에
-                            # 맞추는 동작이지만, 이 코드의 적분은 '기억된 평형
-                            # 개도(%)' 라 그 값은 P 의 거울상일 뿐 뜻이 없다.
-                            # P 가 커지면 그대로 드러난다 — 로컬 섀도 실행(하드
-                            # 온도 상한, 실외가 더 더워 닫는 중)에서 개도 0 %·10 %
-                            # 인 개구부 둘의 적분이 한 사이클에 0→100, 3.53→100
-                            # 이 됐다. 상한이 풀린 뒤에도 '조금 더 닫아라' 면
-                            # 방향 전환 되앉힘이 돌지 않아 `cmd = P + 100` 이 창을
-                            # **연다**. 상한이 아니어도 같은 경로로 추운데 창이
-                            # 열린 채 버틴다(합성 폐루프 A/B: IAE 295 → 187).
-                            #
-                            # 그래서 조건부 적분 — 막힌 방향으로 가는 이번 사이클의
-                            # 누적을 버리고, 슬루 되먹임도 걸지 않는다(아래). 적분은
-                            # 이 사이클에 들어올 때의 값 그대로다: 포화가 **새로
-                            # 더하는 것이 없다.**
-                            #
-                            # ⚠ '실제 개도로 되앉힘'(I = min(I, 개도))은 고르지
-                            # 않았다. 기억된 평형까지 지워서, 강한 외란이 잠깐
-                            # 창을 닫았다 풀리면 적분이 0 에서 다시 쌓여야 한다 —
-                            # ki 가 사이클당 0.2 % 라 100 사이클 넘게 2.6 °C 벗어난
-                            # 채 고착됐다(합성 A/B: IAE 96 → 284, 동결은 105).
-                            # 레일에 **계속** 붙어 있으면 레일 회복 경로가 따로
-                            # 실제 개도로 감쇠시킨다(위 분기).
-                            # ⚠ 위쪽 레일은 종전 back-calculation 그대로다. 같은
-                            # A/B 에서 위쪽까지 동결하면 짧은 고온 스파이크 뒤
-                            # 회복이 나빠졌다(IAE 108 → 138).
-                            I = _I_entry
-                            _freeze_lower = True
+                    _flipped = new_state.drive_sign.get(p.actuator_id, 0) == -_sign
+                    if _flipped:
+                        # 뒤집힌 방향은 이어져야 따른다(DRIVE_FLIP_* 주석).
+                        _pend = new_state.drive_flip_pending.get(p.actuator_id)
+                        if _pend and _pend[0] == _sign:
+                            _pend = (_sign, _pend[1] + float(cycle_sec), _pend[2] + 1)
                         else:
-                            # 위쪽 레일 갓 포화 — 표준 back-calculation(포화분만큼
-                            # 되돌림). 첫 사이클의 빠른 anti-windup 은 그대로 둔다.
-                            I = _clamp(I - (cmd_unclamped - cmd_raw) * AW_BETA,
-                                       0.0, 100.0)
-                    reason = REASON_PRIMARY
+                            _pend = (_sign, 0.0, 1)
+                        if (_pend[2] < DRIVE_FLIP_MIN_CYCLES
+                                or _pend[1] < DRIVE_FLIP_MIN_SEC):
+                            new_state.drive_flip_pending[p.actuator_id] = _pend
+                            _unsettled = True
+                        else:
+                            new_state.drive_flip_pending.pop(p.actuator_id, None)
+                            I = _clamp(prev_val, 0.0, 100.0)
+                            _unsettled = False
+                    else:
+                        new_state.drive_flip_pending.pop(p.actuator_id, None)
+                        _unsettled = False
+                    if _unsettled:
+                        # 제자리 — 적분도 그대로(옛 방향의 기억을 아직 지우지 않는다).
+                        cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                        reason = REASON_DIRECTION_UNSETTLED
+                    else:
+                        new_state.drive_sign[p.actuator_id] = _sign
+
+                        _I_entry = I      # 이번 사이클 누적 전(방향 전환 되앉힘 후)
+                        I = _clamp(I + ki * e_eff, 0.0, 100.0)
+                        p_term = kp * e_eff * 100.0
+                        cmd_unclamped = p_term + I
+                        cmd_raw = _clamp(cmd_unclamped, 0.0, 100.0)
+                        if cmd_unclamped != cmd_raw:
+                            if abs(prev_val - cmd_raw) <= RAIL_EPS:
+                                # ── 레일 고착 회복 경로 ────────────────────────────
+                                # 직전 dispatch 가 이미 이 레일이다 = 최소 한 사이클
+                                # 이상 여기 눌러붙어 있었다. 그 상태의 적분은 '기억된
+                                # 평형 개도'가 아니라 **포화 부산물**이라 값에 뜻이 없다.
+                                # 실제 개도(cmd_raw) 쪽으로 기하 감쇠시켜 적분이 자기
+                                # 정의(=이 액추에이터가 서 있는 자리)를 되찾게 한다.
+                                I = cmd_raw + (I - cmd_raw) * RELAX_FACTOR
+                            elif cmd_unclamped < 0.0:
+                                # ── 아래쪽 레일 갓 포화 — 적분 **동결** (2026-09-19) ──
+                                # back-calculation `I −= (u − c)·β` 은 여기서 I 를
+                                # **위로** 민다(u < 0). 교과서에서는 P + I 를 레일에
+                                # 맞추는 동작이지만, 이 코드의 적분은 '기억된 평형
+                                # 개도(%)' 라 그 값은 P 의 거울상일 뿐 뜻이 없다.
+                                # P 가 커지면 그대로 드러난다 — 로컬 섀도 실행(하드
+                                # 온도 상한, 실외가 더 더워 닫는 중)에서 개도 0 %·10 %
+                                # 인 개구부 둘의 적분이 한 사이클에 0→100, 3.53→100
+                                # 이 됐다. 상한이 풀린 뒤에도 '조금 더 닫아라' 면
+                                # 방향 전환 되앉힘이 돌지 않아 `cmd = P + 100` 이 창을
+                                # **연다**. 상한이 아니어도 같은 경로로 추운데 창이
+                                # 열린 채 버틴다(합성 폐루프 A/B: IAE 295 → 187).
+                                #
+                                # 그래서 조건부 적분 — 막힌 방향으로 가는 이번 사이클의
+                                # 누적을 버리고, 슬루 되먹임도 걸지 않는다(아래). 적분은
+                                # 이 사이클에 들어올 때의 값 그대로다: 포화가 **새로
+                                # 더하는 것이 없다.**
+                                #
+                                # ⚠ '실제 개도로 되앉힘'(I = min(I, 개도))은 고르지
+                                # 않았다. 기억된 평형까지 지워서, 강한 외란이 잠깐
+                                # 창을 닫았다 풀리면 적분이 0 에서 다시 쌓여야 한다 —
+                                # ki 가 사이클당 0.2 % 라 100 사이클 넘게 2.6 °C 벗어난
+                                # 채 고착됐다(합성 A/B: IAE 96 → 284, 동결은 105).
+                                # 레일에 **계속** 붙어 있으면 레일 회복 경로가 따로
+                                # 실제 개도로 감쇠시킨다(위 분기).
+                                # ⚠ 위쪽 레일은 종전 back-calculation 그대로다. 같은
+                                # A/B 에서 위쪽까지 동결하면 짧은 고온 스파이크 뒤
+                                # 회복이 나빠졌다(IAE 108 → 138).
+                                I = _I_entry
+                                _freeze_lower = True
+                            else:
+                                # 위쪽 레일 갓 포화 — 표준 back-calculation(포화분만큼
+                                # 되돌림). 첫 사이클의 빠른 anti-windup 은 그대로 둔다.
+                                I = _clamp(I - (cmd_unclamped - cmd_raw) * AW_BETA,
+                                           0.0, 100.0)
+                        reason = REASON_PRIMARY
 
             if p.actuator_id in ceiling_ids and cmd_raw > prev_val:
                 # 더 열지 않음(2.7). 근거는 16(판단할 근거 없음, 제자리) —
@@ -1112,6 +1241,7 @@ def coordinate(
 # 실외를 모를 때 개구부 규칙 — coordinate() 와 MPC 경로가 **같은 판정**을 쓴다
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#pre-gate-checked-before-l1l3
 def vent_open_ceiling_ids(ctx: dict, vents) -> set:
     """"더 열지 않음" 을 걸 개구부 id — 강우·풍속을 잃었을 때(2.7).
 
@@ -1131,6 +1261,7 @@ def vent_open_ceiling_ids(ctx: dict, vents) -> set:
     return {p.actuator_id for p in vents if getattr(p, 'kind', '') == 'opening'}
 
 
+# @manual ai/env-control#pre-gate-checked-before-l1l3, ai/env-control#settings-ventilation
 def limit_vent_for_unknown_outdoor(ctx: dict, profile, value: float,
                                    prev: float) -> Tuple[float, Optional[int]]:
     """적분이 없는 경로(MPC)용 — 2.6 제자리 · 2.7 더 열지 않음을 한 번에 건다.
@@ -1155,6 +1286,7 @@ def limit_vent_for_unknown_outdoor(ctx: dict, profile, value: float,
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# @manual ai/env-control#l3-coordinator-actuator-command
 def finalize_command(
     p: ActuatorProfile,
     aperture_pct: float,
@@ -1238,6 +1370,7 @@ def _outdoor_reachable(var: str, ctx: Dict) -> Optional[float]:
     return None
 
 
+# @manual ai/env-control#settings-ventilation
 def _ventilation_reaches_all_targets(
         situation: SituationReport, ctx: Dict, vents: List[ActuatorProfile],
         prev_commands: Dict[str, float]) -> bool:
@@ -1284,6 +1417,7 @@ def _ventilation_reaches_all_targets(
     return decisive
 
 
+# @manual ai/env-control#settings-ventilation
 def _ventilation_credit(
         situation: SituationReport, ctx: Dict, vents: List[ActuatorProfile],
         blocked: set) -> Dict[str, float]:
@@ -1357,6 +1491,7 @@ def _ventilation_credit(
     return out
 
 
+# @manual ai/env-control#settings-ventilation
 def _ventilation_is_futile(profile: ActuatorProfile,
                            situation: SituationReport,
                            ctx: Dict) -> bool:

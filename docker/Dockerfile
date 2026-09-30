@@ -43,6 +43,17 @@ RUN pip install --no-cache-dir --upgrade pip setuptools \
 FROM python:3.11-slim
 
 ENV INSTALL_TARGET=docker
+# 이 이미지로 뜬 컨테이너는 (docker-compose 든 단독 `docker run` 이든) 항상
+# Docker 컨테이너다 -- 그런데 이 값은 각 docker-compose*.yml 의 `environment:`
+# 에서만 켜져 있었다. 그래서 compose 없이 이 이미지를 그대로 실행하면(예:
+# Docker Desktop 의 "Run" 버튼) DOCKER_CONTAINER 가 꺼진 채로 뜨고,
+# register_extensions()(aot_flask/app.py)의 "Docker 환경이면 강제 HTTPS 끄기"
+# 분기가 발동하지 않아 Misc.force_https 기본값(True)이 그대로 적용된다. 그
+# 결과 HTTP 만 서빙하는 컨테이너(CMD 의 `-s`)가 모든 요청을 https:// 로
+# 302 리다이렉트해 브라우저가 접속하지 못한다(2026-09-28 실측). compose
+# 파일들은 이미 같은 값을 명시적으로 주므로 여기서 기본값으로 바꿔도 그쪽
+# 동작은 그대로다.
+ENV DOCKER_CONTAINER=TRUE
 WORKDIR /app
 
 # Node.js: genuinely needed at runtime (aot/ai/agents/mcp_*.py shells out to

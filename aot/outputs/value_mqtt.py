@@ -13,6 +13,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.utils import random_alphanumeric
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -30,7 +31,7 @@ channels_dict = {
 
 OUTPUT_INFORMATION = {
     'output_name_unique': 'MQTT_PAHO_VALUE',
-    'output_name': "{}: MQTT Publish".format(lazy_gettext('Value')),
+    'output_name': lazy_format("{}: MQTT Publish", lazy_gettext('Value')),
     'output_library': 'paho-mqtt',
     'output_manufacturer': 'AoT',
     'measurements_dict': measurements_dict,

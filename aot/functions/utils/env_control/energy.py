@@ -36,6 +36,7 @@ KIND_UNIT_PRICE = {
 }
 
 
+# @manual ai/env-control#actuators
 def actuator_kw(kind: str, capacity_meta: dict | None) -> float:
     """장치 한 대의 kW(위 우선순위)."""
     cap = capacity_meta or {}
@@ -53,6 +54,7 @@ def unit_price(kind: str) -> float:
     return float(KIND_UNIT_PRICE.get(kind, 1.0))
 
 
+# @manual ai/env-control#actuators
 def electric_kw(amps, volts) -> float:
     """전류(A)·전압(V) → kW. 모르면 0."""
     try:

@@ -4,6 +4,7 @@ from flask_babel import lazy_gettext
 from aot.actions.base_action import AbstractFunctionAction
 from aot.config import AOT_DB_PATH
 from aot.config_translations import TRANSLATIONS
+from aot.utils.lazy_text import lazy_join
 from aot.databases.models import Actions
 from aot.databases.utils import session_scope
 from aot.utils.database import db_retrieve_table_daemon
@@ -12,7 +13,7 @@ from aot.utils.note_factory import create_note_record
 
 ACTION_INFORMATION = {
     'name_unique': 'create_note',
-    'name': f"{TRANSLATIONS['create']['title']}: {TRANSLATIONS['note']['title']}",
+    'name': lazy_join(TRANSLATIONS['create']['title'], ': ', TRANSLATIONS['note']['title']),
     'message': lazy_gettext('Create a note with the selected options.'),
     'library': None,
     'manufacturer': 'AoT',

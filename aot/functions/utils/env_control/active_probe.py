@@ -16,6 +16,7 @@ env_control/active_probe.py — 능동 탐색 스케줄러 (Stage 1).
   - 2 사이클 유지 후 원복
   - CalibrationRegistry.push_cycle 에 is_probe=True 전달
 """
+# @manual ai/env-control#settings-calibration
 
 from __future__ import annotations
 

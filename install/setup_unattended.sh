@@ -155,7 +155,7 @@ else
 fi
 
 # ------------------------------------------------------------------
-# Mosquitto MQTT 브로커 (Docker 제외)
+# Mosquitto MQTT 브로커 (Docker 제외) — 기본은 로컬 전용, AOT_MQTT_LISTEN_ALL=1 이면 네트워크 개방
 # ------------------------------------------------------------------
 if [[ "${INSTALL_TARGET}" != "docker" ]]; then
     echo "#### 설치 중: mosquitto MQTT broker" | tee -a "${LOG_LOCATION}"
@@ -165,16 +165,26 @@ if [[ "${INSTALL_TARGET}" != "docker" ]]; then
         echo "#### mosquitto 이미 설치됨 - 건너뜀" | tee -a "${LOG_LOCATION}"
     fi
 
-    echo "#### mosquitto 외부 연결 허용 설정 중" | tee -a "${LOG_LOCATION}"
+    echo "#### mosquitto 설정 중 (기본: 이 기기에서만 접속)" | tee -a "${LOG_LOCATION}"
     MOSQUITTO_CONF="/etc/mosquitto/conf.d/aot.conf"
     if [ ! -f "$MOSQUITTO_CONF" ]; then
-        cat <<EOF > "$MOSQUITTO_CONF"
+        if [ "${AOT_MQTT_LISTEN_ALL:-0}" = "1" ]; then
+            cat <<EOF > "$MOSQUITTO_CONF"
 listener 1883
 allow_anonymous true
 EOF
-        echo "#### ${MOSQUITTO_CONF} 생성 완료" | tee -a "${LOG_LOCATION}"
+            echo "#### ${MOSQUITTO_CONF} 생성 완료" | tee -a "${LOG_LOCATION}"
+            echo "#### 경고: MQTT 1883 포트가 인증 없이 네트워크 전체에 열렸습니다. 신뢰하는 네트워크에서만 쓰세요." | tee -a "${LOG_LOCATION}"
+        else
+            cat <<EOF > "$MOSQUITTO_CONF"
+listener 1883 127.0.0.1
+allow_anonymous true
+EOF
+            echo "#### ${MOSQUITTO_CONF} 생성 완료" | tee -a "${LOG_LOCATION}"
+        fi
     else
         echo "#### ${MOSQUITTO_CONF} 이미 존재 - 덮어쓰지 않음" | tee -a "${LOG_LOCATION}"
+        ${INSTALL_CMD} mosquitto-check 2>&1 | tee -a "${LOG_LOCATION}"
     fi
 
     if ! grep -q '^include_dir /etc/mosquitto/conf.d' /etc/mosquitto/mosquitto.conf 2>/dev/null; then

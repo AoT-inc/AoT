@@ -781,24 +781,45 @@ class SystemToolsMixin:
 
         def _crops_summary():
             cs = S.get_crop_status() or {}
+            # `open_field_plots`/`facility_bay_plots` 는 get_crop_status 자체가
+            # (2026-09-29부터) limit=30 으로 자를 수 있다 — 개수는 그 잘린
+            # 목록의 len() 이 아니라 원본이 낸 참값(`plot_count`/
+            # `facility_bay_plot_count`)으로 센다. 그 값을 그대로 더해서도 안
+            # 된다 — `plot_count` 는 노지만 세므로 시설 구획과 더해야 합이
+            # 맞는다(실측: 39 / 39 / 5).
             open_plots = cs.get("open_field_plots") or []
             bay_plots = cs.get("facility_bay_plots") or []
+            n_open = cs.get("plot_count", len(open_plots))
+            n_bay = cs.get("facility_bay_plot_count", len(bay_plots))
             subjects = []
             for p in list(open_plots) + list(bay_plots):
                 sub = p.get("crop") or p.get("subject")
                 if sub and sub not in subjects:
                     subjects.append(sub)
-            # `plot_count` 를 원본에서 그대로 가져오면 안 된다 — 그 값은 노지만
-            # 세므로 시설 구획과 더하면 합이 맞지 않는다(실측: 39 / 39 / 5).
-            return {
-                "plot_count": len(open_plots) + len(bay_plots),
-                "open_field": len(open_plots),
-                "in_facility": len(bay_plots),
+            # 시설 행은 이름·작물·단계만 남긴다. `controlled_by`(uuid)·
+            # `season_window`·growth_stage 상세는 get_crop_status 가 내는 것과
+            # **완전히 같은 값**이라 여기 다시 실으면 브리핑이 그 도구의 크기를
+            # 그대로 흡수한다 — "see" 가 이미 그쪽을 가리킨다.
+            facilities = [
+                {k: f.get(k) for k in ('facility_name', 'crop', 'stage')
+                 if f.get(k) is not None}
+                for f in (cs.get("facilities") or [])]
+            out = {
+                "plot_count": n_open + n_bay,
+                "open_field": n_open,
+                "in_facility": n_bay,
                 "subjects": _capped(subjects),
-                # 시설은 몇 개뿐이고 작물·단계가 붙어 있어 그대로 둔다.
-                "facilities": cs.get("facilities") or [],
+                "facilities": facilities,
                 "see": "get_crop_status for every plot with its stage and guidance",
             }
+            if cs.get("truncated"):
+                out["note"] = ("get_crop_status truncated its plot lists at "
+                               "the default limit — 'plot_count' above is "
+                               "still the true total, but 'subjects' may be "
+                               "missing some crops beyond the cut. Call "
+                               "get_crop_status directly (with a higher "
+                               "limit) for every plot.")
+            return out
 
         def _control_summary():
             st = S.get_control_state() or {}

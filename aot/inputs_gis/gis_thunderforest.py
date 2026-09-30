@@ -15,6 +15,7 @@ CHANNELS = {
     8: {'name': 'Neighbourhood', 'options': {'layer': 'neighbourhood'}},
 }
 
+# @manual geo/layers#international-general
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_thunderforest',
     'input_manufacturer': 'Thunderforest',

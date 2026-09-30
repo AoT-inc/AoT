@@ -12,6 +12,7 @@ from aot.inputs.sensorutils import convert_from_x_to_y_unit
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import get_measurement
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 
 def constraints_pass_positive_value(mod_input, value):
@@ -138,7 +139,7 @@ INPUT_INFORMATION = {
         ('pip-pypi', 'wiringpi', 'wiringpi'),
         ('pip-pypi', 'pipyadc_py3', 'git+https://github.com/aot-inc/PiPyADC-py3.git')  # PiPyADC ported to Python3
     ],
-    'interfaces': ['UART'],
+    'interfaces': ['SPI'],
 
     # TODO: Next major revision, move settings such as these to custom_options
     'adc_gain': [
@@ -219,7 +220,7 @@ INPUT_INFORMATION = {
                 'Input',
                 'Function'
             ],
-            'name': "{}: {}".format(lazy_gettext('Temperature Compensation'), lazy_gettext('Measurement')),
+            'name': lazy_format("{}: {}", lazy_gettext('Temperature Compensation'), lazy_gettext('Measurement')),
             'phrase': lazy_gettext('Select a measurement for temperature compensation')
         },
         {
@@ -228,7 +229,7 @@ INPUT_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: {} ({})".format(lazy_gettext('Temperature Compensation'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Temperature Compensation'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {

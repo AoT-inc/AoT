@@ -84,6 +84,7 @@ def page_facility():
         devices_tmp[dm.device_id]['channels'].append({
             'measurement_id': dm.unique_id,
             'measurement':    dm.measurement or '',
+            'measurement_name': str(utils_general.find_name_measurement(dict_measurements, dm.measurement or '')),
             'unit':           _effective_unit(dm),
         })
     input_devices = sorted(devices_tmp.values(), key=lambda d: inp_order.get(d['input_id'], 9999))
@@ -125,6 +126,7 @@ def page_facility():
         func_devices_tmp[dm.device_id]['channels'].append({
             'measurement_id': dm.unique_id,
             'measurement':    dm.measurement or '',
+            'measurement_name': str(utils_general.find_name_measurement(dict_measurements, dm.measurement or '')),
             'unit':           _effective_unit(dm),
         })
     function_devices = sorted(
@@ -146,6 +148,7 @@ def page_facility():
     )
 
 
+# @manual geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/list', methods=['GET'])
 @login_required
 def api_facility_list():
@@ -177,6 +180,7 @@ def api_facility_list():
     return jsonify({'ok': True, 'facilities': result})
 
 
+# @manual geo/facility#integration-view, geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/<facility_uuid>/integration', methods=['GET'])
 @login_required
 def api_facility_integration(facility_uuid):
@@ -201,6 +205,7 @@ def api_facility_integration(facility_uuid):
     return jsonify({'ok': True, **result})
 
 
+# @manual geo/facility#natural-ventilation-wind-pressure-simulation, geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/<facility_uuid>/wind', methods=['GET'])
 @login_required
 def api_facility_wind(facility_uuid):
@@ -261,6 +266,7 @@ def api_facility_wind(facility_uuid):
     })
 
 
+# @manual geo/facility#engineering-calculations, geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/compute', methods=['POST'])
 @login_required
 def api_facility_compute():
@@ -285,6 +291,7 @@ def api_facility_compute():
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
+# @manual geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/<facility_uuid>', methods=['GET'])
 @login_required
 def api_facility_get(facility_uuid):
@@ -297,6 +304,7 @@ def api_facility_get(facility_uuid):
     return jsonify({'ok': True, 'facility': result})
 
 
+# @manual geo/api-reference#facilities
 @blueprint.route('/api/geo/facility', methods=['POST'])
 @login_required
 def api_facility_save():
@@ -316,6 +324,7 @@ def api_facility_save():
     return jsonify(result)
 
 
+# @manual geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/<facility_uuid>/clone', methods=['POST'])
 @login_required
 def api_facility_clone(facility_uuid):
@@ -331,6 +340,7 @@ def api_facility_clone(facility_uuid):
     return jsonify(result)
 
 
+# @manual geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/<facility_uuid>', methods=['DELETE'])
 @login_required
 def api_facility_delete(facility_uuid):
@@ -487,6 +497,7 @@ def _facility_bay_capacities(facility_uuid):
         return {}
 
 
+# @manual geo/facility-widget#data-refresh, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/runtime', methods=['GET'])
 @login_required
 def api_facility_runtime(facility_uuid):
@@ -602,6 +613,7 @@ def api_facility_runtime(facility_uuid):
     except Exception:
         dict_outputs = {}
 
+    # @manual geo/facility-widget#d-actuator-control
     def _resolve_control_type(output_type_key):
         """Determine the control UI from the module's OUTPUT_INFORMATION['output_types'] array.
             'value' → 'value'  (Actuator Paired position slider)
@@ -772,6 +784,7 @@ def api_facility_runtime(facility_uuid):
     return utils_http.json_conditional(jsonify(runtime), request)
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/actuator_order', methods=['POST'])
 @login_required
 def api_facility_actuator_order(facility_uuid):
@@ -823,6 +836,7 @@ def api_facility_actuator_order(facility_uuid):
     return jsonify({'ok': True, 'order': clean})
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/bays', methods=['GET'])
 @login_required
 def api_facility_bays(facility_uuid):
@@ -854,6 +868,7 @@ def api_facility_bays(facility_uuid):
         for s in slices if s.get('id')]})
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/bay_capacity', methods=['POST'])
 @login_required
 def api_facility_bay_capacity(facility_uuid):
@@ -938,6 +953,7 @@ def api_facility_bay_capacity(facility_uuid):
                     'capacity': target.get('capacity')})
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/calibration_status', methods=['GET'])
 @login_required
 def api_calibration_status(facility_uuid):
@@ -1065,6 +1081,7 @@ def api_calibration_status(facility_uuid):
     })
 
 
+# @manual geo/facility-widget#e-ai-advice, geo/api-reference#facilities
 @blueprint.route('/api/geo/facility/<facility_uuid>/apply', methods=['POST'])
 @login_required
 def api_facility_apply(facility_uuid):

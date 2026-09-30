@@ -239,10 +239,12 @@ def _run(mod, fn, engine):
             getattr(mod, fn)()
 
 
-def test_p6_76_is_the_head_the_app_expects():
-    from aot.config import ALEMBIC_VERSION
+def test_p6_76_keeps_its_place_in_the_chain():
+    # 헤드인지(ALEMBIC_VERSION 과 같은지)는 여기서 단언하지 않는다 — 이 마이그레이션 뒤에
+    # 새 마이그레이션이 붙는 순간(p6_77) 이 테스트가 릴리스를 막았다. 헤드 일치는
+    # alembic 체인 검사가 맡는다.
     mod = _load_p6_76()
-    assert mod.revision == ALEMBIC_VERSION == _P6_76
+    assert mod.revision == _P6_76
     assert mod.down_revision == 'p6_75_api_key_tool_profile_20260924'
 
 

@@ -13,23 +13,25 @@ A quick setup guide for first-time AoT GIS users. Follow these steps to have a m
 
 ## Step 1: Global GIS Settings
 
-Navigate to **Gear → Configure → GIS Settings** or go to `/geo/setting`.
+Go to **Settings → Map** (`/geo/design`) and click the **Settings** button below the page title to open the **GIS Settings** window. The old address `/geo/setting` only redirects to this page.
 
 ### Set Default Location
 
-1. Move the map to your desired location, or type an address in the search bar.
-2. Set the **zoom level** to the default you want to save.
+1. Before opening the window, move the map to the location and zoom you want as the default (you can also type an address in the search bar).
+2. In the window, click **Get Location** under **Default Start Location** to fill in **Latitude**, **Longitude** and **Zoom Level** from the current view. You can also type the values.
 3. Click **Save**.
 
 ### Theme Colors (Optional)
 
+Change the per-layer colors under **Design Theme Settings**.
+
 | Element | Default | Description |
 |---------|---------|-------------|
-| Site | Blue tones | Site boundary color |
-| Zone | Green tones | Zone color |
-| Facility | Orange tones | Facility building color |
-| Equipment | Gray | Equipment color |
-| Device | Red tones | AoT device marker color |
+| Site Color | Red tones | Site boundary color |
+| Zone Color | Green tones | Zone color |
+| Facility Color | Gray | Facility building color |
+| Equipment Color | Blue tones | Equipment color |
+| Device Color | Purple tones | AoT device marker color |
 
 ---
 
@@ -37,11 +39,11 @@ Navigate to **Gear → Configure → GIS Settings** or go to `/geo/setting`.
 
 If you need aerial imagery or a domestic map beyond the default OSM, register a GIS layer.
 
-Navigate to **GIS → Layer** or go to `/geo/layer`.
+Navigate to **Settings → GIS Input** or go to `/geo/layer`.
 
 **Example: Adding VWorld (Korean cadastral map/aerial):**
 
-1. Select `VWorld` from the **Input Type** dropdown in the top right.
+1. Select `VWorld` from the **Select GIS Service** dropdown at the top of the page.
 2. Click **Add**.
 3. Click the **Settings (gear) icon** on the newly created item.
 4. Enter your VWorld API key and save.
@@ -53,50 +55,51 @@ See [GIS Layer Management](layers.md) for details.
 
 ## Step 3: Create Your First Map Design
 
-Navigate to **GIS → Design** or go to `/geo/design`.
+Navigate to **Settings → Map** or go to `/geo/design`.
 
-### Create a New Map
+### Create a New Map { #create-a-new-map }
 
-1. Click the **+ New Map** button at the top of the left panel.
-2. Enter a map name and confirm.
+1. In **Map Design**, choose **Create New Map** from the map dropdown; the new map is created right away.
+2. Click **Edit** to rename the map.
 
 ### Draw a Site Boundary
 
-1. Select **Site** mode in the top mode panel.
-2. Select **Draw polygon** from the toolbar.
+1. Select **Site** mode in the mode tabs below the map.
+2. Pick the polygon tool from the drawing tools.
 3. Click on the map to place vertices; connect the last point to the first to complete the polygon.
-4. Enter the site name in the right property panel and click **Save**.
+4. Enter the site name in the property panel. Shapes are saved automatically as you draw.
 
 **Faster option — use VWorld parcel import:**
 
-1. Click the **Parcel Import** button in the top toolbar.
-2. Type an address to search.
-3. Select the parcel from the results.
+1. In the Site settings drawer, click **Search** next to **Add from Address**.
+2. Type an address and click **Search**.
+3. Check the parcels found in the preview.
 4. Click **Save as Site**.
 
 ### Set Up Zones
 
 1. Switch to **Zone** mode.
 2. Draw a zone polygon inside the site.
-3. Enter the zone name (e.g., "Block 1", "Growing Zone A") and save.
+3. Enter the zone name (e.g., "Block 1", "Growing Zone A").
 
 ---
 
 ## Step 4: Place Devices
 
-1. Switch to **Device** mode.
-2. Select **Place marker** from the toolbar.
-3. Click on the map where the device is physically located.
-4. In the right panel, select the **AoT device** from the dropdown.
-5. Click **Save**.
+1. Switch to the device mode (**A**) in the mode tabs.
+2. Under **Device kind**, pick **Input**, **Output**, **Function** or **Device**, then click **Open** next to **Selection list**.
+3. Turn on the switch of the device you want to place; its marker appears at the center of the current map view.
+4. Drag the marker to where the device is physically located. The new position is saved automatically.
+
+See [Design Tool — Device mode](design-tool.md#device-a) for details.
 
 ---
 
 ## Step 5: Add a Dashboard Widget
 
 1. Go to the dashboard.
-2. Select **Add Widget → AoT_map**.
-3. In the widget settings, select the map created in Step 3.
+2. Select **Add Widget → AoT Map**.
+3. In the widget settings, pick the map created in Step 3 under **Select Map**.
 4. Click **Save**.
 
 Device markers will appear on the map. Clicking a marker shows real-time values and a control switch.

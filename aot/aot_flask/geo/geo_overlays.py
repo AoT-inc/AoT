@@ -115,6 +115,7 @@ class GeoOverlayManager:
             GeoFacility.unique_id.in_(facility_uuids)
         ).delete(synchronize_session=False)
 
+    # @manual geo/api-reference#overlays-shapes-geojson
     @staticmethod
     def get_overlays(map_uuid, target_type=None, parent_id=None, device_id=None):
         """Get All Overlays for a Map"""
@@ -290,6 +291,7 @@ class GeoOverlayManager:
     # 계약이다(GB-5b, 별도 게이팅).
     _STORED_STRUCT_PROPS = ('aot_type', 'device_id', 'channel_id')
 
+    # @manual geo/api-reference#details-post-apigeooverlays
     @staticmethod
     def _strip_structural_props(feat):
         """저장 직전 구조 필드를 제거한 사본을 반환한다. 원본 불변."""
@@ -304,6 +306,7 @@ class GeoOverlayManager:
                              if k not in GeoOverlayManager._STORED_STRUCT_PROPS}
         return out
 
+    # @manual geo/design-tool#device-a
     @staticmethod
     def _record_bindings(target_type, pending):
         """도형↔장치 연결을 geo_binding 에 기록한다(도형 저장의 유일한 지점).
@@ -354,6 +357,7 @@ class GeoOverlayManager:
                 '[GeoOverlays] 바인딩 기록 실패(type=%s, %d건) — %s',
                 target_type, len(wanted), exc)
 
+    # @manual geo/design-tool#manual-save, geo/api-reference#details-post-apigeooverlays
     @staticmethod
     def save_overlays(data):
         """
@@ -758,6 +762,7 @@ class GeoOverlayManager:
             db.session.rollback()
             current_app.logger.warning(f"[GeoOverlay] materialize_timezones failed for {map_uuid}: {e}")
 
+    # @manual geo/design-tool#auto-save, geo/api-reference#overlays-shapes-geojson
     @staticmethod
     def save_delta(data):
         """
@@ -991,6 +996,7 @@ class GeoOverlayManager:
             current_app.logger.error(f"Geo Delta Save Error: {e}")
             return None, str(e)
 
+    # @manual geo/design-tool#equipment
     @staticmethod
     def generate_pipes(data):
         """
@@ -1186,6 +1192,7 @@ class GeoOverlayManager:
             current_app.logger.error(f"[GeoGen] High-Precision Engine Error: {e}")
             return None, str(e)
 
+    # @manual geo/design-tool#site, geo/design-tool#zone
     @staticmethod
     def _validate_geometry_rules(feature, feature_type):
         """
@@ -1213,39 +1220,42 @@ class GeoOverlayManager:
     def find_containing_shape(lat, lng, map_uuid):
         """
         Finds the smallest (most specific) shape containing the given point.
-        Priority: Zone > Site.
+
+        The tie-break for overlapping candidates lives in one place —
+        `aot.utils.geo_hierarchy.pick_smallest_container()` (smallest area
+        wins, site vs zone included) — instead of a local "zone replaces
+        site, first match otherwise" rule that used to disagree with it
+        whenever two zones overlapped (no caller currently depends on the
+        old rule; see aot/tests/geo/test_geo_overlap_containment_tiebreak.py).
         """
         if not lat or not lng or not map_uuid:
             return None
-            
+
         try:
             # point = Point(lng, lat) # Shapely uses (x, y) -> (lng, lat)
-            # Actually, check if shape uses [lng, lat] or [lat, lng]. 
+            # Actually, check if shape uses [lng, lat] or [lat, lng].
             # Standard GeoJSON is [lng, lat], Turf is [lng, lat].
             p = Point(float(lng), float(lat))
-            
+
             # Fetch all Sites and Zones for this map
             shapes = GeoShape.query.filter(
                 GeoShape.geo_id == map_uuid,
                 GeoShape.type.in_(['site', 'zone'])
             ).all()
-            
-            best_match = None
-            
+
+            from aot.utils.geo_hierarchy import pick_smallest_container
+
+            by_id, candidates = {}, []
             for s in shapes:
                 feat = s.feature
                 if not feat or 'geometry' not in feat:
                     continue
-                    
                 geom = shape(feat['geometry'])
-                if geom.contains(p):
-                    # Priority logic: Zone replaces Site
-                    if not best_match:
-                        best_match = s
-                    elif s.type == 'zone' and best_match.type == 'site':
-                        best_match = s
-                    
-            return best_match # Return object to allow robust property access (e.g. name via feature)
+                by_id[s.id] = s
+                candidates.append((s.id, geom, getattr(geom, 'area', 0.0) or 0.0))
+
+            winner_id = pick_smallest_container(p, candidates)
+            return by_id.get(winner_id)  # Return object to allow robust property access (e.g. name via feature)
         except Exception as e:
             current_app.logger.error(f"Error finding containing shape: {e}")
             return None

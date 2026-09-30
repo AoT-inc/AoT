@@ -34,6 +34,17 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
     return True, True, mod_widget, final
 
 
+def _float_or(value, default):
+    """값이 비었을 때만 기본값 — 0 은 그대로 둔다."""
+    if value is None or value == '':
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+# @manual geo/facility-widget#adding-the-widget, geo/facility-widget#widget-settings, geo/facility-widget#no-facility
 def widget_variables(widget_unique_id, widget_options):
     """Resolve template variables: facility data, setpoints, permissions."""
     from aot.databases.models import GeoFacility
@@ -142,6 +153,17 @@ def widget_variables(widget_unique_id, widget_options):
     # Control permission: reuse edit_settings (admin-level)
     can_control = user_has_permission('edit_settings', silent=True)
 
+    # 겹 수는 두 저장 형식을 다 읽는 계산 쪽 정본(_normalize_envelope)에
+    # 맡긴다 — 현행 형식(layers 배열)에는 layer_count 가 없어서, 그 키만 보면
+    # 이중 외피 시설에도 'double layer' 배지가 뜨지 않았다.
+    double_layer = False
+    if facility and facility.envelope:
+        try:
+            from aot.aot_flask.geo.facility_calc import _normalize_envelope
+            double_layer = _normalize_envelope(facility.envelope).get('layer_count') == 2
+        except Exception:
+            double_layer = False
+
     return {
         'facility':       facility_data,
         'facilities':     facility_list,
@@ -153,8 +175,9 @@ def widget_variables(widget_unique_id, widget_options):
         'show_status':    options.get('show_status', True),
         'show_setpoints': options.get('show_setpoints', True),
         'show_controls':  options.get('show_controls', True),
-        'estop_enabled':  options.get('estop_enabled', False),
+        'estop_enabled':  bool(options.get('estop_enabled', False)),
         'can_control':    can_control,
+        'double_layer':   double_layer,
         'setpoints':      setpoints_data,
         'render_mode_3d':    options.get('render_mode_3d', 'default'),
         'sensor_label_opts': {
@@ -165,7 +188,8 @@ def widget_variables(widget_unique_id, widget_options):
             'bg':           options.get('sensor_label_bg', 'rgba(15,23,42,0.78)'),
             'fg':           options.get('sensor_label_fg', '#f8fafc'),
             'offset_y':     float(options.get('sensor_label_offset_y', 0.25) or 0.0),
-            'opacity':      float(options.get('sensor_label_opacity', 0.7) or 0.7),
+            # 0.0 도 유효값이다 — `or 0.7` 은 0.0 을 0.7 로 바꿔 버렸다.
+            'opacity':      _float_or(options.get('sensor_label_opacity'), 0.7),
             'popup':        bool(options.get('sensor_popup_enabled', True)),
             'ranges':       sensor_ranges,
         },
@@ -202,6 +226,7 @@ if (!window._aotFacility3DLoaded) {
 {% endif %}
 """
 
+# @manual geo/facility-widget#screen-layout
 WIDGET_BODY_HTML = """\
 {% set display_mode   = widget_variables.display_mode   or 'viewer' %}
 {% set show_status    = widget_variables.show_status    if widget_variables.show_status    is not none else true %}
@@ -233,7 +258,7 @@ WIDGET_BODY_HTML = """\
       {% if widget_variables.facility.structure == 'connected' %}
         <span class="preset-badge">{{ _('connected') }} x{{ widget_variables.facility.bay_count }}</span>
       {% endif %}
-      {% if widget_variables.facility.envelope and widget_variables.facility.envelope.layer_count == 2 %}
+      {% if widget_variables.double_layer %}
         <span class="preset-badge">{{ _('double layer') }}</span>
       {% endif %}
       <small class="aot-fac-ts" id="aot-facility-status-{{each_widget.unique_id}}">—</small>
@@ -309,6 +334,14 @@ WIDGET_BODY_HTML = """\
     <div class="aot-act-panel" id="aot-act-panel-{{each_widget.unique_id}}">
       <div class="aot-act-empty">{{ _('Loading...') }}</div>
     </div>
+    {#- ALL STOP — 다른 제어 버튼처럼 제어 권한(edit_settings, API 와 같은 검사)이
+        있을 때만 그린다. 확인은 공용 aotConfirm, 연결은 aot-facility-actuator-panel.js. -#}
+    {% if estop_enabled and can_control %}
+    <div class="d-flex justify-content-end mt-2">
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-danger"
+              id="aot-fac-estop-{{each_widget.unique_id}}">{{ _('Emergency Stop') }}</button>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -352,7 +385,6 @@ WIDGET_BODY_HTML = """\
     'showStatus':    show_status,
     'showSetpoints': show_setpoints,
     'showControls':  show_controls,
-    'estopEnabled':  estop_enabled,
     'canControl':    can_control,
     'setpoints':     widget_variables.setpoints,
     'functionUuid':  widget_variables.function.unique_id if widget_variables.function else '',
@@ -376,6 +408,7 @@ WIDGET_BODY_HTML = """\
 </script>
 """
 
+# @manual geo/facility-widget#adding-the-widget, geo/facility-widget#widget-settings
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_facility',
     'widget_name': lazy_gettext('AoT Facility'),
@@ -431,9 +464,8 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('Show AI Advice (§ E) — EXPERIMENTAL'),
             'phrase': lazy_gettext(
                 'Display AI recommendation cards. WARNING: currently shows MOCK '
-                'demo cards with hardcoded text. The Approve button still '
-                'dispatches real actuator commands via /api/geo/facility/<uuid>/apply, '
-                'so do NOT enable in production until a real advisor backend is wired up.'
+                'demo cards with hardcoded text. The cards never send actuator '
+                'commands; they stay demo-only until a real advisor backend is wired up.'
             )
         },
         {

@@ -9,7 +9,7 @@ Page Location: `[Manage] -> System Administration -> General Settings`
 | Setting | Description |
 | :--- | :--- |
 | **Language** | Set the language displayed in the web user interface. |
-| **Force HTTPS** | Redirects all HTTP requests to HTTPS for security. |
+| **Force HTTPS** | Redirects all HTTP requests to HTTPS for security. Forced off on Docker unless `AOT_BEHIND_TLS=1` is set. |
 | **Hide Status Notifications** | Options to hide Success, Info, or Warning notification boxes. |
 
 ## TimeSeries Database (TSDB)
@@ -47,7 +47,7 @@ Each controller (Input, Output, Function) runs in a loop. The sampling period de
 | Setting | Description |
 | :--- | :--- |
 | **Check for Updates** | Automatically checks for AoT system updates every 2 days. |
-| **Internet Test IP** | Used to verify connectivity before attempting updates. |
+| **Internet Test IP** | Used to verify connectivity before attempting updates. Native install only; the Docker Upgrade page does not run this check. |
 
 ## Diagnostics
 

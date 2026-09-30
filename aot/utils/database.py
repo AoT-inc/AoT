@@ -13,6 +13,7 @@ logger = logging.getLogger("aot.database")
 
 _LOCK_PHRASES = ("database is locked", "unable to open database")
 _IO_PHRASES = ("disk i/o error",)
+_MISSING_TABLE_PHRASES = ("no such table",)
 
 # 채널 활성/비활성 상태 캐시 (device_id -> (읽은 시각, 꺼진 채널 집합))
 DISABLED_CHANNEL_CACHE_SECONDS = 10.0
@@ -28,6 +29,11 @@ def _is_lock_error(exc) -> bool:
 def _is_io_error(exc) -> bool:
     msg = str(exc).lower()
     return any(p in msg for p in _IO_PHRASES)
+
+
+def _is_missing_table_error(exc) -> bool:
+    msg = str(exc).lower()
+    return any(p in msg for p in _MISSING_TABLE_PHRASES)
 
 
 def db_retrieve_table(table, entry=None, unique_id=None):
@@ -69,13 +75,18 @@ def db_retrieve_table_daemon(
     If device_id is set, the first entry with that device ID is returned.
     Otherwise, the table object is returned.
 
-    **조회 실패 시(락 5회 재시도 초과, 디스크 I/O 에러) 예외 대신 "빈 결과"를
-    돌려준다.** 그 빈 결과는 성공 시의 반환 타입과 맞춘다 — 단일 행을 기대한
-    호출에는 None, 목록을 기대한 호출에는 []. 예전에는 어느 경우든 [] 였는데,
-    단일 행을 기대한 호출부가 그 리스트에 속성 접근을 해서
+    **조회 실패 시(락 5회 재시도 초과, 디스크 I/O 에러, 테이블 없음) 예외 대신
+    "빈 결과"를 돌려준다.** 그 빈 결과는 성공 시의 반환 타입과 맞춘다 — 단일
+    행을 기대한 호출에는 None, 목록을 기대한 호출에는 []. 예전에는 어느
+    경우든 [] 였는데, 단일 행을 기대한 호출부가 그 리스트에 속성 접근을 해서
     `'list' object has no attribute 'measurement_db_host'` 같은 엉뚱한
     AttributeError 로 터졌다(2026-08-04 안전 게이트 사건). 호출부는 여전히
     None 검사를 해야 하지만, 최소한 실패가 실패처럼 보인다.
+
+    "테이블 없음"(완전 신규 설치에서 alembic_upgrade_db() 가 아직 안 끝난
+    구간)은 락/경합과 달리 같은 초 단위로 재시도해서 나아질 일이 아니라서
+    즉시 물러난다 — 5회 재시도하며 "database is locked"라고 오진하지 않는다
+    (2026-09-28).
     """
     tries = 5
     # 성공 시 .first() 를 타는 형태 = 단일 행 기대.
@@ -109,6 +120,20 @@ def db_retrieve_table_daemon(
                 logger.error(
                     "The AoT database returned a disk I/O error — "
                     "skipping retry: %s", exc)
+                return _empty
+            if _is_missing_table_error(exc):
+                # 스키마가 아직 없다 — 락/경합이 아니라 alembic_upgrade_db()가
+                # 아직 끝나지 않은 것이다(완전 신규 설치의 정상 과정,
+                # register_extensions() 앞부분의 로그 몇 줄이 이 테이블에
+                # 먼저 손을 댄다). 같은 초 단위로 5번 재시도해도 그 사이
+                # 테이블이 생기지 않으니 "잠겼다"고 재시도하는 것은 원인을
+                # 잘못 짚은 것이고, 매번 "이슈를 등록하라"는 ERROR 로그까지
+                # 남겨 정상 부팅을 오류로 보이게 한다(2026-09-28). 곧 있을
+                # 마이그레이션이 끝나면 다음 호출은 정상적으로 값을 읽으므로,
+                # 여기서는 조용히 빈 결과로 물러난다.
+                logger.debug(
+                    "AoT database table not yet created (fresh install or "
+                    "mid-migration) — returning empty result: %s", exc)
                 return _empty
             # lock/busy: retry with backoff
         except Exception:

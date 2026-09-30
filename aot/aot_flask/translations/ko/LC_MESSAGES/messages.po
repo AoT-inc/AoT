@@ -55,7 +55,7 @@ msgstr "밝기"
 
 #: config_devices_units.py:53
 msgid "Carbon Dioxide"
-msgstr "탄소이산화물질"
+msgstr "이산화탄소"
 
 #: aot_flask/templates/settings/custom_ui.html:1197
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:12
@@ -510,7 +510,7 @@ msgstr "센티바"
 
 #: config_devices_units.py:443
 msgid "CIE"
-msgstr "활성"
+msgstr "CIE"
 
 #: config_devices_units.py:446
 msgid "Centimeter"
@@ -904,7 +904,7 @@ msgstr "버스"
 #: config_translations.py:28 inputs/ads1256.py:85
 #: inputs/ads1256_analog_ph_ec.py:347
 msgid "Calibration"
-msgstr "지속시간"
+msgstr "보정"
 
 #: aot_flask/forms/forms_misc.py:32 config_translations.py:30
 msgid "Calculate"
@@ -1545,7 +1545,7 @@ msgstr "순서 변경"
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_title_bar.html:11
 #: config_translations.py:156
 msgid "Reset"
-msgstr "돌아가기"
+msgstr "초기화"
 
 #: aot_flask/forms/forms_pid.py:137
 #: aot_flask/templates/pages/function_options/pid_entry.html:57
@@ -2240,8 +2240,8 @@ msgid "Clock"
 msgstr "클럭"
 
 #: config_translations.py:325 config_translations.py:326
-msgid "Cable Select"
-msgstr "케이블 선택"
+msgid "Chip Select"
+msgstr "칩 선택"
 
 #: config_translations.py:328 config_translations.py:329
 msgid "MISO"
@@ -3056,9 +3056,7 @@ msgid ""
 "Manages common GIS parameters used across the system, including map "
 "center, zoom levels, search providers, and theme colors (Site, Zone, "
 "Device)."
-msgstr ""
-"시스템 전역에서 사용되는 공통 GIS 파라미터를 관리합니다. 맵 중심점, 줌 레벨, 검색 서비스 제공자, 그리고 테마 색상(사이트,"
-" 구역, 장치) 등이 포함됩니다."
+msgstr "시스템 전역에서 사용되는 공통 GIS 파라미터를 관리합니다. 맵 중심점, 줌 레벨, 검색 서비스 제공자, 그리고 테마 색상(대지, 구역, 장치) 등이 포함됩니다."
 
 #: config_translations_docs.py:117
 msgid "2. geo/layer (GIS Layer Management)"
@@ -3081,9 +3079,7 @@ msgid ""
 "An interactive editing tool for placing devices and setting up areas. "
 "Includes features like Spatial Join (auto-detecting zones for devices), "
 "Shape Editing (drawing sites/zones/pipes), and layout saving."
-msgstr ""
-"실제 기기를 배치하고 구역을 설정하는 인터랙티브 편집 도구입니다. 공간 조인(Spatial Join, 장치의 구역 자동 인식), "
-"도형 편집(사이트/구역/배관 그리기), 레이아웃 저장 등의 기능을 제공합니다."
+msgstr "실제 기기를 배치하고 구역을 설정하는 인터랙티브 편집 도구입니다. 공간 조인(Spatial Join, 장치의 구역 자동 인식), 도형 편집(대지/구역/배관 그리기), 레이아웃 저장 등의 기능을 제공합니다."
 
 #: config_translations_docs.py:123
 msgid "4. GIS Capabilities (Proxy & Search)"
@@ -3602,7 +3598,7 @@ msgstr "평균 계산에 포함할 Output 채널 측정값 (예: 지속 시간)"
 
 #: actions/output_actuator_paired.py:14
 msgid "Output: Actuator Paired (Position / Stop)"
-msgstr "Output: 액추에이터 페어링 (위치 / 정지)"
+msgstr "출력: 액추에이터 페어링 (위치 / 정지)"
 
 #: actions/output_actuator_paired.py:25
 msgid ""
@@ -4234,8 +4230,10 @@ msgid "MCP Server '%(name)s' deleted."
 msgstr "MCP 서버 '%(name)s'이(가) 삭제되었습니다."
 
 #: aot_flask/routes_ai_agent.py:1513
-msgid "Enable the AI service in Settings > General first."
-msgstr "설정 > 일반에서 AI 서비스를 먼저 활성화하세요."
+msgid ""
+"Enable the AI service in Manage > System Management > General Settings "
+"first."
+msgstr "관리 > 시스템 관리 > 일반 설정에서 AI 서비스를 먼저 활성화하세요."
 
 #: aot_flask/routes_ai_agent.py:1518
 msgid "Register and activate at least one AI model before starting the service."
@@ -4735,7 +4733,7 @@ msgstr "이 시스템에서 사용할 수 없는 명령입니다: %(command)s"
 
 #: aot_flask/routes_page.py:964
 msgid "File not found"
-msgstr "File을(를) 찾을 수 없습니다"
+msgstr "파일을 찾을 수 없습니다"
 
 #: aot_flask/routes_page.py:1025
 msgid "error"
@@ -5822,15 +5820,15 @@ msgstr "CSV로 데이터 내보내기"
 
 #: aot_flask/forms/forms_misc.py:58
 msgid "Export Settings"
-msgstr "내보내기 설정"
+msgstr "설정 내보내기"
 
 #: aot_flask/forms/forms_misc.py:63
 msgid "Import Settings"
-msgstr "가져오기 설정"
+msgstr "설정 가져오기"
 
 #: aot_flask/forms/forms_misc.py:67
 msgid "Export InfluxDB"
-msgstr "InfluxDB로 내보내기"
+msgstr "InfluxDB 내보내기"
 
 #: aot_flask/forms/forms_misc.py:82
 msgid "Upgrade AoT"
@@ -7418,15 +7416,11 @@ msgid "Rejected"
 msgstr "거절됨"
 
 #: aot_flask/static/js/app/dashboard.js:319
-msgid "layout_save_fail"
+msgid "Failed to save layout"
 msgstr "레이아웃 저장 실패"
 
-#: aot_flask/static/js/app/dashboard.js:323
-msgid "layout_serialize_error"
-msgstr "레이아웃 오류"
-
 #: aot_flask/static/js/app/dashboard.js:454
-msgid "dashboard_order_save_fail"
+msgid "Failed to save dashboard order"
 msgstr "대시보드 순서 저장 실패"
 
 #: aot_flask/static/js/app/dashboard-widget-live-preview.js:242
@@ -7446,11 +7440,11 @@ msgid "Search service unavailable"
 msgstr "검색 서비스를 사용할 수 없습니다"
 
 #: aot_flask/static/js/components/aot-tabs.js:221
-msgid "order_saved"
+msgid "Order saved"
 msgstr "순서 저장됨"
 
 #: aot_flask/static/js/components/aot-tabs.js:225
-msgid "order_save_fail"
+msgid "Failed to save order"
 msgstr "순서 저장 실패"
 
 #: aot_flask/static/js/dist/aot-facility-widget.bundle.js:2
@@ -7567,8 +7561,8 @@ msgstr "응답 없음"
 
 #: aot_flask/static/js/dist/geo-design.bundle.js:468
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:4309
-msgid "only_polygons_selectable"
-msgstr "도형만 선택 가능 합니다."
+msgid "Only polygons can be selected"
+msgstr "도형만 선택할 수 있습니다."
 
 #: aot_flask/static/js/geo/aot-facility-design.js:867
 #, python-format
@@ -7602,76 +7596,34 @@ msgstr "기본 지도"
 msgid "Overlay"
 msgstr "오버레이"
 
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:729
-msgid "hide_panel"
-msgstr "패널 숨기기"
-
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:735
-msgid "show_panel"
+msgid "Show Panel"
 msgstr "패널 표시"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:883
-msgid "mode_switch_error"
-msgstr "모드 스위치 오류"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:1006
-msgid "main_pipe"
-msgstr "주배관"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:1015
-msgid "branch_pipe"
-msgstr "분기 배관"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:1023
-msgid "reference_line"
-msgstr "기준선"
+msgid "Failed to switch mode"
+msgstr "모드를 바꾸지 못했습니다"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1135
-msgid "ref_line_out_of_bounds"
-msgstr "기준선 이탈"
+msgid "Reference line removed: draw it inside a site or zone"
+msgstr "기준선을 지웠습니다. 대지나 구역 안에 그리세요"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1880
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1990
-msgid "design_map_new"
+msgid "New map"
 msgstr "새 지도"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2006
-msgid "map_not_found"
+msgid "Map not found"
 msgstr "지도를 찾을 수 없습니다"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2020
-msgid "map_load_failed"
+msgid "Failed to load the map. Please retry."
 msgstr "지도를 불러오지 못했습니다. 다시 시도해 주세요."
 
-# GIS Module JS Translations (Added 2026-02-09)
-# Mode Panel 번역 키 추가 스크립트
-# # 한국어 번역
-# 기존 GIS 모듈 (24개)
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2624
-msgid "saved_successfully"
-msgstr "저장 성"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2631
-msgid "save_failed"
-msgstr "저장 실패"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2698
-msgid "no_data_table"
-msgstr "데이터 없음"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2744
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:3089
-msgid "deleted_successfully"
-msgstr "삭제 성공"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2778
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:3111
-msgid "delete_failed"
-msgstr "삭제 실패"
-
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2823
-msgid "polygon_split_feature_coming_soon"
-msgstr "미구현 기능"
+msgid "Polygon split is not available yet"
+msgstr "도형 나누기는 아직 지원하지 않습니다"
 
 # Mode Panel (40개)
 #: aot_flask/static/js/geo/aot-geo-panel.js:207
@@ -7866,7 +7818,7 @@ msgstr "만들어진 배관을 지워 처음부터 다시 할 수 있게 합니�
 #: aot_flask/templates/pages/geo/geo_facility.html:136
 #: aot_flask/templates/pages/geo/geo_facility.html:162
 msgid "Irrigation"
-msgstr "관개"
+msgstr "관수"
 
 #: aot_flask/static/js/geo/aot-geo-panel.js:585
 #: aot_flask/templates/pages/ai/ai_manage.html:199
@@ -8046,11 +7998,11 @@ msgstr "RainViewer 레이더"
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:113
 #: aot_flask/templates/pages/geo/geo_design.html:478
 msgid "Site List"
-msgstr "사이트 목록"
+msgstr "대지 목록"
 
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:109
 msgid "No registered sites."
-msgstr "등록된 사이트가 없습니다."
+msgstr "등록된 대지가 없습니다."
 
 #: aot_flask/static/js/geo/aot-map-custom-controls.js:177
 msgid "Distance measurement"
@@ -8136,28 +8088,24 @@ msgid "Select"
 msgstr "선택"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:97
-msgid "creating_new_map"
+msgid "Creating a new map..."
 msgstr "새 지도 생성 중"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:110
-msgid "confirm_delete_map"
-msgstr "지도 삭제 승인"
+msgid "Delete this map?"
+msgstr "이 지도를 삭제하시겠습니까?"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:117
-msgid "enter_new_map_name"
+msgid "Enter a new map name"
 msgstr "새로운 지도 이름 입력"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:121
-msgid "unsaved_map_warning"
-msgstr "경고: 저장 안됨"
+msgid "Save the map before renaming it"
+msgstr "이름을 바꾸기 전에 지도를 저장하세요"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:134
-msgid "rename_failed"
+msgid "Rename failed"
 msgstr "이름 변경 실패"
-
-#: aot_flask/static/js/geo/design/aot-geo-events.js:140
-msgid "rename_error"
-msgstr "이름 변경 오류"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:593
 msgid "Exit fullscreen"
@@ -8181,93 +8129,73 @@ msgstr "가져오기 실패: "
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:46
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:103
-msgid "operation_error"
-msgstr "작업 오류"
+msgid "Operation failed"
+msgstr "작업 실패"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:59
-msgid "extend_only_line"
+msgid "Only lines can be extended"
 msgstr "선만 연장 가능"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:67
-msgid "trim_only_line"
+msgid "Only lines can be trimmed"
 msgstr "선만 잘라내기 가능"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:76
-msgid "offset_prompt_polygon"
-msgstr "다각형 오프셋 입력"
+msgid "Offset distance in meters (negative shrinks the polygon)"
+msgstr "오프셋 거리(m, 음수면 도형이 줄어듭니다)"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:77
-msgid "offset_prompt_line"
-msgstr "선 오프셋 입력"
+msgid "Offset distance in meters (negative moves to the other side)"
+msgstr "오프셋 거리(m, 음수면 반대쪽으로 옮깁니다)"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:88
-msgid "select_merge_target"
+msgid "Select the polygon to merge with"
 msgstr "병합할 대상을 선택해주세요"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:94
-msgid "select_subtract_target"
+msgid "Select the polygon to subtract"
 msgstr "빼기 대상 선택"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:175
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:199
-msgid "parent_polygon_not_found"
-msgstr "상위 다각형을 찾을 수 없습니다"
+msgid "No enclosing polygon found"
+msgstr "둘러싼 도형을 찾을 수 없습니다"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:189
-msgid "no_boundary_intersection"
-msgstr "경계 교차점이 없습니다"
+msgid "The line cannot be extended to the boundary"
+msgstr "선을 경계까지 늘릴 수 없습니다"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:213
-msgid "multiline_not_supported"
+msgid "Multi-part lines are not supported"
 msgstr "다중 선은 지원되지 않습니다"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:216
-msgid "trim_error_or_none"
-msgstr "자르기 오류 또는 없음"
+msgid "Could not trim the line"
+msgstr "선을 자르지 못했습니다"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:222
-msgid "merge_self_error"
-msgstr "자신과 병합 오류"
+msgid "Cannot merge a polygon with itself"
+msgstr "도형을 자기 자신과 합칠 수 없습니다"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:249
-msgid "merge_failed_turf"
-msgstr "병합 실패 (turf)"
-
-#: aot_flask/static/js/geo/design/aot-geo-geometry.js:257
-msgid "merge_error"
-msgstr "병합 오류"
+msgid "Merge failed"
+msgstr "병합 실패"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:263
-msgid "subtract_self_error"
-msgstr "자신에서 빼기 오류"
+msgid "Cannot subtract a polygon from itself"
+msgstr "도형에서 자기 자신을 뺄 수 없습니다"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:288
-msgid "subtract_failed_turf"
-msgstr "빼기 실패 (turf)"
-
-#: aot_flask/static/js/geo/design/aot-geo-geometry.js:296
-msgid "subtract_error"
-msgstr "빼기 오류"
-
-#: aot_flask/static/js/geo/design/aot-geo-label.js:326
-msgid "enter_name_please"
-msgstr "이름을 입력해 주세요"
-
-#: aot_flask/static/js/geo/design/aot-geo-label.js:351
-msgid "edit_label_name"
-msgstr "라벨 이름 편집"
+msgid "Subtract failed"
+msgstr "빼기 실패"
 
 #: aot_flask/static/js/geo/design/aot-geo-modules.js:48
 msgid "Shape intersects itself (Self-intersection). Invalid geometry."
 msgstr "도형이 자기 자신과 교차합니다 (Self-intersection). 유효하지 않은 기하구조입니다."
 
-#: aot_flask/static/js/geo/design/aot-geo-modules.js:242
-msgid "reference_line_auto_delete_warning"
-msgstr "참조선 자동 삭제 경고"
-
 #: aot_flask/static/js/geo/design/aot-geo-modules.js:511
-msgid "session_expired"
-msgstr "세션이 만료되었습니다"
+msgid "Your session has expired. Please reload the page."
+msgstr "세션이 만료되었습니다. 페이지를 새로 고치세요."
 
 #: aot_flask/static/js/geo/design/aot-geo-stats.js:429
 msgid "Site Common Area"
@@ -8921,7 +8849,7 @@ msgstr "로그아웃"
 
 #: aot_flask/templates/layout-settings.html:13
 msgid "System Administration"
-msgstr "시스템 관리자"
+msgstr "시스템 관리"
 
 #: aot_flask/templates/layout-settings.html:15
 #: aot_flask/templates/settings/general.html:14
@@ -9287,8 +9215,8 @@ msgstr "구글 계정"
 #: aot_flask/templates/layout_default.html:881
 msgid ""
 "Not configured on this server yet — ask an administrator to set it up "
-"under Settings > Integrations."
-msgstr "이 서버에는 아직 설정되어 있지 않습니다 — 관리자에게 설정 > Integrations 에서 설정해 달라고 요청하세요."
+"under Manage > System Management > Integrations."
+msgstr "이 서버에는 아직 설정되어 있지 않습니다 — 관리자에게 관리 > 시스템 관리 > 연동에서 설정해 달라고 요청하세요."
 
 #: aot_flask/templates/layout.html:887
 #: aot_flask/templates/layout_default.html:887
@@ -9455,9 +9383,7 @@ msgstr "그룹 선택"
 msgid ""
 "If no group is selected, everyone can operate this dashboard. Selecting a"
 " group limits operation to its members. Data stays visible to everyone."
-msgstr ""
-"그룹을 선택하지 않으면 모두가 이 대시보드에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 "
-"모두에게 계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 대시보드를 조작할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: aot_flask/templates/layout.html:987
 #: aot_flask/templates/layout_default.html:987
@@ -9530,8 +9456,8 @@ msgstr "오류: 서버와 통신할 수 없습니다."
 #: aot_flask/templates/modals/tab_settings.html:151
 #: aot_flask/templates/pages/geo/geo_design.html:1184
 #: aot_flask/templates/pages/geo/geo_facility.html:1148
-msgid "No groups yet. Create one in Settings > Users > Groups."
-msgstr "아직 그룹이 없습니다. 설정 > 사용자 > 그룹에서 만드세요."
+msgid "No groups yet. Create one in Manage > System Management > Users > Groups."
+msgstr "아직 그룹이 없습니다. 관리 > 시스템 관리 > 사용자 > 그룹에서 만드세요."
 
 #: aot_flask/templates/layout.html:1151 aot_flask/templates/layout.html:1153
 #: aot_flask/templates/layout_default.html:1151
@@ -10096,8 +10022,8 @@ msgstr "업그레이드는 일반적으로 몇 분가량 소요되지만, 경우
 #: aot_flask/templates/admin/upgrade.html:299
 msgid ""
 "Once the upgrade is complete and the system restarts, the daemon status "
-"indicator (top-left logo) will return to green."
-msgstr "업그레이드가 완료되고 시스템이 재시작되면 데몬 상태 표시기(왼쪽 상단 로고)가 녹색으로 돌아옵니다."
+"indicator (top-left logo) will return to its normal color."
+msgstr "업그레이드가 완료되고 시스템이 재시작되면 데몬 상태 표시기(왼쪽 상단 로고)가 평소 색으로 돌아옵니다."
 
 #: aot_flask/templates/admin/upgrade.html:300
 msgid ""
@@ -10395,9 +10321,7 @@ msgstr "그룹 선택"
 msgid ""
 "If no group is selected, everyone can operate this tab. Selecting a group"
 " limits operation to its members. Data stays visible to everyone."
-msgstr ""
-"그룹을 선택하지 않으면 모두가 이 탭에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 "
-"계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 탭을 조작할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: aot_flask/templates/modals/tab_settings.html:42
 msgid "Cannot delete the last tab on this page."
@@ -11270,12 +11194,12 @@ msgstr "%(period)s초 동안 데이터가 없습니다"
 
 #: aot_flask/templates/pages/live.html:35
 msgid "Error: Data not found."
-msgstr "Error: Data을(를) 찾을 수 없습니다"
+msgstr "오류: 데이터를 찾을 수 없습니다"
 
 #: aot_flask/templates/pages/live.html:36
 #, python-format
 msgid "Error: No data for the last %(period)s seconds"
-msgstr "%(period)s초 동안 데이터가 없습니다"
+msgstr "오류: %(period)s초 동안 데이터가 없습니다"
 
 #: aot_flask/templates/pages/live.html:90
 msgid "No active inputs or functions."
@@ -11500,8 +11424,10 @@ msgid "AI Settings"
 msgstr "AI 설정"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
-msgid "The AI service is disabled. Enable it in Settings > General first."
-msgstr "AI 서비스가 비활성 상태입니다. 설정 > 일반에서 먼저 활성화하세요."
+msgid ""
+"The AI service is disabled. Enable it in Manage > System Management > "
+"General Settings first."
+msgstr "AI 서비스가 비활성 상태입니다. 관리 > 시스템 관리 > 일반 설정에서 먼저 활성화하세요."
 
 #: aot_flask/templates/pages/ai/ai_agent.html:64
 msgid ""
@@ -11676,7 +11602,7 @@ msgstr "정기 상황 요약"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:835
 msgid "Default Site"
-msgstr "기본 사이트"
+msgstr "기본 대지"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:842
 msgid "(none)"
@@ -11971,22 +11897,24 @@ msgid "Google account not connected."
 msgstr "Google 계정이 연결되어 있지 않습니다."
 
 #: aot_flask/templates/pages/ai/ai_library.html:484
-msgid "Connect it under Settings > Integrations"
-msgstr "설정 > 연동에서 연결하세요"
+msgid "Connect it under Manage > System Management > Integrations"
+msgstr "관리 > 시스템 관리 > 연동에서 연결하세요"
 
 #: aot_flask/templates/pages/ai/ai_library.html:485
 msgid "Your Google connection predates Drive access — reconnect to grant it."
 msgstr "기존 Google 연결에는 Drive 권한이 없습니다 — 재연결해서 권한을 부여하세요."
 
 #: aot_flask/templates/pages/ai/ai_library.html:486
-msgid "Reconnect under Settings > Integrations"
-msgstr "설정 > 연동에서 재연결하세요"
+msgid "Reconnect under Manage > System Management > Integrations"
+msgstr "관리 > 시스템 관리 > 연동에서 재연결하세요"
 
 #: aot_flask/templates/pages/ai/ai_library.html:487
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
-"key under Settings > Integrations."
-msgstr "Google Picker가 아직 설정되지 않았습니다 — 관리자가 설정 > 연동에서 Picker API 키를 등록해야 합니다."
+"key under Manage > System Management > Integrations."
+msgstr ""
+"Google Picker가 아직 설정되지 않았습니다 — 관리자가 관리 > 시스템 관리 > 연동에서 Picker API 키를 등록해야"
+" 합니다."
 
 #: aot_flask/templates/pages/ai/ai_library.html:492
 msgid "Source is not enabled. Activate it before syncing."
@@ -12158,7 +12086,7 @@ msgstr "관련 문서"
 
 #: aot_flask/templates/pages/ai/ai_library.html:541
 msgid "Source Site"
-msgstr "원본 사이트"
+msgstr "원본 대지"
 
 #: aot_flask/templates/pages/ai/ai_library.html:543
 msgid "Usage:"
@@ -12804,7 +12732,7 @@ msgstr "대상 함수"
 
 #: aot_flask/templates/pages/ai/scheduler.html:788
 msgid "Target Zone/Site"
-msgstr "대상 구역/사이트"
+msgstr "대상 구역/대지"
 
 #: aot_flask/templates/pages/ai/scheduler.html:798
 msgid "No items available"
@@ -14123,7 +14051,7 @@ msgstr "데이터 분석 중..."
 
 #: aot_flask/templates/pages/geo/geo_design.html:583
 msgid "Data Processing"
-msgstr "데이터 처리 중"
+msgstr "데이터 처리"
 
 #: aot_flask/templates/pages/geo/geo_design.html:595
 msgid "Export Map"
@@ -14187,9 +14115,9 @@ msgstr "주소 추가"
 
 #: aot_flask/templates/pages/geo/geo_design.html:824
 msgid ""
-"Enter addresses in the first column of the CSV file. Adjacent parcels are"
-" merged automatically."
-msgstr "CSV 파일의 첫 번째 열에 주소를 입력하세요. 인접한 필지는 자동으로 통합됩니다."
+"Enter addresses in the first column of the CSV file. To merge adjacent "
+"parcels, check Merge Adjacent Parcels."
+msgstr "CSV 파일의 첫 번째 열에 주소를 입력하세요. 인접한 필지를 합치려면 [인접 필지 통합]을 체크하세요."
 
 #: aot_flask/templates/pages/geo/geo_design.html:828
 msgid "Choose CSV File"
@@ -14217,7 +14145,7 @@ msgstr "자동 입력됨"
 
 #: aot_flask/templates/pages/geo/geo_design.html:862
 msgid "Save as Site"
-msgstr "Site로 저장"
+msgstr "대지로 저장"
 
 #: aot_flask/templates/pages/geo/geo_design.html:1138
 msgid "Map Settings"
@@ -14225,15 +14153,13 @@ msgstr "지도 설정"
 
 #: aot_flask/templates/pages/geo/geo_design.html:1156
 msgid "Groups that can operate this map"
-msgstr "그룹 선택"
+msgstr "이 지도를 조작할 수 있는 그룹"
 
 #: aot_flask/templates/pages/geo/geo_design.html:1159
 msgid ""
 "If no group is selected, everyone can operate this map. Selecting a group"
 " limits operation to its members. Data stays visible to everyone."
-msgstr ""
-"그룹을 선택하지 않으면 모두가 이 지도에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 "
-"계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 지도를 조작할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: aot_flask/templates/pages/geo/geo_design.html:1179
 msgid "Everyone can operate this map (no group assigned)."
@@ -14402,7 +14328,7 @@ msgstr "시설물"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:136
 msgid "Irrigation layers, pipes and devices"
-msgstr "관개 레이어, 배관, 장치"
+msgstr "관수 레이어, 배관, 장치"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:137
 msgid "Sensor — click a position to place"
@@ -14682,11 +14608,11 @@ msgstr "시설 복제"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:345
 msgid "Map & Site"
-msgstr "지도 및 사이트"
+msgstr "지도 및 대지"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:371
 msgid "Sites belonging to the selected map"
-msgstr "선택된 지도에 속한 사이트"
+msgstr "선택된 지도에 속한 대지"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:375
 msgid "Select a Map first"
@@ -14737,9 +14663,7 @@ msgstr "그룹 선택"
 msgid ""
 "If no group is selected, everyone can operate this facility. Selecting a "
 "group limits operation to its members. Data stays visible to everyone."
-msgstr ""
-"그룹을 선택하지 않으면 모두가 이 시설에 접근할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 "
-"계속 보입니다."
+msgstr "그룹을 선택하지 않으면 모두가 이 시설을 조작할 수 있습니다. 그룹을 선택하면 그 구성원만 조작할 수 있습니다. 데이터는 모두에게 계속 보입니다."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:484
 #: aot_flask/templates/user_templates/widget_template_AoT_pid_body.html:427
@@ -14817,7 +14741,7 @@ msgstr "측벽이 높은 경우 2단으로 나눌 수 있습니다"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:579
 msgid "Stages"
-msgstr " 단"
+msgstr "단수"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:583
 msgid "1 stage"
@@ -15437,7 +15361,7 @@ msgstr "히트펌프"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1217
 msgid "Irrigation valve"
-msgstr "관개밸브"
+msgstr "관수 밸브"
 
 # ── design.js full i18n pass ──
 #: aot_flask/templates/pages/geo/geo_facility.html:1218
@@ -15940,7 +15864,7 @@ msgstr "기본값으로 재설정"
 
 #: aot_flask/templates/pages/geo/geo_setting.html:155
 msgid "Site Color"
-msgstr "사이트 색상"
+msgstr "대지 색상"
 
 #: aot_flask/templates/pages/geo/geo_setting.html:164
 msgid "Zone Color"
@@ -17347,9 +17271,9 @@ msgstr ""
 
 #: aot_flask/templates/settings/chirpstack.html:39
 msgid ""
-"Stored and managed under Settings > API Keys. Select which key this "
-"connection uses."
-msgstr "설정 > API 키에서 저장·관리됩니다. 이 연결에 사용할 키를 선택하세요."
+"Stored and managed under Manage > System Management > API Key Management."
+" Select which key this connection uses."
+msgstr "관리 > 시스템 관리 > API 키 관리에서 저장·관리됩니다. 이 연결에 사용할 키를 선택하세요."
 
 #: aot_flask/templates/settings/chirpstack.html:61
 #: aot_flask/templates/settings/chirpstack.html:162
@@ -18132,8 +18056,12 @@ msgid ""
 "language you wrote them in. Turn this on to have them shown in the "
 "interface language as well. The stored names are never changed. Without "
 "an AI engine they are not translated automatically, but translations you "
-"enter under Settings > Name Translations are still shown."
-msgstr "직접 입력한 이름(장치, 구역, 작물 이름)은 입력한 언어 그대로 표시됩니다. 이 옵션을 켜면 인터페이스 언어로도 함께 표시됩니다. 저장된 이름은 절대 바뀌지 않습니다. AI 엔진이 없으면 자동으로 번역되지 않지만, 설정 > 이름 번역에서 직접 입력한 번역은 계속 표시됩니다."
+"enter under Manage > System Management > Name Translations are still "
+"shown."
+msgstr ""
+"직접 입력한 이름(장치, 구역, 작물 이름)은 입력한 언어 그대로 표시됩니다. 이 옵션을 켜면 인터페이스 언어로도 함께 표시됩니다."
+" 저장된 이름은 절대 바뀌지 않습니다. AI 엔진이 없으면 자동으로 번역되지 않지만, 관리 > 시스템 관리 > 이름 번역에서 직접 "
+"입력한 번역은 계속 표시됩니다."
 
 #: aot_flask/templates/settings/general.html:195
 msgid ""
@@ -18243,10 +18171,8 @@ msgstr "컨트롤러 샘플링 속도 설정"
 msgid ""
 "The sampling rate of the AoT daemon controller can be changed below. A "
 "daemon restart is required to apply new settings. Restart the daemon by "
-"selecting Config Menu [Gear Icon] -> Restart Backend."
-msgstr ""
-"AoT 데몬 컨트롤러의 샘플링 속도는 아래에서 변경할 수 있습니다. 새 설정을 적용하려면 데몬을 재시작해야 합니다.설정 메뉴 [기어"
-" 아이콘] -> 백엔드 재시작에서 데몬을 재시작하십시오."
+"selecting Manage -> Restart Backend."
+msgstr "AoT 데몬 컨트롤러의 샘플링 속도는 아래에서 변경할 수 있습니다. 새 설정을 적용하려면 데몬을 재시작해야 합니다. 관리 -> 백엔드 재시작에서 데몬을 재시작하십시오."
 
 #: aot_flask/templates/settings/group_detail.html:24
 msgid ""
@@ -18799,16 +18725,15 @@ msgid ""
 "This feature allows you to replace current settings by uploading a ZIP "
 "file containing the AoT setup database and custom "
 "functions/inputs/outputs/widgets. You must only import databases that are"
-" of the same or older version as the current AoT version. There is no "
-"procedure to verify this, but problems may occur if a database version "
-"higher than the current version is imported. Problems may also occur if "
-"the custom controller is not compatible with the AoT version being "
-"imported."
+" of the same or older version as the current AoT version. The version is "
+"read only from the file name: a file whose name shows a newer version is "
+"refused, so do not rename exported files. Problems may also occur if the "
+"custom controller is not compatible with the AoT version being imported."
 msgstr ""
 "이 기능은 AoT 설정 데이터베이스와 사용자 정의 함수/입력/출력/위젯이 포함된 ZIP 파일을 업로드하여 현재 설정을 교체할 수 "
-"있게 해줍니다. 반드시 현재 설치된 AoT 버전과 같거나 낮은 버전의 데이터베이스만 가져와야 합니다. 이를 검증하는 별도의 절차는 "
-"없으나, 현재 버전보다 높은 버전의 데이터베이스를 가져올 경우 문제가 발생할 수 있습니다. 또한, 사용자 정의 컨트롤러가 가져오려는"
-" AoT 버전과 호환되지 않을 때도 오류가 발생할 수 있습니다."
+"있게 해줍니다. 반드시 현재 설치된 AoT 버전과 같거나 낮은 버전의 데이터베이스만 가져와야 합니다. 버전은 파일 이름에서만 "
+"읽으며, 이름이 더 새 버전을 가리키는 파일은 거절합니다. 그러니 내보낸 파일의 이름을 바꾸지 마세요. 또한, 사용자 정의 "
+"컨트롤러가 가져오려는 AoT 버전과 호환되지 않을 때도 오류가 발생할 수 있습니다."
 
 #: aot_flask/templates/tools/export.html:95
 msgid ""
@@ -18926,8 +18851,8 @@ msgid "Notes Manager"
 msgstr "노트 관리자"
 
 #: aot_flask/templates/tools/notes.html:152
-msgid "Search content, subject..."
-msgstr "내용, 주제 검색..."
+msgid "Search note text..."
+msgstr "노트 내용 검색..."
 
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
@@ -19381,8 +19306,10 @@ msgid "Save as Global Band Colors"
 msgstr "전역 구간 색상으로 저장"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
-msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr "앞의 5개 구간 색상을 설정 > 사용자 지정 UI 구간 색상에 적용합니다."
+msgid ""
+"Applies the first 5 section colors to the band colors in Manage > System "
+"Management > Custom UI."
+msgstr "앞의 5개 구간 색상을 관리 > 시스템 관리 > 사용자 정의 UI의 구간 색상에 적용합니다."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -19432,8 +19359,10 @@ msgid "Save as Global Chart Colors"
 msgstr "전역 차트 색상으로 저장"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
-msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr "앞의 6개 시리즈 색상을 설정 > 사용자 지정 UI 차트 색상에 적용합니다."
+msgid ""
+"Applies the first 6 series colors to the chart colors in Manage > System "
+"Management > Custom UI."
+msgstr "앞의 6개 시리즈 색상을 관리 > 시스템 관리 > 사용자 정의 UI의 차트 색상에 적용합니다."
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21074,12 +21003,15 @@ msgstr "지속 트리거 함수는 활성화된 시점부터 주기마다 동작
 #: config/__init__.py:634
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr ""
-"시퀀스 트리거는 활성화되면 정렬된 동작 목록을 한 단계씩 실행합니다. 시퀀스에 동작을 추가하면 위에서 아래로 실행되며, 단계 사이에"
-" 지연을 둘 수 있습니다. 예를 들어 환기구를 열고, 기다린 뒤, 팬을 켜는 다단계 루틴 자동화에 사용하세요."
+"시퀀스 트리거는 활성화되면 정렬된 동작 목록을 한 단계씩 실행합니다. 동작은 개별로 실행되거나 그룹으로 묶여 동시에 실행될 수"
+" 있고, 각 단계의 지속 시간은 고정 지연일 수도 입력 측정값으로 실시간 결정될 수도 있으며, 단계는 서로 겹칠 수 있고 요일별"
+" 일정을 따를 수 있습니다. 예를 들어 환기구를 열고, 기다린 뒤, 팬을 켜는 다단계 루틴 자동화에 사용하세요."
 
 #: functions/AoT_VPD.py:50
 msgid "AoT VPD"
@@ -22136,7 +22068,7 @@ msgstr "잡음 대역"
 
 #: functions/pid_autotune.py:112
 msgid "Outstep"
-msgstr "출력 상태"
+msgstr "출력 단계"
 
 #: functions/redundancy.py:45
 msgid "Redundant Sensor Data"
@@ -22411,7 +22343,7 @@ msgstr "mV"
 
 #: inputs/aot_test_input_save_value.py:79
 msgid "Store Measurement"
-msgstr "측정값 없음"
+msgstr "측정값 저장"
 
 #: inputs/atlas_co2.py:87 inputs/atlas_do.py:103 inputs/atlas_o2.py:140
 #: inputs/atlas_orp.py:103 inputs/atlas_ph.py:110
@@ -22919,7 +22851,7 @@ msgstr "Ecowitt Cloud API를 사용하려면 Application Key, API Key, 장치 MA
 #: inputs/ecowitt_weather.py:56 inputs/kma_weather_500.py:195
 #: inputs/sensecap_weather.py:114
 msgid "Measurement Period (sec)"
-msgstr "측정 기간(초)"
+msgstr "측정 주기(초)"
 
 #: inputs/ecowitt_soil_moisture.py:37 inputs/ecowitt_temp_and_humidity.py:37
 #: inputs/ecowitt_weather.py:57 inputs/kma_weather_500.py:196
@@ -23194,7 +23126,7 @@ msgstr "명령 제한 시간"
 
 #: inputs/linux_command.py:66
 msgid "Current Working Directory"
-msgstr "현재 작업 시간"
+msgstr "현재 작업 디렉터리"
 
 #: inputs/modbus_tcp.py:49
 msgid ""
@@ -24480,7 +24412,7 @@ msgstr "일반"
 #: outputs/on_off_wireless_rpi_rf.py:31 outputs/on_off_xl9535.py:31
 #: outputs/remote_output_on_off.py:32
 msgid "On/Off"
-msgstr "끄기"
+msgstr "켜기/끄기"
 
 #: outputs/on_off_52pi_4ch.py:131 outputs/on_off_ecowitt.py:130
 #: outputs/on_off_gpio.py:98 outputs/on_off_grove_multichannel_relay.py:170
@@ -24518,7 +24450,7 @@ msgstr "시작 시 작동 함수"
 #: outputs/pwm_python.py:308 outputs/pwm_rpi_gpio.py:151
 #: outputs/pwm_shell.py:138
 msgid "Current"
-msgstr "현재"
+msgstr "전류"
 
 #: outputs/on_off_chirpstack.py:142
 msgid "LoRaWAN FPort on which the command is received"
@@ -24705,7 +24637,7 @@ msgstr "디지털 포텐시미터"
 #: outputs/pump_l298n_pi5.py:56 outputs/pump_mcp23017.py:51
 #: outputs/pump_pcf8574.py:50
 msgid "Peristaltic Pump"
-msgstr "페리스탈틱 풀머"
+msgstr "페리스탈틱 펌프"
 
 #: outputs/pwm_gpio.py:142 outputs/pwm_pca9685.py:101
 #: outputs/pwm_rpi_gpio.py:129
@@ -25365,10 +25297,11 @@ msgstr "사전 설정"
 msgid ""
 "Selecting a preset configuration automatically applies default settings "
 "such as min/max values. Preset gauges follow the global band colors "
-"(Settings > Custom UI); choose Custom to set individual section colors."
+"(Manage > System Management > Custom UI); choose Custom to set individual"
+" section colors."
 msgstr ""
-"프리셋 구성을 선택하면 최소/최대값 등 기본 설정이 자동으로 적용됩니다. 프리셋 게이지는 전역 구간 색상(설정 > 사용자 지정 "
-"UI)을 따릅니다. 구간별 색상을 직접 지정하려면 사용자 지정을 선택하세요."
+"프리셋 구성을 선택하면 최소/최대값 등 기본 설정이 자동으로 적용됩니다. 프리셋 게이지는 전역 구간 색상(관리 > 시스템 관리 > "
+"사용자 정의 UI)을 따릅니다. 구간별 색상을 직접 지정하려면 사용자 지정을 선택하세요."
 
 #: widgets/AoT_gauge_angular.py:326 widgets/AoT_wind_angular.py:238
 msgid "Data Font Size"
@@ -25861,7 +25794,7 @@ msgstr "그리기 도구로 생성한 자율 형태의 도형을 표시합니다
 
 #: widgets/AoT_map.py:952
 msgid "Device Shape Opacity"
-msgstr "장치 도형 투명도"
+msgstr "장치 도형 불투명도"
 
 #: widgets/AoT_map.py:953
 msgid "0 (Transparent) ~ 100 (Opaque)"
@@ -25938,10 +25871,12 @@ msgstr "AoT 구획"
 
 #: widgets/AoT_plot.py:357
 msgid ""
-"One plot at a glance: stage timeline, targets against current readings, "
-"trends, and accumulated heat. Edit its schedule, guidance and targets "
-"from here."
-msgstr "구획 하나를 한 눈에 — 단계 기간 바, 목표 대비 실측, 추세, 적산온도. 일정·지침·목표를 여기서 고칩니다."
+"Every plot that is growing now, as a list of cards. Open one to see its "
+"stage timeline, targets against current readings, trends and accumulated "
+"heat, and to edit its schedule, guidance and targets."
+msgstr ""
+"지금 진행 중인 구획 전체를 카드 목록으로 보여 줍니다. 하나를 열면 단계 기간 바, 목표 대비 실측, 추세, 적산온도를 보고 "
+"일정·지침·목표를 고칠 수 있습니다."
 
 #: widgets/AoT_plot.py:377
 msgid "What to monitor"
@@ -26955,9 +26890,9 @@ msgstr "긴급 판정 편차 임계값 (허용오차 배수)"
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:223
 msgid ""
 "If a variable deviates from its target by more than this many times its "
-"tolerance, treat the cycle as an emergency and move vents immediately "
-"(ignore the actuation period above)."
-msgstr "변수의 편차가 허용오차의 이 배수를 초과하면 이번 사이클을 긴급으로 간주해 즉시 환기창을 움직입니다(위 구동 주기는 무시됩니다)."
+"tolerance and the gap is still widening, treat the cycle as an emergency "
+"and move vents immediately (ignore the actuation period above)."
+msgstr "변수의 편차가 허용오차의 이 배수를 넘은 채 계속 벌어지고 있으면 이번 사이클을 긴급으로 간주해 즉시 환기창을 움직입니다(위 구동 주기는 무시됩니다)."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:239
 msgid "Emergency Rate Threshold (°C / 10min)"
@@ -28047,12 +27982,8 @@ msgid "elements imported."
 msgstr "개 요소를 가져왔습니다."
 
 #: aot_flask/static/js/dist/geo-design.bundle.js:323
-msgid "loading_map"
+msgid "Loading map..."
 msgstr "지도를 불러오는 중..."
-
-#: aot_flask/static/js/dist/geo-design.bundle.js:347
-msgid "save_btn_text"
-msgstr "저장"
 
 #: aot_flask/static/js/dist/geo-facility.bundle.js:30
 msgid "equipment"
@@ -28069,8 +28000,8 @@ msgid "No Measurements"
 msgstr "측정값 없음"
 
 #: aot_flask/static/js/widgets/AoT_map/aot-map-widget-v3.js:883
-msgid "confirm_remove_pin"
-msgstr "핀 제거 확인"
+msgid "Remove pin from map?"
+msgstr "지도에서 핀을 지울까요?"
 
 #: aot_flask/templates/pages/ai/ai_library.html:51
 msgid "Custom Source"
@@ -30366,6 +30297,14 @@ msgid "Holding position until the indoor reading returns"
 msgstr "실내 값을 다시 받을 때까지 그대로 둡니다"
 
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Daytime — the thermal curtain stays open for light"
+msgstr "낮 — 보온커튼은 빛을 위해 걷어 둡니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Holding — waiting to see if the change of direction lasts"
+msgstr "그대로 둡니다 — 바뀐 방향이 이어지는지 확인 중입니다"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 #, python-format
 msgid "%(var)s cannot be measured right now, so the devices that move it are holding position"
 msgstr "%(var)s를 지금 잴 수 없어, 이를 조절하는 장치는 그대로 둡니다"
@@ -30944,11 +30883,12 @@ msgstr ""
 msgid ""
 "Targets come from the program attached to this plot. Δ is the measured "
 "average minus that target. Day/night targets and curve-based targets are "
-"marked instead of differenced, because comparing them against a whole-day"
-" average produces false alarms."
+"compared against the average of the matching daytime or night-time "
+"window, not the whole day; where that window has no readings, Δ is left "
+"out."
 msgstr ""
-"목표는 구획에 붙은 프로그램에서 옵니다. Δ 는 실측 평균에서 그 목표를 뺀 값입니다. 주야 목표와 곡선 목표는 편차를 내지 않고 "
-"표시만 합니다 — 하루 전체 평균과 비교하면 잘못된 경보가 나기 때문입니다."
+"목표는 구획에 붙은 프로그램에서 옵니다. Δ 는 실측 평균에서 그 목표를 뺀 값입니다. 주야 목표와 곡선 목표는 하루 전체가 아니라"
+" 해당하는 낮 또는 밤 구간의 평균과 비교합니다. 그 구간에 측정값이 없으면 Δ 를 비워 둡니다."
 
 msgid "Show the last 8 weeks"
 msgstr "최근 8주 보기"
@@ -31433,8 +31373,8 @@ msgstr "허용"
 msgid "Not allowed"
 msgstr "허용 안 함"
 
-msgid "Turned on or off in Settings > General."
-msgstr "설정 > 일반에서 켜고 끕니다."
+msgid "Turned on or off in Manage > System Management > General Settings."
+msgstr "관리 > 시스템 관리 > 일반 설정에서 켜고 끕니다."
 
 msgid "Open General Settings"
 msgstr "일반 설정 열기"
@@ -31458,7 +31398,7 @@ msgid "Run built-in AI"
 msgstr "내장 AI 작동"
 
 msgid "The site the AI uses when a chat or screen does not name one."
-msgstr "대화나 화면에 사이트가 정해지지 않았을 때 AI가 기준으로 삼는 사이트입니다."
+msgstr "대화나 화면에 대지가 정해지지 않았을 때 AI가 기준으로 삼는 대지입니다."
 
 msgid "Lets the built-in AI periodically summarize the farm's situation in the background."
 msgstr "내장 AI가 백그라운드에서 농장 상황을 주기적으로 요약해 둡니다."
@@ -32062,8 +32002,14 @@ msgid "True Color"
 msgstr "트루 컬러"
 
 #: widgets/AoT_plot.py
-msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
-msgstr "이 단계가 정의한 목표 및 한계에 대한 현재 측정값입니다. 지도 위젯에 표시되는 것과 같은 카드이며, DLI와 적산온도를 포함합니다. [7 Days]를 켜면 각 행이 지난 한 주 동안 움직인 범위로 바뀝니다."
+msgid ""
+"Current readings against the targets and limits this stage declares — the"
+" same card the map widget shows, including DLI and accumulated heat. "
+"[Daily] and [Weekly] turn each row into the range it moved through over "
+"the last 7 days or 8 weeks."
+msgstr ""
+"이 단계가 정의한 목표 및 한계에 대한 현재 측정값입니다. 지도 위젯에 표시되는 것과 같은 카드이며, DLI와 적산온도를 "
+"포함합니다. [일간]과 [주간]을 켜면 각 행이 지난 7일 또는 8주 동안 움직인 범위로 바뀝니다."
 
 #: widgets/AoT_plot.py
 msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
@@ -32365,6 +32311,38 @@ msgstr "AI 도구를 바꿨습니다. 연결된 AI 앱은 다시 연결해야 �
 msgid "All tools (built-in AI)"
 msgstr "모든 도구 (앱 내장 AI)"
 
+#: aot_flask/forms/forms_settings.py
+msgid "Setup modules"
+msgstr "설정 모듈"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Plots and crop programs"
+msgstr "구획·작기 프로그램"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Map and locations"
+msgstr "지도·위치"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Building automations"
+msgstr "자동화 작성"
+
+#: aot_flask/forms/forms_settings.py
+msgid "Documents and library"
+msgstr "문서·라이브러리"
+
+#: aot_flask/forms/forms_settings.py
+msgid "System and AI settings"
+msgstr "시스템·AI 설정"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Operations (always)"
+msgstr "운영 (항상)"
+
+#: aot_flask/templates/settings/user_detail.html
+msgid "Operations (always on): everyday tools for reading, control, schedules, notes and plot stages. Each setup module you tick adds its setup tools and makes the tool list sent to the AI in every conversation longer, so tick only what this key is for."
+msgstr "운영(항상 켜짐): 조회·제어·일정·노트·구획 단계처럼 날마다 쓰는 도구입니다. 설정 모듈을 체크할 때마다 그 설정 도구가 더해지고 대화마다 AI에 보내는 도구 목록이 길어집니다. 이 키가 하는 일에 필요한 모듈만 체크하세요."
+
 #: aot_flask/templates/layout.html
 msgid "Connecting Google Calendar requires the Edit Controllers permission."
 msgstr "구글 캘린더를 연결하려면 컨트롤러 편집 권한이 필요합니다."
@@ -32599,11 +32577,13 @@ msgid "Password for connecting to the server."
 msgstr "서버 연결에 사용할 비밀번호입니다."
 
 #: outputs/on_off_mqtt.py:178 outputs/on_off_mqtt_multi.py:150
+#: inputs/ecowitt_mqtt.py:190 inputs/mqtt_paho.py:133 inputs/mqtt_paho_json.py:149
 msgid "Password for connecting to the server. Leave blank to disable."
 msgstr "서버 연결에 사용할 비밀번호입니다. 비워두면 비활성화됩니다."
 
 #: outputs/on_off_mqtt.py:195 outputs/on_off_mqtt_multi.py:167
 #: outputs/pwm_mqtt.py:153 outputs/value_mqtt.py:140
+#: inputs/mqtt_paho.py:114 inputs/mqtt_paho_json.py:130
 msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
 msgstr "브로커 인증서에 서명한 CA 인증서 파일의 경로입니다. 비워두면 시스템 CA 저장소를 사용합니다(Let's Encrypt 등 공인 인증서를 사용하는 브로커의 경우)."
 
@@ -32653,6 +32633,7 @@ msgstr "확인 응답을 기다리는 확인형(Confirmed) 명령으로 전송�
 
 #: outputs/on_off_mqtt.py:162 outputs/on_off_mqtt_multi.py:134
 #: outputs/pwm_mqtt.py:120 outputs/value_mqtt.py:107
+#: inputs/ecowitt_mqtt.py:165 inputs/mqtt_paho.py:97 inputs/mqtt_paho_json.py:112
 msgid "Send login credentials"
 msgstr "로그인 자격 증명을 전송합니다"
 
@@ -32968,6 +32949,7 @@ msgstr "MQTT 서버에 연결할 때 사용할 고유 클라이언트 ID"
 
 #: outputs/on_off_mqtt.py:205 outputs/on_off_mqtt_multi.py:177
 #: outputs/pwm_mqtt.py:163 outputs/value_mqtt.py:150
+#: inputs/ecowitt_mqtt.py:198 inputs/mqtt_paho.py:141 inputs/mqtt_paho_json.py:157
 msgid "Use websockets to connect to the server."
 msgstr "서버에 연결할 때 웹소켓을 사용합니다."
 
@@ -33003,3 +32985,837 @@ msgstr "예: 010110 (Hex) 또는 JSON 문자열"
 #: outputs/on_off_chirpstack.py:177
 msgid "e.g., 010210 (Hex) or JSON string"
 msgstr "예: 010210 (Hex) 또는 JSON 문자열"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Streets"
+msgstr "도로"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Ocean"
+msgstr "해양"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Topo"
+msgstr "지형"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Standard road map with labels"
+msgstr "이름이 표시되는 일반 도로 지도"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Topographic map with trails"
+msgstr "등산로가 표시되는 지형도"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Satellite imagery base"
+msgstr "위성 영상 바탕"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Satellite with roads/labels"
+msgstr "도로·이름이 겹쳐진 위성 영상"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Bathymetric ocean map"
+msgstr "수심이 표시되는 해양 지도"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Topographic terrain map"
+msgstr "지형 기복이 표시되는 지도"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "MapTiler API Key"
+msgstr "MapTiler API 키"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Map Style"
+msgstr "지도 스타일"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Label Language"
+msgstr "이름 표시 언어"
+
+#: aot/aot_flask/templates/pages/geo/map_base_notice.html
+msgid "Language for map labels (e.g., ko, en, auto)"
+msgstr "지도에 표시되는 이름의 언어(예: ko, en, auto)"
+
+
+#: aot_flask/templates/modals/geo_settings_modal.html:171
+msgid "Max Site Polygons"
+msgstr "최대 대지 폴리곤 수"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:172
+msgid "Max Zone Polygons"
+msgstr "최대 구역 폴리곤 수"
+
+#: aot_flask/templates/modals/geo_settings_modal.html:173
+msgid "Max Device Polygons"
+msgstr "최대 장치 폴리곤 수"
+
+#: inputs/ecowitt_mqtt.py:140 inputs/mqtt_paho_json.py:87
+msgid "Topic"
+msgstr "토픽"
+
+#: inputs/ecowitt_mqtt.py:141 inputs/mqtt_paho_json.py:88
+msgid "The topic to subscribe to"
+msgstr "구독할 토픽입니다."
+
+#: inputs/ecowitt_mqtt.py:158 inputs/mqtt_paho.py:90 inputs/mqtt_paho_json.py:105
+msgid "Unique client ID for connecting to the server"
+msgstr "서버 연결에 사용할 고유 클라이언트 ID입니다."
+
+#: inputs/ecowitt_mqtt.py:164 inputs/mqtt_paho.py:96 inputs/mqtt_paho_json.py:111
+msgid "Use Login"
+msgstr "로그인 사용"
+
+#: inputs/ecowitt_mqtt.py:171 inputs/mqtt_paho.py:103 inputs/mqtt_paho_json.py:118
+msgid "Use TLS"
+msgstr "TLS 사용"
+
+#: inputs/ecowitt_mqtt.py:174 inputs/mqtt_paho.py:106 inputs/mqtt_paho_json.py:122
+msgid "Encrypt the connection to the broker with TLS"
+msgstr "TLS로 브로커 연결을 암호화합니다."
+
+#: inputs/ecowitt_mqtt.py:197 inputs/mqtt_paho.py:140 inputs/mqtt_paho_json.py:156
+msgid "Use Websockets"
+msgstr "웹소켓 사용"
+
+#: inputs/ecowitt_mqtt.py:216 inputs/mqtt_paho_json.py:175
+msgid "JMESPATH Expression"
+msgstr "JMESPath 표현식"
+
+#: inputs/ecowitt_mqtt.py:217 inputs/mqtt_paho_json.py:176
+msgid "JMESPATH expression to find value in JSON response"
+msgstr "JSON 응답에서 값을 찾기 위한 JMESPath 표현식입니다."
+
+#: inputs/mqtt_paho.py:159
+msgid "Subscription Topic"
+msgstr "구독 토픽"
+
+#: inputs/mqtt_paho.py:160
+msgid "The MQTT topic to subscribe to"
+msgstr "구독할 MQTT 토픽입니다."
+
+#: outputs/on_off_gpio.py:88
+msgid "HIGH"
+msgstr "HIGH (높음)"
+
+#: outputs/on_off_gpio.py:89
+msgid "LOW"
+msgstr "LOW (낮음)"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Enable Serial Hardware"
+msgstr "시리얼 하드웨어 활성화"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Disable Serial Hardware"
+msgstr "시리얼 하드웨어 비활성화"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Enable Serial Login Shell"
+msgstr "시리얼 로그인 셸 활성화"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Disable Serial Login Shell"
+msgstr "시리얼 로그인 셸 비활성화"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Serial Hardware"
+msgstr "직렬 하드웨어"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Serial Login Shell"
+msgstr "직렬 로그인 셸"
+
+#: aot_flask/templates/settings/pi.html
+msgid "Keep enabled to use serial devices."
+msgstr "직렬 장치를 쓰려면 켜 두세요."
+
+#: aot_flask/templates/settings/pi.html
+msgid "Keep disabled; it takes the serial port away from devices."
+msgstr "꺼 두세요. 켜면 직렬 포트를 장치가 쓰지 못합니다."
+
+#: aot_flask/templates/settings/pi.html
+msgid "The following settings are configured via non-interactive raspi-config. Changes made here take effect after a system reboot, which can be performed from the top menu (Manage -> Restart System)."
+msgstr "다음 설정은 비대화형 raspi-config로 구성됩니다. 변경한 내용은 시스템을 재시작해야 적용되며, 상단 메뉴(관리 → 시스템 재시작)에서 할 수 있습니다."
+
+#: aot_flask/templates/settings/pi.html
+msgid "This page configures a Raspberry Pi through raspi-config. This system has no raspi-config (not a Raspberry Pi installation, or running in Docker), so there is nothing to change here."
+msgstr "이 화면은 raspi-config로 라즈베리파이를 설정합니다. 이 시스템에는 raspi-config가 없어(라즈베리파이 설치가 아니거나 Docker에서 실행 중) 여기서 바꿀 설정이 없습니다."
+
+#: aot_flask/templates/settings/pi.html
+msgid "This system has no raspi-config (not a Raspberry Pi installation, or running in Docker); nothing was changed."
+msgstr "이 시스템에는 raspi-config가 없어(라즈베리파이 설치가 아니거나 Docker에서 실행 중) 아무것도 바꾸지 않았습니다."
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s turned on (%(time)s)"
+msgstr "출력 %(name)s (%(id)s) 채널 %(channel)s 켜짐 (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s turned off (%(time)s)"
+msgstr "출력 %(name)s (%(id)s) 채널 %(channel)s 꺼짐 (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s turned on for %(seconds)s seconds (%(time)s)"
+msgstr "출력 %(name)s (%(id)s) 채널 %(channel)s %(seconds)s초 동안 켜짐 (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s duty cycle set to %(duty)s%% (%(time)s)"
+msgstr "출력 %(name)s (%(id)s) 채널 %(channel)s 듀티 사이클 %(duty)s%% 설정 (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s command sent (%(time)s)"
+msgstr "출력 %(name)s (%(id)s) 채널 %(channel)s 명령 전송 (%(time)s)"
+
+#: aot_flask/utils/utils_input.py
+msgid "All measurements must have a name and unit/measurement set"
+msgstr "모든 측정값에는 이름과 단위/측정 항목이 설정되어 있어야 합니다"
+
+#: aot_flask/utils/utils_general.py
+msgid "Command sent to {controller} Controller and is running in the background."
+msgstr "{controller} 컨트롤러에 명령을 보냈으며 백그라운드에서 실행 중입니다."
+
+#: aot_flask/utils/utils_general.py
+msgid "Command sent to {controller} Controller."
+msgstr "{controller} 컨트롤러에 명령을 보냈습니다."
+
+#: aot_flask/utils/utils_general.py
+msgid "Command sent to {controller} Controller. Returned: {returned}"
+msgstr "{controller} 컨트롤러에 명령을 보냈습니다. 반환값: {returned}"
+
+msgid "Current position"
+msgstr "현재 위치"
+
+msgid "Single-span"
+msgstr "단동"
+
+msgid "Multi-span"
+msgstr "연동"
+
+msgid "Use \"Place on Map\" to set the facility location first."
+msgstr "먼저 [지도에 배치]로 시설 위치를 정하세요."
+
+msgid "Save error"
+msgstr "저장 오류"
+
+#: aot/ai/services/intent_resolver.py
+msgid "valves"
+msgstr "밸브"
+
+#: aot/ai/services/intent_resolver.py
+msgid "pumps"
+msgstr "펌프"
+
+#: aot/ai/services/intent_resolver.py
+msgid "motors"
+msgstr "모터"
+
+#: aot/ai/services/intent_resolver.py
+msgid "lights"
+msgstr "조명"
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "New Camera"
+msgstr "새 카메라"
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "Error adding camera"
+msgstr "카메라 추가 오류"
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "Error updating camera"
+msgstr "카메라 수정 오류"
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "Error deleting camera"
+msgstr "카메라 삭제 오류"
+
+#: aot/aot_flask/utils/utils_function.py
+msgid "Execute All"
+msgstr "모두 실행"
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Required"
+msgstr "필수"
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Start date/time, end date/time, start setpoint"
+msgstr "시작 일시, 종료 일시, 시작 설정값"
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Invalid Date/Time format"
+msgstr "날짜/시간 형식이 올바르지 않습니다"
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "YYYY/MM/DD HH:MM:SS"
+msgstr "YYYY/MM/DD HH:MM:SS"
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Start time, end time, start setpoint"
+msgstr "시작 시간, 종료 시간, 시작 설정값"
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Duration must be positive"
+msgstr "기간은 양수여야 합니다"
+
+#: aot/inputs_gis/gis_sentinelhub.py
+msgid "index"
+msgstr "지수"
+
+#: aot/utils/calendar_event_format.py
+msgid "Setting"
+msgstr "설정"
+
+#: aot/services/device_references.py
+msgid "Cannot delete '%(device)s' — it is still used by: %(referrers)s. Remove or repoint those references first."
+msgstr "'%(device)s' 을(를) 삭제할 수 없습니다 — 아직 %(referrers)s 에서 쓰고 있습니다. 해당 참조를 먼저 제거하거나 다른 장치로 바꾸세요."
+
+#: aot/services/resolvers/device_resolver.py
+msgid "More than one %(kind)s is named '%(name)s' (tabs: %(tabs)s). Say which one you mean, or use its exact id."
+msgstr "이름이 '%(name)s' 인 %(kind)s 이(가) 둘 이상입니다(탭: %(tabs)s). 어느 것인지 말씀해 주시거나 정확한 id 를 쓰세요."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "No changes were submitted."
+msgstr "제출된 변경 사항이 없습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "%(field)s is fixed by this device's driver and cannot be changed."
+msgstr "%(field)s 은(는) 이 장치의 드라이버가 고정한 값이라 바꿀 수 없습니다."
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "The device is saved but stayed off. Turn it back on from its settings page."
+msgstr "장치는 저장했지만 꺼진 상태로 두었습니다. 설정 페이지에서 다시 켜 주세요."
+
+#: aot/ai/services/agent_loop_service.py
+msgid "This looks like a recurring operation. Should I set it up as a repeating automation (a Function), or reserve it just this once?"
+msgstr "반복되는 작업으로 보입니다. 반복 자동화(함수)로 설정할까요, 이번 한 번만 예약할까요?"
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Repeating automation (Function)"
+msgstr "반복 자동화(함수)"
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Just this once"
+msgstr "이번 한 번만"
+
+#: aot/ai/services/agent_loop_service.py
+msgid "This looks like a condition-based operation. Should I set it up as a conditional automation (a Function), or reserve it at a fixed time?"
+msgstr "조건 기반 작업으로 보입니다. 조건 자동화(함수)로 설정할까요, 정해진 시각에 예약할까요?"
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Conditional automation (Function)"
+msgstr "조건 자동화(함수)"
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Fixed-time reservation"
+msgstr "정시 예약"
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "h"
+msgstr "시간"
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "s"
+msgstr "초"
+
+msgid "This is a test email from AoT"
+msgstr "AoT에서 보낸 테스트 이메일입니다."
+
+msgid "AI Periodic Advice"
+msgstr "AI 정기 조언"
+
+msgid "Test Input: Save your own measurement value"
+msgstr "테스트 입력: 원하는 측정값 저장"
+
+msgid "Enter the Value you want to store as a measurement, then press Store Measurement."
+msgstr "측정값으로 저장할 값을 입력한 뒤 '측정값 저장'을 누르십시오."
+
+msgid "This is the channel to save the measurement value to"
+msgstr "측정값을 저장할 채널입니다."
+
+msgid "This is the measurement value to save for this Input"
+msgstr "이 입력에 저장할 측정값입니다."
+
+msgid "Select Input"
+msgstr "입력 선택"
+
+msgid "Select Output"
+msgstr "출력 선택"
+
+msgid "Select Function"
+msgstr "함수 선택"
+
+msgid "Select Device"
+msgstr "장치 선택"
+
+msgid "Labels"
+msgstr "라벨"
+
+msgid "Deactivate this function?"
+msgstr "이 함수를 비활성화하시겠습니까?"
+
+msgid "Automatic environment control will stop. Continue?"
+msgstr "환경 자동 제어가 중지됩니다. 계속하시겠습니까?"
+
+msgid "This is a simple test Input that allows you to save any value as a measurement, that will be stored in the measurement database. It can be useful for testing other parts of AoT, such as PIDs, Bang-Bang, and Conditional Functions, since you can be completely in control of what values the input provides to the Functions. Note 1: Select and save the Name and Measurement Unit for each channel. Once the unit has been saved, you can convert to other units in the Convert Measurement section. Note 2: Activate the Input before storing measurements."
+msgstr "이 입력은 어떤 값이든 측정값으로 저장해 측정값 데이터베이스에 기록하는 간단한 테스트 입력입니다. 이 입력이 함수에 전달하는 값을 직접 정할 수 있으므로 PID, 온오프 제어, 조건 함수 등 AoT의 다른 기능을 시험할 때 유용합니다. 참고 1: 채널마다 이름과 측정 단위를 선택해 저장하십시오. 단위를 저장한 뒤에는 '측정값 변환' 항목에서 다른 단위로 변환할 수 있습니다. 참고 2: 측정값을 저장하기 전에 입력을 활성화하십시오."
+
+#: aot_flask/utils/utils_action.py
+msgid "Action added"
+msgstr "동작을 추가했습니다"
+
+#: aot_flask/utils/utils_action.py
+msgid "Action deleted"
+msgstr "동작을 삭제했습니다"
+
+#: aot_flask/utils/utils_action.py
+msgid "Action modified"
+msgstr "동작을 수정했습니다"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller activated"
+msgstr "컨트롤러를 활성화했습니다"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller deactivated"
+msgstr "컨트롤러를 비활성화했습니다"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller deleted"
+msgstr "컨트롤러를 삭제했습니다"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller modified"
+msgstr "컨트롤러를 수정했습니다"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function added"
+msgstr "함수를 추가했습니다"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function deleted"
+msgstr "함수를 삭제했습니다"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function duplicated"
+msgstr "함수를 복제했습니다"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function modified"
+msgstr "함수를 수정했습니다"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input activated"
+msgstr "입력을 활성화했습니다"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input added"
+msgstr "입력을 추가했습니다"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input deactivated"
+msgstr "입력을 비활성화했습니다"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input deleted"
+msgstr "입력을 삭제했습니다"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input duplicated"
+msgstr "입력을 복제했습니다"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input modified"
+msgstr "입력을 수정했습니다"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller activated"
+msgstr "PID 컨트롤러를 활성화했습니다"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller deactivated"
+msgstr "PID 컨트롤러를 비활성화했습니다"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller deleted"
+msgstr "PID 컨트롤러를 삭제했습니다"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller modified"
+msgstr "PID 컨트롤러를 수정했습니다"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger activated"
+msgstr "트리거를 활성화했습니다"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger deactivated"
+msgstr "트리거를 비활성화했습니다"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger deleted"
+msgstr "트리거를 삭제했습니다"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger modified"
+msgstr "트리거를 수정했습니다"
+
+#: aot_flask/utils/utils_function.py
+msgid "All actions executed"
+msgstr "모든 동작을 실행했습니다"
+
+#: config/__init__.py
+msgid "with Timestamp"
+msgstr "타임스탬프 포함"
+
+#: actions/create_log_line.py
+msgid "Daemon Log Line"
+msgstr "데몬 로그 줄"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Env Coordinator"
+msgstr "통합 환경 제어"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Coordinates the actuators of the linked facility to optimise photosynthesis. VPD is the primary control target; temperature and humidity act as safety constraints. Actuators and sensors come from the linked facility. External environment data (outdoor temperature, humidity, wind, rain, solar, CO₂) comes from the facility's outdoor sensors, or optionally from the External Environment Context Collector function."
+msgstr "연결된 시설의 장치들을 조율해 광합성을 최적화합니다. 주된 제어 목표는 VPD이며, 온도와 습도는 안전 제약으로 작동합니다. 장치와 센서는 연결된 시설에서 가져옵니다. 외기 환경 데이터(외기 온도, 습도, 풍속, 강우, 일사, CO₂)는 시설의 실외 센서에서 오며, 필요하면 외부 환경 컨텍스트 수집기 함수에서 받을 수도 있습니다."
+
+#: aot_flask/static/js/common/aot-scale-input.js
+msgid "These values do not match any step — see them under [Advanced]."
+msgstr "이 값들은 어느 단계와도 맞지 않습니다 — [고급]에서 확인하세요."
+
+#: aot_flask/routes_mcp_auth.py:64
+#: aot_flask/routes_mcp_auth.py:128
+msgid "Your permissions do not allow this action"
+msgstr "권한이 없어 이 작업을 할 수 없습니다"
+
+#: aot_flask/routes_mcp_auth.py:86
+msgid "The authorization server address must start with https:// (http only for localhost)."
+msgstr "인가 서버 주소는 https:// 로 시작해야 합니다(http 는 localhost 만)."
+
+#: aot_flask/routes_mcp_auth.py:88
+msgid "The public MCP address must be a full address with a path, such as https://farm.example.com/mcp."
+msgstr "MCP 공개 주소는 https://farm.example.com/mcp 처럼 경로까지 있는 전체 주소여야 합니다."
+
+#: aot_flask/routes_mcp_auth.py:90
+msgid "The public web address must be a full address such as https://farm.example.com."
+msgstr "웹 공개 주소는 https://farm.example.com 처럼 전체 주소여야 합니다."
+
+#: aot_flask/routes_mcp_auth.py:93
+msgid "To turn on central authentication, enter both the authorization server address and the public MCP address."
+msgstr "중앙 인증을 켜려면 인가 서버 주소와 MCP 공개 주소를 모두 입력하세요."
+
+#: aot_flask/routes_mcp_auth.py:118
+msgid "MCP authentication settings saved."
+msgstr "MCP 인증 설정을 저장했습니다."
+
+#: aot_flask/routes_mcp_auth.py:137
+msgid "Authorization server"
+msgstr "인가 서버"
+
+#: aot_flask/routes_mcp_auth.py:138
+msgid "Public MCP address"
+msgstr "MCP 공개 주소"
+
+#: aot_flask/routes_mcp_auth.py:139
+msgid "Authorization server metadata"
+msgstr "인가 서버 메타데이터"
+
+#: aot_flask/routes_mcp_auth.py:140
+msgid "Signing keys"
+msgstr "서명 키"
+
+#: aot_flask/routes_mcp_auth.py:141
+msgid "Account linking"
+msgstr "계정 연결"
+
+#: aot_flask/routes_mcp_auth.py:153
+msgid "Account linking is not set up yet. Ask an administrator to finish the MCP authentication settings."
+msgstr "계정 연결이 아직 설정되지 않았습니다. 관리자에게 MCP 인증 설정을 마쳐 달라고 요청하세요."
+
+#: aot_flask/routes_mcp_auth.py:170
+msgid "The account link request expired or does not match. Try linking again."
+msgstr "계정 연결 요청이 만료되었거나 맞지 않습니다. 다시 연결해 주세요."
+
+#: aot_flask/routes_mcp_auth.py:173
+msgid "The authorization server did not approve the account link."
+msgstr "인가 서버가 계정 연결을 승인하지 않았습니다."
+
+#: aot_flask/routes_mcp_auth.py:182
+#, python-format
+msgid "Could not link the account: %(err)s"
+msgstr "계정을 연결하지 못했습니다: %(err)s"
+
+#: aot_flask/routes_mcp_auth.py:186
+msgid "Your account is linked. AI connections signed in with this account now act as you."
+msgstr "계정을 연결했습니다. 이 계정으로 로그인한 AI 연결은 이제 내 권한으로 동작합니다."
+
+#: aot_flask/routes_mcp_auth.py:202
+msgid "Your account is unlinked. AI connections signed in with it can no longer act here."
+msgstr "계정 연결을 해제했습니다. 그 계정으로 로그인한 AI 연결은 더 이상 이 AoT 에서 동작하지 않습니다."
+
+#: tools/mcp_central.py:320
+msgid "The authorization server address is empty or not https."
+msgstr "인가 서버 주소가 비어 있거나 https 가 아닙니다."
+
+#: tools/mcp_central.py:323
+msgid "The public MCP address is empty or malformed (it needs a path such as /mcp)."
+msgstr "MCP 공개 주소가 비어 있거나 모양이 틀렸습니다(/mcp 같은 경로가 있어야 합니다)."
+
+#: tools/mcp_central.py:330
+#, python-format
+msgid "Cannot reach %(address)s (%(error)s)."
+msgstr "%(address)s 에 닿지 못했습니다(%(error)s)."
+
+#: tools/mcp_central.py:340
+msgid "The server did not publish authorization server metadata."
+msgstr "그 서버가 인가 서버 메타데이터를 내놓지 않습니다."
+
+#: tools/mcp_central.py:343
+#, python-format
+msgid "The server says its issuer is \"%(issuer)s\", not the address entered."
+msgstr "그 서버의 발급자는 입력한 주소가 아니라 \"%(issuer)s\" 입니다."
+
+#: tools/mcp_central.py:346
+msgid "Authorization server metadata found."
+msgstr "인가 서버 메타데이터를 찾았습니다."
+
+#: tools/mcp_central.py:353
+#, python-format
+msgid "%(count)s signing key(s) published."
+msgstr "서명 키 %(count)s개가 공개되어 있습니다."
+
+#: tools/mcp_central.py:354
+msgid "No ES256 signing keys at /.well-known/jwks.json."
+msgstr "/.well-known/jwks.json 에 ES256 서명 키가 없습니다."
+
+#: tools/mcp_central.py:357
+msgid "client ID"
+msgstr "클라이언트 ID"
+
+#: tools/mcp_central.py:358
+msgid "client secret"
+msgstr "클라이언트 비밀키"
+
+#: tools/mcp_central.py:359
+msgid "public web address"
+msgstr "웹 공개 주소"
+
+#: tools/mcp_central.py:360
+msgid "Account linking is ready."
+msgstr "계정 연결을 쓸 수 있습니다."
+
+#: tools/mcp_central.py:361
+#, python-format
+msgid "Account linking needs: %(missing)s."
+msgstr "계정 연결에 필요한 값: %(missing)s."
+
+#: aot_flask/templates/settings/general.html:192
+msgid "MCP Authentication"
+msgstr "MCP 인증"
+
+#: aot_flask/templates/settings/general.html:194
+msgid "Configure"
+msgstr "설정하기"
+
+#: aot_flask/templates/settings/general.html:196
+#, python-format
+msgid "API keys, and access tokens from %(issuer)s"
+msgstr "API 키, 그리고 %(issuer)s 의 접근 토큰"
+
+#: aot_flask/templates/settings/general.html:196
+msgid "API keys only"
+msgstr "API 키만"
+
+#: aot_flask/templates/settings/general.html:478
+msgid "MCP Authentication Settings"
+msgstr "MCP 인증 설정"
+
+#: aot_flask/templates/settings/general.html:487
+msgid "Connection Methods"
+msgstr "연결 방법"
+
+#: aot_flask/templates/settings/general.html:491
+msgid "Always accepted"
+msgstr "항상 받음"
+
+#: aot_flask/templates/settings/general.html:493
+msgid "An AI client sends a user's API key in the X-API-KEY header. Keys are issued under Settings > Users. This works on any network, including closed VPNs."
+msgstr "AI 클라이언트가 사용자의 API 키를 X-API-KEY 헤더로 보냅니다. 키는 설정 > 사용자에서 발급합니다. 닫힌 VPN 을 포함해 어느 네트워크에서나 동작합니다."
+
+#: aot_flask/templates/settings/general.html:496
+msgid "Central Authentication"
+msgstr "중앙 인증"
+
+#: aot_flask/templates/settings/general.html:505
+msgid "Also accept access tokens issued by an OAuth authorization server, such as AoT Central Authentication. Sign-in and consent happen there; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr "AoT 중앙 인증 같은 OAuth 인가 서버가 낸 접근 토큰도 받습니다. 로그인과 동의는 그 서버에서 하고, 이 AoT 는 토큰만 확인합니다. 아래 주소는 이 서버와 인가 서버에 실제로 닿는 주소를 적으면 됩니다 — 어느 도메인·네트워크든 됩니다."
+
+#: aot_flask/templates/settings/general.html:508
+msgid "Addresses"
+msgstr "주소"
+
+#: aot_flask/templates/settings/general.html:511
+msgid "Authorization Server"
+msgstr "인가 서버"
+
+#: aot_flask/templates/settings/general.html:517
+msgid "The issuer address of the authorization server (https). Its signing keys are fetched from here, so this server must be able to reach it."
+msgstr "인가 서버의 발급자 주소(https). 서명 키를 여기서 받아 오므로 이 서버가 그 주소에 닿아야 합니다."
+
+#: aot_flask/templates/settings/general.html:520
+msgid "Public MCP Address"
+msgstr "MCP 공개 주소"
+
+#: aot_flask/templates/settings/general.html:526
+msgid "The address AI clients connect to. Access tokens must name exactly this address. Route /mcp and /.well-known/oauth-protected-resource at this address to the MCP server (port 5700)."
+msgstr "AI 클라이언트가 접속하는 주소입니다. 접근 토큰은 정확히 이 주소를 대상으로 해야 합니다. 이 주소의 /mcp 와 /.well-known/oauth-protected-resource 를 MCP 서버(포트 5700)로 보내 주세요."
+
+#: aot_flask/templates/settings/general.html:529
+msgid "Public Web Address"
+msgstr "웹 공개 주소"
+
+#: aot_flask/templates/settings/general.html:535
+msgid "The address people open this AoT at. Account linking returns here. Shared with the Google integration setting."
+msgstr "사람들이 이 AoT 를 여는 주소입니다. 계정 연결을 마치면 여기로 돌아옵니다. Google 연동 설정과 같은 값입니다."
+
+#: aot_flask/templates/settings/general.html:538
+msgid "Account Linking Client"
+msgstr "계정 연결 클라이언트"
+
+#: aot_flask/templates/settings/general.html:548
+msgid "Client Secret"
+msgstr "클라이언트 비밀키"
+
+#: aot_flask/templates/settings/general.html:552
+msgid "Set by environment"
+msgstr "환경변수로 정해짐"
+
+#: aot_flask/templates/settings/general.html:552
+msgid "Saved — leave blank to keep"
+msgstr "저장됨 — 비워 두면 그대로 둡니다"
+
+#: aot_flask/templates/settings/general.html:555
+msgid "Issued by the authorization server when this site is registered. Used only to link a person's account there to their user here."
+msgstr "이 사이트를 인가 서버에 등록할 때 받습니다. 그 서버의 계정을 이 AoT 의 사용자와 잇는 데에만 씁니다."
+
+#: aot_flask/templates/settings/general.html:557
+msgid "Fields that are greyed out are set by environment variables on this server and cannot be changed here."
+msgstr "흐리게 보이는 칸은 이 서버의 환경변수로 정해져 있어 여기서 바꿀 수 없습니다."
+
+#: aot_flask/templates/settings/general.html:561
+msgid "Register at the Authorization Server"
+msgstr "인가 서버에 등록할 값"
+
+#: aot_flask/templates/settings/general.html:564
+msgid "Resource"
+msgstr "자원 주소"
+
+#: aot_flask/templates/settings/general.html:568
+msgid "Redirect URI"
+msgstr "리디렉션 URI"
+
+#: aot_flask/templates/settings/general.html:572
+msgid "Scopes"
+msgstr "범위"
+
+#: aot_flask/templates/settings/general.html:573
+msgid "required"
+msgstr "필수"
+
+#: aot_flask/templates/settings/general.html:575
+msgid "aot.read lets the AI read; aot.control lets it operate devices; aot.config lets it change settings. The user's own role still applies on top."
+msgstr "aot.read 는 읽기, aot.control 은 장치 조작, aot.config 는 설정 변경을 허용합니다. 그 위에 사용자 자신의 역할 권한이 그대로 적용됩니다."
+
+#: aot_flask/templates/settings/general.html:577
+msgid "Check Connection"
+msgstr "연결 점검"
+
+#: aot_flask/templates/settings/general.html:579
+msgid "Check"
+msgstr "점검하기"
+
+#: aot_flask/templates/settings/general.html:586
+msgid "My Account"
+msgstr "내 계정"
+
+#: aot_flask/templates/settings/general.html:589
+#, python-format
+msgid "Linked: %(who)s"
+msgstr "연결됨: %(who)s"
+
+#: aot_flask/templates/settings/general.html:589
+msgid "Not linked"
+msgstr "연결 안 됨"
+
+#: aot_flask/templates/settings/general.html:592
+msgid "Unlink My Account"
+msgstr "내 계정 연결 해제"
+
+#: aot_flask/templates/settings/general.html:594
+msgid "Link My Account"
+msgstr "내 계정 연결"
+
+#: aot_flask/templates/settings/general.html:598
+msgid "AI connections signed in at the authorization server act as the AoT user their account is linked to. Link your own account while signed in here as yourself."
+msgstr "인가 서버에 로그인한 AI 연결은 그 계정과 이어진 AoT 사용자로 동작합니다. 이 AoT 에 본인으로 로그인한 상태에서 자기 계정을 연결하세요."
+
+#: aot_flask/templates/settings/general.html:598
+msgid "Account linking needs the client ID, client secret and public web address to be saved first."
+msgstr "계정 연결을 쓰려면 먼저 클라이언트 ID·클라이언트 비밀키·웹 공개 주소를 저장하세요."
+
+#: aot_flask/templates/settings/general.html:631
+msgid "Checking…"
+msgstr "점검 중…"
+
+#: aot_flask/templates/settings/general.html:648
+msgid "The check could not be run. Reload the page and try again."
+msgstr "점검을 하지 못했습니다. 페이지를 새로 고친 뒤 다시 해 보세요."
+
+#: aot_flask/templates/settings/general.html:658
+msgid "Pass"
+msgstr "통과"
+
+#: aot/utils/sequence_warnings.py
+msgid "No step runs on this day — the window opens but nothing happens."
+msgstr "이 요일에는 실행할 스텝이 없습니다 — 시간창은 열리지만 아무 동작도 하지 않습니다."
+
+#: aot/utils/sequence_warnings.py
+msgid ""
+"One pass takes %(span)ds but the window is only %(window)ds — it will be cut off before finishing."
+msgstr "한 회차는 %(span)d초가 걸리는데 시간창은 %(window)d초뿐입니다 — 끝나기 전에 잘립니다."
+
+#: aot/utils/sequence_warnings.py
+msgid ""
+"One pass takes %(span)ds but the cycle restarts every %(period)ds — it will restart before finishing."
+msgstr "한 회차는 %(span)d초가 걸리는데 주기는 %(period)d초마다 반복됩니다 — 끝나기 전에 재시작됩니다."
+
+#: aot/utils/sequence_warnings.py
+msgid ""
+"The cycle repeats every %(period)ds inside a %(window)ds window, so it runs about %(repeats)s times that day rather than once."
+msgstr ""
+"주기(%(period)d초)가 시간창(%(window)d초) 안에서 반복되어, 이 요일에는 한 번이 아니라 약 %(repeats)s번 실행됩니다."
+
+#: aot_flask/templates/settings/alerts.html
+msgid ""
+"The saved SMTP password cannot be read on this system (settings may have been restored from another installation). Enter the password again and save."
+msgstr ""
+"저장된 SMTP 비밀번호를 이 시스템에서 읽을 수 없습니다(다른 설치에서 복원한 설정일 수 있습니다). 비밀번호를 다시 입력하고 저장하십시오."
+
+#: aot_flask/templates/settings/alerts.html
+msgid ""
+"The saved password cannot be read on this system (settings may have been restored from another installation). Enter it again and save."
+msgstr "저장된 비밀번호를 이 시스템에서 읽을 수 없습니다(다른 설치에서 복원한 설정일 수 있습니다). 다시 입력하고 저장하십시오."
+
+#: aot_flask/templates/settings/alerts.html
+msgid "A password is saved. Leave blank to keep it."
+msgstr "비밀번호가 저장되어 있습니다. 비워 두면 그대로 유지됩니다."
+
+#: aot_flask/templates/settings/alerts.html
+msgid "No password is saved."
+msgstr "저장된 비밀번호가 없습니다."

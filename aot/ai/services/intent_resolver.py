@@ -24,6 +24,8 @@ import json
 import logging
 import re
 
+from flask_babel import lazy_gettext as lg
+
 from aot.ai.services.ai_context_service import AIContextService
 
 logger = logging.getLogger(__name__)
@@ -69,6 +71,15 @@ _DEVICE_KIND_KEYWORDS = (
     ('전등', 'lights', ('light', 'led', '조명', '전등')),
     ('light', 'lights', ('light', 'led', '조명', '전등')),
 )
+# 제안 문구에 이름으로 들어가는 종류 라벨. 키는 위 표의 영어 키이고, 값은
+# 요청 시점에 번역된다(pybabel 은 `_(변수)` 를 추출하지 못한다).
+_DEVICE_KIND_LABELS = {
+    'valves': lg('valves'),
+    'pumps': lg('pumps'),
+    'motors': lg('motors'),
+    'lights': lg('lights'),
+    'devices': lg('devices'),
+}
 _VAGUE_CTRL_VERBS = ('열어', '열', '개방', '켜', '작동', '가동', '닫아', '닫', '꺼', '끄',
                      '정지', 'open', 'close', 'on', 'off', 'start', 'stop', 'turn')
 # A specifically-named device ("밸브3", "v141") is NOT a vague area command.
@@ -396,8 +407,7 @@ def build_location_proposal(outs, site, zone, raw_cmd, thread_id, source):
     state = not off
 
     try:
-        from flask_babel import gettext as _
-        kind_label = _(kind_key)
+        kind_label = str(_DEVICE_KIND_LABELS.get(kind_key, kind_key))
     except Exception:
         kind_label = kind_key
     location_label = (f"'{site}' '{zone}'" if (site and zone)

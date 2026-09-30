@@ -3,13 +3,14 @@ from flask_babel import lazy_gettext
 
 from aot.actions.base_action import AbstractFunctionAction
 from aot.config_translations import TRANSLATIONS
+from aot.utils.lazy_text import lazy_join
 from aot.databases.models import Actions
 from aot.utils.database import db_retrieve_table_daemon
 
 
 ACTION_INFORMATION = {
     'name_unique': 'create_log_line',
-    'name': f"{TRANSLATIONS['create']['title']}: Daemon Log Line",
+    'name': lazy_join(TRANSLATIONS['create']['title'], ': ', lazy_gettext('Daemon Log Line')),
     'message': lazy_gettext('Create a log line in the daemon log.'),
     'library': None,
     'manufacturer': 'AoT',

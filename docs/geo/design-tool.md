@@ -10,7 +10,7 @@ A typical first pass, from the outside in:
 
 1. **Site** — switch to **Site** mode and draw a polygon around the whole property. Name it in the property panel; it saves automatically as soon as you finish drawing.
 2. **Zone** — switch to **Zone** mode and draw a polygon for the growing bay inside the site boundary. Name it (for example, "Bay 1").
-3. **Facility** — switch to **Facility** mode and draw the building footprint inside the zone. Once it's named and saved, use the **Facility Design** button (or go to `/geo/facility` directly) to do the 3D setup — see [Facility Management](facility.md) for that part; this page only covers drawing the footprint.
+3. **Facility** — facilities are not drawn here; they are created on the facility page. Switch to **Facility** mode and click **Open** next to **Facility Design** in the settings drawer (or go to `/geo/facility` directly), then **+ New Facility**, pick this map, **Place on Map** and **Save Facility** — see [Facility Registration Flow](facility.md#facility-registration-flow). Saving puts the facility's outline on this map, in the Facility layer.
 4. **Equipment** — switch to **Equipment** mode to add a pump, a couple of valves, and the piping between them (see [Equipment mode](#equipment) below for the Pipe/Irrigation auto-generation tools).
 5. **Devices** — switch to the device mode (labeled **A** in the mode panel) to place your real Input/Output/Function devices — see [Device mode](#device-a) below.
 6. **Check the dashboard** — add an AoT Map widget pointed at this design; the shapes and markers you just placed appear there, and clicking a device marker shows its live value and controls.
@@ -19,7 +19,7 @@ Nothing in the tool forces you to follow this order (you can place a device befo
 
 ---
 
-## Screen Layout
+## Screen Layout { #screen-layout }
 
 ```
 ┌──────┬──────────────────────────────────┬────────────┐
@@ -40,15 +40,16 @@ Nothing in the tool forces you to follow this order (you can place a device befo
 
 Select the editing target from the mode tabs below the map — there are **6 modes**: Site, Zone, Facility, Plot, Equipment, and Device (labeled **A**, for "AoT device"). Each has different drawable shapes and properties. Pressing a tab also opens that mode's settings drawer.
 
-### Site
+### Site { #site }
 
 Defines the top-level boundary of a property.
 
 - **Draw**: Rectangle, Circle, or Polygon.
-- **Properties**: Name, theme color, opacity — color changes save automatically.
+- **Properties**: Name, theme color — color changes save automatically.
+- **Switches**: **Show on map** hides this kind of shape while you work in another mode; **Show length labels** puts the measured length of each edge on the map.
 - **Special**: VWorld/CSV parcel import (see [Parcel Import](#parcel-import) below).
 
-### Zone
+### Zone { #zone }
 
 Defines growing blocks, sections, or management areas within a site.
 
@@ -56,7 +57,7 @@ Defines growing blocks, sections, or management areas within a site.
 - **Properties**: Name, theme color.
 
 !!! note
-    Drawing a Zone does **not** automatically link it to whichever Site it's inside — that link isn't tracked. What *is* automatic is the other direction: Equipment and Device items you place **inside** a Zone or Site get auto-linked to it (see below), which is why drawing zones before placing equipment/devices in them is the easier order.
+    Drawing a Zone does **not** automatically link it to whichever Site it's inside — that link isn't tracked. What *is* automatic is the other direction: Equipment and Device items you place **inside** a Zone or Site get auto-linked to it (see below), which is why drawing zones before placing equipment/devices in them is the easier order. Where shapes overlap, the item links to the **smallest** shape that contains it — usually the zone rather than the site around it.
 
 ### Facility
 
@@ -64,7 +65,7 @@ Places physical buildings (greenhouses, warehouses, equipment rooms).
 
 - **Draw**: Line, Rectangle, Circle, Polygon, Marker, or Label — draw the building footprint as a polygon.
 - **Properties**: Name, theme color.
-- **Special**: After saving, use the **Facility Design** button (or go to `/geo/facility`) for 3D modeling, engineering calculations, and picking the parent zone — all of that happens on that page, not here. See [Facility Management](facility.md).
+- **Special**: **Open** next to **Facility Design** goes to `/geo/facility`, where a facility is created and saved — placement, 3D modeling, engineering calculations and picking the site all happen on that page, not here. A polygon you draw by hand in this mode stays an ordinary shape and does not become a facility there. See [Facility Registration Flow](facility.md#facility-registration-flow).
 
 ### Plot { #plot }
 
@@ -75,7 +76,7 @@ Records **what is where**. If a Zone says "this area is block 3-1", a plot says 
 **Attach a program** and the current stage, target environment and expected end date follow automatically. See [Management Programs](programs.md).
 
 - **Draw**: Rectangle, Circle, Polygon.
-- **Properties**: Crop, variety, plot name, planted-on date, expected end date, color.
+- **Properties**: Kind, crop, variety, plot name, program, start date, expected end date, color.
 
 !!! note "Unlike zones, plots have a lifespan"
     A plot ends — 3 to 9 months for open-field beds, 30 years for an orchard. It is therefore **stored separately** from other shapes, and ending a season does not erase it: the record stays as history. That is what lets you answer "what has been in this spot for the last three years" for crop-rotation and replant-disease decisions.
@@ -92,8 +93,8 @@ When one zone is planted in several pieces, you do not have to draw each piece �
 - **Split by** — either **Equal parts** (how many pieces) or **Strip width** (how many cm each piece is). Setting **Equal parts** to **1** does not divide at all — the whole area becomes a single plot (still inset if you set an edge margin), which is what you want when a field is planted as one. Choosing **Strip width** also reveals **Exact piece count (optional)** — leave it empty and the count is worked out automatically from the width (as many as fit); fill it in and exactly that many pieces are cut at exactly that width, with the leftover space becoming margin split evenly on both sides. This is not an equal split — use it when both the count and the spacing are already decided (e.g. "5 rows, exactly 40 cm apart").
 - **Direction** — shown for **Equal parts**, and for **Strip width** once you fill in an exact piece count (both are then "N pieces laid out which way"). **Long side** (default) follows the field's long direction; **Short side** divides across it instead, giving squarer pieces. If the goal is splitting the zone between different crops rather than laying beds, the short side is often easier to manage. **Custom angle** shows an angle slider so you can rotate to any direction — while you drag it, a baseline through the zone's center turns to match on the map, and after a brief pause the piece preview redraws at that angle.
 - **Edge margin** — leaves room inside the shape for machinery to turn. Use 0 if you do not need it.
-- **Adjust each piece width** — the modes above all cut equal-width pieces. Turn this on to give each piece its own width instead: it starts from the equal split you already have, with one number field per piece (in meters) so you can edit them, plus buttons to add or remove a piece (minimum 2). Direction still applies — the width list only sets how thick each piece is, not which way the cutting axis runs. If the last piece you enter is too wide for what is left, it is not rejected — it is shortened to whatever fits, and the summary line below says so. On the map, each dashed preview piece is numbered to match its input field.
-- **Crop, variety, plot name, planted-on date, color** — every piece gets the same values. The plot name gets the piece number appended (`Trial 1`, `Trial 2`, …).
+- **Adjust each piece width** — the modes above all cut equal-width pieces. Turn this on to give each piece its own width instead: it starts from the equal split you already have, with one number field per piece (in meters) so you can edit them, plus buttons to add or remove a piece (minimum 1). Direction still applies — the width list only sets how thick each piece is, not which way the cutting axis runs. If the last piece you enter is too wide for what is left, it is not rejected — it is shortened to whatever fits, and the summary line below says so. On the map, each dashed preview piece is numbered to match its input field.
+- **Crop, variety, plot name, start date, color** — every piece gets the same values. The plot name gets the piece number appended (`Trial 1`, `Trial 2`, …).
 
 **The map follows as you change values.** The proposal is drawn as a **dashed** outline, with the piece count, piece width, length range and direction shown below the form. If the pieces come out long and narrow (roughly above 4:1), the aspect ratio is shown as a warning — a hint to try the short side instead. There is no separate step to confirm the preview — because the drawer does not cover the map, **what you see is the proposal**. If it looks right press **Create plots**; otherwise just close the drawer (nothing is saved).
 
@@ -116,29 +117,33 @@ Two values are used when you ask for a count:
 
 The two go **together**. For flat (unbedded) planting, give row spacing instead.
 
-#### Migrating crops from facility bays
+#### Migrating crops from facility bays { #migrating-crops-from-facility-bays }
 
 Crop names previously entered on facility (greenhouse) bays can be migrated into plots with a backfill script — ask your administrator. Geometry is **copied** as a snapshot at that moment, so changing the bay count later does not drag past seasons along with it.
 
-### Equipment
+### Equipment { #equipment }
 
 Places pumps, valves, piping, and irrigation layouts. This mode has three sub-tabs:
 
 - **Device** — a catalog of point markers grouped by category: Water Supply (river / water tank / pump), Filter (disc / screen / sand), Valve (union / adapter / inline / reducer), and Connection (suction / elbow / tee / reducer — pipe fittings, not a separate drawing mode). Pick an item and click on the map to place it.
-- **Pipe** — draw a **Reference Line** or **Main Pipe**, set the branch spacing/angle/offset, then click **Generate** to automatically sweep parallel branch pipes across the zone, clipped to its boundary and split where they cross the main pipe.
-- **Irrigation** — choose Sprinkler or Drip, set the interval, radius, flow, and pressure, then click **Generate** to lay out coverage points or emitters across the zone automatically, instead of placing them one by one.
+- **Pipe** — draw a **Reference line** or **Main pipe**, set the branch spacing/angle/offset under **Spacing and angle**, then click **Generate** next to **Generate branches** to automatically sweep parallel branch pipes across the zone, clipped to its boundary and split where they cross the main pipe. **Branch at 90 degrees** lays the branches square to the main pipe instead of following the reference line, and **Reset** removes the generated pipes so you can start over.
+- **Irrigation** — choose Sprinkler or Drip, set the spacing, flow rate and pressure (sprinklers also take a radius), then click **Generate** to lay out coverage points or emitters across the zone automatically, instead of placing them one by one. **Reset** removes them again.
 
 Equipment placed inside a Zone or Site polygon is automatically linked to it — this re-check happens when the map loads and whenever you edit a shape, so a marker you *just* placed may not show its zone link in the stats panel until you reload or nudge it slightly.
 
 ### Device { #device-a }
 
-Shows the physical location of your AoT Input, Output, and Function devices, and links them to the map. This mode also has sub-tabs (Input / Output / Function). The actual workflow:
+Shows the physical location of your AoT Input, Output, and Function devices, and links them to the map. In this mode you first pick a **Device kind** (**Input** / **Output** / **Function** / **Device**). The actual workflow:
 
-1. Click **Selection List** to open a list of your real devices (per-channel for outputs).
+1. Click **Open** next to **Selection list** to open a list of your real devices (per-channel for outputs).
 2. Toggle a device on — it appears as a marker at the **center of the current map view**, not wherever you were looking. Drag it to its real physical position; the new position saves automatically.
 3. Toggle a device off to remove its marker.
 
 **Linking a shape (not just a marker) to a device**: click an already-placed device marker to "activate" it (it changes color and shows a toast confirming it's active) — the next shape you draw, of any kind, is automatically linked to that device instead of becoming a plain unlinked shape. Use this to draw, say, a fan's coverage area or a sprinkler zone tied to a specific device, separate from that device's own location marker.
+
+**Putting a device in charge of a place, not a point**: select a zone or site on the map and an **Assign device** row appears in the drawer — **Assign** records which device looks after that place. **Places with no device** → **Show** lists the zones that still have none. **Split into device areas** cuts a zone or site into pieces — **Equal parts** or **Strip width**, with **Direction** (long side, short side, or a custom angle) and **Edge margin (cm)**; unlike the plot split, the direction stays selectable in strip-width mode, and a piece is only dropped when it comes out under 50 cm. Name the pieces in **Area name**, then press **Create device areas** — nothing is saved before that. Each new area is linked to the device whose marker falls inside it; an area with no marker inside — or with more than one — is left unlinked and reported. **Link only this device kind** narrows that matching to Input, Output, Function or Device Unit; the default, **Any kind**, matches all of them. If the map has no zone or site drawn yet, the form is replaced by a line asking you to draw one first.
+
+**If the map, or the device's tab, is assigned to another access group**, saving the position is refused — placing, dragging and removing a marker all go through the same save. The screen does not say so: the marker stays where you put it until you reload the page, which puts it back where the server has it.
 
 *Notable:* clicking a device marker on the [AoT Map](../Data-Viewing.md#widget-map) widget's dashboard view shows its live value and, for outputs, an on/off control — this is why placing devices accurately here matters.
 
@@ -146,11 +151,12 @@ Shows the physical location of your AoT Input, Output, and Function devices, and
 
 ## Toolbar
 
-### Left Toolbar
+### Left Toolbar { #left-toolbar }
 
 | Icon | Function |
 |------|----------|
 | + / − | Zoom in/out |
+| Compass | Shows which way the map faces; click to face north again |
 | Fullscreen | Toggle fullscreen |
 | Search | Address/coordinate search |
 | My location | Move to GPS position |
@@ -167,11 +173,11 @@ Available tools depend on the mode: Site and Zone offer **Rectangle, Circle, and
 
 ## Saving Features
 
-### Auto-save
+### Auto-save { #auto-save }
 
 Shapes save automatically as you draw, edit, or delete them — there's no separate "commit" step. If you want to double-check that a change really persisted, reloading the page is a reliable way to confirm it.
 
-### Manual Save
+### Manual Save { #manual-save }
 
 The **Save** button at the top forces a full save of the current state. There is no keyboard shortcut for it.
 
@@ -179,42 +185,44 @@ The **Save** button at the top forces a full save of the current state. There is
 
 ## Parcel Import { #parcel-import }
 
-Use Korean land data (VWorld) to quickly import site boundaries instead of drawing them by hand. In **Site** mode, click **Search** next to **Add from Address** in the settings drawer — this opens a dialog with an **Address Input** tab (type one or more addresses, uses the VWorld PNU API) and a **CSV Batch** tab (one address per line, first column only). Either way you land on the same preview: matched parcels drawn on the map, an optional **Merge Adjacent Parcels** checkbox to union touching results into one Site, and a **Save as Site** button. Re-importing a parcel you already saved is skipped, not duplicated.
+Use Korean land data (VWorld) to quickly import site boundaries instead of drawing them by hand. In **Site** mode, click **Search** next to **Add from Address** in the settings drawer — this opens a dialog with an **Address Input** tab (type one or more addresses, uses the VWorld PNU API) and a **CSV Batch** tab (one address per line, first column only). Either way you land on the same preview: matched parcels drawn on the map, an optional **Merge Adjacent Parcels** checkbox to union touching results into one Site (nothing is merged unless it is ticked), and a **Save as Site** button. Re-importing a parcel you already saved is skipped, not duplicated. Saving into a map that is assigned to another access group is refused — those parcels are counted as **failed** in the status line, with no reason given.
 
 See [Parcel Import Details](parcel-import.md) for the full walkthrough and the underlying API.
 
 ---
 
-## Layer Control
+## Layer Control { #layer-control }
 
 Use the **Layers** panel in the upper right to toggle layer visibility.
 
-- **Base layers**: select from registered GIS layer providers.
-- **Overlays**: toggle Site, Zone, Facility, and Device shapes individually.
-- **Weather layers**: RainViewer radar, OpenWeather overlay, where registered.
+- **Base Map**: pick one of the registered GIS layer providers — only one can be active at a time.
+- **Overlay**: the registered overlay layers (weather radar and the like), each toggled on its own.
+- **Shapes**: show or hide Site, Zone, Facility, Plot, Equipment, and Device shapes — these are the same switches as **Show on map** in each mode's settings drawer.
 
 See [GIS Layers](layers.md) for registering new layer providers.
 
 ---
 
-## Statistics Panel
+## Statistics Panel { #statistics-panel }
 
-Click the **Stats** button to view map statistics.
+The **Design Information** section below the map fills itself in — there is no button to press.
 
-- Total site area (m²/pyeong)
-- Number and area of zones
-- Number of facilities
-- Number of placed devices
+- **Design Summary** — site count, zone count, total pipe length, number of emitters, and AoT device count.
+- **Per site, then per zone inside it** — area (m²), main and branch pipe length and count, number of emitters, flow rate (L/h and L/min), the pipe fittings counted from the layout (tee, elbow, end), and how many Input, Output and Logic devices belong there. Rows whose value is 0 are left out.
+- **Pipe details** — one row per main and branch pipe: its number, length, the emitters on it, and its flow.
+- With two or more sites, a site picker and **Apply Filter** narrow everything above to the sites you tick.
+
+Clicking a site or zone name in the panel moves the map to that shape. Areas are shown in m².
 
 ---
 
-## Map Lock
+## Map Lock { #map-lock }
 
 Click the **Lock** button in the upper right to lock map panning and zooming. This prevents accidental map movement in the AoT Map dashboard widget.
 
 ---
 
-## Deleting a map
+## Deleting a map { #deleting-a-map }
 
 If a map widget still shows the map, deletion is refused and AoT tells you
 which widgets those are. Delete or repoint them first, then delete the map.
@@ -229,6 +237,6 @@ reference sits where that cleanup cannot reach.
 
 ## Related Pages
 
-- [Facility Management](facility.md) — 3D setup for buildings placed in Facility mode
+- [Facility Management](facility.md) — creating facilities and their 3D setup
 - [GIS Layers](layers.md) — Base layer provider configuration
 - [Parcel Import Details](parcel-import.md)

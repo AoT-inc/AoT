@@ -23,6 +23,7 @@ _POLY_TYPES = ('Polygon', 'MultiPolygon')
 # 기하 헬퍼
 # ---------------------------------------------------------------------------
 
+# @manual geo/plots#location
 def geometry_of(row, facilities=None):
     """GeoPlot | GeoShape → GeoJSON geometry dict ({} 이면 없음).
 
@@ -89,6 +90,7 @@ def facility_geometry(facility_uuid, bay_id=None, facilities=None):
 _CAPACITY_UNITS = ('bed', 'row', 'tray', 'area', 'house')
 
 
+# @manual geo/plots#crop
 def bay_capacities(fac):
     """`GeoFacility` 행 → `{bay_id: {'unit': str, 'total': number}}` (p6_50).
 
@@ -125,6 +127,7 @@ def bay_capacities(fac):
     return out
 
 
+# @manual geo/plots#crop
 def allocation_view(allocation, capacity):
     """저장된 몫 + 구역 총량 → 화면이 그대로 쓰는 dict (없으면 None).
 
@@ -240,6 +243,7 @@ def shapely_area_m2(geom):
     return 0.0
 
 
+# @manual geo/plots#crop
 def area_m2(row):
     """GeoPlot | GeoShape 의 면적 (m²). 기하가 없으면 0."""
     return shapely_area_m2(_shapely(geometry_of(row)))
@@ -339,6 +343,7 @@ _SHAPE_WARN_NOTE = (
 )
 
 
+# @manual geo/map-widget#plot
 def dimensions(row):
     """구획의 치수 → `{width_m, length_m, rect_fill_pct, shape_note}` (없으면 None).
 
@@ -399,6 +404,7 @@ def dimensions(row):
     }
 
 
+# @manual geo/design-tool#bed-layout
 def capacity_estimate(dims, row_spacing_cm=None, plant_spacing_cm=None,
                       edge_margin_cm=None, bed_pitch_cm=None,
                       rows_per_bed=None):
@@ -625,6 +631,7 @@ _FLAT_LAYOUT_ASK = (
 # 소속 — 파생, 저장하지 않는다
 # ---------------------------------------------------------------------------
 
+# @manual geo/design-tool#plot
 def zone_for_plot(plot, containers=None):
     """구획을 감싸는 zone/site GeoShape (없으면 None).
 

@@ -21,6 +21,7 @@ coordinator 가 0~100% percent 명령을 내리면, 장치 output_types 에 따�
 
 참조: docs/dev/integrated_env_control_design.md §P0
 """
+# @manual ai/env-control#actuators-adapters
 from __future__ import annotations
 
 # on/off 어댑터 최소 작동 임계 (%)
@@ -220,6 +221,7 @@ class VolumetricAdapter(DispatchAdapter):
         return f'VolumetricAdapter(flow_lpm={self._flow_lpm})'
 
 
+# @manual ai/env-control#settings-hvac
 class PulsedDoseAdapter(DispatchAdapter):
     """관수식 펄스 도징 — 짧은 정량 분무 + 강제 건조 간격.
 
@@ -411,3 +413,35 @@ def build_adapter_map(by_id: dict) -> dict:
         adapters[aid] = adapter
 
     return adapters
+
+
+# ── 스크린(커튼·차광막) 0/100 결정 ────────────────────────────────────────────
+# 부분 전개는 스크린이 고르지 않아 쓰지 않는다 — 완전히 닫거나 완전히 걷는다.
+# 경계(50 %) 한 점으로 자르면 명령이 그 근처에 앉았을 때 사이클마다 끝에서 끝으로
+# 오간다(편도 수 분 주행). 그래서 지금 서 있는 쪽에서 반대쪽으로 넘어가려면
+# 경계를 한 칸 더 넘어야 한다.
+SCREEN_KINDS = ('curtain', 'shade')
+SCREEN_OPEN_AT = 60.0      # 닫혀 있을 때 이 이상이면 걷는다
+SCREEN_CLOSE_AT = 40.0     # 걷혀 있을 때 이 이하면 닫는다
+
+
+def snap_screen_value(value: float, current: 'float | None') -> float:
+    """스크린 명령을 0/100 으로. `current` 는 지금 서 있는 개도(모르면 None)."""
+    v = float(value)
+    if current is None:
+        return 100.0 if v >= 50.0 else 0.0
+    if float(current) >= 50.0:
+        return 0.0 if v <= SCREEN_CLOSE_AT else 100.0
+    return 100.0 if v >= SCREEN_OPEN_AT else 0.0
+
+
+def snap_screen_commands(final_cmds: dict, profiles, positions: dict) -> None:
+    """`final_cmds` 의 스크린 명령을 제자리에서 0/100 으로 바꾼다(기록·전송 공통)."""
+    kinds = {p.actuator_id: getattr(p, 'kind', '') for p in profiles or []}
+    for aid, cmd in final_cmds.items():
+        if kinds.get(aid) not in SCREEN_KINDS:
+            continue
+        if isinstance(cmd, dict):
+            cmd['value'] = snap_screen_value(cmd.get('value', 0.0), positions.get(aid))
+        elif hasattr(cmd, 'value'):
+            cmd.value = snap_screen_value(cmd.value, positions.get(aid))

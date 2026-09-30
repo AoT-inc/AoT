@@ -4,6 +4,7 @@ import copy
 from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -49,14 +50,14 @@ INPUT_INFORMATION = {
             'id': 'cal_v',
             'type': 'float',
             'default_value': 0.4,
-            'name': "{}: {} ({})".format(lazy_gettext('Calibrate'), lazy_gettext('Voltage'), lazy_gettext('Internal')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Calibrate'), lazy_gettext('Voltage'), lazy_gettext('Internal')),
             'phrase': 'Calibration data: internal voltage'
         },
         {
             'id': 'cal_orp',
             'type': 'float',
             'default_value': 400.0,
-            'name': "{}: {} ({})".format(lazy_gettext('Calibrate'), lazy_gettext('ORP'), lazy_gettext('Internal')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Calibrate'), lazy_gettext('ORP'), lazy_gettext('Internal')),
             'phrase': 'Calibration data: internal ORP'
         },
     ],
@@ -68,7 +69,7 @@ the known ORP value in the `Calibration ORP` field, and press `Calibrate`. You d
             'id': 'calibration_orp',
             'type': 'float',
             'default_value': 400.0,
-            'name': "{}: {} ({})".format(lazy_gettext('Calibrate'), lazy_gettext('Buffer ORP'), lazy_gettext('mV')) ,
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Calibrate'), lazy_gettext('Buffer ORP'), lazy_gettext('mV')) ,
             'phrase': 'This is the nominal ORP of the calibration buffer in mV, usually labelled on the bottle.'
         },
         {

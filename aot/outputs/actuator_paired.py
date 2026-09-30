@@ -17,13 +17,14 @@ from aot.outputs.paired_actuator_common import (  # noqa: F401
     ACTUATOR_KIND_OPTIONS,
     KIND_TO_PROFILE_KIND,
 )
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {0: {'measurement': 'duty_cycle', 'unit': 'percent'}}
 channels_dict = {0: {'types': ['value'], 'measurements': [0]}}
 
 OUTPUT_INFORMATION = {
     'output_name_unique': 'actuator_paired',
-    'output_name': "{}: Actuator Paired".format(lazy_gettext('Value')),
+    'output_name': lazy_format("{}: Actuator Paired", lazy_gettext('Value')),
     'output_manufacturer': 'AoT',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,

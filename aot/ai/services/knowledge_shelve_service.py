@@ -195,6 +195,7 @@ def _verified_source_ref(source_ref):
     return ref
 
 
+# @manual ai/overview#where-knowledge-comes-from
 def shelve_knowledge(content, tags, heading=None, entity_ref=None,
                       attribution=None, content_kind='prose', ttl=None,
                       source_url=None, source_ref=None):

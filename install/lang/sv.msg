@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** FEL under AoT-instal
 install_begin=#### AoT-installationen startar. %s\n
 mosquitto_installing=#### Installerar: mosquitto MQTT-mäklare\n
 mosquitto_already_installed=#### mosquitto är redan installerat - hoppar över installationen\n
-mosquitto_configuring=#### Konfigurerar mosquitto för att tillåta externa anslutningar\n
 mosquitto_conf_checking=#### Skapar/verifierar mosquittos konfigurationsfil\n
 mosquitto_conf_created=#### %s skapad\n
 mosquitto_conf_exists=#### %s finns redan - skrivs inte över\n

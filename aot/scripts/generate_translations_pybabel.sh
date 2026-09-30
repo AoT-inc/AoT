@@ -20,7 +20,9 @@ cd "${INSTALL_DIRECTORY}"/aot || return
 printf "\n#### Extracting translatable texts\n"
 
 # -k lg : config/__init__.py (and others) wrap strings with the alias `lg = lazy_gettext`.
-"${INSTALL_DIRECTORY}"/env/bin/pybabel extract "${INFO_ARGS[@]}" -s -F babel.cfg -k _ -k gettext -k ngettext -k lazy_gettext -k lg -o aot_flask/translations/messages.pot .
+# -k _t / _gettext_safe : local wrappers that fall back to the original text when there is
+#   no request context (daemon/MCP callers); their literal arguments are msgids.
+"${INSTALL_DIRECTORY}"/env/bin/pybabel extract "${INFO_ARGS[@]}" -s -F babel.cfg -k _ -k gettext -k ngettext -k lazy_gettext -k lg -k _t -k _gettext_safe -o aot_flask/translations/messages.pot .
 
 # The built-in Integrated Environment Control ships under custom_functions/ (which
 # babel.cfg ignores). Extract its FUNCTION_INFORMATION separately and merge so its
@@ -31,7 +33,7 @@ printf "\n#### Extracting translatable texts\n"
 printf "\n#### Extracting + merging Integrated Environment Control\n"
 IEC_CFG=$(mktemp)
 printf '[python: **.py]\n' > "${IEC_CFG}"
-"${INSTALL_DIRECTORY}"/env/bin/pybabel extract -F "${IEC_CFG}" -k _ -k gettext -k ngettext -k lazy_gettext -k lg \
+"${INSTALL_DIRECTORY}"/env/bin/pybabel extract -F "${IEC_CFG}" -k _ -k gettext -k ngettext -k lazy_gettext -k lg -k _t -k _gettext_safe \
   -o /tmp/aot_iec.pot functions/custom_functions/env_coordinator_impl/ \
   functions/custom_functions/env_coordinator.py
 "${INSTALL_DIRECTORY}"/env/bin/python3 - <<'PYMERGE'

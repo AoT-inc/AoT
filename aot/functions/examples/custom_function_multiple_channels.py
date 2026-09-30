@@ -35,6 +35,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -71,7 +72,7 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         }
     ],

@@ -37,6 +37,7 @@ ALLOWED_ATTACHMENT_EXTENSIONS = {
 # Visibility / permission helpers
 #
 
+# @manual Notices#posts, Notices#list
 def notice_is_visible(post, now=None):
     """A post is visible once publish_at has passed (or is unset) and before
     expire_at (if set)."""
@@ -48,6 +49,7 @@ def notice_is_visible(post, now=None):
     return True
 
 
+# @manual Notices#list
 def notice_category_list():
     """Distinct category labels currently in use, for autocomplete suggestions
     on the compose form and the widget's category-filter checkbox list."""
@@ -56,6 +58,7 @@ def notice_category_list():
     return [r[0] for r in rows]
 
 
+# @manual Notices#replies
 def can_manage_post(post):
     """Admin can manage any post. The author can manage their own post if they
     still hold write permission."""
@@ -71,6 +74,7 @@ def can_manage_post(post):
 # Attachments
 #
 
+# @manual Notices#posts
 def _save_notice_attachment(file_storage, post_unique_id):
     filename = secure_filename(file_storage.filename)
     if '.' not in filename or filename.rsplit('.', 1)[1].lower() not in ALLOWED_ATTACHMENT_EXTENSIONS:
@@ -91,6 +95,7 @@ def _save_notice_attachment(file_storage, post_unique_id):
 # Poll
 #
 
+# @manual Notices#poll
 def _save_poll(post_id):
     question = (request.form.get('poll_question') or '').strip()
     if not question:
@@ -107,6 +112,7 @@ def _save_poll(post_id):
         db.session.add(NoticePollOption(poll_id=poll.id, label=label, display_order=i))
 
 
+# @manual Notices#poll
 def _replace_poll(post):
     existing = NoticePoll.query.filter_by(post_id=post.id).first()
     if existing:
@@ -121,6 +127,7 @@ def _replace_poll(post):
 # Posts
 #
 
+# @manual Notices#posts, Notices#poll
 def notice_add(form):
     """Create a post. Returns (errors, post) — post is None if errors is non-empty.
     Also flashes + is consumed by the classic page route (which ignores the
@@ -174,6 +181,7 @@ def notice_add(form):
     return error, (new_post if not error else None)
 
 
+# @manual Notices#posts, Notices#poll
 def notice_mod(form):
     """Update a post. Returns (errors, post) — see notice_add()'s docstring."""
     error = []
@@ -283,6 +291,7 @@ def notice_del(unique_id):
     return error
 
 
+# @manual Notices#posts, Notices#list
 def notice_pin(unique_id, pinned):
     if not user_is_admin():
         flash(_("Insufficient permission"), "error")
@@ -299,6 +308,7 @@ def notice_pin(unique_id, pinned):
 # Poll voting
 #
 
+# @manual Notices#poll
 def notice_vote(post, option_unique_ids):
     """Record the current user's vote(s) for this post's poll.
     Enforces single-choice by clearing prior votes before inserting new ones.
@@ -324,6 +334,7 @@ def notice_vote(post, option_unique_ids):
     return True, None
 
 
+# @manual Notices#poll
 def notice_poll_results(post):
     """Return (poll, [{option, count}], user_selected_option_ids, total_voters)."""
     poll = NoticePoll.query.filter_by(post_id=post.id).first()
@@ -351,6 +362,7 @@ def notice_poll_results(post):
 # Replies
 #
 
+# @manual Notices#replies
 def notice_reply_add(form):
     error = []
     post = NoticePost.query.filter(NoticePost.unique_id == form.post_unique_id.data).first()
@@ -373,6 +385,7 @@ def notice_reply_add(form):
         url_for('routes_notice.page_notice_detail', unique_id=form.post_unique_id.data))
 
 
+# @manual Notices#replies
 def notice_reply_del(form):
     reply = NoticeReply.query.filter(NoticeReply.unique_id == form.reply_unique_id.data).first()
     if not reply:
@@ -391,6 +404,7 @@ def notice_reply_del(form):
 # Read acknowledgement ("필독 확인")
 #
 
+# @manual Notices#acknowledge
 def notice_ack_add(post):
     if not current_user.is_authenticated:
         return False
@@ -402,6 +416,7 @@ def notice_ack_add(post):
     return True
 
 
+# @manual Notices#acknowledge
 def notice_ack_status(post):
     """Return (has_acked, ack_count)."""
     ack_count = NoticeAck.query.filter_by(post_id=post.id).count()

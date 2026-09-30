@@ -135,7 +135,10 @@ class MeasurementToolsMixin:
         if not member_ids:
             return [], []
 
-        rows = Input.query.filter(Input.unique_id.in_(list(member_ids))).all()
+        # 'AI 판단에 포함' 을 끈 센서는 후보가 아니다(device_resolver.ai_excluded).
+        from aot.services.resolvers.device_resolver import ai_excluded
+        rows = [i for i in Input.query.filter(
+            Input.unique_id.in_(list(member_ids))).all() if not ai_excluded(i)]
         if not rows:
             return [], []
 
@@ -221,6 +224,9 @@ class MeasurementToolsMixin:
             derr = dict(derr, status="needs_disambiguation",
                         _reading=[cls._READ_AMBIGUOUS_READING])
             return derr
+        from aot.services.resolvers.device_resolver import AI_EXCLUDED
+        if derr and derr.get("reason_code") == AI_EXCLUDED:
+            return derr
         try:
             detail = cls._resolve_explain(name)
         except Exception as e:                              # noqa: BLE001
@@ -280,11 +286,21 @@ class MeasurementToolsMixin:
             zone_candidates = []
 
             # 1. 대상 식별 (Input 우선: unique_id 또는 map_config_id/geo_id 지원)
-            target_input = Input.query.filter(
+            # 'AI 판단에 포함' 을 끈 센서는 읽지 않는다 — id 로 지목했으면
+            # 이유를 돌려준다(device_resolver.ai_excluded).
+            from aot.services.resolvers.device_resolver import (
+                AI_EXCLUDED, ai_excluded, ai_excluded_error)
+            _inputs = Input.query.filter(
                 # [P2] 지도 uuid 로 들어오면 그 지도에 배치된 장치를 찾는다.
                 or_(Input.unique_id == loc_id,
                     Input.unique_id.in_(_devices_on_map_p2(loc_id)))
-            ).first()
+            ).all()
+            target_input = next((i for i in _inputs if not ai_excluded(i)), None)
+            if target_input is None:
+                _named = next((i for i in _inputs if i.unique_id == loc_id), None)
+                if _named is not None:
+                    return {"error": ai_excluded_error(_named),
+                            "reason_code": AI_EXCLUDED}
 
             # 집계 함수(VPD·평균·Equation 등)는 CustomController 로 살지만
             # DeviceMeasurements 와 InfluxDB 기록은 Input 과 같은 규약을 쓴다
@@ -421,6 +437,15 @@ class MeasurementToolsMixin:
             def _read_series(dev, measurements):
                 """한 장치의 측정들을 읽어 시계열 목록으로. 데이터 없으면 []."""
                 out = []
+                # 채널이 여럿이면(sensor_type 을 안 좁혔거나 'weather' 처럼
+                # 여러 측정을 한꺼번에 묶는 경우) 채널마다 기본 20건씩 실으면
+                # 응답이 채널 수에 비례해 불어난다(실측: 기상 채널 6~8개 ×20건
+                # 이 get_weather 응답 6~7천자의 대부분이었다). limit 을 명시하지
+                # 않았을 때만 기본을 줄인다 — 하나만 물었으면(가장 흔한 질문)
+                # 그대로 20건을 지킨다. `total_readings`/`stats`(최소·최대·평균)
+                # 는 잘린 것과 무관하게 **전체 구간** 기준이라 줄여도 통계는
+                # 그대로 남는다.
+                _default_keep = 20 if len(measurements) <= 2 else 5
                 for m in measurements:
                     conversion = Conversion.query.filter(Conversion.unique_id == m.conversion_id).first() if m.conversion_id else None
                     channel, unit, measurement = return_measurement_info(m, conversion)
@@ -445,7 +470,7 @@ class MeasurementToolsMixin:
                         except Exception:
                             readings = [{"t": row[0].isoformat(), "v": round(row[1], 2), "u": unit} for row in data]
                         values = [row[1] for row in data]
-                        _keep = int(limit) if limit else 20
+                        _keep = int(limit) if limit else _default_keep
                         out.append({
                             "device_name": dev.name or dev.unique_id,
                             # 함수 값은 계산된 것(예: 센서 여럿의 평균, VPD)이다.
@@ -604,13 +629,26 @@ class MeasurementToolsMixin:
             if not shapes:
                 return {"error": "no zone/site found"}
 
+            # 특정 구역을 안 물으면(전 농장) 기본 상한을 둔다 — 넓은 농장에서
+            # zone_ids/measurement_type 둘 다 없는 호출이 응답 크기의 꼬리를
+            # 만든다(실측 최대 10,605자). zone_ids 로 좁혀 부르면 이 상한에
+            # 걸리지 않는다.
+            _ZONE_SUMMARY_DEFAULT_LIMIT = 25
+            zones_truncated = False
+            if not zone_ids and len(shapes) > _ZONE_SUMMARY_DEFAULT_LIMIT:
+                zones_truncated = True
+                shapes = shapes[:_ZONE_SUMMARY_DEFAULT_LIMIT]
+
             wanted = (cls._device_ids_with_measurement(measurement_type)
                       if measurement_type else None)
 
             # 1) 구역 → 장치. 2) 장치 → 측정 채널. 여기까지가 SQL 이다.
+            # 'AI 판단에 포함' 을 끈 장치는 빼고 센다(device_resolver).
+            from aot.services.resolvers.device_resolver import ai_excluded_ids
+            hidden = ai_excluded_ids()
             per_zone, all_ids = [], set()
             for shape in shapes:
-                ids = device_ids_in_area(shape.unique_id) or set()
+                ids = (device_ids_in_area(shape.unique_id) or set()) - hidden
                 if wanted is not None:
                     ids = ids & wanted
                 if ids:
@@ -646,9 +684,20 @@ class MeasurementToolsMixin:
                 channel, unit, meas = return_measurement_info(m, conv)
                 if not unit:
                     continue
-                specs.append((unit, m.device_id, channel, meas))
+                # return_measurement_info()는 변환(Conversion)이 걸린 채널의
+                # measurement를 항상 None으로 돌려준다 — Influx 쓰기 쪽
+                # (add_measurements_influxdb_flux)도 그 None을 그대로 받아
+                # 이런 채널의 포인트에는 "measure" 태그를 아예 안 붙인다.
+                # 그래서 `meas`는 read_influxdb_list(measure=...) 필터에는
+                # 그대로(None) 넘겨야 한다 — 채워서 넘기면 태그가 없는
+                # 포인트를 걸러 버려 데이터가 통째로 안 잡힌다. 화면에 낼
+                # 라벨만 DeviceMeasurements.measurement로 폴백한다
+                # (get_sensor_detail의 `measurement or m.measurement`와 같은
+                # 이유의 같은 폴백 — 쿼리용 변수는 그대로 두고 표시용만 채운다).
+                disp_meas = meas or m.measurement
+                specs.append((unit, m.device_id, channel, meas, disp_meas))
                 by_device.setdefault(m.device_id, []).append(
-                    (unit, channel, meas))
+                    (unit, channel, meas, disp_meas))
 
             # 3) 채널마다 한 번씩 읽고 통계는 여기서 센다.
             #
@@ -659,7 +708,7 @@ class MeasurementToolsMixin:
             # 것은 장치가 수십 개이고 창이 짧을 때다(query_last_values_bulk
             # docstring 의 지도 위젯 사례). 여기 워크로드는 그 반대다.
             series, degraded = {}, False
-            for unit, did, channel, meas in specs:
+            for unit, did, channel, meas, disp_meas in specs:
                 rows = read_influxdb_list(did, unit, channel, measure=meas,
                                           duration_sec=past_sec,
                                           datetime_obj=True)
@@ -680,7 +729,7 @@ class MeasurementToolsMixin:
             for shape, ids in per_zone:
                 readings = []
                 for did in sorted(ids):
-                    for unit, channel, meas in by_device.get(did, []):
+                    for unit, channel, meas, disp_meas in by_device.get(did, []):
                         s = series.get((did, channel, meas))
                         if s is None:
                             continue
@@ -689,7 +738,7 @@ class MeasurementToolsMixin:
                             "device_id": did,
                             "device_name": names.get(did) or did,
                             "channel": channel,
-                            "measurement": meas, "unit": unit,
+                            "measurement": disp_meas, "unit": unit,
                             "last_value": round(v, 2),
                             "last_time": (t.isoformat() if hasattr(t, 'isoformat')
                                           else str(t)),
@@ -714,6 +763,13 @@ class MeasurementToolsMixin:
                    "zones": zones_out}
             if measurement_type:
                 out["measurement_type"] = measurement_type
+            if zones_truncated:
+                out["truncated"] = True
+                out["note"] = (
+                    "Only the first %d site/zone shapes are shown — this farm "
+                    "has more. Pass zone_ids (from get_spatial_tree/"
+                    "resolve_target) or measurement_type to see the rest."
+                    % _ZONE_SUMMARY_DEFAULT_LIMIT)
             if skipped:
                 out["zones_without_data"] = skipped
             if degraded:
@@ -880,7 +936,9 @@ class MeasurementToolsMixin:
         except Exception:
             logger.debug("[WEATHER_TOOL] wind/rain measurement scan failed",
                          exc_info=True)
-        return rows
+        # 'AI 판단에 포함' 을 끈 기상 장치는 후보가 아니다(device_resolver).
+        from aot.services.resolvers.device_resolver import ai_excluded
+        return {k: v for k, v in rows.items() if not ai_excluded(v)}
 
     @classmethod
     def _name_affinity(cls, device_name, zone_name):
@@ -1111,6 +1169,9 @@ class MeasurementToolsMixin:
             try:
                 from aot.aot_flask.geo.device_membership import device_ids_in_shape
                 _ids = device_ids_in_shape(target_shape) or set()
+                # 'AI 판단에 포함' 을 끈 센서는 후보가 아니다(device_resolver).
+                from aot.services.resolvers.device_resolver import ai_excluded_ids
+                _ids = set(_ids) - ai_excluded_ids()
                 if _ids:
                     fallback_dev = Input.query.filter(
                         Input.unique_id.in_(list(_ids))).first()
@@ -1445,7 +1506,14 @@ class MeasurementToolsMixin:
             q = Input.query
             if device_id:
                 q = q.filter(Input.unique_id == device_id)
+            # 'AI 판단에 포함' 을 끈 센서는 보지 않는다 — 지목했으면 이유를 준다.
+            from aot.services.resolvers.device_resolver import (
+                AI_EXCLUDED, ai_excluded, ai_excluded_error)
             devices = q.all()
+            if device_id and devices and ai_excluded(devices[0]):
+                return {"status": "error", "reason_code": AI_EXCLUDED,
+                        "message": ai_excluded_error(devices[0])}
+            devices = [d for d in devices if not ai_excluded(d)]
             if not devices:
                 return {"status": "success", "checked": 0, "stale_devices": [],
                         "message": ("No such device." if device_id

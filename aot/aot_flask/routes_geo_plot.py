@@ -21,6 +21,7 @@ from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 logger = logging.getLogger(__name__)
 
 
+# @manual geo/plots#permissions
 def _require_edit():
     """쓰기 권한 확인 — 없으면 응답 튜플, 있으면 None.
 
@@ -49,6 +50,7 @@ def _parse_on(value):
 
 # ── 목록 ───────────────────────────────────────────────────────────────────
 
+# @manual geo/plots#edit, geo/programs#kind, geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/programs', methods=['GET'])
 @login_required
 def api_programs():
@@ -86,6 +88,7 @@ def api_programs():
     return jsonify({'ok': True, 'programs': items, 'count': len(items)})
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/program/<string:program_uuid>', methods=['GET'])
 @login_required
 def api_program_get(program_uuid):
@@ -101,6 +104,7 @@ def api_program_get(program_uuid):
     return jsonify({'ok': True, 'program': program_io.to_dict(row)})
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/target-methods', methods=['GET'])
 @login_required
 def api_target_methods():
@@ -120,6 +124,7 @@ def api_target_methods():
          'method_type': m.method_type} for m in rows]})
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/target-measurements', methods=['GET'])
 @login_required
 def api_target_measurements():
@@ -154,6 +159,7 @@ def api_target_measurements():
                     'fixed_defs': fixed})
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/coordinator/<string:function_uuid>/plot-targets',
                  methods=['GET'])
 @login_required
@@ -210,6 +216,7 @@ def api_coordinator_plot_targets(function_uuid):
     return jsonify(data)
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/coordinator/<string:function_uuid>/reference-plot',
                  methods=['POST'])
 @login_required
@@ -247,6 +254,7 @@ def api_coordinator_set_reference_plot(function_uuid):
     return jsonify({'ok': True, 'source_plot_id': plot_uuid})
 
 
+# @manual geo/programs#creating-a-program, geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/program-templates', methods=['GET'])
 @login_required
 def api_program_templates():
@@ -276,6 +284,7 @@ def api_program_templates():
     return jsonify({'ok': True, 'templates': items, 'count': len(items)})
 
 
+# @manual geo/programs#creating-a-program, geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/program', methods=['POST'])
 @login_required
 def api_program_create():
@@ -331,6 +340,7 @@ def api_program_create():
     return jsonify({'ok': True, 'program': result})
 
 
+# @manual geo/programs#creating-a-program, geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/program/<string:program_uuid>/clone',
                  methods=['POST'])
 @login_required
@@ -348,6 +358,7 @@ def api_program_clone(program_uuid):
     return jsonify({'ok': True, 'program': result})
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/program/<string:program_uuid>',
                  methods=['POST', 'PUT'])
 @login_required
@@ -365,6 +376,7 @@ def api_program_update(program_uuid):
     return jsonify({'ok': True, 'program': result})
 
 
+# @manual geo/api-reference#cultivation-programs
 @blueprint.route('/api/geo/program/<string:program_uuid>',
                  methods=['DELETE'])
 @login_required
@@ -381,6 +393,7 @@ def api_program_delete(program_uuid):
     return jsonify(result)
 
 
+# @manual geo/plots#page, geo/plot-widget#plot-list, geo/programs#plots-page, geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plots', methods=['GET'])
 @login_required
 def api_plots_list():
@@ -464,6 +477,7 @@ def api_plots_list():
     return jsonify({'ok': True, 'plots': items, 'count': len(items)})
 
 
+# @manual geo/plot-widget#stages, geo/map-widget#plot, geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plot/<string:plot_uuid>', methods=['GET'])
 @login_required
 def api_plot_get(plot_uuid):
@@ -522,6 +536,7 @@ def _plot_schedule(row):
         return {'own': [], 'devices': []}
 
 
+# @manual geo/plot-widget#environment, geo/map-widget#plot, geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/contents',
                  methods=['GET'])
 @login_required
@@ -552,6 +567,7 @@ def api_plot_contents(plot_uuid):
     return jsonify(payload)
 
 
+# @manual geo/plot-widget#environment
 def _stage_window(row, stage_key, today):
     """단계 키 → `(start, end, state)`. 못 찾으면 `(None, None, None)`.
 
@@ -597,6 +613,7 @@ def _as_day(value):
         return None
 
 
+# @manual geo/map-widget#plot, geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/resource_usage',
                  methods=['GET'])
 @login_required
@@ -637,6 +654,7 @@ def api_plot_resource_usage(plot_uuid):
     return jsonify(dict(payload or {'days': days, 'roles': {}}, ok=True))
 
 
+# @manual geo/plot-widget#environment, geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/env_series', methods=['GET'])
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/env_week', methods=['GET'])
 @login_required
@@ -826,6 +844,7 @@ def _program_methods(row):
     return coordinator_plot.program_target_methods(row)
 
 
+# @manual geo/map-widget#plot
 def _plot_photosynthesis(row):
     """구획의 적산온도(GDD)·광합성 지표(DLI) → `{'gdd', 'dli'}`.
 
@@ -987,6 +1006,7 @@ def _build_facility_plot_contents(row):
     }
 
 
+# @manual geo/map-widget#plot
 def _build_plot_contents(plot_uuid):
     """식생 모달 인벤토리 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
     from aot.aot_flask.geo import device_membership
@@ -1198,6 +1218,7 @@ def _build_plot_contents(plot_uuid):
 
 # ── 쓰기 ───────────────────────────────────────────────────────────────────
 
+# @manual geo/plots#create, geo/plots#edit, geo/plot-widget#editing, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot', methods=['POST'])
 @login_required
 def api_plot_save():
@@ -1214,6 +1235,7 @@ def api_plot_save():
     return jsonify({'ok': True, 'plot': result})
 
 
+# @manual geo/plots#lifecycle, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/end',
                  methods=['POST'])
 @login_required
@@ -1241,6 +1263,7 @@ def _current_user_name():
     except Exception:
         return None
 
+# @manual geo/plot-widget#stages, geo/programs#stage-events, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stage',
                  methods=['POST'])
 @login_required
@@ -1271,6 +1294,7 @@ def api_plot_stage_accept(plot_uuid):
     return jsonify({'ok': True, 'event': result})
 
 
+# @manual geo/programs#stage-events, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stage',
                  methods=['DELETE'])
 @login_required
@@ -1289,6 +1313,7 @@ def api_plot_stage_undo(plot_uuid):
     return jsonify({'ok': True, 'event': result})
 
 
+# @manual geo/plot-widget#editing, geo/programs#stage-schedule, geo/api-reference#schedule
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/schedule',
                  methods=['POST'])
 @login_required
@@ -1328,6 +1353,7 @@ def api_plot_schedule(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/programs#stage-schedule, geo/api-reference#schedule
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/schedule/shift',
                  methods=['POST'])
 @login_required
@@ -1353,6 +1379,7 @@ def api_plot_schedule_shift(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/plot-widget#editing, geo/programs#stage-guidance-adding-and-removing-stages, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-guidance',
                  methods=['POST'])
 @login_required
@@ -1378,6 +1405,7 @@ def api_plot_stage_guidance(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-name',
                  methods=['POST'])
 @login_required
@@ -1404,6 +1432,7 @@ def api_plot_stage_name(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/plots#targets, geo/plot-widget#editing, geo/programs#plot-override, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stage-target',
                  methods=['POST'])
 @login_required
@@ -1435,6 +1464,7 @@ def api_plot_stage_target(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/plot-widget#editing, geo/programs#stage-guidance-adding-and-removing-stages, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stages', methods=['POST'])
 @login_required
 def api_plot_stage_add(plot_uuid):
@@ -1460,6 +1490,7 @@ def api_plot_stage_add(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/plot-widget#editing, geo/programs#stage-guidance-adding-and-removing-stages, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/stages/<string:stage_key>',
                  methods=['DELETE'])
 @login_required
@@ -1479,6 +1510,7 @@ def api_plot_stage_remove(plot_uuid, stage_key):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/plots#register, geo/programs#register, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/save-as-program',
                  methods=['POST'])
 @login_required
@@ -1506,6 +1538,7 @@ def api_plot_save_as_program(plot_uuid):
     return jsonify(dict({'ok': True}, **result))
 
 
+# @manual geo/programs#resources, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/resources',
                  methods=['POST'])
 @login_required
@@ -1538,6 +1571,7 @@ def api_plot_resources_apply(plot_uuid):
     return jsonify({'ok': True, 'result': result})
 
 
+# @manual geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/copy',
                  methods=['POST'])
 @login_required
@@ -1558,6 +1592,7 @@ def api_plot_copy(plot_uuid):
     return jsonify({'ok': True, 'plot': result})
 
 
+# @manual geo/plots#lifecycle, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/succeed',
                  methods=['POST'])
 @login_required
@@ -1597,6 +1632,7 @@ def api_plot_succeed(plot_uuid):
     return jsonify({'ok': True, **result})
 
 
+# @manual geo/plots#lifecycle, geo/api-reference#lifecycle-stage
 @blueprint.route('/api/geo/plot/<string:plot_uuid>', methods=['DELETE'])
 @login_required
 def api_plot_delete(plot_uuid):
@@ -1614,6 +1650,7 @@ def api_plot_delete(plot_uuid):
 
 # ── 파생 조회 ──────────────────────────────────────────────────────────────
 
+# @manual geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plot/<string:plot_uuid>/sensors',
                  methods=['GET'])
 @login_required
@@ -1626,6 +1663,7 @@ def api_plot_sensors(plot_uuid):
                     'sensors': plot_context.sensors_for_plot(row)})
 
 
+# @manual geo/api-reference#zones, geo/api-reference#listing-detail
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/allocation',
                  methods=['GET'])
 @login_required
@@ -1644,6 +1682,7 @@ def api_zone_allocation(zone_uuid):
                     'allocation': plot_context.zone_allocation(zone, on=on)})
 
 
+# @manual geo/api-reference#listing-detail
 @blueprint.route('/api/geo/plots/history', methods=['POST'])
 @login_required
 def api_plots_history():
@@ -1695,6 +1734,7 @@ def api_plots_history():
 # 도형이 그 사이에 바뀌면 결과도 바뀐다. 그것이 맞다 — 사람이 밭 모양을 고쳤으면
 # 새 모양대로 나뉘어야 한다.
 
+# @manual geo/design-tool#split
 def split_args_from(src):
     """요청에서 분할 파라미터를 뽑는다 → (kwargs, 오류문구).
 
@@ -1760,6 +1800,7 @@ def split_args_from(src):
         return None, str(exc)
 
 
+# @manual geo/design-tool#split
 def split_kwargs_from(args):
     """`split_args_from` 결과 → `plot_split.split_shape` 키워드.
 
@@ -1777,6 +1818,7 @@ def split_kwargs_from(args):
     return kwargs
 
 
+# @manual geo/design-tool#split
 def compute_split(args):
     """(strips, info, shape) 또는 (None, (응답, 코드))."""
     shape = GeoShape.query.filter_by(unique_id=args['shape_id']).first()
@@ -1789,6 +1831,7 @@ def compute_split(args):
     return (strips, info, shape), None
 
 
+# @manual geo/design-tool#split, geo/api-reference#splitting-a-zone-into-plots
 @blueprint.route('/api/geo/plot/split-preview', methods=['GET'])
 @login_required
 def api_plot_split_preview():
@@ -1807,6 +1850,7 @@ def api_plot_split_preview():
                     'shape_uuid': shape.unique_id, 'geo_id': shape.geo_id})
 
 
+# @manual geo/plots#create, geo/design-tool#split, geo/api-reference#splitting-a-zone-into-plots
 @blueprint.route('/api/geo/plot/split-apply', methods=['POST'])
 @login_required
 def api_plot_split_apply():
@@ -1867,6 +1911,7 @@ def api_plot_split_apply():
 
 
 
+# @manual geo/plots#page, geo/plots#permissions, geo/programs#plots-page
 @blueprint.route('/plots')
 @login_required
 def page_plots():

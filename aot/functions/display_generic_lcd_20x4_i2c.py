@@ -41,6 +41,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.functions import parse_function_information
 from aot.utils.lcd import format_measurement_line
 from aot.utils.system_pi import cmd_output
+from aot.utils.lazy_text import lazy_format
 
 # Set to how many lines the LCD has
 lcd_lines = 4
@@ -198,7 +199,7 @@ FUNCTION_INFORMATION = {
             'default_value': 10,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         },
         {
@@ -264,7 +265,7 @@ FUNCTION_INFORMATION = {
             'default_value': 360,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {

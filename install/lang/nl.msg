@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** FOUT tijdens de AoT-
 install_begin=#### De AoT-installatie begint. %s\n
 mosquitto_installing=#### Bezig met installeren: mosquitto MQTT-broker\n
 mosquitto_already_installed=#### mosquitto is al geïnstalleerd - installatie overgeslagen\n
-mosquitto_configuring=#### mosquitto wordt geconfigureerd om externe verbindingen toe te staan\n
 mosquitto_conf_checking=#### mosquitto-configuratiebestand wordt aangemaakt/gecontroleerd\n
 mosquitto_conf_created=#### %s aangemaakt\n
 mosquitto_conf_exists=#### %s bestaat al - wordt niet overschreven\n

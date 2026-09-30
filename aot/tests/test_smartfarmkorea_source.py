@@ -45,34 +45,37 @@ def _make_test_app():
 
 
 class TestSmartfarmkoreaUrlBuilding(unittest.TestCase):
-    """Pure functions — no DB, no network. Every URL below was scraped
-    verbatim from the source page's 샘플 URL panel (2026-07-19)."""
+    """Pure functions — no DB, no network. Every URL below matches the
+    source page's 샘플 URL panel (2026-07-19), except the scheme: the
+    page's sample used http://, upgraded here to https:// since the
+    provider serves TLS on the same host/path (see _API_BASE_* in
+    smartfarmkorea_client.py)."""
 
     def test_all_seven_operations_match_scraped_sample_urls(self):
         cases = [
             ('identity', {'serviceKey': 'SERVICE_KEY'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getIdentityDataList/SERVICE_KEY'),
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getIdentityDataList/SERVICE_KEY'),
             ('cropping', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0000011'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getCroppingSeasonDataList/SERVICE_KEY/PF_0000011'),
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getCroppingSeasonDataList/SERVICE_KEY/PF_0000011'),
             ('env', {'serviceKey': 'SERVICE_KEY', 'facilityId': 'PF_0006032_01', 'measDate': '2022-12-04',
                      'fldCode': 'FG', 'sectCode': 'EI', 'fatrCode': 'TI', 'itemCode': '080400'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getEnvDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getEnvDataList/'
              'SERVICE_KEY/PF_0006032_01/2022-12-04/FG/EI/TI/080400'),
             ('growth_strawberry', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0001004', 'croppingSerlNo': '15',
                                     'startDate': '2015-11-29', 'endDate': '2015-11-29'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getStrbCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getStrbCultivateDataList/'
              'SERVICE_KEY/PF_0001004/15/2015-11-29/2015-11-29'),
             ('growth_mum', {'serviceKey': 'SK', 'userId': 'PF_0000122', 'croppingSerlNo': '276',
                              'startDate': '2017-03-12', 'endDate': '2017-03-12'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getMumCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getMumCultivateDataList/'
              'SK/PF_0000122/276/2017-03-12/2017-03-12'),
             ('growth_melon', {'serviceKey': 'SK', 'userId': 'PF_0000476', 'croppingSerlNo': '272',
                                'startDate': '2017-02-12', 'endDate': '2017-02-12'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getFruitCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getFruitCultivateDataList/'
              'SK/PF_0000476/272/2017-02-12/2017-02-12'),
             ('growth_other', {'serviceKey': 'SK', 'userId': 'PF_0000021', 'croppingSerlNo': '4',
                                'startDate': '2015-12-06', 'endDate': '2015-12-06'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService/getCultivateDataList/'
              'SK/PF_0000021/4/2015-12-06/2015-12-06'),
         ]
         self.assertEqual(len(cases), len(sfk.OPERATIONS))  # every operation covered
@@ -85,35 +88,35 @@ class TestSmartfarmkoreaUrlBuilding(unittest.TestCase):
         same verification method as the facility dataset above."""
         cases = [
             ('identity', {'serviceKey': 'SERVICE_KEY'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getIdentityDataList/SERVICE_KEY'),
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getIdentityDataList/SERVICE_KEY'),
             ('cropping', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0000006'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getCroppingSeasonDataList/SERVICE_KEY/PF_0000006'),
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getCroppingSeasonDataList/SERVICE_KEY/PF_0000006'),
             ('env', {'serviceKey': 'SERVICE_KEY', 'facilityId': 'PF_0006001_01', 'measDate': '2022-12-06',
                      'fldCode': 'FG', 'sectCode': 'NT', 'fatrCode': 'EO', 'itemCode': '065900'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getEnvDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getEnvDataList/'
              'SERVICE_KEY/PF_0006001_01/2022-12-06/FG/NT/EO/065900'),
             ('growth_garlic', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0020437', 'croppingSerlNo': '3721',
                                 'startDate': '2020-10-14', 'endDate': '2020-10-14'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getGarlicCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getGarlicCultivateDataList/'
              'SERVICE_KEY/PF_0020437/3721/2020-10-14/2020-10-14'),
             ('growth_onion', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0020507', 'croppingSerlNo': '3664',
                                'startDate': '2020-10-14', 'endDate': '2020-10-14'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getOnionCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getOnionCultivateDataList/'
              'SERVICE_KEY/PF_0020507/3664/2020-10-14/2020-10-14'),
             ('growth_blueberry', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0020477', 'croppingSerlNo': '3587',
                                    'startDate': '2020-10-01', 'endDate': '2020-10-01'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getBlueberryCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getBlueberryCultivateDataList/'
              'SERVICE_KEY/PF_0020477/3587/2020-10-01/2020-10-01'),
             # 2026-08-24 추가. 실호출로 데이터가 나오는 것을 확인한 둘이다
             # (품목코드가 맞는 농가를 골라서 재야 한다 — 무=110100, 배추=100100.
             # 클라이언트의 해당 항목 주석 참조).
             ('growth_radish', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0002739', 'croppingSerlNo': '3540',
                                'startDate': '2018-07-20', 'endDate': '2018-11-30'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getRadishCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getRadishCultivateDataList/'
              'SERVICE_KEY/PF_0002739/3540/2018-07-20/2018-11-30'),
             ('growth_cabbage', {'serviceKey': 'SERVICE_KEY', 'userId': 'PF_0002739', 'croppingSerlNo': '3540',
                                 'startDate': '2018-07-20', 'endDate': '2018-11-30'},
-             'http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getCabbageCultivateDataList/'
+             'https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest/getCabbageCultivateDataList/'
              'SERVICE_KEY/PF_0002739/3540/2018-07-20/2018-11-30'),
         ]
         self.assertEqual(len(cases), len(sfk.OUTDOOR_OPERATIONS))  # every operation covered
@@ -169,7 +172,7 @@ class TestSmartfarmkoreaUrlBuilding(unittest.TestCase):
         self.assertEqual(len(cases), len(sfk.LIVESTOCK_OPERATIONS))  # every operation covered
         for op_key, path, service_key, start, end in cases:
             expected = (
-                f"http://www.smartfarmkorea.net/Agree_WS/webservices/StockRestService/"
+                f"https://www.smartfarmkorea.net/Agree_WS/webservices/StockRestService/"
                 f"{path}/{service_key}/{start}/{end}"
             )
             params = {'serviceKey': service_key, 'startDate': start, 'endDate': end}

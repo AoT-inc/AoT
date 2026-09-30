@@ -52,6 +52,7 @@ from flask import flash
 from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +250,7 @@ WIDGET_INFORMATION = {
             'default_value': 1800,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format(lazy_gettext("{} ({})"), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('Set the maximum valid time for the measurement')
         },
         {
@@ -258,7 +259,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('Set the refresh interval for the widget')
         },
         {
@@ -305,7 +306,7 @@ WIDGET_INFORMATION = {
                 ('vpd', lazy_gettext('VPD'))
             ],
             'name': lazy_gettext('Preset Config'),
-            'phrase': lazy_gettext('Selecting a preset configuration automatically applies default settings such as min/max values. Preset gauges follow the global band colors (Settings > Custom UI); choose Custom to set individual section colors.')
+            'phrase': lazy_gettext('Selecting a preset configuration automatically applies default settings such as min/max values. Preset gauges follow the global band colors (Manage > System Management > Custom UI); choose Custom to set individual section colors.')
         },
         {
             'type': 'collapse_start',
@@ -414,7 +415,7 @@ WIDGET_INFORMATION = {
                 .catch(function(e){ if (window.toastr) toastr.error(e.message); else alert(e.message); });
             })(this)">{{_('Save as Global Band Colors')}}</button>
   </div>
-  <div class="aot-modal-body-text">{{_('Applies the first 5 section colors to Settings > Custom UI band colors.')}}</div>
+  <div class="aot-modal-body-text">{{_('Applies the first 5 section colors to the band colors in Manage > System Management > Custom UI.')}}</div>
 </div>
 </div>
     """,

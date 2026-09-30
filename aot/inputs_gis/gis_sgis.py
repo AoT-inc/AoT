@@ -4,6 +4,7 @@ import time
 from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg
 
+# @manual geo/layers#specialized-data
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_sgis',
     'input_manufacturer': 'Statistics Korea',

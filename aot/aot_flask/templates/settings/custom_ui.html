@@ -1,9 +1,9 @@
 {% extends "layout-settings.html" %}
 {% set active_page = "settings" %}
 {% set active_settings = "custom_ui" %}
-{% set help_page = [manual_url("Configuration-Settings/#general-settings"), dict_translation['settings']['title'] + ': Custom UI'] %}
+{% set help_page = [manual_url("Configuration-Settings/#general-settings"), dict_translation['settings']['title'] + ': ' + _('Custom UI')] %}
 
-{% block title %} - {{dict_translation['settings']['title'] + ': Custom UI'}}{% endblock %}
+{% block title %} - {{dict_translation['settings']['title'] + ': ' + _('Custom UI')}}{% endblock %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-custom-ui-preview.css') }}">

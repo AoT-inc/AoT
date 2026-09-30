@@ -3,6 +3,7 @@
 from flask_babel import lazy_gettext
 
 from aot.config_translations import TRANSLATIONS
+from aot.utils.lazy_text import lazy_join
 from aot.databases.models import Actions
 from aot.databases.models import Output
 from aot.actions.base_action import AbstractFunctionAction
@@ -12,7 +13,7 @@ from aot.utils.execution_context import run_in_thread
 
 ACTION_INFORMATION = {
     'name_unique': 'output_value',
-    'name': f"{TRANSLATIONS['output']['title']}: {TRANSLATIONS['value']['title']}",
+    'name': lazy_join(TRANSLATIONS['output']['title'], ': ', TRANSLATIONS['value']['title']),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

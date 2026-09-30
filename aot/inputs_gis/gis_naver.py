@@ -8,6 +8,7 @@ CHANNELS = {
     2: {'name': lg('Terrain'), 'options': {'type': 'base', 'url_template': 'https://map.pstatic.net/nrb/styles/terrain/{z}/{x}/{y}.png'}}
 }
 
+# @manual geo/layers#domestic-korea
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_naver',
     'input_manufacturer': 'Naver',

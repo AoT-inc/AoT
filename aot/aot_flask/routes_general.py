@@ -302,6 +302,46 @@ def page_settings():
     return redirect('settings/general')
 
 
+def _output_success_message(output_dev, output_id, output_channel, state,
+                            output_type, amount):
+    """수동 출력 명령이 성공했을 때 화면에 보일 문장(번역, 출력 위치의 현지 시각).
+
+    드라이버가 돌려주는 영문 진단 문구(내부 반환값 포함)는 로그용이라 쓰지 않는다.
+    """
+    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import resolve_tz
+
+    try:
+        local_now = utc_now().astimezone(resolve_tz(output_dev)[0])
+    except Exception:
+        local_now = utc_now()
+    params = {
+        'name': output_dev.name if output_dev else output_id,
+        'id': output_id,
+        'channel': output_channel,
+        'time': local_now.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    if state == 'off':
+        return gettext(
+            "Output %(name)s (%(id)s) channel %(channel)s turned off (%(time)s)",
+            **params)
+    if output_type == 'pwm':
+        return gettext(
+            "Output %(name)s (%(id)s) channel %(channel)s duty cycle set to %(duty)s%% (%(time)s)",
+            duty='{:.2f}'.format(amount), **params)
+    if output_type == 'sec' and amount:
+        return gettext(
+            "Output %(name)s (%(id)s) channel %(channel)s turned on for %(seconds)s seconds (%(time)s)",
+            seconds='{:.1f}'.format(abs(amount)), **params)
+    if output_type == 'sec':
+        return gettext(
+            "Output %(name)s (%(id)s) channel %(channel)s turned on (%(time)s)",
+            **params)
+    return gettext(
+        "Output %(name)s (%(id)s) channel %(channel)s command sent (%(time)s)",
+        **params)
+
+
 @blueprint.route('/output_mod/<output_id>/<channel>/<state>/<output_type>/<amount>')
 @flask_login.login_required
 def output_mod(output_id, channel, state, output_type, amount):
@@ -350,26 +390,31 @@ def output_mod(output_id, channel, state, output_type, amount):
             output_channel=output_channel,
             additional_options={'source': 'manual'})
 
-        # Manual device control is an audited action. Only the on/off
-        # transition is recorded — PWM/PID channels change continuously and
-        # logging every value would swamp the audit table (see the audit-log
-        # design note in .local/plans/security_hardening_plan.md).
         try:
             output_dev = db_retrieve_table(Output).filter(
                 Output.unique_id == output_id).first()
             output_name = output_dev.name if output_dev else None
         except Exception:
+            output_dev = None
             output_name = None
-        audit_log(audit.OUTPUT_CONTROL, target_type='Output',
-                  target_id=output_id, target_name=output_name,
-                  result='failure' if out_status[0] else 'success',
-                  detail='channel={} state={} type={} amount={}'.format(
-                      output_channel, state, output_type, amount))
+        # 수동 제어의 감사 기록은 데몬 게이트(`controller_output._audit_command`)가
+        # 출처(origin)까지 붙여 남긴다. 성공한 명령을 여기서 또 적으면 한 번의
+        # 클릭이 16ms 간격의 두 줄로 남아 명령이 두 번 나간 것처럼 읽힌다.
+        # 데몬 응답이 실패로 돌아온 경우에만 여기서 남긴다 — RPC 시간 초과처럼
+        # 데몬이 기록하지 못하는 실패의 유일한 흔적이기 때문이다.
+        if out_status[0]:
+            audit_log(audit.OUTPUT_CONTROL, target_type='Output',
+                      target_id=output_id, target_name=output_name,
+                      result='failure',
+                      detail='channel={} state={} type={} amount={}'.format(
+                          output_channel, state, output_type, amount))
 
         if out_status[0]:
             return f'ERROR: {out_status[1]}'
         else:
-            return f'SUCCESS: {out_status[1]}'
+            return 'SUCCESS: ' + _output_success_message(
+                output_dev, output_id, output_channel, state, output_type,
+                float(amount))
     else:
         return 'ERROR: unknown parameters: ' \
                f'output_id: {output_id}, channel: {channel}, ' \
@@ -1898,6 +1943,7 @@ def output_started_at_public(device_unique_id, channel_id):
 # Geo / Facility — Model Asset API (Phase 1)
 # ══════════════════════════════════════════════════════════════════════════════
 
+# @manual geo/facility#3d-asset-mode
 @blueprint.route('/geo/model_assets')
 @flask_login.login_required
 def geo_model_assets_page():
@@ -1912,6 +1958,7 @@ def geo_model_assets_page():
     )
 
 
+# @manual geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/model_assets', methods=['GET'])
 @flask_login.login_required
 def api_geo_model_assets_list():
@@ -1925,6 +1972,7 @@ def api_geo_model_assets_list():
     return jsonify(assets)
 
 
+# @manual geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/model_assets', methods=['POST'])
 @flask_login.login_required
 def api_geo_model_assets_create():
@@ -1948,6 +1996,7 @@ def api_geo_model_assets_create():
     return jsonify(asset), 201
 
 
+# @manual geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/model_assets/<string:asset_uuid>', methods=['GET'])
 @flask_login.login_required
 def api_geo_model_asset_get(asset_uuid):
@@ -1958,6 +2007,7 @@ def api_geo_model_asset_get(asset_uuid):
     return jsonify(asset)
 
 
+# @manual geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/model_assets/<string:asset_uuid>', methods=['PUT'])
 @flask_login.login_required
 def api_geo_model_asset_update(asset_uuid):
@@ -1969,6 +2019,7 @@ def api_geo_model_asset_update(asset_uuid):
     return jsonify(asset)
 
 
+# @manual geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/model_assets/<string:asset_uuid>', methods=['DELETE'])
 @flask_login.login_required
 def api_geo_model_asset_delete(asset_uuid):
@@ -1981,6 +2032,7 @@ def api_geo_model_asset_delete(asset_uuid):
     return jsonify({'deleted': asset_uuid}), 200
 
 
+# @manual geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/model_assets/<string:asset_uuid>/regenerate_preview', methods=['POST'])
 @flask_login.login_required
 def api_geo_model_asset_preview(asset_uuid):
@@ -1997,6 +2049,7 @@ def api_geo_model_asset_preview(asset_uuid):
     return jsonify({'preview_png': row.preview_png, 'preview_status': row.preview_status})
 
 
+# @manual geo/facility#3d-asset-mode, geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/facility/<string:facility_uuid>/attach_model', methods=['POST'])
 @flask_login.login_required
 def api_geo_facility_attach_model(facility_uuid):
@@ -2011,6 +2064,7 @@ def api_geo_facility_attach_model(facility_uuid):
     return jsonify(result)
 
 
+# @manual geo/facility#3d-asset-mode, geo/api-reference#facility-3d-model-assets
 @blueprint.route('/api/geo/facility/<string:facility_uuid>/attach_model', methods=['DELETE'])
 @flask_login.login_required
 def api_geo_facility_detach_model(facility_uuid):
@@ -2021,6 +2075,7 @@ def api_geo_facility_detach_model(facility_uuid):
     return jsonify(result)
 
 
+# @manual geo/settings#unit-settings, geo/api-reference#settings
 @blueprint.route('/api/geo/settings/length_unit', methods=['GET', 'PUT'])
 @flask_login.login_required
 def api_geo_length_unit():

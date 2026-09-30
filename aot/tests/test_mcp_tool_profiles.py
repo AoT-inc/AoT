@@ -21,6 +21,12 @@
      open_drawer 도 묶음 밖이면 같은 거절로 답한다. 묶음 밖 승인 요청은
      이름을 가리고 거절만 받는다. knowledge_shelve 안내는 쓸 수 있는
      연결의 knowledge_search 응답에만 있다. 묶음 변경은 폐기와 같은 문턱.
+ 10. (2026-09-29 모듈 분할) 묶음 = 운영(항상) + 고른 설정 모듈. 설정 도구마다
+     정확히 한 모듈이다(양방향). 'configuration' 은 모듈 전부(앞으로 생길 것
+     포함), 'operations' 는 모듈 없음 — 기존 키는 변환 없이 전과 같은 목록을
+     받는다. 모듈 M 도구의 설명·응답은 운영 ∪ M 밖 도구를 가리키지 않는다
+     (모듈 R6). 모듈마다 크기를 래칫으로 기록한다. 안내문은 꺼진 모듈을 한
+     줄씩, 거절은 그 도구의 모듈 이름을 말한다. 마이그레이션 p6_80.
 
 라이브 DB 를 쓰지 않는다(conftest 의 임시 DB, 마이그레이션은 임시 sqlite).
 """
@@ -47,7 +53,8 @@ _PREFIX = 'ProfTest'
 
 OPS = R.TOOL_PROFILE_OPERATIONS
 CFG = R.TOOL_PROFILE_CONFIGURATION
-_SWITCH_PLACE = 'Settings > Users > API keys'
+MODS = R.TOOL_MODULES
+_SWITCH_PLACE = 'Manage > System Management > Users > API Key'
 
 
 def _catalog_names():
@@ -176,6 +183,132 @@ class TestClassificationTable(unittest.TestCase):
         self.assertEqual(R.normalize_tool_profile(R.TOOL_PROFILE_UNRESTRICTED),
                          OPS)
 
+    # --- 설정 모듈(2026-09-29) ------------------------------------------------
+
+    def test_every_setup_tool_is_in_exactly_one_module(self):
+        """설정 도구마다 정확히 한 모듈이고, 모듈 도구의 합이 곧 설정 전용이다."""
+        raw = R.mcp_module_table()
+        allowed = {OPS, 'retired', 'drawer'} | set(MODS)
+        for name, value in raw.items():
+            self.assertIn(value, allowed, name)
+        cfg_only = R.profile_tools(CFG) - R.profile_tools(OPS)
+        seen = collections.Counter()
+        for m in MODS:
+            tools = R.module_tools(m)
+            self.assertTrue(tools, '빈 모듈: %s' % m)
+            seen.update(tools)
+            for n in tools:
+                self.assertEqual(R.mcp_module_of(n), m, n)
+                self.assertEqual(R.mcp_profile_of(n), CFG, n)
+        self.assertEqual(sorted(n for n, c in seen.items() if c > 1), [])
+        self.assertEqual(set(seen), set(cfg_only),
+                         '설정 전용 도구와 모듈 도구의 합이 다르다')
+        for n in set(raw) - set(cfg_only):
+            self.assertIsNone(R.mcp_module_of(n), n)
+
+    def test_decided_module_assignments(self):
+        """배정 근거는 tool_registry._MCP_PROFILE 의 주석. 경계에 있던 것들."""
+        expect = {
+            'plots': ('create_plot', 'propose_plot_split', 'add_plot_stage',
+                      'save_plot_schedule_as_program', 'list_programs',
+                      'get_program', 'create_program'),
+            'map': ('get_address', 'distance_between', 'nearest',
+                    'set_device_location', 'delete_geo_shape'),
+            'automation': ('create_function', 'delete_function',
+                           'create_sequence_function', 'configure_sequence_day'),
+            'devices': ('list_device_types', 'get_device_type_options',
+                        'create_input', 'modify_output', 'create_gis_input',
+                        'rebind_device'),
+            'dashboard': ('list_dashboards', 'list_widget_types', 'create_widget',
+                          'create_tab'),
+            'library': ('get_archived_document', 'archive_note', 'modify_notice',
+                        'delete_notice', 'knowledge_shelve',
+                        'smartfarmkorea_lookup', 'configure_library_source'),
+            'admin': ('get_system_update_status', 'get_storage_tier_status',
+                      'list_ai_agents', 'create_ai_agent'),
+        }
+        self.assertEqual(set(expect), set(MODS))
+        for m, names in expect.items():
+            for n in names:
+                self.assertEqual(R.mcp_module_of(n), m, n)
+
+    def test_module_names_match_the_model_and_screen(self):
+        from aot.aot_flask.forms.forms_settings import \
+            API_KEY_TOOL_MODULE_CHOICES
+        from aot.databases.models import user_api_key as model
+        self.assertEqual(tuple(model.TOOL_MODULES), tuple(MODS))
+        self.assertEqual(model.TOOL_PROFILE_SEP, R.TOOL_PROFILE_SEP)
+        self.assertEqual(tuple(v for v, _label in API_KEY_TOOL_MODULE_CHOICES),
+                         tuple(MODS))
+        self.assertEqual(set(R.TOOL_MODULE_SUMMARIES), set(MODS))
+        # 모듈 이름은 묶음 값의 조각이다 — 구분 기호·쉼표가 들어가면 안 된다.
+        for m in MODS:
+            self.assertRegex(m, r'^[a-z]+$')
+
+    def test_profile_values_round_trip(self):
+        """모든 모듈 부분집합(2^7) — 화면·저장·스냅샷이 같은 값으로 돈다."""
+        import itertools
+        from aot.databases.models import user_api_key as model
+        for k in range(len(MODS) + 1):
+            for combo in itertools.combinations(MODS, k):
+                spec = R.compose_tool_profile(combo)
+                self.assertEqual(R.parse_tool_profile(spec), spec)
+                self.assertEqual(R.normalize_tool_profile(spec), spec)
+                self.assertEqual(R.profile_modules(spec), frozenset(combo))
+                cols = model.tool_profile_columns(spec)
+                self.assertEqual(R.profile_from_storage(*cols), spec)
+                self.assertEqual(model.tool_profile_columns(OPS, combo), cols)
+                self.assertEqual(model.tool_profile_spec(None, combo), spec)
+                self.assertEqual(R.profile_tools(spec), R.profile_tools(OPS)
+                                 | frozenset().union(*(R.module_tools(m)
+                                                       for m in combo)))
+        self.assertEqual(R.compose_tool_profile(()), OPS)
+        self.assertEqual(R.compose_tool_profile(MODS), CFG)
+        self.assertEqual(R.compose_tool_profile(['map', 'plots', 'map']),
+                         'operations+plots+map')
+
+    def test_legacy_values_keep_their_meaning(self):
+        """기존 두 값은 뜻 그대로 — 저장값 변환이 필요 없다. 'configuration' 은
+        모듈 칸을 보지 않고 언제나 모듈 전부(앞으로 생길 모듈 포함)다."""
+        ops, cfg = R.profile_tools(OPS), R.profile_tools(CFG)
+        union = frozenset().union(*(R.module_tools(m) for m in MODS))
+        self.assertEqual(cfg, ops | union)
+        self.assertEqual(R.profile_modules(CFG), frozenset(MODS))
+        self.assertEqual(R.profile_modules(OPS), frozenset())
+        self.assertEqual(R.profile_from_storage(CFG, None), CFG)
+        self.assertEqual(R.profile_from_storage(CFG, 'plots'), CFG)
+        self.assertEqual(R.profile_from_storage(OPS, None), OPS)
+        self.assertEqual(R.profile_from_storage(OPS, ''), OPS)
+        self.assertEqual(R.profile_from_storage(None, 'plots'), OPS)
+        self.assertEqual(R.profile_from_storage(OPS, ','.join(MODS)), CFG)
+
+    def test_unknown_modules_narrow(self):
+        self.assertEqual(R.normalize_tool_profile('operations+plots+bogus'),
+                         'operations+plots')
+        self.assertEqual(R.normalize_tool_profile('operations+bogus'), OPS)
+        self.assertEqual(R.normalize_tool_profile('configuration+plots'), OPS)
+        self.assertEqual(R.normalize_tool_profile('plots'), OPS)
+        self.assertEqual(R.normalize_tool_profile(frozenset({'plots'})), OPS)
+        self.assertEqual(R.profile_from_storage(OPS, 'plots, bogus'),
+                         'operations+plots')
+        # 화면·요청 값은 엄격히 — 하나라도 모르면 None(호출자가 거절한다).
+        for bad in ('operations+plots+bogus', 'plots', 'operations+', None,
+                    'everything', 'configuration+plots'):
+            self.assertIsNone(R.parse_tool_profile(bad), bad)
+
+    def test_module_membership(self):
+        p = 'operations+plots+map'
+        for n in ('create_plot', 'nearest', 'operate_device', 'open_drawer'):
+            self.assertTrue(R.tool_in_profile(n, p), n)
+        for n in ('create_function', 'list_device_types', 'set_output_state'):
+            self.assertFalse(R.tool_in_profile(n, p), n)
+        # 표에 없는 이름은 모듈을 **전부** 켠 묶음에만 보인다.
+        self.assertFalse(R.tool_in_profile('get_function_doc', p))
+        self.assertFalse(R.tool_in_profile(
+            'get_function_doc', R.compose_tool_profile(MODS[:-1])))
+        self.assertTrue(R.tool_in_profile(
+            'get_function_doc', R.TOOL_PROFILE_SEP.join((OPS,) + MODS)))
+
 
 # ---------------------------------------------------------------------------
 # 2. R6 — 운영 도구는 운영 밖 도구를 가리키지 않는다
@@ -237,9 +370,47 @@ class TestNoPointersOutsideTheProfile(unittest.TestCase):
         cls.listed_cfg = R.profile_tools(CFG)
         cls.retired = {n for n, v in table.items() if v == 'retired'}
         # 서랍 기구는 서랍 스위치가 켜져 있으면 목록에 있다.
-        cls.outside_ops = set(table) - cls.ops - {
-            n for n, v in table.items() if v == 'drawer'}
+        cls.named = set(table) - {n for n, v in table.items() if v == 'drawer'}
+        cls.outside_ops = cls.named - cls.ops
         cls.defs = _catalog_definitions()
+
+    def _outside_module(self, module):
+        """모듈 하나만 켠 키의 목록 밖 이름(운영 ∪ M 밖, 서랍 기구 제외)."""
+        return self.named - R.profile_tools(R.compose_tool_profile([module]))
+
+    def test_module_descriptions(self):
+        """모듈 R6 — 모듈 M 도구의 설명은 운영 ∪ M 밖 도구를 부르지 않는다.
+        M 만 켠 키에서 목록에 없는 이름이 된다. 위반이면 문구를 고치거나 서로
+        가리키는 도구를 같은 모듈에 둔다(tool_registry._MCP_PROFILE 주석)."""
+        hits = []
+        for m in MODS:
+            pat = _name_pattern(self._outside_module(m))
+            for name in sorted(R.module_tools(m) & set(self.defs)):
+                text = json.dumps(self.defs[name], ensure_ascii=False)
+                hits += ['%s/%s -> %s' % (m, name, x)
+                         for x in sorted(set(pat.findall(text)))]
+        self.assertEqual(hits, [], '모듈 도구 설명이 그 모듈 밖 도구를 가리킨다')
+
+    def test_module_handler_responses(self):
+        from aot.tools.aot_data_tool_service import AoTDataToolService
+        tool_map = R.build_tool_map()
+        hits = collections.defaultdict(set)
+        scanned = 0
+        for m in MODS:
+            pat = _name_pattern(self._outside_module(m))
+            for name in sorted(R.module_tools(m)):
+                fn = tool_map.get(name)
+                if fn is None:
+                    continue
+                scanned += 1
+                strings = []
+                _handler_strings(fn, AoTDataToolService, set(), 3, strings)
+                for where, text in strings:
+                    for x in set(pat.findall(text)):
+                        hits['%s/%s -> %s' % (m, name, x)].add(where)
+        self.assertGreater(scanned, 50, '처리기를 거의 못 찾았다 — 검사가 헛돈다')
+        self.assertEqual(dict(hits), {},
+                         '모듈 도구의 응답 문자열이 그 모듈 밖 도구를 가리킨다')
 
     def test_operations_descriptions(self):
         pat = _name_pattern(self.outside_ops)
@@ -325,8 +496,35 @@ CONFIGURATION_TOKEN_CEILING = 45_000
 #: 전환은 tool_profile 거절에만" 한 줄을 더했다(882 → 920). 같은 DB 사본(입력
 #: 37·출력 106)으로 쟀다 — 상한까지 81 남는다.
 #: 설정 묶음은 같은 설명 축약으로 줄었다(44,497 → 44,000).
-OPERATIONS_MEASURED_TOKENS = 21_004
-CONFIGURATION_MEASURED_TOKENS = 44_000
+#:
+#: 26-09-29 세 번째 기록(20,814 / 42,800) — "가벼운 스키마 + 풍부한 오류" 기반.
+#: tool_registry._MCP_TOOL_PAYLOADS 의 선택 필드 `detail` 에 몇몇 큰 도구의
+#: 중첩 item 전체 모양·반복 설명을 옮기고, tools/list 의 가벼운 쪽은
+#: `{"type":"object"}` + 키 이름 한 줄로 줄였다(지운 것이 아니다 — `detail` 은
+#: get_tool_detail 과 인자 문제 거절 본문(`schema`/`hint`)에서 그대로 나간다).
+#: 손댄 다섯 도구와 카탈로그 전체(virtual_tools(), 129개) 토큰(추정, 이 파일의
+#: _estimate_tokens):
+#:   create_program            1,583 → 1,027  (-556, stages/target_defs/
+#:                                              resource_defs item 축약)
+#:   add_schedule_batch          837 →   618  (-219, entries item 축약 —
+#:                                              R3(인자 설명 100자)에 맞춰
+#:                                              한 번 더 줄였다)
+#:   configure_sequence_day      854 →   637  (-217, slots item 축약)
+#:   apply_plot_split            848 →   683  (-165, "propose_plot_split 과
+#:                                              같음" 반복 6회를 한 문장으로)
+#:   configure_library_source    815 →   752  (-63, preset 별 정확한 operation
+#:                                              키 나열 — 틀리면 valid_operations
+#:                                              로 돌려주므로 상세로)
+#:   카탈로그 전체(129개)       42,568 → 41,348 (-1,220)
+#: 손대지 않은 것(판단 근거는 최종 보고 참조): get_plot·add_schedule·
+#: create_note 는 R3 예외 목록의 안전 문구(식재량 계산 인자, target_name 한
+#: 개체 규칙)가 크기를 차지해 옮기지 않았고, respond_to_confirmation·
+#: propose_plot_split 은 그 문구 전부가 선택 전(에러 이전) 결정 규칙이라
+#: 상세로 미루면 조용한 오답 위험이 커 보류했다.
+#: 같은 방법(TestHostSurfaceBudget._host_tokens, 입력 37·출력 106 DB 사본)으로
+#: 잰 실측값 — 운영 상한까지 271 남는다.
+OPERATIONS_MEASURED_TOKENS = 20_794
+CONFIGURATION_MEASURED_TOKENS = 42_780
 RATCHET_SLACK = 1.03
 #: 서랍을 다시 켰을 때(AOT_MCP_TOOL_TIERING=1) 운영 키의 상시 노출(카탈로그
 #: 추정, 안내문 제외 — 선택 기능이라 예전 방법 그대로 둔다).
@@ -365,6 +563,50 @@ class TestOperationsBudget(unittest.TestCase):
         tokens = self._tokens(names)
         self.assertLessEqual(tokens, TIERED_OPERATIONS_TOKEN_CEILING,
                              '서랍 켬 운영 표면이 %d 추정 토큰이다' % tokens)
+
+
+#: 모듈별 크기 래칫(2026-09-29) — 그 모듈 도구 정의의 추정 토큰(카탈로그로
+#: 잰다, 앱·안내문 제외). 운영 키에 모듈 M 을 켜면 목록이 대략 이만큼 는다 —
+#: 키를 발급하는 사람이 고를 때 보는 숫자이기도 하다(docs ai/overview#tool-profiles).
+#: 넘으면(3% 여유) 멈춘다. 늘리는 것이 맞다면 이 숫자를 일부러 고친다(리뷰에서
+#: 보이게), 줄었으면 같이 내린다. 26-09-29 첫 기록, 합 23,406 = 설정 전용 전체.
+MODULE_MEASURED_TOKENS = {
+    'plots': 8_847,
+    'map': 1_452,
+    'automation': 1_977,
+    'devices': 2_501,
+    'dashboard': 2_908,
+    'library': 4_447,
+    'admin': 1_274,
+}
+
+
+class TestModuleBudget(unittest.TestCase):
+    """모듈마다 크기를 기록한다 — 한 모듈이 조용히 불어나는 것을 보이게."""
+
+    _tokens = staticmethod(TestOperationsBudget._tokens)
+
+    def test_every_module_is_measured(self):
+        self.assertEqual(set(MODULE_MEASURED_TOKENS), set(MODS),
+                         '새 모듈이면 MODULE_MEASURED_TOKENS 에 잰 값을 적을 것')
+
+    def test_module_ratchet(self):
+        over = []
+        for m in MODS:
+            tokens = self._tokens(R.module_tools(m))
+            self.assertGreater(tokens, 0, m)
+            if tokens > int(MODULE_MEASURED_TOKENS[m] * RATCHET_SLACK):
+                over.append('%s: %d (기록 %d)' % (m, tokens,
+                                                   MODULE_MEASURED_TOKENS[m]))
+        self.assertEqual(over, [], '모듈 크기가 기록값의 3%% 를 넘었다 — 의도한 '
+                         '것이면 MODULE_MEASURED_TOKENS 를 고칠 것')
+
+    def test_modules_add_up_to_the_configuration_surface(self):
+        """모듈로 나눠도 설정 전체의 크기는 그대로다(나누기만 했다)."""
+        whole = (self._tokens(R.profile_tools(CFG))
+                 - self._tokens(R.profile_tools(OPS)))
+        parts = sum(self._tokens(R.module_tools(m)) for m in MODS)
+        self.assertLessEqual(abs(whole - parts), 20, (whole, parts))
 
 
 class TestSchemaRules(unittest.TestCase):
@@ -471,6 +713,103 @@ class TestSchemaRules(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# 3-b. 상세 기구(2026-09-29) — "가벼운 스키마 + 풍부한 오류".
+#
+# 몇몇 큰 도구(create_program, add_schedule_batch, configure_sequence_day,
+# apply_plot_split, configure_library_source)는 tool_registry._MCP_TOOL_PAYLOADS
+# 에 선택 필드 `detail` 을 들고 있다 — 중첩 item 의 전체 모양, 반복 설명의
+# 원본을 옮겨 둔 자리다. 아래는 그 기반이 지키는 세 가지 계약이다.
+# ---------------------------------------------------------------------------
+
+class TestSchemaDetail(unittest.TestCase):
+
+    @staticmethod
+    def _with_detail():
+        """`detail` 을 가진 카탈로그 항목들 — 없으면 이 테스트 자체가 헛돈다."""
+        return [p for p in R._MCP_TOOL_PAYLOADS if p.get('detail')]
+
+    def test_at_least_one_tool_has_detail(self):
+        self.assertGreater(len(self._with_detail()), 0,
+                           '상세를 든 도구가 하나도 없다 — 아래 테스트가 아무것도 안 본다')
+
+    def test_detail_never_leaks_into_tools_list(self):
+        """(a) `detail` 은 virtual_tools()(tools/list)에 새지 않는다."""
+        for entry in R.virtual_tools():
+            self.assertNotIn('detail', entry, entry.get('tool_name'))
+            self.assertEqual({'tool_name', 'description', 'input_schema'},
+                             set(entry), entry.get('tool_name'))
+
+    def test_detail_property_names_match_the_light_schema(self):
+        """(c) 가벼운 쪽 속성 이름 = 상세 쪽 속성 이름(둘 다 있는 속성 한정),
+        그리고 가벼운 쪽 required ⊆ 상세 쪽 required — 상세로 옮기며 인자
+        이름이나 필수 여부가 조용히 바뀌면 안 된다."""
+        for payload in self._with_detail():
+            name = payload['tool_name']
+            detail_schema = payload['detail'].get('input_schema')
+            if detail_schema is None:
+                continue
+            light_props = set(payload['input_schema'].get('properties') or {})
+            detail_props = set(detail_schema.get('properties') or {})
+            self.assertEqual(light_props, detail_props, name)
+            light_req = set(payload['input_schema'].get('required') or [])
+            detail_req = set(detail_schema.get('required') or [])
+            self.assertLessEqual(light_req, detail_req, name)
+
+    def test_get_tool_detail_returns_the_richer_schema(self):
+        """(b, get_tool_detail 경로) 서랍 기구로 콕 집어 물으면 상세가 나온다."""
+        from aot.tools import tool_execution as te
+        for payload in self._with_detail():
+            name = payload['tool_name']
+            detail = payload['detail']
+            if not detail.get('input_schema'):
+                continue
+            full = dict(te._tool_schema(name) or {})
+            enriched = te._tool_detail(name)
+            self.assertIsNotNone(enriched, name)
+            self.assertEqual(enriched.get('input_schema'), detail['input_schema'], name)
+            # 가벼운 쪽보다 속성이 줄지 않는다(적어도 이름은 다 있다).
+            light_props = set(full.get('properties') or {})
+            rich_props = set(enriched['input_schema'].get('properties') or {})
+            self.assertEqual(light_props, rich_props, name)
+
+    def test_argument_problem_carries_the_detail_schema(self):
+        """(b) 인자 문제로 거절될 때 상세가 오류 본문에 실린다 — _pre_gate_validation
+        경로(필수 인자 빠짐)와 _dispatch_virtual_tool 경로(핸들러 서명의 필수
+        인자 빠짐) 둘 다."""
+        from aot.tools import tool_execution as te
+
+        # _pre_gate_validation: add_schedule_batch 의 'entries' 는 스키마도
+        # 필수고 핸들러에도 기본값이 없다 — 이 앞단이 잡는다.
+        body = te._pre_gate_validation('add_schedule_batch', {'date': '2026-01-01'},
+                                       role=None)
+        self.assertIsNotNone(body)
+        self.assertIn('entries', body['message'])
+        self.assertIn('schema', body)
+        self.assertEqual(set(body['schema']['properties']),
+                         set(R.tool_detail('add_schedule_batch')['input_schema']['properties']))
+
+        # _dispatch_virtual_tool: configure_sequence_day 를 인자 없이 부르면
+        # 핸들러 서명에서 day/slots 가 빠졌다고 여기서 잡는다.
+        out = te._dispatch_virtual_tool('configure_sequence_day', {'function_id': 'x'})
+        self.assertEqual(out['status'], 'error')
+        self.assertIn('day', out['message'])
+        self.assertIn('slots', out['message'])
+        self.assertIn('schema', out)
+        self.assertEqual(set(out['schema']['properties']),
+                         set(R.tool_detail('configure_sequence_day')['input_schema']['properties']))
+
+    def test_tool_without_detail_gets_no_stray_keys(self):
+        """상세가 없는 도구의 오류 본문에는 schema/hint 가 끼어들지 않는다."""
+        from aot.tools import tool_execution as te
+        self.assertIsNone(R.tool_detail('resolve_target'))
+        out = te._dispatch_virtual_tool('resolve_target', {})
+        self.assertEqual(out['status'], 'error')
+        self.assertIn('target_name', out['message'])
+        self.assertNotIn('schema', out)
+        self.assertNotIn('hint', out)
+
+
+# ---------------------------------------------------------------------------
 # 4. 서버 안내문·거절 본문 (앱 불필요)
 # ---------------------------------------------------------------------------
 
@@ -487,6 +826,54 @@ class TestServerInstructions(unittest.TestCase):
         # 분야만 말하고 도구 이름은 싣지 않는다.
         cfg_only = R.profile_tools(CFG) - R.profile_tools(OPS)
         self.assertEqual(_name_pattern(cfg_only).findall(text), [])
+
+    def test_note_lists_on_modules_and_each_off_module(self):
+        """켠 모듈은 이름만, 꺼진 모듈은 한 줄씩 무엇을 담는지 — 모델이 "X
+        모듈이 꺼져 있다" 고 말할 수 있게. 도구 이름은 싣지 않는다."""
+        cfg_only = R.profile_tools(CFG) - R.profile_tools(OPS)
+        text = self.te._server_instructions('operations+plots+map')
+        self.assertIn("'operations+plots+map' tool profile", text)
+        self.assertIn('Setup modules on: plots, map.', text)
+        for m in MODS:
+            line = '- %s: %s' % (m, R.TOOL_MODULE_SUMMARIES[m])
+            if m in ('plots', 'map'):
+                self.assertNotIn(line, text, m)
+            else:
+                self.assertIn(line, text, m)
+        self.assertIn(_SWITCH_PLACE, text)
+        self.assertEqual(_name_pattern(cfg_only).findall(text), [])
+        ops = self.te._server_instructions(OPS)
+        self.assertNotIn('Setup modules on', ops)
+        for m in MODS:
+            self.assertIn('- %s: ' % m, ops, m)
+        cfg = self.te._server_instructions(CFG)
+        self.assertNotIn('Setup modules off', cfg)
+        self.assertIn(', '.join(MODS), cfg)
+        self.assertEqual(_name_pattern(cfg_only).findall(cfg), [])
+
+    def test_refusal_names_the_module(self):
+        from aot.tools import mcp_auth
+        editor = mcp_auth.RoleInfo(name='Editor', can_write=True, user_id='u',
+                                   can_edit_settings=True, can_use_ai_chat=True,
+                                   can_edit_plots=True,
+                                   tool_profile='operations+plots')
+        body = self.te._profile_refusal('create_function', 'operations+plots',
+                                        'mcp_http', role=editor)
+        self.assertEqual(body['reason_code'], 'tool_profile')
+        self.assertEqual(body['tool_profile'], 'operations+plots')
+        self.assertEqual(body['tool_module'], 'automation')
+        self.assertIn("'automation' setup module", body['message'])
+        self.assertIn('(operations+plots)', body['message'])
+        self.assertIn(_SWITCH_PLACE, body['message'])
+        self.assertIsNone(self.te._profile_refusal(
+            'create_plot', 'operations+plots', 'mcp_http', role=editor))
+        # 표에 없는(배정 전) 이름 — 어느 모듈인지 모르므로 "전부" 라고 말한다.
+        with mock.patch.object(R, 'is_declared_tool', return_value=True):
+            body = self.te._profile_refusal('get_function_doc',
+                                            'operations+plots', 'mcp_http',
+                                            role=editor)
+        self.assertIn('every setup module', body['message'])
+        self.assertNotIn('tool_module', body)
 
     def test_drawer_switch_accepts_common_true_values(self):
         for v, on in (('1', True), ('true', True), ('YES', True), (' On ', True),
@@ -701,6 +1088,20 @@ class TestHostSurfaceBudget(_AppFixture):
                              '운영 + 설정 키가 받는 목록+안내문이 %d 추정 토큰이다'
                              % tokens)
 
+    def test_each_module_adds_about_its_measured_size(self):
+        """운영 + 모듈 하나인 키 — 운영 키보다 크고, 그 모듈의 기록 크기(래칫
+        여유 포함) + 안내문 차이만큼만 크다. 인증부터 목록까지 모듈 묶음 값이
+        그대로 흐르는지도 함께 본다."""
+        ops = self._host_tokens(OPS)
+        for m in MODS:
+            with self.subTest(module=m):
+                tokens = self._host_tokens(R.compose_tool_profile([m]))
+                self.assertGreater(tokens, ops)
+                self.assertLessEqual(
+                    tokens, ops + int(MODULE_MEASURED_TOKENS[m] * RATCHET_SLACK)
+                    + 30)
+                self.assertLessEqual(tokens, CONFIGURATION_TOKEN_CEILING)
+
     def test_ratchet(self):
         """지금 크기에서 3% 넘게 늘면 멈춘다 — 상한 아래라도 조금씩 불어나는
         것을 리뷰에서 보이게 한다. 늘리는 것이 맞으면 *_MEASURED_TOKENS 를
@@ -718,7 +1119,7 @@ class TestHostSurfaceBudget(_AppFixture):
 class TestAuthenticationCarriesTheProfile(_AppFixture):
 
     def test_key_profile_reaches_the_role(self):
-        for profile in (OPS, CFG):
+        for profile in (OPS, CFG, 'operations+plots+map'):
             with self.subTest(profile=profile):
                 role = self._auth(self._issue('Editor', profile=profile))
                 self.assertEqual(role.tool_profile, profile)
@@ -756,6 +1157,14 @@ class TestAuthenticationCarriesTheProfile(_AppFixture):
         self.assertIsNone(mcp_auth.tool_profile_of(unrestricted))
         self.assertEqual(mcp_auth.key_tool_profile(person, None), OPS)
         row = types.SimpleNamespace(tool_profile='everything')
+        self.assertEqual(mcp_auth.key_tool_profile(person, row), OPS)
+        # 모듈 칸 — 운영 키에만 더해지고, 모르는 모듈은 버린다.
+        row = types.SimpleNamespace(tool_profile=OPS, tool_modules='map,bogus')
+        self.assertEqual(mcp_auth.key_tool_profile(person, row),
+                         'operations+map')
+        row = types.SimpleNamespace(tool_profile=CFG, tool_modules='map')
+        self.assertEqual(mcp_auth.key_tool_profile(person, row), CFG)
+        row = types.SimpleNamespace(tool_profile=None, tool_modules='map')
         self.assertEqual(mcp_auth.key_tool_profile(person, row), OPS)
 
     def test_in_app_snapshot_is_unrestricted(self):
@@ -1222,6 +1631,120 @@ class TestOutOfProfileCalls(_AppFixture):
         self.assertNotIn('knowledge_shelve', desc)
 
 
+class TestModuleKeys(_AppFixture):
+    """운영 + 고른 설정 모듈 키 — 인증부터 목록·실행·안내문·거절까지 같은 값."""
+
+    _call = TestOutOfProfileCalls._call
+
+    def test_configuration_key_lists_what_it_did_before(self):
+        """호환 — 기존 'configuration' 키(모듈 칸 NULL)는 운영 + 모듈 전부,
+        즉 모듈로 나누기 전과 같은 목록을 받는다. 전부 체크한 키와도 같다."""
+        from aot.databases.models import UserAPIKey
+        cfg_key = self._issue('Admin', 'full', CFG)
+        row = UserAPIKey.query.order_by(UserAPIKey.id.desc()).first()
+        self.assertEqual((row.tool_profile, row.tool_modules), (CFG, None))
+        cfg = self._listed(self._auth(cfg_key))
+        ops = self._listed(self._auth(self._issue('Admin', 'full', OPS)))
+        every = self._listed(self._auth(self._issue(
+            'Admin', 'full', R.TOOL_PROFILE_SEP.join((OPS,) + MODS))))
+        union = frozenset().union(*(R.module_tools(m) for m in MODS))
+        self.assertEqual(cfg, every)
+        self.assertEqual(cfg - ops, union & _catalog_names())
+        # 'configuration' 키의 모듈 칸에 무엇이 남아 있어도 보지 않는다.
+        row = UserAPIKey.query.filter(UserAPIKey.tool_profile == CFG).first()
+        row.tool_modules = 'plots'
+        self.db.session.commit()
+        self.assertEqual(self._listed(self._auth(cfg_key)), cfg)
+
+    def test_module_key_lists_operations_plus_its_modules(self):
+        role = self._auth(self._issue('Editor', 'full', 'operations+plots+map'))
+        self.assertEqual(role.tool_profile, 'operations+plots+map')
+        names = self._listed(role)
+        ops = self._listed(self._auth(self._issue('Editor', 'full', OPS)))
+        self.assertTrue(ops < names)
+        self.assertEqual(names - ops, (R.module_tools('plots')
+                                       | R.module_tools('map')) & names)
+        for n in ('create_plot', 'list_programs', 'nearest'):
+            self.assertIn(n, names)
+        for n in ('create_function', 'list_device_types', 'create_widget',
+                  'set_output_state'):
+            self.assertNotIn(n, names)
+
+    def test_calls_follow_the_modules_on_every_transport(self):
+        from aot.tools import tool_execution as te
+        role = self._auth(self._issue('Editor', 'full', 'operations+plots'))
+        with mock.patch.object(te, '_dispatch_virtual_tool',
+                               return_value={'programs': []}) as run:
+            for transport in ('mcp_stdio', 'mcp_http', 'rest'):
+                with self.subTest(transport=transport):
+                    body = self._call('create_function', role, transport,
+                                      {'name': 'x', 'function_type': 'y'})
+                    self.assertEqual(body['reason_code'], 'tool_profile')
+                    self.assertEqual(body['tool_module'], 'automation')
+                    self.assertEqual(body['tool_profile'], 'operations+plots')
+                    self.assertIn("'automation' setup module", body['message'])
+                    body = self._call('list_programs', role, transport)
+                    self.assertEqual(body['call_state'], 'executed', body)
+            self.assertEqual(run.call_count, 3)
+
+    def test_system_brief_names_the_modules(self):
+        from aot.tools import tool_execution as te
+        role = self._auth(self._issue('Editor', 'full', 'operations+library'))
+        with mock.patch.object(te, '_dispatch_virtual_tool',
+                               side_effect=lambda *a, **k: {'status': 'ok'}):
+            body = self._call('get_system_brief', role, 'mcp_http')
+        self.assertEqual(body['tool_profile']['name'], 'operations+library')
+        self.assertIn('Setup modules on: library.', body['tool_profile']['note'])
+
+    def test_shelve_hint_follows_the_library_module(self):
+        from aot.tools import tool_execution as te
+        from aot.tools.tool_execution import KNOWLEDGE_SHELVE_READING
+        with mock.patch.object(te, '_dispatch_virtual_tool',
+                               side_effect=lambda *a, **k: {'result': 'none'}):
+            lib = self._call('knowledge_search', self._auth(self._issue(
+                'Editor', 'full', 'operations+library')), 'mcp_http',
+                {'query': 'q'})
+            plots = self._call('knowledge_search', self._auth(self._issue(
+                'Editor', 'full', 'operations+plots')), 'mcp_http',
+                {'query': 'q'})
+        self.assertIn(KNOWLEDGE_SHELVE_READING, lib.get('_reading') or [])
+        self.assertNotIn(KNOWLEDGE_SHELVE_READING, plots.get('_reading') or [])
+
+    def test_stdio_end_to_end(self):
+        from aot import aot_mcp_server as srv
+        from aot.tools import tool_execution as te
+        key = self._issue('Editor', 'full', 'operations+devices')
+        out = io.StringIO()
+        server = srv.StdioMCPServer(self.app, out=out)
+        with mock.patch.dict(os.environ, {'AOT_MCP_API_KEY': key,
+                                          'AOT_MCP_TOOL_TIERING': '0'}), \
+                mock.patch.object(te, '_dispatch_virtual_tool') as run:
+            server._handle({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize',
+                            'params': {'clientInfo': {'name': 'test'}}})
+            server._handle({'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'})
+            server._handle({'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call',
+                            'params': {'name': 'create_plot', 'arguments': {}}})
+            run.assert_not_called()
+        lines = [json.loads(line) for line in out.getvalue().splitlines()]
+        self.assertIn('Setup modules on: devices.',
+                      lines[0]['result']['instructions'])
+        listed = {t['name'] for t in lines[1]['result']['tools']}
+        self.assertIn('create_input', listed)
+        self.assertNotIn('create_plot', listed)
+        body = json.loads(lines[2]['result']['content'][0]['text'])
+        self.assertEqual(body['tool_module'], 'plots')
+
+    def test_partial_modules_drawer_refusal_names_the_module(self):
+        from aot.tools import tool_execution as te
+        role = self._auth(self._issue('Editor', 'full', 'operations+plots'))
+        with mock.patch.dict(os.environ, {'AOT_MCP_TOOL_TIERING': '1'}):
+            drawer = te._open_drawer(self.app, {'drawer': 'definition'},
+                                     role=role, profile='operations+plots')
+        self.assertEqual(drawer['reason_code'], 'tool_profile')
+        self.assertIn("'devices'", drawer['message'])
+        self.assertIn(_SWITCH_PLACE, drawer['message'])
+
+
 class TestBackfill(_AppFixture):
 
     def _audit(self, agent_id, tool, days_ago):
@@ -1411,18 +1934,85 @@ class TestKeyProfileRoutes(_UsersSubmitAppFixture):
         self.assertTrue(payload['data']['messages']['error'])
         self.assertEqual(self._active_keys()[0].tool_profile, OPS)
 
-    def test_template_offers_both_profiles(self):
+    def test_template_offers_operations_and_modules(self):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                             'aot_flask', 'templates', 'settings',
                             'user_detail.html')
         with open(path, encoding='utf-8') as fh:
             src = fh.read()
         self.assertIn('api_key_tool_profile', src)
+        self.assertIn('name="api_key_tool_modules"', src)
         self.assertIn('user_api_key_profile_save', src)
-        self.assertIn("_('Operations + configuration')", src)
-        # 줄마다 있는 select 에 name 을 주면 모든 줄의 값이 함께 전송된다.
-        select = re.search(r'<select[^>]*data-profile-select[^>]*>', src).group(0)
-        self.assertNotIn('name=', select)
+        self.assertIn("_('Operations (always)')", src)
+        # 줄마다 있는 체크박스에 name 을 주면 모든 줄의 값이 함께 전송된다.
+        for box in re.findall(r'<input[^>]*data-profile-module[^>]*>', src):
+            self.assertNotIn('name=', box)
+        self.assertTrue(re.search(r'<input[^>]*data-profile-module', src))
+
+    def _generate_modules(self, modules):
+        return self._post({'api_key_name': 'Client', 'api_key_scope': 'full',
+                           'api_key_tool_profile': OPS,
+                           'api_key_tool_modules': list(modules),
+                           'user_generate_api_key': 'Generate'})
+
+    def test_new_key_with_modules(self):
+        from aot.databases.models import AuditLog
+        payload = self._generate_modules(['map', 'plots'])
+        self.assertEqual(payload['data']['messages']['error'], [])
+        key = self._active_keys()[0]
+        self.assertEqual((key.tool_profile, key.tool_modules),
+                         (OPS, 'plots,map'))
+        self.assertEqual(key.tool_profile_spec, 'operations+plots+map')
+        with self.app.app_context():
+            row = AuditLog.query.filter(
+                AuditLog.action == 'apikey.issue').order_by(
+                AuditLog.id.desc()).first()
+            self.assertIn('operations+plots+map', row.detail)
+
+    def test_all_modules_checked_is_configuration(self):
+        self._generate_modules(list(MODS) + ['bogus'])
+        key = self._active_keys()[0]
+        self.assertEqual((key.tool_profile, key.tool_modules), (CFG, None))
+
+    def test_unknown_modules_are_dropped_at_issue(self):
+        self._generate_modules(['bogus', 'admin'])
+        key = self._active_keys()[0]
+        self.assertEqual((key.tool_profile, key.tool_modules), (OPS, 'admin'))
+
+    def test_change_modules_without_reissuing(self):
+        import json as _json
+        from aot.databases.models import AuditLog
+        self._generate_modules(['plots'])
+        key = self._active_keys()[0]
+        payload = self._change(key.unique_id, 'operations+automation+devices')
+        self.assertEqual(payload['data']['messages']['error'], [])
+        after = self._active_keys()[0]
+        self.assertEqual((after.tool_profile, after.tool_modules),
+                         (OPS, 'automation,devices'))
+        self.assertEqual(after.key_hash, key.key_hash)
+        with self.app.app_context():
+            row = AuditLog.query.filter(
+                AuditLog.action == 'apikey.profile_change').one()
+            before, now = _json.loads(row.before_json), _json.loads(
+                row.after_json)
+        self.assertEqual(before, {'tool_profile': 'operations+plots',
+                                  'tool_modules': ['plots']})
+        self.assertEqual(now, {'tool_profile': 'operations+automation+devices',
+                               'tool_modules': ['automation', 'devices']})
+        # 전부 켜면 설정 묶음, 다 끄면 운영.
+        self._change(key.unique_id, R.TOOL_PROFILE_SEP.join((OPS,) + MODS))
+        self.assertEqual(self._active_keys()[0].tool_modules, None)
+        self.assertEqual(self._active_keys()[0].tool_profile, CFG)
+        self._change(key.unique_id, OPS)
+        self.assertEqual((self._active_keys()[0].tool_profile,
+                          self._active_keys()[0].tool_modules), (OPS, None))
+
+    def test_change_rejects_unknown_modules(self):
+        self._generate_modules(['plots'])
+        key = self._active_keys()[0]
+        payload = self._change(key.unique_id, 'operations+plots+bogus')
+        self.assertTrue(payload['data']['messages']['error'])
+        self.assertEqual(self._active_keys()[0].tool_modules, 'plots')
 
 
 class TestServiceAccountKeyScreen(_AppFixture):
@@ -1453,6 +2043,15 @@ class TestServiceAccountKeyScreen(_AppFixture):
         self.assertIn('service_account=is_service_account(user)',
                       inspect.getsource(routes_settings.settings_user_detail))
 
+    def test_key_row_shows_its_modules_checked(self):
+        self._issue('Editor', profile='operations+map+admin')
+        html = self._render(self._user('Editor'), False)
+        checked = set(re.findall(
+            r'data-profile-module="(\w+)"\s*checked', html))
+        self.assertEqual(checked, {'map', 'admin'})
+        self.assertEqual(len(re.findall(r'data-profile-module="', html)),
+                         len(MODS))
+
 
 # ---------------------------------------------------------------------------
 # 7. 마이그레이션 p6_75
@@ -1461,15 +2060,22 @@ class TestServiceAccountKeyScreen(_AppFixture):
 _P6_75 = 'p6_75_api_key_tool_profile_20260924'
 
 
-def _load_p6_75():
+_P6_80 = 'p6_80_api_key_tool_modules_20260929'
+
+
+def _load_revision(revision):
     import importlib.util
     here = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(here, '..', '..', 'alembic_db', 'alembic', 'versions',
-                        _P6_75 + '.py')
-    spec = importlib.util.spec_from_file_location(_P6_75, path)
+                        revision + '.py')
+    spec = importlib.util.spec_from_file_location(revision, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def _load_p6_75():
+    return _load_revision(_P6_75)
 
 
 def _run_migration(mod, fn, engine):
@@ -1512,7 +2118,9 @@ def test_p6_75_upgrade_downgrade_is_idempotent(tmp_path):
         assert cols() == base
     _run_migration(mod, 'upgrade', engine)
 
-    assert cols() == {c.name for c in UserAPIKey.__table__.columns}
+    # 모듈 칸(tool_modules)은 뒤에 온 p6_80 의 몫이다.
+    assert cols() == {c.name for c in UserAPIKey.__table__.columns} - {
+        'tool_modules'}
     with engine.connect() as conn:
         row = conn.execute(sa.text(
             "SELECT key_hash, scope, tool_profile FROM user_api_key")).one()
@@ -1526,3 +2134,58 @@ def test_p6_75_follows_p6_74():
     mod = _load_p6_75()
     assert mod.revision == _P6_75
     assert mod.down_revision == 'p6_74_mcp_audit_quality_20260923'
+
+
+# ---------------------------------------------------------------------------
+# 8. 마이그레이션 p6_80 — 설정 모듈 칸
+# ---------------------------------------------------------------------------
+
+def test_p6_80_upgrade_downgrade_is_idempotent(tmp_path):
+    import sqlalchemy as sa
+    from aot.databases.models import UserAPIKey
+
+    engine = sa.create_engine(f"sqlite:///{tmp_path / 'mig.db'}")
+    with engine.begin() as conn:
+        # p6_79 시점의 모양 — 묶음 칸은 있고 모듈 칸은 없다.
+        conn.execute(sa.text(
+            "CREATE TABLE user_api_key (id INTEGER PRIMARY KEY, "
+            "unique_id VARCHAR(36) NOT NULL UNIQUE, user_id INTEGER NOT NULL, "
+            "name VARCHAR(64), key_hash VARCHAR(64) NOT NULL UNIQUE, "
+            "scope VARCHAR(16) NOT NULL DEFAULT 'full', "
+            "tool_profile VARCHAR(16), created_at DATETIME, "
+            "revoked_at DATETIME)"))
+        conn.execute(sa.text(
+            "INSERT INTO user_api_key (unique_id, user_id, key_hash, "
+            "tool_profile) VALUES ('k1', 1, 'h1', 'configuration'), "
+            "('k2', 1, 'h2', 'operations')"))
+
+    def cols():
+        return {c['name'] for c in sa.inspect(engine).get_columns('user_api_key')}
+
+    base = cols()
+    mod = _load_revision(_P6_80)
+    for _ in range(2):
+        _run_migration(mod, 'upgrade', engine)
+        _run_migration(mod, 'upgrade', engine)
+        assert cols() == base | {'tool_modules'}
+        _run_migration(mod, 'downgrade', engine)
+        _run_migration(mod, 'downgrade', engine)
+        assert cols() == base
+    _run_migration(mod, 'upgrade', engine)
+
+    assert cols() == {c.name for c in UserAPIKey.__table__.columns}
+    with engine.connect() as conn:
+        rows = conn.execute(sa.text(
+            "SELECT key_hash, tool_profile, tool_modules FROM user_api_key "
+            "ORDER BY id")).all()
+    # 기존 키는 그대로 — 모듈 칸은 비어 있고 뜻은 전과 같다(변환 불필요).
+    assert [tuple(r) for r in rows] == [('h1', CFG, None), ('h2', OPS, None)]
+    assert [R.profile_from_storage(p, m) for _h, p, m in rows] == [CFG, OPS]
+
+
+def test_p6_80_keeps_its_place_in_the_chain():
+    # 헤드인지(ALEMBIC_VERSION 과 같은지)는 단언하지 않는다 — 뒤에 마이그레이션이
+    # 붙는 순간 깨진다. 헤드 일치는 check_alembic_head.py 가 본다.
+    mod = _load_revision(_P6_80)
+    assert mod.revision == _P6_80
+    assert mod.down_revision == 'p6_79_conditional_refractory_period_20260930'

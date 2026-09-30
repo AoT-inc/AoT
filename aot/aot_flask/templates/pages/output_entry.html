@@ -116,11 +116,11 @@
         {% if 'button_on' in dict_options['options_enabled'] -%}
         <input onclick="return $(this).turn_on(this, '{{each_output.unique_id}}', '{{each_output_channel}}');"
           class="form-control btn aot-btn-on aot-pill-btn"
-          name="{{each_output.unique_id}}/{{each_output_channel}}/on/sec/0" type="button" value="On">
+          name="{{each_output.unique_id}}/{{each_output_channel}}/on/sec/0" type="button" value="{{_('On')}}">
         {%- endif %}
         <input onclick="return $(this).turn_off(this, '{{each_output.unique_id}}', '{{each_output_channel}}');"
           class="form-control btn aot-btn-off aot-pill-btn"
-          name="{{each_output.unique_id}}/{{each_output_channel}}/off/sec/0" type="button" value="Off">
+          name="{{each_output.unique_id}}/{{each_output_channel}}/off/sec/0" type="button" value="{{_('Off')}}">
         {% endif %}
       </div>
     </div>

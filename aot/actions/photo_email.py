@@ -117,23 +117,32 @@ class ActionModule(AbstractFunctionAction):
             # If the emails per hour limit has not been exceeded
             smtp_wait_timer, allowed_to_send_notice = check_allowed_to_email()
             if allowed_to_send_notice:
-                dict_vars['message'] += f" Email '{','.join(email_recipients)}' with photo attached."
                 if not message_send:
                     message_send = dict_vars['message']
                 smtp = db_retrieve_table_daemon(SMTP, entry='first')
                 if smtp is None:
-                    self.logger.error(
-                        "SMTP 설정을 읽지 못해 사진 이메일을 보내지 못했다")
-                    return message_send
-                send_email(smtp.host, smtp.protocol, smtp.port,
-                           smtp.user, smtp.passw, smtp.email_from,
-                           email_recipients, message_send,
-                           attachment_file=attachment_file,
-                           attachment_type="still",
-                           logger=self.logger)
+                    msg = " Error: Email not sent (SMTP settings could not be read)."
+                    self.logger.error(msg)
+                    dict_vars['message'] += msg
+                    return dict_vars
+                rc = send_email(smtp.host, smtp.protocol, smtp.port,
+                                smtp.user, smtp.passw, smtp.email_from,
+                                email_recipients, message_send,
+                                attachment_file=attachment_file,
+                                attachment_type="still",
+                                logger=self.logger)
+                if rc == 0:
+                    dict_vars['message'] += f" Email '{','.join(email_recipients)}' with photo attached."
+                else:
+                    msg = (f" Error: Email to '{','.join(email_recipients)}' failed to send "
+                           "(check SMTP settings and the daemon log).")
+                    self.logger.error(msg)
+                    dict_vars['message'] += msg
             else:
-                self.logger.error(
-                    f"Wait {smtp_wait_timer - time.time():.0f} seconds to email again.")
+                msg = (f" Error: Email not sent (hourly limit reached); wait "
+                       f"{max(smtp_wait_timer - time.time(), 0):.0f} seconds to email again.")
+                self.logger.error(msg)
+                dict_vars['message'] += msg
         else:
             dict_vars['message'] += " An image could not be acquired. Not sending email."
 

@@ -261,7 +261,7 @@
               <div class="aot-modal-option-row">
                 {{form_add_user.user_name.label(class_='aot-modal-option-label', title=_('Used to log in. Letters and numbers only, and cannot be changed later.'))}}
                 <div class="aot-modal-option-control">
-                  {{form_add_user.user_name(class_='form-control aot-modern-input')}}
+                  {{form_add_user.user_name(class_='form-control aot-modern-input', autocomplete='off')}}
                 </div>
               </div>
 
@@ -275,7 +275,7 @@
               <div class="aot-modal-option-row">
                 {{form_add_user.email.label(class_='aot-modal-option-label')}}
                 <div class="aot-modal-option-control">
-                  {{form_add_user.email(class_='form-control aot-modern-input')}}
+                  {{form_add_user.email(class_='form-control aot-modern-input', autocomplete='off', placeholder='name@example.com')}}
                 </div>
               </div>
 
@@ -595,14 +595,19 @@
           // API 키 목록은 <tr> 표가 아니라 한 줄에 하나씩인 .aot-list-row 다.
           $revoked_row = submitter_btn.closest('.aot-list-row');
         }
-        // 도구 묶음 바꾸기도 같은 방식이다 — 누른 줄의 키 id 와 그 줄에서 고른
-        // 값을 숨은 칸으로 옮긴다. 줄의 select 에는 name 이 없어 그대로는
-        // 전송되지 않는다(모든 줄의 값이 섞이지 않게).
+        // 도구 묶음 바꾸기도 같은 방식이다 — 누른 줄의 키 id 와 그 줄에서 체크한
+        // 설정 모듈을 묶음 값 하나('operations' 또는 'operations+plots+map')로
+        // 만들어 숨은 칸으로 옮긴다. 줄의 체크박스에는 name 이 없어 그대로는
+        // 전송되지 않는다(모든 줄의 값이 섞이지 않게). 전부 체크는 서버가
+        // 'configuration' 으로 정규화한다(tool_registry.compose_tool_profile).
         if (action === 'user_api_key_profile_save') {
           let key_id = submitter_btn.data('profile-key');
+          let modules = $(this).find('[data-profile-select="' + key_id + '"]')
+            .find('input[data-profile-module]:checked')
+            .map(function () { return $(this).data('profile-module'); }).get();
           $(this).find('input[name="api_key_id"]').val(key_id);
           $(this).find('input[name="api_key_profile_value"]').val(
-            $(this).find('select[data-profile-select="' + key_id + '"]').val());
+            ['operations'].concat(modules).join('+'));
         }
         // Saving a user changes several things the card shows at once — name,
         // role, the disabled badge and tint — and a role rename changes every

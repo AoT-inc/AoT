@@ -9,6 +9,7 @@ CHANNELS = {
     2: {'name': 'Road', 'options': {'style': 'r', 'ext': 'png'}},
 }
 
+# @manual geo/layers#international-general
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_bing',
     'input_manufacturer': 'Microsoft',

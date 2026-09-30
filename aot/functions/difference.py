@@ -31,6 +31,7 @@ from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import write_influxdb_value
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -61,7 +62,7 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         },
         {
@@ -72,7 +73,7 @@ FUNCTION_INFORMATION = {
                 'Input',
                 'Function'
             ],
-            'name': '{}: A'.format(lazy_gettext("Measurement")),
+            'name': lazy_format('{}: A', lazy_gettext("Measurement")),
             'phrase': ''
         },
         {
@@ -80,7 +81,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{} A: {} ({})".format(lazy_gettext("Measurement"), lazy_gettext("Max Age"), lazy_gettext("Seconds")),
+            'name': lazy_format("{} A: {} ({})", lazy_gettext("Measurement"), lazy_gettext("Max Age"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -91,7 +92,7 @@ FUNCTION_INFORMATION = {
                 'Input',
                 'Function'
             ],
-            'name': '{}: B'.format(lazy_gettext("Measurement")),
+            'name': lazy_format('{}: B', lazy_gettext("Measurement")),
             'phrase': ''
         },
         {
@@ -99,7 +100,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{} B: {} ({})".format(lazy_gettext("Measurement"), lazy_gettext("Max Age"), lazy_gettext("Seconds")),
+            'name': lazy_format("{} B: {} ({})", lazy_gettext("Measurement"), lazy_gettext("Max Age"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {

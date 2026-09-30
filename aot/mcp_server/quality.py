@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual ai/overview#call-quality
 """
 mcp_server/quality.py — MCP 호출 품질 지표.
 

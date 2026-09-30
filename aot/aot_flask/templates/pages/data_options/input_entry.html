@@ -30,7 +30,7 @@
       <div class="aot-entry-measure-live" id="input_measure_{{each_input.unique_id}}">
         {%- for each_meas in _meas_enabled -%}
           {%- if dict_inputs.get(each_input.device, {}).get('listener') -%}
-            {%- set _period = 0 -%}
+            {%- set _period = each_input.max_age_s or 0 -%}
           {%- else -%}
             {%- set _period = (each_input.period * 2) | int -%}
           {%- endif -%}

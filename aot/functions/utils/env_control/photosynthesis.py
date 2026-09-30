@@ -110,6 +110,7 @@ DEFAULT_CROP = CROP_PRESETS['tomato']
 SAT_K_L_MULT = 9.0
 
 
+# @manual ai/env-control#settings-light
 def light_saturation_wm2(params: 'CropParams') -> Optional[float]:
     """이 작물의 **광포화점** [W/m² 전천일사] — `K_L` 에서 파생한다.
 
@@ -232,6 +233,7 @@ _PERTURB = {
 }
 
 
+# @manual ai/env-control#settings-advanced
 def find_limiting_factor(
     L: float,
     CO2: float,

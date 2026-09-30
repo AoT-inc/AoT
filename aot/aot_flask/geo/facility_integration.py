@@ -80,6 +80,7 @@ _AUTO_RESOLVABLE_MTYPES = frozenset({
 })
 
 
+# @manual geo/facility#sensor-roles
 def auto_channels_for_device(dm_rows, explicit_types):
     """고른 장치에서 아직 안 묶인 종류 중, 후보가 **하나뿐인** 것들.
 
@@ -110,6 +111,7 @@ def auto_channels_for_device(dm_rows, explicit_types):
             for mt, rows in sorted(by_type.items()) if len(rows) == 1]
 
 
+# @manual geo/facility#sensor-roles
 def _infer_mtype_from_dm(dm_row):
     """DeviceMeasurements 행에서 measurement_type을 자동 추론한다.
 
@@ -189,6 +191,7 @@ _IRRIGATION_KINDS = frozenset({'irrigation_layer', 'irrigation_valve'})
 _FAN_ROLE_KINDS = frozenset({'circulation_fan', 'exhaust_fan', 'intake_fan'})
 
 
+# @manual geo/facility#actuator-roles
 def _irrigation_actuator_kind(nozzle_summary):
     """관수 액추에이터의 노즐 요약 → env_control ActuatorProfile.kind.
 
@@ -205,6 +208,7 @@ def _irrigation_actuator_kind(nozzle_summary):
     return 'fogger' if nozzle_summary.get('sprinkler_count') else None
 
 
+# @manual geo/facility#actuator-roles
 def _fitting_actuator_kind(fitting, nozzle_map=None):
     """피팅(fitting) → env_control ActuatorProfile.kind 추론.
 
@@ -223,6 +227,7 @@ def _fitting_actuator_kind(fitting, nozzle_map=None):
     return _FITTING_KIND_TO_ACTUATOR_KIND.get(fk)
 
 
+# @manual geo/facility#integration-view
 def get_facility_integration(facility_uuid, bypass_cache=False):
     """Build the unified IEC payload for *facility_uuid*.
 

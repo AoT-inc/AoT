@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Widget Definition
 # ------------------------------------------------------------------------------
 
+# @manual geo/map-widget#map, geo/map-widget#device-filter
 def execute_at_modification(mod_widget, request_form, custom_options_presave, custom_options_postsave):
     """Handle widget modification by merging framework and legacy custom_options schemes.
 
@@ -504,6 +505,7 @@ WIDGET_BODY_HTML = """
 </script>
 """
 
+# @manual geo/map-widget#widget-settings
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_map',
     'widget_name': lazy_gettext('AoT Map'),
@@ -1089,6 +1091,7 @@ WIDGET_INFORMATION = {
 # 이 두 항목(`collapse_start` 3d_map … `collapse_end`)에 남는 것이
 # `facility_render_mode` 뿐이어도 그룹은 유지한다 — 3D 관련 설정을 찾는 자리가
 # 버전에 따라 사라졌다 나타나면 그게 더 헷갈린다.
+# @manual geo/map-widget#3d-map-vector-mode
 def _drop_options_the_bundled_maplibre_cannot_render(info):
     from aot.utils import maplibre as _ml
     if _ml.supports_terrain():

@@ -110,6 +110,7 @@ def _reject(message, code=400):
     return redirect(url_for('routes_geo.geo_journal_hub')), code
 
 
+# @manual geo/api-reference#plotzone-journal-geojournal
 @blueprint.route('/geo/journal/plot_history', methods=['GET'])
 @login_required
 def geo_journal_plot_history():
@@ -156,6 +157,7 @@ def geo_journal_plot_history():
                         "first.")})
 
 
+# @manual geo/journal#generating-a-journal, geo/api-reference#plotzone-journal-geojournal
 @blueprint.route('/geo/journal', methods=['GET'])
 @login_required
 def geo_journal_hub():
@@ -210,6 +212,7 @@ def geo_journal_hub():
                            area_groups=area_groups)
 
 
+# @manual geo/journal#generating-a-journal, geo/api-reference#plotzone-journal-geojournal
 @blueprint.route('/geo/journal', methods=['POST'])
 @login_required
 def geo_journal_create():
@@ -312,6 +315,7 @@ def geo_journal_create():
                             journal_uuid=row.unique_id))
 
 
+# @manual geo/journal#granularity, geo/journal#output-formats, geo/api-reference#plotzone-journal-geojournal
 @blueprint.route('/geo/journal/<string:journal_uuid>', methods=['GET'])
 @login_required
 def geo_journal_view(journal_uuid):
@@ -569,6 +573,7 @@ def geo_journal_view(journal_uuid):
                            granularities=available)
 
 
+# @manual geo/api-reference#plotzone-journal-geojournal
 @blueprint.route('/geo/journal/<string:journal_uuid>', methods=['DELETE'])
 @login_required
 def geo_journal_delete(journal_uuid):
@@ -610,6 +615,7 @@ def geo_journal_delete(journal_uuid):
     return jsonify({'ok': True})
 
 
+# @manual geo/journal#generating-a-journal, geo/api-reference#plotzone-journal-geojournal
 @blueprint.route('/geo/journal/target_info', methods=['GET'])
 @login_required
 def geo_journal_target_info():

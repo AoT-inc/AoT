@@ -535,10 +535,14 @@ class ScheduleToolsMixin:
             # 1. 장치 확인 (UUID, 정확한 이름, 부분 이름 순서로 조회)
             # 각 단계에서 둘 이상 걸리면 멈춘다. 예약은 나중에 혼자 실행되므로
             # 잘못 고르면 사람이 지켜보지 않는 시각에 엉뚱한 장치가 움직인다.
+            # ai=True — 'AI 판단에 포함' 을 끈 출력은 대상이 아니다(이유를 돌려준다).
             from aot.services.resolvers.device_resolver import resolve_output
-            match = resolve_output(device_id, allow_partial=True)
+            match = resolve_output(device_id, allow_partial=True, ai=True)
             if match.error:
-                return {"error": match.error, "dispatched": False}
+                out = {"error": match.error, "dispatched": False}
+                if match.reason:
+                    out["reason_code"] = match.reason
+                return out
             output = match.row
             if not output:
                 return {"error": f"Device not found: {device_id}", "dispatched": False}
@@ -740,6 +744,10 @@ class ScheduleToolsMixin:
         else:
             when = None
 
+        # `target_id`(raw uuid)는 싣지 않는다 — `location` 이 이미 이름으로
+        # 같은 대상을 가리키고, 이 항목을 고치는 도구(edit/delete_schedule_tool)
+        # 는 `job_id` 로 찾지 `target_id` 로 찾지 않는다. 다시 그 장치/구역을
+        # 겨냥해야 하면 `location` 이름을 다른 도구(resolve_target 등)에 넘긴다.
         return {
             'job_id': meta.unique_id,
             'when': when,
@@ -747,7 +755,6 @@ class ScheduleToolsMixin:
             'content': content,
             'worker': params.get('worker') or None,
             'location': params.get('target_name') or None,   # resolved entity name
-            'target_id': meta.target_id if meta.target_id and meta.target_id != 'none' else None,
             'kind': meta.action_type,          # human / control_output / automated_fire ...
             'state': meta.state,
             'editable': bool(meta.is_editable),
@@ -809,13 +816,39 @@ class ScheduleToolsMixin:
             else:
                 q = q.order_by(SchedulerJobMeta.schedule_time.asc())
 
-            rows = q.limit(max(1, int(limit))).all()
+            _lim = max(1, int(limit))
+            # 상한보다 하나 더 읽어 "더 있는가" 를 안다 — 개수만으로는 정확히
+            # 상한만큼 있어도 잘렸다고 오해하거나, 잘렸어도 모를 수 있다.
+            rows = q.limit(_lim + 1).all()
+            truncated = len(rows) > _lim
+            rows = rows[:_lim]
             results = [cls._schedule_summary(r) for r in rows]
+            # 같은 tz 를 항목마다 반복하지 않는다 — 대부분의 호출이 한 농장
+            # (같은 기본 tz)을 묻고, 앵커가 갈리는 항목만 드물게 나온다.
+            tzs = {r.get('when_tz') for r in results}
+            if len(tzs) == 1:
+                common_tz = tzs.pop()
+                if common_tz is not None:
+                    for r in results:
+                        r.pop('when_tz', None)
+                    out_tz = common_tz
+                else:
+                    out_tz = None
+            else:
+                out_tz = None
             out = {
                 "status": "success",
                 "count": len(results),
                 "results": results,
             }
+            if out_tz is not None:
+                out["when_tz"] = out_tz
+            if truncated:
+                out["truncated"] = True
+                out["note"] = ("Only the first %d matching schedules are shown "
+                               "(most imminent first, or most recent if "
+                               "include_past). Narrow with query/target_name, "
+                               "or raise limit, for the rest." % _lim)
             if scope is not None:
                 out["scope"] = scope
                 _amb = cls._ambiguous_scope_reading(scope)
@@ -1022,10 +1055,6 @@ class ScheduleToolsMixin:
         CustomController) by unique_id or name. Sets is_activated + signals the
         daemon. Returns a result dict or {'error': ...}."""
         try:
-            from aot.databases.models import Input
-            from aot.databases.models.function import Conditional, Trigger
-            from aot.databases.models.controller import CustomController
-            from aot.databases.models.pid import PID
             from aot.aot_flask.extensions import db as _db
             from aot.aot_client import DaemonControl
             # 저장은 됐는데 데몬이 받았는지 모르면 performed:"unknown"
@@ -1035,20 +1064,24 @@ class ScheduleToolsMixin:
             if not entity_id:
                 return {"error": "entity_id is required."}
 
-            resolvers = [
-                (Conditional, 'Conditional'), (Trigger, 'Trigger'), (PID, 'PID'),
-                (CustomController, 'Function'), (Input, 'Input'),
-            ]
-            mod = None
-            kind = None
-            for model, label in resolvers:
-                mod = model.query.filter(
-                    (model.unique_id == entity_id) | (model.name == entity_id)).first()
-                if mod is not None:
-                    kind = label
-                    break
-            if mod is None:
+            # 이름이 겹치면(로컬 서버에 활성/비활성 "Env Coordinator" 둘 —
+            # 실제 사례) 고르지 않는다. 4~5 테이블을 따로 `.first()` 로
+            # 짚던 예전 방식은 이름이 겹치면 행 순서로 아무거나 하나를
+            # 집었다 — function.py::_resolve_function_target 과 같은
+            # 공용 리졸버를 쓴다(Input 도 켜고 끌 수 있어 함께 본다).
+            from aot.services.resolvers.function_resolver import resolve_function
+            match = resolve_function(entity_id, include_input=True)
+            if match.error:
+                err = {"error": match.error}
+                if match.candidates is not None:
+                    err.update(needs_disambiguation=True, query=str(entity_id).strip(),
+                               candidates=match.candidates,
+                               candidates_shown=len(match.candidates),
+                               candidates_total=match.candidates_total)
+                return err
+            if match.row is None:
                 return {"error": f"Activatable entity not found: {entity_id}"}
+            mod, kind = match.row, match.kind
 
             # 쓰기 시점 그룹 스코프 — 이름으로 찾았어도 **찾은 행**으로 묻는다
             # (쓰기 호출이 묶여 있을 때만; write_scope.enforce).

@@ -3089,6 +3089,7 @@ class AIAgentService:
             re.sub(r'\s*\([^)]*\)\s*$', '', line) if line.startswith('### ') else line
             for line in block.split('\n'))
 
+    # @manual ai/overview#where-knowledge-comes-from
     @staticmethod
     def _enforce_unconfirmed_disclosure(insight, manual_ref):
         """Deterministic post-guard for the citation-trust contract

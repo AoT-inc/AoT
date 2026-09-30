@@ -3,6 +3,7 @@ from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg
 import datetime
 
+# @manual geo/layers#satellite-aerial
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_esa', # Keep ID
     'input_manufacturer': 'NASA',

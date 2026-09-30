@@ -249,6 +249,31 @@ def resolve_location_coords(target_id: Optional[str]):
     return (None, None)
 
 
+def default_device_coords(misc=None):
+    """새 장치 행에 넣을 기본 (위도, 경도). 없으면 (None, None).
+
+    geo 화면이 지도를 여는 자리(`GeoSetting.default_lat/default_lng`)를 먼저
+    본다. `Misc.map_latitude/map_longitude` 는 지금 어느 UI 경로도 채우지 않아
+    실제 설치에서 NULL 이므로 값이 있을 때만 대체 출처로 쓴다.
+    """
+    try:
+        from aot.databases.models.geo import GeoSetting
+        setting = GeoSetting.query.first()
+        if setting is not None:
+            lat = setting.default_lat
+            lng = setting.default_lng
+            if lat is not None and lng is not None:
+                return lat, lng
+    except Exception:
+        logger.debug("geo default coords unavailable", exc_info=True)
+    if misc is not None:
+        lat = getattr(misc, 'map_latitude', None)
+        lng = getattr(misc, 'map_longitude', None)
+        if lat is not None and lng is not None:
+            return lat, lng
+    return None, None
+
+
 def apply_system_tz_fallback(row, system_tz_name: Optional[str]) -> bool:
     """위치 없는 새 장치 행에 시스템 시간대를 복사하고 **출처를 'system' 으로
     남긴다**. 복사했으면 True.

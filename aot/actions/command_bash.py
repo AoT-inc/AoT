@@ -5,10 +5,11 @@ from aot.databases.models import Actions
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import cmd_output
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'command',
-    'name': "{}: Bash/Shell Command".format(lazy_gettext('Execute')),
+    'name': lazy_format("{}: Bash/Shell Command", lazy_gettext('Execute')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

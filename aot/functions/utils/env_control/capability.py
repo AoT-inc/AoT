@@ -22,6 +22,7 @@ env_control/capability.py — 축별 기능 상태 (1단계: 계산·기록·표
   사이클마다 바뀌는 사정이라 L3·안전 게이트가 맡는다. 여기는 시설의 구성과
   측정 가능 여부만 본다.
 """
+# @manual ai/env-control#actuators-missing
 
 from __future__ import annotations
 

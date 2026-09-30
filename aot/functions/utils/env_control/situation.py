@@ -35,6 +35,7 @@ class TrendState:
     window_sec: float = 300.0  # 슬라이딩 윈도우 크기 (초)
 
 
+# @manual ai/env-control#l2-situationreport-evaluation
 def _update_trend(state: TrendState, now: float, values: Dict[str, float]) -> Dict[str, float]:
     """히스토리 갱신 후 각 변수의 변화율(단위/min) 반환."""
     slopes: Dict[str, float] = {}
@@ -74,6 +75,7 @@ def _slope_per_min(points: List[Tuple[float, float]]) -> float:
 # 공개 진입점
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#l2-situationreport-evaluation, ai/env-control#actuators-missing
 def assess(
     env_target: EnvTarget,
     internal: Dict[str, float],
@@ -240,6 +242,7 @@ _VPD_STRESS   = 1.5     # kPa   — VPD 기공 폐쇄 임계
 _VPD_SEVERE   = 2.5     # kPa   — VPD 심각 수분 스트레스
 
 
+# @manual ai/env-control#l2-situationreport-evaluation
 def _assess_limiting_factor(ctx: EnvContext, light_sat: Optional[float] = None) -> Optional[str]:
     """
     광합성 제한 인자를 단순 점수 기반으로 평가.
@@ -395,6 +398,7 @@ def _decide_modes(
 # D4: VPD 분해 (§5.4 옵션 A) — Phase C 구현 유지
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#l2-situationreport-evaluation
 def _decompose_vpd(target: EnvTarget, ctx: EnvContext) -> EnvTarget:
     """VPD 우선 정책 (P6 — 분해 폐기, VPD 직접 제어).
 
@@ -435,16 +439,19 @@ def _decompose_vpd(target: EnvTarget, ctx: EnvContext) -> EnvTarget:
 # 공개 유틸리티 (테스트·외부 사용 가능)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#vpd-vapor-pressure-deficit
 def svp(T: float) -> float:
     """포화 수증기압 [kPa], Magnus 공식. T: °C."""
     return 0.6108 * math.exp(17.27 * T / (T + 237.3))
 
 
+# @manual ai/env-control#vpd-vapor-pressure-deficit
 def compute_vpd(T: float, RH: float) -> float:
     """실제 VPD [kPa] = SVP(T) × (1 - RH/100)."""
     return max(0.0, (1 - RH / 100.0) * svp(T))
 
 
+# @manual ai/env-control#settings-advanced
 def decompose_vpd_to_T_RH(
     vpd_target: float,
     T_int: float,

@@ -46,6 +46,7 @@
     {% include 'pages/ai/_mcp_pending_approvals.html' %}
   </section>
 
+  {# @manual ai/scheduler#ai-proposals #}
   {# 2) 일정 제안 — 서버가 그린다(이름·장소·시각을 사람 말로 푸는 _enrich_job_display 재사용). #}
   <section id="proposals">
     <div class="aot-settings-group-title">{{ _('Schedule proposals') }}{% if drafts %}<span class="aot-appr-count">{{ drafts|length }}</span>{% endif %}</div>
@@ -76,6 +77,7 @@
       </div>
     {% endif %}
   </section>
+  {# @manual-end #}
 
   {# 3) 조언 — 채택은 "동의" 기록일 뿐 실행하지 않는다(실행은 여전히 1번 승인 게이트). #}
   <section id="advice">
@@ -88,6 +90,7 @@
 
 {# 일정 제안 자세히 — 일정 화면에서 옮겨 왔다. 사실은 글로, 고칠 수 있는 칸만 입력으로. #}
 {% if can_decide %}
+{# @manual ai/scheduler#ai-proposals #}
 {% for d in drafts %}
 <div class="modal fade aot-option-modal" id="proposalModal_{{ d.id }}" tabindex="-1" role="dialog" aria-hidden="true">
   <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
@@ -162,6 +165,7 @@
   </div>
 </div>
 {% endfor %}
+{# @manual-end #}
 {% endif %}
 
 <script>

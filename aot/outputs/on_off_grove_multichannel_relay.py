@@ -8,6 +8,7 @@ from aot.config_translations import TRANSLATIONS
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -91,7 +92,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'Grove_Multichannel_Relay',
-    'output_name': "{}: Grove Multichannel Relay (4- or 8-Channel board)".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Grove Multichannel Relay (4- or 8-Channel board)", lazy_gettext('On/Off')),
     'output_manufacturer': 'Grove',
     'output_library': 'smbus2',
     'measurements_dict': measurements_dict,
@@ -157,8 +158,8 @@ OUTPUT_INFORMATION = {
             'type': 'select',
             'default_value': 1,
             'options_select': [
-                (1, 'HIGH'),
-                (0, 'LOW')
+                (1, lazy_gettext('HIGH')),
+                (0, lazy_gettext('LOW'))
             ],
             'name': lazy_gettext('On State'),
             'phrase': lazy_gettext('The state of the GPIO that corresponds to an On state')
@@ -175,7 +176,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

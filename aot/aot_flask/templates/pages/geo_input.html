@@ -43,6 +43,7 @@
 
     <div class="aot-vspace"></div>
 
+    {# @manual geo/layers#how-to-register-a-layer #}
     <!-- Add Input Form (Matched Style) -->
     <form class="pb-2" id="new_input_form" method="post" action="/input">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -57,6 +58,7 @@
             </div>
         </div>
     </form>
+    {# @manual-end #}
 
     <div class="aot-vspace-lg"></div>
 
@@ -109,6 +111,7 @@
             });
         }
 
+        {# @manual geo/layers#layer-order-and-visibility #}
         // Save only on user-initiated drag completion. 'change' fires during
         // column transitions / programmatic updates (e.g. window resize) and
         // would otherwise overwrite the saved order with transient layouts.
@@ -126,6 +129,7 @@
                 success: function (data) { }
             });
         });
+        {# @manual-end #}
     }
 
     $(document).ready(initGrid);

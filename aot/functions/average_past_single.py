@@ -15,6 +15,7 @@ from aot.utils.influx import add_measurements_influxdb
 from aot.utils.influx import average_past_seconds
 from aot.utils.system_pi import get_measurement
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -48,7 +49,7 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         },
         {
@@ -56,7 +57,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 10,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration to wait before the first operation')
         },
         {
@@ -75,7 +76,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         }
     ]

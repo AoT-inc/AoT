@@ -184,6 +184,7 @@ def needed_direction_authority(
 # P5-3: Automatic target relaxation (degrade_target)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#actuators-missing
 def degrade_target(env_target, authority: Dict[str, str], external: Dict) -> None:
     """Relax the targets of NATURAL-authority variables to match outside-air conditions (in-place).
 

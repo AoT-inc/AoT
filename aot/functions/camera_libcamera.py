@@ -34,6 +34,7 @@ from aot.utils.camera_functions import get_camera_function_image_info
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import assure_path_exists, cmd_output
+from aot.utils.lazy_text import lazy_format
 
 
 def function_status(function_id):
@@ -78,8 +79,8 @@ def generate_latest_media_html(unique_id):
 
 FUNCTION_INFORMATION = {
     'function_name_unique': 'CAMERA_LIBCAMERA',
-    'function_name': '{}: libcamera: {}/{}'.format(lazy_gettext("Camera"), lazy_gettext("Image"), lazy_gettext("Video")),
-    'function_name_short': '{} libcamera'.format(lazy_gettext("Camera")),
+    'function_name': lazy_format('{}: libcamera: {}/{}', lazy_gettext("Camera"), lazy_gettext("Image"), lazy_gettext("Video")),
+    'function_name_short': lazy_format('{} libcamera', lazy_gettext("Camera")),
     'modify_settings_without_deactivating': True,
     'camera_image': True,
     'camera_video': True,
@@ -241,7 +242,7 @@ FUNCTION_INFORMATION = {
             'default_value': 720,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: {}: {}".format(lazy_gettext('Image'), lazy_gettext('Resolution'), lazy_gettext('Width')),
+            'name': lazy_format("{}: {}: {}", lazy_gettext('Image'), lazy_gettext('Resolution'), lazy_gettext('Width')),
             'phrase': "The width of still images"
         },
         {
@@ -250,7 +251,7 @@ FUNCTION_INFORMATION = {
             'default_value': 480,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: {}: {}".format(lazy_gettext('Image'), lazy_gettext('Resolution'), lazy_gettext('Height')),
+            'name': lazy_format("{}: {}: {}", lazy_gettext('Image'), lazy_gettext('Resolution'), lazy_gettext('Height')),
             'phrase': "The height of still images"
         },
         {
@@ -258,7 +259,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{}".format(lazy_gettext('Brightness')),
+            'name': lazy_format("{}", lazy_gettext('Brightness')),
             'phrase': "The brightness of still images (-1 to 1)"
         },
         {
@@ -266,7 +267,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 1.0,
             'required': True,
-            'name': "{}: {}".format(lazy_gettext('Image'), lazy_gettext('Contrast')),
+            'name': lazy_format("{}: {}", lazy_gettext('Image'), lazy_gettext('Contrast')),
             'phrase': "The contrast of still images. Larger values produce images with more contrast."
         },
         {
@@ -274,7 +275,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 1.0,
             'required': True,
-            'name': "{}".format(lazy_gettext('Saturation')),
+            'name': lazy_format("{}", lazy_gettext('Saturation')),
             'phrase': "The saturation of still images. Larger values produce more saturated colours; 0.0 produces a greyscale image."
         },
         {
@@ -282,7 +283,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{}".format(lazy_gettext('Sharpness')),
+            'name': lazy_format("{}", lazy_gettext('Sharpness')),
             'phrase': "The sharpness of still images. Larger values produce more saturated colours; 0.0 produces a greyscale image."
         },
         {
@@ -290,7 +291,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Shutter Speed'), lazy_gettext('Microseconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Shutter Speed'), lazy_gettext('Microseconds')),
             'phrase': "The shutter speed, in microseconds. 0 disables and returns to auto exposure."
         },
         {
@@ -298,7 +299,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 1.0,
             'required': True,
-            'name': "{}".format(lazy_gettext('Gain')),
+            'name': lazy_format("{}", lazy_gettext('Gain')),
             'phrase': "The gain of still images."
         },
         {
@@ -316,7 +317,7 @@ FUNCTION_INFORMATION = {
                 ('cloudy', 'Cloudy'),
                 ('custom', 'Custom')
             ],
-            'name': '{}: Auto'.format(lazy_gettext('White Balance')),
+            'name': lazy_format('{}: Auto', lazy_gettext('White Balance')),
             'phrase': 'The white balance of images'
         },
         {
@@ -324,7 +325,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{}: Red Gain".format(lazy_gettext('White Balance')),
+            'name': lazy_format("{}: Red Gain", lazy_gettext('White Balance')),
             'phrase': "The red gain of white balance for still images (disabled Auto White Balance if red and blue are not set to 0)"
         },
         {
@@ -332,7 +333,7 @@ FUNCTION_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{}: Blue Gain".format(lazy_gettext('White Balance')),
+            'name': lazy_format("{}: Blue Gain", lazy_gettext('White Balance')),
             'phrase': "The red gain of white balance for still images (disabled Auto White Balance if red and blue are not set to 0)"
         },
         {
@@ -354,7 +355,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Rotate'), lazy_gettext('Degrees')),
+            'name': lazy_format("{} ({})", lazy_gettext('Rotate'), lazy_gettext('Degrees')),
             'phrase': "Rotate the image."
         },
         {
@@ -397,7 +398,7 @@ FUNCTION_INFORMATION = {
             'default_value': 720,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: {}: {}".format(lazy_gettext('Video'), lazy_gettext('Resolution'), lazy_gettext('Width')),
+            'name': lazy_format("{}: {}: {}", lazy_gettext('Video'), lazy_gettext('Resolution'), lazy_gettext('Width')),
             'phrase': "The width of videos"
         },
         {
@@ -406,7 +407,7 @@ FUNCTION_INFORMATION = {
             'default_value': 480,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: {}: {}".format(lazy_gettext('Video'), lazy_gettext('Resolution'), lazy_gettext('Height')),
+            'name': lazy_format("{}: {}: {}", lazy_gettext('Video'), lazy_gettext('Resolution'), lazy_gettext('Height')),
             'phrase': "The height of videos"
         },
         {

@@ -3,6 +3,7 @@
 _cycle_mixin.py — CycleMixin: _run_cycle() (L1→L2→L3 pipeline).
 """
 
+import logging
 import time
 from dataclasses import dataclass
 from datetime import timedelta
@@ -17,6 +18,7 @@ from aot.functions.utils.env_control.coordinator import (
     coordinate, ActuatorCommand, CoordinatorState,
 )
 from aot.functions.utils.env_control import log_channels as _LC
+from aot.functions.utils.env_control.dispatch_adapters import snap_screen_commands
 from aot.functions.utils.env_control.data_hygiene import DataHygieneChecker
 from aot.functions.utils.env_control.greybox.params import GreyboxParams
 from aot.functions.utils.env_control.greybox.shadow import GreyboxShadow
@@ -68,6 +70,11 @@ class _CycleContext:
     commands: dict = None
     final_cmds: dict = None
     is_probe: bool = False
+    # ⚠ 사이클 길이 — 꼬리 작업(누적 추적·greybox 그림자·학습)이 전부 쓴다.
+    #   2026-08-04 분리 때 이것만 빠져서 `_finalize_cycle` 안의 4곳이 정의되지 않은
+    #   이름을 참조했고, greybox 그림자 단계가 매 사이클 NameError 로 죽었다.
+    #   그 예외가 debug 로 삼켜져 8주간 아무 흔적이 없었다(2026-09-28 발견).
+    cycle_sec: float = 60.0
 
 
 TEMP_HYST_C     = 0.5    # °C
@@ -94,6 +101,7 @@ def latch_threshold(value: float, threshold: float, hysteresis: float,
     return value < limit
 
 
+# @manual ai/env-control#settings-light
 def estimate_indoor_light(outdoor_light: float, profiles: list[ActuatorProfile],
                           apertures: dict, default_tau: float = 0.0,
                           cover_tau: float = 1.0) -> float:
@@ -152,6 +160,7 @@ def estimate_indoor_light(outdoor_light: float, profiles: list[ActuatorProfile],
     return outdoor_light * min(factors) * cover
 
 
+# @manual ai/env-control#settings-light
 def apply_light_threshold_overrides(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """광량 하드 임계(light_max/light_min) 위반 시 shade/lighting 강제 오버라이드.
@@ -176,6 +185,7 @@ def apply_light_threshold_overrides(
                 final_cmds[p.actuator_id] = {'value': 100.0, 'reason': 'light_min'}
 
 
+# @manual ai/env-control#settings-screen
 def clamp_guide_range_to_hard_limits(
         guide, temp_min=None, temp_max=None,
         humid_min=None, humid_max=None):
@@ -229,9 +239,13 @@ def clamp_guide_range_to_hard_limits(
 # 프로그램에 폭 항목을 두지 않는다: 재배 기술문서 대부분이 평균값만 주고 주·야간
 # 폭을 서술하지 않는다(2026-09-14 사용자 확정). 가이드는 목표를 맞추는 폭이 아니라
 # **VPD 를 극단적인 온습도 조합으로 달성하는 것**을 막는 울타리라서 넓게 잡는다.
+# @manual ai/env-control#stage-guide
 GUIDE_BAND = {'temperature': 5.0, 'humidity': 10.0}
+# @manual-end
 
 
+# @manual ai/env-control#stage-guide
+# @manual geo/programs#targets
 def stage_guide_range(guide, is_day, facility_guide, band=None,
                       temp_min=None, temp_max=None,
                       humid_min=None, humid_max=None):
@@ -283,6 +297,7 @@ def stage_guide_range(guide, is_day, facility_guide, band=None,
             'T_stage': (float(guide[t_source]) if t_source != 'facility' else None)}
 
 
+# @manual ai/env-control#settings-target
 def apply_temp_humid_threshold_overrides(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """온습도 하드 임계(temp_max/min, humid_max/min) — **제약**이지 목표가 아니다.
@@ -360,6 +375,7 @@ def apply_temp_humid_threshold_overrides(
                 final_cmds[p.actuator_id] = {'value': 0.0, 'reason': 'humid_min'}
 
 
+# @manual ai/env-control#settings-hvac
 def apply_nursery_fog_derate(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """육묘장 모드: 일사가 올라가는 구간에서 습윤형 분무 명령을 선형 감쇠한다.
@@ -412,6 +428,7 @@ def apply_nursery_fog_derate(
         }
 
 
+# @manual ai/env-control#settings-hvac
 def apply_wetting_fog_humidity_ceiling(
         internal: dict, profiles: list[ActuatorProfile], final_cmds: dict) -> None:
     """습도가 이미 허용 범위 위면 **습윤형 분무를 쓰지 않는다**.
@@ -483,14 +500,17 @@ def apply_wetting_fog_humidity_ceiling(
 #   **끄기만** 하므로(위 `apply_temp_humid_threshold_overrides`) 켜진 쪽으로
 #   나타나는 일이 없다. 없는 경우를 위한 칸을 만들어 두면 검사할 수 없는
 #   규칙이 되고, 검사할 수 없는 규칙은 조용히 틀린다.
+# @manual ai/env-control#post-gate-checked-after-l3-before-dispatch
 _INTERLOCK_RANK = {
     _LC.REASON_SAFETY_PRE_GATE:  3,
     _LC.REASON_SAFETY_POST_GATE: 3,
     _LC.REASON_MANUAL_OVERRIDE:  1,
 }
 _INTERLOCK_ON_PCT = 5.0
+# @manual-end
 
 
+# @manual ai/env-control#post-gate-checked-after-l3-before-dispatch
 def apply_hvac_opposition_interlock(
         profiles: list[ActuatorProfile], final_cmds: dict) -> bool:
     """냉방과 난방이 동시에 돌면 한쪽을 끈다 → 껐으면 True.
@@ -580,6 +600,11 @@ def apply_threshold_and_gate_overrides(
 _KPI_BASIS = 'h_skill_v1'
 
 
+# 편차 긴급의 비교 창 — 변화율 옵션(°C/10분)과 같은 10분. 사이클 주기가 창보다
+# 길면(600초 등) 직전 사이클이 곧 비교 대상이다.
+EMERGENCY_DEV_WINDOW_SEC = 600.0
+
+
 class CycleMixin:
     """Mixin: one coordination cycle (L1 target → L2 situation → L3 coordinate → dispatch)."""
 
@@ -640,6 +665,25 @@ class CycleMixin:
             except Exception:
                 pass
             self._greybox_shadow_inst = GreyboxShadow(params=gb_params)
+            # ── 학습 창·KPI 기록을 이어받는다 (2026-09-28) ──────────────────
+            # 이 객체는 옵션 저장·데몬 리로드마다 다시 만들어진다(로컬 실측 7일간
+            # 155회). 이어받지 않으면 600 초 주기에서 학습에 필요한 20시간 연속이
+            # 사실상 오지 않아, 물리 모델이 영영 학습되지 않는다.
+            try:
+                _rep = self._greybox_shadow_inst.load_state(
+                    (self._read_calibration_state() or {}).get('greybox_shadow_state'),
+                    dt=float(self.update_period or 60.0))
+                if _rep.get('input'):
+                    self.logger.info(
+                        'greybox 학습 창 이어받음: 샘플 %d개 · KPI 기록 %d개',
+                        _rep['input'], _rep['skill'])
+                elif _rep.get('skipped') not in (None, 'none'):
+                    # 왜 처음부터 다시 쌓는지 말한다 — 조용하면 물어볼 자리가 없다.
+                    self.logger.info(
+                        'greybox 학습 창을 이어받지 않았습니다(%s) — 처음부터 쌓습니다',
+                        _rep['skipped'])
+            except Exception:
+                self.logger.debug('greybox 학습 창 복원 실패', exc_info=True)
         return self._greybox_shadow_inst
 
     @property
@@ -651,6 +695,7 @@ class CycleMixin:
                 interval_sec=probe_interval, enabled=probe_enabled)
         return self._probe_scheduler_inst
 
+    # @manual ai/env-control#settings-light
     def _compute_light_est(self, internal: dict, external: dict = None) -> None:
         """실내 추정 광량을 internal['light_est'] 에 채우고 육묘 설정을 함께 싣는다.
 
@@ -749,6 +794,7 @@ class CycleMixin:
                 self.logger.debug('맑은날 광량 어림 실패(폴백 없음): %s', exc)
             return None
 
+    # @manual ai/env-control#settings-hvac
     def _evening_fog_blocked(self) -> bool:
         """지금이 '일몰 전 분무 중단' 구간인가.
 
@@ -784,6 +830,7 @@ class CycleMixin:
                 self.logger.debug('저녁 분무 차단 판정 실패 (차단 안 함): %s', exc)
             return False
 
+    # @manual ai/env-control#settings-target
     def _classify_emergency(
             self, gate_result: GateResult,
             situation: SituationReport) -> tuple[bool, str]:
@@ -791,32 +838,38 @@ class CycleMixin:
 
         긴급 판정 시 _dispatch() 는 actuation_profile 주기 대신 emergency_period_sec
         만 적용한다(완전 무시가 아니라 연타 방지 하한만 유지). 긴급 사유:
-          1. 안전게이트 발동/부분발동 — 돌풍·강우·폭염·한파·센서만료(이미 SafetyPreGate 가 판정)
-          2. 급격한 편차 — |deviation| >= tolerance × emergency_deviation_mult
-          3. 급격한 변화율 — 내부온도 변화율 >= emergency_rate_c_per_10min (situation.context['T_trend'], °C/min)
-          4. setpoint 변경 직후 1회 — cmd_reload/cmd_run_now 가 남긴 _force_immediate 플래그(1회성 소비)
+          1. 급격한 편차 — |deviation| >= tolerance × emergency_deviation_mult 이면서
+             최근 10분 사이 허용오차 1개 이상 **더 벌어지는 중**
+          2. 급격한 변화율 — 내부온도 변화율 >= emergency_rate_c_per_10min (situation.context['T_trend'], °C/min)
+          3. setpoint 변경 직후 1회 — cmd_reload/cmd_run_now 가 남긴 _force_immediate 플래그(1회성 소비)
+
+        ⚠ **안전 게이트는 여기서 긴급 사유가 아니다**(2026-09-26 제거). 이 판정은
+          사이클 **전체**의 구동 주기를 푼다 — 강제 명령을 받지 않은 개구부까지.
+          게이트 강제 명령을 즉시 보내는 일은 `_dispatch` 가 장치별로 한다
+          (`safety_forced` — 근거가 안전 게이트인 명령은 억제를 통째로 건너뛴다,
+          2026-09-07). 07-27 에 "강제 명령이 구동 주기에 막힌다" 를 풀려고 넣은
+          사이클 긴급이 그 뒤로 할 일 없이 남아, 강제 명령이 늘 서 있는 설치에서
+          창의 구동 주기를 통째로 지웠다. 실측(김제 육묘장3, 09-24~26): 육묘
+          분무 잠금(분무기 하나만 0 강제)이 낮 내내 서 있어 측창 이동의 88% 가
+          60초 간격으로 났다 — 설정은 표준(180초).
+
+        ⚠ **편차가 크기만 한 것은 긴급이 아니다.** 목표에서 멀리 떨어진 채 머무는
+          상태(습한 밤·환기로 닿을 수 없는 목표)는 서두를 이유가 없다 — 창은 이미
+          할 수 있는 만큼 가 있다. 예전에는 크기만 봐서 김제 VPD(허용 0.1 kPa ×3)
+          가 밤낮 거의 내내 긴급이었다. 서둘러야 하는 것은 **벌어지는 중** 일 때다.
 
         Returns: (is_emergency: bool, reason: str)
         """
+        # 편차 이력은 판정 순서와 무관하게 **매 사이클** 쌓는다 — setpoint 긴급으로
+        # 일찍 돌아간 사이클이 빠지면 다음 비교가 더 오래된 값과 이뤄진다.
+        dev_hit = self._deviation_emergency(situation)
+
         if getattr(self, '_force_immediate', False):
             self._force_immediate = False
             return True, 'setpoint_change'
 
-        # 부분 게이트는 **강제 명령이 있을 때만** 긴급이다. 강우·풍속을 잃은
-        # EXT_EXP 단독은 "더 열지 않음" 제약뿐이라 급히 움직일 것이 없다 —
-        # 긴급으로 치면 기상 센서가 며칠 끊긴 내내 모터 최소 이동 간격 보호가
-        # 풀린 채 돈다(2026-09-19).
-        if gate_result.triggered or (gate_result.partial
-                                     and gate_result.forced_commands):
-            return True, 'safety_gate'
-
-        mult = float(getattr(self, 'emergency_deviation_mult', 3.0) or 3.0)
-        for var, dev in situation.deviation_native.items():
-            tgt = situation.target.get(var)
-            if tgt is None or tgt.tolerance <= 0:
-                continue
-            if abs(dev) >= tgt.tolerance * mult:
-                return True, f'deviation:{var}'
+        if dev_hit:
+            return True, f'deviation:{dev_hit}'
 
         rate_thr = float(getattr(self, 'emergency_rate_c_per_10min', 2.0) or 2.0)
         t_trend_per_min = abs(situation.context.get('T_trend', 0.0) or 0.0)
@@ -824,6 +877,51 @@ class CycleMixin:
             return True, 'T_rate'
 
         return False, ''
+
+    def _curtain_day_open(self) -> bool:
+        """보온커튼이 있고 지금이 시설 위치의 낮인가. 판단 못 하면 False(모델에 맡긴다)."""
+        if not any(getattr(p, 'kind', '') == 'curtain'
+                   for p in getattr(self, '_profiles', []) or []):
+            return False
+        try:
+            from aot.utils.solar import is_daytime
+            return is_daytime(target_id=self.unique_id) is True
+        except Exception as exc:                            # noqa: BLE001
+            self.logger.debug('낮·밤 판정 실패 — 보온커튼은 모델에 맡긴다: %s', exc)
+            return False
+
+    def _deviation_emergency(self, situation: SituationReport) -> str:
+        """편차 긴급에 걸린 변수 이름, 없으면 ''.
+
+        조건: |편차| ≥ 허용오차 × emergency_deviation_mult 이고, 창(10분) 전보다
+        허용오차 1개 이상 더 벌어졌다. 창만큼 오래된 기록이 없으면(재시작 직후)
+        걸지 않는다 — 급변은 변화율 판정(`T_rate`)이 따로 잡는다.
+        """
+        now = time.time()
+        window = EMERGENCY_DEV_WINDOW_SEC
+        hist = getattr(self, '_emergency_dev_hist', None)
+        if hist is None:
+            hist = {}
+            self._emergency_dev_hist = hist
+        mult = float(getattr(self, 'emergency_deviation_mult', 3.0) or 3.0)
+        hit = ''
+        for var, dev in situation.deviation_native.items():
+            tgt = situation.target.get(var)
+            if tgt is None or tgt.tolerance <= 0:
+                continue
+            ratio = abs(dev) / tgt.tolerance
+            h = hist.setdefault(var, [])
+            # 창의 90% 이상 지난 기록 중 가장 최근 것 — 600초 주기의 직전 사이클
+            # (지터로 590초일 수 있다)도 비교 대상이 되게 한다.
+            base = None
+            for ts, r in h:
+                if now - ts >= window * 0.9:
+                    base = r
+            if not hit and ratio >= mult and base is not None and ratio - base >= 1.0:
+                hit = var
+            h[:] = [(ts, r) for ts, r in h if now - ts <= window * 2]
+            h.append((now, ratio))
+        return hit
 
     def _collect_external_context(self, max_age):
         """이번 사이클의 **실외 컨텍스트**를 정한다.
@@ -963,6 +1061,7 @@ class CycleMixin:
                 ','.join(_carried))
         return external, _od_cache
 
+    # @manual ai/env-control#safety-gates
     def _act_on_triggered_gate(self, gate_result, gate_env: dict,
                                cycle_sec: float, now_ts: float,
                                internal: dict) -> None:
@@ -1046,6 +1145,24 @@ class CycleMixin:
         self._write_gate_only_summary(gate_result, gate_env, now_ts,
                                       internal=internal)
 
+    def _status_log(self, level, msg, *args):
+        """상태 변화 기록 — 컨트롤러 로거가 ERROR 로 묶여 있어도 실제 등급으로 남긴다.
+
+        `self.logger` 는 `log_level_debug` 가 꺼지면 ERROR 이상만 통과시키므로 info/
+        warning 을 그대로 쓰면 사라진다. 등급을 error 로 속이는 대신, 하위 로거를
+        따로 두어 자기 레벨(INFO)로 판정하게 한다 — 기록은 상위 핸들러로 전파된다.
+        """
+        try:
+            log = getattr(self, '_status_logger', None)
+            if log is None:
+                log = logging.getLogger(self.logger.name + '.status')
+                log.setLevel(logging.INFO)
+                self._status_logger = log
+        except Exception:
+            log = self.logger
+        log.log(level, msg, *args)
+
+    # @manual ai/env-control#actuators-missing
     def _refresh_capability(self, internal, situation=None,
                             authority=None) -> None:
         """축별 기능 상태를 다시 계산해 `_last_capability` 에 둔다(1단계).
@@ -1070,9 +1187,9 @@ class CycleMixin:
             self._last_capability = cap
             sig = capability_signature(cap)
             if sig != getattr(self, '_last_capability_sig', None):
-                # ⚠ error 등급 — 기본 로거가 ERROR 라 info 는 안 남는다.
-                #   바뀔 때만이라 시끄럽지 않다.
-                self.logger.error('EnvCoordinator 축별 기능 상태: %s', sig)
+                # 바뀔 때만이라 시끄럽지 않다. 등급은 info — 기본 로거가 ERROR 라
+                # 그대로 두면 안 남으므로 `_status_log` 로 남긴다.
+                self._status_log(logging.INFO, 'EnvCoordinator 축별 기능 상태: %s', sig)
                 self._last_capability_sig = sig
             if situation is not None:
                 ctx = situation.context or {}
@@ -1083,19 +1200,22 @@ class CycleMixin:
                 key = '|'.join(diffs)
                 if key != getattr(self, '_last_capability_diff', None):
                     if diffs:
-                        self.logger.error(
+                        self._status_log(
+                            logging.WARNING,
                             'EnvCoordinator 기능 상태가 기존 판정과 다름(제어는 기존 판정대로): %s',
                             '; '.join(diffs))
                     self._last_capability_diff = key
         except Exception:
             self.logger.debug('EnvCoordinator: 기능 상태 계산 실패', exc_info=True)
 
+    # @manual ai/env-control#control-basis
     def _control_basis(self) -> str:
         from aot.functions.utils.env_control.basis import (
             BASIS_TEMPERATURE, BASIS_VPD)
         v = str(getattr(self, 'control_basis', None) or BASIS_VPD)
         return BASIS_TEMPERATURE if v == BASIS_TEMPERATURE else BASIS_VPD
 
+    # @manual ai/env-control#control-basis
     def _select_control_basis(self, vpd_env_target, vpd_t, co2_t, internal,
                               guide) -> dict:
         """제어 기준에 맞는 EnvTarget 을 돌려주고, 다른 기준의 것은 그림자로 둔다.
@@ -1127,6 +1247,7 @@ class CycleMixin:
         self._alt_env_target = temp_env
         return vpd_env_target
 
+    # @manual ai/env-control#control-basis
     def _assess_alternative_basis(self, internal, external_for_control,
                                   external, cycle_sec, authority):
         """다른 기준의 목표로 L2 를 한 번 더 — 추세 상태는 복사본을 쓴다."""
@@ -1146,6 +1267,7 @@ class CycleMixin:
             self.logger.debug('EnvCoordinator: 그림자 기준 평가 실패', exc_info=True)
             return None
 
+    # @manual ai/env-control#control-basis
     def _basis_shadow_commands(self, situation) -> None:
         """다른 기준이었다면 나갔을 L3 명령을 요약에 싣는다 — **제어에 쓰지 않는다.**
 
@@ -1189,6 +1311,11 @@ class CycleMixin:
     _GB_CH_SOLAR_X    = 14   # 일사 선행 지표 S − S̄(60분) [W/m²]
     _GB_CH_SOLAR_PRED = 15   # 그 지표로 예측한 20분 뒤 실내 온도 변화 [°C]
 
+    # greybox 그림자 실패를 말하는 규칙 — 단발은 조용히, 이어지면 ERROR 한 줄.
+    _GB_SHADOW_FAIL_SPEAK  = 3    # 3사이클 연속부터 말한다
+    _GB_SHADOW_FAIL_REPEAT = 60   # 그 뒤에는 60사이클마다 한 번 더
+
+    # @manual ai/env-control#settings-calibration
     def _mpc_shadow(self, situation) -> None:
         """MPC 였다면 나갔을 명령을 기록한다(G 단계) — **제어에 쓰지 않는다.**
 
@@ -1267,6 +1394,7 @@ class CycleMixin:
         except Exception:
             self.logger.debug('EnvCoordinator: 일사 선행 예측 실패', exc_info=True)
 
+    # @manual ai/env-control#safety-gates
     def _rebase_integral_after_gate(self) -> None:
         """전체 게이트가 풀린 첫 사이클 — 게이트가 움직인 장치의 적분을 그 위치로.
 
@@ -1289,6 +1417,7 @@ class CycleMixin:
             '위치에서 다시 시작합니다', len(held))
         self._gate_held_positions = {}
 
+    # @manual ai/env-control#time-control
     def _intentional_stop(self) -> 'str | None':
         """제어를 **일부러** 쉬는 중인가 — 그렇다면 사유, 아니면 None.
 
@@ -1328,6 +1457,7 @@ class CycleMixin:
 
         return None
 
+    # @manual ai/env-control#time-control
     def _run_outside_window(self, max_age, cycle_sec: float) -> None:
         """운전 시간대 밖 사이클 — 안전 게이트·하드 한계(막는 쪽)만, 나머지는 종료 동작.
 
@@ -1643,6 +1773,9 @@ class CycleMixin:
         # 스스로 풀린다(`_night_vent_parked` 의 탈출구).
         situation.context['night_vent_park'] = self._night_vent_parked(
             internal, external_for_control)
+        # 낮에는 보온커튼을 걷어 둔다(`coordinator.decide_parking`). 낮·밤은 단계
+        # 가이드와 같은 위치별 일출·일몰이다. 모르면(None) 걸지 않는다.
+        situation.context['curtain_day_open'] = self._curtain_day_open()
         # 강우·풍속을 잃었다 → 개구부는 **더 열지 않는다**(제자리 또는 닫기).
         # 게이트가 명령을 박지 않고 여기로 넘기는 이유는 적분이다 — 상한은
         # coordinate() 안에서 걸어야 적분이 실제 서 있는 개도를 따라간다
@@ -1683,6 +1816,9 @@ class CycleMixin:
         # 코디네이터 prev_commands 와 장치 last_position_pct 가 어긋나면 반대로
         # 움직이므로, 제어 직전에 장치 실측 위치로 맞춘다.
         self._sync_prev_from_devices()
+        # 스크린 0/100 결정의 기준(현재 서 있는 쪽) — coordinate() 가 prev 를
+        # 이번 명령으로 바꾸기 전에 붙잡는다.
+        _screen_positions = dict(self._coord_state.prev_commands or {})
 
         # ── 이 사이클의 전달 비율을 프로필에 싣는다 (coordinate() 앞) ──────────
         # 명령이 요구대로 다 못 나가는 물리 제약은 **코디네이터가 알아야 한다**.
@@ -1753,6 +1889,10 @@ class CycleMixin:
         # ── 임계 오버라이드 + 안전 프리게이트 (순서 보장은 헬퍼 안에) ───────────
         apply_threshold_and_gate_overrides(
             internal, self._profiles, final_cmds, partial_overrides)
+        # 커튼·차광막은 0/100 으로만 움직인다(부분 전개는 스크린이 고르지 않다).
+        # 그 결정을 **기록 앞에서** 한다 — `_dispatch` 에서만 하면 기록·화면은
+        # 40 % 인데 장치에는 0 이 나간다(2026-09-25~26 영양 보온커튼, 28시간).
+        snap_screen_commands(final_cmds, self._profiles, _screen_positions)
         write_final_commands(uid, final_cmds, self._actuator_idx)
 
         # ── P1-3: 사이클 메트릭 일괄 기록 (디버그 로깅 활성 시에만) ─────────────
@@ -1811,6 +1951,7 @@ class CycleMixin:
             commands=commands,
             final_cmds=final_cmds,
             is_probe=is_probe,
+            cycle_sec=cycle_sec,
         ))
 
     def _apply_cmd_scales(self, internal: dict, external: dict) -> None:
@@ -1856,6 +1997,8 @@ class CycleMixin:
             if w is not None:
                 p.cmd_scale = min(p.cmd_scale, max(0.0, min(1.0, float(w))))
 
+    # @manual ai/env-control#stage-guide
+    # @manual geo/programs#targets
     def _apply_stage_guide(self, facility_guide: tuple) -> tuple:
         """이번 사이클의 guide 범위 → `(T_min, T_max, RH_min, RH_max)`.
 
@@ -1901,6 +2044,7 @@ class CycleMixin:
             self._last_stage_guide = None
             return tuple(facility_guide)
 
+    # @manual ai/env-control#settings-forecast
     def _apply_forecast_feedforward(
             self, env_target: dict, internal: dict,
             T_int: float, RH_int: float, guide: tuple) -> None:
@@ -1954,6 +2098,7 @@ class CycleMixin:
         else:
             self._last_ff_signal = FeedforwardSignal()
 
+    # @manual ai/env-control#settings-advanced
     def _apply_photosynthesis_priority(
             self, env_target: dict, internal: dict, authority: dict) -> None:
         """광합성 모드에서 제한 인자를 찾아 해당 변수의 우선순위를 격상한다.
@@ -2010,6 +2155,7 @@ class CycleMixin:
             }
             decay_priorities(env_target, self._priority_ewa_state, base_priorities)
 
+    # @manual ai/env-control#actuators-missing
     def _warn_missing_measurements(self, situation) -> None:
         """측정이 사라진 축을 **말한다** (2026-09-20).
 
@@ -2021,22 +2167,25 @@ class CycleMixin:
         ⚠ **상태가 바뀔 때만** 찍는다 — 매 사이클이면 정작 읽어야 할 로그를
           밀어낸다(`_warn_inert_options_once` 와 같은 판단). 돌아온 것도 한 번
           남긴다: 없으면 로그만 보고는 지금도 끊겨 있는지 알 수 없다.
-        ⚠ **등급은 error** — 컨트롤러 로거는 `log_level_debug` 가 꺼져 있으면
-          레벨이 ERROR 라, warning 은 기본 설치에서 아무 데도 안 남는다.
+        ⚠ **등급은 warning(복귀는 info)** — 컨트롤러 로거는 `log_level_debug` 가
+          꺼져 있으면 레벨이 ERROR 라 그대로는 안 남으므로 `_status_log` 로 남긴다.
         """
         _missing = sorted(situation.context.get('unmeasured') or ())
         if _missing != getattr(self, '_last_missing', None):
             if _missing:
-                self.logger.error(
+                self._status_log(
+                    logging.WARNING,
                     '측정이 없어 제어에서 빠진 항목: %s — 이 항목을 움직이던 '
                     '장치는 근거가 없어 제자리에 섭니다. 실내 센서 연결과 '
                     '측정 주기·신선도 상한을 확인하세요.', ', '.join(_missing))
             elif getattr(self, '_last_missing', None):
-                self.logger.error(
+                self._status_log(
+                    logging.INFO,
                     '측정이 돌아왔습니다(%s) — 제어를 재개합니다.',
                     ', '.join(getattr(self, '_last_missing', []) or []))
             self._last_missing = _missing
 
+    # @manual ai/env-control#settings-hvac
     def _judge_fog_humidity_block(self, situation, internal: dict) -> None:
         """습윤형 분무를 습도 상한으로 잠글 것인가 → internal 에 표식을 심는다.
 
@@ -2079,6 +2228,7 @@ class CycleMixin:
             # 습도 목표가 없으면 막을 근거가 없다 — 종전대로 둔다.
             self._constraint_breach_state['fog_RH'] = False
 
+    # @manual ai/env-control#settings-target, ai/env-control#settings-light
     def _check_hard_constraints(self, internal: dict) -> None:
         """온습도·광량 하드 임계를 히스테리시스 래치로 판정한다.
 
@@ -2218,6 +2368,7 @@ class CycleMixin:
         commands = ctx.commands
         final_cmds = ctx.final_cmds
         is_probe = ctx.is_probe
+        cycle_sec = ctx.cycle_sec
 
         # ── 0.5: 데이터 위생 체크 + 로깅 ─────────────────────────────────────
         current_cmd_pcts = {
@@ -2310,8 +2461,10 @@ class CycleMixin:
                             self._handle_greybox_kpi_passed(mae_t, mae_rh or 0.0)
                 # Periodic batch re-identification of greybox params
                 self._maybe_run_greybox_identification(cycle_sec)
+                self._gb_shadow_fail_n = 0
+                self._maybe_save_greybox_state(cycle_sec)
             except Exception as _gb_exc:
-                self.logger.debug('greybox shadow error: %s', _gb_exc)
+                self._note_greybox_shadow_failure(_gb_exc)
 
         # ── Commissioning anchor live-poll ───────────────────────────────────
         # Check for pending_anchors written by the Flask verdict API while the
@@ -2592,6 +2745,7 @@ class CycleMixin:
             pass
         return photo
 
+    # @manual ai/env-control#safety-gates
     def _write_gate_only_summary(self, gate_result, gate_env, now_ts,
                                  internal: dict = None) -> None:
         """안전 게이트로 조기 종료할 때 남기는 **축소 요약**.
@@ -2954,6 +3108,7 @@ class CycleMixin:
         except Exception:
             self.logger.debug('greybox: merge calibration_state failed', exc_info=True)
 
+    # @manual ai/env-control#settings-calibration
     def _maybe_run_greybox_identification(self, cycle_sec: float) -> None:
         """주기적으로 그레이박스 파라미터를 배치 학습·영속화.
 
@@ -2964,19 +3119,36 @@ class CycleMixin:
         last = getattr(self, '_greybox_fit_ts', None)
         interval = getattr(self, '_GREYBOX_FIT_INTERVAL_S', 6 * 3600)
         if last is None:
-            # 첫 호출 — 시계만 시작(데이터가 쌓일 시간을 둠)
-            self._greybox_fit_ts = now
-            return
+            # 재초기화를 건너 이어받는다(2026-09-28). 예전에는 객체가 다시 만들어질
+            # 때마다 이 시계가 0 에서 시작해, 재초기화가 6시간보다 잦으면 학습을
+            # **한 번도 시도하지 않았다**.
+            try:
+                last = (self._read_calibration_state() or {}).get('greybox_fit_ts')
+                last = float(last) if last else None
+            except Exception:
+                last = None
+            self._greybox_fit_ts = last if last else now
+            if not last:
+                # ⚠ 시계 **시작도 저장한다.** 예전에는 시도한 순간에만 저장했는데,
+                #   그 시도가 6시간을 채워야 오므로 재시작이 그보다 잦으면 저장이
+                #   영영 일어나지 않고 시계가 매번 0 이었다 — 고치려던 덫을 그대로
+                #   남겨 둔 셈이었다(2026-09-28 확인).
+                self._persist_greybox_fit_ts(now)
+                return              # 정말 처음 — 데이터가 쌓일 시간을 둔다
+            last = self._greybox_fit_ts
         if (now - last) < interval:
             return
         self._greybox_fit_ts = now   # 성공/실패와 무관하게 다음 주기까지 대기
+        self._persist_greybox_fit_ts(now)
         try:
             from aot.functions.utils.env_control.greybox.identification import fit, N_MIN_SAMPLES
-            states, exts, cmds = self._greybox_shadow.fit_window()
-            if len(exts) < N_MIN_SAMPLES:
+            # `valid` 는 "이 이웃 쌍이 진짜 한 사이클 전이인가" 다 — 재시작·센서
+            # 끊김으로 생긴 구멍을 건너뛴 쌍은 학습에서 빼야 한다.
+            states, exts, cmds, valid = self._greybox_shadow.fit_window(dt=cycle_sec)
+            if sum(1 for v in valid if v) < N_MIN_SAMPLES:
                 return
             new_p = fit(states, exts, cmds, dt=cycle_sec,
-                        prev_params=self._greybox_shadow.params)
+                        prev_params=self._greybox_shadow.params, valid=valid)
             if new_p is not None:
                 self._greybox_shadow.params = new_p
                 self._merge_calibration_state({'greybox_params': new_p.to_dict()})
@@ -2987,6 +3159,7 @@ class CycleMixin:
             self.logger.debug('greybox identification failed', exc_info=True)
 
     # ── Greybox physics control: gating + effect-model swap ───────────────────
+    # @manual ai/env-control#settings-calibration
     def _greybox_control_gate_ok(self) -> bool:
         """greybox 물리 제어를 활성화해도 되는지 — shadow 검증 + 학습 수렴 게이트.
 
@@ -3024,6 +3197,7 @@ class CycleMixin:
             return False
         return True
 
+    # @manual ai/env-control#settings-calibration
     def _apply_effect_engine(self, situation: SituationReport) -> bool:
         """coordinate() 직전에 effect_model 출처를 결정.
 
@@ -3081,6 +3255,7 @@ class CycleMixin:
             '— 레거시 제어로 폴백. shadow 로 충분히 검증되면 자동 활성됩니다.')
 
     # ── Control dispatch: MPC → greybox-PI → legacy ───────────────────────────
+    # @manual ai/env-control#settings-calibration
     def _run_control(
             self, situation: SituationReport,
             uid: str) -> tuple[dict, CoordinatorState]:
@@ -3111,6 +3286,55 @@ class CycleMixin:
         """vent 채널 장치별 풍량 능력(`greybox.channels.vent_capacities`)."""
         from aot.functions.utils.env_control.greybox.channels import vent_capacities
         return vent_capacities(getattr(self, '_profiles', None) or [])
+
+    # @manual ai/env-control#settings-calibration
+    _GB_STATE_SAVE_INTERVAL_S = 600.0   # 10분마다 — 매 사이클 쓰면 DB 를 헛되게 두드린다
+
+    def _maybe_save_greybox_state(self, cycle_sec: float) -> None:
+        """학습 창·KPI 기록을 영속화한다(재초기화를 견디게, 2026-09-28).
+
+        매 사이클 쓰지 않는다 — 600 샘플이면 수십 KB 라, 10분 간격이면 재초기화로
+        잃는 것이 한 사이클 남짓이다.
+        """
+        now = time.time()
+        last = getattr(self, '_gb_state_saved_ts', 0.0) or 0.0
+        if (now - last) < self._GB_STATE_SAVE_INTERVAL_S:
+            return
+        self._gb_state_saved_ts = now
+        try:
+            self._merge_calibration_state({
+                'greybox_shadow_state': self._greybox_shadow.export_state(cycle_sec),
+            })
+        except Exception:
+            self.logger.debug('greybox 학습 창 저장 실패', exc_info=True)
+
+    def _persist_greybox_fit_ts(self, ts: float) -> None:
+        """학습 시계를 영속화한다 — 재초기화가 잦아도 6시간이 실제로 흐르게."""
+        try:
+            self._merge_calibration_state({'greybox_fit_ts': float(ts)})
+        except Exception:
+            self.logger.debug('greybox 학습 시각 저장 실패', exc_info=True)
+
+    def _note_greybox_shadow_failure(self, exc: Exception) -> None:
+        """그림자 실패를 센다 — 단발은 조용히, **이어지면 말한다**.
+
+        ⚠ 예전에는 debug 한 줄이 전부였다. 기본 설치는 이 로거가 debug 를 남기지
+        않아(로그 파일에 DEBUG 가 한 줄도 없다) greybox 그림자가 2026-08-04 부터
+        매 사이클 NameError 로 죽어 있는 것을 **8주간 아무도 몰랐다**. 예측·학습·
+        검증이 통째로 멈추는 실패라, 이어지면 반드시 눈에 띄어야 한다.
+        입력 드라이버의 단발/지속 규칙과 같은 모양이다.
+        """
+        n = getattr(self, '_gb_shadow_fail_n', 0) + 1
+        self._gb_shadow_fail_n = n
+        speak = (n == self._GB_SHADOW_FAIL_SPEAK
+                 or (n > self._GB_SHADOW_FAIL_SPEAK
+                     and n % self._GB_SHADOW_FAIL_REPEAT == 0))
+        if speak:
+            self.logger.error(
+                'EnvCoordinator: greybox 그림자가 %d사이클째 실패합니다 — '
+                '예측·학습·검증이 멈춥니다: %s', n, exc)
+        else:
+            self.logger.debug('greybox shadow error: %s', exc)
 
     def _build_mpc_ext_seq(self, situation: SituationReport, horizon: int) -> list[dict]:
         """MPC 예측용 외기 시퀀스(F 단계) — `env_control/mpc_ext.py` 참조.
@@ -3155,6 +3379,7 @@ class CycleMixin:
         self._last_mpc_ext_info = info
         return seq
 
+    # @manual ai/env-control#settings-calibration
     def _mpc_forecast_curve(self, now: float, kma_curve):
         """기상청 단기예보 곡선 — **이 시설 시간대가 예보 파일과 같을 때만**.
 
@@ -3176,6 +3401,7 @@ class CycleMixin:
             self.logger.debug('MPC 외기: 예보 읽기 실패 — 지금 값 유지', exc_info=True)
             return None
 
+    # @manual ai/env-control#settings-calibration
     def _run_mpc(
             self, situation: SituationReport,
             uid: str, shadow: bool = False) -> 'tuple[dict, CoordinatorState] | None':

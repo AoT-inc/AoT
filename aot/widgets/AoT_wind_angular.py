@@ -52,6 +52,7 @@ from flask import flash
 from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -198,7 +199,7 @@ WIDGET_INFORMATION = {
             'default_value': 1800,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('Maximum Validity Time'), lazy_gettext('Seconds')),
+            'name': lazy_format(lazy_gettext("{} ({})"), lazy_gettext('Maximum Validity Time'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('Set the maximum validity for the measurement.')
         },
         {
@@ -207,7 +208,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('Set the refresh interval for the widget.')
         },
         {

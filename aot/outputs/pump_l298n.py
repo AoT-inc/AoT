@@ -16,6 +16,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -53,7 +54,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'DC_MOTOR_L298N',
-    'output_name': "{}: L298N DC Motor Controller (Pi <= 4)".format(lazy_gettext('Peristaltic Pump')),
+    'output_name': lazy_format("{}: L298N DC Motor Controller (Pi <= 4)", lazy_gettext('Peristaltic Pump')),
     'output_manufacturer': 'STMicroelectronics',
     'output_library': 'RPi.GPIO',
     'measurements_dict': measurements_dict,

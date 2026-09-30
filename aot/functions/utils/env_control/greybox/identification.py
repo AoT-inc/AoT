@@ -30,6 +30,7 @@ def fit(
     prev_params: Optional[GreyboxParams] = None,
     max_iter: int = 50,
     prior_weight: float = 0.05,
+    valid: Optional[List[bool]] = None,
 ) -> Optional[GreyboxParams]:
     """배치 least-squares 파라미터 추정.
 
@@ -41,8 +42,18 @@ def fit(
 
     Returns updated GreyboxParams, or None if insufficient data / fit failed.
     """
-    N = len(exts)
-    if N < N_MIN_SAMPLES or len(states) < N + 1:
+    # ⚠ `valid[i]` 가 False 인 쌍은 **한 사이클 전이가 아니다**(재시작·센서 끊김으로
+    #   사이에 구멍이 났다). 그대로 넣으면 "두 시간이 한 사이클 만에 흘렀다" 는 전이가
+    #   되어 계수를 끌어당긴다. 건너뛰되, 남은 표본이 문턱을 넘어야 학습한다.
+    if valid is not None:
+        keep = [i for i in range(len(exts)) if i < len(valid) and valid[i]]
+        skipped = len(exts) - len(keep)
+        if skipped:
+            logger.info('greybox.fit: 이어지지 않는 전이 %d개 건너뜀(구멍)', skipped)
+    else:
+        keep = list(range(len(exts)))
+    N = len(keep)
+    if N < N_MIN_SAMPLES or len(states) < len(exts) + 1:
         logger.debug('greybox.fit: 샘플 부족 (%d < %d)', N, N_MIN_SAMPLES)
         return None
 
@@ -59,9 +70,21 @@ def fit(
     # 광합성 흡수를 배운다. volume_m3·tau_shade·보온커튼 계수는 시설이 아는 값이라 배우지 않는다.
     param_keys = ['UA_eff', 'alpha_sol', 'Q_heat', 'Q_cool', 'm_vent_coef',
                   'Q_plant_base', 'tau_T', 'K_CO2_inj', 'k_transp', 'k_photo']
-    x0 = [getattr(p0, k) for k in param_keys]
     bounds_lo = [p0.BOUNDS[k][0] for k in param_keys]
     bounds_hi = [p0.BOUNDS[k][1] for k in param_keys]
+    # ⚠ 초기값을 범위 안으로 **접어 넣는다.** 하나라도 밖이면 least_squares 는
+    #   손도 대지 않고 "Initial guess is outside of provided bounds" 로 끝나,
+    #   학습이 매번 실패한다(2026-09-28 실측: m_vent_coef 417 대 상한 10).
+    #   조용히 접지 않는다 — 접었다는 것은 범위나 초기값 산정이 틀렸다는 뜻이다.
+    x0 = []
+    for k, lo, hi in zip(param_keys, bounds_lo, bounds_hi):
+        v = float(getattr(p0, k))
+        if v < lo or v > hi:
+            logger.warning(
+                'greybox.fit: %s 초기값 %.4g 가 범위(%.4g~%.4g) 밖 — 범위 안으로 '
+                '접어 학습합니다. 범위나 시설 값을 확인하세요.', k, v, lo, hi)
+            v = min(max(v, lo), hi)
+        x0.append(v)
 
     # 릿지 prior: 각 계수의 prior 값(0 보호)과 가중치
     prior_vec   = [max(abs(getattr(p0, k)), 1e-6) for k in param_keys]
@@ -70,7 +93,7 @@ def fit(
     def residuals(x):
         p = _vec_to_params(x, param_keys, p0)
         res = []
-        for i in range(N):
+        for i in keep:
             T, RH, CO2 = states[i]
             T_pred, RH_pred, CO2_pred = step(T, RH, CO2, exts[i], cmds[i], p, dt)
             T_true, RH_true, CO2_true = states[i + 1]

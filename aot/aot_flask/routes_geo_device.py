@@ -14,6 +14,7 @@ from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 
 
 
+# @manual geo/map-widget#device-markers, geo/api-reference#device-location-lists-detail
 @blueprint.route('/api/geo/devices', methods=['GET'])
 @login_required
 def api_geo_devices_list():
@@ -62,6 +63,7 @@ def api_geo_devices_list():
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
+# @manual geo/api-reference#device-location-lists-detail
 @blueprint.route('/api/geo/inputs', methods=['GET'])
 @login_required
 def api_geo_inputs():
@@ -118,6 +120,7 @@ def api_geo_inputs():
     return jsonify({'ok': True, 'channels': channels})
 
 
+# @manual geo/api-reference#device-location-lists-detail
 @blueprint.route('/api/geo/outputs', methods=['GET'])
 @login_required
 def api_geo_outputs():
@@ -137,6 +140,7 @@ def api_geo_outputs():
     return jsonify({'ok': True, 'outputs': items})
 
 
+# @manual geo/map-widget#control-right-from-the-popup, geo/map-widget#scheduled-on, geo/api-reference#output-control-map-popups
 @blueprint.route('/api/geo/output/<string:output_uuid>/state', methods=['POST'])
 @login_required
 def api_geo_output_state(output_uuid):
@@ -182,6 +186,7 @@ def api_geo_output_state(output_uuid):
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+# @manual geo/api-reference#output-control-map-popups
 @blueprint.route('/api/geo/output_states', methods=['POST'])
 @login_required
 def api_geo_output_states():
@@ -213,6 +218,7 @@ def api_geo_output_states():
     return jsonify({'ok': True, 'states': states})
 
 
+# @manual geo/map-widget#control-right-from-the-popup, geo/map-widget#click-a-zonesite-control-from-a-device-list, geo/api-reference#output-control-map-popups
 @blueprint.route('/api/geo/output_runtimes', methods=['POST'])
 @login_required
 def api_geo_output_runtimes():
@@ -276,6 +282,7 @@ def api_geo_output_runtimes():
     return jsonify({'ok': True, 'runtimes': out})
 
 
+# @manual geo/api-reference#device-location-lists-detail
 @blueprint.route('/api/geo/link_status', methods=['POST'])
 @login_required
 def api_geo_link_status():
@@ -303,6 +310,7 @@ def api_geo_link_status():
     return jsonify({'ok': True, 'status': status})
 
 
+# @manual geo/api-reference#zones
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/output_history', methods=['GET'])
 @login_required
 def api_geo_zone_output_history(zone_uuid):
@@ -322,6 +330,7 @@ def api_geo_zone_output_history(zone_uuid):
     return _output_history_response(output_id, request.args.get('hours'))
 
 
+# @manual geo/map-widget#control-right-from-the-popup, geo/api-reference#output-control-map-popups
 @blueprint.route('/api/geo/output/<string:output_uuid>/history', methods=['GET'])
 @login_required
 def api_geo_output_history(output_uuid):
@@ -335,6 +344,7 @@ def api_geo_output_history(output_uuid):
     return _output_history_response(output_uuid, request.args.get('hours'))
 
 
+# @manual geo/map-widget#control-right-from-the-popup
 def _output_history_response(output_id, hours_arg):
     """duty_cycle(%) 우선, 없으면 duration_time(작동 분) 시계열을 반환한다."""
     import time as _time
@@ -405,6 +415,7 @@ def _output_history_response(output_id, hours_arg):
     })
 
 
+# @manual geo/map-widget#click-a-zonesite-control-from-a-device-list, geo/api-reference#zones
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/output_order', methods=['POST'])
 @login_required
 def api_geo_zone_output_order(zone_uuid):

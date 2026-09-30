@@ -14,6 +14,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import get_measurement
 from aot.utils.system_pi import return_measurement_info
 from aot.utils.system_pi import str_is_float
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -64,7 +65,7 @@ INPUT_INFORMATION = {
                 'Input',
                 'Function'
             ],
-            'name': "{}: {}".format(lazy_gettext('Temperature Compensation'), lazy_gettext('Measurement')),
+            'name': lazy_format("{}: {}", lazy_gettext('Temperature Compensation'), lazy_gettext('Measurement')),
             'phrase': lazy_gettext('Select a measurement for temperature compensation')
         },
         {
@@ -73,7 +74,7 @@ INPUT_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: {} ({})".format(lazy_gettext('Temperature Compensation'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Temperature Compensation'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         }
     ],

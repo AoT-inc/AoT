@@ -24,7 +24,7 @@ This page serves to provide information about the AoT frontend and backend as we
 </tr>
 <tr>
 <td>Daemon Status</td>
-<td>This will be a green &quot;Running&quot; or a red &quot;Stopped&quot;. Additionally, the AoT version and hostname text at the top-left of the screen May be Green, Yellow, or Red to indicate the status. Green = daemon running, yellow = unable to connect, and red = daemon not running.</td>
+<td>Shows &quot;Running&quot;, or a red &quot;Not Running&quot; and a help link. The navigation bar shows the same state by tinting the brand (logo) area at the top left: no tint = daemon and web app are fine, red = the daemon is down, gray = the browser cannot reach the web app. The page checks every 60 seconds.</td>
 </tr>
 <tr>
 <td>...</td>

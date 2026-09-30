@@ -128,6 +128,7 @@ class GeoMap(CRUDMixin, db.Model):
 # GeoSetting (Previously MapGlobalSettings)
 # Global configurations for the Geo system.
 # ------------------------------------------------------------------------------
+# @manual geo/settings#default-start-location, geo/settings#zoom-settings, geo/settings#zoom-method, geo/settings#performance-rendering, geo/settings#polygon-display-limits
 class GeoSetting(CRUDMixin, db.Model):
     """
     Singleton global configuration record for the Geo mapping system.
@@ -175,6 +176,7 @@ class GeoSetting(CRUDMixin, db.Model):
         except Exception:
             return {}
 
+    # @manual geo/settings#api
     def state_dict(self):
         return {
             'providers': self._loads(self.providers),

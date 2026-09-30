@@ -10,6 +10,7 @@ from aot.functions.base_function import AbstractFunction
 from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 
 FUNCTION_INFORMATION = {
@@ -47,8 +48,7 @@ FUNCTION_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 360,
             'required': True,
-            'name': "{}: {} ({})".format(lazy_gettext("Measurement"), lazy_gettext("Max Age"),
-                                         lazy_gettext("Seconds")),
+            'name': lazy_format("{}: {} ({})", lazy_gettext("Measurement"), lazy_gettext("Max Age"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -110,7 +110,7 @@ FUNCTION_INFORMATION = {
             'default_value': 5,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         }
     ]

@@ -77,6 +77,8 @@ REASON_LABEL = {
     LC.REASON_NIGHT_PARKED:     '야간 파킹',
     LC.REASON_MANUAL_OVERRIDE:  '수동 잠금',
     LC.REASON_NO_MEASUREMENT:   '실내 값 없음',
+    LC.REASON_CURTAIN_DAY_OPEN: '낮 걷음',
+    LC.REASON_DIRECTION_UNSETTLED: '방향 확정 대기',
     # 임계 오버라이드 계열 — coordinate() 가 아니라
     # `apply_threshold_and_gate_overrides` 가 붙이는 근거다. 최종 명령
     # 로그(CH100 계열)에만 나타난다.
@@ -97,7 +99,28 @@ IDLE_REASONS = frozenset({
     LC.REASON_IDLE, LC.REASON_NO_GRADIENT, LC.REASON_NO_OUTDOOR_DATA,
     LC.REASON_OPPOSING_PARKED, LC.REASON_NIGHT_PARKED,
     LC.REASON_WRONG_DIRECTION, LC.REASON_NO_MEASUREMENT,
+    LC.REASON_CURTAIN_DAY_OPEN,
 })
+
+# 코디네이터의 요청을 **일부러** 0 으로 만드는 보호 장치의 근거들. 최종 명령의
+# 근거(`_final_reason`)가 이것이면 "요청이 게이트에 버려졌다" 가 아니라 "보호가
+# 설계대로 작동했다" 다. 이 둘을 한 줄로 묶어 경고하면 사람은 경고에 익숙해지고,
+# 정말 버려진 요청(2026-08-30 영양: 가습이 필요한 31 사이클 전부에서 분무 요청이
+# 게이트에 버려졌다)이 그 사이에 묻힌다 — 2026-09-30 로컬 3포장이 정확히 그랬다:
+# 육묘 일소 방지 잠금이 107번 분무를 막았고 검사기는 그것을 고장처럼 보고했다.
+GUARD_REASONS = frozenset({
+    LC.REASON_SAFETY_PRE_GATE, LC.REASON_SAFETY_POST_GATE,
+    LC.REASON_LIMIT_LIGHT_MAX, LC.REASON_LIMIT_LIGHT_MIN,
+    LC.REASON_LIMIT_TEMP_MAX, LC.REASON_LIMIT_TEMP_MIN,
+    LC.REASON_LIMIT_HUMID_MAX, LC.REASON_LIMIT_HUMID_MIN,
+    LC.REASON_FOG_DERATE, LC.REASON_FOG_HUMIDITY_CEILING,
+})
+
+# 스크린(보온커튼·차광막)은 0/100 두 자리뿐이라 명령이 문턱(닫혀 있다 걷으려면 60,
+# 걷혀 있다 닫으려면 40)을 못 넘으면 제자리로 스냅된다. 그러므로 스크린의 최종 0 은
+# "안 나갔다" 가 아니라 **닫힘이라는 위치**다 — 요청 12% → 최종 0% 는 커튼을 닫으라는
+# 명령이 그대로 나간 것이고, 이것을 억제로 세면 저녁마다 오경보가 난다.
+SCREEN_KINDS = frozenset({'curtain', 'shade'})
 
 MODE_LABEL = {
     1: '냉방', 2: '난방', 3: '가습', 4: '제습',
@@ -230,7 +253,12 @@ def _activity_flags(values, reason_counter):
     """
     never_ran = bool(values) and max(values) <= 0.0
     explained = bool(reason_counter) and set(reason_counter) <= IDLE_REASONS
-    claimed_work = bool({LC.REASON_PRIMARY, LC.REASON_SECONDARY} & set(reason_counter))
+    # ⚠ **한 번이라도 아니라 대부분일 때만** 수상하다. 보호 장치가 창의 대부분을 막은
+    #   장치(로컬 3포장 분무: 습도 상한 46 · 안전 강제 43 · 주작용 11 %)는 주작용이
+    #   조금 섞였다는 이유로 "설명이 안 된다" 가 아니다 — 89 % 는 이미 설명됐다.
+    work = sum(n for c, n in reason_counter.items()
+               if c in (LC.REASON_PRIMARY, LC.REASON_SECONDARY))
+    claimed_work = bool(reason_counter) and work * 2 > sum(reason_counter.values())
     return {
         'never_ran': never_ran,
         'always_idle': explained,
@@ -238,10 +266,10 @@ def _activity_flags(values, reason_counter):
     }
 
 
-def _count_suppressed(requested, final):
-    """코디네이터가 켜라고 했는데 실제로는 0 이 나간 사이클 수.
+def _suppressed_pairs(requested, final):
+    """코디네이터가 켜라고 했는데 실제로는 0 이 나간 사이클들 `[(시각, 요청값)]`.
 
-    이 숫자가 이 검사기의 존재 이유다. 요청만 보면 "평균 23% 로 돌고 있다"
+    이 목록이 이 검사기의 존재 이유다. 요청만 보면 "평균 23% 로 돌고 있다"
     이고 최종만 보면 "0% 로 쉰다"인데, 둘 다 참이면서 서로 다른 곳을
     가리킨다 — 전자는 코디네이터가 정상이라는 뜻이고 후자는 그 판단이
     게이트에 버려졌다는 뜻이다. 그 간극을 세지 않으면 사람이 둘 중 어디를
@@ -253,9 +281,9 @@ def _count_suppressed(requested, final):
     묶는 대신 5 초 안의 가장 가까운 최종값을 그 요청의 짝으로 본다.
     """
     if not requested or not final:
-        return 0
+        return []
     finals = sorted(final)
-    n = 0
+    out = []
     for ts, want in requested:
         if want <= 0.0:
             continue
@@ -263,8 +291,39 @@ def _count_suppressed(requested, final):
         if abs((nearest[0] - ts).total_seconds()) > 5.0:
             continue
         if nearest[1] <= 0.0:
-            n += 1
-    return n
+            out.append((ts, want))
+    return out
+
+
+def _count_suppressed(requested, final):
+    """`_suppressed_pairs` 의 개수."""
+    return len(_suppressed_pairs(requested, final))
+
+
+def _split_suppressed(pairs, final_reasons, guard_codes):
+    """버려진 사이클을 **보호 장치가 막은 것**과 **설명 없이 버려진 것**으로 가른다.
+
+    반환 `(guarded, unexplained_pairs)` — 앞은 `Counter{근거 코드: 횟수}`, 뒤는
+    보호 근거가 없는 `[(시각, 요청값)]`. 그 사이클의 최종 근거(`_final_reason`)를
+    5 초 안에서 찾고, 그것이 `guard_codes` 에 있으면 보호가 막은 것이다. 최종 근거
+    기록이 없는 옛 구간은 **설명이 없는 쪽**으로 둔다 — 모르는 것을 정상으로
+    접으면 이 검사가 존재하는 이유가 사라진다.
+    """
+    from collections import Counter
+    guarded = Counter()
+    unexplained = []
+    frs = sorted(final_reasons or [])
+    for ts, want in pairs:
+        code = None
+        if frs:
+            near = min(frs, key=lambda fr: abs((fr[0] - ts).total_seconds()))
+            if abs((near[0] - ts).total_seconds()) <= 5.0:
+                code = near[1]
+        if code in guard_codes:
+            guarded[code] += 1
+        else:
+            unexplained.append((ts, want))
+    return guarded, unexplained
 
 
 def _count_reversals(samples, min_delta):
@@ -304,6 +363,7 @@ def analyse(row, hours, min_delta):
     final_by_act = defaultdict(list)        # 게이트까지 지난 **최종** 값 (CH100+)
     final_reason_by_act = defaultdict(list)
     env_by_channel = defaultdict(list)
+    gb_by_channel = Counter()               # 그림자 기록 수(채널별)
     gate_events = []
     dispatch_fail = []
     clean_flags = []
@@ -323,6 +383,14 @@ def analyse(row, hours, min_delta):
                 cmd_by_act[body[:-len('_command')]].append((ts, float(value)))
             elif body.endswith('_reason'):
                 reason_by_act[body[:-len('_reason')]].append((ts, int(value)))
+        elif measurement == 'env_greybox':
+            # 그림자(물리 모델)가 남기는 것. 채널 0~5 는 1스텝 예측·오차,
+            # 6~13 은 MPC 그림자, 14~15 는 일사 선행이다 — **출처가 달라**
+            # 하나가 죽어도 나머지는 계속 쌓인다(그래서 따로 센다).
+            try:
+                gb_by_channel[int(channel)] += 1
+            except (TypeError, ValueError):
+                pass
         elif measurement == 'env_control':
             try:
                 env_by_channel[int(channel)].append((ts, float(value)))
@@ -387,6 +455,13 @@ def analyse(row, hours, min_delta):
                for c, n in reasons.most_common(3)]
         flags = _activity_flags(values, reasons)
         req_values = [v for _t, v in requested]
+        # 스크린은 0 이 위치(닫힘)라 억제로 세지 않는다(SCREEN_KINDS 주석).
+        if kind in SCREEN_KINDS:
+            pairs = []
+        else:
+            pairs = _suppressed_pairs(requested, final)
+        guarded, unexplained = _split_suppressed(
+            pairs, final_reason_by_act.get(prefix), GUARD_REASONS)
         actuators.append({
             'prefix': prefix,
             'name': name,
@@ -399,7 +474,10 @@ def analyse(row, hours, min_delta):
             'requested_mean': (sum(req_values) / len(req_values)
                                if req_values else 0.0),
             'requested_max': max(req_values) if req_values else 0.0,
-            'suppressed': _count_suppressed(requested, final),
+            'suppressed': len(unexplained),
+            'suppressed_max': max((w for _t, w in unexplained), default=0.0),
+            'guarded': {REASON_LABEL.get(c, f'코드 {c}'): n
+                        for c, n in guarded.most_common()},
             'reversals': _count_reversals(samples, min_delta),
             'reversals_per_h': _count_reversals(samples, min_delta) / span_h,
             'top_reasons': top,
@@ -479,7 +557,9 @@ def analyse(row, hours, min_delta):
         'dispatch_fail_total': int(sum(v for _t, v in dispatch_fail)),
         'actuator_mismatch_max': int(max((v for _t, v in mismatch), default=0)),
         'clean_ratio': clean_ratio,
-        'settings': _check_settings(opts, facility_uuid, row),
+        'greybox_records': dict(gb_by_channel),
+        'settings': (_check_settings(opts, facility_uuid, row)
+                     + _check_shadow_alive(opts, gb_by_channel, len(stamps))),
     }
 
 
@@ -531,6 +611,37 @@ def _check_settings(opts, facility_uuid, row=None):
     findings.extend(_check_combinations(opts, facility_uuid, row))
     findings.extend(_check_shared_actuators(facility_uuid, row))
     return findings
+
+
+def _check_shadow_alive(opts, gb_by_channel, n_cycles):
+    """그림자를 켜 뒀는데 **예측 기록이 없으면** 말한다.
+
+    ⚠ 이 항목이 있는 이유: 2026-08-04 리팩터가 사이클 길이를 넘기지 않아 그림자
+    단계가 매 사이클 NameError 로 죽었는데, 예외가 debug 로 삼켜져 **8주 동안**
+    아무도 몰랐다. 그동안 예측·학습·검증 기록이 통째로 비어, 물리 제어로 전환할
+    근거가 쌓일 수 없었다. 화면도 로그도 조용했다 — 기록이 **없다는 사실**만이
+    유일한 신호였다(2026-09-28).
+
+    MPC 그림자(6~13)는 다른 자리에서 기록하므로, 그것만 있고 0~5 가 없으면
+    "예측 단계만 죽었다" 는 뜻이라 따로 말한다.
+    """
+    engine = (opts.get('effect_engine') or 'legacy').lower()
+    if engine not in ('shadow', 'greybox') or n_cycles <= 0:
+        return []
+    pred = sum(gb_by_channel.get(c, 0) for c in range(0, 6))
+    mpc = sum(gb_by_channel.get(c, 0) for c in range(6, 14))
+    if pred > 0:
+        return []
+    if mpc > 0:
+        return [('error',
+                 '효과 엔진이 %s 인데 **1스텝 예측 기록이 한 건도 없습니다**'
+                 '(MPC 그림자는 %d건). 예측·학습·검증이 멈춰 있어 물리 제어로 '
+                 '전환할 근거가 쌓이지 않습니다 — 데몬 로그에서 "greybox 그림자" '
+                 '실패를 확인하세요' % (engine, mpc))]
+    return [('error',
+             '효과 엔진이 %s 인데 그림자 기록이 한 건도 없습니다(%d사이클). '
+             '모델이 나란히 돌지 않고 있습니다 — 데몬 로그를 확인하세요'
+             % (engine, n_cycles))]
 
 
 def _check_shared_actuators(facility_uuid, row=None):
@@ -607,6 +718,7 @@ def _has_ext_collector():
         return False
 
 
+# @manual ai/env-control#actuators-missing
 def _check_combinations(opts, facility_uuid, row=None):
     """센서와 장치의 **조합**이 제어로 이어지는가 (2026-09-20).
 
@@ -864,8 +976,16 @@ def report(results, hours, min_delta):
         for a in sorted(blocked, key=lambda x: -x['suppressed']):
             problems += 1
             print(f'   ! {a["name"]} 은 {a["suppressed"]}개 사이클에서 코디네이터가'
-                  f' 최대 {a["requested_max"]:.0f}% 를 요청했으나 실제로는 0% 가'
+                  f' 최대 {a["suppressed_max"]:.0f}% 를 요청했으나 실제로는 0% 가'
                   f' 나갔습니다 — 게이트·감쇠·인터록을 확인하세요')
+
+        # 보호 장치가 설계대로 막은 것은 문제가 아니다 — 다만 **숨기지는 않는다.**
+        # 같은 보호가 갑자기 늘면 그것이 신호이므로 횟수와 근거는 남긴다.
+        for a in r['actuators']:
+            if a.get('guarded'):
+                why = ' · '.join(f'{lbl} {n}' for lbl, n in a['guarded'].items())
+                print(f'   · {a["name"]}: 요청이 보호 장치에 막힌 사이클 '
+                      f'{sum(a["guarded"].values())}개 ({why}) — 설계된 동작입니다')
 
         stale = [a['name'] for a in r['actuators']
                  if a.get('source') == 'requested']

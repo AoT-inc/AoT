@@ -37,7 +37,7 @@
         </div>
 
         <div class="aot-settings-row">
-          {{form_chirpstack.chirpstack_api_token.label(class_='aot-settings-label', title=_('Stored and managed under Settings > API Keys. Select which key this connection uses.'))}}
+          {{form_chirpstack.chirpstack_api_token.label(class_='aot-settings-label', title=_('Stored and managed under Manage > System Management > API Key Management. Select which key this connection uses.'))}}
           <div class="aot-settings-control aot-action-group">
             {{form_chirpstack.chirpstack_api_token(class_='form-control aot-modern-input')}}
             <a href="{{ url_for('routes_settings.settings_api_key') }}" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Manage API Keys')}}</a>

@@ -207,3 +207,16 @@ class AIGlobalSettings(CRUDMixin, db.Model):
     # intentional for local single-tenant test environments; a real staged
     # rollout sets specific ids here first.
     agent_loop_canary_user_ids = db.Column(db.Text, default='', nullable=True)
+
+    # 외부 MCP 의 중앙 인증(OAuth 인가 서버가 낸 접근 토큰) — API 키(X-API-KEY)와 함께 받는다.
+    # 켜면 이 서버는 자원 서버가 되어 토큰의 서명·발급자·대상(aud)만 확인한다(aot/tools/mcp_central.py).
+    # 주소는 코드에 박지 않는다 — 설치처마다 네트워크·도메인이 다르다. 환경변수가 있으면 그것이 이긴다
+    # (AOT_MCP_CENTRAL_ISSUER · AOT_MCP_PUBLIC_URL · AOT_MCP_LINK_CLIENT_ID · AOT_MCP_LINK_CLIENT_SECRET).
+    mcp_central_enabled = db.Column(db.Boolean, default=False, nullable=True)
+    # 인가 서버의 발급자 주소(토큰 iss). 예: https://auth.aotinc.co.kr
+    mcp_central_issuer = db.Column(db.String(255), default='', nullable=True)
+    # AI 가 부르는 이 서버의 MCP 주소 — 토큰 aud 가 이것과 정확히 같아야 한다. 예: https://farm.example.com/mcp
+    mcp_public_url = db.Column(db.String(255), default='', nullable=True)
+    # 계정 연결(중앙 계정 ↔ 이 AoT 사용자)에 쓰는 기밀 클라이언트. 비밀은 crypto.encrypt_secret 으로 저장한다.
+    mcp_link_client_id = db.Column(db.String(255), default='', nullable=True)
+    mcp_link_client_secret = db.Column(db.Text, default=None, nullable=True)

@@ -1,12 +1,14 @@
 # coding=utf-8
 """
-Symmetric encryption-at-rest for sensitive credentials (OAuth refresh tokens).
+Symmetric encryption-at-rest for sensitive credentials (OAuth refresh tokens,
+the SMTP account password).
 
-The rest of this codebase stores tokens as plaintext db.Text (APIKey.key,
-Misc.chirpstack_api_token, ...). OAuth refresh tokens are a deliberate
-exception: they are long-lived credentials granting standing access to a
-user's *personal* external account, so they are encrypted before hitting the
-DB. This is the one encryption-at-rest helper in the project.
+Most other tokens in this codebase are still plaintext db.Text (APIKey.key,
+Misc.chirpstack_api_token, ...). OAuth refresh tokens and the SMTP password are
+the exceptions: they grant standing access to a user's *personal* external
+account (a mail-account app password often unlocks the whole mailbox), so they
+are encrypted before hitting the DB. This is the one encryption-at-rest helper
+in the project.
 
 Key derivation: the Fernet key is derived from the existing Flask secret_key
 file (databases/flask_secret_key, 32 random bytes generated on first run — see
@@ -77,3 +79,45 @@ def decrypt_secret(ciphertext):
     except (InvalidToken, Exception) as exc:  # noqa: BLE001 — never leak crypto errors upward
         logger.warning("decrypt_secret failed (rotated key or corrupt value?): %s", type(exc).__name__)
         return None
+
+
+# --- Marked ciphertext for columns that used to hold plaintext -------------
+#
+# A column that already exists as plaintext (SMTP.passw) cannot tell "not yet
+# migrated" from "ciphertext" on its own, so stored values carry a prefix.
+# That makes the migration idempotent (the daemon and the web app both run
+# alembic; a second pass must not encrypt the ciphertext again) and lets the
+# reader distinguish an old plaintext value from one it cannot decrypt.
+SEALED_PREFIX = 'aotenc1:'
+
+# Result of open_sealed() — why a value could / could not be read.
+SEALED_EMPTY = 'empty'                # nothing stored
+SEALED_OK = 'ok'                      # decrypted
+SEALED_LEGACY = 'legacy_plaintext'    # stored before encryption existed
+SEALED_UNREADABLE = 'unreadable'      # encrypted with a different key / corrupt
+
+
+def is_sealed(value):
+    return isinstance(value, str) and value.startswith(SEALED_PREFIX)
+
+
+def seal_secret(plaintext):
+    """Encrypt and mark. None/empty stays None."""
+    token = encrypt_secret(plaintext)
+    return SEALED_PREFIX + token if token else None
+
+
+def open_sealed(value):
+    """Return (plaintext_or_None, state) for a stored value.
+
+    A value from another install (a settings export restored on a machine with
+    a different flask_secret_key) comes back as (None, SEALED_UNREADABLE) so the
+    caller can ask for the secret again instead of trying to use garbage."""
+    if not value:
+        return None, SEALED_EMPTY
+    if not is_sealed(value):
+        return value, SEALED_LEGACY
+    plaintext = decrypt_secret(value[len(SEALED_PREFIX):])
+    if plaintext is None:
+        return None, SEALED_UNREADABLE
+    return plaintext, SEALED_OK

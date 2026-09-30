@@ -177,7 +177,8 @@ class AIContextService:
             current_tag = latest_geo.id if latest_geo else 0
 
             if _SPATIAL_CACHE is not None and _LAST_GEO_UPDATE == current_tag:
-                return copy.deepcopy(_SPATIAL_CACHE)  # E-1: Deep Copy
+                return AIContextService._without_ai_excluded_nodes(
+                    copy.deepcopy(_SPATIAL_CACHE))  # E-1: Deep Copy
             # ------------------------------------
 
             # v14.0: Pre-fetch AI Semantic Notes for quick binding
@@ -236,23 +237,12 @@ class AIContextService:
                 
                 clean_d_id = str(d_id).split('::')[0] if d_id else None
 
-                # [TASK_29] AI Enablement Filter for Spatial Tree
-                if clean_d_id:
-                    # Check if device is AI enabled. If not, skip this node.
-                    from aot.databases.models.input import Input
-                    from aot.databases.models.output import Output
-                    is_enabled = True
-                    if clean_d_id.startswith('IN_'):
-                        dev = Input.query.filter_by(unique_id=clean_d_id).first()
-                        is_enabled = getattr(dev, 'is_ai_enabled', True)
-                    elif clean_d_id.startswith('OUT_'):
-                        dev = Output.query.filter_by(unique_id=clean_d_id).first()
-                        is_enabled = getattr(dev, 'is_ai_enabled', True)
-                    
-                    if not is_enabled:
-                        logger.debug(f"Skipping AI-disabled device {clean_d_id} in spatial tree")
-                        return None
-                
+                # [TASK_29] 'AI 판단에 포함' 을 끈 장치 노드는 여기서 거르지 않는다 —
+                # 이 트리는 도형이 바뀔 때만 다시 만드는 캐시라, 토글을 바꿔도
+                # 반영되지 않는다. 돌려주기 직전에 거른다
+                # (`_without_ai_excluded_nodes`). 예전 거름은 id 가 'IN_'/'OUT_'
+                # 로 시작할 때만 봤는데 장치 id 는 uuid 라 한 번도 걸리지 않았다.
+
                 # v14.0: Node Construction with Semantic Priority
                 # unique_id 는 **도형 자신의 id** 다. 예전에는 s.geo_id(지도 id)
                 # 를 넣어, 같은 지도의 노드 74개가 전부 같은 값을 달고 나갔다
@@ -331,7 +321,7 @@ class AIContextService:
             _LAST_GEO_UPDATE = current_tag
             # -----------------------------
             
-            return hierarchy
+            return AIContextService._without_ai_excluded_nodes(hierarchy)
             
         except ImportError:
             logger.warning("shapely not installed! Spatial awareness degraded.")
@@ -339,6 +329,32 @@ class AIContextService:
         except Exception as e:
             logger.exception("Error building spatial hierarchy")
             return []
+
+    @staticmethod
+    def _without_ai_excluded_nodes(nodes):
+        """'AI 판단에 포함' 을 끈 장치의 노드(와 그 아래)를 뺀 새 트리.
+
+        docs/ai/overview.md#device-ai-toggle. 판정은 AI 도구와 같은 공용
+        헬퍼(`device_resolver.ai_excluded_ids`)다. 캐시를 건드리지 않도록
+        노드를 새로 만든다."""
+        from aot.services.resolvers.device_resolver import ai_excluded_ids
+        hidden = ai_excluded_ids()
+        if not hidden:
+            return nodes
+
+        def _walk(items):
+            out = []
+            for n in items or []:
+                if not isinstance(n, dict):
+                    out.append(n)
+                    continue
+                if n.get('device_id') in hidden:
+                    continue
+                if n.get('children'):
+                    n = dict(n, children=_walk(n['children']))
+                out.append(n)
+            return out
+        return _walk(nodes)
 
     # E-4: Spatial Cache Invalidation
     @staticmethod
@@ -591,6 +607,7 @@ class AIContextService:
             logger.exception(f"Error triggering capture for {camera_id}")
             return {"error": str(e)}
 
+    # @manual ai/overview#device-ai-toggle
     @staticmethod
     def get_sensor_context(target_device_ids=None):
         """
@@ -1231,6 +1248,7 @@ class AIContextService:
             logger.debug(f"[PointLoc] resolve failed: {e}")
             return {'site': None, 'zone': None}
 
+    # @manual ai/overview#device-ai-toggle
     @staticmethod
     def get_device_list_summary():
         """

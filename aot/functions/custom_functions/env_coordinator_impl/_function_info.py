@@ -67,15 +67,16 @@ _ACTUATOR_UI_KIND_TO_KIND = {
 FUNCTION_INFORMATION = {
     'function_name_unique': 'env_coordinator',
     'function_name': lazy_gettext('Integrated Environment Control'),
-    'function_name_short': 'Env Coordinator',
+    'function_name_short': lazy_gettext('Env Coordinator'),
 
     'message': lazy_gettext(
-        'Coordinates registered Output actuators to optimise photosynthesis. '
-        'VPD is the primary control target; temperature and humidity act as '
-        'safety constraints. Add "Environment Control: Register Actuator" actions '
-        'to register devices. External environment data (outdoor temperature, '
-        'humidity, wind, rain, solar, CO₂) comes from the linked facility\'s '
-        'outdoor sensors, or optionally from the ext_context_collector function.'
+        'Coordinates the actuators of the linked facility to optimise '
+        'photosynthesis. VPD is the primary control target; temperature and '
+        'humidity act as safety constraints. Actuators and sensors come from '
+        'the linked facility. External environment data (outdoor temperature, '
+        'humidity, wind, rain, solar, CO₂) comes from the facility\'s outdoor '
+        'sensors, or optionally from the External Environment Context '
+        'Collector function.'
     ),
 
     # AI 가 옵션을 고를 때 읽는 한 줄(get_function_detail 의 options_note) —
@@ -98,6 +99,7 @@ FUNCTION_INFORMATION = {
     'custom_commands_message': lazy_gettext(
         'Trigger an immediate cycle, reload actuators, or issue an emergency stop.'
     ),
+    # @manual ai/env-control#commands
     'custom_commands': [
         {
             'id': 'cmd_reload',
@@ -130,6 +132,7 @@ FUNCTION_INFORMATION = {
             ),
         },
     ],
+    # @manual-end
 
     'custom_options': [
 
@@ -138,6 +141,7 @@ FUNCTION_INFORMATION = {
             'type': 'header',
             'name': lazy_gettext('Basic'),
         },
+        # @manual ai/env-control#settings-target
         {
             'id': 'update_period',
             'advanced_only': True,
@@ -146,7 +150,7 @@ FUNCTION_INFORMATION = {
             'axis_low': lazy_gettext('Fewer decisions'),
             'axis_high': lazy_gettext('Faster response'),
             'steps': [(600.0, lazy_gettext('Relaxed')), (300.0, lazy_gettext('Slow')), (120.0, lazy_gettext('Standard')), (60.0, lazy_gettext('Responsive'))],
-            'default_value': 60.0,
+            'default_value': 120.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
             'name': lazy_gettext('Period (seconds)'),
@@ -154,6 +158,8 @@ FUNCTION_INFORMATION = {
                 'Coordination cycle interval. Recommended: slowest actuator response time × 1.5.'
             ),
         },
+        # @manual-end
+        # @manual ai/env-control#settings-advanced
         {
             'id': 'sensor_max_age',
             'type': 'float',
@@ -173,12 +179,14 @@ FUNCTION_INFORMATION = {
                 'each sensor decide from its own update interval.'
             ),
         },
+        # @manual-end
 
         # ── Actuation Rate (opening vents only) ──────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Actuation Rate'),
         },
+        # @manual ai/env-control#settings-target
         {
             'id': 'actuation_profile',
             'advanced_only': True,
@@ -235,8 +243,9 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('Emergency Deviation Threshold (× tolerance)'),
             'phrase': lazy_gettext(
                 'If a variable deviates from its target by more than this many '
-                'times its tolerance, treat the cycle as an emergency and move '
-                'vents immediately (ignore the actuation period above).'
+                'times its tolerance and the gap is still widening, treat the '
+                'cycle as an emergency and move vents immediately (ignore the '
+                'actuation period above).'
             ),
         },
         {
@@ -256,6 +265,8 @@ FUNCTION_INFORMATION = {
                 'treat the cycle as an emergency and move vents immediately.'
             ),
         },
+        # @manual-end
+        # @manual ai/env-control#settings-ventilation
         {
             'id': 'vent_futility_gate',
         'advanced_only': True,
@@ -395,6 +406,7 @@ FUNCTION_INFORMATION = {
                 'Read on the signal chosen above, in whatever unit that signal uses. For an on/off signal (0 or 1) leave it at 0.5.'
             ),
         },
+        # @manual-end
 
 
         # ── Facility (optional) ──────────────────────────────────────────────
@@ -402,6 +414,7 @@ FUNCTION_INFORMATION = {
             'type': 'header',
             'name': lazy_gettext('Facility (optional)'),
         },
+        # @manual ai/env-control#settings-facility
         {
             'id': 'geo_facility_id',
             'type': 'select_device',
@@ -458,12 +471,14 @@ FUNCTION_INFORMATION = {
                 'Limit this coordinator to one bay. Leave blank for the whole facility.'
             ),
         },
+        # @manual-end
 
         # ── Time Control ──────────────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Time Control'),
         },
+        # @manual ai/env-control#time-control
         {
             'id': 'time_enable',
             'type': 'bool',
@@ -521,6 +536,7 @@ FUNCTION_INFORMATION = {
                 'The window is centred on this time.'
             ),
         },
+        # @manual-end
 
         # ── VPD (Primary control target) ──────────────────────────────────────
         {
@@ -530,6 +546,7 @@ FUNCTION_INFORMATION = {
         # 제어 기준(2026-09-22, `env_control/basis.py`). 기본은 기존 그대로(VPD
         # 직접). 온도 우선은 코디네이터별로 켜는 opt-in 이다 — 선택하지 않은 쪽도
         # 매 사이클 그림자로 계산돼 요약에 실린다.
+        # @manual ai/env-control#control-basis, ai/env-control#settings-advanced
         {
             'id': 'control_basis',
             'type': 'select',
@@ -556,6 +573,8 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('VPD Priority'),
             'phrase': lazy_gettext('Higher value = processed first. Default 1.2.'),
         },
+        # @manual-end
+        # @manual ai/env-control#settings-target
         {
             'id': 'tolerance_vpd',
             'advanced_only': True,
@@ -573,12 +592,14 @@ FUNCTION_INFORMATION = {
                 'reducing unnecessary actuator cycling. Typical value: 0.05–0.15 kPa.'
             ),
         },
+        # @manual-end
 
         # ── Light ─────────────────────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Light Intensity'),
         },
+        # @manual ai/env-control#settings-light
         {
             'id': 'light_max',
             'advanced_only': True,
@@ -603,12 +624,14 @@ FUNCTION_INFORMATION = {
                 ' Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight.'
             ),
         },
+        # @manual-end
 
         # ── CO₂ ───────────────────────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('CO₂'),
         },
+        # @manual ai/env-control#settings-advanced
         {
             'id': 'priority_co2',
         'advanced_only': True,
@@ -622,6 +645,8 @@ FUNCTION_INFORMATION = {
                 'Default 0.8 (lower than VPD 1.2, since CO₂ enrichment is secondary).'
             ),
         },
+        # @manual-end
+        # @manual ai/env-control#settings-target
         {
             'id': 'tolerance_co2',
             'type': 'float',
@@ -690,7 +715,9 @@ FUNCTION_INFORMATION = {
                 'Hard lower limit. Prevents VPD bypass via extreme dryness.'
             ),
         },
+        # @manual-end
 
+        # @manual ai/env-control#settings-hvac
         {
             'id': 'use_wetting_fog_for_humidity',
             'type': 'bool',
@@ -845,12 +872,14 @@ FUNCTION_INFORMATION = {
                 'Harder or colder water needs a lower sunburn threshold, which this sets for you.'
             ),
         },
+        # @manual-end
 
         # ── VPD Decomposition ─────────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('VPD Decomposition'),
         },
+        # @manual ai/env-control#settings-advanced
         {
             'id': 'vpd_weight_T',
             'type': 'float',
@@ -878,7 +907,9 @@ FUNCTION_INFORMATION = {
                 'Let the model decide which of light, CO₂, temperature or VPD is limiting right now.'
             ),
         },
+        # @manual-end
 
+        # @manual ai/env-control#settings-advanced, ai/env-control#targets-reference-plot
         {
             'id': 'source_plot_id',
             'type': 'text',
@@ -891,12 +922,14 @@ FUNCTION_INFORMATION = {
                 'automatically. When more than one is growing, pick it from the summary under the linked facility above.'
             ),
         },
+        # @manual-end
 
         # ── Guide Ranges (T/RH) ───────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Guide Ranges (T / RH)'),
         },
+        # @manual ai/env-control#settings-target
         {
             'id': 'guide_T_min',
             'advanced_only': True,
@@ -937,12 +970,14 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('Guide RH Max (%)'),
             'phrase': lazy_gettext('Advisory upper bound for relative humidity.'),
         },
+        # @manual-end
 
         # ── Cumulative Goal Tracker ───────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Cumulative Goal Tracker'),
         },
+        # @manual ai/env-control#settings-advanced
         {
             'id': 'cumulative_tracker_enabled',
             'type': 'bool',
@@ -957,12 +992,14 @@ FUNCTION_INFORMATION = {
                 'Requires a Light sensor for DLI tracking.'
             ),
         },
+        # @manual-end
 
         # ── Wind ──────────────────────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Wind'),
         },
+        # @manual ai/env-control#settings-ventilation
         {
             'id': 'gate_wind_threshold',
         # 도메인은 환기가 맞지만 온당한 기본값이 있는 숫자다 — [고급] 에서만.
@@ -975,12 +1012,14 @@ FUNCTION_INFORMATION = {
                 'Openings (vents, side walls) are forced closed above this wind speed.'
             ),
         },
+        # @manual-end
 
         # ── Calibration (Stage 1) ─────────────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Effect Calibration'),
         },
+        # @manual ai/env-control#settings-calibration
         {
             'id': 'effect_engine',
             'type': 'select',
@@ -1035,12 +1074,14 @@ FUNCTION_INFORMATION = {
                 'Minimum time between active probing events. Default 3600 s (1 hour).'
             ),
         },
+        # @manual-end
 
         # ── Forecast Feedforward (P3-4) ───────────────────────────────────────
         {
             'type': 'header',
             'name': lazy_gettext('Forecast Feedforward'),
         },
+        # @manual ai/env-control#settings-forecast
         {
             # ⚠ **문구가 실제 동작보다 뒤처져 있었다** (2026-09-08 사용자 지적:
             #   "현재: 기상청 단기예보 고정 / 변경: 시설에서 설정한 경우 시설의
@@ -1084,6 +1125,7 @@ FUNCTION_INFORMATION = {
                 'source already applies its own lookahead.'
             ),
         },
+        # @manual-end
 
         # ── Diagnostics ───────────────────────────────────────────────────────
         {
@@ -1141,6 +1183,7 @@ FUNCTION_INFORMATION = {
 # ⚠ 멤버는 `advanced_only` 로 표시한다 — [고급] 을 켜야 나온다. 핵심 옵션만으로
 #   끝나야 정리가 된 것이고, 세부가 늘 보이면 옵션 62개 시절과 같다.
 _SCALE_GROUPS = [
+    # @manual ai/env-control#settings-screen, ai/env-control#settings-target
     {
         'id': 'responsiveness',
         'name': lazy_gettext('Control Temperament'),
@@ -1172,6 +1215,7 @@ _SCALE_GROUPS = [
                 'emergency_rate_c_per_10min': 1.5}),
         ],
     },
+    # @manual-end
     # ⚠ **"육묘장 모드" 를 이 축이 흡수했다** (2026-08-27 사용자 지적:
     #   *"육묘장 모드와 분무 조심도가 모두 있어야 해? 조심모드 켜면
     #   육묘장 모드인 것 같은데..."*). 맞다 — 코드가 스스로 그렇게 말한다:
@@ -1203,6 +1247,7 @@ _SCALE_GROUPS = [
     # ⚠ **`hvac_interlock` 은 감지 신호가 없어도 작동한다.** 코디네이터가
     #   냉난방을 직접 명령하면 그 명령으로 판단한다(`_hvac_running` 경로 1).
     #   신호는 **손으로 켜는 기계** 전용이다 — 그래서 [고급] 에 있다.
+    # @manual ai/env-control#settings-ventilation
     {
         'id': 'vent_economy',
         'name': lazy_gettext('Ventilation and HVAC Teamwork'),
@@ -1237,6 +1282,8 @@ _SCALE_GROUPS = [
                 'hvac_interlock': True}),
         ],
     },
+    # @manual-end
+    # @manual ai/env-control#settings-hvac
     {
         'id': 'misting_care',
         # ⚠ **id 는 그대로 둔다** — `_LAYOUT` 의 `@group:misting_care` 가 이
@@ -1286,9 +1333,11 @@ _SCALE_GROUPS = [
                 'nursery_max_on_sec': 30.0, 'nursery_min_off_sec': 450.0}),
         ],
     },
+    # @manual-end
 ]
 
 _RANGE_BANDS = [
+    # @manual ai/env-control#settings-screen, ai/env-control#settings-target
     {
         'id': 'temperature',
         'name': lazy_gettext('Temperature Range'),
@@ -1301,6 +1350,7 @@ _RANGE_BANDS = [
         'guide_min': 'guide_T_min', 'guide_max': 'guide_T_max',
         'hard_min': 'temp_min', 'hard_max': 'temp_max',
     },
+    # @manual-end
     # 일사가 셀수록 젖은 잎이 탄다. 두 값(해제·잠금)은 **한 구간의 양 끝**
     # 이지 따로 생각할 값이 아니다 — 사이에서 선형으로 줄어들고, 둘 사이를
     # 벌려 두는 이유는 구름이 지날 때 분무가 켜졌다 꺼졌다 하지 않게 하려는
@@ -1308,6 +1358,7 @@ _RANGE_BANDS = [
     # 잠금/해제도 하나로 만들 수 있잖아. 밴드 슬라이더로 설정"*).
     #
     # ⚠ 하드 임계가 없다 — 파생할 것이 없으므로 `margin` 은 0 이다.
+    # @manual ai/env-control#settings-hvac
     {
         'id': 'misting_light',
         'name': lazy_gettext('Misting by Sunlight Level'),
@@ -1327,6 +1378,8 @@ _RANGE_BANDS = [
         'guide_min': 'nursery_solar_release',
         'guide_max': 'nursery_solar_lockout',
     },
+    # @manual-end
+    # @manual ai/env-control#settings-screen, ai/env-control#settings-target
     {
         'id': 'humidity',
         'name': lazy_gettext('Humidity Range'),
@@ -1339,6 +1392,7 @@ _RANGE_BANDS = [
         'guide_min': 'guide_RH_min', 'guide_max': 'guide_RH_max',
         'hard_min': 'humid_min', 'hard_max': 'humid_max',
     },
+    # @manual-end
     # 빛도 한 구간이다 — 아래로 내려가면 보광, 위로 올라가면 차광.
     # ⚠ **0 은 "안 함" 이고, 두 끝에서 뜻이 반대다.** `light_min=0` 은 축의
     #   맨 아래라 자연스럽지만, `light_max=0` 은 "차광 안 함" 이라 축의 맨
@@ -1346,6 +1400,7 @@ _RANGE_BANDS = [
     #   `off_at_max`. 없이 그리면 상한을 끝까지 올린 사람이 "항상 차광" 을
     #   설정한 줄 알고, 실제로는 그 값이 0(끔)으로 저장되지 않아 조용히
     #   다르게 돈다.
+    # @manual ai/env-control#settings-light
     {
         'id': 'light',
         'name': lazy_gettext('Shading and Supplemental Light'),
@@ -1372,6 +1427,7 @@ _RANGE_BANDS = [
         'requires_max': 'shade',
         'guide_min': 'light_min', 'guide_max': 'light_max',
     },
+    # @manual-end
 ]
 
 _RANGE_MEMBERS = {v for b in _RANGE_BANDS
@@ -1416,6 +1472,7 @@ _DOMAIN_GROUPS = {
 # 온 사람이 모델 설정부터 지나지 않는다")을 범위 선택이 어기지 않기 때문이다.
 _SCOPE_GROUPS = {'Devices under automatic control'}
 
+# @manual ai/env-control#settings-screen
 _LAYOUT = [
     # ═══════════════════════════════════════════════════════════════════════
     # 축은 **도메인**이다 — 옵션 종류가 아니라 (2026-08-27 재구성)
@@ -1595,6 +1652,7 @@ _LAYOUT = [
     #   것도 출력하지 않았다**(기본 로거 레벨이 ERROR 다). 이제 프레임워크
     #   스위치 하나가 둘 다 한다.
 ]
+# @manual-end
 
 
 def _emit_members(out, used, by_id, member_ids):
@@ -1621,6 +1679,7 @@ def _emit_members(out, used, by_id, member_ids):
         used.add(mid)
 
 
+# @manual ai/env-control#settings-screen
 def _apply_layout(options, layout):
     """선언한 배치대로 옵션을 다시 늘어놓는다 → 새 목록.
 
@@ -1774,14 +1833,17 @@ FUNCTION_INFORMATION['custom_options'] = _apply_layout(
 #   같은 방식으로 조용히 무시된다.
 #
 #   (값 옵션, 조건 옵션, 조건이 이 값일 때만 쓰임, 이 기능 토글이 켜졌을 때만 따짐)
+# @manual ai/env-control#settings-screen
 _INERT_UNLESS = (
     ('actuation_period_sec',         'actuation_profile', 'custom', None),
     ('night_vent_sunset_offset_min', 'night_vent_basis',  'sun',   'night_vent_park'),
     ('night_vent_start',             'night_vent_basis',  'clock', 'night_vent_park'),
     ('night_vent_end',               'night_vent_basis',  'clock', 'night_vent_park'),
 )
+# @manual-end
 
 
+# @manual ai/env-control#settings-screen
 def inert_options(values):
     """지금 설정에서 **입력됐지만 안 쓰이는** 옵션 → [(값 옵션, 조건 옵션, 필요값)].
 

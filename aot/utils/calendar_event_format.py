@@ -28,26 +28,28 @@ import re
 
 try:
     from flask_babel import gettext as _
+    from flask_babel import lazy_gettext as lg
 except Exception:  # pragma: no cover - allows import outside app context
     def _(s):
         return s
+    lg = _
 
 
 # canonical field -> English gettext source string used for the WRITTEN label.
 _FIELD_LABELS = {
-    'location': 'Location',
-    'device': 'Device',
-    'content': 'Content',
-    'state': 'State',
-    'worker': 'Worker',
-    'duration': 'Duration',
-    'value': 'Value',
-    'pid': 'PID',
-    'setpoint': 'Setpoint',
-    'setting': 'Setting',
-    'function': 'Function',
-    'activate': 'Activate',
-    'deactivate': 'Deactivate',
+    'location': lg('Location'),
+    'device': lg('Device'),
+    'content': lg('Content'),
+    'state': lg('State'),
+    'worker': lg('Worker'),
+    'duration': lg('Duration'),
+    'value': lg('Value'),
+    'pid': lg('PID'),
+    'setpoint': lg('Setpoint'),
+    'setting': lg('Setting'),
+    'function': lg('Function'),
+    'activate': lg('Activate'),
+    'deactivate': lg('Deactivate'),
 }
 
 # Hardcoded multilingual + synonym label aliases (lowercased) -> canonical field.
@@ -106,7 +108,7 @@ _PID_SETTING_SYNONYMS = {
 }
 
 # canonical state -> gettext source word (WRITTEN value)
-_STATE_LABELS = {'on': 'On', 'off': 'Off', 'open': 'Open', 'close': 'Close'}
+_STATE_LABELS = {'on': lg('On'), 'off': lg('Off'), 'open': lg('Open'), 'close': lg('Close')}
 
 # canonical state -> generous synonym set (whitespace removed, lowercased).
 # Covers inflections/spellings the user asked for and their natural opposites.
@@ -155,7 +157,7 @@ def normalize_state(value):
     # active-locale written words (e.g. gettext('On') -> '켜짐') first
     for canon, src in _STATE_LABELS.items():
         try:
-            if _norm(_(src)) == n:
+            if _norm(str(src)) == n:
                 return canon
         except Exception:
             pass
@@ -172,7 +174,7 @@ def normalize_state(value):
 def state_display(state):
     """Localized written form of a canonical state ('on' -> gettext('On'))."""
     src = _STATE_LABELS.get(state)
-    return _(src) if src else (state or '')
+    return str(src) if src else (state or '')
 
 
 def normalize_pid_setting(value):
@@ -197,7 +199,7 @@ def _label_lookup():
     lut = {_norm(k): v for k, v in _FIELD_ALIASES.items()}
     for field, src in _FIELD_LABELS.items():
         try:
-            lut[_norm(_(src))] = field
+            lut[_norm(str(src))] = field
         except Exception:
             pass
     return lut
@@ -263,35 +265,35 @@ def format_job_description(category, content=None, location=None, worker=None,
     L = _FIELD_LABELS
     lines = []
     if category in ('activate', 'deactivate'):
-        lines.append("{}: {}".format(_(L[category]), target or ''))
+        lines.append("{}: {}".format(str(L[category]), target or ''))
     elif category == 'pid':
         if pid:
-            lines.append("{}: {}".format(_(L['pid']), pid))
+            lines.append("{}: {}".format(str(L['pid']), pid))
         if setting and setting != 'setpoint':
-            lines.append("{}: {}".format(_(L['setting']), setting))
-            lines.append("{}: {}".format(_(L['value']), _num(value if value is not None else setpoint)))
+            lines.append("{}: {}".format(str(L['setting']), setting))
+            lines.append("{}: {}".format(str(L['value']), _num(value if value is not None else setpoint)))
         else:
-            lines.append("{}: {}".format(_(L['setpoint']), _num(setpoint if setpoint is not None else value)))
+            lines.append("{}: {}".format(str(L['setpoint']), _num(setpoint if setpoint is not None else value)))
     elif category == 'function':
         if function:
-            lines.append("{}: {}".format(_(L['function']), function))
-        lines.append("{}: {}".format(_(L['state']), _('Run')))
+            lines.append("{}: {}".format(str(L['function']), function))
+        lines.append("{}: {}".format(str(L['state']), _('Run')))
     elif category == 'device':
         if device:
-            lines.append("{}: {}".format(_(L['device']), device))
+            lines.append("{}: {}".format(str(L['device']), device))
         if value is not None:   # value/PWM set
-            lines.append("{}: {}".format(_(L['value']), _num(value)))
+            lines.append("{}: {}".format(str(L['value']), _num(value)))
         if state:
-            lines.append("{}: {}".format(_(L['state']), state_display(state)))
+            lines.append("{}: {}".format(str(L['state']), state_display(state)))
         if duration_min:
-            lines.append("{}: {}{}".format(_(L['duration']), duration_min, _('min')))
+            lines.append("{}: {}{}".format(str(L['duration']), duration_min, _('min')))
     else:
         if location:
-            lines.append("{}: {}".format(_(L['location']), location))
+            lines.append("{}: {}".format(str(L['location']), location))
         if content:
-            lines.append("{}: {}".format(_(L['content']), content))
+            lines.append("{}: {}".format(str(L['content']), content))
         if worker:
-            lines.append("{}: {}".format(_(L['worker']), worker))
+            lines.append("{}: {}".format(str(L['worker']), worker))
     lines.append("")
     lines.append("— {} —".format(_marker()))
     return "\n".join(lines)
@@ -302,7 +304,7 @@ def format_job_summary(category, content=None, location=None, device=None, state
                        target=None):
     """The event title shown in Google Calendar (concise, still informative)."""
     if category in ('activate', 'deactivate'):
-        return "{} · {}".format(target or '', _(_FIELD_LABELS[category]))
+        return "{} · {}".format(target or '', str(_FIELD_LABELS[category]))
     if category == 'pid':
         tgt = pid or _('PID')
         if setting and setting != 'setpoint':

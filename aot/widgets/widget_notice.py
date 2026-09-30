@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual Notices#widget
 import json
 
 from flask_babel import lazy_gettext

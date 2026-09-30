@@ -538,7 +538,7 @@ def _fetch_google_drive(source, config):
     from aot.databases.models.calendar_integration import UserCalendarConnection
     connection = UserCalendarConnection.query.filter_by(user_id=user_id, provider='google').first()
     if not connection or not connection.get_refresh_token():
-        return None, "Google account is not connected — connect it under Settings > Integrations, then reopen this source and pick files again."
+        return None, "Google account is not connected — connect it under Manage > System Management > Integrations, then reopen this source and pick files again."
 
     # A connection made before drive.file was added to SCOPES (google_oauth.py)
     # still refreshes access_tokens fine (Google honors the old, narrower
@@ -550,7 +550,7 @@ def _fetch_google_drive(source, config):
     # from Google's own security settings, without AoT being told).
     if 'drive.file' not in (connection.scope or ''):
         return None, ("Google account is connected but was authorized before Drive access was added — "
-                       "reconnect it under Settings > Integrations to grant Drive access, then reopen this "
+                       "reconnect it under Manage > System Management > Integrations to grant Drive access, then reopen this "
                        "source and pick files again.")
 
     # Reused, not duplicated: calendar_sync_service already implements
@@ -558,7 +558,7 @@ def _fetch_google_drive(source, config):
     from aot.ai.services.calendar_sync_service import get_valid_access_token
     access_token = get_valid_access_token(connection)
     if not access_token:
-        return None, "Could not refresh the Google access token — reconnect the account under Settings > Integrations."
+        return None, "Could not refresh the Google access token — reconnect the account under Manage > System Management > Integrations."
 
     from aot.utils import google_drive_api
 
@@ -737,6 +737,7 @@ _DIGEST_PROMPT_TEMPLATE = (
 
 
 # @ANCHOR: KNOWLEDGE_DIGEST_ENABLED
+# @manual ai/overview#knowledge-digest-pipeline
 def _digest_enabled():
     """True if the knowledge digest feature flag is on. Any error → False
     (fail closed — sync must keep working exactly as before when unsure)."""
@@ -748,6 +749,7 @@ def _digest_enabled():
 
 
 # @ANCHOR: SPLIT_CHUNKS
+# @manual ai/overview#knowledge-digest-pipeline
 def _split_chunks(text):
     """Deterministically split `text` into ~target-sized chunks on paragraph
     boundaries. A markdown heading (short line starting with '#') starts a new
@@ -809,6 +811,7 @@ def _pick_digester_agent():
 
 
 # @ANCHOR: DIGEST_ONE_CHUNK
+# @manual ai/overview#knowledge-digest-pipeline
 def _digest_one(chunk_text, source_name):
     """LLM-digest one chunk into {section_title, digest_text, keywords}.
 
@@ -855,6 +858,7 @@ def _digest_one(chunk_text, source_name):
 
 
 # @ANCHOR: WRITE_KNOWLEDGE_CHUNKS
+# @manual ai/overview#knowledge-digest-pipeline
 def _write_knowledge_chunks(source, text, provenance='user_provided', tags=None, attribution=None):
     """Chunk + digest `text` and upsert AIKnowledgeChunk rows for `source`.
 

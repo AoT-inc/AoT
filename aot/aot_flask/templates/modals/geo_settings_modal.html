@@ -25,6 +25,7 @@
                         <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60 mb-2" id="btnSaveGeoSettings">{{ _('Save') }}</button>
                     </div>
 
+                    {# @manual geo/settings#default-start-location #}
                     <div class="aot-modal-section-title">{{ _('Default Start Location') }}</div>
                     <div class="aot-modal-container">
                         <div class="aot-modal-option-row">
@@ -56,6 +57,7 @@
                                 </button>
                             </div>
                         </div>
+                    {# @manual-end #}
 
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Search Provider') }}</label>
@@ -73,6 +75,7 @@
                         </div>
                     </div>
 
+                    {# @manual geo/settings#design-theme-colors #}
                     <div class="aot-modal-section-title">{{ _('Design Theme Settings') }}</div>
                     <div class="aot-modal-container">
                         {#- 라벨은 **낱개로 부른다.** 예전에는 `_(type.capitalize() + ' Color')`
@@ -105,15 +108,19 @@
                             </div>
                         </div>
                     </div>
+                    {# @manual-end #}
 
                     <div class="aot-modal-section-title">{{ _('Map Behavior Settings') }}</div>
                     <div class="aot-modal-container">
+                        {# @manual geo/settings#zoom-settings #}
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Max Zoom') }}</label>
                             <div class="aot-modal-option-control">
                                 <input type="number" class="form-control aot-modern-input" name="max_zoom" min="1" max="30">
                             </div>
                         </div>
+                        {# @manual geo/settings#zoom-method #}
+                        {# @manual-end #}
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Digital Zoom') }}</label>
                             <div class="aot-modal-option-control">
@@ -132,8 +139,10 @@
                                 </label>
                             </div>
                         </div>
+                        {# @manual-end #}
                     </div>
 
+                    {# @manual geo/settings#performance-rendering #}
                     <div class="aot-modal-section-title">{{ _('Performance & Rendering') }}</div>
                     <div class="aot-modal-container">
                         <div class="aot-modal-option-row">
@@ -163,20 +172,33 @@
                                 </label>
                             </div>
                         </div>
+                        {# @manual geo/settings#polygon-display-limits #}
+                    {# @manual-end #}
+                        {#- 78번째 줄의 theme_color_labels 와 같은 이유로 낱개로 부른다 —
+                            조립한 msgid(`'Max ' + type.capitalize() + ' Polygons'`)는
+                            추출기가 못 보고, 세 문구 모두 카탈로그에 등록된 적이 없어
+                            한국어 화면에 영어로 남아 있었다. -#}
+                        {% set max_polygons_labels = {
+                             'site':   _('Max Site Polygons'),
+                             'zone':   _('Max Zone Polygons'),
+                             'device': _('Max Device Polygons') } %}
                         {% for type in ['site', 'zone', 'device'] %}
                         <div class="aot-modal-option-row">
-                            <label class="aot-modal-option-label">{{ _('Max ' + type.capitalize() + ' Polygons') }}</label>
+                            <label class="aot-modal-option-label">{{ max_polygons_labels[type] }}</label>
                             <div class="aot-modal-option-control">
                                 <input type="number" class="form-control aot-modern-input" name="max_polygons_{{ type }}">
                             </div>
                         </div>
                         {% endfor %}
+                        {# @manual geo/settings#zoom-settings #}
+                        {# @manual-end #}
                         <div class="aot-modal-option-row">
                             <label class="aot-modal-option-label">{{ _('Equipment Hide Zoom') }} <span class="small text-muted ml-1">{{ _('(hide below this zoom)') }}</span></label>
                             <div class="aot-modal-option-control">
                                 <input type="number" class="form-control aot-modern-input" name="equipment_cull_zoom" min="1" max="25" step="1">
                             </div>
                         </div>
+                        {# @manual-end #}
                     </div>
 
                 </form>
@@ -189,6 +211,7 @@
 /**
  * Gets the current map state (coordinates, zoom level) and fills the form.
  */
+{# @manual geo/settings#default-start-location #}
 function getCurrentMapView() {
     // Get the map object from the geoDesign instance or check the global map variable
     const mapObj = (window.geoDesign && window.geoDesign.map) ? window.geoDesign.map : (typeof map !== 'undefined' ? map : null);
@@ -207,6 +230,7 @@ function getCurrentMapView() {
         window.showToast && window.showToast({{ _("Map object not found")|tojson }}, 'error');
     }
 }
+{# @manual-end #}
 
 function openGeoSettings() {
     $('#geoSettingsModal').modal('show');
@@ -227,20 +251,35 @@ function openGeoSettings() {
             form.find('[name="max_polygons_device"]').val(state.max_polygons_device);
             form.find('[name="equipment_cull_zoom"]').val(state.equipment_cull_zoom != null ? state.equipment_cull_zoom : 15);
             
-            form.find('[name="digital_zoom"]').prop('checked', !!state.digital_zoom);
-            form.find('[name="smooth_zoom"]').prop('checked', !!state.smooth_zoom);
-            form.find('[name="tile_fade_animation"]').prop('checked', !!state.tile_fade_animation);
-            form.find('[name="prefer_canvas"]').prop('checked', !!state.prefer_canvas);
-            $('#modal_maplibre_local').prop('checked', !!(state.providers && state.providers.maplibre_local_serving));
+            // 값이 없으면(NULL) 모델 기본값을 보인다 — GeoSetting 의 column default.
+            const _bool = (v, dflt) => (v === null || v === undefined) ? dflt : !!v;
+            form.find('[name="digital_zoom"]').prop('checked', _bool(state.digital_zoom, true));
+            form.find('[name="smooth_zoom"]').prop('checked', _bool(state.smooth_zoom, true));
+            form.find('[name="tile_fade_animation"]').prop('checked', _bool(state.tile_fade_animation, true));
+            form.find('[name="prefer_canvas"]').prop('checked', _bool(state.prefer_canvas, false));
+            // 미설정 = 로컬 서빙(layout.html 은 명시적 false 일 때만 CDN).
+            $('#modal_maplibre_local').prop('checked', _bool(state.providers && state.providers.maplibre_local_serving, true));
             
+            {# @manual geo/settings#design-theme-colors #}
             const theme = (typeof state.theme_config === 'string') ? JSON.parse(state.theme_config) : (state.theme_config || {});
             const opacity = theme.panel_opacity || 90;
             form.find('[name="theme_panel_opacity"]').val(opacity);
             $('#modal_opacity_val').text(opacity + '%');
             
-            for (let k in theme) {
-                form.find(`[name="theme_${k}"]`).val(theme[k]);
-            }
+            // 색 입력은 비울 수 없어 미설정도 #000000 으로 보인다. 저장된 값이 없는
+            // 색은 지금 실제로 쓰이는 색(전역 기본값)을 보여 주고 '미설정'으로
+            // 표시해 둔다 — 건드리지 않으면 저장 때 보내지 않는다.
+            const defaults = Object.assign({ panel_bg: '#ffffff' },
+                                           (window.AoTGeoTheme && window.AoTGeoTheme.DEFAULTS) || {});
+            form.find('.aot-geo-theme-color').each(function() {
+                const key = this.name.replace(/^theme_/, '');
+                if (theme[key]) {
+                    $(this).val(theme[key]).removeAttr('data-unset');
+                } else {
+                    $(this).val(defaults[key] || '#000000').attr('data-unset', '1');
+                }
+            });
+            {# @manual-end #}
 
             const menu = $('#modal_search_provider_menu');
             const btn = $('#modal_search_provider_btn');
@@ -268,6 +307,10 @@ function openGeoSettings() {
     });
 }
 
+$(document).on('input change', '#geoSettingsForm .aot-geo-theme-color', function() {
+    $(this).removeAttr('data-unset');
+});
+
 $('#modal_panel_opacity').on('input', function() {
     $('#modal_opacity_val').text($(this).val() + '%');
 });
@@ -287,8 +330,14 @@ $('#geoSettingsForm').on('submit', function(e) {
     $btn.prop('disabled', true).text({{ _("Saving...")|tojson }});
 
     // 체크박스는 해제 시 serialize 에 포함되지 않으므로 명시적으로 true/false 전송
-    const payload = $(this).serialize()
-        + '&maplibre_local_serving=' + ($('#modal_maplibre_local').is(':checked') ? 'true' : 'false');
+    // (빠지면 서버는 그 키를 건드리지 않아 한 번 켠 토글을 끌 수 없다).
+    // 건드리지 않은(미설정) 색은 보내지 않는다.
+    const $form = $(this);
+    let payload = $form.find(':input').not(':checkbox').not('.aot-geo-theme-color[data-unset]').serialize();
+    $form.find(':checkbox[name]').each(function() {
+        payload += '&' + encodeURIComponent(this.name) + '=' + (this.checked ? 'true' : 'false');
+    });
+    payload += '&maplibre_local_serving=' + ($('#modal_maplibre_local').is(':checked') ? 'true' : 'false');
 
     $.ajax({
         url: '/api/geo/settings',

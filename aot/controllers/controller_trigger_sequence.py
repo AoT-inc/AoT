@@ -249,6 +249,31 @@ def _build_slots(single_actions, group_of=None):
     return slots
 
 
+def _format_plan_warning_en(warning_code):
+    """English text for one plan_for_day() warning code.
+
+    This is the wording the AI tools (get_function_detail,
+    configure_sequence_day) have always shown, kept exactly as it was.
+    The web UI translates the same ``warning_code`` dicts instead of
+    re-deriving them — see aot.aot_flask.utils.utils_trigger.
+    sequence_schedule_day_warnings().
+    """
+    code = warning_code["code"]
+    if code == "empty":
+        return "No step runs on this day — the window opens but nothing happens."
+    if code == "window_cutoff":
+        return (f"One pass takes {warning_code['span']:.0f}s but the window is only "
+                f"{warning_code['window_sec']}s — it will be cut off before finishing.")
+    if code == "period_restart":
+        return (f"One pass takes {warning_code['span']:.0f}s but the cycle restarts every "
+                f"{warning_code['period']:.0f}s — it will restart before finishing.")
+    if code == "repeats_per_day":
+        return (f"The cycle repeats every {warning_code['period']:.0f}s inside a "
+                f"{warning_code['window_sec']}s window, so it runs about "
+                f"{warning_code['repeats']} times that day rather than once.")
+    return ""
+
+
 def build_sequence_status_facts(status, state, wait_s=None):
     """시퀀스 상태 dict → 함수 상태 위젯이 읽을 **사실 묶음**.
 
@@ -715,16 +740,24 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         except (KeyError, ValueError):
             window_sec = None
         period = float(entry.get('period') or 0)
+
+        # Structured twin of the English sentences below. The AI tools
+        # (get_function_detail, configure_sequence_day) read out["warnings"]
+        # verbatim, but the web UI (function settings modal, sequence widget)
+        # needs the SAME findings translated — keeping the facts here as data
+        # (not just English prose) lets aot.aot_flask.utils.utils_trigger.
+        # sequence_schedule_day_warnings() localize them without
+        # re-implementing this slot maths. 2026-09-25: before this, the web UI
+        # only ever showed a "period > window" toast (weekly_schedule.
+        # build_warnings), missing the restart-mid-pass and repeats-per-day
+        # cases below entirely.
+        warning_codes = []
         if not out["slots"]:
-            out["warnings"].append("No step runs on this day — the window opens but nothing happens.")
+            warning_codes.append({"code": "empty"})
         if window_sec is not None and span > window_sec:
-            out["warnings"].append(
-                f"One pass takes {span:.0f}s but the window is only {window_sec}s — "
-                "it will be cut off before finishing.")
+            warning_codes.append({"code": "window_cutoff", "span": span, "window_sec": window_sec})
         if period and span > period:
-            out["warnings"].append(
-                f"One pass takes {span:.0f}s but the cycle restarts every {period:.0f}s — "
-                "it will restart before finishing.")
+            warning_codes.append({"code": "period_restart", "span": span, "period": period})
         # Only a genuine repeat is worth flagging. The old guard (period <
         # window) fired even when the window fits exactly one pass, producing
         # "runs about 1 times that day, not once" — self-contradictory, and the
@@ -732,9 +765,11 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         repeats = int(window_sec // period) if (window_sec and period) else 0
         out["runs_per_day"] = repeats or (1 if out["slots"] else 0)
         if repeats >= 2 and out["slots"]:
-            out["warnings"].append(
-                f"The cycle repeats every {period:.0f}s inside a {window_sec}s window, "
-                f"so it runs about {repeats} times that day rather than once.")
+            warning_codes.append({"code": "repeats_per_day", "period": period,
+                                   "window_sec": window_sec, "repeats": repeats})
+
+        out["warning_codes"] = warning_codes
+        out["warnings"] = [_format_plan_warning_en(w) for w in warning_codes]
         return out
 
     def initialize_variables(self, cold_start=True):
@@ -764,7 +799,18 @@ class SequenceTriggerController(AbstractController, threading.Thread):
         self.sequence_cycle_duration = float(self.trigger.period or 3600)
         self.action_overlap_duration = float(self.trigger.output_duration or 0)
         self.start_latency = float(self.trigger.timer_start_offset or 0)
-        self.input_validity_duration = float(self.trigger.time_offset_minutes if self.trigger.time_offset_minutes is not None else 300)
+        # 0 은 여기서 "설정 안 됨" 이 아니라 **"신선도 제한 없음"** 이다 —
+        # get_dynamic_duration() 이 이 값을 InfluxDB 쿼리의 past_sec 로
+        # 넘기면 query_flux() 가 `if past_sec:` 로만 판정해 0(과 None)
+        # 둘 다 range 필터 없이 전체 이력을 본다. None(컬럼이 비어 있음)만
+        # 300 으로 대체하고, 명시적 0 은 그대로 둔다 — 0 을 "유효한 값"
+        # 으로 보존하는 쪽은 test_sequence_widget_display_refresh.py 의
+        # test_zero_is_a_real_value_not_a_missing_one 이 이미 지키고 있다.
+        # (2026-09-25: 새 시퀀스가 이 컬럼 기본값 0 을 그대로 물려받는
+        # 문제는 함수 생성 시점에서 고친다 — utils_function.function_add()
+        # 참고. 여기서 0 의 의미 자체를 바꾸지 않는다.)
+        self.input_validity_duration = float(
+            self.trigger.time_offset_minutes if self.trigger.time_offset_minutes is not None else 300)
         self.timer_weekday = getattr(self.trigger, 'timer_weekday', None) or ''
 
         # Weekly schedule: parse from timer_schedule JSON, fall back to legacy columns

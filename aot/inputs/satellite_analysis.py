@@ -189,8 +189,6 @@ INPUT_INFORMATION = {
     ],
     'options_disabled': ['interface'],
 
-    'interfaces': ['AoT'],
-
     'dependencies_module': [],
 
     'custom_options': [

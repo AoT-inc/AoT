@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual ai/overview#safety-approval-model
 from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value

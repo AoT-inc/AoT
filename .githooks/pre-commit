@@ -44,6 +44,24 @@ if [ -z "$AOT_SKIP_JS_UNDEF_CHECK" ]; then
     fi
 fi
 
+# ── 정의되지 않은 파이썬 이름 ────────────────────────────────────────────
+# 위 JS 검사의 파이썬 판이다. 2026-08-04 `_run_cycle`(727줄) 분리 때 `cycle_sec`
+# 하나가 안 넘어가, greybox 그림자 단계가 매 사이클 NameError 로 죽었다. 예외를
+# debug 로 삼키는 자리라 **8주간 아무 흔적이 없었고**, 그 사이 예측·학습·검증
+# 기록이 통째로 비었다(2026-09-28 발견). `python3 -m pyflakes` 한 줄로 잡힌다.
+# 우회: AOT_SKIP_PY_UNDEF_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_PY_UNDEF_CHECK" ]; then
+    PY_UNDEF_CHECK="$ROOT/aot/scripts/check_undefined_names.py"
+    if [ -f "$PY_UNDEF_CHECK" ] && git diff --cached --name-only | grep -q '\.py$'; then
+        if ! python3 "$PY_UNDEF_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 정의되지 않은 이름을 참조합니다."
+            echo "  (의도한 커밋이라면 AOT_SKIP_PY_UNDEF_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
 # ── 바깥에서 안쪽 스코프의 이름 부르기 ───────────────────────────────────
 # 형제 검사(위)는 "정의가 있는가", 이쪽은 "그 정의에 닿는가" 를 본다.
 # 2026-09-06: 5,500줄짜리 함수 안의 장치 모달을 IIFE 최상위로 끌어올렸는데
@@ -191,4 +209,15 @@ fi
 DR_CHECK="$ROOT/aot/scripts/check_docs_reminder.py"
 if [ -f "$DR_CHECK" ]; then
     python3 "$DR_CHECK"
+fi
+
+# ── 매뉴얼 절 동기화 상태 (비차단) ───────────────────────────────────────
+# 위 리마인더는 폴더 단위로 "매뉴얼이 딸린 영역" 만 안다. 코드에 `@manual
+# 쪽#앵커` 주석이 달린 곳은 이쪽이 절 단위로 본다: 이 커밋이 연결된 코드를
+# 바꿔 장부와 어긋나면 알리고, 커밋 직후 post-commit 훅이 claude 로 초안을
+# 쓴다. 공개 발행(publish_public.sh)에서만 차단한다.
+# 끄기: AOT_SKIP_MANUAL_SYNC_CHECK=1 git commit ...
+MS_CHECK="$ROOT/aot/scripts/manual_sync.py"
+if [ -f "$MS_CHECK" ]; then
+    python3 "$MS_CHECK" precommit || true
 fi

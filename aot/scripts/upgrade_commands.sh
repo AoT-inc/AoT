@@ -152,6 +152,7 @@ Options:
   update-aotmcp-service-enable  Enable and start the AoT MCP Server service
   update-aotmcp-service-disable Disable and stop the AoT MCP Server service
   restart-aotmcp                Restart the AoT MCP Server service if enabled (run on every upgrade)
+  mosquitto-check               Warn if the mosquitto broker accepts anonymous network connections (read-only)
   update-packages               Ensure required apt packages are installed/up-to-date
   update-permissions            Set permissions for AoT directories/files
   update-pip3                   Update pip
@@ -329,6 +330,24 @@ case "${1:-''}" in
         /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh create-files-directories
         /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-permissions
         systemctl daemon-reload
+    ;;
+    'mosquitto-check')
+        # Read-only: never edits the broker config. Warns when MQTT 1883 is reachable
+        # from the network without a login, so field gateways keep working on upgrade.
+        MOSQ_FILES=$(ls /etc/mosquitto/mosquitto.conf /etc/mosquitto/conf.d/*.conf 2>/dev/null)
+        if [ -n "${MOSQ_FILES}" ]; then
+            # shellcheck disable=SC2086
+            MOSQ_ANON=$(grep -h -E '^[[:space:]]*allow_anonymous[[:space:]]+true' ${MOSQ_FILES} 2>/dev/null)
+            # listener <port> with no address, or bound to all interfaces
+            # shellcheck disable=SC2086
+            MOSQ_OPEN=$(grep -h -E '^[[:space:]]*listener[[:space:]]+[0-9]+[[:space:]]*(0\.0\.0\.0|::)?[[:space:]]*$' ${MOSQ_FILES} 2>/dev/null)
+            if [ -n "${MOSQ_ANON}" ] && [ -n "${MOSQ_OPEN}" ]; then
+                printf "\n#### WARNING: the mosquitto MQTT broker accepts anonymous connections from the network.\n"
+                printf "####          Anyone who can reach port 1883 can read sensor data and publish to MQTT topics.\n"
+                printf "####          The config was NOT changed, so existing gateways keep working.\n"
+                printf "####          To restrict it, see docs: Installation > MQTT broker security.\n"
+            fi
+        fi
     ;;
     'restart-daemon')
         printf "\n#### Restarting the AoT daemon\n"

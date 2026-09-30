@@ -43,7 +43,9 @@ def action_add(form, request_form=None):
             return messages, dep_name, list_unmet_deps, dep_message, None
 
     dict_actions = parse_action_information()
-    controller_type, controller_table, _ = which_controller(form.device_id.data)
+    # ⚠ 버리는 값을 `_` 로 받지 말 것 — 이 함수가 위에서 쓰는 `_(...)`(gettext)와
+    #   같은 이름이라, 의존성 미충족 분기가 UnboundLocalError 로 죽는다.
+    controller_type, controller_table, _unused_ctrl = which_controller(form.device_id.data)
 
     if controller_type not in ['Conditional', 'Trigger', 'Function', 'Input']:
         messages["error"].append(_("Invalid controller type: {}").format(controller_type))
@@ -124,7 +126,7 @@ def action_add(form, request_form=None):
             new_action.save()
             action_id = new_action.unique_id
             page_refresh = True
-            messages["success"].append(f"{TRANSLATIONS['add']['title']} {TRANSLATIONS['actions']['title']}")
+            messages["success"].append(_("Action added"))
             
             # Refresh if it's a Trigger Sequence
             from aot.aot_client import DaemonControl
@@ -233,7 +235,7 @@ def action_mod(form, request_form):
     if not messages["error"]:
         try:
             db.session.commit()
-            messages["success"].append(f"{TRANSLATIONS['modify']['title']} {TRANSLATIONS['actions']['title']}")
+            messages["success"].append(_("Action modified"))
             
             # Refresh if it's a Trigger Sequence
             from aot.aot_client import DaemonControl
@@ -275,7 +277,7 @@ def action_del(form):
             delete_python_file('action', action_id)
             delete_entry_with_id(
                 Actions, action_id, flash_message=False)
-            messages["success"].append(f"{TRANSLATIONS['delete']['title']} {TRANSLATIONS['actions']['title']}")
+            messages["success"].append(_("Action deleted"))
             
             # Refresh if it's a Trigger Sequence
             from aot.aot_client import DaemonControl

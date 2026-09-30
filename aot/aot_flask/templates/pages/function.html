@@ -556,6 +556,12 @@
             });
           }
 
+          // function_add / function_duplicate 는 위 분기가 새 항목을 붙인 뒤 직접
+          // 토스트를 띄운다. 아래 공통 popup_response 가 또 띄우면 성공 알림이 두 번 뜬다.
+          var alreadyToasted =
+            (action === 'function_add' && ((data.data.dep_unmet && data.data.dep_unmet.length > 0) || data.data.function_id)) ||
+            (action === 'function_duplicate' && 'function_id' in data.data);
+
           if (data.data.messages.error.length === 0) {
             if (action === 'function_mod' && 'function_id' in data.data) {
               if ('return_text' in data.data.messages && data.data.messages.return_text.length > 0) {
@@ -744,10 +750,10 @@
                   window.showToast({{ _("Error: Could not get Function conditions.")|tojson }}, 'error');
                 }
               });
-            } else {
+            } else if (!alreadyToasted) {
               popup_response(data);
             }
-          } else {
+          } else if (!alreadyToasted) {
             popup_response(data);
           }
         },

@@ -81,6 +81,7 @@ def _to_dict(row):
 
 
 # @ANCHOR: KNOWLEDGE_BROWSE
+# @manual ai/overview#browsing-and-adding
 def browse(query=None, tag=None, provenance=None, include_disabled=False,
            page=1, page_size=_PAGE_SIZE, context_state=None):
     """Every knowledge item, filtered. Ordered newest first.
@@ -208,6 +209,7 @@ def summary():
 
 
 # @ANCHOR: ADD_USER_KNOWLEDGE
+# @manual ai/overview#browsing-and-adding
 def add_user_knowledge(content, tags, heading=None, attribution=None,
                        source_url=None, entity_ref=None):
     """An operator writes knowledge in by hand.
@@ -260,6 +262,7 @@ def add_user_knowledge(content, tags, heading=None, attribution=None,
     return {'success': True, 'chunk_id': row.unique_id, 'item': _to_dict(row)}
 
 
+# @manual ai/overview#browsing-and-adding
 def set_enabled(chunk_id, enabled):
     """Take an item out of the AI's reach, or put it back — for ANY item, not
     just the AI's own notes (which have their own retire/reactivate path with

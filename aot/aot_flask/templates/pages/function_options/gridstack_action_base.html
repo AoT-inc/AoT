@@ -80,7 +80,7 @@
 
                                         {% if each_option['type'] == 'select' %}
                                             {% for each_set in each_option['options_select'] %}
-                                                <option value="{{each_set[0]}}" {% if each_set[0]|string == opt_val|string %}selected{% endif %}>{{each_set[1]}}</option>
+                                                <option value="{{each_set[0]}}" {% if each_set[0]|string == opt_val|string %}selected{% endif %}>{{_(each_set[1]|string)}}</option>
                                             {% endfor %}
 
                                         {% elif each_option['type'] == 'select_device' %}

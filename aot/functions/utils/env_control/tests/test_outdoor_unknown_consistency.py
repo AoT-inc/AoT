@@ -402,12 +402,16 @@ class TestExceptionsAndOtherPaths:
         from types import SimpleNamespace
         from aot.functions.utils.env_control.safety_gates import GateResult
         calm = SimpleNamespace(deviation_native={}, target={}, context={})
+        from types import MethodType
         stub = SimpleNamespace(_force_immediate=False)
+        stub._deviation_emergency = MethodType(CycleMixin._deviation_emergency, stub)
         lost = GateResult(partial=True, gate_mask=GATE_BIT_EXT_EXP,
                           vent_open_ceiling=True)
         assert CycleMixin._classify_emergency(stub, lost, calm) == (False, '')
+        # 강제 명령이 있는 부분 게이트도 사이클 긴급이 아니다(2026-09-26) — 강제
+        # 명령은 `_dispatch` 가 장치별로 즉시 보낸다. test_emergency_cadence.py 참조.
         windward = GateResult(partial=True, forced_commands={'v1': {'value': 0.0}})
-        assert CycleMixin._classify_emergency(stub, windward, calm)[0] is True
+        assert CycleMixin._classify_emergency(stub, windward, calm) == (False, '')
 
     def test_MPC_경로도_같은_규칙(self):
         v = make_opening_profile('v1')

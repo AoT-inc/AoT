@@ -950,6 +950,8 @@ def register_blueprints(app):
     app.register_blueprint(routes_locale_api.blueprint)  # register locale api routes
     app.register_blueprint(routes_scheduler.blueprint)  # register scheduler routes
     app.register_blueprint(routes_integrations.blueprint)  # register external integrations (Google Calendar OAuth)
+    from aot.aot_flask import routes_mcp_auth
+    app.register_blueprint(routes_mcp_auth.blueprint)  # 외부 MCP 인증 설정·계정 연결
     from aot.aot_flask.routes_ai_library import ai_library_bp
     app.register_blueprint(ai_library_bp)  # register ai library routes
     from aot.aot_flask import routes_notice

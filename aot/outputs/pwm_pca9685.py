@@ -16,6 +16,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.influx import read_influxdb_single
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 
 def constraints_pass_hertz(mod_dev, value):
@@ -54,7 +55,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'pwm_pca9685',
-    'output_name': "{}: PCA9685 16-Channel {}".format(lazy_gettext('PWM'), lazy_gettext('LED Controller')),
+    'output_name': lazy_format("{}: PCA9685 16-Channel {}", lazy_gettext('PWM'), lazy_gettext('LED Controller')),
     'output_manufacturer': 'NXP Semiconductors',
     'output_library': 'adafruit-pca9685',
     'measurements_dict': measurements_dict,
@@ -173,7 +174,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

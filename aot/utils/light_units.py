@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual geo/journal#dli
 """빛 측정 단위 → PPFD 환산. 순수 단위 환산이라 geo·journal 어디에도 속하지
 않는다 — `plot_context.dli_accumulated` 와 `plot_journal` 의 일지 집계가
 **같은 표**를 봐야 하므로 둘 다 내려다보는 여기에 둔다.

@@ -16,6 +16,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.influx import read_influxdb_single
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -39,7 +40,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'atlas_ezo_pmp',
-    'output_name': "{}: Atlas Scientific".format(lazy_gettext('Peristaltic Pump')),
+    'output_name': lazy_format("{}: Atlas Scientific", lazy_gettext('Peristaltic Pump')),
     'output_manufacturer': 'Atlas Scientific',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -98,7 +99,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ],

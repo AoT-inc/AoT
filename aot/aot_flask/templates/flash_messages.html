@@ -12,7 +12,7 @@
     if (window.__aotFlashNotice) return;
     window.__aotFlashNotice = function (message, kind) {
       if (typeof window.showToast === 'function' && typeof toastr !== 'undefined') {
-        window.__aotFlashNotice(message, kind);
+        window.showToast(message, kind);
         return;
       }
       var box = document.getElementById('aot-flash-fallback');

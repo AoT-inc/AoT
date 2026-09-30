@@ -110,6 +110,7 @@ from .ai_task import AITask
 from .scheduler import SchedulerJobMeta
 from .scheduler import SchedulerAuditLog
 from .ai_settings import AIGlobalSettings
+from .mcp_external_account import MCPExternalAccount
 from .ai_domain_glossary import AIDomainGlossary
 from .ai_user_profile import AIUserProfile
 from .ai_context_record import AIContextRecord

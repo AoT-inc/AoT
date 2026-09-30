@@ -4,6 +4,7 @@ from flask_babel import lazy_gettext
 from aot.actions.base_action import AbstractFunctionAction
 from aot.config import AOT_DB_PATH
 from aot.config_translations import TRANSLATIONS
+from aot.utils.lazy_text import lazy_join
 from aot.databases.models import Actions
 from aot.databases.models import Camera
 from aot.databases.utils import session_scope
@@ -12,7 +13,7 @@ from aot.utils.database import db_retrieve_table_daemon
 
 ACTION_INFORMATION = {
     'name_unique': 'camera_timelapse_pause',
-    'name': f"{TRANSLATIONS['camera']['title']}: {TRANSLATIONS['timelapse']['title']}: {TRANSLATIONS['pause']['title']}",
+    'name': lazy_join(TRANSLATIONS['camera']['title'], ': ', TRANSLATIONS['timelapse']['title'], ': ', TRANSLATIONS['pause']['title']),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

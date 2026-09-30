@@ -204,6 +204,7 @@ LIBRARY_PRESETS = {
     # 기상은 시시각각 바뀌므로 지식 항목으로 굳히면 그 순간부터 틀린 값이
     # 라이브러리에 영원히 남는다. 활성화가 하는 일은 좌표가 실제로 응답하는지
     # 한 번 확인하는 것뿐이고, 조회는 AI 가 물어볼 때 일어난다.
+    # @manual ai/overview#global-sources
     'ext_openmeteo': {
         'label': 'Open-Meteo — Weather · Soil · ET₀ (EXT-GL-02)',
         'description': 'Global forecast, soil temperature/moisture by depth, and FAO reference '
@@ -241,6 +242,7 @@ LIBRARY_PRESETS = {
             # _preset_computed_defaults() 가 지도 기본 위치에서 채운다.
         },
     },
+    # @manual-end
     'csv_table': {
         'label': 'Reference Table (CSV)',
         'description': 'Register a CSV table the AI can look rows up in, instead of ingesting it as text.',
@@ -257,6 +259,7 @@ LIBRARY_PRESETS = {
     },
     # 위 범용 표의 **미리 채워진 사례**다. 별도 클라이언트를 두지 않는다 — 특별한
     # 자료여서가 아니라, 한국 밖에서 쓸 수 있는 첫 내장 소스라서 기본값을 채워 둔다.
+    # @manual ai/overview#global-sources
     'ext_ecocrop': {
         'label': 'FAO ECOCROP — Crop Requirements (EXT-GL-01)',
         'description': 'FAO ECOCROP: environmental requirement ranges for 2,500+ plant species. Suitability envelopes, not greenhouse setpoints.',
@@ -304,6 +307,7 @@ LIBRARY_PRESETS = {
                       '치명 저온, GMIN/GMAX 는 생육 일수, 강수는 mm/년 이다.',
         },
     },
+    # @manual-end
     'rest_api': {
         'region': 'any', 'topics': ['any'],
         'label': 'REST API',
@@ -357,9 +361,9 @@ LIBRARY_PRESETS = {
         'description_ko': "Google Drive에서 파일을 선택해 AI 지식으로 변환합니다. PDF·텍스트·"
                           '마크다운 파일은 그대로, Google 문서/프레젠테이션은 텍스트로, Google '
                           '스프레드시트는 첫 시트를 CSV로 변환해 등록합니다. 사용자 문서이므로 '
-                          '[Library] 태그로 인용됩니다. 별도 API 키가 필요 없고, Settings > '
-                          'Integrations에서 연결한 본인 Google 계정 권한을 그대로 사용합니다.',
-        'usage': '먼저 Settings > Integrations에서 Google 계정을 연결하세요(연결되어 있지 '
+                          '[Library] 태그로 인용됩니다. 별도 API 키가 필요 없고, 관리 > 시스템 관리 > '
+                          '연동에서 연결한 본인 Google 계정 권한을 그대로 사용합니다.',
+        'usage': '먼저 관리 > 시스템 관리 > 연동에서 Google 계정을 연결하세요(연결되어 있지 '
                  '않으면 아래 버튼이 연결 화면으로 안내합니다). 이후 Google Drive에서 파일 '
                  '선택으로 파일을 고르고 활성화하세요. 문서 내용이 바뀌면 다음 동기화 때 '
                  '다시 가져옵니다.',
@@ -370,6 +374,7 @@ LIBRARY_PRESETS = {
 
 
 
+# @manual ai/overview#data-credits
 def _attribution_notices(sources):
     """켜져 있는 소스들의 출처 표기 — 화면 아래 한 줄로 모은다.
 
@@ -1063,6 +1068,7 @@ def api_google_drive_picker_config():
 # registered feed — see knowledge_library_service's module docstring.
 # ---------------------------------------------------------------------------
 
+# @manual ai/overview#browsing-and-adding
 @ai_library_bp.route('/api/v1/ai/library/knowledge', methods=['GET'])
 @login_required
 def api_browse_knowledge():
@@ -1087,6 +1093,7 @@ def api_browse_knowledge():
     })
 
 
+# @manual ai/overview#browsing-and-adding
 @ai_library_bp.route('/api/v1/ai/library/knowledge', methods=['POST'])
 @login_required
 def api_add_knowledge():
@@ -1105,6 +1112,7 @@ def api_add_knowledge():
     return jsonify(result), (201 if result.get('success') else 400)
 
 
+# @manual ai/overview#browsing-and-adding
 @ai_library_bp.route('/api/v1/ai/library/knowledge/<chunk_id>/enabled', methods=['POST'])
 @login_required
 def api_set_knowledge_enabled(chunk_id):
@@ -1119,6 +1127,7 @@ def api_set_knowledge_enabled(chunk_id):
     return jsonify(result), (200 if result.get('success') else 404)
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 @ai_library_bp.route('/api/v1/ai/library/strict-mode', methods=['POST'])
 @login_required
 def api_set_strict_mode():
@@ -1147,6 +1156,7 @@ def api_set_strict_mode():
     return jsonify({'success': True, 'enabled': settings.knowledge_chunk_confirmed_only})
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 @ai_library_bp.route('/api/v1/ai/library/review', methods=['GET'])
 @login_required
 def api_list_review_items():
@@ -1159,6 +1169,7 @@ def api_list_review_items():
     })
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 @ai_library_bp.route('/api/v1/ai/library/review/<chunk_id>/confirm', methods=['POST'])
 @login_required
 def api_confirm_review_item(chunk_id):
@@ -1168,6 +1179,7 @@ def api_confirm_review_item(chunk_id):
     return jsonify(result), (200 if result.get('success') else 404)
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 @ai_library_bp.route('/api/v1/ai/library/review/<chunk_id>/edit', methods=['POST'])
 @login_required
 def api_edit_review_item(chunk_id):
@@ -1184,6 +1196,7 @@ def api_edit_review_item(chunk_id):
     return jsonify(result), status
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 @ai_library_bp.route('/api/v1/ai/library/review/<chunk_id>/retire', methods=['POST'])
 @login_required
 def api_retire_review_item(chunk_id):
@@ -1193,6 +1206,7 @@ def api_retire_review_item(chunk_id):
     return jsonify(result), (200 if result.get('success') else 404)
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 @ai_library_bp.route('/api/v1/ai/library/review/<chunk_id>/reactivate', methods=['POST'])
 @login_required
 def api_reactivate_review_item(chunk_id):

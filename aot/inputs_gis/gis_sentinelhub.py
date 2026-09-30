@@ -184,6 +184,7 @@ CHANNELS = {
     },
 }
 
+# @manual geo/layers#satellite-aerial, geo/layers#sentinel-hub-sentinel-2
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_sentinelhub',
     'input_manufacturer': 'Copernicus',
@@ -363,6 +364,7 @@ def get_channel_config(channel_id):
     return CHANNELS.get(channel_id, CHANNELS[0])
 
 
+# @manual geo/layers#sentinel-hub-sentinel-2
 def time_range(days):
     """(from, to) ISO8601 UTC 문자열. **날짜 경계로 맞춘다.**
 
@@ -382,6 +384,7 @@ def time_range(days):
     return start.strftime(fmt), end.strftime(fmt)
 
 
+# @manual geo/layers#sentinel-hub-sentinel-2
 def _data_filter(settings):
     flt = {
         'timeRange': {
@@ -413,6 +416,7 @@ def tile_bbox_3857(z, x, y):
     return (minx, miny, maxx, maxy)
 
 
+# @manual geo/layers#sentinel-hub-sentinel-2
 def fetch_tile_png(settings, z, x, y, logger=None):
     """Process API 로 타일 한 장(PNG bytes)을 받아온다. 실패 시 None."""
     token = get_access_token(settings.get('client_id'),
@@ -573,6 +577,7 @@ class InputModule(AbstractGisInput):
         except (TypeError, ValueError):
             return 0
 
+    # @manual geo/layers#sentinel-hub-sentinel-2
     def request_settings(self):
         """프록시/통계 호출이 필요로 하는 값 한 벌."""
         time_from, time_to = time_range(self.get_custom_option('time_window_days') or 30)
@@ -589,10 +594,12 @@ class InputModule(AbstractGisInput):
 
     # -- 레이어 -------------------------------------------------------------
 
+    # @manual geo/layers#sentinel-hub-sentinel-2
     def get_url(self):
         return (f'/api/geo/proxy/sentinelhub/{getattr(self, "unique_id", "")}'
                 '?z={z}&x={x}&y={y}')
 
+    # @manual geo/layers#sentinel-hub-sentinel-2
     def get_leaflet_options(self):
         options = super(InputModule, self).get_leaflet_options()
         channel = get_channel_config(self._channel_id())
@@ -616,6 +623,7 @@ class InputModule(AbstractGisInput):
 
         # 채널 이름은 이미 lazy_gettext 다 — f-string 이 현재 로케일로 편다.
         title = channel['name']
+        unit_label = _("index")
         low, mid, high = opts.get('range', ('-1', '0', '1'))
         input_id = getattr(self, 'unique_id', '')
         proxy_url = (f'/api/geo/proxy/sentinelhub/{input_id}/value'
@@ -633,7 +641,7 @@ class InputModule(AbstractGisInput):
                 f'<div class="aot-legend-value-box" data-api-url="{proxy_url}"'
                 ' data-api-param="mean" data-unit="">'
                 '<div class="aot-legend-value-text">--</div>'
-                f'<div class="aot-legend-value-unit">{_("index")}</div>'
+                f'<div class="aot-legend-value-unit">{unit_label}</div>'
                 '</div>'
                 '</div>'
             )

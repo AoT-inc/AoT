@@ -51,7 +51,7 @@ fi
 if [[ "${INSTALL_TARGET}" == "docker" ]]; then
     printf "\nError: A Docker environment was detected.\n"
     printf "For Docker deployments, use docker-compose instead:\n"
-    printf "  cd %s/docker && docker compose up -d\n\n" "${INSTALL_DIRECTORY}"
+    printf "  cd %s && docker compose -f docker/docker-compose.prod.yml up -d\n\n" "${INSTALL_DIRECTORY}"
     exit 1
 fi
 
@@ -238,7 +238,7 @@ ${INSTALL_CMD} setup-virtualenv 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-pip3 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-pip3-packages 2>&1 | tee -a "${LOG_LOCATION}"
 
-# Install mosquitto MQTT broker and configure for external connections
+# Install mosquitto MQTT broker (local-only by default; AOT_MQTT_LISTEN_ALL=1 opens it to the network)
 pmsg mosquitto_installing | tee -a "${LOG_LOCATION}"
 if ! dpkg -s mosquitto >/dev/null 2>&1; then
   apt-get install -y mosquitto mosquitto-clients >> "${LOG_LOCATION}" 2>&1
@@ -252,13 +252,23 @@ MOSQUITTO_CONF="/etc/mosquitto/conf.d/aot.conf"
 
 # 기존 파일이 있으면 덮어쓰지 않음(사용자 설정 보존)
 if [ ! -f "$MOSQUITTO_CONF" ]; then
-  cat <<EOF > "$MOSQUITTO_CONF"
+  if [ "${AOT_MQTT_LISTEN_ALL:-0}" = "1" ]; then
+    cat <<EOF > "$MOSQUITTO_CONF"
 listener 1883
 allow_anonymous true
 EOF
-  pmsg mosquitto_conf_created "${MOSQUITTO_CONF}" | tee -a "${LOG_LOCATION}"
+    pmsg mosquitto_conf_created "${MOSQUITTO_CONF}" | tee -a "${LOG_LOCATION}"
+    pmsg mosquitto_open_warning | tee -a "${LOG_LOCATION}"
+  else
+    cat <<EOF > "$MOSQUITTO_CONF"
+listener 1883 127.0.0.1
+allow_anonymous true
+EOF
+    pmsg mosquitto_conf_created "${MOSQUITTO_CONF}" | tee -a "${LOG_LOCATION}"
+  fi
 else
   pmsg mosquitto_conf_exists "${MOSQUITTO_CONF}" | tee -a "${LOG_LOCATION}"
+  ${INSTALL_CMD} mosquitto-check 2>&1 | tee -a "${LOG_LOCATION}"
 fi
 
 # Ensure main config includes conf.d

@@ -623,6 +623,7 @@
 {%- else %}{{ '%+g' | format(lo) if signed else lo }} ~ {{ '%+g' | format(hi) if signed else hi }}{% endif %}
 {%- endmacro %}
 
+{# @manual geo/journal#drift, geo/journal#drift-sensors #}
 {% macro drift_summary(rows, scope_id) %}
 {% if rows %}
 <h3 class="aot-modal-group-title">{{ _('Against target') }}</h3>
@@ -690,6 +691,7 @@
 </div>
 {% endif %}
 {% endmacro %}
+{# @manual-end #}
 
 {#- 범위 도표가 앉을 자리. **문구는 여기서 실어 보낸다** — `aot-dataviz.js`
     는 문구를 만들지 않는 것이 규약이고(msgid 가 그 파일에 갇힌다), 이
@@ -707,6 +709,7 @@
     자리다(단계로 흡수됐으면 단계 절, 아니면 일자별 절). -#}
 {#- 단위 전환. 저장된 것보다 **굵게만** 볼 수 있으므로 라우트가 고를 수 있는
     것만 넘겨준다 — 눌러도 아무 일 없는 버튼을 두면 고장으로 읽힌다. -#}
+{# @manual geo/journal#granularity #}
 {% macro gran_switcher(anchor) %}
   {% if granularities|length > 1 %}
   <div class="aot-journal-gran">
@@ -726,6 +729,7 @@
   </div>
   {% endif %}
 {% endmacro %}
+{# @manual-end #}
 
 {#- ── 기간 전체의 범위 도표 ────────────────────────────────────────────
     반복되는 일별 표 대신 기간 전체의 모양을 먼저 보여준다 — 노트(사람의
@@ -752,6 +756,7 @@
 {#- 한 기간(일·주·월)의 기록 한 덩어리. `scope_id` 는 펼침 토글의 id 접두다
     — 같은 버킷이 두 자리에 그려질 때 한쪽을 펼치면 다른 쪽도 열리는 것을
     막는다. -#}
+{# @manual geo/journal#contents #}
 {% macro bucket_block(b, show_target, scope_id) %}
   <div class="aot-journal-bucket mb-4">
     <h3 class="aot-modal-group-title">
@@ -759,6 +764,8 @@
       {#- 일장 — 주야 목표의 편차가 이 시각을 근거로 계산된다.
           ⚠ 적산온도는 여기 없다. 표의 **행**으로 옮겼다(DLI·VPD 와 같은
             자리) — 세 지표를 각 층에서 같이 다루기로 했다. -#}
+      {# @manual geo/journal#daylight #}
+{# @manual-end #}
       {% if b.daylight_h %}
       <span class="aot-modal-body-text font-weight-normal">
         · {{ _('daylight %(h)s h', h=b.daylight_h) }}
@@ -769,6 +776,8 @@
         {% if b.sunrise and b.sunset %}({{ b.sunrise }}–{{ b.sunset }}){% endif %}
       </span>
       {% endif %}
+    {# @manual geo/journal#contents #}
+      {# @manual-end #}
     </h3>
     {#- 본문은 컨테이너 안에 둔다 — `.aot-modal-container` 의 `padding: 0 16px`
         가 **좌우 여백을 함께** 준다(공용 규칙, 직접 만들지 않는다). -#}
@@ -942,11 +951,15 @@
             <td>{{ e.max if e.max is not none else '' }}</td>
             <td>
               {#- 방위는 각도가 아니라 최다 풍향으로 말한다. -#}
+              {# @manual geo/journal#weather-readings #}
+    {# @manual-end #}
               {% if e.sector is not none %}
                 {{ compass(e.sector) }}{% if e.sector_pct %} <span class="aot-journal-num">{{ e.sector_pct }}%</span>{% endif %}
               {% elif e.avg is not none %}
                 <span class="aot-journal-num">{{ e.avg }}</span>{{ ' ' ~ unit_label(e.unit) if unit_label(e.unit) else '' }}
               {% endif %}
+              {# @manual geo/journal#contents #}
+              {# @manual-end #}
               {% if e.coverage_low %}<span class="text-muted small">({{ _('partial coverage') }})</span>{% endif %}
               {#- 피복을 지난 값이면 **그 자리에서** 근거를 말한다. 안내
                   페이지의 주석으로만 두면 표를 읽는 사람이 그 숫자가 실측인지
@@ -989,6 +1002,8 @@
     </div>
     {% endif %}
 
+    {# @manual geo/journal#irrigation #}
+              {# @manual-end #}
     {% if b.control %}
     <div class="aot-journal-table-scroll">
     <table class="table table-sm aot-journal-table aot-journal-runtime">
@@ -1019,20 +1034,25 @@
     </table>
     </div>
     {% endif %}
+{# @manual geo/journal#contents #}
+    {# @manual-end #}
 
     {% endif %}
     </div>
   </div>
 {% endmacro %}
+{# @manual-end #}
 
 <main role="main" class="container aot-page aot-journal-doc">
 
+  {# @manual geo/journal#generating-a-journal #}
   {% if journal.status in ('pending', 'running') %}
   <div class="aot-page-head">
     <h1 class="aot-page-title">{{ journal.title or _('Journal') }}</h1>
   </div>
   <meta http-equiv="refresh" content="5">
   <p class="text-muted">{{ _('This journal is still being generated. This page will refresh automatically.') }}</p>
+  {# @manual-end #}
 
   {% elif journal.status == 'error' %}
   <div class="aot-page-head">
@@ -1045,6 +1065,7 @@
 
   {% elif journal.status == 'done' and d %}
 
+  {# @manual geo/journal#output-formats #}
   {# ── 표지 ────────────────────────────────────────────────────────────
        인쇄에서 한 장을 실제로 쓴다(위 @media print). 화면에서는 얇은 머리글로
        남아 스크롤을 잡아먹지 않는다. #}
@@ -1130,7 +1151,7 @@
       <dd>{{ _('Rows marked "Weather station" and set off by a left border come from the site weather station, not a sensor placed at this target. Where both exist for the same measurement, targets are compared against the field sensor only.') }}</dd>
 
       <dt>{{ _('Target and Δ') }}</dt>
-      <dd>{{ _('Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms.') }}</dd>
+      <dd>{{ _('Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are compared against the average of the matching daytime or night-time window, not the whole day; where that window has no readings, Δ is left out.') }}</dd>
 
       <dt>{{ _('Runtime') }}</dt>
       <dd>{{ _('Hours a device was on during the period, read from its first channel.') }}</dd>
@@ -1191,6 +1212,7 @@
             data-url="{{ url_for('routes_geo.geo_journal_delete', journal_uuid=journal.unique_id) }}"
             data-back="{{ url_for('routes_geo.geo_journal_hub') }}">{{ _('Delete') }}</button>
   </div>
+  {# @manual-end #}
 
   {# ── 목차 ──────────────────────────────────────────────────────────── #}
   {#- 제목은 공용 절 제목, 항목은 **앱의 공용 버튼**(`.btn.aot-pill-btn`)이다.
@@ -1219,6 +1241,7 @@
   {% endif %}
 
   {# ── 개요 ──────────────────────────────────────────────────────────── #}
+  {# @manual geo/journal#contents #}
   <section class="aot-journal-section">
   <h2 class="aot-modal-section-title" id="journal-overview">{{ _('Overview') }}</h2>
   {#- ── 지도 ────────────────────────────────────────────────────────────
@@ -1305,6 +1328,8 @@
     {#- 적산온도 — 단계 전환을 좌우하는 값이라 개요에 둔다.
         ⚠ 못 쓸 때 빈칸이나 0 을 내지 않는다. "그날 하나도 안 쌓였다" 로
           읽히는데, 못 쓰는 것과 0 은 전혀 다르다 — 이유를 그대로 적는다. -#}
+    {# @manual geo/journal#gdd #}
+  {# @manual-end #}
     {% if d.gdd %}
     <div class="aot-modal-option-row">
       <span class="aot-modal-option-label">{{ _('Growing degree days') }}</span>
@@ -1326,6 +1351,8 @@
       </span>
     </div>
     {% endif %}
+    {# @manual geo/journal#contents #}
+    {# @manual-end #}
     <div class="aot-modal-option-row">
       <span class="aot-modal-option-label">{{ _('Time zone') }}</span>
       <span>{{ d.target.tz_name }}</span>
@@ -1333,6 +1360,7 @@
   </div>
 
   </section>
+    {# @manual-end #}
 
   {# ── 단계별 기록 (plot만) ──────────────────────────────────────────────
        ⚠ msgid 는 `_('Program stages')` 다. `_('Stages')` 는 **시설 화면의
@@ -1342,6 +1370,7 @@
        기간과 겹치는 단계는 그 구간의 **실제 기록**(목표 대비 실측·노트·사진)을
        함께 낸다. 겹치지 않는 단계(아직 오지 않은 계획)는 접어 둔다 — 지우지
        않는 이유는 "이 작기가 앞으로 어떻게 가는가" 도 문서의 값이기 때문이다. #}
+  {# @manual geo/journal#contents #}
   {% if stage_sections %}
   <section class="aot-journal-section">
   <h2 class="aot-modal-section-title" id="journal-stages">{{ _('Program stages') }}</h2>
@@ -1490,6 +1519,8 @@
     </p>
     {% endif %}
 
+    {# @manual geo/journal#irrigation #}
+  {# @manual-end #}
     {% if sec.control %}
     <div class="aot-journal-table-scroll">
     <table class="table table-sm aot-journal-table aot-journal-runtime mb-2">
@@ -1518,6 +1549,8 @@
     </table>
     </div>
     {% endif %}
+    {# @manual geo/journal#contents #}
+    {# @manual-end #}
     </div>
 
     {{ drift_summary(sec.drift, 'stage-' ~ (st.key or loop.index0)) }}
@@ -1670,6 +1703,7 @@
   {% endfor %}
   </section>
   {% endif %}
+    {# @manual-end #}
 
   {# ── 일자별 기록 ───────────────────────────────────────────────────
        ⚠ **단계가 있으면 이 절을 내지 않는다.** 각 단계가 그 기간의 일/주/월을
@@ -1690,8 +1724,10 @@
   </section>
   {% endif %}
 
+  {# @manual geo/journal#adding-comments #}
   {# ── 추가 의견 (노트 재사용, §10) ──────────────────────────────────── #}
   <div class="aot-journal-notes" id="journal-notes-mount"></div>
+  {# @manual-end #}
 
   <script src="{{ asset('page-journal-view-viz') }}"></script>
   {#- ── 지도 ─────────────────────────────────────────────────────────────
@@ -1937,6 +1973,7 @@
         });
       }
 
+      {# @manual geo/journal#adding-comments #}
       var mount = document.getElementById('journal-notes-mount');
       if (mount && window.AoTNotesBlock) {
         mount.innerHTML = window.AoTNotesBlock.html({ title: {{ _('Additional notes') | tojson }} });
@@ -1946,6 +1983,7 @@
           name: {{ (journal.title or '') | tojson }}
         });
       }
+      {# @manual-end #}
       // ── 인쇄 / PDF 저장 ──────────────────────────────────────────────
       //
       // 브라우저는 PDF 파일명을 `document.title` 에서 딴다. 그대로 두면

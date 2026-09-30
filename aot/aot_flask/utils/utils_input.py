@@ -39,6 +39,7 @@ from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.inputs import parse_input_information
 from aot.utils.device_tz import apply_system_tz_fallback
+from aot.utils.device_tz import default_device_coords
 from aot.utils.system_pi import parse_custom_option_values
 from aot.aot_flask.utils.utils_map_config import (
     ensure_map_config,
@@ -130,8 +131,7 @@ def input_add(form_add, tab_id=None):
         try:
             misc = Misc.query.first()
             if misc:
-                new_input.latitude = misc.map_latitude
-                new_input.longitude = misc.map_longitude
+                new_input.latitude, new_input.longitude = default_device_coords(misc)
                 apply_system_tz_fallback(new_input, misc.timezone)
         except Exception:
             pass
@@ -298,7 +298,7 @@ def input_add(form_add, tab_id=None):
                     dict_inputs, new_input.device, new_input.unique_id, messages)
 
                 messages["success"].append(
-                    f"{TRANSLATIONS['add']['title']} {TRANSLATIONS['input']['title']}")
+                    gettext("Input added"))
         except sqlalchemy.exc.OperationalError as except_msg:
             messages["error"].append(except_msg)
         except sqlalchemy.exc.IntegrityError as except_msg:
@@ -370,9 +370,26 @@ def input_duplicate(form_mod):
             clone_model(each_dev, unique_id=set_uuid(), input_id=duplicated_input.unique_id)
 
     messages["success"].append(
-        f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['input']['title']}")
+        gettext("Input duplicated"))
 
     return messages, new_input.unique_id
+
+
+def apply_max_age_s(mod_input, form_mod, options_enabled):
+    """측정 유효 수명(max_age_s)을 저장한다 — Period.html 이 그 칸을 그리는 입력에만.
+
+    주기 저장(`if form_mod.period.data`) 안에 두면, 주기 칸 없이 유효 수명 칸만
+    그리는 'max_age_only' 입력(MQTT·ChirpStack·KMA 등)은 값이 버려진다.
+    칸을 그리지 않는 입력은 건드리지 않는다 — 폼에 없던 값으로 None 을 덮어쓰지 않도록.
+    비우면 NULL — '주기에서 파생하라' 는 뜻이다(p6_55). 0 은 '즉시 만료' 로 읽힐 수
+    있으므로 미설정으로 다룬다.
+    """
+    if not hasattr(form_mod, 'max_age_s'):
+        return
+    if 'period' not in options_enabled and 'max_age_only' not in options_enabled:
+        return
+    _ma = form_mod.max_age_s.data
+    mod_input.max_age_s = int(_ma) if _ma else None
 
 
 def input_mod(form_mod, request_form):
@@ -553,11 +570,9 @@ def input_mod(form_mod, request_form):
 
         if form_mod.period.data:
             mod_input.period = form_mod.period.data
-            # 비우면 NULL — '주기에서 파생하라' 는 뜻이다(p6_55).
-            # 0 을 넣으면 '즉시 만료' 로 읽힐 수 있으므로 미설정으로 다룬다.
-            if hasattr(form_mod, 'max_age_s'):
-                _ma = form_mod.max_age_s.data
-                mod_input.max_age_s = int(_ma) if _ma else None
+        apply_max_age_s(
+            mod_input, form_mod,
+            dict_inputs[mod_input.device].get('options_enabled', []))
         if form_mod.start_offset.data:
             mod_input.start_offset = form_mod.start_offset.data
 
@@ -782,7 +797,7 @@ def input_mod(form_mod, request_form):
         if not messages["error"]:
             db.session.commit()
             messages["success"].append(
-                f"{TRANSLATIONS['modify']['title']} {TRANSLATIONS['input']['title']}")
+                gettext("Input modified"))
             if messages.get("name"):
                 sync_geo_device_name(mod_input.unique_id, mod_input.name)
 
@@ -874,7 +889,7 @@ def input_del(input_id):
 
         db.session.commit()
         messages["success"].append(
-            f"{TRANSLATIONS['delete']['title']} {TRANSLATIONS['input']['title']}")
+            gettext("Input deleted"))
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 
@@ -950,7 +965,7 @@ def input_activate(form_mod):
                     not each_channel.unit):
                 measure_set = False
         if not measure_set:
-            messages["error"].append("All measurements must have a name and unit/measurement set")
+            messages["error"].append(gettext("All measurements must have a name and unit/measurement set"))
 
 
     messages = controller_activate_deactivate(
@@ -958,7 +973,7 @@ def input_activate(form_mod):
 
     if not messages["error"]:
         messages["success"].append(
-            f"{TRANSLATIONS['activate']['title']} {TRANSLATIONS['input']['title']}")
+            gettext("Input activated"))
 
     return messages
 
@@ -977,7 +992,7 @@ def input_deactivate(form_mod):
         messages = controller_activate_deactivate(
             messages, 'deactivate', 'Input', input_id, flash_message=False)
         messages["success"].append(
-            f"{TRANSLATIONS['deactivate']['title']} {TRANSLATIONS['input']['title']}")
+            gettext("Input deactivated"))
     except Exception as err:
         messages["error"].append(f"Error deactivating Input: {err}")
 
@@ -1096,8 +1111,9 @@ def force_acquire_measurements(unique_id):
             if status[0]:
                 messages["error"].append(f"Force Input Measurement: {status[1]}")
             else:
+                msg_force = gettext('Force Measurements')
                 messages["success"].append(
-                    f"{gettext('Force Measurements')}, {TRANSLATIONS['input']['title']}")
+                    f"{msg_force}, {TRANSLATIONS['input']['title']}")
                 flash(gettext("Force Input Measurement: %(status)s", status=status[1]), "success")
     except Exception as except_msg:
         messages["error"].append(str(except_msg))

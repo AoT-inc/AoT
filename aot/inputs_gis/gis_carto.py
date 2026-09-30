@@ -10,6 +10,7 @@ CHANNELS = {
     4: {'name': 'Voyager', 'options': {'style': 'voyager'}},
 }
 
+# @manual geo/layers#international-general
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_carto',
     'input_manufacturer': 'CARTO',

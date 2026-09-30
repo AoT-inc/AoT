@@ -39,7 +39,7 @@ import inspect
 import pytest
 
 from aot.aot_flask.geo.facility_wind import (
-    WIND_BIAS_MIN_MS, wind_biased_opening,
+    WIND_BIAS_FULL_MS, WIND_BIAS_MIN_MS, wind_biased_opening,
 )
 from aot.functions.utils.env_control.coordinator import finalize_command
 from aot.functions.utils.env_control.types import ActuatorProfile, CmdConstraints
@@ -91,12 +91,29 @@ class TestCalmMeansNoBias:
           그러면 한쪽만 고쳐진 채로 갈라진다(2026-08-26 실제로 겪었다:
           미러 보정을 걷어내자 이 테스트가 옛 방향을 붙잡고 실패했다).
         """
-        hi = WIND_BIAS_MIN_MS + 1.0
+        hi = WIND_BIAS_FULL_MS
         got = {deg: wind_biased_opening([_SIDE_RIGHT], deg,
                                         wind_speed_ms=hi)['right']
                for deg in (0.0, 90.0, 180.0, 270.0)}
         assert min(got.values()) == pytest.approx(0.2), got
         assert max(got.values()) == pytest.approx(1.0), got
+
+    def test_약풍은_문턱을_넘어도_계단으로_깎지_않는다(self):
+        """0.5 m/s 문턱 양쪽에서 가중치가 연속이다(2026-09-26 김제 — 문턱을 오르내리는
+        약풍에 측창 하나가 5분마다 1.0 ↔ 0.2 로 뛰었다)."""
+        leeward = min(wind_biased_opening([_SIDE_RIGHT], deg, wind_speed_ms=v)['right']
+                      for deg in (0.0, 90.0, 180.0, 270.0)
+                      for v in (WIND_BIAS_MIN_MS + 0.01,))
+        assert leeward > 0.99, leeward
+        # 1 m/s(김제 실측 상단)에서도 10 % 넘게 깎지 않는다.
+        at_1ms = min(wind_biased_opening([_SIDE_RIGHT], deg, wind_speed_ms=1.0)['right']
+                     for deg in (0.0, 90.0, 180.0, 270.0))
+        assert at_1ms > 0.9, at_1ms
+        # 풍속이 오르면 연속으로 깊어진다.
+        seq = [min(wind_biased_opening([_SIDE_RIGHT], deg, wind_speed_ms=v)['right']
+                   for deg in (0.0, 90.0, 180.0, 270.0))
+               for v in (0.6, 1.0, 1.5, 2.0, 2.5, 3.0)]
+        assert all(a >= b for a, b in zip(seq, seq[1:])), seq
 
     def test_모르면_가중한다(self):
         """None = 모름. 모른다고 무풍으로 단정하면 강풍에 창이 안 닫힌다."""

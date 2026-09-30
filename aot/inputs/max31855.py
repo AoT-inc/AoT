@@ -21,7 +21,7 @@ measurements_dict = {
 INPUT_INFORMATION = {
     'input_name_unique': 'MAX31855',
     'input_manufacturer': 'MAXIM',
-    'input_name': 'MAX31855',
+    'input_name': 'MAX31855 (GPIO pins)',
     'input_library': 'Adafruit_MAX31855',
     'measurements_name': 'Temperature (Object/Die)',
     'measurements_dict': measurements_dict,
@@ -44,7 +44,7 @@ INPUT_INFORMATION = {
         ('pip-pypi', 'Adafruit_GPIO', 'Adafruit-GPIO==1.0.3')
     ],
 
-    'interfaces': ['UART'],
+    'interfaces': ['SPI'],
     'pin_cs': 8,
     'pin_miso': 9,
     'pin_clock': 11

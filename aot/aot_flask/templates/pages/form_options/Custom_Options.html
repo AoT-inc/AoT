@@ -189,7 +189,7 @@
 
       {% if 'api_key' in each_option['id'].lower() or 'token' in each_option['id'].lower() %}
         <button class="btn aot-pill-btn aot-pill-btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
-          Key
+          {{_('Key')}}
         </button>
         <div class="dropdown-menu dropdown-menu-right">
           {% if api_keys %}
@@ -269,7 +269,7 @@
                 {{' selected'}}
             {%- endif -%}
         {%- endif -%}
-      >{{each_set[1]}}</option>
+      >{{_(each_set[1]|string)}}</option>
       {% endfor %}
     </select>
   </div>
@@ -572,7 +572,7 @@
           {%- for each_dev in devices -%}
             {% if not each_option.get('filter') or (each_option.get('filter') and each_dev|attr(each_option['filter']['key']) == each_option['filter']['value']) %}
             <option value="{{each_dev.unique_id}}"{% if (channel_options and each_dev.unique_id == custom_options_values[unique_id][channel][each_option['id']]) or (custom_options_values and each_dev.unique_id == custom_options_values[unique_id][each_option['id']]) %} selected{% endif %}>
-              {% if name == 'Map' %}{{each_dev.name}}{% else %}[{{name}} {{'%02d' % each_dev.id}}] {{each_dev.name}}{% endif %}
+              {% if name in ('Map', 'GeoFacility') %}{{each_dev.name}}{% else %}[{{name}} {{'%02d' % each_dev.id}}] {{each_dev.name}}{% endif %}
             </option>
             {% endif %}
           {%- endfor -%}

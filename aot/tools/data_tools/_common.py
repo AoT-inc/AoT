@@ -39,6 +39,27 @@ class CommonToolsMixin:
         return {r[0] for r in rows if r[0]}
 
     @classmethod
+    def _without_ai_excluded(cls, results, key='id'):
+        """목록 결과에서 'AI 판단에 포함' 을 끈 입력·출력을 덜어 낸다.
+
+        docs/ai/overview.md#device-ai-toggle — 끈 장치는 AI 도구의 조회에서
+        빠진다. 판정은 공용 헬퍼(`device_resolver.ai_excluded_ids`) 하나다.
+        복합장치 행의 `member_ids` 에서도 뺀다. 원본 목록은 건드리지 않는다."""
+        from aot.services.resolvers.device_resolver import ai_excluded_ids
+        hidden = ai_excluded_ids()
+        if not hidden:
+            return results
+        out = []
+        for r in results or []:
+            if r.get(key) in hidden:
+                continue
+            if r.get('member_ids'):
+                r = dict(r, member_ids=[m for m in r['member_ids']
+                                        if m not in hidden])
+            out.append(r)
+        return out
+
+    @classmethod
     def _geoshape_name_candidates(cls, limit=20):
         """지도 도형(GeoShape) 이름 후보 목록 — 위치 미해석 시 ask_user 제시용."""
         import json as _json
@@ -999,6 +1020,7 @@ class CommonToolsMixin:
         "(never by id), then call again with that candidate's 'use_name' or id. "
         "For a read you may instead answer for EACH candidate, labelled by 'where'.")
 
+    # @manual ai/overview#tool-arguments
     @classmethod
     def _read_place(cls, token, arg='zone_id'):
         """zone/site/facility 인자 → (GeoShape, None) 또는 (None, 오류 dict).
@@ -1045,6 +1067,7 @@ class CommonToolsMixin:
         return None, {"error": "No zone or site named '%s'." % token,
                       "available_targets": cls._geoshape_name_candidates()}
 
+    # @manual ai/overview#tool-arguments
     @classmethod
     def _read_plot(cls, token):
         """구획 인자 → (GeoPlot, None) 또는 (None, 오류 dict).
@@ -1095,6 +1118,7 @@ class CommonToolsMixin:
         return None, {"error": "No growing plot named '%s'." % token,
                       "growing_plots": names[:20]}
 
+    # @manual ai/overview#tool-arguments
     @classmethod
     def _read_device(cls, token, kinds=None, arg='device_id'):
         """장치 인자 → (row, kind, None) 또는 (None, None, 오류 dict).
@@ -1150,6 +1174,7 @@ class CommonToolsMixin:
                 ' or '.join(_a(k) for k in kinds))}
         return row, kind, None
 
+    # @manual ai/overview#tool-arguments
     @classmethod
     def _read_ambiguity(cls, token, candidates, message=None):
         return {"status": "needs_disambiguation", "error": "ambiguous_name",
@@ -1160,6 +1185,7 @@ class CommonToolsMixin:
                 "candidates": candidates,
                 "_reading": [cls._READ_AMBIGUOUS_READING]}
 
+    # @manual ai/overview#tool-arguments
     @classmethod
     def _targets_arg(cls, single, many, arg):
         """단수 인자와 복수 인자(목록)를 하나의 목록으로. (목록, 오류 dict|None).
@@ -1187,6 +1213,7 @@ class CommonToolsMixin:
             return tokens, {"error": "%s is required (unique_id or name)" % arg}
         return tokens, None
 
+    # @manual ai/overview#tool-arguments
     @classmethod
     def _for_each_target(cls, tokens, one):
         """대상마다 `one(token)` → {"count", "results": [...], "_reading"?}.

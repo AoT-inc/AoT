@@ -54,6 +54,7 @@ from aot.outputs.paired_actuator_bus_scheduler import (
     _Bus, get_bus, drop_member)  # noqa: F401
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Position deltas below this (percent) are treated as "already there".
 POSITION_EPSILON = 0.5
@@ -70,7 +71,7 @@ channels_dict = {0: {'types': ['value'], 'measurements': [0]}}
 # ─────────────────────────────────────────────────────────────────────────────
 OUTPUT_INFORMATION = {
     'output_name_unique': 'actuator_paired_bus',
-    'output_name': "{}: Actuator Paired (Shared Bus)".format(lazy_gettext('Value')),
+    'output_name': lazy_format("{}: Actuator Paired (Shared Bus)", lazy_gettext('Value')),
     'output_manufacturer': 'AoT',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,

@@ -14,6 +14,7 @@ class GeoDesignManager:
     Manages Geo Design Maps (Metadata & State).
     """
 
+    # @manual geo/api-reference#design-maps
     @staticmethod
     def get_design_map(map_uuid):
         """Get Map State by UUID"""
@@ -28,6 +29,7 @@ class GeoDesignManager:
             'state': geo_map.state_dict()
         }, None
 
+    # @manual geo/api-reference#design-maps
     @staticmethod
     def init_design_map(current_user_id):
         """
@@ -70,6 +72,20 @@ class GeoDesignManager:
         }, None
 
     @staticmethod
+    def _start_view():
+        """GeoSetting 의 기본 시작 위치 → 지도 state 의 center/zoom."""
+        setting = GeoSetting.query.first()
+        if not setting:
+            return {}
+        view = {}
+        if setting.default_lat is not None and setting.default_lng is not None:
+            view['center'] = {'lat': setting.default_lat, 'lng': setting.default_lng}
+        if setting.zoom is not None:
+            view['zoom'] = setting.zoom
+        return view
+
+    # @manual geo/design-tool#manual-save, geo/api-reference#design-maps
+    @staticmethod
     def save_design_map(data, current_user_id):
         """Create or Update GeoMap Metadata & State"""
         map_uuid = data.get('map_uuid')
@@ -91,7 +107,11 @@ class GeoDesignManager:
                 geo_map = GeoMap()
                 geo_map.created_by = current_user_id
                 geo_map.category = 'design' # [New] Set column
-                state_update['category'] = 'design' 
+                state_update['category'] = 'design'
+                # 새 지도는 설정한 기본 시작 위치에서 연다. 클라이언트가 보내는
+                # center/zoom 은 그 순간 화면이라(다른 지도를 보던 자리일 수 있다)
+                # 쓰지 않는다.
+                state_update.update(GeoDesignManager._start_view())
             
             if name:
                 geo_map.name = name
@@ -115,6 +135,7 @@ class GeoDesignManager:
             current_app.logger.error(f"Geo Design Save Error: {e}")
             return None, str(e)
 
+    # @manual geo/design-tool#deleting-a-map, geo/api-reference#design-maps
     @staticmethod
     def delete_design_map(map_uuid):
         """Delete GeoMap and everything under it (facilities, setpoints, shapes).

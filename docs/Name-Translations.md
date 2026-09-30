@@ -1,4 +1,4 @@
-Page\: `[Admin] -> Configure -> Name Translations`
+Page\: `Manage -> System Management -> Name Translations`
 
 AoT ships with the interface itself translated into more than a dozen languages, but the *names* on your farm — device names, zone names, crop names, dashboard titles, and so on — are things you typed in yourself. Nothing in the software can know in advance what to call them in every language. Name Translations is the settings page where AoT keeps (and lets you correct) the translations it has generated for those names, so that a farm built in Korean can still be read comfortably by someone who set their account to Japanese, or English, or any other supported language.
 

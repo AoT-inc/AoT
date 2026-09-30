@@ -35,6 +35,7 @@ from aot.databases.models import DeviceMeasurements, OutputChannel
 from aot.devices.modbus_client import ModbusLinkError, get_link
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -52,7 +53,7 @@ channels_dict = {
 
 OUTPUT_INFORMATION = {
     'output_name_unique': 'MODBUS_TCP_COIL',
-    'output_name': "{}: Modbus TCP Coil (PLC)".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Modbus TCP Coil (PLC)", lazy_gettext('On/Off')),
     'output_manufacturer': 'Modbus',
     'output_library': 'pymodbus',
     'measurements_dict': measurements_dict,
@@ -216,7 +217,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext(
                 'The current draw of the device being controlled')
         }

@@ -360,8 +360,17 @@ class TestDirectionReversalReseatsTheIntegral:
         state.prev_commands['cooler'] = 76.0
 
         # 2) 국면이 뒤집힌다 — 이제 VPD 를 올려야 한다(냉방은 반대 방향).
+        #    뒤집힌 방향은 확정(DRIVE_FLIP_MIN_*)될 때까지 제자리다 — 그동안에도
+        #    옛 적분이 명령을 **더 밀어서는** 안 된다.
+        from aot.functions.utils.env_control.log_channels import (
+            REASON_DIRECTION_UNSETTLED)
         s_up = _Situation(_TARGET, _DEVIATION)
-        cmds, state = coordinate(s_up, [self._cooler()], state, unique_id='t')
+        for _ in range(30):
+            cmds, state = coordinate(s_up, [self._cooler()], state, unique_id='t')
+            if cmds['cooler'].reason != REASON_DIRECTION_UNSETTLED:
+                break
+            assert cmds['cooler'].control_value() <= 76.0, (
+                '확정을 기다리는 동안 옛 적분이 명령을 밀었다')
         assert state.drive_sign['cooler'] == -1
         assert cmds['cooler'].control_value() < 76.0, (
             '방향이 뒤집혔는데 옛 적분이 명령을 계속 밀고 있다')
@@ -374,7 +383,8 @@ class TestDirectionReversalReseatsTheIntegral:
         state.integral['cooler'] = 90.0
         state.prev_commands['cooler'] = 60.0
         s_up = _Situation(_TARGET, _DEVIATION)
-        _, state = coordinate(s_up, [self._cooler()], state, unique_id='t')
+        for _ in range(30):
+            _, state = coordinate(s_up, [self._cooler()], state, unique_id='t')
         assert state.integral['cooler'] > 0.0, (
             '적분을 0 으로 지웠다 — 그것은 "완전히 닫아라" 라는 뜻이다')
 

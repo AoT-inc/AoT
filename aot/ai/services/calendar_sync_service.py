@@ -326,21 +326,25 @@ def _norm_name(s):
 
 def _resolve_activatable(name):
     """Resolve an Input/Conditional/Trigger/PID/CustomController by unique_id or
-    name (for activate/deactivate). Returns (unique_id, type_label, name) or None."""
+    name (for activate/deactivate). Returns (unique_id, type_label, name), or
+    None when nothing matches OR the name is ambiguous.
+
+    이름이 겹치면(로컬 서버에 활성/비활성 "Env Coordinator" 둘 — 실제 사례)
+    고르지 않는다 — 옛 코드는 다섯 테이블을 따로 `.first()` 로 짚어 이름이
+    겹치면 행 순서로 아무거나 하나를 집었고, 그마저 실패하면 부분일치까지
+    같은 방식으로 집었다(겹칠 확률이 더 높은데도). 여기서 고르지 못하면
+    `_build_imported_job` 이 "미해석" 사람 할일로 낮춰 만든다 — 조용히 틀린
+    쪽을 활성화하는 것보다 낫다."""
     if not name:
         return None
     try:
-        from sqlalchemy import or_
-        from aot.databases.models import Input
-        from aot.databases.models.function import Conditional, Trigger
-        from aot.databases.models.controller import CustomController
-        from aot.databases.models.pid import PID
-        for model, label in ((Conditional, 'Conditional'), (Trigger, 'Trigger'),
-                             (PID, 'PID'), (CustomController, 'Function'), (Input, 'Input')):
-            row = (model.query.filter(or_(model.unique_id == name, model.name == name)).first()
-                   or model.query.filter(model.name.ilike('%{}%'.format(name))).first())
-            if row is not None:
-                return (row.unique_id, label, row.name)
+        from aot.services.resolvers.function_resolver import resolve_function
+        match = resolve_function(name, include_input=True, allow_partial=True)
+        if match.error:
+            logger.warning("[CalendarSync] %s", match.error)
+            return None
+        if match.row is not None:
+            return (match.row.unique_id, match.kind, match.row.name)
     except Exception:
         pass
     return None
@@ -635,7 +639,6 @@ def _build_imported_job(connection, fields, event, start, end):
     Returns a SchedulerJobMeta (uncommitted) or None."""
     from aot.utils import calendar_event_format as fmt
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    from sqlalchemy import or_
 
     # --- Activate / deactivate an Input or controller ---
     for act_type in ('activate', 'deactivate'):
@@ -657,9 +660,14 @@ def _build_imported_job(connection, fields, event, start, end):
         pname = fields.get('pid')
         if pname:
             try:
-                from aot.databases.models import PID
-                pid = (PID.query.filter(or_(PID.unique_id == pname, PID.name == pname)).first()
-                       or PID.query.filter(PID.name.ilike('%{}%'.format(pname))).first())
+                # 이름이 겹치면(부분일치까지) 고르지 않는다 — 사람이 지켜보지
+                # 않는 시각에 실행되는 예약이라 잘못 고르면 알아채기 어렵다.
+                from aot.databases.models.pid import PID
+                from aot.services.resolvers.function_resolver import resolve_function
+                _m = resolve_function(pname, models=[(PID, 'PID')], allow_partial=True)
+                if _m.error:
+                    logger.warning("[CalendarSync] %s", _m.error)
+                pid = _m.row
             except Exception:
                 pid = None
         if pid is not None:
@@ -679,9 +687,18 @@ def _build_imported_job(connection, fields, event, start, end):
         fname = fields['function']
         fn = None
         try:
+            # 이름이 겹치면(부분일치까지) 고르지 않는다 — Conditional/Trigger/
+            # PID/CustomController/순수 Function(function_actions)을 함께 본다
+            # (로컬 서버에 이름이 같은 "Env Coordinator" 둘 — 실제 사례).
             from aot.databases.models import Function
-            fn = (Function.query.filter(or_(Function.unique_id == fname, Function.name == fname)).first()
-                  or Function.query.filter(Function.name.ilike('%{}%'.format(fname))).first())
+            from aot.services.resolvers.function_resolver import (
+                resolve_function, _default_models)
+            _m = resolve_function(
+                fname, models=list(_default_models()) + [(Function, 'Function')],
+                allow_partial=True)
+            if _m.error:
+                logger.warning("[CalendarSync] %s", _m.error)
+            fn = _m.row
         except Exception:
             fn = None
         if fn is not None:

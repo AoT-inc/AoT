@@ -38,6 +38,10 @@
 !/pyproject.toml
 !/LICENSE.txt
 !/CHANGELOG.md
+# 내부 작업 지침. **비공개 저장소(AoT-dev)에만** 추적한다 — 공개 저장소로는 나가지 않는다:
+# publish/gen_exclude.py 의 PRIVATE_STATE → exclude.txt, 그리고 공개 트리 검사
+# (check_origin_push_safety.py 의 PRIVATE_ONLY_PATHS)가 이중으로 막는다.
+!/CLAUDE.md
 !/requirements.txt
 
 # ==============================================================

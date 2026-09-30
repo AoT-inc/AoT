@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import pwd
+import shutil
 import signal
 import socket
 import subprocess
@@ -564,6 +565,74 @@ def epoch_of_next_time(time_str, tz=None):
             return new_time
     except:
         return None
+
+
+# raspi-config nonint get_* 이 돌려주는 값: 0 = 켜짐, 1 = 꺼짐 (종료 코드가 아니라 stdout).
+RASPI_CONFIG_GETTERS = {
+    'i2c_enabled': 'get_i2c',
+    'one_wire_enabled': 'get_onewire',
+    'serial_enabled': 'get_serial_hw',              # 직렬 하드웨어(UART)
+    'serial_console_enabled': 'get_serial_cons',    # 직렬 위 로그인 셸
+    'spi_enabled': 'get_spi',
+    'ssh_enabled': 'get_ssh',
+}
+
+
+def raspi_config_available():
+    """raspi-config 로 인터페이스를 다룰 수 있는 환경인가 (파이 네이티브 설치)."""
+    from aot.utils.system_environment import is_docker
+    return not is_docker() and shutil.which('raspi-config') is not None
+
+
+def _raspi_config_get(getter, timeout=10):
+    """raspi-config nonint <getter> 를 실행해 True/False/None(알 수 없음)을 돌려준다."""
+    try:
+        result = subprocess.run(
+            ['raspi-config', 'nonint', getter],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True, timeout=timeout)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    out = (result.stdout or '').strip()
+    if out == '0':
+        return True
+    if out == '1':
+        return False
+    return None
+
+
+def get_raspi_config_settings():
+    """/settings/pi 화면용 현재 상태.
+
+    raspi-config 가 없으면(Docker, 비 Pi) available=False 만 채워 돌려준다.
+    개별 값은 True/False, 읽지 못하면 None.
+    """
+    settings = {'available': raspi_config_available(),
+                'hostname': socket.gethostname()}
+    if not settings['available']:
+        return settings
+    for key, getter in RASPI_CONFIG_GETTERS.items():
+        settings[key] = _raspi_config_get(getter)
+    return settings
+
+
+PIGPIOD_STATE_FILES = (
+    ('low', 'pigpiod_low.service'),
+    ('high', 'pigpiod_high.service'),
+    ('disabled', 'pigpiod_disabled.service'),
+    ('uninstalled', 'pigpiod_uninstalled.service'),
+)
+
+
+def get_pigpiod_state(systemd_dir='/etc/systemd/system'):
+    """pigpiod 현재 상태: 'low'(1 ms) | 'high'(5 ms) | 'disabled' | 'uninstalled' | ''(알 수 없음).
+
+    upgrade_commands.sh 가 상태마다 systemd 디렉터리에 남기는 서비스 파일로 판정한다.
+    """
+    for state, filename in PIGPIOD_STATE_FILES:
+        if os.path.lexists(os.path.join(systemd_dir, filename)):
+            return state
+    return ''
 
 
 def cmd_output(command, stdout_pipe=True, shell=True, timeout=360, user='aot', cwd='/home'):

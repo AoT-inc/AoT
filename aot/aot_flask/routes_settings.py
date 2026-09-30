@@ -137,9 +137,11 @@ def settings_general():
 
         return redirect(url_for('routes_settings.settings_general'))
 
+    from aot.aot_flask.routes_mcp_auth import modal_context
     return render_template('settings/general.html',
                            form_settings_general=form_settings_general,
-                           report_path=os.path.normpath(USAGE_REPORTS_PATH))
+                           report_path=os.path.normpath(USAGE_REPORTS_PATH),
+                           mcp_auth=modal_context(flask_login.current_user))
 
 
 @blueprint.route('/settings/chirpstack', methods=('GET', 'POST'))
@@ -1002,13 +1004,17 @@ def settings_pi():
     except Exception:
         pi_settings = {}
 
+    from aot.utils.system_pi import get_pigpiod_state
+    pigpiod_state = get_pigpiod_state()
+
     if request.method == 'POST':
         if not utils_general.user_has_permission('edit_settings'):
             return redirect(url_for('routes_general.home'))
 
         form_name = request.form['form-name']
-        if form_name == "PiSettings":
-            messages = utils_settings.settings_pi_mod(form_settings_misc)
+        if form_name in ("Pi", "PiSettings"):
+            # settings_pi_mod 가 직접 flash 한다(반환값 없음).
+            utils_settings.settings_pi_mod(form_settings_misc)
         if form_name == "InitPigpiod":
             cmd = "echo \" $(</proc/sys/kernel/hostname): " \
                   "$(sudo systemctl start pigpiod && echo OK)\""
@@ -1037,6 +1043,8 @@ def settings_pi():
                            form_settings_pi=form_settings_misc,
                            sudo=utils_general.sudo_present(),
                            pi_settings=pi_settings,
+                           pigpiod_state=pigpiod_state,
+                           pigpiod_sample_rate=pigpiod_state,
                            pi_gpio_daemon_running=pi_gpio_daemon_running)
 
 

@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required
 from flask_babel import gettext
 from aot.databases.models import db, AIAgent, AIHistory, AIEntry, Misc, AITask, AIGlobalSettings, APIKey, MCPServer, GeoFacility
+from aot.utils.timekit import utc_now
 from aot.ai.services.ai_agent_service import AIAgentService
 from aot.ai.services.mcp_bridge_service import MCPBridgeService
 from aot.aot_flask.utils.utils_general import user_has_permission
@@ -120,6 +121,7 @@ def page_ai_agent():
                            ai_settings=AIGlobalSettings.query.first())
 
 
+# @manual ai/overview#ai-records
 @blueprint.route('/ai/manage', methods=['GET'])
 @login_required
 def page_ai_manage():
@@ -1558,6 +1560,7 @@ def api_update_ai_settings():
         # run on its own. Starting with no activated agent is refused, because
         # that is exactly the state that used to fill the log with
         # "No suitable AI agent found for summary generation." every cycle.
+        # @manual ai/overview#enable-and-start
         if 'ai_running' in data:
             from aot.ai.services import ai_runtime_state
             new_val = bool(data['ai_running'])
@@ -1565,7 +1568,7 @@ def api_update_ai_settings():
                 if not ai_settings.ai_enabled:
                     return jsonify({
                         "status": "error",
-                        "message": gettext("Enable the AI service in Settings > General first."),
+                        "message": gettext("Enable the AI service in Manage > System Management > General Settings first."),
                     }), 400
                 if ai_runtime_state.active_agent_count() <= 0:
                     return jsonify({
@@ -1573,6 +1576,7 @@ def api_update_ai_settings():
                         "message": gettext("Register and activate at least one AI model before starting the service."),
                     }), 400
             ai_settings.ai_running = new_val
+        # @manual-end
 
         # Multi-site default facility — lives on Misc (shared with the rest
         # of the app), not AIGlobalSettings. This is the fallback
@@ -1658,6 +1662,7 @@ def api_ai_devices():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+# @manual ai/overview#device-ai-toggle
 @blueprint.route('/api/v1/ai/devices/<device_id>/ai_toggle', methods=['POST'])
 @login_required
 def api_ai_device_toggle(device_id):

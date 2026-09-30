@@ -13,6 +13,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -32,7 +33,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'stepper_bipolar_generic',
-    'output_name': "{}: {}, {} ({}) (Pi <= 4)".format(lazy_gettext('Motor'), lazy_gettext('Stepper Motor'), lazy_gettext('Bipolar'), lazy_gettext('Generic')),
+    'output_name': lazy_format("{}: {}, {} ({}) (Pi <= 4)", lazy_gettext('Motor'), lazy_gettext('Stepper Motor'), lazy_gettext('Bipolar'), lazy_gettext('Generic')),
     'output_library': 'RPi.GPIO',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -93,9 +94,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Direction Pin',
-            'phrase': "{} {}".format(
-                'The Direction pin of the controller (BCM numbering).',
-                lazy_gettext('Set to None to disable.'))
+            'phrase': lazy_format("{} {}", 'The Direction pin of the controller (BCM numbering).', lazy_gettext('Set to None to disable.'))
         },
         {
             'id': 'pin_enable',
@@ -104,8 +103,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Enable Pin',
-            'phrase': 'The Enable pin of the controller (BCM numbering). {}'.format(
-                lazy_gettext('Set to None to disable.'))
+            'phrase': lazy_format('The Enable pin of the controller (BCM numbering). {}', lazy_gettext('Set to None to disable.'))
         },
         {
             'id': 'enable_mode',
@@ -156,8 +154,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Mode Pin 1',
-            'phrase': 'The Mode Pin 1 of the controller (BCM numbering). {}'.format(
-                lazy_gettext('Set to None to disable.'))
+            'phrase': lazy_format('The Mode Pin 1 of the controller (BCM numbering). {}', lazy_gettext('Set to None to disable.'))
         },
         {
             'id': 'pin_mode_2',
@@ -166,8 +163,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Mode Pin 2',
-            'phrase': 'The Mode Pin 2 of the controller (BCM numbering). {}'.format(
-                lazy_gettext('Set to None to disable.'))
+            'phrase': lazy_format('The Mode Pin 2 of the controller (BCM numbering). {}', lazy_gettext('Set to None to disable.'))
         },
         {
             'id': 'pin_mode_3',
@@ -176,8 +172,7 @@ OUTPUT_INFORMATION = {
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
             'name': 'Mode Pin 3',
-            'phrase': 'The Mode Pin 3 of the controller (BCM numbering). {}'.format(
-                lazy_gettext('Set to None to disable.'))
+            'phrase': lazy_format('The Mode Pin 3 of the controller (BCM numbering). {}', lazy_gettext('Set to None to disable.'))
         }
     ]
 }

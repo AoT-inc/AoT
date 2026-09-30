@@ -231,6 +231,7 @@ class GeoProgram(CRUDMixin, db.Model):
                 continue
         return total
 
+    # @manual geo/programs#creating-a-program
     def is_editable(self):
         """사람이 화면에서 고칠 수 있는가.
 

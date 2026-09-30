@@ -15,6 +15,7 @@ from typing import Optional
 from .types import EnvTarget, TargetVar
 
 
+# @manual ai/env-control#l1-envtarget-setpoint
 def build_env_target(
     T_target: float   = 24.0, T_tol: float   = 1.0, T_pri: float   = 1.0,
     RH_target: float  = 65.0, RH_tol: float  = 5.0, RH_pri: float  = 0.8,

@@ -14,6 +14,7 @@ CHANNELS = {
     7: {'name': 'Navigation Night', 'options': {'layer': 'mapbox/navigation-night-v1'}},
 }
 
+# @manual geo/layers#international-general, geo/layers#mapbox-maptiler
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_mapbox',
     'input_manufacturer': 'Mapbox',
@@ -84,6 +85,7 @@ class InputModule(AbstractGisInput):
         
         self.api_key = self.get_custom_option('api_key') or ''
 
+    # @manual geo/layers#mapbox-maptiler
     def _get_active_layer_id(self):
         active_channels = self.get_custom_option('active_channels')
         layer_id = 0
@@ -103,6 +105,7 @@ class InputModule(AbstractGisInput):
             return CHANNELS[layer_id]['options'].get('layer', 'mapbox/streets-v11')
         return 'mapbox/streets-v11'
 
+    # @manual geo/layers#mapbox-maptiler
     def get_url(self):
         layer = self._get_active_layer_id()
         self.api_key = self.get_custom_option('api_key') or ''

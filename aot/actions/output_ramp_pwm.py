@@ -11,10 +11,11 @@ from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.execution_context import run_in_thread
+from aot.utils.lazy_text import lazy_format, lazy_join
 
 ACTION_INFORMATION = {
     'name_unique': 'output_ramp_pwm',
-    'name': f"{TRANSLATIONS['output']['title']}: {TRANSLATIONS['ramp']['title']} {TRANSLATIONS['duty_cycle']['title']}",
+    'name': lazy_join(TRANSLATIONS['output']['title'], ': ', TRANSLATIONS['ramp']['title'], ' ', TRANSLATIONS['duty_cycle']['title']),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -47,7 +48,7 @@ ACTION_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{}: {}".format(lazy_gettext('Duty Cycle'), lazy_gettext('Start')),
+            'name': lazy_format("{}: {}", lazy_gettext('Duty Cycle'), lazy_gettext('Start')),
             'phrase': lazy_gettext('Duty cycle for the PWM (percent, 0.0 - 100.0)')
         },
         {
@@ -56,7 +57,7 @@ ACTION_INFORMATION = {
             'default_value': 50.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{}: {}".format(lazy_gettext('Duty Cycle'), lazy_gettext('End')),
+            'name': lazy_format("{}: {}", lazy_gettext('Duty Cycle'), lazy_gettext('End')),
             'phrase': lazy_gettext('Duty cycle for the PWM (percent, 0.0 - 100.0)')
         },
         {
@@ -65,7 +66,7 @@ ACTION_INFORMATION = {
             'default_value': 1.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Increment'), lazy_gettext('Duty Cycle')),
+            'name': lazy_format("{} ({})", lazy_gettext('Increment'), lazy_gettext('Duty Cycle')),
             'phrase': 'How much to change the duty cycle every Duration'
         },
         {
@@ -74,7 +75,7 @@ ACTION_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{} ({})".format(lazy_gettext('Duration'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Duration'), lazy_gettext('Seconds')),
             'phrase': 'How long to ramp from start to finish.'
         }
     ]

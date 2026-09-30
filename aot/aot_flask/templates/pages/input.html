@@ -208,10 +208,10 @@
   function popup_response(data) {
     if (data && data.data && data.data.messages) {
       const msgs = data.data.messages;
-      if (msgs.error && msgs.error.length) window.showToast('Error: ' + msgs.error.join(", "), 'error');
-      if (msgs.warning && msgs.warning.length) window.showToast('Warning: ' + msgs.warning.join(", "), 'warning');
-      if (msgs.info && msgs.info.length) window.showToast('Info: ' + msgs.info.join(", "), 'info');
-      if (msgs.success && msgs.success.length) window.showToast('Success: ' + msgs.success.join(", "), 'success');
+      if (msgs.error && msgs.error.length) window.showToast({{ _("Error:")|tojson }} + ' ' + msgs.error.join(", "), 'error');
+      if (msgs.warning && msgs.warning.length) window.showToast({{ _("Warning:")|tojson }} + ' ' + msgs.warning.join(", "), 'warning');
+      if (msgs.info && msgs.info.length) window.showToast({{ _("Info:")|tojson }} + ' ' + msgs.info.join(", "), 'info');
+      if (msgs.success && msgs.success.length) window.showToast({{ _("Success:")|tojson }} + ' ' + msgs.success.join(", "), 'success');
     }
   }
 
@@ -331,7 +331,7 @@
       action === 'save_action' ||
       action === 'delete_action' ||
       action.startsWith('custom_button_')) {
-      window.showToast('Command sent. Please wait...', 'info');
+      window.showToast({{ _("Command sent. Please wait...")|tojson }}, 'info');
       
       // Get current tab_id from URL
       const urlParams = new URLSearchParams(window.location.search);

@@ -36,6 +36,7 @@ from flask_babel import lazy_gettext
 logger = logging.getLogger(__name__)
 
 
+# @manual geo/plot-widget#remembering-your-place
 def execute_at_modification(mod_widget, request_form, custom_options_presave,
                             custom_options_postsave):
     """설정 폼 저장 — **선언하지 않은 값을 지우지 않는다.**
@@ -62,6 +63,7 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave,
     return True, True, mod_widget, final
 
 
+# @manual geo/plot-widget#remembering-your-place, geo/plot-widget#widget-settings
 def widget_variables(widget_unique_id, widget_options):
     """템플릿 변수 — 저장된 자리와 표시 토글.
 
@@ -685,6 +687,7 @@ WIDGET_BODY_HTML = """
 </script>
 """
 
+# @manual geo/plot-widget#adding-the-widget, geo/plot-widget#widget-settings
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_plot',
     'widget_name': lazy_gettext('AoT Plot'),
@@ -692,9 +695,9 @@ WIDGET_INFORMATION = {
     'no_class': True,
 
     'message': lazy_gettext(
-        'One plot at a glance: stage timeline, targets against current '
-        'readings, trends, and accumulated heat. Edit its schedule, guidance '
-        'and targets from here.'),
+        'Every plot that is growing now, as a list of cards. Open one to see '
+        'its stage timeline, targets against current readings, trends and '
+        'accumulated heat, and to edit its schedule, guidance and targets.'),
 
     # 폰에서 한 줄에 하나 — 반으로 접히면 탭 줄과 축이 뭉갠다.
     'mobile_full_width': True,
@@ -757,8 +760,9 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext(
                 'Current readings against the targets and limits this stage '
                 'declares — the same card the map widget shows, including '
-                'DLI and accumulated heat. [7 Days] turns each row into the '
-                'range it moved through over the last week.')
+                'DLI and accumulated heat. [Daily] and [Weekly] turn each row '
+                'into the range it moved through over the last 7 days or 8 '
+                'weeks.')
         },
         {
             'id': 'show_trend',

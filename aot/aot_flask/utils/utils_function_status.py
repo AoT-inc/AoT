@@ -19,6 +19,7 @@
 """
 
 from flask_babel import gettext as _
+from flask_babel import lazy_gettext as lg
 
 # 모드·액추에이터 종류·변수 이름 라벨.
 #
@@ -27,25 +28,25 @@ from flask_babel import gettext as _
 #   이미 쓰는 것과 **같은 msgid** 라 카탈로그에 번역이 들어 있다. 다르게
 #   적으면 같은 것을 가리키는 번역이 두 벌이 되고, 화면마다 다른 말이 나온다.
 _MODE_LABELS = {
-    'cooling': 'Cooling', 'heating': 'Heating', 'humidify': 'Humidify',
-    'dehumidify': 'Dehumidify', 'co2_enrich': 'CO2 Enrichment',
-    'conservation': 'Conservation', 'emergency': 'Emergency',
-    'degraded': 'Partial Control', 'natural': 'Natural Ventilation',
-    'unattainable': 'Target Unattainable',
+    'cooling': lg('Cooling'), 'heating': lg('Heating'), 'humidify': lg('Humidify'),
+    'dehumidify': lg('Dehumidify'), 'co2_enrich': lg('CO2 Enrichment'),
+    'conservation': lg('Conservation'), 'emergency': lg('Emergency'),
+    'degraded': lg('Partial Control'), 'natural': lg('Natural Ventilation'),
+    'unattainable': lg('Target Unattainable'),
 }
 
 _KIND_LABELS = {
-    'opening': 'Opening', 'curtain': 'Curtain', 'shade': 'Shade',
-    'heater': 'Heater', 'cooler': 'Cooler', 'fogger': 'Fogger',
-    'co2_injector': 'CO2 Injector', 'lighting': 'Lighting',
-    'circulation_fan': 'Circulation Fan', 'exhaust_fan': 'Exhaust Fan',
-    'intake_fan': 'Intake Fan',
+    'opening': lg('Opening'), 'curtain': lg('Curtain'), 'shade': lg('Shade'),
+    'heater': lg('Heater'), 'cooler': lg('Cooler'), 'fogger': lg('Fogger'),
+    'co2_injector': lg('CO2 Injector'), 'lighting': lg('Lighting'),
+    'circulation_fan': lg('Circulation Fan'), 'exhaust_fan': lg('Exhaust Fan'),
+    'intake_fan': lg('Intake Fan'),
 }
 
 _VAR_LABELS = {
-    'temperature': 'Temperature', 'humidity': 'Humidity',
-    'co2': 'CO2', 'vpd': 'Water (VPD)', 'water': 'Water (VPD)',
-    'light': 'Light Level',
+    'temperature': lg('Temperature'), 'humidity': lg('Humidity'),
+    'co2': lg('CO2'), 'vpd': lg('Water (VPD)'), 'water': lg('Water (VPD)'),
+    'light': lg('Light Level'),
 }
 
 
@@ -56,7 +57,7 @@ def _label(table, code):
     영어 코드가 그대로 보이는 편이 낫다 — 후자는 눈에 띄어 고쳐진다.
     """
     name = table.get(code)
-    return _(name) if name else str(code)
+    return str(name) if name is not None else str(code)
 
 
 def _num(value, digits=0):

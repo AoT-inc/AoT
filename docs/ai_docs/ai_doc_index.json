@@ -92,9 +92,9 @@
     "Shared ↔ per-day switch",
     "The settings modal always shows the current values",
     "Unified modal and time wheel",
-    "Integrated Environment Control - Nursery Mode",
+    "Integrated Environment Control - Sunburn/Evening Protection",
     "Why nursery seedlings need different handling",
-    "Nursery Mode Options",
+    "Sunburn/Evening Protection Options",
     "Pulsed dosing",
     "Notes",
     "When one device handles both irrigation and humidity"
@@ -128,7 +128,7 @@
     "Map visibility",
     "Photos and the gallery",
     "Turning a passage into a schedule",
-    "Searching and exporting",
+    "Searching",
     "Notes elsewhere in AoT",
     "AI and notes",
     "For developers",
@@ -175,6 +175,7 @@
     "Region-agnostic built-in sources",
     "Data credits",
     "Running the MCP Server",
+    "Central authentication (OAuth access tokens)",
     "Connecting a ChatGPT Custom GPT",
     "Connecting Claude Desktop",
     "Related Pages"
@@ -339,7 +340,7 @@
     "Sensor Roles",
     "Actuator Roles",
     "Integration View",
-    "Commissioning",
+    "Device Check",
     "AI Advice Panel",
     "Related API",
     "Related Pages"
@@ -377,7 +378,8 @@
     "Real-Time Refresh",
     "Map Tool Buttons",
     "Widget Settings",
-    "Basic",
+    "Map",
+    "Data Transfer Period",
     "Device Filter",
     "Measurement Panel",
     "Label Style",
@@ -1113,6 +1115,7 @@
   "System-Information.md": [],
   "Configuration-Settings.md": [
     "General Settings",
+    "AI Service",
     "Custom UI",
     "Time Series Database Settings",
     "Dashboard Settings",
@@ -1197,7 +1200,12 @@
     "What happens during an update",
     "Automatic updates",
     "Data",
-    "Backup-Restore"
+    "Backup-Restore",
+    "Backing up a Docker deployment",
+    "Measurements",
+    "Copying the volumes",
+    "Restoring from the copy",
+    "Test the restore before you need it"
   ],
   "Export-Import.md": [],
   "Error-Codes.md": [
@@ -1248,7 +1256,8 @@
     "Daemon Not Running",
     "Incorrect Database Version",
     "Restoring a Backup Without the UI",
-    "More on Diagnosing issues"
+    "More on Diagnosing issues",
+    "Troubleshooting on Docker"
   ],
   "Supported-Geo-Layers.md": [
     "Built-In Map Layers (System)",

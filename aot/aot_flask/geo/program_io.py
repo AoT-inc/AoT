@@ -55,6 +55,7 @@ def _resolve_tab_id(raw_tab_id):
     return tab_id, None
 
 
+# @manual geo/programs#stages
 def _clean_stages(stages, defs=None, rdefs=None):
     """단계 목록 검증·정규화 → (stages, error).
 
@@ -348,6 +349,7 @@ def _apply_default(entry, item, lo, hi):
     return None
 
 
+# @manual geo/programs#targets
 def _clean_targets(targets, defs):
     """단계 목표 검증 → (dict|None, error).
 
@@ -389,6 +391,7 @@ def _clean_targets(targets, defs):
 
 
 
+# @manual geo/programs#resources
 def _clean_resource_defs(defs):
     """자원 역할 정의 검증 → (list, error). `[{role, default}]`.
 
@@ -425,6 +428,7 @@ def _clean_resource_defs(defs):
     return out, None
 
 
+# @manual geo/programs#resources
 def _clean_stage_resources(value, rdefs):
     """단계의 자원 덮어쓰기 검증 → (dict|None, error). `{role: bool}`.
 
@@ -473,6 +477,7 @@ _PHOTO_FIELDS = {
 }
 
 
+# @manual geo/programs#fields
 def _check_photosynthesis(photo):
     """`photosynthesis` 값 검증 → error|None.
 
@@ -503,6 +508,7 @@ def _check_photosynthesis(photo):
 
 
 
+# @manual geo/programs#fields
 def _clean_target_methods(methods, defs=None):
     """목표 곡선 참조 검증 → (dict|None, error).
 
@@ -536,6 +542,7 @@ def _clean_target_methods(methods, defs=None):
     return (out or None), None
 
 
+# @manual geo/programs#fields
 def _apply_fields(row, data):
     """수정 가능한 필드만 반영 → 내용이 바뀌었으면 True.
 
@@ -629,6 +636,7 @@ def _apply_fields(row, data):
     return changed, None
 
 
+# @manual geo/programs#creating-a-program
 def create_program(data, source='user'):
     """새 프로그램 → (dict, error).
 
@@ -699,6 +707,7 @@ def create_program(data, source='user'):
     return to_dict(row), None
 
 
+# @manual geo/programs#creating-a-program
 def clone_program(program_uuid, data=None):
     """기존 프로그램을 **복제**해 내 것으로 만든다 → (dict, error).
 
@@ -720,6 +729,11 @@ def clone_program(program_uuid, data=None):
         # 정의를 함께 옮기지 않으면 사용자 항목이 사라지고, 그 값들이 고아가 되어
         # 복제 자체가 거절된다.
         'target_defs': data.get('target_defs') or src.target_def_list(),
+        # 자원 역할 선언도 같은 이유다 — 빠지면 단계의 자원 덮어쓰기가 고아가
+        # 되어 `_clean_stages` 가 복제를 거절한다. 빈 목록은 "자원 없음" 이라는
+        # 뜻이 있으므로 `or` 가 아니라 키 존재로 가른다(`update_program` 과 같다).
+        'resource_defs': (data['resource_defs'] if 'resource_defs' in data
+                          else src.resource_def_list()),
         'photosynthesis': data.get('photosynthesis') or src.photosynthesis,
         'targets_methods': data.get('targets_methods') or src.targets_methods,
         'notes': data.get('notes', src.notes),
@@ -740,6 +754,7 @@ _AI_CONTENT_FIELDS = ('stages', 'target_defs', 'targets_methods',
                       'photosynthesis')
 
 
+# @manual geo/programs#creating-a-program
 def update_program(program_uuid, data, by=None):
     """수정 → (dict, error). 내장·외부는 거절한다.
 

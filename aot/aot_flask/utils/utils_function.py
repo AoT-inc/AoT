@@ -34,6 +34,7 @@ from aot.utils.conditional import save_conditional_code
 from aot.utils.actions import parse_action_information
 from aot.utils.functions import parse_function_information
 from aot.utils.device_tz import apply_system_tz_fallback
+from aot.utils.device_tz import default_device_coords
 from aot.aot_flask.utils.utils_map_config import (
     ensure_map_config,
     delete_map_config,
@@ -87,6 +88,37 @@ def _existing_function_names():
         except Exception:
             logger.debug("이름 수집 실패: %s", table.__name__, exc_info=True)
     return names
+
+
+def duplicate_function_name_warning(name, exclude_id=None):
+    """저장하려는 이름이 함수 페이지의 **다른** 행과 겹치면 경고 문구, 아니면 None.
+
+    이름은 unique 제약이 없다 — 로컬 서버에 활성/비활성 "Env Coordinator"
+    가 실제로 둘 있었다(2026-09-25). AI 도구는 함수를 이름으로 찾을 때
+    이제 겹치면 고르지 않고 되묻지만([[function_resolver]]), 애초에 겹치는
+    이름이 왜 생겼는지는 여기다 — 저장을 막지는 않는다(같은 이름을 일부러
+    쓰는 경우도 있다), 다만 알린다.
+
+    `_existing_function_names()` 와 같은 다섯 모델을 본다. `exclude_id` 는
+    수정 중인 행 자신(unique_id) — 이름을 그대로 두고 저장할 때 스스로와
+    겹친다고 나오면 안 된다.
+    """
+    name = (name or '').strip()
+    if not name:
+        return None
+    for table in (Conditional, PID, Trigger, Function, CustomController):
+        try:
+            q = db.session.query(table.unique_id).filter(table.name == name)
+            if exclude_id:
+                q = q.filter(table.unique_id != exclude_id)
+            if db.session.query(q.exists()).scalar():
+                return _("Another function is already named '%(name)s'. Saving is "
+                         "still allowed, but AI tools that look functions up by "
+                         "name may pick the wrong one — consider a unique name."
+                         ) % {'name': name}
+        except Exception:
+            logger.debug("이름 중복 확인 실패: %s", table.__name__, exc_info=True)
+    return None
 
 
 def function_add(form_add_func, tab_id=None):
@@ -143,6 +175,7 @@ def function_add(form_add_func, tab_id=None):
         if function_name == 'conditional_conditional':
             new_func = Conditional()
             new_func.position_y = _get_next_position_y()
+            new_func.name = gettext('Conditional')
             
             # Assign tab_id
             if tab_id:
@@ -196,8 +229,7 @@ return status_dict'''
             try:
                 misc = Misc.query.first()
                 if misc:
-                    new_func.latitude = misc.map_latitude
-                    new_func.longitude = misc.map_longitude
+                    new_func.latitude, new_func.longitude = default_device_coords(misc)
                     apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
@@ -236,8 +268,7 @@ return status_dict'''
             try:
                 misc = Misc.query.first()
                 if misc:
-                    new_func.latitude = misc.map_latitude
-                    new_func.longitude = misc.map_longitude
+                    new_func.latitude, new_func.longitude = default_device_coords(misc)
                     apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
@@ -274,6 +305,20 @@ return status_dict'''
             new_func.trigger_type = function_name
             new_func.position_y = _get_next_position_y()
 
+            if function_name == 'trigger_sequence':
+                # time_offset_minutes 는 트리거 타입마다 뜻이 다른 공유
+                # 컬럼이다 — 일출/일몰 트리거에선 오프셋(분)이라 0 이 정상값
+                # 이지만, 시퀀스에선 "입력 유효성"(초)이고 0 은 "신선도 제한
+                # 없음" 을 뜻해 동적 동작 시간 참조가 InfluxDB 에서 아무리
+                # 오래된 값이든 그대로 받아들인다(controller_trigger_
+                # sequence.py 의 get_dynamic_duration 참고). 컬럼의 공유
+                # 기본값(0)은 다른 트리거 타입 때문에 바꿀 수 없으니, 시퀀스를
+                # 만들 때만 명시적으로 안전한 기본값을 넣는다 — 화면(설정
+                # 모달·위젯)이 처음부터 보여주는 300 과 실제 저장값을 맞춘다
+                # (2026-09-25: 전에는 컬럼 기본값 0 이 그대로 남아, 화면엔
+                # 300 처럼 보여도 실제로는 신선도 제한이 꺼져 있었다).
+                new_func.time_offset_minutes = 300
+
             # Assign tab_id
             if tab_id:
                 new_func.tab_id = tab_id
@@ -287,8 +332,7 @@ return status_dict'''
             try:
                 misc = Misc.query.first()
                 if misc:
-                    new_func.latitude = misc.map_latitude
-                    new_func.longitude = misc.map_longitude
+                    new_func.latitude, new_func.longitude = default_device_coords(misc)
                     apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
@@ -315,8 +359,7 @@ return status_dict'''
             try:
                 misc = Misc.query.first()
                 if misc:
-                    new_func.latitude = misc.map_latitude
-                    new_func.longitude = misc.map_longitude
+                    new_func.latitude, new_func.longitude = default_device_coords(misc)
                     apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
@@ -349,8 +392,7 @@ return status_dict'''
             try:
                 misc = Misc.query.first()
                 if misc:
-                    new_func.latitude = misc.map_latitude
-                    new_func.longitude = misc.map_longitude
+                    new_func.latitude, new_func.longitude = default_device_coords(misc)
                     apply_system_tz_fallback(new_func, misc.timezone)
             except Exception:
                 pass
@@ -446,7 +488,7 @@ return status_dict'''
 
                         new_channel.save()
 
-            messages["success"].append(f"{TRANSLATIONS['add']['title']} {TRANSLATIONS['function']['title']}")
+            messages["success"].append(gettext("Function added"))
 
     except sqlalchemy.exc.OperationalError as except_msg:
         messages["error"].append(str(except_msg))
@@ -541,9 +583,13 @@ def function_mod(form):
     try:
         func_mod = Function.query.filter(
             Function.unique_id == form.function_id.data).first()
-        
+
         func_mod.name = form.name.data
         messages["name"] = form.name.data
+        dup_warning = duplicate_function_name_warning(
+            form.name.data, exclude_id=func_mod.unique_id)
+        if dup_warning:
+            messages["warning"].append(dup_warning)
 
         new_tab_id = request.form.get('tab_id')
         if new_tab_id and new_tab_id != func_mod.tab_id:
@@ -582,7 +628,7 @@ def function_mod(form):
 
         if not messages["error"]:
             db.session.commit()
-            messages["success"].append(f"{TRANSLATIONS['modify']['title']} {TRANSLATIONS['function']['title']}")
+            messages["success"].append(gettext("Function modified"))
             page_refresh = True
             if messages.get("name"):
                 sync_geo_device_name(func_mod.unique_id, func_mod.name)
@@ -642,7 +688,7 @@ def function_del(function_id):
         end_all_for_device(function_id)
         delete_entry_with_id(Function, function_id, flash_message=False)
 
-        messages["success"].append(f"{TRANSLATIONS['delete']['title']} {TRANSLATIONS['function']['title']}")
+        messages["success"].append(gettext("Function deleted"))
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 
@@ -688,7 +734,7 @@ def action_execute_all(form):
                 }
             )
             trigger_all_actions.start()
-            messages["success"].append(f"{gettext('Execute All')} {function_type} {TRANSLATIONS['actions']['title']}")
+            messages["success"].append(gettext("All actions executed"))
         except Exception as except_msg:
             messages["error"].append(str(except_msg))
 
@@ -760,7 +806,7 @@ def function_duplicate(form):
             if new_func:
                 new_function_id = new_func.unique_id
                 messages["success"].append(
-                    f"{TRANSLATIONS['duplicate']['title']} {TRANSLATIONS['function']['title']}")
+                    gettext("Function duplicated"))
         else:
             messages["error"].append(gettext("Function not found"))
 

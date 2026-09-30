@@ -158,6 +158,24 @@
 }
 
 .aot-action-field-select { max-width: 240px; }
+
+/* 고른 이름이 길면 칸 밖으로 흘러 옆 칸 위에 겹쳤다 — 칸 안에서 자른다.
+   ▼ 는 `.filter-option::after`(right:12px · 폭 8px)로 그려져 오른쪽 20px 을
+   차지한다. 공용 규칙은 그 자리를 버튼 padding-right 32px 로 비워 두는데
+   이 칸은 `fit-width` 라 버튼이 글자 폭으로 줄고 padding-right 도 12px 뿐이어서
+   ▼ 가 글자 끝을 덮었다("켜기"→"켜거▼"). 글자 뒤에 ▼ 자리(24px)를 둔다.
+   줄임표는 버튼이 아니라 안쪽 라벨이 받으므로(aot-select.css) 길면 ▼ 앞에서 끝난다. */
+.aot-action-field-select.bootstrap-select > .dropdown-toggle {
+  overflow: hidden;
+  padding-right: 24px;
+}
+
+/* `fit-width` 는 안쪽 라벨을 inline 으로 돌려 놓는데, inline 에는 text-overflow
+   가 듣지 않아 긴 이름이 `…` 없이 뚝 잘렸다 — 라벨을 block 으로 되돌린다. */
+.bootstrap-select.aot-action-field-select.fit-width > .dropdown-toggle .filter-option-inner,
+.bootstrap-select.aot-action-field-select.fit-width > .dropdown-toggle .filter-option-inner-inner {
+  display: block;
+}
 .aot-action-field-input { max-width: 100px; }
 
 /* 켜고 끄는 옵션은 이름과 체크가 한 상자에 든다. */

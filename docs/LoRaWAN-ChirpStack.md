@@ -4,7 +4,7 @@ AoT connects to LoRaWAN devices through a **ChirpStack v4** network server. Upli
 over the ChirpStack MQTT broker and become Input measurements; downlinks are queued through
 the ChirpStack API by an Output. Both modules are built in.
 
-The connection is configured once under **Settings → ChirpStack**, and from that same page
+The connection is configured once under **Manage → System Management → ChirpStack**, and from that same page
 you select devices already registered in ChirpStack and register them in AoT as Inputs and
 Outputs without retyping DevEUIs and keys.
 
@@ -28,7 +28,7 @@ bring it into AoT. If a device has never joined, nothing in AoT will make it app
 ### 1. Store the API key { #api-key }
 
 The ChirpStack API key is **not typed on the ChirpStack page**. It is stored in the key
-store under **Settings → API Key Management**, and the ChirpStack page only selects which
+store under **Manage → System Management → API Key Management**, and the ChirpStack page only selects which
 stored key to use. Add a key there first:
 
 | Field | Notes |
@@ -47,7 +47,7 @@ this and falls back to listing applications with no tenant filter, so such a key
 
 ### 2. Fill in the connection { #connection-fields }
 
-Go to **Settings → ChirpStack**:
+Go to **Manage → System Management → ChirpStack**:
 
 | Field | Notes |
 |---|---|
@@ -219,7 +219,7 @@ and status frames. Consequences:
   a probe, with no retransmission burst, so an absent device cannot pull the whole site's
   downlink budget. A single confirmation brings it back to normal.
 
-The broker used by this listener is read live from **Settings → ChirpStack**, so if uplinks
+The broker used by this listener is read live from **Manage → System Management → ChirpStack**, so if uplinks
 work for Inputs but confirmations never arrive, the broker is not usually the cause.
 
 ## Downlink pacing { #pacing }

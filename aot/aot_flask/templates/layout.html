@@ -305,6 +305,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
        끈 경우에만 CDN 을 사용한다. -->
   {# 버전은 `maplibre_version` 하나에서만 온다 — 반입 디렉터리가 정한다.
      `static/vendor/maplibre-gl-<버전>/` 을 바꿔 끼우면 로컬·CDN 두 갈래가 함께 따라온다. #}
+  {# @manual geo/settings#performance-rendering #}
   {% if map_global_providers and map_global_providers.get('maplibre_local_serving') == false %}
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{{ maplibre_version }}/dist/maplibre-gl.css" />
   <script src="https://unpkg.com/maplibre-gl@{{ maplibre_version }}/dist/maplibre-gl.js"></script>
@@ -312,6 +313,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/' + maplibre_vendor_dir + '/maplibre-gl.css') }}" />
   <script src="{{ url_for('static', filename='vendor/' + maplibre_vendor_dir + '/maplibre-gl.js') }}"></script>
   {% endif %}
+  {# @manual-end #}
 
   <!-- map-shim 번들 — maplibre-gl 직후.
        · aot-maplibre-patches      MapLibre 호환 패치(멱등). 지연/온디맨드 로드에서도 재호출 가능.
@@ -552,14 +554,15 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
 
   {% block head %}{% endblock %}
 
-  <title>
-    {% if settings.title_display == 'hostname' %}
-    {{ host }}
-    {% elif settings.title_display == 'brand_text' %}
-    {{ settings.hostname_override }}
-    {% endif %}
-    {% block title %}{% endblock %} - AoT {{ aot_version }}
-  </title>
+  {#- 제목 앞머리: 브랜드 텍스트(hostname_override)가 있으면 그것, 없으면 호스트 이름.
+      컨테이너 안의 무작위 ID 는 host 가 비어 있으므로 앞머리 없이 페이지 제목만 나온다. #}
+  {%- if settings.title_display == 'hostname' %}{% set _title_prefix = settings.hostname_override or host %}
+  {%- elif settings.title_display == 'brand_text' %}{% set _title_prefix = settings.hostname_override %}
+  {%- else %}{% set _title_prefix = '' %}{% endif %}
+  {%- set _page_title %}{% block title %}{% endblock %}{% endset %}
+  {%- set _page_title = _page_title|trim %}
+  {%- if not _title_prefix and _page_title.startswith('- ') %}{% set _page_title = _page_title[2:] %}{% endif %}
+  <title>{{ (_title_prefix ~ ' ') if _title_prefix }}{{ _page_title }}{{ ' - ' if (_page_title or _title_prefix) }}AoT {{ aot_version }}</title>
 
   <!-- Daemon status check script -->
   <script type="text/javascript">
@@ -758,7 +761,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             {% for each_dash in dashboards %}
             <a class="dropdown-item {% if each_dash.unique_id == dashboard_id %} active{% endif %}"
               href="/dashboard/{{ each_dash.unique_id }}">
-              {{ each_dash.name }}
+              {{ _(each_dash.name) }}
             </a>
             <div class="dropdown-divider"></div>
             {% endfor %}
@@ -1119,7 +1122,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
             <div class="aot-modal-option-row">
               <div class="aot-modal-option-label">{{ _('Google Account') }}</div>
               <div class="aot-modal-body-text text-right">
-                {{ _("Not configured on this server yet — ask an administrator to set it up under Settings > Integrations.") }}
+                {{ _("Not configured on this server yet — ask an administrator to set it up under Manage > System Management > Integrations.") }}
               </div>
             </div>
             {% elif google_connection and google_connection.is_active %}
@@ -1196,7 +1199,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
     <div class="modal-dialog modal-lg aot-modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">{{ _('Dashboard Settings') }}{% if each_dash.name %}: {{ each_dash.name }}{% endif %}</h5>
+          <h5 class="modal-title">{{ _('Dashboard Settings') }}{% if each_dash.name %}: {{ _(each_dash.name) }}{% endif %}</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -1210,7 +1213,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
               <div class="aot-modal-option-row">
                 <label class="aot-modal-option-label">{{ form_dashboard.name.label(class_='mb-0') }}</label>
                 <div class="aot-modal-option-control">
-                  {{ form_dashboard.name(class_='form-control aot-modern-input', value=each_dash.name, **{'title': dict_translation['name']['phrase']}) }}
+                  {{ form_dashboard.name(class_='form-control aot-modern-input', value=_(each_dash.name), **{'title': dict_translation['name']['phrase']}) }}
                 </div>
               </div>
             </div>
@@ -1311,7 +1314,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
           if (!d || !d.success) return;
           if (!d.groups.length) {
             $groups.html('<div class="aot-modal-body-text">'
-              + {{ _("No groups yet. Create one in Settings > Users > Groups.")|tojson }} + '</div>');
+              + {{ _("No groups yet. Create one in Manage > System Management > Users > Groups.")|tojson }} + '</div>');
             $sec.show();
             return;   // 그룹이 없으면 표식도 넣지 않는다 — 지울 부여가 없다
           }

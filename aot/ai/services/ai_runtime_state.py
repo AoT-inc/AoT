@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual ai/overview#enable-and-start
 """
 AI 런타임 상태 판정 — "지금 AI 가 스스로 돌아도 되는가" 의 유일한 정본.
 

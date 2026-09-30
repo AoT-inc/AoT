@@ -213,6 +213,7 @@ def vent_reachable_pct(caps: Dict[str, VentCap], blocked=()) -> float:
     return min(100.0, 100.0 * max(o, f) / C)
 
 
+# @manual ai/env-control#settings-calibration
 def distribute_vent(u: float, caps: Dict[str, VentCap], indoor_hotter: bool,
                     blocked=()) -> Dict[str, float]:
     """vent 채널 값 u(%) → 장치별 개도. `vent_channel_value` 의 역이다.

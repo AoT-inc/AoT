@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual ai/overview#data-credits
 """
 source_attribution.py — 출처 표시 의무를 조회 응답에 싣는다.
 

@@ -10,6 +10,7 @@ from aot.outputs.base_output import AbstractOutput
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -57,7 +58,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'mcp4728',
-    'output_name': "{}: MCP4728".format(lazy_gettext('Digital-to-Analog Converter')),
+    'output_name': lazy_format("{}: MCP4728", lazy_gettext('Digital-to-Analog Converter')),
     'output_manufacturer': 'MICROCHIP',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,

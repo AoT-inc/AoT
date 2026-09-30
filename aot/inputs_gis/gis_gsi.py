@@ -10,6 +10,7 @@ CHANNELS = {
     3: {'name': 'Photo', 'options': {'layer': 'ort', 'ext': 'jpg'}},
 }
 
+# @manual geo/layers#specialized-data
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_gsi',
     'input_manufacturer': 'GSI',

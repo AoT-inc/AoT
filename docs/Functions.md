@@ -1,4 +1,4 @@
-Page: `Setup -> Function`
+Page: `Settings -> Function`
 
 For a full list of supported functions, see [Supported Functions](Supported-Functions.md).
 
@@ -14,7 +14,7 @@ and Custom Functions. The search box matches both the displayed name and the mod
 
 ## Custom Functions
 
-AoT has a custom function import system that lets user-created functions be used within the AoT system. Custom functions can be uploaded on the `[Gear Icon] -> Configure -> Custom Functions` page. Once imported, they become available on the `Setup -> Function` page.
+AoT has a custom function import system that lets user-created functions be used within the AoT system. Custom functions can be uploaded on the `Manage -> System Management -> User Function` page. Once imported, they become available on the `Settings -> Function` page.
 
 If you have developed a working function module, consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. The module may be included in the built-in set.
 
@@ -24,7 +24,7 @@ Additionally, the directory [AoT/aot/functions/examples](https://github.com/AoT-
 
 Another GitHub repository dedicated to custom modules not included in the built-in set can be found at [aot-inc/AoT-custom](https://github.com/AoT-inc/AoT-custom).
 
-For functions that require a new measurement/unit, you can add them on the `[Gear Icon] -> Configure -> Measurements` page.
+For functions that require a new measurement/unit, you can add them on the `Manage -> System Management -> Measurement` page.
 
 ## PID Controller
 
@@ -205,7 +205,7 @@ Use the same configuration as the [Exact Temperature Regulation](#exact-temperat
 !!! warning
     This feature is experimental. It is recommended to use it after you are familiar with the theory, operation, and tuning of PIDs.
 
-The autotune feature is a standalone controller useful for determining appropriate Kp, Ki, and Kd gains to use in a PID controller. The autotuner manipulates an output and analyzes the measured response of a particular environment/system. To gather enough data to calculate the PID gains, the system must be disturbed several times with the selected output. To use this feature, select a measurement and an output that can adjust the specific measured condition. Then configure the noise band and output step and activate the feature. The autotuner's log appears in the daemon log (`[Gear Icon] -> AoT Logs -> Daemon Log`). While autotuning is being performed, it is recommended to create a dashboard graph including the measurement and output. This lets you see what the PID autotuner is doing and any problems that may arise from the configured autotune settings. If autotuning takes a long time to complete, the system being manipulated may not have enough stability to calculate a reliable set of PID gains. This may be the case when there is too much disturbance in the system or the conditions change too quickly to obtain consistent measurement oscillation. In that case, try modifying the system to increase stability and produce consistent measurement oscillation. Once autotuning completes successfully, further tuning can be performed by reintroducing disturbances so that the PID controller can handle them.
+The autotune feature is a standalone controller useful for determining appropriate Kp, Ki, and Kd gains to use in a PID controller. The autotuner manipulates an output and analyzes the measured response of a particular environment/system. To gather enough data to calculate the PID gains, the system must be disturbed several times with the selected output. To use this feature, select a measurement and an output that can adjust the specific measured condition. Then configure the noise band and output step and activate the feature. The autotuner's log appears in the daemon log (`Manage -> System Log -> Daemon Log`). While autotuning is being performed, it is recommended to create a dashboard graph including the measurement and output. This lets you see what the PID autotuner is doing and any problems that may arise from the configured autotune settings. If autotuning takes a long time to complete, the system being manipulated may not have enough stability to calculate a reliable set of PID gains. This may be the case when there is too much disturbance in the system or the conditions change too quickly to obtain consistent measurement oscillation. In that case, try modifying the system to increase stability and produce consistent measurement oscillation. Once autotuning completes successfully, further tuning can be performed by reintroducing disturbances so that the PID controller can handle them.
 
 <table>
 <thead>
@@ -390,6 +390,10 @@ Conditional functions are used to perform tasks ranging from simple to complex b
 <td>The period (in seconds) at which `Run Python Code` runs.</td>
 </tr>
 <tr>
+<td>Refractory Period (seconds)</td>
+<td>After `self.run_action()` or `self.run_all_actions()` fires, suppress further firing from this Conditional for this many seconds. Several calls made within the same `Run Python Code` execution (for example, turning on a device and sending an email for the same alert) are never suppressed against each other — only a later `Period` tick that falls inside the refractory window is. Set to 0 (the default) to disable. The countdown is saved to the database, so it survives a daemon restart. Use this instead of a manual "self" latch (see Example 7 below) when the only goal is to stop an alert from resending every `Period` while the condition remains true.</td>
+</tr>
+<tr>
 <td>Start Offset (seconds)</td>
 <td>The time (in seconds) to wait after the conditional function is activated before it first runs.</td>
 </tr>
@@ -522,6 +526,9 @@ if measurement is not None:
     self.stored_measurement = measurement  # Store the measurement
 ```
 
+!!! tip
+    If the only goal is to stop an alert from resending every `Period` while a condition stays true, use the `Refractory Period` option (above) instead of a manual `self` latch like Example 7 — it needs no code and its countdown survives a daemon restart.
+
 The "Measurement (Multiple)" condition is useful when you want to check whether a particular value occurred in the past within the configured Max Age, not just the last measurement. This can be used, in an alert system where each numeric value represents a different alert to check, to verify whether a particular value occurred among the past values. Below is an example that retrieves all measurements from the past 30 minutes (Max Age: 1800 seconds) and checks whether a value such as "119" exists in the returned list. If "119" exists, an action runs and `break` exits the `for` loop.
 
 ```python
@@ -595,7 +602,7 @@ If an action is a type that receives a message (E-Mail or Note), you can modify 
 ```python
 # Example 1
 measurement = self.measure("asdf1234")
-if measurement is None and measurement > 23:
+if measurement is not None and measurement > 23:
     self.message += "The measurement is {}".format(measurement)
     self.run_action("uiop5678", message=self.message)
 
@@ -614,7 +621,7 @@ Logging can also be used to record messages to the daemon log using `self.logger
 ```python
 # Example 1
 measurement = self.measure("asdf1234")
-if measurement is None and measurement > 23:
+if measurement is not None and measurement > 23:
     self.logger.error("Warning, the measurement is {}".format(measurement))
     self.message += "The measurement is {}".format(measurement)
     self.run_action("uiop5678", message=self.message)
@@ -944,7 +951,7 @@ If the margins are larger than the cycle itself — leaving the pump no time to 
 
 - **Dynamic Duration**: Via the `action_duration_id` option, the measurement of a particular Input can be used as the run time.
     - Format: `Input_UUID` or `Input_UUID,Measurement_UUID`.
-    - Validity: Only the latest measurement within `time_offset_minutes` is used; if none exists, the configured base `action_duration` is used.
+    - Validity: Only the latest measurement within `time_offset_minutes` (shown in the UI as **Input Validity (seconds)**) is used; if none exists, the configured base `action_duration` is used.
 - **Overlaps**: The `output_duration` setting determines the transition time between steps. The first action has only a `Tail Overlap`, middle actions have both `Head & Tail Overlap`, and the last action has only a `Head Overlap`.
 - **Constraints (Window & Latency)**:
     - **Execution Window**: The sequence starts or runs only between `timer_start_time` and `timer_end_time`. Outside this range it is forcibly terminated.
@@ -957,7 +964,7 @@ If the margins are larger than the cycle itself — leaving the pump no time to 
 | `period` | The repeat period of the entire sequence cycle (in seconds). |
 | `output_duration` | The overlap time between actions (in seconds). |
 | `timer_start_offset` | The delay from activation to sequence start. |
-| `time_offset_minutes` | The maximum validity age of a dynamic-duration measurement (in minutes). |
+| `time_offset_minutes` | The maximum validity age of a dynamic-duration measurement (in seconds, despite the field name — labeled **Input Validity (seconds)** in the UI). |
 | `enabled` | Whether an individual action is enabled. |
 | `sequence_mode` | Select 'single' or 'total'. |
 | `total_lead` | (Total mode only) Switch on this many seconds after the sequence begins. Default 0. |
@@ -1115,9 +1122,9 @@ Time, group, name, and weekday schedule are edited from a **single unified modal
 - Start and end times are entered with the **time wheel** component, so you can pick hours:minutes accurately even on mobile.
 - The legacy start/end/weekday columns are automatically synchronized when the schedule is saved (backward compatibility), so representative values are preserved even in older views that do not use the schedule.
 
-## Integrated Environment Control - Nursery Mode { #nursery-mode }
+## Integrated Environment Control - Sunburn/Evening Protection { #nursery-mode }
 
-The Integrated Environment Control function coordinates every registered actuator against a VPD target. This section covers the Nursery Mode options only; the remaining options are described in the function's own settings page.
+The Integrated Environment Control function coordinates every registered actuator against a VPD target. This section covers only the **Enable Sunburn/Evening Protection** toggle in the **Heating, Cooling and Misting** group of the settings screen, and the options that go with it; the remaining options are described on the [Integrated Environment Control](ai/env-control.md#settings-hvac) page. This toggle is what older screens called "Nursery (Seedling) Mode".
 
 ### Why nursery seedlings need different handling
 
@@ -1125,9 +1132,9 @@ Misting is the fastest way to bring VPD down, because it lowers temperature and 
 
 The difficulty is that VPD peaks at the same time the sun does. On a mature crop that is fine — the leaves tolerate being wet and the evaporative cooling is welcome. A seedling that has just pushed through the substrate has no cuticle yet, so a droplet left on a cotyledon in full sun focuses light onto the leaf and concentrates dissolved minerals as it dries. The leaf scorches.
 
-Nursery Mode does not change the VPD target. It changes which actuators are allowed to reach it, pushing misting down the list while the sun is high so that shading and ventilation are used first.
+Sunburn/evening protection does not change the VPD target. It changes which actuators are allowed to reach it, pushing misting down the list while the sun is high so that shading and ventilation are used first.
 
-### Nursery Mode Options
+### Sunburn/Evening Protection Options
 
 <table>
 <thead>
@@ -1138,24 +1145,12 @@ Nursery Mode does not change the VPD target. It changes which actuators are allo
 </thead>
 <tbody>
 <tr>
-<td>Nursery (Seedling) Mode</td>
-<td>Enables the protections below. Whether a nozzle counts as the wetting type is decided from the nozzle layout in the facility design (flow rate, spray radius, spray direction), so no nozzle specification is entered here. Drip lines and true high-pressure fog are left alone.</td>
+<td>Enable Sunburn/Evening Protection</td>
+<td>Off by default. Blocks wetting-type misting in strong light and, if set below, before sunset. It is independent of how often misting runs (<strong>Misting Frequency</strong>), so it can be turned on or off at any frequency. Whether a nozzle counts as the wetting type is decided from the nozzle layout in the facility design (flow rate, spray radius, spray direction), so no nozzle specification is entered here. Drip lines and true high-pressure fog are left alone.</td>
 </tr>
 <tr>
-<td>Misting Lockout Irradiance (W/m²)</td>
-<td>Wetting-type misting is blocked outright at or above this indoor light level. The estimated indoor level is used, so closing the shade screen relaxes the lockout.</td>
-</tr>
-<tr>
-<td>Misting Release Irradiance (W/m²)</td>
-<td>Misting is released again once the light falls below this level, and is tapered linearly between here and the lockout threshold. The gap between the two prevents the mist from switching on and off as clouds pass.</td>
-</tr>
-<tr>
-<td>Max Spray Duration (s)</td>
-<td>Longest single spray. Humidification is regulated by how often it sprays, not by how long — the same way irrigation doses a fixed amount at intervals.</td>
-</tr>
-<tr>
-<td>Enforced Drying Interval (s)</td>
-<td>No spraying at all for this long after one finishes, so the leaves get a chance to dry.</td>
+<td>Misting by Sunlight Level (W/m²)</td>
+<td>A band with two handles (default 150–250). Wetting-type misting is blocked outright at or above the upper handle (<strong>Misting Lockout Irradiance</strong>), released again once the light falls below the lower handle (<strong>Misting Release Irradiance</strong>), and tapered linearly in between. The gap between the two prevents the mist from switching on and off as clouds pass. The estimated indoor level is used, so closing the shade screen relaxes the lockout. Turning on [Advanced] also shows both values as number fields.</td>
 </tr>
 <tr>
 <td>Allow Misting Before Sunset</td>
@@ -1163,24 +1158,24 @@ Nursery Mode does not change the VPD target. It changes which actuators are allo
 </tr>
 <tr>
 <td>Stop Misting Before Sunset (min)</td>
-<td>How long before sunset misting stops, when the option above is off. Misting stays blocked until the next sunrise. Two hours is usually enough for the leaves to dry before dark. Sunset is derived from the facility's position on the map; if no coordinates can be resolved, misting is not blocked.</td>
+<td>How long before sunset misting stops, when the option above is off (default 120 min). Misting stays blocked until the next sunrise. Two hours is usually enough for the leaves to dry before dark. Sunset is derived from the facility's position on the map; if no coordinates can be resolved, misting is not blocked.</td>
 </tr>
 <tr>
 <td>Misting Water Source</td>
-<td>Untreated groundwater is usually hard and cold, so droplets leave concentrated mineral deposits as they dry and can cold-shock a sunlit leaf. Selecting it lowers the lockout threshold automatically.</td>
+<td>Choose Groundwater (untreated), Treated (RO, softened, filtered) or Rainwater (default Groundwater (untreated)). Untreated groundwater is usually hard and cold, so droplets leave concentrated mineral deposits as they dry and can cold-shock a sunlit leaf. Selecting it lowers the lockout and release thresholds automatically (to at most 150/100 W/m²).</td>
 </tr>
 </tbody>
 </table>
 
 ### Pulsed dosing
 
-Driving a mister by percentage means it sprays for that fraction of every cycle, which never lets the leaves dry. A wetting-type mister is therefore always broken into short pulses with an enforced gap, whether or not Nursery Mode is on — continuous misting invites disease on a mature crop too. Nursery Mode simply tightens the numbers. High-pressure fog that evaporates before reaching the leaf, and drip lines, keep the ordinary continuous modulation.
+Driving a mister by percentage means it sprays for that fraction of every cycle, which never lets the leaves dry. A wetting-type mister is therefore always broken into short pulses with an enforced gap, whether or not sunburn/evening protection is on — continuous misting invites disease on a mature crop too. How many seconds each spray lasts and how long it waits before the next is set by the **Misting Frequency** scale in the same group (Max Spray Duration (s) · Enforced Drying Interval (s)); this toggle does not change those numbers. To be gentler on seedlings, lower the frequency. High-pressure fog that evaporates before reaching the leaf, and drip lines, keep the ordinary continuous modulation.
 
 ### Notes
 
 The misting lockout takes precedence over both the heat emergency response and the minimum humidity limit. Midsummer noon is when the heat emergency fires and when the scorch risk peaks, and filling a humidity target is not worth losing the seedlings. Only misting stops — vents, screens and fans keep running normally.
 
-Relax the protection gradually as the seedlings harden off rather than switching it off in one step. Going from no midday misting to full midday misting overnight reproduces the very conditions the mode exists to prevent, on plants that are only slightly better prepared.
+Relax the protection gradually as the seedlings harden off rather than switching it off in one step. Going from no midday misting to full midday misting overnight reproduces the very conditions the protection exists to prevent, on plants that are only slightly better prepared.
 
 Some of the damage attributed to sun scorch comes from the water rather than the light. Hard water leaves mineral deposits, cold water shocks a sunlit leaf, and iron staining looks almost identical to scorch. Wiping a spot with dilute acid tells them apart: if it lifts, it was iron. No control setting fixes bad water.
 
@@ -1190,6 +1185,6 @@ Nurseries often water and humidify through the same set of overhead sprinklers. 
 
 The water also behaves differently. Sprinklers sized for watering deliver far more than humidity control needs, so using them in short humidity bursts leaves only a thin film on the leaf. That film cannot run off; it dries where it sits and leaves behind whatever the water carried. A heavy morning watering does the opposite — most of it runs off, rinsing away what earlier applications left. Same water, same nozzles, opposite outcome.
 
-Turning off **Use Wetting Misting to Raise Humidity** stops the integrated environment control from commanding those nozzles at all. They belong entirely to your irrigation schedule or soil moisture controller, and humidity is managed with the screens, vents and fans. True high-pressure fog evaporates before reaching the leaf and keeps working as a humidity actuator regardless of this setting, as do humidifiers, drip lines and every other actuator.
+Turning off **Use Micro Sprinklers to Raise Humidity** stops the integrated environment control from commanding those nozzles at all. They belong entirely to your irrigation schedule or soil moisture controller, and humidity is managed with the screens, vents and fans. True high-pressure fog evaporates before reaching the leaf and keeps working as a humidity actuator regardless of this setting, as do humidifiers, drip lines and every other actuator.
 
 You lose misting as a midday humidity tool, which is usually no loss: drawing one more shade screen gives comparable cooling without spending water or leaving salts behind.

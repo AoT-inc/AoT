@@ -37,4 +37,6 @@ Notes:
 - The flag lives in memory. Deactivating and reactivating the function, or restarting the daemon, resets it, and the next true check sends one email again.
 - To alert on a missing measurement instead, use `if measurement is None:` for the condition and re-arm when the value returns.
 
+To stop an alert from repeating every check while the underlying condition stays true, set a `Refractory Period` on the [Conditional Function](Functions.md#conditional) that sends it.
+
 For more details on configuring email, see [Alert Settings](Configuration-Settings.md#alert-settings).

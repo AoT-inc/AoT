@@ -72,6 +72,7 @@ from aot.utils.influx import read_influxdb_list
 from aot.utils.system_pi import add_custom_measurements
 from aot.utils.system_pi import return_measurement_info
 from aot.utils.system_pi import str_is_float
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +266,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 90.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('Set the refresh interval for the widget')
         },
         {
@@ -583,7 +584,7 @@ WIDGET_INFORMATION = {
                         .then(function(){ if (window.toastr) toastr.success('{{_('Saved as global chart colors')}}'); })
                         .catch(function(e){ if (window.toastr) toastr.error(e.message); else alert(e.message); });
                     })(this)">{{_('Save as Global Chart Colors')}}</button>
-            <div class="aot-modal-body-text">{{_('Applies the first 6 series colors to Settings > Custom UI chart colors.')}}</div>
+            <div class="aot-modal-body-text">{{_('Applies the first 6 series colors to the chart colors in Manage > System Management > Custom UI.')}}</div>
           </div>
         </div>
 

@@ -54,6 +54,7 @@ from aot.aot_client import DaemonControl
 from aot.aot_flask.access import scope
 from aot.aot_flask.utils.utils_general import user_has_permission
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('Frequency of widget refresh (seconds)')
         }
     ],

@@ -76,6 +76,11 @@ def conditional_mod(form):
             Conditional.unique_id == form.function_id.data).first()
         cond_mod.name = form.name.data
         messages["name"] = form.name.data
+        from aot.aot_flask.utils.utils_function import duplicate_function_name_warning
+        dup_warning = duplicate_function_name_warning(
+            form.name.data, exclude_id=cond_mod.unique_id)
+        if dup_warning:
+            messages["warning"].append(dup_warning)
         new_tab_id = request.form.get('tab_id')
         if new_tab_id and new_tab_id != cond_mod.tab_id:
             if Tab.query.filter(Tab.unique_id == new_tab_id).first():
@@ -91,6 +96,7 @@ def conditional_mod(form):
         cond_mod.message_include_code = form.message_include_code.data
         cond_mod.start_offset = form.start_offset.data
         cond_mod.pyro_timeout = form.pyro_timeout.data
+        cond_mod.refractory_period = form.refractory_period.data
 
         if cmd_status:
             messages["warning"].append(

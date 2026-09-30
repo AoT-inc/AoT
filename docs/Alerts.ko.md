@@ -37,4 +37,6 @@ elif measurement is not None:  # 정상 범위로 돌아온 유효한 측정값
 - 표시는 메모리에만 있습니다. 함수를 비활성화했다가 다시 켜거나 데몬을 재시작하면 지워지고, 다음 확인에서 조건이 참이면 이메일이 한 번 다시 나갑니다.
 - 반대로 측정값이 없는 상황을 알리려면 조건을 `if measurement is None:`로 두고, 값이 돌아올 때 표시를 지웁니다.
 
+근본 조건이 계속 참인 동안 알림이 매번 확인할 때마다 반복해서 나가지 않게 하려면, 그 알림을 보내는 [Conditional 함수](Functions.ko.md#conditional)에 `불응기(Refractory Period)`를 설정하세요.
+
 이메일 설정에 대한 자세한 내용은 [알림 설정](Configuration-Settings.md#alert-settings)을 참고하세요.

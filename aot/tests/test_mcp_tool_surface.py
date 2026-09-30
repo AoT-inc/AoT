@@ -1136,10 +1136,18 @@ class TestSystemBriefIsSummaryNotUnion(unittest.TestCase):
 
     def test_plot_count_is_the_sum_not_the_open_field_only(self):
         """원본 `plot_count` 는 노지만 센다 — 그대로 실으면 시설 구획과 더한
-        합이 맞지 않는다(실측: 39 / 39 / 5)."""
+        합이 맞지 않는다(실측: 39 / 39 / 5).
+
+        get_crop_status 가 자기 목록에 기본 limit(2026-09-29)을 두게 되면서,
+        잘린 리스트의 len() 은 더 이상 참값이 아니다 — 참값은 get_crop_status
+        가 자르기 **전에** 낸 `plot_count`(노지)/`facility_bay_plot_count`
+        (시설 베이)다. 그래서 지금은 `len(open_plots)` 단독이 아니라 그 둘을
+        **더한** 값이어야 한다 — 한쪽만 쓰면(원본 재발과 같은 실수) 여전히
+        틀린다."""
         src = self._src()
-        self.assertIn('len(open_plots) + len(bay_plots)', src)
-        self.assertNotIn("cs.get(\"plot_count\"", src)
+        self.assertIn('n_open + n_bay', src)
+        self.assertIn('cs.get("plot_count"', src)
+        self.assertIn('cs.get("facility_bay_plot_count"', src)
 
     def test_anomalies_stay_whole(self):
         """이상 상태는 작고(348토큰) 이 도구의 존재 이유에 가장 가깝다 —

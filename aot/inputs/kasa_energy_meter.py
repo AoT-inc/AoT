@@ -13,6 +13,7 @@ from flask_babel import lazy_gettext
 from aot.config_translations import TRANSLATIONS
 from aot.inputs.base_input import AbstractInput
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -74,7 +75,7 @@ INPUT_INFORMATION = {
         {
             'id': 'clear_total_kwh',
             'type': 'button',
-            'name': "{}: {}".format(lazy_gettext('Clear Total'), lazy_gettext('Kilowatt-hour'))
+            'name': lazy_format("{}: {}", lazy_gettext('Clear Total'), lazy_gettext('Kilowatt-hour'))
         }
     ],
 

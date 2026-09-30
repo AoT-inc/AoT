@@ -406,6 +406,7 @@ def _load_program_stage_sections():
         logger.debug("[KnowledgeSearch] program sections skipped: %s", e)
         return []
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 def _load_library_sections():
     """Fetch AIKnowledgeChunk rows as index entries (same shape as a markdown
     section, plus 'origin': 'library' and the P1 unified-item fields —
@@ -540,6 +541,7 @@ def _load_semantic_note_sections():
         return []
 
 
+# @manual ai/overview#scoping-is-by-tag-not-by-site
 def _normalize_tags(tags):
     """Accept a list[str] or comma-separated str (or None) and return a set of
     lowercase, stripped tag tokens. Empty input -> empty set (no tag filter)."""
@@ -731,6 +733,7 @@ def _tokenize(text):
     return out
 
 
+# @manual ai/overview#scoping-is-by-tag-not-by-site
 def search(query, top_k=3, max_chars=1400, tags=None):
     """Return the top-k markdown/library sections most relevant to `query`,
     each as {file, heading, score, content, origin, provenance, trust_state,
@@ -870,6 +873,7 @@ def search(query, top_k=3, max_chars=1400, tags=None):
     return results
 
 
+# @manual ai/overview#where-knowledge-comes-from
 # Provenance -> the citation tag shown in the injected block, per
 # docs/design/ai-library-redesign.md §6. The model is told (via
 # _MANUAL_GROUNDING_DIRECTIVE in ai_agent_service.py) to cite these
@@ -919,6 +923,7 @@ def _format_hit_tag(hit):
     else:
         tag = _PROVENANCE_TAG.get(provenance, '[Library]')
     return f"{tag} "
+# @manual-end
 
 
 def library_is_populated():
@@ -951,6 +956,7 @@ def library_is_populated():
         return True
 
 
+# @manual ai/overview#where-knowledge-comes-from
 def search_as_text(query, top_k=3, max_chars=1400, tags=None):
     """Search and format the result as a compact text block for injection into
     a tool result / reasoning context. Empty string when nothing matches.

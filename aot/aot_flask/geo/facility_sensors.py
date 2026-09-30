@@ -1268,6 +1268,7 @@ def validate_sensor_bindings(bindings: list) -> Tuple[bool, List[str]]:
     return len(errors) == 0, errors
 
 
+# @manual geo/facility-widget#b-environment, geo/facility-widget#data-refresh
 def build_sensor_snapshot(
     sensors_resolved: List[dict],
     sensors_outdoor: List[dict],
@@ -1299,6 +1300,9 @@ def build_sensor_snapshot(
             spatial = compute_spatial_internal(sensors_resolved, max_age=max_age)
             indoor['temp_c']       = spatial.get('T')
             indoor['humidity_pct'] = spatial.get('RH')
+            # CO₂ 도 같은 공간 평균에서 이미 계산돼 있다 — 채우지 않아서 시설
+            # 위젯의 CO₂ 칸이 늘 '— ppm' 이었다.
+            indoor['co2_ppm']      = spatial.get('CO2')
             indoor['vpd_kpa']      = spatial.get('VPD')
             valid_count = spatial.get('valid_count', 0)
             total_count = len(sensors_resolved)

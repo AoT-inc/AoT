@@ -72,9 +72,10 @@ from aot.utils.actions import parse_action_information
 from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
 from aot.utils import sequence_schedule
+from aot.utils.sequence_warnings import sequence_schedule_day_warnings
 from aot.utils.weekly_schedule import (
     apply_shared_window, from_legacy, parse_schedule, to_legacy,
-    validate as validate_schedule, build_warnings
+    validate as validate_schedule
 )
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import output_types, parse_output_information
@@ -1752,7 +1753,11 @@ def sequence_update_weekday():
         control = DaemonControl()
         control.refresh_daemon_trigger_settings(function_id)
 
-        return jsonify({'status': 'success'})
+        # 요일을 껐다 켰다 하면 그날의 경고(잘림·재시작·하루 여러 번 반복)도
+        # 나타나거나 사라진다 — 배지가 저장 직후 바로 맞도록 같이 돌려준다.
+        day_warnings, flat_warnings = sequence_schedule_day_warnings(trigger)
+        return jsonify({'status': 'success', 'warnings': flat_warnings,
+                        'day_warnings': day_warnings})
     except Exception as e:
         logger.error(f"Sequence Weekday Update Error: {e}")
         return jsonify({'error': str(e)}), 500
@@ -1849,8 +1854,13 @@ def function_sequence_update_schedule():
         control = DaemonControl()
         control.refresh_daemon_trigger_settings(function_id)
 
-        warnings = build_warnings(schedule)
-        return jsonify({'status': 'success', 'warnings': warnings})
+        # build_warnings() only ever checked "period > window". Read back the
+        # richer, per-weekday picture the AI tools already show (one pass
+        # longer than its window/period, or a cycle that repeats several
+        # times a day) so the widget's toast and day badges match it exactly.
+        day_warnings, flat_warnings = sequence_schedule_day_warnings(trigger)
+        return jsonify({'status': 'success', 'warnings': flat_warnings,
+                        'day_warnings': day_warnings})
     except Exception as e:
         logger.error(f"Sequence Schedule Update Error: {e}")
         return jsonify({'error': str(e)}), 500

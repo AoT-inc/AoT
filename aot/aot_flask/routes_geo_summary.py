@@ -32,6 +32,7 @@ def _polygon_area_m2(coords):
     return abs(area) / 2.0
 
 
+# @manual geo/map-widget#click-a-zonesite-control-from-a-device-list, geo/api-reference#zones
 @blueprint.route('/api/geo/zone/<string:zone_uuid>/contents', methods=['GET'])
 @login_required
 def api_geo_zone_contents(zone_uuid):
@@ -61,6 +62,7 @@ def api_geo_zone_contents(zone_uuid):
     return jsonify(payload)
 
 
+# @manual geo/map-widget#click-a-zonesite-control-from-a-device-list
 def _build_area_contents(device_ids, scope_of=None, env=None):
     """장치 참조 집합 → 모달의 인벤토리(센서·장치·기능 + 집계 + 상태).
 
@@ -189,6 +191,7 @@ def _build_area_contents(device_ids, scope_of=None, env=None):
     }
 
 
+# @manual geo/map-widget#click-a-zonesite-control-from-a-device-list
 def _build_zone_contents(zone_uuid):
     """구역 모달 응답 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
     # 지연 import — routes_geo_shape 를 모듈 최상단에서 가져오면
@@ -342,6 +345,7 @@ def _build_zone_contents(zone_uuid):
     }
 
 
+# @manual geo/map-widget#click-a-zonesite-control-from-a-device-list, geo/api-reference#sites
 @blueprint.route('/api/geo/site/<string:site_uuid>/contents', methods=['GET'])
 @login_required
 def api_geo_site_contents(site_uuid):
@@ -397,6 +401,7 @@ def api_geo_site_contents(site_uuid):
     return jsonify(payload)
 
 
+# @manual geo/api-reference#sites
 @blueprint.route('/api/geo/site/<string:site_uuid>/summary', methods=['GET'])
 @login_required
 def api_geo_site_summary(site_uuid):
@@ -432,6 +437,7 @@ def api_geo_site_summary(site_uuid):
     return jsonify(result)
 
 
+# @manual geo/map-widget#site-weather, geo/api-reference#sites
 @blueprint.route('/api/geo/site/<string:site_uuid>/weather',
                  methods=['GET', 'POST'])
 @login_required
@@ -500,6 +506,7 @@ def api_geo_site_weather(site_uuid):
                     'source': source, 'selected': selected})
 
 
+# @manual geo/map-widget#control-right-from-the-popup, geo/api-reference#device-location-lists-detail
 @blueprint.route('/api/geo/device/<string:device_uuid>/detail', methods=['GET'])
 @login_required
 def api_geo_device_detail(device_uuid):

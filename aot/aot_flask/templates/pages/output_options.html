@@ -157,6 +157,7 @@
             </button>
           </div>
         </div>
+        {# @manual ai/overview#device-ai-toggle #}
         <div class="aot-modal-option-row">
           <label class="aot-modal-option-label" title="{{_('When enabled, this device is visible to AI judgment and control tools.')}}">{{_('Include in AI Judgment')}}</label>
           <div class="aot-modal-option-control">
@@ -168,6 +169,7 @@
             </label>
           </div>
         </div>
+        {# @manual-end #}
         {% endif %}
 
         {% include 'pages/form_options/Interface.html' %}
@@ -320,6 +322,22 @@
     {% endif %}
 
     {% endfor %}
+
+    {% if each_output.output_type in custom_commands and custom_commands[each_output.output_type] %}
+    {#- 모듈이 선언한 명령(`custom_commands`)을 입력·함수 설정과 같은 자리·같은
+        부품으로 그린다. 라우트(`/output_submit` 의 custom_button_*)와 데몬
+        (`module_function('Output', …)`)은 이미 이 명령을 받는다 — 화면만 없었다. -#}
+    <div class="aot-modal-group-title">{{_('Commands')}}</div>
+    {% set dict_options = dict_outputs[each_output.output_type] %}
+    {% include 'pages/form_options/Custom_Actions_Message.html' %}
+    <div class="aot-modal-container">
+      {% set force_default_value = true %}
+      {% set custom_options_values = none %}
+      {% for each_option in dict_options['custom_commands'] %}
+        {% include 'pages/form_options/Custom_Options.html' %}
+      {% endfor %}
+    </div>
+    {% endif %}
 
     {% if output_channel_exists %}{% endif %}
 

@@ -1,10 +1,10 @@
-Page\: `[Admin] -> Configure`
+Page\: `Manage -> System Management`
 
-The Configure menu is accessed by clicking Admin in the top right and selecting the "Configure" link. It is the area where you can set up a variety of system-wide settings.
+The System Management pages are reached from the top-right Manage menu by selecting "System Management". It is the area where you can set up a variety of system-wide settings.
 
 ## General Settings { #general-settings }
 
-Page\: `[Admin] -> System Configuration -> General Settings`
+Page\: `Manage -> System Management -> General Settings`
 
 <table>
 <thead>
@@ -16,36 +16,85 @@ Page\: `[Admin] -> System Configuration -> General Settings`
 <tbody>
 <tr>
 <td>Language</td>
-<td>Sets the language displayed in the web user interface.</td>
+<td>Sets the language displayed in the web user interface. &quot;Browser Default&quot; follows the browser's language.</td>
+</tr>
+<tr>
+<td>Landing Page</td>
+<td>The page opened right after login: Dashboard, Real-time Measurement, or System Information.</td>
+</tr>
+<tr>
+<td>Index Page</td>
+<td>The page opened when you click the brand (logo) link in the navigation bar. &quot;Same as Landing Page&quot; reuses the Landing Page choice.</td>
+</tr>
+<tr>
+<td>System Timezone</td>
+<td>The system-wide default timezone, as an IANA name such as <code>Asia/Seoul</code>. It is used for daemon log times and as the last fallback for devices that have no location. Times that people read and write use each person's own timezone from their Account settings.</td>
+</tr>
+<tr>
+<td>Pyro Timeout</td>
+<td>Timeout in seconds for the connection between the web application and the daemon. Restart the backend to apply a change.</td>
+</tr>
+<tr>
+<td>Enable Daemon Debug Logging</td>
+<td>Writes detailed debug messages to the daemon log for diagnosis. It makes the log much larger, so turn it off when you are done. Restart the backend to apply a change.</td>
 </tr>
 <tr>
 <td>Force HTTPS</td>
-<td>Requires the web browser to use SSL/HTTPS. <a href="http://">http://</a> requests are redirected to <a href="https://">https://</a>.</td>
+<td>Requires the web browser to use SSL/HTTPS. <a href="http://">http://</a> requests are redirected to <a href="https://">https://</a>. <strong>On Docker this setting is forced off</strong> (a direct <code>http://</code> connection would otherwise stop working), unless the environment variable <code>AOT_BEHIND_TLS=1</code> is set for a container that is only reached through an HTTPS reverse proxy. See the &quot;Cookies behind a reverse proxy (Docker)&quot; section of the Security page.</td>
 </tr>
 <tr>
-<td>Hide Success Alerts</td>
+<td>Hide Success Messages</td>
 <td>Hides all success alert boxes shown at the top of the page.</td>
 </tr>
 <tr>
-<td>Hide Info Alerts</td>
+<td>Hide Info Messages</td>
 <td>Hides all info alert boxes shown at the top of the page.</td>
 </tr>
 <tr>
-<td>Hide Warning Alerts</td>
+<td>Hide Warning Messages</td>
 <td>Hides all warning alert boxes shown at the top of the page.</td>
 </tr>
 <tr>
-<td>Opt out of Statistics</td>
-<td>Disables the sending of anonymous usage statistics. This feature helps with development, so please keep it enabled if possible.</td>
+<td>Hide Tooltips</td>
+<td>Hides the tooltips that appear when you hover over form fields.</td>
+</tr>
+<tr>
+<td>Opt out of Statistics Collection</td>
+<td>Disables the sending of anonymous usage statistics. This feature helps with development, so please keep it enabled if possible. <em>View Collected Statistics</em> shows exactly what is collected.</td>
 </tr>
 </tbody>
 </table>
 
-To customize the branding and colors of the web interface, see [Custom UI](#custom-ui) below.
+### AI Service { #general-ai }
+
+<table>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable AI Service</td>
+<td>Turns the AI service on or off. When it is off the AI menu is hidden and AI features are unavailable, but every AI setting is kept. Turning it on only makes AI available; autonomous operation is started separately on the AI page once at least one AI model is registered. This is an experimental feature.</td>
+</tr>
+<tr>
+<td>Translate User-Defined Names</td>
+<td>Names you typed yourself (device, zone, crop names) stay in the language you wrote them in. Turn this on to also show them in the interface language. The stored names are never changed. Translations you enter under Name Translations are shown even without an AI engine.</td>
+</tr>
+<tr>
+<td>Enable External MCP Server</td>
+<td>Allows or refuses requests from external MCP clients (for example Claude Desktop) to the MCP server that is already running. It takes effect immediately. The address and port it listens on are not set here: on Docker edit the <code>ports:</code> entry of the <code>aot_mcp</code> service and run <code>docker compose up -d</code> again; on a native install edit and restart the <code>aotmcp</code> systemd service.</td>
+</tr>
+</tbody>
+</table>
+
+There is no site-name field on this page. The name shown in the navigation bar and the browser tab is set under `Manage -> System Management -> Custom UI` (Brand Text); see [Custom UI](#custom-ui) below for branding and colors.
 
 ## Custom UI { #custom-ui }
 
-Page\: `[Admin] -> System Configuration -> Custom UI`
+Page\: `Manage -> System Management -> Custom UI`
 
 This page customizes the branding and color palette of the web interface — useful for putting your own name and logo on AoT, or simply changing its color scheme. A live preview at the top of the page shows every color as you change it; nothing is applied elsewhere until you click Save.
 
@@ -150,7 +199,7 @@ Theme Preset switches between built-in palettes (AoT Default, Ocean Blue, Warm S
 
 ## Time Series Database Settings
 
-Page\: `[Admin] -> System Configuration -> General Settings`
+Page\: `Manage -> System Management -> General Settings`
 
 Measurements are stored in a time series database. The options currently available in AoT are InfluxDB 1.x and InfluxDB 2.x. InfluxDB 1.x works on both 32-bit and 64-bit operating systems, but 2.x only works on 64-bit operating systems. Therefore, if you are using a 32-bit operating system, you must use InfluxDB 1.x. During AoT installation, you can choose InfluxDB 1.x, 2.x, or no installation. If InfluxDB is not installed, you must specify a separate installation address and credentials so that AoT can store and retrieve measurements.
 
@@ -197,7 +246,7 @@ If installing with Docker, after installation you must change the host name to "
 
 ## Dashboard Settings
 
-Page\: `[Admin] -> System Configuration -> General Settings`
+Page\: `Manage -> System Management -> General Settings`
 
 <table>
 <thead>
@@ -216,7 +265,7 @@ Page\: `[Admin] -> System Configuration -> General Settings`
 
 ## Upgrade Settings
 
-Page\: `[Admin] -> System Configuration -> General Settings`
+Page\: `Manage -> System Management -> General Settings`
 
 <table>
 <thead>
@@ -228,26 +277,26 @@ Page\: `[Admin] -> System Configuration -> General Settings`
 <tbody>
 <tr>
 <td>Internet Test IP Address</td>
-<td>The IP address used to test whether an internet connection is active.</td>
+<td>The IP address used to test whether an internet connection is active before an upgrade. <strong>Native install only</strong>: the Docker Upgrade page does not run this check.</td>
 </tr>
 <tr>
 <td>Internet Test Port</td>
-<td>The port used to test whether an internet connection is active.</td>
+<td>The port used to test whether an internet connection is active. Native install only.</td>
 </tr>
 <tr>
 <td>Internet Test Timeout</td>
-<td>The timeout duration used when testing the internet connection.</td>
+<td>The timeout duration used when testing the internet connection. Native install only.</td>
 </tr>
 <tr>
 <td>Check for Updates</td>
-<td>Automatically checks for updates every 2 days and displays a notification through the web interface. If a new update is available, the Configure (Admin) and Upgrade menus are shown in red.</td>
+<td>Automatically checks for updates every 2 days and displays a notification through the web interface. If a new update is available, the Upgrade item in the Manage menu is highlighted.</td>
 </tr>
 </tbody>
 </table>
 
 ## Energy Usage Settings
 
-Page\: `[Admin] -> System Configuration -> General Settings`
+Page\: `Manage -> System Management -> General Settings`
 
 To calculate accurate energy usage statistics, you need to know a few characteristics of your electrical system. These variables should describe the characteristics of the electrical system that operates electrical devices through relays.
 
@@ -303,7 +352,7 @@ To calculate accurate energy usage statistics, you need to know a few characteri
 
 ## Controller Sampling Period Settings { #controller-settings }
  
-Page\: `[Admin] -> System Configuration -> General Settings`
+Page\: `Manage -> System Management -> General Settings`
  
 Each controller for Inputs, Outputs, and Functions operates periodically. The fastest speed at which each controller can respond is determined by that controller's sampling period. The controller pauses its loop for the duration of the period. For example, if the Output controller's sampling period is set to 1 second, an output on/off command will react within at most 1 second.
  
@@ -344,7 +393,7 @@ Each controller for Inputs, Outputs, and Functions operates periodically. The fa
 
 ## Input Settings { #input-settings }
 
-Page\: `[Admin] -> System Configuration -> Custom Inputs`
+Page\: `Manage -> System Management -> Custom Inputs`
 
 Input modules can be imported into AoT for use. These modules must follow a specific format. For details, see [Custom Inputs](Inputs.md#custom-inputs).
 
@@ -365,7 +414,7 @@ Input modules can be imported into AoT for use. These modules must follow a spec
 
 ## Output Settings { #output-settings }
 
-Page\: `[Admin] -> System Configuration -> Custom Outputs`
+Page\: `Manage -> System Management -> Custom Outputs`
 
 Output modules can be imported into AoT for use. These modules must follow a specific format. For details, see [Custom Outputs](Outputs.md#custom-outputs).
 
@@ -386,7 +435,7 @@ Output modules can be imported into AoT for use. These modules must follow a spe
 
 ## Function Settings
 
-Page\: `[Admin] -> System Configuration -> Custom Functions`
+Page\: `Manage -> System Management -> Custom Functions`
 
 Function modules can be imported into AoT for use. These modules must follow a specific format. For details, see [Custom Functions](Functions.md#custom-functions).
 
@@ -407,7 +456,7 @@ Function modules can be imported into AoT for use. These modules must follow a s
 
 ## Action Settings { #action-settings }
 
-Page\: `[Admin] -> System Configuration -> Custom Actions`
+Page\: `Manage -> System Management -> Custom Actions`
 
 Action modules can be imported into AoT for use. These modules must follow a specific format. For details, see [Custom Actions](Actions.md#custom-actions).
 
@@ -428,7 +477,7 @@ Action modules can be imported into AoT for use. These modules must follow a spe
 
 ## Widget Settings { #widget-settings }
 
-Page\: `[Admin] -> System Configuration -> Custom Widgets`
+Page\: `Manage -> System Management -> Custom Widgets`
 
 Widget modules can be imported into AoT for use. These modules must follow a specific format. For details, see [Custom Widgets](Data-Viewing.md#custom-widgets).
 
@@ -449,7 +498,7 @@ Widget modules can be imported into AoT for use. These modules must follow a spe
 
 ## Measurement Settings { #measurement-settings }
 
-Page\: `[Admin] -> System Configuration -> Measurements`
+Page\: `Manage -> System Management -> Measurements`
 
 You can create new measurements, units, and conversions to extend functionality beyond AoT's built-in types and formulas. Before creating a measurement, you must first create the unit, because you need to select a unit when creating a measurement. You can also assign additional units to a measurement that already exists. For example: `altitude` already exists, but if you want to add the `fathom` unit, first create the `fathom` unit, then create the `altitude` measurement with `fathom` selected.
 
@@ -696,9 +745,11 @@ On the [Roles](#roles) screen, a Role can be marked "Access all groups". Users w
 
 ## Raspberry Pi Settings { #pi-settings }
 
-Page\: `[Admin] -> System Configuration -> Raspberry Pi`
+Page\: `Manage -> System Management -> Raspberry Pi`
 
 The Raspberry Pi settings configure part of the Linux system on which AoT runs.
+
+This page works only on a Raspberry Pi installation with `raspi-config`. In Docker (or on any system without `raspi-config`) it shows a notice instead of the settings.
 
 pigpiod is required to use PWM outputs and PWM, RPM, DHT22, DHT11, and HTU21D inputs.
 
@@ -712,7 +763,7 @@ pigpiod is required to use PWM outputs and PWM, RPM, DHT22, DHT11, and HTU21D in
 <tbody>
 <tr>
 <td>Enable/Disable Features</td>
-<td>System interfaces that can be enabled and disabled from the web UI via the <code>raspi-config</code> command.</td>
+<td>System interfaces (I2C, 1-Wire, Serial Hardware, Serial Login Shell, SPI, SSH) that can be enabled and disabled from the web UI via the <code>raspi-config</code> command. Each row shows the current state read from <code>raspi-config</code> and offers the opposite action. Serial Hardware should be enabled and Serial Login Shell disabled to use serial devices. Changes apply after <code>Manage -> Restart System</code>. On Bookworm, the boot configuration file is <code>/boot/firmware/config.txt</code>.</td>
 </tr>
 <tr>
 <td>pigpiod Sampling Rate</td>
@@ -784,7 +835,7 @@ To clear the counter and start a fresh window immediately, use **Reset Email Cou
 
 ## Camera Settings
 
-Page\: `[Admin] -> System Configuration -> Camera`
+Page\: `Manage -> System Management -> Camera`
 
 AoT can use multiple cameras simultaneously. Each camera can be used throughout the software after being configured in the Camera settings.
 
@@ -848,7 +899,7 @@ AoT can use multiple cameras simultaneously. Each camera can be used throughout 
 
 ## Diagnostic Settings { #diagnostic-settings }
 
-Page\: `[Admin] -> System Configuration -> Diagnostics`
+Page\: `Manage -> System Management -> Diagnostics`
 
 Problems can occur in the system due to incompatible configurations. These can result from a part of the system (Input, Output, etc.) being misconfigured, an update in which the database upgrade was not handled properly, or other unexpected issues. There are times when you need to perform diagnostics to identify the cause of a problem or to resolve the problem itself. The options below are intended to mitigate problems. For example, if the `Data -> Dashboard` page cannot be accessed because of a misconfigured dashboard element that causes an error, deleting all dashboard elements may be the most economical way to regain access. Note, however, that in this case you will have to re-add all existing dashboard elements.
 

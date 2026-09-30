@@ -84,6 +84,12 @@ class Conditional(CRUDMixin, db.Model):
     period = db.Column(db.Float, default=60.0)
     start_offset = db.Column(db.Float, default=10.0)
     pyro_timeout = db.Column(db.Float, default=30.0)
+    # 0 = 비활성화. 마지막 액션 발동 후 이 시간(초) 동안은 run_action()/
+    # run_all_actions() 를 다시 호출해도 억제한다("불응기") — period 마다
+    # 조건이 계속 참이면 매번 알림이 나가는 문제의 최소 해결책
+    # (aot/controllers/base_conditional.py 의 AbstractConditional 이 시행,
+    # 마지막 발동 시각은 custom_options 에 저장되어 데몬 재시작 후에도 유지).
+    refractory_period = db.Column(db.Float, default=0.0)
     use_pylint = db.Column(db.Boolean, default=True)
     message_include_code = db.Column(db.Boolean, default=False)
 

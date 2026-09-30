@@ -4,8 +4,7 @@ import logging
 import os
 
 import sqlalchemy
-# 번역 기능 사용하지 않으므로 gettext 대신 한글 문자열을 직접 사용합니다.
-# from flask_babel import gettext
+from flask_babel import gettext
 
 from aot.config_translations import TRANSLATIONS
 from aot.databases.models import CustomController
@@ -73,6 +72,11 @@ def controller_mod(form_mod, request_form):
 
         mod_controller.name = form_mod.name.data
         messages["name"] = form_mod.name.data
+        from aot.aot_flask.utils.utils_function import duplicate_function_name_warning
+        dup_warning = duplicate_function_name_warning(
+            form_mod.name.data, exclude_id=mod_controller.unique_id)
+        if dup_warning:
+            messages["warning"].append(dup_warning)
         new_tab_id = request_form.get('tab_id')
         if new_tab_id and new_tab_id != mod_controller.tab_id:
             if Tab.query.filter(Tab.unique_id == new_tab_id).first():
@@ -226,9 +230,7 @@ def controller_mod(form_mod, request_form):
 
         if not messages["error"]:
             db.session.commit()
-            messages["success"].append('{action} {controller}'.format(
-                action=TRANSLATIONS['modify']['title'],
-                controller=TRANSLATIONS['controller']['title']))
+            messages["success"].append(gettext("Controller modified"))
             sync_geo_device_name(mod_controller.unique_id, mod_controller.name)
 
     except sqlalchemy.exc.OperationalError as except_msg:
@@ -301,9 +303,7 @@ def controller_del(cond_id):
                     each_channel.unique_id,
                     flash_message=False)
 
-            messages["success"].append('{action} {controller}'.format(
-                action=TRANSLATIONS['delete']['title'],
-                controller=TRANSLATIONS['controller']['title']))
+            messages["success"].append(gettext("Controller deleted"))
 
             from aot.utils.code_verification import delete_python_file
             delete_python_file('conditional', cond.unique_id)
@@ -366,9 +366,7 @@ def controller_activate(controller_id):
         messages = cascade_activate_inputs(function, messages)
 
     if not messages["error"]:
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['activate']['title'],
-            controller=TRANSLATIONS['controller']['title']))
+        messages["success"].append(gettext("Controller activated"))
 
     return messages
 
@@ -393,8 +391,6 @@ def controller_deactivate(controller_id):
             messages = cascade_deactivate_inputs(function, messages)
 
     if not messages["error"]:
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['deactivate']['title'],
-            controller=TRANSLATIONS['controller']['title']))
+        messages["success"].append(gettext("Controller deactivated"))
 
     return messages

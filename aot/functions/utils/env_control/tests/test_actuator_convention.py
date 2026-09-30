@@ -150,31 +150,49 @@ class TestMotorApertureRoundTrip:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestScreenIdleRetracts:
-    """할 일 없는(게이트된) 보온커튼·차광막은 닫힘(0=단열/차광)이 아니라
-    걷힘(100=열림)으로 수렴해야 한다. (닫으면 더운 낮에 열을 가두거나 빛 차단)"""
+    """할 일 없는 보온커튼(무구배) — 낮에는 걷고, 밤에는 제자리 (2026-09-26).
 
-    def test_curtain_gated_retracts_to_open(self):
+    06-28 에는 "할 일 없으면 걷힘(100)" 이었다 — 근거는 낮(열 가둠·빛 차단)이었다.
+    그 근거는 이제 낮 규칙(`curtain_day_open`)이 직접 맡는다. 밤에 걷힘으로 풀면
+    안팎 온도차가 작아지는 순간 보온이 풀린다(2026-09-24 영양: 밤새 100 %).
+    """
+
+    @staticmethod
+    def _run(day, start_I, prev, cycles=12):
         from aot.functions.utils.env_control.coordinator import CoordinatorState, coordinate
         from aot.functions.utils.env_control.situation import assess
         from aot.functions.utils.env_control.types import (
             ActuatorProfile, CmdConstraints, TargetVar)
         from aot.functions.utils.env_control.effect_functions import build_effect_model
 
-        # 보온커튼: safe_default=100(걷힘). 무구배(내외 동일 온도) → 게이트
         cur = ActuatorProfile(
             actuator_id='cur', kind='curtain',
             effect_model=build_effect_model('curtain', {}),
             cmd_constraints=CmdConstraints(effective_start_pct=0.0, effective_end_pct=100.0),
             gains={'kp': 1.0, 'ki': 0.2}, safe_default=100.0)
         target = {'temperature': TargetVar(24.0, 0.5, 1.0)}
-        st = CoordinatorState(integral={'cur': 20.0})   # 일부 배치된 상태에서 시작
+        st = CoordinatorState(integral={'cur': start_I}, prev_commands={'cur': prev})
         last = None
-        for _ in range(12):
+        for _ in range(cycles):
             internal = {'T': 25.0, 'RH': 60.0, 'CO2': 400.0}
             external = {'T': 25.0, 'RH': 60.0, 'wind': 1.0, 'solar': 50.0}  # ΔT=0 → 무구배
             report, _ = assess(target, internal, external,
                                cycle_sec=600.0, now_ts=1767240000.0)
+            report.context['curtain_day_open'] = day
             cmds, st = coordinate(report, [cur], st)
             last = cmds['cur']
-        # 걷힘(100=열림) 쪽으로 수렴 (닫힘 0 이 아님)
-        assert last.aperture > 90.0, f"게이트된 보온커튼이 걷히지 않음: {last.aperture}%"
+            st.prev_commands['cur'] = last.aperture     # 장치가 명령대로 섰다
+        return last
+
+    def test_curtain_opens_in_daytime(self):
+        from aot.functions.utils.env_control.log_channels import REASON_CURTAIN_DAY_OPEN
+        last = self._run(day=True, start_I=20.0, prev=20.0, cycles=1)
+        assert last.aperture == 100.0, f"낮인데 보온커튼이 걷히지 않음: {last.aperture}%"
+        assert last.reason == REASON_CURTAIN_DAY_OPEN
+
+    def test_curtain_holds_at_night_when_idle(self):
+        """무구배 밤 — 닫혀 있던 커튼은 닫힌 채, 걷혀 있던 커튼은 걷힌 채."""
+        closed = self._run(day=False, start_I=0.0, prev=0.0)
+        assert closed.aperture == 0.0, f"밤에 할 일 없는 커튼이 걷힘: {closed.aperture}%"
+        opened = self._run(day=False, start_I=100.0, prev=100.0)
+        assert opened.aperture == 100.0, f"밤에 할 일 없는 커튼이 닫힘: {opened.aperture}%"

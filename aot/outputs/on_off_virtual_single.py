@@ -7,6 +7,7 @@ from flask_babel import lazy_gettext
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 # Measurements (Single channel)
 measurements_dict = {
@@ -21,7 +22,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'virtual_on_off_single',
-    'output_name': "{} (Virtual Single-Channel)".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{} (Virtual Single-Channel)", lazy_gettext('On/Off')),
     'output_library': 'Internal',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -62,7 +63,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the virtual device')
         }
     ]

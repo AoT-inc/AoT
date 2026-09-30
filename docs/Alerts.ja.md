@@ -37,4 +37,6 @@ elif measurement is not None:  # 正常範囲に戻った有効な測定値
 - フラグはメモリ上にだけあります。関数を無効化して再度有効にした場合やデーモンを再起動した場合は消え、次の確認で条件が真ならメールが1回送られます。
 - 逆に測定値がない状況を知らせたい場合は、条件を `if measurement is None:` にし、値が戻ったときにフラグを下ろします。
 
+根本の条件が真であり続ける間アラートが確認のたびに繰り返し送られないようにするには、そのアラートを送る[Conditional機能](Functions.ja.md#conditional)に`不応期（Refractory Period）`を設定してください。
+
 メール設定の詳細は[アラート設定](Configuration-Settings.md#alert-settings)を参照してください。

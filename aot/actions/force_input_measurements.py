@@ -7,10 +7,11 @@ from aot.actions.base_action import AbstractFunctionAction
 from aot.databases.models import Actions
 from aot.databases.models import Input
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'input_force_measurements',
-    'name': "{}: {}:".format(lazy_gettext('Input'), lazy_gettext('Force Measurements')),
+    'name': lazy_format("{}: {}:", lazy_gettext('Input'), lazy_gettext('Force Measurements')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

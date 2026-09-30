@@ -1,10 +1,10 @@
 ## I2C Notes
 
-The I2C interface must be enabled via `raspi-config` or the `[gear icon] -> Settings -> Raspberry Pi` page.
+The I2C interface must be enabled via `raspi-config` or the `Manage -> System Management -> Raspberry Pi` page (not available in Docker). Changes apply after `Manage -> Restart System`.
 
 ## 1-Wire Notes
 
-The 1-Wire interface must be enabled via `raspi-config` or the `[gear icon] -> Settings -> Raspberry Pi` page.
+The 1-Wire interface must be enabled via `raspi-config` or the `Manage -> System Management -> Raspberry Pi` page (not available in Docker). Changes apply after `Manage -> Restart System`.
 
 ## UART Notes
 
@@ -16,8 +16,12 @@ Run `raspi-config`
 
 `sudo raspi-config`
 
-Go to `Advanced Options -> Serial` and disable it. Then edit `/boot/config.txt`.
+On Raspberry Pi OS Bookworm and later, the serial port has two separate settings: the serial login shell (a text console on the port) must be **off**, and the serial hardware (the UART itself) must be **on**. The `Manage -> System Management -> Raspberry Pi` page shows them as "Serial Login Shell" and "Serial Hardware". From the command line:
 
-`sudo nano /boot/config.txt`
+`sudo raspi-config nonint do_serial_cons 1` (login shell off)
 
-Find the line "enable_uart=0" and change it to "enable_uart=1", then reboot.
+`sudo raspi-config nonint do_serial_hw 0` (serial hardware on)
+
+In `raspi-config` this is `Interface Options -> Serial Port`: answer No to the login shell, Yes to the serial hardware.
+
+The configuration file is `/boot/firmware/config.txt` on Bookworm (`/boot/config.txt` on earlier releases). To set it by hand, make sure it contains `enable_uart=1`, then reboot.

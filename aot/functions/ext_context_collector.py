@@ -36,6 +36,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils import measurement_freshness as _freshness
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import write_influxdb_value
+from aot.utils.lazy_text import lazy_format
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Collection channels — InfluxDB measurement names
@@ -116,7 +117,7 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{}: ({})".format(lazy_gettext('Update Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{}: ({})", lazy_gettext('Update Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('Collection period (seconds). Set it equal to or shorter than the integrated control Function\'s cycle.'),
         },
         {

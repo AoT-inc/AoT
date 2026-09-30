@@ -4,8 +4,8 @@
 aot/scripts/aot_backup_create.sh and aot_backup_restore.sh assume a
 bare-metal install (/var/aot-root, /opt/AoT, systemd) and rsync the whole
 install directory -- meaningless inside a container, where the live data
-(SQLite DB, uploaded files, facility 3D model assets) instead lives in
-named Docker volumes (aot_data, aot_uploads, aot_model_assets; see
+(SQLite DB, uploaded files, facility 3D model assets, map overlays) instead lives in
+named Docker volumes (aot_data, aot_uploads, aot_model_assets, aot_geo_overlays; see
 docker/docker-compose.prod.yml). This module snapshots/restores that data
 directly, without needing docker.sock or any host-level access.
 """
@@ -16,7 +16,8 @@ import shutil
 import sqlite3
 import time
 
-from aot.config import AOT_VERSION, BACKUP_PATH, PATH_USER_SCRIPTS, SQL_DATABASE_AOT
+from aot.config import (AOT_VERSION, BACKUP_PATH, PATH_STATIC, PATH_USER_SCRIPTS,
+                        SQL_DATABASE_AOT)
 from aot.utils.service_control import reload_frontend
 from aot.utils.system_pi import (assure_path_exists, get_directory_free_space,
                                     get_directory_size)
@@ -31,7 +32,19 @@ logger = logging.getLogger("aot.docker_backup")
 # covers via its (separate, pre-existing) custom-code directory handling,
 # but which Docker admin/backup must capture itself since nothing else
 # does for that flow.
-UPLOAD_DIRS = UPLOAD_DIRECTORIES + [(PATH_USER_SCRIPTS, "user_scripts")]
+#
+# Also the map overlay images + tile pyramids (aot_geo_overlays volume). They
+# are uploaded originals (drone/aerial photos) with no regeneration path, and
+# the DB rows only hold their /static/uploads/geo_overlays/... URLs -- a
+# restore without them leaves every overlay 404. Kept out of the shared
+# UPLOAD_DIRECTORIES list on purpose: that list also feeds the settings
+# export ZIP, whose contents this change does not touch.
+PATH_GEO_OVERLAYS = os.path.join(PATH_STATIC, "uploads", "geo_overlays")
+
+UPLOAD_DIRS = UPLOAD_DIRECTORIES + [
+    (PATH_USER_SCRIPTS, "user_scripts"),
+    (PATH_GEO_OVERLAYS, "geo_overlays"),
+]
 
 BACKUP_DIR_PREFIX = "AoT-backup-"
 
@@ -154,8 +167,9 @@ def _prune_pre_restore_backups():
 
 
 def docker_backup_create():
-    """Snapshot the DB + uploaded files + 3D model assets into a new
-    directory under BACKUP_PATH. Returns (status, dest_dir_or_error).
+    """Snapshot the DB + uploaded files + 3D model assets + map overlays into
+    a new directory under BACKUP_PATH. InfluxDB measurements are NOT included
+    (separate volume; see docs/Upgrade-Backup-Restore.md). Returns (status, dest_dir_or_error).
 
     Built under a hidden ".<name>.partial" directory and published via a
     single atomic os.rename() only once every copy has succeeded -- so a

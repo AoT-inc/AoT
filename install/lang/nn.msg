@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** FEIL under AoT-insta
 install_begin=#### AoT-installasjonen starter. %s\n
 mosquitto_installing=#### Installerer: mosquitto MQTT-megler\n
 mosquitto_already_installed=#### mosquitto er allerede installert - hopper over installasjonen\n
-mosquitto_configuring=#### Konfigurerer mosquitto til å tillate eksterne tilkoblinger\n
 mosquitto_conf_checking=#### Oppretter/kontrollerer mosquitto-konfigurasjonsfilen\n
 mosquitto_conf_created=#### %s opprettet\n
 mosquitto_conf_exists=#### %s finnes allerede - overskrives ikke\n

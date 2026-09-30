@@ -70,6 +70,7 @@ def resource_fitting_kinds():
     return kinds
 
 
+# @manual geo/programs#resources
 def declared_roles(stage, program_row=None):
     """이 단계가 요구하는 자원 역할 → `[{role, source}]` (P6).
 
@@ -275,6 +276,7 @@ def program_brief(plot, programs=None):
     }
 
 
+# @manual geo/plots#stages, geo/programs#plot-override
 def effective_stages(plot, program_row):
     """이 구획이 실제로 따르는 **단계 목록** → list.
 
@@ -358,6 +360,7 @@ def effective_stages(plot, program_row):
     return out
 
 
+# @manual geo/plots#stages, geo/programs#stage-schedule
 def stage_schedule(plot, program=None, on=None, plan=None, anchors=None,
                    programs=None):
     """구획의 **단계 경계** 한 벌 → dict|None. 정본: program-layer.md §P8
@@ -581,6 +584,7 @@ def _as_date(iso):
         return None
 
 
+# @manual geo/plots#targets, geo/programs#plot-override
 def _view_targets(stage, program_row):
     """단계 하나의 목표 → 화면이 **고칠 수 있는** 목록.
 
@@ -613,6 +617,7 @@ def _view_targets(stage, program_row):
     return out
 
 
+# @manual geo/programs#stage-schedule
 def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
                         stage=None):
     """화면·AI 가 그대로 읽는 일정 → list. 없으면 `[]`.
@@ -704,7 +709,13 @@ def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
             'editable': i > first_editable and nxt is not None,
             # 지나간 단계는 뺄 수 없다 — 확인된 전환이 그것을 가리킨다.
             # 지침은 지나간 단계에도 적을 수 있다(관찰의 기록이다).
-            'removable': i >= first_editable and len(bounds) > 1,
+            #
+            # 원장이 있으면 `first_editable` 자리(기준점 단계)도 **확인된 전환이
+            # 가리키는 단계**라 뺄 수 없다(`plot_io.remove_stage` 의
+            # `idx <= 기준점` 과 같은 규칙). 원장이 비었으면 기준점은 구획
+            # 시작일일 뿐이라 첫 단계도 뺄 수 있다(육묘 없이 바로 정식하는 작기).
+            'removable': ((i > first_editable if sched['anchored']
+                           else i >= first_editable) and len(bounds) > 1),
             # 이 단계의 **목표**. 구획이 정했으면 그것이, 아니면 프로그램의
             # 것이 온다(`effective_stages`) — 지침과 같은 규칙이다.
             #
@@ -735,6 +746,7 @@ def _gdd_cached(plot, program_row, on, cache):
     return cache[key]
 
 
+# @manual geo/programs#gdd
 def stage_of(plot, program=None, on=None, with_observability=False,
              gated=True, sched=None, gdd_cache=None):
     """구획의 **현재 단계** → dict (판정 불가면 None).
@@ -853,6 +865,7 @@ def _stage_by_dates(sched, program_row, plot):
                           program_row, base_index, plot)
 
 
+# @manual geo/programs#stage-events
 def _hold_at_anchor(out, sched, program_row, plot, gated=True):
     """승인 전에는 단계가 넘어가지 않는다 (P8) → 고정된 payload.
 
@@ -1027,6 +1040,7 @@ def _mark_observable(out, plot):
     return out
 
 
+# @manual geo/programs#gdd
 def _stage_by_gdd(stages, gdd, program_row, base_index=0, plot=None):
     """누적 GDD 를 단계 목표에 대어 현재 단계를 찾는다 (판정 불가면 None).
 
@@ -1078,6 +1092,7 @@ def _stage_by_gdd(stages, gdd, program_row, base_index=0, plot=None):
 
 
 
+# @manual geo/programs#auto
 def _gdd_crossed_on(gdd, threshold):
     """누적 GDD 가 `threshold` 를 넘어선 **다음 날** → ISO 문자열|None.
 
@@ -1137,6 +1152,7 @@ def _stage_payload(st, idx, stages, day_in_stage, days_left,
     }
 
 
+# @manual geo/programs#targets
 def _stage_targets(stage, program_row=None):
     """이 단계의 목표 → 화면이 그대로 그리는 목록(없으면 []).
 
@@ -1248,6 +1264,7 @@ def stage_targets_full(stage, program_row=None, plot=None):
     return targets
 
 
+# @manual geo/plots#edit, geo/programs#stage-schedule
 def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
     """예상 종료일 → `(date, source)`. 없으면 `(None, None)`.
 
@@ -1495,6 +1512,7 @@ def plot_for_coordinator(fn, on=None):
     return out
 
 
+# @manual geo/plot-widget#plot-list
 def timeline(plot, program=None, on=None, sched=None, stage=None,
              events=None):
     """구획의 기간을 **한 축**으로 → `{start, end, today_pct, stages[]}`.
@@ -1701,6 +1719,7 @@ def plot_brief_for_control(row, on=None, capacities=None):
     return out
 
 
+# @manual geo/map-widget#plot
 def sensors_for_plot(plot, containers=None, markers=None):
     """구획이 참조할 장치 → `{'in_plot', 'from_zone', 'zone_uuid', 'source'}`.
 
@@ -1851,6 +1870,7 @@ def _shape_name(shape):
 # 조회
 # ---------------------------------------------------------------------------
 
+# @manual geo/plot-widget#plot-list
 def active_plots(map_uuid=None, on=None, include_planned=False):
     """`on`(기본 오늘) 시점에 재배 중인 구획 목록.
 
@@ -1933,6 +1953,7 @@ def plots_overlapping(map_uuid, geom, since=None, until=None,
 # 이 정본이고, 바인딩이 없으면 미배정 슬롯 — 그 자체가 정보라 함께 돌려준다
 # ("이 구획은 밸브가 안 정해진 구역에 걸쳐 있다").
 
+# @manual geo/map-widget#plot
 def valves_for_plot(plot):
     """구획과 겹치는 **장치 영역** 목록.
 
@@ -2664,6 +2685,7 @@ def stage_events_for(plot_uuids):
     return out
 
 
+# @manual geo/programs#stage-events
 def stage_anchors_for(plot_uuids, events=None):
     """여러 구획의 기준점을 **한 번에** → `{plot_uuid: dict|None}`.
 
@@ -2696,6 +2718,7 @@ def stage_anchors_for(plot_uuids, events=None):
     return out
 
 
+# @manual geo/programs#stage-events
 def stage_anchor(plot, anchors=None):
     """이 구획의 기준점 → dict|None.
 
@@ -2728,6 +2751,7 @@ def stage_anchor(plot, anchors=None):
     return _anchor_of(row)
 
 
+# @manual geo/programs#stage-events
 def stage_history(plot, events=None):
     """이 구획의 전환 이력(무른 것 포함) — 시작일 오름차순.
 
@@ -2759,6 +2783,7 @@ def stage_history(plot, events=None):
              'undone': r.undone_at is not None} for r in rows]
 
 
+# @manual geo/plot-widget#stages, geo/programs#stage-events
 def stage_proposal(plot, program=None, on=None, assume_start=False, anchors=None,
                    sched=None, gdd_cache=None):
     """대기 중인 전환 제안 → dict|None. **저장하지 않는다.**
@@ -2810,6 +2835,7 @@ def stage_proposal(plot, program=None, on=None, assume_start=False, anchors=None
             'started_on': _proposed_start(plot, st, on=on)}
 
 
+# @manual geo/programs#auto
 def _proposed_start(plot, st, on=None):
     """제안된 단계가 시작된 날(추정) → ISO 문자열|None.
 
@@ -2834,6 +2860,7 @@ def _proposed_start(plot, st, on=None):
     return today.isoformat()
 
 
+# @manual geo/programs#resources
 def stage_resources(stage, program_row=None, plot=None):
     """이 단계의 자원 → **선언(역할)과 현장(찾은 함수)을 나란히** 낸 목록.
 

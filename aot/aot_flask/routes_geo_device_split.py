@@ -24,6 +24,7 @@ from aot.aot_flask.routes_geo_plot import (  # 공용 분할 파라미터 계층
 logger = logging.getLogger(__name__)
 
 
+# @manual geo/api-reference#device-location-lists-detail
 @blueprint.route('/api/geo/device/split-apply', methods=['POST'])
 @login_required
 def api_device_split_apply():

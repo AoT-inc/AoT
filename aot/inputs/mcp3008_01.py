@@ -17,7 +17,7 @@ for each_channel in range(8):
 INPUT_INFORMATION = {
     'input_name_unique': 'MCP3008',
     'input_manufacturer': 'Microchip',
-    'input_name': 'MCP3008',
+    'input_name': 'MCP3008 (GPIO pins)',
     'input_library': 'Adafruit_MCP3008',
     'measurements_name': 'Voltage (Analog-to-Digital Converter)',
     'measurements_dict': measurements_dict,
@@ -45,7 +45,7 @@ INPUT_INFORMATION = {
         ('pip-pypi', 'Adafruit_MCP3008', 'Adafruit-MCP3008==1.0.2')
     ],
 
-    'interfaces': ['UART'],
+    'interfaces': ['SPI'],
     'pin_cs': 8,
     'pin_miso': 9,
     'pin_mosi': 10,

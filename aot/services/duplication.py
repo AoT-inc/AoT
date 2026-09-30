@@ -171,10 +171,16 @@ def blank_paired_channel_refs(channel) -> bool:
         if key in opts and opts[key]:
             opts[key] = ''
             changed = True
-    for key in ('last_position_pct', 'last_target_pct'):
-        if key in opts and opts[key]:
-            opts[key] = 0.0
-            changed = True
+    if 'last_position_pct' in opts and opts['last_position_pct']:
+        opts['last_position_pct'] = 0.0
+        changed = True
+    # last_target_pct 의 "안 정한" 상태는 0.0 이 아니라 -1.0 이다
+    # (actuator_paired.py/actuator_paired_bus.py 둘 다 `>= 0.0` 으로 이 값을
+    # 읽는다). 여기서 0.0 을 넣으면 다리를 하나도 안 골랐는데 사본이 "목표
+    # 0%" 를 사용자가 정한 것처럼 보여준다.
+    if 'last_target_pct' in opts and opts['last_target_pct'] not in (None, -1.0):
+        opts['last_target_pct'] = -1.0
+        changed = True
 
     if changed:
         channel.custom_options = json.dumps(opts)

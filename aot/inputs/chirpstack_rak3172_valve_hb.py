@@ -73,9 +73,14 @@ INPUT_INFORMATION = {
         'input_node_class / input_node_hb / input_vbat / input_rssi / input_snr.'
     ),
 
+    # This input runs on its own listener thread (see listener() below) and
+    # never polls on a period, so the standard period field is left out —
+    # only the measurement-freshness override is exposed (max_age_only).
+    'listener': True,
     'options_enabled': [
         'measurements_select',
-        'pre_output'
+        'pre_output',
+        'max_age_only'
     ],
 
     'dependencies_module': [

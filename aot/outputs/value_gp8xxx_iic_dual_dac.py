@@ -12,6 +12,7 @@ from aot.outputs.base_output import AbstractOutput
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -37,7 +38,7 @@ channels_dict = {
 
 OUTPUT_INFORMATION = {
     'output_name_unique': 'OUTPUT_GP8XXX_IIC_DUAL_DAC_0_10_VDC',
-    'output_name': "{}: GP8XXX (8413, 8403) 2-Channel DAC: 0-10 VDC".format(lazy_gettext('Value')),
+    'output_name': lazy_format("{}: GP8XXX (8413, 8403) 2-Channel DAC: 0-10 VDC", lazy_gettext('Value')),
     'output_library': 'GP8XXX-IIC',
     'output_manufacturer': 'DFRobot',
     'measurements_dict': measurements_dict,

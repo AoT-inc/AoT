@@ -9,6 +9,7 @@ env_control/cumulative_tracker.py — DLI·GDD 일별 누적 추적 (P5-5).
 
 참조: docs/env_control_enhancement_design.md §3.20
 """
+# @manual ai/env-control#settings-advanced
 
 from __future__ import annotations
 

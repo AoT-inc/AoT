@@ -18,6 +18,7 @@ from wtforms import widgets
 # Posts
 #
 
+# @manual Notices#posts, Notices#poll
 class NoticeAdd(FlaskForm):
     title = StringField(lazy_gettext('Title'))
     body = TextAreaField(lazy_gettext('Content'))
@@ -37,6 +38,7 @@ class NoticeAdd(FlaskForm):
     notice_add = SubmitField(lazy_gettext('Post'))
 
 
+# @manual Notices#posts, Notices#poll
 class NoticeMod(FlaskForm):
     notice_unique_id = StringField(widget=widgets.HiddenInput())
     title = StringField(lazy_gettext('Title'))

@@ -8,27 +8,7 @@ from datetime import timedelta
 
 import os
 from flask_babel import lazy_gettext as lg
-from flask_babel.speaklater import LazyString
-
-
-def lazy_join(*parts):
-    """Combine lazy_gettext()/T[...] values (and literal strings) into one
-    label without freezing it under whatever locale happens to be active
-    when this module is first imported.
-
-    A plain f-string or `"{}".format(...)` calls `str()` on every part
-    immediately -- at *import* time, before Babel has a request to read a
-    locale from -- so the joined result gets permanently baked in under
-    the default locale (English) for the rest of the process. flask_babel's
-    LazyString never caches (it re-runs gettext() on every access), so
-    wrapping the whole composition in one more layer of laziness keeps the
-    result reactive to each request's actual locale instead of freezing it.
-    Confirmed with a running worker: FUNCTION_INFO['trigger_edge']['name']
-    (an f-string of two T[...] values) stayed English under force_locale('ko')
-    while T['trigger']['title'] on its own translated correctly.
-    """
-    return LazyString(lambda: ''.join(str(p) for p in parts))
-
+from aot.utils.lazy_text import lazy_format, lazy_join  # noqa: F401 (re-export)
 
 # Determine if running in a Docker container
 DOCKER_CONTAINER = os.environ.get('DOCKER_CONTAINER', False) == 'TRUE'
@@ -38,8 +18,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_76_calendar_sync_status_20260924'
-AOT_VERSION = '26.09.07'
+ALEMBIC_VERSION = 'p6_80_api_key_tool_modules_20260929'
+AOT_VERSION = '26.09.08'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -531,22 +511,22 @@ PID_INFO = {
         6: {
             'measurement': 'duration_time',
             'unit': 's',
-            'name': f"{T['output']['title']} ({T['duration']['title']})"
+            'name': lazy_join(T['output']['title'], ' (', T['duration']['title'], ')')
         },
         7: {
             'measurement': 'duty_cycle',
             'unit': 'percent',
-            'name': f"{T['output']['title']} ({T['duty_cycle']['title']})"
+            'name': lazy_join(T['output']['title'], ' (', T['duty_cycle']['title'], ')')
         },
         8: {
             'measurement': 'volume',
             'unit': 'ml',
-            'name': f"{T['output']['title']} ({T['volume']['title']})"
+            'name': lazy_join(T['output']['title'], ' (', T['volume']['title'], ')')
         },
         9: {
             'measurement': 'unitless',
             'unit': 'none',
-            'name': f"{T['output']['title']} ({T['value']['title']})"
+            'name': lazy_join(T['output']['title'], ' (', T['value']['title'], ')')
         }
     }
 }
@@ -559,15 +539,15 @@ DEPENDENCIES_GENERAL = {}
 # Conditional Functions
 CONDITIONAL_CONDITIONS = [
     ('measurement',
-     f"{T['measurement']['title']} ({T['single']['title']}, {T['last']['title']})"),
+     lazy_join(T['measurement']['title'], ' (', T['single']['title'], ', ', T['last']['title'], ')')),
     ('measurement_and_ts',
-     f"{T['measurement']['title']} ({T['single']['title']}, {T['last']['title']}, with Timestamp)"),
+     lazy_join(T['measurement']['title'], ' (', T['single']['title'], ', ', T['last']['title'], ', ', lg('with Timestamp'), ')')),
     ('measurement_past_average',
-     f"{T['measurement']['title']} ({T['single']['title']}, {T['past']['title']}, {T['average']['title']})"),
+     lazy_join(T['measurement']['title'], ' (', T['single']['title'], ', ', T['past']['title'], ', ', T['average']['title'], ')')),
     ('measurement_past_sum',
-     f"{T['measurement']['title']} ({T['single']['title']}, {T['past']['title']}, {T['sum']['title']})"),
+     lazy_join(T['measurement']['title'], ' (', T['single']['title'], ', ', T['past']['title'], ', ', T['sum']['title'], ')')),
     ('measurement_dict',
-     f"{T['measurement']['title']} ({T['multiple']['title']}, {T['past']['title']})"),
+     lazy_join(T['measurement']['title'], ' (', T['multiple']['title'], ', ', T['past']['title'], ')')),
     ('gpio_state', lg('GPIO State')),
     ('output_state', lg('Output State')),
     ('output_duration_on', lg('Output Duration On')),
@@ -599,13 +579,13 @@ FUNCTION_INFO = {
         'dependencies_module': []
     },
     'conditional_conditional': {
-        'name': f"{T['conditional']['title']} {T['controller']['title']}",
+        'name': lazy_join(T['conditional']['title'], ' ', T['controller']['title']),
         'dependencies_module': [
             ('pip-pypi', 'pylint', 'pylint==3.0.1')
         ]
     },
     'pid_pid': {
-        'name': f"{T['pid']['title']} {T['controller']['title']}",
+        'name': lazy_join(T['pid']['title'], ' ', T['controller']['title']),
         'message': lg(
             'A PID (Proportional-Integral-Derivative) Controller continuously '
             'regulates a measured condition toward a target Setpoint by adjusting '
@@ -616,15 +596,15 @@ FUNCTION_INFO = {
         'dependencies_module': []
     },
     'trigger_edge': {
-        'name': f"{T['trigger']['title']}: {T['edge']['title']}",
+        'name': lazy_join(T['trigger']['title'], ': ', T['edge']['title']),
         'dependencies_module': []
     },
     'trigger_output': {
-        'name': f"{T['trigger']['title']}: {T['output']['title']} ({T['on']['title']}/{T['off']['title']})",
+        'name': lazy_join(T['trigger']['title'], ': ', T['output']['title'], ' (', T['on']['title'], '/', T['off']['title'], ')'),
         'dependencies_module': []
     },
     'trigger_output_pwm': {
-        'name': f"{T['trigger']['title']}: {T['output']['title']} ({T['pwm']['title']})",
+        'name': lazy_join(T['trigger']['title'], ': ', T['output']['title'], ' (', T['pwm']['title'], ')'),
         'dependencies_module': []
     },
     'trigger_timer_daily_time_point': {
@@ -638,7 +618,7 @@ FUNCTION_INFO = {
         'dependencies_module': []
     },
     'trigger_timer_duration': {
-        'name': f"{T['trigger']['title']}: {T['duration']['title']}",
+        'name': lazy_join(T['trigger']['title'], ': ', T['duration']['title']),
         'message': lg('Duration Trigger Functions will execute Actions every Period from when it is activated. A start offset can be added to delay the first execution.'),
         'dependencies_module': []
     },
@@ -656,10 +636,11 @@ FUNCTION_INFO = {
         'name': lazy_join(T['trigger']['title'], ': ', _LABEL_SEQUENCE),
         'message': lg(
             'A Sequence Trigger runs an ordered list of Actions one step at a time '
-            'when activated. Add Actions to the sequence and they execute from top '
-            'to bottom, with an optional delay between steps. Use it to automate '
-            'multi-step routines — for example, open a vent, wait, then turn on a '
-            'fan.'),
+            'when activated. Actions can run individually or as groups that fire '
+            'together, each step\'s duration can be a fixed delay or driven live by '
+            'an Input measurement, and steps can overlap and follow a per-weekday '
+            'schedule. Use it to automate multi-step routines — for example, open a '
+            'vent, wait, then turn on a fan.'),
         'dependencies_module': []
     }
 }

@@ -499,7 +499,7 @@ TOOLS: List[Tool] = [
                         "reading THIS result. Follow it; it is instruction, "
                         "not commentary. Read-only."),
         "usage_hint": ("params.arguments: {map_id?, zone_id?, include_ended?, "
-                       "on?: 'YYYY-MM-DD', with_sensors?}"),
+                       "on?: 'YYYY-MM-DD', with_sensors?, limit? (default 10)}"),
     }),
     Tool('get_plot', handler='get_plot', manifest={
         "tool_name": "get_plot",
@@ -1390,6 +1390,7 @@ for _t in TOOLS:
 # 표를 빠뜨림)는 test_tool_registry_ssot 가 양방향으로 잡는다.
 #
 # 서랍은 도메인 이름으로 묶는다 — LLM 이 열기 전에 안을 예측할 수 있어야 한다.
+# @manual ai/overview#tool-drawers
 DRAWERS = {
     'device':      '장치 조작·상태·검색',
     'measurement': '센서 값·환경·날씨·에너지',
@@ -1613,6 +1614,7 @@ for _name in _TIER_ASSIGNMENT:
 def tier_of(name):
     """(domain, base_tier, never_demote). 배정이 없으면 보수적 기본값."""
     return _TIER_ASSIGNMENT.get(name, ('system', 'drawer', False))
+# @manual-end
 
 
 # ---------------------------------------------------------------------------
@@ -1622,13 +1624,25 @@ def tier_of(name):
 # "무엇을 목록에 싣는가"(표면)다. 둘은 다른 축이라 섞지 않는다 — 묶음 밖 도구를
 # 부르면 거절하지만, 그것은 목록과 실행을 맞추는 일관성일 뿐 권한 판단이 아니다.
 #
+# 묶음 = 운영(항상) + 사람이 고른 **설정 모듈**(2026-09-29). 모듈은 설정 도구를
+# 용도별로 나눈 칸이다(TOOL_MODULES). 설정 전체(65개 ≈23k 토큰)를 켜거나 끄는
+# 둘뿐이면, 구획만 설계하는 키도 장치 정의·화면·AI 설정까지 대화마다 싣는다.
+# **모델이 대화 중에 고르는 구조가 아니라 사람이 키 발급 때 고르는 구조**다 —
+# 모델이 고르는 서랍 방식은 모델이 서랍을 열지 않아 실패했다(_tiering_enabled).
+#
 #   operations    — 일상 운영(기본). 조회·제어·일정·기록·작기 단계 사건.
-#   configuration — 운영 + 설정·작성(장치 정의, 자동화·시퀀스 작성, 구획·
-#                   프로그램 작성, 지도 배치, 화면 구성, AI 설정, 보관 문서·
-#                   라이브러리 소스). **더하기 방식**이라 운영을 항상 포함한다.
+#   configuration — 운영 + **모든** 모듈. 모듈이 늘어도 저절로 포함된다
+#                   ("더하기" — 예전 뜻 그대로라 기존 키의 목록이 바뀌지 않는다).
+#   operations+plots+map … — 운영 + 고른 모듈(TOOL_MODULES 순서로 정규화).
+#
+# 이 "묶음 값"(문자열 하나)이 인증 스냅샷(RoleInfo.tool_profile)부터 전송(stdio·
+# HTTP·REST·중앙 인증)·목록·실행·안내문·거절까지 그대로 흐른다. 값 하나로 두는
+# 이유: 모듈 집합을 따로 들고 다니면 자리마다 둘 중 하나를 빠뜨려 목록과 실행이
+# 갈라진다. 문자열이라 해시 가능하고(lru_cache), 옛 두 값은 뜻이 그대로다.
+# 저장은 두 칸이다(user_api_key.tool_profile + tool_modules, p6_80).
 #
 # 표 값은 넷 중 하나다:
-#   'operations' / 'configuration' — 그 묶음부터 보인다.
+#   'operations' / 모듈 이름 — 운영이거나, 그 모듈을 켠 키부터 보인다.
 #   'retired'   — 외부 MCP 목록에서 뺀 도구(같은 일을 하는 운영 도구가 있다).
 #                 인앱 AI 처럼 묶음이 없는(제한 없는) 호출자에게는 그대로 있다.
 #   'drawer'    — 서랍 기구(open_drawer·get_tool_detail·use_tool). 묶음과
@@ -1639,8 +1653,13 @@ def tier_of(name):
 # 묶음(용도)은 다른 축이라 _TIER_ASSIGNMENT 에 칸을 더하지 않는다. MCP 표면의
 # 도구마다 정확히 한 번 배정돼 있는지는 test_mcp_tool_profiles 가 양방향으로 본다.
 # **실행할 수 있는 도구는 전부** 표에 있다(카탈로그에 없어도 use_tool 로 닿는
-# 것 포함) — 표에 없는 이름을 설정으로 치는 규칙(tool_in_profile)은 새 도구가
-# 배정 없이 들어올 때를 위한 안전장치일 뿐, 배정을 대신하지 않는다.
+# 것 포함) — 표에 없는 이름은 **모듈을 전부 켠 키에만** 보이게 하는 규칙
+# (tool_in_profile)은 새 도구가 배정 없이 들어올 때를 위한 안전장치일 뿐, 배정을
+# 대신하지 않는다.
+#
+# 모듈 배정 규칙(모듈 R6): 모듈 M 도구의 설명·응답은 운영 ∪ M 밖 도구 이름을
+# 부르지 않는다 — M 만 켠 키에서 목록에 없는 이름을 가리키게 된다. 서로를
+# 가리키는 도구는 같은 모듈에 둔다(test_mcp_tool_profiles 가 검사한다).
 TOOL_PROFILE_OPERATIONS = 'operations'
 TOOL_PROFILE_CONFIGURATION = 'configuration'
 TOOL_PROFILES = (TOOL_PROFILE_OPERATIONS, TOOL_PROFILE_CONFIGURATION)
@@ -1653,8 +1672,29 @@ _PROFILE_DRAWER = 'drawer'
 #: None 은 "묶음이 비었다 → 기본 묶음" 으로 읽힌다.
 TOOL_PROFILE_UNRESTRICTED = 'unrestricted'
 
+#: 설정 모듈 — 이 순서가 묶음 값·화면·안내문의 순서다. 이름은 저장값이라
+#: 바꾸지 말 것(바꾸면 그 모듈을 켠 키가 조용히 좁아진다 — 모르는 모듈은
+#: 버린다). 모델 쪽 사본 user_api_key.TOOL_MODULES 와 같아야 한다(검사가 대조).
+TOOL_MODULES = ('plots', 'map', 'automation', 'devices', 'dashboard',
+                'library', 'admin')
+#: 모듈마다 모델에게 알리는 한 줄(영문) — 서버 안내문·거절 메시지에 싣는다.
+#: **도구 이름을 싣지 않는다**(R6 — 목록에 없는 이름을 가리키는 안내는 모델이
+#: 주입으로 오인했다). 분야로만 말한다. 짧게: 꺼진 모듈마다 한 줄씩 나간다.
+TOOL_MODULE_SUMMARIES = {
+    'plots': 'plots, stages, splits, crop programs',
+    'map': 'addresses, distances, placement, shapes',
+    'automation': 'create/delete automations, sequence day plans',
+    'devices': 'device and GIS input definitions',
+    'dashboard': 'dashboards, widgets, tabs',
+    'library': 'archives, notice edits, library sources',
+    'admin': 'update/storage status, AI agents',
+}
+#: 묶음 값에서 운영과 모듈을 잇는 기호. 쉼표가 아닌 이유: 거절 메시지 등에
+#: "(operations+plots)" 로 그대로 실려도 목록처럼 읽히지 않고 한 값으로 읽힌다.
+TOOL_PROFILE_SEP = '+'
+
 _OPS = TOOL_PROFILE_OPERATIONS
-_CFG = TOOL_PROFILE_CONFIGURATION
+_M_PLOTS, _M_MAP, _M_AUTO, _M_DEV, _M_DASH, _M_LIB, _M_ADMIN = TOOL_MODULES
 
 _MCP_PROFILE = {
     # --- 장치 ---------------------------------------------------------------
@@ -1668,7 +1708,9 @@ _MCP_PROFILE = {
     # 카탈로그(tools/list)에는 없지만 use_tool 로 실행되는 도구 — 표에 없으면
     # 설정으로 쳐지는 안전장치에 기대지 않고 명시한다(test_mcp_tool_profiles).
     'list_unbound_slots':        _OPS,
-    'rebind_device':             _CFG,
+    # 슬롯 재배선은 장치 정의를 고치는 일이다(devices) — 운영 키는 빈 슬롯을
+    # 보기만 한다(list_unbound_slots).
+    'rebind_device':             _M_DEV,
     # operate_device 와 같은 일을 하는 네이티브 도구. 인앱 AI 에는 남는다.
     'set_output_state':          _PROFILE_RETIRED,
     # get_device_list·search_devices 와 겹치는 네이티브 도구.
@@ -1692,10 +1734,12 @@ _MCP_PROFILE = {
     # 제어기 옵션·시퀀스 운전 시간 조정("관수 5분 늘려")은 현장의 일상이다.
     'modify_function_options':   _OPS,
     'modify_sequence_schedule':  _OPS,
-    'create_function':           _CFG,
-    'delete_function':           _CFG,
-    'create_sequence_function':  _CFG,
-    'configure_sequence_day':    _CFG,
+    # 자동화 작성(automation) — 함수·시퀀스를 새로 만들거나 지우고 요일 계획을
+    # 통째로 까는 일. 켜고 끄기·옵션·운전 시간 조정은 위의 운영이다.
+    'create_function':           _M_AUTO,
+    'delete_function':           _M_AUTO,
+    'create_sequence_function':  _M_AUTO,
+    'configure_sequence_day':    _M_AUTO,
     # 기존 단계 하나의 시간·순서·켜짐 조정("관수 5분 늘려")도 현장의 일상이다.
     # 운영 안내문이 "시퀀스 운전 시간" 을 약속하는데 이것이 설정에만 있어서
     # 프로필 벤치마크(26-09-24, 432회) lat_19 가 운영 키에서 실패했다. 단계를
@@ -1724,17 +1768,22 @@ _MCP_PROFILE = {
     'list_advice':               _OPS,
     # search_notes 응답이 보관 문서 검색을 가리킨다.
     'search_archives':           _OPS,
-    'get_archived_document':     _CFG,
-    'archive_note':              _CFG,
-    'restore_note_from_archive': _CFG,
-    'set_document_tier':         _CFG,
-    'delete_archive':            _CFG,
-    'modify_notice':             _CFG,
-    'delete_notice':             _CFG,
-    'knowledge_shelve':          _CFG,
-    'list_library_source_types': _CFG,
-    'smartfarmkorea_lookup':     _CFG,
-    'configure_library_source':  _CFG,
+    # 보관 문서·공지 수정/삭제·라이브러리 소스·지식 보관은 library 하나다 —
+    # 모두 "쌓인 문서를 정리하는 일" 이고, 설명·응답이 서로를 가리킨다
+    # (set_document_tier → archive_note, configure_library_source ↔
+    # smartfarmkorea_lookup). 공지 **작성**(create_notice)과 조회는 현장
+    # 일상이라 운영에 남는다.
+    'get_archived_document':     _M_LIB,
+    'archive_note':              _M_LIB,
+    'restore_note_from_archive': _M_LIB,
+    'set_document_tier':         _M_LIB,
+    'delete_archive':            _M_LIB,
+    'modify_notice':             _M_LIB,
+    'delete_notice':             _M_LIB,
+    'knowledge_shelve':          _M_LIB,
+    'list_library_source_types': _M_LIB,
+    'smartfarmkorea_lookup':     _M_LIB,
+    'configure_library_source':  _M_LIB,
     # --- 공간 ---------------------------------------------------------------
     'list_plots':                _OPS,
     'get_plot':                  _OPS,
@@ -1755,40 +1804,52 @@ _MCP_PROFILE = {
     'reschedule_plot_stage':     _OPS,
     'undo_plot_stage':           _OPS,
     'apply_plot_resources':      _OPS,
-    'create_plot':               _CFG,
-    'modify_plot':               _CFG,
-    'delete_plot':               _CFG,
-    'copy_plot':                 _CFG,
-    'propose_plot_split':        _CFG,
-    'apply_plot_split':          _CFG,
-    'set_plot_stage_guidance':   _CFG,
-    'add_plot_stage':            _CFG,
-    'remove_plot_stage':         _CFG,
-    'save_plot_schedule_as_program': _CFG,
-    'list_programs':             _CFG,
-    'get_program':               _CFG,
-    'create_program':            _CFG,
-    'modify_program':            _CFG,
-    'delete_program':            _CFG,
-    'get_address':               _CFG,
-    'distance_between':          _CFG,
-    'nearest':                   _CFG,
-    'set_device_location':       _CFG,
-    'delete_geo_shape':          _CFG,
+    # 작기 설계(plots) — 구획 만들기·나누기·단계 틀·작기 프로그램. 프로그램
+    # 조회(list_programs·get_program)도 여기다: 구획을 설계할 때만 쓰고, 운영
+    # 키는 get_plot 이 그 구획의 일정을 이미 싣는다. 구획과 프로그램은 설명이
+    # 서로를 가리켜(create_plot → list_programs, delete_program·
+    # save_plot_schedule_as_program → modify_plot) 한 모듈이어야 한다.
+    'create_plot':               _M_PLOTS,
+    'modify_plot':               _M_PLOTS,
+    'delete_plot':               _M_PLOTS,
+    'copy_plot':                 _M_PLOTS,
+    'propose_plot_split':        _M_PLOTS,
+    'apply_plot_split':          _M_PLOTS,
+    'set_plot_stage_guidance':   _M_PLOTS,
+    'add_plot_stage':            _M_PLOTS,
+    'remove_plot_stage':         _M_PLOTS,
+    'save_plot_schedule_as_program': _M_PLOTS,
+    'list_programs':             _M_PLOTS,
+    'get_program':               _M_PLOTS,
+    'create_program':            _M_PLOTS,
+    'modify_program':            _M_PLOTS,
+    'delete_program':            _M_PLOTS,
+    # 지도·위치(map) — 주소·거리·가까운 것 찾기는 장치 배치(set_device_location)
+    # 와 도형 정리를 할 때 쓰는 도구라 한 모듈로 둔다(nearest 설명이
+    # distance_between 을 가리킨다). 위치 **조회**(get_device_location·
+    # get_map_equipment)는 운영이다.
+    'get_address':               _M_MAP,
+    'distance_between':          _M_MAP,
+    'nearest':                   _M_MAP,
+    'set_device_location':       _M_MAP,
+    'delete_geo_shape':          _M_MAP,
     # --- 장치 정의 ----------------------------------------------------------
-    'list_device_types':         _CFG,
-    'get_device_type_options':   _CFG,
-    'create_input':              _CFG,
-    'modify_input':              _CFG,
-    'delete_input':              _CFG,
-    'create_output':             _CFG,
-    'modify_output':             _CFG,
-    'delete_output':             _CFG,
-    'list_gis_inputs':           _CFG,
-    'create_gis_input':          _CFG,
-    'modify_gis_input':          _CFG,
-    'activate_gis_input':        _CFG,
-    'delete_gis_input':          _CFG,
+    # 장치 정의(devices) — 입출력·GIS 입력의 종류 조회와 CRUD. 종류 조회
+    # (list_device_types)는 kind=function 도 받지만 create_function 이 종류를
+    # enum 으로 싣고 있어 automation 은 이것 없이 닫혀 있다.
+    'list_device_types':         _M_DEV,
+    'get_device_type_options':   _M_DEV,
+    'create_input':              _M_DEV,
+    'modify_input':              _M_DEV,
+    'delete_input':              _M_DEV,
+    'create_output':             _M_DEV,
+    'modify_output':             _M_DEV,
+    'delete_output':             _M_DEV,
+    'list_gis_inputs':           _M_DEV,
+    'create_gis_input':          _M_DEV,
+    'modify_gis_input':          _M_DEV,
+    'activate_gis_input':        _M_DEV,
+    'delete_gis_input':          _M_DEV,
     # --- 시스템 -------------------------------------------------------------
     'resolve_target':            _OPS,
     'get_system_brief':          _OPS,
@@ -1800,55 +1861,156 @@ _MCP_PROFILE = {
     # 선언만 있고 MCP 실행층에는 처리기가 없다(인앱 action_type). 읽기라 운영.
     'read_manual':               _OPS,
     'analyze_system_failure':    _OPS,
-    'get_system_update_status':  _CFG,
-    'get_storage_tier_status':   _CFG,
-    'list_dashboards':           _CFG,
-    'list_widget_types':         _CFG,
-    'get_widget':                _CFG,
-    'create_widget':             _CFG,
-    'modify_widget':             _CFG,
-    'delete_widget':             _CFG,
-    'list_tabs':                 _CFG,
-    'create_tab':                _CFG,
-    'modify_tab':                _CFG,
-    'delete_tab':                _CFG,
-    'list_ai_agents':            _CFG,
-    'list_ai_entries':           _CFG,
-    'create_ai_agent':           _CFG,
-    'modify_ai_agent':           _CFG,
-    'delete_ai_agent':           _CFG,
+    # 시스템·AI 설정(admin) — 업데이트·저장소 계층 상태와 AI 에이전트 설정.
+    # 관리자가 가끔 보는 것이라 현장 키에는 필요 없다.
+    'get_system_update_status':  _M_ADMIN,
+    'get_storage_tier_status':   _M_ADMIN,
+    # 화면(dashboard) — 대시보드·위젯·탭 구성.
+    'list_dashboards':           _M_DASH,
+    'list_widget_types':         _M_DASH,
+    'get_widget':                _M_DASH,
+    'create_widget':             _M_DASH,
+    'modify_widget':             _M_DASH,
+    'delete_widget':             _M_DASH,
+    'list_tabs':                 _M_DASH,
+    'create_tab':                _M_DASH,
+    'modify_tab':                _M_DASH,
+    'delete_tab':                _M_DASH,
+    'list_ai_agents':            _M_ADMIN,
+    'list_ai_entries':           _M_ADMIN,
+    'create_ai_agent':           _M_ADMIN,
+    'modify_ai_agent':           _M_ADMIN,
+    'delete_ai_agent':           _M_ADMIN,
     # 서랍 기구 — 묶음이 아니라 서랍 스위치를 따른다.
     'open_drawer':               _PROFILE_DRAWER,
     'get_tool_detail':           _PROFILE_DRAWER,
     'use_tool':                  _PROFILE_DRAWER,
 }
 
-_PROFILE_VALUES = frozenset(TOOL_PROFILES) | {_PROFILE_RETIRED, _PROFILE_DRAWER}
+_PROFILE_VALUES = (frozenset({TOOL_PROFILE_OPERATIONS}) | frozenset(TOOL_MODULES)
+                   | {_PROFILE_RETIRED, _PROFILE_DRAWER})
 for _name, _value in _MCP_PROFILE.items():
     if _value not in _PROFILE_VALUES:
         raise ValueError(
             f"tool_registry: 묶음 표에 모르는 값이 있습니다 — {_name}: {_value}")
+if set(TOOL_MODULE_SUMMARIES) != set(TOOL_MODULES):
+    raise ValueError("tool_registry: 모듈 요약과 모듈 목록이 어긋났습니다")
+
+_ALL_MODULES = frozenset(TOOL_MODULES)
 
 
+# @manual ai/overview#tool-profiles
+def compose_tool_profile(modules):
+    """켤 모듈들 → 정규화한 묶음 값.
+
+    모르는 모듈은 버린다(좁히는 쪽). 하나도 없으면 'operations', 전부면
+    'configuration' — 전부 켠 키는 앞으로 생길 모듈까지 받는 설정 묶음과 같게
+    둔다(화면에서 전부 체크 = 예전 "운영 + 설정")."""
+    chosen = {m for m in (modules or ()) if m in _ALL_MODULES}
+    if not chosen:
+        return TOOL_PROFILE_OPERATIONS
+    if chosen == _ALL_MODULES:
+        return TOOL_PROFILE_CONFIGURATION
+    return TOOL_PROFILE_SEP.join(
+        [TOOL_PROFILE_OPERATIONS] + [m for m in TOOL_MODULES if m in chosen])
+
+
+# @manual ai/overview#tool-profiles
+def parse_tool_profile(value):
+    """묶음 값을 엄격히 읽는다 — 정규화한 값, 읽을 수 없으면 None.
+
+    화면·요청에서 들어온 값의 검증용이다(모르는 모듈이 하나라도 있으면 None →
+    호출자가 거절한다). 저장값·스냅샷을 읽을 때는 normalize_tool_profile."""
+    if not isinstance(value, str):
+        return None
+    if value in TOOL_PROFILES:
+        return value
+    head, _sep, rest = value.partition(TOOL_PROFILE_SEP)
+    if head != TOOL_PROFILE_OPERATIONS or not rest:
+        return None
+    parts = rest.split(TOOL_PROFILE_SEP)
+    if any(p not in _ALL_MODULES for p in parts):
+        return None
+    return compose_tool_profile(parts)
+
+
+# @manual ai/overview#tool-profiles
 def normalize_tool_profile(value):
-    """키에 저장할 묶음 값. 모르는 값·빈 값은 운영으로 좁힌다.
+    """키에 저장하거나 연결에 적용할 묶음 값. 모르는 값·빈 값은 운영으로 좁힌다.
 
-    scope 와 같은 원칙이다 — 오타 하나가 조용히 넓은 표면을 만들지 않게 한다."""
-    return value if value in TOOL_PROFILES else TOOL_PROFILE_OPERATIONS
+    scope 와 같은 원칙이다 — 오타 하나가 조용히 넓은 표면을 만들지 않게 한다.
+    'operations+…' 안의 모르는 모듈은 그 모듈만 버린다(없어진 모듈 이름이
+    저장돼 있어도 나머지 모듈은 산다). 앞머리가 운영이 아니면 운영이다."""
+    if value in TOOL_PROFILES:
+        return value
+    if not isinstance(value, str):
+        return TOOL_PROFILE_OPERATIONS
+    head, _sep, rest = value.partition(TOOL_PROFILE_SEP)
+    if head != TOOL_PROFILE_OPERATIONS:
+        return TOOL_PROFILE_OPERATIONS
+    return compose_tool_profile(rest.split(TOOL_PROFILE_SEP))
+
+
+# @manual ai/overview#tool-profiles
+def profile_modules(profile):
+    """그 묶음이 켠 모듈(frozenset). 'configuration' 은 지금 있는 모듈 전부."""
+    return _profile_modules(normalize_tool_profile(profile))
+
+
+@functools.lru_cache(maxsize=None)
+def _profile_modules(profile):
+    if profile == TOOL_PROFILE_CONFIGURATION:
+        return _ALL_MODULES
+    _head, _sep, rest = profile.partition(TOOL_PROFILE_SEP)
+    return frozenset(rest.split(TOOL_PROFILE_SEP)) if rest else frozenset()
+
+
+# @manual ai/overview#tool-profiles
+def profile_from_storage(tool_profile, tool_modules):
+    """키 행의 두 칸(user_api_key.tool_profile, tool_modules) → 묶음 값.
+
+    'configuration' 은 모듈 칸을 보지 않는다(언제나 전부). 'operations' 이면
+    모듈 칸(쉼표 목록)을 더한다. 그 밖(빈 값 포함)은 운영 — 배정 전(NULL)을
+    운영으로 보는 것은 호출자(mcp_auth.key_tool_profile)의 규칙과 같다."""
+    if tool_profile == TOOL_PROFILE_CONFIGURATION:
+        return TOOL_PROFILE_CONFIGURATION
+    if tool_profile != TOOL_PROFILE_OPERATIONS:
+        return TOOL_PROFILE_OPERATIONS
+    return compose_tool_profile(
+        m.strip() for m in (tool_modules or '').split(','))
 
 
 def mcp_profile_of(name):
-    """MCP 표면 도구의 묶음 배정. 표에 없으면 None."""
-    return _MCP_PROFILE.get(name)
+    """MCP 표면 도구의 묶음 단계 — 'operations' / 'configuration'(어느 모듈이든)
+    / 'retired' / 'drawer'. 표에 없으면 None. 모듈은 mcp_module_of."""
+    value = _MCP_PROFILE.get(name)
+    return TOOL_PROFILE_CONFIGURATION if value in _ALL_MODULES else value
+
+
+def mcp_module_of(name):
+    """설정 도구가 속한 모듈. 운영·retired·서랍 기구·표에 없는 이름은 None."""
+    value = _MCP_PROFILE.get(name)
+    return value if value in _ALL_MODULES else None
 
 
 def mcp_profile_table():
-    """배정표 사본(검사·문서용)."""
+    """배정표 사본 — 단계로(검사·문서용). 모듈 배정은 mcp_module_table."""
+    return {n: mcp_profile_of(n) for n in _MCP_PROFILE}
+
+
+def mcp_module_table():
+    """배정표 원본 사본 — 설정 도구는 모듈 이름으로."""
     return dict(_MCP_PROFILE)
 
 
+def module_tools(module):
+    """그 모듈에 배정된 도구 이름(frozenset). 모르는 모듈은 빈 집합."""
+    return frozenset(n for n, v in _MCP_PROFILE.items() if v == module)
+
+
+# @manual ai/overview#tool-profiles
 def profile_tools(profile):
-    """그 묶음이 보여 주는 도구 이름. 설정은 운영을 포함한다(운영 ⊆ 설정).
+    """그 묶음이 보여 주는 도구 이름 = 운영 + 켠 모듈의 도구(운영 ⊆ 모든 묶음).
 
     서랍 기구와 retired 는 어느 묶음에도 들지 않는다 — 앞의 것은 서랍 스위치가,
     뒤의 것은 "묶음 없음(제한 없음)" 호출자만 본다."""
@@ -1857,9 +2019,7 @@ def profile_tools(profile):
 
 @functools.lru_cache(maxsize=None)
 def _profile_tools(profile):
-    wanted = {TOOL_PROFILE_OPERATIONS}
-    if profile == TOOL_PROFILE_CONFIGURATION:
-        wanted.add(TOOL_PROFILE_CONFIGURATION)
+    wanted = {TOOL_PROFILE_OPERATIONS} | _profile_modules(profile)
     return frozenset(n for n, v in _MCP_PROFILE.items() if v in wanted)
 
 
@@ -1876,21 +2036,22 @@ def is_retired_from_mcp(name):
     return _MCP_PROFILE.get(name) == _PROFILE_RETIRED
 
 
+# @manual ai/overview#tool-profiles
 def tool_in_profile(name, profile):
     """묶음 `profile` 인 호출자에게 이 도구를 보여 주는가.
 
     profile 이 None 이면 제한이 없다(인앱 AI). 서랍 기구는 묶음과 무관하게
-    참이다 — 서랍 스위치가 따로 정한다. 표에 없는 이름은 설정으로 친다(새
-    도구가 배정 없이 들어와도 운영 키 표면이 조용히 커지지 않게)."""
+    참이다 — 서랍 스위치가 따로 정한다. 표에 없는 이름은 **모듈을 전부 켠
+    묶음에만** 보인다(새 도구가 배정 없이 들어와도 운영·일부 모듈 키의 표면이
+    조용히 커지지 않게 — 어느 모듈 것인지 모르므로 좁은 쪽으로 친다)."""
     if profile is None:
         return True
-    value = _MCP_PROFILE.get(name, TOOL_PROFILE_CONFIGURATION)
+    value = _MCP_PROFILE.get(name)
     if value == _PROFILE_DRAWER:
         return True
-    return name in profile_tools(profile) or (
-        value == TOOL_PROFILE_CONFIGURATION
-        and name not in _MCP_PROFILE
-        and normalize_tool_profile(profile) == TOOL_PROFILE_CONFIGURATION)
+    if value is None:
+        return profile_modules(profile) >= _ALL_MODULES
+    return name in profile_tools(profile)
 
 
 # ---------------------------------------------------------------------------
@@ -1933,6 +2094,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "include_ended": {"type": "boolean", "description": "Include finished plots (history)."},
                 "on": {"type": "string", "description": "As-of date 'YYYY-MM-DD'."},
                 "with_sensors": {"type": "boolean", "description": "Include each plot's sensors (not valves)."},
+                # `limit` (int, default 10) is accepted but not advertised here —
+                # host token-budget ceiling (test_mcp_tool_profiles.py). A truncated
+                # reply's own `truncated_note` teaches the model the flag, at zero
+                # fixed catalog cost.
             },
         },
     },
@@ -2099,13 +2264,33 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         "tool_name": "apply_plot_split",
         "description": (
             "Creates one plot per piece of a split — the write half of "
-            "propose_plot_split. Pass exactly the SAME arguments as the proposal,"
-            " leaving out what was left out there: the split is recomputed and "
-            "must match. Check the piece count first (41 pieces = 41 plots). One "
-            "crop over a whole zone is create_plot with zone_id. Requires human "
-            "approval."
+            "propose_plot_split. Pass exactly the SAME arguments as the proposal"
+            " (parts/strip_width_cm/widths_cm/edge_margin_m/orientation/"
+            "angle_deg), leaving out what was left out there: the split is "
+            "recomputed and must match. Check the piece count first (41 pieces ="
+            " 41 plots). One crop over a whole zone is create_plot with "
+            "zone_id. Requires human approval."
         ),
         "input_schema": {
+            "type": "object",
+            "properties": {
+                "zone_id": {"type": "string", "description": "The zone or site shape to divide."},
+                "subject": {"type": "string", "description": "Subject for every piece."},
+                "started_on": {"type": "string", "description": "Start date 'YYYY-MM-DD'."},
+                "parts": {"type": "integer"},
+                "strip_width_cm": {"type": "number"},
+                "widths_cm": {"type": "array", "items": {"type": "number"}},
+                "edge_margin_m": {"type": "number", "description": "METERS. Default 0."},
+                "orientation": {"type": "string", "enum": ["long", "short"]},
+                "angle_deg": {"type": "number"},
+                "variety": {"type": "string"},
+                "name": {"type": "string", "description": "Base name; pieces are numbered from it, e.g. 'A' becomes 'A 1', 'A 2'."},
+                "expected_end_on": {"type": "string", "description": "'YYYY-MM-DD'"},
+                "color": {"type": "string", "description": "'#rrggbb'"},
+            },
+            "required": ["zone_id", "subject", "started_on"],
+        },
+        "detail": {"input_schema": {
             "type": "object",
             "properties": {
                 "zone_id": {"type": "string", "description": "The zone or site shape to divide."},
@@ -2123,7 +2308,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "color": {"type": "string", "description": "'#rrggbb'"},
             },
             "required": ["zone_id", "subject", "started_on"],
-        },
+        }},
     },
     {
         "tool_name": "copy_plot",
@@ -2349,6 +2534,23 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "name": {"type": "string", "description": "Programme name."},
                 "subject": {"type": "string", "description": "What it manages."},
                 "source_note": {"type": "string", "description": "REQUIRED. What this is based on, and how that source's stages were mapped onto these ones — without it nobody can later judge whether a number is right."},
+                "stages": {"type": "array", "description": "Ordered stages; each item keys: key, name, days, targets?, guidance?. 'days' is LENGTH not cumulative; only the LAST may be blank. Full item shape: get_tool_detail.", "items": {"type": "object"}},
+                "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"], "description": "Default 'vegetation'. Only vegetation has fixed target items; other kinds need target_defs before targets."},
+                "variety": {"type": "string", "description": "Cultivar / breed."},
+                "notes": {"type": "string", "description": "Free notes."},
+                "target_defs": {"type": "array", "description": "Extra target items, only for a value the fixed vocabulary lacks; each item keys: key, label, unit, measurement.", "items": {"type": "object"}},
+                "base_temp_c": {"type": "number", "description": "GDD base temperature. Vegetation only."},
+                "resource_defs": {"type": "array", "description": "What the subject NEEDS (roles: irrigation/fertigation/other) — never which function does it; the site resolves that.", "items": {"type": "object"}},
+                "tab_id": {"type": "string", "description": "Tab on the Programs page."},
+            },
+            "required": ["name", "subject", "source_note"],
+        },
+        "detail": {"input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Programme name."},
+                "subject": {"type": "string", "description": "What it manages."},
+                "source_note": {"type": "string", "description": "REQUIRED. What this is based on, and how that source's stages were mapped onto these ones — without it nobody can later judge whether a number is right."},
                 "stages": {"type": "array", "description": "Ordered stages. 'days' is that stage's LENGTH, not a cumulative day; only the LAST stage may leave it blank (= until the end).", "items": {"type": "object", "properties": {"key": {"type": "string", "description": "Stage key, e.g. transplant / vegetative / flowering / fruiting / harvest."}, "name": {"type": "string", "description": "Display name."}, "days": {"type": "integer", "description": "Length of this stage in days. Blank only on the last stage."}, "targets": {"type": "object", "description": "{item_key: number}, this stage only. Keys MUST exist in target_defs — vegetation already has temp_day, temp_night, rh, co2, dli, vpd. Out-of-range values are refused."}, "guidance": {"type": "string", "description": "The half no sensor can do — what to LOOK at and DO BY HAND this stage. This is what a beginner opens the programme for, so fill it when you have a real basis."}}}},
                 "kind": {"type": "string", "enum": ["vegetation", "livestock", "facility", "other"], "description": "Default 'vegetation'. Only vegetation has fixed target items; other kinds need target_defs before targets."},
                 "variety": {"type": "string", "description": "Cultivar / breed."},
@@ -2359,7 +2561,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "tab_id": {"type": "string", "description": "Tab on the Programs page."},
             },
             "required": ["name", "subject", "source_note"],
-        },
+        }},
     },
     {
         "tool_name": "modify_program",
@@ -2638,7 +2840,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "date": {"type": "string", "description": "YYYY-MM-DD for every entry."},
-                "entries": {"type": "array", "description": "One per target; the same target twice is rejected.", "items": {"type": "object", "properties": {"target_name": {"type": "string", "description": "Exact place name, e.g. a resolve_target child."}, "target_id": {"type": "string", "description": "Instead: a candidate's target_id (wins over target_name)."}, "time": {"type": "string", "description": "HH:MM."}, "content": {"type": "string", "description": "Overrides the shared content."}, "worker": {"type": "string", "description": "Overrides the shared worker."}}, "required": ["target_name", "time"]}},
+                "entries": {"type": "array", "description": "One per target (no repeats); keys: target_name/target_id, time, content?, worker?.", "items": {"type": "object"}},
                 "content": {"type": "string", "description": "Shared work text for entries without their own."},
                 "worker": {"type": "string", "description": "Shared assignee."},
                 "tags": {"type": "string", "description": "Comma-separated, for every entry."},
@@ -2648,6 +2850,20 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             },
             "required": ["date", "entries"],
         },
+        "detail": {"input_schema": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string", "description": "YYYY-MM-DD for every entry."},
+                "entries": {"type": "array", "description": "One per target; the same target twice is rejected.", "items": {"type": "object", "properties": {"target_name": {"type": "string", "description": "Exact place name, e.g. a resolve_target child."}, "target_id": {"type": "string", "description": "Instead: a candidate's target_id (wins over target_name)."}, "time": {"type": "string", "description": "HH:MM."}, "content": {"type": "string", "description": "Overrides the shared content."}, "worker": {"type": "string", "description": "Overrides the shared worker."}}, "required": ["target_name", "time"]}},
+                "content": {"type": "string", "description": "Shared work text for entries without their own."},
+                "worker": {"type": "string", "description": "Shared assignee."},
+                "tags": {"type": "string", "description": "Comma-separated, for every entry."},
+                "window_start": {"type": "string", "description": "'HH:MM' start of the work window (enables the fit check)."},
+                "window_end": {"type": "string", "description": "'HH:MM' end; every entry's time must be at or before it."},
+                "duration_minutes": {"type": "integer", "description": "Minutes per entry for the fit check. Default 60."},
+            },
+            "required": ["date", "entries"],
+        }},
     },
     {
         "tool_name": "search_notes",
@@ -2995,6 +3211,23 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "day": {"type": "integer", "description": "Weekday this plan applies to, 0=Mon..6=Sun. Other weekdays are left alone."},
                 "slots": {
                     "type": "array",
+                    "description": "Ordered run plan; same-slot devices run SIMULTANEOUSLY. Each item keys: devices (required), minutes/seconds, group.",
+                    "items": {"type": "object"},
+                },
+                "start": {"type": "string", "description": "When the day's run begins, 'HH:MM' local. Optional — keeps the current start if omitted."},
+                "end": {"type": "string", "description": "Window end 'HH:MM'. Optional — defaults to exactly one pass."},
+                "period_seconds": {"type": "number", "description": "Seconds between repeats. Optional — defaults to one pass, i.e. it runs once."},
+                "repeat": {"type": "boolean", "description": "Keep the existing repeat period instead of running once. Optional."}
+            },
+            "required": ["function_id", "day", "slots"]
+        },
+        "detail": {"input_schema": {
+            "type": "object",
+            "properties": {
+                "function_id": {"type": "string", "description": "unique_id or exact name of the sequence."},
+                "day": {"type": "integer", "description": "Weekday this plan applies to, 0=Mon..6=Sun. Other weekdays are left alone."},
+                "slots": {
+                    "type": "array",
                     "description": "Ordered run plan. Each entry is one time slot; devices listed in the same slot run SIMULTANEOUSLY.",
                     "items": {
                         "type": "object",
@@ -3013,7 +3246,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "repeat": {"type": "boolean", "description": "Keep the existing repeat period instead of running once. Optional."}
             },
             "required": ["function_id", "day", "slots"]
-        }
+        }},
     },
     {
         # 운영 묶음에 있다(프로필 벤치마크 26-09-24 lat_19) — 운영 크기 상한
@@ -3285,9 +3518,13 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     # list_device_types/get_device_type_options lookups they depend on) but never
     # exposed to external MCP clients — same gap pattern as the Function/Notice
     # CRUD found earlier today.
+    # 설명에 create_function 을 적지 않는다 — 이 도구는 devices 모듈이고
+    # create_function 은 automation 모듈이라, devices 만 켠 키에서 목록에 없는
+    # 이름을 가리키게 된다(모듈 R6, test_mcp_tool_profiles). create_function 은
+    # function_type 을 enum 으로 싣고 있어 이 도구 없이도 종류를 고른다.
     {
         "tool_name": "list_device_types",
-        "description": "Lists the valid TYPES available for creating an Input/Output/Function. Read-only. ALWAYS call this before create_input/create_output/create_function so the type is real — never invent a type.",
+        "description": "Lists the valid TYPES available for creating an Input/Output/Function. Read-only. ALWAYS call this before create_input/create_output or creating a function so the type is real — never invent a type.",
         "input_schema": {
             "type": "object",
             "properties": {"kind": {"type": "string", "enum": ["input", "output", "function"]}},
@@ -3574,6 +3811,22 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "preset_key": {"type": "string", "enum": ["smartfarmkorea", "smartfarmkorea_outdoor", "smartfarmkorea_livestock"]},
                 "api_key": {"type": "string"},
+                "operations": {"type": "array", "items": {"type": "string"}, "description": "EXACT operation keys, per-dataset (identity/cropping/env shared) — a wrong key is refused with the valid list, so a good first guess is fine."},
+                "userId": {"type": "string"}, "facilityId": {"type": "string"},
+                "croppingSerlNo": {"type": "string"}, "itemCode": {"type": "string"},
+                "measDate": {"type": "string"}, "startDate": {"type": "string"}, "endDate": {"type": "string"},
+                "source_id": {"type": "string", "description": "Optional — update instead of create."},
+                "activate": {"type": "boolean", "description": "Default true."},
+                "sync": {"type": "boolean", "description": "Default true."},
+                "farm_label": {"type": "string"}, "season_label": {"type": "string"}
+            },
+            "required": ["preset_key", "api_key", "operations"]
+        },
+        "detail": {"input_schema": {
+            "type": "object",
+            "properties": {
+                "preset_key": {"type": "string", "enum": ["smartfarmkorea", "smartfarmkorea_outdoor", "smartfarmkorea_livestock"]},
+                "api_key": {"type": "string"},
                 "operations": {"type": "array", "items": {"type": "string"}, "description": "EXACT operation keys (not generic words) — a wrong key returns valid_operations to retry with. 시설: growth_strawberry/growth_mum/growth_melon/growth_other, 노지: growth_radish/growth_cabbage/growth_garlic/growth_onion/growth_blueberry, shared: identity/cropping/env."},
                 "userId": {"type": "string"}, "facilityId": {"type": "string"},
                 "croppingSerlNo": {"type": "string"}, "itemCode": {"type": "string"},
@@ -3584,7 +3837,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "farm_label": {"type": "string"}, "season_label": {"type": "string"}
             },
             "required": ["preset_key", "api_key", "operations"]
-        }
+        }},
     },
     {
         "tool_name": "get_address",
@@ -3648,6 +3901,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "facility_name": {"type": "string", "description": "Facility name. Omit for all."},
                 "facility_id": {"type": "string", "description": "Facility unique_id."},
                 "include_inactive": {"type": "boolean", "description": "Include inactive coordinators."},
+                # `detail` (bool, default false) is accepted but not advertised here —
+                # host token-budget ceiling (test_mcp_tool_profiles.py). The default
+                # response's own `_omitted` note teaches the model the flag when it
+                # matters, at zero fixed catalog cost. See get_control_state's docstring.
             },
         },
     },
@@ -3708,6 +3965,9 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "facility_id": {"type": "string", "description": "Facility unique_id."},
                 "facility_name": {"type": "string", "description": "Facility name. Omit for all."},
+                # `limit` (int, default 10, per plot list) accepted but not advertised —
+                # host token-budget ceiling; a truncated reply's own `truncated_note`
+                # teaches the model the flag.
             },
         },
     },
@@ -4073,6 +4333,7 @@ def _drawer_index_manifest() -> Dict[str, Any]:
     }
 
 
+# @manual ai/overview#tool-drawers
 def core_tools() -> frozenset:
     """상시 노출 도구 — 개발 단계의 유효 등급이 곧 base_tier 다."""
     return frozenset(n for n in _BY_NAME if tier_of(n)[1] == 'core')
@@ -4083,6 +4344,7 @@ def never_demote_tools() -> frozenset:
     return frozenset(n for n in _BY_NAME if tier_of(n)[2])
 
 
+# @manual ai/overview#tool-drawers
 def drawer_index(available=None) -> List[Dict[str, Any]]:
     """서랍 목록 — 이름 + 한 줄 + **그 안의 도구 이름들**.
 
@@ -4106,6 +4368,7 @@ def drawer_index(available=None) -> List[Dict[str, Any]]:
             for name, desc in DRAWERS.items()]
 
 
+# @manual ai/overview#tool-drawers
 def tools_in_drawer(drawer: str, available=None) -> List[str]:
     """그 서랍 안의 도구 이름 — 상시 노출이 아닌 것만.
 
@@ -4175,3 +4438,30 @@ def virtual_tools() -> List[Dict[str, Any]]:
         },
     })
     return kept
+
+
+# ---------------------------------------------------------------------------
+# 상세 기구(2026-09-29) — "가벼운 스키마 + 풍부한 오류".
+#
+# `virtual_tools()`(위)가 매 tools/list 에 싣는 것은 **가벼운** description·
+# input_schema 뿐이다. 몇몇 큰 도구는 그 옆에 선택 필드 `detail` 을 들고 있다 —
+# 중첩 item 의 전체 모양, 결정 규칙(예: propose_plot_split 의 orientation·
+# widths_cm), RECIPE 류 긴 안내처럼 **고르기 전에는 필요 없고 인자를 채울 때만
+# 필요한** 내용이다. `detail` 은 항상 원래 있던 내용을 옮긴 것이고
+# (test_schema_detail_is_lossless), 지운 것이 아니다.
+#
+# 이 값은 세 자리에서만 나간다 — tools/list(virtual_tools) 는 절대 아니다:
+#   1. get_tool_detail — 도구 하나의 완전한 정의를 요청받았을 때(tool_execution).
+#   2. 인자 문제로 거절할 때 그 도구의 오류 본문(`schema`/`hint`) — 처음부터
+#      상세를 실어 보내는 대신, 실수했을 때만 보여준다(tool_execution).
+#
+# `detail` 은 아래 모양이다(둘 다 선택):
+#   {"input_schema": {...}}   # 같은 속성 이름·required, 더 깊은 설명/중첩 item
+#   {"description": "..."}    # 더 긴 안내(RECIPE·결정 규칙)
+def tool_detail(name: str) -> Optional[Dict[str, Any]]:
+    """`name` 의 상세 동반물, 없으면 None. 항상 사본을 준다(SSOT 보호)."""
+    for payload in _MCP_TOOL_PAYLOADS:
+        if payload.get("tool_name") == name:
+            detail = payload.get("detail")
+            return copy.deepcopy(detail) if detail else None
+    return None

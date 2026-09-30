@@ -177,6 +177,7 @@ def journal_map_view(journal_data):
 
 # ── 관수량 ───────────────────────────────────────────────────────────────
 
+# @manual geo/journal#irrigation
 def _open_field_flow(plot):
     """노지 구획 → `{output_id: {'lph', 'share', 'source'}}`.
 
@@ -297,6 +298,7 @@ def _device_area_shapes(output_id):
 _EMITTER_SUB_TYPE = 'sprinkler_coverage'
 
 
+# @manual geo/journal#irrigation
 def _map_sprinklers(map_uuid):
     """지도의 **이미터** → `[(Point, L/h)]`.
 
@@ -410,6 +412,7 @@ def _map_of_plot(plot):
     return row.geo_id if row is not None else None
 
 
+# @manual geo/journal#irrigation
 def irrigation_flow_for_plot(plot):
     """구획 → `{output_id: {'lph', 'share', 'source'}}`.
 
@@ -465,6 +468,7 @@ def irrigation_flow_for_plot(plot):
     return out
 
 
+# @manual geo/journal#irrigation
 def _allocation_share(plot):
     """구획이 그 동에서 차지하는 몫(0~1). 모르면 1.0.
 

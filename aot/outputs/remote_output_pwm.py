@@ -15,6 +15,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb, read_influxdb_single
 from aot.utils.remote_aot_client import RemoteAoTClient, RemoteAoTError
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -33,7 +34,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'remote_output_pwm',
-    'output_name': "{} AoT Output: {}".format(lazy_gettext('Remote'), lazy_gettext('PWM')),
+    'output_name': lazy_format("{} AoT Output: {}", lazy_gettext('Remote'), lazy_gettext('PWM')),
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
     'output_library': 'requests',

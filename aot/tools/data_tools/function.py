@@ -18,6 +18,58 @@ def _runtime_unconfirmed(result):
 
 class FunctionToolsMixin:
 
+    #: DaemonControl/공용 리졸버 레이블 → get_function_list 의 function_type 값.
+    _LABEL_TO_KIND = {'Conditional': 'conditional', 'Trigger': 'trigger',
+                      'PID': 'pid', 'Function': 'custom'}
+
+    @classmethod
+    def _resolve_function_target(cls, function_id):
+        """function_id(unique_id) 또는 이름 → (row, kind, controller_type, 오류dict|None).
+
+        `kind` 는 get_function_list 의 function_type 값('conditional'|'trigger'|
+        'pid'|'custom'), `controller_type` 은 DaemonControl 이 쓰는 레이블
+        ('Conditional'|'Trigger'|'PID'|'Function').
+
+        이름은 unique 제약이 없다 — 로컬 서버에 활성/비활성 "Env Coordinator"
+        가 실제로 둘 있었다. 예전에는 각 호출부가 네 테이블을 따로
+        `(unique_id == x) | (name == x)).first()` 로 짚어, 이름이 겹치면 행
+        순서로 아무거나 하나를 집었다(활성인지 비활성인지도 운에 맡겨졌다).
+        해석 자체는 `function_resolver.resolve_function` 하나에 — 이 도구뿐
+        아니라 schedule.py::_set_entity_activation, AIActionService,
+        calendar_sync_service 도 같은 함수를 쓴다. 여기서는 그 결과를 이
+        모듈의 (row, kind, controller_type, err) 모양으로 옮길 뿐이다.
+
+        쓰기 시점 그룹 스코프(write_scope.enforce)는 여기서 걸지 않는다 —
+        읽기 도구(get_function_detail)가 이 리졸버를 그대로 쓸 수 있어야
+        하기 때문이다. 쓰기 도구는 확정된 row 로 스스로 묻는다(기존 방식).
+        """
+        from aot.services.resolvers.function_resolver import resolve_function
+
+        match = resolve_function(function_id)
+
+        if match.error:
+            if match.candidates is None:
+                return None, None, None, {"error": match.error}
+            return None, None, None, {
+                "error": match.error,
+                "needs_disambiguation": True,
+                "query": str(function_id or '').strip(),
+                "candidates": [
+                    {"id": c["id"], "name": c["name"],
+                     "function_type": cls._LABEL_TO_KIND.get(c["kind"], c["kind"]),
+                     "is_activated": c["is_activated"], "tab": c["tab"]}
+                    for c in match.candidates
+                ],
+                "candidates_shown": len(match.candidates),
+                "candidates_total": match.candidates_total,
+            }
+
+        if match.row is None:
+            return None, None, None, {"error": f"Function not found: {function_id}"}
+
+        return (match.row, cls._LABEL_TO_KIND.get(match.kind, match.kind),
+                match.kind, None)
+
     @classmethod
     def get_function_list(cls, function_type=None, active_only=False):
         """
@@ -30,14 +82,22 @@ class FunctionToolsMixin:
                               'trigger', 'pid', 'custom'. Case-insensitive.
                               None returns all types.
         :param active_only:   If True, returns only is_activated=True entries.
-        :returns:             {"results": [...], "count": int}
+        :returns:             {"functions": {type: [...]}, "count": int} — see
+                              below for why this is grouped by type rather than
+                              one flat list.
+
+        **Grouped by type, not a flat list** (2026-09-29). A flat list repeats
+        `"function_type": "conditional"` on every one of dozens/hundreds of
+        rows — pure repetition once the grouping key already says it. Grouping
+        hoists it to the dict key instead: same information, no per-row copy.
+        Also drops `period`/`trigger_type`/`device` per row when null instead
+        of serializing `null` — a farm with mostly non-periodic functions was
+        carrying that literal on every row for nothing.
         """
         try:
             from aot.databases.models.function import Conditional, Trigger
             from aot.databases.models.controller import CustomController
             from aot.databases.models.pid import PID
-
-            results = []
 
             # Normalize filter
             _type_filter = function_type.lower().strip() if function_type else None
@@ -45,65 +105,54 @@ class FunctionToolsMixin:
             def _should_include(type_key):
                 return _type_filter is None or _type_filter == type_key
 
+            def _row(r, **extra_fields):
+                d = {"function_id": r.unique_id, "name": r.name,
+                     "is_activated": bool(getattr(r, 'is_activated', False))}
+                period = getattr(r, 'period', None)
+                if period is not None:
+                    d["period"] = period
+                for k, v in extra_fields.items():
+                    if v is not None:
+                        d[k] = v
+                return d
+
+            groups = {}
+
             if _should_include('conditional'):
-                rows = Conditional.query.all()
-                for r in rows:
-                    if active_only and not getattr(r, 'is_activated', False):
-                        continue
-                    results.append({
-                        "function_id": r.unique_id,
-                        "name": r.name,
-                        "function_type": "conditional",
-                        "is_activated": bool(getattr(r, 'is_activated', False)),
-                        "period": getattr(r, 'period', None),
-                    })
+                rows = [r for r in Conditional.query.all()
+                        if not active_only or getattr(r, 'is_activated', False)]
+                if rows:
+                    groups['conditional'] = [_row(r) for r in rows]
 
             if _should_include('trigger'):
-                rows = Trigger.query.all()
-                for r in rows:
-                    if active_only and not getattr(r, 'is_activated', False):
-                        continue
-                    results.append({
-                        "function_id": r.unique_id,
-                        "name": r.name,
-                        "function_type": "trigger",
-                        "trigger_type": getattr(r, 'trigger_type', None),
-                        "is_activated": bool(getattr(r, 'is_activated', False)),
-                        "period": getattr(r, 'period', None),
-                    })
+                rows = [r for r in Trigger.query.all()
+                        if not active_only or getattr(r, 'is_activated', False)]
+                if rows:
+                    groups['trigger'] = [
+                        _row(r, trigger_type=getattr(r, 'trigger_type', None))
+                        for r in rows]
 
             if _should_include('pid'):
-                rows = PID.query.all()
-                for r in rows:
-                    if active_only and not getattr(r, 'is_activated', False):
-                        continue
-                    results.append({
-                        "function_id": r.unique_id,
-                        "name": r.name,
-                        "function_type": "pid",
-                        "is_activated": bool(getattr(r, 'is_activated', False)),
-                        "period": getattr(r, 'period', None),
-                    })
+                rows = [r for r in PID.query.all()
+                        if not active_only or getattr(r, 'is_activated', False)]
+                if rows:
+                    groups['pid'] = [_row(r) for r in rows]
 
             if _should_include('custom'):
-                rows = CustomController.query.all()
-                for r in rows:
-                    if active_only and not getattr(r, 'is_activated', False):
-                        continue
-                    results.append({
-                        "function_id": r.unique_id,
-                        "name": r.name,
-                        "function_type": "custom",
-                        "device": getattr(r, 'device', None),
-                        "is_activated": bool(getattr(r, 'is_activated', False)),
-                        "period": getattr(r, 'period', None),
-                    })
+                rows = [r for r in CustomController.query.all()
+                        if not active_only or getattr(r, 'is_activated', False)]
+                if rows:
+                    groups['custom'] = [
+                        _row(r, device=getattr(r, 'device', None))
+                        for r in rows]
 
-            return {"results": results, "count": len(results)}
+            count = sum(len(v) for v in groups.values())
+            return {"functions": groups, "count": count}
         except Exception as e:
             logger.exception("Error in get_function_list")
             return {"error": f"Error while querying Function list: {str(e)}"}
 
+    # @manual ai/overview#sequences-configuration-edits-need-no-approval
     @classmethod
     def _sequence_detail(cls, trig):
         """Ordered steps + weekly schedule of a trigger_sequence.
@@ -196,35 +245,38 @@ class FunctionToolsMixin:
         :returns:           dict with full field set for the matched entity.
         """
         try:
-            from aot.databases.models.function import Conditional, Trigger
-            from aot.databases.models.controller import CustomController
-            from aot.databases.models.pid import PID
-
             if not function_id:
                 return {"error": "function_id is required."}
 
-            # Search order: Conditional → Trigger → PID → CustomController
-            cond = Conditional.query.filter(
-                (Conditional.unique_id == function_id) | (Conditional.name == function_id)
-            ).first()
-            if cond:
-                return {
+            # 응답에서 null 필드를 뺀다(응답 요약, claude/mcp-response-diet).
+            def _drop_none(d):
+                """null 값 필드는 아예 싣지 않는다 — 있는 채로 비어 있는
+                필드와 "이 항목에는 원래 이 개념이 없다"는 구분이 안 필요한
+                자리라, 조용히 뺀다(응답이 짧아질 뿐 뜻은 그대로다)."""
+                return {k: v for k, v in d.items() if v is not None}
+
+            row, kind, _label, err = cls._resolve_function_target(function_id)
+            if err:
+                return err
+
+            if kind == 'conditional':
+                cond = row
+                return _drop_none({
                     "function_id": cond.unique_id,
                     "name": cond.name,
                     "function_type": "conditional",
                     "is_activated": bool(getattr(cond, 'is_activated', False)),
                     "period": getattr(cond, 'period', None),
                     "start_offset": getattr(cond, 'start_offset', None),
+                    "refractory_period": getattr(cond, 'refractory_period', None),
                     "use_pylint": getattr(cond, 'use_pylint', None),
                     "log_level_debug": getattr(cond, 'log_level_debug', None),
                     "tab_id": getattr(cond, 'tab_id', None),
-                }
+                })
 
-            trig = Trigger.query.filter(
-                (Trigger.unique_id == function_id) | (Trigger.name == function_id)
-            ).first()
-            if trig:
-                detail = {
+            if kind == 'trigger':
+                trig = row
+                detail = _drop_none({
                     "function_id": trig.unique_id,
                     "name": trig.name,
                     "function_type": "trigger",
@@ -235,16 +287,14 @@ class FunctionToolsMixin:
                     "timer_end_time": getattr(trig, 'timer_end_time', None),
                     "log_level_debug": getattr(trig, 'log_level_debug', None),
                     "tab_id": getattr(trig, 'tab_id', None),
-                }
+                })
                 if getattr(trig, 'trigger_type', None) == 'trigger_sequence':
                     detail.update(cls._sequence_detail(trig))
                 return detail
 
-            pid = PID.query.filter(
-                (PID.unique_id == function_id) | (PID.name == function_id)
-            ).first()
-            if pid:
-                return {
+            if kind == 'pid':
+                pid = row
+                return _drop_none({
                     "function_id": pid.unique_id,
                     "name": pid.name,
                     "function_type": "pid",
@@ -253,26 +303,22 @@ class FunctionToolsMixin:
                     "setpoint": getattr(pid, 'setpoint', None),
                     "log_level_debug": getattr(pid, 'log_level_debug', None),
                     "tab_id": getattr(pid, 'tab_id', None),
-                }
+                })
 
-            ctrl = CustomController.query.filter(
-                (CustomController.unique_id == function_id) | (CustomController.name == function_id)
-            ).first()
-            if ctrl:
-                detail = {
-                    "function_id": ctrl.unique_id,
-                    "name": ctrl.name,
-                    "function_type": "custom",
-                    "device": getattr(ctrl, 'device', None),
-                    "is_activated": bool(getattr(ctrl, 'is_activated', False)),
-                    "period": getattr(ctrl, 'period', None),
-                    "log_level_debug": getattr(ctrl, 'log_level_debug', None),
-                    "tab_id": getattr(ctrl, 'tab_id', None),
-                }
-                detail.update(cls._function_options_view(ctrl))
-                return detail
-
-            return {"error": f"Function not found: {function_id}"}
+            # kind == 'custom'
+            ctrl = row
+            detail = _drop_none({
+                "function_id": ctrl.unique_id,
+                "name": ctrl.name,
+                "function_type": "custom",
+                "device": getattr(ctrl, 'device', None),
+                "is_activated": bool(getattr(ctrl, 'is_activated', False)),
+                "period": getattr(ctrl, 'period', None),
+                "log_level_debug": getattr(ctrl, 'log_level_debug', None),
+                "tab_id": getattr(ctrl, 'tab_id', None),
+            })
+            detail.update(cls._function_options_view(ctrl))
+            return detail
         except Exception as e:
             logger.exception("Error in get_function_detail")
             return {"error": f"Error while querying Function details: {str(e)}"}
@@ -313,52 +359,19 @@ class FunctionToolsMixin:
         Resolves function type, updates DB, and calls DaemonControl.
         """
         try:
-            from aot.databases.models.function import Conditional, Trigger, Actions
-            from aot.databases.models.controller import CustomController
-            from aot.databases.models.pid import PID
+            from aot.databases.models.function import Actions
             from aot.aot_flask.extensions import db as _db
             from aot.aot_client import DaemonControl
 
             if not function_id:
                 return {"error": "function_id is required."}
 
-            # Resolve entity and controller_type label used by DaemonControl
-            mod = None
-            controller_type = None
-
-            cond = Conditional.query.filter(
-                (Conditional.unique_id == function_id) | (Conditional.name == function_id)
-            ).first()
-            if cond:
-                mod = cond
-                controller_type = 'Conditional'
-
-            if mod is None:
-                trig = Trigger.query.filter(
-                    (Trigger.unique_id == function_id) | (Trigger.name == function_id)
-                ).first()
-                if trig:
-                    mod = trig
-                    controller_type = 'Trigger'
-
-            if mod is None:
-                pid = PID.query.filter(
-                    (PID.unique_id == function_id) | (PID.name == function_id)
-                ).first()
-                if pid:
-                    mod = pid
-                    controller_type = 'PID'
-
-            if mod is None:
-                ctrl = CustomController.query.filter(
-                    (CustomController.unique_id == function_id) | (CustomController.name == function_id)
-                ).first()
-                if ctrl:
-                    mod = ctrl
-                    controller_type = 'Function'  # DaemonControl uses 'Function' for CustomController
-
-            if mod is None:
-                return {"error": f"Function not found: {function_id}"}
+            # 이름이 겹치면(활성/비활성 "Env Coordinator" 둘 — 실제 사례)
+            # 고르지 않는다. _resolve_function_target 은 하나로 확정되지
+            # 않으면 needs_disambiguation 을 낸다 — 여기서 그대로 돌려준다.
+            mod, _kind, controller_type, err = cls._resolve_function_target(function_id)
+            if err:
+                return err
 
             # 쓰기 시점 그룹 스코프 — id·이름 어느 쪽으로 찾았든 **찾은 행**으로
             # 묻는다(쓰기 호출이 묶여 있을 때만; write_scope.enforce).
@@ -1095,6 +1108,7 @@ class FunctionToolsMixin:
                                  "get_function_detail ranges and options_note).")
         return out
 
+    # @manual ai/overview#sequences-configuration-edits-need-no-approval
     @classmethod
     def configure_sequence_day(cls, function_id, day, slots, start=None, end=None,
                                period_seconds=None, repeat=False):
@@ -1114,7 +1128,7 @@ class FunctionToolsMixin:
         weekdays keep their own plan.
         """
         import json as _json
-        from aot.databases.models.function import Actions, Trigger
+        from aot.databases.models.function import Actions
         from aot.databases.models.output import Output
         from aot.utils.weekly_schedule import (
             parse_schedule, from_legacy, validate, minutes_to_hhmm, time_to_minutes,
@@ -1134,10 +1148,15 @@ class FunctionToolsMixin:
         if not 0 <= day <= 6:
             return {"error": f"day must be 0-6 (0=Mon), got {day}"}
 
-        trig = Trigger.query.filter(
-            (Trigger.unique_id == function_id) | (Trigger.name == function_id)).first()
-        if not trig:
-            return {"error": f"Sequence not found: {function_id}"}
+        # 이름이 겹치면(다른 종류에도 같은 이름이 있을 수 있다) 고르지
+        # 않는다 — Conditional/PID/CustomController까지 함께 보고, 하나로
+        # 확정되지 않으면 needs_disambiguation 을 그대로 돌려준다.
+        row, kind, _label, err = cls._resolve_function_target(function_id)
+        if err:
+            return err
+        if kind != 'trigger':
+            return {"error": f"'{row.name}' is a {kind} function, not a sequence."}
+        trig = row
         # 쓰기 시점 그룹 스코프 — 이름으로 찾았어도 찾은 시퀀스로 묻는다.
         from aot.aot_flask.access import write_scope
         write_scope.enforce(trig)
@@ -1378,6 +1397,7 @@ class FunctionToolsMixin:
             result["duration_propagated_to"] = propagated
         return result
 
+    # @manual ai/overview#sequences-configuration-edits-need-no-approval
     @classmethod
     def modify_sequence_step(cls, action_id, group_name=None, duration_seconds=None,
                              mode=None, enabled=None, display_name=None,
@@ -1557,6 +1577,7 @@ class FunctionToolsMixin:
                               f"step(s) in '{opts.get('group_name')}' were set to {opts['action_duration']}s too.")
         return result
 
+    # @manual ai/overview#sequences-configuration-edits-need-no-approval
     @classmethod
     def modify_sequence_schedule(cls, function_id, start=None, end=None,
                                  period_seconds=None, weekdays=None, day=None):
@@ -1577,7 +1598,6 @@ class FunctionToolsMixin:
         enabled day. weekdays replaces the set of enabled days.
         """
         import json as _json
-        from aot.databases.models.function import Trigger
         from aot.utils.weekly_schedule import (
             parse_schedule, from_legacy, validate, to_legacy, build_warnings,
             get_today_idx)
@@ -1589,10 +1609,14 @@ class FunctionToolsMixin:
             return {"error": "Nothing to change: pass at least one of "
                              "start, end, period_seconds, weekdays."}
 
-        trig = Trigger.query.filter(
-            (Trigger.unique_id == function_id) | (Trigger.name == function_id)).first()
-        if not trig:
-            return {"error": f"Sequence not found: {function_id}"}
+        # 이름이 겹치면(다른 종류에도 같은 이름이 있을 수 있다) 고르지
+        # 않는다 — 하나로 확정되지 않으면 needs_disambiguation 을 돌려준다.
+        row, kind, _label, err = cls._resolve_function_target(function_id)
+        if err:
+            return err
+        if kind != 'trigger':
+            return {"error": f"'{row.name}' is a {kind} function, not a sequence."}
+        trig = row
         # 쓰기 시점 그룹 스코프 — 이름으로 찾았어도 찾은 시퀀스로 묻는다.
         from aot.aot_flask.access import write_scope
         write_scope.enforce(trig)
@@ -1701,6 +1725,7 @@ class FunctionToolsMixin:
                      "runs at one time every day."),
         }
 
+    # @manual ai/overview#sequences-configuration-edits-need-no-approval
     @classmethod
     def create_sequence_function(cls, name=None, device_ids=None, state='on',
                                  step_duration=0, pause_seconds=0, **extra):

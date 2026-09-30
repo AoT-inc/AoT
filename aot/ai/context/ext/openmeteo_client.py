@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual ai/overview#global-sources
 """
 openmeteo_client.py — Open-Meteo: 전세계 기상·토양·증발산 (EXT-GL-02).
 

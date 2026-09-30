@@ -11,6 +11,7 @@ from aot.outputs.base_output import AbstractOutput
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -30,7 +31,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'stepper_uln2003',
-    'output_name': "{}: ULN2003 {}, {} (Pi <= 4)".format(lazy_gettext('Motor'), lazy_gettext('Stepper Motor'), lazy_gettext('Unipolar')),
+    'output_name': lazy_format("{}: ULN2003 {}, {} (Pi <= 4)", lazy_gettext('Motor'), lazy_gettext('Stepper Motor'), lazy_gettext('Unipolar')),
     'output_manufacturer': 'STMicroelectronics',
     'output_library': 'RPi.GPIO, rpimotorlib',
     'measurements_dict': measurements_dict,

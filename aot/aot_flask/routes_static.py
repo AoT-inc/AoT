@@ -2,7 +2,6 @@
 import hashlib
 import logging
 import os
-import socket
 import subprocess
 import traceback
 import time
@@ -31,6 +30,7 @@ from aot.config_translations import TRANSLATIONS
 from aot.databases.models import Dashboard, Misc
 from aot.aot_client import DaemonControl
 from aot.aot_flask.forms import forms_dashboard
+from aot.aot_flask.routes_authentication import _display_host
 from aot.aot_flask.routes_authentication import admin_exists
 from aot.aot_flask.utils.utils_general import is_hex_color_light, user_has_permission
 from aot.aot_flask.extensions import db, cache
@@ -403,7 +403,7 @@ def inject_variables():
                 hide_alert_success=misc.hide_alert_success,
                 hide_alert_warning=misc.hide_alert_warning,
                 hide_tooltips=misc.hide_tooltips,
-                host=socket.gethostname(),
+                host=_display_host(),
                 languages=languages_sorted,
                 aot_version=AOT_VERSION,
                 permission_view_settings=perm_view_settings,

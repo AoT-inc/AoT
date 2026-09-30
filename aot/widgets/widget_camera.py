@@ -35,6 +35,7 @@ from aot.devices.camera import camera_record
 from aot.aot_flask.utils import utils_general
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.functions import parse_function_information
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +273,7 @@ WIDGET_INFORMATION = {
             'type': 'integer',
             'default_value': 1200,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format(lazy_gettext("{} ({})"), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the camera image')
         },
         {
@@ -281,7 +282,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {

@@ -58,6 +58,7 @@ from aot.utils.influx import read_influxdb_single
 from aot.utils.method import create_method_handler
 from aot.utils.system_pi import return_measurement_info, str_is_float
 from aot.utils.time_utils import utc_now
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -403,7 +404,7 @@ WIDGET_INFORMATION = {
             'type': 'integer',
             'default_value': 3600,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format(lazy_gettext("{} ({})"), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('Maximum validity time for measurements used')
         },
         {
@@ -412,7 +413,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 3.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('Frequency of widget refresh')
         },
         {

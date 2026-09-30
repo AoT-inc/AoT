@@ -6,10 +6,11 @@ from aot.databases.models import Actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.safe_eval import UnsafeExpressionError, safe_eval
 from aot.utils.system_pi import get_measurement
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'input_action_equation',
-    'name': "{} (Single-Measurement)".format(lazy_gettext('Equation')),
+    'name': lazy_format("{} (Single-Measurement)", lazy_gettext('Equation')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['inputs'],
@@ -108,7 +109,7 @@ class ActionModule(AbstractFunctionAction):
             f"original value: {original_value}, "
             f"returned value: {dict_vars['measurements_dict'][channel]['value']}")
 
-        dict_vars['message'] += f" Equation '{equation_str}', return value = {dict_vars['measurements_dict'][channel]['value']}."
+        dict_vars['message'] += f" Equation '{self.equation}', return value = {dict_vars['measurements_dict'][channel]['value']}."
 
         return dict_vars
 

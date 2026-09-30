@@ -2,7 +2,8 @@
 """i18n extraction blind-spot checker.
 
 pybabel's Python extractor only recognizes `_()`/`gettext()`/`ngettext()`/
-`lazy_gettext()`/`lg()` calls whose argument is a literal string. Two shapes
+`lazy_gettext()`/`lg()` (and the local wrappers `_t()`/`_gettext_safe()`, via
+`-k`) calls whose argument is a literal string. Two shapes
 are invisible to it, so a translatable string written that way never makes
 it into messages.pot/.po -- it stays untranslated forever, no matter how
 many times `pybabel extract`/`update` runs:
@@ -48,7 +49,16 @@ IGNORE_DIR_PARTS = (
     "scripts/generate_doc_translations.py",
 )
 
-GETTEXT_FUNCS = {"_", "gettext", "ngettext", "lazy_gettext", "lg"}
+GETTEXT_FUNCS = {"_", "gettext", "ngettext", "lazy_gettext", "lg",
+                 "_t", "_gettext_safe"}
+
+# Local wrappers that add a "no request context -> fall back to the original
+# text" guard around gettext (daemon/MCP/background-thread callers). Their body
+# necessarily calls gettext(<parameter>); that one call is not a blind spot.
+# The wrapper's *callers* are extracted because the extraction commands pass
+# `-k _t -k _gettext_safe` (see docs/i18n_translation_guide.md), and are still
+# checked here like any other gettext call. A new wrapper needs a new `-k`.
+WRAPPER_FUNCS = {"_t", "_gettext_safe"}
 
 
 def should_skip(path):
@@ -109,7 +119,15 @@ def check_file(path, text):
     # 2) dynamic (non-literal) first argument, anywhere (including inside
     #    f-strings, already caught above by rule 1, so this additionally
     #    catches plain dynamic calls like _(info['name'])).
+    wrapper_calls = set()
+    for fn in ast.walk(tree):
+        if (isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and fn.name in WRAPPER_FUNCS):
+            wrapper_calls.update(id(n) for n in ast.walk(fn))
+
     for call in find_calls(tree):
+        if id(call) in wrapper_calls:
+            continue
         first = call.args[0]
         if not is_str_literal(first):
             snippet = ast.dump(first)[:70]

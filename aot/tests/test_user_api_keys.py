@@ -34,7 +34,8 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from aot.databases.models.user_api_key import (SCOPE_FULL, SCOPE_READONLY,
-                                               SCOPES, UserAPIKey)
+                                               SCOPES, UserAPIKey,
+                                               tool_profile_columns)
 
 
 class ScopeVocabularyTest(unittest.TestCase):
@@ -79,7 +80,8 @@ class IssueScopeTest(unittest.TestCase):
         with patch.dict(sys.modules, {
                 'aot.databases.models.user_api_key': MagicMock(
                     SCOPE_FULL=SCOPE_FULL, SCOPE_READONLY=SCOPE_READONLY,
-                    SCOPES=SCOPES, UserAPIKey=_Row)}), \
+                    SCOPES=SCOPES, UserAPIKey=_Row,
+                    tool_profile_columns=tool_profile_columns)}), \
                 patch('aot.databases.models.user.db') as db:
             user = User()
             user.id = 1

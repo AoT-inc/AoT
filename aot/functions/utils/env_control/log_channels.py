@@ -98,6 +98,11 @@ CH_COORD_FINAL_REASON_BASE = 101  # + actuator_idx × 2
 CH_INTEGRAL_BASE         = 60   # + VAR_INDEX[var]
 CH_SAFETY_GATE           = 70
 CH_DISPATCH_FAIL         = 71   # 한 사이클에서 dispatch 실패한 액추에이터 수
+# ⚠ **71·72 는 번호가 두 번 쓰인다** — 측정 이름으로 가른다. `dispatch_fail_count`
+#   (실패 수) / `runtime_state_fail`(저장 실패) 와, `write_cycle_metrics` 의
+#   `env_control` 71(제한 인자 코드)·72(운전 모드 코드)는 다른 값이다. 번호만 보고
+#   읽으면 낮마다 "디스패치 실패 1" 로 오독한다(2026-09-26 점검에서 실제로 그랬다).
+#   과거 기록과 이어지지 않으므로 번호는 바꾸지 않는다.
 CH_RUNTIME_STATE_FAIL    = 72   # runtime state DB 저장 실패 누적 카운트
 CH_ACTUATOR_MISMATCH     = 73   # trust_score < 0.5 인 의심 액추에이터 수
 CH_CLEAN_FOR_LEARNING    = 74   # 이번 사이클 학습 가능 여부 (1.0 = clean, 0.0 = dirty)
@@ -146,6 +151,15 @@ REASON_NO_MEASUREMENT   = 21   # 실내 측정 없음 — 이 장치를 움직�
                                # 없습니다" 라고 말하는데, 실제로는 효과를 잴
                                # 수단이 없는 것이다 — 사람이 해야 할 조치
                                # (센서 점검)가 그 문장에서 안 보인다.
+REASON_CURTAIN_DAY_OPEN = 22   # 낮 — 보온커튼은 걷어 둔다(빛). 효과 모델은 커튼의 열
+                               # 교환만 보고 빛 차단을 모르므로, 모델에 맡기면 낮에도
+                               # 닫는다(2026-09-25~26 영양 — 오전 8시에 닫혀 28시간
+                               # 그대로였다). 안전 게이트(한파 등)는 이것보다 뒤에서 이긴다.
+REASON_DIRECTION_UNSETTLED = 23  # 미는 방향이 막 뒤집혔다 — 확정될 때까지 제자리.
+                               # 창의 VPD 효과는 "식힘(↓)" 과 "건조한 외기(↑)" 가 겨룬
+                               # 합이라, 실외 습도가 조금만 흔들려도 부호가 사이클마다
+                               # 바뀐다(2026-09-24 영양 천창: 6시간 반전 24회). 1 과
+                               # 뭉치면 "왜 안 움직이나" 에 답이 없다.
 
 # ── 임계 오버라이드 계열 (30~) ────────────────────────────────────────────────
 # `apply_threshold_and_gate_overrides` 가 지나는 헬퍼들은 근거를 **문자열**로

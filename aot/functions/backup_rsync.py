@@ -38,6 +38,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import assure_path_exists, cmd_output
 from aot.utils.tools import (create_measurements_export,
                                 create_settings_export)
+from aot.utils.lazy_text import lazy_format
 
 try:
     host_name = socket.gethostname().replace(' ', '_')
@@ -67,7 +68,7 @@ FUNCTION_INFORMATION = {
             'default_value': 1296000,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         },
         {
@@ -75,7 +76,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 300,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration to wait before the first operation')
         },
         {

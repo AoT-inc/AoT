@@ -3,6 +3,7 @@ import time
 from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg, gettext as _
 
+# @manual geo/layers#weather-overlays, geo/layers#rainviewer
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_rainviewer',
     'input_manufacturer': lg('RainViewer'),
@@ -107,6 +108,7 @@ class InputModule(AbstractGisInput):
         options.update(INPUT_INFORMATION.get('leaflet_options', {}))
         return options
 
+    # @manual geo/layers#rainviewer
     def get_layer_config(self):
         """
         Override to provide RainViewer-specific configuration for frontend.

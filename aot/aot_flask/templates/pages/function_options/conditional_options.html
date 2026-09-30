@@ -86,6 +86,13 @@
         </div>
 
         <div class="aot-modal-option-row">
+            <label class="aot-modal-option-label">{{form_conditional.refractory_period.label(class_='mb-0')}}</label>
+            <div class="aot-modal-option-control">
+                {{form_conditional.refractory_period(class_='form-control aot-modern-input', value=each_function.refractory_period, **{'title':_('Minimum time to wait after an action fires before this Conditional can fire again; 0 disables it')})}}
+            </div>
+        </div>
+
+        <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_conditional.start_offset.label(class_='mb-0')}}</label>
             <div class="aot-modal-option-control">
                 {{form_conditional.start_offset(class_='form-control aot-modern-input', value=each_function.start_offset, **{'title':_('Time to wait before the first operation')})}}

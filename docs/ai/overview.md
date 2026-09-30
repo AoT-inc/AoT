@@ -10,18 +10,18 @@ Using the AI takes two switches in two different places. They are deliberately n
 
 | Switch | Where | What it turns on |
 |--------|-------|------------------|
-| **Enable AI Service** | Settings > General | The AI menu appears in the navigation and the AI page becomes reachable. Chat and advice requests work. |
-| **Run built-in AI** | AI > Connection > Built-in AI | Work that runs without anyone asking for it — periodic summaries, context broadcast, weather summary, MCP health checks, real-time alerts. |
+| **Enable AI Service** | Manage > System Management > General Settings | The AI menu appears in the navigation and the AI page becomes reachable. |
+| **Run built-in AI** | AI > Connection > Built-in AI | The built-in model itself: chat and advice requests, plus work that runs without anyone asking for it — periodic summaries, context broadcast, weather summary, MCP health checks, real-time alerts. |
 
-The order is **enable in Settings → register a model (agent) on the AI > Connection page → start operation**.
+The order is **enable in General Settings → register a model (agent) on the AI > Connection page → start operation**.
 
-**Connecting your own AI app** (Claude Desktop and the like) works independently of this switch. It only needs external MCP access allowed in Settings > General and a per-user access key — the built-in AI can stay off. The top of the AI > Connection page shows both and links to each screen.
+**Connecting your own AI app** (Claude Desktop and the like) works independently of this switch. It only needs external MCP access allowed in Manage > System Management > General Settings and a per-user access key — the built-in AI can stay off. The top of the AI > Connection page shows both and links to each screen.
 
-That "external MCP access" toggle (**Settings > General > Enable External MCP Server**, `AIGlobalSettings.mcp_http_enabled`) is checked fresh on every HTTP request to the MCP server, not cached — turning it off returns `503` to every external MCP call immediately, with no restart needed, and turning it back on restores access just as fast.
+That "external MCP access" toggle (**Manage > System Management > General Settings > Enable External MCP Server**, `AIGlobalSettings.mcp_http_enabled`) is checked fresh on every HTTP request to the MCP server, not cached — turning it off returns `503` to every external MCP call immediately, with no restart needed, and turning it back on restores access just as fast.
 
 - **Operation cannot be started with no model registered.** Running background work with nothing to ask only piles up errors in the log every cycle. The switch is available only once at least one agent is activated.
 - **Deactivating or deleting the last model stops operation too.** Re-activating a model later does not silently resume autonomous operation — start it again on the AI page.
-- **Chat and advice requests still work while operation is off.** That way you can try a freshly registered model without committing to autonomous operation.
+- **With operation off, chat and advice requests are refused as well.** The switch means "the built-in model is running", so while it is off there is nothing to ask — the hint line on the AI page says so. One thing stays open: deciding advice that has already been submitted, including advice your own AI app sent over MCP, is still available on AI → Requests, so a pending decision never disappears just because the built-in model is stopped.
 
 ---
 
@@ -61,7 +61,7 @@ Tools exposed by the external MCP server and the internal `mcp_aot` engine. Read
 
 The catalog is not one flat list. Listing every tool up front costs roughly 20K tokens before the conversation even starts, so `tools/list` returns only two layers, and the rest is opened on demand:
 
-- **Core — 27 tools, always listed.** The narrow set an agent needs to take its next step without guessing: name resolution (`resolve_target`), device lookup, reading a value, immediate control, the approval queue, and a handful more (`aot/tools/tool_registry.py`, the `_TIER_ASSIGNMENT` table).
+- **Core — 28 tools, always listed.** The narrow set an agent needs to take its next step without guessing: name resolution (`resolve_target`), device lookup, reading a value, immediate control, the approval queue, and a handful more (`aot/tools/tool_registry.py`, the `_TIER_ASSIGNMENT` table).
 - **4 meta tools, always listed alongside core:** `open_drawer` (lists a drawer's tools, or all drawers with no argument), `get_tool_detail` (one tool's full schema by name), `use_tool` (actually *calls* a drawer tool by name — the only way to execute one; `open_drawer`/`get_tool_detail` only return definitions), `respond_to_confirmation` (approve/reject a pending confirmation).
 - **101 tools live in 8 drawers**, grouped by purpose, and only appear once `open_drawer` is called: `device` (device control/state), `measurement` (sensors, environment, weather, energy), `function` (functions/controllers/sequences), `schedule` (scheduling), `record` (notes/notices/knowledge/advice), `space` (map/zones/facilities/plots), `definition` (device-definition CRUD), `system` (AI settings, system status, diagnostics, screens).
 
@@ -71,24 +71,40 @@ Drawers are now optional. External MCP connections list the key's whole tool pro
 
 Each API key also chooses which tools an external AI app sees — its **tool profile**. This is separate from the key's permissions: permissions decide what the key may do, the profile decides what is listed.
 
-- **Operations** (the default for new keys) — everyday work: reading devices, sensors, weather, schedules, notes and plots; controlling devices and functions; adjusting function options, sequence run times and existing sequence steps; scheduling; recording notes, notices, advice and plot-stage events.
-- **Operations + configuration** — adds setup tools: device definitions, creating or deleting automations and sequence steps, creating or editing plots and programs, map placement, dashboards and tabs, AI settings, archive and library-source management. The tool list sent to the AI in every conversation becomes much longer, so choose it only for keys that do setup work.
+A profile is **operations** (always on) plus any **setup modules** you tick. Each module adds one kind of setup work; the tool list sent to the AI in every conversation grows by roughly the size shown, so tick only what the key is for.
 
-Pick the profile when you issue a key under `Settings > Users` (API Key section, **AI Tools**), or change it later on the same screen without reissuing the key. Changing it takes the same permission as revoking a key (user editing) and is recorded in the audit log; issuing a new key additionally asks for a recent sign-in. A connected app may need to reconnect before it sees the new list. With drawers on, a drawer only holds tools from the key's profile.
+- **Operations** (always on; the only thing a new key gets by default, about 21k tokens with the server instructions) — everyday work: reading devices, sensors, weather, schedules, notes and plots; controlling devices and functions; adjusting function options, sequence run times and existing sequence steps; scheduling; recording notes, notices, advice and plot-stage events.
 
-If a key on the operations profile calls a setup tool anyway, the server refuses it (`call_state: refused`, `reason_code: tool_profile`) with a message that says who can switch it and where; nothing is queued for approval. `get_tool_detail` and `open_drawer` answer the same way for tools and drawers outside the profile instead of reporting them as unknown or empty. When the key's permissions would block the tool anyway (for example a write tool on a read-only key), the message does not suggest switching, since that would not help. Other refusals — advice-only mode, the key's role, approval — never suggest switching: advice-only mode is a server-wide setting that no profile changes. Pending approvals for tools outside the profile are listed without the tool name (a neutral label and the area instead); the key can reject them but not approve them. The server instructions and `get_system_brief` also tell the AI which profile it is on, so it can point the user to the switch instead of saying the system cannot do something.
+| Module | Adds | Approx. size |
+|---|---|---|
+| `plots` — Plots and crop programs | creating, editing, copying and splitting plots, their stage templates and guidance, crop programs | 8.8k tokens |
+| `map` — Map and locations | addresses, distances, nearest search, device placement, removing map shapes | 1.5k |
+| `automation` — Building automations | creating or deleting functions and sequences, a sequence's whole day plan | 2.0k |
+| `devices` — Device definitions | device types and options, creating/editing/deleting inputs, outputs and GIS inputs, rebinding a slot | 2.5k |
+| `dashboard` — Dashboards | dashboards, widgets and tabs | 2.9k |
+| `library` — Documents and library | archived documents, editing or deleting notices, saving findings to the knowledge library, library sources | 4.4k |
+| `admin` — System and AI settings | system update and storage-tier status, AI agents | 1.3k |
 
-- Keys issued before profiles existed are assigned once, on the first start after the upgrade: a key whose owner called a setup tool in the last 90 days gets operations + configuration, every other key gets operations. The audit log does not record which key made a call, so this is decided per person — all of one person's keys get the same profile. Adjust individual keys afterwards if needed.
-- The in-app assistant is not limited by profiles, and neither is the built-in AI's own service-account key (in-app device control goes through it). The screen shows no profile selector for that account's keys.
-- `knowledge_search` suggests saving findings with `knowledge_shelve` only on connections that can use it (the configuration profile, or the in-app assistant, with note-editing permission).
+Ticking every module is the same as the earlier **Operations + configuration** profile and is stored that way (`configuration`), so such a key also gets any module added later. Keys that were on operations + configuration before modules existed keep exactly the list they had; operations keys keep operations. Nothing is converted.
+
+Pick the modules when you issue a key under `Manage > System Management > Users` (API Key section, **AI Tools**), or change them later on the same screen (tick the boxes on the key's row, then **Change**) without reissuing the key. Changing them takes the same permission as revoking a key (user editing) and is recorded in the audit log with the profile and module list before and after; issuing a new key additionally asks for a recent sign-in. A connected app may need to reconnect before it sees the new list. With drawers on, a drawer only holds tools from the key's profile.
+
+If a key calls a setup tool whose module is off, the server refuses it (`call_state: refused`, `reason_code: tool_profile`, `tool_module: <module>`) with a message that names the module and says who can turn it on and where; nothing is queued for approval. `get_tool_detail` and `open_drawer` answer the same way for tools and drawers outside the profile instead of reporting them as unknown or empty. When the key's permissions would block the tool anyway (for example a write tool on a read-only key), the message does not suggest switching, since that would not help. Other refusals — advice-only mode, the key's role, approval — never suggest switching: advice-only mode is a server-wide setting that no profile changes. Pending approvals for tools outside the profile are listed without the tool name (a neutral label and the area instead); the key can reject them but not approve them. The server instructions and `get_system_brief` tell the AI which modules are on and, one line each, what every module that is off would add — so it can tell the user which module to ask for instead of saying the system cannot do something.
+
+- Keys issued before profiles existed are assigned once, on the first start after the upgrade: a key whose owner called a setup tool in the last 90 days gets operations + configuration (every module), every other key gets operations. The audit log does not record which key made a call, so this is decided per person — all of one person's keys get the same profile. Narrow individual keys to the modules they need afterwards.
+- The in-app assistant is not limited by profiles, and neither is the built-in AI's own service-account key (in-app device control goes through it). The screen shows no module selector for that account's keys.
+- Connections signed in through [central authentication](#central-auth) have no key to pick modules on: the `aot.config` scope gives every module, without it the connection gets operations.
+- `knowledge_search` suggests saving findings with `knowledge_shelve` only on connections that can use it (the `library` module, or the in-app assistant, with note-editing permission).
 - `set_output_state` and `list_available_devices` are no longer listed for API keys — `operate_device`, `get_device_list` and `search_devices` do the same jobs.
-- `AOT_MCP_TOOL_PROFILES=0` turns profiles off (every key sees the full list, as before). `AOT_MCP_DEFAULT_TOOL_PROFILE` sets the profile of a server that runs without authentication (default `operations`).
+- `AOT_MCP_TOOL_PROFILES=0` turns profiles off (every key sees the full list, as before). `AOT_MCP_DEFAULT_TOOL_PROFILE` sets the profile of a server that runs without authentication (default `operations`; `configuration` or a value such as `operations+plots+map` also work).
 
 ### Names, several targets and argument checks { #tool-arguments }
 
 - **Names where an id used to be needed.** `get_output_state`, `get_device_measurements`, `get_sensor_detail` and `get_sensor_reading` take a device name; `get_zone_sensor_summary` and `list_plots` take a zone or site name; `get_plot` takes the name, crop or variety of a growing plot. An id still works and is checked first. A name shared by several things returns `needs_disambiguation` with candidates described by where they are, instead of a guess.
 - **Several targets in one call** (up to 10): `device_ids` (`get_output_state`, `get_sensor_reading`), `loc_ids` (`get_sensor_detail`), `plot_ids` (`get_plot`), `target_names` (`search_notes`), `zone_ids` (`get_zone_sensor_summary`). The reply is `{count, results}` — one entry per target, shaped like a single call.
 - **Argument checks come first.** Write tools check their arguments before any permission or approval step: missing arguments, argument names that look like a typo of a valid one, and for `modify_function_options` unknown option keys or invalid values come back as `reason_code: invalid_arguments` with the valid names — also in advice-only mode (`get_function_detail` lists a function's option keys, current values and ranges up front; a range such as `temperature` is not a key — its min/max keys are), and the reply says so when the key could not run the call anyway. Other unknown arguments are ignored and listed in `_ignored_arguments`.
+- When a call is rejected for its arguments, the reply also carries that tool's detailed `schema` and a `hint` (nested item shapes, decision rules, a worked recipe). `get_tool_detail` returns the same fuller description for one tool. The tool list itself stays light and does not carry them.
+- Large results come in a summary form to keep replies small: `list_plots` and `get_crop_status` return the first 10 (marked `truncated`), `get_control_state` leaves out screen-only diagnostics (pass `detail=true` to get them back), and `get_plot` leaves out the stage table's guidance and targets. What was left out is listed in `_omitted`.
 - `get_sensor_reading` no longer lists every device id in its schema, so the tool list does not grow with the number of devices.
 - `search_devices` marks devices that share a name (`same_name_count`, `where`, `same_name_groups`).
 - `get_spatial_tree` without `depth` lists every site, zone and facility at every level and counts the devices in each; pass `depth` to list devices.
@@ -134,7 +150,7 @@ The tables in this section describe tools regardless of which layer they're in �
 
 > In the in-app assistant, the control tools above execute only after confirmation via the approval card. Calling directly through the external MCP server goes through the same kind of gate: the first call is not executed and comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject that confirmation_id in chat (handled via `respond_to_confirmation`) or on the web review page, then the caller retries the same arguments plus `_confirmation_id` to actually execute it. See "Running the MCP Server" below for the full flow. `add_schedule`/`add_schedule_batch` are not in this gate — see the Record / Task table above.
 
-### Sequences (configuration edits need no approval)
+### Sequences (configuration edits need no approval) { #sequences-configuration-edits-need-no-approval }
 
 A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set order — the usual shape for irrigation, where valves take turns and a pump spans the run. These tools read and shape one. All four tools on this page (the three below, plus `create_sequence_function`) live in the `function` drawer.
 
@@ -152,6 +168,8 @@ A [sequence](../Functions.md#trigger-sequence) runs several outputs in a set ord
 > shifts its next run without approval (decided 2026-08-07).
 
 `get_function_detail` returns a sequence's steps plus `weekly_plan` — what actually runs each weekday, in wall-clock time. Read that back to confirm a change rather than repeating the request.
+
+A sequence can be named instead of given by id: the id is matched first, then the name. Function names are not unique, so when a name matches more than one function nothing is changed — the reply says the name is ambiguous and lists the candidates, each with its type, whether it is active and which tab it is on (at most ten, along with the total). Repeat the call with the id of the one you meant.
 
 Two things are worth knowing before using them:
 
@@ -246,7 +264,7 @@ New inputs and outputs are created with this enabled by default (`is_ai_enabled=
 
 ---
 
-## Safety & Approval Model
+## Safety & Approval Model { #safety-approval-model }
 
 Non-mutating **read tools** run immediately. Writes split into two categories.
 
@@ -302,7 +320,7 @@ is its sync status (synced, sync failed, not synced yet, or "Looked up on demand
 for sources queried live); hover it or open the source's settings for the last
 sync time. Sync now lives in the settings window too.
 
-### Where knowledge comes from
+### Where knowledge comes from { #where-knowledge-comes-from }
 
 Four kinds of thing live in the library, and the AI cites each of them differently:
 
@@ -316,22 +334,27 @@ Four kinds of thing live in the library, and the AI cites each of them different
 The AI can write to the library itself: when it researches something it saves a
 summary so the next question does not start from nothing. Those notes always
 enter unconfirmed and are always disclosed as such — the server appends the
-disclosure even if the model forgets to.
+disclosure even if the model forgets to. When the note was copied out of a
+source registered in the library, the citation names that source too — still
+unconfirmed, but there is somewhere to go and check it.
 
-### Reviewing what the AI wrote
+### Reviewing what the AI wrote { #reviewing-what-the-ai-wrote }
 
 When notes the AI wrote are waiting for a person, a one-line notice sits at the
 top of the Knowledge tab; **Show them** filters the list to *Needs confirming*.
 Click an item to open it, check the source link if it has one, then **Save and
 confirm** (after correcting anything wrong) or **Retire**. Confirming is what
 promotes a note out of "unconfirmed". A note with no source link shows no link —
-there is no original to check it against.
+there is no original to check it against. Retiring is not final: a retired note
+still appears in the list under **Include set-aside items**, and **Reactivate**
+puts it back as *Needs confirming* — un-retiring is not the same as having
+reviewed it.
 
 **Knowledge settings → Cite confirmed knowledge only** (off by default) stops the
 AI citing its own unconfirmed notes. Authoritative and hand-entered knowledge is
 unaffected.
 
-### Browsing and adding
+### Browsing and adding { #browsing-and-adding }
 
 The **Knowledge** tab lists one item per row (title, trust) and by default shows
 only what people and the AI wrote. Data synced from sources is left out — every
@@ -345,7 +368,7 @@ the AI's reach — show set-aside items with the state filter to put one back).
 **Add Knowledge** writes in what you already know, without an AI turn or a
 registered source. What you write is treated as confirmed: you are the source.
 
-### Knowledge Digest Pipeline
+### Knowledge Digest Pipeline { #knowledge-digest-pipeline }
 
 Long prose sources such as documents and web URLs are pre-processed **once**, at
 registration time:
@@ -354,7 +377,7 @@ registration time:
 2. Each chunk is **digested (LLM summarize + keyword extraction)** and cached in the `ai_knowledge_chunk` table.
 3. At query time there is **no LLM call** — retrieval is pure DB lookup + deterministic search, so answers are fast and cheap.
 
-### Scoping is by tag, not by site
+### Scoping is by tag, not by site { #scoping-is-by-tag-not-by-site }
 
 !!! warning "This changed — the library is farm-wide"
     Knowledge used to be filtered by `facility_id`, and earlier versions of this
@@ -387,6 +410,14 @@ Korea-only (KMA). With no sensor, or outside Korea, this is the only weather
 evidence available — and soil values and ET₀ come from here regardless of what
 sensors you have.
 
+Two limits the source screen states as well. Open-Meteo's key-free endpoint is
+for non-commercial use under its own terms — for commercial use, get an
+Open-Meteo key and enter it on the source, and queries go to the commercial
+endpoint instead; the key field is optional and exists only for that. And
+ECOCROP's numbers are suitability ranges answering "can this species grow in
+this climate", not setpoints to control to. Both ask for attribution (CC BY 4.0),
+which the source carries by default.
+
 Beyond those, the library is filled the other way: your own documents, web
 pages, REST APIs — plus whatever the AI looks up and shelves as it works.
 
@@ -417,7 +448,7 @@ You can override the credit text in the source's settings (gear icon) under
 
 ---
 
-## Running the MCP Server
+## Running the MCP Server { #running-the-mcp-server }
 
 A standard MCP server for external MCP clients. It is warm-started automatically when the app boots, and can also be run manually.
 
@@ -436,7 +467,7 @@ HTTP mode serves two things side by side.
 | `POST /mcp` | **MCP Streamable HTTP** (the standard transport) | Claude Desktop/Code, Cursor, any MCP client |
 | `GET /mcp/info`, `GET /mcp/tools/list`, `POST /mcp/tools/call` | Custom REST | ChatGPT Custom GPT (OpenAPI Actions), curl checks |
 
-A standard client needs only the URL and an API key — no relay script.
+A standard client needs only the URL and an API key — no relay script. Clients that sign in through an OAuth authorization server (such as claude.ai connectors) can use [central authentication](#central-auth) instead.
 
 ```bash
 claude mcp add --transport http aot https://<host>/aotmcp/mcp \
@@ -450,6 +481,26 @@ spec allows this, and it is where server-initiated notifications would go later.
 The REST API stays because ChatGPT Custom GPTs on ordinary plans cannot register
 an MCP server — they attach through OpenAPI Actions only.
 
+### Central authentication (OAuth access tokens) { #central-auth }
+
+Besides API keys, the HTTP server can also accept access tokens issued by an OAuth authorization server — for example AoT Central Authentication, where one staff account signs in once and connects to many AoT sites. AoT is then a **resource server**: sign-in, consent and token issuing happen at the authorization server, and AoT only checks each token's signature, issuer, audience (`aud`), expiry and the revocation list. API keys keep working either way.
+
+Nothing is tied to a particular network or domain. Set it up under `Settings > General > AI Service > MCP Authentication > Configure`:
+
+| Field | What to enter |
+|---|---|
+| Central Authentication | Turn on to accept access tokens as well as API keys |
+| Authorization Server | The issuer address (https). This server fetches the signing keys from it, so it must be reachable from here |
+| Public MCP Address | The address AI clients connect to, for example `https://farm.example.com/mcp`. Tokens must name exactly this address. Route `/mcp` and `/.well-known/oauth-protected-resource` at that address to the MCP server (port 5700) |
+| Public Web Address | The address people open AoT at. Account linking returns here (shared with the Google integration) |
+| Client ID / Client Secret | Issued by the authorization server when this site is registered; used only for account linking |
+
+The dialog lists what to register at the authorization server — the resource (the public MCP address), the redirect URI and the scopes — and **Check** confirms that the authorization server and its signing keys can be reached before you save. The environment variables `AOT_MCP_CENTRAL`, `AOT_MCP_CENTRAL_ISSUER`, `AOT_MCP_PUBLIC_URL`, `AOT_MCP_LINK_CLIENT_ID` and `AOT_MCP_LINK_CLIENT_SECRET` override the screen for fleets that share one deployment template.
+
+A token's subject is an account at the authorization server, not an AoT user, so each person links once: sign in to AoT as yourself, open the same dialog and press **Link My Account**. Until then the AI can connect, but every tool call answers with a message explaining how to link. Accounts are never matched by e-mail.
+
+What a token may do is its scopes narrowed by the linked user's role: `aot.read` (required) reads, `aot.control` operates devices, `aot.config` changes settings and shows every setup module (the configuration tool profile). State-changing calls still go through the same approval as API keys.
+
 ### Connecting a ChatGPT Custom GPT { #chatgpt-setup }
 
 Register the three REST paths above (`/mcp/info`, `/mcp/tools/list`,
@@ -457,7 +508,7 @@ Register the three REST paths above (`/mcp/info`, `/mcp/tools/list`,
 Actions requires a paid ChatGPT plan (Plus/Team/Enterprise/Pro) — free
 accounts cannot use this path at all.
 
-1. **Issue an API key** — under `Settings > Users`, generate a new API key for
+1. **Issue an API key** — under `Manage > System Management > Users`, generate a new API key for
    your account (name it something like "ChatGPT" so you can revoke just this
    connection later). If this GPT should only ever read, pick scope
    `readonly` at issue time — write tool calls (notes and knowledge included) are then refused server-side,
@@ -465,7 +516,8 @@ accounts cannot use this path at all.
    more than one person will use it, issue a separate key per person — the
    audit log then shows who called what, and a leaked key can be revoked
    without cutting off everyone else. Leave **AI Tools** on Operations
-   unless this GPT will do setup work ([tool profiles](#tool-profiles)).
+   alone unless this GPT will do setup work, and then tick only the modules
+   it needs ([tool profiles](#tool-profiles)).
 2. **Confirm HTTP mode is on and reachable** — the server must be running
    with `--http --port 5700`, and ChatGPT must be able to reach that port (or
    whatever path your reverse proxy exposes it at). Check unauthenticated
@@ -592,11 +644,14 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "aot": {
       "command": "python3",
-      "args": ["/opt/AoT/aot/aot_mcp_server.py"]
+      "args": ["/opt/AoT/aot/aot_mcp_server.py"],
+      "env": { "AOT_MCP_API_KEY": "<base64 api key>" }
     }
   }
 }
 ```
+
+stdio requires an API key by default too. Put a key issued under `Manage > System Management > Users` in `AOT_MCP_API_KEY` under `env` — without it the connection is refused with an authentication error right after it starts (`AOT_MCP_REQUIRE_AUTH=0` turns authentication off).
 
 > State-changing tool calls do not execute immediately here either (`aot/tools/mcp_safety_gate.py`). The first call comes back as `pending_approval` with a `confirmation_id`; the user must explicitly approve or reject it, in that same conversation or on the **AI → Requests** screen (`/ai`), which is handled through `respond_to_confirmation`. (`/api/v1/mcp/review_page` still exists as a bookmark-compatible redirect to `/ai`, but the audit log itself moved — it's now **AI → Records** (`/ai/manage`), under the Tool Calls tab, alongside Conversations, Error Reports and Call Quality.) Approving executes nothing by itself — retry the same call with `_confirmation_id` added afterward. The calling AI has no way to decide or fake this approval on its own. Set `AOT_MCP_WRITE_ENABLED=0` to refuse write tools outright, notes and knowledge included (advice-only mode; `submit_advice` still works). Two separate deadlines apply: 15 minutes by default for a human to approve (`AOT_MCP_CONFIRM_TTL_SEC`), then a fresh 5 minutes from the moment of approval to execute (`AOT_MCP_APPROVED_TTL_SEC`). It still exposes control tools, so connect this server only to trusted clients.
 

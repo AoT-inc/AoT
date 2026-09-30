@@ -39,7 +39,7 @@ INPUT_INFORMATION = {
         ('pip-pypi', 'wiringpi', 'wiringpi'),
         ('pip-pypi', 'pipyadc_py3', 'git+https://github.com/aot-inc/PiPyADC-py3.git')  # PiPyADC ported to Python3
     ],
-    'interfaces': ['UART'],
+    'interfaces': ['SPI'],
 
     'adc_gain': [
         (1, '1'),

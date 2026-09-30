@@ -20,7 +20,7 @@ channels_dict = {
 INPUT_INFORMATION = {
     'input_name_unique': 'TEST_SAVE_VALUE',
     'input_manufacturer': 'AoT',
-    'input_name': 'Test Input: Save your own measurement value',
+    'input_name': lazy_gettext('Test Input: Save your own measurement value'),
     'input_name_short': 'Test: Save Value',
     'measurements_name': 'Variable measurements',
     'measurements_dict': measurements_dict,
@@ -56,21 +56,21 @@ INPUT_INFORMATION = {
     'custom_commands': [
         {
             'type': 'message',
-            'default_value': "Enter the Value you want to store as a measurement, then press Store Measurement."
+            'default_value': lazy_gettext('Enter the Value you want to store as a measurement, then press Store Measurement.')
         },
         {
             'id': 'channel_measurement',
             'type': 'integer',
             'default_value': 0,
             'name': lazy_gettext('Channel'),
-            'phrase': 'This is the channel to save the measurement value to'
+            'phrase': lazy_gettext('This is the channel to save the measurement value to')
         },
         {
             'id': 'value_measurement',
             'type': 'float',
             'default_value': 10.0,
             'name': lazy_gettext('Value'),
-            'phrase': 'This is the measurement value to save for this Input'
+            'phrase': lazy_gettext('This is the measurement value to save for this Input')
         },
         {
             'id': 'save_measurement',

@@ -15,6 +15,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -45,7 +46,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'peristaltic_pump',
-    'output_name': "{}: Raspberry Pi GPIO (Pi <= 4)".format(lazy_gettext('Peristaltic Pump')),
+    'output_name': lazy_format("{}: Raspberry Pi GPIO (Pi <= 4)", lazy_gettext('Peristaltic Pump')),
     'output_library': 'RPi.GPIO',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -81,7 +82,7 @@ OUTPUT_INFORMATION = {
             'default_value': None,
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{}: {} ({})".format(lazy_gettext('Pin'), lazy_gettext('GPIO'), lazy_gettext('BCM')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Pin'), lazy_gettext('GPIO'), lazy_gettext('BCM')),
             'phrase': lazy_gettext('The pin to control the state of')
         },
         {
@@ -89,8 +90,8 @@ OUTPUT_INFORMATION = {
             'type': 'select',
             'default_value': 1,
             'options_select': [
-                (1, 'HIGH'),
-                (0, 'LOW')
+                (1, lazy_gettext('HIGH')),
+                (0, lazy_gettext('LOW'))
             ],
             'name': lazy_gettext('On State'),
             'phrase': lazy_gettext('The state of the GPIO that corresponds to an On state')
@@ -127,7 +128,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 10.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Desired Flow Rate'), lazy_gettext('ml/min')),
+            'name': lazy_format("{} ({})", lazy_gettext('Desired Flow Rate'), lazy_gettext('ml/min')),
             'phrase': lazy_gettext('Desired flow rate in ml/minute when Specify Flow Rate set')
         },
         {
@@ -135,7 +136,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

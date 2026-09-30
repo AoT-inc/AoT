@@ -1,4 +1,4 @@
-Page: `Setup -> Input`
+Page: `Settings -> Input`
 
 For a complete list of supported input devices, see [Supported Inputs](Supported-Inputs.md).
 
@@ -21,8 +21,8 @@ Latitude/Longitude in the input's own Coordinates option and it works
 anywhere on Earth, with no key required.
 
 It also reports something most free weather sources do not: solar radiation
-(W/m²), modeled with cloud cover taken into account. Without it, [Nursery
-Mode](Functions.md#nursery-mode)'s sun-scald lock falls back to a clear-sky
+(W/m²), modeled with cloud cover taken into account. Without it, [Sunburn/Evening
+Protection](Functions.md#nursery-mode)'s sun-scald lock falls back to a clear-sky
 estimate that ignores clouds and always errs toward caution. Adding this
 input switches the lock onto Open-Meteo's modeled value instead — more
 accurate on average, but no longer guaranteed to only err on the safe side.
@@ -54,7 +54,7 @@ the internet rather than a local network.
 
 See the [Building a Custom Input Module](https://github.com/AoT-inc/AoT/wiki/Building-a-Custom-Input-Module) Wiki page.
 
-AoT has a custom input import system that lets you create custom inputs and make them available for use in the AoT system. Custom inputs can be uploaded and imported on the `[Gear Icon] -> Configure -> Custom Inputs` page. Once imported, they become available on the `Setup -> Input` page.
+AoT has a custom input import system that lets you create custom inputs and make them available for use in the AoT system. Custom inputs can be uploaded and imported on the `Manage -> System Management -> User Input` page. Once imported, they become available on the `Settings -> Input` page.
 
 If you have developed a working input module, please consider [creating a new GitHub issue](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module) or a pull request. Your module may be included in the built-in set.
 
@@ -66,7 +66,7 @@ Another GitHub repository dedicated to custom modules that are not included in t
 
 ### Input Commands
 
-Input commands are functions within an input module that can be executed from the web UI. These are useful for tasks such as calibration or other functions specific to an input. By default, there is at least one action, "Acquire Measurements Now," which causes the input to acquire a measurement before the next period elapses.
+Input commands are functions within an input module that can be executed from the web UI. These are useful for tasks such as calibration or other functions specific to an input. By default, there is at least one action, "Measure Now" (under **Commands**), which causes the input to acquire a measurement before the next period elapses.
 
 !!! note
     Actions can only be executed while the input is active.
@@ -85,7 +85,7 @@ For more information about the input options, refer to the table below.
 | Deactivate                | Deactivating stops the acquisition of measurements from the sensor. Any associated Conditional Functions also stop operating.                                                                         |
 | Save                      | Saves the current configuration entered in the input boxes for a particular sensor.                                                                                                                   |
 | Delete                    | Deletes a particular sensor.                                                                                                                                                                          |
-| Acquire Measurements Now  | Forces the input to take a measurement and store it in the database.                                                                                                                                  |
+| Measure Now               | Forces the input to take a measurement and store it in the database.                                                                                                                                  |
 | Up/Down                   | Moves a particular sensor up or down in the displayed order.                                                                                                                                          |
 | Power Output              | Selects the output that powers the sensor. This enables power cycling—turning the power off and back on to resolve issues—when the sensor returns three consecutive errors. A transistor may also be used instead of a relay. |
 | Location                  | Depending on the sensor in use, you must select a serial number, GPIO pin, I2C address, and so on.                                                                                                    |

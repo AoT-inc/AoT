@@ -41,7 +41,7 @@ measurements_dict = {
 INPUT_INFORMATION = {
     'input_name_unique': 'MAX31865',
     'input_manufacturer': 'MAXIM',
-    'input_name': 'MAX31865',
+    'input_name': 'MAX31865 (GPIO pins)',
     'input_library': 'RPi.GPIO',
     'measurements_name': 'Temperature',
     'measurements_dict': measurements_dict,
@@ -68,7 +68,7 @@ INPUT_INFORMATION = {
         ('pip-pypi', 'RPi.GPIO', 'RPi.GPIO==0.7.1')
     ],
 
-    'interfaces': ['UART'],
+    'interfaces': ['SPI'],
     'pin_cs': 8,
     'pin_miso': 9,
     'pin_mosi': 10,

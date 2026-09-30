@@ -10,6 +10,7 @@ CHANNELS = {
     3: {'name': 'Terrain', 'options': {'layer': 'p'}},
 }
 
+# @manual geo/layers#international-general, geo/layers#google-maps
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_google',
     'input_manufacturer': 'Google',
@@ -80,6 +81,7 @@ class InputModule(AbstractGisInput):
         
         self.api_key = self.get_custom_option('api_key') or ''
 
+    # @manual geo/layers#google-maps
     def _get_active_layer_type(self):
         active_channels = self.get_custom_option('active_channels')
         layer_id = 0
@@ -99,6 +101,7 @@ class InputModule(AbstractGisInput):
             return CHANNELS[layer_id]['options'].get('layer', 'm')
         return 'm'
 
+    # @manual geo/layers#google-maps
     def get_url(self):
         layer_type = self._get_active_layer_type()
         

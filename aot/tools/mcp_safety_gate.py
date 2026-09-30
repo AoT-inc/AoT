@@ -186,6 +186,7 @@ def write_tools() -> frozenset:
         return _NATIVE_WRITE_TOOLS
 
 
+# @manual ai/overview#safety-approval-model
 def approval_tools() -> frozenset:
     """사람 승인이 필요한 도구 이름 집합 (레지스트리 SSOT + 네이티브 물리 도구)."""
     try:
@@ -196,6 +197,7 @@ def approval_tools() -> frozenset:
         return _NATIVE_WRITE_TOOLS
 
 
+# @manual ai/overview#safety-approval-model
 def config_only_tools() -> frozenset:
     """쓰기지만 승인이 면제된 설정 편집 도구 — tool_registry 의 _CONFIG_ONLY 주석 참고.
 
@@ -215,6 +217,7 @@ _RECORD_WRITE_FALLBACK = frozenset({'create_note', 'knowledge_shelve', 'note'})
 _ADVISORY_WRITE_FALLBACK = frozenset({'submit_advice'})
 
 
+# @manual ai/overview#safety-approval-model
 def record_write_tools() -> frozenset:
     """기록만 저장하는 쓰기(노트·지식) — tool_registry 의 _RECORD_WRITE 주석 참고.
 
@@ -242,6 +245,7 @@ def plot_write_tools() -> frozenset:
         return frozenset()
 
 
+# @manual ai/overview#safety-approval-model
 def required_write_permission(tool_name) -> str:
     """이 쓰기 도구에 필요한 역할 권한 이름 — 웹의 같은 동작과 같은 것.
 
@@ -272,6 +276,7 @@ def map_edit_tools() -> frozenset:
         return frozenset({'delete_geo_shape', 'set_device_location'})
 
 
+# @manual ai/overview#safety-approval-model
 def role_allows_tool(role, tool_name) -> bool:
     """MCP 키 역할(RoleInfo) 또는 DB `Role` 행이 이 쓰기 도구를 해도 되는가.
 
@@ -505,6 +510,7 @@ WRITE_DISABLED_SCOPE = (
     "do not suggest that.")
 
 
+# @manual ai/overview#safety-approval-model
 def role_refusal(tool_name, role):
     """게이트가 **역할·조언 전용 모드**로 거절할 때의 본문. 아니면 None.
 
@@ -613,6 +619,7 @@ def role_refusal(tool_name, role):
     return None
 
 
+# @manual ai/overview#safety-approval-model
 def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_fn=None):
     """쓰기 도구를 사람 승인 뒤로 보낸다.
 
@@ -1034,7 +1041,8 @@ def _normalize_device_id_for_scope(tool_name, params):
     # 좁히면 부분 일치로만 찾아지는 이름은 스코프 검사에서 "장치 없음"이 되어
     # 통과해 버리고, 곧이어 실행층은 그 이름을 찾아내 그대로 돌려버린다 —
     # 승인 시점과 실행 시점이 다른 장치를 보는 구멍이 생긴다.
-    match = resolve_output(device_id, allow_partial=True)
+    # `ai=True` — 실행층과 같은 해석(AI 에서 뺀 출력은 후보가 아니다).
+    match = resolve_output(device_id, allow_partial=True, ai=True)
     if match.row is None:
         return params
     normalized = dict(params)
@@ -1042,6 +1050,7 @@ def _normalize_device_id_for_scope(tool_name, params):
     return normalized
 
 
+# @manual ai/overview#safety-approval-model
 def _approval_scope_denial(tool_name, params, user=None):
     """승인자가 이 요청의 대상(들)을 조작할 그룹 스코프 권한이 있는가.
 
@@ -1083,6 +1092,7 @@ def _approval_scope_denial(tool_name, params, user=None):
     return denied_uuid, scope.deny_message()
 
 
+# @manual ai/overview#safety-approval-model
 def _approver_role_denial(tool_name, user_id=None, role=None):
     """결정하는 사람의 역할이 이 도구의 쓰기 권한을 갖는가. 막으면 문구.
 
@@ -1111,6 +1121,7 @@ def _approver_role_denial(tool_name, user_id=None, role=None):
     return None
 
 
+# @manual ai/overview#safety-approval-model
 def _decide(confirmation_id, status, user_id=None, modified_params=None,
             role=None):
     from aot.databases.models import MCPConfirmation
@@ -1233,6 +1244,7 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None,
 #: configured/placed/success… 12종). 그래서 "실행됐는가"를 알려면 도구마다 다른
 #: 단어를 알아야 했다. `status` 를 통일하는 쪽은 이미 그 값으로 분기하는 코드
 #: 46곳과 배포된 프롬프트를 깨므로, 축을 하나 더 두고 기존 값은 그대로 둔다.
+# @manual ai/overview#call-state
 CALL_STATES = (
     'executed',            # 이번 호출에서 실제로 실행됨 (읽기 도구 포함)
     'already_executed',    # 승인 시점에 서버가 이미 실행함 — 결과 재생
@@ -1509,6 +1521,7 @@ def call_state(blocked, result=None, error_text='', tool_name=None):
                 classify_permission(tool_name) == 'write':
             return NOT_PERFORMED_STATUSES[result['status']]
     return 'executed'
+# @manual-end
 
 
 #: 승인 화면에서 한 번 더 확인을 받는 도구 — 되돌릴 수 없는 물리 동작.
@@ -1516,6 +1529,7 @@ def call_state(blocked, result=None, error_text='', tool_name=None):
 PHYSICAL_TOOLS = frozenset({'operate_device', 'set_output_state', 'schedule_device_control'})
 
 
+# @manual ai/overview#safety-approval-model
 def execute_approved(confirmation_id, role=None):
     """승인된 요청을 서버가 직접 실행하고 결과를 레코드에 남긴다.
 
@@ -1656,6 +1670,7 @@ def execute_approved(confirmation_id, role=None):
     return status, result
 
 
+# @manual ai/overview#safety-approval-model
 def _return_to_pending(row, confirmation_id, result):
     """승인자의 그룹 밖이라 실행하지 않은 요청을 대기로 되돌린다.
 

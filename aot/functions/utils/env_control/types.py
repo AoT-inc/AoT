@@ -80,6 +80,7 @@ MANUAL_LOCK_DEFAULT = ManualLockState()
 # 명령 제약 조건 (§3.1, §4.1)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#l3-coordinator-actuator-command
 @dataclass
 class CmdConstraints:
     slew_per_cycle: float = 20.0    # 사이클당 최대 명령 변화 (%)
@@ -184,6 +185,7 @@ ACTUATOR_KINDS = frozenset({
 # ⚠ **여기가 정본이다.** coordinator(부하분담·환기 게이트)와 effect_functions
 # (도달 한계 클램프)가 같은 표를 본다. 어휘를 두 벌 두면 갈라지고, 갈라지면
 # 한쪽만 고쳐진 채로 굴러간다.
+# @manual ai/env-control#domains
 ACTUATOR_DOMAIN = {
     'opening':         'vent',
     'exhaust_fan':     'vent',
@@ -197,12 +199,14 @@ ACTUATOR_DOMAIN = {
     'lighting':        'aux',
     'circulation_fan': 'aux',
 }
+# @manual-end
 DEFAULT_DOMAIN = 'aux'   # 명부에 없는 새 kind — 남을 오염시키지 못하는 쪽이 안전하다
 
 VENTILATING_KINDS = frozenset(
     k for k, d in ACTUATOR_DOMAIN.items() if d == 'vent')
 
 
+# @manual ai/env-control#domains
 def domain_of(profile) -> str:
     """이 액추에이터의 부하분담 도메인. 모르는 kind 는 격리한다."""
     return ACTUATOR_DOMAIN.get(getattr(profile, 'kind', ''), DEFAULT_DOMAIN)

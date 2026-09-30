@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 # ── 장치 점검 (Commissioning Diagnostic) ──────────────────────────────────────
 
+# @manual geo/facility#device-check, geo/api-reference#facility-commissioning
 @blueprint.route('/api/geo/facility/<facility_uuid>/commissioning/start', methods=['POST'])
 @login_required
 def api_commissioning_start(facility_uuid):
@@ -84,6 +85,7 @@ def api_commissioning_start(facility_uuid):
     return jsonify({'ok': True, 'check_id': check_id, 'actuator_count': len(all_acts)})
 
 
+# @manual geo/facility#device-check, geo/api-reference#facility-commissioning
 @blueprint.route('/api/geo/facility/<facility_uuid>/commissioning/<check_id>', methods=['GET'])
 @login_required
 def api_commissioning_result(facility_uuid, check_id):
@@ -98,6 +100,7 @@ def api_commissioning_result(facility_uuid, check_id):
     return jsonify({'ok': True, **data})
 
 
+# @manual geo/facility#device-check, geo/api-reference#facility-commissioning
 @blueprint.route('/api/geo/facility/<facility_uuid>/commissioning/<check_id>/verdict', methods=['POST'])
 @login_required
 def api_commissioning_verdict(facility_uuid, check_id):
@@ -137,6 +140,7 @@ def api_commissioning_verdict(facility_uuid, check_id):
     return jsonify({'ok': True, 'actions': actions, 'message': msg})
 
 
+# @manual geo/facility#device-check
 def _apply_commissioning_actions(facility_uuid: str, actions: list):
     """Write verdict actions into facility.commissioning_state."""
     import time as _time

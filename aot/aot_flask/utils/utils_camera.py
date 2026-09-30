@@ -27,10 +27,11 @@ def camera_add(form, platform='unknown'):
         library = CAMERA_TYPE_TO_LIBRARY.get(camera_type, 'opencv')
         config = CAMERA_TYPES.get(CAMERA_TYPE_TO_CONFIG_KEY.get(camera_type, camera_type), {})
 
+        msg_new_camera = gettext('New Camera')
         max_pos = db.session.query(db.func.max(Camera.position_y)).scalar()
         new_camera = Camera(
             unique_id=str(uuid.uuid4()),
-            name=f"{gettext('New Camera')} ({config.get('display_name', camera_type)})",
+            name=f"{msg_new_camera} ({config.get('display_name', camera_type)})",
             camera_type=camera_type,
             library=library,
             is_activated=False,
@@ -44,7 +45,8 @@ def camera_add(form, platform='unknown'):
         return new_camera
     except Exception as e:
         db.session.rollback()
-        flash(f"{gettext('Error adding camera')}: {str(e)}", 'error')
+        msg_error = gettext('Error adding camera')
+        flash(f"{msg_error}: {str(e)}", 'error')
         return None
 
 def camera_mod(form, camera_id):
@@ -92,7 +94,8 @@ def camera_mod(form, camera_id):
         return True
     except Exception as e:
         db.session.rollback()
-        flash(f"{gettext('Error updating camera')}: {str(e)}", 'error')
+        msg_error = gettext('Error updating camera')
+        flash(f"{msg_error}: {str(e)}", 'error')
         return False
 
 def camera_activate(camera_id):
@@ -126,6 +129,7 @@ def camera_delete(camera_id):
             return True
         except Exception as e:
             db.session.rollback()
-            flash(f"{gettext('Error deleting camera')}: {str(e)}", 'error')
+            msg_error = gettext('Error deleting camera')
+            flash(f"{msg_error}: {str(e)}", 'error')
             return False
     return False

@@ -8,6 +8,7 @@ from .calc import (
 )
 
 
+# @manual geo/journal#output-formats
 def glossary_terms(journal_data):
     """이 문서에 **실제로 나오는** 전문용어만 → `[{'term', 'text'}, …]`.
 
@@ -199,6 +200,7 @@ def caveat_text(key):
     return key
 
 
+# @manual geo/journal#output-formats
 def journal_to_jsonable(journal_data):
     """계약 dict → JSON-safe dict. date/datetime 만 isoformat 으로, 그 외 그대로.
 
@@ -287,6 +289,7 @@ def _note_attachment_url(filename):
                    _external=True)
 
 
+# @manual geo/journal#output-formats
 def render_plot_journal_markdown(journal_data, granularity=None):
     """§6 계약 dict → Markdown 문자열(CommonMark 파이프 테이블).
 
@@ -600,6 +603,7 @@ def summarize_for_card(journal_data):
 #   두 번째 레이아웃을 두면 같은 문서가 경로마다 달라지고, 그 차이는 인쇄해
 #   보기 전까지 아무도 모른다 — 이 저장소가 반복해서 겪은 모양이다.
 
+# @manual geo/journal#output-formats
 def render_plot_journal_csv(journal_data, granularity=None):
     """§6 계약 dict → CSV 문자열(표 계산·통계용).
 
@@ -766,6 +770,7 @@ def _odt_table(name, header, rows):
     return ''.join(out)
 
 
+# @manual geo/journal#output-formats
 def render_plot_journal_odt(journal_data, granularity=None):
     """§6 계약 dict → ODT 바이트(OpenDocument Text).
 

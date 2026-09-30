@@ -314,6 +314,7 @@ class GeoPlot(CRUDMixin, db.Model):
                 continue
         return out
 
+    # @manual geo/plots#targets, geo/programs#plot-override
     def stage_override_map(self):
         """단계 구성 → `{removed, added, guidance, targets, name}`.
 

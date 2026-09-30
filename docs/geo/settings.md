@@ -4,7 +4,7 @@ The `/geo/setting` page configures system-wide GIS defaults. Settings are stored
 
 ---
 
-## Default Start Location
+## Default Start Location { #default-start-location }
 
 The default location shown when the map widget and design tool first open.
 
@@ -12,13 +12,13 @@ The default location shown when the map widget and design tool first open.
 |-------|---------|-------------|
 | Latitude | 37.5665 | Center of Seoul |
 | Longitude | 126.9780 | Center of Seoul |
-| Zoom level | 13 | Initial zoom (1=world, 22=building) |
+| Zoom Level | 12 | Initial zoom (smaller = wider area, larger = closer in) |
 
-Click **Set to Current Position** after navigating to your desired location and zoom level to auto-fill the fields.
+Move the map to the location and zoom you want, then click **Get Location** on the **Current View** row to fill the three fields from the current map view.
 
 ---
 
-## Design Theme Colors
+## Design Theme Colors { #design-theme-colors }
 
 Per-layer colors used in the design tool and map widget.
 
@@ -31,51 +31,51 @@ Per-layer colors used in the design tool and map widget.
 | Device | AoT device marker |
 | Panel Background | Property panel background |
 
-Each item has a color picker and an opacity slider (0–100%).
+Each row has a color picker. A color you have never saved shows the colour currently in use (the global default) and stays unset — it is only saved once you change it. One **Panel Opacity** slider (0–100%, in steps of 5) applies to the property panel background.
 
 ---
 
 ## Map Behavior
 
-### Zoom Settings
+### Zoom Settings { #zoom-settings }
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Max Zoom | 22 | Maximum map zoom level |
-| Equipment Cull Zoom | 15 | Equipment/Device markers hidden below this zoom level |
+| Max Zoom | 25 | Maximum map zoom level (accepts 1–30) |
+| Equipment Hide Zoom | 15 | Equipment items are hidden below this zoom level (accepts 1–25) |
 
-**Equipment Cull Zoom** prevents large numbers of device markers from cluttering the map when zoomed out. When zoom drops below `15`, Equipment/Device markers are automatically hidden.
+**Equipment Hide Zoom** prevents large numbers of equipment items from cluttering the map when zoomed out. When zoom drops below `15`, pipes, connection points, sprinkler coverage areas and 3D facility models are automatically hidden. AoT device markers are not affected — they stay visible at every zoom level.
 
-### Zoom Method
+### Zoom Method { #zoom-method }
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Digital Zoom | Off | Continue CSS-scale zoom beyond tile resolution |
+| Digital Zoom | On | Continue CSS-scale zoom beyond tile resolution |
 | Smooth Zoom | On | Smooth interpolation during pinch zoom |
 
 ---
 
-## Performance & Rendering
+## Performance & Rendering { #performance-rendering }
 
 | Field | Default | Description |
 |-------|---------|-------------|
 | Tile Fade Animation | On | Fade-in animation when tiles load |
-| Serve MapLibre Locally | Off | Use local vendored files instead of the CDN for the MapLibre GL library |
-| Prefer Canvas | Off | Prefer Canvas renderer over SVG (Leaflet mode only) |
+| Serve MapLibre Locally | On | Serve the MapLibre GL library from local files instead of the CDN. Turn it off to load the library from the CDN |
+| Prefer Canvas Rendering | Off | Prefer Canvas renderer over SVG (Leaflet mode only) |
 
-### Polygon Display Limits
+### Polygon Display Limits { #polygon-display-limits }
 
-Limits the number of polygons rendered at once in the dashboard map widget. Excess polygons are clustered.
+Upper counts kept with the map settings. They are stored and can be edited here, but the current map drawing does not apply them yet.
 
 | Field | Default |
 |-------|---------|
-| Max Site polygons | 500 |
-| Max Zone polygons | 1000 |
-| Max Device markers | 2000 |
+| Max Site Polygons | 1000 |
+| Max Zone Polygons | 1000 |
+| Max Device Polygons | 1000 |
 
 ---
 
-## Unit Settings
+## Unit Settings { #unit-settings }
 
 Select the length unit for facility engineering calculations and dimension inputs.
 
@@ -89,13 +89,15 @@ Select the length unit for facility engineering calculations and dimension input
 
 ---
 
-## API
+## API { #api }
 
 ```http
 GET /api/geo/settings
 ```
 
-Returns the current global settings as JSON.
+Returns the current global settings as JSON. It requires the Edit Settings permission; without it the request is refused.
+
+The response is `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "search_provider": "..."}`. `saved_state` carries the stored settings — note that the default start zoom comes back as `zoom` — along with the saved map provider keys.
 
 ```http
 POST /api/geo/settings
@@ -104,27 +106,41 @@ Content-Type: application/json
 {
   "default_lat": 37.5665,
   "default_lng": 126.9780,
-  "default_zoom": 13,
-  "max_zoom": 22,
+  "default_zoom": 12,
+  "max_zoom": 25,
   "equipment_cull_zoom": 15,
-  "digital_zoom": false,
+  "digital_zoom": true,
   "smooth_zoom": true,
   "tile_fade_animation": true,
   "maplibre_local_serving": false,
   "prefer_canvas": false,
-  "length_unit": "m",
-  "max_polygons_site": 500,
+  "search_provider": "",
+  "max_polygons_site": 1000,
   "max_polygons_zone": 1000,
-  "max_polygons_device": 2000,
-  "theme_config": {
-    "site": { "color": "#2563eb", "opacity": 0.3 },
-    "zone": { "color": "#16a34a", "opacity": 0.3 },
-    "facility": { "color": "#ea580c", "opacity": 0.4 },
-    "equipment": { "color": "#6b7280", "opacity": 0.5 },
-    "device": { "color": "#dc2626", "opacity": 1.0 }
-  }
+  "max_polygons_device": 1000,
+  "theme_site": "#2563eb",
+  "theme_zone": "#16a34a",
+  "theme_facility": "#ea580c",
+  "theme_equipment": "#6b7280",
+  "theme_device": "#dc2626",
+  "theme_panel_bg": "#ffffff",
+  "theme_panel_opacity": 90
 }
 ```
+
+Every key is optional — an omitted key keeps its stored value, and keys that are not on the accepted list are silently ignored. Form-encoded bodies are accepted as well as JSON. Theme values are sent as flat `theme_*` keys, not as a nested object; the design drawer's visibility toggles are saved through the same `theme_*` family. An empty `search_provider` means "follow map settings". A successful save answers `{"ok": true, "message": "Settings Saved"}`, and saving also requires the Edit Settings permission.
+
+The length unit is not part of this endpoint. It has its own:
+
+```http
+GET /api/geo/settings/length_unit
+PUT /api/geo/settings/length_unit
+Content-Type: application/json
+
+{ "length_unit": "m" }
+```
+
+`GET` returns the current unit together with the list of supported units; `PUT` refuses any value outside that list.
 
 ---
 

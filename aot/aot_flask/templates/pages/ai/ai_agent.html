@@ -68,7 +68,7 @@
         {% endif %}
       </div>
       <div class="aot-settings-sub">
-        {{ _('Turned on or off in Settings > General.') }}
+        {{ _('Turned on or off in Manage > System Management > General Settings.') }}
         <a href="{{ url_for('routes_settings.settings_general') }}">{{ _('Open General Settings') }}</a>
       </div>
     </div>
@@ -103,7 +103,7 @@
       </div>
       <div class="aot-settings-sub" id="aiRuntimeHint">
         {%- if not ai_runtime or not ai_runtime.ai_enabled -%}
-          {{ _('The AI service is disabled. Enable it in Settings > General first.') }}
+          {{ _('The AI service is disabled. Enable it in Manage > System Management > General Settings first.') }}
         {%- elif ai_runtime.agent_count == 0 -%}
           {{ _('No AI model is registered yet. Add and activate at least one agent below, then start the service.') }}
         {%- elif ai_runtime.ai_running -%}

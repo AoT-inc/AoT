@@ -17,6 +17,7 @@ from aot.utils.inputs import parse_input_information
 logger = logging.getLogger("aot.forms_geo")
 
 
+# @manual geo/layers#how-to-register-a-layer
 class GISInputAdd(FlaskForm):
     """Form to Add a new GIS Input"""
     input_type = SelectField(

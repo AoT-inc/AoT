@@ -389,6 +389,14 @@ a.aot-modal-section-title-collapsible + .collapse + .aot-modal-container:not(:ha
     overflow-wrap: anywhere;
 }
 
+/* 컨트롤 자리에 놓는 읽기 전용 값(주소처럼 공백 없는 긴 글) — 컨트롤 폭은 줄지 않으므로(§4-6)
+   값이 그 폭 안에서 접혀야 한다. 접지 않으면 폰에서 라벨 위로 겹친다(MCP 인증 설정의 리디렉션 URI). */
+.aot-modal-option-value {
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
 /* SECTION 3: FORM CONTROLS & LAYOUT */
 .aot-modal-option-control {
     flex: 0 0 var(--aot-common-control-width);

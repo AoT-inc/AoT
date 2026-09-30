@@ -10,6 +10,7 @@ CHANNELS = {
     4: {'name': 'Temperature', 'options': {'layer': 'temp_new'}}
 }
 
+# @manual geo/layers#weather-overlays
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_openweather',
     'input_manufacturer': 'OpenWeatherMap',

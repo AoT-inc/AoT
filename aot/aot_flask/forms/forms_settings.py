@@ -25,12 +25,14 @@ from wtforms.widgets import NumberInput
 from wtforms.widgets import TextArea
 
 from aot.aot_flask.utils import credential_rules
+from aot.config import lazy_join
 from aot.utils.utils import PASSWORD_MIN_LENGTH
 
 from aot.config_translations import TRANSLATIONS
 from aot.aot_flask.forms.forms_authentication import _strip_whitespace
 import json
 import os
+from aot.utils.lazy_text import lazy_join
 
 # Load Theme Defaults from JSON (Single Source of Truth)
 THEME_DEFAULTS = {}
@@ -170,11 +172,9 @@ class SettingsEmail(FlaskForm):
         lazy_gettext('SMTP Protocol'),
         validators=[DataRequired()]
     )
-    smtp_ssl = BooleanField(lazy_gettext('Enable SSL'))
     smtp_user = StringField(
         lazy_gettext('SMTP User'),
-        render_kw={"placeholder": lazy_gettext('SMTP User')},
-        validators=[DataRequired()]
+        render_kw={"placeholder": lazy_gettext('SMTP User')}
     )
     smtp_password = PasswordField(
         lazy_gettext('SMTP Password'),
@@ -188,6 +188,11 @@ class SettingsEmail(FlaskForm):
             validators.Email()
         ]
     )
+    def validate_smtp_user(self, field):
+        # 로그인 없는 프로토콜은 사용자가 필요 없다
+        if self.smtp_protocol.data != 'unencrypted_no_login':
+            DataRequired()(self, field)
+
     smtp_hourly_max = IntegerField(
         lazy_gettext('Max Emails per Hour'),
         render_kw={"placeholder": lazy_gettext('Max Emails per Hour')},
@@ -282,22 +287,22 @@ class SettingsGeneral(FlaskForm):
         lazy_gettext('Translate User-Defined Names'))
 
     sample_rate_controller_conditional = DecimalField(
-        "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Conditional')),
+        lazy_join(lazy_gettext('Sample Rate'), ' (', lazy_gettext('Seconds'), '): ', lazy_gettext('Conditional')),
         widget=NumberInput(step='any'))
     sample_rate_controller_function = DecimalField(
-        "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Function')),
+        lazy_join(lazy_gettext('Sample Rate'), ' (', lazy_gettext('Seconds'), '): ', lazy_gettext('Function')),
         widget=NumberInput(step='any'))
     sample_rate_controller_input = DecimalField(
-        "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Input')),
+        lazy_join(lazy_gettext('Sample Rate'), ' (', lazy_gettext('Seconds'), '): ', lazy_gettext('Input')),
         widget=NumberInput(step='any'))
     sample_rate_controller_output = DecimalField(
-        "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Output')),
+        lazy_join(lazy_gettext('Sample Rate'), ' (', lazy_gettext('Seconds'), '): ', lazy_gettext('Output')),
         widget=NumberInput(step='any'))
     sample_rate_controller_pid = DecimalField(
-        "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('PID')),
+        lazy_join(lazy_gettext('Sample Rate'), ' (', lazy_gettext('Seconds'), '): ', lazy_gettext('PID')),
         widget=NumberInput(step='any'))
     sample_rate_controller_widget = DecimalField(
-        "{} ({}): {}".format(lazy_gettext('Sample Rate'), lazy_gettext('Seconds'), lazy_gettext('Widget')),
+        lazy_join(lazy_gettext('Sample Rate'), ' (', lazy_gettext('Seconds'), '): ', lazy_gettext('Widget')),
         widget=NumberInput(step='any'))
 
     settings_general_save = SubmitField(lazy_gettext('Save'))
@@ -545,9 +550,8 @@ class UserAdd(FlaskForm):
     )
     password_repeat = PasswordField(
         lazy_gettext('Confirm Password'), validators=[DataRequired()])
-    code = PasswordField("{} ({})".format(
-        lazy_gettext('Keypad Code'),
-        lazy_gettext('Optional')))
+    code = PasswordField(lazy_join(
+        lazy_gettext('Keypad Code'), ' (', lazy_gettext('Optional'), ')'))
     addRole = StringField(
         lazy_gettext('Role'), validators=[DataRequired()])
     theme = StringField(
@@ -602,6 +606,20 @@ class AccountSelf(FlaskForm):
     user_account_save = SubmitField(lazy_gettext('Save'))
 
 
+#: API 키 설정 모듈의 화면 이름 — 값은 tool_registry.TOOL_MODULES 와 같은 순서
+#: (test_mcp_tool_profiles 가 대조한다). 설명(모델에게 가는 영문 한 줄)은
+#: tool_registry.TOOL_MODULE_SUMMARIES, 사람에게는 이 이름과 칸의 title 이다.
+API_KEY_TOOL_MODULE_CHOICES = [
+    ('plots', lazy_gettext('Plots and crop programs')),
+    ('map', lazy_gettext('Map and locations')),
+    ('automation', lazy_gettext('Building automations')),
+    ('devices', lazy_gettext('Device definitions')),
+    ('dashboard', lazy_gettext('Dashboards')),
+    ('library', lazy_gettext('Documents and library')),
+    ('admin', lazy_gettext('System and AI settings')),
+]
+
+
 class UserMod(FlaskForm):
     user_id = StringField(lazy_gettext('User ID'), widget=widgets.HiddenInput())
     # 발급하려는 키에 붙일 이름("ChatGPT", "Claude Desktop"). 한 사람이 키를
@@ -615,13 +633,18 @@ class UserMod(FlaskForm):
         choices=[('full', lazy_gettext('Full access')),
                  ('readonly', lazy_gettext('Read only'))],
         default='full')
-    # 외부 MCP 에 보여 줄 도구 묶음. 기본은 운영 — 설정 묶음은 대화마다 AI 에
-    # 보내는 도구 설명이 크게 늘어나므로 고르는 사람이 정해야 한다.
-    api_key_tool_profile = SelectField(
-        lazy_gettext('AI Tools'),
-        choices=[('operations', lazy_gettext('Operations')),
-                 ('configuration', lazy_gettext('Operations + configuration'))],
-        default='operations')
+    # 외부 MCP 에 보여 줄 도구 묶음 = 운영(항상) + 고른 설정 모듈(2026-09-29).
+    # 기본은 운영만 — 모듈마다 대화마다 AI 에 보내는 도구 설명이 늘어나므로
+    # 고르는 사람이 필요한 것만 켠다. 바탕 값은 숨은 칸이다: 화면은 언제나
+    # 'operations' 를 보내고, 예전처럼 'configuration' 을 보내는 호출자는
+    # 모듈 전부로 받는다(user_api_key.tool_profile_columns).
+    api_key_tool_profile = StringField(widget=widgets.HiddenInput(),
+                                       default='operations')
+    # 켤 설정 모듈 — 체크박스(user_detail.html 이 choices 로 그린다). 전부
+    # 체크하면 'configuration' 으로 저장된다(앞으로 생길 모듈까지 포함).
+    api_key_tool_modules = SelectMultipleField(
+        lazy_gettext('Setup modules'), choices=API_KEY_TOOL_MODULE_CHOICES,
+        default=[])
     # 폐기·묶음 변경 대상 키의 unique_id.
     api_key_id = StringField(widget=widgets.HiddenInput())
     user_revoke_api_key = SubmitField(lazy_gettext('Revoke'))
@@ -698,8 +721,10 @@ class SettingsPi(FlaskForm):
     disable_i2c = SubmitField(lazy_gettext('Disable I2C'))
     enable_one_wire = SubmitField(lazy_gettext('Enable 1-Wire'))
     disable_one_wire = SubmitField(lazy_gettext('Disable 1-Wire'))
-    enable_serial = SubmitField(lazy_gettext('Enable Serial Communication'))
-    disable_serial = SubmitField(lazy_gettext('Disable Serial Communication'))
+    enable_serial = SubmitField(lazy_gettext('Enable Serial Hardware'))
+    disable_serial = SubmitField(lazy_gettext('Disable Serial Hardware'))
+    enable_serial_console = SubmitField(lazy_gettext('Enable Serial Login Shell'))
+    disable_serial_console = SubmitField(lazy_gettext('Disable Serial Login Shell'))
     enable_spi = SubmitField(lazy_gettext('Enable SPI'))
     disable_spi = SubmitField(lazy_gettext('Disable SPI'))
     enable_ssh = SubmitField(lazy_gettext('Enable SSH'))
@@ -707,7 +732,7 @@ class SettingsPi(FlaskForm):
     hostname = StringField(lazy_gettext('Hostname'))
     change_hostname = SubmitField(lazy_gettext('Change Hostname'))
     pigpiod_sample_rate = StringField(lazy_gettext('pigpiod Sample Rate Settings'))
-    change_pigpiod_sample_rate = SubmitField(lazy_gettext('Reset'))
+    change_pigpiod_sample_rate = SubmitField(lazy_gettext('Apply'))
 
 
 #
@@ -721,8 +746,8 @@ class SettingsDiagnostic(FlaskForm):
     delete_outputs = SubmitField(lazy_gettext('Delete All Outputs'))
     delete_functions = SubmitField(lazy_gettext('Delete All Functions'))
     delete_settings_database = SubmitField(lazy_gettext('Delete Settings Database'))
-    delete_file_dependency = SubmitField(lazy_gettext('Delete File') + ': .dependency')
-    delete_file_upgrade = SubmitField(lazy_gettext('Delete File') + ': .upgrade')
+    delete_file_dependency = SubmitField(lazy_join(lazy_gettext('Delete File'), ': .dependency'))
+    delete_file_upgrade = SubmitField(lazy_join(lazy_gettext('Delete File'), ': .upgrade'))
     recreate_influxdb_db_1 = SubmitField(lazy_gettext('Recreate InfluxDB 1.x Database'))
     recreate_influxdb_db_2 = SubmitField(lazy_gettext('Recreate InfluxDB 2.x Database'))
     reset_email_counter = SubmitField(lazy_gettext('Reset Email Counter'))

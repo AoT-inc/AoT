@@ -1,0 +1,19 @@
+#!/bin/sh
+# AoT post-commit 훅 — 매뉴얼 자동 갱신.
+#
+# 코드 주석 `@manual 쪽#앵커` 로 연결된 매뉴얼 절 중, 연결된 코드가 장부
+# (docs/.manual-sync.json)와 달라진 절이 있으면 이 Mac 의 claude CLI 로
+# en·ko·ja 를 다시 쓰는 작업을 **백그라운드로** 띄우고 바로 돌아온다.
+# 결과는 커밋하지 않은 문서 변경으로 작업 폴더에 남는다 — 검토 후 다음
+# 커밋에 넣는다. 로그·보고서: .local/manual_sync/
+#
+# 커밋을 막거나 늦추지 않는다. 리베이스·머지 도중, CI, claude 가 없는
+# 환경에서는 아무것도 하지 않는다. 배경: aot/scripts/manual_sync.py
+#
+# 활성화: git config core.hooksPath .githooks   (클론마다 1회, pre-commit 과 공유)
+# 끄기  : AOT_SKIP_MANUAL_AUTODRAFT=1 git commit ...
+ROOT=$(git rev-parse --show-toplevel)
+MS="$ROOT/aot/scripts/manual_sync.py"
+[ -f "$MS" ] || exit 0
+python3 "$MS" autodraft || true
+exit 0

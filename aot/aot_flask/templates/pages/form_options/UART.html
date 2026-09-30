@@ -1,14 +1,22 @@
-{% if 'uart' in dict_options['options_enabled'] or
-      'uart' in dict_options['options_disabled']
+{% if 'uart_location' in dict_options['options_enabled'] or
+      'uart_location' in dict_options['options_disabled']
   %}
 
 <div class="aot-modal-option-row">
-  <label class="aot-modal-option-label">{{dict_translation['uart']['title']}}</label>
+  <label class="aot-modal-option-label">{{dict_translation['uart_location']['title']}}</label>
   <div class="aot-modal-option-control">
-  {%- if 'uart' in dict_options['options_disabled'] -%}
-    {{form.uart(class_='form-control aot-modern-select', value=each_device.uart, disabled=True, **{'title': dict_translation['uart']['phrase']})}}
+  {%- if 'uart_location' in dict_options['options_disabled'] -%}
+    {{form.uart_location(class_='form-control aot-modern-input', value=each_device.uart_location, disabled=True, **{'title': dict_translation['uart_location']['phrase']})}}
   {% else %}
-    {{form.uart(class_='form-control aot-modern-select', value=each_device.uart, **{'title': dict_translation['uart']['phrase']})}}
+    {{form.uart_location(class_='form-control aot-modern-input', value=each_device.uart_location, list='uart_location_options_' ~ each_device.unique_id, **{'title': dict_translation['uart_location']['phrase']})}}
+    <datalist id="uart_location_options_{{each_device.unique_id}}">
+      <option value="/dev/ttyAMA0">
+      <option value="/dev/serial0">
+      <option value="/dev/ttyS0">
+      <option value="/dev/ttyUSB0">
+      <option value="/dev/ttyUSB1">
+      <option value="/dev/ttyACM0">
+    </datalist>
   {%- endif -%}
   </div>
 </div>

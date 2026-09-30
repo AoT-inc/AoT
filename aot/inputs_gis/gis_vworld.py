@@ -24,6 +24,7 @@ CHANNELS = {
     14: {'name': lg('Individual Official Land Price'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d150', 'role': 'overlay', 'type': 'wms', 'style': 'dt_d150', 'url': 'https://api.vworld.kr/ned/wms/getIndvdLandPriceWMS', 'min_zoom': 10.5, 'min_native_zoom': 12}},
 }
 
+# @manual geo/layers#domestic-korea, geo/layers#vworld
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_vworld',
     'input_manufacturer': 'Vworld',
@@ -126,6 +127,7 @@ class InputModule(AbstractGisInput):
                 pass
         return layer_id
 
+    # @manual geo/layers#vworld
     def _get_active_channel_info(self):
         layer_id = self._get_active_channel_id()
         from aot.inputs_gis.gis_vworld import CHANNELS
@@ -150,6 +152,7 @@ class InputModule(AbstractGisInput):
         self._update_layer_properties()
         return super(InputModule, self).get_layer_config()
 
+    # @manual geo/layers#vworld
     def get_url(self):
         """Dispatch URL generation based on channel type."""
         channel_info = self._get_active_channel_info()
@@ -413,6 +416,7 @@ class InputModule(AbstractGisInput):
     # Parcel (필지) Lookup Pipeline
     # -------------------------------------------------------------------------
 
+    # @manual geo/parcel-import#address-input, geo/parcel-import#import-by-address, geo/parcel-import#notes
     @staticmethod
     def parcel_from_address(address, api_key, domain=''):
         """
@@ -696,6 +700,7 @@ class InputModule(AbstractGisInput):
         return {'ok': False,
                 'error': f'Reverse geocoding failed for ({lat:.6f}, {lng:.6f}): {last_error}'}
 
+    # @manual geo/parcel-import#how-to-import, geo/parcel-import#csv-batch-import_1, geo/parcel-import#notes
     @staticmethod
     def parcels_from_addresses(addresses, api_key, domain=''):
         """

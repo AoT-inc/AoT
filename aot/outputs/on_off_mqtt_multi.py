@@ -14,6 +14,7 @@ from aot.outputs.mqtt_publisher import PersistentMqttPublisher
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.utils import random_alphanumeric
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -31,7 +32,7 @@ channels_dict = {
 
 OUTPUT_INFORMATION = {
     'output_name_unique': 'MQTT_PAHO_MULTI',
-    'output_name': "{}: MQTT Publish Multi".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: MQTT Publish Multi", lazy_gettext('On/Off')),
     'output_manufacturer': 'AoT',
     'output_library': 'paho-mqtt',
     'measurements_dict': measurements_dict,
@@ -265,7 +266,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

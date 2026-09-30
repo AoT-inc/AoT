@@ -26,6 +26,7 @@ _wms_layer_info_cache = {}  # {unique_id: (base_url, leaflet_opts, expires_at)}
 _WMS_LAYER_INFO_TTL = 60.0
 
 
+# @manual geo/layers#wms-layers
 def _get_wms_layer_info(unique_id):
     """Return (base_url, leaflet_opts) for a WMS layer, with per-process TTL cache.
     Avoids calling parse_input_information() + load_module_from_file() on every tile."""
@@ -206,6 +207,7 @@ _TRANSPARENT_1X1_PNG = (
     b'\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
 )
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/layer_secrets', methods=['GET'])
 @login_required
 def api_geo_layer_secrets():
@@ -234,6 +236,7 @@ def api_geo_layer_secrets():
     resp.headers['Cache-Control'] = 'no-store, max-age=0'
     return resp
 
+# @manual geo/api-reference#overlays-shapes-geojson
 @blueprint.route('/api/geo/overlays/list', methods=['GET'])
 @login_required
 def api_geo_overlays_list():
@@ -255,6 +258,7 @@ def api_geo_overlays_list():
         return jsonify({'ok': False, 'error': str(error)}), 500
     return jsonify(collection)
 
+# @manual geo/design-tool#auto-save, geo/api-reference#overlays-shapes-geojson
 @blueprint.route('/api/geo/overlays/delta', methods=['POST'])
 @login_required
 def api_geo_overlays_delta():
@@ -279,6 +283,7 @@ def api_geo_overlays_delta():
         
     return jsonify(result)
 
+# @manual geo/design-tool#equipment, geo/api-reference#overlays-shapes-geojson
 @blueprint.route('/api/geo/generate-pipes', methods=['POST'])
 @login_required
 def api_geo_generate_pipes():
@@ -301,6 +306,7 @@ def api_geo_generate_pipes():
 # [New] GIS Proxy Routes (Specific)
 # ---------------------------------------------------------------------------
 
+# @manual geo/layers#rainviewer, geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/rainviewer/meta', methods=['GET'])
 @login_required
 @cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
@@ -330,6 +336,7 @@ def api_geo_proxy_rainviewer_meta():
         current_app.logger.warning(f'[RainViewer Meta] Error: {e}')
         return jsonify({'radar': {'past': [], 'nowcast': []}}), 200
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/isric', methods=['GET'])
 @login_required
 # Cache only successful responses (exclude errors)
@@ -391,6 +398,7 @@ def api_geo_proxy_isric():
         current_app.logger.error(f"[ISRIC Proxy] Error: {e}\n{traceback.format_exc()}")
         return jsonify({'error': str(e), 'type': type(e).__name__}), 500
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/openweather', methods=['GET'])
 @login_required
 @cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
@@ -444,6 +452,7 @@ def api_geo_proxy_openweather():
         current_app.logger.error(f"OpenWeather Proxy Error: {e}")
         return jsonify({'error': str(e)}), 500
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/kma', methods=['GET'])
 @login_required
 @cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
@@ -574,6 +583,7 @@ _openmeteo_fail_until = {}
 OPENMETEO_FAIL_COOLDOWN_SEC = 60
 
 
+# @manual geo/layers#weather-overlays, geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/openmeteo', methods=['GET'])
 @login_required
 @cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
@@ -627,6 +637,7 @@ def api_geo_proxy_openmeteo():
         current_app.logger.error(f"OpenMeteo Proxy Error: {e}")
         return jsonify({'error': str(e)}), 200
 
+# @manual geo/layers#rainviewer, geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/rainviewer/timestamps', methods=['GET'])
 @login_required
 @cache.cached(timeout=300, query_string=True, unless=lambda: hasattr(g, '_proxy_error') and g._proxy_error)
@@ -674,6 +685,7 @@ def api_geo_proxy_rainviewer_timestamps():
 # [New] GIS Proxy Routes (Generic)
 # ---------------------------------------------------------------------------
 
+# @manual geo/layers#wms-layers, geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/wms/<unique_id>', methods=['GET'])
 @login_required
 def api_geo_proxy_wms(unique_id):
@@ -776,6 +788,7 @@ def api_geo_proxy_wms(unique_id):
 _OVERLAY_TILE_TTL = 600        # 날씨 오버레이는 자주 바뀐다 — 10분.
 
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/tile/<layer_id>/<int:z>/<int:x>/<int:y>', methods=['GET'])
 @login_required
 def api_geo_tile_xyz(layer_id, z, x, y):
@@ -931,6 +944,7 @@ def _load_gis_layer_instance(unique_id):
     return inst
 
 
+# @manual geo/layers#sentinel-hub-sentinel-2
 def _get_sentinelhub_settings(unique_id):
     """Sentinel Hub 조회에 필요한 설정 한 벌. 못 찾으면 None.
 
@@ -957,6 +971,7 @@ def _sh_blank_tile():
                     headers={'Cache-Control': 'no-cache'})
 
 
+# @manual geo/layers#sentinel-hub-sentinel-2, geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/sentinelhub/<unique_id>', methods=['GET'])
 @login_required
 def api_geo_proxy_sentinelhub(unique_id):
@@ -1019,6 +1034,7 @@ def api_geo_proxy_sentinelhub(unique_id):
         return _sh_blank_tile()
 
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/sentinelhub/<unique_id>/value', methods=['GET'])
 @login_required
 @cache.cached(timeout=900, query_string=True,
@@ -1068,6 +1084,7 @@ def api_geo_proxy_sentinelhub_value(unique_id):
 # 필지 폴리곤의 토양 수분·지온·NDVI. 키가 브라우저로 나가지 않게 서버가
 # 부르고, 무료 등급의 호출 한도가 공개돼 있지 않아 30분 캐시를 건다
 # (`aot/inputs_gis/gis_agromonitoring.py` 상단 참조).
+# @manual geo/layers#agromonitoring-field-ndvi-soil, geo/api-reference#proxy-services
 @blueprint.route('/api/geo/proxy/agromonitoring/<unique_id>', methods=['GET'])
 @login_required
 @cache.cached(timeout=1800, query_string=True,
@@ -1103,6 +1120,7 @@ def api_geo_proxy_agromonitoring(unique_id):
 # GIS Tile Proxy Routes (Generic) - NASA GIBS tile proxy
 # ---------------------------------------------------------------------------
 
+# @manual geo/api-reference#proxy-services
 @blueprint.route('/api/geo/tile_proxy', methods=['GET'])
 @login_required
 def api_geo_tile_proxy():
@@ -1200,6 +1218,7 @@ def _geo_layer_get_custom_option(layer_obj, option_id):
         return None
 
 
+# @manual geo/layers#how-to-register-a-layer
 @blueprint.route('/geo/layer') # Renamed from /geo/input
 @blueprint.route('/geo/input') # Alias for compatibility
 @login_required
@@ -1259,6 +1278,7 @@ def page_layer_options():
                            get_custom_option=_geo_layer_get_custom_option,
                            csrf_token=generate_csrf)
 
+# @manual geo/layers#how-to-register-a-layer
 @blueprint.route('/geo/layer/submit', methods=['POST'])
 @blueprint.route('/geo/input/submit', methods=['POST'])
 @login_required
@@ -1327,6 +1347,7 @@ def page_layer_submit():
         'action': action_type
     })
 
+# @manual geo/layers#layer-order-and-visibility
 @blueprint.route('/geo/input/layout', methods=['POST'])
 @blueprint.route('/geo/layer/layout', methods=['POST'])
 @login_required
@@ -1540,6 +1561,7 @@ def _parse_overlay_coords(raw):
     return None
 
 
+# @manual geo/api-reference#aerial-drone-image-overlays
 @blueprint.route('/api/geo/overlay_image/upload', methods=['POST'])
 @login_required
 def api_geo_overlay_image_upload():
@@ -1674,6 +1696,7 @@ def api_geo_overlay_image_upload():
     })
 
 
+# @manual geo/api-reference#aerial-drone-image-overlays
 @blueprint.route('/api/geo/overlay_image/save', methods=['POST'])
 @login_required
 def api_geo_overlay_image_save():
@@ -1738,6 +1761,7 @@ def api_geo_overlay_image_save():
                     'render_mode': opts.get('render_mode', 'image')})
 
 
+# @manual geo/api-reference#aerial-drone-image-overlays
 @blueprint.route('/api/geo/overlay_image/tile_status/<layer_id>', methods=['GET'])
 @login_required
 def api_geo_overlay_image_tile_status(layer_id):

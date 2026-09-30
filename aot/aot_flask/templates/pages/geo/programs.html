@@ -53,6 +53,7 @@
 <main role="main" class="container">
   {% include 'flash_messages.html' %}
 
+  {# @manual geo/programs#creating-a-program #}
   <div class="aot-vspace"></div>
 
   {#- 추가 줄: 무엇을 바탕으로 만들지 고른다. 내장 프로그램을 복제하는 것이
@@ -93,6 +94,7 @@
       </span>
     </div>
   </div>
+  {# @manual-end #}
 
   <div class="aot-vspace-lg"></div>
 
@@ -194,6 +196,7 @@ window._PROG = {
   g_advanced:   {{ _('Advanced settings')|tojson }},
   g_advanced_note: {{ _('None of this is needed. Leave it empty unless you already know the numbers.')|tojson }},
 
+  {# @manual geo/programs#fields #}
   {#- 'Subject' 는 기존 카탈로그에서 "주제" 로 번역돼 있다 — 뜻이 다르면 msgid 를
      나눈다("Sensors"="센서류" 교훈). 여기서 말하는 것은 이 프로그램이 무엇을
      관리하는가다(작물·수종·잔디·그 밖의 대상). -#}
@@ -206,6 +209,7 @@ window._PROG = {
   subject_custom: {{ _('Enter a new one…')|tojson }},
   variety:      {{ _('Variety')|tojson }},
   name:         {{ _('Name')|tojson }},
+  {# @manual-end #}
   {#- 의도 — `notes` 컬럼. 서버는 예전부터 받아 왔는데 **화면에만 없었다.**
       "메모" 라고만 하면 아무도 안 적으므로, 무엇을 적는 칸인지 물어서 묻는다. -#}
   {#- 그냥 "설명" 이다. 무슨 칸인지를 제목이 아니라 **설명이 말한다** —
@@ -214,6 +218,7 @@ window._PROG = {
   intent:       {{ _('Description')|tojson }},
   intent_note:  {{ _('What this programme is for and how you want it to run. Written in your own words and read back whenever the programme comes up — by you, and by the AI when it advises on a plot using it.')|tojson }},
   intent_ph:    {{ _('e.g. Started early so it finishes before the summer heat. Ease off the water once it starts to bolt.')|tojson }},
+  {# @manual geo/programs#stages #}
   stage_name:   {{ _('Stage name')|tojson }},
   {#- 'Key' 는 사람에게 물을 것이 아니다 — 이름에서 만들어 준다. 칸은 남기되
      접어 두고, 무엇인지 한 줄로 말한다. -#}
@@ -223,6 +228,7 @@ window._PROG = {
   stage_days_note: {{ _('How long this stage lasts, counted from when the one before it ended. Leave the last one blank to run until the end.')|tojson }},
   until_end:    {{ _('until the end')|tojson }},
   add_stage:    {{ _('Add stage')|tojson }},
+  {# @manual-end #}
   save:         {{ _('Save')|tojson }},
   cancel:       {{ _('Cancel')|tojson }},
   edit:         {{ _('Edit')|tojson }},
@@ -230,6 +236,7 @@ window._PROG = {
   del:          {{ _('Delete')|tojson }},
   saved:        {{ _('Saved.')|tojson }},
   save_failed:  {{ _('Save failed')|tojson }},
+  load_failed:  {{ _('Load failed')|tojson }},
   delete_failed:{{ _('Delete failed')|tojson }},
   del_confirm:  {{ _('Delete this program?')|tojson }},
   read_only:    {{ _('Built-in and external programs are read-only. Copy it to make your own.')|tojson }},
@@ -299,12 +306,14 @@ window._PROG = {
   curves_note:  {{ _('A curve overrides the stage value for that item. Time runs from the start date.')|tojson }},
   curve_none:   {{ _('Fixed value')|tojson }},
   {#- ── 단계 전환 ─────────────────────────────────────────────────────── -#}
+  {# @manual geo/programs#gdd #}
   stage_gdd:    {{ _('Heat units')|tojson }},
   by_days:      {{ _('blank = go by days')|tojson }},
   {#- "생육 기준온도" 보다 **하는 일**을 그대로 부르는 편이 낫다 — 이 값은
       적산온도(GDD)를 셀 때의 기준선이다. -#}
   t_base:       {{ _('Heat unit base temperature')|tojson }},
   gdd_note:     {{ _('The starting line for counting heat units. Each day banks the average temperature minus this number: base 10, a day averaging 18, banks 8. Set this and the heat units on each stage, and stages advance on warmth banked instead of days on the calendar. Leave it blank and stages go by days.')|tojson }},
+  {# @manual-end #}
   {#- 광합성 모델 상수 — 코디네이터가 광합성 지향 제어를 돌 때만 쓴다.
       사용자가 "설명을 봐도 무슨 설정인지 알 수 없다" 고 한 자리다. 무엇을
       요약한 숫자인지, 누가 읽는지, 비워 두면 어떻게 되는지를 먼저 말한다. -#}
@@ -326,6 +335,7 @@ window._PROG = {
   p_dli_note:   {{ _('The total light worth aiming for in a day.')|tojson }},
   p_gdd:        {{ _('Suggested GDD per day')|tojson }},
   p_gdd_note:   {{ _('Roughly how much warmth this crop banks on a normal day.')|tojson }},
+  {# @manual geo/programs#resources #}
   resources:    {{ _('Resources')|tojson }},
   resources_note_v2: {{ _('What this programme needs. Nothing is switched on here — a plot using this programme looks at where it sits and reports whether the equipment for each of these is actually there, so you find out before the crop does. Only watering can be found that way today, and only inside a facility: it is matched to irrigation valves placed on the facility plan. The others are recorded as intent until there is a way to recognise them.')|tojson }},
   res_overridden: {{ _('set for this stage')|tojson }},
@@ -341,6 +351,7 @@ window._PROG = {
   res_irrigation: {{ _('Watering')|tojson }},
   res_fertigation: {{ _('Fertigation')|tojson }},
   res_other:    {{ _('Other')|tojson }},
+  {# @manual-end #}
   stage_delete: {{ _('Delete this stage')|tojson }},
   source_builtin: {{ _('built-in')|tojson }},
   source_external: {{ _('external')|tojson }},

@@ -126,6 +126,7 @@ GUIDE_SLOTS = {
 }
 
 
+# @manual geo/programs#targets
 def _pick_guide(targets):
     """단계 목표 목록 → `{'temp_day', 'temp_night', 'rh'}` 숫자|None.
 

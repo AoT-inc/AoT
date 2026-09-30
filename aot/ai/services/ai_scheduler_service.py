@@ -41,9 +41,12 @@ class InactiveOwner(ValueError):
 #: 편집자(제어) 이상만 — 그 아래 역할은 보기만 한다(2026-09-23 결정). "보기
 #: 전용인데 이것만은 된다" 는 예외가 현장 작업자를 헷갈리게 해서, 지도·노트·
 #: 스케줄러·AI 도구·구글 달력 가져오기가 모두 이 한 값을 본다.
+# @manual ai/scheduler#ai-proposals
 HUMAN_TASK_PERMISSION = 'edit_controllers'
+# @manual-end
 
 
+# @manual ai/scheduler#job-states
 JOB_STATE_DRAFT = 'DRAFT'
 JOB_STATE_PENDING = 'PENDING'
 JOB_STATE_RUNNING = 'RUNNING'
@@ -55,6 +58,7 @@ JOB_STATES = [
     JOB_STATE_DRAFT, JOB_STATE_PENDING, JOB_STATE_RUNNING,
     JOB_STATE_COMPLETED, JOB_STATE_FAILED, JOB_STATE_ARCHIVED
 ]
+# @manual-end
 
 # Singleton instances
 _scheduler = None
@@ -1032,6 +1036,7 @@ class AISchedulerService:
             logger.exception('[scheduler-guard] 쓰기 분류 실패 — 쓰기로 본다')
             return True
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def job_write_permission(action_type, target_id, params):
         """`job_denial` 의 1단계(역할)가 요구할 권한 — 읽기 예약이면 None.
@@ -1053,6 +1058,7 @@ class AISchedulerService:
             logger.exception('[scheduler-guard] 필요 권한 판정 실패')
             return 'edit_controllers'
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def job_denial(user, action_type, target_id, params):
         """`user` 가 이 예약(을 만들기·승인하기·발화하기)을 해도 되는가.
@@ -1489,6 +1495,7 @@ class AISchedulerService:
             logger.warning("[ContextBroadcast] Immediate trigger failed: %s", exc)
             return False
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def propose_job(action_type, target_id, params, reasoning,
                     schedule_time=None, schedule_cron=None, duration_sec=0,
@@ -1513,6 +1520,7 @@ class AISchedulerService:
         logger.info(f"Job proposed as DRAFT (id={meta.id}, by={proposed_by}): {reasoning[:80]}")
         return meta
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def propose_job_no_commit(action_type, target_id, params, reasoning,
                               schedule_time=None, schedule_cron=None, duration_sec=0,
@@ -1583,6 +1591,7 @@ class AISchedulerService:
             logger.exception('[scheduler-guard] 예약 책임자 확인 실패')
             return None
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def approve_job(meta_id, adjusted_params=None, user_feedback=None,
                     decided_by='HUMAN', approver=None):
@@ -1728,6 +1737,7 @@ class AISchedulerService:
         AISchedulerService._log_audit(meta, 'APPROVED', user_feedback)
         return meta
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def reject_job(meta_id, user_feedback=None):
         """
@@ -1754,6 +1764,7 @@ class AISchedulerService:
         logger.info(f"Job {meta_id} rejected: {user_feedback}")
         return meta
 
+    # @manual ai/scheduler#job-states
     @staticmethod
     def update_job_state(job_id, new_state, execution_result=None):
         """Update job metadata state after execution events."""
@@ -1787,6 +1798,7 @@ class AISchedulerService:
             feedback=feedback or '', previous_state=meta.state or '',
             new_state=meta.state or ''))
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def owner_eligible(user):
         """책임자가 될 수 있는 계정인가 — 사람이고, 켜져 있다.
@@ -1809,6 +1821,7 @@ class AISchedulerService:
     _CREATE_PERMISSIONS = {'human': (HUMAN_TASK_PERMISSION,)}
     _CREATE_PERMISSIONS_DEFAULT = ('edit_controllers',)
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def create_permissions(action_type):
         """이 종류의 예약을 만들 수 있는 역할 권한들(어느 하나면 된다)."""
@@ -1816,6 +1829,7 @@ class AISchedulerService:
         return AISchedulerService._CREATE_PERMISSIONS.get(
             at, AISchedulerService._CREATE_PERMISSIONS_DEFAULT)
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def owner_role_denial(user, action_type):
         """`user` 가 이 종류의 예약을 **만들 수 있는 역할**인가. 막으면 사유.
@@ -1842,6 +1856,7 @@ class AISchedulerService:
         return [u for u in User.query.order_by(User.name).all()
                 if AISchedulerService.owner_eligible(u)]
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def owner_candidates(meta, users=None, roles=None):
         """이 예약의 책임자 지정 상자에 내놓을 사람.
@@ -1905,6 +1920,7 @@ class AISchedulerService:
             return None
         return params if isinstance(params, dict) else None
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def backfill_job_owners():
         """책임자 없는 예약에 기록으로 알 수 있는 책임자를 한 번 채운다.
@@ -1985,6 +2001,7 @@ class AISchedulerService:
         return {'assigned': assigned, 'released': released,
                 'denied': denied, 'remaining': remaining}
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def release_owner_jobs(user, reason='owner account deleted', commit=True):
         """사람 계정을 지우거나 끌 때 부른다 — 그 사람이 책임자인 예약을
@@ -2015,6 +2032,7 @@ class AISchedulerService:
                            '책임자 없음으로 돌림', reason, len(rows))
         return len(rows)
 
+    # @manual ai/scheduler#ai-proposals
     @staticmethod
     def assign_job_owner(meta_id, new_owner, assigned_by=None):
         """책임자 없는 예약에 책임자를 지정한다(관리자 동작).
@@ -2230,6 +2248,7 @@ class AISchedulerService:
         except Exception as e:
             logger.warning(f"Failed to store feedback as note: {e}")
 
+# @manual ai/overview#safety-approval-model, ai/scheduler#ai-proposals
 def _execute_scheduled_action(action_type, target_id, params, meta_id=None):
     """
     Wrapper function called by APScheduler to execute an action.

@@ -10,10 +10,11 @@ from flask_babel import lazy_gettext
 from aot.actions.base_action import AbstractFunctionAction
 from aot.databases.models import Actions
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'measurement_input',
-    'name': '{}: {}'.format(lazy_gettext('Measurement'), lazy_gettext('Input')),
+    'name': lazy_format('{}: {}', lazy_gettext('Measurement'), lazy_gettext('Input')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -31,7 +32,7 @@ ACTION_INFORMATION = {
             'options_select': [
                 'Input',
             ],
-            'name': '{}: {}'.format(lazy_gettext('Measurement'), lazy_gettext('Input')),
+            'name': lazy_format('{}: {}', lazy_gettext('Measurement'), lazy_gettext('Input')),
             'phrase': lazy_gettext('Input sensor measurement to include in the average calculation')
         },
         {
@@ -39,7 +40,7 @@ ACTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': '{} ({})'.format(lazy_gettext('Max Age'), lazy_gettext('seconds')),
+            'name': lazy_format('{} ({})', lazy_gettext('Max Age'), lazy_gettext('seconds')),
             'phrase': lazy_gettext('Measurements older than this value (seconds) will be excluded from the average')
         },
     ]

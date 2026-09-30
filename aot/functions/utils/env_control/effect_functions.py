@@ -225,7 +225,9 @@ K_CO2_INJ     = 80.0   # ppm/cycle at 100%
 # 넣은 CO₂ 가 곧장 빠져나가 "부족 → 주입 → 환기로 배출 → 또 부족" 을 돈다.
 # 선형 근사: 보존율 = max(0, 1 − 평균 개도 / 이 값). 배기팬 압력 유효도
 # (VENT_PRESSURE_F0)와 같은 방식의 경험 상수다 — 질량수지는 greybox 모델이 맡는다.
+# @manual ai/env-control#domains
 CO2_VENT_LOSS_F0 = 0.30
+# @manual-end
 # 차광막·보온커튼 (온도 영향만)
 # 규약: 모든 액추에이터 cmd_pct = 개도(100=완전 열림, 0=완전 닫힘).
 #   차광막 100%=열림=빛 유입(온도↑), 0%=닫힘=차광(온도↓ 효과)
@@ -337,6 +339,7 @@ def _gis_factor(profile, use_u: bool = True):
 #
 # 계수는 보수적으로 잡는다. 부력 유효도는 √ΔT 에 비례하지만(Q ∝ √(gΔhΔT/T)),
 # 여기 magnitude 는 이미 ΔT 선형이므로 배수로만 표현한다.
+# @manual ai/env-control#vent-form
 VENT_FORM_GAIN = {
     # (형태, 실내가 더 더운가) → 배수
     ('ridge', True):  1.3,   # 부력이 돕는다 — 같은 면적이 더 많이 뺀다
@@ -344,8 +347,10 @@ VENT_FORM_GAIN = {
     ('side',  True):  1.0,   # 기준
     ('side',  False): 1.0,   # 직접 유입 — 그대로 가온이다
 }
+# @manual-end
 
 
+# @manual ai/env-control#vent-form
 def _vent_form_gain(profile, indoor_hotter: bool) -> float:
     """개구부 형태에 따른 유효도 배수. 형태를 모르면 1.0(예전 동작)."""
     form = getattr(profile, 'vent_form', None)
@@ -741,6 +746,7 @@ HEATER_EFFECT_MODEL = {
 # CO₂ 주입기 (co2_injector)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#domains
 @_scaled('co2')
 def co2_injector_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """CO₂ 주입 → 실내 CO₂ 상승. **환기로 빠지는 몫**을 뺀다.

@@ -21,6 +21,9 @@ checks require HTTPS, so a cookie can never be sent in the clear — including o
 the very first request a browser makes to `http://` before the proxy redirects
 it to `https://`.
 
+For the Docker distribution, set it in `docker/.env` (`AOT_BEHIND_TLS=1`) and
+apply it with `docker compose -f docker/docker-compose.prod.yml up -d`.
+
 !!! warning "Only set this if every request truly arrives over HTTPS"
     With `AOT_BEHIND_TLS=1`, a browser will not send these cookies back over a
     plain `http://` connection at all. If the reverse proxy does not actually
@@ -28,6 +31,9 @@ it to `https://`.
     `X-Forwarded-Proto` header, or the container is also reachable directly on
     plain HTTP), login and form submissions will fail. Leave this unset for any
     install reached over plain HTTP, including most local/LAN Docker installs.
+    This also means logging in directly at `http://<LAN-IP>:8084`, bypassing
+    the proxy, stops working — on-site users who currently use that plain-HTTP
+    address must switch to the HTTPS address instead once this is on.
 
 This is independent of the **Force HTTPS** setting above, which controls
 whether AoT itself redirects `http://` to `https://`; a reverse proxy usually

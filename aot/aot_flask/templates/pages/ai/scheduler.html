@@ -55,6 +55,7 @@
         </div>
     </div>
 
+    {# @manual ai/scheduler#ai-proposals #}
     {# 제어 요청 승인과 AI 일정 제안은 AI → 요청 화면으로 옮겼다(2026-09-10). 결정할
        것이 한 화면에 모여야 발견이 늦지 않는다 — 여기에는 한 줄로 알리고 그리로 보낸다. #}
     <div class="aot-settings-card">
@@ -65,6 +66,7 @@
             </div>
         </div>
     </div>
+    {# @manual-end #}
 
     {#- 2026-09-11: 여기 있던 빈 `.aot-vspace-lg`(32px)가 아래 구획 제목의
         자체 위 여백(1.6rem=25.6px)과 함께 쌓여 카드 → "Active Jobs" 사이가
@@ -117,6 +119,7 @@
 
     <div class="aot-vspace-lg"></div>
 
+    {# @manual ai/scheduler#timeline-device-timeline #}
     <!-- Timeline -->
     <div class="aot-modal-group-title">{{ _('Timeline') }}</div>
 
@@ -148,9 +151,11 @@
          data-t-scheduled="{{ _('Scheduled') }}" data-t-runtime="{{ _('Runtime') }}"
          data-t-empty="{{ _('No devices found.') }}"
          data-t-failed="{{ _('Could not load the device timeline') }}"></div>
+    {# @manual-end #}
 
     <div class="aot-vspace-lg"></div>
 
+    {# @manual ai/scheduler#history #}
     <!-- History -->
     <div class="aot-modal-group-title aot-ov-sec-title--row">
       <span>{{ _('History') }}</span>
@@ -213,6 +218,7 @@
         <p class="text-muted mb-0">{{ _('No history yet.') }}</p>
     </div>
     {% endif %}
+    {# @manual-end #}
 </main>
 
 <!-- Active Job Detail Modals -->
@@ -445,6 +451,7 @@
                 </div>
 
                 <div class="tab-content">
+                    {# @manual ai/scheduler#ask-ai #}
                     <!-- Smart Tab -->
                     <div class="tab-pane fade" id="tab-smart" role="tabpanel">
                         <div class="aot-modal-container">
@@ -487,6 +494,8 @@
                         </div>
                     </div>
 
+                    {# @manual-end #}
+                    {# @manual ai/scheduler#manual-tasks #}
                     <!-- Manual Tab -->
                     <div class="tab-pane fade show active" id="tab-manual" role="tabpanel">
                         <form id="addTaskForm">
@@ -584,6 +593,7 @@
                             </div>
                         </form>
                     </div>
+                    {# @manual-end #}
                 </div>
             </div>
             <div class="modal-footer">

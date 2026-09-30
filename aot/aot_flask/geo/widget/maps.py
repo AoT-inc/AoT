@@ -87,6 +87,7 @@ def _get_geomap_cached(uuid):
     return GeoMap.query.filter_by(unique_id=uuid).first()
 
 
+# @manual geo/map-widget#adding-the-widget, geo/map-widget#map
 def _get_latest_geomap_cached():
     return GeoMap.query.order_by(GeoMap.updated_at.desc()).first()
 
@@ -132,6 +133,7 @@ def _int_option(widget_options, key, fallback):
         return fallback
 
 
+# @manual geo/map-widget#device-filter
 def extract_device_ids(widget_options: dict) -> list:
     """Robustly extract device IDs from saved option keys.
 
@@ -181,6 +183,7 @@ def extract_device_ids(widget_options: dict) -> list:
     return list(dict.fromkeys(ids))
 
 
+# @manual geo/map-widget#measurement-panel
 def extract_measurements(widget_options: dict) -> dict:
     """
     Extract selected measurements from options.
@@ -245,6 +248,7 @@ def extract_measurements(widget_options: dict) -> dict:
 
 
 
+# @manual geo/map-widget#map, geo/map-widget#values-saved-automatically
 def generate_page_variables_logic(widget_unique_id, widget_options):
     """
     Prepare variables for template rendering using modular logic.
@@ -355,12 +359,12 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                             'id': m_id,
                             'device_unique_id': dev_id,
                             'channel': chan,
-                            'name': f"[CH{chan}] {gettext(display_name)}".strip(),
-                            'meas_name': gettext(display_name),
+                            'name': f"[CH{chan}] {display_name}".strip(),
+                            'meas_name': display_name,
                             'measurement_type': meas.measurement_type,
                             'key': band_key,
                             'device_type': m_conf['device_type'],
-                            'device_name': gettext(dev_name_lookup.get(dev_id) or ''),
+                            'device_name': dev_name_lookup.get(dev_id) or '',
                             'unit': eff_unit,
                             'display_unit': disp_unit,
                             'last_value': getattr(meas, 'last_value', '')

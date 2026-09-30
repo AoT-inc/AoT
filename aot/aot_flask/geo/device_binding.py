@@ -184,6 +184,7 @@ def history(spatial_kind, spatial_id, role=None):
     return q.order_by(GeoBinding.valid_from, GeoBinding.id).all()
 
 
+# @manual geo/api-reference#details-binding-fields
 def role_for_shape_type(shape_type):
     """도형 종류 → 바인딩 role. 모르는 종류면 None(=장치를 매다는 자리가 아님).
 
@@ -460,6 +461,7 @@ def device_kind_models():
     )
 
 
+# @manual geo/api-reference#details-binding-fields
 def resolve_device_kind(device_id):
     """장치 uuid 가 실존하는 테이블로 `device_kind` 를 판별한다. 없으면 None.
 
@@ -728,6 +730,7 @@ SITE_WEATHER_ROLE = 'station'
 """
 
 
+# @manual geo/map-widget#site-weather
 def set_site_weather(shape_uuid, device_ids, commit=False):
     """대지(도형)의 기상대를 **지정한 목록 그대로** 맞춘다. 반환: (추가, 종료).
 

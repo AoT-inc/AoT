@@ -80,6 +80,7 @@ _GATE_BITS_LOST = GATE_BIT_EXT_EXP | GATE_BIT_INT_EXP
 # Pre-Gate 설정
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#pre-gate-checked-before-l1l3, ai/env-control#safety-gates
 @dataclass
 class PreGateConfig:
     """사용자 설정 가능한 Pre-Gate 임계값."""
@@ -97,9 +98,13 @@ class PreGateConfig:
     #   센서마다 이미 정하고, 게이트는 그 결과(값이 왔는가)만 본다. 게다가 그
     #   타이머는 한 번도 돈 적이 없었다: 호출자가 `last_int_ts` 에 매번
     #   `time.time()` 을 실어 보내 나이가 언제나 0 이었다.
-    heat_ext_threshold:   float = 38.0   # 폭염: 외부 온도 임계 (°C)
+    # 폭염·한파 외부 문턱의 **정본은 여기 하나**다(2026-09-27). 예전에는 기본값이
+    # 38 / −2 °C 인데 `EnvCoordinator.initialize` 가 45 / −5 °C 를 따로 넘겨,
+    # 운영(과 매뉴얼)은 45 / −5 로 돌고 인자 없이 만드는 곳(IEC 미리보기·테스트)은
+    # 다른 문턱으로 돌았다. 호출자는 이 두 값을 넘기지 않는다.
+    heat_ext_threshold:   float = 45.0   # 폭염: 외부 온도 임계 (°C)
     heat_int_threshold:   float = 35.0   # 폭염: 내부 온도 임계 (°C)
-    cold_ext_threshold:   float = -2.0   # 한파: 외부 온도 임계 (°C)
+    cold_ext_threshold:   float = -5.0   # 한파: 외부 온도 임계 (°C)
     cold_int_threshold:   float = 5.0    # 한파: 내부 온도 임계 (°C)
     gate_ttl:             float = 300.0  # 게이트 발동 후 최소 유지 시간 (초)
     # 폭염·한파 **해제 여유**(°C). 들어가는 문턱과 나오는 문턱을 나눈다 — 문턱
@@ -116,6 +121,7 @@ class PreGateConfig:
     nursery_evening_fog:  bool  = True   # 일몰 전 분무 허용 여부 (끄면 야간 습윤 차단)
 
 
+# @manual ai/env-control#settings-hvac
 def is_wetting_fogger(profile: ActuatorProfile) -> bool:
     """이 액추에이터가 잎을 적시는 분무기인가.
 
@@ -136,6 +142,7 @@ def is_wetting_fogger(profile: ActuatorProfile) -> bool:
 # Pre-Gate
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#pre-gate-checked-before-l1l3, ai/env-control#safety-gates
 class SafetyPreGate:
     """L1~L3 진입 전 안전 검사.
 
@@ -216,6 +223,7 @@ class SafetyPreGate:
                 view[key] = 0.0         # 원래 없는 센서 — 예전 기본값과 같다
         return view, lost
 
+    # @manual ai/env-control#settings-hvac
     def _eval_nursery_lock(self, env: EnvContext) -> bool:
         """육묘 일소 잠금 상태를 갱신하고 반환한다.
 
@@ -571,6 +579,7 @@ class SafetyPreGate:
 # Post-Gate
 # ─────────────────────────────────────────────────────────────────────────────
 
+# @manual ai/env-control#post-gate-checked-after-l3-before-dispatch
 class SafetyPostGate:
     """L3 결과를 L4 전달 전 정합성 검사·보정.
 

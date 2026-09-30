@@ -30,6 +30,7 @@ F 는 예보 곡선(시간별 점을 직선으로 잇는다). 예보 값 자체�
 
 풍속·CO₂ 는 지금 값 유지.
 """
+# @manual ai/env-control#settings-calibration
 
 from __future__ import annotations
 

@@ -4,7 +4,7 @@ Action은 컨트롤러(즉 Input, Conditional, Trigger 컨트롤러)에 추가�
 
 ## Custom Actions
 
-AoT에는 사용자가 직접 만든 Action을 AoT 시스템에서 사용할 수 있게 해주는 Custom Action 가져오기 시스템이 있습니다. Custom Action은 `[Gear Icon] -> Configure -> Custom Actions` 페이지에서 업로드할 수 있습니다. 가져오기 후에는 `Setup -> Function` 페이지에서 사용할 수 있습니다.
+AoT에는 사용자가 직접 만든 Action을 AoT 시스템에서 사용할 수 있게 해주는 Custom Action 가져오기 시스템이 있습니다. Custom Action은 `관리 → 시스템 관리 → 사용자 작업` 페이지에서 업로드할 수 있습니다. 가져오기 후에는 `Setup -> Function` 페이지에서 사용할 수 있습니다.
 
 동작하는 Action 모듈을 개발하셨다면 [새 GitHub 이슈 생성](https://github.com/AoT-inc/AoT/issues/new?assignees=&labels=&template=feature-request.md&title=New%20Module)이나 풀 리퀘스트를 고려해 주세요. 내장 세트에 포함될 수 있습니다.
 

@@ -11,6 +11,7 @@ from flask_babel import lazy_gettext
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -29,7 +30,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'output_neopixel_rgb',
-    'output_name': "{}: Neopixel (WS2812) RGB Strip with Raspberry Pi".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Neopixel (WS2812) RGB Strip with Raspberry Pi", lazy_gettext('On/Off')),
     'output_manufacturer': 'Worldsemi',
     'input_library': 'adafruit-circuitpython-neopixel',
     'measurements_dict': measurements_dict,

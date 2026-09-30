@@ -15,6 +15,7 @@ from aot.utils.constraints_pass import constraints_pass_percent
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -66,7 +67,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'grove_i2c_motor_driver_v1_3',
-    'output_name': "{}: Grove I2C Motor Driver (Board v1.3)".format(lazy_gettext('Peristaltic Pump')),
+    'output_name': lazy_format("{}: Grove I2C Motor Driver (Board v1.3)", lazy_gettext('Peristaltic Pump')),
     'output_manufacturer': 'Grove',
     'output_library': 'smbus2',
     'measurements_dict': measurements_dict,

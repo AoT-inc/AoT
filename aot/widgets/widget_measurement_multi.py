@@ -23,6 +23,7 @@ import logging
 from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ WIDGET_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age 1'), lazy_gettext('Seconds')),
+            'name': lazy_format(lazy_gettext("{} ({})"), lazy_gettext('Max Age 1'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the first measurement to use')
         },
         {
@@ -87,7 +88,7 @@ WIDGET_INFORMATION = {
             'default_value': 120,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext("{} ({})").format(lazy_gettext('Max Age 2'), lazy_gettext('Seconds')),
+            'name': lazy_format(lazy_gettext("{} ({})"), lazy_gettext('Max Age 2'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the second measurement to use')
         },
         {
@@ -103,7 +104,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {

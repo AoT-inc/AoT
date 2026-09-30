@@ -1,10 +1,13 @@
 # coding=utf-8
 """collection of Page endpoints."""
+import contextlib
+import fcntl
 import flask_login
 import json
 import logging
 import os
 import subprocess
+import tempfile
 from flask import (redirect, render_template, request, url_for, jsonify,
                    get_flashed_messages)
 from flask.blueprints import Blueprint
@@ -77,6 +80,7 @@ def save_dashboard_layout():
     return "success"
 
 
+# @manual geo/plot-widget#widget-settings
 def _geo_scope_choices():
     """위젯 설정의 '지도 · 대지' 선택지 — 지도마다 그 안의 대지.
 
@@ -104,6 +108,25 @@ def _geo_scope_choices():
     return sorted(choices, key=lambda m: m['name'])
 
 
+@contextlib.contextmanager
+def _widget_options_lock():
+    """위젯 옵션의 읽기-병합-쓰기를 프로세스 사이에서 한 줄로 세운다.
+
+    이 경로는 옵션 일부만 받아 저장된 JSON 에 합친다. 도형 스위치 셋을 잇달아
+    누르면 요청 셋이 동시에 옛 JSON 을 읽고 각자 자기 키만 얹어 쓰므로, 마지막에
+    쓴 것만 남고 나머지는 조용히 사라진다(대지를 켰는데 다시 열면 꺼져 있음).
+    gunicorn 워커가 여럿이라 프로세스 내부 락으로는 모자라 파일 락을 쓴다.
+    """
+    lock_path = os.path.join(tempfile.gettempdir(), 'aot_widget_options.lock')
+    with open(lock_path, 'a') as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+
+# @manual geo/map-widget#values-saved-automatically
 @blueprint.route('/save_widget_custom_options', methods=['POST'])
 @flask_login.login_required
 def save_widget_custom_options():
@@ -122,33 +145,36 @@ def save_widget_custom_options():
         if not widget_id:
             return jsonify({"status": "error", "message": "Missing widget_id"}), 400
 
-        widget = Widget.query.filter(Widget.unique_id == widget_id).first()
-        if not widget:
-            return jsonify({"status": "error", "message": "Widget not found"}), 404
+        with _widget_options_lock():
+            # 락을 잡은 뒤에 읽는다 — 앞선 요청이 방금 쓴 값을 봐야 한다.
+            db.session.expire_all()
+            widget = Widget.query.filter(Widget.unique_id == widget_id).first()
+            if not widget:
+                return jsonify({"status": "error", "message": "Widget not found"}), 404
 
-        # [Refactor] Use execute_at_modification if available to ensure logic consistency (e.g. field mapping)
-        try:
-            current_options = json.loads(widget.custom_options) if widget.custom_options else {}
-        except Exception:
-            current_options = {}
+            # [Refactor] Use execute_at_modification if available to ensure logic consistency (e.g. field mapping)
+            try:
+                current_options = json.loads(widget.custom_options) if widget.custom_options else {}
+            except Exception:
+                current_options = {}
 
-        # 타입 정리와 execute_at_modification 호출은 폼 저장과 **같은 함수**를
-        # 쓴다. 두 경로가 각자 하던 시절, 한쪽에만 규칙이 붙어 갈라진 것이
-        # 2026-08-23 사고였다(느슨한 이 경로가 남긴 label_min_zoom=17.5 하나가
-        # 그 값을 건드리지도 않은 다음 폼 저장 전체를 거부하게 만들었다).
-        allow_saving, apply_errors, final_options = \
-            utils_dashboard.apply_widget_option_changes(
-                widget, current_options, new_options, partial=True)
-        if apply_errors:
-            return jsonify({"status": "error",
-                            "message": "; ".join(str(e) for e in apply_errors)}), 400
-        if not allow_saving:
-            return jsonify({"status": "error",
-                            "message": "Modification rejected by widget"}), 400
+            # 타입 정리와 execute_at_modification 호출은 폼 저장과 **같은 함수**를
+            # 쓴다. 두 경로가 각자 하던 시절, 한쪽에만 규칙이 붙어 갈라진 것이
+            # 2026-08-23 사고였다(느슨한 이 경로가 남긴 label_min_zoom=17.5 하나가
+            # 그 값을 건드리지도 않은 다음 폼 저장 전체를 거부하게 만들었다).
+            allow_saving, apply_errors, final_options = \
+                utils_dashboard.apply_widget_option_changes(
+                    widget, current_options, new_options, partial=True)
+            if apply_errors:
+                return jsonify({"status": "error",
+                                "message": "; ".join(str(e) for e in apply_errors)}), 400
+            if not allow_saving:
+                return jsonify({"status": "error",
+                                "message": "Modification rejected by widget"}), 400
 
-        widget.custom_options = json.dumps(final_options)
-        db.session.commit()
-        logger.debug(f"[AoT Map Debug] Save successful for {widget.unique_id}")
+            widget.custom_options = json.dumps(final_options)
+            db.session.commit()
+            logger.debug(f"[AoT Map Debug] Save successful for {widget.unique_id}")
 
         return jsonify({"status": "success"})
     except Exception as e:
@@ -201,6 +227,7 @@ def get_widget_custom_options(widget_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# @manual geo/map-widget#measurement-panel
 @blueprint.route('/api/widget/aot_map/<widget_id>/measurements_panel', methods=['POST'])
 @flask_login.login_required
 def get_aot_map_measurements_panel(widget_id):

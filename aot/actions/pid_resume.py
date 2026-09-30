@@ -6,6 +6,7 @@ from flask_babel import lazy_gettext
 from aot.actions.base_action import AbstractFunctionAction
 from aot.config import AOT_DB_PATH
 from aot.config_translations import TRANSLATIONS
+from aot.utils.lazy_text import lazy_join
 from aot.databases.models import Actions
 from aot.databases.models import PID
 from aot.databases.utils import session_scope
@@ -14,7 +15,7 @@ from aot.utils.database import db_retrieve_table_daemon
 
 ACTION_INFORMATION = {
     'name_unique': 'resume_pid',
-    'name': f"{TRANSLATIONS['pid']['title']}: {TRANSLATIONS['resume']['title']}",
+    'name': lazy_join(TRANSLATIONS['pid']['title'], ': ', TRANSLATIONS['resume']['title']),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

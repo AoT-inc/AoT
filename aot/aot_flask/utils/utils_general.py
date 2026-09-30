@@ -4,6 +4,7 @@ import importlib
 import json
 import logging
 import os
+import re
 import shutil
 from collections import OrderedDict
 from datetime import datetime
@@ -262,7 +263,7 @@ def custom_options_return_string(error, dict_options, mod_dev, request_form):
                     constraints_errors = []
                     value = None
 
-                    if each_option['type'] == 'float':
+                    if each_option['type'] in ('float', 'select_scale'):
                         if str_is_float(request_form.get(key)):
                             if 'constraints_pass' in each_option:
                                 (constraints_pass,
@@ -480,7 +481,7 @@ def custom_options_return_json(
                     # Set type-appropriate defaults when no default_value is specified
                     if each_option['type'] == 'integer':
                         dict_options_return[each_option['id']] = 0
-                    elif each_option['type'] == 'float':
+                    elif each_option['type'] in ('float', 'select_scale'):
                         dict_options_return[each_option['id']] = 0.0
                     elif each_option['type'] == 'bool':
                         dict_options_return[each_option['id']] = False
@@ -510,7 +511,7 @@ def custom_options_return_json(
                                     raw_val = val
                                     break
                         logger.debug("[AoT Debug] custom_options_return_json checking key=%s, raw_val=%s", key, raw_val)
-                        if each_option['type'] == 'float':
+                        if each_option['type'] in ('float', 'select_scale'):
                             if str_is_float(raw_val):
                                 if 'constraints_pass' in each_option:
                                     (constraints_pass,
@@ -655,7 +656,7 @@ def custom_options_return_json(
                     # Set type-appropriate defaults when no default_value is specified
                     if each_option['type'] == 'integer':
                         dict_options_return[each_option['id']] = 0
-                    elif each_option['type'] == 'float':
+                    elif each_option['type'] in ('float', 'select_scale'):
                         dict_options_return[each_option['id']] = 0.0
                     elif each_option['type'] == 'bool':
                         dict_options_return[each_option['id']] = False
@@ -727,7 +728,7 @@ def custom_channel_options_return_json(
                         constraints_errors = []
                         value = None
 
-                        if each_option['type'] == 'float':
+                        if each_option['type'] in ('float', 'select_scale'):
                             raw_val = request_form.get(key)
                             if str_is_float(raw_val):
                                 if 'constraints_pass' in each_option:
@@ -2682,13 +2683,35 @@ def custom_command(controller_type, dict_device, unique_id, form):
             if status:
                 messages["error"].append(gettext("Custom button error: {}").format(msg))
             else:
-                messages["success"].append(gettext("Custom button executed successfully: {}").format(msg))
+                messages["success"].append(gettext("Custom button executed successfully: {}").format(
+                    _translate_controller_reply(msg)))
 
     except Exception as except_msg:
         logger.exception(1)
         messages["error"].append(str(except_msg))
 
     return messages
+
+
+def _translate_controller_reply(msg):
+    """Translate the fixed English replies of the daemon controllers."""
+    if not isinstance(msg, str):
+        return msg
+    match = re.match(
+        r"^Command sent to (Input|Function|Output) Controller"
+        r"(?:\. Returned: (.*)| and is running in the background\.)$",
+        msg, re.DOTALL)
+    if not match:
+        return msg
+    controller = gettext(match.group(1))
+    returned = match.group(2)
+    if returned is None:
+        return gettext("Command sent to {controller} Controller and is running in the background.").format(
+            controller=controller)
+    if returned == "None":
+        return gettext("Command sent to {controller} Controller.").format(controller=controller)
+    return gettext("Command sent to {controller} Controller. Returned: {returned}").format(
+        controller=controller, returned=returned)
 
 
 def sudo_present():

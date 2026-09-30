@@ -10,10 +10,11 @@ from flask_babel import lazy_gettext
 from aot.actions.base_action import AbstractFunctionAction
 from aot.databases.models import Actions
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'measurement_output',
-    'name': '{}: {}'.format(lazy_gettext('Measurement'), lazy_gettext('Output')),
+    'name': lazy_format('{}: {}', lazy_gettext('Measurement'), lazy_gettext('Output')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -32,7 +33,7 @@ ACTION_INFORMATION = {
             'options_select': [
                 'Output_Channels_Measurements',
             ],
-            'name': '{}: {}'.format(lazy_gettext('Measurement'), lazy_gettext('Output')),
+            'name': lazy_format('{}: {}', lazy_gettext('Measurement'), lazy_gettext('Output')),
             'phrase': lazy_gettext('Output channel measurement to include in the average calculation (e.g. duration)')
         },
         {
@@ -40,7 +41,7 @@ ACTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': '{} ({})'.format(lazy_gettext('Max Age'), lazy_gettext('seconds')),
+            'name': lazy_format('{} ({})', lazy_gettext('Max Age'), lazy_gettext('seconds')),
             'phrase': lazy_gettext('Measurements older than this value (seconds) will be excluded from the average')
         },
     ]

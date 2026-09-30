@@ -71,6 +71,7 @@ from aot.aot_flask.utils.utils_general import choices_units
 from aot.aot_flask.utils.utils_general import controller_activate_deactivate
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.aot_flask.utils.utils_general import flash_form_errors
+from aot.aot_flask.utils.utils_general import form_error_messages
 from aot.aot_flask.utils.utils_general import flash_success_errors
 from aot.utils.actions import parse_action_information
 from aot.utils.database import db_retrieve_table
@@ -86,6 +87,7 @@ from aot.utils.system_pi import all_conversions
 from aot.utils.system_pi import assure_path_exists
 from aot.utils.system_pi import base64_encode_bytes
 from aot.utils.system_pi import cmd_output
+from aot.utils.system_pi import raspi_config_available
 from aot.utils.system_pi import set_user_grp
 from aot.utils.utils import test_password
 from aot.utils.utils import test_username
@@ -401,6 +403,7 @@ def generate_api_key(form):
     api_key = None
 
     try:
+        from aot.databases.models.user_api_key import tool_profile_spec
         mod_user = User.query.filter(
             User.unique_id == form.user_id.data).first()
         # 키를 **추가** 발급한다. 예전에는 users.api_key_hash 컬럼 하나에
@@ -408,13 +411,17 @@ def generate_api_key(form):
         # 첫 번째 연동이 아무 에러 없이 죽었다(p6_32).
         key_name = getattr(getattr(form, 'api_key_name', None), 'data', None)
         key_scope = getattr(getattr(form, 'api_key_scope', None), 'data', None)
-        # 도구 묶음 — 모르는 값·빈 값은 issue_api_key 가 운영으로 좁힌다.
+        # 도구 묶음 = 운영 + 체크한 설정 모듈. 모르는 값·모듈은 issue_api_key 가
+        # 버려 좁힌다(전부 체크 = 'configuration').
         key_profile = getattr(getattr(form, 'api_key_tool_profile', None),
                               'data', None)
+        key_modules = getattr(getattr(form, 'api_key_tool_modules', None),
+                              'data', None)
         api_key = mod_user.issue_api_key(key_name, key_scope,
-                                         tool_profile=key_profile)
-        key_profile = (key_profile if key_profile in ('operations', 'configuration')
-                       else 'operations')
+                                         tool_profile=key_profile,
+                                         tool_modules=key_modules)
+        # 감사에는 실제로 저장된 묶음 값('operations+plots' 등)을 적는다.
+        key_profile = tool_profile_spec(key_profile, key_modules)
         db.session.commit()
         # The key itself is never written to the audit trail — only the fact
         # that one was issued, for whom, under what name, and with what scope.
@@ -444,20 +451,28 @@ def generate_api_key(form):
     return messages, base64_encode_bytes(api_key) if api_key else None
 
 
+# @manual ai/overview#tool-profiles
 def change_api_key_profile(form):
-    """발급된 키 하나의 도구 묶음을 바꾼다 — 재발급 없이.
+    """발급된 키 하나의 도구 묶음(운영 + 설정 모듈)을 바꾼다 — 재발급 없이.
+
+    값은 묶음 값 하나다: 'operations' / 'configuration' / 'operations+plots+map'
+    (users.html 이 누른 줄의 체크박스로 만든다). 모르는 값·모듈이 하나라도
+    있으면 거절한다 — 발급과 달리 좁혀 저장하지 않는 이유: 이미 쓰이는 키라,
+    뜻과 다르게 좁히면 붙어 있는 연동이 조용히 도구를 잃는다.
 
     바꾼 값은 그 키로 들어오는 다음 요청(목록·호출)부터 반영된다. 호스트가
     도구 목록을 기억해 두면 다시 연결해야 새 목록을 받는다. 무엇이 언제 바뀌었는지
-    감사 기록에 이전·이후 값으로 남긴다(키 자체는 남기지 않는다).
+    감사 기록에 이전·이후 값(묶음 값과 켠 모듈)으로 남긴다(키 자체는 남기지 않는다).
     """
     from aot.databases.models import UserAPIKey
-    from aot.databases.models.user_api_key import TOOL_PROFILES
+    from aot.databases.models.user_api_key import tool_profile_columns
+    from aot.tools.tool_registry import parse_tool_profile
 
     messages = {"success": [], "info": [], "warning": [], "error": []}
     try:
-        new_value = (form.api_key_profile_value.data or '').strip()
-        if new_value not in TOOL_PROFILES:
+        new_value = parse_tool_profile(
+            (form.api_key_profile_value.data or '').strip())
+        if new_value is None:
             messages["error"].append(gettext("Choose a tool set for this key."))
             return messages
         row = UserAPIKey.query.filter(
@@ -466,16 +481,18 @@ def change_api_key_profile(form):
             messages["error"].append(gettext("API key not found."))
             return messages
 
-        before = row.effective_tool_profile
+        before = {'tool_profile': row.tool_profile_spec,
+                  'tool_modules': list(row.effective_tool_modules)}
         mod_user = User.query.filter(User.id == row.user_id).first()
-        row.tool_profile = new_value
+        row.tool_profile, row.tool_modules = tool_profile_columns(new_value)
         db.session.commit()
         audit_log(audit.API_KEY_PROFILE_CHANGE, target_type='User',
                   target_id=mod_user.unique_id if mod_user else None,
                   target_name=mod_user.name if mod_user else None,
                   detail=row.name or None,
-                  before={'tool_profile': before},
-                  after={'tool_profile': new_value})
+                  before=before,
+                  after={'tool_profile': row.tool_profile_spec,
+                         'tool_modules': list(row.effective_tool_modules)})
         messages["success"].append(gettext(
             "AI tools changed. A connected AI app may need to reconnect to see "
             "the new tool list."))
@@ -2427,6 +2444,12 @@ def settings_pi_mod(form):
     status = None
     action_str = None
 
+    if not raspi_config_available():
+        flash(gettext("This system has no raspi-config (not a Raspberry Pi "
+                      "installation, or running in Docker); nothing was changed."),
+              "error")
+        return
+
     if form.enable_i2c.data:
         _, _, status = cmd_output("raspi-config nonint do_i2c 0", user='root')
         action_str = "Enable I2C"
@@ -2440,11 +2463,17 @@ def settings_pi_mod(form):
         _, _, status = cmd_output("raspi-config nonint do_onewire 1", user='root')
         action_str = "Disable 1-Wire"
     elif form.enable_serial.data:
-        _, _, status = cmd_output("raspi-config nonint do_serial 0", user='root')
-        action_str = "Enable Serial"
+        _, _, status = cmd_output("raspi-config nonint do_serial_hw 0", user='root')
+        action_str = "Enable Serial Hardware"
     elif form.disable_serial.data:
-        _, _, status = cmd_output("raspi-config nonint do_serial 1", user='root')
-        action_str = "Disable Serial"
+        _, _, status = cmd_output("raspi-config nonint do_serial_hw 1", user='root')
+        action_str = "Disable Serial Hardware"
+    elif form.enable_serial_console.data:
+        _, _, status = cmd_output("raspi-config nonint do_serial_cons 0", user='root')
+        action_str = "Enable Serial Login Shell"
+    elif form.disable_serial_console.data:
+        _, _, status = cmd_output("raspi-config nonint do_serial_cons 1", user='root')
+        action_str = "Disable Serial Login Shell"
     elif form.enable_spi.data:
         _, _, status = cmd_output("raspi-config nonint do_spi 0", user='root')
         action_str = "Enable SPI"
@@ -2529,6 +2558,9 @@ def settings_pi_mod(form):
             start_daemon = subprocess.Popen(cmd, shell=True)
             start_daemon.wait()
 
+    if action_str is None:
+        return
+
     if status:
         error.append("Unknown error executing command to {action}".format(
             action=action_str))
@@ -2551,12 +2583,21 @@ def settings_alert_mod(form_mod_alert):
         if form_mod_alert.validate():
             mod_smtp = SMTP.query.one()
             if form_mod_alert.send_test.data:
+                if mod_smtp.password_unreadable:
+                    flash(gettext("The saved SMTP password cannot be read on this system (settings may have been restored from another installation). Enter the password again and save."), "error")
+                    return redirect(url_for('routes_settings.settings_alerts'))
                 try:
+                    # 저장하지 않고도 시험할 수 있게 화면에 입력된 값을 쓰고,
+                    # 비워 둔 항목(비밀번호 등)만 저장값으로 채운다.
                     rc = send_email(
-                        mod_smtp.host, mod_smtp.protocol, mod_smtp.port,
-                        mod_smtp.user, mod_smtp.passw, mod_smtp.email_from,
+                        form_mod_alert.smtp_host.data or mod_smtp.host,
+                        form_mod_alert.smtp_protocol.data or mod_smtp.protocol,
+                        form_mod_alert.smtp_port.data or None,
+                        form_mod_alert.smtp_user.data or mod_smtp.user,
+                        form_mod_alert.smtp_password.data or mod_smtp.passw,
+                        form_mod_alert.smtp_from_email.data or mod_smtp.email_from,
                         form_mod_alert.send_test_to_email.data,
-                        "This is a test email from AoT")
+                        gettext("This is a test email from AoT"))
                     if rc == 0:
                         flash(gettext("Test email sent to %(recip)s. Check your "
                                       "inbox to see if it was successful.",
@@ -2576,7 +2617,7 @@ def settings_alert_mod(form_mod_alert):
                 else:
                     mod_smtp.port = None
                 mod_smtp.protocol = form_mod_alert.smtp_protocol.data
-                mod_smtp.user = form_mod_alert.smtp_user.data
+                mod_smtp.user = form_mod_alert.smtp_user.data or ''
                 if form_mod_alert.smtp_password.data:
                     mod_smtp.passw = form_mod_alert.smtp_password.data
                 mod_smtp.email_from = form_mod_alert.smtp_from_email.data
@@ -2593,7 +2634,7 @@ def settings_alert_mod(form_mod_alert):
                     flash(gettext("Insecure SMTP protocol configured. Use TLS/SSL if possible."), "warning")
                 db.session.commit()
         else:
-            flash_form_errors(form_mod_alert)
+            form_error_messages(form_mod_alert, error)
     except Exception as except_msg:
         error.append(except_msg)
 

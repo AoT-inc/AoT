@@ -8,10 +8,11 @@ from aot.databases.models import Actions
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format, lazy_join
 
 ACTION_INFORMATION = {
     'name_unique': 'pause_actions',
-    'name': f"Actions: {TRANSLATIONS['pause']['title']}",
+    'name': lazy_join(TRANSLATIONS['actions']['title'], ': ', TRANSLATIONS['pause']['title']),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],
@@ -32,7 +33,7 @@ ACTION_INFORMATION = {
             'default_value': 0.0,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Duration'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Duration'), lazy_gettext('Seconds')),
             'phrase': 'The duration to pause'
         }
     ]

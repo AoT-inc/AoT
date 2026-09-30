@@ -16,6 +16,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.lockfile import LockFile
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = OrderedDict()
@@ -47,7 +48,7 @@ for each_channel in range(8):
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'PCF8574_PUMP',
-    'output_name': "{}: PCF8574 8-Channel {}".format(lazy_gettext('Peristaltic Pump'), lazy_gettext('I/O Expander')),
+    'output_name': lazy_format("{}: PCF8574 8-Channel {}", lazy_gettext('Peristaltic Pump'), lazy_gettext('I/O Expander')),
     'output_manufacturer': 'Texas Instruments',
     'output_library': 'smbus2',
     'measurements_dict': measurements_dict,
@@ -91,8 +92,8 @@ OUTPUT_INFORMATION = {
             'type': 'select',
             'default_value': 1,
             'options_select': [
-                (1, 'HIGH'),
-                (0, 'LOW')
+                (1, lazy_gettext('HIGH')),
+                (0, lazy_gettext('LOW'))
             ],
             'name': lazy_gettext('On State'),
             'phrase': lazy_gettext('The state of the output channel that corresponds to the pump being on')
@@ -137,7 +138,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

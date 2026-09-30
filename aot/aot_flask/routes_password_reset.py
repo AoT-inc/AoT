@@ -71,7 +71,11 @@ def forgot_password():
 
                 if form_forgot_password.reset_method.data == 'email':
                     smtp = SMTP.query.first()
-                    if user and smtp.host and smtp.protocol and smtp.port and smtp.user and smtp.passw:
+                    # 포트는 비워 두면 send_email 이 프로토콜 기본 포트(SSL 465·TLS 587·
+                    # 비암호화 25)를 고른다 — 설정 화면 안내와 같은 규칙이라 필수 조건이 아니다.
+                    smtp_login_ok = bool(smtp and smtp.host and smtp.protocol and (
+                        smtp.protocol == 'unencrypted_no_login' or (smtp.user and smtp.passw)))
+                    if user and smtp_login_ok:
                         subject = "AoT Password Reset ({})".format(hostname)
                         msg = "A password reset has been requested for user {user} on host {host} at {time} " \
                               "with your email address.\n\nIf you did not initiate this, you can disregard " \
@@ -81,10 +85,12 @@ def forgot_password():
                                 host=hostname,
                                 time=now.strftime("%d/%m/%Y %H:%M"),
                                 code=user.password_reset_code)
-                        send_email(
+                        rc = send_email(
                             smtp.host, smtp.protocol, smtp.port,
                             smtp.user, smtp.passw, smtp.email_from,
                             user.email, msg, subject=subject)
+                        if rc != 0:
+                            logger.error("Password reset email could not be sent (see SMTP settings)")
                     flash(gettext(
                         "If the user name exists, it has a valid email associated with it, and the email "
                         "server settings are configured correctly, an email will be sent with instructions "

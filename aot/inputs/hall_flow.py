@@ -5,6 +5,7 @@ import time
 from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -58,7 +59,7 @@ INPUT_INFORMATION = {
         {
             'id': 'clear_total_volume',
             'type': 'button',
-            'name': "{}: {}".format(lazy_gettext('Clear Total'), lazy_gettext('Volume'))
+            'name': lazy_format("{}: {}", lazy_gettext('Clear Total'), lazy_gettext('Volume'))
         }
     ]
 

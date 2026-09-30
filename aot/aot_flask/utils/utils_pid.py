@@ -62,6 +62,11 @@ def pid_mod(form_mod_pid_base,
 
     mod_pid.name = form_mod_pid_base.name.data
     messages["name"] = form_mod_pid_base.name.data
+    from aot.aot_flask.utils.utils_function import duplicate_function_name_warning
+    dup_warning = duplicate_function_name_warning(
+        form_mod_pid_base.name.data, exclude_id=mod_pid.unique_id)
+    if dup_warning:
+        messages["warning"].append(dup_warning)
     new_tab_id = request.form.get('tab_id')
     if new_tab_id and new_tab_id != mod_pid.tab_id:
         if Tab.query.filter(Tab.unique_id == new_tab_id).first():
@@ -307,9 +312,7 @@ def pid_mod(form_mod_pid_base,
     try:
         if not messages["error"]:
             db.session.commit()
-            messages["success"].append('{action} {controller}'.format(
-                action=TRANSLATIONS['modify']['title'],
-                controller=TRANSLATIONS['pid']['title']))
+            messages["success"].append(gettext("PID controller modified"))
 
             # If the controller is active or paused, refresh variables in thread
             if mod_pid.is_activated:
@@ -373,9 +376,7 @@ def pid_del(pid_id):
         delete_entry_with_id(
             PID, pid_id, flash_message=False)
 
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['delete']['title'],
-            controller=TRANSLATIONS['pid']['title']))
+        messages["success"].append(gettext("PID controller deleted"))
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 
@@ -483,9 +484,7 @@ def pid_activate(pid_id):
         messages, 'activate', 'PID', pid_id, flash_message=False)
 
     if not messages["error"]:
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['activate']['title'],
-            controller=TRANSLATIONS['pid']['title']))
+        messages["success"].append(gettext("PID controller activated"))
 
     return messages
 
@@ -519,9 +518,7 @@ def pid_deactivate(pid_id):
             messages, 'deactivate', 'PID', pid_id, flash_message=False)
 
     if not messages["error"]:
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['deactivate']['title'],
-            controller=TRANSLATIONS['pid']['title']))
+        messages["success"].append(gettext("PID controller deactivated"))
 
     return messages
 

@@ -5,6 +5,7 @@ from aot.databases import set_uuid
 from aot.aot_flask.extensions import db
 
 
+# @manual geo/programs#stage-events
 class GeoPlotStageEvent(CRUDMixin, db.Model):
     """확인된 단계 전환 하나 (추가 전용 원장).
 

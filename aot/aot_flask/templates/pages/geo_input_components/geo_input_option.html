@@ -8,6 +8,7 @@
     <input type="hidden" name="input_id" value="{{ each_input.unique_id }}">
     <input type="hidden" name="input_type" value="{{ each_input.type }}">
 
+    {# @manual geo/layers#layer-preview #}
     <!-- Preview Section (Moved to Top) -->
     <div class="map-option-section map-option-section-gap">
         <div class="col-12 aot-col-flush">
@@ -23,6 +24,7 @@
                 class="map-option-preview"></div>
         </div>
     </div>
+    {# @manual-end #}
 
     <!-- Manufacturer Info (Standard Style) -->
     {% if dict_inputs.get(each_input.type, {}).get('input_manufacturer') %}
@@ -37,6 +39,16 @@
         <strong>{{ _('Related Documents') }}:</strong>
         {{ _('Manufacturer') }}
         {% for each_url in manufacturer_url %}
+        <a href="{{ each_url }}" target="_blank">Link {{ loop.index }}</a>{{ ", " if not loop.last }}
+        {% endfor %}.
+    </div>
+    {% endif %}
+
+    {% set api_key_url = dict_inputs.get(each_input.type, {}).get('url_api_key') %}
+    {% if api_key_url %}
+    <div class="aot-modal-body-text aot-meta-links">
+        {{ _('API Key') }}
+        {% for each_url in api_key_url %}
         <a href="{{ each_url }}" target="_blank">Link {{ loop.index }}</a>{{ ", " if not loop.last }}
         {% endfor %}.
     </div>
@@ -89,7 +101,7 @@
 
                     {% if 'api_key' in option['id'].lower() or 'token' in option['id'].lower() %}
                         <button class="btn dropdown-toggle aot-pill-btn btn-primary" type="button" data-toggle="dropdown">
-                            Key
+                            {{_('Key')}}
                         </button>
                         <div class="dropdown-menu dropdown-menu-right">
                             {% if api_keys %}

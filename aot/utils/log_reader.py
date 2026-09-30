@@ -18,6 +18,8 @@ import re
 import shutil
 import subprocess
 
+from flask_babel import lazy_gettext as lg
+
 from aot.config import (BACKUP_LOG_FILE, DAEMON_LOG_FILE, DEPENDENCY_LOG_FILE,
                         DOCKER_CONTAINER, HTTP_ACCESS_LOG_FILE,
                         HTTP_ERROR_LOG_FILE, IMPORT_LOG_FILE, KEEPUP_LOG_FILE,
@@ -141,35 +143,35 @@ def _build_registry():
     # AI 서비스는 자기 파일을 갖지 않는다. `logging.getLogger('aot.ai.…')` 가
     # 공용 'aot' 로거로 전파돼 aot.log 한 곳에 섞여 쌓인다. 그래서 별도
     # 파일을 만드는 대신 같은 파일을 로거 이름으로 걸러 하나의 소스로 세운다.
-    reg.add('ai', 'AI', 'ai',
+    reg.add('ai', lg('AI'), 'ai',
             _file(DAEMON_LOG_FILE, logger_prefixes=('aot.ai',)))
-    reg.add('mcp', 'MCP Server', 'ai', _file(MCP_LOG_FILE))
+    reg.add('mcp', lg('MCP Server'), 'ai', _file(MCP_LOG_FILE))
 
     # --- 시스템 --------------------------------------------------------
-    reg.add('daemon', 'Daemon', 'system', _file(DAEMON_LOG_FILE))
-    reg.add('pid_settings', 'Daemon (PID settings)', 'system',
+    reg.add('daemon', lg('Daemon'), 'system', _file(DAEMON_LOG_FILE))
+    reg.add('pid_settings', lg('Daemon (PID settings)'), 'system',
             _file(DAEMON_LOG_FILE, contains='PID Settings'))
-    reg.add('keepup', 'Daemon keepup', 'system', _file(KEEPUP_LOG_FILE))
+    reg.add('keepup', lg('Daemon keepup'), 'system', _file(KEEPUP_LOG_FILE))
 
     # --- 웹 ------------------------------------------------------------
     # 'Web app' 은 gunicorn 프로세스의 'aot.aot_flask.*' 로거다. 도커에서
     # `docker logs aot_flask` 가 불가능한 배포에서도 웹 앱 로그를 볼 수 있는
     # 유일한 경로다(logging_setup 이 파일 핸들러를 붙인 뒤로 가능해졌다).
-    reg.add('web_app', 'Web app', 'web',
+    reg.add('web_app', lg('Web app'), 'web',
             _file(DAEMON_LOG_FILE, logger_prefixes=('aot.aot_flask',)))
-    reg.add('login', 'Web login', 'web', _file(LOGIN_LOG_FILE))
-    reg.add('http_access', 'Web access', 'web', _file(HTTP_ACCESS_LOG_FILE))
-    reg.add('http_error', 'Web error', 'web', _file(HTTP_ERROR_LOG_FILE))
-    reg.add('flask', 'Web', 'web', _journal_or_docker('aotflask', 'aot_flask'))
-    reg.add('nginx', 'Nginx', 'web', _journal_or_docker('nginx', 'aot_nginx'))
+    reg.add('login', lg('Web login'), 'web', _file(LOGIN_LOG_FILE))
+    reg.add('http_access', lg('Web access'), 'web', _file(HTTP_ACCESS_LOG_FILE))
+    reg.add('http_error', lg('Web error'), 'web', _file(HTTP_ERROR_LOG_FILE))
+    reg.add('flask', lg('Web'), 'web', _journal_or_docker('aotflask', 'aot_flask'))
+    reg.add('nginx', lg('Nginx'), 'web', _journal_or_docker('nginx', 'aot_nginx'))
 
     # --- 유지보수 ------------------------------------------------------
-    reg.add('dependency', 'Dependency', 'maintenance',
+    reg.add('dependency', lg('Dependency'), 'maintenance',
             _file(DEPENDENCY_LOG_FILE))
-    reg.add('import', 'Import settings', 'maintenance', _file(IMPORT_LOG_FILE))
-    reg.add('backup', 'AoT backup', 'maintenance', _file(BACKUP_LOG_FILE))
-    reg.add('restore', 'AoT restore', 'maintenance', _file(RESTORE_LOG_FILE))
-    reg.add('upgrade', 'AoT upgrade', 'maintenance', _file(UPGRADE_LOG_FILE))
+    reg.add('import', lg('Import settings'), 'maintenance', _file(IMPORT_LOG_FILE))
+    reg.add('backup', lg('AoT backup'), 'maintenance', _file(BACKUP_LOG_FILE))
+    reg.add('restore', lg('AoT restore'), 'maintenance', _file(RESTORE_LOG_FILE))
+    reg.add('upgrade', lg('AoT upgrade'), 'maintenance', _file(UPGRADE_LOG_FILE))
 
     return reg
 
@@ -178,10 +180,10 @@ def _build_registry():
 # 목록 맨 뒤에 카테고리 없이 붙는다.
 CATEGORY_ORDER = ('ai', 'system', 'web', 'maintenance')
 CATEGORY_LABELS = {
-    'ai': 'AI',
-    'system': 'System',
-    'web': 'Web',
-    'maintenance': 'Maintenance',
+    'ai': lg('AI'),
+    'system': lg('System'),
+    'web': lg('Web'),
+    'maintenance': lg('Maintenance'),
 }
 
 DEFAULT_SOURCE = 'daemon'
@@ -358,7 +360,7 @@ def read_log(source_id, lines=_DEFAULT_LINES, search='', min_level='',
     """
     spec = get_source(source_id)
     if spec is None:
-        return _error_result(source_id, 'Unknown log source')
+        return _error_result(source_id, lg('Unknown log source'))
 
     try:
         lines = max(1, min(int(lines), _MAX_LINES))
@@ -535,7 +537,7 @@ def _read_command_source(spec, lines, search, min_level):
             timeout=_COMMAND_TIMEOUT, shell=False)
         text = proc.stdout.decode('utf-8', 'replace')
     except subprocess.TimeoutExpired:
-        return _error_result(spec['id'], 'Timed out reading this log source')
+        return _error_result(spec['id'], lg('Timed out reading this log source'))
     except OSError as err:
         return _error_result(spec['id'], str(err))
 

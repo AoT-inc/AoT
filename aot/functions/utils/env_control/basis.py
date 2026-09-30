@@ -27,6 +27,7 @@ VPD 를 1차 목표로 직접 좇으면 고온·저온에서 틀린다.
   끌어온다. 유도 범위 중앙(기본 22 °C)을 조용히 능동 추종하면 사람이 정한 적 없는
   목표가 생긴다 — 2026-08-22 에 기록한 옛 목표 소실 사고와 같은 모양이다.
 """
+# @manual ai/env-control#control-basis
 
 from __future__ import annotations
 

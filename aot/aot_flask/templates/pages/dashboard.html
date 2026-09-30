@@ -4,7 +4,7 @@
 
 {% set dashboard_dict = dict() %}
 
-{% block title %} - {% for each_dash in dashboards if each_dash.unique_id == dashboard_id %}{{each_dash.name}}{% endfor %} {{dict_translation['dashboard']['title']}}{% endblock %}
+{% block title %} - {% for each_dash in dashboards if each_dash.unique_id == dashboard_id %}{{ _(each_dash.name) }}{% endfor %} {{dict_translation['dashboard']['title']}}{% endblock %}
 
 {% block head %}
   <script>

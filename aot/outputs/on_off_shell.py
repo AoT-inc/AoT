@@ -8,6 +8,7 @@ from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import cmd_output
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -27,7 +28,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'command',
-    'output_name': "{}: Shell Script".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Shell Script", lazy_gettext('On/Off')),
     'output_library': 'subprocess.Popen',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -110,7 +111,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

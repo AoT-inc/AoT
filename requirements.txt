@@ -39,6 +39,7 @@ Flask-WTF==1.2.1
 future==1.0.0
 geocoder==1.38.1
 gunicorn==22.0.0
+httpx==0.28.1
 idna==3.15
 importlib-metadata==6.8.0
 importlib_resources==6.5.2
@@ -47,6 +48,7 @@ influxdb-client==1.48.0
 iniconfig==2.3.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
+joserfc==1.7.5
 json-repair==0.60.1
 jsonschema==4.25.1
 jsonschema-specifications==2025.9.1

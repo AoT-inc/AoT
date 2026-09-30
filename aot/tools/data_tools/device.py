@@ -148,6 +148,7 @@ class DeviceToolsMixin:
                         CustomController.unique_id.in_(list(candidate_ids))).all():
                     results.append({"id": item.unique_id, "name": item.name,
                                     "type": "function", "device": item.device})
+                results = cls._without_ai_excluded(results)
                 results = cls._annotate_device_zone(results)
                 results = cls._annotate_device_membership(results)
                 out = {"results": results, "count": len(results)}
@@ -400,6 +401,7 @@ class DeviceToolsMixin:
                 # 않는 종류(구역·카메라)는 이 질문의 답이 아니므로 함께 빠진다.
                 results = [r for r in results if r.get('id') in candidate_ids]
 
+            results = cls._without_ai_excluded(results)
             results = cls._annotate_device_membership(results)
             out = {"results": results, "count": len(results)}
             notes = []
@@ -564,6 +566,7 @@ class DeviceToolsMixin:
             except Exception:
                 pass
 
+            results = cls._without_ai_excluded(results)
             results = cls._annotate_device_membership(results)
             out = {"results": results, "count": len(results)}
             note = cls._complex_device_note(results)
@@ -572,6 +575,21 @@ class DeviceToolsMixin:
             return out
         except Exception as e:
             return {"error": str(e)}
+
+    @classmethod
+    def validate_ai_control_target(cls, device_id=None, **extra):
+        """물리 제어 도구(operate_device·schedule_device_control·set_output_state)
+        의 출력이 'AI 판단에 포함' 을 끈 장치면 이유를 담은 오류, 아니면 None.
+
+        `tool_execution._pre_gate_validation` 이 승인 게이트 **앞에서** 부른다 —
+        실행층도 같은 헬퍼(`device_resolver`)로 거절하지만, 여기서 먼저 막지
+        않으면 어차피 거절될 요청이 승인 큐에서 사람을 기다린다."""
+        from aot.services.resolvers.device_resolver import (
+            AI_EXCLUDED, ai_control_refusal)
+        message = ai_control_refusal(device_id)
+        if not message:
+            return None
+        return {"error": message, "reason_code": AI_EXCLUDED}
 
     @classmethod
     def operate_device_tool(cls, device_id, state, **kwargs):
@@ -599,10 +617,14 @@ class DeviceToolsMixin:
             # 2. 장치 존재 여부 확인 (UUID 또는 이름)
             # 이름이 겹치면 고르지 않는다 — `.first()` 로 아무거나 집으면
             # 엉뚱한 밸브를 연다(2026-08-28: v11 이 두 개였다).
+            # ai=True — 'AI 판단에 포함' 을 끈 출력은 대상이 아니다(이유를 돌려준다).
             from aot.services.resolvers.device_resolver import resolve_output
-            match = resolve_output(device_id)
+            match = resolve_output(device_id, ai=True)
             if match.error:
-                return {"error": match.error, "dispatched": False}
+                out = {"error": match.error, "dispatched": False}
+                if match.reason:
+                    out["reason_code"] = match.reason
+                return out
             target = match.row
             if not target:
                 return {"error": f"Device (output) to control not found: {device_id}",
@@ -778,27 +800,40 @@ class DeviceToolsMixin:
         if not token:
             return None, None, {"error": "device_id is required (unique_id or name)"}
 
+        # 'AI 판단에 포함' 을 끈 입력·출력은 AI 도구의 대상이 아니다
+        # (docs/ai/overview.md#device-ai-toggle). 판정은 공용 헬퍼 하나다.
+        from aot.services.resolvers.device_resolver import (
+            AI_EXCLUDED, ai_excluded, ai_excluded_error)
+
+        def _refused(r):
+            return {"error": ai_excluded_error(r), "reason_code": AI_EXCLUDED}
+
         # 0) unique_id 정확일치.
         row = Input.query.filter_by(unique_id=token).first()
         if row is not None:
-            return row, 'input', None
+            return (None, None, _refused(row)) if ai_excluded(row) \
+                else (row, 'input', None)
         row = Output.query.filter_by(unique_id=token).first()
         if row is not None:
-            return row, 'output', None
+            return (None, None, _refused(row)) if ai_excluded(row) \
+                else (row, 'output', None)
         row = CustomController.query.filter_by(unique_id=token).first()
         if row is not None:
             return row, cls._kind_of_controller(row), None
 
-        # 1) 이름 정확일치 — 세 테이블을 한꺼번에 모은다.
-        candidates = []
+        # 1) 이름 정확일치 — 세 테이블을 한꺼번에 모은다. AI 에서 뺀 장치는
+        #    후보가 아니다 — 같은 이름의 다른 장치와 겹쳐 되묻게 하지도 않는다.
+        candidates, hidden = [], []
         for r in Input.query.filter(Input.name == token).all():
-            candidates.append((r, 'input'))
+            (hidden if ai_excluded(r) else candidates).append((r, 'input'))
         for r in Output.query.filter(Output.name == token).all():
-            candidates.append((r, 'output'))
+            (hidden if ai_excluded(r) else candidates).append((r, 'output'))
         for r in CustomController.query.filter(CustomController.name == token).all():
             candidates.append((r, cls._kind_of_controller(r)))
 
         if not candidates:
+            if hidden:
+                return None, None, _refused(hidden[0][0])
             return None, None, {"error": f"Device not found: {token}"}
 
         if len(candidates) > 1:
@@ -1210,7 +1245,7 @@ class DeviceToolsMixin:
 
     @classmethod
     def get_control_state(cls, facility_name=None, facility_id=None,
-                          include_inactive=False, **extra):
+                          include_inactive=False, detail=False, **extra):
         """[읽기전용] 환경제어 코디네이터의 현재 목표값과 최근 판단 결과.
 
         무엇이 목표이고(setpoint), 무엇이 제약을 걸었고(limiting factor),
@@ -1224,6 +1259,18 @@ class DeviceToolsMixin:
             (실환경에 'Env Coordinator' 동명 2개 존재) 이름으로는 키가 안 된다.
           - target_temperature/humidity, tolerance, priority, 스케줄 창을
             추가로 노출한다. 조언에 필요한데 그쪽에는 빠져 있다.
+
+        `detail`(기본 False)이 꺼져 있으면 두 곳을 줄인다(2026-09-29, 벤치
+        실측 중앙값 14,954자 → 목표 4,000자 이하):
+          - 코디네이터마다 `tolerance`/`priority`(설정값, 자주 안 바뀜)를
+            뺀다 — `safety_range`(안전 상·하한)는 그대로 남는다.
+          - `latest_cycle_summary`는 이 도구의 존재 이유(목표·제약·게이트·
+            액추에이터+사유)에 해당하는 키만 남기고, UI 관측용 진단값
+            (greybox_skill·mpc_shadow·solar_lead·capability·basis·actuation·
+            vent·outputs_by_kind·trend·photo)은 뺀다 — 그 값들은 화면
+            [현황] 탭이 쓰는 값이지 제어 조언에 필요한 값이 아니다.
+        `detail=True`면 둘 다 원본 그대로 낸다. 무엇을 뺐는지는 응답의
+        `_omitted`가 말한다 — 없는 값이 아니라 줄인 값이다.
         """
         import json as _json
         try:
@@ -1265,8 +1312,9 @@ class DeviceToolsMixin:
                 if fid:
                     try:
                         from aot.aot_flask.geo import plot_context as _pc
-                        _plants = [_pc.plot_brief_for_control(r)
-                                   for r in _pc.plots_in_facility(fid, bay_id=_bay)]
+                        _plants = [
+                            cls._plot_ctl_brief(_pc.plot_brief_for_control(r), detail)
+                            for r in _pc.plots_in_facility(fid, bay_id=_bay)]
                     except Exception as exc:
                         logger.warning(
                             "list_env_coordinators: 식생 조회 실패(%s): %s", fid, exc)
@@ -1284,18 +1332,6 @@ class DeviceToolsMixin:
                         "source": "plot program",
                         **_control_targets_for(c),
                     },
-                    "tolerance": {
-                        "vpd": o.get('tolerance_vpd'),
-                        "temperature_c": o.get('tolerance_temperature'),
-                        "humidity_pct": o.get('tolerance_humidity'),
-                        "co2_ppm": o.get('tolerance_co2'),
-                    },
-                    "priority": {
-                        "vpd": o.get('priority_vpd'),
-                        "temperature": o.get('priority_temperature'),
-                        "humidity": o.get('priority_humidity'),
-                        "co2": o.get('priority_co2'),
-                    },
                     "safety_range": {
                         "temp_c": [o.get('temp_min'), o.get('temp_max')],
                         "humid_pct": [o.get('humid_min'), o.get('humid_max')],
@@ -1312,11 +1348,26 @@ class DeviceToolsMixin:
                         "daily": [o.get('time_start'), o.get('time_end')],
                     },
                 }
+                if detail:
+                    entry["tolerance"] = {
+                        "vpd": o.get('tolerance_vpd'),
+                        "temperature_c": o.get('tolerance_temperature'),
+                        "humidity_pct": o.get('tolerance_humidity'),
+                        "co2_ppm": o.get('tolerance_co2'),
+                    }
+                    entry["priority"] = {
+                        "vpd": o.get('priority_vpd'),
+                        "temperature": o.get('priority_temperature'),
+                        "humidity": o.get('priority_humidity'),
+                        "co2": o.get('priority_co2'),
+                    }
 
                 state = FunctionRuntimeState.query.filter_by(function_id=c.unique_id).first()
                 if state and state.summary_json:
                     try:
-                        entry["latest_cycle_summary"] = _json.loads(state.summary_json)
+                        summary = _json.loads(state.summary_json)
+                        entry["latest_cycle_summary"] = (
+                            summary if detail else cls._cycle_summary_brief(summary))
                     except (ValueError, TypeError):
                         entry["latest_cycle_summary_error"] = "Failed to parse summary_json"
                 else:
@@ -1326,10 +1377,58 @@ class DeviceToolsMixin:
                         "or summary recording is disabled.")
                 out.append(entry)
 
-            return {"status": "success", "count": len(out), "coordinators": out}
+            result = {"status": "success", "count": len(out), "coordinators": out}
+            if out and not detail:
+                result["_omitted"] = (
+                    "Each coordinator's 'tolerance'/'priority' (rarely-changing "
+                    "config) and 'latest_cycle_summary' fields other than "
+                    "ts/limiting_factor/strain/deviation/targets/gate/"
+                    "feedforward/schedule/commands/unmeasured/modes (display-"
+                    "only diagnostics: capability, greybox_skill, mpc_shadow, "
+                    "solar_lead, basis, actuation, vent, outputs_by_kind, "
+                    "trend, photo) were dropped to fit the response size. "
+                    "Each plot under 'plots' also drops 'timeline.stages' "
+                    "(the full stage-by-stage schedule — get_plot has it) and "
+                    "keeps only the current stage's name/index/position. Call "
+                    "again with detail=true for all of it.")
+            return result
         except Exception as e:
             logger.exception("Error in get_control_state")
             return {"status": "error", "message": str(e)}
+
+    #: `latest_cycle_summary` 의 키 중 이 도구의 존재 이유(목표·제약·게이트·
+    #: 액추에이터+사유)에 해당하는 것만. 나머지는 화면 [현황] 탭의 관측용
+    #: 진단값(greybox_skill·mpc_shadow·solar_lead·capability·basis·actuation·
+    #: vent·outputs_by_kind·trend·photo)이라 기본 응답에서 뺀다.
+    _CYCLE_SUMMARY_KEEP = (
+        'ts', 'limiting_factor', 'strain', 'deviation', 'targets', 'gate',
+        'feedforward', 'schedule', 'commands', 'unmeasured', 'modes',
+    )
+
+    @classmethod
+    def _cycle_summary_brief(cls, summary):
+        """`_build_cycle_summary` 원본(dict) → 요약(dict). 원본은 건드리지 않는다."""
+        if not isinstance(summary, dict):
+            return summary
+        return {k: summary[k] for k in cls._CYCLE_SUMMARY_KEEP if k in summary}
+
+    @classmethod
+    def _plot_ctl_brief(cls, p, detail):
+        """`plot_brief_for_control` 결과 → `detail=False` 면 `timeline.stages`
+        (전체 단계 일정 — 실측: 구획 하나에 최대 수 킬로바이트)를 뺀다.
+
+        `timeline` 의 나머지 스칼라(시작·기준일·끝·경과일·오늘 진행률)는
+        남는다 — "지금 몇 %째인가" 는 제어 조언에도 쓰이지만, 단계별 전체
+        일정표는 get_plot 의 몫이다. `plot_brief_for_control` 자체(화면 제어
+        탭이 같이 쓴다)는 건드리지 않고, 여기서 얕은 복사만 한다."""
+        if detail or not isinstance(p, dict):
+            return p
+        tl = p.get('timeline')
+        if not isinstance(tl, dict) or 'stages' not in tl:
+            return p
+        p = dict(p)
+        p['timeline'] = {k: v for k, v in tl.items() if k != 'stages'}
+        return p
 
     @classmethod
     def get_output_state(cls, device_id=None, channel=None, device_ids=None,

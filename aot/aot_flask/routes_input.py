@@ -76,6 +76,23 @@ def inject_dictionary():
     return inject_variables()
 
 
+@blueprint.route('/i2c_scan')
+@flask_login.login_required
+def page_i2c_scan():
+    """I2C 버스를 스캔해 응답한 주소를 돌려준다(네이티브 설치 전용)."""
+    from aot.utils.system_environment import detect as detect_env
+    env = detect_env()
+    if (env.get('platform_type') == 'docker' or
+            not env.get('capabilities', {}).get('i2c')):
+        return jsonify({'ok': False, 'error': 'unsupported'})
+    try:
+        bus = int(request.args.get('bus', 1))
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'error': 'bad_bus'}), 400
+    from aot.aot_flask.utils import utils_i2c_scan
+    return jsonify(utils_i2c_scan.scan_bus(bus))
+
+
 @blueprint.route('/input_submit', methods=['POST'])
 @flask_login.login_required
 def page_input_submit():

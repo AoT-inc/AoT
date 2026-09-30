@@ -39,6 +39,8 @@ class Conditional(FlaskForm):
     message_include_code = BooleanField(lazy_gettext('Include Code in Messages'))
     refractory_period = DecimalField(
         lazy_gettext("Refractory Period (sec)"),
+        validators=[validators.Optional(),
+                    validators.NumberRange(min=0)],
         widget=NumberInput(step='any'))
     start_offset = DecimalField(
         lazy_gettext("Start Offset (sec)"),

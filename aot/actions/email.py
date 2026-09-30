@@ -87,19 +87,31 @@ class ActionModule(AbstractFunctionAction):
         # If the emails per hour limit has not been exceeded
         smtp_wait_timer, allowed_to_send_notice = check_allowed_to_email()
         if allowed_to_send_notice:
-            dict_vars['message'] += f" Email '{self.email}'."
+            # 수신자 꼬리표는 조건 로그용이라 메일 본문에는 싣지 않는다 —
+            # 받는 사람에게 자기 주소를 되읽어 주는 문장이고 내부 표기다.
             if not message_send:
                 message_send = dict_vars['message']
             smtp = db_retrieve_table_daemon(SMTP, entry='first')
             if smtp is None:
-                self.logger.error("SMTP 설정을 읽지 못해 이메일을 보내지 못했다")
-                return message_send
-            send_email(smtp.host, smtp.protocol, smtp.port,
-                       smtp.user, smtp.passw, smtp.email_from,
-                       email_recipients, message_send, logger=self.logger)
+                msg = " Error: Email not sent (SMTP settings could not be read)."
+                self.logger.error(msg)
+                dict_vars['message'] += msg
+                return dict_vars
+            rc = send_email(smtp.host, smtp.protocol, smtp.port,
+                            smtp.user, smtp.passw, smtp.email_from,
+                            email_recipients, message_send, logger=self.logger)
+            if rc == 0:
+                dict_vars['message'] += f" Email '{self.email}'."
+            else:
+                msg = (f" Error: Email to '{self.email}' failed to send "
+                       "(check SMTP settings and the daemon log).")
+                self.logger.error(msg)
+                dict_vars['message'] += msg
         else:
-            self.logger.error(
-                f"Wait {smtp_wait_timer - time.time():.0f} seconds to email again.")
+            msg = (f" Error: Email not sent (hourly limit reached); wait "
+                   f"{max(smtp_wait_timer - time.time(), 0):.0f} seconds to email again.")
+            self.logger.error(msg)
+            dict_vars['message'] += msg
 
         self.logger.debug(f"Message: {dict_vars['message']}")
 

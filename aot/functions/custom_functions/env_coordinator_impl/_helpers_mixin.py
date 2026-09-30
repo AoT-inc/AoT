@@ -33,10 +33,13 @@ from aot.utils.database import db_retrieve_table_daemon
 # (일출 직후 VPD 급상승 등)까지 늦추므로, 필터값과 원값이 _VPD_EMA_SNAP 이상
 # 벌어지면 실제 전이로 보고 즉시 원값으로 붙는다. 덕분에 추종 지연은 항상
 # _VPD_EMA_SNAP 이하로 유한하게 묶인다.
+# @manual ai/env-control#l2-situationreport-evaluation
 _VPD_EMA_ALPHA = 0.3    # 평활 계수. 시상수 ≈ (1-α)/α = 2.3 사이클
 _VPD_EMA_SNAP  = 0.10   # kPa. 이만큼 벌어지면 즉시 추종(지연 상한이기도 하다)
+# @manual-end
 
 
+# @manual ai/env-control#l2-situationreport-evaluation
 def smooth_vpd(prev: Optional[float], raw: float,
                alpha: float = _VPD_EMA_ALPHA,
                snap: float = _VPD_EMA_SNAP) -> float:
@@ -54,8 +57,10 @@ def smooth_vpd(prev: Optional[float], raw: float,
 # 0.1 °C·습도 눈금 1 % 의 디더는 누르고, 그보다 확실히 큰 변화는 바로 반영한다.
 # ⚠ **안전 판단은 원값을 쓴다.** 게이트(폭염·한파는 공간 극값)와 하드 한계는
 #   `T_raw`/`RH_raw` 를 본다 — 보호를 필터 지연만큼 늦출 이유가 없다.
+# @manual ai/env-control#l2-situationreport-evaluation
 _T_EMA_SNAP  = 0.5      # °C
 _RH_EMA_SNAP = 3.0      # %
+# @manual-end
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -63,9 +68,11 @@ _RH_EMA_SNAP = 3.0      # %
 # ─────────────────────────────────────────────────────────────────────────────
 # 결로 위험 = 실내 온도와 이슬점의 차(이슬점 여유)가 작다. 들어가는 문턱과 나오는
 # 문턱을 나눈다 — 새벽 내내 여유가 문턱 위아래로 흔들리면 창이 따라 여닫힌다.
+# @manual ai/env-control#settings-ventilation
 _CONDENSATION_ENTER_C = 2.0   # 여유가 이보다 작으면 위험(20 °C 에서 RH ≈ 88 %)
 _CONDENSATION_EXIT_C  = 3.0   # 탈출 중이면 여유가 이만큼 회복돼야 다시 닫는다
 _MIX_FRACTION         = 0.1   # "조금 섞으면" — 외기 10 % 와 섞은 공기로 판정
+# @manual-end
 
 
 def _svp_kpa(T: float) -> float:
@@ -81,6 +88,7 @@ def _dewpoint_from_e(e_kpa: float) -> Optional[float]:
     return 237.3 * a / (17.27 - a)
 
 
+# @manual ai/env-control#settings-ventilation
 def dewpoint_margin(T: Optional[float], RH: Optional[float]) -> Optional[float]:
     """실내 온도 − 이슬점(°C). 모르면 None."""
     if T is None or RH is None or RH <= 0:
@@ -89,6 +97,7 @@ def dewpoint_margin(T: Optional[float], RH: Optional[float]) -> Optional[float]:
     return None if td is None else T - td
 
 
+# @manual ai/env-control#settings-ventilation
 def condensation_escape(T_in, RH_in, T_out, RH_out,
                         was_escaping: bool = False) -> bool:
     """야간 파킹을 풀어야 하는가 — 결로가 임박했고, 환기가 그것을 덜어 줄 때.
@@ -160,6 +169,7 @@ class HelpersMixin:
 
     # ── Growth Schedule ───────────────────────────────────────────────────────
 
+    # @manual ai/env-control#methods-setpoint-curves
     def _get_weeks_elapsed(self) -> float:
         """구획 시작일 이후 경과 주차(소수).
 
@@ -315,6 +325,7 @@ class HelpersMixin:
 
     # ── 구획(프로그램) 목표 ───────────────────────────────────────────────
 
+    # @manual ai/env-control#targets-read, ai/env-control#targets-no-plot
     def _load_plot_targets(self) -> dict:
         """이 시설에서 지금 기르는 구획의 단계 목표를 읽는다 → dict.
 
@@ -370,6 +381,7 @@ class HelpersMixin:
             self._plot_targets_cache = cached
         return cached
 
+    # @manual ai/env-control#targets-read
     def _crop_params(self):
         """Big-Leaf 모델 상수 → `CropParams`.
 
@@ -403,6 +415,7 @@ class HelpersMixin:
         self._crop_params_cache = params
         return params
 
+    # @manual ai/env-control#targets-read, ai/env-control#settings-light
     def _light_saturation(self):
         """지금 기르는 작물의 광포화점 [W/m²] — 없으면 None.
 
@@ -434,6 +447,7 @@ class HelpersMixin:
 
     # ── CO₂ setpoint ─────────────────────────────────────────────────────────
 
+    # @manual ai/env-control#targets-read, ai/env-control#l1-envtarget-setpoint, ai/env-control#methods-setpoint-curves
     def _get_co2_setpoint(self) -> 'float | None':
         """지금 따라야 할 CO₂ 목표(ppm) → 없으면 None.
 
@@ -484,6 +498,7 @@ class HelpersMixin:
 
     # ── VPD setpoint ─────────────────────────────────────────────────────────
 
+    # @manual ai/env-control#targets-read, ai/env-control#targets-no-plot, ai/env-control#l1-envtarget-setpoint, ai/env-control#methods-setpoint-curves
     def _get_vpd_setpoint(self) -> 'float | None':
         """지금 따라야 할 VPD 목표(kPa) → 없으면 None.
 
@@ -572,6 +587,7 @@ class HelpersMixin:
         total_min = total_min % (24 * 60)
         return f'{total_min // 60:02d}:{total_min % 60:02d}'
 
+    # @manual ai/env-control#time-control
     def _get_time_window(self) -> tuple[str, str]:
         """Return (start_hhmm, end_hhmm) for the active time window.
 
@@ -614,6 +630,7 @@ class HelpersMixin:
             self.logger.error('Photoperiod method calculate error: %s', exc)
             return self.time_start or '06:00', self.time_end or '20:00'
 
+    # @manual ai/env-control#time-control
     def _in_time_window(self) -> bool:
         """Return True if current time is within the active time window.
 
@@ -634,6 +651,7 @@ class HelpersMixin:
 
     # ── 야간 개구부 파킹 ───────────────────────────────────────────────────────
 
+    # @manual ai/env-control#settings-ventilation
     def _night_vent_parked(self, internal: dict = None,
                            external: dict = None) -> bool:
         """지금 개구부를 야간 파킹해야 하는가.
@@ -724,6 +742,7 @@ class HelpersMixin:
             self.logger.debug('야간 파킹 판정 실패 (파킹 안 함): %s', exc)
             return False
 
+    # @manual ai/env-control#time-control, ai/env-control#settings-ventilation
     def _facility_local_now(self):
         """시설 현지 시각. 시간대를 모르면 서버 시각으로 물러난다.
 
@@ -737,6 +756,7 @@ class HelpersMixin:
         from aot.utils.timekit import utc_now
         return utc_now().astimezone(fac_tz)
 
+    # @manual ai/env-control#settings-screen
     def _warn_inert_options_once(self) -> None:
         """입력됐지만 **안 쓰이는** 값을 기동 후 한 번 알린다.
 
@@ -872,7 +892,9 @@ class HelpersMixin:
           1. Alert only on a state transition (OK->problem). Same state persisting = no alert.
           2. Non-actionable situations (NATURAL + no gradient) use a 24h cooldown.
              Nothing can be done anyway, so repeat alerts only accumulate fatigue.
-          3. Actionable situations (ACTIVE/PASSIVE actuators present) use a 1h cooldown.
+          3. Actionable situations (an ACTIVE actuator present) use a 1h cooldown and may
+             e-mail. PASSIVE-only (vents/screens) is informational, once a day — outdoor
+             conditions may be the limit, which is not a device fault.
           4. When the state clears, reset the counter/cooldown -> alert again on next occurrence.
         """
         from aot.functions.utils.env_control.authority import (
@@ -954,14 +976,12 @@ class HelpersMixin:
                 # falls to NATURAL, so the [action required] alert would never fire even
                 # when actuators are present.
                 var_auth = needed_direction_authority(auth, var, dev)
-                if var_auth == LEVEL_NATURAL:
-                    # No device -> 24h cooldown (block repeat alerts)
-                    cooldown_h = 24.0
-                    actionable = False
-                else:
-                    # ACTIVE/PASSIVE device present but still unreachable -> 1h cooldown
-                    cooldown_h = 1.0
-                    actionable = True
+                # 장치 점검을 요구하는 것은 **능동** 장치가 있을 때뿐이다. 수동 장치
+                # (창·커튼·차광)는 실외가 허락하는 만큼만 움직일 수 있어, 못 닿는 것이
+                # 곧 고장이 아니다 — 실측(2026-09-24~26 영양 밤): VPD 를 올릴 수단이
+                # 창·커튼뿐인데 "Actuator check needed" 가 36회, 긴급 메일 경로까지 탔다.
+                actionable = (var_auth == LEVEL_ACTIVE)
+                cooldown_h = 1.0 if actionable else 24.0
 
                 if not _should_alert(key, cooldown_h):
                     continue   # within cooldown — stay silent
@@ -979,6 +999,13 @@ class HelpersMixin:
                         f'unreachable for 10+ cycles (current {current_val:.1f}, deviation {dev:+.1f}). '
                         f'Please check the relevant actuator.',
                     )
+                elif var_auth == LEVEL_PASSIVE:
+                    # 수동 장치뿐 — 하루 한 번, 조용히. 실외 조건이 한계일 수 있다.
+                    self.logger.info(
+                        'EnvCoordinator: %s target %.1f not reached (current %.1f) — only '
+                        'passive devices (vents/screens) can move it, so outdoor conditions '
+                        'may be the limit.',
+                        var, tv.value if tv else 0.0, (tv.value if tv else 0.0) + dev)
                 else:
                     # No device case: once a day only, quiet info level
                     self.logger.info(
@@ -990,6 +1017,7 @@ class HelpersMixin:
 
     # ── P5-5: Cumulative Goal Tracker ─────────────────────────────────────────
 
+    # @manual ai/env-control#settings-advanced
     def _update_cumulative_tracker(self, internal: dict, cycle_sec: float,
                                    authority: dict) -> None:
         """Accumulate DLI/GDD and, at day rollover, save to DB + generate compensation suggestions."""
@@ -1063,6 +1091,7 @@ class HelpersMixin:
                 suggestions=[],
             )
 
+    # @manual ai/env-control#time-control, ai/env-control#actuators
     def _apply_end_behaviors(self, skip_ids=None) -> None:
         """Send end-of-window commands to each actuator based on its end_behavior setting.
 
@@ -1107,6 +1136,7 @@ class HelpersMixin:
                 self.control.output_on(device_id, output_type='value',
                                        amount=pct, output_channel=ch_obj)
 
+    # @manual ai/env-control#settings-light
     def _facility_shade_transmittance(self) -> float:
         """연동 시설이 정한 차광막 투과율(0~1). 사이클마다 한 번만 읽는다.
 
@@ -1149,6 +1179,7 @@ class HelpersMixin:
         self._shade_tau_cache = tau
         return tau
 
+    # @manual ai/env-control#settings-light
     def _facility_cover_transmittance(self) -> float:
         """연동 시설 피복재의 일사 투과율(0~1). 못 읽으면 1.0(깎지 않음).
 
@@ -1179,6 +1210,7 @@ class HelpersMixin:
         self._cover_tau_cache = tau
         return tau
 
+    # @manual ai/env-control#settings-ventilation
     def _hvac_running(self, prev_commands: dict = None) -> bool:
         """냉·난방이 지금 돌고 있는가. 근거가 없으면 False (모듈 상단 주석 참조).
 
@@ -1230,6 +1262,7 @@ class HelpersMixin:
         except (TypeError, ValueError):
             return False
 
+    # @manual ai/env-control#settings-advanced
     def _sensor_max_age(self):
         """신선도 상한 — **정하지 않았으면 `None`** 이다(센서가 정한다).
 
@@ -1247,6 +1280,7 @@ class HelpersMixin:
         # 규칙(0 = 미지정)은 정본에 있다 — 여기 다시 쓰면 갈라진다.
         return _freshness.as_seconds(getattr(self, 'sensor_max_age', None))
 
+    # @manual ai/env-control#l2-situationreport-evaluation
     def _collect_internal(self, max_age=None, outdoor_data: dict = None) -> dict:
         """실내 센서 데이터 수집.
 
@@ -1373,6 +1407,7 @@ class HelpersMixin:
 
         return result
 
+    # @manual ai/env-control#pre-gate-checked-before-l1l3
     def _build_gate_env(self, internal: dict, external: dict) -> dict:
         # ⚠ **없으면 None 이다, 0 이 아니다**(2026-09-19). 게이트는 "이번에 안
         #   왔다" 로 강우·풍속을 잃었는지 가른다(`SafetyPreGate._weather_view`).
@@ -1440,9 +1475,11 @@ class HelpersMixin:
         }
 
     # ── Dispatch lifetime-protection constants ────────────────────────────────────────────────
+    # @manual ai/env-control#actuators
     _DISPATCH_DEADBAND_PCT = 1.0    # if |new - prev| < this value, skip sending (%)
     _DISPATCH_WATCHDOG_SEC = 600.0  # even for the same value, force a re-confirm send every this period (s)
     _DISPATCH_STAGGER_SEC  = 1.0    # sequential send interval between devices (s) — spreads simultaneous batch-send load
+    # @manual-end
 
     # ── Motor-driven actuator (side/roof vent) lifetime protection: motion gate ──────────────────
     # Even in steady state, the PI controller produces a target value that wobbles 1~3% every
@@ -1463,12 +1500,15 @@ class HelpersMixin:
     # ── Actuation-rate profiles (normal-cycle minimum move interval, seconds) ────────────────────
     # 'standard' matches the legacy _MOTOR_MIN_MOVE_SEC so existing installs are unaffected until
     # the user explicitly picks a different profile.
+    # @manual ai/env-control#settings-target
     _ACTUATION_PROFILE_SEC = {
         'responsive': 60.0,
         'standard':   180.0,
         'gentle':     600.0,
     }
+    # @manual-end
 
+    # @manual ai/env-control#settings-target
     def _actuation_params(self) -> tuple:
         """Resolve (normal_min_dwell_sec, emergency_min_dwell_sec) from custom_options.
 
@@ -1487,6 +1527,7 @@ class HelpersMixin:
         emergency_sec = float(getattr(self, 'emergency_period_sec', 60.0) or 60.0)
         return normal_sec, emergency_sec
 
+    # @manual ai/env-control#settings-target
     def _motor_motion_gate(
             self, target: float, last_sent: 'float | None', age: float,
             min_dwell: float, step: float) -> tuple[float, bool]:
@@ -1602,6 +1643,23 @@ class HelpersMixin:
                     f'{prev:.1f}' if prev is not None else 'none', aperture, motor)
 
     def _dispatch(self, commands: dict, cycle_sec: float = 60.0, emergency: bool = False) -> set:
+        """장치 명령을 내보낸다. 출처를 env_coordinator 로 명시해 감사로그에 남긴다.
+
+        컨트롤러 스레드 기본 출처는 클래스 이름에서 온 값(`customcontroller` 등)이라
+        어느 자동화인지 감사로그에서 구분할 수 없다. 배분은 변화가 있을 때만 나가므로
+        (`_dispatch_sent` 불감대) 관계형 감사로그를 잠글 빈도는 아니다.
+        """
+        from aot.utils.command_origin import TYPE_ENV_COORDINATOR
+        from aot.utils.execution_context import (
+            clear_execution_context, set_execution_context)
+        set_execution_context(source_type=TYPE_ENV_COORDINATOR,
+                              source_id=getattr(self, 'unique_id', None))
+        try:
+            return self._dispatch_commands(commands, cycle_sec, emergency)
+        finally:
+            clear_execution_context()
+
+    def _dispatch_commands(self, commands: dict, cycle_sec: float = 60.0, emergency: bool = False) -> set:
         """Dispatch commands. Returns set of actuator_ids that FAILED.
 
         Lifetime protection (2026-05-18):
@@ -1754,6 +1812,8 @@ class HelpersMixin:
                 # (100=열림, 0=닫힘)으로 일치하므로 코디네이터 개도를 그대로 보낸다.
                 # 과거 'send_val=100-snapped' 반전은 옛 "0=최대효과" 규약 잔재였고,
                 # effect 모델 규약수정 후엔 이중반전(닫기→열기)을 유발했다.
+                # 정상 사이클은 기록 앞에서 이미 0/100 으로 정했다(`snap_screen_commands`,
+                # 히스테리시스 포함) — 여기는 그 밖의 경로를 위한 안전망이다.
                 send_val = val
                 if profile and profile.kind in ('curtain', 'shade'):
                     send_val = 100.0 if val >= 50.0 else 0.0

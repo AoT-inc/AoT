@@ -84,6 +84,7 @@ _MAX_STRIPS = 200
 _ASPECT_RATIO_WARNING = 4.0
 
 
+# @manual geo/design-tool#split
 def _longest_edge_angle(rect):
     """최소회전 사각형 → 가장 긴 변의 방위각(도, 반시계).
 
@@ -98,6 +99,7 @@ def _longest_edge_angle(rect):
     return math.degrees(math.atan2(long_e[1], long_e[0]))
 
 
+# @manual geo/design-tool#split
 def split_shape(shape_or_geom, parts=None, strip_width_cm=None, widths_cm=None,
                 edge_margin_m=0, min_bed_length_m=_MIN_BED_LENGTH_M,
                 orientation=None, angle_deg=None):

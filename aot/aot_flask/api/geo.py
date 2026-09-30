@@ -4,6 +4,7 @@ import traceback
 from datetime import datetime
 
 from flask import request, current_app
+from werkzeug.exceptions import HTTPException
 from flask_restx import Resource, abort, fields
 from flask_login import login_required
 from sqlalchemy import or_
@@ -35,6 +36,7 @@ geo_design_model = ns_geo.model('GeoDesign', {
 
 @ns_geo.route('/designs')
 class GeoDesigns(Resource):
+    # @manual geo/api-reference#design-maps
     @ns_geo.doc(responses=default_responses)
     @login_required
     def get(self):
@@ -44,19 +46,24 @@ class GeoDesigns(Resource):
             all_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
             result = []
             for m in all_maps:
-                state = m.state_dict()
-                center = state.get('center', [37.5665, 126.9780])
+                # 저장된 카메라는 state_json 'center' 에 {lat, lng}(지도 저장·새 지도
+                # 시작 위치) 또는 [lat, lng](init_design 이 만든 첫 지도)로 있다.
+                # 리스트로만 읽으면 {lat, lng} 인 지도가 전부 기본값(서울)으로
+                # 나간다 — 두 형식을 푸는 곳은 GeoMap.viewport() 하나다
+                # (routes_geo_map.api_geo_designs_list 와 같은 규칙).
+                lat, lng, zoom = m.viewport()
                 result.append({
                     'unique_id': m.unique_id,
                     'name': m.name,
-                    'latitude': center[0] if isinstance(center, list) and len(center) >= 2 else 37.5665,
-                    'longitude': center[1] if isinstance(center, list) and len(center) >= 2 else 126.9780,
-                    'zoom': state.get('zoom', 13)
+                    'latitude': lat if lat is not None else 37.5665,
+                    'longitude': lng if lng is not None else 126.9780,
+                    'zoom': zoom if zoom is not None else 13
                 })
             return result
         except Exception as e:
             abort(500, message=str(e))
 
+    # @manual geo/design-tool#manual-save, geo/api-reference#design-maps
     @ns_geo.doc(responses=default_responses)
     @ns_geo.expect(geo_design_model)
     @login_required
@@ -86,6 +93,7 @@ class GeoDesigns(Resource):
 
 @ns_geo.route('/designs/<string:map_uuid>')
 class GeoDesignDetail(Resource):
+    # @manual geo/api-reference#design-maps
     @ns_geo.doc(responses=default_responses)
     @login_required
     def get(self, map_uuid):
@@ -96,6 +104,7 @@ class GeoDesignDetail(Resource):
             abort(404 if "not found" in error else 500, message=error)
         return result
 
+    # @manual geo/design-tool#deleting-a-map, geo/api-reference#design-maps
     @ns_geo.doc(responses=default_responses)
     @login_required
     def delete(self, map_uuid):
@@ -117,6 +126,7 @@ class GeoDesignDetail(Resource):
 
 @ns_geo.route('/maps/<string:map_uuid>/restore-original')
 class GeoMapRestoreOriginal(Resource):
+    # @manual geo/api-reference#design-maps
     @ns_geo.doc(responses=default_responses)
     @login_required
     def post(self, map_uuid):
@@ -179,6 +189,10 @@ class GeoMapRestoreOriginal(Resource):
                 'restored': restored,
                 'skipped': skipped
             }
+        except HTTPException:
+            # 위의 abort(400)(추적 컬럼 없음)은 요청 쪽 문제다 — 아래
+            # except Exception 이 잡으면 500 으로 바뀌어 원인이 가려진다.
+            raise
         except Exception as e:
             current_app.logger.error(f'Restore original error: {e}')
             abort(500, message=str(e))
@@ -186,6 +200,7 @@ class GeoMapRestoreOriginal(Resource):
 
 @ns_geo.route('/overlays')
 class GeoOverlays(Resource):
+    # @manual geo/api-reference#overlays-shapes-geojson
     @ns_geo.doc(responses=default_responses)
     @login_required
     def get(self):
@@ -200,6 +215,7 @@ class GeoOverlays(Resource):
             abort(500, message=error)
         return result
 
+    # @manual geo/design-tool#manual-save, geo/api-reference#details-post-apigeooverlays
     @ns_geo.doc(responses=default_responses)
     @ns_geo.expect(geo_overlay_model)
     @login_required
@@ -223,6 +239,7 @@ class GeoOverlays(Resource):
 
 @ns_geo.route('/search')
 class GeoSearch(Resource):
+    # @manual geo/api-reference#search
     @ns_geo.doc(responses=default_responses)
     @login_required
     def post(self):
@@ -358,6 +375,7 @@ def _binding_dict(row):
     }
 
 
+# @manual geo/api-reference#details-binding-fields
 def _shape_by_node_id(node_id, map_uuid=None):
     """feature.properties.node_id 로 도형을 찾는다(저장 전 클라이언트 식별자).
 
@@ -383,6 +401,7 @@ def _shape_by_node_id(node_id, map_uuid=None):
     return None
 
 
+# @manual geo/api-reference#details-binding-fields
 def _binding_args(data):
     """페이로드 → 게이트웨이 인자. device_kind 는 서버가 판별한다.
 
@@ -392,7 +411,13 @@ def _binding_args(data):
     """
     from aot.aot_flask.geo import device_binding
 
-    device_id = (data.get('device_id') or '').split('::')[0]
+    # device_id 는 `<uuid>::<channel>` 접미사를 받는다. 명시적 channel_id 가
+    # 없으면 그 접미사가 채널이다 — 떼기만 하고 버리면 채널 3 배정이 채널 0
+    # 으로 저장된다(/device/location 과 같은 규칙).
+    raw_device_id = data.get('device_id') or ''
+    parts = str(raw_device_id).split('::')
+    device_id = parts[0]
+    suffix_channel = parts[1] if len(parts) > 1 and parts[1] != '' else None
     kind = device_binding.resolve_device_kind(device_id)
     if kind is None:
         raise ValueError('존재하지 않는 장치: %s' % (data.get('device_id'),))
@@ -432,7 +457,7 @@ def _binding_args(data):
         'role': role,
         'device_kind': kind,
         'device_id': device_id,
-        'channel_id': data.get('channel_id') or '0',
+        'channel_id': data.get('channel_id') or suffix_channel or '0',
         'measurement_id': data.get('measurement_id') or None,
     }
 
@@ -446,6 +471,7 @@ class GeoBindingResource(Resource):
     엔드포인트에 섞으면 좌표 없는 배정과 배정 없는 좌표를 구분할 수 없다.
     """
 
+    # @manual geo/api-reference#device-binding
     @ns_geo.doc(responses=default_responses)
     @login_required
     def get(self):
@@ -468,6 +494,7 @@ class GeoBindingResource(Resource):
             current_app.logger.error('[GeoAPI] binding get: %s', e)
             return {'ok': False, 'message': str(e)}, 500
 
+    # @manual geo/api-reference#device-binding
     @ns_geo.doc(responses=default_responses)
     @ns_geo.expect(geo_binding_model)
     @login_required
@@ -492,6 +519,7 @@ class GeoBindingResource(Resource):
             current_app.logger.error('[GeoAPI] binding post: %s', e)
             return {'ok': False, 'message': str(e)}, 500
 
+    # @manual geo/api-reference#device-binding
     @ns_geo.doc(responses=default_responses)
     @ns_geo.expect(geo_binding_model)
     @login_required
@@ -515,6 +543,7 @@ class GeoBindingResource(Resource):
 
 @ns_geo.route('/binding/unbound')
 class GeoBindingUnbound(Resource):
+    # @manual geo/api-reference#device-binding
     @ns_geo.doc(responses=default_responses)
     @login_required
     def get(self):
@@ -539,6 +568,7 @@ class GeoBindingUnbound(Resource):
 
 @ns_geo.route('/binding/<string:binding_uid>')
 class GeoBindingDetail(Resource):
+    # @manual geo/api-reference#device-binding
     @ns_geo.doc(responses=default_responses)
     @login_required
     def delete(self, binding_uid):
@@ -565,10 +595,15 @@ class GeoBindingDetail(Resource):
 
 @ns_geo.route('/device/location')
 class GeoDeviceLocation(Resource):
+    # @manual geo/design-tool#device-a, geo/api-reference#device-location-lists-detail
     @ns_geo.doc(responses=default_responses)
     @login_required
     def post(self):
         """Saves device location directly to SQL columns (latitude, longitude)"""
+        # 지도 편집 쓰기 — 형제 쓰기(/overlays·/binding·/designs)와 MCP
+        # set_device_location 과 같은 edit_settings.
+        if not utils_general.user_has_permission('edit_settings'):
+            abort(403)
         try:
             data = request.get_json()
             unique_id_raw = data.get('unique_id')
@@ -625,6 +660,14 @@ class GeoDeviceLocation(Resource):
                  
             if not target_device:
                  return {'ok': False, 'message': 'Device not found'}, 404
+
+            # 그룹 스코프 — 대상이 정해진 뒤, 좌표·마커를 건드리기 전에.
+            # 장치는 그 탭으로, 마커를 만들 지도는 지도 자신으로 판정한다.
+            # (abort 는 아래 except Exception 에 삼켜져 500 이 되므로 응답으로 돌려준다.)
+            from aot.aot_flask.access import scope
+            if not scope.can_operate_device(target_device.unique_id) or \
+                    (map_uuid and not scope.can_operate('geo_map', map_uuid)):
+                return {'ok': False, 'message': scope.deny_message()}, 403
 
             if str(channel_id) in ['0', 'None', '']:
                 if hasattr(target_device, 'latitude'):

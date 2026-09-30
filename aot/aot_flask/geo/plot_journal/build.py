@@ -126,6 +126,7 @@ _BUILD_LOCK = threading.Lock()
 STALE_RUNNING_MINUTES = 30
 
 
+# @manual geo/journal#generating-a-journal
 def estimate_journal_cost(target_type, target_id, start_date, end_date,
                           measurements=None):
     """집계를 **시작하기 전에** 비용을 센다 → dict.
@@ -200,6 +201,7 @@ def reclaim_stale_builds(minutes=None):
     return len(rows)
 
 
+# @manual geo/journal#generating-a-journal
 def _run_journal_build(app, journal_uuid, measurements=None,
                        granularity=None, wait=False):
     """백그라운드에서 일지 하나를 채운다. 선례: `routes_geo._start_overlay_tiling`.
@@ -275,6 +277,7 @@ def _run_journal_build(app, journal_uuid, measurements=None,
                      name='journal_%s' % str(journal_uuid)[:8]).start()
 
 
+# @manual geo/journal#generating-a-journal
 def start_journal_build(journal_uuid, measurements=None, granularity=None,
                         wait=False):
     """요청 스레드에서 부른다 — 앱 객체를 잡아 백그라운드로 넘긴다.

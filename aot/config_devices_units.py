@@ -3,7 +3,12 @@
 #  config_devices_units.py - AoT device unit settings
 #
 
-from flask_babel import lazy_gettext
+from flask_babel import LazyString, lazy_gettext
+
+
+def _lazy_format(fmt, *parts):
+    """Format at render time so the translated parts follow the request locale."""
+    return LazyString(lambda: fmt.format(*[str(p) for p in parts]))
 
 
 # Measurement information
@@ -39,15 +44,15 @@ MEASUREMENTS = {
         'meas': 'acceleration',
         'units': ['g_force', 'm_s_s']},
     'acceleration_x': {
-        'name': "{} (X)".format(lazy_gettext('Acceleration')),
+        'name': _lazy_format("{} (X)", lazy_gettext('Acceleration')),
         'meas': 'acceleration_x',
         'units': ['g_force', 'm_s_s']},
     'acceleration_y': {
-        'name': "{} (Y)".format(lazy_gettext('Acceleration')),
+        'name': _lazy_format("{} (Y)", lazy_gettext('Acceleration')),
         'meas': 'acceleration_y',
         'units': ['g_force', 'm_s_s']},
     'acceleration_z': {
-        'name': "{} (Z)".format(lazy_gettext('Acceleration')),
+        'name': _lazy_format("{} (Z)", lazy_gettext('Acceleration')),
         'meas': 'acceleration_z',
         'units': ['g_force', 'm_s_s']},
     'adc': {
@@ -79,15 +84,15 @@ MEASUREMENTS = {
         'meas': 'co2',
         'units': ['ppm', 'ppb', 'percent']},
     'color_red': {
-        'name': "{} ({})".format(lazy_gettext('Color'), lazy_gettext('Red')),
+        'name': _lazy_format("{} ({})", lazy_gettext('Color'), lazy_gettext('Red')),
         'meas': 'color_red',
         'units': ['eight_bit_color']},
     'color_green': {
-        'name': "{} ({})".format(lazy_gettext('Color'), lazy_gettext('Green')),
+        'name': _lazy_format("{} ({})", lazy_gettext('Color'), lazy_gettext('Green')),
         'meas': 'color_green',
         'units': ['eight_bit_color']},
     'color_blue': {
-        'name': "{} ({})".format(lazy_gettext('Color'), lazy_gettext('Blue')),
+        'name': _lazy_format("{} ({})", lazy_gettext('Color'), lazy_gettext('Blue')),
         'meas': 'color_blue',
         'units': ['eight_bit_color']},
     'color_temperature': {
@@ -95,27 +100,27 @@ MEASUREMENTS = {
         'meas': 'color_temperature',
         'units': ['K']},
     'color_x': {
-        'name': "{} (x)".format(lazy_gettext('Color')),
+        'name': _lazy_format("{} (x)", lazy_gettext('Color')),
         'meas': 'color_x',
         'units': ['cie']},
     'color_y': {
-        'name': "{} (y)".format(lazy_gettext('Color')),
+        'name': _lazy_format("{} (y)", lazy_gettext('Color')),
         'meas': 'color_y',
         'units': ['cie']},
     'color_Y': {
-        'name': "{} (Y)".format(lazy_gettext('Color')),
+        'name': _lazy_format("{} (Y)", lazy_gettext('Color')),
         'meas': 'color_Y',
         'units': ['cie']},
     'cpu_load_1m': {
-        'name': "{} (1 {})".format(lazy_gettext('CPU Load'), lazy_gettext('Minute')),
+        'name': _lazy_format("{} (1 {})", lazy_gettext('CPU Load'), lazy_gettext('Minute')),
         'meas': 'cpu_load',
         'units': ['cpu_load']},
     'cpu_load_5m': {
-        'name': "{} (5 {})".format(lazy_gettext('CPU Load'), lazy_gettext('Minutes')),
+        'name': _lazy_format("{} (5 {})", lazy_gettext('CPU Load'), lazy_gettext('Minutes')),
         'meas': 'cpu_load',
         'units': ['cpu_load']},
     'cpu_load_15m': {
-        'name': "{} (15 {})".format(lazy_gettext('CPU Load'), lazy_gettext('Minutes')),
+        'name': _lazy_format("{} (15 {})", lazy_gettext('CPU Load'), lazy_gettext('Minutes')),
         'meas': 'cpu_load',
         'units': ['cpu_load']},
     'dewpoint': {

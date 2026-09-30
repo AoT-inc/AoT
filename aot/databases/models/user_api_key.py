@@ -44,6 +44,44 @@ SCOPES = (SCOPE_FULL, SCOPE_READONLY)
 TOOL_PROFILE_OPERATIONS = 'operations'
 TOOL_PROFILE_CONFIGURATION = 'configuration'
 TOOL_PROFILES = (TOOL_PROFILE_OPERATIONS, TOOL_PROFILE_CONFIGURATION)
+#: 설정 모듈(2026-09-29) — `tool_registry.TOOL_MODULES` 와 같아야 한다(검사가
+#: 대조한다). 순서가 저장 순서·화면 순서다.
+TOOL_MODULES = ('plots', 'map', 'automation', 'devices', 'dashboard',
+                'library', 'admin')
+#: 묶음 값에서 운영과 모듈을 잇는 기호(tool_registry.TOOL_PROFILE_SEP).
+TOOL_PROFILE_SEP = '+'
+
+
+def tool_profile_columns(value, modules=None):
+    """묶음 값(또는 옛 두 값 + 켤 모듈) → 저장할 두 칸 (tool_profile, tool_modules).
+
+    value 는 'operations' / 'configuration' / 'operations+plots+map'. modules 를
+    따로 주면 그것을 더한다(화면의 체크박스). 모르는 값·모듈은 버려 좁힌다 —
+    scope 와 같은 원칙. 모듈을 전부 켜면 'configuration' 으로 적는다: 앞으로
+    생길 모듈까지 받는 "더하기" 뜻이 전부 체크한 사람의 뜻이기도 하다."""
+    if value == TOOL_PROFILE_CONFIGURATION:
+        return TOOL_PROFILE_CONFIGURATION, None
+    chosen = set(modules or ())
+    if isinstance(value, str):
+        head, _sep, rest = value.partition(TOOL_PROFILE_SEP)
+        if head == TOOL_PROFILE_OPERATIONS and rest:
+            chosen.update(rest.split(TOOL_PROFILE_SEP))
+    chosen &= set(TOOL_MODULES)
+    if chosen == set(TOOL_MODULES):
+        return TOOL_PROFILE_CONFIGURATION, None
+    if not chosen:
+        return TOOL_PROFILE_OPERATIONS, None
+    return TOOL_PROFILE_OPERATIONS, ','.join(
+        m for m in TOOL_MODULES if m in chosen)
+
+
+def tool_profile_spec(value, modules=None):
+    """저장될 두 칸을 묶음 값 하나로('operations+plots' 등) — 감사 기록용.
+    tool_registry.compose_tool_profile 과 같은 정규화다(검사가 대조한다)."""
+    profile, stored = tool_profile_columns(value, modules)
+    if not stored:
+        return profile
+    return TOOL_PROFILE_SEP.join([profile] + stored.split(','))
 
 
 class UserAPIKey(CRUDMixin, db.Model):
@@ -94,6 +132,17 @@ class UserAPIKey(CRUDMixin, db.Model):
     # 채워지기 전에 들어온 연결은 운영으로 본다(mcp_auth.key_tool_profile).
     tool_profile = db.Column(db.String(16), default=None, nullable=True)
 
+    # 운영 키가 더 켠 설정 모듈 — 쉼표 목록('plots,map', TOOL_MODULES 순서).
+    # NULL/빈 값 = 모듈 없음. tool_profile 이 'configuration' 이면 보지 않는다
+    # (언제나 모듈 전부 — 모듈이 늘어도 저절로 포함된다). p6_80.
+    #
+    # 칸을 따로 두고 tool_profile 을 두 값으로 남긴 이유: (1) 기존 키는 변환
+    # 없이 뜻이 같다, (2) 이 칸을 모르는 옛 코드로 되돌려도 'operations' 로만
+    # 읽혀 **좁아질 뿐 넓어지지 않는다**, (3) 배정 전(NULL) 백필 규칙이 그대로다.
+    # JSON 이 아니라 쉼표 목록인 이유: 식별자 몇 개의 평평한 집합이라 SQL 에서
+    # 그대로 읽히고(LIKE 로 찾을 수 있다) DB 마다 JSON 칸 차이를 탈 일이 없다.
+    tool_modules = db.Column(db.String(128), default=None, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # 폐기 시각. 행을 지우지 않고 여기에 시각을 적는다 — 지우면 "이 키는 언제
@@ -119,6 +168,25 @@ class UserAPIKey(CRUDMixin, db.Model):
         """화면에 보일 묶음 — 배정 전(NULL)이면 연결이 실제로 받는 운영."""
         return (self.tool_profile if self.tool_profile in TOOL_PROFILES
                 else TOOL_PROFILE_OPERATIONS)
+
+    @property
+    def effective_tool_modules(self):
+        """이 키에 켜진 설정 모듈(TOOL_MODULES 순서의 tuple) — 화면 체크박스용.
+
+        연결이 실제로 받는 것과 같은 규칙이다(mcp_auth.key_tool_profile):
+        'configuration' 은 전부, 운영은 모듈 칸의 아는 모듈, 배정 전은 없음."""
+        profile = self.effective_tool_profile
+        if profile == TOOL_PROFILE_CONFIGURATION:
+            return TOOL_MODULES
+        stored = {m.strip() for m in (self.tool_modules or '').split(',')}
+        return tuple(m for m in TOOL_MODULES if m in stored)
+
+    @property
+    def tool_profile_spec(self):
+        """감사 기록·화면용 묶음 값('operations+plots' 등). 모듈을 전부 켠
+        운영 키는 'configuration' 으로 읽는다(tool_registry 와 같은 정규화)."""
+        return tool_profile_spec(self.effective_tool_profile,
+                                 self.effective_tool_modules)
 
     @classmethod
     def find_active(cls, raw_key):

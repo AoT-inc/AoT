@@ -67,8 +67,12 @@ SERVICE_ACCOUNT_PROVIDER = 'system'
 # 기준 — 웹 구획 화면과 같은 `edit_plots`(설정 편집이 함의). None 이면 옛
 # 스냅샷이라 can_write 로 읽는다(role_can_edit_plots).
 #
-# tool_profile (2026-09-24): 이 연결에 보여 줄 도구 묶음 — 'operations' 또는
-# 'configuration'(tool_registry.TOOL_PROFILES). **None 은 "제한 없음"** 이다 —
+# tool_profile (2026-09-24): 이 연결에 보여 줄 도구 묶음 — 'operations',
+# 'configuration'(tool_registry.TOOL_PROFILES), 또는 운영 + 고른 설정 모듈
+# 'operations+plots+map'(2026-09-29, tool_registry.compose_tool_profile). 모듈
+# 집합을 칸을 따로 두지 않고 이 값 하나에 싣는다 — 전송·목록·실행·안내문이 이미
+# 이 값 하나를 넘기므로, 칸을 늘리면 어느 자리가 빠뜨려 갈라진다.
+# **None 은 "제한 없음"** 이다 —
 # 인앱 AI 가 _role_for 로 만든 스냅샷이 그렇다. 외부 키로 들어온 연결은
 # authenticate_http/authenticate_stdio 가 키에서 읽어 **반드시 채운다**(비어
 # 있으면 운영). 내부 AI 서비스 계정의 키로 들어온 연결은
@@ -98,6 +102,7 @@ def role_row_allows(row, permission) -> bool:
     return bool(getattr(row, permission, False))
 
 
+# @manual ai/overview#tool-profiles
 def tool_profiles_enabled() -> bool:
     """키별 도구 묶음을 적용할지. 기본 켬 — `AOT_MCP_TOOL_PROFILES=0` 이면 모든
     키가 예전처럼 전체 표면을 본다(되돌리기용). 매 호출 읽는다. 환경변수인
@@ -105,6 +110,7 @@ def tool_profiles_enabled() -> bool:
     return os.environ.get('AOT_MCP_TOOL_PROFILES', '1') not in ('0', 'false', 'False')
 
 
+# @manual ai/overview#tool-profiles
 def default_tool_profile() -> str:
     """키 없이 들어온 연결(인증을 끈 서버)의 묶음. 기본 운영."""
     from aot.tools.tool_registry import normalize_tool_profile
@@ -112,11 +118,13 @@ def default_tool_profile() -> str:
         os.environ.get('AOT_MCP_DEFAULT_TOOL_PROFILE', 'operations'))
 
 
+# @manual ai/overview#tool-profiles
 def is_service_account(user) -> bool:
     return bool(user is not None and
                 getattr(user, 'auth_provider', None) == SERVICE_ACCOUNT_PROVIDER)
 
 
+# @manual ai/overview#tool-profiles
 def key_tool_profile(user, key_row) -> str:
     """이 키로 들어온 연결의 묶음.
 
@@ -125,20 +133,23 @@ def key_tool_profile(user, key_row) -> str:
       프로세스에 붙어 set_output_state 를 부른다 — 설정 묶음으로 두면 외부
       키에서 뺀(retired) 그 도구가 거절돼 인앱 제어가 끊긴다. 키 행의 값은
       보지 않는다(화면도 이 키의 묶음 선택을 숨긴다).
-    - 키 행의 값이 있으면 그 값(모르는 값은 운영으로 좁힌다).
+    - 키 행의 값이 있으면 그 값 — 'configuration' 은 모듈 전부, 'operations'
+      는 모듈 칸(tool_modules)에 적힌 모듈을 더한다(모르는 값·모듈은 버려
+      좁힌다, tool_registry.profile_from_storage).
     - 행이 없는 레거시 키, 아직 배정 전(NULL)인 키는 운영.
     """
     from aot.tools.tool_registry import (TOOL_PROFILE_OPERATIONS,
                                          TOOL_PROFILE_UNRESTRICTED,
-                                         normalize_tool_profile)
+                                         profile_from_storage)
     if is_service_account(user):
         return TOOL_PROFILE_UNRESTRICTED
     value = getattr(key_row, 'tool_profile', None) if key_row is not None else None
     if not value:
         return TOOL_PROFILE_OPERATIONS
-    return normalize_tool_profile(value)
+    return profile_from_storage(value, getattr(key_row, 'tool_modules', None))
 
 
+# @manual ai/overview#tool-profiles
 def tool_profile_of(role):
     """외부 전송이 목록·실행·안내문에 넘길 묶음. None = 제한 없음.
 
@@ -385,26 +396,37 @@ def authenticate_http(headers, declared_agent_id=None):
         쓰기 도구를 쓸 수 있는지 판단할 때 role_can_write(role) 로 넘기면 된다 —
         인증을 껐거나 실패한 경우 role=None(= 안전하게 조회 전용 취급).
     """
+    from aot.tools import mcp_central
+
     raw = headers.get('X-API-KEY')
+    bearer = None
     if not raw:
         # Authorization: Basic <base64> 도 같은 규약으로 받아준다(app.py 와 동일).
         auth = headers.get('Authorization') or ''
         if auth.startswith('Basic '):
             raw = auth[6:]
         elif auth.startswith('Bearer '):
-            raw = auth[7:]
+            token = auth[7:].strip()
+            # 점 두 개면 인가 서버가 낸 접근 토큰(JWT), 아니면 예전처럼 API 키다.
+            if mcp_central.looks_like_jwt(token):
+                bearer = token
+            else:
+                raw = token
 
     if not require_auth():
         # 인증을 끈 상태 — 신원은 자기 신고이므로 감사 로그에서 구분되게 표시한다.
         # role 은 알 수 없으니 None(= role_can_write 는 False, 조회 전용) 취급한다.
         return True, f"{UNAUTH_PREFIX}{declared_agent_id or 'anonymous'}", None, None
 
+    if bearer is not None:
+        return _authenticate_central(bearer, declared_agent_id)
+
     if not raw:
         return False, '', None, {
             "error": "unauthorized",
             "message": ("An API key is required. Send the user's API key "
                         "base64-encoded in the 'X-API-KEY' header. "
-                        "Generate one under Settings > Users."),
+                        "Generate one under Manage > System Management > Users."),
         }
 
     user, key_row = resolve_key(raw)
@@ -422,6 +444,42 @@ def authenticate_http(headers, declared_agent_id=None):
         agent_id = f"user:{user.name}/{label}"
     return True, agent_id, _with_key_profile(
         _role_for(user, key_row), user, key_row), None
+
+
+#: 토큰은 맞지만 이 AoT 사용자와 이어지지 않은 연결 — HTTP 오류가 아니라 도구 오류로 안내한다
+#: (401/403 을 주면 AI 클라이언트가 재인증을 되풀이하거나 커넥터를 실패로 본다).
+ERROR_NOT_LINKED = 'account_not_linked'
+
+
+def _authenticate_central(token, declared_agent_id=None):
+    """인가 서버가 낸 접근 토큰(JWT)으로 인증한다 — authenticate_http 와 같은 반환 규약.
+
+    실제 권한은 연결된 사용자의 역할을 토큰 범위로 좁힌 것이다(mcp_central.restrict_role)."""
+    from aot.tools import mcp_central
+
+    cfg = mcp_central.config()
+    if not mcp_central.is_active(cfg):
+        return False, '', None, {
+            "error": "unauthorized",
+            "message": ("This AoT does not accept authorization-server tokens. Use an API key in the "
+                        "'X-API-KEY' header, or turn on central authentication under Settings > General > "
+                        "AI Service > MCP Authentication Settings."),
+        }
+    result = mcp_central.authenticate(cfg, token)
+    if result.kind == mcp_central.INVALID:
+        return False, '', None, {"error": "invalid_token",
+                                 "message": "The access token is not valid for this server."}
+    if result.kind != mcp_central.OK:
+        message = mcp_central.link_help(cfg) if result.kind == mcp_central.NOT_LINKED else (
+            "The access token does not carry the '%s' scope. Reconnect and allow it." % mcp_central.SCOPE_READ)
+        return False, 'central:unlinked', None, {"error": ERROR_NOT_LINKED, "message": message}
+
+    user = result.user
+    agent_id = f"user:{user.name}"
+    label = _clean_label(result.claims.client_name or declared_agent_id)
+    if label:
+        agent_id = f"user:{user.name}/{label}"
+    return True, agent_id, mcp_central.restrict_role(_role_for(user), result.claims.scopes), None
 
 
 def authenticate_stdio(declared_agent_id=None):
@@ -470,6 +528,7 @@ def agent_id_belongs_to(agent_id, user_name) -> bool:
     return agent_id == head or agent_id.startswith(head + '/')
 
 
+# @manual ai/overview#tool-profiles
 def backfill_key_tool_profiles(now=None):
     """묶음이 비어 있는(NULL) 키에 한 번 값을 채운다 — 기동 때 부른다.
 
@@ -484,6 +543,10 @@ def backfill_key_tool_profiles(now=None):
 
     서비스 계정 키에 적는 값은 표시용일 뿐이다 — 연결은 키 행을 보지 않고
     제한 없음으로 들어온다(key_tool_profile).
+
+    설정 모듈(2026-09-29)은 여기서 고르지 않는다 — 예전 키에는 두 값뿐이었고,
+    'configuration' 은 지금도 모듈 전부라 그 키가 받던 목록 그대로다. 모듈로
+    좁히는 것은 사람이 화면에서 한다.
     """
     from datetime import datetime, timedelta
 

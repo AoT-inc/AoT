@@ -198,6 +198,11 @@ class ConditionalController(AbstractController, threading.Thread):
         # a prior cycle can never leak into this one's conditional_fired
         # decision, including on the early-return/exception paths below.
         self.conditional_run.action_fired = False
+        # Refractory Period 판정도 주기마다 다시 내린다 — 이번 주기 안의
+        # run_action()/run_all_actions() 호출들끼리는 서로 억제하지 않되,
+        # 다음 주기부터는 다시 불응기를 적용하기 위함
+        # (aot/controllers/base_conditional.py 의 _refractory_gate() 참고).
+        self.conditional_run._refractory_gate_result = None
 
         cond = db_retrieve_table_daemon(
             Conditional, unique_id=self.unique_id, entry='first')
@@ -210,7 +215,7 @@ class ConditionalController(AbstractController, threading.Thread):
 
         timestamp = datetime.datetime.fromtimestamp(
             self.time_conditional).strftime('%Y-%m-%d %H:%M:%S')
-        message = f"{timestamp}\n[Conditional {self.unique_id}]\n[Name: {cond.name}]"
+        message = f"{timestamp}\n[Name: {cond.name}]"
 
         if self.message_include_code:
             message += '\n[Run Python Code Code Executed]:' \

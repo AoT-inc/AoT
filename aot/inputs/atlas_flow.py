@@ -5,6 +5,7 @@ from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
 from aot.utils.atlas_calibration import setup_atlas_device
+from aot.utils.lazy_text import lazy_format
 
 
 def constraints_pass_rate(mod_input, value):
@@ -201,7 +202,7 @@ INPUT_INFORMATION = {
         {
             'id': 'clear_total_volume',
             'type': 'button',
-            'name': "{}: {}".format(lazy_gettext('Clear Total'), lazy_gettext('Volume'))
+            'name': lazy_format("{}: {}", lazy_gettext('Clear Total'), lazy_gettext('Volume'))
         },
         {
             'type': 'message',

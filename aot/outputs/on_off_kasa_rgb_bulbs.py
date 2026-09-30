@@ -19,6 +19,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -55,7 +56,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'output_kasa_rgb_bulbs',
-    'output_name': "{}: Kasa WiFi RGB Light Bulb".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Kasa WiFi RGB Light Bulb", lazy_gettext('On/Off')),
     'output_manufacturer': 'TP-Link',
     'input_library': 'python-kasa',
     'measurements_dict': measurements_dict,
@@ -87,14 +88,14 @@ OUTPUT_INFORMATION = {
             'id': 'brightness_transition_ms',
             'type': 'integer',
             'default_value': '0',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'brightness',
             'type': 'integer',
             'default_value': '',
-            'name': "{} ({})".format(lazy_gettext('Brightness'), lazy_gettext('Percent')),
+            'name': lazy_format("{} ({})", lazy_gettext('Brightness'), lazy_gettext('Percent')),
             'phrase': lazy_gettext('The brightness to set, in percent (0 - 100)')
         },
         {
@@ -110,14 +111,14 @@ OUTPUT_INFORMATION = {
             'id': 'hue_transition_ms',
             'type': 'integer',
             'default_value': '0',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'hue',
             'type': 'integer',
             'default_value': '',
-            'name': "{} ({})".format(lazy_gettext('Hue'), lazy_gettext('Degree')),
+            'name': lazy_format("{} ({})", lazy_gettext('Hue'), lazy_gettext('Degree')),
             'phrase': lazy_gettext('The hue to set, in degrees (0 - 360)')
         },
         {
@@ -133,14 +134,14 @@ OUTPUT_INFORMATION = {
             'id': 'saturation_transition_ms',
             'type': 'integer',
             'default_value': '0',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'saturation',
             'type': 'integer',
             'default_value': '',
-            'name': "{} ({})".format(lazy_gettext('Saturation'), lazy_gettext('Percent')),
+            'name': lazy_format("{} ({})", lazy_gettext('Saturation'), lazy_gettext('Percent')),
             'phrase': lazy_gettext('The saturation to set, in percent (0 - 100)')
         },
         {
@@ -156,14 +157,14 @@ OUTPUT_INFORMATION = {
             'id': 'color_temperature_transition_ms',
             'type': 'integer',
             'default_value': '0',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The hsv transition period')
         },
         {
             'id': 'color_temperature',
             'type': 'integer',
             'default_value': '',
-            'name': "{} ({})".format(lazy_gettext('Color Temperature'), lazy_gettext('Kelvin')),
+            'name': lazy_format("{} ({})", lazy_gettext('Color Temperature'), lazy_gettext('Kelvin')),
             'phrase': lazy_gettext('The color temperature to set, in degrees Kelvin')
         },
         {
@@ -179,7 +180,7 @@ OUTPUT_INFORMATION = {
             'id': 'hsv_transition_ms',
             'type': 'integer',
             'default_value': '0',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The hsv transition period')
         },
         {
@@ -202,7 +203,7 @@ OUTPUT_INFORMATION = {
             'id': 'on_transition_ms',
             'type': 'integer',
             'default_value': '1000',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The transition period')
         },
         {
@@ -218,7 +219,7 @@ OUTPUT_INFORMATION = {
             'id': 'off_transition_ms',
             'type': 'integer',
             'default_value': '1000',
-            'name': "Transition ({})".format(lazy_gettext('Milliseconds')),
+            'name': lazy_format("Transition ({})", lazy_gettext('Milliseconds')),
             'phrase': lazy_gettext('The transition period')
         },
         {
@@ -303,7 +304,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

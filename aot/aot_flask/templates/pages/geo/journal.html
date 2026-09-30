@@ -109,6 +109,7 @@
           목록 상자에 띄우고 그 폭은 공용 규칙(`width: max-content`)이 정한다.
       옵션은 JS 가 `/api/geo/plots` 로 채운다. 검색이 훑는 필드는
       `data-tokens` 로 넘긴다 — /plots 의 `_matches()` 와 같은 필드다. -#}
+  {# @manual geo/journal#generating-a-journal #}
   <div class="aot-modal-container" id="journal-form">
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label" for="journal-plot-select">{{ _('Plot') }}</label>
@@ -134,6 +135,8 @@
       </div>
     </div>
 
+    {# @manual geo/journal#granularity #}
+  {# @manual-end #}
     {#- ── 기록 단위 ────────────────────────────────────────────────────────
         굵게 고르면 저장되는 문서와 화면이 그만큼 작아진다. 다만 **센서를 읽는
         양은 줄지 않는다** — 어느 단위든 시간별로 읽어 접기 때문이다. 그래서
@@ -156,6 +159,8 @@
     <p class="aot-modal-body-text text-muted small" id="journal-gran-note">
       {{ _('A coarser unit makes a smaller document. Daily detail cannot be recovered later, so pick it only if you do not need it.') }}
     </p>
+  {# @manual geo/journal#generating-a-journal #}
+    {# @manual-end #}
   </div>
 
   {#- ── 2차: 대지·구역 자체의 일지 ────────────────────────────────────────
@@ -225,6 +230,7 @@
     <button type="button" id="journal-generate"
             class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Generate journal') }}</button>
   </div>
+  {# @manual-end #}
 
   <h2 class="aot-modal-section-title">{{ _('Saved journals') }}</h2>
 

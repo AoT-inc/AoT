@@ -188,7 +188,8 @@ class TestRecoveryIsProportional:
 
         # … 더워져 냉방이 조금 필요해진다. 편차 +1.5°C, 허용오차 1.0.
         # e_norm = 1.5/6 = 0.25, 데드존 0.0833 → e_eff = 0.1667 → P ≈ 16.7%
-        st, _, apertures = _run(st, T_int=26.5, T_target=25.0, n=6, start=100)
+        # 반대 방향은 확정(DRIVE_FLIP_MIN_*)을 거친 뒤 따른다 — 그동안은 제자리(0).
+        st, _, apertures = _run(st, T_int=26.5, T_target=25.0, n=16, start=100)
         assert apertures[-1] == pytest.approx(16.7, abs=1.0)
         assert max(apertures) < 30.0, '유령 계단이 남아 있다: %s' % apertures
 

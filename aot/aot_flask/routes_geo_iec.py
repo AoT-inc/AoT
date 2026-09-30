@@ -7,6 +7,7 @@ functions are registered on the shared blueprint object without circular
 imports.  All route paths and function signatures are unchanged.
 """
 import logging
+import re
 
 from flask import request, jsonify, current_app
 from flask_login import login_required, current_user
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 IEC_STALE_SEC = 300
 
 
+# @manual geo/facility-widget#0-status-strip
 def _iec_stale_threshold(fn):
     """function 의 사이클 주기(update_period)에 비례한 stale 임계값.
 
@@ -41,6 +43,7 @@ def _iec_stale_threshold(fn):
 # ── IEC Widget APIs ────────────────────────────────────────────────────────────
 
 
+# @manual geo/facility-widget#0-status-strip, geo/facility-widget#data-refresh, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/status', methods=['GET'])
 @login_required
 def api_facility_iec_status(facility_uuid):
@@ -222,6 +225,7 @@ def api_facility_iec_status(facility_uuid):
     })
 
 
+# @manual geo/facility-widget#b-environment
 def _effective_targets(facility_uuid):
     """이 시설의 제어가 **지금 따르는** 목표 → `{'vpd':…, 'co2':…, 'source':…}`.
 
@@ -245,6 +249,7 @@ def _effective_targets(facility_uuid):
         return {'vpd': None, 'co2': None, 'source': 'error'}
 
 
+# @manual geo/facility-widget#b-environment, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/setpoints', methods=['GET', 'POST'])
 @login_required
 def api_facility_setpoints(facility_uuid):
@@ -436,6 +441,7 @@ def api_facility_setpoints(facility_uuid):
     })
 
 
+# @manual geo/facility-widget#d-actuator-control, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/control', methods=['POST'])
 @login_required
 def api_facility_control(facility_uuid):
@@ -705,10 +711,21 @@ def api_facility_control(facility_uuid):
     return jsonify(resp)
 
 
+# @manual geo/facility-widget#d-actuator-control, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/estop', methods=['POST'])
 @login_required
 def api_facility_estop(facility_uuid):
-    """IEC § D — emergency stop: set all actuators to safe state for the preset."""
+    """IEC § D — emergency stop (the facility widget's ALL STOP).
+
+    **환경 제어도 멈춘다.** 이 시설에 붙어 켜져 있는 env_coordinator 가 있으면
+    함수의 'Emergency Stop' 명령(`cmd_emergency_stop` — 안전값 전송 + 다음
+    사이클 60초 보류)을 **그대로** 부른다. 출력만 안전 상태로 보내면 코디네이터가
+    다음 주기에 장치를 다시 움직였다(2026-09-27). 정지 로직은 여기서 새로 만들지
+    않는다 — 함수 쪽 진입점이 정본이다.
+
+    붙은 코디네이터가 없거나 꺼져 있으면(또는 하나라도 긴급 정지를 확인해 주지
+    않으면) 아래의 출력 안전 상태 경로로 직접 보낸다.
+    """
     import time as _time
     from aot.databases.models import GeoFacility, Output
     from aot.aot_client import DaemonControl, daemon_call_failed
@@ -724,6 +741,49 @@ def api_facility_estop(facility_uuid):
     if body.get('confirm') != 'STOP':
         return jsonify({'ok': False, 'message': 'confirm field must be "STOP"'}), 400
 
+    daemon = DaemonControl()
+    applied = []
+    failed  = []
+
+    # ── 1) 이 시설을 제어하는 env_coordinator 전부 — 함수의 긴급 정지 진입점 ──
+    functions = []
+    fn_failed = 0
+    for fn in _facility_env_coordinators(facility_uuid, activated_only=True):
+        entry = {'unique_id': fn.unique_id, 'name': fn.name, 'stopped': False}
+        try:
+            ret = daemon.module_function(
+                'Function', fn.unique_id, 'cmd_emergency_stop', {},
+                thread=False, return_from_function=True)
+        except Exception as exc:  # module_function 은 보통 삼키지만 방어
+            ret = (1, str(exc))
+        counts = _parse_coordinator_estop_reply(ret)
+        if counts is None:
+            # 데몬에서 안 돌고 있거나(비활성 응답도 status 0 이다) 호출 실패.
+            entry['error'] = str(ret[1] if isinstance(ret, tuple) and len(ret) == 2 else ret)
+            fn_failed += 1
+            logger.error("E-stop could not stop env_coordinator %s: %s",
+                         fn.unique_id, entry['error'])
+        else:
+            sent, n_failed = counts
+            entry.update({'stopped': True, 'actuators': sent, 'failed': n_failed})
+        functions.append(entry)
+
+    stopped = [f for f in functions if f['stopped']]
+    if stopped and not fn_failed:
+        n_applied = sum(f['actuators'] - f['failed'] for f in stopped)
+        n_failed  = sum(f['failed'] for f in stopped)
+        return jsonify({
+            'ok':        n_failed == 0,
+            'path':      'coordinator',
+            'applied':   n_applied,
+            'failed':    n_failed,
+            'functions': functions,
+            'details':   [],
+            'errors':    [],
+            'ts':        _time.time(),
+        })
+
+    # ── 2) 코디네이터가 없거나 꺼져 있음(또는 일부가 확인 못 함) — 출력 직접 ──
     # Preset-based safe state: heater off, vents closed, curtains open, fans off
     SAFE_ACTIONS = {
         'heater':           'off',
@@ -740,14 +800,11 @@ def api_facility_estop(facility_uuid):
         'lighting':         'off',
     }
 
-    daemon = DaemonControl()
     # ⚠ 원장 기준이어야 한다. 레거시 목록을 그대로 쓰면 원장이 **다른 시설로
     #   넘긴** 장치까지 이 시설의 안전 상태 명령을 받는다 — 한 시설을 멈추려다
     #   남의 시설 창을 닫는다(2026-09-25, 측창 좌/우 사례).
     from aot.aot_flask.geo.device_binding import resolved_refs
     actuators_raw = resolved_refs(facility)[1] or {}
-    applied = []
-    failed  = []
 
     def _iter_actuators(raw):
         if isinstance(raw, list):
@@ -785,15 +842,59 @@ def api_facility_estop(facility_uuid):
             logger.exception("E-stop raised for %s (%s)", uuid, kind)
             failed.append({'kind': kind, 'uuid': uuid, 'error': str(e)})
 
+    n_applied = len(applied) + sum(f['actuators'] - f['failed'] for f in stopped)
+    n_failed  = len(failed) + sum(f['failed'] for f in stopped) + fn_failed
     return jsonify({
-        # An e-stop that could not reach every actuator must not report ok.
-        'ok':      not failed,
-        'applied': len(applied),
-        'failed':  len(failed),
-        'details': applied,
-        'errors':  failed,
-        'ts':      _time.time(),
+        # An e-stop that could not reach every actuator — or could not hold a
+        # coordinator that controls this facility — must not report ok.
+        'ok':        n_failed == 0,
+        'path':      'coordinator+outputs' if stopped else 'outputs',
+        'applied':   n_applied,
+        'failed':    n_failed,
+        'functions': functions,
+        'details':   applied,
+        'errors':    failed,
+        'ts':        _time.time(),
     })
+
+
+def _facility_env_coordinators(facility_uuid, activated_only=False):
+    """이 시설에 붙은 env_coordinator 전부(연결 판정은 `_function_belongs_to_facility`)."""
+    from aot.databases.models.controller import CustomController
+    try:
+        funcs = CustomController.query.filter_by(device='env_coordinator').all()
+    except Exception as exc:
+        logger.warning('[env_coordinator lookup] %s', exc)
+        return []
+    return [f for f in funcs
+            if _function_belongs_to_facility(f, facility_uuid)
+            and (f.is_activated or not activated_only)]
+
+
+_COORD_ESTOP_REPLY = re.compile(
+    r'^Emergency stop: .* for (\d+) actuator\(s\) \((\d+) failed\)')
+
+
+def _parse_coordinator_estop_reply(ret):
+    """`module_function(..., 'cmd_emergency_stop', return_from_function=True)` 결과
+    → (보낸 액추에이터 수, 실패 수) | None(긴급 정지가 돌았다고 볼 수 없음).
+
+    ⚠ 데몬은 **비활성 함수 호출에도 status 0** 을 돌려준다(메시지만 다르다).
+    그래서 status 가 아니라 `cmd_emergency_stop` 의 반환 문장으로 확인한다 —
+    그 문장 형식은 테스트가 실제 메서드로 지킨다.
+    """
+    if not (isinstance(ret, tuple) and len(ret) == 2):
+        return None
+    status, reply = ret
+    try:
+        if int(status) != 0:
+            return None
+    except (TypeError, ValueError):
+        return None
+    m = _COORD_ESTOP_REPLY.match(reply) if isinstance(reply, str) else None
+    if not m:
+        return None
+    return int(m.group(1)), int(m.group(2))
 
 
 # ── 맵 팝업 [현황] 탭 APIs ──────────────────────────────────────────────────────
@@ -868,6 +969,7 @@ def _find_facility_env_coordinator(facility_uuid):
     return matched[0]
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/env_summary', methods=['GET'])
 @login_required
 def api_facility_env_summary(facility_uuid):
@@ -924,6 +1026,7 @@ def api_facility_env_summary(facility_uuid):
     })
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/actuator_history', methods=['GET'])
 @login_required
 def api_facility_actuator_history(facility_uuid):
@@ -1047,6 +1150,7 @@ def api_facility_actuator_history(facility_uuid):
     })
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/function_state', methods=['POST'])
 @login_required
 def api_facility_function_state(facility_uuid):
@@ -1181,6 +1285,7 @@ def _facility_dims(facility):
     }
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/info', methods=['GET', 'POST'])
 @login_required
 def api_facility_info(facility_uuid):
@@ -1247,6 +1352,7 @@ def _unwrap_json(resp):
         return None
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/env_week', methods=['GET'])
 @login_required
 def api_facility_env_week(facility_uuid):
@@ -1322,6 +1428,7 @@ def api_facility_env_week(facility_uuid):
                                'end': end.isoformat()}})
 
 
+# @manual geo/map-widget#3d-facility-popup, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/overview', methods=['GET'])
 @login_required
 def api_facility_overview(facility_uuid):
@@ -1364,6 +1471,7 @@ def api_facility_overview(facility_uuid):
     return jsonify(payload)
 
 
+# @manual geo/map-widget#3d-facility-popup
 def _build_facility_overview(facility_uuid):
     """overview 응답 본체(캐시에 담기는 부분). 시설을 못 찾으면 None.
 
@@ -1468,6 +1576,7 @@ def _build_facility_overview(facility_uuid):
     }
 
 
+# @manual geo/map-widget#representative-measurement, geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/rep_key', methods=['POST'])
 @login_required
 def api_facility_rep_key(facility_uuid):
@@ -1512,6 +1621,7 @@ def api_facility_rep_key(facility_uuid):
     return jsonify({'ok': True, 'rep_key': key})
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/hidden_rows', methods=['POST'])
 @login_required
 def api_facility_hidden_rows(facility_uuid):
@@ -1544,6 +1654,7 @@ def api_facility_hidden_rows(facility_uuid):
     return jsonify({'ok': True, 'hidden_rows': rows})
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/facility/<facility_uuid>/photo', methods=['POST'])
 @login_required
 def api_facility_photo(facility_uuid):
@@ -1599,6 +1710,7 @@ def api_facility_photo(facility_uuid):
     })
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/facility_photo/<path:filename>', methods=['GET'])
 @login_required
 def serve_facility_photo(filename):
@@ -1614,6 +1726,7 @@ def serve_facility_photo(filename):
     return send_file(file_path)
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/coordinator/<function_uuid>/overview', methods=['GET'])
 @login_required
 def api_coordinator_overview(function_uuid):
@@ -1740,6 +1853,7 @@ def api_coordinator_overview(function_uuid):
     })
 
 
+# @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
 @blueprint.route('/api/aot/coordinator/<function_uuid>/actuators', methods=['GET'])
 @login_required
 def api_coordinator_actuators(function_uuid):

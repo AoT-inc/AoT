@@ -26,7 +26,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 **이름으로, 여러 대상 한 번에.** 조회 도구는 id 가 필요하던 자리에 이름을 받습니다 — 장치(`get_output_state`·`get_device_measurements`·`get_sensor_detail`·`get_sensor_reading`), 구역·부지(`get_zone_sensor_summary`·`list_plots`), 재배 중인 구획(`get_plot`: 이름·작물·품종). 이름이 여럿에 걸리면 고르지 않고 후보를 돌려줍니다. `device_ids`·`loc_ids`·`plot_ids`·`target_names`·`zone_ids` 는 한 번에 최대 10개 대상을 받습니다. 쓰기 도구는 권한·승인 단계보다 먼저 빠진 인자와 오타로 보이는 인자를 알려 주고(`reason_code: invalid_arguments`, 맞는 이름 목록 포함), 그 밖의 모르는 인자는 무시하고 `_ignored_arguments` 로 알려 줍니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-arguments).
 
-**도구 묶음.** MCP 에서는 API 키마다 자기 묶음의 도구만 목록에 나옵니다: **운영**(기본 — 조회·제어·일정·기록·구획 단계 사건) 또는 **운영 + 설정**(장치 정의, 자동화 작성, 구획·프로그램 설정, 지도 배치, 화면 구성, AI 설정, 보관 문서·라이브러리 관리를 더함). 서랍도 같은 묶음을 따릅니다. 묶음 밖 도구를 부르면 `reason_code: tool_profile` 로 거절되고, 사용자 편집 권한이 있는 관리자가 `설정 > 사용자`에서 바꿉니다. `set_output_state`·`list_available_devices` 는 API 키의 목록에 나오지 않습니다(`operate_device`·`get_device_list`·`search_devices` 를 쓰세요). 앱 안의 AI 비서와 내장 AI 자신의 서비스 계정 키는 묶음의 제한을 받지 않습니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-profiles).
+**도구 묶음.** MCP 에서는 API 키마다 자기 묶음의 도구만 목록에 나옵니다: **운영**(항상 켜짐 — 조회·제어·일정·기록·구획 단계 사건)에 그 키에 체크한 **설정 모듈**을 더합니다: `plots`(구획·작기 프로그램 설계), `map`(주소·거리·배치), `automation`(자동화 작성), `devices`(장치 정의), `dashboard`(화면), `library`(보관 문서·공지 수정·라이브러리 소스), `admin`(시스템 상태·AI 설정). 모듈을 전부 체크하면 예전 **운영 + 설정** 묶음과 같습니다. 서랍도 같은 묶음을 따릅니다. 꺼진 모듈의 도구를 부르면 `reason_code: tool_profile`(와 `tool_module: <모듈>`)로 거절되고, 사용자 편집 권한이 있는 관리자가 `설정 > 사용자`에서 그 모듈을 켭니다. `set_output_state`·`list_available_devices` 는 API 키의 목록에 나오지 않습니다(`operate_device`·`get_device_list`·`search_devices` 를 쓰세요). 앱 안의 AI 비서와 내장 AI 자신의 서비스 계정 키는 묶음의 제한을 받지 않습니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-profiles).
 
 ### 1.1 상시 노출 도구 (27)
 

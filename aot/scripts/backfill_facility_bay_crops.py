@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# @manual geo/design-tool#migrating-crops-from-facility-bays
 """시설 bay 의 작물(`bays[].crop`)을 식생 구획(GeoPlot)으로 옮긴다.
 
 설계 정본: docs/design/geo-vegetation-plot.md (Phase 2)

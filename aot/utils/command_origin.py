@@ -51,11 +51,14 @@ logger = logging.getLogger(__name__)
 # 결과가 가장 큰 동작인데, 예전에는 출처를 안 심어 'unknown' 으로 남거나
 # 데몬 판정에 걸려 'automation' 으로 빠져 아예 안 남았다. 빈도로 보면 PID
 # (30초마다)와 달리 시간당 몇 건이라 관계형 테이블을 잠글 이유가 없다.
+# `env_coordinator` 는 배분이 변화가 있을 때만 나가고(불감대) 물리 결과가 크다 —
+# 사람이 낸 명령과 자동 배분을 감사로그에서 가를 수 있어야 한다.
 # `timer` 가 여기 있는 이유는 `sequence` 와 같다: 타이머 위젯은 밸브를 열고
 # 닫는다 — 물리적 결과가 크고 빈도는 시간당 몇 건이라 관계형 테이블을 잠글
 # 이유가 없다. 이게 없으면 타이머 명령은 배경 스레드라 `unknown` 으로 남아
 # 진짜 우회 경로와 구분되지 않는다(2026-09-14 현장 감사로그가 그랬다).
-AUDITED_TYPES = frozenset({'user', 'api', 'ai', 'unknown', 'lifecycle', 'sequence', 'timer'})
+AUDITED_TYPES = frozenset({'user', 'api', 'ai', 'unknown', 'lifecycle', 'sequence', 'timer',
+                           'env_coordinator'})
 
 TYPE_UNKNOWN = 'unknown'
 TYPE_AUTOMATION = 'automation'
@@ -64,6 +67,7 @@ TYPE_LIFECYCLE = 'lifecycle'
 TYPE_AI = 'ai'
 TYPE_SEQUENCE = 'sequence'
 TYPE_TIMER = 'timer'
+TYPE_ENV_COORDINATOR = 'env_coordinator'
 
 ROLE_DAEMON = 'daemon'
 ROLE_WEB = 'web'

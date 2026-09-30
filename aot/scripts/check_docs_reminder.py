@@ -29,6 +29,7 @@
 우회(메시지 자체를 끄고 싶을 때): AOT_SKIP_DOCS_REMINDER=1 git commit ...
 """
 import os
+import re
 import subprocess
 import sys
 
@@ -119,6 +120,11 @@ def _staged_paths():
     return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
 
 
+def _has_manual_annotation(path):
+    out = subprocess.run(["git", "show", f":{path}"], cwd=ROOT, capture_output=True)
+    return out.returncode == 0 and re.search(rb"@manual[: ]", out.stdout) is not None
+
+
 def main():
     if os.environ.get("AOT_SKIP_DOCS_REMINDER"):
         return 0
@@ -130,6 +136,10 @@ def main():
     docs_touched = any(p.startswith("docs/") for p in staged)
     if docs_touched:
         return 0  # 이미 문서도 같이 건드렸다 — 알릴 것 없음
+
+    # `@manual` 주석이 달린 파일은 manual_sync.py 가 절 단위로 추적한다 —
+    # 여기서 또 폴더 단위로 알리면 같은 커밋에 알림이 두 번 뜬다.
+    staged = [p for p in staged if not _has_manual_annotation(p)]
 
     hits = []
     for label, prefixes, doc_pages in WATCH_AREAS:

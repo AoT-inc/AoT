@@ -387,12 +387,14 @@ def mcp_confirmations_list():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# @manual ai/overview#call-state
 def _execution_unconfirmed(exec_status, exec_result):
     """승인 실행이 실패로 끝났지만 명령이 나갔을 수 있는가(performed "unknown")."""
     return (exec_status == 'failed' and isinstance(exec_result, dict)
             and exec_result.get('performed') == 'unknown')
 
 
+# @manual ai/overview#safety-approval-model
 @blueprint.route('/confirmations/<confirmation_id>/approve', methods=['POST'])
 @flask_login.login_required
 def mcp_confirmation_approve(confirmation_id):
@@ -442,6 +444,7 @@ def mcp_confirmation_approve(confirmation_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# @manual ai/overview#safety-approval-model
 @blueprint.route('/confirmations/<confirmation_id>/reject', methods=['POST'])
 @flask_login.login_required
 def mcp_confirmation_reject(confirmation_id):
@@ -456,6 +459,7 @@ def mcp_confirmation_reject(confirmation_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# @manual ai/overview#safety-approval-model
 @blueprint.route('/confirmations/batch_approve', methods=['POST'])
 @flask_login.login_required
 def mcp_confirmation_batch_approve():
@@ -503,6 +507,7 @@ def mcp_confirmation_batch_approve():
     }), 200
 
 
+# @manual ai/overview#safety-approval-model
 @blueprint.route('/confirmations/batch_reject', methods=['POST'])
 @flask_login.login_required
 def mcp_confirmation_batch_reject():
@@ -597,6 +602,7 @@ def mcp_audit_recent():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# @manual ai/overview#call-quality
 @blueprint.route('/quality', methods=['GET'])
 @flask_login.login_required
 def mcp_call_quality():

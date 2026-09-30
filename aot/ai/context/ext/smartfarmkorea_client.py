@@ -76,9 +76,9 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_API_BASE_FACILITY = "http://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService"
-_API_BASE_OUTDOOR = "http://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest"
-_API_BASE_LIVESTOCK = "http://www.smartfarmkorea.net/Agree_WS/webservices/StockRestService"
+_API_BASE_FACILITY = "https://www.smartfarmkorea.net/Agree_WS/webservices/ProvideRestService"
+_API_BASE_OUTDOOR = "https://www.smartfarmkorea.net/Agree_WS/webservices/OutdoorFarmRest"
+_API_BASE_LIVESTOCK = "https://www.smartfarmkorea.net/Agree_WS/webservices/StockRestService"
 _REQUEST_TIMEOUT = 20
 _MAX_RECORDS_PER_OP = 50  # digest stays a knowledge summary, not a full data dump
 

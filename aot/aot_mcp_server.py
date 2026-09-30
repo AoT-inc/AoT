@@ -22,10 +22,14 @@ Claude Desktop stdio config:
     "mcpServers": {
       "aot": {
         "command": "python3",
-        "args": ["/opt/AoT/aot/aot_mcp_server.py"]
+        "args": ["/opt/AoT/aot/aot_mcp_server.py"],
+        "env": { "AOT_MCP_API_KEY": "<base64 api key>" }
       }
     }
   }
+
+  stdio requires an API key too (AOT_MCP_REQUIRE_AUTH=0 turns this off). Issue
+  one under Manage > System Management > Users.
 """
 
 import sys
@@ -354,11 +358,12 @@ def _run_http_server(app, port=5700):
     import uuid as _uuid
 
     from flask import Flask, request, jsonify, Response
-    from aot.tools import mcp_auth
+    from aot.tools import mcp_auth, mcp_central
     from aot.databases.models import AIGlobalSettings
 
     http_app = Flask("aot_mcp_http")
 
+    # @manual ai/overview#enable-and-start
     def _http_server_enabled():
         # Checked fresh every request (not cached) so the Settings > General >
         # AI Service toggle takes effect immediately — no restart of this
@@ -368,18 +373,42 @@ def _run_http_server(app, port=5700):
             settings = AIGlobalSettings.query.first()
         return settings is None or settings.mcp_http_enabled is not False
 
+    # @manual ai/overview#enable-and-start
     @http_app.before_request
     def _gate_disabled():
         if not _http_server_enabled():
             return jsonify({"error": "External MCP server is disabled in "
-                                      "Settings > General > AI Service."}), 503
+                                      "Manage > System Management > General Settings > "
+                                      "Enable External MCP Server."}), 503
 
     # ── MCP Streamable HTTP ────────────────────────────────────────────────
     def _rpc_error(msg_id, code, message):
         return {"jsonrpc": "2.0", "id": msg_id,
                 "error": {"code": code, "message": message}}
 
-    def _handle_rpc(msg, agent_id, role, session_key=None):
+    def _unauthorized(err):
+        """401 — 중앙 인증을 켰으면 인가 서버를 찾는 길(RFC 9728)을 헤더로 알린다."""
+        resp = jsonify(err)
+        resp.status_code = 401
+        with app.app_context():
+            cfg = mcp_central.config()
+        if mcp_central.is_active(cfg):
+            resp.headers["WWW-Authenticate"] = mcp_central.www_authenticate(
+                cfg, invalid=(err or {}).get("error") == "invalid_token")
+        return resp
+
+    # @manual ai/overview#central-auth
+    @http_app.route("/.well-known/oauth-protected-resource", methods=["GET"])
+    @http_app.route("/.well-known/oauth-protected-resource/<path:_rest>", methods=["GET"])
+    def protected_resource_metadata(_rest=None):
+        # 클라이언트에 따라 경로 없는 주소를 먼저 찾으므로 두 경로 모두 같은 내용을 낸다.
+        with app.app_context():
+            cfg = mcp_central.config()
+        if not mcp_central.is_active(cfg):
+            return jsonify({"error": "not found"}), 404
+        return jsonify(mcp_central.protected_resource_metadata(cfg))
+
+    def _handle_rpc(msg, agent_id, role, session_key=None, blocked=None):
         """One JSON-RPC message → response dict, or None for a notification.
 
         Routes to the same _get_all_tools/_execute_tool the stdio transport and
@@ -389,6 +418,9 @@ def _run_http_server(app, port=5700):
         session_key: 요청의 `Mcp-Session-Id` 헤더 원문(호출 품질 기록용). 헤더는
         **여기 전송층에서만** 읽는다 — 실행층은 test_request_context 안이라 원래
         요청의 헤더가 보이지 않는다.
+
+        blocked: 토큰은 맞지만 이 AoT 사용자와 이어지지 않은 연결의 안내문. 연결과
+        목록은 그대로 주고, 도구 실행만 이 안내를 담은 도구 오류로 돌려준다.
         """
         if not isinstance(msg, dict):
             return _rpc_error(None, -32600, "Invalid Request")
@@ -406,7 +438,7 @@ def _run_http_server(app, port=5700):
                 "capabilities": {"tools": {}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                "host": SERVER_HOST},
-                "instructions": _server_instructions(profile),
+                "instructions": (blocked + "\n\n" if blocked else "") + _server_instructions(profile),
             }}
         if method.startswith("notifications/"):
             return None                      # 알림에는 응답하지 않는다
@@ -420,6 +452,9 @@ def _run_http_server(app, port=5700):
             name = params.get("name", "")
             if not name:
                 return _rpc_error(msg_id, -32602, "Missing tool name")
+            if blocked:
+                return {"jsonrpc": "2.0", "id": msg_id, "result": {
+                    "content": [{"type": "text", "text": blocked}], "isError": True}}
             try:
                 # 그룹 스코프(A2) — 신원은 키 소유자(`RoleInfo.user_id`).
                 content = _execute_tool(app, name, params.get("arguments") or {},
@@ -438,6 +473,7 @@ def _run_http_server(app, port=5700):
             return None
         return _rpc_error(msg_id, -32601, f"Method not found: {method}")
 
+    # @manual ai/overview#running-the-mcp-server
     @http_app.route("/mcp", methods=["POST"])
     def mcp_streamable():
         # DNS 리바인딩 방어: 브라우저에서 온 요청이면 Origin 이 붙는다. 이 서버는
@@ -449,8 +485,11 @@ def _run_http_server(app, port=5700):
         declared = request.headers.get("X-MCP-Agent-Id")
         with app.app_context():
             ok, agent_id, role, err = mcp_auth.authenticate_http(request.headers, declared)
+        blocked = None
         if not ok:
-            return jsonify(err), 401
+            if (err or {}).get("error") != mcp_auth.ERROR_NOT_LINKED:
+                return _unauthorized(err)
+            blocked = err["message"]
 
         payload = request.get_json(silent=True)
         if payload is None:
@@ -462,7 +501,7 @@ def _run_http_server(app, port=5700):
         session_key = _session_header(request.headers)
         batch = isinstance(payload, list)
         messages = payload if batch else [payload]
-        responses = [r for r in (_handle_rpc(m, agent_id, role, session_key)
+        responses = [r for r in (_handle_rpc(m, agent_id, role, session_key, blocked)
                                  for m in messages)
                      if r is not None]
 
@@ -478,6 +517,7 @@ def _run_http_server(app, port=5700):
             resp.headers["Mcp-Session-Id"] = _uuid.uuid4().hex
         return resp
 
+    # @manual ai/overview#running-the-mcp-server
     @http_app.route("/mcp", methods=["GET"])
     def mcp_streamable_get():
         # 서버→클라이언트 SSE 스트림은 제공하지 않는다. waitress 를 4스레드로
@@ -486,12 +526,14 @@ def _run_http_server(app, port=5700):
         # 서버발 알림(tools/list_changed 등)이 필요해지면 그때 여는 자리다.
         return jsonify({"error": "This server does not offer an SSE stream."}), 405
 
+    # @manual ai/overview#running-the-mcp-server
     @http_app.route("/mcp", methods=["DELETE"])
     def mcp_streamable_delete():
         # 세션 상태를 두지 않으므로 종료할 것이 없다. 클라이언트의 정리 요청은
         # 성공으로 받아준다.
         return Response(status=204)
 
+    # @manual ai/overview#chatgpt-setup
     @http_app.route("/mcp/info", methods=["GET"])
     def info():
         tools = _get_all_tools(app)
@@ -503,17 +545,19 @@ def _run_http_server(app, port=5700):
             "tool_count": len(tools),
         })
 
+    # @manual ai/overview#chatgpt-setup
     @http_app.route("/mcp/tools/list", methods=["GET"])
     def tools_list():
         # 카탈로그도 능력 노출이므로 인증 뒤에 둔다. /mcp/info 만 생존 확인용으로 열어둔다.
         with app.app_context():
             ok, _agent, role, err = mcp_auth.authenticate_http(request.headers)
         if not ok:
-            return jsonify(err), 401
+            return _unauthorized(err)
         tools = _get_all_tools(app, role=role,
                                profile=mcp_auth.tool_profile_of(role))
         return jsonify({"tools": tools})
 
+    # @manual ai/overview#chatgpt-setup
     @http_app.route("/mcp/tools/call", methods=["POST"])
     def tools_call():
         data = request.get_json(silent=True) or {}
@@ -553,7 +597,7 @@ def _run_http_server(app, port=5700):
         with app.app_context():
             ok, agent_id, role, err = mcp_auth.authenticate_http(request.headers, declared)
         if not ok:
-            return jsonify(err), 401
+            return _unauthorized(err)
         try:
             # 그룹 스코프(A2) — 신원은 키 소유자(`RoleInfo.user_id`).
             content = _execute_tool(app, tool_name, arguments,
@@ -595,6 +639,7 @@ def _run_http_server(app, port=5700):
 # Entry point
 # =============================================================================
 
+# @manual ai/overview#running-the-mcp-server
 def main():
     parser = argparse.ArgumentParser(
         description="AoT MCP Server — exposes AoT tools via MCP protocol."

@@ -37,6 +37,7 @@ calibration.py — P3-3: 효과 배율 자동 캘리브레이션 (Recursive Leas
   - 외란 없음(데이터 위생 clean), 장치 신뢰도 ≥ 0.5, 다른 장치 정지
   - 수렴 보호: θ ∈ [0.1, 5]
 """
+# @manual ai/env-control#settings-calibration
 
 import math
 from collections import deque

@@ -44,12 +44,15 @@ _KIND_DEFAULT_RATED_M3H = {
 # 스크린(보온커튼·차광막)은 할 일 없을 때 '걷힘(100=열림)'이 안전 — 닫으면(0)
 # 단열/차광이 켜져 더운 낮에 열을 가두거나 빛을 막는다. 능동 배치(보온·차광)는
 # 제어 법칙·안전게이트(폭염/한파)가 필요 시 명령한다. 개구부·팬은 0(닫힘/OFF).
+# @manual ai/env-control#actuators-safe-default
 _KIND_SAFE_DEFAULT = {
     'curtain': 100.0,
     'shade':   100.0,
 }
+# @manual-end
 
 
+# @manual ai/env-control#actuators-safe-default
 def _resolve_safe_default_pct(opts: dict, existing_default: 'float | None',
                                kind: str) -> float:
     """`env_actuator` 액션의 `safe_default_pct` 를 해석한다.
@@ -76,8 +79,10 @@ def _resolve_safe_default_pct(opts: dict, existing_default: 'float | None',
 # 잎을 적시는 분무기를 개도(%)로 연속 변조하면 사이클의 절반을 계속 뿌리게 되어
 # 잎이 마를 틈이 없다. 이는 육묘가 아닌 시설에서도 병해 유발 조건이므로 기본값
 # 자체를 펄스로 둔다. 육묘장 모드는 여기서 더 조인다(짧게, 더 긴 건조).
+# @manual ai/env-control#settings-hvac
 _FOG_DEFAULT_MAX_ON_SEC  = 30.0
 _FOG_DEFAULT_MIN_OFF_SEC = 180.0
+# @manual-end
 
 
 # 실외 센서가 하나라도 연결돼 있으면 있어야 할 채널.
@@ -139,6 +144,7 @@ def _is_wetting_fog(kind: str, capacity_meta: dict, *, conservative=True) -> boo
     return bool(nozzle.get('wetting'))
 
 
+# @manual ai/env-control#settings-hvac
 def _fog_excluded_from_env(coordinator: Any, kind: str, capacity_meta: dict) -> bool:
     """이 분무기를 환경 제어 대상에서 통째로 뺄지.
 
@@ -168,6 +174,7 @@ def _fog_excluded_from_env(coordinator: Any, kind: str, capacity_meta: dict) -> 
     return not bool(val)
 
 
+# @manual ai/env-control#settings-hvac
 def _fog_pulse_constraints(coordinator: Any, kind: str, capacity_meta: dict) -> dict:
     """습윤형 분무기에 적용할 관수식 펄스 도징 파라미터.
 
@@ -198,6 +205,7 @@ def _fog_pulse_constraints(coordinator: Any, kind: str, capacity_meta: dict) -> 
     }
 
 
+# @manual ai/env-control#actuators
 def _build_cost_fn(
         kind: str, base_cost: float,
         capacity_meta: dict) -> Callable[[dict, float], float]:
@@ -220,6 +228,7 @@ def _build_cost_fn(
     return cost_fn
 
 
+# @manual ai/env-control#settings-facility
 def _bay_capacity_fraction(bay_slices, bay_id):
     """구역 하나가 시설에서 차지하는 **폭 비율** → float|None.
 
@@ -298,6 +307,7 @@ class ProfileLoaderMixin:
             self.logger.debug('형제 코디네이터 조회 실패', exc_info=True)
             return set()
 
+    # @manual ai/env-control#actuators, ai/env-control#settings-facility
     def _reload_profiles(self) -> None:
         """Hybrid loader: facility-derived profiles + manual env_actuator action profiles.
 
@@ -1311,6 +1321,7 @@ class ProfileLoaderMixin:
         except Exception:
             self.logger.debug('공유 장치 점검 실패', exc_info=True)
 
+    # @manual ai/env-control#actuators
     def _attach_electric_kw(self) -> None:
         """각 장치의 전기소모량(출력 채널 `amps` × 사용 전압)을 capacity_meta['elec_kw'] 로.
 

@@ -179,6 +179,7 @@ def _local_day_of(ts, tz, back=False):
     return d.astimezone(tz).date()
 
 
+# @manual geo/journal#gdd
 def _query_daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
                           bucket_sec):
     """`_daily_extremes` 의 실제 조회부. 캐시를 거치지 않는다."""
@@ -218,6 +219,7 @@ def _query_daily_extremes(device_id, channel, measure, start_ts, end_ts, tz,
             if v[0] is not None and v[1] is not None}
 
 
+# @manual geo/programs#gdd, geo/journal#gdd
 def gdd_accumulated(plot, program_row=None, on=None, with_series=False):
     """구획의 누적 GDD → dict (판정 불가면 `usable=False` + 이유).
 

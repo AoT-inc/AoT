@@ -167,6 +167,20 @@ def refresh_display_values(widget_unique_id, options_values):
     values['resume_on_activate'] = (
         'resume' if getattr(trigger, 'resume_on_activate', True) in (None, True, 1)
         else 'restart')
+
+    # 요일별 배지 초기값 — 페이지를 열 때 한 번만 계산한다(이 함수 자체가
+    # "대시보드를 열 때마다" 불리는 자리). 5초마다 도는
+    # /function_status_activated 에는 절대 얹지 않는다 — 그쪽은 요일마다
+    # Actions 조회가 하나씩 늘어 폴링 경로가 무거워진다(그 라우트의 주석
+    # 참고). 저장(일정 편집·요일 켜기/끄기)한 뒤에는 그 응답의
+    # day_warnings 로 갱신된다.
+    try:
+        from aot.utils.sequence_warnings import sequence_schedule_day_warnings
+        per_day_warnings, _ = sequence_schedule_day_warnings(trigger)
+        values['sequence_day_warnings'] = per_day_warnings
+    except Exception as exc:
+        logger.warning(f"[trigger_sequence widget] initial day warnings failed: {exc}")
+        values['sequence_day_warnings'] = {}
     return values
 
 
@@ -637,6 +651,21 @@ WIDGET_INFORMATION = {
             background: var(--aot-color-brand-secondary);
             box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
         }
+        /* Warning: this weekday's plan doesn't fit its window/period (cut off,
+           restarts mid-pass, or repeats several times a day) — the same check
+           plan_for_day already gives the AI tools. Border/label color only,
+           no icon (see feedback_no_icons); the full message sits in the
+           native title tooltip. Comes after is-today/is-selected so a
+           warning on the selected day still shows. */
+        .seq-day-btn.has-warning {
+            border-color: var(--aot-color-warning, #fea60b);
+        }
+        .seq-day-btn.has-warning .seq-day-label-text {
+            color: var(--aot-color-warning, #fea60b);
+        }
+        .seq-day-btn.has-warning.is-selected .seq-day-label-text {
+            color: var(--aot-color-text-tertiary);
+        }
 
         .seq-day-label-text {
             font-size: var(--aot-fs-label);
@@ -990,7 +1019,8 @@ WIDGET_INFORMATION = {
         </div>
 
         <!-- Section 2: Weekday Row (TOP) -->
-        <div id="seq-weekday-{{wid}}" class="seq-weekday-row" data-fid="{{fid}}" data-wid="{{wid}}">
+        <div id="seq-weekday-{{wid}}" class="seq-weekday-row" data-fid="{{fid}}" data-wid="{{wid}}"
+             data-day-warnings='{{ (widget_options.get('sequence_day_warnings') or {}) | tojson }}'>
             {% for day_label, day_idx in [(_('Mon'),'0'),(_('Tue'),'1'),(_('Wed'),'2'),(_('Thu'),'3'),(_('Fri'),'4'),(_('Sat'),'5'),(_('Sun'),'6')] %}
             <div class="seq-day-cell{% if day_idx in ['5','6'] %} seq-day-weekend{% endif %}"
                  id="seq-day-cell-{{wid}}-{{day_idx}}" data-day="{{day_idx}}">
@@ -1402,6 +1432,7 @@ WIDGET_INFORMATION = {
         var sched = ss.schedule;
         var today = ss.today;
         var selected = ss.selectedDay;
+        var warnings = ss.warnings || {};
 
         for (var d = 0; d < 7; d++) {
             var btn = document.getElementById('seq-day-btn-' + widget_id + '-' + d);
@@ -1414,6 +1445,17 @@ WIDGET_INFORMATION = {
             btn.classList.toggle('is-today',    d === today);
             btn.classList.toggle('is-selected', d === selected);
 
+            // 그 요일 판정(한 회차가 창/주기보다 길어 잘리거나 재시작함, 하루
+            // 여러 번 반복함) — plan_for_day 가 AI 도구에 이미 주는 것과 같은
+            // 판정을 배지로 얹는다. 이모지 대신 테두리색(CSS has-warning) +
+            // 네이티브 title 로만 표시한다.
+            if (btn.dataset.baseTitle === undefined) {
+                btn.dataset.baseTitle = btn.getAttribute('title') || '';
+            }
+            var msgs = warnings[String(d)] || [];
+            btn.classList.toggle('has-warning', msgs.length > 0);
+            btn.title = msgs.length ? msgs.join('; ') : btn.dataset.baseTitle;
+
             // Update disabled state on cell
             var entry = sched && sched.days ? sched.days[String(d)] : null;
             var enabled = entry ? entry.enabled !== false : true;
@@ -1421,6 +1463,28 @@ WIDGET_INFORMATION = {
             var check = cell.querySelector('.seq-day-check');
             if (check && document.activeElement !== check) check.checked = enabled;
         }
+    }
+
+    // 최초 렌더 시점(대시보드를 열 때) 서버가 이미 계산해 둔 요일별 경고를
+    // 읽어 배지 상태로 반영한다 — 5초 폴링에는 이 계산을 얹지 않는다
+    // (function_status_activated 는 요일마다 Actions 조회가 늘어 무거워진다).
+    // 저장·요일 토글 이후에는 그 응답의 day_warnings 가 seq_apply_day_warnings
+    // 를 통해 갱신한다.
+    function seq_init_day_warnings(widget_id) {
+        var row = document.getElementById('seq-weekday-' + widget_id);
+        if (!row) return;
+        var raw = row.getAttribute('data-day-warnings');
+        var parsed = {};
+        if (raw) {
+            try { parsed = JSON.parse(raw) || {}; } catch (e) { parsed = {}; }
+        }
+        seq_apply_day_warnings(widget_id, parsed);
+    }
+
+    function seq_apply_day_warnings(widget_id, per_day) {
+        var ss = seq_get_sched_state(widget_id);
+        ss.warnings = per_day || {};
+        seq_refresh_day_ui(widget_id);
     }
 
     function seq_update_cards_for_selected_day(widget_id) {
@@ -1524,8 +1588,12 @@ WIDGET_INFORMATION = {
             data: JSON.stringify({ function_id: function_id, schedule: ss.schedule }),
             success: function(resp) {
                 if (resp.status === 'success') {
+                    seq_apply_day_warnings(widget_id, resp.day_warnings || {});
                     if (resp.warnings && resp.warnings.length) {
-                        safe_toast('warning', resp.warnings[0]);
+                        // 요일마다 하나씩 날 수 있으니 한 토스트에 모아 보여준다
+                        // (예전엔 resp.warnings[0] 만 띄워 나머지 요일 문제를
+                        // 놓쳤다).
+                        safe_toast('warning', resp.warnings.join('; '));
                     }
                     if (onSuccess) onSuccess();
                 } else {
@@ -1568,6 +1636,9 @@ WIDGET_INFORMATION = {
                         ss.schedule.days[String(day)].enabled = !checkbox.checked;
                     }
                     checkbox.checked = !checkbox.checked;
+                } else if (resp.day_warnings) {
+                    // 요일을 끄고 켜면 그 요일의 경고도 나타나거나 사라진다.
+                    ss.warnings = resp.day_warnings;
                 }
                 seq_refresh_day_ui(widget_id);
             },
@@ -2578,6 +2649,7 @@ WIDGET_INFORMATION = {
 
     function repeat_update_seq_widget(function_id, widget_id, period_sec, default_period) {
         if(!period_sec) period_sec = 5;
+        seq_init_day_warnings(widget_id);
         update_sequence_widget(function_id, widget_id, default_period);
 
         // Store intervals per widget and clear any previous ones so a live-preview

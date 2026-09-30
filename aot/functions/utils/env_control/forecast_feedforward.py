@@ -15,6 +15,7 @@ EnvCoordinator는 이 신호를 L1 목표 편향(bias)으로 적용해
 
 참조: docs/env_control_enhancement_design.md §3.12 (P3-4)
 """
+# @manual ai/env-control#settings-forecast
 
 from __future__ import annotations
 

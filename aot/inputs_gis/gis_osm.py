@@ -4,6 +4,7 @@ from flask_babel import lazy_gettext as lg
 import requests
 
 # Definition of the Input
+# @manual geo/layers#international-general
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_osm',
     'input_manufacturer': 'OpenStreetMap',

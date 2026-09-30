@@ -41,6 +41,7 @@ from aot.aot_flask.utils.utils_map_config import (
 )
 from aot.utils.system_pi import is_int
 from aot.utils.device_tz import apply_system_tz_fallback
+from aot.utils.device_tz import default_device_coords
 
 logger = logging.getLogger(__name__)
 _DROP = object()
@@ -173,7 +174,12 @@ def output_add(form_add, request_form, tab_id=None):
                 logger.error(
                     "RPi.GPIO and Raspberry Pi required for this action")
 
-            new_output.name = "Name"
+            if 'output_name_short' in dict_outputs[output_type]:
+                new_output.name = str(dict_outputs[output_type]['output_name_short'])
+            elif 'output_name' in dict_outputs[output_type]:
+                new_output.name = str(dict_outputs[output_type]['output_name'])
+            else:
+                new_output.name = "Name"
             new_output.interface = output_interface
             size_y = len(dict_outputs[output_type]['channels_dict']) + 1
             new_output.size_y = len(dict_outputs[output_type]['channels_dict']) + 1
@@ -185,8 +191,7 @@ def output_add(form_add, request_form, tab_id=None):
             try:
                 misc = Misc.query.first()
                 if misc:
-                    new_output.latitude = misc.map_latitude
-                    new_output.longitude = misc.map_longitude
+                    new_output.latitude, new_output.longitude = default_device_coords(misc)
                     apply_system_tz_fallback(new_output, misc.timezone)
             except Exception:
                 pass
@@ -789,7 +794,7 @@ def manipulate_output(action, output_id):
             else:
                 messages["success"].append(gettext("%(err)s",
                     err='{action} Output: Daemon response: {msg}'.format(
-                        action=gettext(action),
+                        action=TRANSLATIONS.get(action.lower(), {}).get('title', action),
                         msg=return_values[1])))
     except Exception as msg:
         messages["error"].append(gettext("%(err)s",

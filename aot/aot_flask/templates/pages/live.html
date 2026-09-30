@@ -16,7 +16,7 @@
         if (jqXHR.status === 204) {
           if (period === 0) document.getElementById(measure_string + "-time").innerHTML = {{ _('No Data')|tojson }};
           else document.getElementById(measure_string + "-time").innerHTML = {{ _('No data for the last %(period)s seconds', period='%(period)s')|tojson }}.replace('%(period)s', period);
-          document.getElementById(measure_string + "-value").innerHTML = "0";
+          document.getElementById(measure_string + "-value").innerHTML = "--";
         }
         else {
           const time = data[0] * 1000;
@@ -35,7 +35,7 @@
       error: function (XMLHttpRequest, textStatus, errorThrown) {
         if (period === 0) document.getElementById(measure_string + "-time").innerHTML = {{ _('Error: Data not found.')|tojson }};
         else document.getElementById(measure_string + "-time").innerHTML = {{ _('Error: No data for the last %(period)s seconds', period='%(period)s')|tojson }}.replace('%(period)s', period);
-        document.getElementById(measure_string + "-value").innerHTML = "0";
+        document.getElementById(measure_string + "-value").innerHTML = "--";
       },
       cache: false
     });
@@ -52,8 +52,10 @@
     {% for each_input in live_inputs_list %}
     {% for each_meas in table_device_measurements.query.filter(table_device_measurements.device_id == each_input.unique_id).all() if each_meas.is_enabled %}
     {% if each_input.device in dict_inputs and 'listener' in dict_inputs[each_input.device] and dict_inputs[each_input.device]['listener'] %}
-    {% set period = 0 %}
-    {% set period_refresh = 600 %}
+    {#- 리스너는 주기 폴링이 없다. 조회 기간은 측정 유효 수명(설정 시), 없으면 제한 없음.
+        갱신은 30초 — 600초면 10초마다 들어오는 MQTT 값도 화면에선 10분에 한 번 바뀐다. -#}
+    {% set period = each_input.max_age_s or 0 %}
+    {% set period_refresh = 30 %}
     {% else %}
     {% set period = each_input.period * 2 %}
     {% set period_refresh = each_input.period %}

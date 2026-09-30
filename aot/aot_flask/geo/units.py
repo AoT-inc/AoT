@@ -1,4 +1,5 @@
 # coding=utf-8
+# @manual geo/settings#unit-settings
 """Unit conversion helpers for Geo/Facility 3D asset dimensions.
 
 DB storage rule: all length values are in metres (SI).

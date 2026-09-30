@@ -8,6 +8,7 @@ CHANNELS = {
     2: {'name': lg('Hybrid'), 'options': {'type': 'overlay', 'url_template': 'https://map{s}.daumcdn.net/map_hybrid/L{z}/{y}/{x}.png'}}
 }
 
+# @manual geo/layers#domestic-korea
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_kakao',
     'input_manufacturer': 'Kakao',

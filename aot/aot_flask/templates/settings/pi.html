@@ -15,80 +15,51 @@
       <button class="btn aot-pill-btn aot-pill-btn-primary" id="menu-toggle">{{_('Settings Menu')}}</button>
     </div>
 
+    {% if not pi_settings.get('available') %}
+    <div class="aot-settings-card">
+      <div class="aot-settings-row">
+        <div class="aot-settings-sub">{{_('This page configures a Raspberry Pi through raspi-config. This system has no raspi-config (not a Raspberry Pi installation, or running in Docker), so there is nothing to change here.')}}</div>
+      </div>
+    </div>
+    {% else %}
     <form method="post" action="/settings/pi">
       <input type="hidden" name="form-name" value="Pi">
       {{ form_settings_pi.csrf_token }}
+      <input type="hidden" name="pigpiod_state" value="{{ pigpiod_state }}">
 
       <!-- 인터페이스 -->
       <div class="aot-settings-group-title">{{_('Interface')}}</div>
       <p class="aot-settings-sub">
-        {{_('The following settings are configured via non-interactive raspi-config. Changes made here require a system reboot, which can be performed from the top menu (Settings -> Restart System).')}}
+        {{_('The following settings are configured via non-interactive raspi-config. Changes made here require a system reboot, which can be performed from the top menu (Manage -> Restart System).')}}
       </p>
 
       {# 라벨은 인터페이스 이름 하나만 든다. 켜짐/꺼짐은 **다른 사실**이라
          아랫줄 부연으로 내린다 — 이름 옆에 상태를 이어 붙이지 않는다
          (§3-2 ① 한 자리에 한 사실 · ③ 부연은 아랫줄로). #}
       <div class="aot-settings-card">
-
+        {% macro iface_row(label, key, enable_btn, disable_btn, note='') %}
         <div class="aot-settings-row">
-          <label class="aot-settings-label">I<sup>2</sup>C</label>
+          <label class="aot-settings-label">{{ label }}</label>
           <div class="aot-settings-control">
-            {% if pi_settings['i2c_enabled'] %}
-              {{ form_settings_pi.disable_i2c(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% if pi_settings.get(key) is none %}
+              {{ enable_btn(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+              {{ disable_btn(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+            {% elif pi_settings.get(key) %}
+              {{ disable_btn(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% else %}
-              {{ form_settings_pi.enable_i2c(class_='btn aot-pill-btn aot-pill-btn-primary') }}
+              {{ enable_btn(class_='btn aot-pill-btn aot-pill-btn-primary') }}
             {% endif %}
           </div>
-          <div class="aot-settings-sub">{% if pi_settings['i2c_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
+          <div class="aot-settings-sub">{% if pi_settings.get(key) is none %}{{_('Unknown')}}{% elif pi_settings.get(key) %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}{% if note %} · {{ note }}{% endif %}</div>
         </div>
+        {% endmacro %}
 
-        <div class="aot-settings-row">
-          <label class="aot-settings-label">1-Wire</label>
-          <div class="aot-settings-control">
-            {% if pi_settings['one_wire_enabled'] %}
-              {{ form_settings_pi.disable_one_wire(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% else %}
-              {{ form_settings_pi.enable_one_wire(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% endif %}
-          </div>
-          <div class="aot-settings-sub">{% if pi_settings['one_wire_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
-        </div>
-
-        <div class="aot-settings-row">
-          <label class="aot-settings-label">{{_('Serial')}}</label>
-          <div class="aot-settings-control">
-            {% if pi_settings['serial_enabled'] %}
-              {{ form_settings_pi.disable_serial(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% else %}
-              {{ form_settings_pi.enable_serial(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% endif %}
-          </div>
-          <div class="aot-settings-sub">{% if pi_settings['serial_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
-        </div>
-
-        <div class="aot-settings-row">
-          <label class="aot-settings-label">SPI</label>
-          <div class="aot-settings-control">
-            {% if pi_settings['spi_enabled'] %}
-              {{ form_settings_pi.disable_spi(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% else %}
-              {{ form_settings_pi.enable_spi(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% endif %}
-          </div>
-          <div class="aot-settings-sub">{% if pi_settings['spi_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
-        </div>
-
-        <div class="aot-settings-row">
-          <label class="aot-settings-label">SSH</label>
-          <div class="aot-settings-control">
-            {% if pi_settings['ssh_enabled'] %}
-              {{ form_settings_pi.disable_ssh(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% else %}
-              {{ form_settings_pi.enable_ssh(class_='btn aot-pill-btn aot-pill-btn-primary') }}
-            {% endif %}
-          </div>
-          <div class="aot-settings-sub">{% if pi_settings['ssh_enabled'] %}{{_('Enabled')}}{% else %}{{_('Disabled')}}{% endif %}</div>
-        </div>
+        {{ iface_row('I<sup>2</sup>C'|safe, 'i2c_enabled', form_settings_pi.enable_i2c, form_settings_pi.disable_i2c) }}
+        {{ iface_row('1-Wire', 'one_wire_enabled', form_settings_pi.enable_one_wire, form_settings_pi.disable_one_wire) }}
+        {{ iface_row(_('Serial Hardware'), 'serial_enabled', form_settings_pi.enable_serial, form_settings_pi.disable_serial, _('Keep enabled to use serial devices.')) }}
+        {{ iface_row(_('Serial Login Shell'), 'serial_console_enabled', form_settings_pi.enable_serial_console, form_settings_pi.disable_serial_console, _('Keep disabled; it takes the serial port away from devices.')) }}
+        {{ iface_row('SPI', 'spi_enabled', form_settings_pi.enable_spi, form_settings_pi.disable_spi) }}
+        {{ iface_row('SSH', 'ssh_enabled', form_settings_pi.enable_ssh, form_settings_pi.disable_ssh) }}
 
       </div>
 
@@ -140,6 +111,7 @@
       </div>
 
     </form>
+    {% endif %}
 
   </div>
 

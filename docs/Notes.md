@@ -17,7 +17,7 @@ There is one notes component in AoT (`AoTNotesBlock`), and it opens the same way
 
 Clicking **`Open Notes`** slides in a panel scoped to that one thing — on a desktop it opens beside the page (like the AI chat panel); on a phone it takes the full screen. A zone, site, or facility also shows the notes of everything inside it, so you don't have to open each device separately to see what happened there.
 
-For browsing or managing *every* note in the system at once — searching, filtering by tag, exporting — use the full **Notes Manager** page instead: `Additional Features -> Notes` in the menu.
+For browsing or managing *every* note in the system at once — searching, editing, deleting — use the full **Notes Manager** page instead: `Additional Features -> Notes` in the menu.
 
 ## Writing a note { #writing }
 
@@ -39,7 +39,7 @@ Editing an existing note's text, tags, or attachments, and deleting a note outri
 
 Tags classify notes so you can find them again later. Pick an existing tag or type a new one — new tags are created the moment you use them, there is no separate tag-management step.
 
-AoT also tags a note with the name of whatever it's attached to automatically (a device's name, a zone's name, and so on), in addition to any tags you pick. This is why searching for a device or zone's name in the Notes Manager's tag filter turns up everything ever written about it, even notes where you didn't think to add that tag yourself.
+AoT also tags a note with the name of whatever it's attached to automatically (a device's name, a zone's name, and so on), in addition to any tags you pick. This is why clicking that name tag (`#device name`) on a note card in the Notes Manager narrows the list to everything ever written about it, even notes where you didn't think to add that tag yourself.
 
 ## Map visibility { #map-visibility }
 
@@ -61,15 +61,14 @@ If the note is edited later and that highlighted passage disappears from the tex
 
 Making a schedule from a passage and **`Cancel the schedule`** need the Editor role (permission to edit controllers) — the same permission as creating a work task anywhere else. With a role below that you can still see the linked schedules, but these controls are not shown; **`Unlink only`** stays available to anyone who can edit notes.
 
-## Searching and exporting { #search }
+## Searching { #search }
 
 The Notes Manager (`Additional Features -> Notes`) lists every note in the system, newest first, and loads more as you scroll. Use it to:
 
-- Search note text and subjects
-- Filter by one or more tags
-- Sort by date (or other fields) in either direction
-- Export the current filtered results, or
-- Export a **PDF Report** covering a date range and tag combination — a formatted document rather than a raw list, useful for handing a period's notes to someone else
+- Search note text — type in the search box and press Enter. **Only the note text is searched, not the subject.**
+- Click a tag (`#tag`) on a note card to narrow the list to notes with that tag
+
+The tag picker filter, sorting and CSV/PDF export were removed from the Notes Manager on 2026-09-11. The list is always newest first.
 
 ## Notes elsewhere in AoT { #elsewhere }
 

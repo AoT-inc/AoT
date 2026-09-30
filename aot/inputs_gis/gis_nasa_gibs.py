@@ -65,6 +65,7 @@ CHANNELS = {
     }
 }
 
+# @manual geo/layers#satellite-aerial
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_nasa_gibs',
     'input_manufacturer': 'NASA',

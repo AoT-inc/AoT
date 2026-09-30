@@ -107,14 +107,9 @@
                 </div>
             </div>
             {% endif %}
-            <div class="aot-modal-option-row">
-                <label class="aot-modal-option-label">{{_('Execute All Actions')}}</label>
-                <div class="aot-modal-option-control">
-                <button data-form-id="form_function_{{each_function.unique_id}}"
-                    onclick="return $(this).processRequest(this, 'execute_all_actions');"
-                    class="btn aot-pill-btn aot-pill-btn-primary" type="button">{{_('Execute All Actions')}}</button>
-                </div>
-            </div>
+            {# '모든 액션 실행' 은 시퀀스에 두지 않는다 — 스텝을 순서·지연·지속시간 없이
+               한꺼번에 발사해 밸브와 펌프가 동시에 켜지고, 자동으로 꺼지지도 않는다
+               (2026-09-25). 시퀀스 실행은 활성화로 한다. #}
         </div>
         <div class="aot-modal-group-title">{{_('Time Settings')}}</div>
         <div class="aot-modal-container">

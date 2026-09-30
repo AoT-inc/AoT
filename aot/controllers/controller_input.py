@@ -340,8 +340,12 @@ class InputController(AbstractController, threading.Thread):
         self.input_timer = time.time()
         self.lastUpdate = None
 
-        # Check if get_measurement() has been overwritten
-        if type(self.measure_input).get_measurement != AbstractInput.get_measurement:
+        # Check if get_measurement() has been overwritten. Inputs that declare
+        # 'do_not_run_periodically' only receive values through their custom
+        # commands, so they are never polled.
+        if self.dict_inputs[self.device].get('do_not_run_periodically'):
+            self.logger.debug("do_not_run_periodically set, not polling")
+        elif type(self.measure_input).get_measurement != AbstractInput.get_measurement:
             self.logger.debug("get_measurement() found")
             self.has_loop = True
         else:

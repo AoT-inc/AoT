@@ -6,6 +6,7 @@ from aot.databases import set_uuid
 from aot.aot_flask.extensions import db
 
 
+# @manual geo/facility-widget#b-environment
 class GeoFacilitySetpoint(CRUDMixin, db.Model):
     """
     Operator-defined setpoints for a facility (one row per facility).

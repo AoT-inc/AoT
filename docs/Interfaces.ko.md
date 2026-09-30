@@ -1,10 +1,10 @@
 ## I2C 정보
 
-I2C 인터페이스는 `raspi-config` 또는 `[기어 아이콘] -> 설정 -> Raspberry Pi` 페이지에서 활성화해야 합니다.
+I2C 인터페이스는 `raspi-config` 또는 `관리 -> 시스템 관리 -> 라즈베리파이` 페이지에서 활성화해야 합니다(Docker에서는 사용할 수 없습니다). 변경 내용은 `관리 -> 시스템 재시작` 후에 적용됩니다.
 
 ## 1-Wire 정보
 
-1-Wire 인터페이스는 `raspi-config` 또는 `[기어 아이콘] -> 설정 -> Raspberry Pi` 페이지에서 활성화해야 합니다.
+1-Wire 인터페이스는 `raspi-config` 또는 `관리 -> 시스템 관리 -> 라즈베리파이` 페이지에서 활성화해야 합니다(Docker에서는 사용할 수 없습니다). 변경 내용은 `관리 -> 시스템 재시작` 후에 적용됩니다.
 
 ## UART 정보
 
@@ -16,8 +16,12 @@ Raspberry Pi 2 이후 버전에서는 블루투스 추가로 인해 UART가 다�
 
 `sudo raspi-config`
 
-`고급 옵션 -> 직렬`로 이동하여 비활성화합니다. 그런 다음 `/boot/config.txt`를 편집합니다.
+Raspberry Pi OS Bookworm 이상에서는 직렬 포트 설정이 둘로 나뉩니다. 직렬 로그인 셸(포트 위의 텍스트 콘솔)은 **꺼야** 하고, 직렬 하드웨어(UART 자체)는 **켜야** 합니다. `관리 -> 시스템 관리 -> 라즈베리파이` 페이지에서는 "직렬 로그인 셸"과 "직렬 하드웨어"로 표시됩니다. 명령줄에서는 다음과 같이 합니다.
 
-`sudo nano /boot/config.txt`
+`sudo raspi-config nonint do_serial_cons 1` (로그인 셸 끄기)
 
-"enable_uart=0"이라는 줄을 찾아 "enable_uart=1"로 변경한 후 재부팅합니다.
+`sudo raspi-config nonint do_serial_hw 0` (직렬 하드웨어 켜기)
+
+`raspi-config`에서는 `Interface Options -> Serial Port`에서 로그인 셸은 No, 직렬 하드웨어는 Yes로 답합니다.
+
+설정 파일은 Bookworm에서 `/boot/firmware/config.txt`입니다(이전 버전은 `/boot/config.txt`). 직접 고치려면 `enable_uart=1`이 들어 있는지 확인한 뒤 재부팅합니다.

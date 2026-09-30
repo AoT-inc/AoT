@@ -525,7 +525,7 @@ class TestArgumentsCheckedBeforeTheGate(_AppFixture):
                           'params': {'setpoint': 24.5, 'direction': 'lower'}})
         self.assertEqual('write_disabled', out.get('reason_code'), out)
         # 조언 전용 거절은 묶음 전환을 권하지 않는다(벤치마크 lat_24).
-        self.assertNotIn('Settings > Users > API keys', out['message'])
+        self.assertNotIn('Manage > System Management > Users > API Key', out['message'])
         self.assertIn('would not change it', out['message'])
 
     def test_combined_refusal_does_not_suggest_a_profile_switch(self):
@@ -534,7 +534,7 @@ class TestArgumentsCheckedBeforeTheGate(_AppFixture):
                          {'function_id': self.fn_id,
                           'params': {'target_temp_day': 25}})
         self.assertEqual('write_disabled', out.get('also_refused'), out)
-        self.assertNotIn('Settings > Users > API keys', out['message'])
+        self.assertNotIn('Manage > System Management > Users > API Key', out['message'])
         self.assertIn('not this key', out['message'])
 
     def test_the_handler_itself_refuses_unknown_keys(self):

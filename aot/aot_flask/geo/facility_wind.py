@@ -34,6 +34,16 @@ RHO = 1.20   # 공기 밀도 kg/m³ (20°C, 해면 기준)
 # 풍압 ∝ ρv²/2 이므로 0.5 m/s 에서 약 0.15 Pa — 개구부 개도를 80% 깎을 근거가
 # 못 된다. 사람이 "바람이 없다" 고 말하는 구간과도 대체로 맞는다(蒲福 0~1).
 WIND_BIAS_MIN_MS = 0.5
+# 이 이상이면 풍향 가중치를 **온전히** 건다 [m/s]. 그 사이는 풍압(∝ v²)에 비례해
+# 0 에서 1 로 연속으로 커진다. 蒲福 2(남실바람) 상단 ≈ 3.3 m/s — 풍압 환기가
+# 부력 환기를 넘어서기 시작하는 구간이다.
+#
+# ⚠ **문턱 하나로 켜고 끄지 말 것**(2026-09-26). 약풍은 0.5 m/s 근처를 오르내리고
+#   풍향도 불안정하다 — 실측(김제 육묘장3, 이천 기상청 풍속 0.4·0.5·0.6·0.9·1.0·
+#   0.6·0.4…): 가중치가 5분마다 켜졌다 꺼지며 측창 하나를 최대 80 % 깎았고, 깎인
+#   사이클마다 anti-windup 이 적분을 0 가까이 떨어뜨려 창이 100→40→100 을 오갔다.
+#   좌·우가 같은 근거로 93 % 대 20 % 로 갈라진 것도 이것이었다.
+WIND_BIAS_FULL_MS = 3.0
 
 # 풍압계수 기준값 (직사각형 온실 경험식, ASHRAE 2009)
 Cp_WINDWARD = 0.60   # 풍상면(windward): 양압
@@ -116,6 +126,7 @@ def _wind_from_vector(wind_dir_deg: float):
     return (math.sin(rad), math.cos(rad))
 
 
+# @manual geo/facility#natural-ventilation-wind-pressure-simulation
 def compute_natural_ventilation(
     vent_openings: list,
     wind_speed_ms: float,
@@ -291,12 +302,14 @@ def _side_world_normal(vo, orientation_deg: float):
     return _world_normal(vo.get('face'), orientation_deg)
 
 
+# @manual geo/facility#natural-ventilation-wind-pressure-simulation
 def wind_biased_opening(vent_openings, wind_dir_deg, orientation_deg=0.0,
                         wind_speed_ms=None):
     """각 개구부의 풍향 기여도(0.0~1.0) 반환 — env_coordinator 명령 가중치용.
 
     정책:
       - 무풍         : 전부 1.0 (아래 참조)
+      - 약풍         : 풍압(∝v²)에 비례해 아래 가중치로 연속으로 다가감(WIND_BIAS_FULL_MS)
       - 천창(roof)   : 풍향 무관 → 1.0 (명령대로 개방, 내부 열기 배출 역할)
       - 측창(side)   : surface_normal(미러 보정) × 풍향 → windward 높게, leeward 낮게
                        weight = 0.2 + 0.8·max(0, cosα)  (leeward 최소 20% 유지)
@@ -320,6 +333,13 @@ def wind_biased_opening(vent_openings, wind_dir_deg, orientation_deg=0.0,
     if wind_speed_ms is not None and float(wind_speed_ms) < WIND_BIAS_MIN_MS:
         return {vo['actuator_id']: 1.0
                 for vo in vent_openings if vo.get('actuator_id')}
+    # 풍압 비례 강도 k ∈ [0, 1] — 모르면(None) 온전히(종전 동작).
+    if wind_speed_ms is None:
+        strength = 1.0
+    else:
+        v2 = float(wind_speed_ms) ** 2
+        lo2, hi2 = WIND_BIAS_MIN_MS ** 2, WIND_BIAS_FULL_MS ** 2
+        strength = max(0.0, min(1.0, (v2 - lo2) / (hi2 - lo2)))
 
     wind_vec = _wind_from_vector(wind_dir_deg)
     weights  = {}
@@ -344,6 +364,7 @@ def wind_biased_opening(vent_openings, wind_dir_deg, orientation_deg=0.0,
         cos_alpha = wn[0] * wind_vec[0] + wn[1] * wind_vec[1]
         # [-1, 1] → [0.2, 1.0]  (leeward 최소 20% 유지 — 과압 방지)
         weight = 0.2 + 0.8 * max(0.0, cos_alpha)
+        weight = 1.0 - strength * (1.0 - weight)      # 약풍일수록 1.0 에 가깝게
         # 동일 actuator 에 여러 opening → 최대값 채택
         weights[aid] = max(weights.get(aid, 0.0), round(weight, 3))
 

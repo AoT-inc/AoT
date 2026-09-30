@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** FEHLER bei der AoT-I
 install_begin=#### Die AoT-Installation beginnt. %s\n
 mosquitto_installing=#### Installiere: mosquitto MQTT-Broker\n
 mosquitto_already_installed=#### mosquitto ist bereits installiert - Installation wird übersprungen\n
-mosquitto_configuring=#### mosquitto wird für externe Verbindungen konfiguriert\n
 mosquitto_conf_checking=#### mosquitto-Konfigurationsdatei wird erstellt/geprüft\n
 mosquitto_conf_created=#### %s erstellt\n
 mosquitto_conf_exists=#### %s existiert bereits - wird nicht überschrieben\n

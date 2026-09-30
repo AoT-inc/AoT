@@ -409,14 +409,14 @@ class TestReportsWhatRanNotWhatWasAsked(unittest.TestCase):
 
     def test_count_suppressed_flags_a_blocked_request(self):
         """요청 23% → 최종 0% = 버려진 사이클 1건."""
-        ns = _load_helpers('_count_suppressed')
+        ns = _load_helpers('_count_suppressed', '_suppressed_pairs')
         t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
         requested = [(t0, 23.0)]
         final = [(t0 + timedelta(seconds=1), 0.0)]
         self.assertEqual(ns['_count_suppressed'](requested, final), 1)
 
     def test_count_suppressed_ignores_an_honoured_request(self):
-        ns = _load_helpers('_count_suppressed')
+        ns = _load_helpers('_count_suppressed', '_suppressed_pairs')
         t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
         self.assertEqual(
             ns['_count_suppressed']([(t0, 23.0)],
@@ -424,7 +424,7 @@ class TestReportsWhatRanNotWhatWasAsked(unittest.TestCase):
 
     def test_count_suppressed_ignores_a_zero_request(self):
         """애초에 0 을 요청했으면 버려진 것이 아니다."""
-        ns = _load_helpers('_count_suppressed')
+        ns = _load_helpers('_count_suppressed', '_suppressed_pairs')
         t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
         self.assertEqual(
             ns['_count_suppressed']([(t0, 0.0)],
@@ -432,11 +432,86 @@ class TestReportsWhatRanNotWhatWasAsked(unittest.TestCase):
 
     def test_count_suppressed_does_not_pair_across_cycles(self):
         """다음 사이클의 최종값을 이번 요청의 짝으로 삼으면 안 된다."""
-        ns = _load_helpers('_count_suppressed')
+        ns = _load_helpers('_count_suppressed', '_suppressed_pairs')
         t0 = datetime(2026, 8, 30, 3, 0, tzinfo=timezone.utc)
         self.assertEqual(
             ns['_count_suppressed']([(t0, 23.0)],
                                     [(t0 + timedelta(minutes=10), 0.0)]), 0)
+
+
+class TestGuardedSuppressionIsNotAlarm(unittest.TestCase):
+    """보호 장치가 설계대로 막은 요청은 "게이트에 버려졌다" 가 아니다 (2026-09-30).
+
+    로컬 3포장 분무는 육묘 일소 방지 잠금으로 107번 막혔는데 검사기는 그것을
+    고장처럼 보고했다. 그런 경고가 늘 뜨면 정말 버려진 요청이 묻힌다.
+    """
+
+    def setUp(self):
+        from aot.functions.utils.env_control import log_channels as lc
+        self.lc = lc
+        self.ns = _load_helpers('_split_suppressed')
+        self.t0 = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
+
+    def _split(self, pairs, final_reasons):
+        guard = {self.lc.REASON_SAFETY_PRE_GATE, self.lc.REASON_LIMIT_HUMID_MAX}
+        return self.ns['_split_suppressed'](pairs, final_reasons, guard)
+
+    def test_guard_reason_marks_the_cycle_as_explained(self):
+        guarded, unexplained = self._split(
+            [(self.t0, 60.0)],
+            [(self.t0 + timedelta(seconds=1), self.lc.REASON_SAFETY_PRE_GATE)])
+        self.assertEqual(dict(guarded), {self.lc.REASON_SAFETY_PRE_GATE: 1})
+        self.assertEqual(unexplained, [])
+
+    def test_a_primary_final_reason_stays_unexplained(self):
+        """최종 근거가 코디네이터 자신의 것이면 어느 보호도 막지 않았다."""
+        guarded, unexplained = self._split(
+            [(self.t0, 60.0)],
+            [(self.t0, self.lc.REASON_PRIMARY)])
+        self.assertEqual(sum(guarded.values()), 0)
+        self.assertEqual(unexplained, [(self.t0, 60.0)])
+
+    def test_missing_final_reason_is_never_folded_into_normal(self):
+        """옛 구간처럼 근거 기록이 없으면 **모르는 것**이다 — 정상으로 접지 않는다."""
+        guarded, unexplained = self._split([(self.t0, 60.0)], [])
+        self.assertEqual(sum(guarded.values()), 0)
+        self.assertEqual(len(unexplained), 1)
+
+    def test_a_far_away_reason_is_not_paired(self):
+        _g, unexplained = self._split(
+            [(self.t0, 60.0)],
+            [(self.t0 + timedelta(minutes=10), self.lc.REASON_SAFETY_PRE_GATE)])
+        self.assertEqual(len(unexplained), 1)
+
+    def test_screens_are_not_counted_as_suppressed(self):
+        """스크린의 최종 0 은 닫힘이라는 위치다 — 요청 12% → 0% 는 정상 스냅이다."""
+        src = _source(_SCRIPT)
+        self.assertIn('SCREEN_KINDS', src)
+        self.assertIn('if kind in SCREEN_KINDS', src)
+
+    def test_guard_reasons_are_referenced_by_constant(self):
+        """숫자를 베껴 적으면 renumber 가 조용히 오라벨을 만든다."""
+        src = _source(_SCRIPT)
+        self.assertIn('LC.REASON_SAFETY_PRE_GATE', src)
+        self.assertIn('LC.REASON_LIMIT_HUMID_MAX', src)
+
+
+class TestMostlyGuardedIsNotPuzzling(TestActivityFlags):
+    def test_guard_dominated_window_is_not_puzzling(self):
+        """습도 상한 46 · 안전 강제 43 · 주작용 11 % — 89 % 는 이미 설명됐다."""
+        from collections import Counter
+        out = self.flags([0.0] * 100, Counter({
+            self.lc.REASON_LIMIT_HUMID_MAX: 46,
+            self.lc.REASON_SAFETY_PRE_GATE: 43,
+            self.lc.REASON_PRIMARY: 11}))
+        self.assertTrue(out['never_ran'])
+        self.assertFalse(out['idle_while_claiming_work'])
+
+    def test_majority_primary_is_still_puzzling(self):
+        from collections import Counter
+        out = self.flags([0.0] * 100, Counter({
+            self.lc.REASON_PRIMARY: 68, self.lc.REASON_IDLE: 32}))
+        self.assertTrue(out['idle_while_claiming_work'])
 
 
 class TestFinalCommandsAreActuallyLogged(unittest.TestCase):
@@ -463,3 +538,45 @@ class TestFinalCommandsAreActuallyLogged(unittest.TestCase):
         self.assertEqual(len(line) - len(line.lstrip()), 8,
                          '디버그 분기 안으로 들어가 있습니다 — 기본 설치에서 '
                          '최종 명령 기록이 통째로 사라집니다')
+
+
+class TestShadowAliveCheck(unittest.TestCase):
+    """그림자가 켜져 있는데 **기록이 없으면** 말하는가 (2026-09-28).
+
+    2026-08-04 리팩터가 사이클 길이를 넘기지 않아 그림자 단계가 매 사이클
+    NameError 로 죽었는데, 예외가 debug 로 삼켜져 8주 동안 아무도 몰랐다. 그동안
+    예측·학습·검증 기록이 통째로 비어 물리 제어로 전환할 근거가 쌓일 수 없었다.
+    화면도 로그도 조용했다 — **기록이 없다는 사실**만이 유일한 신호였다.
+    """
+
+    def _check(self, engine, records, cycles=100):
+        from aot.scripts.check_env_coordinator_health import _check_shadow_alive
+        return _check_shadow_alive({'effect_engine': engine}, records, cycles)
+
+    def test_예측_기록이_없으면_말한다(self):
+        got = self._check('shadow', {6: 50, 8: 50})      # MPC 그림자만 있다
+        self.assertEqual(1, len(got))
+        self.assertEqual('error', got[0][0])
+        self.assertIn('1스텝 예측 기록', got[0][1])
+
+    def test_아무_기록도_없으면_말한다(self):
+        got = self._check('greybox', {})
+        self.assertEqual(1, len(got))
+        self.assertIn('한 건도 없습니다', got[0][1])
+
+    def test_기록이_있으면_조용하다(self):
+        self.assertEqual([], self._check('shadow', {0: 30, 2: 30, 6: 30}))
+
+    def test_legacy_는_대상이_아니다(self):
+        """그림자를 안 켰으면 기록이 없는 것이 정상이다 — 잡음을 만들지 않는다."""
+        self.assertEqual([], self._check('legacy', {}))
+
+    def test_사이클이_없으면_판정하지_않는다(self):
+        """멈춰 있던 코디네이터는 다른 항목(사이클 리듬)이 이미 말한다."""
+        self.assertEqual([], self._check('shadow', {}, cycles=0))
+
+    def test_분석_결과에_그림자_기록_수가_실린다(self):
+        """사람이 숫자를 직접 볼 수 있어야 한다 — 판정만 주면 확인할 방법이 없다."""
+        src = _source(_SCRIPT)
+        self.assertIn("'greybox_records'", src)
+        self.assertIn("_check_shadow_alive(", src)

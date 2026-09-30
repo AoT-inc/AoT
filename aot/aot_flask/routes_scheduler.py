@@ -77,6 +77,7 @@ def _resolve_target_name(target_id):
     return None
 
 
+# @manual ai/scheduler#time-display
 def _enrich_job_display(job):
     """Attach human-facing display fields to a SchedulerJobMeta ROW (plain Python
     attributes, not DB columns) so the template never has to touch target_id/
@@ -123,6 +124,7 @@ def _enrich_job_display(job):
     return job
 
 
+# @manual ai/scheduler#manual-tasks, ai/scheduler#history
 @blueprint.route('/scheduler', methods=['GET'])
 @login_required
 def page_scheduler():
@@ -260,6 +262,7 @@ def page_scheduler():
                            settings=Misc.query.first())
 
 
+# @manual ai/scheduler#ask-ai
 @blueprint.route('/api/v1/scheduler/smart_propose', methods=['POST'])
 @login_required
 def api_smart_propose():
@@ -306,6 +309,8 @@ def api_get_drafts():
     return jsonify([_serialize_job(d) for d in drafts])
 
 
+# @manual ai/scheduler#manual-tasks
+# @manual geo/map-widget#scheduled-on
 @blueprint.route('/api/v1/scheduler/propose', methods=['POST'])
 @login_required
 def api_propose_job():
@@ -414,6 +419,7 @@ def api_propose_job():
         return jsonify({'error': str(e)}), 500
 
 
+# @manual ai/scheduler#ai-proposals
 @blueprint.route('/api/v1/scheduler/approve/<int:job_id>', methods=['POST'])
 @login_required
 def api_approve_job(job_id):
@@ -445,6 +451,7 @@ def api_approve_job(job_id):
         return jsonify({'error': str(e)}), 500
 
 
+# @manual ai/scheduler#ai-proposals
 @blueprint.route('/api/v1/scheduler/reject/<int:job_id>', methods=['POST'])
 @login_required
 def api_reject_job(job_id):
@@ -471,6 +478,7 @@ def api_reject_job(job_id):
         return jsonify({'error': str(e)}), 500
 
 
+# @manual ai/scheduler#ai-proposals
 @blueprint.route('/api/v1/scheduler/jobs/<int:job_id>', methods=['PUT'])
 @login_required
 def api_update_job(job_id):
@@ -511,6 +519,7 @@ def api_update_job(job_id):
     return jsonify(result)
 
 
+# @manual ai/scheduler#ai-proposals
 @blueprint.route('/api/v1/scheduler/jobs/<int:job_id>', methods=['DELETE'])
 @login_required
 def api_delete_job(job_id):
@@ -541,6 +550,7 @@ def api_delete_job(job_id):
     return jsonify(result)
 
 
+# @manual ai/scheduler#ai-proposals
 @blueprint.route('/api/v1/scheduler/jobs/<int:job_id>/owner', methods=['POST'])
 @login_required
 def api_assign_job_owner(job_id):
@@ -648,6 +658,7 @@ def api_calendar_events():
     return jsonify(events)
 
 
+# @manual ai/scheduler#time-display
 def _job_target_tz_name(job):
     """Resolve the IANA tz a job should display in (device-local — the
     confirmed anchor policy, docs/design/timezone-management.md §12).
@@ -671,6 +682,7 @@ def _job_target_tz_name(job):
         return 'UTC'
 
 
+# @manual ai/scheduler#timeline-device-timeline
 @blueprint.route('/api/v1/scheduler/timeline', methods=['GET'])
 @login_required
 def api_timeline_events():
@@ -717,6 +729,7 @@ def api_timeline_events():
     return jsonify(events)
 
 
+# @manual ai/scheduler#time-display
 def _serialize_job(meta):
     """Serialize SchedulerJobMeta to dict."""
     # Device-local (anchor tz) view of schedule_time, alongside the legacy
@@ -759,6 +772,7 @@ def _serialize_job(meta):
     }
 
 
+# @manual ai/scheduler#timeline-device-timeline
 def _state_to_css_class(state):
     """Map job state to CSS class for FullCalendar events."""
     mapping = {

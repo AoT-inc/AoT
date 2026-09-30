@@ -65,6 +65,13 @@
           {{form_email_alert.smtp_password.label(class_='aot-settings-label')}}
           <div class="aot-settings-control">
             {{form_email_alert.smtp_password(class_='form-control aot-modern-input', **{'title': _('Only enter a password to change the saved password')})}}
+            {% if smtp.password_unreadable %}
+            <small class="text-danger">{{_('The saved password cannot be read on this system (settings may have been restored from another installation). Enter it again and save.')}}</small>
+            {% elif smtp.has_password %}
+            <small class="text-muted">{{_('A password is saved. Leave blank to keep it.')}}</small>
+            {% else %}
+            <small class="text-muted">{{_('No password is saved.')}}</small>
+            {% endif %}
           </div>
         </div>
 

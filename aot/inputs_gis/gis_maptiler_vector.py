@@ -8,14 +8,15 @@ from flask_babel import lazy_gettext as lg
 
 # Vector tile styles available from MapTiler
 CHANNELS = {
-    0: {'name': 'Streets', 'style': 'streets', 'description': 'Standard road map with labels'},
-    1: {'name': 'Outdoor', 'style': 'outdoor', 'description': 'Topographic map with trails'},
-    2: {'name': 'Satellite', 'style': 'satellite', 'description': 'Satellite imagery base'},
-    3: {'name': 'Hybrid', 'style': 'hybrid', 'description': 'Satellite with roads/labels'},
-    4: {'name': 'Ocean', 'style': 'ocean', 'description': 'Bathymetric ocean map'},
-    5: {'name': 'Topo', 'style': 'topo', 'description': 'Topographic terrain map'},
+    0: {'name': lg('Streets'), 'style': 'streets', 'description': lg('Standard road map with labels')},
+    1: {'name': lg('Outdoor'), 'style': 'outdoor', 'description': lg('Topographic map with trails')},
+    2: {'name': lg('Satellite'), 'style': 'satellite', 'description': lg('Satellite imagery base')},
+    3: {'name': lg('Hybrid'), 'style': 'hybrid', 'description': lg('Satellite with roads/labels')},
+    4: {'name': lg('Ocean'), 'style': 'ocean', 'description': lg('Bathymetric ocean map')},
+    5: {'name': lg('Topo'), 'style': 'topo', 'description': lg('Topographic terrain map')},
 }
 
+# @manual geo/layers#international-general, geo/layers#mapbox-maptiler
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_maptiler_vector',
     'input_manufacturer': 'MapTiler',
@@ -48,13 +49,13 @@ INPUT_INFORMATION = {
             'id': 'api_key',
             'type': 'text',
             'default': '',
-            'name': 'MapTiler API Key',
+            'name': lg('MapTiler API Key'),
             'required': True
         },
         {
             'id': 'active_channels',
             'type': 'channel_selector',
-            'name': 'Map Style',
+            'name': lg('Map Style'),
             'channel_def': CHANNELS,
             'default': [0],
             'multiple': False
@@ -63,8 +64,8 @@ INPUT_INFORMATION = {
             'id': 'language',
             'type': 'text',
             'default': 'auto',
-            'name': 'Label Language',
-            'description': 'Language for map labels (e.g., ko, en, auto)'
+            'name': lg('Label Language'),
+            'description': lg('Language for map labels (e.g., ko, en, auto)')
         }
     ],
     'leaflet_options': {
@@ -94,6 +95,7 @@ class InputModule(AbstractGisInput):
         # MapTiler Cloud API base
         self._base_url = 'https://api.maptiler.com'
     
+    # @manual geo/layers#mapbox-maptiler
     def _get_active_style(self):
         """Get the active style from channel selection."""
         active_channels = self.get_custom_option('active_channels')
@@ -113,6 +115,7 @@ class InputModule(AbstractGisInput):
             return CHANNELS[layer_id]
         return CHANNELS[0]
     
+    # @manual geo/layers#mapbox-maptiler
     def get_url(self):
         """Get the vector tile URL (for MapLibre-GL)."""
         self.api_key = self.get_custom_option('api_key') or ''

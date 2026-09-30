@@ -2239,8 +2239,8 @@ msgid "Clock"
 msgstr "घड़ी"
 
 #: config_translations.py:325 config_translations.py:326
-msgid "Cable Select"
-msgstr "केबल चयन"
+msgid "Chip Select"
+msgstr "चिप चयन"
 
 #: config_translations.py:328 config_translations.py:329
 msgid "MISO"
@@ -4394,8 +4394,12 @@ msgid "MCP Server '%(name)s' deleted."
 msgstr "MCP सर्वर '%(name)s' हटाया गया।"
 
 #: aot_flask/routes_ai_agent.py:1513
-msgid "Enable the AI service in Settings > General first."
-msgstr "पहले सेटिंग्स > सामान्य में AI सेवा सक्षम करें।"
+msgid ""
+"Enable the AI service in Manage > System Management > General Settings "
+"first."
+msgstr ""
+"पहले प्रबंधित करें > सिस्टम प्रबंधन > सामान्य सेटिंग्स में AI सेवा सक्षम "
+"करें।"
 
 #: aot_flask/routes_ai_agent.py:1518
 msgid "Register and activate at least one AI model before starting the service."
@@ -7611,15 +7615,11 @@ msgid "Rejected"
 msgstr "अस्वीकृत"
 
 #: aot_flask/static/js/app/dashboard.js:319
-msgid "layout_save_fail"
+msgid "Failed to save layout"
 msgstr "लेआउट सहेजने में विफल"
 
-#: aot_flask/static/js/app/dashboard.js:323
-msgid "layout_serialize_error"
-msgstr "लेआउट सीरियलाइज़ करने में त्रुटि"
-
 #: aot_flask/static/js/app/dashboard.js:454
-msgid "dashboard_order_save_fail"
+msgid "Failed to save dashboard order"
 msgstr "डैशबोर्ड क्रम सहेजने में विफल"
 
 #: aot_flask/static/js/components/aot-map-search-fixed.js:365
@@ -7627,11 +7627,11 @@ msgid "Search service unavailable"
 msgstr "खोज सेवा उपलब्ध नहीं है"
 
 #: aot_flask/static/js/components/aot-tabs.js:221
-msgid "order_saved"
+msgid "Order saved"
 msgstr "क्रम सहेजा गया"
 
 #: aot_flask/static/js/components/aot-tabs.js:225
-msgid "order_save_fail"
+msgid "Failed to save order"
 msgstr "क्रम सहेजने में विफल"
 
 #: aot_flask/static/js/dist/aot-facility-widget.bundle.js:2
@@ -7746,7 +7746,7 @@ msgstr "कोई प्रतिक्रिया नहीं"
 
 #: aot_flask/static/js/dist/geo-design.bundle.js:468
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:4309
-msgid "only_polygons_selectable"
+msgid "Only polygons can be selected"
 msgstr "केवल बहुभुज चयन योग्य हैं"
 
 #: aot_flask/static/js/geo/aot-facility-design.js:867
@@ -7781,71 +7781,37 @@ msgstr "आधार मानचित्र"
 msgid "Overlay"
 msgstr "ओवरले"
 
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:729
-msgid "hide_panel"
-msgstr "पैनल छिपाएं"
-
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:735
-msgid "show_panel"
+msgid "Show Panel"
 msgstr "पैनल दिखाएं"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:883
-msgid "mode_switch_error"
+msgid "Failed to switch mode"
 msgstr "मोड बदलने में त्रुटि"
 
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:1006
-msgid "main_pipe"
-msgstr "मुख्य पाइप"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:1015
-msgid "branch_pipe"
-msgstr "शाखा पाइप"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:1023
-msgid "reference_line"
-msgstr "संदर्भ रेखा"
-
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1135
-msgid "ref_line_out_of_bounds"
+msgid "Reference line removed: draw it inside a site or zone"
 msgstr "संदर्भ रेखा सीमा से बाहर"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1880
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:1990
-msgid "design_map_new"
+msgid "New map"
 msgstr "नया डिज़ाइन मानचित्र"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2006
-msgid "map_not_found"
+msgid "Map not found"
 msgstr "मानचित्र नहीं मिला"
 
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2020
-msgid "map_load_failed"
+msgid "Failed to load the map. Please retry."
 msgstr "मानचित्र लोड नहीं हो सका। कृपया पुनः प्रयास करें।"
 
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2624
-msgid "saved_successfully"
-msgstr "सफलतापूर्वक सहेजा गया"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2631
-msgid "save_failed"
-msgstr "सहेजना विफल रहा"
-
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2698
-msgid "no_data_table"
+msgid "No data"
 msgstr "कोई डेटा तालिका नहीं"
 
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2744
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:3089
-msgid "deleted_successfully"
-msgstr "सफलतापूर्वक हटाया गया"
-
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:2778
-#: aot_flask/static/js/geo/aot-geo-design-v3.js:3111
-msgid "delete_failed"
-msgstr "हटाना विफल रहा"
-
 #: aot_flask/static/js/geo/aot-geo-design-v3.js:2823
-msgid "polygon_split_feature_coming_soon"
+msgid "Polygon split is not available yet"
 msgstr "बहुभुज विभाजन सुविधा जल्द आ रही है"
 
 #: aot_flask/static/js/geo/aot-geo-panel.js:207
@@ -8314,28 +8280,24 @@ msgid "Select"
 msgstr "चुनें"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:97
-msgid "creating_new_map"
+msgid "Creating a new map..."
 msgstr "नया मानचित्र बनाया जा रहा है"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:110
-msgid "confirm_delete_map"
+msgid "Delete this map?"
 msgstr "मानचित्र हटाने की पुष्टि करें"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:117
-msgid "enter_new_map_name"
+msgid "Enter a new map name"
 msgstr "नया मानचित्र नाम दर्ज करें"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:121
-msgid "unsaved_map_warning"
+msgid "Save the map before renaming it"
 msgstr "असहेजा मानचित्र चेतावनी"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:134
-msgid "rename_failed"
+msgid "Rename failed"
 msgstr "नाम बदलना विफल रहा"
-
-#: aot_flask/static/js/geo/design/aot-geo-events.js:140
-msgid "rename_error"
-msgstr "नाम बदलने में त्रुटि"
 
 #: aot_flask/static/js/geo/design/aot-geo-events.js:593
 msgid "Exit fullscreen"
@@ -8359,92 +8321,72 @@ msgstr "आयात विफल: "
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:46
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:103
-msgid "operation_error"
+msgid "Operation failed"
 msgstr "संचालन में त्रुटि हुई"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:59
-msgid "extend_only_line"
+msgid "Only lines can be extended"
 msgstr "केवल रेखा विस्तार"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:67
-msgid "trim_only_line"
+msgid "Only lines can be trimmed"
 msgstr "केवल रेखा ट्रिम"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:76
-msgid "offset_prompt_polygon"
+msgid "Offset distance in meters (negative shrinks the polygon)"
 msgstr "बहुभुज के लिए ऑफ़सेट दूरी दर्ज करें"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:77
-msgid "offset_prompt_line"
+msgid "Offset distance in meters (negative moves to the other side)"
 msgstr "रेखा के लिए ऑफ़सेट दूरी दर्ज करें"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:88
-msgid "select_merge_target"
+msgid "Select the polygon to merge with"
 msgstr "मर्ज करने के लिए लक्ष्य चुनें"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:94
-msgid "select_subtract_target"
+msgid "Select the polygon to subtract"
 msgstr "घटाने के लिए लक्ष्य चुनें"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:175
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:199
-msgid "parent_polygon_not_found"
+msgid "No enclosing polygon found"
 msgstr "मूल बहुभुज नहीं मिला"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:189
-msgid "no_boundary_intersection"
+msgid "The line cannot be extended to the boundary"
 msgstr "सीमा के साथ कोई प्रतिच्छेदन नहीं"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:213
-msgid "multiline_not_supported"
+msgid "Multi-part lines are not supported"
 msgstr "मल्टीलाइन समर्थित नहीं है"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:216
-msgid "trim_error_or_none"
+msgid "Could not trim the line"
 msgstr "ट्रिम त्रुटि या कोई परिणाम नहीं"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:222
-msgid "merge_self_error"
+msgid "Cannot merge a polygon with itself"
 msgstr "स्वयं के साथ मर्ज नहीं किया जा सकता"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:249
-msgid "merge_failed_turf"
+msgid "Merge failed"
 msgstr "मर्ज विफल रहा"
 
-#: aot_flask/static/js/geo/design/aot-geo-geometry.js:257
-msgid "merge_error"
-msgstr "मर्ज त्रुटि"
-
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:263
-msgid "subtract_self_error"
+msgid "Cannot subtract a polygon from itself"
 msgstr "स्वयं से घटाया नहीं जा सकता"
 
 #: aot_flask/static/js/geo/design/aot-geo-geometry.js:288
-msgid "subtract_failed_turf"
+msgid "Subtract failed"
 msgstr "घटाव विफल रहा"
-
-#: aot_flask/static/js/geo/design/aot-geo-geometry.js:296
-msgid "subtract_error"
-msgstr "घटाव त्रुटि"
-
-#: aot_flask/static/js/geo/design/aot-geo-label.js:326
-msgid "enter_name_please"
-msgstr "कृपया नाम दर्ज करें"
-
-#: aot_flask/static/js/geo/design/aot-geo-label.js:351
-msgid "edit_label_name"
-msgstr "लेबल नाम संपादित करें"
 
 #: aot_flask/static/js/geo/design/aot-geo-modules.js:48
 msgid "Shape intersects itself (Self-intersection). Invalid geometry."
 msgstr "आकार स्वयं को प्रतिच्छेद करता है (सेल्फ़-इंटरसेक्शन)। अमान्य ज्यामिति।"
 
-#: aot_flask/static/js/geo/design/aot-geo-modules.js:242
-msgid "reference_line_auto_delete_warning"
-msgstr "संदर्भ रेखा स्वतः हट जाएगी"
-
 #: aot_flask/static/js/geo/design/aot-geo-modules.js:511
-msgid "session_expired"
+msgid "Your session has expired. Please reload the page."
 msgstr "सत्र समाप्त हो गया"
 
 #: aot_flask/static/js/geo/design/aot-geo-stats.js:429
@@ -9486,10 +9428,10 @@ msgstr "Google खाता"
 #: aot_flask/templates/layout_default.html:881
 msgid ""
 "Not configured on this server yet — ask an administrator to set it up "
-"under Settings > Integrations."
+"under Manage > System Management > Integrations."
 msgstr ""
 "यह इस सर्वर पर अभी कॉन्फ़िगर नहीं किया गया है — किसी व्यवस्थापक से "
-"सेटिंग्स > इंटीग्रेशन में इसे सेट करने के लिए कहें।"
+"प्रबंधित करें > सिस्टम प्रबंधन > इंटीग्रेशन में इसे सेट करने के लिए कहें।"
 
 #: aot_flask/templates/layout.html:887
 #: aot_flask/templates/layout_default.html:887
@@ -9734,8 +9676,10 @@ msgstr "त्रुटि: सर्वर से संपर्क करन�
 #: aot_flask/templates/modals/tab_settings.html:151
 #: aot_flask/templates/pages/geo/geo_design.html:1184
 #: aot_flask/templates/pages/geo/geo_facility.html:1148
-msgid "No groups yet. Create one in Settings > Users > Groups."
-msgstr "अभी तक कोई समूह नहीं है। सेटिंग्स > उपयोगकर्ता > समूह में एक बनाएं।"
+msgid "No groups yet. Create one in Manage > System Management > Users > Groups."
+msgstr ""
+"अभी तक कोई समूह नहीं है। प्रबंधित करें > सिस्टम प्रबंधन > उपयोगकर्ता > "
+"समूह में एक बनाएं।"
 
 #: aot_flask/templates/layout.html:1151 aot_flask/templates/layout.html:1153
 #: aot_flask/templates/layout_default.html:1151
@@ -10342,10 +10286,10 @@ msgstr ""
 #: aot_flask/templates/admin/upgrade.html:299
 msgid ""
 "Once the upgrade is complete and the system restarts, the daemon status "
-"indicator (top-left logo) will return to green."
+"indicator (top-left logo) will return to its normal color."
 msgstr ""
 "एक बार अपग्रेड पूर्ण होने और सिस्टम पुनरारंभ होने के बाद, डेमन स्थिति "
-"संकेतक (ऊपर-बाएं लोगो) हरा हो जाएगा।"
+"संकेतक (ऊपर-बाएं लोगो) अपने सामान्य रंग में लौट आएगा।"
 
 #: aot_flask/templates/admin/upgrade.html:300
 msgid ""
@@ -11762,8 +11706,12 @@ msgid "AI Settings"
 msgstr "AI सेटिंग्स"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:62
-msgid "The AI service is disabled. Enable it in Settings > General first."
-msgstr "AI सेवा अक्षम है। पहले इसे सेटिंग्स > सामान्य में सक्षम करें।"
+msgid ""
+"The AI service is disabled. Enable it in Manage > System Management > "
+"General Settings first."
+msgstr ""
+"AI सेवा अक्षम है। पहले इसे प्रबंधित करें > सिस्टम प्रबंधन > सामान्य "
+"सेटिंग्स में सक्षम करें।"
 
 #: aot_flask/templates/pages/ai/ai_agent.html:64
 msgid ""
@@ -12246,8 +12194,8 @@ msgid "Google account not connected."
 msgstr "Google खाता कनेक्ट नहीं है।"
 
 #: aot_flask/templates/pages/ai/ai_library.html:484
-msgid "Connect it under Settings > Integrations"
-msgstr "इसे सेटिंग्स > एकीकरण में कनेक्ट करें"
+msgid "Connect it under Manage > System Management > Integrations"
+msgstr "इसे प्रबंधित करें > सिस्टम प्रबंधन > एकीकरण में कनेक्ट करें"
 
 #: aot_flask/templates/pages/ai/ai_library.html:485
 msgid "Your Google connection predates Drive access — reconnect to grant it."
@@ -12256,16 +12204,17 @@ msgstr ""
 "पुनः कनेक्ट करें।"
 
 #: aot_flask/templates/pages/ai/ai_library.html:486
-msgid "Reconnect under Settings > Integrations"
-msgstr "सेटिंग्स > एकीकरण में पुनः कनेक्ट करें"
+msgid "Reconnect under Manage > System Management > Integrations"
+msgstr "प्रबंधित करें > सिस्टम प्रबंधन > एकीकरण में पुनः कनेक्ट करें"
 
 #: aot_flask/templates/pages/ai/ai_library.html:487
 msgid ""
 "Google Picker is not configured yet — an admin must set the Picker API "
-"key under Settings > Integrations."
+"key under Manage > System Management > Integrations."
 msgstr ""
 "Google Picker अभी तक कॉन्फ़िगर नहीं किया गया है — किसी व्यवस्थापक को "
-"सेटिंग्स > एकीकरण में Picker API कुंजी सेट करनी होगी।"
+"प्रबंधित करें > सिस्टम प्रबंधन > एकीकरण में Picker API कुंजी सेट करनी "
+"होगी।"
 
 #: aot_flask/templates/pages/ai/ai_library.html:492
 msgid "Source is not enabled. Activate it before syncing."
@@ -14554,11 +14503,11 @@ msgstr "पता जोड़ें"
 
 #: aot_flask/templates/pages/geo/geo_design.html:824
 msgid ""
-"Enter addresses in the first column of the CSV file. Adjacent parcels are"
-" merged automatically."
+"Enter addresses in the first column of the CSV file. To merge adjacent "
+"parcels, check Merge Adjacent Parcels."
 msgstr ""
-"CSV फ़ाइल के पहले कॉलम में पते दर्ज करें। आसन्न पार्सल स्वतः मर्ज हो जाते"
-" हैं।"
+"CSV फ़ाइल के पहले कॉलम में पते दर्ज करें। आसन्न पार्सल मर्ज करने के लिए "
+"\"आसन्न पार्सल मर्ज करें\" चुनें।"
 
 #: aot_flask/templates/pages/geo/geo_design.html:828
 msgid "Choose CSV File"
@@ -17813,11 +17762,11 @@ msgstr ""
 
 #: aot_flask/templates/settings/chirpstack.html:39
 msgid ""
-"Stored and managed under Settings > API Keys. Select which key this "
-"connection uses."
+"Stored and managed under Manage > System Management > API Key Management."
+" Select which key this connection uses."
 msgstr ""
-"सेटिंग्स > API कुंजियाँ के अंतर्गत संग्रहीत और प्रबंधित। यह कनेक्शन किस "
-"कुंजी का उपयोग करता है, चुनें।"
+"प्रबंधित करें > सिस्टम प्रबंधन > API कुंजी प्रबंधन के अंतर्गत संग्रहीत और"
+" प्रबंधित। यह कनेक्शन किस कुंजी का उपयोग करता है, चुनें।"
 
 #: aot_flask/templates/settings/chirpstack.html:61
 #: aot_flask/templates/settings/chirpstack.html:162
@@ -18640,13 +18589,15 @@ msgid ""
 "language you wrote them in. Turn this on to have them shown in the "
 "interface language as well. The stored names are never changed. Without "
 "an AI engine they are not translated automatically, but translations you "
-"enter under Settings > Name Translations are still shown."
+"enter under Manage > System Management > Name Translations are still "
+"shown."
 msgstr ""
 "आपके द्वारा स्वयं टाइप किए गए नाम — डिवाइस, ज़ोन और फसल के नाम — उसी भाषा"
 " में रहते हैं जिसमें आपने उन्हें लिखा था। इंटरफ़ेस भाषा में भी उन्हें "
 "दिखाने के लिए इसे चालू करें। संग्रहीत नाम कभी नहीं बदले जाते। AI इंजन के "
-"बिना वे स्वतः अनुवादित नहीं होते, लेकिन सेटिंग्स > नाम अनुवाद के अंतर्गत "
-"आपके द्वारा दर्ज किए गए अनुवाद फिर भी दिखाए जाते हैं।"
+"बिना वे स्वतः अनुवादित नहीं होते, लेकिन प्रबंधित करें > सिस्टम प्रबंधन > "
+"नाम अनुवाद के अंतर्गत आपके द्वारा दर्ज किए गए अनुवाद फिर भी दिखाए जाते "
+"हैं।"
 
 #: aot_flask/templates/settings/general.html:195
 msgid ""
@@ -18766,11 +18717,8 @@ msgstr "कंट्रोलर सैंपलिंग दर सेटिं
 msgid ""
 "The sampling rate of the AoT daemon controller can be changed below. A "
 "daemon restart is required to apply new settings. Restart the daemon by "
-"selecting Config Menu [Gear Icon] -> Restart Backend."
+"selecting Manage -> Restart Backend."
 msgstr ""
-"नीचे AoT डीमन कंट्रोलर की सैंपलिंग दर बदली जा सकती है। नई सेटिंग्स लागू "
-"करने के लिए डीमन पुनः आरंभ आवश्यक है। Config Menu [Gear Icon] -> Restart "
-"Backend चुनकर डीमन को पुनः आरंभ करें।"
 
 #: aot_flask/templates/settings/group_detail.html:24
 msgid ""
@@ -19374,19 +19322,18 @@ msgid ""
 "This feature allows you to replace current settings by uploading a ZIP "
 "file containing the AoT setup database and custom "
 "functions/inputs/outputs/widgets. You must only import databases that are"
-" of the same or older version as the current AoT version. There is no "
-"procedure to verify this, but problems may occur if a database version "
-"higher than the current version is imported. Problems may also occur if "
-"the custom controller is not compatible with the AoT version being "
-"imported."
+" of the same or older version as the current AoT version. The version is "
+"read only from the file name: a file whose name shows a newer version is "
+"refused, so do not rename exported files. Problems may also occur if the "
+"custom controller is not compatible with the AoT version being imported."
 msgstr ""
 "यह सुविधा आपको AoT सेटअप डेटाबेस और कस्टम फ़ंक्शन/इनपुट/आउटपुट/विजेट वाली"
 " ZIP फ़ाइल अपलोड करके वर्तमान सेटिंग्स बदलने की अनुमति देती है। आपको केवल"
 " वर्तमान AoT संस्करण के समान या उससे पुराने संस्करण के डेटाबेस आयात करने "
-"चाहिए। इसे सत्यापित करने की कोई प्रक्रिया नहीं है, लेकिन यदि वर्तमान "
-"संस्करण से उच्चतर डेटाबेस संस्करण आयात किया जाता है तो समस्याएं हो सकती "
-"हैं। यदि कस्टम नियंत्रक आयात किए जा रहे AoT संस्करण के साथ संगत नहीं है "
-"तो भी समस्याएं हो सकती हैं।"
+"चाहिए। संस्करण केवल फ़ाइल नाम से पढ़ा जाता है: जिस फ़ाइल के नाम में नया "
+"संस्करण दिखता है उसे अस्वीकार कर दिया जाता है, इसलिए निर्यात की गई "
+"फ़ाइलों का नाम न बदलें। यदि कस्टम नियंत्रक आयात किए जा रहे AoT संस्करण के"
+" साथ संगत नहीं है तो भी समस्याएं हो सकती हैं।"
 
 #: aot_flask/templates/tools/export.html:95
 msgid ""
@@ -19512,8 +19459,8 @@ msgid "Notes Manager"
 msgstr "नोट्स प्रबंधक"
 
 #: aot_flask/templates/tools/notes.html:152
-msgid "Search content, subject..."
-msgstr "सामग्री, विषय खोजें..."
+msgid "Search note text..."
+msgstr "नोट का पाठ खोजें..."
 
 #: aot_flask/templates/tools/notes.html:270
 msgid "No notes found"
@@ -19969,8 +19916,12 @@ msgid "Save as Global Band Colors"
 msgstr "वैश्विक बैंड रंगों के रूप में सहेजें"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_gauge_angular_configure_options.html:39
-msgid "Applies the first 5 section colors to Settings > Custom UI band colors."
-msgstr "पहले 5 खंड रंगों को सेटिंग्स > कस्टम UI के बैंड रंगों पर लागू करता है।"
+msgid ""
+"Applies the first 5 section colors to the band colors in Manage > System "
+"Management > Custom UI."
+msgstr ""
+"पहले 5 खंड रंगों को प्रबंधित करें > सिस्टम प्रबंधन > कस्टम UI के बैंड "
+"रंगों पर लागू करता है।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:2
 msgid "Graph Series Options"
@@ -20020,8 +19971,12 @@ msgid "Save as Global Chart Colors"
 msgstr "वैश्विक चार्ट रंगों के रूप में सहेजें"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:80
-msgid "Applies the first 6 series colors to Settings > Custom UI chart colors."
-msgstr "पहले 6 सीरीज़ रंगों को सेटिंग्स > कस्टम UI के चार्ट रंगों पर लागू करता है।"
+msgid ""
+"Applies the first 6 series colors to the chart colors in Manage > System "
+"Management > Custom UI."
+msgstr ""
+"पहले 6 सीरीज़ रंगों को प्रबंधित करें > सिस्टम प्रबंधन > कस्टम UI के चार्ट"
+" रंगों पर लागू करता है।"
 
 #: aot_flask/templates/user_templates/widget_template_AoT_graph_configure_options.html:84
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:62
@@ -21712,11 +21667,14 @@ msgstr ""
 "जोड़ा जा सकता है।"
 
 #: config/__init__.py:634
+#, fuzzy
 msgid ""
 "A Sequence Trigger runs an ordered list of Actions one step at a time "
-"when activated. Add Actions to the sequence and they execute from top to "
-"bottom, with an optional delay between steps. Use it to automate multi-"
-"step routines — for example, open a vent, wait, then turn on a fan."
+"when activated. Actions can run individually or as groups that fire "
+"together, each step's duration can be a fixed delay or driven live by "
+"an Input measurement, and steps can overlap and follow a per-weekday "
+"schedule. Use it to automate multi-step routines — for example, open a "
+"vent, wait, then turn on a fan."
 msgstr ""
 "एक सीक्वेंस ट्रिगर सक्रिय होने पर क्रियाओं की एक क्रमबद्ध सूची को एक-एक "
 "करके चलाता है। सीक्वेंस में क्रियाएं जोड़ें और वे ऊपर से नीचे तक "
@@ -26345,11 +26303,13 @@ msgstr "प्रीसेट कॉन्फ़िगरेशन"
 msgid ""
 "Selecting a preset configuration automatically applies default settings "
 "such as min/max values. Preset gauges follow the global band colors "
-"(Settings > Custom UI); choose Custom to set individual section colors."
+"(Manage > System Management > Custom UI); choose Custom to set individual"
+" section colors."
 msgstr ""
 "प्रीसेट कॉन्फ़िगरेशन चुनने पर min/max मान जैसी डिफ़ॉल्ट सेटिंग्स स्वतः "
-"लागू हो जाती हैं। प्रीसेट गेज ग्लोबल बैंड रंगों (Settings > Custom UI) का"
-" पालन करते हैं; अलग-अलग सेक्शन रंग सेट करने के लिए Custom चुनें।"
+"लागू हो जाती हैं। प्रीसेट गेज ग्लोबल बैंड रंगों (प्रबंधित करें > सिस्टम "
+"प्रबंधन > कस्टम UI) का पालन करते हैं; अलग-अलग सेक्शन रंग सेट करने के लिए "
+"Custom चुनें।"
 
 #: widgets/AoT_gauge_angular.py:326 widgets/AoT_wind_angular.py:238
 msgid "Data Font Size"
@@ -26960,13 +26920,13 @@ msgstr "AoT प्लॉट"
 
 #: widgets/AoT_plot.py:357
 msgid ""
-"One plot at a glance: stage timeline, targets against current readings, "
-"trends, and accumulated heat. Edit its schedule, guidance and targets "
-"from here."
+"Every plot that is growing now, as a list of cards. Open one to see its "
+"stage timeline, targets against current readings, trends and accumulated "
+"heat, and to edit its schedule, guidance and targets."
 msgstr ""
-"एक नज़र में एक प्लॉट: चरण समयरेखा, वर्तमान रीडिंग के मुकाबले लक्ष्य, "
-"रुझान, और संचित ऊष्मा। यहाँ से इसका शेड्यूल, मार्गदर्शन और लक्ष्य संपादित"
-" करें।"
+"अभी सक्रिय सभी प्लॉट, कार्डों की सूची के रूप में। किसी एक को खोलकर उसकी "
+"चरण समयरेखा, वर्तमान रीडिंग के मुकाबले लक्ष्य, रुझान और संचित ऊष्मा "
+"देखें, और उसका शेड्यूल, मार्गदर्शन और लक्ष्य संपादित करें।"
 
 #: widgets/AoT_plot.py:377
 msgid "What to monitor"
@@ -28020,12 +27980,12 @@ msgstr "आपातकालीन विचलन सीमा (× सहन�
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:223
 msgid ""
 "If a variable deviates from its target by more than this many times its "
-"tolerance, treat the cycle as an emergency and move vents immediately "
-"(ignore the actuation period above)."
+"tolerance and the gap is still widening, treat the cycle as an emergency "
+"and move vents immediately (ignore the actuation period above)."
 msgstr ""
 "यदि कोई वेरिएबल अपने लक्ष्य से अपनी सहनशीलता के इतने गुना से अधिक विचलित "
-"होता है, तो चक्र को आपातकाल मानें और वेंट को तुरंत चलाएं (ऊपर दी गई "
-"एक्चुएशन अवधि को अनदेखा करें)।"
+"होता है और यह अंतर अभी भी बढ़ रहा है, तो चक्र को आपातकाल मानें और वेंट को"
+" तुरंत चलाएं (ऊपर दी गई एक्चुएशन अवधि को अनदेखा करें)।"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:239
 msgid "Emergency Rate Threshold (°C / 10min)"
@@ -29328,7 +29288,7 @@ msgstr "तत्व आयात किए गए।"
 msgid "hh"
 msgstr "hh"
 
-msgid "loading_map"
+msgid "Loading map..."
 msgstr "मानचित्र लोड हो रहा है..."
 
 msgid "manual size"
@@ -29342,9 +29302,6 @@ msgstr "अन्य"
 
 msgid "pipes)"
 msgstr "पाइप)"
-
-msgid "save_btn_text"
-msgstr "सहेजें"
 
 msgid "ss"
 msgstr "ss"
@@ -29668,8 +29625,10 @@ msgid "Tool servers the built-in AI calls. One is added automatically when you a
 msgstr "बिल्ट-इन AI जिन टूल सर्वरों को कॉल करता है। ऊपर MCP इंजन जोड़ने पर एक अपने-आप जुड़ जाता है।"
 
 #: aot_flask/templates/pages/ai/ai_agent.html
-msgid "Turned on or off in Settings > General."
-msgstr "सेटिंग्स > सामान्य में चालू या बंद किया जाता है।"
+msgid "Turned on or off in Manage > System Management > General Settings."
+msgstr ""
+"प्रबंधित करें > सिस्टम प्रबंधन > सामान्य सेटिंग्स में चालू या बंद किया "
+"जाता है।"
 
 #: aot_flask/templates/pages/ai/ai_library.html
 msgid "%(n)s notes the AI wrote are waiting for a person to confirm them."
@@ -30092,8 +30051,17 @@ msgid "Stage timeline"
 msgstr "चरण टाइमलाइन"
 
 #: aot_flask/templates/pages/geo/journal_view.html
-msgid "Targets come from the program attached to this plot. Δ is the measured average minus that target. Day/night targets and curve-based targets are marked instead of differenced, because comparing them against a whole-day average produces false alarms."
-msgstr "लक्ष्य इस प्लॉट से जुड़े प्रोग्राम से आते हैं। Δ मापे गए औसत में से वह लक्ष्य घटाने पर मिलता है। दिन/रात के लक्ष्य और वक्र-आधारित लक्ष्य अंतर निकालने के बजाय चिह्नित किए जाते हैं, क्योंकि उनकी पूरे दिन के औसत से तुलना करने पर झूठे अलर्ट बनते हैं।"
+msgid ""
+"Targets come from the program attached to this plot. Δ is the measured "
+"average minus that target. Day/night targets and curve-based targets are "
+"compared against the average of the matching daytime or night-time "
+"window, not the whole day; where that window has no readings, Δ is left "
+"out."
+msgstr ""
+"लक्ष्य इस प्लॉट से जुड़े प्रोग्राम से आते हैं। Δ मापे गए औसत में से वह "
+"लक्ष्य घटाने पर मिलता है। दिन/रात के लक्ष्यों और वक्र-आधारित लक्ष्यों की "
+"तुलना पूरे दिन से नहीं, बल्कि संबंधित दिन या रात की अवधि के औसत से की "
+"जाती है; जिस अवधि में कोई रीडिंग नहीं होती, वहाँ Δ नहीं दिखाया जाता।"
 
 #: aot_flask/templates/pages/geo/journal_view.html
 msgid "The outline is derived from the facility."
@@ -30384,8 +30352,16 @@ msgid "Text Size"
 msgstr "टेक्स्ट आकार"
 
 #: widgets/AoT_plot.py
-msgid "Current readings against the targets and limits this stage declares — the same card the map widget shows, including DLI and accumulated heat. [7 Days] turns each row into the range it moved through over the last week."
-msgstr "इस चरण द्वारा घोषित लक्ष्यों और सीमाओं के मुकाबले वर्तमान रीडिंग — वही कार्ड जो मानचित्र विजेट दिखाता है, जिसमें DLI और संचित ऊष्मा शामिल हैं। [7 दिन] हर पंक्ति को उस सीमा में बदल देता है जिसमें वह पिछले सप्ताह के दौरान रही।"
+msgid ""
+"Current readings against the targets and limits this stage declares — the"
+" same card the map widget shows, including DLI and accumulated heat. "
+"[Daily] and [Weekly] turn each row into the range it moved through over "
+"the last 7 days or 8 weeks."
+msgstr ""
+"इस चरण द्वारा घोषित लक्ष्यों और सीमाओं के मुकाबले वर्तमान रीडिंग — वही "
+"कार्ड जो मानचित्र विजेट दिखाता है, जिसमें DLI और संचित ऊष्मा शामिल हैं। "
+"[दैनिक] और [साप्ताहिक] हर पंक्ति को उस सीमा में बदल देते हैं जिसमें वह "
+"पिछले 7 दिनों या 8 सप्ताहों के दौरान रही।"
 
 #: widgets/AoT_plot.py
 msgid "Fills the rows that have no range of their own (CO2, soil moisture, dew point) with a recent trend line. Needs the targets block."
@@ -30881,11 +30857,13 @@ msgid "Password for connecting to the server."
 msgstr ""
 
 #: outputs/on_off_mqtt.py:178 outputs/on_off_mqtt_multi.py:150
+#: inputs/ecowitt_mqtt.py:190 inputs/mqtt_paho.py:133 inputs/mqtt_paho_json.py:149
 msgid "Password for connecting to the server. Leave blank to disable."
 msgstr ""
 
 #: outputs/on_off_mqtt.py:195 outputs/on_off_mqtt_multi.py:167
 #: outputs/pwm_mqtt.py:153 outputs/value_mqtt.py:140
+#: inputs/mqtt_paho.py:114 inputs/mqtt_paho_json.py:130
 msgid "Path to the CA certificate file that signed the broker certificate. Leave blank to use the system CA store (for brokers with a publicly-trusted certificate, e.g. Let's Encrypt)."
 msgstr ""
 
@@ -30935,6 +30913,7 @@ msgstr ""
 
 #: outputs/on_off_mqtt.py:162 outputs/on_off_mqtt_multi.py:134
 #: outputs/pwm_mqtt.py:120 outputs/value_mqtt.py:107
+#: inputs/ecowitt_mqtt.py:165 inputs/mqtt_paho.py:97 inputs/mqtt_paho_json.py:112
 msgid "Send login credentials"
 msgstr ""
 
@@ -31250,6 +31229,7 @@ msgstr ""
 
 #: outputs/on_off_mqtt.py:205 outputs/on_off_mqtt_multi.py:177
 #: outputs/pwm_mqtt.py:163 outputs/value_mqtt.py:150
+#: inputs/ecowitt_mqtt.py:198 inputs/mqtt_paho.py:141 inputs/mqtt_paho_json.py:157
 msgid "Use websockets to connect to the server."
 msgstr ""
 
@@ -31284,4 +31264,846 @@ msgstr ""
 
 #: outputs/on_off_chirpstack.py:177
 msgid "e.g., 010210 (Hex) or JSON string"
+msgstr ""
+
+
+#: aot_flask/templates/modals/geo_settings_modal.html:171
+msgid "Max Site Polygons"
+msgstr ""
+
+#: aot_flask/templates/modals/geo_settings_modal.html:172
+msgid "Max Zone Polygons"
+msgstr ""
+
+#: aot_flask/templates/modals/geo_settings_modal.html:173
+msgid "Max Device Polygons"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:140 inputs/mqtt_paho_json.py:87
+msgid "Topic"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:141 inputs/mqtt_paho_json.py:88
+msgid "The topic to subscribe to"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:158 inputs/mqtt_paho.py:90 inputs/mqtt_paho_json.py:105
+msgid "Unique client ID for connecting to the server"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:164 inputs/mqtt_paho.py:96 inputs/mqtt_paho_json.py:111
+msgid "Use Login"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:171 inputs/mqtt_paho.py:103 inputs/mqtt_paho_json.py:118
+msgid "Use TLS"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:174 inputs/mqtt_paho.py:106 inputs/mqtt_paho_json.py:122
+msgid "Encrypt the connection to the broker with TLS"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:197 inputs/mqtt_paho.py:140 inputs/mqtt_paho_json.py:156
+msgid "Use Websockets"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:216 inputs/mqtt_paho_json.py:175
+msgid "JMESPATH Expression"
+msgstr ""
+
+#: inputs/ecowitt_mqtt.py:217 inputs/mqtt_paho_json.py:176
+msgid "JMESPATH expression to find value in JSON response"
+msgstr ""
+
+#: inputs/mqtt_paho.py:159
+msgid "Subscription Topic"
+msgstr ""
+
+#: inputs/mqtt_paho.py:160
+msgid "The MQTT topic to subscribe to"
+msgstr ""
+
+#: outputs/on_off_gpio.py:88
+msgid "HIGH"
+msgstr ""
+
+#: outputs/on_off_gpio.py:89
+msgid "LOW"
+msgstr ""
+
+#: aot_flask/utils/utils_input.py
+msgid "All measurements must have a name and unit/measurement set"
+msgstr ""
+
+#: aot_flask/utils/utils_general.py
+msgid "Command sent to {controller} Controller and is running in the background."
+msgstr ""
+
+#: aot_flask/utils/utils_general.py
+msgid "Command sent to {controller} Controller."
+msgstr ""
+
+#: aot_flask/utils/utils_general.py
+msgid "Command sent to {controller} Controller. Returned: {returned}"
+msgstr ""
+
+msgid "Current position"
+msgstr "वर्तमान स्थिति"
+
+msgid "Single-span"
+msgstr "एकल-स्पैन"
+
+msgid "Multi-span"
+msgstr "बहु-स्पैन"
+
+#: aot/ai/services/intent_resolver.py
+msgid "valves"
+msgstr ""
+
+#: aot/ai/services/intent_resolver.py
+msgid "pumps"
+msgstr ""
+
+#: aot/ai/services/intent_resolver.py
+msgid "motors"
+msgstr ""
+
+#: aot/ai/services/intent_resolver.py
+msgid "lights"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "New Camera"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "Error adding camera"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "Error updating camera"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_camera.py
+msgid "Error deleting camera"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function.py
+msgid "Execute All"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Humidify"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Dehumidify"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "CO2 Enrichment"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Conservation"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Emergency"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Partial Control"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Natural Ventilation"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Target Unattainable"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Fogger"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "CO2 Injector"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Water (VPD)"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_function_status.py
+msgid "Light Level"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Required"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Start date/time, end date/time, start setpoint"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Invalid Date/Time format"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "YYYY/MM/DD HH:MM:SS"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Start time, end time, start setpoint"
+msgstr ""
+
+#: aot/aot_flask/utils/utils_method.py
+msgid "Duration must be positive"
+msgstr ""
+
+#: aot/inputs_gis/gis_sentinelhub.py
+msgid "index"
+msgstr ""
+
+#: aot/utils/calendar_event_format.py
+msgid "Setting"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Daemon"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Daemon (PID settings)"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Daemon keepup"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Web app"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Web login"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Web access"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Web error"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Web"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Nginx"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Import settings"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "AoT restore"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "AoT upgrade"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Unknown log source"
+msgstr ""
+
+#: aot/utils/log_reader.py
+msgid "Timed out reading this log source"
+msgstr ""
+
+#: aot/services/device_references.py
+msgid "%(kind)s '%(name)s'"
+msgstr ""
+
+#: aot/services/device_references.py
+msgid "%(kind)s of '%(parent)s'"
+msgstr ""
+
+#: aot/services/device_references.py
+msgid "%(list)s and %(count)d more"
+msgstr ""
+
+#: aot/services/device_references.py
+msgid "Cannot delete '%(device)s' — it is still used by: %(referrers)s. Remove or repoint those references first."
+msgstr ""
+
+#: aot/services/resolvers/device_resolver.py
+msgid "no tab"
+msgstr ""
+
+#: aot/services/resolvers/device_resolver.py
+msgid "More than one %(kind)s is named '%(name)s' (tabs: %(tabs)s). Say which one you mean, or use its exact id."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "No device was given."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "That device no longer exists."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "%(kind)s entries have no connection settings to change."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "%(field)s must be a number."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "No changes were submitted."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "'%(field)s' is not a connection setting of this device."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "%(field)s is fixed by this device's driver and cannot be changed."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "%(field)s is not a connection setting."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "The device is saved but stayed off. Turn it back on from its settings page."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Connection settings changed (hardware swap)."
+msgstr ""
+
+#: aot/aot_flask/utils/utils_device_connection.py
+msgid "Replaced: %(name)s"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Browsed the tool list"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Checked pending approvals"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Answered an approval request"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up devices"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Read sensor values"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up functions and controllers"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up the schedule"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up notes and knowledge"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up the map and zones"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up device definitions"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked up AI settings and system status"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Looked something up"
+msgstr ""
+
+#: aot/aot_flask/routes_mcp_api.py
+msgid "Made a change"
+msgstr ""
+
+#: aot/ai/services/agent_loop_service.py
+msgid "This looks like a recurring operation. Should I set it up as a repeating automation (a Function), or reserve it just this once?"
+msgstr ""
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Repeating automation (Function)"
+msgstr ""
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Just this once"
+msgstr ""
+
+#: aot/ai/services/agent_loop_service.py
+msgid "This looks like a condition-based operation. Should I set it up as a conditional automation (a Function), or reserve it at a fixed time?"
+msgstr ""
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Conditional automation (Function)"
+msgstr ""
+
+#: aot/ai/services/agent_loop_service.py
+msgid "Fixed-time reservation"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "GDD (accumulated)"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "D%(n)s"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "h"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "s"
+msgstr ""
+
+#: aot/aot_flask/geo/plot_journal/calc.py
+msgid "Weather station %(name)s"
+msgstr ""
+
+#: aot_flask/utils/utils_action.py
+msgid "Action added"
+msgstr "जोड़ें क्रियाएं"
+
+#: aot_flask/utils/utils_action.py
+msgid "Action deleted"
+msgstr "हटाएं क्रियाएं"
+
+#: aot_flask/utils/utils_action.py
+msgid "Action modified"
+msgstr "संशोधित करें क्रियाएं"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller activated"
+msgstr "सक्रिय करें नियंत्रक"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller deactivated"
+msgstr "निष्क्रिय करें नियंत्रक"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller deleted"
+msgstr "हटाएं नियंत्रक"
+
+#: aot_flask/utils/utils_controller.py
+msgid "Controller modified"
+msgstr "संशोधित करें नियंत्रक"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function added"
+msgstr "जोड़ें फ़ंक्शन"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function deleted"
+msgstr "हटाएं फ़ंक्शन"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function duplicated"
+msgstr "डुप्लिकेट फ़ंक्शन"
+
+#: aot_flask/utils/utils_function.py
+msgid "Function modified"
+msgstr "संशोधित करें फ़ंक्शन"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input activated"
+msgstr "सक्रिय करें इनपुट"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input added"
+msgstr "जोड़ें इनपुट"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input deactivated"
+msgstr "निष्क्रिय करें इनपुट"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input deleted"
+msgstr "हटाएं इनपुट"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input duplicated"
+msgstr "डुप्लिकेट इनपुट"
+
+#: aot_flask/utils/utils_input.py
+msgid "Input modified"
+msgstr "संशोधित करें इनपुट"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller activated"
+msgstr "सक्रिय करें PID"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller deactivated"
+msgstr "निष्क्रिय करें PID"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller deleted"
+msgstr "हटाएं PID"
+
+#: aot_flask/utils/utils_pid.py
+msgid "PID controller modified"
+msgstr "संशोधित करें PID"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger activated"
+msgstr "सक्रिय करें ट्रिगर"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger deactivated"
+msgstr "निष्क्रिय करें ट्रिगर"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger deleted"
+msgstr "हटाएं ट्रिगर"
+
+#: aot_flask/utils/utils_trigger.py
+msgid "Trigger modified"
+msgstr "संशोधित करें ट्रिगर"
+
+#: aot_flask/utils/utils_function.py
+msgid "All actions executed"
+msgstr ""
+
+#: config/__init__.py
+msgid "with Timestamp"
+msgstr ""
+
+#: actions/create_log_line.py
+msgid "Daemon Log Line"
+msgstr ""
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Env Coordinator"
+msgstr "एकीकृत पर्यावरण नियंत्रण"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Coordinates the actuators of the linked facility to optimise photosynthesis. VPD is the primary control target; temperature and humidity act as safety constraints. Actuators and sensors come from the linked facility. External environment data (outdoor temperature, humidity, wind, rain, solar, CO₂) comes from the facility's outdoor sensors, or optionally from the External Environment Context Collector function."
+msgstr ""
+
+#: aot_flask/static/js/common/aot-scale-input.js
+msgid "These values do not match any step — see them under [Advanced]."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:64
+#: aot_flask/routes_mcp_auth.py:128
+msgid "Your permissions do not allow this action"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:86
+msgid "The authorization server address must start with https:// (http only for localhost)."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:88
+msgid "The public MCP address must be a full address with a path, such as https://farm.example.com/mcp."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:90
+msgid "The public web address must be a full address such as https://farm.example.com."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:93
+msgid "To turn on central authentication, enter both the authorization server address and the public MCP address."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:118
+msgid "MCP authentication settings saved."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:137
+msgid "Authorization server"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:138
+msgid "Public MCP address"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:139
+msgid "Authorization server metadata"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:140
+msgid "Signing keys"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:141
+msgid "Account linking"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:153
+msgid "Account linking is not set up yet. Ask an administrator to finish the MCP authentication settings."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:170
+msgid "The account link request expired or does not match. Try linking again."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:173
+msgid "The authorization server did not approve the account link."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:182
+#, python-format
+msgid "Could not link the account: %(err)s"
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:186
+msgid "Your account is linked. AI connections signed in with this account now act as you."
+msgstr ""
+
+#: aot_flask/routes_mcp_auth.py:202
+msgid "Your account is unlinked. AI connections signed in with it can no longer act here."
+msgstr ""
+
+#: tools/mcp_central.py:320
+msgid "The authorization server address is empty or not https."
+msgstr ""
+
+#: tools/mcp_central.py:323
+msgid "The public MCP address is empty or malformed (it needs a path such as /mcp)."
+msgstr ""
+
+#: tools/mcp_central.py:330
+#, python-format
+msgid "Cannot reach %(address)s (%(error)s)."
+msgstr ""
+
+#: tools/mcp_central.py:340
+msgid "The server did not publish authorization server metadata."
+msgstr ""
+
+#: tools/mcp_central.py:343
+#, python-format
+msgid "The server says its issuer is \"%(issuer)s\", not the address entered."
+msgstr ""
+
+#: tools/mcp_central.py:346
+msgid "Authorization server metadata found."
+msgstr ""
+
+#: tools/mcp_central.py:353
+#, python-format
+msgid "%(count)s signing key(s) published."
+msgstr ""
+
+#: tools/mcp_central.py:354
+msgid "No ES256 signing keys at /.well-known/jwks.json."
+msgstr ""
+
+#: tools/mcp_central.py:357
+msgid "client ID"
+msgstr ""
+
+#: tools/mcp_central.py:358
+msgid "client secret"
+msgstr ""
+
+#: tools/mcp_central.py:359
+msgid "public web address"
+msgstr ""
+
+#: tools/mcp_central.py:360
+msgid "Account linking is ready."
+msgstr ""
+
+#: tools/mcp_central.py:361
+#, python-format
+msgid "Account linking needs: %(missing)s."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:192
+msgid "MCP Authentication"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:194
+msgid "Configure"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:196
+#, python-format
+msgid "API keys, and access tokens from %(issuer)s"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:196
+msgid "API keys only"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:478
+msgid "MCP Authentication Settings"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:487
+msgid "Connection Methods"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:491
+msgid "Always accepted"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:493
+msgid "An AI client sends a user's API key in the X-API-KEY header. Keys are issued under Settings > Users. This works on any network, including closed VPNs."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:496
+msgid "Central Authentication"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:505
+msgid "Also accept access tokens issued by an OAuth authorization server, such as AoT Central Authentication. Sign-in and consent happen there; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:508
+msgid "Addresses"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:511
+msgid "Authorization Server"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:517
+msgid "The issuer address of the authorization server (https). Its signing keys are fetched from here, so this server must be able to reach it."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:520
+msgid "Public MCP Address"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:526
+msgid "The address AI clients connect to. Access tokens must name exactly this address. Route /mcp and /.well-known/oauth-protected-resource at this address to the MCP server (port 5700)."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:529
+msgid "Public Web Address"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:535
+msgid "The address people open this AoT at. Account linking returns here. Shared with the Google integration setting."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:538
+msgid "Account Linking Client"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:548
+msgid "Client Secret"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:552
+msgid "Set by environment"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:552
+msgid "Saved — leave blank to keep"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:555
+msgid "Issued by the authorization server when this site is registered. Used only to link a person's account there to their user here."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:557
+msgid "Fields that are greyed out are set by environment variables on this server and cannot be changed here."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:561
+msgid "Register at the Authorization Server"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:564
+msgid "Resource"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:568
+msgid "Redirect URI"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:572
+msgid "Scopes"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:573
+msgid "required"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:575
+msgid "aot.read lets the AI read; aot.control lets it operate devices; aot.config lets it change settings. The user's own role still applies on top."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:577
+msgid "Check Connection"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:579
+msgid "Check"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:586
+msgid "My Account"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:589
+#, python-format
+msgid "Linked: %(who)s"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:589
+msgid "Not linked"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:592
+msgid "Unlink My Account"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:594
+msgid "Link My Account"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:598
+msgid "AI connections signed in at the authorization server act as the AoT user their account is linked to. Link your own account while signed in here as yourself."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:598
+msgid "Account linking needs the client ID, client secret and public web address to be saved first."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:631
+msgid "Checking…"
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:648
+msgid "The check could not be run. Reload the page and try again."
+msgstr ""
+
+#: aot_flask/templates/settings/general.html:658
+msgid "Pass"
 msgstr ""

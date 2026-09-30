@@ -13,6 +13,7 @@ from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -35,7 +36,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'kp303',
-    'output_name': "{}: Kasa KP303 3-Outlet WiFi Power Strip (old library, deprecated)".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{}: Kasa KP303 3-Outlet WiFi Power Strip (old library, deprecated)", lazy_gettext('On/Off')),
     'output_manufacturer': 'TP-Link',
     'input_library': 'python-kasa',
     'measurements_dict': measurements_dict,
@@ -132,7 +133,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

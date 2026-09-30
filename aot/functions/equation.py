@@ -32,6 +32,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import write_influxdb_value
 from aot.utils.safe_eval import UnsafeExpressionError, safe_eval
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -43,7 +44,7 @@ measurements_dict = {
 
 FUNCTION_INFORMATION = {
     'function_name_unique': 'EQUATION_SINGLE',
-    'function_name': '{} (Single-Measure)'.format(lazy_gettext('Equation')),
+    'function_name': lazy_format('{} (Single-Measure)', lazy_gettext('Equation')),
     'measurements_dict': measurements_dict,
     'enable_channel_unit_select': True,
 
@@ -62,7 +63,7 @@ FUNCTION_INFORMATION = {
             'default_value': 60,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         },
         {
@@ -82,7 +83,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {

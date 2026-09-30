@@ -303,6 +303,7 @@ def invalidate_zone_contents(zone_uuid):
         _ZONE_CONTENTS_CACHE.pop(zone_uuid, None)
 
 
+# @manual geo/map-widget#representative-measurement
 def invalidate_rep(shape):
     """대표 측정 지정이 바뀐 직후 부른다 — **그 값을 쓰는 캐시만** 버린다.
 
@@ -732,6 +733,7 @@ def prefetch_last_values(device_ids):
     return out
 
 
+# @manual geo/map-widget#representative-measurement
 def env_for_devices(device_ids, prefetched=None):
     """장치 묶음의 현재 환경 — `{'readings': [...], 'sensors': {...}}`.
 
@@ -877,6 +879,7 @@ def _sensor_rollup(device_ids, partial, rep_key=None, prefetched=None):
     return _pick_rep(env['readings'], rep_key), env['sensors']
 
 
+# @manual geo/map-widget#representative-measurement
 def rep_key_of(shape):
     """도형에 지정된 대표 측정 key(없으면 None).
 
@@ -943,6 +946,7 @@ def hidden_rows_for_facility(facility_uuid):
     return hidden_rows_for_shape(row.shape_uuid) if row is not None else {}
 
 
+# @manual geo/map-widget#representative-measurement
 def _pick_rep(readings, rep_key=None):
     """대표값 하나. 지정이 있으면 그것, 없으면 우선순위 첫 항목.
 

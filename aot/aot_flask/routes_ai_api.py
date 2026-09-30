@@ -4,7 +4,7 @@ import flask_login
 from flask_login import login_required
 from aot.databases.models import Input, Output, Function, CustomController, PID, Trigger, Conditional
 from aot.config import AI_AGENT_ENABLED, LANGUAGES
-from aot.databases.models import AIGlobalSettings
+from aot.databases.models import AIGlobalSettings, AISystemSummaryFeedback
 from aot.ai.services import ai_runtime_state
 from aot.ai.services.ai_context_service import AIContextService
 from aot.ai.services.ai_action_service import AIActionService

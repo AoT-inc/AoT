@@ -11,11 +11,12 @@ from aot.databases.models import Method
 from aot.databases.models import PID
 from aot.databases.utils import session_scope
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 
 ACTION_INFORMATION = {
     'name_unique': 'method_pid',
-    'name': "{}: {}".format(TRANSLATIONS['pid']['title'], lazy_gettext('Set Method')),
+    'name': lazy_format("{}: {}", TRANSLATIONS['pid']['title'], lazy_gettext('Set Method')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

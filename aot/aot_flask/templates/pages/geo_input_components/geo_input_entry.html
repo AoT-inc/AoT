@@ -17,6 +17,7 @@
                 title="UUID: {{each_input.unique_id}}, {{dict_translation['copy_to_clipboard']['phrase']}}"
                 value="{{ dict_inputs.get(each_input.type, {}).get('input_name', each_input.type) }}">
         </div>
+        {# @manual geo/layers#how-to-register-a-layer #}
         <div class="aot-entry-actions aot-col-action">
             <input {% if each_input.is_activated -%}style="display: none" {% endif %}
                 onclick="return $(this).processRequest(this, 'input_activate');" name="input_activate"
@@ -32,6 +33,7 @@
                 <i class="fas fa-cog"></i>
             </a>
         </div>
+        {# @manual-end #}
     </div>
 </form>
 

@@ -7,10 +7,11 @@ from aot.config import INSTALL_DIRECTORY
 from aot.databases.models import Actions
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'system_shutdown',
-    'name': "{}: {}".format(TRANSLATIONS['system']['title'], lazy_gettext('Shutdown')),
+    'name': lazy_format("{}: {}", TRANSLATIONS['system']['title'], lazy_gettext('Shutdown')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

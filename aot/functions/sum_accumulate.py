@@ -45,6 +45,7 @@ from aot.utils.influx import read_influxdb_single
 from aot.utils.influx import write_influxdb_value
 from aot.utils.system_pi import get_measurement
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {
     0: {
@@ -104,7 +105,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 10,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration to wait before the first operation')
         },
         {
@@ -114,7 +115,7 @@ FUNCTION_INFORMATION = {
             'default_value': 3600,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('[Interval mode] The duration between sums')
         },
         {
@@ -133,7 +134,7 @@ FUNCTION_INFORMATION = {
             'default_value': 24,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Snapshot Interval'), lazy_gettext('Hours')),
+            'name': lazy_format("{} ({})", lazy_gettext('Snapshot Interval'), lazy_gettext('Hours')),
             'phrase': lazy_gettext(
                 '[Point mode] Hours between snapshots, starting from the anchor '
                 '(e.g. 24 = once daily, 6 = four times daily)')

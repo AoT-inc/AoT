@@ -40,6 +40,9 @@ TIMER_START_update_packages=$SECONDS
 ${INSTALL_CMD} update-packages
 TIMER_TOTAL_update_packages=$((SECONDS - TIMER_START_update_packages))
 
+# Read-only notice if the MQTT broker is open to the network (config is never rewritten)
+${INSTALL_CMD} mosquitto-check
+
 TIMER_START_web_server_update=$SECONDS
 ${INSTALL_CMD} web-server-update
 TIMER_TOTAL_web_server_update=$((SECONDS - TIMER_START_web_server_update))

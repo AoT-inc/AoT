@@ -7,6 +7,7 @@ from aot.actions.base_action import AbstractFunctionAction
 from aot.databases.models import Actions
 from aot.databases.models import Output
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'action_led_kasa_bulb_change_color',
@@ -41,7 +42,7 @@ ACTION_INFORMATION = {
             'type': 'integer',
             'default_value': 0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Hue'), lazy_gettext('Degree')),
+            'name': lazy_format("{} ({})", lazy_gettext('Hue'), lazy_gettext('Degree')),
             'phrase': 'The hue to set, in degrees (0 - 360)'
         },
         {
@@ -49,7 +50,7 @@ ACTION_INFORMATION = {
             'type': 'integer',
             'default_value': 50,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Saturation'), lazy_gettext('Percent')),
+            'name': lazy_format("{} ({})", lazy_gettext('Saturation'), lazy_gettext('Percent')),
             'phrase': 'The saturation to set, in percent (0 - 100)'
         },
         {
@@ -57,7 +58,7 @@ ACTION_INFORMATION = {
             'type': 'integer',
             'default_value': 50,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Brightness'), lazy_gettext('Percent')),
+            'name': lazy_format("{} ({})", lazy_gettext('Brightness'), lazy_gettext('Percent')),
             'phrase': 'The brightness to set, in percent (0 - 100)'
         },
     ]

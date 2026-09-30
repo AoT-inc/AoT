@@ -8,10 +8,11 @@ from aot.databases.models import Actions
 from aot.databases.models import CustomController
 from aot.actions.base_action import AbstractFunctionAction
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.lazy_text import lazy_format
 
 ACTION_INFORMATION = {
     'name_unique': 'display_flash_off',
-    'name': "{}: {}: {}".format(TRANSLATIONS['display']['title'], lazy_gettext('Flashing'), lazy_gettext('Off')),
+    'name': lazy_format("{}: {}: {}", TRANSLATIONS['display']['title'], lazy_gettext('Flashing'), lazy_gettext('Off')),
     'library': None,
     'manufacturer': 'AoT',
     'application': ['functions'],

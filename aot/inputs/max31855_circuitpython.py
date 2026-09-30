@@ -21,7 +21,7 @@ measurements_dict = {
 INPUT_INFORMATION = {
     'input_name_unique': 'MAX31855_CIRCUITPYTHON',
     'input_manufacturer': 'MAXIM',
-    'input_name': 'MAX31855',
+    'input_name': 'MAX31855 (CircuitPython)',
     'input_library': 'adafruit-circuitpython-max31855',
     'measurements_name': 'Temperature (Object/Die)',
     'measurements_dict': measurements_dict,

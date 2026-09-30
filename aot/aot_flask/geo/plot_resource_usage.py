@@ -59,6 +59,7 @@ logger = logging.getLogger(__name__)
 WINDOW_DAYS = 7
 
 
+# @manual geo/map-widget#plot
 def usage_for_plot(plot, days=WINDOW_DAYS):
     """구획 → 자원 장치의 가동시간·물량.
 

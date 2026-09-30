@@ -43,6 +43,7 @@ def _canon_env_vent_id(fitting_id):
 #                 they conduct identically, both stop all light, and the
 #                 difference the grower feels is how much of the sun the
 #                 surface soaks up and then radiates inward.
+# @manual geo/facility#covering-materials
 MATERIALS = {
     # ── Glazing — light gets through, little is absorbed ────────────────────
     'vinyl_single':     {'u': 6.0,  'transmittance': 0.85, 'absorptance': 0.08},
@@ -219,6 +220,7 @@ def roof_section_perimeter(roof_type, span, rise):
 # ----------------------------------------------------------------
 # Effective envelope properties (single vs double layer)
 # ----------------------------------------------------------------
+# @manual geo/facility#engineering-calculations
 def effective_u(layer_count, outer_material, inner_material=None, r_airgap=None):
     """U_eff (W/m²K). Double layer: 1 / (1/U_o + R_gap + 1/U_i)."""
     u_outer = MATERIALS.get(outer_material, MATERIALS[DEFAULT_MATERIAL])['u']
@@ -384,6 +386,7 @@ def _normalize_envelope(envelope):
     }
 
 
+# @manual geo/facility#engineering-calculations
 def _aggregate_actuators(actuators):
     """Return totals from new-format list or legacy dict.
 
@@ -424,6 +427,7 @@ def _aggregate_actuators(actuators):
     return out
 
 
+# @manual geo/facility#engineering-calculations
 def compute_capacity(spec):
     """Compute reference capacity from a facility spec dict.
 

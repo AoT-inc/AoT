@@ -49,6 +49,7 @@ def _get_ai_curated(chunk_id):
     return AIKnowledgeChunk.query.filter_by(unique_id=chunk_id, provenance='ai_curated').first()
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 def list_review_items(context_state=None):
     """AI-curated items for the review surface (§8). Each is annotated with
     an `authoritative_match` badge — advisory only, see module docstring."""
@@ -83,6 +84,7 @@ def list_review_items(context_state=None):
     return out
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 def confirm_item(chunk_id):
     row = _get_ai_curated(chunk_id)
     if not row:
@@ -93,6 +95,7 @@ def confirm_item(chunk_id):
     return {'success': True}
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 def edit_item(chunk_id, content=None, heading=None, tags=None):
     """A human editing an ai_curated note IS a confirmation — §3.2 groups
     '사용자 확인/수정' as a single branch, both landing on user_confirmed."""
@@ -120,6 +123,7 @@ def edit_item(chunk_id, content=None, heading=None, tags=None):
     return {'success': True}
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 def retire_item(chunk_id):
     """§3.2: excluded from search, row/history kept (not deleted)."""
     row = _get_ai_curated(chunk_id)
@@ -131,6 +135,7 @@ def retire_item(chunk_id):
     return {'success': True}
 
 
+# @manual ai/overview#reviewing-what-the-ai-wrote
 def reactivate_item(chunk_id):
     """Undo an accidental retire. Goes back to system_generated (not
     user_confirmed) — un-retiring isn't the same as having reviewed it."""

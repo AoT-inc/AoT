@@ -193,7 +193,7 @@ class AoTAdviceWidget(AbstractWidget):
 # ---------------------------------------------------------------------------
 WIDGET_INFORMATION = {
     'widget_name_unique': 'AoT_advice',
-    'widget_name': 'AI Periodic Advice',
+    'widget_name': lazy_gettext('AI Periodic Advice'),
     'widget_library': 'ai',
     'no_class': True,
     'message': (

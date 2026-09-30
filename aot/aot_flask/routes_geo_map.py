@@ -16,6 +16,7 @@ from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 
 
 
+# @manual geo/api-reference#design-maps
 @blueprint.route('/api/geo/init_design', methods=['GET'])
 @login_required
 def api_geo_init_design():
@@ -31,6 +32,7 @@ def api_geo_init_design():
         
     return jsonify(result)
 
+# @manual geo/api-reference#design-maps
 @blueprint.route('/api/geo/designs/list', methods=['GET'])
 @login_required
 def api_geo_designs_list():
@@ -56,6 +58,7 @@ def api_geo_designs_list():
     except Exception as e:
         return jsonify({'ok': False, 'message': str(e)}), 500
 
+# @manual geo/settings#default-start-location, geo/settings#design-theme-colors, geo/settings#zoom-settings, geo/settings#zoom-method, geo/settings#performance-rendering, geo/settings#api, geo/api-reference#settings
 @blueprint.route('/api/geo/settings', methods=['GET', 'POST'])
 @login_required
 def api_geo_settings():
@@ -100,7 +103,7 @@ def api_geo_settings():
                 search_provider = data.get('search_provider')
                 if search_provider is not None:
                      providers_state['search_provider'] = search_provider
-                # MapLibre 라이브러리 로컬 서빙 여부 (기본: CDN)
+                # MapLibre 라이브러리 로컬 서빙 여부 (미설정 = 로컬, layout.html 참조)
                 maplibre_local = data.get('maplibre_local_serving')
                 if maplibre_local is not None:
                      providers_state['maplibre_local_serving'] = (str(maplibre_local).lower() == 'true')
@@ -236,6 +239,7 @@ def api_geo_settings():
 # Parcel Import Routes — address → parcel polygon → Site conversion
 # ---------------------------------------------------------------------------
 
+# @manual geo/layers#vworld, geo/parcel-import#prerequisites
 def _get_vworld_credentials():
     """Read api_key / domain from the registered VWorld GIS Input.
     Prefer an activated layer; if none, also check inactive layers."""
@@ -251,6 +255,7 @@ def _get_vworld_credentials():
     return opts.get('api_key', ''), opts.get('vworld_domain', '')
 
 
+# @manual geo/design-tool#parcel-import, geo/parcel-import#address-input, geo/parcel-import#import-by-address, geo/api-reference#parcel-import
 @blueprint.route('/api/geo/parcel/from_address', methods=['POST'])
 @login_required
 def api_geo_parcel_from_address():
@@ -268,6 +273,7 @@ def api_geo_parcel_from_address():
     return jsonify(result)
 
 
+# @manual geo/design-tool#parcel-import, geo/parcel-import#csv-file-format, geo/parcel-import#how-to-import, geo/parcel-import#csv-batch-import_1, geo/api-reference#parcel-import
 @blueprint.route('/api/geo/parcel/from_csv', methods=['POST'])
 @login_required
 def api_geo_parcel_from_csv():
@@ -289,6 +295,7 @@ def api_geo_parcel_from_csv():
     return jsonify(result)
 
 
+# @manual geo/parcel-import#reviewing-and-saving, geo/parcel-import#save-as-site
 def _parcel_geom_key(geometry, tolerance=1e-6):
     """기하를 좌표 반올림 후 정규화 문자열로. 없으면 None.
 
@@ -313,6 +320,7 @@ def _parcel_geom_key(geometry, tolerance=1e-6):
         sort_keys=True)
 
 
+# @manual geo/design-tool#parcel-import, geo/parcel-import#reviewing-and-saving, geo/parcel-import#save-as-site
 def _find_duplicate_site(geo_id, geometry):
     """같은 지도에 기하가 같은 site 도형이 있으면 그것을 반환. 없으면 None."""
     key = _parcel_geom_key(geometry)
@@ -332,11 +340,14 @@ def _find_duplicate_site(geo_id, geometry):
     return None
 
 
+# @manual geo/design-tool#parcel-import, geo/parcel-import#reviewing-and-saving, geo/parcel-import#save-as-site, geo/api-reference#parcel-import
 @blueprint.route('/api/geo/parcel/save_as_site', methods=['POST'])
 @login_required
 def api_geo_parcel_save_as_site():
     """Save a GeoJSON Feature as a GeoShape(Site) and also create a label_aux for labeling."""
     import json as _json
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'message': 'permission denied'}), 403
     data = request.get_json()
     feature = data.get('feature')
     name = data.get('name', 'Site')
@@ -361,6 +372,9 @@ def api_geo_parcel_save_as_site():
     if not map_uuid:
         return jsonify({'ok': False,
                         'message': 'map_uuid is required for parcel import'}), 400
+    # 그룹 스코프 — 지도는 자기 자신이 부여 단위다(/api/geo/overlays 와 같다).
+    if not scope.can_operate('geo_map', map_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
     if not GeoMap.query.filter_by(unique_id=map_uuid).first():
         return jsonify({'ok': False,
                         'message': f'map not found: {map_uuid}'}), 404
@@ -442,6 +456,7 @@ def api_geo_parcel_save_as_site():
 # GG Public Park Import Routes — Gyeonggi-do urban park CityPark API import
 # ---------------------------------------------------------------------------
 
+# @manual geo/api-reference#parcel-import
 @blueprint.route('/api/geo/import/gg_parks/preview', methods=['GET'])
 @login_required
 def api_geo_import_gg_parks_preview():
@@ -475,6 +490,7 @@ def api_geo_import_gg_parks_preview():
     return jsonify({'ok': True, **result})
 
 
+# @manual geo/api-reference#parcel-import
 @blueprint.route('/api/geo/import/gg_parks', methods=['POST'])
 @login_required
 def api_geo_import_gg_parks():
@@ -487,10 +503,15 @@ def api_geo_import_gg_parks():
         limit:     maximum number of records to process (optional, default: all)
         delay_sec: delay in seconds between API calls (optional, default: 0.3)
     """
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'error': 'permission denied'}), 403
     data = request.get_json() or {}
     map_uuid = data.get('map_uuid', '').strip()
     if not map_uuid:
         return jsonify({'ok': False, 'error': 'map_uuid required'}), 400
+    # 그룹 스코프 — 지도는 자기 자신이 부여 단위다.
+    if not scope.can_operate('geo_map', map_uuid):
+        return jsonify({'ok': False, 'error': scope.deny_message()}), 403
 
     sigun_nm = (data.get('sigun_nm') or '').strip() or None
     limit = data.get('limit')       # None means all
@@ -607,6 +628,7 @@ def _geo_map_state(geo_map):
         return {}
 
 
+# @manual geo/api-reference#map-ordering
 @blueprint.route('/api/geo/map/<string:map_uuid>/site_order', methods=['GET'])
 @login_required
 def api_geo_map_site_order_get(map_uuid):
@@ -638,6 +660,7 @@ def api_geo_map_site_order_get(map_uuid):
     })
 
 
+# @manual geo/api-reference#map-ordering
 @blueprint.route('/api/geo/map/<string:map_uuid>/site_order', methods=['POST'])
 @login_required
 def api_geo_map_site_order_save(map_uuid):

@@ -35,6 +35,7 @@ from aot.utils.code_verification import create_python_file
 from aot.utils.code_verification import test_python_code
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.widgets.base_widget import AbstractWidget
+from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +162,7 @@ WIDGET_INFORMATION = {
             'type': 'float',
             'default_value': 60,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('Loop Period ({})').format(lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('Loop Period ({})'), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The period of time between executing loop code')
         },
         {
@@ -170,7 +171,7 @@ WIDGET_INFORMATION = {
             'class': 'aot-time-input',
             'default_value': 30.0,
             'constraints_pass': constraints_pass_positive_value,
-            'name': lazy_gettext('{} ({})').format(lazy_gettext("Refresh"), lazy_gettext("Seconds")),
+            'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
         {

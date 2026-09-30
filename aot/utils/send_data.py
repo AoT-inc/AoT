@@ -15,6 +15,26 @@ _default_logger = logging.getLogger("aot.notification")
 _default_logger.setLevel(logging.ERROR)
 
 
+def mail_host_label():
+    """메일 제목에 쓸 호스트 이름 — 컨테이너마다 달라지는 값이면 안 된다.
+
+    도커에서 `socket.gethostname()` 은 컨테이너 ID 라 앱과 데몬이 서로 다른
+    값을 내고 재생성 때마다 바뀐다. 설정의 "브랜드 텍스트"(`hostname_override`)가
+    있으면 그것을, 없으면 `AOT_HOSTNAME` 환경변수, 그다음 시스템 호스트 이름.
+    앱·데몬 어느 쪽에서 불러도 같은 DB 값을 읽는다.
+    """
+    try:
+        from aot.databases.models import Misc
+        from aot.utils.database import db_retrieve_table_daemon
+        misc = db_retrieve_table_daemon(Misc, entry='first')
+        name = (getattr(misc, 'hostname_override', '') or '').strip()
+        if name:
+            return name
+    except Exception:
+        pass
+    return os.environ.get('AOT_HOSTNAME', '').strip() or socket.gethostname()
+
+
 #
 # Email notification
 #
@@ -62,8 +82,7 @@ def send_email(smtp_host, smtp_protocol, smtp_port, smtp_user, smtp_pass,
         # Create the enclosing (outer) message
         outer = MIMEMultipart()
         if not subject:
-            subject = "AoT Notification ({})".format(
-                socket.gethostname())
+            subject = "AoT Notification ({})".format(mail_host_label())
         outer['Subject'] = Header(subject, 'utf-8')
         outer['To'] = ', '.join(recipients)
         outer['From'] = smtp_email_from
@@ -91,6 +110,16 @@ def send_email(smtp_host, smtp_protocol, smtp_port, smtp_user, smtp_pass,
                                  "Error: {}".format(sys.exc_info()[0]))
 
         composed = outer.as_string()
+
+        # No password to log in with. SMTP.passw is None when nothing is saved or
+        # when the stored (encrypted) value cannot be decrypted here -- e.g. the
+        # settings were restored from another install with a different key.
+        # Say so, instead of a confusing authentication failure from the server.
+        if smtp_pass is None and smtp_protocol != 'unencrypted_no_login':
+            log.error("SMTP password is not set or cannot be decrypted on this "
+                      "install (settings restored from another install?). "
+                      "Re-enter it in Settings > Alerts. Not sending.")
+            return 1
 
         # determine port
         if smtp_port:

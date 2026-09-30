@@ -284,6 +284,7 @@
           {% endfor %}
         </div>
 
+        {# @manual ai/overview#data-credits #}
         {#- 출처 표시. CC BY 자료는 표시하는 자리 옆에 출처를 밝혀야 한다
             (FAO ECOCROP, Open-Meteo 둘 다 CC BY 4.0). 켜진 소스만 싣는다. -#}
         {% if attributions %}
@@ -299,6 +300,7 @@
           {% endfor %}
         </p>
         {% endif %}
+        {# @manual-end #}
       </section>
     </div>
   </div>
@@ -444,10 +446,10 @@ var T = {
   gdriveLoading:    {{ _('Checking Google connection…')|tojson }},
   gdriveConnected:  {{ _('Connected as')|tojson }},
   gdriveNotConnected: {{ _('Google account not connected.')|tojson }},
-  gdriveConnectLink: {{ _('Connect it under Settings > Integrations')|tojson }},
+  gdriveConnectLink: {{ _('Connect it under Manage > System Management > Integrations')|tojson }},
   gdriveNeedsRescope: {{ _('Your Google connection predates Drive access — reconnect to grant it.')|tojson }},
-  gdriveReconnectLink: {{ _('Reconnect under Settings > Integrations')|tojson }},
-  gdriveNotConfigured: {{ _('Google Picker is not configured yet — an admin must set the Picker API key under Settings > Integrations.')|tojson }},
+  gdriveReconnectLink: {{ _('Reconnect under Manage > System Management > Integrations')|tojson }},
+  gdriveNotConfigured: {{ _('Google Picker is not configured yet — an admin must set the Picker API key under Manage > System Management > Integrations.')|tojson }},
   gdriveRemove:     {{ _('Remove')|tojson }},
   activate:         {{ _('Activate')|tojson }},
   deactivate:       {{ _('Deactivate')|tojson }},

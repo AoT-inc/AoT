@@ -13,6 +13,7 @@ CHANNELS = {
     6: {'name': 'Stamen Terrain', 'options': {'layer': 'stamen_terrain'}},
 }
 
+# @manual geo/layers#international-general
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_stadia',
     'input_manufacturer': 'Stadia Maps',

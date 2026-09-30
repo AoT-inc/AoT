@@ -22,7 +22,6 @@ abort_banner=\n****************************************\n** AoT 安装过程中�
 install_begin=#### AoT 安装即将开始。%s\n
 mosquitto_installing=#### 正在安装：mosquitto MQTT 代理\n
 mosquitto_already_installed=#### mosquitto 已安装 - 跳过安装步骤\n
-mosquitto_configuring=#### 正在配置 mosquitto 以允许外部连接\n
 mosquitto_conf_checking=#### 正在创建/验证 mosquitto 配置文件\n
 mosquitto_conf_created=#### 已创建 %s\n
 mosquitto_conf_exists=#### %s 已存在 - 未覆盖\n

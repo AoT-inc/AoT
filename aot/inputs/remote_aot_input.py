@@ -49,6 +49,7 @@ from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
 from aot.utils.remote_aot_client import (
     RemoteAoTClient, RemoteAoTError, discover_measurements, parse_channel_value)
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {}
@@ -61,8 +62,7 @@ channels_dict = {
 INPUT_INFORMATION = {
     'input_name_unique': 'REMOTE_AOT',
     'input_manufacturer': 'AoT',
-    'input_name': "{} AoT: {}".format(
-        lazy_gettext('Remote'), lazy_gettext('Measurements')),
+    'input_name': lazy_format("{} AoT: {}", lazy_gettext('Remote'), lazy_gettext('Measurements')),
     'input_name_short': 'Remote AoT',
     'input_library': 'requests',
     'measurements_name': 'Variable measurements',

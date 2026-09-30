@@ -104,6 +104,7 @@ def _strip_forbidden(feature):
     return feature, removed
 
 
+# @manual geo/plots#kind, geo/programs#kind, geo/design-tool#plot
 def _resolve_program(program_uuid, current_uuid=None, current_version=None,
                      plot_kind=None):
     """관리 프로그램 참조를 검증·정규화 → (program_uuid, version, error).
@@ -140,6 +141,7 @@ def _resolve_program(program_uuid, current_uuid=None, current_version=None,
     return program_uuid, (row.version or 1), None
 
 
+# @manual geo/plots#crop
 def _resolve_allocation(raw, has_geom):
     """구역 안에서의 몫을 검증·정규화 → (allocation, error).
 
@@ -192,6 +194,7 @@ def _resolve_allocation(raw, has_geom):
     return {key: out}, None
 
 
+# @manual geo/plots#location
 def _resolve_parent(map_uuid, facility_uuid, bay_id):
     """시설 부모를 검증·정규화 → (facility_uuid, bay_id, error).
 
@@ -272,6 +275,7 @@ def _validate_geometry(feature):
     return None
 
 
+# @manual geo/plots#edit, geo/design-tool#plot
 def save_plot(data):
     """생성 또는 수정 → (dict, error).
 
@@ -546,6 +550,7 @@ def save_plot(data):
     return plot_context.to_dict(row), None
 
 
+# @manual geo/plots#lifecycle
 def end_plot(unique_id, ended_on=None, reason='harvested'):
     """작기 종료 → (dict, error). 행을 지우지 않는다.
 
@@ -579,6 +584,7 @@ def end_plot(unique_id, ended_on=None, reason='harvested'):
     return plot_context.to_dict(row), None
 
 
+# @manual geo/plots#lifecycle
 def delete_plot(unique_id):
     """오기입 삭제 → (dict, error).
 
@@ -620,6 +626,7 @@ def delete_plot(unique_id):
 _UNSET = object()
 
 
+# @manual geo/plots#lifecycle
 def copy_plot(unique_id, started_on=None, subject=None,
               program_uuid=_UNSET, variety=_UNSET, kind=None):
     """지난 작기의 **자리**를 그대로 새 작기로 → (dict, error).
@@ -659,6 +666,7 @@ def copy_plot(unique_id, started_on=None, subject=None,
     return save_plot(payload)
 
 
+# @manual geo/plots#lifecycle
 def succeed_plot(unique_id, ended_on=None, reason='harvested',
                  subject=None, program_uuid=_UNSET, variety=_UNSET,
                  started_on=None):
@@ -712,6 +720,7 @@ def succeed_plot(unique_id, ended_on=None, reason='harvested',
 # ── 단계 전환 (P5) ─────────────────────────────────────────────────────────
 
 
+# @manual geo/programs#stage-events
 def accept_stage(plot_uuid, stage_key=None, stage_index=None, started_on=None,
                  source='manual', decided_by=None, note=None, auto=False):
     """단계 전환을 확인해 원장에 남긴다 → (dict, error).
@@ -797,6 +806,7 @@ def accept_stage(plot_uuid, stage_key=None, stage_index=None, started_on=None,
             'stage_index': idx, 'started_on': started.isoformat()}, None
 
 
+# @manual geo/programs#stage-events
 def undo_stage(plot_uuid, decided_by=None):
     """마지막으로 확인된 전환을 되돌린다 → (dict, error).
 
@@ -830,6 +840,7 @@ def undo_stage(plot_uuid, decided_by=None):
     return {'unique_id': ev.unique_id, 'stage_key': ev.stage_key}, None
 
 
+# @manual geo/programs#auto
 def auto_advance_stage(plot_uuid):
     """자동 승인 구획의 대기 중 전환을 기록한다 → list (없으면 []).
 
@@ -915,6 +926,7 @@ def _drop_plan_upto(row, stages, idx):
         row.stage_plan = left or None
 
 
+# @manual geo/programs#stage-schedule
 def _plan_context(plot_uuid):
     """(row, program, stages, 편집 가능한 첫 단계 순번) → 또는 (None, …, error)."""
     from aot.databases.models import GeoProgram
@@ -935,6 +947,7 @@ def _plan_context(plot_uuid):
     return row, prog, stages, first, None
 
 
+# @manual geo/programs#stage-schedule
 def set_stage_plan(plot_uuid, plan, set_by=None):
     """계획 경계를 **병합** 저장 → (dict, error).
 
@@ -1008,6 +1021,7 @@ def set_stage_plan(plot_uuid, plan, set_by=None):
     return {'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 
+# @manual geo/programs#stage-schedule
 def set_stage_days(plot_uuid, days, set_by=None):
     """단계 **기간(일)** 으로 일정을 고친다 → (dict, error).
 
@@ -1138,6 +1152,7 @@ def _save_overrides(row, ov):
     return None
 
 
+# @manual geo/programs#stage-guidance-adding-and-removing-stages
 def set_stage_guidance(plot_uuid, stage_key=None, text=None, set_by=None):
     """이 구획의 **단계 지침**을 적는다 → (dict, error).
 
@@ -1217,6 +1232,7 @@ def set_stage_name(plot_uuid, stage_key=None, name=None, set_by=None):
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 
+# @manual geo/plots#targets, geo/programs#plot-override
 def set_stage_target(plot_uuid, stage_key=None, target_key=None,
                      value=None, set_by=None):
     """이 구획의 **단계 목표**를 정한다 → (dict, error).
@@ -1277,6 +1293,7 @@ def set_stage_target(plot_uuid, stage_key=None, target_key=None,
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 
+# @manual geo/programs#stage-guidance-adding-and-removing-stages
 def remove_stage(plot_uuid, stage_key=None, set_by=None):
     """이 구획에서 단계를 **뺀다** → (dict, error).
 
@@ -1334,6 +1351,7 @@ def remove_stage(plot_uuid, stage_key=None, set_by=None):
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 
+# @manual geo/programs#stage-guidance-adding-and-removing-stages
 def add_stage(plot_uuid, name=None, days=None, after=None, guidance=None,
               set_by=None):
     """이 구획에 단계를 **더한다** → (dict, error).
@@ -1394,6 +1412,7 @@ def add_stage(plot_uuid, name=None, days=None, after=None, guidance=None,
             'stage_schedule': plot_context.stage_schedule_view(row)}, None
 
 
+# @manual geo/programs#register
 def _target_review(row, src, out_stages, adopt):
     """등록될 단계 목록에 **실측 분포**를 붙인다 → (review, adopted, kept).
 
@@ -1463,6 +1482,7 @@ def _target_review(row, src, out_stages, adopt):
     return measured, adopted, kept
 
 
+# @manual geo/plots#register, geo/programs#register
 def save_as_program(plot_uuid, name=None, set_by=None, adopt_targets=False):
     """이 구획의 일정을 **프로그램으로 등록한다** → (dict, error).
 
@@ -1584,6 +1604,7 @@ def save_as_program(plot_uuid, name=None, set_by=None, adopt_targets=False):
                         'name': result.get('name')}}, None
 
 
+# @manual geo/programs#stage-schedule
 def shift_stage(plot_uuid, stage_key=None, days=None, set_by=None):
     """단계 경계를 상대로 옮긴다 → (dict, error). 연기는 +, 앞당김은 −.
 
@@ -1625,6 +1646,7 @@ def shift_stage(plot_uuid, stage_key=None, days=None, set_by=None):
         set_by=set_by)
 
 
+# @manual geo/programs#resources
 def apply_stage_resources(plot_uuid):
     """현재 단계가 요구하는 자원을 켠다 → (dict, error).
 

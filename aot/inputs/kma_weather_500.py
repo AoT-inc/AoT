@@ -182,9 +182,15 @@ INPUT_INFORMATION = {
     'message': lazy_gettext('After issuing a free API key from the KMA API Hub, data is requested based on the location (latitude/longitude) in the input settings.'
                ' Note: the Korea Meteorological Administration API allows 20000 calls per day, and each call returns data for a single observation station.'),
 
+    # This module keeps its own 'period' custom option below (used for the
+    # actual fetch cadence and QC/backfill math) instead of the standard
+    # period field, so only the measurement-freshness override is exposed
+    # here — otherwise the field would be permanently hidden and admins have
+    # no way to raise it past the 300s floor when KMA itself is running late.
     'options_enabled': [
         'measurements_select',
-        'pre_output'
+        'pre_output',
+        'max_age_only'
     ],
 
     'custom_options': [

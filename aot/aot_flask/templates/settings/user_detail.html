@@ -143,21 +143,24 @@
               {% if each_key.is_readonly %}{{_('Read only')}}{% else %}{{_('Full access')}}{% endif %}
               · {{each_key.created_at.strftime('%Y-%m-%d') if each_key.created_at else ''}}
             </div>
-            {# 도구 묶음은 재발급 없이 바꾼다. select 에 name 을 주지 않는다 —
-               폼은 하나라 이름이 있으면 모든 줄의 값이 함께 전송된다. 누른
-               줄의 값은 제출 직전에 숨은 칸(api_key_profile_value)으로 옮긴다
+            {# 도구 묶음(운영 + 설정 모듈)은 재발급 없이 바꾼다. 줄의 체크박스에
+               name 을 주지 않는다 — 폼은 하나라 이름이 있으면 모든 줄의 값(과
+               아래 발급 칸)이 함께 전송된다. 누른 줄의 체크 상태는 제출 직전에
+               묶음 값 하나로 만들어 숨은 칸(api_key_profile_value)으로 옮긴다
                (users.html). #}
             {% if service_account %}
             <div class="aot-modal-body-text w-100">{{_('AI Tools')}}: {{_('All tools (built-in AI)')}}</div>
             {% else %}
-            <div class="aot-api-key-group">
-              <select class="form-control aot-modern-input"
-                data-profile-select="{{each_key.unique_id}}"
-                aria-label="{{_('AI Tools')}}"
-                title="{{_('Which AI tools an app connected with this key can see.')}}">
-                <option value="operations" {% if each_key.effective_tool_profile == 'operations' %}selected{% endif %}>{{_('Operations')}}</option>
-                <option value="configuration" {% if each_key.effective_tool_profile == 'configuration' %}selected{% endif %}>{{_('Operations + configuration')}}</option>
-              </select>
+            {% set key_modules = each_key.effective_tool_modules %}
+            <div class="aot-modal-body-text w-100 d-flex flex-wrap align-items-center"
+              data-profile-select="{{each_key.unique_id}}"
+              role="group" aria-label="{{_('AI Tools')}}"
+              title="{{_('Which AI tools an app connected with this key can see.')}}">
+              <label class="mb-0 mr-3"><input type="checkbox" checked disabled> {{_('Operations (always)')}}</label>
+              {% for value, label in form_mod_user.api_key_tool_modules.choices %}
+              <label class="mb-0 mr-3"><input type="checkbox" data-profile-module="{{value}}"
+                {% if value in key_modules %}checked{% endif %}> {{label}}</label>
+              {% endfor %}
               <button type="submit" name="user_api_key_profile_save" value="1"
                 class="btn aot-pill-btn aot-pill-btn-secondary"
                 data-profile-key="{{each_key.unique_id}}">{{_('Change')}}</button>
@@ -185,16 +188,21 @@
         </div>
       </div>
 
-      {# 외부 AI 앱이 이 키로 볼 도구 묶음. 기본은 운영 — 설정 묶음은 장치 정의·
-         자동화 작성 같은 설정 도구를 더하는 대신, 대화마다 AI 에 보내는 도구
-         설명이 크게 늘어난다. 권한(위)과는 다른 축이다: 권한은 무엇을 해도
-         되는가, 이것은 무엇을 보여 주는가. #}
+      {# 외부 AI 앱이 이 키로 볼 도구 묶음 = 운영(항상) + 체크한 설정 모듈.
+         기본은 운영만 — 모듈마다 설정 도구를 더하는 대신 대화마다 AI 에 보내는
+         도구 설명이 늘어나므로, 그 키가 하는 일에 필요한 모듈만 켠다. 전부
+         체크하면 예전 "운영 + 설정" 과 같다. 권한(위)과는 다른 축이다: 권한은
+         무엇을 해도 되는가, 이것은 무엇을 보여 주는가. #}
       {% if not service_account %}
-      <div class="aot-modal-option-row">
+      <div class="aot-modal-option-row aot-full-width-row">
         <label class="aot-modal-option-label"
-          title="{{_('Operations: everyday tools for reading, control, schedules, notes and plot stages. Operations + configuration adds setup tools (device definitions, automations, plots and programs, map, dashboards, AI settings) and sends a much longer tool list to the AI in every conversation.')}}">{{_('AI Tools')}}</label>
-        <div class="aot-modal-option-control">
-          {{form_mod_user.api_key_tool_profile(class_='form-control aot-modern-input')}}
+          title="{{_('Operations (always on): everyday tools for reading, control, schedules, notes and plot stages. Each setup module you tick adds its setup tools and makes the tool list sent to the AI in every conversation longer, so tick only what this key is for.')}}">{{_('AI Tools')}}</label>
+        <div class="aot-modal-option-control d-flex flex-wrap align-items-center">
+          {{form_mod_user.api_key_tool_profile()}}
+          <label class="mb-0 mr-3"><input type="checkbox" checked disabled> {{_('Operations (always)')}}</label>
+          {% for value, label in form_mod_user.api_key_tool_modules.choices %}
+          <label class="mb-0 mr-3"><input type="checkbox" name="api_key_tool_modules" value="{{value}}"> {{label}}</label>
+          {% endfor %}
         </div>
       </div>
       {% endif %}

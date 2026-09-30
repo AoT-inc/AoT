@@ -121,6 +121,16 @@ def get_misc_cached():
             _MISC_CACHE_TS = now
     return result
 
+def _geo_setting_fingerprint(settings):
+    """GeoSetting 행 내용의 지문 — 행이 없으면 None."""
+    if settings is None:
+        return None
+    try:
+        return json.dumps(settings.state_dict(), sort_keys=True, default=str)
+    except Exception:
+        return None
+
+
 def get_geo_config(with_secrets=False):
     """
     Returns the consolidated Geo configuration for the frontend.
@@ -153,23 +163,30 @@ def get_geo_config(with_secrets=False):
     # 요청의 성격이 그대로 굳어 다음 요청에 새어 나간다.
     cache_key = (current_locale, bool(with_secrets))
 
-    # Return cached if valid for current locale. Capture the generation while
-    # holding the lock so we can detect a concurrent invalidation during the DB
-    # read below (prevents re-poisoning the cache with a stale snapshot).
-    with _GEO_CACHE_LOCK:
-        if cache_key in _GEO_CONFIG_CACHE_MAP:
-            ts, cached_config = _GEO_CONFIG_CACHE_MAP[cache_key]
-            if (now - ts) < _CACHE_TTL:
-                return cached_config
-        gen_at_read = _GEO_CACHE_GEN
-
     # populate_existing(): bypass the SQLAlchemy identity-map cache and re-read
     # the row from the DB. A worker thread's scoped session can hold a STALE
     # GeoSetting object (theme_config from before another session committed a
     # change); returning that stale object here would cache it (TTL) and serve
-    # old device/theme colors intermittently for a long time. Forcing a fresh
-    # read is the fix (verified: without it, an external UPDATE is not seen).
+    # old device/theme colors intermittently for a long time.
+    #
+    # 이 읽기는 캐시 적중 여부와 무관하게 매번 한다(행 하나, 가볍다). 캐시된
+    # 설정이 이 지문과 다르면 — 앱 밖에서 DB 를 고쳤거나 다른 프로세스가
+    # 저장한 경우 — invalidate 가 불리지 않았어도 버린다. TTL 만 믿으면 그
+    # 변경이 웹 프로세스를 재시작할 때까지(최대 TTL) 안 보인다.
+    # 세대는 DB 를 읽기 **전에** 잡는다 — 읽은 뒤 저장+invalidate 가 끼어들면
+    # 옛 스냅샷이 새 캐시로 되살아난다(아래 기록 조건이 이를 막는다).
+    with _GEO_CACHE_LOCK:
+        gen_at_read = _GEO_CACHE_GEN
+
     settings = GeoSetting.query.populate_existing().first()
+    fingerprint = _geo_setting_fingerprint(settings)
+
+    with _GEO_CACHE_LOCK:
+        if cache_key in _GEO_CONFIG_CACHE_MAP:
+            ts, cached_config, cached_fp = _GEO_CONFIG_CACHE_MAP[cache_key]
+            if (now - ts) < _CACHE_TTL and cached_fp == fingerprint:
+                return cached_config
+
     if settings:
         logger.debug(f"[Geo Config Debug] Loaded Theme Config from DB (Locale: {current_locale}): {settings.theme_config}")
 
@@ -196,7 +213,7 @@ def get_geo_config(with_secrets=False):
     # committed + cleared the cache mid-read) and must not be written back.
     with _GEO_CACHE_LOCK:
         if _GEO_CACHE_GEN == gen_at_read:
-            _GEO_CONFIG_CACHE_MAP[cache_key] = (now, config)
+            _GEO_CONFIG_CACHE_MAP[cache_key] = (now, config, fingerprint)
 
     return config
 
@@ -792,6 +809,7 @@ def get_active_geo_layers(api_keys=None):
 # ------------------------------------------------------------------------------
 # Geo Layer CRUD
 # ------------------------------------------------------------------------------
+# @manual geo/layers#how-to-register-a-layer
 def geo_layer_add(form):
     messages = { "success": [], "info": [], "warning": [], "error": [] }
     
@@ -860,6 +878,7 @@ def geo_layer_add(form):
         
     return messages
 
+# @manual geo/layers#how-to-register-a-layer
 def geo_layer_mod(form, request_form):
     messages = { "success": [], "info": [], "warning": [], "error": [] }
     
@@ -938,6 +957,7 @@ def geo_layer_del(layer_id):
         messages["error"].append(str(e))
     return messages
 
+# @manual geo/layers#how-to-register-a-layer, geo/layers#layer-order-and-visibility
 def geo_layer_activate(layer_id, active=True):
     messages = { "success": [], "info": [], "warning": [], "error": [] }
     try:
@@ -958,6 +978,7 @@ def geo_layer_activate(layer_id, active=True):
 # ------------------------------------------------------------------------------
 # Device Collection & Helpers (Shared between Widget and API)
 # ------------------------------------------------------------------------------
+# @manual geo/map-widget#device-markers, geo/map-widget#device-filter
 def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None):
     """Return a list of device dicts with coordinates and status info.
 

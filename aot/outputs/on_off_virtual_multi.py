@@ -6,6 +6,7 @@ from flask_babel import lazy_gettext
 
 from aot.outputs.base_output import AbstractOutput
 from aot.config_translations import TRANSLATIONS
+from aot.utils.lazy_text import lazy_format
 
 # Measurements (one for each of 8 channels)
 measurements_dict = {
@@ -34,7 +35,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'virtual_on_off_multi',
-    'output_name': "{} (Virtual Multi-Channel)".format(lazy_gettext('On/Off')),
+    'output_name': lazy_format("{} (Virtual Multi-Channel)", lazy_gettext('On/Off')),
     'output_library': 'Internal',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -61,7 +62,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the virtual device')
         }
     ]

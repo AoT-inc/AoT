@@ -481,6 +481,7 @@
             </div>
             <hr class="mt-0 mb-3">
 
+            {# @manual geo/getting-started#create-a-new-map #}
             <!-- Map Selector Row -->
             <div class="d-flex align-items-center w-100 justify-content-between geo-map-toolbar-row">
                 <div class="geo-map-toolbar-select">
@@ -495,6 +496,7 @@
                         </option>
                         {% endfor %}
                     </select>
+            {# @manual-end #}
                 </div>
 
                 <div class="d-flex align-items-center geo-map-toolbar-buttons">
@@ -512,10 +514,12 @@
                     <button class="btn aot-pill-btn aot-pill-btn-danger mr-1 geo-btn-minw" id="btn-delete-map">
                         {{ _('Delete') }}
                     </button>
+                    {# @manual geo/design-tool#manual-save #}
                     <!-- Save Button -->
                     <button class="btn aot-pill-btn aot-pill-btn-primary geo-btn-minw" id="btn-save-global">
                         {{ _('Save') }}
                     </button>
+                    {# @manual-end #}
                 </div>
             </div>
 
@@ -525,6 +529,7 @@
             <!-- Map Container (Fixed Height) -->
             <div id="geo-map"></div>
 
+            {# @manual geo/design-tool#left-toolbar #}
             <!-- Floating Map Tools (Left) -->
             <div class="map-tools-left">
                 <!-- Group: Zoom + Compass -->
@@ -541,11 +546,14 @@
                     <button class="btn btn-white" id="tool-locate" title="{{ _('My Location') }}"><i class="fas fa-crosshairs"></i></button>
                     <button class="btn btn-white" id="tool-reset" title="{{ _('Reset View') }}"><i class="fas fa-undo"></i></button>
                 </div>
+            {# @manual-end #}
 
+                {# @manual geo/design-tool#map-lock #}
                 <!-- Toggle: Lock -->
                 <button class="btn btn-white btn-circle mt-2" id="tool-lock" title="{{ _('Lock Editing') }}" data-locked="false">
                     <i class="fas fa-unlock"></i>
                 </button>
+                {# @manual-end #}
 
                 <!-- Toggle: Hide -->
                 <button class="btn btn-white btn-circle mt-2" id="tool-hide" title="{{ _('Hide Overlays') }}" data-hidden="false">
@@ -565,10 +573,12 @@
 
             <!-- Floating Map Tools (Right) -->
             <div class="map-tools-right">
+                {# @manual geo/design-tool#layer-control #}
                 <!-- Tool: Layers — top-right (above drawing tools) -->
                 <button class="btn btn-white btn-circle" id="tool-layers" title="{{ _('Layers') }}">
                     <i class="fas fa-layer-group"></i>
                 </button>
+                {# @manual-end #}
 
                 <div id="draw-tools-container" class="d-flex flex-column gap-2 mt-2">
                     <!-- JS Injected Tools -->
@@ -580,24 +590,29 @@
                 </button>
             </div>
 
+            {# @manual geo/design-tool#layer-control #}
             <!-- [Fix] External Container for Layer Manager to ensure Z-Index > Mode Panel -->
             <!-- Position matches Leaflet Top-Right standard margin (20px) -> Adjusted to 10px (Mobile Standard) -->
             <div id="external-layer-control">
                 <!-- JS will move leaflet-control-layers here -->
             </div>
+            {# @manual-end #}
 
+            {# @manual geo/design-tool#screen-layout #}
             <!-- New Tiered Navigation Mode Panel (Replaces old mode-panel) -->
             <div class="nav-v-panel mode-panel" id="nav-mode-panel">
                 <div class="nav-tier-viewport" id="nav-tier-viewport">
                     <!-- Tiers will be dynamically injected here by JS -->
                 </div>
             </div>
+            {# @manual-end #}
 
             <!-- Hidden Search Overlay Component -->
             <div id="search-overlay" class="d-none map-search-overlay">
                 <aot-map-search-fixed id="design-search"></aot-map-search-fixed>
             </div>
 
+            {# @manual geo/design-tool#screen-layout #}
             <!-- 모드별 설정 드로어 ──────────────────────────────────────────
                  하단 가로바(#nav-mode-panel)에는 **모드 탭만** 남기고, 각 모드의
                  설정 tier(배관 각도·간격, 장치 분류, 식생 분할 등)는 여기로 온다.
@@ -636,9 +651,11 @@
                     </div>
                 </div>
             </div>
+            {# @manual-end #}
         </div>
     </div>
 
+    {# @manual geo/design-tool#statistics-panel #}
     <!-- Section 3: Information (Dashboard) -->
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-white font-weight-bold mt-2 border-0">
@@ -653,6 +670,7 @@
             </div>
         </div>
     </div>
+    {# @manual-end #}
 
     <!-- Section 4: Data Processing -->
     <div class="card mb-5 shadow-sm" id="section-data-processing">
@@ -821,6 +839,7 @@
 </script>
 {% include 'modals/geo_settings_modal.html' %}
 
+{# @manual geo/parcel-import#opening-the-import-dialog #}
 <!-- [Parcel Import Modal] address -> parcel -> Site conversion -->
 <!-- 주소로 필지 가져오기 — 설정 드로어와 **같은 오른쪽 서랍**으로 연다.
      지도를 덮는 팝업이면 "여기가 맞나" 를 확인하려고 창을 닫았다 다시 열어야
@@ -846,8 +865,10 @@
             <a class="nav-link" data-toggle="tab" href="#tab-csv-upload">{{ _('CSV Batch') }}</a>
           </li>
         </ul>
+{# @manual-end #}
 
         <div class="tab-content">
+          {# @manual geo/parcel-import#address-input #}
           <!-- Address list (dynamic multi-input) -->
           <div class="tab-pane fade show active" id="tab-single-address">
             <div class="text-muted small mb-2">
@@ -874,11 +895,13 @@
             </div>
             <div id="parcel-search-status" class="text-muted small mb-2"></div>
           </div>
+          {# @manual-end #}
 
+          {# @manual geo/parcel-import#how-to-import #}
           <!-- CSV batch -->
           <div class="tab-pane fade" id="tab-csv-upload">
             <div class="mb-2 text-muted small">
-              {{ _('Enter addresses in the first column of the CSV file. Adjacent parcels are merged automatically.') }}
+              {{ _('Enter addresses in the first column of the CSV file. To merge adjacent parcels, check Merge Adjacent Parcels.') }}
             </div>
             <div class="custom-file mb-2">
               <input type="file" class="custom-file-input" id="parcel-csv-file" accept=".csv">
@@ -889,8 +912,10 @@
             </button>
             <div id="parcel-csv-status" class="text-muted small mt-2"></div>
           </div>
+          {# @manual-end #}
         </div>
 
+        {# @manual geo/parcel-import#reviewing-and-saving #}
         <!-- Result preview -->
         <div id="parcel-preview-area" class="mt-3" style="display:none;">
           <hr>
@@ -920,6 +945,7 @@
           </button>
           <span id="parcel-save-status" class="ml-2 text-muted small"></span>
         </div>
+        {# @manual-end #}
 
       </div><!-- /.modal-body -->
     </div>
@@ -958,6 +984,7 @@
         el.innerHTML = html || ('<span class="text-muted">' + (window._ ? window._('No results') : 'No results') + '</span>');
     }
 
+    {# @manual geo/parcel-import#reviewing-and-saving #}
     function showPreviewArea(features, errors) {
         _pendingFeatures = features;
         document.getElementById('parcel-preview-area').style.display = features.length ? '' : 'none';
@@ -975,6 +1002,7 @@
             window.AoTParcelImport.showPreview(features);
         }
     }
+    {# @manual-end #}
 
     // ── Multi-address row management ──────────────────────────────────────────────────
     function _getAddressRows() {
@@ -1013,6 +1041,7 @@
         row.querySelector('.parcel-addr-input').focus();
     }
 
+    {# @manual geo/parcel-import#address-input #}
     /** Collect all entered addresses (split by comma + drop empty lines) */
     function _collectAddresses() {
         const addrs = [];
@@ -1079,7 +1108,9 @@
                 } finally { btnSearch.disabled = false; }
             });
         }
+    {# @manual-end #}
 
+        {# @manual geo/parcel-import#how-to-import #}
         // CSV upload
         const btnCsv = document.getElementById('btn-parcel-csv-upload');
         if (btnCsv) {
@@ -1101,6 +1132,7 @@
                 } finally { btnCsv.disabled = false; }
             });
         }
+        {# @manual-end #}
 
         // Refresh file input label
         const csvInput = document.getElementById('parcel-csv-file');
@@ -1111,6 +1143,7 @@
             });
         }
 
+        {# @manual geo/parcel-import#reviewing-and-saving #}
         // Save as Site (+ reload map with labels after saving)
         const btnSave = document.getElementById('btn-parcel-save');
         if (btnSave) {
@@ -1162,6 +1195,7 @@
                 } finally { btnSave.disabled = false; }
             });
         }
+        {# @manual-end #}
 
         // Reset
         const btnClear = document.getElementById('btn-parcel-clear');
@@ -1238,7 +1272,7 @@
     losing: {{ _('Losing operation')|tojson }},
     nobody: {{ _('Nobody loses operation with this change.')|tojson }},
     comm_error: {{ _('Error: Unable to communicate with server.')|tojson }},
-    no_groups: {{ _('No groups yet. Create one in Settings > Users > Groups.')|tojson }},
+    no_groups: {{ _('No groups yet. Create one in Manage > System Management > Users > Groups.')|tojson }},
     unsaved: {{ _('Save the map first.')|tojson }}
   };
 </script>

@@ -33,6 +33,7 @@ from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.send_data import send_email
+from aot.utils.lazy_text import lazy_format
 
 measurements_dict = {0: {}}
 
@@ -182,7 +183,7 @@ FUNCTION_INFORMATION = {
             'default_value': 300,
             'required': True,
             'constraints_pass': constraints_pass_positive_value,
-            'name': "{} ({})".format(lazy_gettext('Period'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Period'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration between measurements or actions')
         },
         {
@@ -190,7 +191,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 10,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
+            'name': lazy_format("{} ({})", lazy_gettext('Start Offset'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The duration to wait before the first operation')
         },
         {
@@ -221,7 +222,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{}: {} ({})".format(lazy_gettext('pH'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('pH'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {
@@ -243,7 +244,7 @@ FUNCTION_INFORMATION = {
             'type': 'integer',
             'default_value': 360,
             'required': True,
-            'name': "{}: {} ({})".format(lazy_gettext('Electrical Conductivity'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Electrical Conductivity'), lazy_gettext('Max Age'), lazy_gettext('Seconds')),
             'phrase': lazy_gettext('The maximum age of the measurement to use')
         },
         {

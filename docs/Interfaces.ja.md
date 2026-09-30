@@ -1,10 +1,10 @@
 ## I2Cに関する注意事項
 
-I2Cインターフェースは、`raspi-config`または`[gear icon] -> Settings -> Raspberry Pi`ページから有効にする必要があります。
+I2Cインターフェースは、`raspi-config`または`管理 → システム管理 → Raspberry Pi`ページから有効にする必要があります（Dockerでは使用できません）。変更は`管理 -> システムを再起動`の後に反映されます。
 
 ## 1-Wireに関する注意事項
 
-1-Wireインターフェースは、`raspi-config`または`[gear icon] -> Settings -> Raspberry Pi`ページから有効にする必要があります。
+1-Wireインターフェースは、`raspi-config`または`管理 → システム管理 → Raspberry Pi`ページから有効にする必要があります（Dockerでは使用できません）。変更は`管理 -> システムを再起動`の後に反映されます。
 
 ## UARTに関する注意事項
 
@@ -16,8 +16,12 @@ Raspberry Pi 2以降では、Bluetoothが追加されたことによりUARTの�
 
 `sudo raspi-config`
 
-`Advanced Options -> Serial`に進み、無効にします。次に`/boot/config.txt`を編集します。
+Raspberry Pi OS Bookworm以降では、シリアルポートの設定が2つに分かれています。シリアルログインシェル（ポート上のテキストコンソール）は**無効**に、シリアルハードウェア（UART本体）は**有効**にします。`管理 -> システム管理 -> Raspberry Pi`ページでは「シリアルログインシェル」「シリアルハードウェア」と表示されます。コマンドラインでは次のとおりです。
 
-`sudo nano /boot/config.txt`
+`sudo raspi-config nonint do_serial_cons 1`（ログインシェルを無効）
 
-「enable_uart=0」という行を見つけて「enable_uart=1」に変更し、再起動します。
+`sudo raspi-config nonint do_serial_hw 0`（シリアルハードウェアを有効）
+
+`raspi-config`では`Interface Options -> Serial Port`で、ログインシェルはNo、シリアルハードウェアはYesと答えます。
+
+設定ファイルはBookwormでは`/boot/firmware/config.txt`です（以前のリリースは`/boot/config.txt`）。手動で設定する場合は`enable_uart=1`が含まれていることを確認し、再起動します。

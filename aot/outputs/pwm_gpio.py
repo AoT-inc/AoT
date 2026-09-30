@@ -14,6 +14,7 @@ from aot.utils.constraints_pass import (
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb, read_influxdb_single
 from aot.utils.system_pi import return_measurement_info
+from aot.utils.lazy_text import lazy_format
 
 # Measurements
 measurements_dict = {
@@ -33,7 +34,7 @@ channels_dict = {
 # Output information
 OUTPUT_INFORMATION = {
     'output_name_unique': 'pwm',
-    'output_name': "{}: Raspberry Pi GPIO (Pi <= 4)".format(lazy_gettext('PWM')),
+    'output_name': lazy_format("{}: Raspberry Pi GPIO (Pi <= 4, pigpio)", lazy_gettext('PWM')),
     'output_library': 'pigpio',
     'measurements_dict': measurements_dict,
     'channels_dict': channels_dict,
@@ -78,7 +79,7 @@ OUTPUT_INFORMATION = {
             'default_value': None,
             'required': False,
             'constraints_pass': constraints_pass_positive_or_zero_value,
-            'name': "{}: {} ({})".format(lazy_gettext('Pin'), lazy_gettext('GPIO'), lazy_gettext('BCM')),
+            'name': lazy_format("{}: {} ({})", lazy_gettext('Pin'), lazy_gettext('GPIO'), lazy_gettext('BCM')),
             'phrase': lazy_gettext('The pin to control the state of')
         },
         {
@@ -161,7 +162,7 @@ OUTPUT_INFORMATION = {
             'type': 'float',
             'default_value': 0.0,
             'required': True,
-            'name': "{} ({})".format(lazy_gettext('Current'), lazy_gettext('Amps')),
+            'name': lazy_format("{} ({})", lazy_gettext('Current'), lazy_gettext('Amps')),
             'phrase': lazy_gettext('The current draw of the device being controlled')
         }
     ]

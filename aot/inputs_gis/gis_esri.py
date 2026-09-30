@@ -2,6 +2,7 @@
 from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg
 
+# @manual geo/layers#international-general
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_esri',
     'input_manufacturer': lg('Esri'),

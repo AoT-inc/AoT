@@ -9,6 +9,7 @@ run_action() does not control anything directly — env_coordinator queries the
 Actions table every cycle, converts records to ActuatorProfiles, and passes them
 to the coordination algorithm.
 """
+# @manual ai/env-control#actuators
 
 from flask_babel import lazy_gettext
 

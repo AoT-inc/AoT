@@ -13,6 +13,7 @@ CHANNELS = {
     5: {'name': lg('Bulk Density'), 'options': {'map': '/map/bdod.map', 'layers': 'bdod_0-5cm_mean'}}
 }
 
+# @manual geo/layers#specialized-data, geo/layers#isric-soilgrids
 INPUT_INFORMATION = {
     'input_name_unique': 'gis_isric',
     'input_manufacturer': 'ISRIC',
@@ -74,6 +75,7 @@ class InputModule(AbstractGisInput):
         self.default_url = 'https://maps.isric.org/mapserv'
         self.attribution = INPUT_INFORMATION['attribution']
 
+    # @manual geo/layers#isric-soilgrids
     def get_url(self):
         # Channel logic
         active_channels = self.get_custom_option('active_channels')
@@ -95,6 +97,7 @@ class InputModule(AbstractGisInput):
         # This prevents duplicate parameters (e.g. ?map=...&map=...) which break MapServer.
         return self.default_url
 
+    # @manual geo/layers#isric-soilgrids
     def get_leaflet_options(self):
         options = super().get_leaflet_options()
         active_channels = self.get_custom_option('active_channels')

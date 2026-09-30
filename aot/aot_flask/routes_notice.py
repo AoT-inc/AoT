@@ -44,6 +44,7 @@ def inject_functions():
     return dict(utc_to_local_time=utils_general.utc_to_local_time)
 
 
+# @manual Notices#list
 def _visible_posts_query():
     now = utc_now()
     query = NoticePost.query.filter(
@@ -53,6 +54,7 @@ def _visible_posts_query():
     return query
 
 
+# @manual Notices#list
 @blueprint.route('/notice', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_notice():
@@ -444,6 +446,7 @@ def api_notice_link_preview():
     return jsonify(_fetch_link_preview(url))
 
 
+# @manual Notices#poll
 @blueprint.route('/notice/api/<unique_id>/vote', methods=['POST'])
 @flask_login.login_required
 @csrf.exempt
@@ -474,6 +477,7 @@ def api_notice_vote(unique_id):
     })
 
 
+# @manual Notices#acknowledge
 @blueprint.route('/notice/api/<unique_id>/ack', methods=['POST'])
 @flask_login.login_required
 @csrf.exempt
@@ -486,6 +490,7 @@ def api_notice_ack(unique_id):
     return jsonify({'ok': True, 'ack_count': ack_count})
 
 
+# @manual Notices#replies
 @blueprint.route('/notice/api/<unique_id>/reply', methods=['POST'])
 @flask_login.login_required
 @csrf.exempt
@@ -516,6 +521,7 @@ def api_notice_reply(unique_id):
     })
 
 
+# @manual Notices#replies
 @blueprint.route('/notice/api/reply/<reply_unique_id>/delete', methods=['POST'])
 @flask_login.login_required
 @csrf.exempt

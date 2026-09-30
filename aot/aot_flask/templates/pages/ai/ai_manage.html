@@ -36,12 +36,14 @@
     <h3>{{ _('AI Records') }}</h3>
   </div>
 
+  {# @manual ai/overview#ai-records #}
   <ul class="nav nav-tabs" id="recordTabs" role="tablist">
     <li class="nav-item"><a class="nav-link active" id="tab-calls" data-toggle="tab" href="#calls" role="tab" aria-controls="calls" aria-selected="true">{{ _('Tool calls') }}</a></li>
     <li class="nav-item"><a class="nav-link" id="tab-talks" data-toggle="tab" href="#talks" role="tab" aria-controls="talks" aria-selected="false">{{ _('Conversations') }}</a></li>
     <li class="nav-item"><a class="nav-link" id="tab-errors" data-toggle="tab" href="#errors" role="tab" aria-controls="errors" aria-selected="false">{{ _('Error reports') }}</a></li>
     <li class="nav-item"><a class="nav-link" id="tab-quality" data-toggle="tab" href="#quality" role="tab" aria-controls="quality" aria-selected="false">{{ _('Call quality') }}</a></li>
   </ul>
+  {# @manual-end #}
 
   <div class="tab-content">
     <div class="tab-pane fade show active" id="calls" role="tabpanel" aria-labelledby="tab-calls">
@@ -106,6 +108,7 @@
       </section>
     </div>
 
+    {# @manual ai/overview#call-quality #}
     <div class="tab-pane fade" id="quality" role="tabpanel" aria-labelledby="tab-quality">
       <section>
         <p class="aot-settings-sub aot-settings-bare">{{ _('How connected AIs have been using the tools: how many calls a request takes, how long they wait, and how often a call fails or comes back empty.') }}</p>
@@ -142,6 +145,7 @@
         </div>
       </section>
     </div>
+    {# @manual-end #}
   </div>
 </main>
 </div>
@@ -447,6 +451,7 @@
     return '<div class="aot-settings-row aot-settings-row-item"><div class="aot-settings-label">' + esc(label) +
       '</div><div class="aot-settings-control">' + esc(value) + '</div></div>';
   }
+  // @manual ai/overview#call-quality
   var qualitySeq = 0;
   function loadQuality() {
     /* 필터를 빨리 바꾸면 앞선 응답이 늦게 와서 새 결과를 덮을 수 있다 — 마지막 요청만 그린다. */
@@ -507,6 +512,7 @@
     });
   }
   $('#qualityFilters select').on('change', loadQuality);
+  // @manual-end
 
   /* ── 탭 — 주소 해시로 기억한다. 옛 주소 ?tab=errors 도 받는다. ── */
   var loaded = {};

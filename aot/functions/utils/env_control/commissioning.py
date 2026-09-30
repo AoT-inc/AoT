@@ -138,6 +138,7 @@ _checks: Dict[str, CommissioningCheck] = {}
 
 # ── 공개 API ──────────────────────────────────────────────────────────────────
 
+# @manual geo/facility#device-check
 def start_check(
     facility_uuid: str,
     actuator_list: List[Dict],   # [{'actuator_id', 'kind', 'name'}, ...]
@@ -234,6 +235,7 @@ def get_result(check_id: str) -> Optional[Dict]:
     return _serialize(check)
 
 
+# @manual geo/facility#device-check
 def submit_verdict(
     check_id: str,
     actuator_id: str,
@@ -341,6 +343,7 @@ def _next_actuator(check: CommissioningCheck, now: float):
         check.phase_started_ts = now
 
 
+# @manual geo/facility#device-check
 def _evaluate(check: CommissioningCheck, spec: ActuatorTestSpec):
     result = check.results.get(spec.actuator_id)
     if not result:

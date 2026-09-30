@@ -16,6 +16,7 @@ from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.utils.system_pi import epoch_of_next_time
 from aot.utils.time_utils import parse_flexible_time
 from aot.utils import sequence_schedule
+from aot.utils.sequence_warnings import sequence_schedule_day_warnings
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,15 @@ def trigger_mod(form):
     try:
         trigger = Trigger.query.filter(
             Trigger.unique_id == form.function_id.data).first()
-        logger.info(f"DEBUG: trigger_mod called for {trigger.unique_id}, type={trigger.trigger_type}")
+        logger.debug(f"DEBUG: trigger_mod called for {trigger.unique_id}, type={trigger.trigger_type}")
         trigger.name = form.name.data
         trigger.action_type = form.action_type.data
         messages["name"] = form.name.data
+        from aot.aot_flask.utils.utils_function import duplicate_function_name_warning
+        dup_warning = duplicate_function_name_warning(
+            form.name.data, exclude_id=trigger.unique_id)
+        if dup_warning:
+            messages["warning"].append(dup_warning)
         new_tab_id = request.form.get('tab_id')
         if new_tab_id and new_tab_id != trigger.tab_id:
             if Tab.query.filter(Tab.unique_id == new_tab_id).first():
@@ -165,7 +171,7 @@ def trigger_mod(form):
             trigger.timer_start_offset = form.timer_start_offset.data
 
         elif trigger.trigger_type == 'trigger_sequence':
-            logger.info(f"DEBUG: trigger_sequence mod. Data: start={form.timer_start_time.data}, end={form.timer_end_time.data}, period={form.period.data}, dur={form.output_duration.data}, latency={form.timer_start_offset.data}, validity={form.time_offset_minutes.data}")
+            logger.debug(f"DEBUG: trigger_sequence mod. Data: start={form.timer_start_time.data}, end={form.timer_end_time.data}, period={form.period.data}, dur={form.output_duration.data}, latency={form.timer_start_offset.data}, validity={form.time_offset_minutes.data}")
             
             # 창(시작·종료·주기)은 여기서 컬럼에 바로 쓰지 않는다 — 값만 모아 두고
             # 아래에서 정본(JSON)으로 저장한다. 레거시 컬럼은 저장이 맞춘다.
@@ -212,6 +218,14 @@ def trigger_mod(form):
                     messages["error"].append(gettext(
                         "End time must be later than start time on the same day "
                         "(a window crossing midnight is not supported)."))
+                else:
+                    # 저장이 실제로 만든 결과를 같은 자리에서 알린다 — 위젯의
+                    # 요일별 편집기·AI 도구가 이미 보여 주는 것과 같은 판정
+                    # (한 회차가 창/주기보다 길어 잘리거나 재시작함, 하루 여러
+                    # 번 반복함)이다. 2026-09-25 전에는 이 모달에서 저장해도
+                    # "period > window" 조차 알려주지 않았다.
+                    _, flat_warnings = sequence_schedule_day_warnings(trigger)
+                    messages["warning"].extend(flat_warnings)
             else:
                 # per_day 는 요일마다 창이 다른 것이 존재 이유라 전역 값 하나를
                 # 퍼뜨리면 안 된다. 대신 **조용히 버리지 않고 알린다** — 이 폼의
@@ -222,22 +236,20 @@ def trigger_mod(form):
                     "the sequence widget."))
 
         if not messages["error"]:
-            logger.info("DEBUG: Attempting DB commit...")
+            logger.debug("DEBUG: Attempting DB commit...")
             try:
                 db.session.commit()
-                logger.info("DEBUG: DB commit successful.")
+                logger.debug("DEBUG: DB commit successful.")
 
                 # Verify persistence
                 if trigger.trigger_type == 'trigger_sequence':
                     try:
                         check = Trigger.query.filter(Trigger.unique_id == form.function_id.data).first()
-                        logger.info(f"DEBUG: Post-commit check: start={check.timer_start_time}, end={check.timer_end_time}, period={check.period}, dur={check.output_duration}")
+                        logger.debug(f"DEBUG: Post-commit check: start={check.timer_start_time}, end={check.timer_end_time}, period={check.period}, dur={check.output_duration}")
                     except Exception as e:
-                        logger.error(f"DEBUG: Post-commit verification failed: {e}")
+                        logger.error(f"Post-commit verification failed: {e}")
 
-                messages["success"].append('{action} {controller}'.format(
-                    action=TRANSLATIONS['modify']['title'],
-                    controller=TRANSLATIONS['trigger']['title']))
+                messages["success"].append(gettext("Trigger modified"))
 
                 # Refresh Daemon if activated
                 if trigger.is_activated:
@@ -302,10 +314,10 @@ def trigger_mod(form):
                         logger.error(f"Failed to sync widgets: {e}")
 
             except Exception as e:
-                logger.error(f"DEBUG: DB commit FAILED: {e}")
+                logger.error(f"DB commit FAILED: {e}")
                 messages["error"].append(f"Database commit failed: {e}")
         else:
-            logger.warning(f"DEBUG: Skipping commit due to errors: {messages['error']}")
+            logger.warning(f"Skipping commit due to errors: {messages['error']}")
 
     except sqlalchemy.exc.OperationalError as except_msg:
         messages["error"].append(str(except_msg))
@@ -366,9 +378,7 @@ def trigger_del(trigger_id):
             delete_entry_with_id(
                 Trigger, trigger_id, flash_message=False)
 
-            messages["success"].append('{action} {controller}'.format(
-                action=TRANSLATIONS['delete']['title'],
-                controller=TRANSLATIONS['trigger']['title']))
+            messages["success"].append(gettext("Trigger deleted"))
     except sqlalchemy.exc.OperationalError as except_msg:
         messages["error"].append(str(except_msg))
     except sqlalchemy.exc.IntegrityError as except_msg:
@@ -408,9 +418,7 @@ def trigger_activate(trigger_id):
         messages, 'activate', 'Trigger', trigger_id, flash_message=False)
 
     if not messages["error"]:
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['activate']['title'],
-            controller=TRANSLATIONS['trigger']['title']))
+        messages["success"].append(gettext("Trigger activated"))
 
     return messages
 
@@ -434,9 +442,7 @@ def trigger_deactivate(trigger_id):
         trigger.method_end_time = None
         db.session.commit()
 
-        messages["success"].append('{action} {controller}'.format(
-            action=TRANSLATIONS['deactivate']['title'],
-            controller=TRANSLATIONS['trigger']['title']))
+        messages["success"].append(gettext("Trigger deactivated"))
 
     return messages
 
