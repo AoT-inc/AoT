@@ -4430,12 +4430,6 @@ msgstr ""
 msgid "Could not find that area."
 msgstr ""
 
-#: aot_flask/routes_geo_journal.py:154
-msgid ""
-"Facilities without a mapped location won't appear here — add their location "
-"in Facility settings first."
-msgstr ""
-
 #: aot_flask/routes_geo_journal.py:223 aot_flask/routes_geo_journal.py:451
 msgid "Permission Denied"
 msgstr ""
@@ -4468,19 +4462,6 @@ msgstr ""
 #: aot_flask/routes_geo_journal.py:271
 #, python-format
 msgid "That period is too long (%(days)s days). Try a shorter period."
-msgstr ""
-
-#: aot_flask/routes_geo_journal.py:275
-#, python-format
-msgid ""
-"That selection has too many devices (%(n)s channels). Narrow the area, or "
-"pick a single plot instead."
-msgstr ""
-
-#: aot_flask/routes_geo_journal.py:280
-msgid ""
-"That selection would read too much data. Try a shorter period or a narrower "
-"area."
 msgstr ""
 
 #: aot_flask/routes_geo_journal.py:331
@@ -16925,12 +16906,6 @@ msgid ""
 "rendered as points."
 msgstr ""
 
-#: aot_flask/templates/pages/geo/journal.html:61
-msgid ""
-"Pick a plot, zone, or site and a period, and generate a snapshot of what was"
-" grown, measured, and controlled — a document you can hand off or print."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal.html:77
 msgid "Change"
 msgstr ""
@@ -16999,11 +16974,6 @@ msgstr ""
 #: aot_flask/templates/pages/geo/journal_view.html:184
 #: aot_flask/templates/pages/geo/journal_view.html:198
 msgid "Journal"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:180
-msgid ""
-"This journal is still being generated. This page will refresh automatically."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:186
@@ -17087,34 +17057,12 @@ msgstr ""
 msgid "Period and time zone"
 msgstr ""
 
-#: aot_flask/templates/pages/geo/journal_view.html:265
-#, python-format
-msgid ""
-"Days start and end in %(tz)s. Every date in this document is a local "
-"calendar day, not a UTC day."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:267
 msgid "Min / Max / Avg"
 msgstr ""
 
-#: aot_flask/templates/pages/geo/journal_view.html:268
-msgid ""
-"Min and max are exact. The average is the mean of hourly means, so heavily "
-"sampled hours do not pull it — it is an approximation, not a true time-"
-"weighted average."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:270
 msgid "Target and Δ"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:271
-msgid ""
-"Targets come from the growing program attached to the plot. Δ is the "
-"measured average minus that target. Day/night targets and curve-based "
-"targets are marked instead of differenced, because comparing them against a "
-"whole-day average produces false alarms."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:273
@@ -17131,12 +17079,6 @@ msgstr ""
 msgid "What was left out"
 msgstr ""
 
-#: aot_flask/templates/pages/geo/journal_view.html:278
-msgid ""
-"Device diagnostics (battery, signal) are not included by default. They can "
-"be turned on when generating a journal."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:286
 msgid "Terms used here"
 msgstr ""
@@ -17149,20 +17091,8 @@ msgstr ""
 msgid "Source"
 msgstr ""
 
-#: aot_flask/templates/pages/geo/journal_view.html:298
-msgid ""
-"Sensor and device records held by this AoT system for the devices assigned "
-"to this target."
-msgstr ""
-
 #: aot_flask/templates/pages/geo/journal_view.html:299
 msgid "Snapshot"
-msgstr ""
-
-#: aot_flask/templates/pages/geo/journal_view.html:300
-msgid ""
-"This document was fixed when it was generated. Later changes to devices, "
-"programs or wiring do not alter it."
 msgstr ""
 
 #: aot_flask/templates/pages/geo/journal_view.html:304
@@ -20562,13 +20492,6 @@ msgstr ""
 msgid "This function type has no editable options."
 msgstr ""
 
-#: aot_flask/templates/user_templates/widget_template_widget_function_status_js.html:195
-#: widgets/widget_function_status.py:187
-msgid ""
-"This controller is active. Deactivate it before saving changes, or they will"
-" not be applied."
-msgstr ""
-
 #: aot_flask/templates/user_templates/widget_template_widget_graph_synchronous_configure_options.html:4
 msgid "Series Options"
 msgstr ""
@@ -20710,12 +20633,6 @@ msgstr ""
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:44
 #: widgets/widget_trigger_sequence.py:414
 msgid "Set the time of day the sequence starts for the selected day"
-msgstr ""
-
-#: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:52
-#: widgets/widget_trigger_sequence.py:415
-msgid ""
-"Set the time of day the sequence stops. Select 00:00 for 24:00 (end of day)."
 msgstr ""
 
 #: aot_flask/templates/user_templates/widget_template_widget_trigger_sequence_body.html:60
@@ -28493,7 +28410,6 @@ msgstr ""
 #: aot/aot_flask/static/js/geo/journal-page.js
 msgid "%(n)s notes"
 msgstr ""
-
 
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
