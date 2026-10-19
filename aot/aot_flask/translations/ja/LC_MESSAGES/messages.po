@@ -33359,3 +33359,18 @@ msgstr "パスワードは保存済みです。空欄のままにすると変更
 #: aot_flask/templates/settings/alerts.html
 msgid "No password is saved."
 msgstr "保存されたパスワードはありません。"
+
+#: outputs/on_off_chirpstack.py:133
+msgid "DevEUI"
+msgstr "DevEUI"
+
+
+#: outputs/on_off_chirpstack.py:109
+msgid "Enter the ChirpStack server address, API key, DevEUI, FPort, and ON/OFF payload. Payload format can be Hex or JSON."
+msgstr "ChirpStackサーバーアドレス、APIキー、DevEUI、FPort、ON/OFFペイロードを入力してください。ペイロード形式はHexまたはJSONを使用できます。"
+
+
+#: outputs/on_off_chirpstack.py:160
+msgid "Payload Format"
+msgstr "ペイロード形式"
+
