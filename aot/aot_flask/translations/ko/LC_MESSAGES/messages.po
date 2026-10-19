@@ -33824,3 +33824,18 @@ msgstr "비밀번호가 저장되어 있습니다. 비워 두면 그대로 유�
 #: aot_flask/templates/settings/alerts.html
 msgid "No password is saved."
 msgstr "저장된 비밀번호가 없습니다."
+
+#: outputs/on_off_chirpstack.py:133
+msgid "DevEUI"
+msgstr "DevEUI"
+
+
+#: outputs/on_off_chirpstack.py:109
+msgid "Enter the ChirpStack server address, API key, DevEUI, FPort, and ON/OFF payload. Payload format can be Hex or JSON."
+msgstr "ChirpStack 서버 주소, API 키, DevEUI, FPort, ON/OFF 페이로드를 입력하세요. 페이로드 형식은 Hex 또는 JSON을 사용할 수 있습니다."
+
+
+#: outputs/on_off_chirpstack.py:160
+msgid "Payload Format"
+msgstr "페이로드 형식"
+

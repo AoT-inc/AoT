@@ -32132,3 +32132,18 @@ msgstr ""
 #: aot_flask/templates/settings/general.html:658
 msgid "Pass"
 msgstr ""
+
+#: outputs/on_off_chirpstack.py:133
+msgid "DevEUI"
+msgstr ""
+
+
+#: outputs/on_off_chirpstack.py:109
+msgid "Enter the ChirpStack server address, API key, DevEUI, FPort, and ON/OFF payload. Payload format can be Hex or JSON."
+msgstr ""
+
+
+#: outputs/on_off_chirpstack.py:160
+msgid "Payload Format"
+msgstr ""
+

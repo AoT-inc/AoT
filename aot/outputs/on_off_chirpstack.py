@@ -106,7 +106,7 @@ OUTPUT_INFORMATION = {
 
     'interfaces': ['API'],
 
-    'custom_options_message': 'Enter the ChirpStack server address, API key, DevEUI, FPort, and ON/OFF payload. Payload format can be Hex or JSON.',
+    'custom_options_message': lazy_gettext('Enter the ChirpStack server address, API key, DevEUI, FPort, and ON/OFF payload. Payload format can be Hex or JSON.'),
 
     'custom_options': [
         {
@@ -114,7 +114,7 @@ OUTPUT_INFORMATION = {
             'type': 'text',
             'default_value': '127.0.0.1:8080',
             'required': False,
-            'name': 'ChirpStack gRPC Server',
+            'name': lazy_gettext('ChirpStack gRPC Server'),
             'phrase': lazy_gettext('Host:port format (e.g., 127.0.0.1:8080) or http(s)://host:port')
         },
         {
@@ -122,7 +122,7 @@ OUTPUT_INFORMATION = {
             'type': 'text',
             'default_value': '',
             'required': True,
-            'name': 'API Key',
+            'name': lazy_gettext('API Key'),
             'phrase': lazy_gettext('Enter the JWT token value (without Bearer prefix)')
         },
         {
@@ -130,7 +130,7 @@ OUTPUT_INFORMATION = {
             'type': 'text',
             'default_value': '',
             'required': True,
-            'name': 'DevEUI',
+            'name': lazy_gettext('DevEUI'),
             'phrase': lazy_gettext('16-digit hexadecimal DevEUI (separators allowed)')
         },
         {
@@ -138,7 +138,7 @@ OUTPUT_INFORMATION = {
             'type': 'integer',
             'default_value': 15,
             'required': False,
-            'name': 'FPort',
+            'name': lazy_gettext('FPort'),
             'phrase': lazy_gettext('LoRaWAN FPort on which the command is received')
         },
         {
@@ -146,7 +146,7 @@ OUTPUT_INFORMATION = {
             'type': 'bool',
             'default_value': False,
             'required': False,
-            'name': 'Confirmed',
+            'name': lazy_gettext('Confirmed'),
             'phrase': lazy_gettext('Send command as confirmed (await acknowledgment)')
         },
         {
@@ -157,7 +157,7 @@ OUTPUT_INFORMATION = {
                 ('hex', 'Hex Bytes'),
                 ('json', 'JSON Object (UTF-8 encoded)')
             ],
-            'name': 'Payload Format',
+            'name': lazy_gettext('Payload Format'),
             'phrase': lazy_gettext('Select the payload encoding format')
         },
         {
@@ -165,7 +165,7 @@ OUTPUT_INFORMATION = {
             'type': 'text',
             'default_value': '000000',
             'required': False,
-            'name': 'On Payload',
+            'name': lazy_gettext('On Payload'),
             'phrase': lazy_gettext('e.g., 010110 (Hex) or JSON string')
         },
         {
@@ -173,7 +173,7 @@ OUTPUT_INFORMATION = {
             'type': 'text',
             'default_value': '000000',
             'required': False,
-            'name': 'Off Payload',
+            'name': lazy_gettext('Off Payload'),
             'phrase': lazy_gettext('e.g., 010210 (Hex) or JSON string')
         },
         # NOTE: ACK Timeout / Max Retries are unified into the common
@@ -186,7 +186,7 @@ OUTPUT_INFORMATION = {
             'type': 'bool',
             'default_value': False,
             'required': False,
-            'name': 'Enable Debug Logging',
+            'name': lazy_gettext('Enable Debug Logging'),
             'phrase': lazy_gettext('Log connection/enqueue/confirmation notices (INFO/WARNING) for this '
                       'device. Errors are always logged. Leave off in production.')
         }
@@ -198,11 +198,11 @@ OUTPUT_INFORMATION = {
             'type': 'select',
             'default_value': 0,
             'options_select': [
-                (-1, 'Do Nothing'),
-                (0, 'Off'),
-                (1, 'On')
+                (-1, lazy_gettext('Do Nothing')),
+                (0, lazy_gettext('Off')),
+                (1, lazy_gettext('On'))
             ],
-            'name': 'Startup State',
+            'name': lazy_gettext('Startup State'),
             'phrase': lazy_gettext('State to apply when AoT starts')
         },
         {
@@ -210,25 +210,25 @@ OUTPUT_INFORMATION = {
             'type': 'select',
             'default_value': 0,
             'options_select': [
-                (-1, 'Do Nothing'),
-                (0, 'Off'),
-                (1, 'On')
+                (-1, lazy_gettext('Do Nothing')),
+                (0, lazy_gettext('Off')),
+                (1, lazy_gettext('On'))
             ],
-            'name': 'Shutdown State',
+            'name': lazy_gettext('Shutdown State'),
             'phrase': lazy_gettext('State to apply when AoT shuts down')
         },
         {
             'id': 'command_force',
             'type': 'bool',
             'default_value': False,
-            'name': 'Force Command',
+            'name': lazy_gettext('Force Command'),
             'phrase': lazy_gettext('Always send command regardless of current state')
         },
         {
             'id': 'trigger_functions_startup',
             'type': 'bool',
             'default_value': False,
-            'name': 'Trigger Functions at Startup',
+            'name': lazy_gettext('Trigger Functions at Startup'),
             'phrase': lazy_gettext('Execute trigger function when output switches at startup')
         }
     ]
