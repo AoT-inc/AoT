@@ -1,0 +1,131 @@
+/*
+ * aot-media-embed.css — 공용 미디어 임베드(노트·공지). 마크업은 aot-media-embed.js (AoTMediaEmbed) 가 만든다.
+ *
+ *  - 상자 폭은 100% 이고 높이는 ::before 패딩으로 잡는다(16:9, 쇼츠 9:16). aspect-ratio·고정 높이를 쓰지 않는다 —
+ *    화면 배율(CSS zoom)이 걸린 iPhone 에서 영상이 잘리던 문제(카드 뷰어와 같은 방식).
+ *  - 색은 토큰만: 상자 면 --aot-surface-body, 재생 표식은 AI 면(--aot-ai-surface-*) 짝.
+ *  - 눌리는 영역은 상자 전체라 터치 표적(2.75rem)을 넘는다.
+ */
+.aot-media {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  margin: var(--aot-space-2) 0;
+  white-space: normal;   /* 노트 본문(pre-wrap) 안에서도 상자 안 공백이 줄을 만들지 않게 */
+}
+.aot-media.is-vertical {
+  max-width: min(100%, 18rem);   /* 쇼츠(9:16): 휴대폰 화면 한 장 높이를 넘지 않게 폭을 줄인다 */
+}
+.aot-media__stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--aot-radius-sm);
+  background: var(--aot-surface-body);
+  cursor: pointer;
+}
+.aot-media__stage::before {
+  content: "";
+  display: block;
+  padding-top: 56.25%;
+}
+.aot-media.is-vertical .aot-media__stage::before {
+  padding-top: 177.78%;
+}
+.aot-media__poster,
+.aot-media__frame,
+.aot-media__video {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.aot-media__poster {
+  object-fit: cover;   /* 유튜브 대표 이미지(4:3)에 박힌 위아래 검은 띠가 잘려 나간다 */
+}
+.aot-media__video {
+  object-fit: contain;
+}
+.aot-media__badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--aot-ai-touch);
+  height: var(--aot-ai-touch);
+  border-radius: 50%;
+  background: var(--aot-ai-surface-solid);
+  color: var(--aot-ai-surface-fg);
+  font-size: var(--aot-fs-section-title);
+}
+.aot-media__stage:focus-visible {
+  outline: 2px solid var(--aot-ai-surface-fg);
+  outline-offset: -4px;
+}
+.aot-media__src {
+  display: inline-block;
+  margin-top: var(--aot-space-1);
+  font-size: var(--aot-fs-desc);
+  color: inherit;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+.aot-media--image {
+  display: block;
+}
+.aot-media--image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--aot-radius-sm);
+}
+
+/* 링크 미리보기 카드(공지 렌더러가 채운다) — 노트 본문에서도 같은 모양 */
+.aot-notice-link-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 30rem;
+  margin: var(--aot-space-2) 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--aot-border-neutral);
+  border-radius: var(--aot-radius-md);
+  color: inherit;
+  text-decoration: none;
+  white-space: normal;
+}
+.aot-notice-link-preview-image {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--aot-radius-sm);
+}
+.aot-notice-link-preview-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.aot-notice-link-preview-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--aot-fw-semibold);
+}
+.aot-notice-link-preview-desc,
+.aot-notice-link-preview-domain {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--aot-fs-desc);
+}

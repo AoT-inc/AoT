@@ -135,6 +135,7 @@ CHANNELS = {
         'name': lg('NDVI (Vegetation)'),
         'options': {
             'key': 'ndvi',
+            'ambient_role': 'ground.field',
             'index': ('B08', 'B04'),
             'role': 'overlay',
             'evalscript': _index_evalscript('B08', 'B04', _NDVI_COLORS_JS, _NDVI_STOPS),
@@ -146,6 +147,7 @@ CHANNELS = {
         'name': lg('True Color'),
         'options': {
             'key': 'truecolor',
+            'ambient_role': 'ground.imagery',
             'index': None,
             'role': 'base',
             'evalscript': _TRUECOLOR_EVALSCRIPT,
@@ -155,6 +157,7 @@ CHANNELS = {
         'name': lg('NDMI (Moisture)'),
         'options': {
             'key': 'ndmi',
+            'ambient_role': 'ground.field',
             'index': ('B08', 'B11'),
             'role': 'overlay',
             'evalscript': _index_evalscript('B08', 'B11', _MOISTURE_COLORS_JS, _NDVI_STOPS),
@@ -166,6 +169,7 @@ CHANNELS = {
         'name': lg('NDWI (Water)'),
         'options': {
             'key': 'ndwi',
+            'ambient_role': 'ground.field',
             'index': ('B03', 'B08'),
             'role': 'overlay',
             'evalscript': _index_evalscript('B03', 'B08', _MOISTURE_COLORS_JS, _NDVI_STOPS),
@@ -177,6 +181,7 @@ CHANNELS = {
         'name': lg('False Color (NIR)'),
         'options': {
             'key': 'falsecolor',
+            'ambient_role': 'ground.imagery',
             'index': None,
             'role': 'base',
             'evalscript': _FALSECOLOR_EVALSCRIPT,
@@ -216,6 +221,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'overlay',
+    'ambient_role': 'ground.field',
     'custom_options': [
         {
             'id': 'client_id',

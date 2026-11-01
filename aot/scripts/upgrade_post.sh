@@ -123,6 +123,9 @@ TIMER_START_restart_aotmcp=$SECONDS
 ${INSTALL_CMD} restart-aotmcp
 TIMER_TOTAL_restart_aotmcp=$((SECONDS - TIMER_START_restart_aotmcp))
 
+# aottwin(디지털트윈, 실험)도 같은 이유로 — 설치·활성화한 기기에서만 다시 띄운다.
+${INSTALL_CMD} restart-aottwin
+
 # SSL certificate validation and generation
 printf "\n#### Checking SSL certificates...\n"
 

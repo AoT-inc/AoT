@@ -316,38 +316,23 @@ def propose_map_scoped_control(raw_cmd, mapctx, thread_id):
     proposes turning them on/off — naming the location so the user confirms
     exactly what's being controlled. Returns the proposal dict, or None to fall
     through to the normal pipeline (no location resolved / no devices there)."""
-    from aot.databases.models import Output, GeoShape
-    loc = AIContextService.resolve_point_to_location(mapctx.get('lat'), mapctx.get('lng'))
-    zone, site = loc.get('zone'), loc.get('site')
-    if not zone and not site:
+    from aot.databases.models import Output
+    from aot.aot_flask.geo import device_membership as dm
+    # 화면 중심을 감싸는 가장 작은 장소, 그 안의 장치는 정본 소속으로
+    # (2026-10-08). 예전에는 `device_zone_map`(장치 영역 폴리곤만 · 지도 무관 ·
+    # 바인딩 안 봄)을 **구역 이름**으로 맞춰서, 이름이 같은 다른 지도의 구역
+    # 장치가 섞이거나 구역에 바인딩된 밸브가 빠졌다.
+    place = dm.place_at_point(mapctx.get('lat'), mapctx.get('lng'))
+    if place is None:
         return None
-
-    zmap = AIContextService.get_device_zone_map()  # {device_id: zone_name}
-    if zone:
-        # Viewport center falls inside a specific zone — scope to it.
-        dids = [d for d, z in zmap.items() if z == zone]
-    else:
-        # Viewport center is inside the SITE polygon but not any single zone
-        # (e.g. zoomed out to see the whole site) — scope to every device in
-        # every zone under that site, not nothing.
-        def _shape_name(s):
-            feat = s.feature or {}
-            if isinstance(feat, str):
-                try:
-                    feat = json.loads(feat)
-                except Exception:
-                    feat = {}
-            props = feat.get('properties', {}) if isinstance(feat, dict) else {}
-            return str(props.get('name') or props.get('label') or '').strip()
-
-        from aot.utils.geo_hierarchy import geo_descendant_shapes
-        site_shape = next(
-            (s for s in GeoShape.query.filter_by(type='site').all() if _shape_name(s) == site),
-            None)
-        zone_names = {_shape_name(c) for c in geo_descendant_shapes(site_shape)} if site_shape else set()
-        zone_names.discard('')
-        dids = [d for d, z in zmap.items() if z in zone_names] if zone_names else []
-
+    idx = dm.PlaceIndex()
+    chain = idx.chain(place)
+    site = next((dm.place_label(s) for s in chain if s.type == 'site'), None)
+    zone = dm.place_label(place) if place.type == 'zone' else None
+    # 대상은 **화면 규칙**(`screen_members`)으로 — 대지를 가리키면 필지 모달처럼
+    # 시설 설비를 빼고, 구역을 가리키면 구역 모달처럼 넣는다. 화면에 보이는
+    # 목록과 제안 대상이 같아야 사람이 무엇을 승인하는지 안다(2026-10-08 결정).
+    dids = sorted(dm.screen_members(place) or set())
     if not dids:
         return None
 
@@ -367,18 +352,23 @@ def propose_location_scoped_control(raw_cmd, thread_id):
     rows = [r for r in res.get('results', []) if r.get('type') == 'output']
     if not rows:
         return None
-    outs, zones = [], []
+    outs, places = [], []
     for r in rows:
         o = Output.query.filter_by(unique_id=r['id']).first()
         if o:
             outs.append(o)
-            zones.append(r.get('zone'))
+            places.append(r.get('place'))
     if not outs:
         return None
-    # Location label: the shared zone (if all devices are in one) + its site.
-    uniq_zones = {z for z in zones if z}
-    zone = next(iter(uniq_zones)) if len(uniq_zones) == 1 else None
-    site = AIContextService.get_zone_site_map().get(zone) if zone else None
+    # 장소 이름은 결과의 소속 경로('3포장 > 3-1')에서 읽는다. 1단계에서
+    # search_devices 의 'zone' 칸이 'place' 경로로 바뀌었다 — 옛 칸을 읽으면
+    # 제안 문구의 장소가 비어 사람이 무엇을 승인하는지 흐려진다(2026-10-08).
+    # 모두 같은 경로면 그 구역, 대지는 경로들이 함께 지나는 첫 장소다.
+    split = [p.split(' > ') for p in places if p]
+    uniq = {tuple(x) for x in split}
+    zone = split[0][-1] if len(uniq) == 1 and len(split[0]) > 1 else None
+    firsts = {x[0] for x in split}
+    site = next(iter(firsts)) if len(firsts) == 1 else None
     if not site:
         m = re.search(r'(\d+\s*포장)', raw_cmd)
         if m:

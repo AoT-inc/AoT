@@ -1,16 +1,20 @@
 # coding=utf-8
-"""프리게이트 폭염·한파 외부 문턱의 정본은 `PreGateConfig` 기본값 하나다.
+"""프리게이트 한파 외부 문턱의 정본은 `PreGateConfig` 기본값 하나다.
 
 예전에는 기본값이 38 / −2 °C 인데 `EnvCoordinator.initialize` 가 45 / −5 °C 를
 따로 넘겼다. 운영(과 매뉴얼 docs/ai/env-control.md#pre-gate-checked-before-l1l3)은
 45 / −5 로 돌고, 인자 없이 만드는 곳(시설 IEC 미리보기 `routes_geo_iec`, 테스트)은
 다른 문턱으로 돌았다 — 같은 날씨에 한쪽은 비상 운전, 한쪽은 정상이었다.
+
+폭염 쪽(45 °C)은 2026-10-09 에 게이트째 없앴다 — 극한 고온 보호(`heat_protect`)가
+사용자 문턱으로 맡는다. 그 문턱도 정본은 하나다(옵션 `heat_protect_threshold`).
 """
 import ast
 import os
 
+from aot.functions.utils.env_control.log_channels import GATE_BIT_HEAT
 from aot.functions.utils.env_control.safety_gates import (
-    GATE_BIT_COLD, GATE_BIT_HEAT, PreGateConfig, SafetyPreGate)
+    GATE_BIT_COLD, PreGateConfig, SafetyPreGate)
 from aot.functions.utils.env_control.types import ActuatorProfile
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,19 +31,22 @@ def _mask(gate, T_ext, T_int):
 
 def test_defaults_match_the_manual():
     cfg = PreGateConfig()
-    assert cfg.heat_ext_threshold == 45.0
     assert cfg.cold_ext_threshold == -5.0
+    assert not hasattr(cfg, 'heat_ext_threshold')       # 폭염 게이트는 없다
 
 
 def test_default_gate_does_not_fire_between_old_and_canonical_thresholds():
-    """40 °C / −3 °C 는 옛 기본값(38 / −2)으로는 비상이었고 운영에서는 아니었다."""
-    assert not _mask(SafetyPreGate(), 40.0, 36.0) & GATE_BIT_HEAT
+    """−3 °C 는 옛 기본값(−2)으로는 비상이었고 운영에서는 아니었다."""
     assert not _mask(SafetyPreGate(), -3.0, 4.0) & GATE_BIT_COLD
 
 
 def test_default_gate_fires_at_canonical_thresholds():
-    assert _mask(SafetyPreGate(), 45.5, 36.0) & GATE_BIT_HEAT
     assert _mask(SafetyPreGate(), -5.5, 4.0) & GATE_BIT_COLD
+
+
+def test_heat_never_fires_the_gate():
+    """옛 폭염 문턱(45 / 35)을 넘어도 — 고온은 게이트가 아니라 극한 고온 보호다."""
+    assert not _mask(SafetyPreGate(), 45.5, 36.0) & GATE_BIT_HEAT
 
 
 def _pre_gate_config_kwargs(path):

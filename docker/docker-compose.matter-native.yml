@@ -1,0 +1,42 @@
+# Matter 서버만 — **네이티브(systemd) 설치**용. AoT 자체는 Docker 로 돌지 않는 설치
+# (/opt/AoT 의 aot·aotflask·aotmcp 서비스)에서 Matter 컨트롤러를 쓸 때 쓴다.
+# Docker 설치는 이 파일이 아니라 docker-compose.prod.yml 의 profile "matter" 를 쓴다.
+# 설계: docs/design/matter-controller.md §14, 절차: docs/Matter.md#native.
+#
+# 사용 (호스트에서, /opt/AoT 기준):
+#   docker compose -f docker/docker-compose.matter-native.yml up -d
+#   # 새 장치를 블루투스로 추가하려면(선택) BLE 파일을 함께, 이후에도 항상 함께:
+#   docker compose -f docker/docker-compose.matter-native.yml \
+#                  -f docker/docker-compose.matter-ble.yml up -d
+#
+# - Docker 설치와 다른 점은 하나다: 소켓 중계(matter_socket)가 없다. 네이티브 AoT 는
+#   호스트에서 돌아 서버의 루프백 포트에 바로 닿는다 — AoT 서비스에
+#   AOT_MATTER_URL=ws://127.0.0.1:5580/ws 를 준다(install/aot-matter.conf, systemd drop-in).
+# - 그 밖의 설정은 docker-compose.prod.yml 의 matter_server 와 **같아야 한다**
+#   (test_matter_native_files.py 가 지킨다). 이유는 그쪽 주석에 있다: 호스트 네트워크,
+#   루프백 전용(API 인증 없음), VENDOR_ID 10진수, debug 로그 금지(Wi-Fi 비밀번호).
+# - /data(볼륨 aot_matter_matter_data)에는 Fabric 루트 CA 개인키가 있다. 잃으면 모든
+#   장치를 다시 공유받아야 한다. 네이티브 AoT 백업에는 들어가지 않으니 따로 백업한다.
+# - 버전은 MATTER_SERVER_TAG 로 직접 올린다(AoT 업그레이드가 건드리지 않는다).
+name: aot_matter
+
+services:
+  matter_server:
+    image: ghcr.io/matter-js/matterjs-server:${MATTER_SERVER_TAG:-1.4.0}
+    network_mode: host
+    volumes:
+      - matter_data:/data
+    environment:
+      - TZ=${TZ:-Asia/Seoul}
+      - STORAGE_PATH=/data
+      - LISTEN_ADDRESS=127.0.0.1
+      - PORT=5580
+      - DISABLE_DASHBOARD=true
+      - VENDOR_ID=65521
+      - FABRIC_ID=1
+      - ENABLE_TEST_NET_DCL=${MATTER_TEST_DCL:-false}
+      - LOG_LEVEL=${MATTER_LOG_LEVEL:-info}
+    restart: always
+
+volumes:
+  matter_data:

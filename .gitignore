@@ -93,9 +93,9 @@ node_modules
 .claude/
 
 # --- CI 워크플로 ---
-# .github/workflows/ 는 GitHub Actions(매뉴얼 자동 발행)용으로 추적한다.
-# Gitea 워크플로는 사용하지 않으므로 계속 제외.
-.gitea/workflows/
+# .github/workflows/ 는 GitHub Actions(공개 저장소 CI)용으로 추적한다.
+# .gitea/workflows/ 는 나스 Gitea 러너(작업 저장소의 CI)용이다(2026-10-09 되살림) —
+# 비공개 전용이라 공개 발행에서는 제외된다(publish/gen_exclude.py).
 
 # --- 🔐 보안: 절대 커밋 금지 ---
 *.key
@@ -104,6 +104,9 @@ ssl_certs/
 .env
 .env.*
 !docker/.env.prod.example
+# 트윈 노드 실제 설정(주소·배선) — 예시(*.example.json)만 추적한다
+docker/twin/*.json
+!docker/twin/*.example.json
 aot/databases/flask_secret_key
 docs/dev/
 docs/architecture/

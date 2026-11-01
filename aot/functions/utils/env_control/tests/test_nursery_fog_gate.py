@@ -18,7 +18,7 @@ from aot.functions.utils.env_control.dispatch_adapters import (
     PulsedDoseAdapter, TimeProportionalAdapter, VolumetricAdapter,
 )
 from aot.functions.utils.env_control.log_channels import (
-    GATE_BIT_FOG_SUNBURN, GATE_BIT_HEAT,
+    GATE_BIT_FOG_SUNBURN,
 )
 from aot.functions.utils.env_control.safety_gates import (
     SafetyPreGate, PreGateConfig, is_wetting_fogger,
@@ -449,32 +449,43 @@ class TestNurseryFogGate:
         res = gate.evaluate(ctx, [make_fogger()])
         assert res.gate_mask & GATE_BIT_FOG_SUNBURN
 
-    def test_beats_heat_emergency(self):
-        """폭염 게이트와 겹쳐도 분무 잠금이 이긴다.
+    def test_beats_heat_protection(self):
+        """극한 고온 보호가 분무를 허용해도 일소 잠금이 이긴다.
 
-        한여름 정오는 폭염 발동 조건이자 일소 위험이 최대인 시각이다.
+        한여름 정오는 고온이자 일소 위험이 최대인 시각이다. 잠금은 부분 게이트라
+        오버라이드 순서의 마지막이고(`apply_threshold_and_gate_overrides`), 보호의
+        나머지(차광 전개)는 그대로 살아 있어야 한다. (2026-10-09 전에는 폭염 비상
+        게이트와 겹치는 경우를 봤다 — 그 게이트는 없앴다.)
         """
-        gate = SafetyPreGate(_nursery_cfg(heat_ext_threshold=38.0,
-                                          heat_int_threshold=35.0))
+        from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import (
+            apply_threshold_and_gate_overrides)
+        from aot.functions.utils.env_control.heat_protect import HeatProtectDecision
+        gate = SafetyPreGate(_nursery_cfg())
         fog = make_fogger()
-        res = gate.evaluate(
-            gate_ctx(light_est=800.0, T_int=36.0, T_ext=39.0),
-            [fog, make_opening_profile()])
-        assert res.gate_mask & GATE_BIT_HEAT
-        assert res.gate_mask & GATE_BIT_FOG_SUNBURN
-        assert res.forced_commands[fog.actuator_id]['value'] == 0.0
-        # 폭염 대응(개구부 최대 개방)은 그대로 살아 있어야 한다.
-        assert res.forced_commands['vent_01']['value'] == 100.0
+        shade = ActuatorProfile(actuator_id='shade', kind='shade',
+                                manual_lock=ManualLockState())
+        res = gate.evaluate(gate_ctx(light_est=800.0, T_int=33.0, T_ext=30.0),
+                            [fog, shade])
+        assert res.gate_mask & GATE_BIT_FOG_SUNBURN and res.partial
+        internal = {'_heat_protect': HeatProtectDecision(
+            tier=1, fog_allowed=True, shade_deploy=True)}
+        final = {fog.actuator_id: {'value': 60.0, 'reason': 1},
+                 'shade': {'value': 100.0, 'reason': 1}}
+        apply_threshold_and_gate_overrides(internal, [fog, shade], final,
+                                           res.forced_commands)
+        assert final[fog.actuator_id]['value'] == 0.0
+        assert final['shade']['value'] == 0.0           # 보호의 차광은 그대로
 
     def test_wind_differential_closure_still_works(self):
-        """분무 잠금이 켜져도 풍향 차등 폐쇄가 일괄 폐쇄로 퇴화하지 않는다."""
+        """분무 잠금이 켜져도 풍향 차등 폐쇄(강풍 1단계)가 일괄 폐쇄로 퇴화하지 않는다."""
         cfg = _nursery_cfg(wind_threshold=10.0)
         gate = SafetyPreGate(cfg)
         windward = make_opening_profile(actuator_id='vent_S')
         windward.azimuth_deg = 180.0
         leeward = make_opening_profile(actuator_id='vent_N')
         leeward.azimuth_deg = 0.0
-        ctx = gate_ctx(light_est=800.0, wind=15.0)
+        windward.vent_form = leeward.vent_form = 'side'
+        ctx = gate_ctx(light_est=800.0, wind=7.0)      # 1단계: 0.6×10 ≤ 7 < 10
         ctx['external']['wind_dir'] = 180.0
         res = gate.evaluate(ctx, [windward, leeward, make_fogger()])
         assert res.partial is True

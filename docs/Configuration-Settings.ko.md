@@ -87,6 +87,10 @@ Page\: `관리 → 시스템 관리 → 일반 설정`
 <td>외부 MCP 서버 활성화</td>
 <td>이미 실행 중인 MCP 서버에 대한 외부 MCP 클라이언트(예: Claude Desktop)의 요청을 허용하거나 거부합니다. 바로 적용됩니다. 서버가 듣는 주소와 포트는 여기서 정하지 않습니다. Docker에서는 <code>aot_mcp</code> 서비스의 <code>ports:</code> 항목을 고친 뒤 <code>docker compose up -d</code>를 다시 실행하고, 직접 설치에서는 <code>aotmcp</code> systemd 서비스를 고쳐 재시작합니다.</td>
 </tr>
+<tr>
+<td>Matter 사용 (실험)</td>
+<td>기본은 꺼짐입니다. 켜면 설정 메뉴에 <a href="../Matter/">Matter</a> 가 나타나, 다른 스마트홈 앱에 이미 설정된 장치를 AoT 로 가져올 수 있습니다. 직접 설치에서 Matter 에 필요한 패키지가 없으면 먼저 패키지 관리 화면으로 안내합니다. Matter 서버는 호스트에서 따로 시작합니다. Matter 장치가 남아 있는 동안은 끌 수 없습니다.</td>
+</tr>
 </tbody>
 </table>
 

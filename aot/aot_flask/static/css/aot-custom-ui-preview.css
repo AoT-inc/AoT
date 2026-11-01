@@ -196,6 +196,21 @@
 #aot-ui-preview .preview-badge-mcp     { background-color: var(--preview-bg-mcp,        #64C762); }
 #aot-ui-preview .preview-badge-upgrade { background-color: var(--preview-badge-upgrade, #13261B); }
 
+/* AI 카드: 면 ai_surface_bg(--aot-ai-surface-bg) + 짝 글자 ai_surface_fg */
+#aot-ui-preview .preview-ai-card {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: var(--aot-radius-lg);
+    background-color: var(--preview-ai-surface-bg, #13261B);
+    color: var(--preview-ai-surface-fg, #FFFFFF);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+#aot-ui-preview .preview-ai-card:hover {
+    opacity: 0.82;
+}
+
 /* ============================================================
    OUTPUT/INPUT CHANNEL PREVIEW — mirrors the real per-channel row
    states from settings/output & settings/input (bg_on/bg_off/bg_pending/

@@ -32132,3 +32132,117 @@ msgstr ""
 #: aot_flask/templates/settings/general.html:658
 msgid "Pass"
 msgstr ""
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr ""
+
+msgid "Turn devices and functions on and off."
+msgstr ""
+
+msgid "Change settings, plots and records."
+msgstr ""
+
+msgid "Read"
+msgstr ""
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr ""
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr ""
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr ""
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr ""
+
+msgid "That connection was not found."
+msgstr ""
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr ""
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr ""
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr ""
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr ""
+
+msgid "Allow AI access"
+msgstr ""
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr ""
+
+msgid "Signed in as %(user)s."
+msgstr ""
+
+msgid "What it may do"
+msgstr ""
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr ""
+
+msgid "Deny"
+msgstr ""
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr ""
+
+msgid "OAuth Authentication"
+msgstr ""
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr ""
+
+msgid "Token Issuer"
+msgstr ""
+
+msgid "Central (AoT Central Authentication)"
+msgstr ""
+
+msgid "This AoT (built in)"
+msgstr ""
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr ""
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr ""
+
+msgid "Before You Turn This On"
+msgstr ""
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr ""
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr ""
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr ""
+
+msgid "Accepted Redirect Addresses"
+msgstr ""
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr ""
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr ""
+
+msgid "My Connected AI Apps"
+msgstr ""
+
+msgid "last used"
+msgstr ""
+
+msgid "No AI app is connected with your account yet."
+msgstr ""
+
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr ""

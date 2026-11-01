@@ -28,13 +28,14 @@ Four meta-tools for working with drawers are always listed.
 
 **Tool profiles.** Over MCP, each API key lists only its tool profile: **operations** (always on — everyday reading, control, scheduling, records and plot-stage events) plus the **setup modules** ticked for that key: `plots` (plot and crop-program design), `map` (addresses, distances, placement), `automation` (building automations), `devices` (device definitions), `dashboard` (screens), `library` (archives, notice edits, library sources) and `admin` (system status, AI settings). Ticking every module equals the earlier **operations + configuration** profile. Drawers follow the same profile. A call to a tool whose module is off is refused with `reason_code: tool_profile` (plus `tool_module: <module>`); an administrator with user-edit permission turns the module on under `Settings > Users`. `set_output_state` and `list_available_devices` are not listed for API keys (use `operate_device`, `get_device_list`, `search_devices`). The in-app assistant and the built-in AI's own service-account key are not limited by profiles. Details: [AI Features Overview](ai/overview.md#tool-profiles).
 
-### 1.1 Always-Listed Tools (27)
+### 1.1 Always-Listed Tools (28)
 
 | Category | Tool | Description | Approval |
 |------|------|------|------|
 | Starting point | `get_system_brief` | One-glance system summary — start here | Not required |
 | Resolve | `resolve_target` | Resolves a name to an entity, and whether it's a container (has child zones). A name shared by several different places or devices returns the candidates instead of a guess — each with a name that points at only that one when there is one, otherwise its `target_id` to pass on | Not required |
 | Space | `get_spatial_tree` | Site > zone > device hierarchy | Not required |
+| Space | `get_place_overview` | State of one place (or the whole farm): sensor values, climate control, plot stages, weather, alerts in one call | Not required |
 | Space | `get_map_equipment` | Equipment/devices placed on the map | Not required |
 | Device | `get_device_list` / `search_devices` | Full list / search by name, type, or measurement kind | Not required |
 | Device | `get_device_measurements` | List of a device's measurement channels | Not required |

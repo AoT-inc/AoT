@@ -79,10 +79,14 @@ def page_facility():
                 'input_id':    dm.device_id,
                 'name':        inp.name or 'Input',
                 'device_type': 'input',
+                # 드라이버 이름 — 기상 탭의 "추천 바인딩 채우기" 가 Open-Meteo
+                # 예보 입력을 알아보는 데 쓴다(weather-recommend.js).
+                'driver':      inp.device or '',
                 'channels':    [],
             }
         devices_tmp[dm.device_id]['channels'].append({
             'measurement_id': dm.unique_id,
+            'channel':        dm.channel,
             'measurement':    dm.measurement or '',
             'measurement_name': str(utils_general.find_name_measurement(dict_measurements, dm.measurement or '')),
             'unit':           _effective_unit(dm),
@@ -728,7 +732,7 @@ def api_facility_runtime(facility_uuid):
         _snap = _get_or_refresh_sensor_snapshot(
             facility_uuid, sensors_resolved, sensors_outdoor)
 
-    indoor          = _snap.get('indoor')  or {'temp_c': None, 'humidity_pct': None, 'co2_ppm': None, 'vpd_kpa': None}
+    indoor          = _snap.get('indoor')  or {'temp_c': None, 'humidity_pct': None, 'co2_ppm': None, 'vpd_kpa': None, 'vpd_air_kpa': None}
     outdoor         = _snap.get('outdoor') or {'temp_c': None, 'humidity_pct': None, 'wind_ms': None, 'wind_deg': None, 'solar_wm2': None}
     sensors_block   = _snap.get('sensors') or {'detail': [], 'valid_count': 0, 'total_count': 0, 'degraded': False}
     fitting_sensors = _snap.get('fitting_sensors') or []

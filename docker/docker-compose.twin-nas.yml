@@ -1,0 +1,52 @@
+# 디지털트윈 노드 — NAS 에서 **원격 방식**으로 개발서버에 붙는 구성 (개발용 — 배포 경로 아님).
+#
+# ⚠ 2026-10-24: AoT 서버의 수신 API(/api/twin/ingest)를 걷어 냈고 노드의 원격 쓰기는 비활성이다(트윈 계획서
+#   §9.19). 이 구성으로 돌리면 읽고 계산은 하지만 결과를 되돌려 쓰지 않는다("서버 수신 API 없음 — 원격 쓰기는
+#   비활성"). 정식 경로는 같은 기기의 `aot_twin` 서비스(docker-compose 의 profile twin)가 Influx 에 직접 쓰는 것이다.
+#   원격 노드는 다시 설계한다(배포 제안 §2, S6) — 이 파일도 그때 정리한다.
+#
+# 이 파일은 단독으로 쓴다(AoT 앱·Influx 를 띄우지 않는다). 트윈 노드는 개발서버의 REST 로
+# 측정을 읽고, 결과를 env_twin* 측정으로 되돌려 쓴다. 노드가 꺼져도 개발서버는 영향이 없다.
+#
+# 기동은 사용자 확인 후에만 한다 (계획서 §4 · 이 브랜치의 인계 노트).
+#
+#   cd docker
+#   cp twin/nas-dev.example.json twin/nas-dev.json     # <...> 자리를 채운다 (git 에 올리지 않는다)
+#   export AOT_TWIN_DEV_URL=http://<개발서버 주소>:8084
+#   export AOT_TWIN_DEV_KEY=<개발서버에서 발급한 API 키>   # 파일에 적지 않는다
+#   docker compose -f docker-compose.twin-nas.yml --profile twin run --rm aot_twin --once   # 1회 왕복
+#   docker compose -f docker-compose.twin-nas.yml --profile twin up -d                        # 상시(정기 실행)
+#
+# 상시 기동은 설정 JSON 의 `schedule`(예: run_at ["06:10","18:10"], timezone Asia/Seoul)대로 하루 1~2회
+# 돌고 쉰다 — 계획서 §9.8. 서버가 안 닿으면 retry_s 간격으로 다시 하고, 컨테이너가 죽으면 아래 정책이
+# 되살린다(기동 직후 한 번 따라잡는다). `schedule` 이 없으면 period_s 간격으로 돈다(예전 방식).
+# NAS 작업 스케줄러로 돌리고 싶으면 상시 기동 대신 위의 `run --rm … --once` 를 예약하면 된다.
+#
+# 이미지: NAS 에서 P0 벤치에 쓴 aot_ai:ci-591 처럼 미리 받아 둔 aot_ai 이미지. 코드는 이 브랜치 작업
+# 폴더를 읽기 전용으로 덮어 얹는다(AOT_SRC) — 이미지를 새로 빌드하지 않고 브랜치 코드를 시험한다.
+#
+# 설계: docs/design/digital-twin-node.md
+name: aot_twin_nas
+
+services:
+  aot_twin:
+    image: ${AOT_TWIN_IMAGE:-aot_ai:ci-591}
+    profiles: ["twin"]
+    entrypoint: ["python", "-m", "aot.twin"]
+    command: []
+    volumes:
+      - ${AOT_SRC:-..}/aot:/app/aot:ro
+      - ./twin:/etc/aot_twin:ro
+    working_dir: /app
+    environment:
+      - TZ=Asia/Seoul
+      - PYTHONPATH=/app
+      - AOT_TWIN_CONFIG=${AOT_TWIN_CONFIG:-/etc/aot_twin/nas-dev.json}
+      - AOT_TWIN_DEV_URL=${AOT_TWIN_DEV_URL:?개발서버 주소(AOT_TWIN_DEV_URL)가 필요하다}
+      - AOT_TWIN_DEV_KEY=${AOT_TWIN_DEV_KEY:?개발서버 API 키(AOT_TWIN_DEV_KEY)가 필요하다}
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1024M
+    restart: unless-stopped            # 상시(up -d). `run --rm` 일회 실행에는 적용되지 않는다

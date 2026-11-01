@@ -44,6 +44,7 @@ from aot.utils.inputs import (list_analog_to_digital_converters,
                                  parse_input_information)
 from aot.utils.outputs import output_types, parse_output_information
 from aot.utils.service_control import reload_frontend, restart_daemon
+from aot.utils import journal_limit
 from aot.utils.system_environment import (THREADS_MAX, THREADS_MIN,
                                           detect as detect_system_environment,
                                           recommended_threads,
@@ -633,6 +634,33 @@ def page_graph_async():
                            y_axes=y_axes)
 
 
+def _save_journal_limit(raw):
+    """Info 페이지: systemd 저널 상한 저장. 쓰기는 root 인 데몬이 한다."""
+    if not journal_limit.supported():
+        flash(_('The system log limit cannot be changed in this environment.'), 'error')
+        return
+    try:
+        mb = journal_limit.validate_mb(raw)
+    except (TypeError, ValueError):
+        flash(_('Enter an integer between %(min)s and %(max)s (MB).',
+                min=journal_limit.MIN_MB, max=journal_limit.MAX_MB), 'error')
+        return
+    if not daemon_active():
+        flash(_('The daemon is not running, so the system log limit cannot be applied.'), 'error')
+        return
+    try:
+        ok, message = DaemonControl().journal_limit_apply(mb)
+    except Exception:
+        logger.exception("journal_limit_apply RPC failed")
+        ok, message = False, ''
+    if ok:
+        flash(_('System log size limit set to %(mb)s MB.', mb=mb), 'success')
+    elif message.startswith('managed elsewhere'):
+        flash(_('The system log limit is set elsewhere and was not changed.'), 'error')
+    else:
+        flash(_('Could not apply the system log limit. Check the daemon log.'), 'error')
+
+
 @blueprint.route('/info', methods=('GET', 'POST'))
 @flask_login.login_required
 def page_info():
@@ -661,6 +689,8 @@ def page_info():
             except ValueError:
                 flash(_('Enter an integer between %(min)s and %(max)s, or leave empty for automatic.',
                         min=THREADS_MIN, max=THREADS_MAX * 2), 'error')
+        elif request.form.get('action') == 'save_journal_limit':
+            _save_journal_limit(request.form.get('journal_limit_mb'))
         elif request.form.get('action') == 'restart_frontend':
             ok, message = reload_frontend(delay_sec=1, logger=logger)
             flash(message, 'success' if ok else 'error')
@@ -793,8 +823,12 @@ def page_info():
         'is_docker': DOCKER_CONTAINER,
     }
 
+    journal_info = journal_limit.read_state()
+    journal_info['can_edit'] = utils_general.user_has_permission('edit_settings')
+
     return render_template('pages/info.html',
                            daemon_up=daemon_up,
+                           journal_info=journal_info,
                            system_env=system_env,
                            network_cmd=network_cmd,
                            gunicorn_info=gunicorn_info,

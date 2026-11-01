@@ -97,10 +97,13 @@ Docker 에서는 `[톱니바퀴 아이콘] -> Backup Restore` 가 ``/var/AoT-bac
 
 | | 들어 있는 것 | 들어 있지 않은 것 |
 |---|---|---|
-| **Docker** | 설정 데이터베이스(사용자·역할·장치·기능·대시보드), 업로드(노트·공지·시설·구역 사진), 시설 3D 모델, 지도 오버레이 이미지, 사용자 스크립트 | **InfluxDB 측정값**(센서 이력), 로그, ``custom_*`` 확장 모듈(호스트 폴더) |
+| **Docker** | 설정 데이터베이스(사용자·역할·장치·기능·대시보드), 업로드(노트·공지·시설·구역 사진), 시설 3D 모델, 지도 오버레이 이미지, 사용자 스크립트, Matter fabric(``matter_data``, [Matter](Matter.md)를 쓸 때만. 백업에는 담기지만 자동 복원되지 않음) | **InfluxDB 측정값**(센서 이력), 로그, ``custom_*`` 확장 모듈(호스트 폴더) |
 | **네이티브** | ``env``·``cameras`` 를 뺀 설치 폴더 전체(데이터베이스·업로드·오버레이·스크립트) | **InfluxDB 측정값**(설치 폴더 밖의 시스템 서비스) |
 
 업데이터가 업데이트 전에 만드는 백업도 같은 목록을 씁니다.
+
+!!! danger "백업에 든 Matter 데이터는 마스터 키입니다"
+    ``matter_data`` 에는 이 AoT의 Matter fabric이 들어 있고, 여기에는 **루트 CA 개인키**가 포함됩니다. 이 데이터가 담긴 백업 파일을 가진 사람은 같은 네트워크 안에서 AoT에 추가된 모든 Matter 장치를 제어할 수 있습니다. 백업과 볼륨 복사본을 비밀번호처럼 보관하세요. Wi-Fi 비밀번호나 Thread 데이터셋으로 Bluetooth 새 장치를 추가했다면 그 값도 이 데이터에 남아 있을 수 있습니다([Matter](Matter.md#new-device) 참고). 웹 화면의 복원은 ``matter_data`` 를 건드리지 않습니다. fabric을 되살리려면 스택을 멈춘 상태에서 아래 볼륨 복사 방법을 쓰세요. 그렇지 않으면 모든 Matter 장치를 AoT에 다시 공유해야 합니다.
 
 !!! warning "복원해도 측정값은 돌아오지 않습니다"
     백업을 복원하면 설정이 그 시점으로 돌아갑니다. 센서 이력은 지금 상태 그대로 남습니다. 이력을 지키려면 아래 두 방법 중 하나로 따로 백업하세요.
@@ -115,7 +118,7 @@ Docker 에서는 `[톱니바퀴 아이콘] -> Backup Restore` 가 ``/var/AoT-bac
 ```bash
 # 0) 실제 볼륨 이름을 확인합니다. 접두어는 compose 프로젝트 이름
 #    (compose 파일이 있는 폴더 이름, 기본값 "docker")입니다.
-docker volume ls --format '{{.Name}}' | grep -E 'aot_|influxdb_'
+docker volume ls --format '{{.Name}}' | grep -E 'aot_|matter_|influxdb_'
 P=docker            # <- 위에서 본 접두어로 바꾸세요
 mkdir -p ~/aot-volume-backup && cd ~/aot-volume-backup
 
@@ -123,7 +126,7 @@ mkdir -p ~/aot-volume-backup && cd ~/aot-volume-backup
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml stop
 
 # 2) 볼륨마다 .tgz 하나로 묶습니다.
-for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts influxdb_data influxdb_config; do
+for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts matter_data influxdb_data influxdb_config; do
   docker run --rm -v ${P}_$v:/v:ro -v "$PWD":/out alpine tar czf /out/$v.tgz -C /v .
 done
 
@@ -140,7 +143,7 @@ cd ~/aot-volume-backup
 P=docker
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml stop
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml create   # 없는 볼륨을 빈 상태로 만듭니다
-for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts influxdb_data influxdb_config; do
+for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts matter_data influxdb_data influxdb_config; do
   docker run --rm -v ${P}_$v:/v -v "$PWD":/out alpine sh -c "rm -rf /v/* /v/.[!.]* 2>/dev/null; tar xzf /out/$v.tgz -C /v"
 done
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml up -d

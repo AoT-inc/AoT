@@ -97,6 +97,16 @@ _UPDATE_STATUS_TOOL_ADDITIONS = {'get_system_update_status'}
 # tool_map/registry addition, but NOT in either approval set.
 _KNOWLEDGE_SHELVE_TOOL_ADDITIONS = {'knowledge_shelve'}
 
+# modify_note (2026-10-13, G6): note edit/archive. tool_map + registry addition,
+# record_write — in NEITHER static approval set because approval is decided per
+# call (mcp_safety_gate.CONDITIONAL_APPROVAL_TOOLS): own / user-requested AI
+# notes go through, someone else's or author-unknown notes queue for approval.
+_NOTE_MODIFY_TOOL_ADDITIONS = {'modify_note'}
+
+# 대상 별칭(2026-10-28, MCP 점검 E): 사용자가 대상을 부르는 다른 이름. record_write —
+# 장치·설정을 바꾸지 않고 지우면 되돌아가므로 어느 승인 집합에도 없다.
+_TARGET_ALIAS_TOOL_ADDITIONS = {'add_target_alias', 'delete_target_alias'}
+
 # SmartFarmKorea AI-driven setup (2026-07-19, docs/design/ai-library-redesign.md
 # Phase 2): expose Phase 1's discovery primitive as two tools. lookup is
 # read-only (tool_map + registry, no approval); configure_library_source
@@ -203,11 +213,19 @@ _WRITE_NAME_PREFIXES = (
 # - knowledge_shelve (2026-07-19): 항상 최하위 신뢰 등급(provenance='ai_curated',
 #                    unconfirmed)으로만 쓰며, 사람이 확인하기 전까지 권위를 갖고
 #                    제시되지 않는다.
+# - modify_note      (2026-10-13): 정적 승인 집합에는 없지만 **호출마다** 승인이
+#                    갈린다 — 본인(또는 작성자 기록 없는 사용자 요청 AI) 노트만 바로,
+#                    남의 노트·작성자 불명은 승인 대기(mcp_safety_gate.
+#                    CONDITIONAL_APPROVAL_TOOLS). 삭제는 하지 않고 보관만 하며
+#                    바꾸기 전 값은 감사 로그에 남아 되돌릴 수 있다.
 # - submit_advice               : AI가 '의견을 말하는 것'에까지 승인을 요구하면
 #                    조언 원장의 존재 이유가 사라진다. 승인 대상은 실행이지 제안이 아니다.
 _INTENTIONALLY_UNGATED_WRITE_TOOLS = {
     'create_note',
     'knowledge_shelve',
+    'modify_note',
+    'add_target_alias',
+    'delete_target_alias',
     'submit_advice',
     # 프로그램(2026-08-24, 사용자 결정). 프로그램은 제어가 아니라 **제어에
     # 영향을 주는 참고자료**다 — 장치를 직접 움직이지 않고, 오래 두고 보는
@@ -265,6 +283,9 @@ _GIS_INPUT_CRUD_TOOL_ADDITIONS = {
 _GIS_INPUT_CRUD_MUTATING_ADDITIONS = {
     'create_gis_input', 'modify_gis_input', 'activate_gis_input', 'delete_gis_input',
 }
+# 입력(센서) 켜기/끄기(2026-10-30, MCP 체험 피드백): GIS 입력의 activate_gis_input 과 같은 모양 — 일반 입력용.
+# mutating(켜기·끄기 모두 승인), manifest 없음(인앱 프롬프트에 안 실린다), 도메인 틀의 configure.input_activate 가 부른다.
+_INPUT_ACTIVATE_ADDITIONS = {'activate_input'}
 _SCHEDULE_BATCH_TOOL_ADDITIONS = {'add_schedule_batch'}
 _SCHEDULE_BATCH_PHYSICAL_ADDITIONS = {'add_schedule_batch'}
 _TARGET_RESOLUTION_TOOL_ADDITIONS = {'resolve_target'}
@@ -477,6 +498,18 @@ _JOURNAL_CREATE_TOOL_ADDITIONS = {'create_plot_journal'}
 # 조합만 할 뿐 아무것도 쓰지 않으므로 읽기 전용 — 승인 집합에는 안 넣는다.
 _DEVICE_DETAIL_TOOL_ADDITIONS = {'get_device_detail'}
 
+# 가벼움 묶음(2026-10-10): 장소(또는 농장 전체) 현황을 한 번에 내는 읽기 도구,
+# 그리고 이 연결의 키 묶음을 바꾸는 쓰기 도구(승인 필요 — 넓히는 것도 포함되므로
+# 프롬프트 주입으로 조용히 바뀌지 않게 한다).
+_PLACE_OVERVIEW_TOOL_ADDITIONS = {'get_place_overview'}
+_TOOL_PROFILE_SELF_TOOL_ADDITIONS = {'set_tool_profile'}
+_TOOL_PROFILE_SELF_MUTATING_ADDITIONS = {'set_tool_profile'}
+
+# 화면 연동 P1(2026-10): 사용자가 어느 기기로 어느 웹 화면을 보는지 — 웹 요청에서
+# 짐작한 접속 기록을 읽기만 한다. P2 의 screen_action 은 화면만 바꾸고 저장하지
+# 않는다 — 위치 확인은 도구가 스스로 강제한다. 둘 다 승인 집합에는 안 넣는다.
+_SCREEN_TOOL_ADDITIONS = {'get_screen', 'screen_action'}
+
 # 4. _VIRTUAL_APPROVAL_TOOLS (ai_dispatch_service.py) — 17 mutations, no physical.
 _ORIG_VIRTUAL_APPROVAL_TOOLS = {
     'create_function', 'create_sequence_function', 'modify_function_options',
@@ -530,12 +563,12 @@ def run(check_dispatch: bool = True):
 def _check_dispatch_map(R):
     _check("tool_map keys",
            _ORIG_TOOL_MAP_KEYS | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
-           | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_MAP_ADDITIONS
+           | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _NOTE_MODIFY_TOOL_ADDITIONS | _TARGET_ALIAS_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_MAP_ADDITIONS
            | _PHASE2_TOOL_MAP_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS
            | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
            | _SCHEDULE_CRUD_TOOL_ADDITIONS | _LOCAL_TIME_TOOL_ADDITIONS
            | _FACILITY_MAP_TOOL_ADDITIONS | _REVERSE_GEOCODE_TOOL_ADDITIONS
-           | _GIS_INPUT_CRUD_TOOL_ADDITIONS | _SCHEDULE_BATCH_TOOL_ADDITIONS
+           | _GIS_INPUT_CRUD_TOOL_ADDITIONS | _INPUT_ACTIVATE_ADDITIONS | _SCHEDULE_BATCH_TOOL_ADDITIONS
            | _TARGET_RESOLUTION_TOOL_ADDITIONS | _CONFIRMATION_RELAY_TOOL_MAP_ADDITIONS
            | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
@@ -551,7 +584,9 @@ def _check_dispatch_map(R):
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
            | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS
-           | _JOURNAL_CREATE_TOOL_ADDITIONS | _DEVICE_DETAIL_TOOL_ADDITIONS,
+           | _JOURNAL_CREATE_TOOL_ADDITIONS | _DEVICE_DETAIL_TOOL_ADDITIONS
+           | _PLACE_OVERVIEW_TOOL_ADDITIONS | _TOOL_PROFILE_SELF_TOOL_ADDITIONS
+           | _SCREEN_TOOL_ADDITIONS,
            set(R.build_tool_map().keys()))
 
 
@@ -561,12 +596,12 @@ def _check_declarations(R):
     _check("VIRTUAL_TOOL_REGISTRY (drift-fixed)",
            _ORIG_VIRTUAL_TOOL_REGISTRY | _INTENDED_REGISTRY_ADDITIONS
            | _POST_PHASE1_TOOL_ADDITIONS | _UPDATE_STATUS_TOOL_ADDITIONS
-           | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_ADDITIONS
+           | _KNOWLEDGE_SHELVE_TOOL_ADDITIONS | _NOTE_MODIFY_TOOL_ADDITIONS | _TARGET_ALIAS_TOOL_ADDITIONS | _AGENT_LOOP_TOOL_ADDITIONS
            | _PHASE2_REGISTRY_ADDITIONS | _SFK_AI_TOOL_ADDITIONS | _LIBRARY_CATALOG_TOOL_ADDITIONS
            | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
            | _SCHEDULE_CRUD_TOOL_ADDITIONS | _LOCAL_TIME_TOOL_ADDITIONS
            | _FACILITY_MAP_TOOL_ADDITIONS | _REVERSE_GEOCODE_TOOL_ADDITIONS
-           | _GIS_INPUT_CRUD_TOOL_ADDITIONS | _SCHEDULE_BATCH_TOOL_ADDITIONS
+           | _GIS_INPUT_CRUD_TOOL_ADDITIONS | _INPUT_ACTIVATE_ADDITIONS | _SCHEDULE_BATCH_TOOL_ADDITIONS
            | _TARGET_RESOLUTION_TOOL_ADDITIONS | _CONFIRMATION_RELAY_TOOL_ADDITIONS
            | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
@@ -582,7 +617,9 @@ def _check_declarations(R):
            | _ZONE_SUMMARY_TOOL_ADDITIONS | _GEO_DISTANCE_TOOL_ADDITIONS
            | _DRAWER_TOOL_ADDITIONS | _DEVICE_FRESHNESS_TOOL_ADDITIONS
            | _NOTE_ATTACHMENT_TOOL_ADDITIONS | _JOURNAL_TOOL_ADDITIONS
-           | _JOURNAL_CREATE_TOOL_ADDITIONS | _DEVICE_DETAIL_TOOL_ADDITIONS,
+           | _JOURNAL_CREATE_TOOL_ADDITIONS | _DEVICE_DETAIL_TOOL_ADDITIONS
+           | _PLACE_OVERVIEW_TOOL_ADDITIONS | _TOOL_PROFILE_SELF_TOOL_ADDITIONS
+           | _SCREEN_TOOL_ADDITIONS,
            set(R.virtual_tool_registry()))
 
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,
@@ -590,14 +627,14 @@ def _check_declarations(R):
     _check("_VIRTUAL_APPROVAL_TOOLS",
            (_ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
-            | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
+            | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS | _INPUT_ACTIVATE_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
             | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
             | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
-            | _JOURNAL_CREATE_TOOL_ADDITIONS)
+            | _JOURNAL_CREATE_TOOL_ADDITIONS | _TOOL_PROFILE_SELF_MUTATING_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.virtual_approval_tools()))
 
@@ -607,7 +644,7 @@ def _check_declarations(R):
     _check("_APPROVAL_REQUIRED_TOOLS",
            (_ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
-            | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS
+            | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS | _INPUT_ACTIVATE_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
             | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
             | _PLANTING_WRITE_TOOL_ADDITIONS | _PLOT_STAGE_TOOL_ADDITIONS
@@ -615,7 +652,7 @@ def _check_declarations(R):
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
             | _WIDGET_WRITE_TOOL_ADDITIONS | _WIDGET_DELETE_TOOL_ADDITIONS
-            | _JOURNAL_CREATE_TOOL_ADDITIONS)
+            | _JOURNAL_CREATE_TOOL_ADDITIONS | _TOOL_PROFILE_SELF_MUTATING_ADDITIONS)
            - _CONFIG_ONLY_APPROVAL_EXEMPTIONS,
            set(R.approval_required_tools()))
 

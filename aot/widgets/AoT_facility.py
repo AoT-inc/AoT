@@ -279,10 +279,19 @@ WIDGET_BODY_HTML = """\
       <div class="env-cell{% if is_control and show_setpoints and can_control %} env-clickable{% endif %}"
            data-key="indoor_vpd"
            {% if is_control and show_setpoints and can_control %}data-sp-key="vpd" data-wid="{{each_widget.unique_id}}" data-facility="{{widget_variables.facility.unique_id}}"{% endif %}>
-        <div class="env-label">{{ _('VPD') }}</div>
+        <div class="env-label">{{ _('Air VPD') }} <span class="env-basis-tag" data-basis-tag="air" title="{{ _('The VPD target is compared with this value.') }}"></span></div>
         <div class="env-value">— kPa</div>
         {% if is_control %}<span class="env-setpoint" id="iec-sp-lbl-vpd-{{each_widget.unique_id}}"></span>{% endif %}
         {% if is_control and show_setpoints and can_control %}<span class="env-sp-hint">{{ _('set') }}</span>{% endif %}
+      </div>
+
+      {#- 잎 VPD — 코디네이터에 엽온 센서를 묶었고 그 값이 유효할 때만 보인다(`leaf_vpd`).
+          고정 오프셋(기온 − 1.5 °C) 어림값은 보이지 않는다 — 없으면 칸을 숨긴다. -#}
+      <div class="env-cell" data-key="indoor_vpd_leaf" hidden>
+        <div class="env-label">{{ _('Leaf VPD') }} <span class="env-basis-tag" data-basis-tag="leaf" title="{{ _('The VPD target is compared with this value.') }}"></span></div>
+        <div class="env-value">— kPa</div>
+        <span class="env-setpoint" data-leaf-temp></span>
+        {% if is_control %}<span class="env-setpoint" id="iec-sp-lbl-vpdleaf-{{each_widget.unique_id}}"></span>{% endif %}
       </div>
 
       <div class="env-cell{% if is_control and show_setpoints and can_control %} env-clickable{% endif %}"

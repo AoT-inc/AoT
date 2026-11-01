@@ -176,7 +176,7 @@ def outdoor(monkeypatch):
 
     o = _Outdoor()
     monkeypatch.setattr(fs, 'read_outdoor_sensors',
-                        lambda sensors, max_age=None: dict(o.facility))
+                        lambda sensors, max_age=None, **_kw: dict(o.facility))
     return o
 
 

@@ -34,7 +34,8 @@ AoT 는 GPLv3 로 배포되며(`LICENSE.txt`), 오픈소스 [Mycodo](https://git
 | FullCalendar | 5.11.5 | MIT | `vendor/fullcalendar-5.11.5/` |
 | vis-timeline | 7.7.3 | Apache-2.0 OR MIT | `vendor/vis-timeline-7.7.3/` |
 | three.js GLTFExporter (**로컬 자립 빌드**, 아래 참고) | r155 | MIT | `js/widgets/AoT_facility/three-gltf-exporter.js` |
-| MapLibre GL JS | 4.1.2 | BSD 3-Clause | `vendor/maplibre-gl-4.1.2/` |
+| MapLibre GL JS | 5.23.0 | BSD 3-Clause | `vendor/maplibre-gl-5.23.0/` |
+| MapLibre GL JS (되돌리기용 보존) | 4.1.2 | BSD 3-Clause | `vendor/maplibre-gl-4.1.2/` |
 | Apache ECharts (**맞춤 빌드**, 아래 참고) — zrender · d3.js 일부 · tslib 포함 | 6.1.0 (zrender 6.1.0, tslib 2.3.0) | Apache-2.0 (zrender·d3 부분 BSD 3-Clause, tslib 0BSD) | `js/vendor/echarts-6.1.0/` |
 | Turf.js | 번들에 표기 없음 | MIT | `js/common/turf.min.js` |
 | three.js | 2023 판 (**로컬 수정본**, 아래 참고) | MIT | `js/widgets/AoT_facility/three.min.js` |

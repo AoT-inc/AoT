@@ -29,7 +29,7 @@
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/geo/overlays/list?map_uuid=&target_type=&parent_id=&device_id=` | 아래와 같은, 지도 하나의 `FeatureCollection` 입니다 — 다만 여기서는 걸러내는 인자 이름이 `type` 이 아니라 `target_type` 입니다. `map_uuid` 가 없으면 빈 컬렉션이 옵니다. |
-| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 한 지도의 피처를 GeoJSON `FeatureCollection`으로 반환합니다. `type`은 예전 명칭도 함께 매칭합니다(`equipment` ⇒ `equipment_collection`, `aot_device` ⇒ `device`). 각 피처에는 서버가 `db_id`, `shape_uuid`(도형 자신의 식별자 — 클라이언트가 만든 `node_id`와는 다른 값), 해석된 `device_id`/`device_type`, `parent_id`, (`type=facility`인 경우) 3D 메타데이터를 채워 넣습니다. 묶여 저장된 설비는 나갈 때 다시 개별 피처로 풀립니다. |
+| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 한 지도의 피처를 GeoJSON `FeatureCollection`으로 반환합니다. `type`은 예전 명칭도 함께 매칭합니다(`equipment` ⇒ `equipment_collection`, `aot_device` ⇒ `device`). 각 피처에는 서버가 `db_id`, `shape_uuid`(도형 자신의 식별자 — 클라이언트가 만든 `node_id`와는 다른 값), 해석된 `device_id`/`device_type`, `parent_id`, (`type=facility`인 경우) 3D 메타데이터를 채워 넣습니다. 묶여 저장된 설비는 나갈 때 다시 개별 피처로 풀립니다. `type`을 지정하지 않거나 `site`·`zone`으로 조회하면 응답에 `collapsed_zones`도 함께 담깁니다 — 반환된 구역 중 자기 부지와 겹쳐(윤곽이 거의 같고, 이름도 자기 것이 없고, 담긴 데이터도 없어) 별도 레이어로 그리는 대신 부지에 접어 넣어야 할 구역의 uuid 목록입니다. |
 | POST | `/api/geo/overlays` | 한 `map_uuid` + `type`에 대한 일괄 저장/교체입니다. 이 페이지에서 가장 까다로운 엔드포인트라 아래 **상세**에 따로 설명했습니다. |
 | POST | `/api/geo/overlays/delta` | 전체 피처 대신 바뀐 것만 보냅니다 — 큰 지도에 유리합니다. 본문: `{map_uuid, upserts: [...], deletes: [node_id_또는_db_id, ...]}`. 설비 upsert 는 묶음 행에 합쳐지고, 임시 스프링클러 점 마커는 이 경로에서도 걸러집니다. 이 경로도 `edit_settings`와 지도 스코프를 요구합니다. |
 | GET | `/api/geo/sites` | `site` 타입 도형 전체를 GeoJSON으로. `?map_uuid=` 선택적. |
@@ -43,10 +43,11 @@
 - **본문에 없다고 삭제되지 않습니다.** 명시적인 `deletes: [node_id_또는_db_id, ...]` 목록, 또는 `features: []` + `allow_empty: true` 조합만 행을 지웁니다. (예전에 "본문에 없음"을 "삭제"로 처리하다가 도형이 통째로 날아간 사고가 있었습니다.)
 - `aot_device`의 빈 본문은 모든 마커를 지우는 대신 그대로 거절됩니다 — 장치 배치는 오직 `POST /api/geo/device/location`을 통해서만 이뤄집니다.
 - `equipment` 피처는 하나로 묶인 `equipment_collection` 행 하나로 저장됩니다(세트 전체를 통째로 교체). 그 외에는 피처 단위로 저장됩니다. 묶음 경로는 기존 세트를 먼저 지우므로, 빈 설비 본문은 `allow_empty: true`로 확인하지 않는 한 거절되고 몇 행을 지우려 했는지 함께 알려줍니다.
+- 같은 설비 묶음 안에서, 스프링클러 커버리지 도형에는 한 겹의 안전장치가 더 있습니다 — 들어온 본문에 커버리지가 하나도 없는데 기존 묶음에는 있으면, `deletes`에 명시적으로 이름이 오르지 않은 커버리지 도형은 지워지는 대신 그대로 넘어갑니다.
 - 임시로 뜨는 스프링클러 점 마커는 저장하지 않고 걸러냅니다 — 그런 마커만 담긴 본문은 빈 본문으로 취급됩니다.
 - 기하 규칙은 무엇이든 쓰기 전에 검사하며, 잘못된 피처가 하나라도 있으면 저장 전체가 기하 오류로 중단됩니다(설비는 이 검사에서 제외).
 - `aot_type`, `device_id`, `channel_id`는 저장되는 JSON에서 제거됩니다 — 조회 시 파생되는 값이라 그대로 왕복 저장되리라 기대하면 안 됩니다.
-- 응답: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}` (설비 일괄 저장 경로는 `stats.mode: 'bulk_bundle'` 형태).
+- 응답: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}` (설비 일괄 저장 경로는 `stats.mode: 'bulk_bundle'` 형태이며, 위 스프링클러 커버리지 안전장치가 작동했을 때는 `kept_coverage`도 함께 돌려줍니다).
 
 ---
 
@@ -90,7 +91,7 @@
 | GET | `/api/geo/devices?map_uuid=&device_ids=&include_all=` | 지도에 배치 가능한 장치 목록. 응답: `{ok, devices, all_measurements_map}`. 조건부(304) 응답을 지원합니다. |
 | GET | `/api/geo/inputs` | 센서 피팅 바인딩 화면용 채널 단위 평면 목록(`DeviceMeasurements`) — 활성화된 입력만 나오고, 항목마다 장치·채널과 환산된 단위가 붙은 라벨을 함께 담습니다. |
 | GET | `/api/geo/outputs` | 액추에이터 피팅 바인딩 화면용 `Output` 평면 목록. 출력마다 종류와 인터페이스가 함께 실립니다. |
-| GET | `/api/geo/device/<device_uuid>/detail` | 장치 모달 전체 데이터: 식별 정보, 소속 영역, 제어 방식(on/off, value, PWM, 3방향), 채널, 복합장치의 하위 장치, 런타임 정보(경과시간/마지막 작동시간/대기 중인 예약). `?channel=`(기본값 `0`)로 런타임 수치를 어느 채널에서 볼지 정합니다. |
+| GET | `/api/geo/device/<device_uuid>/detail` | 장치 모달 전체 데이터: 식별 정보, 소속 영역, 제어 방식(on/off, value, PWM, 3방향 — 3방향은 짝지은 개폐 액추에이터와 스스로 위치를 잡는 값 출력(Matter 창문 커버링 등)에 해당), 채널, 복합장치의 하위 장치, 런타임 정보(경과시간/마지막 작동시간/대기 중인 예약). `?channel=`(기본값 `0`)로 런타임 수치를 어느 채널에서 볼지 정합니다. |
 | POST | `/api/geo/link_status` | 지도 배지용 배터리/RSSI 일괄 조회. 본문: `{ids: [...]}` (최대 100개). 배터리나 통신품질이 `null`이면 그 값을 들고 있는 채널이 없다는 뜻입니다 — 이때 배지는 0%로 그리지 않고 아예 그리지 않습니다. |
 | POST | `/api/geo/device/split-apply` | 구역을 여러 조각(스트립/격자)으로 나누고 조각마다 장치 마커 도형을 만들어, 그 조각 안에 있는 장치 마커에 자동으로 배정합니다. `edit_plots` 필요. `name`으로 이름 기준을 정하고, `device_kind`로 어느 종류의 장치가 조각을 차지할 수 있는지 좁힐 수 있습니다 — 비우면 전 종류가 후보라 마커가 섞인 지도에서는 대부분 애매함으로 남습니다. 서버는 미리보기가 보여준 폴리곤을 믿지 않고 같은 파라미터로 기하를 다시 계산합니다. 그 분할 파라미터와 *미리보기* 엔드포인트(아래 `GET /api/geo/plot/split-preview`)를 구획 분할기와 공유합니다 — 조각이 장치가 되든 구획이 되든 기하 계산 자체는 같기 때문입니다. 응답: `{ok, created, info, assigned, unassigned, message?}`이며, `message`는 안에 장치가 하나도 특정되지 않은 조각이 몇 개인지 알려줍니다. |
 
@@ -117,8 +118,8 @@
 |---|---|---|
 | GET | `/api/geo/site/<site_uuid>/contents` | 부지 안의 장치 인벤토리(시설 피팅 액추에이터는 제외 — 그건 부지가 아니라 소속 시설에 속합니다). |
 | GET | `/api/geo/site/<site_uuid>/summary?force=` | 부지의 상태/오늘 할 일/노트 요약. 30초 캐시(`force=1`이면 무시). |
-| GET | `/api/geo/site/<site_uuid>/weather` | 현재 지정된 기상 관측 장치. 응답: `{selected, source, candidates}`. |
-| POST | `/api/geo/site/<site_uuid>/weather` | 본문: `{device_ids: [...]}` (빈 배열이어도 키는 필요) — 부지의 기상 소스를 설정합니다. |
+| GET | `/api/geo/site/<site_uuid>/weather` | 현재 지정된 기상 관측 장치와 예보 출처. 응답: `{selected, source, candidates, forecast: {selected, candidates, calibration?}}` — `forecast.selected` 는 지정 순서(우선순위), 후보마다 `kind`(`hourly`/`daily`)·`distance_km`. `forecast.calibration` 은 대지에 지정된 예보 출처가 있을 때만 실리며, 대지의 예보 보정 방식(`off`/`applied`/`collecting`)과 변수별 보정값, 최근 보정 이벤트, 미확인 건수를 담습니다. |
+| POST | `/api/geo/site/<site_uuid>/weather` | 본문: `{device_ids?: [...], forecast_ids?: [...], cal_mode?: "auto"\|"on"\|"off", cal_ack?: true}` — 하나 이상의 키가 있어야 하고, 준 키만 바꿉니다(빈 배열 = 지정 해제). `forecast_ids` 는 트윈·지도 날씨·AI 가 함께 읽는 대지 예보 출처이며 순서가 우선순위입니다. `cal_mode` 는 대지의 예보 보정 방식을 정합니다. `cal_ack` 는 그 대지의 미확인 보정 이벤트를 확인 처리합니다. |
 
 ---
 
@@ -175,12 +176,12 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/api/aot/facility/<facility_uuid>/status?function_uuid=` | 폴링용 경량 상태 배지(약 5초 주기): `{level: 'idle'\|'warn'\|'active'\|'emergency', reasons, active_count, total_count, function_active, function_stale, function_name}`. |
+| GET | `/api/aot/facility/<facility_uuid>/status?function_uuid=` | 폴링용 경량 상태 배지(약 5초 주기): `{level: 'idle'\|'warn'\|'active'\|'emergency', reasons, active_count, total_count, function_active, function_stale, function_name}`. VPD 편차는 실내 온도·습도로 계산한 공기 VPD로 판정하며, 돌고 있는 코디네이터의 목표가 잎 기준이면 잎 VPD로 판정합니다. |
 | GET | `/api/aot/facility/<facility_uuid>/setpoints` | 저장된 **안전 범위** 한계값과 `effective`(제어 루프가 실제로 따르는 실시간 목표 — 이건 여기가 아니라 구획의 프로그램/단계에서 나옵니다). |
 | POST | `/api/aot/facility/<facility_uuid>/setpoints` | `edit_settings` 필요. 본문: `guide_t_min_c`/`guide_t_max_c`, `guide_rh_min_pct`/`guide_rh_max_pct`, `temp_min_c`/`temp_max_c`, `humid_min_pct`/`humid_max_pct` 중 아무거나(전부 범위 검증). `target_vpd_kpa`/`target_co2_ppm`을 여기로 보내면 거부됩니다 — 목표는 재배 프로그램을 통해서만 설정합니다. 바뀐 값을 연결된 모든 환경 코디네이터 함수에 반영하고 즉시 재적용을 트리거합니다. |
 | POST | `/api/aot/facility/<facility_uuid>/control` | 코디네이터를 건너뛴 단일 액추에이터 수동 제어이며, 안전 게이트 인터락이 함께 걸립니다(예: 풍속 안전 게이트가 강제로 닫아둔 창을 열라는 요청은 거부). `edit_settings` + 시설 스코프 필요. 본문: `{slot_key, action: 'on'\|'off'\|'set', percent?, reason?}`. on/off 장치에 `set` 으로 퍼센트를 주면 60초 주기 안의 비례 작동시간으로 바뀝니다(5% 미만은 끔). 게이트가 막으면 `400`, 명령이 장치에 닿지 못했으면 `502`. |
 | POST | `/api/aot/facility/<facility_uuid>/estop` | 비상정지 — **출력만이 아니라 환경 제어 자체를 멈춥니다.** 이 시설을 제어하며 돌아가고 있는 환경 코디네이터가 있으면 그 코디네이터의 긴급 정지 명령을 씁니다: 모든 액추에이터를 안전값으로(안전값이 없으면 끔) 보내고, 코디네이터의 다음 주기를 60초 붙잡아 곧바로 장비를 다시 움직이지 못하게 합니다. 붙은 코디네이터가 없거나 꺼져 있을 때 — 또는 그중 하나라도 정지를 확인해 주지 않을 때 — 만 출력을 직접 안전한 사전 설정 상태로 보내는 경로로 물러섭니다(난방/환기/팬/CO2/관수/조명 끔, 보온커튼 전개, 차광커튼 개방). 이 대체 경로에서는 지금 이 시설에 묶여 있는 장치만 명령을 받습니다. 본문: `{confirm: "STOP"}`(정확히 이 문자열이어야 함). `edit_settings` 필요. 응답은 어느 경로로 갔는지와 함께 적용/실패 대수, 코디네이터별·장치별 결과를 냅니다. 액추에이터나 코디네이터 중 하나라도 닿지 못하면 `ok` 가 **아닙니다**. |
-| GET | `/api/aot/facility/<facility_uuid>/runtime` | 무거운 실시간 스냅샷: 작동 이력을 포함한 액추에이터 상태, 저장된 표시 순서, 실내외 센서, 베이, 구획(예정된 것 포함), 베이별 용량. on/off 장치에는 평소치(최근 7일 일평균, 오늘 제외)도 함께 오며 작동 이력은 120초 캐시입니다. 센서값은 코디네이터가 돌고 있으면 그쪽 사이클 스냅샷에서, 아니면 배경에서 갱신되는 캐시(20초)에서 오므로 첫 호출은 센서가 아직 채워지는 중일 수 있습니다. 조건부(304) 응답 지원. |
+| GET | `/api/aot/facility/<facility_uuid>/runtime` | 무거운 실시간 스냅샷: 작동 이력을 포함한 액추에이터 상태, 저장된 표시 순서, 실내외 센서, 베이, 구획(예정된 것 포함), 베이별 용량. on/off 장치에는 평소치(최근 7일 일평균, 오늘 제외)도 함께 오며 작동 이력은 120초 캐시입니다. 센서값은 코디네이터가 돌고 있으면 그쪽 사이클 스냅샷에서, 아니면 배경에서 갱신되는 캐시(20초)에서 오므로 첫 호출은 센서가 아직 채워지는 중일 수 있습니다. `indoor`에는 `vpd_kpa`(센서가 자기 VPD를 내면 그 값, 아니면 계산값), `vpd_air_kpa`(온도·습도로 계산한 공기 VPD)가 실리고, 돌고 있는 코디네이터의 스냅숏일 때만 `leaf_temp_c`, `vpd_leaf_kpa`(엽온을 실제로 잰 때만), `vpd_target_basis`, `vpd_target_on`이 더해집니다. 조건부(304) 응답 지원. |
 | GET | `/api/aot/facility/<facility_uuid>/env_summary` | 코디네이터가 마지막 주기에 데몬에 저장해 둔 요약(시계열 조회 없이 단일 행만 읽는 저렴한 호출). 응답이 낡았는지 여부와, 그 판정에 실제로 쓴 기준(제어 주기의 3배, 최소 300초)도 함께 냅니다. |
 | GET | `/api/aot/facility/<facility_uuid>/env_week?bay=&days=` | 일별 환경 추이 시계열(기본 7일, 1~31). 10분 캐시. 그린 구간(시작·끝 날짜)을 시설 자신의 시간대로 함께 냅니다. |
 | GET | `/api/aot/facility/<facility_uuid>/actuator_history?slot_key=&hours=` | 액추에이터 하나의 작동 이력(퍼센트/듀티 시계열, 없으면 on/off 지속시간으로 대체). `hours` 기본 24, 1~168로 제한. |
@@ -357,6 +358,22 @@
 
 ---
 
+## 물 회로 { #water-network }
+
+`GET /api/geo/water_net?map_uuid=<uuid>` 는 지도의 배관을 읽을 때마다 기하로 풀어 회로를 세우고 아무것도 저장하지 않습니다. `edit_settings` 권한과 그 지도의 그룹 스코프가 필요합니다(없으면 `403`, `map_uuid` 가 없으면 `400`, 없는 지도는 `404`).
+
+| 칸 | 뜻 |
+|---|---|
+| `summary` | 배관 수, 다른 배관과 이어진 지관, 배관에 붙은 노즐, 부품, 회로 수 |
+| `networks` | 회로마다 배관·노즐·공급 부품·고리, 그리고 펌프 정격 대 수요(`pump_lpm`, `demand_lpm`, `pump_ratio`)와 가득 찬 탱크가 버티는 시간(`tank_l`, `tank_min`). 모르는 값은 `null` 이고 `pump_note` / `tank_note` 가 이유를 말합니다(`no-pump`, `no-rating`, `no-tank`, `no-capacity`, `no-demand`) |
+| `areas` | 대지·구역마다 안에 든 노즐의 회로와 공통 상류 경로 |
+| `parts` | 부품마다 연결된 장치(`device`, `device_kind`), 5 m 안에 마커가 여럿이면 후보(`candidates`, 이때는 어느 것도 연결하지 않음), 상류 경로, 하류 노즐 수 |
+| `checks` | 점검 항목: `network-disconnected`, `no-source`, `area-pipe-mismatch`, `emitter-no-flow`, `part-unattached`, `part-device-ambiguous`, `network-loop` |
+
+공급 부품이 없는 회로에는 상류 경로가 없습니다. 응답은 항목을 알리기만 하고 데이터를 바꾸지 않습니다. 노즐이 어느 출력의 몫인지는 지금처럼 담당 구역이 정합니다.
+
+`GET /api/geo/water_net/paths?map_uuid=<uuid>` (오버레이처럼 로그인만 필요)는 출력마다 그 물이 지나는 배관·부품 id 를 `outputs` 로 돌려줍니다(공급이 있는 회로만). 지도 위젯이 한 번 읽어 두고, 켜진 출력의 경로를 같은 설비 색으로 굵게 그립니다.
+
 ## 지도 정렬 { #map-ordering }
 
 | 메서드 | 경로 | 설명 |
@@ -370,8 +387,9 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/api/geo/local_time?lat=&lng=` | 지도 위젯 시계 독용 — 현지 타임존/시각과 일출·일몰 이벤트 창(어제부터 모레까지). |
+| GET | `/api/geo/local_time?lat=&lng=&at=` | 지도 위젯 시계 독용 — 현지 타임존/시각(항상 지금 이 순간)과 일출·일몰 이벤트 창(어제부터 모레까지). 기준은 보통 오늘이지만, 지도의 시간 슬라이더가 다른 때로 가 있으면 `at`(epoch 밀리초, 지금으로부터 30일 안) 기준으로 바뀐다. |
 | GET | `/api/geo/sun_event?target_id=` | 대상이 물려받은 위치 기준 오늘의 일출·일몰(하루 중 초 단위). |
+| GET | `/api/geo/weather_state?site=&lat=&lng=&t=` | 지도 위젯 기상 표현용 상태 한 벌 — 강수·풍속·풍향·운량·시정·기온, 그 현재값이 위젯의 문턱(바람·강수·서리·폭염)을 넘었을 때의 위험, 태양 고도·방위·단계. 값은 사용자가 마련한 출처에서만 온다 — 지도에 등록된 GIS 입력 중 기상 값을 주는 것(**기상 데이터 출처로 사용**을 켠 것)과 대지에 기상대로 지정한 장치. 두 갈래 중 어느 쪽을 먼저 볼지는 위젯 옵션이 정하고, 항목마다 허용 지연을 넘지 않은 값이 처음 있는 출처를 쓴다. `site`(대지 id) 와/또는 `lat`+`lng`, 그리고 선택적으로 `t`(지도의 시간 슬라이더가 가 있는 시각 — ISO 8601 또는 epoch 초·밀리초)를 받는다 — 지금과 5분 넘게 다르면 지금 상태(이때는 `timeline` 도 함께 실린다) 대신 그 시각의 상태(미래는 GIS 입력 예보, 과거는 기상대·GIS 입력 이력)로 응답이 바뀐다. 그 밖에 위젯 옵션(`order`·`max_age`·`hz_wind`·`hz_precip`·`hz_temp`·`hz_heat`·`tint_lo`·`tint_hi`)도 받는다. 출처가 하나도 없으면 값이 비어서 오고, GIS 입력 결과는 5분 캐시하며(장치 값은 매번 읽는다) 출처가 실패해도 태양 위치와 있는 값으로 응답한다. |
 
 ---
 

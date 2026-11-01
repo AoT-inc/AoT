@@ -43,9 +43,12 @@ This page has no tabs. Cards are reordered by dragging the handle on the left of
 | Remote AoT Server | A collection Input (`AoT: Remote AoT: Measurements`) and an on/off control Output (`Remote AoT Output: On/Off`) | Remote host (a port may be included), remote API key, protocol (HTTPS/HTTP), TLS certificate verification, request timeout |
 | Modbus PLC (Generic) | A Modbus TCP Input and a Modbus TCP Coil Output | Host, port (502 by default), unit/slave ID, timeout, retries |
 | AoT-C (Solar 12V Relay Node) | A ChirpStack MQTT telemetry Input and a ChirpStack downlink Output | DevEUI, MQTT broker host/port/credentials/TLS, ChirpStack gRPC server and API key, and an existing LoRaWAN class scheduler to join |
+| Matter (experimental) | A sensor Input and one Output per controllable endpoint (switch, dimmer, curtain), filled in from what the device reports | None — created only from **Manage → System Management → Matter** (see [Matter](Matter.md)) |
 | Custom (no fixed type) | Nothing — an empty container | None. You attach existing Inputs, Outputs and devices yourself. |
 
 The AoT-C type joins an **existing** LoRaWAN class scheduler rather than creating one, so several nodes share a single scheduler.
+
+The Matter type cannot be added from the dropdown on this page: the Device page refuses it, because a Matter device only makes sense after the physical device has joined AoT's Matter fabric. Add Matter devices from **Manage → System Management → Matter** with a pairing code; the AoT device is created for you. See [Matter](Matter.md).
 
 ## The device list { #device-list }
 

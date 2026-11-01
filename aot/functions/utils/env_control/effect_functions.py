@@ -10,15 +10,15 @@ K_* 계수는 모듈 기본값. 실제 사용 시 apply_calibration()으로 장�
 참조: docs/dev/integrated_env_control_design.md §3.3
 """
 
-import math
 from typing import Optional
 
+from . import psychro as _psychro
 from .types import VENTILATING_KINDS, EffectResult, EnvContext
 
 
 def _svp_kpa(T: float) -> float:
-    """포화 수증기압 [kPa] (Magnus). VPD effect 유도용."""
-    return 0.6108 * math.exp(17.27 * T / (T + 237.3))
+    """포화 수증기압 [kPa] (Magnus). VPD effect 유도용 — 정본은 `psychro.svp`."""
+    return _psychro.svp(T)
 
 
 # 선언된 humidity effect 가 **수분 이동이 아니라 온도 변화의 부산물**인 종류.
@@ -173,7 +173,7 @@ def make_vpd_effect(temp_fn, humid_fn, humid_is_moisture: bool = True,
         if T is None:
             return _NO_EFFECT
         svp_ = _svp_kpa(T)
-        dsvp = svp_ * 17.27 * 237.3 / (T + 237.3) ** 2
+        dsvp = _psychro.svp_slope(T)
         dVPD_dT  = dsvp                  # (T, ea) 좌표 — RH 고정 인자를 곱하지 않는다
         dVPD_dRH = -svp_ / 100.0
 
@@ -227,12 +227,32 @@ K_CO2_INJ     = 80.0   # ppm/cycle at 100%
 # (VENT_PRESSURE_F0)와 같은 방식의 경험 상수다 — 질량수지는 greybox 모델이 맡는다.
 # @manual ai/env-control#domains
 CO2_VENT_LOSS_F0 = 0.30
+# 배기·흡기팬의 환기량을 같은 잣대(개구부 개도)로 옮기는 환산 — 창이 **활짝 열렸을 때**(개도
+# 100 %) 시간당 몇 번 공기가 바뀌는가. 팬이 바꾸는 공기가 이 값의 `F0` 배(= 6 회/시)에 닿으면
+# 창을 `F0` 만큼 연 것과 같아 주입 보존율이 0 이다. 팬은 창이 닫힌 채로도 공기를 빼는데, 개구부
+# 개도만 보던 예전 보존율은 그것을 몰라 팬이 도는 동안에도 주입기가 돌았다(주입 → 팬이 배출
+# → 부족 → 주입). `F0` 와 같은 종류의 경험 상수다 — 질량수지는 greybox 모델이 맡는다.
+# @manual ai/env-control#domains
+CO2_FAN_ACH_PER_OPEN = 20.0
 # @manual-end
-# 차광막·보온커튼 (온도 영향만)
+# 차광막·보온커튼
 # 규약: 모든 액추에이터 cmd_pct = 개도(100=완전 열림, 0=완전 닫힘).
 #   차광막 100%=열림=빛 유입(온도↑), 0%=닫힘=차광(온도↓ 효과)
 #   보온커튼 100%=열림/걷힘=단열 없음, 0%=닫힘=보온(외피 열손실 차단)
-K_SHADE_T     = 1.0    # °C/cycle at 100% 개도(=빛 완전 유입) per 일사기준
+# 차광막은 **막지 못하는 몫**(1 − τ)만큼 일을 한다 — τ 는 닫힌 막의 일사 투과율
+# (`capacity_meta['shade_transmittance']`, 없으면 시설값 `ctx['shade_tau_default']`, 그것도
+# 없으면 `SHADE_TAU_DEFAULT`). 2026-10-09 에 τ 를 식에 넣으며 K 를 1.0 → 2.0 으로 올렸다 —
+# τ = 0.5 에서 예전과 같은 크기다(학습 배율 θ 가 있는 시설은 θ 가 τ 를 한 번 더 담을 수
+# 있다: 릴리스 노트).
+# @manual ai/env-control#shade-heat
+K_SHADE_T     = 2.0    # °C/cycle at 100% 개도, (1 − τ) = 1, 일사 = SOLAR_REFERENCE_W 일 때
+SHADE_TAU_DEFAULT = 0.5
+# 막이 들이는 일사 중 작물이 **증산(잠열)** 으로 쓰는 몫. 나머지가 현열(공기 온도)이다.
+# 잎이 기공을 닫으면(고 VPD) 잠열 몫이 준다 — `shade_latent_ratio`.
+SHADE_LATENT_FRAC = 0.45
+SHADE_STRESS_VPD  = 3.0    # kPa — 이 위에서 기공이 닫히기 시작한다고 본다
+SHADE_LATENT_CAP  = 0.8    # γ·r 은 svp 기울기의 이 몫을 넘지 않는다(차광의 VPD 부호 보존)
+# @manual-end
 K_CURTAIN_U   = 0.04   # 보온커튼 개방 시 외피 열교환 계수 (°C/cycle per ΔT × 개도)
                        # 개구부(0.08)보다 작음 — 환기가 아닌 전도/복사 손실.
 
@@ -507,7 +527,7 @@ def _absorbable_liters(env: EnvContext, volume_m3: float) -> float:
     except (TypeError, ValueError):
         return float('inf')
     # 포화수증기압 [Pa] → 포화수증기밀도 [g/m³]
-    svp = 610.78 * math.exp(17.27 * t / (t + 237.3))
+    svp = _psychro.svp_pa(t)
     rho_sat = svp * _M_WATER_KG_MOL / (_R_GAS * (t + 273.15)) * 1000.0
     head_g_m3 = rho_sat * (1.0 - rh / 100.0)
     return max(0.0, head_g_m3 * volume_m3 / 1000.0)
@@ -747,6 +767,23 @@ HEATER_EFFECT_MODEL = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 # @manual ai/env-control#domains
+def co2_retention(env: EnvContext) -> float:
+    """주입한 CO₂ 가 환기로 빠지지 않고 남는 몫 [0, 1].
+
+    창(개구부 평균 개도 `vent_open_frac`)과 **팬**(`fan_ach` — 배기·흡기팬이 시간당 바꾸는
+    공기 횟수, 코디네이터가 직전 명령과 정격 풍량·체적으로 싣는다)을 한 잣대로 더한다.
+    팬은 `CO2_FAN_ACH_PER_OPEN` 으로 '창이 그만큼 열린 것' 으로 환산하고, 창이 열려 압력이
+    안 걸리면 팬이 힘을 못 쓰므로(`_exhaust_pressure_factor`) 그 몫만큼만 센다 — 배기팬의
+    CO₂ 효과와 같은 가정이다. 공기 교환은 더해지므로 보존율도 손실을 더해 깎는다.
+    정격 풍량·체적을 모르는 팬은 `fan_ach` 에 0 으로 들어오므로(모르는 것을 지어내지 않는다)
+    그 팬은 보존율에 반영되지 않는다.
+    """
+    frac = env.get('vent_open_frac', 0.0) or 0.0
+    fan_ach = (env.get('fan_ach', 0.0) or 0.0) * _exhaust_pressure_factor(env)
+    equiv = frac + fan_ach / CO2_FAN_ACH_PER_OPEN
+    return max(0.0, 1.0 - equiv / CO2_VENT_LOSS_F0)
+
+
 @_scaled('co2')
 def co2_injector_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """CO₂ 주입 → 실내 CO₂ 상승. **환기로 빠지는 몫**을 뺀다.
@@ -754,11 +791,10 @@ def co2_injector_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> Ef
     창이 열려 있으면 넣은 CO₂ 의 상당 부분이 곧장 밖으로 나간다. 예전에는 주입
     효과가 상수라 환기 중에도 주입기가 부족분을 좇아 계속 돌았다(에너지·가스 낭비
     루프). 보존율이 떨어지면 효과가 작아지고, 유효도 게이트(`G_MIN_EFFECT`)가
-    주입기를 쉬게 한다 — 따로 인터록을 두지 않는다.
+    주입기를 쉬게 한다 — 따로 인터록을 두지 않는다. 보존율은 창뿐 아니라 팬의 환기량도
+    센다(`co2_retention`).
     """
-    frac = env.get('vent_open_frac', 0.0) or 0.0
-    retention = max(0.0, 1.0 - frac / CO2_VENT_LOSS_F0)
-    return EffectResult('↑', K_CO2_INJ * (cmd_pct / 100.0) * retention)
+    return EffectResult('↑', K_CO2_INJ * (cmd_pct / 100.0) * co2_retention(env))
 
 
 CO2_INJECTOR_EFFECT_MODEL = {
@@ -770,18 +806,127 @@ CO2_INJECTOR_EFFECT_MODEL = {
 # 차광막·보온커튼 (shade / curtain)
 # ─────────────────────────────────────────────────────────────────────────────
 
-@_scaled('temperature')
-def shade_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
+def shade_transmittance(env: EnvContext, profile=None) -> float:
+    """닫힌 차광막의 일사 투과율 τ ∈ (0, 1] — 장치값 → 시설값 → 기본값.
+
+    시설이 차광막을 선언하지 않아 시설값이 1.0(막 없음)으로 오면 기본값을 쓴다 —
+    차광막 장치가 있는데 효과를 0 으로 지어내지 않는다.
+    """
+    for v in ((getattr(profile, 'capacity_meta', None) or {}).get('shade_transmittance'),
+              (env or {}).get('shade_tau_default')):
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            continue
+        if 0.0 < v < 1.0:
+            return v
+    return SHADE_TAU_DEFAULT
+
+
+def _shade_dT(env: EnvContext, cmd_pct: float, profile, k: float) -> float:
+    """이 개도의 막이 한 사이클에 들이는 현열 → 실내 온도 상승 [°C/cycle] (≥ 0)."""
+    af, _ = _gis_factor(profile, use_u=False)
+    solar = env.get('solar') or 0.0
+    solar_factor = min(max(solar / SOLAR_REFERENCE_W, 0.0), 2.0)
+    tau = shade_transmittance(env, profile)
+    return (k * (1.0 - tau) * (cmd_pct / 100.0) * af * solar_factor
+            * _calibrated_scale(profile, 'temperature'))
+
+
+# @manual ai/env-control#shade-heat
+def shade_latent_ratio(env: EnvContext) -> float:
+    """막이 들이는 일사 중 잠열 ÷ 현열 = r.
+
+    `SHADE_LATENT_FRAC` 로 나누되, VPD 가 `SHADE_STRESS_VPD` 를 넘으면 기공이 닫혀
+    1/(1 + 초과분) 으로 준다. 상한은 `γ·r ≤ SHADE_LATENT_CAP · svp 기울기` 이다 — 그래야
+    "막을 열면 VPD 가 오른다" 는 부호가 어떤 상태에서도 뒤집히지 않는다.
+    """
+    T, RH = env.get('T_int'), env.get('RH_int')
+    if T is not None and RH is not None:
+        vpd = _psychro.vpd_from_rh(float(T), float(RH))
+    else:
+        vpd = float(env.get('VPD_int') or 0.0)
+    stress = 1.0 / (1.0 + max(0.0, vpd - SHADE_STRESS_VPD))
+    r = SHADE_LATENT_FRAC / (1.0 - SHADE_LATENT_FRAC) * stress
+    if T is not None:
+        gamma = _psychro.psychrometric_constant(T=float(T))
+        r = min(r, SHADE_LATENT_CAP * _psychro.svp_slope(float(T)) / gamma)
+    return r
+
+
+# @manual ai/env-control#shade-heat
+def shade_temp_effect(env: EnvContext, cmd_pct: float, profile=None,
+                      k: float = K_SHADE_T) -> EffectResult:
     """차광막: 개도(100%=열림)에 따른 일사 유입 → 온도 상승.
 
     장치 규약상 cmd_pct 는 '개도'다(100=열림=빛 완전 유입, 0=닫힘=차광).
     따라서 열수록(개도↑) 일사가 들어와 온도가 오른다(↑). 닫으면(0%) 차광되어
     효과 0. 일사가 없으면(야간·흐린 날·센서 미설치 solar=0) 효과 0.
+    막이 막는 몫은 (1 − τ) 다 — 투과율이 높은 막은 닫아도 덜 식힌다.
+    **잎 온도는 다루지 않는다**(공기 온도만) — 잎이 받는 복사 차이는 범위 밖이다.
+
+    기본 경로와 계수 오버라이드 경로(`_build_effect_model_raw`)가 **이 함수 하나**를
+    부른다(예전에는 두 벌이라 학습 배율 θ 를 한쪽만 곱했다).
     """
-    af, _ = _gis_factor(profile, use_u=False)
-    solar  = env.get('solar') or 0.0
-    solar_factor = min(max(solar / SOLAR_REFERENCE_W, 0.0), 2.0)
-    return EffectResult('↑', K_SHADE_T * (cmd_pct / 100.0) * af * solar_factor)
+    return EffectResult('↑', _shade_dT(env, cmd_pct, profile, k))
+
+
+# @manual ai/env-control#shade-heat
+def shade_vpd_effect(env: EnvContext, cmd_pct: float, profile=None,
+                     k: float = K_SHADE_T) -> EffectResult:
+    """차광막 → VPD. 연쇄법칙(`make_vpd_effect`)을 쓰지 않는다(분무와 같은 이유).
+
+    막을 열면 들어온 일사가 공기를 데우고(현열 dT) **작물이 그 일부로 증산한다**(잠열).
+    증산은 수증기압을 γ·r·dT 만큼 올리므로
+
+        dVPD = (svp 기울기(T) − γ·r) · dT
+
+    예전 연쇄법칙은 앞 항만 알아, 막을 여는 효과를 VPD 로 과장했다(30 °C 에서 약 1.3 배).
+    γ 는 `psychro.psychrometric_constant` 한 곳에서 온다. 부호는 늘 ↑(열면 VPD 오름) —
+    `shade_latent_ratio` 의 상한이 지킨다.
+    """
+    T = env.get('T_int')
+    if T is None:
+        return _NO_EFFECT
+    dT = _shade_dT(env, cmd_pct, profile, k)
+    if dT <= 0.0:
+        return EffectResult('0', 0.0)
+    gamma = _psychro.psychrometric_constant(T=float(T))
+    d = (_psychro.svp_slope(float(T)) - gamma * shade_latent_ratio(env)) * dT
+    return EffectResult('↑', max(0.0, d)) if d > 1e-9 else EffectResult('0', 0.0)
+
+
+# @manual ai/env-control#shade-heat
+def shade_humid_effect(env: EnvContext, cmd_pct: float, profile=None,
+                       k: float = K_SHADE_T) -> EffectResult:
+    """차광막 → 상대습도. 열면 데워져 RH 가 내려가고, 증산이 수증기를 더해 그만큼 덜 내려간다.
+
+        RH' = 100 · (e + γ·r·dT) / svp(T + dT) − RH
+    """
+    T, RH = env.get('T_int'), env.get('RH_int')
+    if T is None or RH is None:
+        return _NO_EFFECT
+    dT = _shade_dT(env, cmd_pct, profile, k)
+    if dT <= 0.0:
+        return EffectResult('0', 0.0)
+    T, RH = float(T), float(RH)
+    e = _psychro.vapor_pressure(T, RH)
+    de = _psychro.psychrometric_constant(T=T) * shade_latent_ratio(env) * dT
+    d = 100.0 * (e + de) / _psychro.svp(T + dT) - RH
+    if abs(d) < 1e-9:
+        return EffectResult('0', 0.0)
+    return EffectResult('↑' if d > 0 else '↓', abs(d))
+
+
+def make_shade_model(k: float = K_SHADE_T) -> dict:
+    """차광막 효과 모델(온도·습도·VPD) — 기본 경로와 계수 오버라이드가 같은 함수를 쓴다."""
+    if k == K_SHADE_T:
+        return {'temperature': shade_temp_effect, 'humidity': shade_humid_effect,
+                'vpd': shade_vpd_effect}
+    import functools
+    return {'temperature': functools.partial(shade_temp_effect, k=k),
+            'humidity': functools.partial(shade_humid_effect, k=k),
+            'vpd': functools.partial(shade_vpd_effect, k=k)}
 
 
 def curtain_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
@@ -800,9 +945,8 @@ def curtain_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> Effect
                         abs(delta) * (cmd_pct / 100.0) * k * af)
 
 
-SHADE_EFFECT_MODEL = {
-    'temperature': shade_temp_effect,
-}
+# 'vpd' 를 직접 선언한다 — `_inject_vpd` 가 연쇄법칙으로 덮지 않는다(`shade_vpd_effect`).
+SHADE_EFFECT_MODEL = make_shade_model()
 
 CURTAIN_EFFECT_MODEL = {
     'temperature': curtain_temp_effect,
@@ -861,6 +1005,31 @@ def _exhaust_ach(cmd_pct: float, profile) -> float:
     return rated * (cmd_pct / 100.0) / volume
 
 
+def fan_ach_total(profiles, prev_commands) -> float:
+    """배기·흡기팬이 직전 명령으로 바꾸는 시간당 공기 횟수(ACH).
+
+    배기팬 합과 흡기팬 합 중 **큰 쪽**이다 — 둘은 한 공기 흐름의 양끝(음압·양압 환기)이라
+    더하면 같은 공기를 두 번 센다. 정격 풍량이나 체적을 모르는 팬은 0 으로 센다
+    (`_exhaust_ach`) — 없는 풍량을 지어내 주입기를 멈추게 하지 않는다. 직전 명령을 쓰는 것은
+    개구부 평균 개도(`vent_open_frac`)와 같다 — 이번 사이클의 명령은 이 계산 **뒤에** 정해진다.
+    """
+    exhaust = intake = 0.0
+    for p in profiles or ():
+        kind = getattr(p, 'kind', '')
+        if kind not in ('exhaust_fan', 'intake_fan'):
+            continue
+        try:
+            pct = float((prev_commands or {}).get(p.actuator_id, 0.0) or 0.0)
+        except (TypeError, ValueError):
+            continue
+        ach = _exhaust_ach(max(0.0, min(100.0, pct)), p)
+        if kind == 'exhaust_fan':
+            exhaust += ach
+        else:
+            intake += ach
+    return max(exhaust, intake)
+
+
 VENT_PRESSURE_F0 = 0.25  # 개구부 평균 개도가 이 분율 이상이면 배기팬 압력차 소멸(무력).
                          # 덕트 없는 벽면 배기팬은 창이 닫혀 있어야 압력이 걸려 작동.
 
@@ -876,50 +1045,62 @@ def _exhaust_pressure_factor(env: EnvContext) -> float:
     return max(0.0, 1.0 - frac / VENT_PRESSURE_F0)
 
 
-@_scaled('temperature')
-def exhaust_fan_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """배기팬 → 외내부 온도차 × ACH 기반 T 변화 (개구부 압력 유효도 반영)."""
+def _fan_exchange_fraction(env: EnvContext, ach: float) -> float:
+    """이 팬이 **한 사이클** 동안 바꾸는 실내 공기의 몫 [0, 1].
+
+    ACH 는 시간당 환기 횟수라 사이클 길이를 곱해야 사이클당 교환 몫이 된다
+    (`types` 단위 규약 R1: 효과는 변수 native 단위 / **사이클**). 예전에는
+    `ACH/60` 만 써서 사이클이 60 초일 때만 맞았다 — 600 초 사이클이면 팬 효과가
+    10 배 작게 신고돼, 같은 환기량의 팬이 개구부보다 훨씬 약해 보였다.
+    1 을 넘는 몫은 물리적으로 없다(한 번 다 바꾸면 끝) — 상한 1.
+    """
+    cycle = float(env.get('cycle_sec', _CYCLE_REF_S) or _CYCLE_REF_S)
+    return min(1.0, max(0.0, ach * cycle / 3600.0))
+
+
+def _fan_effect(var: str, env: EnvContext, cmd_pct: float, profile,
+                gap_keys: tuple, floor: float, k_fallback: float):
+    """배기·흡기팬의 T/RH 효과 공통 몸통.
+
+    · 구배(실외−실내)에 비례, ACH 로 사이클당 교환 몫을 구한다.
+    · 환기 계열이라 개구부와 같이 **실외를 지나칠 수 없다** — 학습 배율 θ 까지
+      곱한 뒤 `vent_reachable` 로 |구배| 에 자른다(VPD 는 이미 같은 기준으로
+      잘려 있어, T/RH 만 안 잘리면 서로 다른 끝점을 말하게 된다).
+    """
     pf = _exhaust_pressure_factor(env)
     if pf <= 0.0:
         return EffectResult('0', 0.0)   # 창이 열려 압력 안 걸림 → 배기 무력
     ach = _exhaust_ach(cmd_pct, profile)
-    delta_T = _gradient(env, 'T_ext', 'T_int')
-    if delta_T is None:
+    gap = _gradient(env, *gap_keys)
+    if gap is None:
         return _NO_EFFECT
+    theta = _calibrated_scale(profile, var)
     if ach <= 0:
         # rated_m3h 미설정 → 환기(구배 의존)로 근사. 무구배에 상수 효과를 주면
         # (구 K_CIRC_FAN_T 폴백) 무구배에도 큰 효과를 주장해 결합 drive 가 팬을
         # 헛돌리는 와인드업을 유발한다. 배기팬은 순환(내부혼합)이 아니라 환기이므로
-        # 개구부와 동일하게 |ΔT|·K_OPENING_T 로 스케일한다.
-        if abs(delta_T) < 0.5:
+        # 개구부와 동일하게 |구배|·K_OPENING_* 로 스케일한다.
+        if abs(gap) < floor:
             return EffectResult('0', 0.0)
-        return EffectResult('↑' if delta_T > 0 else '↓',
-                            abs(delta_T) * (cmd_pct / 100.0) * K_OPENING_T * pf)
-    mag = abs(delta_T) * ach * (1 / 60.0) * K_EXHAUST_FAN_FACTOR * pf
-    return EffectResult('↑' if delta_T > 0 else '↓', mag)
+        mag = abs(gap) * (cmd_pct / 100.0) * k_fallback * pf * theta
+    else:
+        mag = (abs(gap) * _fan_exchange_fraction(env, ach)
+               * K_EXHAUST_FAN_FACTOR * pf * theta)
+    return EffectResult('↑' if gap > 0 else '↓', vent_reachable(mag, gap))
 
 
-@_scaled('humidity')
+def exhaust_fan_temp_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
+    """배기팬 → 외내부 온도차 × 사이클당 교환 몫 (개구부 압력 유효도 반영)."""
+    return _fan_effect('temperature', env, cmd_pct, profile,
+                       ('T_ext', 'T_int'), 0.5, K_OPENING_T)
+
+
 def exhaust_fan_humid_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
-    """배기팬 → 외내부 RH 차 × ACH 기반 RH 변화 (개구부 압력 유효도 반영)."""
-    pf = _exhaust_pressure_factor(env)
-    if pf <= 0.0:
-        return EffectResult('0', 0.0)
-    ach = _exhaust_ach(cmd_pct, profile)
-    delta_rh = _gradient(env, 'RH_ext', 'RH_int')
-    if delta_rh is None:
-        return _NO_EFFECT
-    if ach <= 0:
-        # rated_m3h 미설정 → 환기(구배 의존)로 근사 (temp 와 일관, VPD 유도 정확도)
-        if abs(delta_rh) < 1.0:
-            return EffectResult('0', 0.0)
-        return EffectResult('↑' if delta_rh > 0 else '↓',
-                            abs(delta_rh) * (cmd_pct / 100.0) * K_OPENING_RH * pf)
-    mag = abs(delta_rh) * ach * (1 / 60.0) * K_EXHAUST_FAN_FACTOR * pf
-    return EffectResult('↑' if delta_rh > 0 else '↓', mag)
+    """배기팬 → 외내부 RH 차 × 사이클당 교환 몫 (개구부 압력 유효도 반영)."""
+    return _fan_effect('humidity', env, cmd_pct, profile,
+                       ('RH_ext', 'RH_int'), 1.0, K_OPENING_RH)
 
 
-@_scaled('co2')
 def exhaust_fan_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectResult:
     """배기팬 → CO₂ 희석 (실내 CO₂ > 외부 가정, 개구부 압력 유효도 반영)."""
     pf = _exhaust_pressure_factor(env)
@@ -927,8 +1108,9 @@ def exhaust_fan_co2_effect(env: EnvContext, cmd_pct: float, profile=None) -> Eff
     if ach <= 0 or pf <= 0.0:
         return EffectResult('~', 0.0)
     excess = max(0.0, _co2_excess(env))
-    mag = excess * ach * (1 / 60.0) * K_EXHAUST_FAN_FACTOR * pf
-    return EffectResult('↓', mag)
+    mag = (excess * _fan_exchange_fraction(env, ach) * K_EXHAUST_FAN_FACTOR * pf
+           * _calibrated_scale(profile, 'co2'))
+    return EffectResult('↓', vent_reachable(mag, excess))    # 외기 농도 아래로는 못 내린다
 
 
 EXHAUST_FAN_EFFECT_MODEL = {
@@ -1061,22 +1243,20 @@ def _build_effect_model_raw(kind: str, k: dict) -> dict:
         }
     elif kind == 'co2_injector':
         k_co2 = k.get('K_CO2_INJ', K_CO2_INJ)
+        # ⚠ 계수 오버라이드 경로도 **같은 보존율**을 곱한다. 예전에는 이 람다가 보존율을 몰라,
+        #   계수를 손본 주입기만 창·팬이 돌아도 풀 출력을 주장했다(기본 경로와 갈라진 두 벌).
         return {
-            'co2': lambda env, pct, profile=None, _k=k_co2: EffectResult('↑', _k * (pct / 100)),
+            'co2': lambda env, pct, profile=None, _k=k_co2: EffectResult(
+                '↑', _k * (pct / 100) * co2_retention(env)),
         }
     elif kind == 'shade':
-        k_t = k.get('K_SHADE_T', K_SHADE_T)
-
-        def _shade_t(env, pct, profile=None, _k=k_t):
-            # 규약: pct=개도(100=열림=빛 유입→온도↑). 일사 없으면 효과 0.
-            af, _u = _gis_factor(profile, use_u=False)
-            solar  = env.get('solar') or 0.0
-            solar_factor = min(max(solar / SOLAR_REFERENCE_W, 0.0), 2.0)
-            return EffectResult('↑', _k * (pct / 100) * af * solar_factor)
-
-        return {'temperature': _shade_t}
+        # 기본 경로와 **같은 함수**다(`make_shade_model`) — 예전에는 여기 사본이 따로 있어
+        # 학습 배율 θ 를 곱하지 않았다.
+        return make_shade_model(float(k.get('K_SHADE_T', K_SHADE_T)))
     elif kind == 'curtain':
-        k_t = k.get('K_CURTAIN_U', K_CURTAIN_U)
+        # 옛 키 K_CURTAIN_T 도 받는다 — 로더가 한동안 그 이름으로 넘겼고, 저장된
+        # 옵션·보정 dict 에 남아 있을 수 있다. 정본은 K_CURTAIN_U.
+        k_t = k.get('K_CURTAIN_U', k.get('K_CURTAIN_T', K_CURTAIN_U))
 
         def _curtain_t(env, pct, profile=None, _k=k_t):
             # 규약: pct=개도(100=걷힘=단열없음). 걷으면 외기로 열교환(↑/↓), 닫으면 0.

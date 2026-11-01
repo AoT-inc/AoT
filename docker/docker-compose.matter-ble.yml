@@ -1,0 +1,40 @@
+# Matter BLE 커미셔닝 오버라이드 — 새 장치를 BLE 로 AoT Fabric 에 직접 추가할 때만 쓴다.
+# (기존 Matter 장치를 다른 생태계에서 공유받는 경로는 BLE 가 필요 없다.)
+# 설계: docs/design/matter-controller.md.
+#
+# 사용:
+#   docker compose -f docker/docker-compose.prod.yml \
+#                  -f docker/docker-compose.matter-ble.yml up -d
+#   (개발용 docker-compose.yml 과도 같은 방식으로 겹쳐 쓴다. docker/.env 에
+#    COMPOSE_PROFILES=matter 가 있어야 matter_server 가 뜬다.)
+#
+# - 왜 별도 파일인가: BLE 는 선택 기능이고 호스트에 BlueZ(bluetoothd)가 떠 있어야
+#   한다. BlueZ 가 없는 호스트에 /run/dbus 를 마운트하면 없는 경로를 컨테이너에
+#   밀어 넣게 되므로(도커가 빈 디렉터리를 만들어 버린다) 기본 compose 에 넣지 않는다.
+#   이 파일은 matter_server 만 건드린다. volumes 는 compose 가 목록을 이어 붙인다.
+# - 왜 dbus 인가: noble 기본 바인딩(hci)은 root 와 raw HCI 소켓 권한이 필요해서
+#   컨테이너를 privileged 로 올려야 한다. dbus 바인딩은 호스트 BlueZ 를 D-Bus 로
+#   쓰므로 컨테이너는 비특권(uid 1000) 그대로 두고 /run/dbus 읽기 전용 마운트만
+#   더한다. 어댑터는 켜져 있어야 한다(전원 off 면 서버는 debug 로그에
+#   "noble state is not poweredOn" 만 남기고 커미셔닝이 검색 타임아웃으로 끝난다).
+# - 자동 업데이트: updater 는 aot-app/aot_daemon/aot_mcp 만 재생성하고 matter_server 는
+#   건드리지 않는다. 그래서 이 오버라이드는 직접 `up -d` 한 구성 그대로 유지된다.
+#   다만 오버라이드 없이 `up -d` 를 다시 돌리면 BLE 설정이 빠진 채 재생성되니,
+#   compose 명령에는 항상 두 파일을 함께 쓴다.
+# - 점검: 켜기 전에 호스트에서 `aot/scripts/check_matter_host.sh --ble` 로 BlueZ·어댑터·
+#   rfkill·전원·D-Bus 소켓을 확인한다(읽기 전용).
+# - 주의: MATTER_LOG_LEVEL=debug 로 올리면 서버가 WS 요청을 가리지 않고 로그에
+#   남겨, 커미셔닝에 보내는 Wi-Fi 비밀번호가 평문으로 찍힌다. 진단 후 반드시
+#   info 로 되돌릴 것.
+# - BLE 프록시(BLE_PROXY, 원격 클라이언트가 /ble 로 접속)는 쓰지 않는다 — 서버는
+#   루프백에만 열려 있다.
+services:
+  matter_server:
+    environment:
+      # 사용할 HCI 어댑터 번호(hci0 = 0). 여러 개면 docker/.env 의
+      # MATTER_BLUETOOTH_ADAPTER 로 고른다(`ls /sys/class/bluetooth`).
+      - BLUETOOTH_ADAPTER=${MATTER_BLUETOOTH_ADAPTER:-0}
+      - NOBLE_BINDINGS=dbus
+    volumes:
+      # 호스트 BlueZ 와 통신하는 D-Bus 시스템 소켓. 읽기 전용으로 충분하다.
+      - /run/dbus:/run/dbus:ro

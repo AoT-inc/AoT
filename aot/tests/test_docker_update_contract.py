@@ -212,9 +212,15 @@ def test_compose_image_lines_honor_aot_image_repo():
     이 테스트는 오버라이드 가능 여부만 고정한다."""
     text = COMPOSE_PROD.read_text()
     image_lines = re.findall(r'^\s*image:\s*(.+)$', text, re.MULTILINE)
-    # influxdb 서비스는 AoT 이미지가 아니다 — 제외
-    aot_image_lines = [l for l in image_lines if 'influxdb' not in l]
-    assert len(aot_image_lines) == 3, aot_image_lines  # aot-app, aot_daemon, aot_mcp
+    # 제3자 사이드카는 AoT 이미지가 아니다 — 제외. influxdb, 그리고 Matter
+    # 컨트롤러와 그 소켓 중계(matter_server·matter_socket, profile "matter").
+    # 모두 updater 의 재생성 대상(AOT_UPDATE_SERVICES)이 아니라 자기 태그로
+    # 따로 올린다.
+    third_party = ('influxdb', 'matterjs-server', 'alpine/socat')
+    aot_image_lines = [l for l in image_lines
+                       if not any(name in l for name in third_party)]
+    # aot-app, aot_daemon, aot_mcp + aot_twin(디지털트윈 노드, profile "twin" — 기본 꺼짐, 실험 브랜치)
+    assert len(aot_image_lines) == 4, aot_image_lines
     for line in aot_image_lines:
         assert line == '${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}', line
 

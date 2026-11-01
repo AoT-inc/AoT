@@ -354,7 +354,8 @@ def _outdoor(plot, start, end):
     if target_uuid:
         rows = GeoBinding.query.filter(
             GeoBinding.spatial_kind == 'weather',
-            GeoBinding.spatial_id == target_uuid).all()
+            GeoBinding.spatial_id == target_uuid,
+            GeoBinding.role != 'forecast').all()        # 예보 출처 지정은 실측 기상대가 아니다
     if rows:
         history_start = _binding_history_start()
         spans = [(b.device_id, _since(b.valid_from, history_start), b.valid_to)

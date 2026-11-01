@@ -89,6 +89,10 @@ THEME_COLOR_FIELDS = [
     # 옅은 구분선(--aot-border-light, 53곳). bd_divider 와 굵기가 아니라
     # **무게**가 다르다 — 값이 촘촘히 늘어설 때(목록 행 사이)는 이쪽이다.
     'bd_divider_soft',
+    # AI 카드(자막·수신함·뷰어) 면과 그 짝 글자 (2026-10-20). 어두운 면 + 밝은 글자 한 쌍 —
+    # 시스템 화면과 갈라 보이게 하려는 사용자 지시(P3). 면은 알파 0.8 로만 쓴다(글자는 불투명).
+    # 둘은 반드시 짝으로 바꾼다(같은 값이 되면 글자가 사라진다). 다크 테마도 이 쌍은 그대로다.
+    'ai_surface_bg', 'ai_surface_fg',
     # 측정 밴드 5색 (--aot-band-1..5) — 게이지/센서 라벨 등
     'band_1', 'band_2', 'band_3', 'band_4', 'band_5',
     # 차트 시리즈 앞 6색 (GRAPH_SERIES_PALETTE 라이트/다크 공통 구간)
@@ -219,6 +223,13 @@ class SettingsEmail(FlaskForm):
 # Settings (General)
 #
 
+class SettingsTwin(FlaskForm):
+    """설정 > 디지털트윈(settings/twin) — 실행 시각과 두 옵션."""
+    twin_run_times = StringField(lazy_gettext('Digital Twin Run Times'))
+    twin_ignore_profile = BooleanField(lazy_gettext('Allow on low-spec profile'))
+    twin_auto_forecast = BooleanField(lazy_gettext('Create forecast inputs automatically'))
+
+
 class SettingsGeneral(FlaskForm):
     landing_page = StringField(lazy_gettext('Landing Page'))
     index_page = StringField(lazy_gettext('Index Page'))
@@ -238,6 +249,9 @@ class SettingsGeneral(FlaskForm):
     hide_success = BooleanField(lazy_gettext('Hide Success Messages'))
     hide_info = BooleanField(lazy_gettext('Hide Info Messages'))
     hide_warning = BooleanField(lazy_gettext('Hide Warning Messages'))
+    hide_ai_messages = BooleanField(lazy_gettext('Hide AI Messages'))
+    ai_card_auto = BooleanField(lazy_gettext('AI result cards'))
+    ai_shortcut_url = StringField(lazy_gettext('AI shortcut link'))
     hide_tooltips = BooleanField(lazy_gettext('Hide Tooltips'))
 
     use_database = StringField(lazy_gettext('Database'))
@@ -281,6 +295,11 @@ class SettingsGeneral(FlaskForm):
     net_test_timeout = IntegerField(
         lazy_gettext('Internet Test Timeout'), widget=NumberInput())
 
+    matter_enabled = BooleanField(lazy_gettext('Use Matter (Experimental)'))
+    twin_enabled = BooleanField(lazy_gettext('Use Digital Twin (Experimental)'))
+    twin_run_times = StringField(lazy_gettext('Digital Twin Run Times'))
+    data_retention_days = IntegerField(
+        lazy_gettext('Data Retention (days)'), widget=NumberInput())
     ai_enabled = BooleanField(lazy_gettext('Enable AI Service'))
     mcp_http_enabled = BooleanField(lazy_gettext('Enable External MCP Server'))
     user_string_translation_enabled = BooleanField(
@@ -834,6 +853,8 @@ class SettingsCustomUI(FlaskForm):
     toggle_track_off = StringField(lazy_gettext('Toggle Track Off'), default=THEME_DEFAULTS.get('toggle_track_off', '#DDDDDD'), render_kw={"type": "color"})
     bd_divider = StringField(lazy_gettext('Divider Line'), default=THEME_DEFAULTS.get('bd_divider', '#DDDDDD'), render_kw={"type": "color"})
     bd_divider_soft = StringField(lazy_gettext('Divider Line (Soft)'), default=THEME_DEFAULTS.get('bd_divider_soft', '#f0f0f0'), render_kw={"type": "color"})
+    ai_surface_bg = StringField(lazy_gettext('AI Card Surface'), default=THEME_DEFAULTS.get('ai_surface_bg', '#13261B'), render_kw={"type": "color"})
+    ai_surface_fg = StringField(lazy_gettext('AI Card Text'), default=THEME_DEFAULTS.get('ai_surface_fg', '#FFFFFF'), render_kw={"type": "color"})
     bg_btn_hold = StringField(lazy_gettext('Btn BG Hold'), default=THEME_DEFAULTS.get('bg_btn_hold', '#D1D5D5'), render_kw={"type": "color"})
     bd_btn_border = StringField(lazy_gettext('Btn Border Base'), default=THEME_DEFAULTS.get('bd_btn_border', '#B6BABA'), render_kw={"type": "color"})
     # 측정 밴드 5색 (--aot-band-1..5, 차가움→적정→뜨거움)

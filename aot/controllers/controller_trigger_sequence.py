@@ -428,7 +428,9 @@ class SequenceTriggerController(AbstractController, threading.Thread):
              # Get Action Description (ACTION Column)
              action_desc = act.name if hasattr(act, 'name') and act.name else act.action_type
              if act.action_type in self.dict_actions:
-                 action_desc = self.dict_actions[act.action_type]['name']
+                 # str() — 액션 이름은 lazy_gettext 라 그대로 두면 데몬 RPC(Pyro5)가
+                 # `LazyString` 을 직렬화하지 못해 상태 전체가 오류로 돌아온다.
+                 action_desc = str(self.dict_actions[act.action_type]['name'])
 
              # Get Device Details (NAME Column)
              target_id = act.do_unique_id or opts.get('output') or opts.get('input')
@@ -584,7 +586,7 @@ class SequenceTriggerController(AbstractController, threading.Thread):
             # Action Desc
             action_desc = action.name if hasattr(action, 'name') and action.name else action.action_type
             if action.action_type in dict_action_info:
-                action_desc = dict_action_info[action.action_type]['name']
+                action_desc = str(dict_action_info[action.action_type]['name'])
 
             # Name / Device Detail
             target_id = action.do_unique_id or opts.get('output') or opts.get('input')

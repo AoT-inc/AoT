@@ -59,6 +59,72 @@ def glossary_terms(journal_data):
     return out
 
 
+#: 물 회로 계산(`water_net_link`)이 내는 caveat. 접미사는 분(分) 또는 시각이다.
+_WATER_NET_CAVEATS = frozenset({
+    'water-supply-limited', 'pump-over-demand', 'source-over-demand',
+    'valve-without-pump', 'pump-dead-head', 'tank-empty', 'supply-unknown',
+    'pump-state-unknown', 'tank-level-unknown', 'pump-before-tank',
+    'drip-flow-unknown', 'water-supply-not-read'})
+
+
+def _water_net_caveat(base, suffix):
+    """물 회로 caveat 의 문장. 경고는 알리기만 한다 — 제어를 막지 않는다."""
+    if base == 'water-supply-limited':
+        delivered, _, design = suffix.partition(':')
+        return _gettext_safe(
+            "Water volumes are limited by what the supply could deliver: "
+            "%(delivered)s L, against %(design)s L by nozzle design alone.") % {
+                'delivered': delivered or '?', 'design': design or '?'}
+    if base == 'pump-over-demand':
+        return _gettext_safe(
+            "Demand was above the pump's rated flow for about %(min)s min, so "
+            "the open valves shared what the pump could give.") % {
+                'min': suffix or '?'}
+    if base == 'source-over-demand':
+        return _gettext_safe(
+            "Demand was above what the water source allows for about %(min)s "
+            "min, so the open valves shared what the source could give.") % {
+                'min': suffix or '?'}
+    if base == 'valve-without-pump':
+        return _gettext_safe(
+            "A valve was open while its pump was off for about %(min)s min. "
+            "No water is counted for that time.") % {'min': suffix or '?'}
+    if base == 'pump-dead-head':
+        return _gettext_safe(
+            "The pump ran with no valve open for about %(min)s min.") % {
+                'min': suffix or '?'}
+    if base == 'tank-empty':
+        return _gettext_safe(
+            "The tank ran out at %(when)s. After that, water is limited to "
+            "what flows into the tank.") % {'when': suffix or '?'}
+    if base == 'supply-unknown':
+        return _gettext_safe(
+            "How much this line can supply is not known — the pump has no "
+            "rated flow, or there is no pump — so volumes are not limited by "
+            "it.")
+    if base == 'pump-state-unknown':
+        return _gettext_safe(
+            "The pump on this line is not tied to an output, so whether it "
+            "was running is not known. It is counted as running whenever a "
+            "valve is open.")
+    if base == 'tank-level-unknown':
+        return _gettext_safe(
+            "The tank on this line has no water level reading, so the tank "
+            "balance is left out. It is not assumed to be full.")
+    if base == 'pump-before-tank':
+        return _gettext_safe(
+            "A pump sits before the tank on this line. The flow limit is "
+            "counted as if the pump drew from the tank, so volumes may be "
+            "lower than what was delivered.")
+    if base == 'drip-flow-unknown':
+        return _gettext_safe(
+            "A drip line on this circuit has no emitter spacing or flow set, "
+            "so it is left out of the demand.")
+    return _gettext_safe(
+        "Run records for this water line could not be read, so volumes are "
+        "not limited by the supply.")
+
+
 def caveat_text(key):
     """`caveats` 의 키 하나 → 뷰어 언어의 문장. HTML(§10)·MD(§11) 이 함께 쓴다.
 
@@ -120,6 +186,8 @@ def caveat_text(key):
             "Water volumes are estimated from the designed nozzle flow and "
             "run time, and split by the plot's share of the bay — not "
             "measured by a flow meter.")
+    if base in _WATER_NET_CAVEATS:
+        return _water_net_caveat(base, suffix)
     if base == 'precipitation-not-summed':
         # ⚠ **합계를 지어내지 않는다.** 실측(기상청 채널, 2026-09-04):
         #   `rn_15m`(직전 15분 누적)을 **5분마다** 다시 적어 창이 겹친다 —

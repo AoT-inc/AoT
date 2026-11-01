@@ -402,6 +402,7 @@ def inject_variables():
                 hide_alert_info=misc.hide_alert_info,
                 hide_alert_success=misc.hide_alert_success,
                 hide_alert_warning=misc.hide_alert_warning,
+                hide_ai_messages=bool(misc.hide_ai_messages),
                 hide_tooltips=misc.hide_tooltips,
                 host=_display_host(),
                 languages=languages_sorted,

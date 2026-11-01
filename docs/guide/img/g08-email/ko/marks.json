@@ -1,0 +1,324 @@
+{
+  "step-1-smtp-settings.png": [
+    {
+      "name": "smtp-host-field",
+      "x": 72.88,
+      "y": 30.37,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "smtp-protocol-select",
+      "x": 72.88,
+      "y": 41.71,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "smtp-hourly-max-field",
+      "x": 77.05,
+      "y": 64.4,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "smtp-save-button",
+      "x": 79.74,
+      "y": 70.88,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-1-smtp-settings.sq.png": [
+    {
+      "name": "smtp-host-field",
+      "x": 76.16,
+      "y": 30.37,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "smtp-protocol-select",
+      "x": 76.16,
+      "y": 41.71,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "smtp-hourly-max-field",
+      "x": 83.56,
+      "y": 64.4,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "smtp-save-button",
+      "x": 88.34,
+      "y": 70.88,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-2-send-test-email.png": [
+    {
+      "name": "test-email-address-field",
+      "x": 72.88,
+      "y": 82.73,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "send-test-email-button",
+      "x": 73.91,
+      "y": 89.21,
+      "w": 9.39,
+      "h": 4.63
+    }
+  ],
+  "step-2-send-test-email.sq.png": [
+    {
+      "name": "test-email-address-field",
+      "x": 76.16,
+      "y": 82.73,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "send-test-email-button",
+      "x": 77.98,
+      "y": 89.21,
+      "w": 16.69,
+      "h": 4.63
+    }
+  ],
+  "step-3-conditional-name-period.png": [
+    {
+      "name": "function-name-field",
+      "x": 87.5,
+      "y": 42.49,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "period-field",
+      "x": 91.67,
+      "y": 47.79,
+      "w": 6.25,
+      "h": 3.7
+    }
+  ],
+  "step-3-conditional-name-period.sq.png": [
+    {
+      "name": "function-name-field",
+      "x": 77.78,
+      "y": 42.49,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "period-field",
+      "x": 85.19,
+      "y": 47.79,
+      "w": 11.11,
+      "h": 3.7
+    }
+  ],
+  "step-3b-condition-measurement.png": [
+    {
+      "name": "condition-type-select",
+      "x": 87.5,
+      "y": 33.02,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "condition-code-line",
+      "x": 78.33,
+      "y": 48.96,
+      "w": 10.28,
+      "h": 1.39
+    },
+    {
+      "name": "condition-measurement-select",
+      "x": 87.96,
+      "y": 54.36,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "condition-max-age-field",
+      "x": 92.12,
+      "y": 59.66,
+      "w": 6.25,
+      "h": 3.7
+    }
+  ],
+  "step-3b-condition-measurement.sq.png": [
+    {
+      "name": "condition-type-select",
+      "x": 77.78,
+      "y": 33.02,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "condition-code-line",
+      "x": 61.47,
+      "y": 48.96,
+      "w": 18.28,
+      "h": 1.39
+    },
+    {
+      "name": "condition-measurement-select",
+      "x": 78.59,
+      "y": 54.36,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "condition-max-age-field",
+      "x": 86.0,
+      "y": 59.66,
+      "w": 11.11,
+      "h": 3.7
+    }
+  ],
+  "step-3c-email-action.png": [
+    {
+      "name": "action-type-select",
+      "x": 87.5,
+      "y": 72.27,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "action-add-button",
+      "x": 94.01,
+      "y": 72.27,
+      "w": 3.91,
+      "h": 3.7
+    },
+    {
+      "name": "action-email-field",
+      "x": 67.9,
+      "y": 85.54,
+      "w": 6.51,
+      "h": 3.24
+    },
+    {
+      "name": "action-save-button",
+      "x": 94.68,
+      "y": 81.83,
+      "w": 3.56,
+      "h": 3.7
+    }
+  ],
+  "step-3c-email-action.sq.png": [
+    {
+      "name": "action-type-select",
+      "x": 77.78,
+      "y": 72.27,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "action-add-button",
+      "x": 89.35,
+      "y": 72.27,
+      "w": 6.94,
+      "h": 3.7
+    },
+    {
+      "name": "action-email-field",
+      "x": 42.94,
+      "y": 85.54,
+      "w": 11.57,
+      "h": 3.24
+    },
+    {
+      "name": "action-save-button",
+      "x": 90.54,
+      "y": 81.83,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-3d-python-code.png": [
+    {
+      "name": "python-code-field",
+      "x": 68.23,
+      "y": 29.27,
+      "w": 29.69,
+      "h": 40.74
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-3d-python-code.sq.png": [
+    {
+      "name": "python-code-field",
+      "x": 43.52,
+      "y": 29.27,
+      "w": 52.78,
+      "h": 40.74
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-3a-conditional-controller-option.png": [
+    {
+      "name": "function-type-select",
+      "x": 11.91,
+      "y": 17.94,
+      "w": 14.32,
+      "h": 4.63
+    },
+    {
+      "name": "conditional-controller-option",
+      "x": 11.91,
+      "y": 41.32,
+      "w": 21.89,
+      "h": 3.24
+    },
+    {
+      "name": "function-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-3a-conditional-controller-option.sq.png": [
+    {
+      "name": "function-type-select",
+      "x": 1.74,
+      "y": 18.06,
+      "w": 25.46,
+      "h": 4.63
+    },
+    {
+      "name": "conditional-controller-option",
+      "x": 1.74,
+      "y": 41.44,
+      "w": 38.91,
+      "h": 3.24
+    },
+    {
+      "name": "function-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ]
+}

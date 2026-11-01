@@ -151,34 +151,30 @@ class TestExtExpiredGate:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestWindwardDifferential:
-    """풍향(wind_dir)에 따라 풍상측 개구부만 강제 폐쇄."""
+    """풍향(wind_dir)에 따라 풍상측 개구부만 강제 폐쇄 — 강풍 1단계(근거 55)."""
 
     def test_windward_opening_closed(self):
-        """동풍(90°) 시 동쪽 개구부(azimuth=90°)만 폐쇄."""
+        """동풍(90°) 1단계 시 동쪽 측창(azimuth=90°)만 폐쇄, 서쪽은 상한."""
         ctx = make_ctx(wind=8.0)
-        ctx['wind_dir'] = 90.0  # 동풍
+        ctx['external']['wind_dir'] = 90.0  # 동풍
 
         east_vent = make_opening_profile('east', azimuth_deg=90.0)
         west_vent = make_opening_profile('west', azimuth_deg=270.0)
+        east_vent.vent_form = west_vent.vent_form = 'side'
 
         result = _run_gate(ctx, [east_vent, west_vent])
-        # partial 또는 triggered
-        if result.forced_commands:
-            # 동쪽 폐쇄 강제, 서쪽은 없거나 정상
-            if 'east' in result.forced_commands:
-                assert result.forced_commands['east']['value'] == pytest.approx(0.0)
-            # 서쪽은 강제 폐쇄 대상 아님
-            assert 'west' not in result.forced_commands or \
-                   result.forced_commands['west']['value'] != pytest.approx(0.0)
+        assert result.forced_commands['east']['value'] == pytest.approx(0.0)
+        assert 'west' not in result.forced_commands
+        assert result.vent_caps['west'] == pytest.approx(50.0)
 
     def test_leeward_opening_not_forced(self):
-        """풍하측(반대 방향) 개구부는 강제 폐쇄 안 됨."""
+        """풍하측(반대 방향) 개구부는 강제 폐쇄 안 됨 — 상한만."""
         ctx = make_ctx(wind=8.0)
-        ctx['wind_dir'] = 0.0  # 북풍
+        ctx['external']['wind_dir'] = 0.0  # 북풍
 
         south_vent = make_opening_profile('south', azimuth_deg=180.0)
+        south_vent.vent_form = 'side'
 
         result = _run_gate(ctx, [south_vent])
-        # 풍하측이므로 강제 명령 없거나 폐쇄 아님
-        if 'south' in result.forced_commands:
-            assert result.forced_commands['south']['value'] != pytest.approx(0.0)
+        assert 'south' not in result.forced_commands
+        assert result.vent_caps['south'] == pytest.approx(50.0)

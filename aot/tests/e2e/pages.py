@@ -28,6 +28,8 @@ NOT_A_PAGE = (
     '/geo/model_assets',
     # 리디렉션 전용
     '/index_page', '/location/entry', '/auth/', '/oauth/',
+    # 내장 OAuth 인가 서버의 메타데이터·JWKS — 내장 모드가 꺼져 있으면 404 가 정상이고 켜져도 JSON 이다.
+    '/.well-known/',
 )
 
 # 로그인한 사용자가 열면 되돌려지는 화면 — 부팅 판정 대상이 아니다.
@@ -43,6 +45,8 @@ SKIP = (
     '/logout', '/login/google/start', '/oauth/google/start',
     '/api/export_import/export_influxdb', '/api/export_import/export_settings',
     '/audit_log/export', '/logview/download', '/admin/backup',
+    # 내장 OAuth 동의 화면 — 내장 모드가 꺼져 있으면 404, 켜져도 client_id·code_challenge 등 인가 요청이 있어야 열린다.
+    '/authorize',
 )
 
 # 페이지별 앵커: 경로 → CSS 선택자들. 전부 존재하고 높이가 0 이 아니어야 한다.

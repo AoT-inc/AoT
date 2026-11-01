@@ -72,7 +72,7 @@ CONTEXT_ACCUMULATION_DEPTH = int(
 # ---------------------------------------------------------------------------
 # REALTIME_ALERT_CHECK_MINUTES: How often the lightweight threshold-only
 # anomaly check runs.  This job skips LLM summarization — it only reads
-# device counts and fires SSE if thresholds are exceeded.
+# device counts and emails admins if thresholds are exceeded.
 # Override via env: REALTIME_ALERT_CHECK_MINUTES
 # Default: 5 minutes
 # ---------------------------------------------------------------------------
@@ -82,12 +82,21 @@ REALTIME_ALERT_CHECK_MINUTES = int(
 
 # ---------------------------------------------------------------------------
 # REALTIME_ALERT_COOLDOWN_MINUTES: Minimum quiet period between repeated
-# SSE pushes for the same scope to avoid notification spam.
+# alert emails for the same scope to avoid notification spam.
 # Override via env: REALTIME_ALERT_COOLDOWN_MINUTES
 # Default: 15 minutes
 # ---------------------------------------------------------------------------
 REALTIME_ALERT_COOLDOWN_MINUTES = int(
     os.getenv('REALTIME_ALERT_COOLDOWN_MINUTES', '15')
+)
+
+# REALTIME_ALERT_REPEAT_HOURS: An unchanged violation set is re-sent only
+# after this many hours (a new or escalated set is sent at once, subject to
+# the cooldown above).
+# Override via env: REALTIME_ALERT_REPEAT_HOURS
+# Default: 6 hours
+REALTIME_ALERT_REPEAT_HOURS = int(
+    os.getenv('REALTIME_ALERT_REPEAT_HOURS', '6')
 )
 
 # ---------------------------------------------------------------------------

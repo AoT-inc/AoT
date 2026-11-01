@@ -173,7 +173,7 @@ def _schedule_payload(target_id):
 
     shape = GeoShape.query.filter_by(unique_id=target_id).first()
     if shape is not None:
-        ids = device_membership.device_ids_in_area(shape.unique_id) or set()
+        ids = device_membership.place_members(shape.unique_id) or set()
         try:
             kids, _bd = descendant_target_ids(shape, include_self=False)
         except Exception:
@@ -194,7 +194,7 @@ def _schedule_payload(target_id):
         sh = GeoShape.query.filter_by(
             unique_id=getattr(fac, 'shape_uuid', None)).first()
         if sh is not None:
-            ids = device_membership.device_ids_in_area(sh.unique_id) or set()
+            ids = device_membership.place_members(sh.unique_id) or set()
             # 시설 uuid 도 대상에 넣는다 — 일정·노트는 GeoFacility uuid 로
             # 붙는데 장치·기하는 도형 쪽이라, 도형만 보면 방금 만든 일정이
             # 그 시설 화면에서 안 보인다.
@@ -436,7 +436,8 @@ _LOCAL_TIME_COORD_ROUND = 3
 def api_geo_local_time():
     """지도 중심 좌표의 현지 시각·시간대·태양시를 반환.
 
-    쿼리: lat, lng (필수).
+    쿼리: lat, lng (필수). at (선택, epoch 밀리초) — 시간 슬라이더가 가 있는 시각. 있으면 일출·일몰 목록을
+          그 시각의 현지 날짜(어제~모레) 기준으로 만든다. 시계의 기준(server_epoch_ms)은 그대로 실제 지금이다.
     응답: tz / tz_abbrev / utc_offset_minutes / server_epoch_ms / local_date
           + status + sunrise_ms / sunset_ms + events(어제~모레의 일출·일몰,
           시각 오름차순 — 독이 직전/다음 사건을 여기서 고른다).
@@ -466,6 +467,18 @@ def api_geo_local_time():
     local_now = now.astimezone(tzinfo)
     offset = local_now.utcoffset()
 
+    # 시간 슬라이더가 멀리 가 있으면 사건 목록을 그 날짜 기준으로 만든다(±30일 안에서만).
+    at_local = local_now
+    at_arg = request.args.get('at')
+    if at_arg not in (None, ''):
+        try:
+            at_ms = float(at_arg)
+            if abs(at_ms / 1000.0 - now.timestamp()) <= 30 * 86400.0:
+                from datetime import datetime, timezone
+                at_local = datetime.fromtimestamp(at_ms / 1000.0, timezone.utc).astimezone(tzinfo)
+        except (TypeError, ValueError, OverflowError, OSError):
+            return jsonify({'error': 'at must be epoch milliseconds'}), 400
+
     times = sun_times(latitude=lat, longitude=lng)
 
     def _ms(dt):
@@ -477,7 +490,7 @@ def api_geo_local_time():
     # 모레까지 한 벌을 보내면 클라이언트는 자정을 넘겨도 목록 안에서 계속
     # 고를 수 있어, 사건이 지날 때마다 서버를 다시 부르지 않아도 된다.
     events = []
-    base_date = local_now.date()
+    base_date = at_local.date()
     for day_offset in (-1, 0, 1, 2):
         day = sun_times(latitude=lat, longitude=lng,
                         date=base_date + timedelta(days=day_offset))
@@ -502,6 +515,45 @@ def api_geo_local_time():
         'events': events,
         'day_length_seconds': times.day_length_seconds if times else None,
     })
+
+
+# @manual geo/map-widget#map, geo/api-reference#time-solar
+@blueprint.route('/api/geo/weather_state', methods=['GET'])
+@login_required
+def api_geo_weather_state():
+    """지도 위젯 기상 표현용 상태 한 벌 — 사용자가 고른 출처의 현재 기상 값과 태양 위치.
+
+    쿼리: ``lat``·``lng``(지도 중심; 없으면 ``site`` 의 중심), ``site``(대지 uuid — 위젯이 포커스된
+    대지나 지도 중심을 포함하는 대지를 정해 넘긴다. 없으면 현장 장치 출처는 비운다),
+    ``t``(선택) — 시간 슬라이더가 가 있는 시각(ISO 8601 또는 epoch 초·밀리초). 지금과 5분 넘게 다르면 그 시각의
+    상태를 돌려준다(미래: gis-input 예보 / 과거: 기상대 장치 측정 이력·gis-input 이력). 없으면 지금(이때 ``timeline`` 포함).
+    위젯 옵션 ``order``(``field_first``|``gis_first``)·``max_age``(초)·``hz_wind``·``hz_precip``·``hz_temp``(서리)·``hz_heat``(폭염)·``tint_lo``·``tint_hi``(온도 색조 중립 구간).
+    출처(등록된 gis-input · 대지에 지정한 기상대)와 응답 모양은 ``geo/weather_state.py`` 의 독스트링 참고.
+    출처가 없으면 ``items`` 가 비고, 외부 호출이 실패해도 태양 위치와 있는 값으로 응답한다.
+    """
+    from aot.aot_flask.geo import weather_state
+    from aot.utils.timekit import resolve_coords
+
+    site = (request.args.get('site') or '').strip() or None
+    lat = lng = None
+    try:
+        if request.args.get('lat') not in (None, '') and request.args.get('lng') not in (None, ''):
+            lat = round(float(request.args.get('lat')), 4)
+            lng = round(float(request.args.get('lng')), 4)
+    except (TypeError, ValueError):
+        return jsonify({'error': 'lat and lng must be numbers'}), 400
+    if lat is None and site:
+        lat, lng, _src = resolve_coords(None, target_id=site)
+    if lat is None or lng is None:
+        return jsonify({'error': 'site or lat/lng is required'}), 400
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        return jsonify({'error': 'lat/lng out of range'}), 400
+    try:
+        t = weather_state.parse_time(request.args.get('t'))
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    return jsonify(weather_state.get_state(
+        lat, lng, site=site, opts=weather_state.parse_options(request.args), t=t))
 
 
 # ──────────────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@ from werkzeug.datastructures import MultiDict
 
 import flask_login
 import sqlalchemy
-from flask import current_app, flash, redirect, request, session
+from flask import current_app, flash, redirect, request, session, url_for
 from flask_babel import gettext
 from importlib_metadata import version
 from sqlalchemy import and_
@@ -40,6 +40,20 @@ from aot.utils.widgets import parse_widget_information
 
 logger = logging.getLogger(__name__)
 _NULLISH_STRINGS = {'', 'none', 'null'}  # 'false' removed - it's a valid boolean value
+
+
+#: 내장 인가 서버(/authorize)가 로그인 전에 맡겨 두는 복귀 주소의 세션 열쇠
+OAUTH_RETURN_KEY = 'oauth_return'
+
+
+def after_login_url():
+    """로그인 직후 갈 곳 — 내장 OAuth 인가 요청(/authorize)이 로그인을 기다리고 있으면 거기로, 아니면 홈.
+
+    세션에 맡긴 값만 쓰고(사용자가 URL 로 줄 수 없다) `/authorize?` 로 시작하는 같은 사이트 경로만 받는다."""
+    target = session.pop(OAUTH_RETURN_KEY, None)
+    if isinstance(target, str) and target.startswith('/authorize?'):
+        return target
+    return url_for('routes_general.home')
 
 
 def regenerate_session_id():

@@ -2,7 +2,9 @@
 """
 forecast_feedforward.py — 기상 예보 기반 선행 제어 신호 생성 (P3-4).
 
-forecast.json (KMA 단기예보) → FeedforwardSignal 도출.
+forecast.json (KMA 단기예보) → FeedforwardSignal 도출. 시설에 Open-Meteo 시간별 예보
+입력(`OPEN_METEO_HOURLY_FORECAST`)이 묶여 있으면 그 입력이 쓴 같은 모양의 시간열 파일
+(`forecast_<uuid>.json`)도 같은 함수로 읽는다(`load_fresh_facility_forecast`).
 EnvCoordinator는 이 신호를 L1 목표 편향(bias)으로 적용해
 기상 변화가 실제로 도달하기 전에 사전 대응한다.
 
@@ -28,10 +30,18 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# 예보 파일 경로 (KMA forecast.json)
+# 예보 파일 캐시 — **경로별** {경로: (읽은 시각, 내용)}. 예전에는 하나뿐이라 두 번째
+# 파일(시설 Open-Meteo 예보)이 첫 파일(forecast.json) 캐시를 돌려받았다.
 _FORECAST_CACHE: dict = {}
-_FORECAST_CACHE_TS: float = 0.0
 _FORECAST_CACHE_TTL: float = 900.0   # 15분 캐시
+
+# 시설 시간열 파일(Open-Meteo `forecast_<uuid>.json`)은 수신(`fetched_epoch`) 뒤 이 시간이
+# 지나면 쓰지 않는다(환경제어 E3). 입력 주기 1800 s 기준 세 번 연속 실패한 셈이다.
+FACILITY_FILE_MAX_AGE_S: float = 7200.0
+
+# 시설 시간열 파일 경로에서 강수확률로 환기를 억제하려면 창 안 시간당 강수 최대가
+# 이 값 이상이어야 한다(환경제어 E2). 강수 값이 없으면 확률만으로 억제하지 않는다.
+FACILITY_RAIN_MM_H_MIN: float = 0.5
 
 
 @dataclass
@@ -53,35 +63,62 @@ class FeedforwardSignal:
 
 def _clear_cache() -> None:
     """테스트·강제 갱신용 캐시 초기화."""
-    global _FORECAST_CACHE, _FORECAST_CACHE_TS
-    _FORECAST_CACHE    = {}
-    _FORECAST_CACHE_TS = 0.0
+    global _FORECAST_CACHE
+    _FORECAST_CACHE = {}
+
+
+def _default_forecast_path() -> Optional[str]:
+    try:
+        from aot.config import PATH_JSON
+        return os.path.join(PATH_JSON, 'forecast.json')
+    except ImportError:
+        return None
 
 
 def _load_forecast(forecast_path: Optional[str] = None) -> dict:
-    """forecast.json을 로드한다 (15분 캐시)."""
-    global _FORECAST_CACHE, _FORECAST_CACHE_TS
+    """예보 파일을 로드한다 (경로별 15분 캐시). 경로가 없으면 `forecast.json`."""
+    if forecast_path is None:
+        forecast_path = _default_forecast_path()
+        if forecast_path is None:
+            return {}
 
     now = time.time()
-    if now - _FORECAST_CACHE_TS < _FORECAST_CACHE_TTL and _FORECAST_CACHE:
-        return _FORECAST_CACHE
-
-    if forecast_path is None:
-        try:
-            from aot.config import PATH_JSON
-            forecast_path = os.path.join(PATH_JSON, 'forecast.json')
-        except ImportError:
-            return {}
+    hit = _FORECAST_CACHE.get(forecast_path)
+    if hit is not None and now - hit[0] < _FORECAST_CACHE_TTL and hit[1]:
+        return hit[1]
 
     try:
         with open(forecast_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        _FORECAST_CACHE    = data
-        _FORECAST_CACHE_TS = now
+        _FORECAST_CACHE[forecast_path] = (now, data)
         return data
     except Exception as exc:
         logger.debug('forecast_feedforward: 파일 로드 실패 — %s', exc)
         return {}
+
+
+def load_fresh_facility_forecast(forecast_path: Optional[str],
+                                 now_epoch: Optional[float] = None) -> Optional[dict]:
+    """시설 시간열 파일(Open-Meteo) → 내용, 쓸 수 없으면 None.
+
+    `fetched_epoch`(수신 시각)가 없거나 `FACILITY_FILE_MAX_AGE_S`(2 h)보다 낡았으면 None
+    — 소비처는 그때 기존 경로(바인딩 단일값·forecast.json)로 간다. 수신 시각이 지금보다
+    10분 넘게 앞서면(시계 이상) 역시 쓰지 않는다.
+    """
+    if not forecast_path:
+        return None
+    data = _load_forecast(forecast_path)
+    if not data or not data.get('forecasts'):
+        return None
+    try:
+        fetched = float(data.get('fetched_epoch'))
+    except (TypeError, ValueError):
+        return None
+    now = time.time() if now_epoch is None else float(now_epoch)
+    age = now - fetched
+    if age > FACILITY_FILE_MAX_AGE_S or age < -600.0:
+        return None
+    return data
 
 
 def forecast_epoch(stamp, tz=None) -> Optional[float]:
@@ -153,6 +190,7 @@ def build_feedforward_signal(
     rain_pop_threshold: int = 50,
     forecast_path: Optional[str] = None,
     now_epoch: Optional[float] = None,
+    rain_mm_h_min: Optional[float] = None,
 ) -> FeedforwardSignal:
     """
     현재 내부 T/RH와 예보를 비교해 FeedforwardSignal을 반환한다.
@@ -169,6 +207,10 @@ def build_feedforward_signal(
     wind_threshold    : 강풍 판단 임계값 (m/s)
     rain_pop_threshold: 강우 확률 임계값 (%)
     forecast_path     : forecast.json 경로 (None → 자동)
+    rain_mm_h_min     : None 이면 강수확률만으로 환기 억제(기상청 forecast.json, 예전 그대로).
+                        값이 있으면 **강수확률 ≥ 임계 그리고 창 안 시간당 강수(RN1) 최대
+                        ≥ 이 값** 일 때만 억제한다. 강수 값이 없으면 확률만으로 억제하지
+                        않는다 — 모름이 환기를 막으면 고온에 위험하다(시설 Open-Meteo 파일, E2).
     """
     sig = FeedforwardSignal(lookahead_h=lookahead_h)
 
@@ -201,6 +243,8 @@ def build_feedforward_signal(
     RH_max = _safe([v for v in reh_vals if isinstance(v, (int, float))], max)
     WSD_max= _safe([v for v in wsd_vals if isinstance(v, (int, float))], max)
     POP_max= _safe([v for v in pop_vals if isinstance(v, (int, float))], max)
+    RN1_max= _safe([w.get('RN1') for w in window
+                    if isinstance(w.get('RN1'), (int, float))], max)
 
     # ── 온도 편향 ─────────────────────────────────────────────────────────
     if T_max is not None and T_max > T_int + T_delta_threshold:
@@ -218,10 +262,16 @@ def build_feedforward_signal(
 
     # ── 환기 제한 ─────────────────────────────────────────────────────────
     rain_flag = False
-    if POP_max is not None and POP_max >= rain_pop_threshold:
+    pop_hit = POP_max is not None and POP_max >= rain_pop_threshold
+    if pop_hit and rain_mm_h_min is not None:
+        pop_hit = RN1_max is not None and RN1_max >= rain_mm_h_min
+    if pop_hit:
         rain_flag = True
         sig.rain_expected = True
-        reasons.append(f'강우 확률 {POP_max:.0f}%')
+        if rain_mm_h_min is None:
+            reasons.append(f'강우 확률 {POP_max:.0f}%')
+        else:
+            reasons.append(f'강우 확률 {POP_max:.0f}% · 시간당 강수 최대 {RN1_max:.1f} mm/h')
 
     # PTY ≠ '없음' / '강수없음'도 강우로 간주
     for pty in pty_vals:

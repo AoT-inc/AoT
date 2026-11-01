@@ -31,7 +31,7 @@ from aot.databases.models import (Dashboard, GeoMap, GroupGrant,
 from aot.databases.models.function import Conditional
 from aot.databases.models.user_group import LEVEL_OPERATE, RESOURCE_GEO_MAP
 from aot.tests.test_ai_requester_write_guard import _svc
-from aot.tests.test_mcp_record_write_guard import _PREFIX
+from aot.tests.test_mcp_record_write_guard import _AGENT, _PREFIX
 from aot.tests.test_write_scope_enforcement import _WS, _sched, _svc_tools
 from aot.tools import mcp_safety_gate as gate
 from aot.tools import tool_execution as te
@@ -455,7 +455,7 @@ class TestRecallAfterApproval(_Entry):
         from datetime import datetime, timedelta
         row = MCPConfirmation(unique_id=str(uuid.uuid4()), tool_name=tool,
                               params_json=gate._canonical_params(args),
-                              agent_id='user:test', status='approved',
+                              agent_id=_AGENT, status='approved',
                               user_id=self.user_uuids[approver])
         row.expires_at = datetime.utcnow() + timedelta(minutes=5)
         db.session.add(row)

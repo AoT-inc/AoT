@@ -1,0 +1,1085 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "matter" %}
+{% set help_page = [manual_url("Matter/"), _('Matter')] %}
+
+{% block title %} - {{_('Matter')}}{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block settings %}
+  <div class="container">
+    <div class="aot-settings-title">
+      <h3>{{_('Matter')}} <a href="{{ manual_url('Matter/') }}" target="_blank"><span class="fas fa-question-circle aot-help-icon"></span></a></h3>
+      <div class="aot-btn-group">
+        <button class="btn aot-pill-btn aot-pill-btn-secondary" id="menu-toggle">{{_('Settings Menu')}}</button>
+      </div>
+    </div>
+
+    <p>{{_('Matter support is experimental.')}}</p>
+
+    <!-- ── Server ── -->
+    <div class="aot-settings-group-title">{{_('Matter Server')}}</div>
+    <div class="aot-settings-card" id="matter-server-card">
+
+      <div class="aot-settings-row">
+        <div class="aot-settings-label">{{_('Status')}}</div>
+        <div class="aot-settings-control">
+          {% if status.connected %}
+          <span class="aot-status-badge aot-status-ok">{{_('Connected')}}</span>
+          {% else %}
+          <span class="aot-status-badge aot-status-fail">{{_('Not connected')}}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if status.endpoint %}
+      <div class="aot-settings-row">
+        <div class="aot-settings-label">{{_('Endpoint')}}</div>
+        <div class="aot-settings-control">{{ status.endpoint }}</div>
+      </div>
+      {% endif %}
+
+      {% if status.connected %}
+      <div class="aot-settings-row">
+        <div class="aot-settings-label">{{_('Server version')}}</div>
+        <div class="aot-settings-control">
+          {{_('Schema')}} {{ status.schema_version if status.schema_version is not none else '-' }}
+          &nbsp;·&nbsp;
+          {{_('SDK')}} {{ status.sdk_version if status.sdk_version is not none else '-' }}
+        </div>
+      </div>
+      <div class="aot-settings-row">
+        <div class="aot-settings-label">{{_('Fabric ID')}}</div>
+        <div class="aot-settings-control">{{ status.fabric_id if status.fabric_id is not none else '-' }}</div>
+      </div>
+      <div class="aot-settings-row">
+        <div class="aot-settings-label">{{_('Devices')}}</div>
+        <div class="aot-settings-control">
+          <span id="matter-node-count">{{ status.node_count }}</span>
+          &nbsp;·&nbsp;{{_('Reachable')}}
+          <span id="matter-node-available">{{ status.nodes_available }}</span>
+        </div>
+      </div>
+      {% else %}
+      {% if status.last_error %}
+      <div class="aot-settings-row">
+        <div class="aot-settings-label">{{_('Last error')}}</div>
+        <div class="aot-settings-control">{{ status.last_error }}</div>
+      </div>
+      {% endif %}
+      <div class="aot-settings-row aot-settings-row-stack">
+        <div class="aot-settings-label">{{_('How to turn it on')}}</div>
+        <div class="aot-settings-sub">{{_('The Matter server is not running on this host.')}}
+          <a href="{{ manual_url('Matter/#host') }}" target="_blank" rel="noopener noreferrer" data-toggle="tooltip"
+             title="{{_('Matter needs a Linux host. The host must be on the same network as the devices, with host networking, IPv6 router advertisements and mDNS. Run aot/scripts/check_matter_host.sh on the host first and fix what it reports.')}} {{_('Then add COMPOSE_PROFILES=matter to docker/.env and start the Matter server:')}} docker compose -f docker/docker-compose.prod.yml up -d {{_('On a native install, start it with docker/docker-compose.matter-native.yml and give the AoT services AOT_MATTER_URL (install/aot-matter.conf).')}}">{{_('Help')}}</a>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- ── Add a shared device ── -->
+    <div class="aot-settings-group-title">{{_('Add a shared device')}}</div>
+    <div class="aot-settings-card">
+      <div class="aot-settings-row">
+        <div class="aot-settings-sub">{{_('Add a device that is already set up in another app (Apple Home, Google Home, SmartThings, and so on).')}}
+          <a href="{{ manual_url('Matter/#add-shared') }}" target="_blank" rel="noopener noreferrer">{{_('Help')}}</a>
+        </div>
+      </div>
+
+      <div class="aot-settings-row">
+        <label class="aot-settings-label" for="matter-code">{{_('Pairing code')}}</label>
+        <div class="aot-settings-control aot-settings-control-grow aot-action-group">
+          <input type="text" id="matter-code" class="form-control aot-modern-input flex-grow-1"
+                 autocomplete="off" autocapitalize="off" spellcheck="false"
+                 title="{{_('1. In that app, open the device and choose its share, pairing mode or linked Matter apps option.')}} {{_('2. The app shows an 11-digit code that is valid for about 15 minutes.')}} {{_('3. Enter the code here and press Add.')}}"
+                 placeholder="1234-567-8901"{% if not status.connected %} disabled{% endif %}>
+          <button type="button" id="matter-add-btn" class="btn aot-pill-btn aot-pill-btn-primary"{% if not status.connected %} disabled{% endif %}>{{_('Add')}}</button>
+        </div>
+      </div>
+      <div class="aot-settings-row" id="matter-wait" hidden>
+        <div class="aot-settings-sub"><i class="fas fa-spinner fa-spin"></i>&nbsp;{{_('This can take up to a minute')}}</div>
+      </div>
+      {% if not status.connected %}
+      <div class="aot-settings-row">
+        <div class="aot-settings-sub">{{_('Connect the Matter server first.')}}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── Add a new device ── -->
+    <div class="aot-settings-group-title">{{_('Add a new device')}}</div>
+    <div class="aot-settings-card" id="matter-new-card">
+      <div class="aot-settings-row">
+        <div class="aot-settings-sub">{{_('Add a device that is fresh out of the box, or that was reset to its factory settings.')}}
+          <a href="{{ manual_url('Matter/#new-device') }}" target="_blank" rel="noopener noreferrer">{{_('Help')}}</a>
+        </div>
+      </div>
+
+      {% if not status.connected %}
+      <div class="aot-settings-row">
+        <div class="aot-settings-sub">{{_('Connect the Matter server first.')}}</div>
+      </div>
+      {% endif %}
+
+      <div class="aot-settings-row">
+        <label class="aot-settings-label" for="matter-new-code">{{_('Pairing code')}}</label>
+        <div class="aot-settings-control aot-settings-control-grow">
+          <input type="text" id="matter-new-code" class="form-control aot-modern-input"
+                 autocomplete="off" autocapitalize="off" spellcheck="false"
+                 title="{{_('You need the pairing code printed on the device or its box.')}} {{_('AoT finds it over Bluetooth from this AoT server, so keep the device close to the server.')}}"
+                 placeholder="1234-567-8901"{% if not status.connected %} disabled{% endif %}>
+        </div>
+      </div>
+
+      <div class="aot-settings-row">
+        <label class="aot-settings-label" for="matter-new-network">{{_('Network')}}</label>
+        <div class="aot-settings-control aot-settings-control-grow">
+          <select id="matter-new-network" class="form-control aot-modern-select"{% if not status.connected %} disabled{% endif %}>
+            <option value="wifi">{{_('Wi-Fi')}}</option>
+            <option value="thread">{{_('Thread')}}</option>
+            <option value="none">{{_('Already on the network (Ethernet)')}}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="aot-settings-row" data-net="wifi">
+        <label class="aot-settings-label" for="matter-new-ssid">{{_('Wi-Fi network name')}}</label>
+        <div class="aot-settings-control aot-settings-control-grow">
+          <input type="text" id="matter-new-ssid" class="form-control aot-modern-input"
+                 autocomplete="off" autocapitalize="off" spellcheck="false"{% if not status.connected %} disabled{% endif %}>
+        </div>
+      </div>
+      <div class="aot-settings-row" data-net="wifi">
+        <label class="aot-settings-label" for="matter-new-password">{{_('Wi-Fi password')}}</label>
+        <div class="aot-settings-control aot-settings-control-grow">
+          <input type="password" id="matter-new-password" class="form-control aot-modern-input"
+                 autocomplete="new-password" spellcheck="false"
+                 title="{{_('AoT does not keep the Wi-Fi password or the Thread dataset. It is used once to join the device to your network and then removed from the Matter server\'s credential list. The Matter server\'s storage log can still contain it, and that storage is part of AoT backups, so treat backups as secret.')}}"{% if not status.connected %} disabled{% endif %}>
+        </div>
+      </div>
+
+      <div class="aot-settings-row" data-net="thread" hidden>
+        <label class="aot-settings-label" for="matter-new-dataset">{{_('Thread dataset (hex)')}}</label>
+        <div class="aot-settings-control aot-settings-control-grow">
+          <textarea id="matter-new-dataset" class="form-control aot-modern-input w-100" rows="3"
+                    autocomplete="off" autocapitalize="off" spellcheck="false"
+                    title="{{_('AoT does not keep the Wi-Fi password or the Thread dataset. It is used once to join the device to your network and then removed from the Matter server\'s credential list. The Matter server\'s storage log can still contain it, and that storage is part of AoT backups, so treat backups as secret.')}}"{% if not status.connected %} disabled{% endif %}></textarea>
+        </div>
+      </div>
+
+      <div class="aot-settings-row" data-net="wifi thread">
+        <div class="aot-settings-sub">{{_("The Matter server's log can keep this password or dataset, and AoT backups include that log. Treat backups as secret.")}}
+          <a href="{{ manual_url('Matter/#new-device') }}" target="_blank" rel="noopener noreferrer">{{_('Help')}}</a>
+        </div>
+      </div>
+
+      {% if status.connected and not bluetooth_enabled %}
+      <div class="aot-settings-row" id="matter-new-ble-note" data-net="wifi thread">
+        <div class="aot-settings-sub">{{_('Bluetooth is off on the Matter server. Only a device already on the network (Ethernet) can be added.')}}
+          <a href="{{ manual_url('Matter/#ble') }}" target="_blank" rel="noopener noreferrer" data-toggle="tooltip"
+             title="{{_('To turn it on, run aot/scripts/check_matter_host.sh --ble on the host and fix what it reports. Then start the Matter server with this extra file:')}} docker compose -f docker/docker-compose.prod.yml -f docker/docker-compose.matter-ble.yml up -d">{{_('Help')}}</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="aot-settings-row">
+        <div class="aot-settings-label"></div>
+        <div class="aot-settings-control aot-action-group">
+          <button type="button" id="matter-new-btn" class="btn aot-pill-btn aot-pill-btn-primary"{% if not status.connected %} disabled{% endif %}>{{_('Add')}}</button>
+        </div>
+      </div>
+      <div class="aot-settings-row" id="matter-new-status-row" hidden>
+        <div class="aot-settings-sub" id="matter-new-status" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- ── Devices ── -->
+    <div class="aot-settings-group-title">{{_('Matter Devices')}}</div>
+    <div class="aot-settings-card aot-table-scroll">
+      <div class="aot-settings-sub" id="matter-list-error"{% if not list_error %} hidden{% endif %}>{{ list_error or '' }}</div>
+      <div class="aot-settings-sub" id="matter-empty"{% if nodes or list_error %} hidden{% endif %}>{{_('No Matter devices yet.')}}</div>
+      <table class="aot-module-table aot-module-table-5col" id="matter-node-table"{% if not nodes %} hidden{% endif %}>
+        <thead>
+          <tr>
+            <td>{{_('Device')}}</td>
+            <td>{{_('Sensors and switches')}}</td>
+            <td>{{_('Reachable')}}</td>
+            <td>{{_('AoT device')}}</td>
+            <td></td>
+          </tr>
+        </thead>
+        <tbody id="matter-node-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Share dialog ── -->
+  <div class="modal fade aot-option-modal" id="matter-share-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Share this device')}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="aot-settings-sub">{{_('In the other app, choose Add device, then Matter, and enter this code. Keep this dialog open until the other app has added the device.')}}
+            <a href="{{ manual_url('Matter/#share') }}" target="_blank" rel="noopener noreferrer">{{_('Help')}}</a>
+          </div>
+          <div class="text-center my-3">
+            <div id="matter-share-code" class="aot-share-code" style="font-size: var(--aot-font-size-xl); font-weight: 600; letter-spacing: 0.08em;"></div>
+            <div class="mt-2"><button type="button" id="matter-share-copy" class="btn aot-pill-btn aot-pill-btn-secondary"
+                 title="{{_('In the other app, choose Add device, then Matter, and enter this code. Most apps also accept the 11-digit code instead of scanning a QR code. Keep this dialog open until the other app has added the device: closing it closes the sharing window.')}}" hidden>{{_('Copy')}}</button></div>
+          </div>
+          <div class="aot-settings-sub" id="matter-share-qr-label" hidden>{{_('QR code text (for apps that ask for it):')}}</div>
+          <div class="aot-settings-sub" id="matter-share-qr" style="word-break: break-all;"></div>
+          <div class="aot-settings-sub" id="matter-share-status" role="status" aria-live="polite"></div>
+
+          <div class="aot-modal-group-title">{{_('Connected ecosystems')}}</div>
+          <div class="aot-settings-sub" id="matter-fabric-note"></div>
+          <div class="aot-table-scroll">
+            <table class="aot-module-table" id="matter-fabric-table" hidden>
+              <thead>
+                <tr>
+                  <td>{{_('Name')}}</td>
+                  <td>{{_('Maker')}}</td>
+                  <td></td>
+                </tr>
+              </thead>
+              <tbody id="matter-fabric-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="matter-share-close-window" class="btn aot-pill-btn aot-pill-btn-secondary" hidden>{{_('Close sharing')}}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Firmware dialog ── -->
+  <div class="modal fade aot-option-modal" id="matter-fw-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog aot-modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{_('Firmware')}}</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="aot-settings-sub" id="matter-fw-current"></div>
+          <div class="aot-settings-sub" id="matter-fw-progress"></div>
+          <div class="my-3"><button type="button" id="matter-fw-check" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Check for an update')}}</button></div>
+          <div id="matter-fw-result" role="status" aria-live="polite">
+            <div class="aot-settings-sub" id="matter-fw-text"></div>
+            <div class="aot-settings-sub"><a id="matter-fw-notes" target="_blank" rel="noopener noreferrer" hidden>{{_('Release notes')}}</a></div>
+            <div class="aot-settings-sub" id="matter-fw-warning" hidden>{{_('This update is not from the certified source. AoT will not install it.')}}</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-dismiss="modal">{{_('Close')}}</button>
+          <button type="button" id="matter-fw-update" class="btn aot-pill-btn aot-pill-btn-primary" hidden>{{_('Update')}}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  var CONNECTED = {{ status.connected|tojson }};
+  var BLUETOOTH = {{ bluetooth_enabled|default(false)|tojson }};
+  var DEVICE_URL = {{ url_for('routes_device.page_device')|tojson }};
+  var NODES = {{ nodes|tojson }};
+  var T = {
+    reachable:    {{ _('Reachable')|tojson }},
+    unreachable:  {{ _('Not reachable')|tojson }},
+    noDevice:     {{ _('No AoT device')|tojson }},
+    adopt:        {{ _('Create AoT device')|tojson }},
+    adoptHint:    {{ _('This device is on the AoT Matter fabric but has no AoT device yet, for example because the page was closed while it was being added')|tojson }},
+    adopted:      {{ _('AoT device created')|tojson }},
+    missing:      {{ _('Not on the Matter server — share it again to reconnect, or remove it')|tojson }},
+    remove:       {{ _('Remove')|tojson }},
+    unnamed:      {{ _('Unnamed device')|tojson }},
+    sensors:      {{ _('%(n)s sensors', n='{n}')|tojson }},
+    switches:     {{ _('%(n)s switches', n='{n}')|tojson }},
+    added:        {{ _('Added: %(sensors)s sensors, %(switches)s switches', sensors='{sensors}', switches='{switches}')|tojson }},
+    rebound:      {{ _('Re-connected to the existing device')|tojson }},
+    addFailed:    {{ _('Adding the device failed.')|tojson }},
+    removeFailed: {{ _('Removing the device failed.')|tojson }},
+    removed:      {{ _('Removed')|tojson }},
+    reread:       {{ _('Read again')|tojson }},
+    rereadHint:   {{ _('Add the sensors and controls AoT now supports that this device does not have yet')|tojson }},
+    rereadAdded:  {{ _('Added %(sensors)s sensor channels and %(outputs)s control channels', sensors='{sensors}', outputs='{outputs}')|tojson }},
+    rereadNothing: {{ _('Nothing new to add')|tojson }},
+    requestFail:  {{ _('The request failed. Check the connection and try again.')|tojson }},
+    confirmRemove: {{ _('Remove this device? This deletes its AoT device and its sensor and switch entries, and removes AoT from the device. The recorded history stays in the database.')|tojson }},
+    share:        {{ _('Share this device')|tojson }},
+    shareHint:    {{ _('Let another app (Apple Home, Google Home, SmartThings, and so on) use this device too')|tojson }},
+    firmware:     {{ _('Firmware')|tojson }},
+    fwVersion:    {{ _('Firmware %(version)s', version='{version}')|tojson }},
+    fwStates: {
+      querying:           {{ _('Checking for an update')|tojson }},
+      delayed_on_query:   {{ _('Waiting to check for an update')|tojson }},
+      downloading:        {{ _('Downloading the update')|tojson }},
+      applying:           {{ _('Installing the update')|tojson }},
+      delayed_on_apply:   {{ _('Waiting to install the update')|tojson }},
+      rolling_back:       {{ _('Rolling back the update')|tojson }},
+      delayed_on_consent: {{ _('Waiting for the device to accept the update')|tojson }}
+    },
+    newStarting:  {{ _('Starting...')|tojson }},
+    newCommissioning: {{ _('Looking for the device over Bluetooth and joining it to the network. This can take several minutes.')|tojson }},
+    newRegistering: {{ _('Creating the AoT device...')|tojson }},
+    newTimeout:   {{ _('There is still no result after 12 minutes. Check the device and the AoT log, then try again.')|tojson }},
+    newUnknown:   {{ _('This job is no longer known. If the device was added, it is in the list below.')|tojson }},
+    newNeedsCode: {{ _('Enter the pairing code first.')|tojson }},
+    shareOpening: {{ _('Opening the sharing window...')|tojson }},
+    shareOpen:    {{ _('Sharing is open. The code stops working in %(time)s.', time='{time}')|tojson }},
+    shareExpired: {{ _('The sharing window has closed. Close this dialog and share again for a new code.')|tojson }},
+    shareClosed:  {{ _('Sharing closed. The code no longer works.')|tojson }},
+    shareFailed:  {{ _('Opening the sharing window failed.')|tojson }},
+    shareCloseFailed: {{ _('Closing the sharing window failed.')|tojson }},
+    fabricsLoading: {{ _('Reading the connections...')|tojson }},
+    fabricsFailed: {{ _('Reading the connections failed.')|tojson }},
+    fabricsNone:  {{ _('No connections found.')|tojson }},
+    fabricsSlots: {{ _('Connections used: %(used)s of %(supported)s', used='{used}', supported='{supported}')|tojson }},
+    fabricsUsed:  {{ _('Connections used: %(used)s', used='{used}')|tojson }},
+    unnamedConn:  {{ _('Unnamed')|tojson }},
+    thisIsAot:    {{ _('This is AoT')|tojson }},
+    disconnect:   {{ _('Disconnect')|tojson }},
+    disconnected: {{ _('Disconnected')|tojson }},
+    disconnectFailed: {{ _('Disconnecting failed.')|tojson }},
+    confirmDisconnect: {{ _('Disconnect this app from the device? The other app loses control of the device and must add it again to use it.')|tojson }},
+    fwCurrent:    {{ _('Current version: %(version)s', version='{version}')|tojson }},
+    fwUnknown:    {{ _('unknown')|tojson }},
+    fwChecking:   {{ _('Checking...')|tojson }},
+    fwUpToDate:   {{ _('Up to date')|tojson }},
+    fwAvailable:  {{ _('Version %(version)s is available', version='{version}')|tojson }},
+    fwCheckFailed: {{ _('Checking for an update failed.')|tojson }},
+    fwConfirm:    {{ _('Update the firmware now? The device restarts and may stop working for a few minutes. Do not update a device that controls something critical right now.')|tojson }},
+    fwStarted:    {{ _('The update has started. Progress shows in the device list.')|tojson }},
+    fwStartFailed: {{ _('Starting the update failed.')|tojson }}
+  };
+  var NEW_POLL_MS = 3000;
+  var NEW_GIVE_UP_MS = 12 * 60 * 1000;
+  var FW_POLL_MS = 10000;
+  var JOB_KEY = 'aotMatterNewDeviceJob';
+  var currentNodes = [];
+
+  function el(id) { return document.getElementById(id); }
+
+  // toastr renders HTML (escapeHtml is off app-wide, see
+  // aot-control-feedback.js), and server text here carries device names that
+  // the device itself chose.
+  function plainText(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function toast(msg, type) {
+    if (window.showToast) { window.showToast(plainText(msg), type); }
+  }
+
+  function postJson(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body || {})
+    }).then(function (res) {
+      return res.json().catch(function () { return null; });
+    });
+  }
+
+  function node(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) { n.className = cls; }
+    if (text !== undefined && text !== null) { n.textContent = text; }
+    return n;
+  }
+
+  function fill(template, values) {
+    var out = template;
+    Object.keys(values).forEach(function (k) {
+      out = out.replace('{' + k + '}', values[k]);
+    });
+    return out;
+  }
+
+  function fwActive(n) {
+    return !!(n.firmware && n.firmware.state && n.firmware.state !== 'idle');
+  }
+
+  // Progress text of a running firmware update, e.g. "Downloading the update 42%".
+  function fwProgressText(fw) {
+    var text = (T.fwStates[fw.state] || fw.state);
+    if (typeof fw.progress === 'number') { text += ' ' + fw.progress + '%'; }
+    return text;
+  }
+
+  var fwTimer = null;
+  function scheduleFwPoll() {
+    if (fwTimer) { clearTimeout(fwTimer); fwTimer = null; }
+    if (currentNodes.some(fwActive)) {
+      fwTimer = setTimeout(refresh, FW_POLL_MS);
+    }
+  }
+
+  function renderNodes(nodes) {
+    var body = el('matter-node-body');
+    currentNodes = nodes;
+    body.textContent = '';
+    nodes.forEach(function (n) {
+      var tr = document.createElement('tr');
+
+      var tdName = document.createElement('td');
+      tdName.appendChild(node('div', '', n.name || T.unnamed));
+      var maker = [n.vendor_name, n.product_name].filter(Boolean).join(' / ');
+      if (maker) { tdName.appendChild(node('div', 'aot-settings-sub', maker)); }
+      if (n.firmware && n.firmware.version) {
+        tdName.appendChild(node('div', 'aot-settings-sub',
+          fill(T.fwVersion, {version: n.firmware.version})));
+      }
+      if (fwActive(n)) {
+        tdName.appendChild(node('div', 'aot-settings-sub', fwProgressText(n.firmware)));
+      }
+      tr.appendChild(tdName);
+
+      var tdCount = document.createElement('td');
+      tdCount.appendChild(node('div', '', fill(T.sensors, {n: n.sensor_count})));
+      tdCount.appendChild(node('div', '', fill(T.switches, {n: n.switch_count})));
+      tr.appendChild(tdCount);
+
+      var tdReach = document.createElement('td');
+      if (n.missing) {
+        tdReach.appendChild(node('span', 'aot-status-badge aot-status-warn', T.missing));
+      } else {
+        tdReach.appendChild(n.available
+          ? node('span', 'aot-status-badge aot-status-ok', T.reachable)
+          : node('span', 'aot-status-badge aot-status-warn', T.unreachable));
+      }
+      tr.appendChild(tdReach);
+
+      var tdDev = document.createElement('td');
+      if (n.device_id) {
+        var a = node('a', '', n.device_name || n.device_id);
+        a.href = DEVICE_URL;
+        tdDev.appendChild(a);
+      } else {
+        tdDev.appendChild(node('span', 'aot-settings-sub', T.noDevice));
+      }
+      tr.appendChild(tdDev);
+
+      var tdAct = document.createElement('td');
+      var btn = node('button', 'btn aot-pill-btn aot-pill-btn-danger', T.remove);
+      btn.type = 'button';
+      btn.addEventListener('click', function () { removeNode(n, btn); });
+      if (n.device_id && !n.missing) {
+        var rbtn = node('button', 'btn aot-pill-btn aot-pill-btn-secondary', T.reread);
+        rbtn.type = 'button';
+        rbtn.title = T.rereadHint;
+        rbtn.addEventListener('click', function () { rereadNode(n, rbtn); });
+        tdAct.appendChild(rbtn);
+        var sbtn = node('button', 'btn aot-pill-btn aot-pill-btn-secondary', T.share);
+        sbtn.type = 'button';
+        sbtn.title = T.shareHint;
+        sbtn.addEventListener('click', function () { openShare(n); });
+        tdAct.appendChild(sbtn);
+        var fbtn = node('button', 'btn aot-pill-btn aot-pill-btn-secondary', T.firmware);
+        fbtn.type = 'button';
+        fbtn.addEventListener('click', function () { openFirmware(n); });
+        tdAct.appendChild(fbtn);
+      }
+      if (!n.device_id && !n.missing) {
+        var abtn = node('button', 'btn aot-pill-btn aot-pill-btn-secondary', T.adopt);
+        abtn.type = 'button';
+        abtn.title = T.adoptHint;
+        abtn.addEventListener('click', function () { adoptNode(n, abtn); });
+        tdAct.appendChild(abtn);
+      }
+      tdAct.appendChild(btn);
+      tr.appendChild(tdAct);
+
+      body.appendChild(tr);
+    });
+    el('matter-node-table').hidden = !nodes.length;
+    el('matter-empty').hidden = nodes.length > 0 || !el('matter-list-error').hidden;
+    scheduleFwPoll();
+  }
+
+  function refresh() {
+    return fetch('/settings/matter/nodes', {credentials: 'same-origin'})
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data || !data.status) { return; }
+        if (!!data.status.connected !== CONNECTED) {
+          window.location.reload();
+          return;
+        }
+        renderNodes(data.nodes || []);
+        var count = el('matter-node-count');
+        var avail = el('matter-node-available');
+        if (count) { count.textContent = data.status.node_count; }
+        if (avail) { avail.textContent = data.status.nodes_available; }
+        var err = el('matter-list-error');
+        err.textContent = data.error || '';
+        err.hidden = !data.error;
+      })
+      .catch(function () { scheduleFwPoll(); /* the next action refreshes again */ });
+  }
+
+  function setBusy(busy) {
+    var add = el('matter-add-btn');
+    var code = el('matter-code');
+    add.disabled = busy || !CONNECTED;
+    code.disabled = busy || !CONNECTED;
+    el('matter-wait').hidden = !busy;
+    add.textContent = '';
+    if (busy) {
+      add.appendChild(node('i', 'fas fa-spinner fa-spin'));
+    } else {
+      add.textContent = {{ _('Add')|tojson }};
+    }
+  }
+
+  function warnAll(list) {
+    (list || []).forEach(function (w) { toast(w, 'warning'); });
+  }
+
+  function addDevice() {
+    var code = el('matter-code').value;
+    if (!code.trim()) { return; }
+    setBusy(true);
+    postJson('/settings/matter/commission', {code: code}).then(function (res) {
+      setBusy(false);
+      if (!res) { toast(T.requestFail, 'error'); return; }
+      warnAll(res.warnings);
+      if (res.ok) {
+        el('matter-code').value = '';
+        toast(res.rebound ? T.rebound
+          : fill(T.added, {sensors: res.sensor_count, switches: res.switch_count}), 'success');
+      } else {
+        toast(res.error || T.addFailed, 'error');
+      }
+      refresh();
+    }).catch(function () {
+      setBusy(false);
+      toast(T.requestFail, 'error');
+    });
+  }
+
+  function adoptNode(n, btn) {
+    btn.disabled = true;
+    postJson('/settings/matter/adopt', {node_id: n.node_id}).then(function (res) {
+      btn.disabled = false;
+      if (!res) { toast(T.requestFail, 'error'); return; }
+      warnAll(res.warnings);
+      if (!res.ok) { toast(res.error || T.requestFail, 'error'); return; }
+      toast(res.rebound ? T.rebound : T.adopted, 'success');
+      refresh();
+    }).catch(function () {
+      btn.disabled = false;
+      toast(T.requestFail, 'error');
+    });
+  }
+
+  function rereadNode(n, btn) {
+    btn.disabled = true;
+    postJson('/settings/matter/refresh', {node_id: n.node_id}).then(function (res) {
+      btn.disabled = false;
+      if (!res) { toast(T.requestFail, 'error'); return; }
+      warnAll(res.warnings);
+      if (!res.ok) { toast(res.error || T.requestFail, 'error'); return; }
+      if (res.added_inputs || res.added_outputs) {
+        toast(fill(T.rereadAdded, {sensors: res.added_inputs, outputs: res.added_outputs}), 'success');
+      } else {
+        toast(T.rereadNothing, 'info');
+      }
+      refresh();
+    }).catch(function () {
+      btn.disabled = false;
+      toast(T.requestFail, 'error');
+    });
+  }
+
+  function removeNode(n, btn) {
+    window.aotConfirm(T.confirmRemove, function () {
+      btn.disabled = true;
+      postJson('/settings/matter/remove', {node_id: n.node_id}).then(function (res) {
+        if (!res) { toast(T.requestFail, 'error'); btn.disabled = false; return; }
+        warnAll(res.warnings);
+        if (res.ok) {
+          toast(T.removed, 'success');
+        } else {
+          toast(res.error || T.removeFailed, 'error');
+        }
+        refresh();
+      }).catch(function () {
+        btn.disabled = false;
+        toast(T.requestFail, 'error');
+      });
+    });
+  }
+
+
+  // ── Add a new device (Bluetooth) ─────────────────────────────────────────
+  var newTimer = null;
+  var newBusy = false;
+
+  function modalOf(id) { return window.jQuery ? window.jQuery('#' + id) : null; }
+  function showModal(id) { var m = modalOf(id); if (m) { m.modal('show'); } }
+  function hideModal(id) { var m = modalOf(id); if (m) { m.modal('hide'); } }
+
+  function newKind() { return el('matter-new-network').value; }
+
+  function updateNewForm() {
+    var kind = newKind();
+    var rows = document.querySelectorAll('#matter-new-card [data-net]');
+    Array.prototype.forEach.call(rows, function (row) {
+      row.hidden = row.getAttribute('data-net').split(' ').indexOf(kind) < 0;
+    });
+    // Wi-Fi and Thread devices are found over Bluetooth; a device that is
+    // already on the network is not.
+    var needsBle = kind !== 'none';
+    el('matter-new-btn').disabled = newBusy || !CONNECTED || (needsBle && !BLUETOOTH);
+  }
+
+  function setNewStatus(text, spinning) {
+    var row = el('matter-new-status-row');
+    var line = el('matter-new-status');
+    line.textContent = '';
+    if (text) {
+      if (spinning) {
+        line.appendChild(node('i', 'fas fa-spinner fa-spin'));
+        line.appendChild(document.createTextNode(' '));
+      }
+      line.appendChild(document.createTextNode(text));
+    }
+    row.hidden = !text;
+  }
+
+  function setNewBusy(busy) {
+    newBusy = busy;
+    ['matter-new-code', 'matter-new-network', 'matter-new-ssid',
+     'matter-new-password', 'matter-new-dataset'].forEach(function (id) {
+      el(id).disabled = busy || !CONNECTED;
+    });
+    updateNewForm();
+  }
+
+  function rememberJob(jobId, startedAt) {
+    try {
+      if (jobId) {
+        window.sessionStorage.setItem(JOB_KEY, JSON.stringify({id: jobId, t: startedAt}));
+      } else {
+        window.sessionStorage.removeItem(JOB_KEY);
+      }
+    } catch (e) { /* storage may be blocked; polling works without it */ }
+  }
+
+  function finishNewJob() {
+    if (newTimer) { clearTimeout(newTimer); newTimer = null; }
+    rememberJob(null);
+    setNewBusy(false);
+  }
+
+  function pollNewJob(jobId, startedAt, errors) {
+    if (Date.now() - startedAt > NEW_GIVE_UP_MS) {
+      finishNewJob();
+      setNewStatus(T.newTimeout, false);
+      toast(T.newTimeout, 'error');
+      refresh();
+      return;
+    }
+    fetch('/settings/matter/new_device/' + encodeURIComponent(jobId), {credentials: 'same-origin'})
+      .then(function (res) { return res.json().catch(function () { return null; }); })
+      .then(function (res) {
+        if (!res || res.ok === false) {
+          // A poll can fail for a moment (server busy); give up after a few.
+          if (errors >= 4) {
+            finishNewJob();
+            setNewStatus('', false);
+            toast((res && res.error) || T.requestFail, 'error');
+            return;
+          }
+          newTimer = setTimeout(function () { pollNewJob(jobId, startedAt, errors + 1); }, NEW_POLL_MS);
+          return;
+        }
+        if (res.state === 'done') {
+          finishNewJob();
+          setNewStatus('', false);
+          var result = res.result || {};
+          warnAll(result.warnings);
+          el('matter-new-code').value = '';
+          toast(result.rebound ? T.rebound
+            : fill(T.added, {sensors: result.sensor_count || 0, switches: result.switch_count || 0}),
+            'success');
+          refresh();
+        } else if (res.state === 'failed') {
+          finishNewJob();
+          setNewStatus('', false);
+          toast(res.error || T.addFailed, 'error');
+          refresh();
+        } else if (res.state === 'unknown') {
+          finishNewJob();
+          setNewStatus('', false);
+          toast(res.error || T.newUnknown, 'error');
+        } else {
+          setNewStatus(res.state === 'commissioning' ? T.newCommissioning
+            : (res.state === 'commissioned' || res.state === 'registering') ? T.newRegistering : T.newStarting, true);
+          newTimer = setTimeout(function () { pollNewJob(jobId, startedAt, 0); }, NEW_POLL_MS);
+        }
+      })
+      .catch(function () {
+        if (errors >= 4) {
+          finishNewJob();
+          setNewStatus('', false);
+          toast(T.requestFail, 'error');
+          return;
+        }
+        newTimer = setTimeout(function () { pollNewJob(jobId, startedAt, errors + 1); }, NEW_POLL_MS);
+      });
+  }
+
+  function startPolling(jobId, startedAt) {
+    rememberJob(jobId, startedAt);
+    setNewBusy(true);
+    setNewStatus(T.newStarting, true);
+    newTimer = setTimeout(function () { pollNewJob(jobId, startedAt, 0); }, 1000);
+  }
+
+  function addNewDevice() {
+    var code = el('matter-new-code').value;
+    if (!code.trim()) { toast(T.newNeedsCode, 'warning'); return; }
+    var kind = newKind();
+    var network = {kind: kind};
+    if (kind === 'wifi') {
+      network.ssid = el('matter-new-ssid').value;
+      network.password = el('matter-new-password').value;
+    } else if (kind === 'thread') {
+      network.dataset = el('matter-new-dataset').value;
+    }
+    setNewBusy(true);
+    setNewStatus(T.newStarting, true);
+    postJson('/settings/matter/new_device', {code: code, network: network}).then(function (res) {
+      network = null;
+      if (!res || !res.ok || !res.job_id) {
+        // Rejected before anything was sent to the device: keep the form so
+        // a typo can be fixed.
+        setNewBusy(false);
+        setNewStatus('', false);
+        toast((res && res.error) || (res ? T.addFailed : T.requestFail), 'error');
+        return;
+      }
+      // Accepted: the secrets are used once by the server; do not keep them here.
+      el('matter-new-password').value = '';
+      el('matter-new-dataset').value = '';
+      startPolling(res.job_id, Date.now());
+    }).catch(function () {
+      network = null;
+      setNewBusy(false);
+      setNewStatus('', false);
+      toast(T.requestFail, 'error');
+    });
+  }
+
+  function resumeNewJob() {
+    var saved = null;
+    try { saved = JSON.parse(window.sessionStorage.getItem(JOB_KEY) || 'null'); } catch (e) { saved = null; }
+    if (!saved || !saved.id || !CONNECTED) { return; }
+    if (Date.now() - saved.t > NEW_GIVE_UP_MS) { rememberJob(null); return; }
+    startPolling(saved.id, saved.t);
+  }
+
+  // ── Share dialog ─────────────────────────────────────────────────────────
+  var share = {node: null, expiresAt: 0, timer: null, isOpen: false, digits: ''};
+
+  function formatCode(digits) {
+    var d = String(digits || '').replace(/\D/g, '');
+    return d.length === 11 ? d.slice(0, 4) + '-' + d.slice(4, 7) + '-' + d.slice(7) : String(digits || '');
+  }
+
+  function formatTime(seconds) {
+    var m = Math.floor(seconds / 60);
+    var sec = seconds % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function stopShareTimer() {
+    if (share.timer) { clearInterval(share.timer); share.timer = null; }
+  }
+
+  function clearShareCode() {
+    share.digits = '';
+    el('matter-share-code').textContent = '';
+    el('matter-share-qr').textContent = '';
+    el('matter-share-qr-label').hidden = true;
+    el('matter-share-copy').hidden = true;
+  }
+
+  function tickShare() {
+    var left = Math.round((share.expiresAt - Date.now()) / 1000);
+    if (left <= 0) {
+      stopShareTimer();
+      share.isOpen = false;
+      clearShareCode();
+      el('matter-share-close-window').hidden = true;
+      el('matter-share-status').textContent = T.shareExpired;
+      return;
+    }
+    el('matter-share-status').textContent = fill(T.shareOpen, {time: formatTime(left)});
+  }
+
+  function openShare(n) {
+    share.node = n;
+    share.isOpen = false;
+    stopShareTimer();
+    clearShareCode();
+    el('matter-share-close-window').hidden = true;
+    el('matter-share-status').textContent = T.shareOpening;
+    showModal('matter-share-modal');
+    loadFabrics(n);
+    postJson('/settings/matter/share', {node_id: n.node_id}).then(function (res) {
+      if (share.node !== n) {
+        // The dialog was closed before the code arrived: nobody saw it, so
+        // close the window rather than leave the device open for pairing.
+        if (res && res.ok) {
+          postJson('/settings/matter/share/close', {node_id: n.node_id}).catch(function () {});
+        }
+        return;
+      }
+      if (!res || !res.ok) {
+        el('matter-share-status').textContent = (res && res.error) || (res ? T.shareFailed : T.requestFail);
+        return;
+      }
+      share.digits = String(res.manual_code || '').replace(/\D/g, '');
+      share.expiresAt = Date.now() + (res.expires_in || 0) * 1000;
+      share.isOpen = true;
+      el('matter-share-code').textContent = formatCode(res.manual_code);
+      el('matter-share-copy').hidden = !share.digits;
+      if (res.qr_code) {
+        var qr = el('matter-share-qr');
+        qr.textContent = '';
+        var link = node('a', '', res.qr_code);
+        link.href = '#';
+        link.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          window.setClipboard(res.qr_code);
+        });
+        qr.appendChild(link);
+        el('matter-share-qr-label').hidden = false;
+      }
+      el('matter-share-close-window').hidden = false;
+      tickShare();
+      stopShareTimer();
+      share.timer = setInterval(tickShare, 1000);
+    }).catch(function () {
+      el('matter-share-status').textContent = T.requestFail;
+    });
+  }
+
+  function closeShareWindow() {
+    var n = share.node;
+    if (!n) { return; }
+    var btn = el('matter-share-close-window');
+    btn.disabled = true;
+    postJson('/settings/matter/share/close', {node_id: n.node_id}).then(function (res) {
+      btn.disabled = false;
+      if (!res || !res.ok) {
+        toast((res && res.error) || (res ? T.shareCloseFailed : T.requestFail), 'error');
+        return;
+      }
+      stopShareTimer();
+      share.isOpen = false;
+      clearShareCode();
+      btn.hidden = true;
+      el('matter-share-status').textContent = T.shareClosed;
+    }).catch(function () {
+      btn.disabled = false;
+      toast(T.requestFail, 'error');
+    });
+  }
+
+  function loadFabrics(n) {
+    var table = el('matter-fabric-table');
+    var body = el('matter-fabric-body');
+    var note = el('matter-fabric-note');
+    table.hidden = true;
+    body.textContent = '';
+    note.textContent = T.fabricsLoading;
+    fetch('/settings/matter/fabrics/' + encodeURIComponent(n.node_id), {credentials: 'same-origin'})
+      .then(function (res) { return res.json().catch(function () { return null; }); })
+      .then(function (res) {
+        if (share.node !== n) { return; }
+        if (!res || !res.ok) {
+          note.textContent = (res && res.error) || T.fabricsFailed;
+          return;
+        }
+        var fabrics = res.fabrics || [];
+        if (typeof res.used === 'number' && typeof res.supported === 'number') {
+          note.textContent = fill(T.fabricsSlots, {used: res.used, supported: res.supported});
+        } else if (typeof res.used === 'number') {
+          note.textContent = fill(T.fabricsUsed, {used: res.used});
+        } else {
+          note.textContent = fabrics.length ? '' : T.fabricsNone;
+        }
+        fabrics.forEach(function (f) {
+          var tr = document.createElement('tr');
+          tr.appendChild(node('td', '', f.label || T.unnamedConn));
+          tr.appendChild(node('td', '', f.vendor_name || (f.vendor_id != null ? String(f.vendor_id) : '')));
+          var tdAct = document.createElement('td');
+          if (f.own) {
+            tdAct.appendChild(node('span', 'aot-settings-sub', T.thisIsAot));
+          } else {
+            var b = node('button', 'btn aot-pill-btn aot-pill-btn-danger', T.disconnect);
+            b.type = 'button';
+            b.addEventListener('click', function () { disconnectFabric(n, f, b); });
+            tdAct.appendChild(b);
+          }
+          tr.appendChild(tdAct);
+          body.appendChild(tr);
+        });
+        table.hidden = !fabrics.length;
+      })
+      .catch(function () { if (share.node === n) { note.textContent = T.requestFail; } });
+  }
+
+  function disconnectFabric(n, f, btn) {
+    window.aotConfirm(T.confirmDisconnect, function () {
+      btn.disabled = true;
+      postJson('/settings/matter/fabrics/remove', {node_id: n.node_id, fabric_index: f.fabric_index})
+        .then(function (res) {
+          if (!res || !res.ok) {
+            btn.disabled = false;
+            toast((res && res.error) || (res ? T.disconnectFailed : T.requestFail), 'error');
+            return;
+          }
+          toast(T.disconnected, 'success');
+          loadFabrics(n);
+        }).catch(function () {
+          btn.disabled = false;
+          toast(T.requestFail, 'error');
+        });
+    });
+  }
+
+  // ── Firmware dialog ──────────────────────────────────────────────────────
+  var fw = {node: null, update: null};
+
+  function resetFwResult() {
+    fw.update = null;
+    el('matter-fw-text').textContent = '';
+    el('matter-fw-notes').hidden = true;
+    el('matter-fw-warning').hidden = true;
+    el('matter-fw-update').hidden = true;
+    el('matter-fw-update').disabled = true;
+  }
+
+  function openFirmware(n) {
+    fw.node = n;
+    resetFwResult();
+    var version = n.firmware && n.firmware.version;
+    el('matter-fw-current').textContent = fill(T.fwCurrent, {version: version || T.fwUnknown});
+    el('matter-fw-progress').textContent = fwActive(n) ? fwProgressText(n.firmware) : '';
+    el('matter-fw-check').disabled = false;
+    showModal('matter-fw-modal');
+  }
+
+  function checkFirmware() {
+    var n = fw.node;
+    if (!n) { return; }
+    var btn = el('matter-fw-check');
+    resetFwResult();
+    btn.disabled = true;
+    el('matter-fw-text').textContent = T.fwChecking;
+    postJson('/settings/matter/update/check', {node_id: n.node_id}).then(function (res) {
+      btn.disabled = false;
+      var text = el('matter-fw-text');
+      if (fw.node !== n) { return; }
+      if (!res || !res.ok) {
+        text.textContent = (res && res.error) || (res ? T.fwCheckFailed : T.requestFail);
+        return;
+      }
+      var up = res.update;
+      if (!up) { text.textContent = T.fwUpToDate; return; }
+      fw.update = up;
+      text.textContent = fill(T.fwAvailable, {version: up.version_string || up.version});
+      var notes = el('matter-fw-notes');
+      if (up.release_notes_url && /^https?:\/\//i.test(up.release_notes_url)) {
+        notes.href = up.release_notes_url;
+        notes.hidden = false;
+      }
+      el('matter-fw-warning').hidden = !!up.certified;
+      var upd = el('matter-fw-update');
+      upd.hidden = false;
+      upd.disabled = !up.certified;
+    }).catch(function () {
+      btn.disabled = false;
+      el('matter-fw-text').textContent = T.requestFail;
+    });
+  }
+
+  function startFirmware() {
+    var n = fw.node;
+    var up = fw.update;
+    if (!n || !up || !up.certified) { return; }
+    window.aotConfirm(T.fwConfirm, function () {
+      var btn = el('matter-fw-update');
+      btn.disabled = true;
+      postJson('/settings/matter/update/start', {node_id: n.node_id, version: up.version})
+        .then(function (res) {
+          if (!res || !res.ok) {
+            btn.disabled = false;
+            toast((res && res.error) || (res ? T.fwStartFailed : T.requestFail), 'error');
+            return;
+          }
+          toast(T.fwStarted, 'success');
+          hideModal('matter-fw-modal');
+          refresh();
+        }).catch(function () {
+          btn.disabled = false;
+          toast(T.requestFail, 'error');
+        });
+    });
+  }
+
+  el('matter-add-btn').addEventListener('click', addDevice);
+  el('matter-code').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); addDevice(); }
+  });
+  el('matter-new-btn').addEventListener('click', addNewDevice);
+  el('matter-new-network').addEventListener('change', updateNewForm);
+  el('matter-share-copy').addEventListener('click', function () {
+    if (share.digits) { window.setClipboard(share.digits); }
+  });
+  el('matter-share-close-window').addEventListener('click', closeShareWindow);
+  el('matter-fw-check').addEventListener('click', checkFirmware);
+  el('matter-fw-update').addEventListener('click', startFirmware);
+  if (window.jQuery) {
+    // Leaving the dialog must not leave a pairing code in the page.
+    // Once the code is gone from the page the window is of no use: close it.
+    window.jQuery('#matter-share-modal').on('hidden.bs.modal', function () {
+      var n = share.node;
+      var wasOpen = share.isOpen;
+      stopShareTimer();
+      clearShareCode();
+      share.node = null;
+      share.isOpen = false;
+      if (n && wasOpen) {
+        postJson('/settings/matter/share/close', {node_id: n.node_id}).catch(function () {});
+      }
+    });
+  }
+  updateNewForm();
+  renderNodes(NODES);
+  resumeNewJob();
+})();
+</script>
+{% endblock %}

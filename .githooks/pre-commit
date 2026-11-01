@@ -82,6 +82,23 @@ if [ -z "$AOT_SKIP_JS_SCOPE_CHECK" ]; then
     fi
 fi
 
+# ── MapLibre 이음매 ──────────────────────────────────────────────────────
+# 지도 생성(`new maplibregl.Map`)과 내부 필드 읽기(style._*, _controls,
+# tileManagers/sourceCaches, map.transform)는 geo/aot-maplibre-seam.js 만 한다.
+# 버전을 올릴 때 고칠 곳을 한 파일로 줄이려는 것이다.
+# 우회: AOT_SKIP_MAPLIBRE_SEAM_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_MAPLIBRE_SEAM_CHECK" ]; then
+    SEAM_CHECK="$ROOT/aot/scripts/check_maplibre_seam.py"
+    if [ -f "$SEAM_CHECK" ] && git diff --cached --name-only | grep -q '\.js$'; then
+        if ! python3 "$SEAM_CHECK"; then
+            echo
+            echo "커밋 중단: MapLibre 생성·내부 필드는 AoTMapSeam 을 거쳐야 합니다."
+            echo "  (의도한 커밋이라면 AOT_SKIP_MAPLIBRE_SEAM_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
 # ── 지도 데이터 쓰기 소유권 (S5) ──────────────────────────────────────────
 # geo 패키지 밖에서 GeoShape 를 직접 쓰면 지도 불변식(타입 어휘·채널 정규화·
 # aot_type 미저장·마커 유일성·시설 연쇄)을 그 코드가 다 알아야 하고, 결국

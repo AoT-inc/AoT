@@ -116,9 +116,19 @@ def build_geo_parent_map(all_shapes, use_cache=True):
             return hit
 
     geoms = {s.id: _parse_geometry(s) for s in all_shapes}
-    containers = [(s.id, geoms[s.id]) for s in all_shapes
-                  if s.type in ('site', 'zone') and geoms.get(s.id) is not None
-                  and geoms[s.id].geom_type in ('Polygon', 'MultiPolygon')]
+    # 부모 후보는 **같은 지도** 안에서만 고른다. 지도마다 좌표계가 같아서
+    # 다른 지도의 도형도 기하로는 "감싼다" — 예전에는 지도를 가리지 않아,
+    # 시험용 지도(New Design Map)의 '농장' 이 김제 지도의 '3포장' 을 자식으로
+    # 삼았고, 3포장은 트리 최상위에서 사라졌다(2026-10-08 실측 — 지도를 넘는
+    # 부모 5건). 장치 소속(device_membership.load_containers)은 처음부터
+    # 지도 단위였다 — 같은 질문에 두 기준이 있던 것을 여기서 맞춘다.
+    containers_by_map = {}
+    for s in all_shapes:
+        g = geoms.get(s.id)
+        if (s.type in ('site', 'zone') and g is not None
+                and g.geom_type in ('Polygon', 'MultiPolygon')):
+            containers_by_map.setdefault(getattr(s, 'geo_id', None), []).append(
+                (s.id, g))
     valid_ids = {s.id for s in all_shapes}
 
     def _find_parent(s):
@@ -144,7 +154,9 @@ def build_geo_parent_map(all_shapes, use_cache=True):
         # 대표점이 하필 자기 안의 zone '2-2' 에 떨어져, 자식이 부모로 뒤집혔다.
         own_area = getattr(g, 'area', 0.0) or 0.0
         candidates = [(cid, cg, getattr(cg, 'area', 0.0) or 0.0)
-                     for cid, cg in containers if cid != s.id]
+                     for cid, cg in containers_by_map.get(
+                         getattr(s, 'geo_id', None), ())
+                     if cid != s.id]
         return pick_smallest_container(pt, candidates, own_area=own_area)
 
     result = {s.id: _find_parent(s) for s in all_shapes}
@@ -179,6 +191,10 @@ def _parent_map_from_cache(all_shapes):
             parent = by_uuid.get(puid)
             if parent is None:
                 return None  # 부모가 이 집합 밖 — 캐시가 낡았다
+            if getattr(parent, 'geo_id', None) != getattr(s, 'geo_id', None):
+                # 지도를 넘는 부모는 옛 판정이 남긴 값이다(build_geo_parent_map
+                # 주석). TTL(24시간)을 기다리지 않고 지금 다시 계산한다.
+                return None
             out[s.id] = parent.id
     return out
 
@@ -418,8 +434,19 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
         actives = actives.all()
         keys = [(cc.KIND_PLANTING, p.unique_id) for p in actives]
         if keys and all(k in cached for k in keys):
-            return [p.unique_id for p, k in zip(actives, keys)
-                    if cached[k] in want]
+            # 지도를 넘는 부모가 하나라도 있으면 옛 판정이 남긴 캐시다 —
+            # 기하로 다시 계산한다(아래 후보 선정 주석).
+            parents = {cached[k] for k in keys if cached[k]}
+            parent_map_of = dict(
+                GeoShape.query.with_entities(GeoShape.unique_id,
+                                             GeoShape.geo_id)
+                .filter(GeoShape.unique_id.in_(list(parents))).all()
+            ) if parents else {}
+            if all(cached[k] is None
+                   or parent_map_of.get(cached[k]) == p.geo_id
+                   for p, k in zip(actives, keys)):
+                return [p.unique_id for p, k in zip(actives, keys)
+                        if cached[k] in want]
     except Exception:
         pass
 
@@ -428,7 +455,7 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
         try:
             g = _parse_geometry(row)
             if g is not None and not g.is_empty:
-                polys.append(g)
+                polys.append((row.geo_id, g))
         except Exception:
             continue
     if not polys:
@@ -446,15 +473,17 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
     cand_q = GeoShape.query.filter(GeoShape.type.in_(('site', 'zone')))
     if geo_ids:
         cand_q = cand_q.filter(GeoShape.geo_id.in_(list(geo_ids)))
-    named = []
+    # 후보는 구획과 **같은 지도** 의 것만 — 다른 지도의 구역이 기하로 감싸도
+    # 부모가 아니다(build_geo_parent_map 주석, 2026-10-08).
+    named_by_map = {}
     for row in cand_q.all():
         try:
             g = _parse_geometry(row)
             if g is not None and not g.is_empty:
-                named.append((row.unique_id, g, getattr(g, 'area', 0.0) or 0.0))
+                named_by_map.setdefault(row.geo_id, []).append(
+                    (row.unique_id, g, getattr(g, 'area', 0.0) or 0.0))
         except Exception:
             continue
-    named.sort(key=lambda t: t[2])   # 가장 작은 = 가장 구체적인 부모
 
     out, entries = [], []
     for pl in q.all():
@@ -463,15 +492,13 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
             pt = containment_point(_shapely_shape(geom))
             if pt is None:
                 continue
-            parent = None
-            for uid, poly, _a in named:
-                if poly.contains(pt):
-                    parent = uid
-                    break
+            # 동점 규칙은 정본 하나로 — 자체 루프는 면적 0 도형을 거르지 않았다.
+            parent = pick_smallest_container(pt, named_by_map.get(pl.geo_id, ()))
             # 반환 판정은 **이번 질의 범위**로, 캐시는 절대값으로.
             if parent is not None and parent in want:
                 out.append(pl.unique_id)
-            elif parent is None and any(poly.contains(pt) for poly in polys):
+            elif parent is None and any(gid == pl.geo_id and poly.contains(pt)
+                                        for gid, poly in polys):
                 # 후보 site/zone 어디에도 안 들어가지만 물어본 도형(시설 등)
                 # 안에는 있는 경우 — 결과에는 넣되 캐시에는 부모 없음으로 적는다.
                 out.append(pl.unique_id)
@@ -560,3 +587,169 @@ def descendant_target_ids(root_shape, all_shapes=None, include_self=True,
             seen.add(i)
             uniq.append(i)
     return uniq, breakdown
+
+
+# ── 접힌 zone (단일 구역 현장) ─────────────────────────────────────────
+#
+# site 안에 zone 이 **딱 하나**이고 그 zone 이 site 와 같은 땅·같은 이름·
+# 자기만의 사용자 데이터가 없으면, 계층 한 겹은 사용자에게 같은 것을 두 번
+# 보여 줄 뿐이다. 데이터 모델(3계층)·상속은 그대로 두고 **표시만** 접는다.
+#
+# **판정은 이 함수 하나다.** 프론트·MCP·웹 API 는 결과(`collapsed` 플래그)만
+# 소비하고 스스로 다시 판정하지 않는다 — 판정이 두 곳이면 어긋난다.
+# **애매하면 접지 않는다**(구조를 숨기는 쪽이 위험하다).
+COLLAPSE_MIN_OVERLAP = 0.98
+
+# 프론트 `aot-geo-stats.js` 의 isDefaultName 과 같은 목록.
+import re as _re
+_DEFAULT_SHAPE_NAME_RE = _re.compile(
+    r'^(New site|New zone|Site|대지|구역|Zone|새 대지|새 구역)\s*\d*$', _re.I)
+
+
+def _shape_display_name(shape_row):
+    try:
+        feat = shape_row.feature if isinstance(shape_row.feature, dict) \
+            else _json.loads(shape_row.feature or '{}')
+    except Exception:
+        return ''
+    props = (feat or {}).get('properties') or {}
+    return str(props.get('label_name') or props.get('name') or '').strip()
+
+
+def _zone_has_own_user_data(zone_row):
+    """zone 에만 붙은 사용자 데이터 — 사진·대표 항목·감춘 행·설명 등.
+
+    `meta_json` 에 값이 하나라도 있으면 있는 것으로 본다(알려진 키만 보면 새로
+    생긴 키를 놓친다 — 애매하면 접지 않는다).
+    """
+    meta = getattr(zone_row, 'meta_json', None)
+    if not meta:
+        return False
+    if not isinstance(meta, dict):
+        return True
+    return any(v not in (None, '', [], {}, False) for v in meta.values())
+
+
+def _overlap_ok(site_g, zone_g, min_ratio=COLLAPSE_MIN_OVERLAP):
+    try:
+        if site_g is None or zone_g is None:
+            return False
+        if site_g.geom_type not in ('Polygon', 'MultiPolygon') \
+                or zone_g.geom_type not in ('Polygon', 'MultiPolygon'):
+            return False
+        sa, za = site_g.area, zone_g.area
+        if not sa or not za or sa <= 0 or za <= 0:
+            return False
+        inter = site_g.intersection(zone_g).area
+        return (inter / sa) >= min_ratio and (inter / za) >= min_ratio
+    except Exception:
+        return False
+
+
+def collapsed_zones_by_site(all_shapes, use_cache=True):
+    """{site.id: 접힌 zone 행} — 접힌 site 만 담는다. 접힌 zone 의 id 집합은
+    `{z.id for z in result.values()}`.
+
+    조건(모두): site 아래 zone 이 정확히 1개(깊은 자손 포함) · 두 경계의 면적
+    겹침이 양방향 `COLLAPSE_MIN_OVERLAP` 이상 · zone 이름이 비었거나 기본
+    이름이거나 site 이름과 같음 · zone 에 사용자 데이터 없음.
+    """
+    all_shapes = list(all_shapes)
+    parent_map = build_geo_parent_map(all_shapes, use_cache=use_cache)
+    by_id = {s.id: s for s in all_shapes}
+
+    def _site_of(s):
+        seen = set()
+        pid = parent_map.get(s.id)
+        while pid is not None and pid not in seen:
+            seen.add(pid)
+            p = by_id.get(pid)
+            if p is None:
+                return None
+            if p.type == 'site':
+                return p
+            pid = parent_map.get(pid)
+        return None
+
+    zones_of = {}
+    for s in all_shapes:
+        if s.type != 'zone':
+            continue
+        site = _site_of(s)
+        if site is not None:
+            zones_of.setdefault(site.id, []).append(s)
+
+    # 면적이 거의 같은 zone 은 부모 판정이 뒤집힐 수 있다(zone 이 조금 더 크면
+    # site 가 zone 의 자식으로 잡힌다). 그래도 "이 site 의 zone" 으로 센다 —
+    # 빠뜨리면 zone 이 둘인 현장이 하나로 보여 접힌다.
+    geoms = {}
+
+    def _g(s):
+        if s.id not in geoms:
+            geoms[s.id] = _parse_geometry(s)
+        return geoms[s.id]
+
+    for site in all_shapes:
+        if site.type != 'site':
+            continue
+        have = {z.id for z in zones_of.get(site.id, [])}
+        for z in all_shapes:
+            if (z.type == 'zone' and z.id not in have
+                    and getattr(z, 'geo_id', None) == getattr(site, 'geo_id', None)
+                    and _overlap_ok(_g(site), _g(z))):
+                zones_of.setdefault(site.id, []).append(z)
+
+    out = {}
+    for site_id, zs in zones_of.items():
+        if len(zs) != 1:
+            continue
+        site, zone = by_id[site_id], zs[0]
+        if getattr(site, 'geo_id', None) != getattr(zone, 'geo_id', None):
+            continue
+        zname, sname = _shape_display_name(zone), _shape_display_name(site)
+        if zname and not _DEFAULT_SHAPE_NAME_RE.match(zname) and zname != sname:
+            continue
+        if _zone_has_own_user_data(zone):
+            continue
+        if not _overlap_ok(_g(site), _g(zone)):
+            continue
+        out[site_id] = zone
+    return out
+
+
+def collapsed_zone_for_site(site_shape, all_shapes=None, use_cache=True):
+    """site 의 접힌 zone 행, 아니면 None. 일괄 처리는 `collapsed_zones_by_site`."""
+    if site_shape is None or getattr(site_shape, 'type', None) != 'site':
+        return None
+    if all_shapes is None:
+        from aot.databases.models import GeoShape
+        all_shapes = GeoShape.query.all()
+    return collapsed_zones_by_site(all_shapes, use_cache=use_cache).get(site_shape.id)
+
+
+_COLLAPSED_CACHE = {'tag': None, 'map': {}}
+
+
+def collapsed_zone_site_map():
+    """{접힌 zone 의 unique_id: 그 site 의 unique_id} — 표시 계층용 캐시판.
+
+    도형이 바뀌면(추가·삭제·제자리 수정: id 최댓값·updated_at 최댓값·개수) 다시
+    계산한다. 실패하면 빈 dict — 못 판정하면 접지 않는다.
+    """
+    try:
+        from sqlalchemy import func
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import GeoShape
+        row = db.session.query(func.max(GeoShape.id), func.max(GeoShape.updated_at),
+                               func.count(GeoShape.id)).one()
+        tag = (row[0] or 0, row[1], row[2] or 0)
+        if _COLLAPSED_CACHE['tag'] == tag:
+            return dict(_COLLAPSED_CACHE['map'])
+        shapes = GeoShape.query.all()
+        res = collapsed_zones_by_site(shapes)
+        site_uid = {s.id: s.unique_id for s in shapes}
+        out = {z.unique_id: site_uid[sid] for sid, z in res.items()}
+        _COLLAPSED_CACHE['tag'], _COLLAPSED_CACHE['map'] = tag, out
+        return dict(out)
+    except Exception:
+        return {}

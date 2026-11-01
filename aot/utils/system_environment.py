@@ -84,9 +84,13 @@ def cpu_cores():
     return host_cores
 
 
-def mem_total_gb():
+def mem_total_gb(host_only=False):
     """Memory available to this process in GB. A container memory limit
-    (cgroup v2 memory.max or v1 limit_in_bytes) wins over host MemTotal."""
+    (cgroup v2 memory.max or v1 limit_in_bytes) wins over host MemTotal.
+
+    host_only=True: 컨테이너 한도를 무시하고 기기(호스트) 메모리만 본다 — "이 기기가 작은가" 를
+    묻는 판정(디지털트윈 잠금)용. 한도는 서비스 몫을 자르는 값이지 기기 크기가 아니라서,
+    768M 한도의 별도 서비스가 큰 기기에서도 스스로 '메모리 부족' 으로 잠기는 일을 막는다."""
     host_gb = None
     meminfo = _read_file('/proc/meminfo') or ''
     for line in meminfo.splitlines():
@@ -97,8 +101,9 @@ def mem_total_gb():
                 pass
             break
 
-    for path in ('/sys/fs/cgroup/memory.max',
-                 '/sys/fs/cgroup/memory/memory.limit_in_bytes'):
+    for path in (() if host_only and host_gb is not None else
+                 ('/sys/fs/cgroup/memory.max',
+                  '/sys/fs/cgroup/memory/memory.limit_in_bytes')):
         raw = _read_file(path)
         if raw and raw.strip() != 'max':
             try:

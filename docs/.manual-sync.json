@@ -80,87 +80,110 @@
       "stamped": "2026-09-26"
     },
     "ai/env-control#actuators": {
-      "code": "22832f1dfce5c5b1",
+      "code": "ff5a24c3b900ba34",
       "units": {
         "aot/actions/env_actuator.py": "5144281a39c66db7",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L1478": "f7d497a718c93c5e",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L1767": "f7d497a718c93c5e",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._apply_end_behaviors": "a3b800f3fcc38633",
         "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::ProfileLoaderMixin._attach_electric_kw": "30b0f8e870b50c5c",
-        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::ProfileLoaderMixin._reload_profiles": "3d8430ee385e3412",
+        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::ProfileLoaderMixin._reload_profiles": "8d441fe1b0038e63",
         "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::_build_cost_fn": "5097279d1292161b",
         "aot/functions/utils/env_control/energy.py::actuator_kw": "a11d53f30c9bbb47",
         "aot/functions/utils/env_control/energy.py::electric_kw": "1c3c403d344f77ec"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "866d85991fa6fc66b5387333763c0d3322ed83d1",
+      "stamped": "2026-10-13"
     },
     "ai/env-control#actuators-adapters": {
-      "code": "69bdeaf36dd92414",
+      "code": "3f694436e8675165",
       "units": {
-        "aot/functions/utils/env_control/dispatch_adapters.py": "90156fbf02e7aa95"
+        "aot/functions/utils/env_control/dispatch_adapters.py": "e63f02e1adb3cac0"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "ead157b531d6a953d43464248f89b625438589ab",
+      "stamped": "2026-10-13"
     },
     "ai/env-control#actuators-missing": {
-      "code": "4f787224f3049054",
+      "code": "199d7b6b93a7bffd",
       "units": {
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._refresh_capability": "89c93c6d00d6b86b",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._warn_missing_measurements": "cd5edf865c1920c6",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._warn_missing_measurements": "db7502b978c28422",
         "aot/functions/utils/env_control/authority.py::degrade_target": "ed2e40b610b228cd",
         "aot/functions/utils/env_control/capability.py": "99af7e5c9adf6ece",
-        "aot/functions/utils/env_control/coordinator.py::coordinate": "ce5732307b91a3be",
-        "aot/functions/utils/env_control/situation.py::assess": "09f817d33c7428b2",
+        "aot/functions/utils/env_control/coordinator.py::coordinate": "b98f046e7a6212ce",
+        "aot/functions/utils/env_control/situation.py::assess": "964588848421d1cc",
         "aot/scripts/check_env_coordinator_health.py::_check_combinations": "8a121046230d8df3"
       },
-      "commit": "7bd5284c34135c16532011a863f1c5e858877421",
-      "stamped": "2026-09-30"
+      "commit": "49450b55705536a8cf0a79f2c2ad3baec309bea3",
+      "stamped": "2026-10-14"
     },
     "ai/env-control#actuators-safe-default": {
-      "code": "374bda81062f8c3d",
+      "code": "9ce8dd140207a810",
       "units": {
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.cmd_emergency_stop": "a5f9afb25d197d24",
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.force_safe_state": "92d5c0ea40836f65",
-        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py#L47": "7433792f2859b284",
+        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py#L49": "7433792f2859b284",
         "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::_resolve_safe_default_pct": "a79774fccf8fe9fd"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "a228078e88c9ea16642b1c3e82066399014288a3",
+      "stamped": "2026-10-09"
+    },
+    "ai/env-control#actuators-suspected": {
+      "code": "ecf3e4e94051ed5f",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._note_no_effect": "8a5dd83d41aa8952",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._update_suspects": "9d092ef36821315b",
+        "aot/functions/utils/env_control/actuator_feedback.py#L57": "514570f7542a4cb1"
+      },
+      "commit": "f186a526bec6d794b3f299df928a080aaa627992",
+      "stamped": "2026-10-09"
     },
     "ai/env-control#commands": {
-      "code": "e18c330b488de897",
+      "code": "7457e0757cc292de",
       "units": {
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.cmd_emergency_stop": "a5f9afb25d197d24",
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.cmd_reload": "502ca66c9d57052f",
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.cmd_run_now": "56d78c201df0c3b4",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L102": "5aea7632e262bdaa"
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L120": "5aea7632e262bdaa"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "a228078e88c9ea16642b1c3e82066399014288a3",
+      "stamped": "2026-10-09"
     },
     "ai/env-control#control-basis": {
-      "code": "6959f850e8aa904c",
+      "code": "544986971d914379",
       "units": {
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._assess_alternative_basis": "b653f2e8d9ad7c34",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._basis_shadow_commands": "aaf58aaec03ed256",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._control_basis": "663b1e068d5b4595",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._select_control_basis": "794029f9b6910fcd",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L549": "24e5d2ea677e3168",
-        "aot/functions/utils/env_control/basis.py": "44323c3e868e3f6f"
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L567": "24e5d2ea677e3168",
+        "aot/functions/utils/env_control/basis.py": "22516dac76effa5d"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "a228078e88c9ea16642b1c3e82066399014288a3",
+      "stamped": "2026-10-09"
+    },
+    "ai/env-control#curtain-gap": {
+      "code": "b3738afa63a3f02c",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L702": "7c8e64e8ca926286",
+        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::ProfileLoaderMixin._mark_screen_positional": "9b7d42ef4d5dbaab",
+        "aot/functions/utils/env_control/screen_policy.py::_curtain_gap": "6a45394160902887",
+        "aot/functions/utils/env_control/screen_policy.py::_curtain_night_close": "79340e9b84fe8530",
+        "aot/functions/utils/env_control/screen_policy.py::_curtain_ramp": "1de54abe711512c3"
+      },
+      "commit": "b55a59e5aa1bd63a8898bc9ed33c750f467cd38c",
+      "stamped": "2026-10-14"
     },
     "ai/env-control#domains": {
-      "code": "321afce0f0ab84ff",
+      "code": "5a5528e3b4723426",
       "units": {
-        "aot/functions/utils/env_control/effect_functions.py#L228": "cbfc804926e7e7d3",
-        "aot/functions/utils/env_control/effect_functions.py::co2_injector_co2_effect": "f33865565f7826d2",
+        "aot/functions/utils/env_control/effect_functions.py#L235": "265d5437a1f32c57",
+        "aot/functions/utils/env_control/effect_functions.py::CO2_VENT_LOSS_F0": "5b3fed0589fcb11d",
+        "aot/functions/utils/env_control/effect_functions.py::co2_retention": "6f8e9f5b6ef7dcc8",
         "aot/functions/utils/env_control/types.py#L188": "7433587210a086c3",
         "aot/functions/utils/env_control/types.py::domain_of": "ffa81230282ddb13"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "09e4056d5cebec6ac5193ced9d6a8bb9a4e39bb0",
+      "stamped": "2026-10-10"
     },
     "ai/env-control#emergency-stop": {
       "code": "65c19cfe1eb0449b",
@@ -170,6 +193,38 @@
       },
       "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
       "stamped": "2026-09-26"
+    },
+    "ai/env-control#frost": {
+      "code": "a50f58ecc41f67e5",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._note_frost": "eaa61b9627bd7ce1",
+        "aot/functions/utils/env_control/safety_gates.py::evaluate_frost": "e78af0f551889d8c",
+        "aot/functions/utils/env_control/safety_gates.py::frost_thresholds": "14cc894b19908354"
+      },
+      "commit": "45b79cc7ec2bcf77a850ac8d67228e108308f454",
+      "stamped": "2026-10-10"
+    },
+    "ai/env-control#heat-protect": {
+      "code": "85696e11954b388b",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evaluate_heat_protect": "1df3de84cb633e87",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L806": "a3169733114218eb",
+        "aot/functions/utils/env_control/heat_protect.py": "8264f884e0d81139",
+        "aot/functions/utils/env_control/heat_protect.py::apply_heat_protect_overrides": "ccd1c87b3ec1e604",
+        "aot/functions/utils/env_control/heat_protect.py::evaluate_heat_protect": "ae61ec0244dc913e",
+        "aot/functions/utils/env_control/screen_policy.py::shaded_below_light_min": "3f99a683b77e1167"
+      },
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
+    },
+    "ai/env-control#humid-zone": {
+      "code": "329510e1656604a2",
+      "units": {
+        "aot/functions/utils/env_control/ext_smoothing.py": "d45dc2bbb93c67c7",
+        "aot/functions/utils/env_control/humid_regime.py": "cd8ae3f29aa53c53"
+      },
+      "commit": "bea5d6fc80cf00d31e2edaa497989239c150afb5",
+      "stamped": "2026-10-14"
     },
     "ai/env-control#l1-envtarget-setpoint": {
       "code": "b4fb31db17cfe1be",
@@ -182,32 +237,45 @@
       "stamped": "2026-09-26"
     },
     "ai/env-control#l2-situationreport-evaluation": {
-      "code": "8a61121000ad9ebd",
+      "code": "720836c244f0a689",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L36": "7b7c3036238d2a90",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L60": "63ec990a94722fd5",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._collect_internal": "3ad6a952fc972005",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L43": "7b7c3036238d2a90",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L69": "63ec990a94722fd5",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._collect_internal": "f346166e56714c3c",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::smooth_vpd": "121f87a865b97801",
         "aot/functions/utils/env_control/situation.py::_assess_limiting_factor": "1bcc84c784abf043",
-        "aot/functions/utils/env_control/situation.py::_decompose_vpd": "2e78c5f159dc0719",
+        "aot/functions/utils/env_control/situation.py::_decompose_vpd": "89c547dffaec48d9",
         "aot/functions/utils/env_control/situation.py::_update_trend": "b0484b53faf50ea5",
-        "aot/functions/utils/env_control/situation.py::assess": "09f817d33c7428b2"
+        "aot/functions/utils/env_control/situation.py::assess": "964588848421d1cc"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "2fe918a88fccc330070355c9ccaaf92c77b2300b",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#l3-coordinator-actuator-command": {
-      "code": "e3c92c3d18fffba4",
+      "code": "620b66d344dfc64d",
       "units": {
-        "aot/functions/utils/env_control/coordinator.py#L211": "e4642d09028c19fc",
-        "aot/functions/utils/env_control/coordinator.py#L95": "b5a1fd9dcdf8bf5a",
-        "aot/functions/utils/env_control/coordinator.py::_temperature_ceiling": "49e4f03b921f7dea",
-        "aot/functions/utils/env_control/coordinator.py::coordinate": "ce5732307b91a3be",
-        "aot/functions/utils/env_control/coordinator.py::finalize_command": "a9e22aec08f0796c",
+        "aot/functions/utils/env_control/coordinator.py#L106": "b5a1fd9dcdf8bf5a",
+        "aot/functions/utils/env_control/coordinator.py#L249": "313267ce0ca3be71",
+        "aot/functions/utils/env_control/coordinator.py::_temperature_ceiling": "2035ee3adf162464",
+        "aot/functions/utils/env_control/coordinator.py::coordinate": "b98f046e7a6212ce",
+        "aot/functions/utils/env_control/coordinator.py::finalize_command": "9533dfaea8c54914",
         "aot/functions/utils/env_control/types.py::CmdConstraints": "9dc64d8566582a5f"
       },
-      "commit": "7bd5284c34135c16532011a863f1c5e858877421",
-      "stamped": "2026-09-30"
+      "commit": "bea5d6fc80cf00d31e2edaa497989239c150afb5",
+      "stamped": "2026-10-14"
+    },
+    "ai/env-control#leaf-vpd": {
+      "code": "7fd68e4a64ca4593",
+      "units": {
+        "aot/aot_flask/routes_geo_iec.py::_snapshot_leaf_vpd": "927a5d89fe021743",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._annotate_snapshot_vpd_basis": "1e678b2e6f743b19",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_vpd_target_basis": "b94df0f04db73ea1",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L598": "34a0a8d8b0cb2e52",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._read_leaf_temperature": "b8c758fc1640a979",
+        "aot/functions/utils/env_control/leaf_vpd.py": "5585e6da2d5abfec"
+      },
+      "commit": "f186a526bec6d794b3f299df928a080aaa627992",
+      "stamped": "2026-10-09"
     },
     "ai/env-control#methods-setpoint-curves": {
       "code": "937d3f6af6275d13",
@@ -219,72 +287,105 @@
       "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
       "stamped": "2026-09-26"
     },
-    "ai/env-control#post-gate-checked-after-l3-before-dispatch": {
-      "code": "0a52e367b0c053c0",
+    "ai/env-control#morning-purge": {
+      "code": "43b474e80b09527a",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py#L503": "e18b33222ba40fc3",
+        "aot/functions/utils/env_control/humid_regime.py::morning_purge": "ecdbf6eabe07e6d5"
+      },
+      "commit": "71d897d1908d5b79b28a0b5ebc580343489cc193",
+      "stamped": "2026-10-10"
+    },
+    "ai/env-control#night-dew-fan": {
+      "code": "5225cc7008f27fc3",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L720": "ea5aabdb92bbd8c1",
+        "aot/functions/utils/env_control/night_dew.py": "f53c8a7d48d9150c"
+      },
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
+    },
+    "ai/env-control#post-gate-checked-after-l3-before-dispatch": {
+      "code": "3f11beb0a980770e",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py#L612": "7a7bf44c8d854296",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_hvac_opposition_interlock": "444909428fadf0d8",
         "aot/functions/utils/env_control/safety_gates.py::SafetyPostGate": "f78e4d1af63c4dbb"
       },
-      "commit": "5008f1002460447efc329e79b6864d4e1569236e",
-      "stamped": "2026-09-28"
+      "commit": "2fe918a88fccc330070355c9ccaaf92c77b2300b",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#pre-gate-checked-before-l1l3": {
-      "code": "269e5544a74c0799",
+      "code": "10eaef95a0fd020e",
       "units": {
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.initialize": "525b99fa4a23754f",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._build_gate_env": "d66f12777c53038c",
-        "aot/functions/utils/env_control/coordinator.py::limit_vent_for_unknown_outdoor": "7d013e5d2f5cccde",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._build_gate_env": "5ab126b2ea3659b0",
+        "aot/functions/utils/env_control/coordinator.py::limit_vent_for_unknown_outdoor": "a0eb7ece5a63a7a4",
         "aot/functions/utils/env_control/coordinator.py::vent_open_ceiling_ids": "807c14d9bf27f995",
-        "aot/functions/utils/env_control/safety_gates.py::PreGateConfig": "a2e90b94c7934357",
-        "aot/functions/utils/env_control/safety_gates.py::SafetyPreGate": "306a9dd32ed3a327"
+        "aot/functions/utils/env_control/safety_gates.py::PreGateConfig": "d9b367f3b8b73a7f",
+        "aot/functions/utils/env_control/safety_gates.py::SafetyPreGate": "11eda34f18592df5"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "081f2b8f8d3295a6bf591f4bec804874fbd9817d",
+      "stamped": "2026-10-12"
+    },
+    "ai/env-control#pulse-fog": {
+      "code": "79ad96d39219e4a8",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evaluate_pulse_fog": "210f64d1b1ff60f2",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_extreme_pulse_fog": "e43c224434f2b4da",
+        "aot/functions/utils/env_control/pulse_fog.py": "4c0328e21b8cd8b9"
+      },
+      "commit": "2fe918a88fccc330070355c9ccaaf92c77b2300b",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#safety-gates": {
-      "code": "a08e22b0c565fa6b",
+      "code": "e1f81043abe82497",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._act_on_triggered_gate": "d05b8908a9b66f4f",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._rebase_integral_after_gate": "44ebcb742ecdc5dc",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._write_gate_only_summary": "20a63a0635f7130e",
-        "aot/functions/utils/env_control/safety_gates.py::PreGateConfig": "a2e90b94c7934357",
-        "aot/functions/utils/env_control/safety_gates.py::SafetyPreGate": "306a9dd32ed3a327"
+        "aot/aot_flask/geo/facility_sensors.py::read_outdoor_sensors": "914cdd1a61c5154b",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._act_on_triggered_gate": "4d5df5d0276d8a27",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._rebase_integral_after_gate": "7ea2ba5c91acb58e",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._write_gate_only_summary": "c6b4d94de1013f17",
+        "aot/functions/utils/env_control/coordinator.py::rain_vent_caps": "4ba6b64abf49b506",
+        "aot/functions/utils/env_control/safety_gates.py::PreGateConfig": "d9b367f3b8b73a7f",
+        "aot/functions/utils/env_control/safety_gates.py::SafetyPreGate": "11eda34f18592df5",
+        "aot/functions/utils/env_control/safety_gates.py::classify_rain": "e365de55c82d7f6e",
+        "aot/functions/utils/env_control/safety_gates.py::classify_wind": "8497a21ced43150e",
+        "aot/scripts/check_env_coordinator_health.py::_check_vent_azimuth": "3870b81cd86b4a0f",
+        "aot/utils/inputs.py::rain_unit_scale": "0d1d16da735116dd"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "6752d1a1015771395e80b81dd043b34c0f5da13c",
+      "stamped": "2026-11-01"
     },
     "ai/env-control#settings-advanced": {
-      "code": "376cc715a06975b2",
+      "code": "e59009e6fc37ed7a",
       "units": {
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_photosynthesis_priority": "b4b8f0779baee2df",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L162": "31680e32999018f6",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L549": "24e5d2ea677e3168",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L634": "6c8453979faa74f0",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L882": "a4f4001ec8fcf541",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L912": "102312a11cb7c8c0",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L980": "c3144cf0ec227954",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1168": "a4f4001ec8fcf541",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1198": "102312a11cb7c8c0",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1266": "c3144cf0ec227954",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L180": "31680e32999018f6",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L567": "24e5d2ea677e3168",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L742": "6c8453979faa74f0",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._sensor_max_age": "4e0bd55a7b0702a2",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._update_cumulative_tracker": "003d8e564966ab1a",
         "aot/functions/utils/env_control/cumulative_tracker.py": "2c407c1233bd21d4",
         "aot/functions/utils/env_control/photosynthesis.py::find_limiting_factor": "1e435eddeb9723ba",
         "aot/functions/utils/env_control/situation.py::decompose_vpd_to_T_RH": "a63cbe62c4637610"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#settings-calibration": {
-      "code": "c7132a78c1df594f",
+      "code": "8a820e7d3d4c356a",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py": "87a947d6f250f350",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py": "0ca26a354bc440d9",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_effect_engine": "7a3cf7339618b651",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._greybox_control_gate_ok": "d525292127426b9a",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._maybe_run_greybox_identification": "b9882bae0bcea7d9",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._mpc_forecast_curve": "0a7216a07391d8dd",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._mpc_forecast_curve": "e34ff791bf9ec48b",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._mpc_shadow": "4115db2a4499a4db",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._run_control": "d8e137607f3fad64",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._run_mpc": "721e0de377e672ce",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1022": "266a0ca9cb459b93",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._run_control": "7a23f68fb4c1e485",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._run_mpc": "fcf87e64ee68617f",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1311": "266a0ca9cb459b93",
         "aot/functions/utils/env_control/active_probe.py": "5089dfe7c415c0e2",
         "aot/functions/utils/env_control/calibration.py": "75821dc63d3843b8",
         "aot/functions/utils/env_control/greybox/channels.py::distribute_vent": "bd7154f63399efd9",
@@ -292,138 +393,182 @@
         "aot/functions/utils/env_control/greybox/shadow.py::classify_regime": "c7607442c2065a28",
         "aot/functions/utils/env_control/mpc_ext.py": "50073bf2c716557b"
       },
-      "commit": "f24507a620b9b7b0d9b2e0a1c17ef0f5b49053de",
-      "stamped": "2026-09-30"
+      "commit": "49450b55705536a8cf0a79f2c2ad3baec309bea3",
+      "stamped": "2026-10-14"
     },
     "ai/env-control#settings-facility": {
-      "code": "6bf07ea8258e5dbc",
+      "code": "5a1ecccd3f01b4df",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L417": "76c7d316af5d8998",
-        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::ProfileLoaderMixin._reload_profiles": "3d8430ee385e3412",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L435": "76c7d316af5d8998",
+        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::ProfileLoaderMixin._reload_profiles": "8d441fe1b0038e63",
         "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::_bay_capacity_fraction": "596f83f9f9ada083"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "866d85991fa6fc66b5387333763c0d3322ed83d1",
+      "stamped": "2026-10-13"
     },
     "ai/env-control#settings-forecast": {
-      "code": "e3a7ae92d8a0a742",
+      "code": "ecbba361767c936c",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_forecast_feedforward": "9b0812c98f31b578",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1084": "c242c5dde1dded10",
-        "aot/functions/utils/env_control/forecast_feedforward.py": "d39b3ad975630e8f"
+        "aot/aot_flask/geo/facility_sensors.py::forecast_file_for": "1576a2c8050badfd",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_forecast_feedforward": "34fed600e7e3eebf",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._forecast_feedforward_signal": "83fc5a18019dcd54",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1373": "c242c5dde1dded10",
+        "aot/functions/utils/env_control/forecast_feedforward.py": "24c25714564d10ab"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "668e70cf7bdf6811f310af0ca047c1008d541a2f",
+      "stamped": "2026-10-13"
     },
     "ai/env-control#settings-hvac": {
-      "code": "d1a0efd24b57c47b",
+      "code": "7e5d85cede18d497",
       "units": {
         "aot/functions/custom_functions/env_coordinator.py::CustomModule.initialize": "525b99fa4a23754f",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evening_fog_blocked": "270975eb81661b17",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._judge_fog_humidity_block": "28c3df0815110978",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_nursery_fog_derate": "e2d9b830909d163f",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evening_fog_blocked": "168fe9fb8e989b41",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._judge_fog_humidity_block": "819a73c07a70dee3",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_nursery_fog_derate": "27d548b80f464d5e",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_wetting_fog_humidity_ceiling": "49e3f97482df092a",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1286": "f6286bc7c7af9b95",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1361": "224cbb228ce67e17",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L720": "f5495e3f7494454c",
-        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py#L82": "bf3c096eb012bc2a",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1575": "f6286bc7c7af9b95",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1650": "224cbb228ce67e17",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L892": "8ce5d81cf662337d",
+        "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py#L84": "bf3c096eb012bc2a",
         "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::_fog_excluded_from_env": "6a7f7baf12898962",
         "aot/functions/custom_functions/env_coordinator_impl/_profile_loader_mixin.py::_fog_pulse_constraints": "2f455434ccb8e801",
-        "aot/functions/utils/env_control/dispatch_adapters.py::PulsedDoseAdapter": "ef6e1ec25b1d3a94",
+        "aot/functions/utils/env_control/dispatch_adapters.py::PulsedDoseAdapter": "e316735deea9d492",
         "aot/functions/utils/env_control/safety_gates.py::SafetyPreGate._eval_nursery_lock": "5437f28d3e2ec625",
         "aot/functions/utils/env_control/safety_gates.py::is_wetting_fogger": "aa34c0653a3ad4ae"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "866d85991fa6fc66b5387333763c0d3322ed83d1",
+      "stamped": "2026-10-13"
     },
     "ai/env-control#settings-light": {
-      "code": "b0bf0db6f1baf0d4",
+      "code": "4d23df874332307a",
       "units": {
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._check_hard_constraints": "0b15c5d1c41d28b0",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._compute_light_est": "847e1feb48eb2ea3",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._compute_light_est": "224260bbb39e1e78",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_light_threshold_overrides": "c90323b170990dac",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::estimate_indoor_light": "f4a1ed1760275ecf",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1403": "8ec677b9a5328826",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L602": "0d5bf7f658d51591",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1692": "8ec677b9a5328826",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L658": "0d5bf7f658d51591",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._facility_cover_transmittance": "4690f46cb86f75e1",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._facility_shade_transmittance": "9729e02f361e952c",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._light_saturation": "f61e8816050c23c4",
         "aot/functions/utils/env_control/photosynthesis.py::light_saturation_wm2": "90caede2bd2cc4a9"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#settings-screen": {
-      "code": "b7fc22ae286338a3",
+      "code": "00123fce7c7f271f",
       "units": {
         "aot/functions/custom_functions/env_coordinator.py::execute_at_modification": "32063a04fbeb1702",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::clamp_guide_range_to_hard_limits": "7f25211ff7faee1d",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1186": "a9880fc8f7bcad7f",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1340": "4edc9c5d80cf295b",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1382": "de78be65a2e7e6b2",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1475": "45f49e19534caa8c",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1836": "0211777971867105",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1475": "a9880fc8f7bcad7f",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1629": "4edc9c5d80cf295b",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1671": "de78be65a2e7e6b2",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1764": "30effb2dd4d9ff9e",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L2136": "0211777971867105",
         "aot/functions/custom_functions/env_coordinator_impl/_function_info.py::_apply_layout": "6c780241dfab2318",
         "aot/functions/custom_functions/env_coordinator_impl/_function_info.py::inert_options": "d3861cc36a8863b0",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._warn_inert_options_once": "308bbd817bac8798"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#settings-target": {
-      "code": "d1b12dc319dc9470",
+      "code": "7ee64f0bf103c9eb",
       "units": {
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._check_hard_constraints": "0b15c5d1c41d28b0",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._classify_emergency": "a59cf7c97c3383f8",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_temp_humid_threshold_overrides": "113b7955ae855b7a",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1186": "a9880fc8f7bcad7f",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1340": "4edc9c5d80cf295b",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1382": "de78be65a2e7e6b2",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L144": "4570529516b8765a",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L189": "54ec669e52740f9b",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L577": "9025dd0b40b3a82c",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L649": "4aeab0ace5ae5232",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L932": "df6561756273f351",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L1503": "427cf0a5503168b8",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._classify_emergency": "3c55ebbb0901b770",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_temp_humid_threshold_overrides": "4f7f488ad2e0f807",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1218": "df6561756273f351",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1475": "a9880fc8f7bcad7f",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L162": "4570529516b8765a",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1629": "4edc9c5d80cf295b",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1671": "de78be65a2e7e6b2",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L207": "54ec669e52740f9b",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L633": "9025dd0b40b3a82c",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L757": "736e05c50b8669af",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L861": "3722b1e9a8488f7b",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L1792": "427cf0a5503168b8",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._actuation_params": "ee2ccddfc966c6d2",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._motor_motion_gate": "ad511c0139679645"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#settings-ventilation": {
-      "code": "ea5909868d5a31c9",
+      "code": "4482bdb2ee02bb54",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1002": "c30be1fa2f830c5f",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1250": "fe464084dab1d06e",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L269": "1b85087d1153703f",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L71": "b2fda782bf9487ec",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evaluate_outdoor_outage": "65f7a36027da7fbf",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1288": "a6bc46c17f178c4d",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1539": "fe464084dab1d06e",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L287": "1b85087d1153703f",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L101": "cb924e592264871c",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py#L83": "b49e2711e907260f",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._facility_local_now": "a7a677602c7a1e23",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._hvac_running": "7d1f66732984a097",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._night_vent_parked": "c57360dd34fc96ac",
-        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::condensation_escape": "ec64c9a13835cb99",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._night_vent_clock": "92450b201d3978cd",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._night_vent_decide": "d0f69d105995ec11",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._night_vent_parked": "a598ee1ad54a3f35",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::condensation_escape": "d9578c1ec64bb6be",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::dewpoint_margin": "a4047770a8a6a628",
-        "aot/functions/utils/env_control/coordinator.py#L169": "e23edfa59c8f72ea",
-        "aot/functions/utils/env_control/coordinator.py::ParkDecision": "f776116792c67eab",
+        "aot/functions/utils/env_control/coordinator.py#L207": "e23edfa59c8f72ea",
+        "aot/functions/utils/env_control/coordinator.py::ParkDecision": "798c7eb1ab74ee49",
         "aot/functions/utils/env_control/coordinator.py::_ventilation_credit": "a8713a6d1e9458f3",
-        "aot/functions/utils/env_control/coordinator.py::_ventilation_is_futile": "5f78b150bbbd7579",
+        "aot/functions/utils/env_control/coordinator.py::_ventilation_is_futile": "2c2d24bdbdb682e4",
         "aot/functions/utils/env_control/coordinator.py::_ventilation_reaches_all_targets": "c81e6f1e108dcc69",
-        "aot/functions/utils/env_control/coordinator.py::decide_parking": "40aa93c2f121a8c9",
-        "aot/functions/utils/env_control/coordinator.py::limit_vent_for_unknown_outdoor": "7d013e5d2f5cccde",
+        "aot/functions/utils/env_control/coordinator.py::decide_parking": "cef88db4b2a9fc86",
+        "aot/functions/utils/env_control/coordinator.py::limit_vent_for_unknown_outdoor": "a0eb7ece5a63a7a4",
         "aot/functions/utils/env_control/ext_context_fallback.py::build_fallback_context": "f1a3c4ef374ddd34"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "49450b55705536a8cf0a79f2c2ad3baec309bea3",
+      "stamped": "2026-10-14"
+    },
+    "ai/env-control#shade-heat": {
+      "code": "c628f0465df88ab5",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evaluate_screens": "bce8019f2dcbc4dd",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L688": "a7c389958b4cc434",
+        "aot/functions/utils/env_control/effect_functions.py#L247": "b2f43c2d4f2ff210",
+        "aot/functions/utils/env_control/effect_functions.py::shade_humid_effect": "4ce4b96ddb99eecb",
+        "aot/functions/utils/env_control/effect_functions.py::shade_latent_ratio": "58631b6c4e5eb4f4",
+        "aot/functions/utils/env_control/effect_functions.py::shade_temp_effect": "644fb9012ba169cd",
+        "aot/functions/utils/env_control/effect_functions.py::shade_vpd_effect": "3e93a4f889468348",
+        "aot/functions/utils/env_control/screen_policy.py": "bf1fb4991a8ea3f2",
+        "aot/functions/utils/env_control/screen_policy.py::adjust_pi_command": "e324fc66b1ece43f",
+        "aot/functions/utils/env_control/screen_policy.py::apply_screen_hold": "9898e51edfac5259",
+        "aot/functions/utils/env_control/screen_policy.py::evaluate_screens": "cf597468d1066b1a",
+        "aot/functions/utils/env_control/screen_policy.py::shaded_below_light_min": "3f99a683b77e1167"
+      },
+      "commit": "b55a59e5aa1bd63a8898bc9ed33c750f467cd38c",
+      "stamped": "2026-10-14"
+    },
+    "ai/env-control#solar-vent": {
+      "code": "406129e7b23850c0",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evaluate_solar_vent": "950d43bc42730296",
+        "aot/functions/utils/env_control/solar_vent.py": "734f0cbea39a28f3",
+        "aot/functions/utils/env_control/solar_vent.py::evaluate_solar_vent": "523377d1b9646cd3"
+      },
+      "commit": "b8e349ce318ec29cc17392573780dda79e8b5e0b",
+      "stamped": "2026-10-14"
+    },
+    "ai/env-control#solar-vent-blind": {
+      "code": "f818eed840abfd10",
+      "units": {
+        "aot/functions/utils/env_control/solar_vent.py::_blind_floor": "4b99c272685086a5"
+      },
+      "commit": "b8e349ce318ec29cc17392573780dda79e8b5e0b",
+      "stamped": "2026-10-14"
     },
     "ai/env-control#stage-guide": {
-      "code": "369e6128cfb974aa",
+      "code": "ba22484af9ae9431",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py#L242": "10f953b0df747d67",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py#L262": "10f953b0df747d67",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_stage_guide": "739664ecc2868f4b",
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::stage_guide_range": "ecaf0ae416c889a1"
       },
-      "commit": "5008f1002460447efc329e79b6864d4e1569236e",
-      "stamped": "2026-09-28"
+      "commit": "2fe918a88fccc330070355c9ccaaf92c77b2300b",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#targets-no-plot": {
       "code": "2d1f03dafc291f40",
@@ -447,44 +592,78 @@
       "stamped": "2026-09-26"
     },
     "ai/env-control#targets-reference-plot": {
-      "code": "445564f0ac32c76f",
+      "code": "921a3ec046d10387",
       "units": {
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L912": "102312a11cb7c8c0"
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1198": "102312a11cb7c8c0"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
     },
     "ai/env-control#time-control": {
-      "code": "90fbb4b3331aa390",
+      "code": "ddc4c0f1027d08c3",
       "units": {
         "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._intentional_stop": "d557eb3335f487a1",
-        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._run_outside_window": "558889cd5bdba87e",
-        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L481": "826464c1ce5ecbcd",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._run_outside_window": "4226b0a429fccfe3",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L499": "826464c1ce5ecbcd",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._apply_end_behaviors": "a3b800f3fcc38633",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._facility_local_now": "a7a677602c7a1e23",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._get_time_window": "c3d68921c574ed2d",
         "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._in_time_window": "42a2a612e4e31313"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "45b79cc7ec2bcf77a850ac8d67228e108308f454",
+      "stamped": "2026-10-10"
     },
     "ai/env-control#vent-form": {
-      "code": "5dba69011c19b429",
+      "code": "1a51865805624e90",
       "units": {
-        "aot/functions/utils/env_control/effect_functions.py#L342": "a37d96e8917ad746",
+        "aot/functions/utils/env_control/effect_functions.py#L362": "a37d96e8917ad746",
         "aot/functions/utils/env_control/effect_functions.py::_vent_form_gain": "91a0ca1e680e78a6"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "09e4056d5cebec6ac5193ced9d6a8bb9a4e39bb0",
+      "stamped": "2026-10-10"
     },
     "ai/env-control#vpd-vapor-pressure-deficit": {
-      "code": "5567d99de2e5a619",
+      "code": "2c2ff30e0253974d",
       "units": {
-        "aot/functions/utils/env_control/situation.py::compute_vpd": "a073adfb37cae004",
-        "aot/functions/utils/env_control/situation.py::svp": "99f1c415cd7206f9"
+        "aot/functions/utils/env_control/situation.py::compute_vpd": "f888c60dee246019",
+        "aot/functions/utils/env_control/situation.py::svp": "fed724684c87eac4"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "5dfafb3c977f32693f60581d3c57f362e3c092cf",
+      "stamped": "2026-10-09"
+    },
+    "ai/env-control#water-supply": {
+      "code": "58c24b0ae5977d54",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._apply_water_supply": "362ee8ea087ab87f",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_no_water_override": "b75803c276076123",
+        "aot/functions/custom_functions/env_coordinator_impl/_function_info.py#L1102": "a210c2da7abb106a",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._read_water_supply_value": "11cf1305d0828557",
+        "aot/functions/custom_functions/env_coordinator_impl/_helpers_mixin.py::HelpersMixin._water_supply_config": "9ff277887d5de798",
+        "aot/functions/utils/env_control/water_supply.py": "697b9166b7648932"
+      },
+      "commit": "76eefb5f7a990122ebfbd2f832811d977a9b32af",
+      "stamped": "2026-10-12"
+    },
+    "ai/env-control#wetting-fog-dusk": {
+      "code": "de47e09ae731a7d2",
+      "units": {
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._evaluate_wetting_fog_dusk": "f9ae803916be51bc",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::apply_wetting_fog_dusk_limit": "925d5df8945dc244",
+        "aot/functions/utils/env_control/wet_fog_dusk.py": "3afb2a5938a63fac",
+        "aot/functions/utils/env_control/wet_fog_dusk.py::evaluate_wetting_fog_dusk": "196ba270aa102010"
+      },
+      "commit": "8ae227fb08ff1203ad344b1bbab5d1043f443d17",
+      "stamped": "2026-10-10"
+    },
+    "ai/overview#ai-cards": {
+      "code": "7ffa09783750566d",
+      "units": {
+        "aot/utils/ai_card_files.py": "c5274998b5bb64b8",
+        "aot/utils/ai_card_video.py": "ea28d88476f0f6b0",
+        "aot/utils/ai_screen_cards.py": "309eb9ee66e38f85"
+      },
+      "commit": "67a296ac3d28c98247648fba4efeab04a841eb5a",
+      "stamped": "2026-10-31"
     },
     "ai/overview#ai-records": {
       "code": "53795abb70bdc4cd",
@@ -521,49 +700,50 @@
       "stamped": "2026-09-26"
     },
     "ai/overview#call-state": {
-      "code": "88ec78c012c6ee45",
+      "code": "540fc132ae221ebd",
       "units": {
         "aot/aot_flask/routes_mcp_api.py::_execution_unconfirmed": "de18979be753983e",
-        "aot/tools/mcp_safety_gate.py#L1247": "999e317f910a7e9e"
+        "aot/tools/mcp_safety_gate.py#L1475": "e8438cf6405982a2"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "6752d1a1015771395e80b81dd043b34c0f5da13c",
+      "stamped": "2026-11-01"
     },
     "ai/overview#central-auth": {
-      "code": "7b69f9e9e853b29b",
+      "code": "302d8057048da6e1",
       "units": {
-        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_callback": "2a49c5397a4ec985",
-        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_check": "d1c01d96b9bdcf29",
-        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_config": "ad11f87349406a8a",
+        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_callback": "1762adf22e6732bd",
+        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_check": "f8d7a354aef3ff99",
+        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_config": "53aecc1302a92a76",
+        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_disconnect": "094c2f8dfaa5c8b5",
         "aot/aot_flask/routes_mcp_auth.py::mcp_auth_link": "ebe4a4e0acd22258",
-        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_unlink": "438654efcc840ce2",
-        "aot/aot_flask/templates/settings/general.html#L190": "c951e6b6e3fa10db",
-        "aot/aot_flask/templates/settings/general.html#L463": "ca85f858b2e4e158",
+        "aot/aot_flask/routes_mcp_auth.py::mcp_auth_unlink": "61106af3cc08cd44",
+        "aot/aot_flask/templates/settings/general.html#L228": "04aa6a78ba88e990",
+        "aot/aot_flask/templates/settings/general.html#L576": "df400e9dbbe08fcc",
         "aot/aot_mcp_server.py::_run_http_server.protected_resource_metadata": "5ad1714e1ddfd10f",
-        "aot/tools/mcp_central.py": "b073e5000efedf35"
+        "aot/tools/mcp_central.py": "3267ae1c04fb2e36"
       },
-      "commit": "bd8eae61c224484294a18c8bcbd1207c3b21ba5b",
-      "stamped": "2026-09-28"
+      "commit": "60debe94b06ece0b44ab55b60f791adc738983b1",
+      "stamped": "2026-10-27"
     },
     "ai/overview#chatgpt-setup": {
-      "code": "f270e22fa5dc0d93",
+      "code": "500f4cf672e88905",
       "units": {
         "aot/aot_mcp_server.py::_run_http_server.info": "f4db314bce6b2f1f",
-        "aot/aot_mcp_server.py::_run_http_server.tools_call": "8b2ebe2a31b9d88a",
-        "aot/aot_mcp_server.py::_run_http_server.tools_list": "b837726c0846f4da"
+        "aot/aot_mcp_server.py::_run_http_server.tools_call": "6d0413b99041a894",
+        "aot/aot_mcp_server.py::_run_http_server.tools_list": "3e7c0ada71bef61c"
       },
-      "commit": "bd8eae61c224484294a18c8bcbd1207c3b21ba5b",
-      "stamped": "2026-09-28"
+      "commit": "23d0855b71efc685ac9e15deee35f9a2e75f81c8",
+      "stamped": "2026-10-10"
     },
     "ai/overview#data-credits": {
-      "code": "574a29d47034ed73",
+      "code": "c6d7860a6beb297f",
       "units": {
         "aot/aot_flask/routes_ai_library.py::_attribution_notices": "1e64537c75d04e3c",
         "aot/aot_flask/templates/pages/ai/ai_library.html#L287": "149480ba1eda3252",
-        "aot/utils/source_attribution.py": "46b2906a5bf14fa3"
+        "aot/utils/source_attribution.py": "0ea1e1b267556218"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "ai/overview#device-ai-toggle": {
       "code": "b4fd3abfe247de34",
@@ -578,6 +758,15 @@
       "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
       "stamped": "2026-09-26"
     },
+    "ai/overview#embedded-auth": {
+      "code": "7848f0f5d8b46241",
+      "units": {
+        "aot/aot_flask/routes_oauth_embedded.py": "3477227783305840",
+        "aot/tools/mcp_embedded.py": "efa20e9a38cacfb8"
+      },
+      "commit": "fc2755bf754c2734a2445494326e2b2ec940aa97",
+      "stamped": "2026-10-24"
+    },
     "ai/overview#enable-and-start": {
       "code": "b4e663d3f096e715",
       "units": {
@@ -590,14 +779,14 @@
       "stamped": "2026-09-28"
     },
     "ai/overview#global-sources": {
-      "code": "e58666a6bb00bd57",
+      "code": "354072362fae72e9",
       "units": {
-        "aot/ai/context/ext/openmeteo_client.py": "2ac4faa1a02fc61d",
+        "aot/ai/context/ext/openmeteo_client.py": "3df4f1655cd17ec1",
         "aot/aot_flask/routes_ai_library.py#L207": "9bac531b445bb4d2",
         "aot/aot_flask/routes_ai_library.py#L262": "c18f3657e5860c02"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "ai/overview#knowledge-digest-pipeline": {
       "code": "d830fc8f81056702",
@@ -630,44 +819,44 @@
       "stamped": "2026-09-26"
     },
     "ai/overview#running-the-mcp-server": {
-      "code": "c7bc92ebd1a1729a",
+      "code": "c76cda18dd1f0f7b",
       "units": {
-        "aot/aot_mcp_server.py::_run_http_server.mcp_streamable": "02d07dc99fd3f1a1",
+        "aot/aot_mcp_server.py::_run_http_server.mcp_streamable": "8573fd761635997d",
         "aot/aot_mcp_server.py::_run_http_server.mcp_streamable_delete": "fec1d992acdf2971",
         "aot/aot_mcp_server.py::_run_http_server.mcp_streamable_get": "464c3c10f17380a9",
-        "aot/aot_mcp_server.py::main": "348abe694784c684"
+        "aot/aot_mcp_server.py::main": "9e9b106b0b5d30aa"
       },
-      "commit": "bd8eae61c224484294a18c8bcbd1207c3b21ba5b",
-      "stamped": "2026-09-28"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "ai/overview#safety-approval-model": {
-      "code": "e1e22eb45a5231ae",
+      "code": "9970e786e6ed7a4b",
       "units": {
         "aot/ai/services/ai_scheduler_service.py::_execute_scheduled_action": "4f0666b7520bd651",
         "aot/aot_flask/routes_mcp_api.py::mcp_confirmation_approve": "03c9b8efcd412882",
         "aot/aot_flask/routes_mcp_api.py::mcp_confirmation_batch_approve": "83791e5a7a2ee4da",
         "aot/aot_flask/routes_mcp_api.py::mcp_confirmation_batch_reject": "d27d7ee2cc3abd5b",
         "aot/aot_flask/routes_mcp_api.py::mcp_confirmation_reject": "23b3d34e5ee3a797",
-        "aot/aot_flask/templates/pages/ai/_mcp_pending_approvals.html": "490907cf08abae07",
+        "aot/aot_flask/templates/pages/ai/_mcp_pending_approvals.html": "fae8fec2639fb20b",
         "aot/tools/mcp_safety_gate.py::_approval_scope_denial": "607f8f881963fd94",
         "aot/tools/mcp_safety_gate.py::_approver_role_denial": "89a5504b55080b93",
-        "aot/tools/mcp_safety_gate.py::_decide": "0f47e8f85de27e72",
+        "aot/tools/mcp_safety_gate.py::_decide": "81a6bb06553c38eb",
         "aot/tools/mcp_safety_gate.py::_return_to_pending": "721045aae1f6a08d",
         "aot/tools/mcp_safety_gate.py::approval_tools": "d988a26b31030ba8",
         "aot/tools/mcp_safety_gate.py::config_only_tools": "2af8258a4133f7f5",
-        "aot/tools/mcp_safety_gate.py::execute_approved": "dfd9e3d0a10cb65c",
-        "aot/tools/mcp_safety_gate.py::gate": "1ffc1593e3025113",
+        "aot/tools/mcp_safety_gate.py::execute_approved": "f0e4b26f3ac6ffe7",
+        "aot/tools/mcp_safety_gate.py::gate": "63812873bae157cc",
         "aot/tools/mcp_safety_gate.py::record_write_tools": "2d0d0d4b0e193d63",
         "aot/tools/mcp_safety_gate.py::required_write_permission": "5d0177f27097b3c8",
         "aot/tools/mcp_safety_gate.py::role_allows_tool": "9800242451fc1d52",
         "aot/tools/mcp_safety_gate.py::role_refusal": "caa592b162ee0b60",
-        "aot/tools/tool_execution.py::_respond_to_confirmation": "c33ee4f3e0c2c3e9",
+        "aot/tools/tool_execution.py::_respond_to_confirmation": "b05d6e373f7acc70",
         "aot/tools/tool_execution.py::_scope_refusal": "5965582316907d99",
         "aot/tools/tool_execution.py::scope_arguments": "356681ff36de1ee0",
-        "aot/widgets/widget_mcp_review.py": "54e3571e2fe0cfa3"
+        "aot/widgets/widget_mcp_review.py": "66a1fed341558022"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "ai/overview#scoping-is-by-tag-not-by-site": {
       "code": "ce97b725c9f7bb20",
@@ -691,39 +880,39 @@
       "stamped": "2026-09-30"
     },
     "ai/overview#tool-arguments": {
-      "code": "346e68a080e52b7a",
+      "code": "85f7e6558b9b1e5d",
       "units": {
         "aot/tools/data_tools/_common.py::CommonToolsMixin._for_each_target": "9ec26d03a6e310d6",
+        "aot/tools/data_tools/_common.py::CommonToolsMixin._map_is_not_a_place": "b0a841b570e1563c",
         "aot/tools/data_tools/_common.py::CommonToolsMixin._read_ambiguity": "7637ae02de5b35d2",
         "aot/tools/data_tools/_common.py::CommonToolsMixin._read_device": "5dd3fdc48b1e03ee",
-        "aot/tools/data_tools/_common.py::CommonToolsMixin._read_place": "40df03346a3a0989",
-        "aot/tools/data_tools/_common.py::CommonToolsMixin._read_plot": "13f7b83d15f1fb50",
+        "aot/tools/data_tools/_common.py::CommonToolsMixin._read_plot": "0c630da4fb039d1b",
         "aot/tools/data_tools/_common.py::CommonToolsMixin._targets_arg": "40b1825f62f81474",
         "aot/tools/tool_execution.py::_likely_typo": "a63f0ca0f3c57aee",
         "aot/tools/tool_execution.py::_pre_gate_validation": "5786f83206ba58de"
       },
-      "commit": "3acb1f10ac288df345e9ae9c016c880d63e671fc",
-      "stamped": "2026-09-30"
+      "commit": "f851fe20f084cd80c188ad66d19ea7dcc23bffa0",
+      "stamped": "2026-10-11"
     },
     "ai/overview#tool-drawers": {
-      "code": "8578e41a359ae784",
+      "code": "5efe383dad76b52c",
       "units": {
         "aot/tools/tool_execution.py::_builtin_tiering_enabled": "e6872d5bb174e987",
-        "aot/tools/tool_execution.py::_drawer_contents": "3afcbaea66edb636",
+        "aot/tools/tool_execution.py::_drawer_contents": "300ba4fe5ed23bf8",
         "aot/tools/tool_execution.py::_drawer_index": "595d7b3e8673bfc3",
-        "aot/tools/tool_execution.py::_get_tool_detail": "7df1568af08b0fad",
-        "aot/tools/tool_execution.py::_open_drawer": "5c309a0cfe3df0bc",
+        "aot/tools/tool_execution.py::_get_tool_detail": "6827ae5712dab515",
+        "aot/tools/tool_execution.py::_open_drawer": "793f29b0337b5ef1",
         "aot/tools/tool_execution.py::_tiering_enabled": "94df13a5ce94e008",
-        "aot/tools/tool_registry.py#L1393": "ad7827af6d911b1e",
+        "aot/tools/tool_registry.py#L1431": "79200fb1c8fffdc0",
         "aot/tools/tool_registry.py::core_tools": "baaa6a019dd10503",
         "aot/tools/tool_registry.py::drawer_index": "2d68d687d2f2e4bd",
         "aot/tools/tool_registry.py::tools_in_drawer": "1f0aadb9fe852a7d"
       },
-      "commit": "3acb1f10ac288df345e9ae9c016c880d63e671fc",
-      "stamped": "2026-09-30"
+      "commit": "6752d1a1015771395e80b81dd043b34c0f5da13c",
+      "stamped": "2026-11-01"
     },
     "ai/overview#tool-profiles": {
-      "code": "1bfd79f9075aa454",
+      "code": "4ac6a18a06b56a72",
       "units": {
         "aot/aot_flask/utils/utils_settings.py::change_api_key_profile": "a4a900ef0f686551",
         "aot/tools/mcp_auth.py::backfill_key_tool_profiles": "e97b1a63cb8775fe",
@@ -733,24 +922,24 @@
         "aot/tools/mcp_auth.py::tool_profile_of": "ecd42cb6dac52bc7",
         "aot/tools/mcp_auth.py::tool_profiles_enabled": "31d0869ac44c7f3f",
         "aot/tools/tool_execution.py::_attach_shelve_hint": "21b92def34267f88",
-        "aot/tools/tool_execution.py::_mask_out_of_profile_pending": "30dec9c3447644d3",
-        "aot/tools/tool_execution.py::_module_sentences": "d6a6f8be75741e6d",
+        "aot/tools/tool_execution.py::_card_rule": "a202e5aa712777b5",
+        "aot/tools/tool_execution.py::_mask_out_of_profile_pending": "a0bc978cd26bf577",
+        "aot/tools/tool_execution.py::_module_sentences": "bdda8ce5d0433736",
         "aot/tools/tool_execution.py::_profile_enforced": "4e62d9fedc443fa4",
-        "aot/tools/tool_execution.py::_profile_note": "9b4f81087afe96c6",
+        "aot/tools/tool_execution.py::_profile_note": "cfe670ac4b02ea53",
         "aot/tools/tool_execution.py::_profile_refusal": "dcd9885b3e7012a5",
-        "aot/tools/tool_execution.py::_profile_refusal_body": "4a0c3adc5642d5dd",
-        "aot/tools/tool_execution.py::_server_instructions": "a5374c00b1c98e2e",
-        "aot/tools/tool_execution.py::_switch_sentence": "4cc2b464b37a8a15",
+        "aot/tools/tool_execution.py::_profile_refusal_body": "98d5c2091169d5ef",
+        "aot/tools/tool_execution.py::_switch_sentence": "d93ceb36680ab0a3",
         "aot/tools/tool_registry.py::compose_tool_profile": "6d35b7434aeed887",
         "aot/tools/tool_registry.py::normalize_tool_profile": "0cf94c5801ff7960",
         "aot/tools/tool_registry.py::parse_tool_profile": "91d69b18193130cd",
-        "aot/tools/tool_registry.py::profile_from_storage": "cb3d50fef9a24a4a",
+        "aot/tools/tool_registry.py::profile_from_storage": "6b95cc29fe542fe4",
         "aot/tools/tool_registry.py::profile_modules": "1023af9771792d70",
         "aot/tools/tool_registry.py::profile_tools": "d1f925fb3c5ce635",
         "aot/tools/tool_registry.py::tool_in_profile": "81c9bf8ebb3246d6"
       },
-      "commit": "0981f199b554acba6cdcb87da021d7ff45a83970",
-      "stamped": "2026-09-29"
+      "commit": "6752d1a1015771395e80b81dd043b34c0f5da13c",
+      "stamped": "2026-11-01"
     },
     "ai/overview#where-knowledge-comes-from": {
       "code": "e842a7dee1e8d0e7",
@@ -908,14 +1097,14 @@
       "stamped": "2026-09-27"
     },
     "geo/api-reference#details-post-apigeooverlays": {
-      "code": "83b5fcef71bf1f5c",
+      "code": "a24a49db5f1546dd",
       "units": {
         "aot/aot_flask/api/geo.py::GeoOverlays.post": "b7523f1249572497",
         "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager._strip_structural_props": "03f166324cf4f649",
-        "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.save_overlays": "c0552fc97e4cefbe"
+        "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.save_overlays": "f3f6b59415b322c2"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/api-reference#device-binding": {
       "code": "bb129f4464439578",
@@ -930,7 +1119,7 @@
       "stamped": "2026-09-26"
     },
     "geo/api-reference#device-location-lists-detail": {
-      "code": "9b9637ce99319e4c",
+      "code": "e25865221d26428a",
       "units": {
         "aot/aot_flask/api/geo.py::GeoDeviceLocation.post": "1f3ffca778c846f4",
         "aot/aot_flask/routes_geo_device.py::api_geo_devices_list": "d4bea75a8040e760",
@@ -938,10 +1127,10 @@
         "aot/aot_flask/routes_geo_device.py::api_geo_link_status": "0cfb3866652818f1",
         "aot/aot_flask/routes_geo_device.py::api_geo_outputs": "be2f6950db7639f1",
         "aot/aot_flask/routes_geo_device_split.py::api_device_split_apply": "778046b5fbbf0693",
-        "aot/aot_flask/routes_geo_summary.py::api_geo_device_detail": "072c9bbfe5b7c6c9"
+        "aot/aot_flask/routes_geo_summary.py::api_geo_device_detail": "1a317ab69a233a73"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "e1467a4fd70d4eca92fd09a9017f89b97e464b5b",
+      "stamped": "2026-10-09"
     },
     "geo/api-reference#facilities": {
       "code": "b881d272acfe95c1",
@@ -985,13 +1174,13 @@
       "stamped": "2026-09-26"
     },
     "geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator": {
-      "code": "be6afe946eec2e13",
+      "code": "af0d06cee4f90f4a",
       "units": {
         "aot/aot_flask/routes_geo_facility.py::api_calibration_status": "ae0387b1b40a5749",
         "aot/aot_flask/routes_geo_facility.py::api_facility_actuator_order": "dd5bbb695c72e3e8",
         "aot/aot_flask/routes_geo_facility.py::api_facility_bay_capacity": "1eefeb6f1858cc79",
         "aot/aot_flask/routes_geo_facility.py::api_facility_bays": "c204bfc290f48257",
-        "aot/aot_flask/routes_geo_facility.py::api_facility_runtime": "39e29debdbc60ac8",
+        "aot/aot_flask/routes_geo_facility.py::api_facility_runtime": "8fb1775bdee227ed",
         "aot/aot_flask/routes_geo_iec.py::api_coordinator_actuators": "72585067f260d543",
         "aot/aot_flask/routes_geo_iec.py::api_coordinator_overview": "76d4d38737f60b9e",
         "aot/aot_flask/routes_geo_iec.py::api_facility_actuator_history": "23c07bf75b3825ad",
@@ -1001,7 +1190,7 @@
         "aot/aot_flask/routes_geo_iec.py::api_facility_estop": "de8961415b406adb",
         "aot/aot_flask/routes_geo_iec.py::api_facility_function_state": "f78b91dcef7dff78",
         "aot/aot_flask/routes_geo_iec.py::api_facility_hidden_rows": "092bc55449ddc011",
-        "aot/aot_flask/routes_geo_iec.py::api_facility_iec_status": "68bae27c06dd3ebf",
+        "aot/aot_flask/routes_geo_iec.py::api_facility_iec_status": "873bf2942b4be83d",
         "aot/aot_flask/routes_geo_iec.py::api_facility_info": "43a77611f750b367",
         "aot/aot_flask/routes_geo_iec.py::api_facility_overview": "e924bbfdf6a9dc15",
         "aot/aot_flask/routes_geo_iec.py::api_facility_photo": "38286df501d7c5fc",
@@ -1009,8 +1198,8 @@
         "aot/aot_flask/routes_geo_iec.py::api_facility_setpoints": "bc0f0dd209eeb7d4",
         "aot/aot_flask/routes_geo_iec.py::serve_facility_photo": "65c5c89ceb99835a"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "02096f7e4ea8bbdc765861f97589ce4ce3742bff",
+      "stamped": "2026-10-09"
     },
     "geo/api-reference#lifecycle-stage": {
       "code": "87702177316fd7e4",
@@ -1087,10 +1276,10 @@
       "stamped": "2026-09-26"
     },
     "geo/api-reference#overlays-shapes-geojson": {
-      "code": "4ed9516f15717d38",
+      "code": "a4c3dc665278b438",
       "units": {
         "aot/aot_flask/api/geo.py::GeoOverlays.get": "86e3b03ff3dee52b",
-        "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.get_overlays": "26b78ed986d63cd8",
+        "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.get_overlays": "798c2cc91ae251e5",
         "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.save_delta": "5a43ce4c5f9429f0",
         "aot/aot_flask/routes_geo_layer.py::api_geo_generate_pipes": "a7216b6e3b3edddd",
         "aot/aot_flask/routes_geo_layer.py::api_geo_overlays_delta": "955dd74dfbf01e87",
@@ -1099,8 +1288,8 @@
         "aot/aot_flask/routes_geo_shape.py::api_geo_sites": "060171ea63217e54",
         "aot/aot_flask/routes_geo_shape.py::api_geo_zones": "0f39ca9ece892a14"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/api-reference#parcel-import": {
       "code": "36aeb20c66115967",
@@ -1174,14 +1363,14 @@
       "stamped": "2026-09-26"
     },
     "geo/api-reference#sites": {
-      "code": "4cc1d98d654cc7fb",
+      "code": "37ceed0b1f41e183",
       "units": {
-        "aot/aot_flask/routes_geo_summary.py::api_geo_site_contents": "c9cf47eb185da909",
+        "aot/aot_flask/routes_geo_summary.py::api_geo_site_contents": "16a3e4b5c3dfe741",
         "aot/aot_flask/routes_geo_summary.py::api_geo_site_summary": "19d81047c7cefd61",
-        "aot/aot_flask/routes_geo_summary.py::api_geo_site_weather": "b8b8913c97f18426"
+        "aot/aot_flask/routes_geo_summary.py::api_geo_site_weather": "36c05e13afe827b2"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "22f02abb404d3decdee13b043a2fdda3749415b9",
+      "stamped": "2026-10-26"
     },
     "geo/api-reference#splitting-a-zone-into-plots": {
       "code": "8ba53185972076c8",
@@ -1193,13 +1382,23 @@
       "stamped": "2026-09-26"
     },
     "geo/api-reference#time-solar": {
-      "code": "de1f1eab4768fbcf",
+      "code": "39aa8ddc4ebdf034",
       "units": {
-        "aot/aot_flask/routes_geo_schedule.py::api_geo_local_time": "4e041a4059549cb5",
-        "aot/aot_flask/routes_geo_schedule.py::api_geo_sun_event": "d1e9639977b949b5"
+        "aot/aot_flask/routes_geo_schedule.py::api_geo_local_time": "8750303192b6f0a7",
+        "aot/aot_flask/routes_geo_schedule.py::api_geo_sun_event": "d1e9639977b949b5",
+        "aot/aot_flask/routes_geo_schedule.py::api_geo_weather_state": "f76bc7ee2fce45b5"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
+    },
+    "geo/api-reference#water-network": {
+      "code": "e9be863ab91294b8",
+      "units": {
+        "aot/aot_flask/routes_geo_map.py::api_geo_water_net": "583a6adec67ea3a4",
+        "aot/aot_flask/routes_geo_map.py::api_geo_water_net_paths": "891c336c66f79577"
+      },
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/api-reference#zones": {
       "code": "efbd3a629160b45b",
@@ -1280,16 +1479,16 @@
       "stamped": "2026-09-26"
     },
     "geo/design-tool#manual-save": {
-      "code": "d2f9d7307f7baa84",
+      "code": "b18220a7fe3334b4",
       "units": {
         "aot/aot_flask/api/geo.py::GeoDesigns.post": "8b21d779e9901faf",
         "aot/aot_flask/api/geo.py::GeoOverlays.post": "b7523f1249572497",
         "aot/aot_flask/geo/geo_design.py::GeoDesignManager.save_design_map": "943e8b4fc8c504de",
-        "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.save_overlays": "c0552fc97e4cefbe",
+        "aot/aot_flask/geo/geo_overlays.py::GeoOverlayManager.save_overlays": "f3f6b59415b322c2",
         "aot/aot_flask/templates/pages/geo/geo_design.html#L517": "9da10d4db0bfd130"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/design-tool#map-lock": {
       "code": "51c689885ad00569",
@@ -1427,31 +1626,31 @@
       "stamped": "2026-09-26"
     },
     "geo/facility#device-check": {
-      "code": "94781928915f0c6e",
+      "code": "7d27a5d285152847",
       "units": {
         "aot/aot_flask/routes_geo_commissioning.py::_apply_commissioning_actions": "5e32ae15c7aa50b9",
         "aot/aot_flask/routes_geo_commissioning.py::api_commissioning_result": "1f53e443570cae4b",
         "aot/aot_flask/routes_geo_commissioning.py::api_commissioning_start": "bbaa8d8fe6dbd09a",
         "aot/aot_flask/routes_geo_commissioning.py::api_commissioning_verdict": "84c244f32b4483b7",
-        "aot/aot_flask/templates/pages/geo/geo_facility.html#L1107": "e4a2412ead2dba5e",
+        "aot/aot_flask/templates/pages/geo/geo_facility.html#L1112": "e4a2412ead2dba5e",
         "aot/functions/utils/env_control/commissioning.py::_evaluate": "5747d7f1edd590b9",
         "aot/functions/utils/env_control/commissioning.py::start_check": "ada55a9d71fb220c",
         "aot/functions/utils/env_control/commissioning.py::submit_verdict": "ae1c24636c7a193a"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "3687c2b210c868f0e0946cefb45be094089261db",
+      "stamped": "2026-10-13"
     },
     "geo/facility#engineering-calculations": {
-      "code": "7724df538a8b1205",
+      "code": "5080f0ed4e2b4f7d",
       "units": {
         "aot/aot_flask/geo/facility_calc.py::_aggregate_actuators": "ad24f341f5608a0a",
         "aot/aot_flask/geo/facility_calc.py::compute_capacity": "9c5c7c8a11b41926",
         "aot/aot_flask/geo/facility_calc.py::effective_u": "9ddf02d489354cfa",
         "aot/aot_flask/routes_geo_facility.py::api_facility_compute": "c2615d3147799c6d",
-        "aot/aot_flask/templates/pages/geo/geo_facility.html#L1070": "9e3211511c4fd391"
+        "aot/aot_flask/templates/pages/geo/geo_facility.html#L1075": "9e3211511c4fd391"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "3687c2b210c868f0e0946cefb45be094089261db",
+      "stamped": "2026-10-13"
     },
     "geo/facility#facility-registration-flow": {
       "code": "442350eb7f8f4904",
@@ -1462,13 +1661,13 @@
       "stamped": "2026-09-26"
     },
     "geo/facility#integration-view": {
-      "code": "12045d2541eb8d92",
+      "code": "2cceefefff56aaa1",
       "units": {
-        "aot/aot_flask/geo/facility_integration.py::get_facility_integration": "5ecb9249ce5f2813",
+        "aot/aot_flask/geo/facility_integration.py::get_facility_integration": "d5392534b2bf10e6",
         "aot/aot_flask/routes_geo_facility.py::api_facility_integration": "29cafa7ac45385f9"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "383ddec20c49924f156950ebfbf5ed6a1049b24b",
+      "stamped": "2026-10-14"
     },
     "geo/facility#natural-ventilation-wind-pressure-simulation": {
       "code": "cd8a8f832f69dd4c",
@@ -1489,14 +1688,15 @@
       "stamped": "2026-09-26"
     },
     "geo/facility#sensor-roles": {
-      "code": "86daef1664d0d4f6",
+      "code": "4ca3e7b082f48395",
       "units": {
-        "aot/aot_flask/geo/facility_integration.py::_infer_mtype_from_dm": "9efca40abb8f624b",
+        "aot/aot_flask/geo/facility_integration.py::_infer_mtype_from_dm": "133a0b4999a4527a",
         "aot/aot_flask/geo/facility_integration.py::auto_channels_for_device": "a2395671dc4a273b",
-        "aot/aot_flask/templates/pages/geo/geo_facility.html": "670c4018c42128f2"
+        "aot/aot_flask/geo/facility_sensors.py::read_outdoor_sensors": "914cdd1a61c5154b",
+        "aot/aot_flask/templates/pages/geo/geo_facility.html": "f0e96df69655f416"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "1b59962e39142d01868d4dd7b26088d6794dd9c6",
+      "stamped": "2026-10-27"
     },
     "geo/facility#structure-type": {
       "code": "c59f0a29cb30acdb",
@@ -1506,14 +1706,22 @@
       "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
       "stamped": "2026-09-26"
     },
+    "geo/facility#weather-forecast-bindings": {
+      "code": "79ff212c22c4464f",
+      "units": {
+        "aot/aot_flask/templates/pages/geo/geo_facility.html#L922": "d09900dfc4902eb3"
+      },
+      "commit": "3687c2b210c868f0e0946cefb45be094089261db",
+      "stamped": "2026-10-13"
+    },
     "geo/facility-widget#0-status-strip": {
-      "code": "527b6b36f73b0f6a",
+      "code": "708532f2a45f3491",
       "units": {
         "aot/aot_flask/routes_geo_iec.py::_iec_stale_threshold": "cd13395e7e085acb",
-        "aot/aot_flask/routes_geo_iec.py::api_facility_iec_status": "68bae27c06dd3ebf"
+        "aot/aot_flask/routes_geo_iec.py::api_facility_iec_status": "873bf2942b4be83d"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "02096f7e4ea8bbdc765861f97589ce4ce3742bff",
+      "stamped": "2026-10-09"
     },
     "geo/facility-widget#adding-the-widget": {
       "code": "2007f7ea904b4f90",
@@ -1525,15 +1733,17 @@
       "stamped": "2026-09-28"
     },
     "geo/facility-widget#b-environment": {
-      "code": "7183c09617388977",
+      "code": "dfaa4fbf9b7c7033",
       "units": {
-        "aot/aot_flask/geo/facility_sensors.py::build_sensor_snapshot": "28147605675ddef4",
+        "aot/aot_flask/geo/facility_sensors.py::build_sensor_snapshot": "338ed9a904f3b992",
         "aot/aot_flask/routes_geo_iec.py::_effective_targets": "7cee5971e2091afa",
+        "aot/aot_flask/routes_geo_iec.py::_snapshot_leaf_vpd": "927a5d89fe021743",
         "aot/aot_flask/routes_geo_iec.py::api_facility_setpoints": "bc0f0dd209eeb7d4",
-        "aot/databases/models/geo_facility_setpoint.py::GeoFacilitySetpoint": "41598cfe29556e72"
+        "aot/databases/models/geo_facility_setpoint.py::GeoFacilitySetpoint": "41598cfe29556e72",
+        "aot/functions/custom_functions/env_coordinator_impl/_cycle_mixin.py::CycleMixin._annotate_snapshot_vpd_basis": "1e678b2e6f743b19"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "82c5333abbab76340e3592ce03b35d257718c259",
+      "stamped": "2026-10-09"
     },
     "geo/facility-widget#d-actuator-control": {
       "code": "8d2da532bfd9bcf3",
@@ -1546,14 +1756,14 @@
       "stamped": "2026-09-27"
     },
     "geo/facility-widget#data-refresh": {
-      "code": "bd029cfb6131faf1",
+      "code": "50d6e84ed8e4845d",
       "units": {
-        "aot/aot_flask/geo/facility_sensors.py::build_sensor_snapshot": "28147605675ddef4",
-        "aot/aot_flask/routes_geo_facility.py::api_facility_runtime": "39e29debdbc60ac8",
-        "aot/aot_flask/routes_geo_iec.py::api_facility_iec_status": "68bae27c06dd3ebf"
+        "aot/aot_flask/geo/facility_sensors.py::build_sensor_snapshot": "338ed9a904f3b992",
+        "aot/aot_flask/routes_geo_facility.py::api_facility_runtime": "8fb1775bdee227ed",
+        "aot/aot_flask/routes_geo_iec.py::api_facility_iec_status": "873bf2942b4be83d"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "02096f7e4ea8bbdc765861f97589ce4ce3742bff",
+      "stamped": "2026-10-09"
     },
     "geo/facility-widget#e-ai-advice": {
       "code": "c9394c460a46d459",
@@ -1572,12 +1782,12 @@
       "stamped": "2026-09-27"
     },
     "geo/facility-widget#screen-layout": {
-      "code": "7373fd1fda73077d",
+      "code": "4626c96185698add",
       "units": {
-        "aot/widgets/AoT_facility.py::WIDGET_BODY_HTML": "7abb7cd3368adae5"
+        "aot/widgets/AoT_facility.py::WIDGET_BODY_HTML": "5ada2554be61035c"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "4d76a8e8efcfb1ac03099baba8f83036bdd1fc9a",
+      "stamped": "2026-10-09"
     },
     "geo/facility-widget#widget-settings": {
       "code": "2007f7ea904b4f90",
@@ -1597,16 +1807,16 @@
       "stamped": "2026-09-26"
     },
     "geo/journal#adding-comments": {
-      "code": "63c063d5e1d3c424",
+      "code": "b51e1e4a4aa4eb60",
       "units": {
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1727": "5d3b093be9d6097c",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1976": "1a3052d214a10188"
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1742": "5d3b093be9d6097c",
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1991": "1a3052d214a10188"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/journal#contents": {
-      "code": "1d83f6cc1a1ecf9e",
+      "code": "f672c4e351a6eccb",
       "units": {
         "aot/aot_flask/geo/plot_journal/calc.py::_attached_device_name": "b1dcfff7867133fd",
         "aot/aot_flask/geo/plot_journal/calc.py::_plot_stages": "41bd8b7a1dbe39d7",
@@ -1622,15 +1832,15 @@
         "aot/aot_flask/geo/plot_journal/calc.py::notes_for_target": "73d2894c14fd5381",
         "aot/aot_flask/geo/plot_journal/calc.py::stage_sections": "129ce160cd63ee91",
         "aot/aot_flask/geo/plot_journal/calc.py::usage_from_stats": "4c1afe93227dae01",
-        "aot/aot_flask/templates/pages/geo/journal_view.html": "18d68f7d2a49caa5",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1037": "e3b0c44298fc1c14",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1354": "e3b0c44298fc1c14",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1552": "e3b0c44298fc1c14",
+        "aot/aot_flask/templates/pages/geo/journal_view.html": "0e4b5f9e067eac54",
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1045": "e3b0c44298fc1c14",
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1362": "e3b0c44298fc1c14",
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1567": "e3b0c44298fc1c14",
         "aot/aot_flask/templates/pages/geo/journal_view.html#L779": "e3b0c44298fc1c14",
         "aot/aot_flask/templates/pages/geo/journal_view.html#L961": "e3b0c44298fc1c14"
       },
-      "commit": "ae695059ced5412f00b350e55a422ab55709fd56",
-      "stamped": "2026-09-27"
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/journal#curve-target": {
       "code": "9e92b3999982f312",
@@ -1690,19 +1900,19 @@
       "stamped": "2026-09-26"
     },
     "geo/journal#gdd": {
-      "code": "4cabecc5239309d5",
+      "code": "839d49542841bdb2",
       "units": {
         "aot/aot_flask/geo/plot_accumulation.py::_query_daily_extremes": "fd00ea9c2a2289a4",
         "aot/aot_flask/geo/plot_accumulation.py::gdd_accumulated": "c7c7747f087d08cd",
         "aot/aot_flask/geo/plot_journal/calc.py::gdd_display_group": "632f83d0d406861c",
         "aot/aot_flask/geo/plot_journal/calc.py::gdd_for_journal": "8ccb0e420edd4cf7",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1331": "e3b0c44298fc1c14"
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1339": "e3b0c44298fc1c14"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/journal#generating-a-journal": {
-      "code": "300dde78cadd6405",
+      "code": "b9744ae3eb22079a",
       "units": {
         "aot/aot_flask/geo/plot_journal/build.py::_run_journal_build": "2ea542bb583d48cd",
         "aot/aot_flask/geo/plot_journal/build.py::estimate_journal_cost": "821d411a6b2ec062",
@@ -1714,15 +1924,15 @@
         "aot/aot_flask/routes_geo_journal.py::geo_journal_target_info": "553e55333c28d2be",
         "aot/aot_flask/templates/pages/geo/journal.html": "a6c645946c0c0582",
         "aot/aot_flask/templates/pages/geo/journal.html#L162": "e3b0c44298fc1c14",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1048": "e2f78304b5498c67"
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1056": "e2f78304b5498c67"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/journal#granularity": {
-      "code": "41548d42a45661a2",
+      "code": "b4ef9fe2eb8d2941",
       "units": {
-        "aot/aot_flask/geo/plot_journal/calc.py::_merge_bucket_group": "5b3ff1a4935334b9",
+        "aot/aot_flask/geo/plot_journal/calc.py::_merge_bucket_group": "0a91c504276f02e2",
         "aot/aot_flask/geo/plot_journal/calc.py::bucket_labels": "516345e7d5b28e69",
         "aot/aot_flask/geo/plot_journal/calc.py::choose_granularity": "87da565fd6b38f72",
         "aot/aot_flask/geo/plot_journal/calc.py::fold_buckets": "a109df227080c454",
@@ -1730,26 +1940,26 @@
         "aot/aot_flask/templates/pages/geo/journal.html#L138": "e3b0c44298fc1c14",
         "aot/aot_flask/templates/pages/geo/journal_view.html#L712": "b2b29b83a60b23ee"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "b325ce42203529133ed589effa99230c9893af61",
+      "stamped": "2026-11-01"
     },
     "geo/journal#irrigation": {
-      "code": "a4c41fde6373fa84",
+      "code": "af2bf39eff53034e",
       "units": {
-        "aot/aot_flask/geo/plot_journal/calc.py::_merge_bucket_group": "5b3ff1a4935334b9",
-        "aot/aot_flask/geo/plot_journal/calc.py::control_rows_by_bucket": "ce81086dc5dde698",
+        "aot/aot_flask/geo/plot_journal/calc.py::_merge_bucket_group": "0a91c504276f02e2",
+        "aot/aot_flask/geo/plot_journal/calc.py::control_rows_by_bucket": "4811a9e6522cab75",
         "aot/aot_flask/geo/plot_journal/mapview.py::_allocation_share": "b4b04b5cce8274ba",
         "aot/aot_flask/geo/plot_journal/mapview.py::_map_sprinklers": "62a8b365d883388c",
         "aot/aot_flask/geo/plot_journal/mapview.py::_open_field_flow": "9500a4026eea9c5f",
         "aot/aot_flask/geo/plot_journal/mapview.py::irrigation_flow_for_plot": "bedaaa57c76c9a6b",
         "aot/aot_flask/templates/pages/geo/journal_view.html#L1005": "e3b0c44298fc1c14",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1522": "e3b0c44298fc1c14"
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1530": "e3b0c44298fc1c14"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/journal#output-formats": {
-      "code": "d9df3001e81e0d88",
+      "code": "9012437f7f4dc87d",
       "units": {
         "aot/aot_flask/geo/plot_journal/render.py::glossary_terms": "8fadd9a7ea5d2971",
         "aot/aot_flask/geo/plot_journal/render.py::journal_to_jsonable": "c34474ac63dd42e9",
@@ -1757,10 +1967,10 @@
         "aot/aot_flask/geo/plot_journal/render.py::render_plot_journal_markdown": "bb0d3512d4d264c8",
         "aot/aot_flask/geo/plot_journal/render.py::render_plot_journal_odt": "d5bdc6b6ed3e62ce",
         "aot/aot_flask/routes_geo_journal.py::geo_journal_view": "3110fac330da4d4a",
-        "aot/aot_flask/templates/pages/geo/journal_view.html#L1068": "34a3af9b25012433"
+        "aot/aot_flask/templates/pages/geo/journal_view.html#L1076": "34a3af9b25012433"
       },
-      "commit": "ae695059ced5412f00b350e55a422ab55709fd56",
-      "stamped": "2026-09-27"
+      "commit": "7a2ca1d3981eae1cd41c2d078dcec3c31c409857",
+      "stamped": "2026-11-01"
     },
     "geo/journal#weather-readings": {
       "code": "22c48cf0028958a6",
@@ -1773,37 +1983,37 @@
       "stamped": "2026-09-26"
     },
     "geo/layers#agromonitoring-field-ndvi-soil": {
-      "code": "4653ab0ac9915113",
+      "code": "5dac2df597352a9e",
       "units": {
         "aot/aot_flask/routes_geo_layer.py::api_geo_proxy_agromonitoring": "2058f2b27438d88a",
-        "aot/inputs_gis/gis_agromonitoring.py::INPUT_INFORMATION": "94761fe7896cdfb2",
+        "aot/inputs_gis/gis_agromonitoring.py::INPUT_INFORMATION": "3c038560051b3b53",
         "aot/inputs_gis/gis_agromonitoring.py::InputModule.get_data_at_location": "45949f5eacd679a1",
         "aot/inputs_gis/gis_agromonitoring.py::fetch_ndvi": "e645136a9358358d",
         "aot/inputs_gis/gis_agromonitoring.py::fetch_soil": "b587d2ccb2db130f",
         "aot/inputs_gis/gis_agromonitoring.py::resolve_polygon_id": "6e56016e07c65d07"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#domestic-korea": {
-      "code": "623d23e8bf80fe33",
+      "code": "73ed7be043bea4e5",
       "units": {
-        "aot/inputs_gis/gis_kakao.py::INPUT_INFORMATION": "ec94740e8bd59b25",
-        "aot/inputs_gis/gis_naver.py::INPUT_INFORMATION": "e7415ac7ba6a042b",
-        "aot/inputs_gis/gis_vworld.py::INPUT_INFORMATION": "cd5a81a32bbbf455"
+        "aot/inputs_gis/gis_kakao.py::INPUT_INFORMATION": "a728e50d5eb15cf3",
+        "aot/inputs_gis/gis_naver.py::INPUT_INFORMATION": "d5efbca93333c4c2",
+        "aot/inputs_gis/gis_vworld.py::INPUT_INFORMATION": "2e74cb2f3f0a3eac"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#google-maps": {
-      "code": "ed0b60c35744d456",
+      "code": "48db47345a6e7dab",
       "units": {
-        "aot/inputs_gis/gis_google.py::INPUT_INFORMATION": "e17a310d347976cd",
+        "aot/inputs_gis/gis_google.py::INPUT_INFORMATION": "ac8395b40e6aeb6a",
         "aot/inputs_gis/gis_google.py::InputModule._get_active_layer_type": "bc0ee0b722753f2f",
         "aot/inputs_gis/gis_google.py::InputModule.get_url": "6be88b8d5b112871"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#how-to-register-a-layer": {
       "code": "247ccc372c992749",
@@ -1821,30 +2031,30 @@
       "stamped": "2026-09-26"
     },
     "geo/layers#international-general": {
-      "code": "6e6019e0b67fa97a",
+      "code": "65d3ecffb2881f90",
       "units": {
-        "aot/inputs_gis/gis_bing.py::INPUT_INFORMATION": "65ee5b864ef5c974",
-        "aot/inputs_gis/gis_carto.py::INPUT_INFORMATION": "4cbdb238ef99120b",
-        "aot/inputs_gis/gis_esri.py::INPUT_INFORMATION": "48e2679506c60f2f",
-        "aot/inputs_gis/gis_google.py::INPUT_INFORMATION": "e17a310d347976cd",
-        "aot/inputs_gis/gis_mapbox.py::INPUT_INFORMATION": "fa67e36b1d2a436a",
-        "aot/inputs_gis/gis_maptiler_vector.py::INPUT_INFORMATION": "2f4200e953110de8",
-        "aot/inputs_gis/gis_osm.py::INPUT_INFORMATION": "1e3bdd195be815d9",
-        "aot/inputs_gis/gis_stadia.py::INPUT_INFORMATION": "65eddea4f8a23b83",
-        "aot/inputs_gis/gis_thunderforest.py::INPUT_INFORMATION": "e9ed1ef48a2da69d"
+        "aot/inputs_gis/gis_bing.py::INPUT_INFORMATION": "da1973170d49bf67",
+        "aot/inputs_gis/gis_carto.py::INPUT_INFORMATION": "d2ad1ac4d2dbaa63",
+        "aot/inputs_gis/gis_esri.py::INPUT_INFORMATION": "d07398a6d87696ff",
+        "aot/inputs_gis/gis_google.py::INPUT_INFORMATION": "ac8395b40e6aeb6a",
+        "aot/inputs_gis/gis_mapbox.py::INPUT_INFORMATION": "9345e83d1cfd2da8",
+        "aot/inputs_gis/gis_maptiler_vector.py::INPUT_INFORMATION": "4f282b63eda82288",
+        "aot/inputs_gis/gis_osm.py::INPUT_INFORMATION": "94e098d722dbd3e6",
+        "aot/inputs_gis/gis_stadia.py::INPUT_INFORMATION": "8be9444dd1f5a43e",
+        "aot/inputs_gis/gis_thunderforest.py::INPUT_INFORMATION": "e062e8502a938542"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#isric-soilgrids": {
-      "code": "f0758cae8a22ff37",
+      "code": "9f8150aab71708c9",
       "units": {
-        "aot/inputs_gis/gis_isric.py::INPUT_INFORMATION": "ac25c3614ff3ff4d",
+        "aot/inputs_gis/gis_isric.py::INPUT_INFORMATION": "0af1ddbfe1f1cac5",
         "aot/inputs_gis/gis_isric.py::InputModule.get_leaflet_options": "224e393ea49f9195",
         "aot/inputs_gis/gis_isric.py::InputModule.get_url": "8d7f806312430871"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#layer-order-and-visibility": {
       "code": "ec11be951eb2d487",
@@ -1865,45 +2075,45 @@
       "stamped": "2026-09-26"
     },
     "geo/layers#mapbox-maptiler": {
-      "code": "edc1db95739963ac",
+      "code": "938084fd5b19c8dc",
       "units": {
-        "aot/inputs_gis/gis_mapbox.py::INPUT_INFORMATION": "fa67e36b1d2a436a",
+        "aot/inputs_gis/gis_mapbox.py::INPUT_INFORMATION": "9345e83d1cfd2da8",
         "aot/inputs_gis/gis_mapbox.py::InputModule._get_active_layer_id": "1b0241eaf78dbafe",
         "aot/inputs_gis/gis_mapbox.py::InputModule.get_url": "cdb032f924b1a92e",
-        "aot/inputs_gis/gis_maptiler_vector.py::INPUT_INFORMATION": "2f4200e953110de8",
+        "aot/inputs_gis/gis_maptiler_vector.py::INPUT_INFORMATION": "4f282b63eda82288",
         "aot/inputs_gis/gis_maptiler_vector.py::InputModule._get_active_style": "e470672eb051b7f9",
         "aot/inputs_gis/gis_maptiler_vector.py::InputModule.get_url": "60594950f175d5ae"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#rainviewer": {
-      "code": "5ec8d905e90b0ba3",
+      "code": "78cca0dc0f1f8901",
       "units": {
         "aot/aot_flask/routes_geo_layer.py::api_geo_proxy_rainviewer_meta": "9c5b97f09a128f47",
         "aot/aot_flask/routes_geo_layer.py::api_geo_proxy_rainviewer_timestamps": "7e5e8b881650c4dd",
-        "aot/inputs_gis/gis_rainviewer.py::INPUT_INFORMATION": "c9c1fcd470597ff8",
+        "aot/inputs_gis/gis_rainviewer.py::INPUT_INFORMATION": "1b631595c788cd73",
         "aot/inputs_gis/gis_rainviewer.py::InputModule.get_layer_config": "8a8d5473daae6f18"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#satellite-aerial": {
-      "code": "2a7496e714db6348",
+      "code": "9a71623946601ff3",
       "units": {
-        "aot/inputs_gis/gis_esa.py::INPUT_INFORMATION": "8c460ab18d086651",
-        "aot/inputs_gis/gis_nasa_gibs.py::INPUT_INFORMATION": "d81d1dc9682b9f37",
-        "aot/inputs_gis/gis_sentinelhub.py::INPUT_INFORMATION": "576bf34fe482aac6"
+        "aot/inputs_gis/gis_esa.py::INPUT_INFORMATION": "8ccacef19e8ff99c",
+        "aot/inputs_gis/gis_nasa_gibs.py::INPUT_INFORMATION": "710184854a0429c4",
+        "aot/inputs_gis/gis_sentinelhub.py::INPUT_INFORMATION": "c9e7c8bbcb487d09"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#sentinel-hub-sentinel-2": {
-      "code": "2ff0d47911fc524f",
+      "code": "5502f70e7c57dca9",
       "units": {
         "aot/aot_flask/routes_geo_layer.py::_get_sentinelhub_settings": "945530d2b8530d8a",
         "aot/aot_flask/routes_geo_layer.py::api_geo_proxy_sentinelhub": "fa584c0115f580e2",
-        "aot/inputs_gis/gis_sentinelhub.py::INPUT_INFORMATION": "576bf34fe482aac6",
+        "aot/inputs_gis/gis_sentinelhub.py::INPUT_INFORMATION": "c9e7c8bbcb487d09",
         "aot/inputs_gis/gis_sentinelhub.py::InputModule.get_leaflet_options": "63f3583d7eb2c702",
         "aot/inputs_gis/gis_sentinelhub.py::InputModule.get_url": "3d322d2045185d1b",
         "aot/inputs_gis/gis_sentinelhub.py::InputModule.request_settings": "4ffb032eec2a7fee",
@@ -1911,41 +2121,41 @@
         "aot/inputs_gis/gis_sentinelhub.py::fetch_tile_png": "be64af3c5fbf5d6b",
         "aot/inputs_gis/gis_sentinelhub.py::time_range": "6f68e7563b8f3621"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#specialized-data": {
-      "code": "76b2b3d944d6a21f",
+      "code": "1339766a97c435f2",
       "units": {
-        "aot/inputs_gis/gis_agromonitoring.py::INPUT_INFORMATION": "94761fe7896cdfb2",
-        "aot/inputs_gis/gis_gsi.py::INPUT_INFORMATION": "76c2865a20bcb597",
-        "aot/inputs_gis/gis_isric.py::INPUT_INFORMATION": "ac25c3614ff3ff4d",
-        "aot/inputs_gis/gis_opentopomap.py::INPUT_INFORMATION": "21c48bbb33d9a90c",
-        "aot/inputs_gis/gis_sgis.py::INPUT_INFORMATION": "70ba34707948020d"
+        "aot/inputs_gis/gis_agromonitoring.py::INPUT_INFORMATION": "3c038560051b3b53",
+        "aot/inputs_gis/gis_gsi.py::INPUT_INFORMATION": "b77b77dbd9880f28",
+        "aot/inputs_gis/gis_isric.py::INPUT_INFORMATION": "0af1ddbfe1f1cac5",
+        "aot/inputs_gis/gis_opentopomap.py::INPUT_INFORMATION": "75d67114b8511e13",
+        "aot/inputs_gis/gis_sgis.py::INPUT_INFORMATION": "b7c2b71875d201f9"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#vworld": {
-      "code": "813d6b97c6d3eb6e",
+      "code": "d59eb93976696a3b",
       "units": {
         "aot/aot_flask/routes_geo_map.py::_get_vworld_credentials": "1d95c6d76f2d0c4f",
-        "aot/inputs_gis/gis_vworld.py::INPUT_INFORMATION": "cd5a81a32bbbf455",
+        "aot/inputs_gis/gis_vworld.py::INPUT_INFORMATION": "2e74cb2f3f0a3eac",
         "aot/inputs_gis/gis_vworld.py::InputModule._get_active_channel_info": "dabd96b16da6139d",
         "aot/inputs_gis/gis_vworld.py::InputModule.get_url": "da2db5d179d88924"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "8a08889ab99b96a572de5fdbb2af975d3f146218",
+      "stamped": "2026-10-19"
     },
     "geo/layers#weather-overlays": {
-      "code": "dd98780f928cf3bd",
+      "code": "f35360f85d2a35e2",
       "units": {
         "aot/aot_flask/routes_geo_layer.py::api_geo_proxy_openmeteo": "16e60fb6e6d1ca4a",
-        "aot/inputs_gis/gis_openweather.py::INPUT_INFORMATION": "bb92ca9a3870e889",
-        "aot/inputs_gis/gis_rainviewer.py::INPUT_INFORMATION": "c9c1fcd470597ff8"
+        "aot/inputs_gis/gis_openweather.py::INPUT_INFORMATION": "915ae82830267156",
+        "aot/inputs_gis/gis_rainviewer.py::INPUT_INFORMATION": "1b631595c788cd73"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "e45fb59880532c9353d187f6717af0042eeebc84",
+      "stamped": "2026-10-20"
     },
     "geo/layers#wms-layers": {
       "code": "d1b8560d56b2cf42",
@@ -1957,13 +2167,13 @@
       "stamped": "2026-09-26"
     },
     "geo/map-widget#3d-facility-popup": {
-      "code": "a414d0a1d1289f87",
+      "code": "42a6229f7dc7b9ec",
       "units": {
-        "aot/aot_flask/routes_geo_iec.py::_build_facility_overview": "fd20e66458cccce8",
+        "aot/aot_flask/routes_geo_iec.py::_build_facility_overview": "63604214fb5eb024",
         "aot/aot_flask/routes_geo_iec.py::api_facility_overview": "e924bbfdf6a9dc15"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "668e70cf7bdf6811f310af0ca047c1008d541a2f",
+      "stamped": "2026-10-13"
     },
     "geo/map-widget#3d-map-vector-mode": {
       "code": "3266dbe46e5ed2b7",
@@ -1982,61 +2192,62 @@
       "stamped": "2026-09-26"
     },
     "geo/map-widget#click-a-zonesite-control-from-a-device-list": {
-      "code": "edf21856d3a7d974",
+      "code": "8ec8db35ef1de277",
       "units": {
-        "aot/aot_flask/geo/device_membership.py::device_ids_in_area": "0435d53f4060df77",
+        "aot/aot_flask/geo/device_membership.py::device_ids_in_area": "d6fa0224013b4b1e",
         "aot/aot_flask/routes_geo_device.py::api_geo_output_runtimes": "fde105261264fa4e",
         "aot/aot_flask/routes_geo_device.py::api_geo_zone_output_order": "84ddd283eb1471f6",
         "aot/aot_flask/routes_geo_summary.py::_build_area_contents": "80157a4d67eb3602",
         "aot/aot_flask/routes_geo_summary.py::_build_zone_contents": "f4b63e595ecf4da7",
-        "aot/aot_flask/routes_geo_summary.py::api_geo_site_contents": "c9cf47eb185da909",
+        "aot/aot_flask/routes_geo_summary.py::api_geo_site_contents": "16a3e4b5c3dfe741",
         "aot/aot_flask/routes_geo_summary.py::api_geo_zone_contents": "7aae67b6944b618a"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "d4d8e6229842340cfc030ffeeb211675938e9ab7",
+      "stamped": "2026-10-08"
     },
     "geo/map-widget#control-right-from-the-popup": {
-      "code": "49667d2c53d09ce3",
+      "code": "dd17f625ed723521",
       "units": {
         "aot/aot_flask/routes_geo_device.py::_output_history_response": "d5d2078125d3d0b1",
         "aot/aot_flask/routes_geo_device.py::api_geo_output_history": "d36dfb06821e9da5",
         "aot/aot_flask/routes_geo_device.py::api_geo_output_runtimes": "fde105261264fa4e",
         "aot/aot_flask/routes_geo_device.py::api_geo_output_state": "9f7355b0e431bc5b",
-        "aot/aot_flask/routes_geo_summary.py::api_geo_device_detail": "072c9bbfe5b7c6c9"
+        "aot/aot_flask/routes_geo_summary.py::api_geo_device_detail": "1a317ab69a233a73"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "e1467a4fd70d4eca92fd09a9017f89b97e464b5b",
+      "stamped": "2026-10-09"
     },
     "geo/map-widget#device-filter": {
-      "code": "3f1d67fa3c531372",
+      "code": "1de908fe8be984f5",
       "units": {
-        "aot/aot_flask/geo/widget/maps.py::extract_device_ids": "68bbfa5931a744b4",
-        "aot/aot_flask/utils/utils_geo.py::collect_devices": "1de86e3e6a27c956",
-        "aot/widgets/AoT_map.py::execute_at_modification": "8d830f052a54e7cc"
+        "aot/aot_flask/geo/widget/maps.py::_bearing_kind_of": "74276ecc0066f50c",
+        "aot/aot_flask/utils/utils_geo.py::collect_devices": "6493df2c42ca36f7",
+        "aot/widgets/AoT_map.py::execute_at_modification": "8a16c84742cfb948"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "geo/map-widget#device-markers": {
-      "code": "45c20a08de5a4a5a",
+      "code": "d983ca1bf0ff1209",
       "units": {
         "aot/aot_flask/routes_geo_device.py::api_geo_devices_list": "d4bea75a8040e760",
-        "aot/aot_flask/utils/utils_geo.py::collect_devices": "1de86e3e6a27c956"
+        "aot/aot_flask/utils/utils_geo.py::collect_devices": "6493df2c42ca36f7"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "e1467a4fd70d4eca92fd09a9017f89b97e464b5b",
+      "stamped": "2026-10-09"
     },
     "geo/map-widget#map": {
-      "code": "11a8357723314b96",
+      "code": "f889c29540de8368",
       "units": {
         "aot/aot_flask/geo/widget/maps.py::_get_latest_geomap_cached": "f57ab559d6f89b36",
-        "aot/aot_flask/geo/widget/maps.py::generate_page_variables_logic": "e912365fc09abacb",
-        "aot/aot_flask/routes_geo_schedule.py::api_geo_local_time": "4e041a4059549cb5",
+        "aot/aot_flask/geo/widget/maps.py::generate_page_variables_logic": "2fb302624e9e7a68",
+        "aot/aot_flask/routes_geo_schedule.py::api_geo_local_time": "8750303192b6f0a7",
         "aot/aot_flask/routes_geo_schedule.py::api_geo_sun_event": "d1e9639977b949b5",
-        "aot/widgets/AoT_map.py::execute_at_modification": "8d830f052a54e7cc"
+        "aot/aot_flask/routes_geo_schedule.py::api_geo_weather_state": "f76bc7ee2fce45b5",
+        "aot/widgets/AoT_map.py::execute_at_modification": "8a16c84742cfb948"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "geo/map-widget#measurement-panel": {
       "code": "a171186145dad68f",
@@ -2048,20 +2259,20 @@
       "stamped": "2026-09-26"
     },
     "geo/map-widget#plot": {
-      "code": "39b51ebc865a29c1",
+      "code": "2ec4ba222d4423c2",
       "units": {
-        "aot/aot_flask/geo/plot_context.py::sensors_for_plot": "1c408cabdeaa148a",
+        "aot/aot_flask/geo/plot_context.py::_zone_sensor_ids": "03771c16e8cb449d",
         "aot/aot_flask/geo/plot_context.py::valves_for_plot": "781270e1a4726223",
         "aot/aot_flask/geo/plot_geometry.py::dimensions": "49331fe989196874",
-        "aot/aot_flask/geo/plot_resource_usage.py::usage_for_plot": "345cc6ce7dadf31d",
+        "aot/aot_flask/geo/plot_resource_usage.py::usage_for_plot": "492e8367ba91f5b0",
         "aot/aot_flask/routes_geo_plot.py::_build_plot_contents": "98c63d428335954d",
         "aot/aot_flask/routes_geo_plot.py::_plot_photosynthesis": "abcc6a9f157a71b0",
         "aot/aot_flask/routes_geo_plot.py::api_plot_contents": "7df29d6ff450a627",
         "aot/aot_flask/routes_geo_plot.py::api_plot_get": "a8f02db1aa3a5971",
         "aot/aot_flask/routes_geo_plot.py::api_plot_resource_usage": "3425d49d0289dddc"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "b325ce42203529133ed589effa99230c9893af61",
+      "stamped": "2026-11-01"
     },
     "geo/map-widget#representative-measurement": {
       "code": "ac6df624367fce31",
@@ -2085,44 +2296,82 @@
       "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
       "stamped": "2026-09-26"
     },
-    "geo/map-widget#site-weather": {
-      "code": "34c637527a6a7d89",
+    "geo/map-widget#site-forecast-calibration": {
+      "code": "13866d9d1eea3c36",
       "units": {
+        "aot/utils/fc_cal/runner.py::calibrate_site": "122a1663433479db"
+      },
+      "commit": "378243810d2383f09c049823780d5e9a49d9b55f",
+      "stamped": "2026-10-31"
+    },
+    "geo/map-widget#site-weather": {
+      "code": "efcb3ce97ab48ee3",
+      "units": {
+        "aot/aot_flask/geo/device_binding.py::set_site_forecast": "787b28087c3eba5a",
         "aot/aot_flask/geo/device_binding.py::set_site_weather": "30c1145fe1648e56",
         "aot/aot_flask/geo/device_membership.py::weather_candidates": "8c8e3a97ee96e399",
-        "aot/aot_flask/geo/device_membership.py::weather_device_ids": "ac1aaeced5584f3b",
-        "aot/aot_flask/routes_geo_summary.py::api_geo_site_weather": "b8b8913c97f18426"
+        "aot/aot_flask/geo/device_membership.py::weather_device_ids": "6b59809431551631",
+        "aot/aot_flask/routes_geo_summary.py::api_geo_site_weather": "36c05e13afe827b2"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "22f02abb404d3decdee13b043a2fdda3749415b9",
+      "stamped": "2026-10-26"
+    },
+    "geo/map-widget#twin-chart": {
+      "code": "2f0cef4c7f3cef48",
+      "units": {
+        "aot/utils/twin_chart.py::plot_chart": "4c0aade2f516a103"
+      },
+      "commit": "378243810d2383f09c049823780d5e9a49d9b55f",
+      "stamped": "2026-10-31"
+    },
+    "geo/map-widget#twin-data-retention": {
+      "code": "1a7450559f517710",
+      "units": {
+        "aot/utils/data_retention.py::run_daily": "ac279935fb9b4a86"
+      },
+      "commit": "378243810d2383f09c049823780d5e9a49d9b55f",
+      "stamped": "2026-10-31"
+    },
+    "geo/map-widget#twin-tab": {
+      "code": "d26d5d77ad938ad2",
+      "units": {
+        "aot/utils/twin_config.py::diagnose_plot": "cc5029091cafde12",
+        "aot/utils/twin_config.py::plot_view": "9fb22dfd94313408",
+        "aot/utils/twin_config.py::site_view": "e71e80b44ec7e29e",
+        "aot/utils/twin_config.py::verdict": "0886ad9108958707",
+        "aot/utils/twin_facility_config.py::facility_view": "4f23f673e75effac",
+        "aot/utils/twin_facility_config.py::verdict": "82f8244dc606804c"
+      },
+      "commit": "67a296ac3d28c98247648fba4efeab04a841eb5a",
+      "stamped": "2026-10-31"
     },
     "geo/map-widget#values-saved-automatically": {
-      "code": "7b6fe10ae6c1d11e",
+      "code": "b540ac9bb15c6465",
       "units": {
-        "aot/aot_flask/geo/widget/maps.py::generate_page_variables_logic": "e912365fc09abacb",
+        "aot/aot_flask/geo/widget/maps.py::generate_page_variables_logic": "2fb302624e9e7a68",
         "aot/aot_flask/routes_dashboard.py::save_widget_custom_options": "b9316ba37bda595f"
       },
-      "commit": "5db7d151f7708c4fbd8ba1da511aeeff36e662ef",
-      "stamped": "2026-09-28"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "geo/map-widget#widget-settings": {
-      "code": "a12e0393548f5d85",
+      "code": "9e3e78208d474ba0",
       "units": {
-        "aot/widgets/AoT_map.py::WIDGET_INFORMATION": "eddfd1d40042b9e7"
+        "aot/widgets/AoT_map.py::WIDGET_INFORMATION": "2a0b17cfb86a888b"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "2790b320fb520d4b74eeb2717455acf876340b56",
+      "stamped": "2026-10-26"
     },
     "geo/parcel-import#address-input": {
-      "code": "f9cf0c04b1848766",
+      "code": "bab004b3dc8f46ec",
       "units": {
         "aot/aot_flask/routes_geo_map.py::api_geo_parcel_from_address": "3ef5daebc1774497",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L1044": "9b33110effd1f8af",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L871": "077ff2756e3f0f06",
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L1046": "9b33110effd1f8af",
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L873": "077ff2756e3f0f06",
         "aot/inputs_gis/gis_vworld.py::InputModule.parcel_from_address": "68bb453880668cfe"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/parcel-import#csv-batch-import_1": {
       "code": "e839b92ca9512c3f",
@@ -2142,15 +2391,15 @@
       "stamped": "2026-09-26"
     },
     "geo/parcel-import#how-to-import": {
-      "code": "ebfecce9cb86129b",
+      "code": "a31f23070692c89a",
       "units": {
         "aot/aot_flask/routes_geo_map.py::api_geo_parcel_from_csv": "e5f4297fbd3263de",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L1113": "bb088775be9ea45b",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L900": "c78e800ba406a8f4",
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L1115": "bb088775be9ea45b",
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L902": "c78e800ba406a8f4",
         "aot/inputs_gis/gis_vworld.py::InputModule.parcels_from_addresses": "8b5d0ee886259daa"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/parcel-import#import-by-address": {
       "code": "670e2402b34bd015",
@@ -2171,12 +2420,12 @@
       "stamped": "2026-09-26"
     },
     "geo/parcel-import#opening-the-import-dialog": {
-      "code": "6ceef09414475f33",
+      "code": "f6228727be607fc6",
       "units": {
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L842": "fe46d276dde3ea56"
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L844": "fe46d276dde3ea56"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/parcel-import#prerequisites": {
       "code": "fc4716304d9fb16b",
@@ -2187,17 +2436,17 @@
       "stamped": "2026-09-26"
     },
     "geo/parcel-import#reviewing-and-saving": {
-      "code": "3201b81a5e52f6dc",
+      "code": "1b9086e0fd4357ad",
       "units": {
         "aot/aot_flask/routes_geo_map.py::_find_duplicate_site": "06c0de76c419d068",
         "aot/aot_flask/routes_geo_map.py::_parcel_geom_key": "de534a6623f78b60",
         "aot/aot_flask/routes_geo_map.py::api_geo_parcel_save_as_site": "59daead5937e7ccd",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L1146": "1a2e6e141c736906",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L918": "a60781181a8f3c10",
-        "aot/aot_flask/templates/pages/geo/geo_design.html#L987": "bdf1435a77eaeb90"
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L1148": "1a2e6e141c736906",
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L920": "a60781181a8f3c10",
+        "aot/aot_flask/templates/pages/geo/geo_design.html#L989": "bdf1435a77eaeb90"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "ee10568e086a693d2860ec7b42b83b42e4d03636",
+      "stamped": "2026-11-01"
     },
     "geo/parcel-import#save-as-site": {
       "code": "ac879ba12ca1cf79",
@@ -2300,16 +2549,16 @@
       "stamped": "2026-09-26"
     },
     "geo/plots#edit": {
-      "code": "a09b5272070be447",
+      "code": "347637d7b124b392",
       "units": {
-        "aot/aot_flask/geo/plot_context.py::expected_end": "6c6f03054bd48bc8",
+        "aot/aot_flask/geo/plot_context.py::expected_end": "3f49c62020ecb434",
         "aot/aot_flask/geo/plot_io.py::save_plot": "8ab17223943bb9c7",
         "aot/aot_flask/routes_geo_plot.py::api_plot_save": "1f822d7e018f2b57",
         "aot/aot_flask/routes_geo_plot.py::api_programs": "63c78c20e4e80e7a",
         "aot/aot_flask/templates/pages/geo/plots.html": "544ca90b551b84fb"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "383ddec20c49924f156950ebfbf5ed6a1049b24b",
+      "stamped": "2026-10-14"
     },
     "geo/plots#kind": {
       "code": "24262bedc8e0e4db",
@@ -2320,18 +2569,18 @@
       "stamped": "2026-09-26"
     },
     "geo/plots#lifecycle": {
-      "code": "1e03d6c6c46c6a43",
+      "code": "769028945f905c09",
       "units": {
         "aot/aot_flask/geo/plot_io.py::copy_plot": "0bb139f50856fc60",
-        "aot/aot_flask/geo/plot_io.py::delete_plot": "a2f14e226de8457c",
+        "aot/aot_flask/geo/plot_io.py::delete_plot": "24d9c2076c8889cc",
         "aot/aot_flask/geo/plot_io.py::end_plot": "530e1082eb48c53f",
         "aot/aot_flask/geo/plot_io.py::succeed_plot": "51c83c5847270419",
         "aot/aot_flask/routes_geo_plot.py::api_plot_delete": "a911c286d553a8c2",
         "aot/aot_flask/routes_geo_plot.py::api_plot_end": "5c8bca8bdb692808",
         "aot/aot_flask/routes_geo_plot.py::api_plot_succeed": "346932b3beabe1dd"
       },
-      "commit": "1db7d746e283fa4dc4960ed096da3228b2fc972b",
-      "stamped": "2026-09-26"
+      "commit": "1b59962e39142d01868d4dd7b26088d6794dd9c6",
+      "stamped": "2026-10-27"
     },
     "geo/plots#location": {
       "code": "b13a93a4d19ec78e",
@@ -2428,15 +2677,15 @@
       "stamped": "2026-09-26"
     },
     "geo/programs#gdd": {
-      "code": "2ffd1e096fee9734",
+      "code": "7d0f282d28a7dad5",
       "units": {
         "aot/aot_flask/geo/plot_accumulation.py::gdd_accumulated": "c7c7747f087d08cd",
-        "aot/aot_flask/geo/plot_context.py::_stage_by_gdd": "4c95bfbbc07dd8a0",
+        "aot/aot_flask/geo/plot_context.py::_stage_by_gdd": "f3a91553f7fe3452",
         "aot/aot_flask/geo/plot_context.py::stage_of": "da1910c3de8e829a",
         "aot/aot_flask/templates/pages/geo/programs.html#L309": "d473e1ee65a21aad"
       },
-      "commit": "12770027c52a2c61c6cd45cffa438dd8256a3a61",
-      "stamped": "2026-09-26"
+      "commit": "4354598daaa4758834ef963e68415790704661dd",
+      "stamped": "2026-10-09"
     },
     "geo/programs#kind": {
       "code": "c93909a8fe863da1",
@@ -2525,11 +2774,11 @@
       "stamped": "2026-09-26"
     },
     "geo/programs#stage-schedule": {
-      "code": "e22fa5d701e871d2",
+      "code": "52f28498175a39c5",
       "units": {
-        "aot/aot_flask/geo/plot_context.py::expected_end": "6c6f03054bd48bc8",
+        "aot/aot_flask/geo/plot_context.py::expected_end": "3f49c62020ecb434",
         "aot/aot_flask/geo/plot_context.py::stage_schedule": "cf292dc33950e3dd",
-        "aot/aot_flask/geo/plot_context.py::stage_schedule_view": "d113af580ba05ce2",
+        "aot/aot_flask/geo/plot_context.py::stage_schedule_view": "0c305344ffbe651c",
         "aot/aot_flask/geo/plot_io.py::_plan_context": "ae5d5264599bfa60",
         "aot/aot_flask/geo/plot_io.py::set_stage_days": "41f4b33ba5e4a5f0",
         "aot/aot_flask/geo/plot_io.py::set_stage_plan": "6398d778a3236d7b",
@@ -2537,8 +2786,8 @@
         "aot/aot_flask/routes_geo_plot.py::api_plot_schedule": "8047beeac0b8a4c8",
         "aot/aot_flask/routes_geo_plot.py::api_plot_schedule_shift": "d167ab27d09a16ea"
       },
-      "commit": "1927c628fcad0f857903bab303c75c6d9afed75f",
-      "stamped": "2026-09-27"
+      "commit": "383ddec20c49924f156950ebfbf5ed6a1049b24b",
+      "stamped": "2026-10-14"
     },
     "geo/programs#stages": {
       "code": "7f2b1f47bf84e505",

@@ -45,6 +45,10 @@ The `/geo/layer` page is where you register and manage external map data sources
 | KMA Weather | `gis_kma` | Korea 500 m observation values, shown as a map legend | Required |
 | Open-Meteo | (built-in proxy) | Weather forecast data | Not required |
 
+OpenWeather and KMA Weather can also supply the values behind the map widget's weather rendering. Each has a **Use as weather data source** setting, on by default: while it is on, the widget reads that provider's current values — OpenWeather reports cloud cover, precipitation, wind, visibility and temperature, KMA Weather reports precipitation, wind, visibility and temperature — and an activated layer is read even while it is hidden on the map. Turn the setting off to use that layer as a map overlay only.
+
+Each also has a **Weather data max age in seconds** setting, which decides how old an observation may be before the widget skips it and moves on to the next source. Leave it blank to use the provider's own default — one hour for OpenWeather, 30 minutes for KMA Weather. Enter a value between 10 seconds and 7 days to use that limit instead.
+
 ### Specialized Data { #specialized-data }
 
 | Provider | Type code | Features | API key required |

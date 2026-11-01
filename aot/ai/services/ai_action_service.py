@@ -40,6 +40,14 @@ _MCP_HEALTH_CACHE = {}  # {server_id: (tools_list, timestamp, error_count)} TTL=
 import time
 _ID_TTL_CACHE = {}  # {device_id: last_verification_timestamp}
 
+def _output_capabilities(output_type):
+    try:
+        from aot.outputs.command_forms import output_capabilities
+        return output_capabilities(output_type)
+    except Exception:
+        return ["on", "off"]
+
+
 class InvalidToolError(Exception):
     """Raised when a tool_name cannot be resolved to a valid action."""
     pass
@@ -192,13 +200,14 @@ class AIActionService:
                 "applies_to": "every entry in 'outputs' below",
                 "arguments": {
                     "device_id": "the entry's own unique_id",
-                    "state": "on | off",
-                    "duration_seconds": "<seconds> (optional)",
+                    "state": "one of the entry's 'capabilities'",
+                    "duration_seconds": "<seconds> (optional, on_off outputs)",
+                    "value": "<number> (set_value; 0-100 % for a level or position)",
                 },
                 "rules": [
                     "Do NOT include action_type in your JSON output.",
-                    "Check the entry's 'capabilities' before choosing state — "
-                    "a pwm output takes a level, an on_off output does not.",
+                    "Use only a state listed in the entry's 'capabilities'. "
+                    "On an open/close entry, off stops it where it is.",
                 ],
             }
             if _aot_server_id:
@@ -211,7 +220,7 @@ class AIActionService:
                     "unique_id": o.unique_id,
                     "name": o.name,
                     "type": o.output_type,
-                    "capabilities": ["on", "off", "pwm" if o.output_type == 'pwm' else "on_off"]
+                    "capabilities": _output_capabilities(o.output_type),
                 }
 
                 # [TASK_31][TASK_32] 제어 방법은 장치마다 싣지 않는다 — 아래
@@ -1960,10 +1969,11 @@ class AIActionService:
                 value = params.get('value', 0)
 
                 op_kwargs = {}
-                if duration_minutes:
-                    op_kwargs['duration_minutes'] = duration_minutes
-                elif duration_seconds:
+                # 초가 정확한 값이다(예약은 둘 다 싣는다 — 분은 소수로 환산한 표시용).
+                if duration_seconds:
                     op_kwargs['duration_seconds'] = duration_seconds
+                elif duration_minutes:
+                    op_kwargs['duration_minutes'] = duration_minutes
                 elif value:
                     op_kwargs['duration_seconds'] = float(value)
 

@@ -245,16 +245,6 @@ Respond with ONLY a JSON array of anomalies (empty array if none found):
                     summary_text=summary_text
                 )
 
-                # Real-time WebUI toast via SSE
-                scope_name = scope_info.get('scope_name', scope_info.get('scope_type', 'System'))
-                toast_level = 'error' if level == 'critical' else 'warning'
-                NotificationService.send_webui_toast(
-                    user_id='broadcast',
-                    message=f"[{level.upper()}] Anomaly detected: {scope_name}",
-                    level=toast_level,
-                    duration=8000 if level == 'critical' else 5000
-                )
-
                 logger.info(f"Notification result: {result}")
                 return result
                 

@@ -97,10 +97,13 @@ Dockerでは`[歯車アイコン] -> Backup Restore`は、ネイティブ用の`
 
 | | 含まれるもの | 含まれないもの |
 |---|---|---|
-| **Docker** | 設定データベース(ユーザー・ロール・デバイス・機能・ダッシュボード)、アップロード(ノート・お知らせ・施設・区画の写真)、施設3Dモデル、地図オーバーレイ画像、ユーザースクリプト | **InfluxDBの測定値**(センサー履歴)、ログ、``custom_*``拡張モジュール(ホストのフォルダー) |
+| **Docker** | 設定データベース(ユーザー・ロール・デバイス・機能・ダッシュボード)、アップロード(ノート・お知らせ・施設・区画の写真)、施設3Dモデル、地図オーバーレイ画像、ユーザースクリプト、Matterファブリック(``matter_data``、[Matter](Matter.md)を使う場合のみ。バックアップには含まれますが自動では復元されません) | **InfluxDBの測定値**(センサー履歴)、ログ、``custom_*``拡張モジュール(ホストのフォルダー) |
 | **ネイティブ** | ``env``と``cameras``を除くインストールフォルダー全体(データベース・アップロード・オーバーレイ・スクリプト) | **InfluxDBの測定値**(インストールフォルダー外のシステムサービス) |
 
 アップデーターが更新前に作成するバックアップも同じ一覧を使います。
+
+!!! danger "バックアップ内のMatterデータはマスターキーです"
+    ``matter_data``には、このAoTのMatterファブリックが入っており、**ルートCAの秘密鍵**を含みます。このデータを含むバックアップファイルを持つ人は、同じネットワーク内から、AoTに追加されたすべてのMatterデバイスを操作できます。バックアップとボリュームのコピーはパスワードと同じように保管してください。Wi-FiパスワードやThreadデータセットを使ってBluetoothで新しいデバイスを追加した場合は、その値もこのデータに残っていることがあります([Matter](Matter.md#new-device)参照)。Web画面からの復元は``matter_data``に触れません。ファブリックを戻すには、スタックを停止した状態で下のボリュームコピーの方法を使ってください。そうしないと、すべてのMatterデバイスをAoTにもう一度共有し直す必要があります。
 
 !!! warning "復元しても測定値は戻りません"
     バックアップを復元すると設定がその時点に戻ります。センサー履歴は現在の状態のまま残ります。履歴を守るには、下の2つの方法のどちらかで別にバックアップしてください。
@@ -115,7 +118,7 @@ Dockerでは`[歯車アイコン] -> Backup Restore`は、ネイティブ用の`
 ```bash
 # 0) 実際のボリューム名を確認します。接頭辞はcomposeプロジェクト名
 #    (composeファイルのあるフォルダー名、既定値は"docker")です。
-docker volume ls --format '{{.Name}}' | grep -E 'aot_|influxdb_'
+docker volume ls --format '{{.Name}}' | grep -E 'aot_|matter_|influxdb_'
 P=docker            # <- 上で確認した接頭辞に変更
 mkdir -p ~/aot-volume-backup && cd ~/aot-volume-backup
 
@@ -123,7 +126,7 @@ mkdir -p ~/aot-volume-backup && cd ~/aot-volume-backup
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml stop
 
 # 2) ボリュームごとに.tgzへまとめます。
-for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts influxdb_data influxdb_config; do
+for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts matter_data influxdb_data influxdb_config; do
   docker run --rm -v ${P}_$v:/v:ro -v "$PWD":/out alpine tar czf /out/$v.tgz -C /v .
 done
 
@@ -140,7 +143,7 @@ cd ~/aot-volume-backup
 P=docker
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml stop
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml create   # 存在しないボリュームを空で作成します
-for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts influxdb_data influxdb_config; do
+for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts matter_data influxdb_data influxdb_config; do
   docker run --rm -v ${P}_$v:/v -v "$PWD":/out alpine sh -c "rm -rf /v/* /v/.[!.]* 2>/dev/null; tar xzf /out/$v.tgz -C /v"
 done
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml up -d

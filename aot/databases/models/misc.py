@@ -28,6 +28,15 @@ class Misc(CRUDMixin, db.Model):
     hide_alert_info = db.Column(db.Boolean, default=False)
     hide_alert_success = db.Column(db.Boolean, default=False)
     hide_alert_warning = db.Column(db.Boolean, default=False)
+    # AI 메시지(자막·수신함 점) 숨기기 — 시스템 메시지(hide_alert_*)와 별개다.
+    # 켜도 AI 가 보낸 카드는 수신함에 저장된다(2026-10-19).
+    hide_ai_messages = db.Column(db.Boolean, default=False)
+    # AI 결과 카드 자동(2026-10-22): 켜면 외부 AI 의 MCP 지침(initialize instructions)에 "핵심 결과를
+    # 끝낼 때 카드로도 올려라" 규칙이 붙는다. 기본 켬 — NULL(옛 행)도 켬으로 본다.
+    ai_card_auto = db.Column(db.Boolean, default=True)
+    # AI 바로가기 주소(2026-10-22) — 휴대폰 AI 창구(수신함 머리줄)에 뜨는 [Claude] 같은 단추가 여는 https 주소.
+    # 비우면 단추가 없다. 기본은 Claude 새 대화. 앱이 깔린 휴대폰은 운영체제가 앱으로 연다(실측은 사용자).
+    ai_shortcut_url = db.Column(db.String(512), default='https://claude.ai/new')
     hide_tooltips = db.Column(db.Boolean, default=False)
     grid_cell_height = db.Column(db.Integer, default=25)
     login_message = db.Column(db.Text, default='')  # Put a message on the login screen
@@ -58,6 +67,25 @@ class Misc(CRUDMixin, db.Model):
     rpyc_timeout = db.Column(db.Integer, default=30)
     gunicorn_threads = db.Column(db.Integer, default=None)  # 웹서버 스레드 수동 설정 (NULL = 자동 산정)
     daemon_debug_mode = db.Column(db.Boolean, default=False)
+    # Matter 컨트롤러(실험). 켜야 설정 사이드바·Matter 페이지·API 가 열린다.
+    matter_enabled = db.Column(db.Boolean, default=False)
+    # 디지털트윈(실험, 별도 서비스 aot_twin). 판정의 정본은 aot/utils/twin_gate.py —
+    # 이 칸을 직접 읽어 켜짐을 판단하지 말 것(낮은 사양 잠금이 빠진다).
+    #   twin_enabled    사용자가 설정 > 일반에서 켠 플래그(기본 꺼짐)
+    #   twin_run_times  실행 시각 'HH:MM,HH:MM' (현지, 기본 06:10,18:10)
+    #   twin_heartbeat  서비스가 쓴다: {at, status, version, sites, plots,
+    #                   last_run_at, failures, locked_reason}. 서비스가 안 돌면 비어 있거나 낡는다.
+    twin_enabled = db.Column(db.Boolean, default=False)
+    twin_run_times = db.Column(db.Text, default='06:10,18:10')
+    twin_heartbeat = db.Column(db.JSON, nullable=True)
+    #   twin_ignore_profile  HARDWARE_PROFILE=LOW 잠금만 건너뛴다(설정 > 디지털트윈). 파이 모델·메모리 잠금은 그대로
+    #   twin_auto_forecast   대지에 트윈을 켤 때 가까운 예보 입력이 없으면 새로 만든다(기본 켜짐)
+    twin_ignore_profile = db.Column(db.Boolean, default=False)
+    twin_auto_forecast = db.Column(db.Boolean, default=True)
+    # 데이터 계층(예보·트윈 데이터 관리, aot/utils/influx_layers.py): Influx 버킷을 계층별로 나눠 보존 기간을 따로 둔다.
+    #   {"enabled": false} 면 한 버킷(aot_db) 모드. {"retention_days": {"fc": 730, "calc": 60, "hist": 730}}.
+    #   NULL = 켜짐 + 기본 보존. 판정·기본값의 정본은 influx_layers.py.
+    data_layers = db.Column(db.JSON, nullable=True)
     net_test_ip = db.Column(db.String(16), default='8.8.8.8')
     net_test_port = db.Column(db.Integer, default=53)
     net_test_timeout = db.Column(db.Integer, default=3)

@@ -12,7 +12,10 @@ from aot.tests.e2e.journeys import choose_option
 
 pytestmark = pytest.mark.e2e
 
-FUNCTION_KIND = 'Conditional Controller'
+# 선택지는 **값(value)** 으로 찾는다. 화면 글자는 브라우저 언어(이 하네스는
+# ko-KR)를 따라가므로 영어 이름으로 찾으면 번역이 제대로 돌수록 깨진다 —
+# 예전에는 이 이름이 모듈을 처음 읽을 때 영어로 굳어 있어서 우연히 맞았다.
+FUNCTION_KIND_VALUE = 'conditional_conditional'
 NEW_NAME = 'E2E Temp Function'
 
 
@@ -57,11 +60,12 @@ def _name_of(page, function_id):
 
 
 def _add_function(page):
-    labels = page.eval_on_selector(
+    kind = page.eval_on_selector(
         '#function_type',
-        'el => Array.from(el.options).map(o => o.text.trim())')
-    kind = next((l for l in labels if FUNCTION_KIND in l), None)
-    assert kind, f'{FUNCTION_KIND} 선택지를 찾지 못했습니다'
+        'el => { const o = Array.from(el.options).find('
+        f'o => o.value === "{FUNCTION_KIND_VALUE}");'
+        ' return o ? o.text.trim() : null; }')
+    assert kind, f'{FUNCTION_KIND_VALUE} 선택지를 찾지 못했습니다'
 
     choose_option(page, 'function_type', kind)
     with page.expect_response(

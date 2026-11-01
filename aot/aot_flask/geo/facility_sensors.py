@@ -13,6 +13,7 @@ InfluxDB에서 읽어 role별로 가중 평균을 계산한다.
     outdoor_humidity  → outdoor.humidity_pct  (%)
     outdoor_wind      → outdoor.wind_ms       (m/s)
     outdoor_wind_dir  → outdoor.wind_deg      (°)
+    (실외 돌풍은 역할이 아니라 measurement_type 'wind_gust' → read_outdoor_sensors 의 wind_gust_ms)
     outdoor_solar     → outdoor.solar_wm2     (W/m²)
 
 복수 센서(동일 role): weight 기반 가중 평균. 유효하지 않은 센서는 제외.
@@ -28,6 +29,8 @@ Update handling:
 import logging
 from typing import Dict, List, Optional, Tuple
 
+from aot.functions.utils.env_control import psychro
+from aot.functions.utils.env_control import sensor_status as _ss
 from aot.utils import measurement_freshness as _freshness
 from aot.utils.influx import get_last_measurement  # module-level — patchable in tests
 
@@ -99,9 +102,17 @@ KNOWN_ROLES = set(_ROLE_MAP.keys())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 역할 → 멈춘 센서 판정의 물리량 (`sensor_status.FROZEN_KINDS`)
+_ROLE_FROZEN_KIND: Dict[str, str] = {
+    'indoor_temp': 'T', 'indoor_humidity': 'RH', 'indoor_co2': 'CO2',
+    'outdoor_temp': 'T', 'outdoor_humidity': 'RH',
+}
+
+
 def read_facility_sensors(
     sensor_bindings: List[dict],
     max_age: Optional[int] = None,
+    frozen=None,
 ) -> dict:
     """sensor_bindings 목록을 읽어 indoor/outdoor 환경 값을 반환한다.
 
@@ -111,6 +122,9 @@ def read_facility_sensors(
         max_age: 측정값 최대 유효 수명 (초). 초과 시 해당 센서 제외.
             None(기본) = 장치 샘플링 주기로 정한다(_max_age_for) — 표시 경로용.
             숫자를 주면 그대로 쓴다 — 제어의 안전 기준을 주기로 넓히지 않는다.
+        frozen: `sensor_status.FrozenTracker` — 주어지면 값이 오래 멈춘 센서(T·RH·CO2 역할)는
+            `degraded_reason='frozen'` 으로 집계에서 뺀다. 공간 경로(`compute_spatial_internal`)가
+            멈춘 센서를 버린 뒤 이 역할 폴백이 같은 값을 되살리지 못하게 하는 것이다.
 
     Returns:
         {
@@ -179,6 +193,14 @@ def read_facility_sensors(
                     detail['degraded_reason'] = 'no_data'
             except Exception:
                 detail['degraded_reason'] = 'no_data'
+            sensor_details.append(detail)
+            continue
+
+        # 멈춘 센서 — 공간 경로와 같은 판정(같은 추적기)
+        _fk = _ROLE_FROZEN_KIND.get(role)
+        if (frozen is not None and _fk is not None
+                and frozen.observe((device_id, measurement_id), _fk, value, ts)):
+            detail['degraded_reason'] = _ss.FROZEN
             sensor_details.append(detail)
             continue
 
@@ -253,11 +275,20 @@ _MEAS_VPD_NAMES     = {'vpd', 'vpd_kpa', 'vapor_pressure_deficit'}
 _MEAS_LIGHT_NAMES   = {'light', 'solar', 'solar_wm2', 'irradiance', 'ppfd', 'lux', 'par', 'radiation'}
 _MEAS_WIND_NAMES    = {'wind', 'wind_speed', 'wind_ms', 'windspeed', 'speed'}
 _MEAS_WINDDIR_NAMES = {'wind_dir', 'wind_direction', 'wind_bearing', 'wind_deg', 'direction'}
+# 돌풍 — 이름이 'speed' 인 돌풍 채널(SenseCAP 'Peak Wind Gust')은 이름으로 못 가른다. 사용자가
+# 채널 종류를 'wind_gust' 로 고르면 직접 조회로 읽힌다(`_read_one_sensor`).
+_MEAS_GUST_NAMES    = {'gust', 'wind_gust', 'wind_gusts', 'wind_gusts_10m', 'gust_speed',
+                       'wind_gust_ms'}
 _MEAS_RAIN_NAMES    = {'rain', 'rainfall', 'rainrate', 'rain_rate', 'precipitation',
                         'length', 'depth'}
 # length/depth: ecowitt 계열 강수 채널의 raw measurement 이름
 _RAIN_UNITS         = {'mm', 'mm_h', 'in_h', 'in'}
 # mm: 누적 강수량, mm_h: 시간당 강수율, in_h/in: 변환 전 원시 단위
+# ⚠ 단위가 mm 여도 강우가 아닌 채널 — 단위로 강우 채널을 찾을 때 건너뛴다(NASA POWER 의
+#   증발산 채널 0 이 강우 채널 5 보다 먼저 잡혔다). 'percent' 인 'precipitation' 은 강수
+#   **확률**(KMA_forecast POP)이라 이름이 맞아도 강우량이 아니다.
+_NOT_RAIN_MEASUREMENTS = {'evapotranspiration', 'snowfall', 'snow_depth'}
+_NOT_RAIN_UNITS        = {'percent', '%'}
 
 # measurement_type → (이름 집합, 결과 소수점 자리수)
 _MTYPE_MAP: Dict[str, Tuple[set, int]] = {
@@ -268,6 +299,7 @@ _MTYPE_MAP: Dict[str, Tuple[set, int]] = {
     'light':           (_MEAS_LIGHT_NAMES,   1),
     'wind_speed':      (_MEAS_WIND_NAMES,    2),
     'wind_direction':  (_MEAS_WINDDIR_NAMES, 1),
+    'wind_gust':       (_MEAS_GUST_NAMES,    2),
     'rain':            (_MEAS_RAIN_NAMES,    2),
 }
 
@@ -280,6 +312,7 @@ _MTYPE_KEY = {
     'light':          'light',
     'wind_speed':     'wind_ms',
     'wind_direction': 'wind_deg',
+    'wind_gust':      'wind_gust_ms',
     'rain':           'rain_mm',
     'pressure':       'P',
     # ── 메타 채널(장치 자신의 상태) ──────────────────────────────────────────
@@ -311,6 +344,7 @@ _UNIT_BY_KEY: Dict[str, str] = {
     'VPD':      'kPa',
     'light':    'W/m²',
     'wind_ms':  'm/s',
+    'wind_gust_ms': 'm/s',
     'wind_deg': '°',
     'P':        'hPa',   # 표준 단위. 저장 단위(Pa/hPa/kPa)가 있으면 그쪽이 우선한다.
     'rssi':     'dBm',
@@ -394,6 +428,7 @@ _DEFAULT_DECIMALS_BY_KEY: Dict[str, int] = {
     'VPD':      2,
     'light':    0,
     'wind_ms':  1,
+    'wind_gust_ms': 1,
     'wind_deg': 0,
     'P':        0,
 }
@@ -668,17 +703,107 @@ def _normalise_light(value, dm):
         return value
 
 
+def _is_rain_channel(dm) -> bool:
+    """이름이나 저장 단위로 이 채널을 강우로 읽어도 되는가(사용자가 채널을 직접 고르지
+    않은 경로 — measurement_type 만 있거나 자동 스캔). 확률(%)·증발산은 강우가 아니다."""
+    meas_lower = (getattr(dm, 'measurement', '') or '').lower()
+    unit = _effective_raw_unit(dm).lower()
+    if unit in _NOT_RAIN_UNITS or meas_lower in _NOT_RAIN_MEASUREMENTS:
+        return False
+    return meas_lower in _MEAS_RAIN_NAMES or unit in _RAIN_UNITS
+
+
+def _normalise_rain(value, dm):
+    """강우 값을 **mm/h**(감우기는 0/1)로 맞춘다 — 규칙의 정본은
+    `aot.utils.inputs.rain_unit_scale`(강우 게이트도 같은 단위로 본다).
+
+    `_normalise_light` 와 같은 자리·같은 원칙이다: 단위를 모르면 바꾸지 않는다.
+    """
+    if value is None or dm is None:
+        return value
+    try:
+        from aot.utils.inputs import rain_channel_mm_h
+        return rain_channel_mm_h(float(value), dm, unit=_effective_raw_unit(dm))
+    except Exception:                                           # noqa: BLE001
+        return value
+
+
+def _accept_reading(result: dict, rkey: str, val, probe: Optional[dict],
+                    frozen=None, ident=None, ts=None) -> None:
+    """판독을 범위 검사한 뒤 `result` 에 싣는다 (`sensor_status.check_value`).
+
+    frozen: `sensor_status.FrozenTracker` — 주어지면 범위를 통과한 값이 **멈춘 센서**인지
+    (`ident` = (장치, 채널) 키, `ts` = 표본 시각) 본다. 멈췄으면 범위 밖과 똑같이 싣지
+    않고 probe 에 `frozen` 으로 남긴다. 제어 사이클만 넘기고 화면 경로는 넘기지 않는다.
+
+    범위 밖(습도 130 % 등)이면 **싣지 않는다** — 평균에 섞이면 다른 센서의 값까지
+    오염시키고, 센서가 하나뿐이면 지어낸 값으로 장치가 움직인다. 싣지 않으므로
+    호출부에서는 "이 센서는 값이 없다" 와 같다(기존 결측 경로). 판독은 probe 에만
+    `out_of_range` 로 남는다. 습도 100 초과 102 이하는 눈금 오차라 100 으로 자른다.
+    """
+    kind = _ss.FACILITY_KEY_KIND.get(rkey)
+    if kind is not None:
+        status, val = _ss.check_value(kind, val)
+        if status == _ss.OUT_OF_RANGE:
+            logger.debug('[FacilitySensors] %s 물리 범위 밖 판독을 버립니다', rkey)
+            if probe is not None:
+                probe[rkey] = _ss.OUT_OF_RANGE
+            return
+    # VPD 는 따로 재지 않는다 — 같은 장치의 T·RH 가 멈췄으면 그 VPD 도 같은 값이 멈춘 것이다
+    # (장치 VPD 폴백이 멈춘 값을 되살리지 못하게). 판정 근거는 `sensor_status.FROZEN_KINDS` 주석.
+    if (frozen is not None and ident is not None
+            and (frozen.device_frozen(ident[0]) if rkey == 'VPD'
+                 else frozen.observe(ident, rkey, val, ts))):
+        logger.debug('[FacilitySensors] %s 값이 멈춘 센서의 판독을 버립니다', rkey)
+        if probe is not None:
+            probe[rkey] = _ss.FROZEN
+        return
+    result[rkey] = val
+    if probe is not None:
+        probe[rkey] = _ss.VALID
+
+
+def _note_miss(probe: Optional[dict], rkey: str, input_uuid: str, meas_id) -> None:
+    """max_age 안에 값이 없었던 채널이 stale 인지 missing 인지 probe 에 남긴다.
+
+    `max_age=None` 으로 한 번 더 조회해 가른다 — 데이터가 있으면 낡은 것(stale),
+    없으면 없는 것(missing). 추가 조회는 **값을 못 받은 채널에서만, 상태를 물은
+    호출(probe 가 있을 때)에서만** 일어난다.
+    """
+    if probe is None or rkey in probe:
+        return
+    kind = _ss.MISSING
+    if meas_id:
+        try:
+            # 지역 import — `_read_one_sensor` 와 같은 조회 함수를 쓴다(테스트가
+            # 패치하는 자리가 `aot.utils.influx` 쪽이다).
+            from aot.utils.influx import get_last_measurement as _glm
+            ts_any, _v = _glm(input_uuid, meas_id, max_age=None)
+            if ts_any is not None:
+                kind = _ss.STALE
+        except Exception:
+            pass
+    probe[rkey] = kind
+
+
 def _read_one_sensor(
     input_uuid: str,
     measurement_type: Optional[str],
     max_age: int,
     measurement_id: Optional[str] = None,
+    probe: Optional[dict] = None,
+    frozen=None,
 ) -> Dict[str, Optional[float]]:
     """input_uuid 장치에서 측정값을 하나 읽어 {result_key: value} 로 반환한다.
 
     measurement_id 가 지정된 경우 해당 채널을 직접 조회한다 (이름 추론 불필요).
     measurement_type 으로 결과 키(T, RH, CO2 …)를 결정한다.
     둘 다 없으면 T·RH 이름 추론(하위 호환).
+
+    probe: 주어지면 `{결과 키: valid|stale|missing|out_of_range}` 를 채운다
+    (`sensor_status`). 값 자체는 probe 와 무관하게 범위 검사를 거친다.
+
+    frozen: `sensor_status.FrozenTracker` — 멈춘 센서 판정(`_accept_reading`). 제어만 넘긴다.
     """
     from aot.utils.influx import get_last_measurement
 
@@ -706,9 +831,13 @@ def _read_one_sensor(
                 val = float(val)
                 if rkey == 'light':
                     val = _normalise_light(val, _dm_row(measurement_id))
-                result[rkey] = val
+                elif rkey == 'rain_mm':
+                    val = _normalise_rain(val, _dm_row(measurement_id))
+                _accept_reading(result, rkey, val, probe, frozen,
+                                (input_uuid, measurement_id), ts)
         except Exception:
             pass
+        _note_miss(probe, rkey, input_uuid, measurement_id)
         return result
 
     if measurement_type and measurement_type in _MTYPE_MAP:
@@ -734,8 +863,8 @@ def _read_one_sensor(
             #   아래 `except` 가 그것을 삼켜 이 재확인은 **한 번도 성립한 적이
             #   없었다**(2026-08-27 실측). `_effective_raw_unit` 이 같은 답을
             #   행 하나로 준다.
-            if not matched and measurement_type == 'rain':
-                matched = _effective_raw_unit(dm).lower() in _RAIN_UNITS
+            if measurement_type == 'rain':
+                matched = _is_rain_channel(dm)
             if matched:
                 try:
                     ts, val = get_last_measurement(input_uuid, dm.unique_id, max_age=max_age)
@@ -743,10 +872,16 @@ def _read_one_sensor(
                         val = float(val)
                         if rkey == 'light':
                             val = _normalise_light(val, dm)
-                        result[rkey] = val
+                        elif rkey == 'rain_mm':
+                            val = _normalise_rain(val, dm)
+                        _accept_reading(result, rkey, val, probe, frozen,
+                                        (input_uuid, dm.unique_id), ts)
                 except Exception:
                     pass
+                _note_miss(probe, rkey, input_uuid, dm.unique_id)
                 break
+        else:
+            _note_miss(probe, rkey, input_uuid, None)   # 맞는 채널이 없다 — missing
         return result
 
     # 하위 호환: measurement_id / measurement_type 모두 미설정 → T·RH 이름 추론
@@ -759,20 +894,35 @@ def _read_one_sensor(
     except Exception:
         dm_rows = []
     t_val = rh_val = None
+    t_src = rh_src = None       # (채널 id, 표본 시각) — 멈춘 센서 판정용
     for dm in dm_rows:
         meas_lower = (dm.measurement or '').lower()
+        # 상태를 물은 호출이면 T·RH 로 읽히는 채널의 실패를 stale/missing 으로 가른다.
+        rkey_try = ('T' if meas_lower in _MEAS_T_NAMES
+                    else 'RH' if meas_lower in _MEAS_RH_NAMES else None)
         try:
             ts, val = get_last_measurement(input_uuid, dm.unique_id, max_age=max_age)
         except Exception:
+            if rkey_try:
+                _note_miss(probe, rkey_try, input_uuid, dm.unique_id)
             continue
         if ts is None or val is None:
+            if rkey_try:
+                _note_miss(probe, rkey_try, input_uuid, dm.unique_id)
             continue
         if meas_lower in _MEAS_T_NAMES and t_val is None:
             t_val = float(val)
+            t_src = (dm.unique_id, ts)
         elif meas_lower in _MEAS_RH_NAMES and rh_val is None:
             rh_val = float(val)
-    if t_val  is not None: result['T']  = t_val
-    if rh_val is not None: result['RH'] = rh_val
+            rh_src = (dm.unique_id, ts)
+    # 값이 있는 쪽이 먼저 probe 를 채우도록 — 이미 miss 가 적혀 있어도 valid 가 덮는다.
+    for _rk, _v, _src in (('T', t_val, t_src), ('RH', rh_val, rh_src)):
+        if _v is not None:
+            if probe is not None:
+                probe.pop(_rk, None)
+            _accept_reading(result, _rk, _v, probe, frozen,
+                            (input_uuid, _src[0]), _src[1])
     return result
 
 
@@ -830,6 +980,8 @@ def _reject_spatial_outliers(
 def compute_spatial_internal(
     sensors_resolved: List[dict],
     max_age: Optional[int] = None,
+    with_status: bool = False,
+    frozen=None,
 ) -> dict:
     """sensors_resolved 목록에서 위치 인식 내부 환경값을 계산한다 (D2).
 
@@ -846,7 +998,9 @@ def compute_spatial_internal(
         'T'          : float | None,        # outlier 제거 후 평균
         'RH'         : float | None,
         'CO2'        : float | None,
-        'VPD'        : float | None,
+        'VPD'        : float | None,        # 표시용 — 장치 VPD 가 있으면 그것, 없으면 T/RH 계산값
+        'VPD_device' : float | None,        # 장치가 준 VPD 만(없으면 None) — 엽온 기준일 수 있다
+        'VPD_calc'   : float | None,        # 이 계산의 T/RH 평균에서 구한 공기 VPD
         'light'      : float | None,
         'T_min'      : float | None,        # outlier 제거 후 극값 (safety_gates 용)
         'T_max'      : float | None,
@@ -858,7 +1012,15 @@ def compute_spatial_internal(
         'valid_count': int,
         'rejected_count': int,              # outlier 로 제외된 (센서·항목) 쌍 수
         'source'     : 'spatial',
+        'status'     : {axis: {status, counts, n}},   # with_status=True 일 때만
     }
+
+    with_status: True 면 센서별 판독 상태(valid/stale/missing/outlier/out_of_range)를
+        `detail[i]['status']` 와 축별 요약 `status` 로 싣는다. stale 과 missing 을
+        가르려면 값을 못 받은 채널마다 max_age 없이 한 번 더 조회하므로 상태가 필요한
+        호출(제어 사이클)만 켠다. 범위 밖 판독을 버리는 것은 이 옵션과 무관하게 늘 한다.
+    frozen: `sensor_status.FrozenTracker` — 주어지면 값이 오래 멈춘 센서(T·RH·CO2)의 판독도
+        버린다(상태 `frozen`). 추적 상태가 필요해 코디네이터만 넘긴다 — 화면 경로는 넘기지 않는다.
     """
     # key → [(detail_idx, value)]
     buckets: Dict[str, List[Tuple[int, float]]] = {
@@ -877,9 +1039,14 @@ def compute_spatial_internal(
 
         mtype   = s.get('measurement_type') or None
         meas_id = s.get('measurement_id')   or None
+        probe: Optional[dict] = {} if with_status else None
+        # probe·frozen 은 필요한 호출만 넘긴다(읽기 함수를 갈아 끼운 테스트 호환).
+        _probe_kw = {'probe': probe} if probe is not None else {}
+        if frozen is not None:
+            _probe_kw['frozen'] = frozen
         vals = _read_one_sensor(input_uuid, mtype,
                                 _max_age_for(max_age, *_fresh(fresh, input_uuid)),
-                                measurement_id=meas_id)
+                                measurement_id=meas_id, **_probe_kw)
 
         d_idx = len(detail)
         for k in buckets:
@@ -900,6 +1067,8 @@ def compute_spatial_internal(
             'responded':        any(v is not None for v in vals.values()),
             **{k: vals.get(k) for k in ('T', 'RH', 'CO2', 'VPD', 'light')},
         })
+        if with_status:     # 상태를 물은 호출에만 — 화면 응답의 모양은 그대로 둔다
+            detail[-1]['status'] = {k: v for k, v in probe.items() if k in buckets}
 
     # ── 등가 환경 전제: 공간 outlier 제거 ────────────────────────────────────
     kept: Dict[str, List[float]] = {}
@@ -910,6 +1079,8 @@ def compute_spatial_internal(
         kept[k] = [v for _, v in kept_pairs]
         for ridx in rejected_idx:
             detail[ridx]['rejected'][k] = True
+            if with_status:
+                detail[ridx]['status'][k] = _ss.OUTLIER
         rejected_count += len(rejected_idx)
 
     def _avg(lst: List[float], ndigits: int) -> Optional[float]:
@@ -933,23 +1104,35 @@ def compute_spatial_internal(
     # 호출자가 "센서가 준 VPD" 와 "T/RH 로 계산한 VPD" 를 가를 수 있게 남긴다 —
     # 계산값이면 걸러진 T/RH 로 다시 계산하는 쪽이 맞다(env_coordinator 잡음 필터).
     vpd_measured = bool(vpd_readings)
-    if not vpd_readings and T_readings and RH_readings:
-        import math as _math
+    vpd_device = (round(sum(vpd_readings) / len(vpd_readings), 3)
+                  if vpd_readings else None)
+    # 공기 VPD — 장치 VPD 와 무관하게 늘 구해 둔다. 제어는 이쪽을 쓴다(장치 VPD 는
+    # 엽온 기준일 수 있어 목표와 의미가 다르다 — env_coordinator `_collect_internal`).
+    vpd_calc_value = None
+    if T_readings and RH_readings:
         T_avg  = sum(T_readings)  / len(T_readings)
         RH_avg = sum(RH_readings) / len(RH_readings)
-        svp    = 0.6108 * _math.exp(17.27 * T_avg / (T_avg + 237.3))
-        vpd_calc = round(max(0.0, (1.0 - RH_avg / 100.0) * svp), 3)
-        vpd_readings = [vpd_calc]
+        vpd_calc_value = round(psychro.vpd_from_rh(T_avg, RH_avg), 3)
+        if not vpd_readings:
+            vpd_readings = [vpd_calc_value]
 
     # 화면 문구가 "센서 응답" 이므로 세는 것도 **응답**이어야 한다. 환경 평균에
     # 기여하지 않는 센서(이슬점·풍속 전용)를 고장처럼 세면, 사용자는 멀쩡한
     # 장치를 찾아 헤맨다.
     valid = sum(1 for d in detail if d.get('responded'))
-    return {
+    status = None
+    if with_status:
+        status = {
+            k: _ss.summarize(d['status'][k] for d in detail if k in d['status'])
+            for k in _ss.INDOOR_AXES
+        }
+    out = {
         'T':           _avg(T_readings,         2),
         'RH':          _avg(RH_readings,        1),
         'CO2':         _avg(kept['CO2'],        0),
         'VPD':         _avg(vpd_readings,       3),
+        'VPD_device':  vpd_device,
+        'VPD_calc':    vpd_calc_value,
         'vpd_measured': vpd_measured,
         'light':       _avg(kept['light'],      1),
         'T_min':       _min(T_readings,         2),
@@ -963,6 +1146,9 @@ def compute_spatial_internal(
         'rejected_count': rejected_count,
         'source':      'spatial',
     }
+    if status is not None:
+        out['status'] = status
+    return out
 
 
 def sensor_priority_of(entry: dict) -> str:
@@ -975,9 +1161,20 @@ def sensor_priority_of(entry: dict) -> str:
     return 'backup' if str(raw or '').strip().lower() == 'backup' else 'primary'
 
 
+def _rain_origin(device_ids) -> str:
+    """강우 출처 — 판정은 `aot.utils.inputs.rain_origin_of` 하나다(수집기도 같은 것을
+    부른다). 데몬 모듈이 이 Flask 패키지를 거치지 않게 거기 둔다."""
+    from aot.utils.inputs import rain_origin_of
+    return rain_origin_of(device_ids)
+
+
+# @manual ai/env-control#safety-gates, geo/facility#sensor-roles
 def read_outdoor_sensors(
     sensors_outdoor: List[dict],
     max_age: Optional[int] = None,
+    with_status: bool = False,
+    frozen=None,
+    rain_seen: Optional[dict] = None,
 ) -> dict:
     """sensors_outdoor 목록에서 실외 환경값을 읽는다.
 
@@ -992,11 +1189,25 @@ def read_outdoor_sensors(
         'CO2_ext'    : float | None,
         'wind_ms'    : float | None,
         'wind_deg'   : float | None,
+        'wind_gust_ms': float | None,  # 'wind_gust' 채널의 최댓값(센서 여럿이면 가장 센 값)
         'solar_wm2'  : float | None,
-        'rain_mm'    : float | None,
+        'rain_mm'    : float | None,   # **mm/h**(감우기는 0/1) — `utils.inputs.rain_unit_scale`
+        'rain_origin': 'model' | 'measured' | None,  # 강우 값의 출처(`utils.inputs.rain_origin_of`)
         'valid_count': int,
         'total_count': int,
+        'status'     : {축: {status, counts, n}},  # with_status=True 일 때만
     }
+
+    with_status: `compute_spatial_internal` 과 같다. 축은 `sensor_status.OUTDOOR_AXES`
+    (T_ext·RH_ext·wind·rain·solar). 메인/백업 순위와 무관하게 그 축을 먹이는 모든
+    센서의 상태를 요약한다 — 값 선택(`backup_keys`)과는 다른 질문이다.
+
+    frozen: `compute_spatial_internal` 과 같다. 실외는 T·RH 만 본다(CO2_ext 는 축이 없다).
+
+    rain_seen: 제어(코디네이터)가 사이클 사이에 들고 다니는 dict — 마지막 **신선한 실측**
+    강우(`measured_mm`)와 그 장치(`devices`). 실측 강우계가 끊겼는데 끊기기 직전 비가
+    오고 있었으면 예보 모델 값으로 갈아타지 않는다(아래 '규칙 A' 주석). 화면 경로는 넘기지
+    않는다(기억이 없으면 예전과 같다).
     """
     # ── 메인과 백업 (2026-09-14) ─────────────────────────────────────────────
     # 실외 센서가 둘 이상일 때 **동등하게 평균하지 않는다.** 현장 기상대가
@@ -1014,16 +1225,41 @@ def read_outdoor_sensors(
     #
     # 순위가 없는 설비(기존 설치 전부)는 메인이다 — 업그레이드로 동작이 바뀌지
     # 않는다.
-    _KEYS = ('T', 'RH', 'CO2', 'wind_ms', 'wind_deg', 'light', 'rain_mm')
-    tiers: Dict[str, Dict[str, List[float]]] = {
-        k: {'primary': [], 'backup': []} for k in _KEYS}
+    #
+    # ── 실측과 예보 모델도 섞지 않는다 (2026-10-10) ─────────────────────────────
+    # 순위 표시 없이(= 둘 다 메인) 강우계와 Open-Meteo 를 묶은 설치에서 강우계 0 과
+    # 예보 1.2 가 **평균**되어 0.6 ≥ 문턱 0.5 — 게다가 실측이 섞였으니 출처는 'measured'
+    # (`rain_origin_of` 는 전부 모델일 때만 'model') 라 한낮에 창을 **전부** 닫았다(폐루프
+    # `rain_gauge_vs_forecast_primary`, 실내 47.6 °C). 출처(`data_origin`)는 순위 안에서
+    # 한 번 더 가른다:
+    #   온도·습도·풍속·풍향·일사·CO₂  메인 실측 > 메인 모델 > 백업 실측 > 백업 모델
+    #                                (사용자가 적은 순위가 먼저 — 그 안에서 실측 먼저)
+    #   강우                         메인 실측 > 백업 실측 > 메인 모델 > 백업 모델
+    #                                (신선한 실측이 하나라도 있으면 실측만 — 순위보다 앞선다)
+    # 강우만 순위를 넘는 이유: 실측 강우가 게이트를 더 엄격하게 쓴다(전부 닫음). 예보가 메인이고
+    # 강우계가 백업인 설치에서 예보를 따르면 지금 오는 비를 모델의 "약한 비" 로 깎는다.
+    # 같은 묶음 안에서 강우는 **최댓값**이다(나머지는 예전처럼 평균): 감우기(0/1)와 강우율을
+    # 평균하면 뜻이 없는 숫자가 되고, 한 강우계만 비를 볼 때(막힘·국지 소나기) 평균은 비를
+    # 반으로 깎는다 — 닫는 쪽으로 틀리는 편이 안전하다.
+    _KEYS = ('T', 'RH', 'CO2', 'wind_ms', 'wind_deg', 'wind_gust_ms', 'light', 'rain_mm')
+    _ORDER = (('primary', 'measured'), ('primary', 'model'),
+              ('backup', 'measured'), ('backup', 'model'))
+    _RAIN_ORDER = (('primary', 'measured'), ('backup', 'measured'),
+                   ('primary', 'model'), ('backup', 'model'))
     total = 0
     outdoor_device_ids: List[str] = []
     device_tier: Dict[str, str] = {}
+    # (값 종류, 순위, 장치, 값) — 출처는 장치 목록이 다 모인 뒤 한 번에 가른다.
+    raw: List[Tuple[str, str, str, float]] = []
+    # 강우를 **고른**(measurement_type 'rain') 장치 — 끊긴 실측 강우계를 알아보는 근거.
+    rain_bound: List[str] = []
 
     # 표시 경로(max_age 미지정)에서만 장치 주기를 조회한다 — 한 번의 IN 조회.
     fresh = _freshness_by_device(
         [s.get('input_uuid') for s in (sensors_outdoor or [])])
+
+    axis_statuses: Dict[str, List[str]] = {a: [] for a in _ss.OUTDOOR_AXES}
+    rain_from: List[str] = []
 
     for s in (sensors_outdoor or []):
         input_uuid = s.get('input_uuid')
@@ -1039,43 +1275,101 @@ def read_outdoor_sensors(
 
         mtype   = s.get('measurement_type') or None
         meas_id = s.get('measurement_id')   or None
+        if mtype == 'rain' and input_uuid not in rain_bound:
+            rain_bound.append(input_uuid)
+        probe: Optional[dict] = {} if with_status else None
+        # probe·frozen 은 필요한 호출만 넘긴다(읽기 함수를 갈아 끼운 테스트 호환).
+        _probe_kw = {'probe': probe} if probe is not None else {}
+        if frozen is not None:
+            _probe_kw['frozen'] = frozen
         vals = _read_one_sensor(input_uuid, mtype,
                                 _max_age_for(max_age, *_fresh(fresh, input_uuid)),
-                                measurement_id=meas_id)
+                                measurement_id=meas_id, **_probe_kw)
+        for rk, st in (probe or {}).items():
+            ax = _ss.OUTDOOR_FACILITY_KEY_AXIS.get(rk)
+            if ax:
+                axis_statuses[ax].append(st)
 
         for k in _KEYS:
             if vals.get(k) is not None:
-                tiers[k][tier].append(vals[k])
+                raw.append((k, tier, input_uuid, vals[k]))
+
+    # 출처 — 값을 낸 장치(와 강우 스캔 후보)만 묻는다. 판정은 `utils.inputs` 하나다.
+    # **모르면 실측**(빈 집합) — 실측 쪽이 강우 게이트에서 엄격하다.
+    _ask = sorted({r[2] for r in raw} | set(outdoor_device_ids))
+    try:
+        from aot.utils.inputs import model_origin_device_ids
+        model_devs = set(model_origin_device_ids(_ask)) if _ask else set()
+    except Exception:                                       # noqa: BLE001
+        model_devs = set()
+
+    def _origin(dev):
+        return 'model' if dev in model_devs else 'measured'
+
+    groups: Dict[str, Dict[Tuple[str, str], List[Tuple[str, float]]]] = {
+        k: {g: [] for g in _ORDER} for k in _KEYS}
+    for k, tier, dev, v in raw:
+        groups[k][(tier, _origin(dev))].append((dev, v))
 
     buckets: Dict[str, List[float]] = {k: [] for k in _KEYS}
     backup_keys: List[str] = []
+    chosen: Dict[str, Optional[Tuple[str, str]]] = {k: None for k in _KEYS}
 
-    def _take(keys, tier):
+    def _take(keys, g):
         for k in keys:
-            buckets[k] = tiers[k][tier]
-            if tier == 'backup' and tiers[k][tier]:
+            buckets[k] = [v for _d, v in groups[k][g]]
+            chosen[k] = g
+            if g[0] == 'backup' and buckets[k]:
                 backup_keys.append(k)
 
-    # 온도·습도 짝
+    def _first(k, order=_ORDER):
+        return next((g for g in order if groups[k][g]), None)
+
+    # 온도·습도 짝 — 짝이 온전한 첫 묶음.
     _pair = ('T', 'RH')
-    if all(tiers[k]['primary'] for k in _pair):
-        _take(_pair, 'primary')
-    elif all(tiers[k]['backup'] for k in _pair):
-        _take(_pair, 'backup')
+    _g = next((g for g in _ORDER if all(groups[k][g] for k in _pair)), None)
+    if _g is not None:
+        _take(_pair, _g)
     else:
-        # 어느 순위도 짝이 온전하지 않다 — 종류별로 있는 것을 쓴다.
+        # 어느 묶음도 짝이 온전하지 않다 — 종류별로 있는 것을 쓴다.
         for k in _pair:
-            _take((k,), 'primary' if tiers[k]['primary'] else 'backup')
+            g = _first(k)
+            if g is not None:
+                _take((k,), g)
     for k in _KEYS:
         if k in _pair:
             continue
-        _take((k,), 'primary' if tiers[k]['primary'] else 'backup')
+        g = _first(k, _RAIN_ORDER if k == 'rain_mm' else _ORDER)
+        if g is not None:
+            _take((k,), g)
+    if chosen['rain_mm'] is not None:
+        rain_from = [d for d, _v in groups['rain_mm'][chosen['rain_mm']]]
+
+    # ── 규칙 A — 끊긴 실측의 "비 옴" 을 예보가 덮지 않는다 ─────────────────────
+    # 실측 강우계가 끊기면(위에서 값 없음) 예보 모델이 강우를 넘겨받는다. 그런데 끊기기 직전
+    # 실측이 비를 보고 있었다면, 게이트는 그 마지막 값으로 닫힌 채 있어야 한다(오래된 "비 옴"
+    # 은 닫는 근거 — `safety_gates._weather_view`). 예보 값을 내면 게이트가 그것을 이번 값으로
+    # 받아 실측 래치를 지우고 모델의 단계 제한으로 **풀어 버린다.** 그래서 이때는 강우를 비워
+    # 둔다(= 잃음) — 실측이 돌아오거나 마지막 실측이 0 이었으면 예보가 그대로 넘겨받는다.
+    rain_held = False
+    if rain_seen is not None:
+        if chosen['rain_mm'] is not None and chosen['rain_mm'][1] == 'measured':
+            rain_seen['measured_mm'] = max(buckets['rain_mm'])
+            rain_seen['devices'] = list(rain_from)
+        elif (float(rain_seen.get('measured_mm') or 0.0) > 0.0
+              and set(rain_seen.get('devices') or ()) & set(rain_bound)):
+            rain_held = True
+            buckets['rain_mm'] = []
+            rain_from = []
+            chosen['rain_mm'] = None
+            if 'rain_mm' in backup_keys:
+                backup_keys.remove('rain_mm')
 
     # 명시적 rain 피팅이 없어도 outdoor 장치 채널을 자동 스캔해서 rain 감지
     # 변환 후 단위가 mm인 채널, 또는 measurement 이름이 _MEAS_RAIN_NAMES에 속하는 채널을 찾는다
-    # 메인 장치를 먼저 본다 — 백업의 강우가 메인의 강우를 앞지르면 안 된다.
-    outdoor_device_ids.sort(key=lambda d: device_tier.get(d) == 'backup')
-    if not buckets['rain_mm'] and outdoor_device_ids:
+    # 실측 장치를 먼저, 그 안에서 메인 장치를 먼저 본다 — 위 강우 순서(`_RAIN_ORDER`)와 같다.
+    outdoor_device_ids.sort(key=lambda d: (d in model_devs, device_tier.get(d) == 'backup'))
+    if not buckets['rain_mm'] and outdoor_device_ids and not rain_held:
         from aot.databases.models.measurement import DeviceMeasurements
         from aot.utils.database import db_retrieve_table_daemon
         from aot.utils.influx import get_last_measurement
@@ -1083,24 +1377,33 @@ def read_outdoor_sensors(
             dm_rows = db_retrieve_table_daemon(DeviceMeasurements).filter(
                 DeviceMeasurements.device_id.in_(outdoor_device_ids)
             ).all()
+            _rank = {d: i for i, d in enumerate(outdoor_device_ids)}
+            dm_rows = sorted(dm_rows, key=lambda r: _rank.get(r.device_id, len(_rank)))
             for dm in dm_rows:
-                meas_lower = (dm.measurement or '').lower()
-                is_rain = meas_lower in _MEAS_RAIN_NAMES
-                if not is_rain:
-                    # ⚠ 같은 깨진 호출이 여기에도 있었다(위 `_read_one_sensor`
-                    #   의 주석 참조) — 두 곳 다 TypeError 를 삼키고 있었으므로
-                    #   **이름이 원시 그대로인 강수 채널은 어느 경로로도 안
-                    #   잡혔다.** 한 곳만 고치면 나머지 하나가 그대로 남는다.
-                    is_rain = _effective_raw_unit(dm).lower() in _RAIN_UNITS
-                if is_rain:
+                # ⚠ 같은 깨진 호출이 여기에도 있었다(위 `_read_one_sensor`
+                #   의 주석 참조) — 두 곳 다 TypeError 를 삼키고 있었으므로
+                #   **이름이 원시 그대로인 강수 채널은 어느 경로로도 안
+                #   잡혔다.** 한 곳만 고치면 나머지 하나가 그대로 남는다.
+                if _is_rain_channel(dm):
                     try:
                         ts, val = get_last_measurement(
                             dm.device_id, dm.unique_id,
                             max_age=_max_age_for(max_age, *_fresh(fresh, dm.device_id)))
                         if ts is not None and val is not None:
-                            buckets['rain_mm'].append(float(val))
+                            # 자동 스캔도 같은 범위 검사를 거친다 — 불가능한 값이면
+                            # 이 채널은 건너뛰고 다음 후보를 본다.
+                            _rs, _rv = _ss.check_value('rain', _normalise_rain(val, dm))
+                            if _rs == _ss.OUT_OF_RANGE:
+                                axis_statuses['rain'].append(_ss.OUT_OF_RANGE)
+                                continue
+                            buckets['rain_mm'].append(_rv)
+                            rain_from.append(dm.device_id)
+                            axis_statuses['rain'].append(_ss.VALID)
                             if device_tier.get(dm.device_id) == 'backup':
                                 backup_keys.append('rain_mm')
+                            if rain_seen is not None and dm.device_id not in model_devs:
+                                rain_seen['measured_mm'] = float(_rv)
+                                rain_seen['devices'] = [dm.device_id]
                             break
                     except Exception:
                         pass
@@ -1115,23 +1418,35 @@ def read_outdoor_sensors(
     CO2_ext   = _avg(buckets['CO2'],      0)
     wind_ms   = _avg(buckets['wind_ms'],  2)
     wind_deg  = _avg(buckets['wind_deg'], 1)
+    # 돌풍은 평균하지 않는다 — 여러 센서면 **가장 센 값**(강풍 게이트는 보수적인 쪽이 옳다).
+    wind_gust_ms = (round(max(buckets['wind_gust_ms']), 2)
+                    if buckets['wind_gust_ms'] else None)
     solar_wm2 = _avg(buckets['light'],    1)
-    rain_mm   = _avg(buckets['rain_mm'],  2)
+    # 강우는 평균이 아니라 최댓값이다(위 '실측과 예보 모델도 섞지 않는다').
+    rain_mm   = round(max(buckets['rain_mm']), 2) if buckets['rain_mm'] else None
 
     valid = sum(1 for v in (T_ext, RH_ext, CO2_ext, wind_ms, wind_deg, solar_wm2, rain_mm) if v is not None)
-    return {
+    out = {
         'T_ext':       T_ext,
         'RH_ext':      RH_ext,
         'CO2_ext':     CO2_ext,
         'wind_ms':     wind_ms,
         'wind_deg':    wind_deg,
+        'wind_gust_ms': wind_gust_ms,   # 잰 돌풍(m/s) — 채널이 없으면 None(추정하지 않는다)
         'solar_wm2':   solar_wm2,
         'rain_mm':     rain_mm,
         'valid_count': valid,
         'total_count': total,
         # 메인이 끊겨 백업에서 온 값의 종류 — 비어 있으면 전부 메인(또는 없음).
         'backup_keys': backup_keys,
+        # 강우 값의 출처 — 'model'(예보·재분석 모델) | 'measured' | None(강우 없음).
+        'rain_origin': (_rain_origin(rain_from) if rain_mm is not None else None),
+        # 끊긴 실측 강우계의 마지막 "비 옴" 을 지키느라 예보 강우를 내지 않았다(규칙 A).
+        'rain_held':   rain_held,
     }
+    if with_status:
+        out['status'] = {a: _ss.summarize(axis_statuses[a]) for a in _ss.OUTDOOR_AXES}
+    return out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1226,6 +1541,78 @@ def read_forecast_sensors(
     }
 
 
+HOURLY_FORECAST_DRIVER = 'OPEN_METEO_HOURLY_FORECAST'
+
+# 바인딩 입력 id 묶음 → 드라이버 조회 결과. 코디네이터가 사이클마다(피드포워드·MPC)
+# 부르므로 DB 조회를 5분에 한 번으로 줄인다.
+_DRIVER_CACHE: Dict[tuple, tuple] = {}
+_DRIVER_CACHE_TTL = 300.0
+
+
+def _bound_input_drivers(uuids: tuple) -> Dict[str, str]:
+    import time as _time
+    now = _time.time()
+    hit = _DRIVER_CACHE.get(uuids)
+    if hit is not None and now - hit[0] < _DRIVER_CACHE_TTL:
+        return hit[1]
+    from aot.utils.inputs import _input_devices
+    rows = _input_devices(list(uuids))
+    if rows is None:            # 조회 실패 — 기억하지 않는다(다음 사이클에 다시)
+        return {}
+    drivers = {uid: dev for uid, dev in rows}
+    _DRIVER_CACHE[uuids] = (now, drivers)
+    return drivers
+
+
+# @manual ai/env-control#settings-forecast
+def forecast_file_for(weather_bindings: List[dict], sole: bool = False) -> Optional[str]:
+    """시설 예보 바인딩 → 묶인 Open-Meteo 시간별 예보 입력의 시간열 파일 경로. 없으면 None.
+
+    바인딩 중 드라이버가 `OPEN_METEO_HOURLY_FORECAST` 인 입력(바인딩 순서상 첫 번째)의
+    `DATABASE_PATH/openmeteo/forecast_<uuid>.json` — 경로는 드라이버의
+    `forecast_file_path` 로 만든다(uuid 형식 검사 포함). 파일이 있는지·신선한지는 보지
+    않는다(`forecast_feedforward.load_fresh_facility_forecast` 가 본다).
+
+    `sole=True` 면 **묶인 예보 입력이 그 입력 하나뿐일 때만** 경로를 낸다 — 다른 예보
+    입력(기상청·OpenWeather 등)이 섞인 시설은 피드포워드를 기존 바인딩 단일값 경로로
+    둔다(환경제어 E1).
+    """
+    order: List[str] = []
+    for wb in (weather_bindings or []):
+        iid = str((wb or {}).get('input_uuid') or '').strip()
+        if iid and iid not in order:
+            order.append(iid)
+    if not order:
+        return None
+    try:
+        drivers = _bound_input_drivers(tuple(sorted(order)))
+    except Exception:                                       # noqa: BLE001
+        logger.debug('[ForecastFile] 입력 드라이버 조회 실패', exc_info=True)
+        return None
+    hourly = [iid for iid in order if drivers.get(iid) == HOURLY_FORECAST_DRIVER]
+    if not hourly:
+        return None
+    if sole and len(order) != 1:
+        return None
+    try:
+        from aot.inputs.open_meteo_hourly_forecast import forecast_file_path
+        return forecast_file_path(hourly[0])
+    except (ValueError, ImportError):
+        logger.debug('[ForecastFile] 파일 경로를 만들 수 없음: %r', hourly[0], exc_info=True)
+        return None
+
+
+def fresh_forecast_file_for(weather_bindings: List[dict], sole: bool = False,
+                            now_epoch: Optional[float] = None) -> Optional[str]:
+    """`forecast_file_for` 중 파일이 신선(수신 2 h 이내)한 것만. 아니면 None."""
+    path = forecast_file_for(weather_bindings, sole=sole)
+    if not path:
+        return None
+    from aot.functions.utils.env_control.forecast_feedforward import (
+        load_fresh_facility_forecast)
+    return path if load_fresh_facility_forecast(path, now_epoch) is not None else None
+
+
 def validate_sensor_binding(binding: dict) -> Tuple[bool, str]:
     """센서 바인딩 항목의 필수 필드와 role 유효성을 검사한다.
 
@@ -1288,7 +1675,8 @@ def build_sensor_snapshot(
 
     ext_fallback: 실외 미설정 항목을 ext_context_collector 공유 컨텍스트로 보충.
     """
-    indoor  = {'temp_c': None, 'humidity_pct': None, 'co2_ppm': None, 'vpd_kpa': None}
+    indoor  = {'temp_c': None, 'humidity_pct': None, 'co2_ppm': None, 'vpd_kpa': None,
+               'vpd_air_kpa': None}
     outdoor = {'temp_c': None, 'humidity_pct': None, 'wind_ms': None,
                'wind_deg': None, 'solar_wm2': None}
     valid_count = 0
@@ -1304,6 +1692,11 @@ def build_sensor_snapshot(
             # 위젯의 CO₂ 칸이 늘 '— ppm' 이었다.
             indoor['co2_ppm']      = spatial.get('CO2')
             indoor['vpd_kpa']      = spatial.get('VPD')
+            # 공기 VPD — 온·습도 평균에서 계산(`VPD_calc`). 화면의 [공기 VPD] 칸과 목표 비교는
+            # 이것을 쓴다. `vpd_kpa` 는 종전 뜻(장치 VPD 가 있으면 그것)을 그대로 둔다 — 장치
+            # VPD 는 엽온 어림(기온 − 1.5 °C) 기준일 수 있다. 잎 VPD·목표 기준은 코디네이터가
+            # 자기 스냅숏에 더 싣는다(`_annotate_snapshot_vpd_basis`).
+            indoor['vpd_air_kpa']  = spatial.get('VPD_calc')
             valid_count = spatial.get('valid_count', 0)
             total_count = len(sensors_resolved)
             degraded    = valid_count < total_count

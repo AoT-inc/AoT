@@ -169,7 +169,8 @@ def page_input_submit():
                      dep_name,
                      dep_list,
                      action_id,
-                     page_refresh) = utils_action.action_add(form_actions)
+                     page_refresh,
+                     dep_message) = utils_action.action_add(form_actions)
                     if dep_list:
                         dep_unmet = form_actions.action_type.data
                     input_id = form_actions.device_id.data

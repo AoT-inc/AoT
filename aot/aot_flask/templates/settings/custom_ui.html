@@ -196,6 +196,16 @@
                     aria-label="{{_('Click to edit Primary Button Background colors')}}">{{_('Upgrade')}}</span>
             </div>
 
+            <!-- AI 카드(자막·수신함·뷰어) — 면 ai_surface_bg + 짝 글자 ai_surface_fg. 실제 화면에서는 면이
+                 알파 0.8 로 그려지고 글자는 불투명이다(여기서는 단색으로 보인다). -->
+            <div class="preview-toggle-label-row">{{_('AI Card')}}</div>
+            <div class="preview-ai-card"
+                 role="button" tabindex="0"
+                 data-color-bg="ai_surface_bg"
+                 data-color-text="ai_surface_fg"
+                 data-color-label="{{_('AI Card Surface')}}"
+                 aria-label="{{_('Click to edit AI Card Surface colors')}}">{{_('AI connected')}} · AI</div>
+
             <!-- Slide toggles (.btn-toggle) — 실제 컴포넌트가 읽는 필드를
                  그대로 쓴다: 켜짐 band_3 · 대기 bg_pending · 무응답 bg_warning ·
                  손잡이 text_color_tertiary. 꺼짐 트랙 toggle_track_off. -->
@@ -522,7 +532,9 @@
               ('bd_divider_soft', _('Divider Line (Soft)'), _('Lighter divider for dense lists, where a full-weight line would be noisy')),
               ('bd_primary',   _('Background Primary'),   _('Page cards — widgets, list rows, modal groups')),
               ('bd_secondary', _('Background Secondary'), _('Page background behind cards, list headers, modal body')),
-              ('bd_control',   _('Control Surface'),      _('Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it'))
+              ('bd_control',   _('Control Surface'),      _('Face of things you operate — text fields, selects, pills. Keep it apart from the page background, or a control sitting on the page vanishes into it')),
+              ('ai_surface_bg', _('AI Card Surface'),     _('Dark face of AI cards — captions, inbox, viewer. Drawn at 0.8 opacity so the screen shows through. Change it together with AI Card Text')),
+              ('ai_surface_fg', _('AI Card Text'),        _('Light text on AI cards. Always opaque. Keep it far from AI Card Surface, or the text vanishes'))
             ] %}
             {% for field_name, label, desc in bg_fields %}
             <div class="aot-color-row" data-css-key="{{field_name}}">
@@ -840,6 +852,7 @@
       tint_danger_bg:  '#FBE7E7', tint_danger_fg:  '#B23B3B',
       bg_fault:        '#FBE7E7', bd_divider:      '#DDDDDD',
       bd_divider_soft: '#f0f0f0',
+      ai_surface_bg:   '#13261B', ai_surface_fg:   '#FFFFFF',
       tint_info_bg:    '#E7F4FB', tint_info_fg:    '#06709B'
     };
 
@@ -926,6 +939,8 @@
       bg_fault:             'bg-fault',
       bd_divider:           'border-neutral',
       bd_divider_soft:      'border-light',
+      ai_surface_bg:        'ai-surface-bg',
+      ai_surface_fg:        'ai-surface-fg',
       tint_danger_fg:       'tint-danger-fg',
       tint_info_bg:         'tint-info-bg',
       tint_info_fg:         'tint-info-fg',

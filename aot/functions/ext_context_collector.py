@@ -32,6 +32,7 @@ from flask_babel import lazy_gettext
 
 from aot.databases.models import CustomController
 from aot.functions.base_function import AbstractFunction
+from aot.functions.utils.env_control import psychro
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils import measurement_freshness as _freshness
 from aot.utils.database import db_retrieve_table_daemon
@@ -89,6 +90,27 @@ def shared_context_is_current(now: float = None) -> bool:
     return ((now or time.time()) - _shared_context_ts) <= limit
 
 
+def constraints_pass_current_value(mod_dev, value):
+    """실외 항목(지금 값)에 **몇 시간 뒤 예보 입력**을 고르면 저장을 거부한다.
+
+    드라이버 `data_time='forecast'`(OPEN_METEO_HOURLY_FORECAST)의 "+6h 강수" 를
+    `sensor_rain` 에 두면 지금 오지 않는 비로 게이트가 걸린다(2026-10-13, 환경제어
+    E4 — 경고가 아니라 거부). 표식이 없는 드라이버(`OPEN_METEO_FORECAST` 등)는
+    '현재' 로 보아 그대로 받는다. 판정을 못 하면 받는다.
+
+    웹 설정 폼(`custom_options_return_json`)과 AI 도구(modify_function_options ·
+    create_function)가 같은 함수를 부른다.
+    """
+    try:
+        from aot.utils.inputs import forecast_time_selection_problem
+        why = forecast_time_selection_problem(value)
+    except Exception:                                       # noqa: BLE001
+        why = None
+    if why:
+        return False, [why], mod_dev
+    return True, [], mod_dev
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNCTION_INFORMATION
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,6 +148,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('External Temperature Sensor'),
             'phrase': lazy_gettext('Select the external air temperature measurement.'),
         },
@@ -135,6 +158,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('External Humidity Sensor'),
             'phrase': lazy_gettext('Select the external relative humidity measurement.'),
         },
@@ -144,6 +168,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('Wind Speed Sensor'),
             'phrase': lazy_gettext('Select the wind speed (m/s) measurement.'),
         },
@@ -153,6 +178,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('Rain Sensor'),
             'phrase': lazy_gettext('Select the rainfall amount or rain detection measurement.'),
         },
@@ -162,6 +188,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('Solar Radiation Sensor'),
             'phrase': lazy_gettext('Select the solar radiation (W/m²) or illuminance measurement.'),
         },
@@ -171,6 +198,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('Dew Point Sensor'),
             'phrase': lazy_gettext('Select the dew point (°C) measurement. If absent, it is calculated from temperature and humidity.'),
         },
@@ -180,6 +208,7 @@ FUNCTION_INFORMATION = {
             'default_value': '',
             'required': False,
             'options_select': ['Input', 'Function'],
+            'constraints_pass': constraints_pass_current_value,
             'name': lazy_gettext('External CO₂ Sensor'),
             'phrase': lazy_gettext('Select the external CO₂ (ppm) measurement. If absent, the default is 400 ppm.'),
         },
@@ -291,6 +320,11 @@ class CustomFunction(AbstractFunction):
             if val is None:
                 stale.append(key)
                 continue
+            if key == 'rain':
+                # 강우 게이트는 mm/h 로 본다 — 15 분 누적(KMA rn_15m) 등을 시간당으로
+                # (`aot.utils.inputs.rain_unit_scale`). 모르는 단위는 그대로.
+                from aot.utils.inputs import rain_measurement_mm_h
+                val = rain_measurement_mm_h(val, meas_id)
             values[key] = val
             stamps[key] = ts if ts is not None else now
 
@@ -333,6 +367,11 @@ class CustomFunction(AbstractFunction):
 
         ctx = {key: values.get(key) for key in selectors}
         ctx['last_ext_ts'] = now if has_trh else prev_ts
+        # 강우 값의 출처 — 예보 모델(Open-Meteo 등)이면 강우 게이트가 전면 폐쇄 대신
+        # 단계 제한을 건다(`safety_gates.classify_rain`). 값이 없으면 싣지 않는다.
+        if ctx.get('rain') is not None:
+            from aot.utils.inputs import rain_origin_of
+            ctx['rain_origin'] = rain_origin_of([_split_selector(self.sensor_rain)[0]])
 
         _shared_context        = ctx
         _shared_context_ts     = now
@@ -389,8 +428,8 @@ def _unpack_last(result):
 
 
 def _calc_dewpoint(T: float, RH: float) -> float:
-    """Calculate the dew point (°C) with the Magnus formula."""
-    import math
-    a, b = 17.27, 237.3
-    alpha = (a * T) / (b + T) + math.log(max(RH, 0.1) / 100.0)
-    return (b * alpha) / (a - alpha)
+    """Calculate the dew point (°C) with the Magnus formula (`psychro.dewpoint`).
+
+    RH is floored at 0.1 % so a 0 reading does not take log(0).
+    """
+    return psychro.dewpoint(max(RH, 0.1) / 100.0 * psychro.svp(T))

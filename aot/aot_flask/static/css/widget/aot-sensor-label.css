@@ -647,6 +647,13 @@
 .aot-ov-row--stack > span:first-child { flex: 0 0 auto; padding-right: 12px; }
 .aot-ov-row--stack > span:last-child  { flex: 1 1 auto; text-align: right; }
 
+/* 한국어만 어절 경계에서 접는다(가이드 §4-6 '한국어 자연 줄바꿈') — ja/zh 는 그대로 둔다. */
+:lang(ko) .aot-ov-row > span,
+:lang(ko) .aot-bay-popup-pane .aot-notice-box {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 /* [자원] 장치 한 대 = 이름 한 줄 + 창 두 줄(오늘·최근 7일).
  *
  * 이름을 값의 왼쪽 칸에 두면 값 칸이 좁아 "오늘 12.34 시간 · 104,917 L" 이
@@ -1199,10 +1206,9 @@
   box-sizing: border-box;
   /* 레이어는 통과, 패널만 받는다. 지도를 만질 수 있어야 한다. */
   pointer-events: none;
-  /* 지도 로컬 z 스케일은 0~99 인데(map.css 상단 표) 라벨 핀은 그 밖의
-     LABEL_Z_FRONT(9000)를 인라인으로 쓴다. 핀된 라벨이 패널을 뚫지 않도록 그
-     위에 둔다. 라벨 핀을 스케일 안으로 되돌리면 이 값도 80 으로 내릴 것. */
-  z-index: 9500;
+  /* 지도 로컬 z 스케일(map.css 상단 표) 안의 80. 선택 라벨(LABEL_Z_FRONT=10)과
+     측정값·시간 패널(11)은 이 아래다. */
+  z-index: 80;
 }
 .aot-map-panel-layer[data-mode="side"] {
   justify-content: flex-end;
@@ -2064,22 +2070,18 @@ button.aot-center-modal-close {
    같은 폼을 쓰는 다른 화면(/plots)에서는 안내가 통째로 스타일 없이 렌더됐다. */
 
 /* ── 고르는 행 (`.aot-ov-pick`) ────────────────────────────────────────
- * 대지 [정보] 탭의 기상대 지정이 쓴다. `.aot-ov-row` 를 그대로 쓰되
- * **좌우가 뒤집힌다** — 체크가 왼쪽에 서야 목록으로 읽히고, 오른쪽에 있으면
- * 값(숫자) 자리로 보여 "무엇을 고르는 줄인지" 가 흐려진다.
+ * 대지 [정보] 탭의 기상대 지정이 쓴다. `.aot-ov-row` 그대로 — 이름(왼쪽)과
+ * 켜고 끄는 슬라이드 토글(오른쪽, 가이드 §3-2).
  *
  * 이름 아래 작은 글씨로 그 장치의 측정값을 적는다. 장치 이름만으로는 어느
  * 것이 기상대인지 알 수 없는 설치가 흔하다(실측: 한 대지에 고를 것 8대,
  * 이름이 전부 '미러-온습도NN'). */
 .aot-ov-row.aot-ov-pick {
-  justify-content: flex-start;
   gap: var(--aot-space-3, 8px);
-  align-items: flex-start;
-  cursor: pointer;
+  align-items: center;
   font-weight: normal;
   margin: 0;
 }
-.aot-ov-row.aot-ov-pick input { margin-top: 3px; flex: 0 0 auto; }
 .aot-ov-pick-text { display: flex; flex-direction: column; min-width: 0; }
 .aot-ov-pick-text small {
   color: var(--aot-color-text-secondary);

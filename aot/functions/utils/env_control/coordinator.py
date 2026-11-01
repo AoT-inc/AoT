@@ -79,8 +79,19 @@ from .log_channels import (
     REASON_NO_GRADIENT, REASON_NO_OUTDOOR_DATA, REASON_OPPOSING_PARKED,
     REASON_DEADZONE_BACKOFF, REASON_NIGHT_PARKED, REASON_NO_MEASUREMENT,
     REASON_CURTAIN_DAY_OPEN, REASON_DIRECTION_UNSETTLED,
+    REASON_HUMID_NO_RELIEF, REASON_HUMID_CAPPED, REASON_NO_RESPONSE,
+    REASON_HUMID_COLD, REASON_HEAT_VENT_HOT_OUTSIDE, REASON_HEAT_FOG_BLOCKED,
+    REASON_NO_WATER, REASON_ACTUATOR_SUSPECT, REASON_PREPARK_HOLD,
+    REASON_SOLAR_VENT_FLOOR, REASON_RAIN_RESTRICT, REASON_MORNING_PURGE,
+    REASON_OUTAGE_CLOSE, REASON_BLIND_SUN_VENT,
 )
+from . import humid_regime as HR
+from .outage_clock import OUTAGE_DEHUMID_GRACE_S
+from . import solar_vent as SV
+from . import psychro
+from . import screen_policy as SP
 from .authority import is_natural_var
+from .effect_functions import fan_ach_total
 from .types import (
     ACTUATOR_DOMAIN, DEFAULT_DOMAIN, VENTILATING_KINDS,
     ActuatorProfile, SituationReport, domain_of,
@@ -126,6 +137,33 @@ RELAX_FACTOR = 0.6   # 평형 개도 기하 감쇠 비율. **세** 자리가 쓴
 AW_BETA    = 0.5     # back-calculation anti-windup 강도 (포화 **직후** 한정)
 RAIL_EPS   = 0.5     # 직전 개도가 레일에 있다고 볼 허용오차 [%]
 # @manual-end
+
+# ── 실외를 모르는 동안 **닫는 쪽은 허용** (2026-10-12 김제, 근거 58) ─────────────────────
+# 2.6 의 제자리는 "근거 없이 열지 말라" 인데 닫는 방향까지 얼렸다. 김제 10/10 22:30 밤새 제습으로 열린 창
+# 25 %가 기상청 값이 끊긴 01:30 이후 3 시간 13~25 % 로 묶였고(근거 16), 폐루프 sensor_storm_outage 에서는
+# 해 질 녘 5 %로 열린 창이 비 70 분을 맞았다. 열 근거가 없다는 것이 닫을 수 없다는 뜻은 아니다 — 규칙 A
+# (오래된 '비 안 옴' 은 여는 근거가 못 된다)의 짝으로, 실외 모름은 **여는 쪽만** 막는다.
+#   · 야간 파킹(19)·마지막 실측 비·강풍의 상한(52·55)은 모른다는 이유로 끄지 않는다.
+#   · 해가 진 뒤(맑은 하늘 일사 < OUTAGE_NIGHT_SOLAR_W) 조금(≤ OUTAGE_CLOSE_MAX_PCT) 열린 개구부는 0 으로 닫는다 —
+#     실외 값이 없을 때(2.6)뿐 아니라 강우·풍속을 잃어 '더 열지 않음'(2.7)일 때도(PI 가 열자고 하면 제자리에 서던 창).
+#   · 낮에 크게 열린 창은 그대로다 — 실외를 모른다는 이유만으로 닫으면 더위가 온다.
+OUTAGE_NIGHT_SOLAR_W = 50.0     # 이 아래면 해가 졌다(맑은 하늘 기준 — 구름이 있어도 해가 있으면 이보다 크다)
+OUTAGE_CLOSE_MAX_PCT = 10.0     # 이 이하로 열린 창만 한 번에 0 으로 닫는다
+
+# ── 두절이 30 분 넘게 이어지면 **제습으로 열린 창**도 단계로 닫는다 (2026-10-12 김제, 근거 58) ──────────────────────
+# 위 '10 % 이하만 0 으로' 는 하드 습도 상한(`_force_dehumid`)이 환기를 원하는 동안 건너뛰었다(PR #161 의 결정). 그 결과
+# 김제 10/10 22:30 에 RH 91~95 % 로 25~30 % 열린 창이 기상청 값이 끊긴 01:30 이후 3 시간 13~25 % 로 묶였다 — 비가 오기
+# 시작해도 볼 수 없는 채로. 끊김이 `OUTAGE_DEHUMID_GRACE_S`(`outage_clock`) 를 넘기면 밤에 이 습도 때문에 열린 창
+# (하드 습도 상한 · 야간 파킹을 푸는 습도/결로 탈출)을 **사이클당 `OUTAGE_DEHUMID_STEP_PCT` %p 씩** 0 까지 내린다.
+#   · 30 분 안의 끊김은 종전대로다 — 기상대 관측은 간헐적으로 그만큼 벌어지고, 그때마다 제습을 흔들 일이 아니다.
+#   · 계단은 -5 %p 의 일정 폭이다. ×0.5 는 30 % 창을 한 번에 15 %p 내려(5 %p 의 세 배) 갑작스럽고 끝이 0 에 닿지도
+#     않는다(30→15→7.5→3.8…). 일정 폭은 큰 창에서 더 부드럽고(일사 하한을 푸는 폭 `SV_FLOOR_RELEASE_STEP_PCT` 와 같은 5 %p),
+#     0 에 정확히 닿는다. 폭은 사이클 길이에 비례해(600 s 기준, 더 길어도 5 %p 가 상한) 짧은 주기에서 시간당 속도가 같다.
+#   · 온도 비상(`_force_cool` · 극한 고온 보호)은 건드리지 않는다 — 더위는 비보다 빠르다. 낮의 큰 열림도 그대로다(해가 지지
+#     않았고 습도 때문에 연 것도 아니다).
+#   · 실외 값이 돌아오면(두절 시계 0) 다음 사이클부터 보통의 제어다. 래치는 없다.
+OUTAGE_DEHUMID_STEP_PCT = 5.0       # 사이클당(600 s 기준) 내리는 폭 [%p]
+OUTAGE_DEHUMID_REF_CYCLE_S = 600.0  # 이 길이의 사이클에서 위 폭을 쓴다(짧은 주기는 비례해 줄인다)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 액추에이터 도메인 — 부하분담이 미치는 범위 (2026-08-26)
@@ -228,6 +266,75 @@ G_MIN_EFFECT = 0.025 # 유효도(g=magnitude/pband) 하한. 100% 가동해도 �
 # 그대로 걸러진다. 반대 방향 진입 문턱은 종전과 같다(G_MIN_EFFECT).
 GRADIENT_EXIT_FRAC = 0.5
 
+# ── 열어도 편차가 줄지 않는 창 — 더 열지 않는다 (2026-10-01) ────────────────────
+# 효과가 작은 창(유효도 g 가 낮다)이 오래 열려 있는데 편차가 좁혀지지 않으면, PI 는
+# "더 열어라" 를 계속 내고 적분만 쌓여 창이 천천히 100 % 로 올라간다. 실측(로컬
+# 쿠마모토 천창, 실내 습도 93 %): 2시간 동안 8 → 21 %. 열어도 실내가 안 변하는
+# 동안의 적분은 **배운 것이 아니라 실행되지 않은 요구**다.
+#
+# ⚠ **유효도가 낮을 때만 건다**(`STALL_G_MAX`). 효과가 큰 창은 편차가 안 줄어도
+#   (한낮에 해가 더 세지는 경우) 더 열어야 하는 것이 맞다 — 그때는 "열어도 소용없다"
+#   가 아니라 "아직 모자라다" 다. 약구배(g≳0.05) 아래만 "열어도 소용없다" 로 본다.
+# ⚠ 풀리는 조건은 편차가 `STALL_IMPROVE_FRAC` 이상 좁혀지거나 열림이 문턱 아래로
+#   내려가는 것이다. 벌어진 편차는 풀지 않는다 — 더 열어도 소용이 없다는 뜻이다.
+STALL_AFTER_S = 2700.0        # 45분 — 한두 사이클의 흔들림과 가른다
+STALL_IMPROVE_FRAC = 0.10     # 기준 편차보다 이만큼 좁혀지면 "반응이 있다"
+STALL_MIN_OPEN_PCT = 10.0     # 이 이상 열려 있어야 "열었다" 로 센다
+STALL_G_MAX = 0.06            # 이 유효도 미만의 창에만 건다
+
+# ── 의심 액추에이터: 세게, 오래, 반응 없음 (2026-10-09) ───────────────────────────────
+# 위 '열어도 편차가 줄지 않는 창' 의 짝이다. 같은 판정(`_no_improvement_step` — 기준 편차보다
+# STALL_IMPROVE_FRAC 이상 좁혀지면 "반응이 있다")을 **반대 대역**에 적용한다: STALL 은 효과가 작은
+# 창(g < STALL_G_MAX)이 "열어도 소용없다" 는 것이고, 여기는 모델이 **효과가 뚜렷하다**고 말하는
+# 창(g ≥ STALL_G_MAX)이 세게 열려 있는데도 반응이 없다는 것이다. 탐지기를 하나 더 만들지 않았다.
+#
+# ⚠ **편차를 공유하는 장치들의 개별 고장은 편차만으로는 안 보인다** — 한 창이 죽어도 나머지가
+# 편차를 줄이면 죽은 창의 편차도 같이 줄어 '반응 있음' 이 된다. 그래서 이 판정은 거짓 제외를
+# 만들지 않는 쪽으로만 선다(조건을 전부 만족해야 한다):
+#   ① 환기 장치(VENTILATING_KINDS)이고 세게 — 직전 명령 NOFX_MIN_CMD_PCT 이상(`prev_val`)
+#   ② 효과가 뚜렷 — g ≥ STALL_G_MAX (모델이 '측정될 만큼 크다' 고 하는 구간)
+#   ③ 실외를 안다 — 지어낸 실외(`_ext_synthetic`)가 아니고 '더 열지 않음' 이 걸리지 않았다
+#      (실외를 모르면 환기의 효과 방향부터 모른다)
+#   ④ 오래 — NOFX_AFTER_S 동안 끊김 없이(명령이 문턱 아래로 한 번 내려오면 처음부터)
+#   ⑤ 혼자 한 일이다 — 이 도메인의 '명령된 효과'(g × 명령) 중 이 장치 몫이 NOFX_SOLE_SHARE 이상.
+#      여러 창이 함께 세게 열렸는데 편차가 안 줄면 **공통 원인**(열린 루프 센서·센서 고장·용량
+#      부족)이지 창 하나의 고장이 아니다 — 김제·영양처럼 실내 센서가 명령에 반응하지 않는
+#      시설에서 창이 전부 제외되는 것을 막는 것이 이 조건이다.
+#   ⑥ 제외하고도 환기 장치가 하나 이상 남는다 — 아무도 일 못 하게 만들지 않는다.
+# 그래도 센서가 열린 루프인 시설에서 창이 하나만 세게 열려 있으면 서 버릴 수 있어, 도메인당 한 번에
+# 하나만 제외하고 다음 제외까지 쉬는 시간을 둔다(`actuator_feedback.NOFX_DOMAIN_COOLDOWN_S`).
+NOFX_AFTER_S = 7200.0         # 2시간 — STALL 의 45분보다 훨씬 길다(제외는 되돌리기 어렵다)
+NOFX_MIN_CMD_PCT = 80.0       # 직전 명령이 이 이상일 때만 '세게'
+NOFX_SOLE_SHARE = 0.8         # 도메인 명령 효과 중 이 장치 몫이 이 이상일 때만 '혼자 한 일'
+
+
+def _no_improvement_step(ref, elapsed_s, e_norm, cycle_sec):
+    """'편차가 좁혀지지 않은 시간' 한 걸음 → (기준 편차, 누적 초).
+
+    기준보다 STALL_IMPROVE_FRAC 이상 좁혀졌거나 기준이 없으면 다시 센다. 약한 창의 '열어도 소용없음'
+    (STALL_AFTER_S)과 센 창의 '반응 없음'(NOFX_AFTER_S)이 **같은 판정**을 쓰도록 한 곳에 둔다.
+    """
+    if ref is None or e_norm < ref * (1.0 - STALL_IMPROVE_FRAC):
+        return e_norm, 0.0
+    return ref, float(elapsed_s) + float(cycle_sec)
+
+# ── 환기를 움직이는 최소 VPD 차이 (2026-10-01) ─────────────────────────────────
+# 무익 판정의 "실외가 실내보다 이만큼은 달라야 한다" 를 허용오차(기본 0.1 kPa)만으로
+# 잡으면 0.15 kPa 차이에도 창이 열린다. 그 차이는 RH 1~2 %p 의 센서 잡음 안이다.
+VENT_MIN_VPD_GAP = 0.25
+
+# 환기 무익 판정의 **이력** (2026-10-08). 문턱 하나로 가르면 실외·실내 값이 문턱(0.25 kPa) 근처에서
+# 조금만 흔들려도 판정이 사이클마다 뒤집힌다 — 환경은 매끄럽게 변하는데 창만 올라갔다 내려갔다
+# 했다(로컬 3개 시설 24시간 반전 7~11회, 근거 1 ↔ 15 가 10~60분 간격). 15 가 될 때마다 명령이
+# RELAX_FACTOR 로 깎여(80→60→40→24→15→9→6→0) 목표보다 2 °C 넘게 더운데도 닫혔다.
+#   무익이 아니던 장치: 문턱의 이 비율 아래로 내려가야 무익이 된다
+#   무익이던 장치     : 문턱 이상으로 회복돼야 무익에서 나온다
+FUTILE_ENTER_FRAC = 0.6
+# 열려 있는 창은 '무익' 이 이만큼(초) 이어져야 감쇠 파킹한다. 그 전에는 **제자리**다. 이력만으로는
+# 입력이 실제로 문턱을 넘나드는 경우를 못 막고, 파킹은 한 번에 명령을 40 % 씩 깎는다 — 짧은
+# 흔들림이 100 → 0 % 톱니가 된다. 닫혀 있던 창은 기다릴 이유가 없다(바로 파킹).
+FUTILE_DWELL_S = 1200.0
+
 # ── 온도 상한 (2026-09-14) ───────────────────────────────────────────────────
 # VPD 를 직접 제어하면 `_decompose_vpd` 가 온도를 제어목표에서 뺀다. 그래서
 # 온도가 유도 상한을 넘어도 **창을 여는 힘이 하나도 없었고**, 하드 상한
@@ -257,6 +364,16 @@ T_CEILING_PRIORITY = 1.0   # 초과 0 에서의 우선순위. (1 + 초과/허용
 # 오르내리며 85 → 65(파킹) → 85 → 65 % 로 10분마다 오르내렸다. 다른 하드 임계
 # 판정(0.5 °C)과 같은 폭이다.
 T_CEILING_HYST = 0.5
+# 항이 꺼지는 선 아래로 이만큼(°C)은 **유지 구간**이다 — 상한 항으로 열어 둔 창은 닫는
+# 쪽으로 움직이지 않는다(더 열 수는 있다). 이 아래로 내려가야 종전처럼 물러난다.
+#
+# 왜: 창이 한 사이클(10분) 안에 실내를 2~4 °C 바꾸는 시설에서, 상한 항은 "선 위 → 연다,
+# 선 아래 → 항이 꺼져 무구배 감쇠(×0.6/사이클)로 닫힌다" 를 오가는 이완 발진기였다
+# (폐루프 2026-10-09, 김제 측창 56 m² × 2: 0 → 20 → 12 → 7 → 0 → 20 %, 주기 약 50 분).
+# 유지 구간이 있으면 평형 개도에서 멈춘다 — 열고·멈추고·닫는 3위치 조절기다. 1.5 °C 는
+# 한 번 열었을 때 실내가 선 아래로 내려가는 폭(김제 시뮬레이터 1.5~3 °C)과 극한 고온
+# 보호의 해제 여유(기본 1.5 °C)에 맞춘 값이다.
+T_CEILING_HOLD_BAND = 1.5
 _T_CEILING_DOMAINS      = frozenset({'vent'})
 _T_CEILING_HARD_DOMAINS = frozenset({'vent', 'hvac'})
 # @manual-end
@@ -268,14 +385,49 @@ def _temperature_ceiling(situation: SituationReport, ctx: Dict,
     """(유도 상한 초과분 °C, 하드 상한 도달) — 걸린 것이 없으면 None.
 
     온도가 이미 제어목표(deviation)에 있으면 None 이다. 그때는 온도가 자기
-    목표로 스스로 끌리므로 여기서 한 번 더 더하면 이중계상이다.
+    목표로 스스로 끌리므로 여기서 한 번 더 더하면 이중계상이다 — **극한 고온 보호
+    중만 빼고**(아래).
+
+    부수 효과: `ctx['_t_ceiling_hp_only']` — 하드가 보호(단계 1) 때문만인가.
     """
-    if 'temperature' in (situation.deviation_native or {}):
+    ctx['_t_ceiling_hp_only'] = False
+    _hp = ctx.get('heat_protect')
+    _hp_on = bool(getattr(_hp, 'active', False))
+    if 'temperature' in (situation.deviation_native or {}) and not _hp_on:
+        # ⚠ 보호 중에는 온도가 제어목표여도 보호의 선을 건다(2026-10-09 폐루프). 온·습도
+        #   직접 제어 — 온도 우선 기준이거나, VPD 기준인데 습도(따라서 VPD)를 잃은 폴백 —
+        #   의 온도 목표는 단계 온도가 없으면 유도 범위로 클램프한 값(가이드 상한 32 °C)이라,
+        #   보호 문턱 30 °C 는 우선순위(`situation` HP_T_PRIORITY)로만 닿고 **선**으로는
+        #   아무 데도 닿지 않았다. 폐루프 sensor_indoor_oor(습도 130 % 보고 → 버림 → 온·습도
+        #   폴백): 창이 온도 목표 32 °C 를 좇아 40~50 % 에 머물고 실내 36 °C(단계 2).
+        #   이중계상은 보호 중에만, 식히는 쪽으로만 생긴다 — 보호가 원하는 방향이다.
         return None
     t_now = ctx.get('T_int')
     ceiling = ctx.get('T_ceiling')
+    # 극한 고온 보호(`heat_protect`)가 **켜져 있으면** 선은 문턱을 넘지 않는다 — 보호 중이
+    # 아니어도. 보호 중에는 그 선이 **하드**다(냉각과 맞서는 VPD·습도 항을 뺀다). 판정은
+    # 그 모듈 한 곳이고 여기서는 결론만 읽는다.
+    #
+    # ⚠ 보호 밖에서도 문턱으로 좁히는 이유(2026-10-09 폐루프): 유도 상한(가이드 32 °C)이
+    #   문턱(30 °C)보다 높으면 평소 PI 는 31 °C 부터 식히기 시작한다 — 실내가 문턱을 넘는
+    #   것이 평소 제어의 **정상 운전점**이 되어, 래치(진입 → 20 분 유지 → 해제 → 닫힘 →
+    #   다시 진입)가 조절기 노릇을 했다. humid_night 에서 36 시간에 10 번 진입(진입마다
+    #   긴급 1회), 창 반전 0.68 → 0.92 /h. 평소 PI 가 문턱 아래(문턱 − 허용오차)부터
+    #   부드러운 상한 항으로 식히면 보호는 평소 제어가 못 막을 때만 서는 뒷받침이 된다.
+    if _hp is not None and (_hp_on or getattr(_hp, 'enabled', False)):
+        ceiling = (min(float(ceiling), float(_hp.threshold)) if ceiling
+                   else float(_hp.threshold))
     if t_now is None or not ceiling:
         return None
+    # ⚠ 유도 상한은 **목표 온도 + 허용오차** 를 넘지 않는다 (2026-10-08). 가이드 상한(딸기 30 °C)만
+    #   보면 목표 25 °C 보다 2~5 °C 더운 채로(실측: 27.5~30.4 °C) 온도 항이 꺼져 있어, 창이 VPD
+    #   하나만 보고 파킹돼 닫혀 있었다 — "충분히 안 열린다". 목표 온도는 VPD 제어 중 제어목표에서
+    #   강등돼 `_temperature_constraint` 로 남아 있다. 하드 상한(temp_max)은 그대로다.
+    _tc = (getattr(situation, 'target', None) or {}).get('_temperature_constraint')
+    if _tc is not None:
+        ceiling = min(float(ceiling),
+                      float(_tc.value) + float(getattr(_tc, 'tolerance', 0.0) or 0.0)
+                      + T_CEILING_TOL)
     trend = max(0.0, float(ctx.get('T_trend') or 0.0))          # °C/min
     projected = float(t_now) + trend * float(cycle_sec) / 60.0
     # 선에 **닿기 전에** 반응한다 — 허용오차만큼 앞에서 시작한다. 선에서
@@ -288,9 +440,27 @@ def _temperature_ceiling(situation: SituationReport, ctx: Dict,
         start -= T_CEILING_HYST
     excess = max(0.0, projected - start)
     hard_max = ctx.get('temp_max')
-    hard = (bool((ctx.get('internal') or {}).get('_force_cool'))
-            or (bool(hard_max) and projected >= float(hard_max)))
+    hard_limit = (bool((ctx.get('internal') or {}).get('_force_cool'))
+                  or (bool(hard_max) and projected >= float(hard_max)))
+    # ⚠ 보호 중이어도 **선 아래로 내려오면 항을 내린다**(초과 0 이면 None). 예전에는 보호
+    #   중이면 초과 0 에서도 하드 항(오차 0 · 무게 최대)이 남았다. 그 항은 아무것도 밀지
+    #   않으면서 (1) 무구배 → 완만한 감쇠(RELAX_FACTOR) 경로를 막고 (2) 맞서는 VPD 항만
+    #   남겨 P 가 거의 전부인 PI 를 0 으로 떨어뜨렸다. 창이 한 사이클 만에 반응하는
+    #   시설에서는 선 위(맞서는 항 뺌 → 연다)와 선 아래(맞서는 항 복귀 → 닫는다)를 10분마다
+    #   오갔다 — 폐루프 normal: 보호 중 창 20 ↔ 0 %, 실내 26 ↔ 31 °C 를 매 사이클 반전.
+    #   선 아래에서는 보호가 없을 때와 같은 경로로 물러난다. 하드 임계(`_force_cool`·
+    #   temp_max)는 종전대로 초과 0 에서도 하드다.
+    hard = (_hp_on and excess > 0.0) or hard_limit
+    # 하드가 **보호 때문만**인가 — 그때 하드 항은 보호가 증발냉각기로 쓰는 분무기만 민다
+    # (`heat_protect.cooling_foggers`: 습윤형은 평소 제어가 다룬다). 하드 임계는 종전대로 전부.
+    ctx['_t_ceiling_hp_only'] = bool(hard and not hard_limit)
     if excess <= 0.0 and not hard:
+        # 유지 구간(T_CEILING_HOLD_BAND) — 켜져 있던 항이 꺼지는 선 아래로 막 내려왔다.
+        # (0.0, False) 는 "항은 서 있되 미는 힘 0" 이다: 상한으로 연 창은 제자리, 무익
+        # 판정·과습 구간은 종전처럼 '상한이 서 있다' 로 본다.
+        if (ctx.get('_t_ceiling_active_prev')
+                and projected >= start - T_CEILING_HOLD_BAND):
+            return 0.0, False
         return None
     return excess, hard
 
@@ -327,12 +497,34 @@ class CoordinatorState:
     # 뒤집힌 구동 방향이 확정을 기다리는 중: {actuator_id: (새 부호, 지난 초, 사이클 수)}.
     # 한 번이라도 옛 방향으로 돌아오면 지운다. `drive_sign` 과 같은 이유로 영속화하지 않는다.
     drive_flip_pending: Dict[str, tuple] = field(default_factory=dict)
-    # 직전 사이클에 온도 상한 항이 켜져 있었나(T_CEILING_HYST). 영속화하지 않는다.
+    # 직전 사이클에 온도 상한 항이 켜져 있었나(T_CEILING_HYST). `cycle_memory` 가 재시작을 넘긴다 — 잃으면
+    # 첫 사이클만 '닫기' 쪽 힘이 작아져 열린다(김제 2026-10-12 22:14). 다른 이력과 달리 보수적이지 않다.
     t_ceiling_active: bool = False
+    # 직전 사이클에 '환기 무익' 으로 판정된 장치(FUTILE_ENTER_FRAC 의 이력)와, 그 판정이 이어진
+    # 시간(초, FUTILE_DWELL_S). 영속화하지 않는다.
+    futile_active: set = field(default_factory=set)
+    futile_s: Dict[str, float] = field(default_factory=dict)
     # 액추에이터가 직전 사이클에 '구동력 있음'(g 가 문턱 이상)이었나 — 유효도 문턱의
     # 이력(GRADIENT_EXIT_FRAC). 없는 항목은 False(=종전대로 G_MIN_EFFECT 로 진입).
     # 영속화하지 않는다 — 재시작 직후 한 사이클만 종전 규칙으로 돌면 된다.
     gradient_active: Dict[str, bool] = field(default_factory=dict)
+    # 과습 구간에 있는가(humid_regime 의 진입/이탈 이력). `cycle_memory` 가 재시작을 넘긴다 — 잃으면 이탈 문턱
+    # 전(VPD 0.30~0.40 · 여유 2~3 °C)이던 집이 '구간 밖' 으로 읽혀 실외가 더 습해도 닫지 않고 열림 상한도 풀린다.
+    humid_zone: bool = False
+    # 아침 습기 빼기(`humid_regime.morning_purge`)의 이력 — 켜짐·직전 실내 온도·평활한 변화율.
+    # `cycle_memory` 가 재시작을 넘긴다(`humid_zone` 과 같다) — 잃으면 구간 안이어도 켬 문턱·'오르는 중인지 모름'
+    # 으로 읽혀 5~15 % 하한이 한 사이클 사라진다.
+    purge: Optional[HR.PurgeState] = None
+    # 열어도 편차가 줄지 않은 누적 시간(초)과 그 기준 편차 — `STALL_AFTER_S` 주석.
+    # 영속화하지 않는다: 재시작 후 45분을 다시 세면 되고, 그 사이는 종전 동작이다.
+    stall_s: Dict[str, float] = field(default_factory=dict)
+    stall_ref: Dict[str, float] = field(default_factory=dict)
+    # 세게 열렸는데 편차가 안 줄어든 누적 시간(초)·기준 편차 — `NOFX_AFTER_S` 주석. 영속화하지 않는다.
+    nofx_s: Dict[str, float] = field(default_factory=dict)
+    nofx_ref: Dict[str, float] = field(default_factory=dict)
+    # 이번 사이클에 '오래 세게 명령했는데 반응이 없다' 로 서는 장치 — **출력**이다(다음 사이클로 안
+    # 넘긴다). 의심 판정(`actuator_feedback.record_no_effect`)이 읽는다. 영속화하지 않는다.
+    noeffect_ids: set = field(default_factory=set)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -379,22 +571,67 @@ class ParkDecision:
     vent_credit: Dict[str, float]      # 환기 우선 — 실외가 대신 해 주는 몫(PI 전용)
     t_ceiling: Optional[Tuple[float, bool]]
     vent_first_held_s: float           # 다음 사이클로 넘길 환기 우선 인내 시간
-    futile_ids: set = field(default_factory=set)       # 환기 무익
+    futile_ids: set = field(default_factory=set)       # 환기 무익(감쇠 파킹 중)
+    futile_raw: set = field(default_factory=set)       # 이번 사이클 무익 판정 전부(이력용)
+    futile_s: Dict[str, float] = field(default_factory=dict)  # 무익이 이어진 시간(초)
+    futile_dwell_ids: set = field(default_factory=set) # 무익이나 대기 중 — 제자리
     interlock_ids: set = field(default_factory=set)    # 냉난방 연동 잠금
     vent_first_ids: set = field(default_factory=set)   # 환기 우선으로 쉬는 냉난방
     day_open_ids: set = field(default_factory=set)     # 낮 — 걷어 두는 보온커튼
+    humid_zone: bool = False                           # 과습 구간(다음 사이클의 이력)
+    heat_cap_ids: set = field(default_factory=set)     # VPD 직접 모드 — 유도 범위 상한에서 난방 출력을 깎는 난방기
+    heat_cap_pct: Optional[float] = None               # 그 상한(%), None = 걸지 않음 (`HR.heat_cap_pct`)
+    humid_parked: set = field(default_factory=set)     # 과습 — 환기로 해소 불가(닫는 쪽)
+    humid_cap_ids: set = field(default_factory=set)    # 과습 — 열림 상한(HR.CAP_PCT)
+    humid_cold: set = field(default_factory=set)       # 과습 — 실외가 너무 차서 닫는 쪽
+    # 극한 고온 보호(`heat_protect`) — 판정은 그 모듈, 여기는 이 사이클의 장치 집합.
+    heat_open_ids: set = field(default_factory=set)        # 열어도 됨(실외가 더 차다)
+    heat_closed_ids: set = field(default_factory=set)      # 바깥이 더 덥다 — 파킹(근거 28)
+    heat_fog_blocked_ids: set = field(default_factory=set) # 분무 차단 — 파킹(근거 29)
+    heat_floor_ids: set = field(default_factory=set)       # 닫는 중이어도 하한까지는 연다
+    heat_floor_pct: float = 0.0
+    # 분무용 물이 없다(`water_supply`) — 폭염과 무관하게 분무기 전부를 쉰다(근거 41).
+    water_blocked_ids: set = field(default_factory=set)
+    # 야간 파킹 직전 완충 구간 — 이 환기 장치들은 VPD·습도 요구로 **더 열리지 않는다**(근거 48).
+    taper_ids: set = field(default_factory=set)
+    # 낮 일사 부하 환기 하한(`solar_vent`, 근거 51) — 이 장치들은 VPD·습도 요구로 하한 아래로 닫히지 않는다.
+    solar_floor_ids: set = field(default_factory=set)
+    solar_floor_pct: float = 0.0
+    # 아침 습기 빼기 하한(`humid_regime.morning_purge`, 근거 54) — 27 로 닫는 대신 조금 연다.
+    purge_ids: set = field(default_factory=set)
+    purge_pct: float = 0.0
+    purge_state: Optional[HR.PurgeState] = None        # 다음 사이클의 이력
+    # 실외를 모르는 동안(`hold_ids`)에도 닫는 쪽은 허용한다(근거 58, 모듈 상수 주석).
+    outage_park_ids: set = field(default_factory=set)  # 야간 파킹 — 실외를 몰라도 감쇠해 닫는다(근거 19)
+    outage_zero_ids: set = field(default_factory=set)  # 해 진 뒤 ≤ 10 % 열린 개구부 — 0 으로(근거 58)
+    # 두절이 30 분 넘게 이어진 밤, 습도 때문에 열린 개구부 — 사이클당 `outage_dehumid_step_pct` %p 씩 0 까지(근거 58).
+    outage_dehumid_ids: set = field(default_factory=set)
+    outage_dehumid_step_pct: float = 0.0
+    # 실내를 모르는 동안 해를 보고 정한 작은 환기(근거 60, `solar_vent` 머리말 마지막 절) — 실제로 서는 것은
+    # 그 사이클에 근거 21(실내 모름, 제자리)로 갈 장치뿐이다(`coordinate` 2.8).
+    blind_floor_ids: set = field(default_factory=set)  # 맑은 낮 — 하한까지 단계로 연다
+    blind_floor_pct: float = 0.0
+    blind_close_ids: set = field(default_factory=set)  # 해 진 뒤 — 하한 크기 이하로 열린 것을 단계로 닫는다
+    blind_step_pct: float = 0.0
 
 
 # @manual ai/env-control#settings-ventilation
 def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
                    ctx: Dict, cycle_sec: float, prev_commands: Dict[str, float],
                    vent_first_held_s: float = 0.0,
-                   log: bool = True) -> ParkDecision:
+                   log: bool = True,
+                   humid_prev: bool = False,
+                   purge_prev: Optional[HR.PurgeState] = None) -> ParkDecision:
     """파킹 판정(2.5~2.6). `log=False` 는 그림자 계산용 — 인내 시간 경고를 두 번
-    남기지 않는다(상태도 호출부가 버린다)."""
+    남기지 않는다(상태도 호출부가 버린다). `purge_prev` 는 아침 습기 빼기의 이력(2.95) —
+    이력을 이어 주지 않는 호출부(MPC 경로: 그 하한을 모른다)는 None 이고, 그러면 켜지고 꺼질 때의
+    한 줄도 남기지 않는다."""
     _err = logger.error if log else (lambda *a, **k: None)
     held = float(vent_first_held_s or 0.0)
     futile_ids: set = set()
+    futile_raw: set = set()
+    futile_s: Dict[str, float] = {}
+    futile_dwell_ids: set = set()
     interlock_ids: set = set()
     vent_first_ids: set = set()
     # ── 2.5. 개구부 파킹 판정 (사용자 옵션 2종) ────────────────────────────────
@@ -405,6 +642,10 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
     park_ids: set = set()
     vents = [p for p in available if getattr(p, 'kind', '') in VENTILATING_KINDS]
 
+    # 극한 고온 보호(`heat_protect`)의 결론 — 판정은 그 모듈이 이미 했다.
+    _hp = ctx.get('heat_protect')
+    _hp_on = bool(getattr(_hp, 'active', False))
+
     # 온도 상한 — 무익 게이트와 PI 가 같은 판정을 본다(한 번만 계산).
     t_ceiling = _temperature_ceiling(situation, ctx, cycle_sec)
     ctx['_t_ceiling'] = t_ceiling
@@ -412,9 +653,21 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
         logger.debug('온도 상한 — 초과 %.2f °C, 하드 %s', t_ceiling[0], t_ceiling[1])
 
     if bool(ctx.get('vent_futility_gate', False)):
-        futile = {p.actuator_id for p in vents
-                  if _ventilation_is_futile(p, situation, ctx)}
+        futile_raw = {p.actuator_id for p in vents
+                      if _ventilation_is_futile(p, situation, ctx)}
+        _prev_s = ctx.get('_futile_s_prev') or {}
+        futile_s = {i: float(_prev_s.get(i, 0.0)) + float(cycle_sec or 0.0)
+                    for i in futile_raw}
+        futile_dwell_ids = {
+            i for i in futile_raw
+            if futile_s[i] < FUTILE_DWELL_S
+            and float(prev_commands.get(i, 0.0) or 0.0) > 1.0}
+        futile = futile_raw - futile_dwell_ids
         futile_ids = set(futile)
+        if futile_dwell_ids:
+            logger.debug('환기 무익 대기 — %d개 제자리(%.0f초 미만): %s',
+                         len(futile_dwell_ids), FUTILE_DWELL_S,
+                         sorted(i[:8] for i in futile_dwell_ids))
         if futile:
             park_ids |= futile
             logger.debug(
@@ -425,7 +678,7 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
     # 밤에는 습도가 오르고 이슬이 맺힌다 — 환기 대신 장치로 관리하는 시간대다.
     # **개구부만** 닫고 냉난방·제습은 그대로 돌린다(제어의 중단이 아니라 수단의
     # 제한이다). 넘을지 말지의 판정과 하드 임계 탈출구는 호출자에 있다
-    # (`_night_vent_parked`) — 여기 오는 것은 그 결론뿐이다.
+    # (`_night_vent_decide`) — 여기 오는 것은 그 결론뿐이다.
     #
     # ⚠ **안전 게이트가 이긴다.** 게이트는 이 함수 앞에서 명령을 강제하거나
     #   (triggered) 뒤에서 덮어쓰므로(partial), 파킹은 그 사이에서만 유효하다.
@@ -471,7 +724,10 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
     ceiling_ids = vent_open_ceiling_ids(ctx, vents)
 
     vent_credit: Dict[str, float] = {}
-    if bool(ctx.get('vent_first', False)) and not ceiling_ids:
+    # 극한 고온 보호 중에는 환기 우선을 끈다 — 냉방을 쉬게 할 때가 아니다(`heat_protect`).
+    # 강우 단계 제한(근거 52)으로 상한이 걸린 창도 같다 — 상한 위의 도움을 믿으면 안 된다.
+    if (bool(ctx.get('vent_first', False)) and not ceiling_ids and not _hp_on
+            and not rain_vent_caps(ctx, vents)):
         hvac_ids = {p.actuator_id for p in available
                     if ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'}
         _reaches = _ventilation_reaches_all_targets(
@@ -558,7 +814,8 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
     opposing_ids: set = set()
     _internal = (ctx.get('internal') or {})
     _demand = None
-    if bool(_internal.get('_force_cool')):
+    if bool(_internal.get('_force_cool')) or _hp_on:
+        # 극한 고온 보호 중에는 난방이 설 자리가 없다 — 냉각 요구로 본다.
         _demand = 'cool'
     elif bool(_internal.get('_force_heat')):
         _demand = 'heat'
@@ -573,6 +830,15 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
                 _demand = 'cool'
             elif _t_dev < -_tol:
                 _demand = 'heat'
+    # ── 2.56. VPD 직접 모드의 난방 출력 상한 — 유도 범위 상한에서 0 ─────────────────
+    # 위 2.55 의 맞서는 짝은 '유도 목표 ± 허용오차' 를 넘어야 서는데, 유도 목표는 범위 상한으로 잘려 있어 실제 문턱이 상한 +
+    # 허용오차였다. 그 사이에서 VPD 항(낮 목표가 해 진 뒤에도 천천히 내려온다)이 난방기를 80~100 % 로 몰았다. 기준선 정의는
+    # `HR.temp_band_c` 의 위 선이다(`HR.heat_cap_pct`). 하드 한계(`_force_heat`)는 이긴다.
+    heat_cap_pct = HR.heat_cap_pct(
+        ctx.get('T_int'), (situation.target or {}).get('temperature'),
+        ctx.get('T_guide_low'), ctx.get('T_ceiling'), force_heat=bool(_internal.get('_force_heat')))
+    heat_cap_ids = ({p.actuator_id for p in available if getattr(p, 'kind', '') in SP.HEATING_KINDS}
+                    if heat_cap_pct is not None else set())
     if _demand:
         _losing_kind = 'heater' if _demand == 'cool' else 'cooler'
         _losers = {p.actuator_id for p in available
@@ -609,6 +875,81 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
             '실외 측정 없음(지어낸 값) — 개구부 %d개 제자리 유지: %s',
             len(hold_ids), sorted(i[:8] for i in hold_ids))
 
+    # ── 2.65. 과습 구간 — 환기를 **수증기압**(이슬점)으로 판단한다 (2026-10-01) ──
+    # 근거·문턱·예외는 `humid_regime` 모듈 머리말에 있다. 요점: 공기가 포화에 가까우면
+    # VPD 는 온도에 끌려다니는 양이라 "실외 VPD 가 더 높다" 가 "열면 건조해진다" 를
+    # 뜻하지 않는다(실외가 따뜻하면 수분이 더 많아도 VPD 가 높다).
+    #
+    #   실외 이슬점이 실내보다 1.5 °C 이상 낮다  → 열 수 있다(상한 HR.CAP_PCT)
+    #   그렇지 않다                               → 창으로 해소 불가 — 닫는 쪽(파킹)
+    #
+    # ⚠ **온도 비상이 이긴다.** 덥고 습한 날의 환기는 습도가 아니라 온도가 요구한다 —
+    #   `_force_cool`·온도 상한 항이 서 있으면 이 구간을 적용하지 않는다.
+    # ⚠ **실외를 모르면 판단하지 않는다**(2.6 의 제자리가 맡는다). 모르는 채로 닫거나
+    #   여는 것은 근거 없는 결정이다.
+    # ⚠ 하드 습도 상한(`_force_dehumid`)을 넘었으면 **상한을 풀되**(습기를 빼야 한다)
+    #   실외가 더 습하면 여전히 열지 않는다 — 열어서 더 습해지는 것은 해소가 아니다.
+    humid_zone = False
+    humid_parked: set = set()
+    humid_cold: set = set()
+    humid_cap_ids: set = set()
+    if (t_ceiling is None and not bool(_internal.get('_force_cool'))):
+        humid_zone = HR.in_overhumid_zone(
+            ctx.get('T_int'), ctx.get('RH_int'), was_in=bool(humid_prev))
+    if humid_zone != bool(humid_prev):
+        _err('과습 구간 %s — 실내 %s °C · %s %%(이슬점 여유 %s °C)',
+             '진입' if humid_zone else '이탈',
+             ctx.get('T_int'), ctx.get('RH_int'),
+             '-' if HR.dewpoint_c(ctx.get('T_int'), ctx.get('RH_int')) is None
+             else '%.1f' % (float(ctx['T_int']) - HR.dewpoint_c(
+                 ctx.get('T_int'), ctx.get('RH_int'))))
+    # ⚠ **온도 기준선 이하에서는 이슬점 기준 환기를 빼고 온도가 이긴다**(2026-10-01 사용자
+    #   제안). 실내가 기준선 이하이면 더 식힐 이유가 없고, 차가운 외기는 그 온도를
+    #   더 떨어뜨린다 — 이슬점이 낮다는 이유로 열면 안 된다. 외기가 더 **따뜻**하면(밤의
+    #   3포장) 열어도 온도가 오르므로 이 규칙에 걸리지 않는다(`relief_verdict` 는 실외가
+    #   `HEAT_DEMAND_COLD_DELTA_C` 넘게 차가울 때만 COLD 로 본다).
+    # ⚠ **기준선은 `humid_regime.temp_edge_c` 한 곳이 정한다**(아침 습기 빼기 2.95 와 같은 함수). 온도가 제어
+    #   목표면 목표 + 허용오차(예전 그대로), **VPD 직접 모드면 유도 범위의 아래 끝**이다 — 그 모드의 유도 온도
+    #   목표는 실내 + 0.6 × (필요한 만큼)이라 늘 실내보다 앞서 가서 '실내 ≤ 목표 + 허용오차' 가 늘 참이었다
+    #   (김제 2026-10-13: 외기가 1 °C 만 차도 COLD → 13:48 에 27 로 닫힘, 과습 3시간). 같은 이유로 유도
+    #   목표에서 나온 `_demand == 'heat'` 는 쓰지 않는다 — 온도가 제어 목표면 그 요구는 기준선 이하에 이미
+    #   들어 있고(허용오차 > 0), VPD 직접 모드에서는 가짜 요구다. 진짜 난방 요구는 `_force_heat`(최저 온도 한계).
+    _warm_side = HR.warm_side(ctx.get('T_int'), (situation.target or {}).get('temperature'),
+                              ctx.get('T_guide_low'), force_heat=bool(_internal.get('_force_heat')))
+    if humid_zone:
+        for p in vents:
+            if p.actuator_id in hold_ids:
+                continue
+            _was_open = float(prev_commands.get(p.actuator_id, 0.0) or 0.0) > 1.0
+            verdict = HR.relief_verdict(
+                ctx.get('T_int'), ctx.get('RH_int'),
+                ctx.get('T_ext'), ctx.get('RH_ext'), was_open=_was_open,
+                heat_demand=_warm_side)
+            if verdict is None:
+                continue
+            if verdict == HR.OK:
+                # 열림 상한 — 열 손실이 작고 실외가 충분히 건조하면 푼다(`humid_regime.relief_cap_pct`).
+                # 이미 풀려 있던 중(직전 명령이 CAP 위)이면 문턱이 완화된다.
+                _was_lifted = float(prev_commands.get(p.actuator_id, 0.0) or 0.0) > HR.CAP_PCT + 1.0
+                if (not bool(_internal.get('_force_dehumid'))
+                        and HR.relief_cap_pct(
+                            ctx.get('T_int'), ctx.get('RH_int'), ctx.get('T_ext'),
+                            ctx.get('RH_ext'), was_lifted=_was_lifted) < HR.CAP_FREE_PCT):
+                    humid_cap_ids.add(p.actuator_id)
+            elif verdict == HR.COLD:
+                # ⚠ **겨울 난방 중에는 열지 않는다.** 실외 이슬점이 훨씬 낮아 "습기를 뺀다" 로
+                #   읽히지만, 온도차가 크면 열 손실·저온 피해가 습기 제거보다 크다
+                #   (`humid_regime.relief_verdict`).
+                humid_cold.add(p.actuator_id)
+            else:
+                humid_parked.add(p.actuator_id)
+        if humid_parked or humid_cold:
+            park_ids |= humid_parked | humid_cold
+            logger.debug(
+                '과습 구간 — 환기로 해소 불가(더 습함 %d · 너무 참 %d): %s',
+                len(humid_parked), len(humid_cold),
+                sorted(i[:8] for i in humid_parked | humid_cold))
+
     # ── 낮에는 보온커튼을 걷어 둔다 ───────────────────────────────────────────
     # 효과 모델은 커튼의 **열 교환**만 안다(걷힘 = 외기와 섞임). 빛을 막는다는
     # 사실은 모델 밖에 있어서, 맡겨 두면 VPD 를 올리려 낮에도 닫는다 — 실측
@@ -619,12 +960,260 @@ def decide_parking(available: List[ActuatorProfile], situation: SituationReport,
                      if getattr(p, 'kind', '') == 'curtain'}
                     if bool(ctx.get('curtain_day_open', False)) else set())
 
+    # ── 2.65b. 분무용 물이 없다 — 분무기 전부를 쉰다(`water_supply`, 근거 41) ───────
+    # 극한 고온 보호 안의 분무 차단(근거 29)과 달리 **폭염이 아니어도** 선다 — 물 없이
+    # 펌프를 돌리면 상한다. 판정은 `water_supply` 한 곳이고(코디네이터가 internal 에 싣는다),
+    # 여기서는 그 결론만 읽는다. 옵션을 안 켰으면 키가 True 라 아무 일도 없다.
+    # 파킹(감쇠)과 함께 전달 비율 0(`_apply_cmd_scales`)이 이번 사이클부터 0 을 내보낸다.
+    water_blocked_ids: set = set()
+    if _internal.get('_water_available', True) is False:
+        water_blocked_ids = {p.actuator_id for p in available
+                             if getattr(p, 'kind', '') == 'fogger'}
+        if water_blocked_ids:
+            park_ids |= water_blocked_ids
+            logger.debug('분무용 물 없음 — 분무기 %d개 파킹: %s', len(water_blocked_ids),
+                         sorted(i[:8] for i in water_blocked_ids))
+
+    # ── 2.7. 극한 고온 보호 — 결론만 싣는다(판정은 `heat_protect` 한 곳) ──────────
+    # 열어도 되는 환기 장치는 야간 파킹·냉난방 연동·환기 무익에서 뺀다 — 바깥이 더
+    # 시원한 폭염 중에 창을 잠가 둘 이유가 없다. 바깥이 더 더우면 닫는 쪽(파킹, 근거 28),
+    # 분무를 쓸 수 없으면 분무도 파킹(근거 29). 그 뒤 **실외를 모르는 장치는 여전히
+    # 제자리**다(2.6 — 근거 없음이 근거 있는 판정을 이기지 않듯, 보호도 지어낸 실외로
+    # 창을 움직이지 않는다).
+    heat_open_ids: set = set()
+    heat_closed_ids: set = set()
+    heat_fog_blocked_ids: set = set()
+    heat_floor_ids: set = set()
+    heat_floor_pct = 0.0
+    if _hp_on:
+        _avail = {p.actuator_id for p in available}
+        heat_open_ids = set(_hp.vent_open_ids) & _avail
+        heat_closed_ids = set(_hp.vent_closed_ids) & _avail
+        heat_fog_blocked_ids = set(_hp.fog_blocked_ids) & _avail
+        heat_floor_ids = set(_hp.floor_ids) & heat_closed_ids
+        heat_floor_pct = float(_hp.floor_pct or 0.0) if heat_floor_ids else 0.0
+        park_ids = ((park_ids - heat_open_ids) | heat_closed_ids
+                    | heat_fog_blocked_ids)
+        night_parked -= heat_open_ids
+        interlock_ids -= heat_open_ids
+        futile_ids -= heat_open_ids
+        futile_dwell_ids -= heat_open_ids
+        park_ids -= hold_ids
+        heat_closed_ids -= hold_ids
+        heat_floor_ids -= hold_ids
+        if heat_open_ids or heat_closed_ids or heat_fog_blocked_ids:
+            logger.debug(
+                '극한 고온 보호 — 열어도 됨 %d · 바깥이 더 더움 %d(하한 %.0f %%) · '
+                '분무 차단 %d', len(heat_open_ids), len(heat_closed_ids),
+                heat_floor_pct, len(heat_fog_blocked_ids))
+
+    # ── 2.8. 야간 파킹 직전 완충 구간 — 곧 닫힐 창을 더 열지 않는다 (2026-10-09 김제) ─────────
+    # 해 질 무렵에는 실내 RH 가 오르고 실외가 더 건조해서 "환기하면 VPD 가 오른다" 가 창을 연다.
+    # 그 창을 10분 뒤 야간 파킹이 닫는다(16:48 12 % → 17:49 91 % → 18:42 0 %). 구간(`_night_vent_clock`,
+    # 파킹 시작 전 45분) 안에서는 환기 장치가 **현재 열림을 넘겨 열리지 않는다** — 닫는 쪽은 그대로
+    # PI 가 한다. 상한을 점점 낮추는 경사(램프)는 일부러 두지 않았다: 평형으로 열려 있어야 하는 집을
+    # 파킹보다 먼저 억지로 닫게 되고, 그 닫음 자체가 모터 이동이다. 막는 것은 **늘어나는** 이동 하나다.
+    #
+    # ⚠ **안전·한계 사유가 이긴다.** 아래는 구간을 적용하지 않는다(= 열 수 있다):
+    #   · `_force_cool`·`_force_dehumid` — 하드 온·습도 임계 (호출자가 구간 값을 이미 비운다)
+    #   · 온도 상한의 하드 항 — 투영 온도가 `temp_max` 에 닿았다
+    #   · 극한 고온 보호 중 — 열어도 되는 창은 열린다(2.7)
+    #   · 결로 탈출 — 호출자(`_night_vent_decide`)가 구간 값을 비운다
+    #   강우·풍속 게이트는 이 판정과 무관하게 닫는다(안전 게이트가 위에 있다).
+    # ⚠ 이미 닫히는 중인 장치(파킹·실외 모름·더 열지 않음)는 뺀다 — 그쪽 근거가 더 정확하다.
+    taper_ids: set = set()
+    _taper_s = ctx.get('night_vent_taper_s')
+    if (_taper_s is not None and not night_parked and not _hp_on
+            and not bool(_internal.get('_force_cool'))
+            and not bool(_internal.get('_force_dehumid'))
+            and not (t_ceiling is not None and bool(t_ceiling[1]))):
+        taper_ids = {p.actuator_id for p in vents} - park_ids - hold_ids - ceiling_ids
+        if taper_ids:
+            logger.debug(
+                '야간 파킹 %.0f분 전 — 개구부 %d개를 더 열지 않는다: %s',
+                float(_taper_s) / 60.0, len(taper_ids), sorted(i[:8] for i in taper_ids))
+
+    # ── 2.9. 낮 일사 부하 환기 하한 — 결론만 싣는다(판정은 `solar_vent` 한 곳, 근거 51) ──────────
+    # 해가 들고 실내가 온도 목표 위면 환기 장치(개구부, 없으면 팬)를 하한까지 연다. 위가 이긴다:
+    # 실외 모름(제자리) · 강우·풍속 모름(더 열지 않음) · 야간 파킹 · 파킹 직전 완충 · 냉난방 연동 ·
+    # 보호의 '바깥이 더 덥다'. 이기는 쪽: VPD·습도 항 · 무구배 · 환기 무익 · 과습 구간(열을 빼는 것이 먼저).
+    # 풀릴 때는 한 번에 푼다 — 내림 램프(2026-10-12 #161)는 PI 와 번갈아 창을 올렸다 내려 창 반전이 기준보다
+    # 나빠졌고(최종 폐루프 회귀 R1·R5, 고친 뒤에도 normal 0.98 → 1.19 · fog 0.20 → 0.76 /h) 되돌렸다. 선 뒤 30 분
+    # 유지(`solar_vent.SV_MIN_ON_S`)가 짧은 켬/끔을 맡는다.
+    solar_floor_ids: set = set()
+    solar_floor_pct = 0.0
+    _sv = ctx.get('solar_vent')
+    if bool(getattr(_sv, 'active', False)) and float(getattr(_sv, 'floor_pct', 0.0) or 0.0) > 0.0:
+        solar_floor_ids = (SV.floor_targets(vents) - hold_ids - ceiling_ids - night_parked
+                           - taper_ids - interlock_ids - heat_closed_ids)
+        if solar_floor_ids:
+            solar_floor_pct = float(_sv.floor_pct)
+            logger.debug('일사 부하 — 환기 %d개 하한 %.1f %%: %s', len(solar_floor_ids),
+                         solar_floor_pct, sorted(i[:8] for i in solar_floor_ids))
+
+    # ── 2.95. 아침 습기 빼기 하한 — 결론만 싣는다(판정은 `humid_regime.morning_purge` 한 곳, 근거 54) ──
+    # 해가 들어 집이 데워지는데 실내가 과습이고 실외 공기가 더 건조하면, 2.65 가 27(실외가 너무 참)로 닫아
+    # 두던 환기창을 5~15 % 연다. 몇 시간의 RH 90 % 이상은 병의 조건이다(영양 2026-10-10 07~09시 RH 91 %
+    # · 창 0 %). 위가 이긴다(일사 하한과 같은 집합): 실외 모름 · 강우·풍속 모름 · 야간 파킹 · 파킹 직전
+    # 완충 · 냉난방 연동 · 보호의 '바깥이 더 덥다'. 이기는 쪽: 2.65 의 파킹(27·24)·무구배·환기 무익.
+    # 온도 비상이면 과습 구간이 아예 서지 않는다(`humid_zone` 참조) — 그때는 온도가 환기를 요구한다.
+    purge_ids: set = set()
+    purge_pct = 0.0
+    # 온도 하한선(`humid_regime.temp_edge_c` — 2.65 의 `_warm_side` 와 같은 함수): 온도가 제어 목표면
+    # 목표 − 허용오차. **VPD 직접 모드에서는 유도 온도 목표를 쓰지 않는다** —
+    # 그 값은 현재 실내 온도 + 0.6 × (VPD 를 맞추는 데 필요한 만큼)이라 항상 지금보다 앞서 있고 습할수록 더
+    # 멀리 간다(영양 2026-10-10: 실내 15.8 → 목표 하한 18.5, 20.8 → 22.7). 가장 습한 때 '너무 춥다' 로 막힌다.
+    # 그때는 유도 범위의 아래 끝(`T_guide_low` — 하드 최저로 좁힌 뒤)이 작물이 견디는 하한이다.
+    _t_low_p = HR.temp_edge_c((situation.target or {}).get('temperature'), ctx.get('T_guide_low'))
+    _pdec = HR.morning_purge(
+        ctx.get('T_int'), ctx.get('RH_int'), ctx.get('T_ext'), ctx.get('RH_ext'),
+        getattr(ctx.get('solar_vent'), 'solar_w', None), _t_low_p, humid_zone,
+        prev=purge_prev,
+        force_heat=bool(_internal.get('_force_heat')),
+        dT_h=HR.temp_trend_h(purge_prev, ctx.get('T_int'), cycle_sec))
+    # 파킹 직전 완충 구간(2.8)이면 걸지 않는다 — 곧 야간 파킹이 닫을 창을 열면 모터만 움직인다.
+    if _pdec.active and _taper_s is None:
+        purge_ids = (SV.floor_targets(vents) - hold_ids - ceiling_ids - night_parked
+                     - interlock_ids - heat_closed_ids)
+        if purge_ids:
+            purge_pct = float(_pdec.pct)
+            logger.debug('아침 습기 빼기 — 환기 %d개 하한 %.1f %%: %s', len(purge_ids),
+                         purge_pct, sorted(i[:8] for i in purge_ids))
+    if purge_prev is not None and bool(purge_prev.on) != _pdec.active:
+        _err('아침 습기 빼기 %s — %s', '켬' if _pdec.active else '끔', _pdec.describe())
+    _ti = ctx.get('T_int')
+    purge_state = HR.PurgeState(
+        on=_pdec.active, T_prev=None if _ti is None else float(_ti),
+        dT_h=HR.temp_trend_h(purge_prev, _ti, cycle_sec))
+
+    # ── 2.6b. 실외를 모르는 동안에도 **닫는 쪽은 한다**(근거 58, 모듈 상수 주석) ─────────────────
+    # 위 모든 집합이 `hold_ids` 를 빼므로, 닫는 이동만 여기서 따로 짚는다. 닫는 근거가 실외 값이 아닌 것만
+    # 고른다: 야간 파킹은 옵션과 시각이, 해 진 뒤 닫기는 맑은 하늘 일사(좌표)가 근거다. 그 밖의 파킹(무익·
+    # 연동·과습)은 지어낸 실외로 계산한 것이라 쓰지 않는다. 하드 한계가 열라고 하는 동안은 건너뛴다.
+    # 대상: 실외를 모르는 창(`hold_ids`)과 강우·풍속을 잃은 창(`ceiling_ids`, 2.7 — 지난 값은 온화했고 '더 열지 않음'
+    # 뿐이라 PI 가 열자고 해도 제자리에 서던 5 % 창, 폐루프 sensor_storm_outage). 야간 파킹 감쇠는 실외 모름에만
+    # 새로 필요하다 — 강우·풍속 모름은 파킹이 이미 park_ids 로 닫는다.
+    outage_park_ids: set = set()
+    outage_zero_ids: set = set()
+    outage_dehumid_ids: set = set()
+    outage_dehumid_step = 0.0
+    _outage_ids = hold_ids | ceiling_ids
+    if _outage_ids:
+        outage_park_ids = night_parked & hold_ids
+        if not (_internal.get('_force_cool') or _internal.get('_force_dehumid') or _hp_on):
+            # 맑은 하늘 일사(좌표로 계산)만 쓴다 — 실측 일사는 두절 중 굳은 값일 수 있어(폐루프: 해 질 녘
+            # 74 W/m² 에서 굳음) 밤이 와도 문턱을 못 내려온다. 구름은 맑은 하늘보다 밝게 못 하므로
+            # 맑은 하늘이 어두우면 어두운 것이다.
+            _sun = SV._num(ctx.get('clear_sky_now'))
+            if _sun is not None and _sun < OUTAGE_NIGHT_SOLAR_W:
+                outage_zero_ids = {
+                    p.actuator_id for p in vents
+                    if getattr(p, 'kind', '') == 'opening'
+                    and p.actuator_id in _outage_ids
+                    and p.actuator_id not in night_parked
+                    and RAIL_EPS < float(prev_commands.get(p.actuator_id, 0.0) or 0.0)
+                    <= OUTAGE_CLOSE_MAX_PCT}
+        # 두절이 오래(30 분 넘게) 이어졌고, 밤에 **습도 때문에** 연 창이면 사이클당 일정 폭으로 닫는다 — 위 '≤ 10 %'
+        # 규칙이 하드 습도 상한 아래에서 건너뛴 창. `outdoor_outage_s` 는 두절 시계(`outage_clock`)가 싣는다.
+        _out_s = ctx.get('outdoor_outage_s')
+        if (_out_s is not None and float(_out_s) >= OUTAGE_DEHUMID_GRACE_S
+                and not (_internal.get('_force_cool') or _hp_on)):
+            _sun_d = SV._num(ctx.get('clear_sky_now'))
+            _released = bool(ctx.get('night_vent_released'))   # 야간 파킹 옵션이 켜진 밤인데 파킹이 풀려 있다
+            _night_d = _released or (_sun_d is not None and _sun_d < OUTAGE_NIGHT_SOLAR_W)
+            if _night_d and (_released or bool(_internal.get('_force_dehumid'))):
+                outage_dehumid_ids = {
+                    p.actuator_id for p in vents
+                    if getattr(p, 'kind', '') == 'opening'
+                    and p.actuator_id in _outage_ids
+                    and p.actuator_id not in night_parked
+                    and float(prev_commands.get(p.actuator_id, 0.0) or 0.0) > RAIL_EPS}
+                _cyc = float(cycle_sec or 0.0)
+                outage_dehumid_step = OUTAGE_DEHUMID_STEP_PCT * (
+                    min(1.0, _cyc / OUTAGE_DEHUMID_REF_CYCLE_S) if _cyc > 0.0 else 1.0)
+        if outage_park_ids or outage_zero_ids or outage_dehumid_ids:
+            logger.debug('실외 모름이어도 닫는다 — 야간 파킹 %d · 해 진 뒤 작은 열림 %d · 두절 %.0f분째 제습 열림 %d(-%.1f %%p)',
+                         len(outage_park_ids), len(outage_zero_ids),
+                         float(_out_s or 0.0) / 60.0, len(outage_dehumid_ids), outage_dehumid_step)
+
+    # ── 2.8b. 실내를 모르는 동안 해를 보고 정한 작은 환기 — 결론만 싣는다(판정은 `solar_vent`, 근거 60) ──────
+    # 실내 센서가 모두 끊기면 2.8 의 제자리(근거 21)가 밤의 0 % 를 맑은 낮까지 끌고 간다(2026-10-14 김제 09~13시 ·
+    # 구마모토 일사 656 W/m², 창 0 %). 닫힌 집은 해 아래서 바깥보다 15~20 °C 더워진다 — 실외 기온과 일사로 세운
+    # 작은 하한까지는 연다. 위가 이긴다(일사 하한과 같은 집합): 실외 모름 · 강우·풍속 모름 · 야간 파킹 · 파킹 직전
+    # 완충 · 냉난방 연동 · 보호의 '바깥이 더 덥다'. 강우 단계·서리 주의 상한(52·55·56)은 명령 뒤에서 이긴다.
+    # 해가 진 뒤(맑은 하늘 < `OUTAGE_NIGHT_SOLAR_W`, 근거 58 과 같은 선) 실내를 여전히 모르면 그 하한 크기
+    # 이하로 열린 창을 같은 폭으로 닫는다 — 이 규칙이 연 것은 이 규칙이 닫는다. 하드 한계·보호가 열라고 하는
+    # 동안은 닫지 않는다(2.6b 와 같은 판단). 더 크게 열린 창은 여전히 제자리다(왜 열렸는지 모른다).
+    blind_floor_ids: set = set()
+    blind_close_ids: set = set()
+    blind_floor_pct = 0.0
+    blind_step = 0.0
+    if bool(getattr(_sv, 'blind', False)):
+        _btargets = (SV.floor_targets(vents) - hold_ids - ceiling_ids - night_parked
+                     - taper_ids - interlock_ids - heat_closed_ids)
+        blind_step = SV.blind_step_pct(cycle_sec)
+        if float(getattr(_sv, 'blind_floor_pct', 0.0) or 0.0) > 0.0:
+            blind_floor_ids = _btargets
+            blind_floor_pct = float(_sv.blind_floor_pct)
+        elif not (_internal.get('_force_cool') or _internal.get('_force_dehumid') or _hp_on):
+            _sun_b = SV._num(ctx.get('clear_sky_now'))
+            if _sun_b is not None and _sun_b < OUTAGE_NIGHT_SOLAR_W:
+                blind_close_ids = {
+                    i for i in _btargets
+                    if RAIL_EPS < float(prev_commands.get(i, 0.0) or 0.0)
+                    <= SV.BLIND_FLOOR_MAX_PCT + RAIL_EPS}
+        if blind_floor_ids or blind_close_ids:
+            logger.debug('실내 모름 — 해를 보고 환기 하한 %.1f %% %d개 · 해 진 뒤 닫기 %d개(사이클당 %.1f %%p)',
+                         blind_floor_pct, len(blind_floor_ids), len(blind_close_ids), blind_step)
+
     return ParkDecision(
+        blind_floor_ids=blind_floor_ids, blind_floor_pct=blind_floor_pct,
+        blind_close_ids=blind_close_ids, blind_step_pct=blind_step,
+        outage_park_ids=outage_park_ids, outage_zero_ids=outage_zero_ids,
+        outage_dehumid_ids=outage_dehumid_ids, outage_dehumid_step_pct=outage_dehumid_step,
+        purge_ids=purge_ids, purge_pct=purge_pct, purge_state=purge_state,
+        solar_floor_ids=solar_floor_ids, solar_floor_pct=solar_floor_pct,
         park_ids=park_ids, night_parked=night_parked, opposing_ids=opposing_ids,
         hold_ids=hold_ids, ceiling_ids=ceiling_ids, vent_credit=vent_credit,
         t_ceiling=t_ceiling, vent_first_held_s=held, futile_ids=futile_ids,
+        futile_raw=futile_raw, futile_s=futile_s, futile_dwell_ids=futile_dwell_ids,
         interlock_ids=interlock_ids, vent_first_ids=vent_first_ids,
-        day_open_ids=day_open_ids)
+        day_open_ids=day_open_ids, humid_zone=humid_zone,
+        humid_parked=humid_parked, humid_cap_ids=humid_cap_ids,
+        heat_cap_ids=heat_cap_ids, heat_cap_pct=heat_cap_pct,
+        humid_cold=humid_cold, heat_open_ids=heat_open_ids,
+        heat_closed_ids=heat_closed_ids,
+        heat_fog_blocked_ids=heat_fog_blocked_ids,
+        heat_floor_ids=heat_floor_ids, heat_floor_pct=heat_floor_pct,
+        water_blocked_ids=water_blocked_ids, taper_ids=taper_ids)
+
+
+def _noeffect_candidates(nofx_s: Dict[str, float], vent_strength: Dict[str, float],
+                         available: List[ActuatorProfile], suspect_ids: set) -> set:
+    """'오래 세게 명령했는데 반응이 없다' 로 서는 장치 — ⑤ 혼자 한 일 · ⑥ 하나는 남긴다.
+
+    ①~④ 는 루프 안에서 `nofx_s` 가 이미 가렸다(세게 · 뚜렷 · 실외를 앎 · 오래). 여기서는 나머지
+    둘로 거짓 제외를 막는다 — 모듈 상단 `NOFX_AFTER_S` 주석 참조. 후보가 없으면 빈 집합이다.
+    """
+    due = {aid for aid, sec in (nofx_s or {}).items() if sec >= NOFX_AFTER_S}
+    if not due:
+        return set()
+    vent_ids = {p.actuator_id for p in available
+                if getattr(p, 'kind', '') in VENTILATING_KINDS} - set(suspect_ids)
+    total = sum(max(0.0, vent_strength.get(a, 0.0)) for a in vent_ids)
+    out = set()
+    for aid in due & vent_ids:
+        share = (vent_strength.get(aid, 0.0) / total) if total > 1e-12 else 0.0
+        if share >= NOFX_SOLE_SHARE:
+            out.add(aid)
+        else:
+            logger.debug('반응 없음 후보 %s 는 환기 효과의 %.0f %% 뿐 — 공통 원인으로 보고 제외하지 않음',
+                         aid[:8], share * 100.0)
+    # ⑥ 제외하고도 환기 장치가 하나는 남아야 한다.
+    if out and len(vent_ids - out) < 1:
+        logger.debug('반응 없음 후보 전부가 마지막 환기 장치 — 제외하지 않음')
+        return set()
+    return out
 
 
 # @manual ai/env-control#l3-coordinator-actuator-command, ai/env-control#actuators-missing
@@ -671,6 +1260,10 @@ def coordinate(
         drive_flip_pending=dict(getattr(state, 'drive_flip_pending', None) or {}),
         t_ceiling_active=bool(getattr(state, 't_ceiling_active', False)),
         gradient_active=dict(getattr(state, 'gradient_active', None) or {}),
+        stall_s=dict(getattr(state, 'stall_s', None) or {}),
+        stall_ref=dict(getattr(state, 'stall_ref', None) or {}),
+        nofx_s=dict(getattr(state, 'nofx_s', None) or {}),
+        nofx_ref=dict(getattr(state, 'nofx_ref', None) or {}),
         vent_first_held_s=float(getattr(state, 'vent_first_held_s', 0.0) or 0.0),
         # ⚠ **복사하지 않는다 — 매 사이클 새로 센다.** 이 카운터는 "지금
         # 데드존 안에서 반대쪽에 있다" 의 연속 횟수인데, 복사해 들고 다니면
@@ -683,6 +1276,9 @@ def coordinate(
     _op_aps = [state.prev_commands.get(p.actuator_id, 0.0)
                for p in profiles if getattr(p, 'kind', '') == 'opening']
     ctx['vent_open_frac'] = (sum(_op_aps) / len(_op_aps) / 100.0) if _op_aps else 0.0
+    # 팬이 바꾸는 공기(시간당 횟수) — CO₂ 주입 보존율이 창과 함께 센다. 창 개도만 보면 창이 닫힌 채
+    # 팬이 도는 동안에도 주입기가 돈다(`effect_functions.co2_retention`).
+    ctx['fan_ach'] = fan_ach_total(profiles, state.prev_commands)
 
     # ── 1. Manual-lock handling + live_effect computation (C2) ───────────────
     for p in profiles:
@@ -724,12 +1320,25 @@ def coordinate(
     # 남기면 본 계산과 다른 기준의 인내 시간이 매 사이클 "판정이 풀렸습니다(N분
     # 지속)" 로 찍힌다(2026-09-26 리플레이에서 1분마다 N 이 1씩 늘며 반복).
     ctx['_t_ceiling_active_prev'] = bool(getattr(state, 't_ceiling_active', False))
+    ctx['_futile_prev'] = set(getattr(state, 'futile_active', None) or ())
+    ctx['_futile_s_prev'] = dict(getattr(state, 'futile_s', None) or {})
     _pk = decide_parking(available, situation, ctx, cycle_sec,
                          state.prev_commands,
                          getattr(state, 'vent_first_held_s', 0.0) or 0.0,
-                         log=bool(unique_id))
+                         log=bool(unique_id),
+                         humid_prev=bool(getattr(state, 'humid_zone', False)),
+                         purge_prev=getattr(state, 'purge', None))
     new_state.vent_first_held_s = _pk.vent_first_held_s
+    new_state.humid_zone = _pk.humid_zone
+    new_state.purge = _pk.purge_state
+    purge_ids, purge_pct = _pk.purge_ids, _pk.purge_pct
+    humid_parked = _pk.humid_parked
+    humid_cold = _pk.humid_cold
+    humid_cap_ids = _pk.humid_cap_ids
     new_state.t_ceiling_active = _pk.t_ceiling is not None
+    new_state.futile_active = set(_pk.futile_raw)
+    new_state.futile_s = dict(_pk.futile_s)
+    futile_dwell_ids = _pk.futile_dwell_ids
     park_ids = _pk.park_ids
     night_parked = _pk.night_parked
     opposing_ids = _pk.opposing_ids
@@ -738,6 +1347,18 @@ def coordinate(
     day_open_ids = _pk.day_open_ids
     vent_credit = _pk.vent_credit
     t_ceiling = _pk.t_ceiling
+    heat_open_ids = _pk.heat_open_ids
+    heat_closed_ids = _pk.heat_closed_ids
+    heat_fog_blocked_ids = _pk.heat_fog_blocked_ids
+    heat_floor_ids = _pk.heat_floor_ids
+    heat_floor_pct = _pk.heat_floor_pct
+    water_blocked_ids = _pk.water_blocked_ids
+    taper_ids = _pk.taper_ids
+    solar_floor_ids, solar_floor_pct = _pk.solar_floor_ids, _pk.solar_floor_pct
+    # 의심 액추에이터(`actuator_feedback`) — 부하 분담에서 빼고 제자리에 둔다. 판정은 피드백
+    # 레지스트리가 하고(사이클이 ctx 로 싣는다), 여기서는 결론만 읽는다.
+    suspect_ids = set(ctx.get('suspected_ids') or ()) & valid_ids
+    vent_strength: Dict[str, float] = {}  # 환기 장치의 '명령된 효과' = g × 직전 명령(%)/100
 
     # ── 2.7. 강우·풍속을 잃었으면 → **더 열지 않음**(ceiling, 2026-09-19) ──────
     # 2.6 과 같은 원칙의 짝이다(`docs/design/sensor-freshness-and-control-
@@ -765,6 +1386,14 @@ def coordinate(
         logger.debug(
             '강우·풍속 모름 — 개구부 %d개 더 열지 않음: %s',
             len(ceiling_ids), sorted(i[:8] for i in ceiling_ids))
+    # 강우 단계 제한(근거 52) — 측창 상한·약한 예보 비의 천창 상한(30 %). 실외 모름
+    # (제자리)이 이긴다 — 그쪽은 이미 움직이지 않는다.
+    # 숫자 상한은 제자리(2.6) 중에도 건다 — 마지막 실측이 비·강풍이었으면 그 값으로 닫는 게 맞고
+    # (규칙 A: 오래된 '비 옴' 은 닫는 근거다), 제자리가 상한 위의 개도를 붙들면 안 된다. 상한이 None
+    # ("더 열지 않음")이면 제자리와 같아 달라지는 것이 없다.
+    rain_caps = dict(rain_vent_caps(ctx, profiles))
+    # 상한마다 근거 — 52(비) | 55(강풍 1단계). 같은 상한 장치를 쓴다(`safety_gates._merge_vent_caps`).
+    cap_reasons = ctx.get('vent_open_cap_reasons') or {}
 
     # ── 2.8. 실내 측정이 없으면 → **제자리 유지**(2026-09-20) ─────────────────
     # 2.6 과 같은 원칙의 실내판이다. 실외를 모르면 창을 움직일 근거가 없듯,
@@ -861,6 +1490,23 @@ def coordinate(
             _is_hvac = ACTUATOR_DOMAIN.get(getattr(p, 'kind', '')) == 'hvac'
             prev_val = state.prev_commands.get(p.actuator_id, 0.0)
             I = new_state.integral.get(p.actuator_id, 0.0)
+            if p.actuator_id in suspect_ids:
+                # ── 의심 액추에이터: 제자리에 둔다(구동하지 않는다) ─────────────────────────
+                # 고장일 수 있는 장치에 계속 명령을 쌓으면 적분이 와인드업하고, 그 장치가 하고 있다고
+                # 믿는 몫이 부하 분담 장부에 남아 나머지가 덜 일한다. 그래서 **장부에 아무것도
+                # 올리지 않고**(tier_effect_deltas 를 건드리지 않는다 — 나머지가 그 몫을 이어받는다)
+                # 직전 위치를 그대로 낸다. 슬루·전달 비율·min-ON 도 건너뛴다 — '움직이지 않는다' 가 곧
+                # 이 명령이다. 적분도 그대로 둔다: 회복해 돌아오면 그 자리에서 이어 간다.
+                # 이 명령은 디스패치에도 나가지 않는다(`_cycle_mixin` — 근거 42 는 전송 제외).
+                _held = _clamp(prev_val, 0.0, 100.0)
+                for _d in (new_state.stall_s, new_state.stall_ref,
+                           new_state.nofx_s, new_state.nofx_ref):
+                    _d.pop(p.actuator_id, None)
+                commands[p.actuator_id] = ActuatorCommand(
+                    value=p.cmd_constraints.map_aperture_to_motor(_held),
+                    reason=REASON_ACTUATOR_SUSPECT, aperture=_held, slewed=_held)
+                _log_cmd(unique_id, p.actuator_id, a_idx, _held, REASON_ACTUATOR_SUSPECT)
+                continue
             kp = p.gains.get('kp', POS_KP)
             ki = p.gains.get('ki', POS_KI)
             _freeze_lower = False   # 아래쪽 레일 갓 포화 — 이번 사이클 적분 동결
@@ -909,11 +1555,21 @@ def coordinate(
 
             # ── 온도 상한 항 (위 `_temperature_ceiling` 주석 참조) ────────────
             _dom_p = ACTUATOR_DOMAIN.get(getattr(p, 'kind', ''))
-            if t_ceiling is not None and 'temperature' not in situation.deviation_native:
+            # 온도가 제어목표여도 보호 중에는 `_temperature_ceiling` 이 항을 낸다(그 주석).
+            if t_ceiling is not None:
                 _excess, _hard = t_ceiling
                 _eff_t = p.live_effect.get('temperature')
                 _allowed = (_T_CEILING_HARD_DOMAINS if _hard else _T_CEILING_DOMAINS)
-                if (_dom_p in _allowed and _eff_t is not None
+                if SP.shade_ceiling_allowed(ctx.get('screen'), p):
+                    # 광 상태가 허락한 차광막(FREE, 또는 창·분무를 다 쓴 TRADE)도 상한 항을
+                    # 받는다 — 판정은 `screen_policy` 한 곳. 보온커튼은 아니다.
+                    _allowed = _allowed | {'screen'}
+                # 보호(단계 1)의 하드 항은 습윤형 분무를 몰지 않는다(`_temperature_ceiling`).
+                _hp_skip = (_hard and getattr(p, 'kind', '') == 'fogger'
+                            and bool(ctx.get('_t_ceiling_hp_only'))
+                            and p.actuator_id not in getattr(
+                                ctx.get('heat_protect'), 'cooling_fog_ids', frozenset()))
+                if (not _hp_skip and _dom_p in _allowed and _eff_t is not None
                         and _eff_t.direction in ('↑', '↓')
                         and _eff_t.magnitude_native > 0.0):
                     _sign_t = 1.0 if _eff_t.direction == '↑' else -1.0
@@ -952,25 +1608,54 @@ def coordinate(
             _g_floor = G_MIN_EFFECT * (GRADIENT_EXIT_FRAC if _was_active else 1.0)
             weak_gradient = den <= 1e-12 or max_g < _g_floor
             new_state.gradient_active[p.actuator_id] = not weak_gradient
+            if getattr(p, 'kind', '') in VENTILATING_KINDS:
+                vent_strength[p.actuator_id] = (
+                    max_g * max(0.0, float(prev_val or 0.0)) / 100.0)
+            # '열어도 소용없음' 누적은 **연속한** 사이클에서만 이어진다 — 일반 PI 분기를
+            # 지나지 않은 사이클(파킹·제자리·데드존)은 여기서 지워, 돌아왔을 때 옛 누적으로
+            # 곧장 멈추지 않게 한다(아래 일반 분기가 다시 센다).
+            new_state.stall_s.pop(p.actuator_id, None)
+            new_state.stall_ref.pop(p.actuator_id, None)
+            new_state.nofx_s.pop(p.actuator_id, None)
+            new_state.nofx_ref.pop(p.actuator_id, None)
 
             if p.actuator_id in day_open_ids:
                 # 낮 — 보온커튼은 걷어 둔다(`decide_parking` 주석). 적분도 그 자리로
                 # 맞춘다 — 해가 진 뒤 코디네이터가 '걷혀 있다' 에서 출발해야 한다.
-                I = 100.0
-                cmd_raw = 100.0
-                reason = REASON_CURTAIN_DAY_OPEN
+                # 위치를 잡는 커튼은 아침에 단계로 걷는다(`screen_policy._curtain_ramp`,
+                # 근거 47) — 적분도 그 단계 값이다.
+                cmd_raw, reason = SP.curtain_day_command(ctx.get('screen'), p.actuator_id)
+                I = cmd_raw
             elif p.actuator_id in hold_ids:
                 # 실외 근거 없음 → **제자리**. 감쇠하지 않는다(그건 닫는 것이다).
                 # 적분도 그대로 둔다 — 모르는 동안 '평형 개도 기억'을 흔들면 실외가
                 # 돌아왔을 때 엉뚱한 자리에서 다시 출발한다.
-                cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                # 제자리는 **실제 개도**다 — 전달 비율로 나눠 낸다(`hold_command`).
+                cmd_raw = hold_command(p, prev_val)
                 reason = REASON_NO_OUTDOOR_DATA
+                # 단 **닫는 쪽은 한다**(근거 58, 모듈 상수 주석) — 야간 파킹은 감쇠, 해 진 뒤
+                # 작은 열림은 0. 열 근거가 없다는 것이 닫을 수 없다는 뜻은 아니다.
+                _oc = outage_close_command(_pk, p, prev_val)
+                if _oc is not None:
+                    cmd_raw, reason = _oc
+                    I = cmd_raw
+            elif p.actuator_id in futile_dwell_ids:
+                # 환기 무익 판정이 막 섰다 — FUTILE_DWELL_S 동안 **제자리**. 적분도 그대로 둔다.
+                cmd_raw = hold_command(p, prev_val)
+                reason = REASON_NO_GRADIENT
             elif p.actuator_id in blind_ids and weak_gradient:
                 # 실내 측정 없음(2.8) → 제자리. hold_ids 와 같은 처리다 —
                 # 감쇠하지 않고 적분도 그대로 둔다(모르는 동안 '평형 개도
                 # 기억' 을 흔들면 센서가 돌아왔을 때 엉뚱한 자리에서 출발한다).
-                cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                # 제자리는 **실제 개도**다 — 전달 비율로 나눠 낸다(`hold_command`, 김제 10/14 20 → 0 %).
+                cmd_raw = hold_command(p, prev_val)
                 reason = REASON_NO_MEASUREMENT
+                # 단 맑은 낮이면 실외·해로 세운 작은 하한까지 열고, 해가 진 뒤에는 그만큼을 닫는다(근거 60,
+                # `decide_parking` 2.8b). 적분은 그 자리에 맞춘다 — 실내가 돌아오면 PI 가 거기서 이어 간다.
+                _bv = blind_vent_command(_pk, p, prev_val)
+                if _bv is not None:
+                    cmd_raw, reason = _bv
+                    I = cmd_raw
             elif weak_gradient or p.actuator_id in park_ids:
                 # 제어 가능 변수 없음 OR 유효 구동력 없음(무구배 환기 등) OR 파킹 대상
                 # (환기 무익 / 냉난방 연동 — 2.5 참조) → 안전 idle
@@ -996,6 +1681,10 @@ def coordinate(
                     # 순간 커튼이 걷힌다 — 실측(2026-09-24 영양): 실내 14~18°C·VPD
                     # 목표보다 0.8 낮은 채 밤새 100 %. 한 사이클 풀림이 정확히 40 %
                     # (100 + (0−100)×0.6)로 찍혀 "왜 40 인가" 도 이것이었다.
+                    # ⚠ 제자리는 **열 수요가 없을 때만** 맞다. 걷힌 커튼 아래의 작은 안팎 온도차는
+                    #   커튼이 지운 것이라 무구배의 근거가 못 된다 — 밤 보온은 아래
+                    #   `SP.adjust_pi_command` 가 목표·실외로 판단해 닫는다(근거 49, 2026-10-10 영양:
+                    #   실내 9~12 °C 인데 밤새 100 %·근거 15).
                     I = prev_val
                     cmd_raw = _clamp(prev_val, 0.0, 100.0)
                 else:
@@ -1005,14 +1694,52 @@ def coordinate(
                 # "밀어도 안 움직인다"(무구배)가 아니라 "지금 밀 방향이 아니다"다.
                 # 야간 파킹은 사용자가 켠 옵션의 결과다 — 무구배로 뭉치면
                 # "왜 밤에 창이 안 열리나" 에 화면이 답할 수 없다.
-                if p.actuator_id in night_parked:
+                if p.actuator_id in water_blocked_ids:
+                    # 물이 없다는 사실이 폭염 판정보다 앞이다 — 사람이 할 일(물 채우기)이 보인다.
+                    reason = REASON_NO_WATER
+                elif p.actuator_id in heat_closed_ids:
+                    reason = REASON_HEAT_VENT_HOT_OUTSIDE
+                elif p.actuator_id in heat_fog_blocked_ids:
+                    reason = REASON_HEAT_FOG_BLOCKED
+                elif p.actuator_id in night_parked:
                     reason = REASON_NIGHT_PARKED
                 elif p.actuator_id in opposing_ids:
                     reason = REASON_OPPOSING_PARKED
+                elif p.actuator_id in humid_cold:
+                    reason = REASON_HUMID_COLD
+                elif p.actuator_id in humid_parked:
+                    reason = REASON_HUMID_NO_RELIEF
                 else:
                     reason = REASON_NO_GRADIENT
             else:
                 e_norm = num / den
+                # ── 열어도 편차가 줄지 않는 창 추적(STALL_AFTER_S 주석) ──────────
+                # 유효도가 낮은 환기 장치만 본다. 기준 편차보다 STALL_IMPROVE_FRAC 이상
+                # 좁혀지면 "반응이 있다" 로 보고 다시 센다.
+                _is_vent = getattr(p, 'kind', '') in VENTILATING_KINDS
+                if _is_vent and e_norm > 0.0 and prev_val >= STALL_MIN_OPEN_PCT \
+                        and max_g < STALL_G_MAX:
+                    new_state.stall_ref[p.actuator_id], new_state.stall_s[p.actuator_id] = \
+                        _no_improvement_step(
+                            (getattr(state, 'stall_ref', None) or {}).get(p.actuator_id),
+                            (getattr(state, 'stall_s', None) or {}).get(p.actuator_id, 0.0),
+                            e_norm, cycle_sec)
+                else:
+                    new_state.stall_ref.pop(p.actuator_id, None)
+                    new_state.stall_s.pop(p.actuator_id, None)
+                # 같은 판정의 반대 대역 — 세게 열렸고 모델이 효과가 뚜렷하다고 하는데 반응이 없다
+                # (`NOFX_AFTER_S` 주석). 실외를 모르거나(지어낸 실외 · 더 열지 않음) 보호가 환기를
+                # 열어 둔 창은 편차 때문에 열린 것이 아니므로 센 적이 없다.
+                if (_is_vent and e_norm > 0.0 and prev_val >= NOFX_MIN_CMD_PCT
+                        and max_g >= STALL_G_MAX
+                        and not (ctx.get('external') or {}).get('_ext_synthetic')
+                        and p.actuator_id not in ceiling_ids
+                        and p.actuator_id not in heat_open_ids):
+                    new_state.nofx_ref[p.actuator_id], new_state.nofx_s[p.actuator_id] = \
+                        _no_improvement_step(
+                            (getattr(state, 'nofx_ref', None) or {}).get(p.actuator_id),
+                            (getattr(state, 'nofx_s', None) or {}).get(p.actuator_id, 0.0),
+                            e_norm, cycle_sec)
                 # 데드존을 분기가 아니라 '빼기'로 적용한다 — 경계에서 P항이 0 으로
                 # 연속 수렴하므로 입력이 경계를 넘나들어도 명령 계단이 생기지 않는다.
                 # (분기 구현이 만들던 ±kp·hb·100 계단 = 야간 창호 진동의 직접 원인)
@@ -1151,7 +1878,95 @@ def coordinate(
                                            0.0, 100.0)
                         reason = REASON_PRIMARY
 
-            if p.actuator_id in ceiling_ids and cmd_raw > prev_val:
+            if p.actuator_id in humid_cap_ids and cmd_raw > HR.CAP_PCT:
+                # 과습 구간의 열림 상한(2.65). 습기를 빼는 것이 목적이지 환기로 온도·VPD 를
+                # 맞추는 것이 아니다. 적분도 상한에 묶는다 — 묶지 않으면 상한에 걸린 채
+                # 사이클마다 감겨, 구간을 나가는 순간 창이 한 번에 튄다(ceiling 과 같은 사고).
+                cmd_raw = HR.CAP_PCT
+                I = min(I, HR.CAP_PCT)
+                if reason == REASON_PRIMARY:
+                    reason = REASON_HUMID_CAPPED
+
+            if p.actuator_id in solar_floor_ids and cmd_raw < solar_floor_pct:
+                # 낮 일사 부하 환기 하한(2.9, `solar_vent`) — VPD·습도·무구배가 닫으라고 해도 일사 열을
+                # 뺄 만큼은 연다. 과습 상한 **뒤**라 그것도 이긴다. 적분도 하한에 묶는다(극한 고온 보호의
+                # 하한과 같은 방식) — 하한이 풀리면 PI 가 그 자리에서 이어 간다(계단 없음).
+                cmd_raw = solar_floor_pct
+                I = max(I, solar_floor_pct)
+                reason = REASON_SOLAR_VENT_FLOOR
+
+            if p.actuator_id in purge_ids and cmd_raw < purge_pct:
+                # 아침 습기 빼기 하한(2.95, `humid_regime.morning_purge`) — 27·24 파킹·무구배가 닫으라고
+                # 해도 해가 집을 데우는 동안 습기를 뺄 만큼은 연다. 과습 상한(30 %)보다 작아 그것과
+                # 부딪치지 않고, 일사 하한이 더 크게 섰으면 그쪽(51)이 이긴 채 남는다. 적분도 하한에
+                # 묶는다 — 풀릴 때 PI 가 그 자리에서 이어 간다(계단 없음).
+                cmd_raw = purge_pct
+                I = max(I, purge_pct)
+                reason = REASON_MORNING_PURGE
+
+            if p.actuator_id in heat_floor_ids and cmd_raw < heat_floor_pct:
+                # 극한 고온 보호의 환기 하한(2.7) — 바깥이 더 더워 닫는 중이어도 분무가
+                # 돌았으면 습기를 뺄 만큼은 연다. 과습 상한과 같은 방식으로 적분도
+                # 하한에 묶는다 — 묶지 않으면 하한이 풀리는 순간 창이 한 번에 닫힌다.
+                cmd_raw = heat_floor_pct
+                I = max(I, heat_floor_pct)
+
+            if p.actuator_id in taper_ids and cmd_raw > hold_command(p, prev_val) + 1e-9:
+                # 야간 파킹 직전(2.8) — 곧 닫힐 창을 더 열지 않는다. 직전 개도에 묶고, 적분은
+                # 이번 사이클에 쌓은 몫을 버려 **그 자리를 넘지 않게** 한다(조건부 적분 — 더
+                # 열라는 요구는 실행되지 않았으므로 배우지 않는다. `ceiling_ids` 와 같은 원칙).
+                # 전달 비율(풍향 가중치)이 곱해지므로 요구는 그만큼 나눠 낸다 — 안 나누면 비율만큼
+                # 사이클마다 닫혀 '제자리'가 감쇠가 된다(온도 상한 유지와 같은 이유).
+                cmd_raw = hold_command(p, prev_val)
+                I = min(new_state.integral.get(p.actuator_id, I), cmd_raw)
+                reason = REASON_PREPARK_HOLD
+
+            # 보호 중 열어도 되는 창은 '열어도 반응 없음' 으로 멈추지 않는다 — 바깥이 더
+            # 시원한 동안의 환기는 편차가 줄든 말든 열·수분 스트레스를 던다(2.7).
+            # 일사 하한이 선 창도 같다 — 그 개도는 편차가 아니라 일사 열 때문이다(2.9).
+            _stalled = (new_state.stall_s.get(p.actuator_id, 0.0) >= STALL_AFTER_S
+                        and p.actuator_id not in heat_open_ids
+                        and p.actuator_id not in solar_floor_ids
+                        and p.actuator_id not in purge_ids)
+            if _stalled and cmd_raw > hold_command(p, prev_val) + 1e-9:
+                # 열어도 편차가 줄지 않는다(STALL_AFTER_S). 더 열지 않고 배운 것도 없다 —
+                # 그 사이 PI 가 본 편차는 실행되지 않은 요구다(ceiling 과 같은 원칙).
+                # '더 열지 않음' 은 실제 개도 기준이다 — 전달 비율로 나눠 낸다(`hold_command`).
+                cmd_raw = hold_command(p, prev_val)
+                I = min(new_state.integral.get(p.actuator_id, I), cmd_raw)
+                reason = REASON_NO_RESPONSE
+            if unique_id and _stalled != (
+                    (getattr(state, 'stall_s', None) or {}).get(
+                        p.actuator_id, 0.0) >= STALL_AFTER_S):
+                # 바뀔 때만 한 번 — 매 사이클 찍으면 읽어야 할 로그를 밀어낸다.
+                logger.error(
+                    '창 %s: %s', p.actuator_id[:8],
+                    '열어도 편차가 줄지 않아 더 열지 않습니다(%d분째)'
+                    % int(new_state.stall_s.get(p.actuator_id, 0.0) // 60)
+                    if _stalled else '편차가 다시 좁혀져 제어를 이어 갑니다')
+
+            if (t_ceiling is not None and t_ceiling[0] <= 0.0 and not t_ceiling[1]
+                    and cmd_raw < prev_val and _dom_p in _T_CEILING_DOMAINS
+                    and p.actuator_id not in park_ids):
+                # (제자리 경로들 — 실외 모름·무익 대기·실내 모름 — 은 이미 prev_val 이라
+                #  여기 오지 않는다. `blind_ids` 는 후보 집합이라 조건으로 쓰면 안 된다:
+                #  CO₂ 측정이 없는 시설에서는 모든 창이 후보다.)
+                # 온도 상한 유지 구간(T_CEILING_HOLD_BAND) — 식히는 창은 닫는 쪽으로 가지
+                # 않는다. 적분도 그 자리로 되앉힌다: 다시 선을 넘으면 0 이 아니라 지금
+                # 개도에서 P 만큼 더 연다. 파킹(야간·연동·보호의 '바깥이 더 덥다' 등)은 이긴다.
+                _eff_hold = p.live_effect.get('temperature')
+                if (_eff_hold is not None and _eff_hold.direction == '↓'
+                        and _eff_hold.magnitude_native > 0.0):
+                    # 제자리는 **실제 개도**다. 전달 비율(풍향 가중치 등, `finalize_command`)이
+                    # 곱해지므로 요구는 그만큼 나눠 낸다 — 직전 개도를 그대로 내면 비율이
+                    # 1 미만인 동안 사이클마다 비율만큼 닫혀(실측 시뮬레이터: 20 → 13.6 →
+                    # 10 → 7 %) 유지가 감쇠가 된다.
+                    cmd_raw = hold_command(p, prev_val)
+                    I = cmd_raw
+                    reason = REASON_PRIMARY
+                    primary_var = 'temperature'
+
+            if p.actuator_id in ceiling_ids and cmd_raw > hold_command(p, prev_val) + 1e-9:
                 # 더 열지 않음(2.7). 근거는 16(판단할 근거 없음, 제자리) —
                 # 화면 문구 "실외 값이 돌아올 때까지 제자리" 가 그대로 맞다.
                 #
@@ -1161,12 +1976,46 @@ def coordinate(
                 # → 55.007/사이클), 긴 두절 끝에 개도까지 차오른 채 풀리면 그
                 # 몫이 한 번에 창을 민다. 막힌 방향으로는 **아무것도 배우지
                 # 않는다**가 맞다 — 그 사이 PI 가 본 편차는 실행되지 않은 요구다.
-                cmd_raw = _clamp(prev_val, 0.0, 100.0)
+                # '더 열지 않음' 은 실제 개도 기준이다 — 전달 비율로 나눠 낸다(`hold_command`).
+                cmd_raw = hold_command(p, prev_val)
                 I = min(new_state.integral.get(p.actuator_id, I), cmd_raw)
                 reason = REASON_NO_OUTDOOR_DATA
+            if p.actuator_id in ceiling_ids:
+                # 닫는 쪽은 허용(근거 58) — 해 진 뒤 조금 열린 창은 닫는다. 위 '더 열지 않음'은 PI 가 열 때만 걸려
+                # 제자리에 서던 창이다.
+                _oc = outage_close_command(_pk, p, prev_val)
+                if _oc is not None:
+                    cmd_raw, reason = _oc
+                    I = cmd_raw
+
+            if p.actuator_id in rain_caps:
+                # 강우 단계 제한(`safety_gates.classify_rain`, 근거 52). 일사 하한·극한 고온
+                # 보호의 하한보다 **뒤** — 비가 이긴다. 상한이 None 이면 지금 개도("더 열지
+                # 않음"). 적분은 2.7 과 같은 조건부 적분: 상한을 넘는 요구는 실행되지 않았으므로
+                # 배우지 않는다 — 안 그러면 비가 그치는 순간 쌓인 몫이 창을 한 번에 민다.
+                _cap = rain_caps[p.actuator_id]
+                _cap = hold_command(p, prev_val) if _cap is None else float(_cap)
+                if cmd_raw > _cap:
+                    cmd_raw = _clamp(_cap, 0.0, 100.0)
+                    I = min(new_state.integral.get(p.actuator_id, I), cmd_raw)
+                    # 근거는 상한을 건 쪽의 것이다 — 52(비)·55(강풍 1단계)·56(서리 주의의 "더 열지 않음").
+                    reason = cap_reasons.get(p.actuator_id, REASON_RAIN_RESTRICT)
+
+            # 스크린 판단(`screen_policy`) — 차광막 바닥(빛 지킴)·근거. 적분도 함께 맞춘다.
+            cmd_raw, I, reason = SP.adjust_pi_command(
+                ctx.get('screen'), p, cmd_raw, I, reason, primary_var)
+
+            # VPD 직접 모드의 난방 출력 상한(2.56) — 상한을 넘는 요구는 실행되지 않으므로 적분도 그 값을 넘지 않게 하고,
+            # 내려가는 쪽은 슬루를 타지 않는다(난방기는 모터가 아니다 — 20 %p/사이클로 내리면 상한을 넘은 채 몇 사이클을 더 돈다).
+            _heat_cut = False
+            if p.actuator_id in _pk.heat_cap_ids and cmd_raw > _pk.heat_cap_pct + 1e-9:
+                cmd_raw = _clamp(_pk.heat_cap_pct, 0.0, 100.0)
+                I = min(I, cmd_raw)
+                reason = REASON_OPPOSING_PARKED
+                _heat_cut = True
 
             cmd = finalize_command(p, cmd_raw, prev_val, cycle_sec,
-                                   reason=reason, var_source=primary_var)
+                                   reason=reason, var_source=primary_var, no_slew_down=_heat_cut)
             commands[p.actuator_id] = cmd
             cmd_ap = cmd.control_value()
 
@@ -1223,6 +2072,11 @@ def coordinate(
             for v, delta in var_deltas.items():
                 accumulated[dom][v] = accumulated[dom].get(v, 0.0) + delta
 
+    # ── 3b. 오래 세게 명령했는데 반응이 없는 장치 → 의심 후보(`NOFX_AFTER_S` 주석) ────────
+    # 후보는 나열일 뿐이다 — 제외는 피드백 레지스트리가 도메인 쿨다운까지 보고 정한다.
+    new_state.noeffect_ids = _noeffect_candidates(
+        new_state.nofx_s, vent_strength, available, suspect_ids)
+
     # ── 4. 명령을 못 받은 프로필(이론상 없음) → 안전 기본값 ──────────────────────
     for p in profiles:
         if p.actuator_id not in commands:
@@ -1261,9 +2115,100 @@ def vent_open_ceiling_ids(ctx: dict, vents) -> set:
     return {p.actuator_id for p in vents if getattr(p, 'kind', '') == 'opening'}
 
 
+# @manual ai/env-control#safety-gates
+def rain_vent_caps(ctx: dict, vents) -> Dict[str, Optional[float]]:
+    """강우·강풍 단계 제한의 개구부 상한 {id: 상한 % | None(지금 개도)} — 근거 52·55.
+
+    강풍 1단계(`safety_gates.classify_wind`)도 같은 상한으로 온다 — 숫자 상한이라 늘 건다
+    (극한 고온 보호는 그 상한까지 쓴다). 근거는 `ctx['vent_open_cap_reasons']` 에 따로 있다.
+
+    판정은 `safety_gates.classify_rain` 이 끝냈고(`GateResult.vent_caps` →
+    `ctx['vent_open_caps']`), 여기서는 이 사이클의 개구부로 거른다.
+
+    **"더 열지 않음"(None) 은 온도 하드 상한(`_force_cool` = 극한 고온 보호 단계 2) 위에서만
+    푼다** — `vent_open_ceiling_ids` 와 같은 판단이다(고온 피해는 몇 분, 빗물은 복구할 수
+    있다). 보호 단계 1 에서는 묶어 둔다: 그때 열 창은 측창이다(상한이 없거나 30 %). 구마모토
+    리플레이에서 단계 1 에 이것을 풀었더니 예보 비 0.7 mm 에 천창이 100 % 까지 갔다.
+    숫자 상한(측창 30 %)은 언제나 건다 — 보호는 그 상한까지 쓴다. 닫힌 천창은 강제
+    명령(0)이라 여기 오지 않는다.
+    """
+    raw = ctx.get('vent_open_caps') or {}
+    if not raw:
+        return {}
+    _hp = ctx.get('heat_protect')
+    hot = (int(getattr(_hp, 'tier', 0) or 0) >= 2
+           or bool((ctx.get('internal') or {}).get('_force_cool')))
+    ids = {p.actuator_id for p in vents if getattr(p, 'kind', '') == 'opening'}
+    return {aid: cap for aid, cap in raw.items()
+            if aid in ids and not (cap is None and hot)}
+
+
+def outage_close_command(pk: 'ParkDecision', profile, prev: float
+                         ) -> Optional[Tuple[float, int]]:
+    """실외를 모르는 동안(제자리) 이 개구부가 **닫는 쪽으로** 움직일 값 → (개도 %, 근거) | None.
+
+    PI(`coordinate`)와 MPC(`limit_vent_for_unknown_outdoor`)가 같은 것을 읽는다. 야간 파킹은 평소 파킹과
+    같은 감쇠(safe_default 쪽으로 RELAX_FACTOR)이고 근거 19, 해 진 뒤 작은 열림은 0 이고 근거 58, 두절이 30 분 넘게 이어진
+    밤에 습도로 열린 창은 사이클당 `OUTAGE_DEHUMID_STEP_PCT` %p 씩 내려 가며 근거 58. 결코 `prev` 를 넘지 않는다.
+    """
+    aid = profile.actuator_id
+    prev = _clamp(prev, 0.0, 100.0)
+    if aid in pk.outage_park_ids:
+        sd = float(getattr(profile, 'safe_default', 0.0) or 0.0)
+        return min(prev, _clamp(sd + (prev - sd) * RELAX_FACTOR, 0.0, 100.0)), REASON_NIGHT_PARKED
+    if aid in pk.outage_zero_ids:
+        return 0.0, REASON_OUTAGE_CLOSE
+    if aid in pk.outage_dehumid_ids:
+        return _clamp(prev - float(pk.outage_dehumid_step_pct or 0.0), 0.0, 100.0), REASON_OUTAGE_CLOSE
+    return None
+
+
+def hold_command(profile, prev: float) -> float:
+    """'제자리' 를 내는 명령 [개도 %] — 직전 **실제** 개도가 그대로 나가게 한다.
+
+    `finalize_command` 가 전달 비율(풍향 가중치 등, `cmd_scale`)을 곱하므로 직전 개도를 그대로 내면 비율이
+    1 미만인 동안 사이클마다 그만큼 닫힌다 — 실측(2026-10-14 김제 측창, 근거 21): 20 → 16 → 13 → 12 → 7 → 0 %
+    (08:13~09:03). 그래서 비율로 나눠 낸다. 비율 0(게이트 차단)은 무엇을 내도 0 이라 나누지 않는다.
+    """
+    prev = _clamp(prev, 0.0, 100.0)
+    sc = float(getattr(profile, 'cmd_scale', 1.0) or 0.0)
+    return _clamp(prev / sc if 0.0 < sc < 1.0 else prev, 0.0, 100.0)
+
+
+def blind_vent_command(pk: 'ParkDecision', profile, prev: float
+                       ) -> Optional[Tuple[float, int]]:
+    """실내를 모르는(근거 21 로 제자리에 설) 환기 장치가 해를 보고 움직일 값 → (명령 %, 근거 60) | None.
+
+    맑은 낮(`blind_floor_ids`)이면 하한까지 사이클당 `blind_step_pct` %p 씩 올린다 — 이미 그 위면 None
+    (제자리, 닫지 않는다). 첫 걸음은 min-ON 을 넘긴다: 짧은 주기의 작은 걸음이 매번 0 으로 스냅되면 영영
+    못 연다. 해 진 뒤(`blind_close_ids`)면 같은 폭으로 내린다. 값은 명령 좌표다(전달 비율로 나눠 낸다 —
+    `hold_command` 와 같은 이유). PI 경로만 쓴다(MPC 는 동결 — 이 하한을 모른다, 일사 하한과 같다).
+    """
+    aid = profile.actuator_id
+    prev = _clamp(prev, 0.0, 100.0)
+    step = float(pk.blind_step_pct or 0.0)
+    sc = float(getattr(profile, 'cmd_scale', 1.0) or 0.0)
+    if sc <= 0.0:
+        return None
+
+    def _cmd(actual: float) -> float:
+        return _clamp(actual / sc if sc < 1.0 else actual, 0.0, 100.0)
+
+    if aid in pk.blind_floor_ids and pk.blind_floor_pct > 0.0:
+        _min_on = float(getattr(getattr(profile, 'cmd_constraints', None), 'min_on_pct', 0.0) or 0.0)
+        nxt = min(float(pk.blind_floor_pct), _cmd(max(prev + step, _min_on + 1e-6)))
+        if nxt > hold_command(profile, prev) + 1e-9:
+            return nxt, REASON_BLIND_SUN_VENT
+        return None
+    if aid in pk.blind_close_ids and step > 0.0:
+        return _cmd(max(0.0, prev - step)), REASON_BLIND_SUN_VENT
+    return None
+
+
 # @manual ai/env-control#pre-gate-checked-before-l1l3, ai/env-control#settings-ventilation
 def limit_vent_for_unknown_outdoor(ctx: dict, profile, value: float,
-                                   prev: float) -> Tuple[float, Optional[int]]:
+                                   prev: float, pk: Optional['ParkDecision'] = None
+                                   ) -> Tuple[float, Optional[int]]:
     """적분이 없는 경로(MPC)용 — 2.6 제자리 · 2.7 더 열지 않음을 한 번에 건다.
 
     반환 (값, 근거) — 근거가 None 이면 손대지 않은 것이다. coordinate() 는 이
@@ -1274,10 +2219,16 @@ def limit_vent_for_unknown_outdoor(ctx: dict, profile, value: float,
     if getattr(profile, 'kind', '') not in VENTILATING_KINDS:
         return value, None
     if bool((ctx.get('external') or {}).get('_ext_synthetic')):
+        _oc = outage_close_command(pk, profile, prev) if pk is not None else None
+        if _oc is not None:
+            return _oc
         return _clamp(prev, 0.0, 100.0), REASON_NO_OUTDOOR_DATA
-    if (profile.actuator_id in vent_open_ceiling_ids(ctx, [profile])
-            and value > prev):
-        return _clamp(prev, 0.0, 100.0), REASON_NO_OUTDOOR_DATA
+    if profile.actuator_id in vent_open_ceiling_ids(ctx, [profile]):
+        _oc = outage_close_command(pk, profile, prev) if pk is not None else None
+        if _oc is not None:
+            return _oc
+        if value > prev:
+            return _clamp(prev, 0.0, 100.0), REASON_NO_OUTDOOR_DATA
     return value, None
 
 
@@ -1294,8 +2245,10 @@ def finalize_command(
     cycle_sec: float,
     reason: int,
     var_source: Optional[str] = None,
+    no_slew_down: bool = False,
 ) -> ActuatorCommand:
     """0–100% aperture 명령에 slew·min-ON·operating-range 매핑을 적용.
+    `no_slew_down` 은 내려가는 쪽만 슬루를 건너뛴다(난방 출력 상한 — 상한은 한 사이클에 지켜져야 한다).
 
     PI(coordinator), greybox-PI, MPC 세 경로가 공유하는 명령 최종화 단계.
     - slew: 물리 속도 한계 내로 이전 명령 대비 변화량 제한
@@ -1331,8 +2284,13 @@ def finalize_command(
     else:
         slew = p.cmd_constraints.effective_slew(cycle_sec)
         cmd_slew = _clamp(aperture_pct, prev_aperture - slew, prev_aperture + slew)
+        if no_slew_down and aperture_pct < prev_aperture:
+            cmd_slew = aperture_pct
     reachable = cmd_slew                 # 속도 한계까지만 반영 — 되먹임의 기준
-    if 0.0 < cmd_slew < p.cmd_constraints.min_on_pct:
+    # min-ON 스냅은 스크린에 걸지 않는다 — 스크린은 0/100 이거나 정지점(커튼 틈 3 %·램프)이고,
+    # 걸면 틈 3 % 가 0 이 되어 첫 단계가 통째로 사라진다(폐루프 humid_gap_night).
+    if (0.0 < cmd_slew < p.cmd_constraints.min_on_pct
+            and getattr(p, 'kind', '') not in ('curtain', 'shade')):
         cmd_slew = 0.0
     cmd_motor = p.cmd_constraints.map_aperture_to_motor(cmd_slew)
     return ActuatorCommand(value=cmd_motor, reason=reason,
@@ -1365,8 +2323,7 @@ def _outdoor_reachable(var: str, ctx: Dict) -> Optional[float]:
         T_e, RH_e = ctx.get('T_ext'), ctx.get('RH_ext')
         if T_e is None or RH_e is None:
             return None
-        svp = 0.6108 * math.exp(17.27 * float(T_e) / (float(T_e) + 237.3))
-        return svp * (1.0 - float(RH_e) / 100.0)
+        return psychro.svp(float(T_e)) * (1.0 - float(RH_e) / 100.0)
     return None
 
 
@@ -1535,7 +2492,14 @@ def _ventilation_is_futile(profile: ActuatorProfile,
         measured = t.value + dev
         avail = float(reachable) - measured
         decisive = True
-        if abs(avail) >= t.tolerance and _same_sign(need, avail):
+        # VPD 는 잡음 안의 차이(RH 1~2 %p ≈ 0.05 kPa)로 창을 움직이지 않는다 —
+        # `VENT_MIN_VPD_GAP` 주석. 다른 변수는 종전처럼 허용오차가 문턱이다.
+        _min_gap = (max(t.tolerance, VENT_MIN_VPD_GAP) if var == 'vpd'
+                    else t.tolerance)
+        # 이력: 무익이던 장치는 문턱 전체를, 아니던 장치는 문턱의 FUTILE_ENTER_FRAC 만 넘으면 된다.
+        if profile.actuator_id not in (ctx.get('_futile_prev') or ()):
+            _min_gap *= FUTILE_ENTER_FRAC
+        if abs(avail) >= _min_gap and _same_sign(need, avail):
             return False                          # 하나라도 환기로 개선 가능
     return decisive
 

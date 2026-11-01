@@ -37,10 +37,17 @@ _ENV = {
     'public_url': 'AOT_MCP_PUBLIC_URL',
     'link_client_id': 'AOT_MCP_LINK_CLIENT_ID',
     'link_client_secret': 'AOT_MCP_LINK_CLIENT_SECRET',
+    'mode': 'AOT_MCP_AUTH_MODE',
 }
 
+#: 인증 서버를 어디에 둘지 — 중앙 인가 서버(aot-auth) 또는 이 AoT 가 직접(mcp_embedded.py). 한 번에 하나.
+MODE_CENTRAL = 'central'
+MODE_EMBEDDED = 'embedded'
+
+# mode 는 끝에 두고 기본값을 준다 — 예전처럼 mode 없이 만드는 쪽(시험 포함)은 central 이다.
 CentralConfig = namedtuple('CentralConfig', [
-    'enabled', 'issuer', 'public_url', 'link_client_id', 'link_client_secret', 'web_base_url', 'from_env'])
+    'enabled', 'issuer', 'public_url', 'link_client_id', 'link_client_secret', 'web_base_url', 'from_env', 'mode'],
+    defaults=(MODE_CENTRAL,))
 
 _verifiers = {}
 _verifiers_lock = threading.Lock()
@@ -79,6 +86,15 @@ def normalize_public_url(value):
     return normalized
 
 
+def embedded_issuer(public_url):
+    """내장 모드의 발급자 = MCP 공개 주소의 출처(경로 없음). https(루프백만 http)가 아니거나 모양이 틀리면 ''."""
+    normalized = normalize_public_url(public_url)
+    if not normalized:
+        return ''
+    parts = urlsplit(normalized)
+    return normalize_issuer('%s://%s' % (parts.scheme, parts.netloc)) or ''
+
+
 def normalize_web_base(value):
     value = (value or '').strip().rstrip('/')
     if not value:
@@ -103,8 +119,14 @@ def config():
         enabled = _env('enabled') not in ('0', 'false', 'False')
     else:
         enabled = bool(row is not None and row.mcp_central_enabled)
+    mode = (_env('mode') or (row.mcp_auth_mode if row is not None else '') or MODE_CENTRAL).lower()
+    if mode not in (MODE_CENTRAL, MODE_EMBEDDED):
+        mode = MODE_CENTRAL
     issuer = _env('issuer') or (row.mcp_central_issuer if row is not None else '') or ''
     public_url = _env('public_url') or (row.mcp_public_url if row is not None else '') or ''
+    if mode == MODE_EMBEDDED:
+        # 내장: 발급자는 MCP 공개 주소의 출처(경로 없음)다 — 웹과 MCP 가 같은 출처라는 전제(설계 §3)
+        issuer = embedded_issuer(public_url)
     client_id = _env('link_client_id') or (row.mcp_link_client_id if row is not None else '') or ''
     secret = _env('link_client_secret') or (
         decrypt_secret(row.mcp_link_client_secret) if row is not None else None) or ''
@@ -117,7 +139,8 @@ def config():
         link_client_id=client_id.strip(),
         link_client_secret=secret.strip(),
         web_base_url=normalize_web_base(web_base) or '',
-        from_env=from_env)
+        from_env=from_env,
+        mode=mode)
 
 
 def is_active(cfg):
@@ -125,18 +148,28 @@ def is_active(cfg):
     return bool(cfg.enabled and cfg.issuer and cfg.public_url)
 
 
+def is_embedded(cfg):
+    return cfg.mode == MODE_EMBEDDED
+
+
 def can_link(cfg):
-    return bool(is_active(cfg) and cfg.link_client_id and cfg.link_client_secret and cfg.web_base_url)
+    # 내장 모드는 토큰의 sub 가 곧 AoT 사용자 id 라 계정 연결 단계가 없다.
+    return bool(not is_embedded(cfg) and is_active(cfg) and cfg.link_client_id and cfg.link_client_secret and cfg.web_base_url)
 
 
 def verifier(cfg):
     """(발급자, 공개 주소)마다 하나 — JWKS·폐지 목록 캐시를 요청 사이에 나눠 쓴다."""
     from aot.tools.central_verify import CentralTokenVerifier
-    key = (cfg.issuer, cfg.public_url)
+    key = (cfg.mode, cfg.issuer, cfg.public_url)
     with _verifiers_lock:
         found = _verifiers.get(key)
         if found is None:
-            found = _verifiers[key] = CentralTokenVerifier(cfg.issuer, cfg.public_url)
+            if is_embedded(cfg):
+                from aot.tools import mcp_embedded
+                found = mcp_embedded.make_verifier(cfg.issuer, cfg.public_url)
+            else:
+                found = CentralTokenVerifier(cfg.issuer, cfg.public_url)
+            _verifiers[key] = found
         return found
 
 
@@ -174,7 +207,9 @@ INVALID = 'invalid'            # 토큰 자체가 틀림 → HTTP 401(클라이�
 NOT_LINKED = 'not_linked'      # 토큰은 맞지만 이 AoT 사용자와 이어지지 않음 → 도구 오류로 안내
 NO_READ_SCOPE = 'no_read_scope'
 
-CentralResult = namedtuple('CentralResult', ['kind', 'user', 'claims'])
+# link — 이 토큰이 이어진 계정 연결 행(MCPExternalAccount). 도구 묶음을 거기서 읽는다.
+CentralResult = namedtuple('CentralResult', ['kind', 'user', 'claims', 'link'],
+                           defaults=(None,))
 
 
 def authenticate(cfg, token):
@@ -186,31 +221,48 @@ def authenticate(cfg, token):
         return CentralResult(INVALID, None, None)
     if SCOPE_READ not in claims.scopes:
         return CentralResult(NO_READ_SCOPE, None, claims)
+    if is_embedded(cfg):
+        # sub 가 곧 이 AoT 사용자 id — 연결 행이 없다. 쓸 수 없는 사용자의 토큰은 틀린 토큰으로 본다(재인증도 못 한다).
+        user = User.query.filter(User.id == int(claims.sub)).first() if claims.sub.isdigit() else None
+        if user is None or not getattr(user, 'is_enabled', True) or not getattr(user, 'is_approved', True):
+            return CentralResult(INVALID, None, None)
+        return CentralResult(OK, user, claims, None)
     link = MCPExternalAccount.query.filter_by(issuer=claims.iss, subject=claims.sub).first()
     user = User.query.filter(User.id == link.user_id).first() if link is not None else None
     if user is None or not getattr(user, 'is_enabled', True) or not getattr(user, 'is_approved', True):
         return CentralResult(NOT_LINKED, None, claims)
-    return CentralResult(OK, user, claims)
+    return CentralResult(OK, user, claims, link)
 
 
-def restrict_role(role, scopes):
+def restrict_role(role, scopes, link_profile=None):
     """역할 스냅샷(mcp_auth.RoleInfo)을 토큰 범위로 좁힌다 — 둘 중 좁은 쪽이 이긴다.
 
     제어(쓰기 도구)는 aot.control, 설정·기록·작기 운영은 aot.config 가 있어야 한다. 도구 묶음도 범위를 따른다.
 
-    중앙 토큰에는 키 행이 없어 설정 모듈(tool_registry.TOOL_MODULES)을 고를 자리가 없다 — aot.config 는
-    'configuration'(모듈 전부), 없으면 'operations'(모듈 없음)다. 이 값이 API 키와 같은 묶음 값이라 목록·실행·
-    안내문·거절은 전송과 무관하게 같은 규칙을 탄다."""
-    from aot.tools.tool_registry import TOOL_PROFILE_CONFIGURATION, TOOL_PROFILE_OPERATIONS
+    도구 묶음: 연결 행에 고른 값(link_profile, p6_83)이 있으면 그것을 쓰되 **토큰 범위를 넘지 않는다** —
+    가벼움은 언제나 가벼움, 운영(+모듈)·설정은 aot.config 가 있어야 하고 없으면 운영이다. 고른 값이 없으면
+    예전과 같다: aot.config 면 'configuration'(모듈 전부), 없으면 'operations'. 이 값이 API 키와 같은 묶음
+    값이라 목록·실행·안내문·거절은 전송과 무관하게 같은 규칙을 탄다."""
+    from aot.tools.tool_registry import (TOOL_PROFILE_CONFIGURATION, TOOL_PROFILE_LITE,
+                                         TOOL_PROFILE_OPERATIONS, parse_tool_profile)
     if role is None:
         return None
     scopes = set(scopes or ())
     config_ok = SCOPE_CONFIG in scopes
+    chosen = parse_tool_profile(link_profile) if link_profile else None
+    if chosen == TOOL_PROFILE_LITE:
+        profile = TOOL_PROFILE_LITE
+    elif chosen and config_ok:
+        profile = chosen
+    elif config_ok and chosen is None:
+        profile = TOOL_PROFILE_CONFIGURATION
+    else:
+        profile = TOOL_PROFILE_OPERATIONS
     return role._replace(
         can_write=bool(role.can_write and SCOPE_CONTROL in scopes),
         can_edit_settings=bool(role.can_edit_settings and config_ok),
         can_edit_plots=bool(role.can_edit_plots and config_ok),
-        tool_profile=TOOL_PROFILE_CONFIGURATION if config_ok else TOOL_PROFILE_OPERATIONS)
+        tool_profile=profile)
 
 
 def link_help(cfg):
@@ -319,6 +371,9 @@ def check(cfg, _=_plain):
     `_` 는 번역 함수(flask_babel.gettext 처럼 이름 붙은 자리표시를 받는다)."""
     import requests
 
+    if is_embedded(cfg):
+        from aot.tools import mcp_embedded
+        return mcp_embedded.check(cfg, _)
     results = []
     if not cfg.issuer:
         results.append(('issuer', False, _('The authorization server address is empty or not https.')))

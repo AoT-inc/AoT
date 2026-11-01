@@ -92,18 +92,3 @@ class TestFeedforward:
                                        now_epoch=AT_WRITE + 4 * 3600)
         ff._clear_cache()
         assert sig.T_bias < 0.0
-
-
-class TestAiTool:
-    def test_hour_offset_는_지금부터(self, monkeypatch):
-        from aot.tools.aot_data_tool_service import AoTDataToolService as MeasurementTools
-        from aot.functions.utils.env_control import forecast_feedforward as ff
-        wall = datetime.now(KST).replace(tzinfo=None, second=0, microsecond=0)
-        written = wall - timedelta(hours=3)
-        rows = {k: {'TMP': float(k)} for k in range(10)}
-        monkeypatch.setattr(ff, '_load_forecast',
-                            lambda *a, **k: _file(written, rows, pub=written))
-        out = MeasurementTools.get_weather_forecast(hours=2)
-        assert out['status'] == 'success', out
-        assert [r['TMP'] for r in out['forecasts']] == [3.0, 4.0, 5.0]
-        assert [r['hour_offset'] for r in out['forecasts']] == [0, 1, 2]

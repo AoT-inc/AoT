@@ -485,6 +485,10 @@ def _build_summary(site_uuid):
         ids = _device_ids_for(shape)
         ids_by_child[shape.unique_id] = ids
         all_ids |= ids
+    # 대지 전체는 자식 몫의 합이 아니라 **대지 자신의 정본 소속**이다 — 합으로만
+    # 세면 대지에 직접 놓였고 어느 구역·시설에도 속하지 않는 장치(대지 경계의
+    # 기상대 등)가 장치 수·오늘·일정에서 통째로 빠진다(2026-10-08).
+    all_ids |= _device_ids_for(site)
 
     link_status = _link_status(all_ids, partial)
 
@@ -516,6 +520,16 @@ def _build_summary(site_uuid):
 
     offline_total = sum(c['issues']['comm_fault'] for c in children)
 
+    # 접힌 zone(site 와 같은 땅의 유일한 기본 이름 zone) — 판정은 geo_hierarchy
+    # 한 곳이고 화면은 이 플래그만 따른다. 행은 그대로 두고 표시만 접게 한다.
+    from aot.utils.geo_hierarchy import collapsed_zone_site_map
+    _collapsed = collapsed_zone_site_map()
+    collapsed_zone = next((z for z, s_ in _collapsed.items()
+                           if s_ == site.unique_id), None)
+    for c in children:
+        if collapsed_zone and c.get('uuid') == collapsed_zone:
+            c['collapsed'] = True
+
     return {
         'site': {
             'uuid': site.unique_id,
@@ -525,13 +539,18 @@ def _build_summary(site_uuid):
             'description': (site.meta_json or {}).get('description') or '',
             'area_m2': _shape_area_m2(site),
             'status': _rollup_status(children),
+            'collapsed_zone': collapsed_zone,
             'counts': dict({
-                'zones': sum(1 for c in children if c['kind'] == 'zone'),
+                'zones': sum(1 for c in children
+                             if c['kind'] == 'zone' and not c.get('collapsed')),
                 'facilities': sum(1 for c in children if c['kind'] == 'facility'),
                 'devices': len(all_ids),
             }, **_plot_counts(site)),
         },
         'children': children,
+        # 필지 **직속** 구획 — zone 없는 필지의 구획과 접힌 zone 의 구획.
+        # zone 모달이 내놓는 구획 목록과 같은 정본(zone_allocation)이다.
+        'plots': _direct_plots(site, collapsed_zone),
         # 다가오는 일정 — 구역·식생·시설과 **같은 창(지금부터)·같은 목록**이다.
         # 예전에는 여기만 "오늘 N건" 숫자라서, 대지가 0인데 구역을 열면 내일
         # 일이 있는 상태가 났다(실측). 자식 도형까지 넣는 것은 롤업이라서다.
@@ -543,6 +562,45 @@ def _build_summary(site_uuid):
         'generated_at': _now_iso(),
         'partial': partial,
     }
+
+
+def _direct_plots(site, collapsed_zone_uuid=None):
+    """필지 모달이 직접 보여 줄 구획 목록(구획 모달로 내려가는 줄).
+
+    zone 모달은 `zone_allocation(zone)` 으로 자기 구획을 낸다. 필지 모달이
+    구획을 열어 줄 수 있어야 하는 경우는 둘이다 — (a) 컨테이너가 필지 자신인
+    구획(zone 이 없는 필지, 또는 어느 zone 에도 안 든 구획), (b) 접힌 zone 의
+    구획(접힌 zone 은 행으로 안 나가므로 필지가 대신 연다). 소속 판정은
+    `zone_allocation` 안의 `zone_for_plot` 한 곳이라 같은 구획이 두 번 나오지 않는다.
+    실패해도 필지 요약 전체를 막지 않는다.
+    """
+    try:
+        from aot.databases.models import GeoShape
+        from aot.aot_flask.geo import plot_context
+
+        owners = [site]
+        if collapsed_zone_uuid:
+            zone = GeoShape.query.filter_by(
+                unique_id=collapsed_zone_uuid, type='zone').first()
+            if zone is not None:
+                owners.append(zone)
+        out, seen = [], set()
+        for owner in owners:
+            for item in plot_context.zone_allocation(owner).get('plots', []):
+                if item['unique_id'] in seen:
+                    continue
+                seen.add(item['unique_id'])
+                out.append({
+                    'uuid': item['unique_id'],
+                    'name': item.get('subject') or item.get('name') or '',
+                    'variety': item.get('variety'),
+                    'days_since_planted': item.get('days_since_planted'),
+                    'stage_name': item.get('stage_name'),
+                })
+        return out
+    except Exception:
+        logger.exception('site summary: 직속 구획 조회 실패')
+        return []
 
 
 def _plot_counts(site):
@@ -605,14 +663,14 @@ def _direct_children(site):
 def _device_ids_for(shape):
     """도형에 속한 장치 id 집합.
 
-    device_membership.device_ids_in_area 가 소속 판정의 유일한 정본이다
-    (마커·바인딩·그릇·참조 4겹). 마커만 보면 목록이 통째로 빈다 — 실측상
+    소속은 정본(`device_membership.place_members` — 마커·바인딩·그릇·참조
+    4겹, 하위 장소 포함)으로 묻는다. 마커만 보면 목록이 통째로 빈다 — 실측상
     출력 16개 중 마커가 있는 것은 1개뿐이다.
     """
-    from aot.aot_flask.geo.device_membership import device_ids_in_area
+    from aot.aot_flask.geo.device_membership import place_members
 
     try:
-        return set(device_ids_in_area(shape.unique_id) or set())
+        return set(place_members(shape.unique_id) or set())
     except Exception as exc:
         logger.warning('[SiteSummary] 소속 판정 실패(shape=%s): %s',
                        shape.unique_id, exc)

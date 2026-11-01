@@ -5,7 +5,7 @@ from flask_babel import lazy_gettext as lg
 CHANNELS = {
     0: {'name': lg('Base Map'), 'options': {'type': 'base', 'url_template': 'https://map{s}.daumcdn.net/map_2d/2103cov/L{z}/{y}/{x}.png'}},
     1: {'name': lg('Satellite'), 'options': {'type': 'base', 'url_template': 'https://map{s}.daumcdn.net/map_skyview/L{z}/{y}/{x}.jpg'}},
-    2: {'name': lg('Hybrid'), 'options': {'type': 'overlay', 'url_template': 'https://map{s}.daumcdn.net/map_hybrid/L{z}/{y}/{x}.png'}}
+    2: {'name': lg('Hybrid'), 'options': {'type': 'overlay', 'ambient_role': 'ground.boundary', 'url_template': 'https://map{s}.daumcdn.net/map_hybrid/L{z}/{y}/{x}.png'}}
 }
 
 # @manual geo/layers#domestic-korea
@@ -29,6 +29,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'base',
+    'ambient_role': 'base',
     'custom_options': [
         {
             'id': 'active_channels',

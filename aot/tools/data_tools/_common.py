@@ -5,6 +5,7 @@ from ._shims import _FakeForm
 logger = logging.getLogger(__name__)
 
 
+from aot.aot_flask.extensions import db
 from aot.databases.models import DeviceMeasurements
 from aot.databases.models import GeoShape
 from aot.databases.models import Input
@@ -21,6 +22,89 @@ class CommonToolsMixin:
     """
 
     _FakeForm = _FakeForm
+
+    @staticmethod
+    def _page_rows(rows, limit=None, offset=None, default=None):
+        """목록 한 쪽 — (그 쪽, 안내 dict 또는 None). limit·offset 은 조회 도구 전체의 같은 말.
+
+        자르지 않았으면 안내는 None. 잘랐으면 전체 수와 다음 offset 을 알린다 — 이어 받는 길이
+        응답에 있어야 AI 가 건수를 지어내지 않는다."""
+        try:
+            lim = int(limit) if limit not in (None, '') else (default or 0)
+            off = max(0, int(offset)) if offset not in (None, '') else 0
+        except (TypeError, ValueError):
+            lim, off = (default or 0), 0
+        lim = max(0, lim)
+        total = len(rows)
+        if not lim and not off:
+            return rows, None
+        page = rows[off:off + lim] if lim else rows[off:]
+        if len(page) >= total:
+            return page, None
+        info = {"total": total, "shown": len(page), "offset": off}
+        if off + len(page) < total:
+            info["next_offset"] = off + len(page)
+        return page, info
+
+    @staticmethod
+    def _place_geo(kind, ident, full=True):
+        """장소(대지·구역·시설)의 좌표 요약 — {center:[lat,lng], bbox, area_m2}.
+
+        도형 전체(GeoJSON)는 싣지 않는다. full=False 면 center 만(목록용).
+        좌표를 알 수 없으면(도형 없음·점이 아님 등) 해당 필드를 뺀다 —
+        빈 dict 는 "지도에 그려진 도형이 없다" 는 뜻이다. 시설 id 가 GeoFacility
+        것이면 연결된 도형으로 넘어간다. 계산은 device_binding 의 기존 함수를 쓴다."""
+        if kind not in ('site', 'zone', 'facility') or not ident:
+            return {}
+        try:
+            from aot.aot_flask.geo import device_binding as db_
+            from aot.databases.models import GeoFacility
+            sh = GeoShape.query.filter(GeoShape.unique_id == ident).first()
+            if sh is None:
+                fac = GeoFacility.query.filter_by(unique_id=ident).first()
+                if fac is not None and fac.shape_uuid:
+                    sh = GeoShape.query.filter(
+                        GeoShape.unique_id == fac.shape_uuid).first()
+            if sh is None:
+                return {}
+            feat = sh.feature or {}
+            center = db_._centroid(feat)
+            if not center:
+                return {}
+            out = {"center": center}
+            if full:
+                pts = db_._flat_coords((feat.get('geometry') or {}).get('coordinates'))
+                lats, lngs = [p[1] for p in pts], [p[0] for p in pts]
+                out["bbox"] = [round(min(lats), 7), round(min(lngs), 7),
+                               round(max(lats), 7), round(max(lngs), 7)]
+                area = db_._area_m2(feat)
+                if area:
+                    out["area_m2"] = area
+            return out
+        except Exception:                                   # noqa: BLE001
+            logger.debug("place geo lookup failed", exc_info=True)
+            return {}
+
+    @staticmethod
+    def _with_target(out, kind, ident, ref=None, exact=False):
+        """조회 결과에 **풀린 대상**(종류·id)을 싣는다 — 화면 따라가기(screen_follow)가
+        이름을 다시 풀지 않고 이 id 로 연다. 대상이 정확히 하나로 풀렸을 때만 부른다
+        (여럿이면 싣지 않는다). resolve_target 의 target_id/target_type 과 같은 이름이다.
+
+        ref 는 사람이 말한 인자. 주면 **어떻게 풀렸는지** `match`('id'|'exact'|'partial')
+        를 함께 싣고, 말 일부가 무시됐으면 `ignored_terms` 도 싣는다 — 따라가기는 partial
+        이면 열지 않고 되묻는다. exact=True 는 이름·id 정확일치만 받는 리졸버(시설 등)."""
+        if isinstance(out, dict) and ident and 'target_id' not in out:
+            out['target_id'] = str(ident)
+            out['target_type'] = kind
+            if ref:
+                from aot.tools.screen_follow import match_of
+                m, ignored = match_of(ref, ident, exact)
+                if m:
+                    out['match'] = m
+                if ignored:
+                    out['ignored_terms'] = ignored
+        return out
 
     @classmethod
     def _device_ids_with_measurement(cls, measurement_type):
@@ -180,6 +264,19 @@ class CommonToolsMixin:
                 continue
         return rows
 
+    @classmethod
+    def _normalized_name_devices(cls, key):
+        """표기(공백·밑줄·하이픈·전각·대소문자)만 다른 이름의 입력/출력 장치."""
+        from aot.tools.name_key import name_key
+        rows = []
+        for model, kind in ((Input, 'input'), (Output, 'output')):
+            try:
+                rows.extend((r, kind) for r in model.query.all()
+                            if r.name and name_key(r.name) == key)
+            except Exception:
+                continue
+        return rows
+
     @staticmethod
     def _map_names_by_lower():
         """{소문자 지도 이름: [geo_id, …]} — 이름이 같은 지도가 여럿일 수 있다."""
@@ -195,6 +292,61 @@ class CommonToolsMixin:
         return out
 
     @classmethod
+    def _resolve_facility(cls, token):
+        """시설 인자 → GeoFacility 행(못 찾으면 None).
+
+        시설은 ID 가 둘이다 — 시설 행의 `GeoFacility.unique_id`(코디네이터
+        옵션·작물 현황·이상 점검이 쓴다)와 그 시설 도형의 `GeoShape.unique_id`
+        (= `GeoFacility.shape_uuid`, 공간 트리·장소 경로가 쓴다). 도구마다 한쪽만
+        받아, 트리에서 본 ID 로 부르면 빈 답이나 다른 답이 나왔다(2026-10-09 외부
+        점검: 육묘장3 을 get_anomalies 에 도형 ID 로 주면 센서 0개, 시설 ID 로 주면
+        2개). 시설을 받는 도구는 모두 여기를 지난다 — 어느 ID 든, 이름이든.
+        이름은 정확히 하나일 때만 받는다(여럿이면 None).
+        """
+        token = str(token or '').strip()
+        if not token:
+            return None
+        try:
+            from aot.databases.models import GeoFacility
+            row = GeoFacility.query.filter(
+                (GeoFacility.unique_id == token) |
+                (GeoFacility.shape_uuid == token)).first()
+            if row is not None:
+                return row
+            named = [f for f in GeoFacility.query.all()
+                     if (f.name or '').strip().lower() == token.lower()]
+            return named[0] if len(named) == 1 else None
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("_resolve_facility failed: %s", e)
+            return None
+
+    @classmethod
+    def _device_names(cls, ids):
+        """장치 ID → 장치 표의 실제 이름. 못 찾으면 빠진다.
+
+        입력만 보면 밸브 같은 출력이 이름 대신 ID 로 나간다(구역 센서 요약이
+        그랬다). 장치 이름이 필요한 도구는 여기를 쓴다.
+        """
+        ids = [i for i in set(ids) if i]
+        if not ids:
+            return {}
+        out = {}
+        try:
+            from aot.databases.models import (
+                Conditional, CustomController, Function, Input, Output, PID,
+                Trigger)
+            for model in (Input, Output, CustomController, Function, PID,
+                          Trigger, Conditional):
+                for uid, name in db.session.query(
+                        model.unique_id, model.name).filter(
+                        model.unique_id.in_(ids)).all():
+                    if name:
+                        out.setdefault(uid, name)
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("_device_names: %s", e)
+        return out
+
+    @classmethod
     def _resolve_core(cls, target_name):
         """이름 해석의 본체. `_resolve_note_target` 은 이 결과의 'result' 다.
 
@@ -207,7 +359,8 @@ class CommonToolsMixin:
         """
         from aot.aot_flask.geo import shape_index
         NONE = (None, None, None, None, None)
-        res = {'result': NONE, 'places': [], 'devices': [], 'place': None}
+        res = {'result': NONE, 'places': [], 'devices': [], 'place': None,
+               'plots': [], 'ignored_terms': []}
         if not target_name or not str(target_name).strip():
             return res
         _q = str(target_name).strip()
@@ -258,6 +411,20 @@ class CommonToolsMixin:
         if got:
             return got
 
+        # 1b) 표기만 다른 이름 — "온습도 7" ↔ "온습도_7"(공백·밑줄·하이픈·전각·
+        #     대소문자). 정확일치가 없을 때만, 열쇠가 같은 것이 한 곳이면 답하고
+        #     여럿이면 모호다(고르지 않는다). 철자가 다른 이름은 여기서 맞추지 않는다.
+        from aot.tools.name_key import name_key
+        _qk = name_key(_q)
+        if _qk:
+            norm = [(s, n) for (s, n, nl) in shapes if name_key(n) == _qk]
+            got = _settle(norm, cls._normalized_name_devices(_qk))
+            if got:
+                if got['result'][0]:
+                    got['matched'] = {'rule': 'normalized', 'term': _q,
+                                      'as': got['result'][2]}
+                return got
+
         # 2) 한정어가 붙은 이름.
         #
         # 2a) 지도 이름 한정어('그린 육묘장', 'New Design Map 1구역'). 지도
@@ -303,15 +470,16 @@ class CommonToolsMixin:
                                   if site_ids & set(cls._ancestor_ids(s.id, _pm))]
                     got = _settle(scoped)
                     if got:
-                        return got
+                        return cls._narrow_leftover(got, tokens, scope)
                 got = _settle(zone_hits)
                 if got:
-                    return got
-            # Only a site matched a token → attach to the site.
+                    return cls._narrow_leftover(got, tokens, scope)
+            # Only a site matched a token → attach to the site — unless the
+            # other words name something INSIDE it (`_narrow_leftover`).
             got = _settle([(s, n) for (s, n, nl) in scope
                            if s.type == 'site' and nl in token_set])
             if got:
-                return got
+                return cls._narrow_leftover(got, tokens, scope)
 
         # 3) Substring fallback.
         #
@@ -380,6 +548,127 @@ class CommonToolsMixin:
         return res
 
     @classmethod
+    def _narrow_leftover(cls, res, tokens, scope):
+        """장소 이름 뒤에 남은 낱말이 있으면 그 장소 **안에서** 좁힌다.
+
+        '3포장 콩' 은 예전에 '3포장' 만 대지로 걸리고 '콩' 은 조용히 버려져, 응답
+        어디에도 표시 없이 3포장 전체가 대상이 됐다 — 쓰기 도구가 이 이름을 받으면
+        콩 구획이 아니라 3포장 전체에 붙는다(2026-10-08 외부 MCP 점검). 이제:
+
+          · 남은 낱말이 그 장소 안의 구획(작물·품종·이름)이나 장치 이름에 하나로
+            걸리면 그것이 답이다.
+          · 여럿이면 고르지 않는다(모호 — 후보를 돌려주고 쓰기는 거절된다).
+          · 아무것에도 안 걸리면 장소로 답하되 `ignored_terms` 에 적는다.
+            '3포장 온도' 처럼 개체가 아닌 말이 붙는 정상 호출이 있어서 거절하지
+            않는다 — 위험한 것은 그 안의 무언가를 가리키는 낱말이 버려지는 것이다.
+        """
+        tid, ttype = res['result'][0], res['result'][1]
+        if not tid or ttype == 'ambiguous':
+            return res
+        names = {nl for (s, n, nl) in scope
+                 if s.type == 'site' or s.type in cls._ZONE_LIKE_TYPES}
+        leftover = [t for t in tokens if t not in names]
+        if not leftover:
+            return res
+        text = ' '.join(leftover)
+        stems = [text]
+        stripped = cls._strip_place_suffix(text)
+        if stripped and stripped not in stems:
+            stems.append(stripped)
+
+        plots, devices = [], []
+        try:
+            from aot.aot_flask.geo import device_membership as dm
+            from aot.databases.models import GeoPlot
+            idx = dm.PlaceIndex()
+            seen, inside = set(), []
+            rows = {}
+            subj = [p for p in cls._active_subject_plots() if p.get('plot_id')]
+            if subj:
+                rows = {r.unique_id: r for r in GeoPlot.query.filter(
+                    GeoPlot.unique_id.in_([p['plot_id'] for p in subj])).all()}
+            for p in subj:
+                row = rows.get(p['plot_id'])
+                if row is None or row.unique_id in seen:
+                    continue
+                if idx.plot_within(row, tid):
+                    seen.add(row.unique_id)
+                    inside.append((row, p))
+
+            def _fields(p):
+                return [str(v).strip().lower()
+                        for v in (p['subject'], p['variety'], p['name'])
+                        if v and str(v).strip()]
+
+            def _match(p):
+                """이 구획이 남은 낱말에 어떻게 걸리는가 → 'exact'|'word'|'fragment'|None.
+
+                한 등급을 고르고 나머지를 버리지 않는다(2026-10-09). 예전에는
+                정확일치가 하나라도 있으면 그것만 남겨 '3포장 콩' 이 이름이 '콩'
+                인 구획 하나로 조용히 정해졌는데, 같은 곳에 '콩 1구'~'콩 7구'·
+                '올콩'·'검정콩' 이 있었다 — 사람이 말한 '콩' 은 대개 그 전부다.
+                한 글자 조각('마' → '고구마')은 후보로만 싣고 그것 하나로는
+                정하지 않는다(아래)."""
+                fs = _fields(p)
+                best = None
+                for st in stems:
+                    if st in fs:
+                        return 'exact'
+                    if any(st in f.split() for f in fs):
+                        best = 'word'
+                    elif best is None and any(
+                            st in f or (len(st) >= 2 and len(f) >= 2 and f in st)
+                            for f in fs):
+                        best = 'fragment'
+                return best
+
+            hits = []
+            for (r, p) in inside:
+                m = _match(p)
+                if m:
+                    hits.append((r, p, m))
+            # 한 글자 조각만으로 걸린 것은 혼자서는 답이 되지 못한다 — 다른
+            # 후보와 함께일 때만 싣는다. 혼자면 낱말을 무시한 것으로 적는다.
+            weak = all(m == 'fragment' and max(len(st) for st in stems) < 2
+                       for (_r, _p, m) in hits)
+            if hits and weak and len(hits) == 1:
+                hits = []
+            order = {'exact': 0, 'word': 1, 'fragment': 2}
+            hits.sort(key=lambda h: (order[h[2]], (h[1].get('name') or h[1].get('subject') or '')))
+            plots = [(r, p.get('name') or p.get('subject'), m) for (r, p, m) in hits]
+
+            members = dm.place_members(tid) or set()
+            for model, kind in ((Input, 'input'), (Output, 'output')):
+                for row in model.query.filter(model.unique_id.in_(list(members))).all():
+                    if (row.name or '').strip().lower() in stems:
+                        devices.append((row, kind))
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("_narrow_leftover failed: %s", e)
+            res['ignored_terms'] = leftover
+            return res
+
+        n = len(plots) + len(devices)
+        place_name = res['result'][2]
+        if n == 1:
+            if plots:
+                row, label, how = plots[0]
+                res['result'] = (row.unique_id, 'plot', label, None, None)
+                # 어떻게 좁혔는지 함께 낸다 — 정확일치가 아니면 사람이 확인할 몫이다.
+                res['matched'] = {'rule': how, 'term': text, 'within': place_name}
+            else:
+                row, kind = devices[0]
+                res['result'] = (row.unique_id, kind, row.name, None, None)
+                res['matched'] = {'rule': 'exact', 'term': text, 'within': place_name}
+            res['place'] = None
+            return res
+        if n > 1:
+            res.update(result=(None, 'ambiguous', None, None, None),
+                       places=[], devices=devices, plots=plots, place=None)
+            return res
+        res['ignored_terms'] = leftover
+        return res
+
+    @classmethod
     def _resolve_explain(cls, target_name):
         """`_resolve_core` + 번역 별칭 재시도(`_with_translated_alias` 와 같은 규칙).
 
@@ -423,7 +712,7 @@ class CommonToolsMixin:
         return None
 
     @classmethod
-    def _describe_places(cls, places, devices=()):
+    def _describe_places(cls, places, devices=(), plots=()):
         """곳 목록 → 후보 dict 목록.
 
         dict: name, type, where, target_id, use_name(검증된 것만), also_inside,
@@ -483,6 +772,37 @@ class CommonToolsMixin:
             except Exception:
                 pass
             out.append(c)
+        if plots:
+            # 구획 후보(`_narrow_leftover`) — 어디에 있는지는 장소 경로로 적는다.
+            try:
+                from aot.aot_flask.geo.device_membership import PlaceIndex
+                idx = PlaceIndex()
+            except Exception:
+                idx = None
+            for entry in plots:
+                row, label = entry[0], entry[1]
+                how = entry[2] if len(entry) > 2 else None
+                path = idx.plot_path(row) if idx is not None else ''
+                where = ' > '.join(x for x in [map_names.get(row.geo_id), path] if x)
+                c = {'name': label, 'type': 'plot',
+                     'where': where or 'not inside any place',
+                     'target_id': row.unique_id, '_rep': None, '_geo': row.geo_id}
+                if how:
+                    # exact = 이름·작물·품종이 그 낱말 그대로 · word = 띄어 쓴 낱말
+                    # 하나로 ('콩 7구') · fragment = 붙은 말의 일부로 ('검정콩').
+                    c['match'] = how
+                # 그 구획 하나로 되풀리는 이름만 use_name 으로 싣는다 — 이름 그대로,
+                # 아니면 안쪽 장소부터 '장소 이름' 을 붙여 본다.
+                tries = [label] + ['%s %s' % (seg, label)
+                                   for seg in reversed(path.split(' > ')) if seg]
+                for cand in tries:
+                    try:
+                        if cand and cls._resolve_note_target(cand)[0] == row.unique_id:
+                            c['use_name'] = cand
+                            break
+                    except Exception:
+                        continue
+                out.append(c)
         return out
 
     @classmethod
@@ -524,7 +844,7 @@ class CommonToolsMixin:
         d = cls._resolve_explain(target_name)
         if d['result'][1] != 'ambiguous':
             return []
-        return cls._describe_places(d['places'], d['devices'])
+        return cls._describe_places(d['places'], d['devices'], d.get('plots', ()))
 
     @staticmethod
     def _public_places(places):
@@ -790,6 +1110,14 @@ class CommonToolsMixin:
         return None
 
     @classmethod
+    def _expand_place_ids(cls, shape):
+        """도형 → 그 안에서 일어나는 일의 target_id 들과 내역 — 정본
+        (`device_membership.place_scope_ids`)을 그대로 부른다. 화면(노트·일정
+        모달)과 같은 함수여야 AI 와 화면의 답이 갈리지 않는다."""
+        from aot.aot_flask.geo.device_membership import place_scope_ids
+        return place_scope_ids(shape)
+
+    @classmethod
     def _scope_for_target(cls, target_name):
         """이름 하나를 **그 안에서 일어나는 일 전부**의 target_id 집합으로.
 
@@ -827,7 +1155,6 @@ class CommonToolsMixin:
         except Exception:
             _places = []
         if len(_places) > 1:
-            from aot.utils.geo_hierarchy import descendant_target_ids
             ids = list(ids or [])
             for c in _places:
                 ids.append(c['target_id'])
@@ -837,7 +1164,7 @@ class CommonToolsMixin:
                 try:
                     shape = GeoShape.query.filter_by(unique_id=rec.unique_id).first()
                     if shape is not None:
-                        more, _b = descendant_target_ids(shape)
+                        more, _b = cls._expand_place_ids(shape)
                         ids.extend(more)
                 except Exception as _e:
                     logger.debug(f"_scope_for_target: 자손 확장 실패: {_e}")
@@ -871,9 +1198,8 @@ class CommonToolsMixin:
         except Exception:
             shape = None
         if shape is not None:
-            from aot.utils.geo_hierarchy import descendant_target_ids
             try:
-                more, breakdown = descendant_target_ids(shape)
+                more, breakdown = cls._expand_place_ids(shape)
                 ids.extend(more)
                 scope['expanded'] = breakdown
             except Exception as _e:
@@ -1022,6 +1348,25 @@ class CommonToolsMixin:
 
     # @manual ai/overview#tool-arguments
     @classmethod
+    def _map_is_not_a_place(cls, token, arg='zone_id'):
+        """token 이 지도 id 면 되묻는 오류 dict(그 지도의 대지 이름 포함), 아니면 None."""
+        try:
+            from aot.databases.models import GeoMap
+            from aot.aot_flask.geo.device_membership import place_label
+            m = GeoMap.query.filter_by(unique_id=token).first()
+            if m is None:
+                return None
+            sites = sorted({place_label(s) for s in GeoShape.query.filter_by(
+                geo_id=token, type='site').all()} - {''})
+        except Exception as e:                              # noqa: BLE001
+            logger.debug("_map_is_not_a_place failed: %s", e)
+            return None
+        return {"error": ("'%s' is the id of the map '%s', not of a place. Pass a "
+                          "site or zone (name or id) in %s." % (token, m.name or '', arg)),
+                "reason": "map_id_given_for_place",
+                "sites_on_this_map": sites[:30]}
+
+    @classmethod
     def _read_place(cls, token, arg='zone_id'):
         """zone/site/facility 인자 → (GeoShape, None) 또는 (None, 오류 dict).
 
@@ -1031,10 +1376,15 @@ class CommonToolsMixin:
         token = str(token or '').strip()
         if not token:
             return None, {"error": "%s is required (unique_id or name)" % arg}
-        row = GeoShape.query.filter(
-            (GeoShape.unique_id == token) | (GeoShape.geo_id == token)).first()
+        row = GeoShape.query.filter(GeoShape.unique_id == token).first()
         if row is not None:
             return row, None
+        # 지도 id 는 장소가 아니다. 예전에는 `geo_id == token` 으로 그 지도의
+        # **아무 도형 하나**(마커일 수도 있다)를 장소로 써서, 엉뚱한 범위로
+        # 조용히 답했다(2026-10-08).
+        merr = cls._map_is_not_a_place(token, arg)
+        if merr:
+            return None, merr
         try:
             detail = cls._resolve_explain(token)
         except Exception as e:                              # noqa: BLE001
@@ -1045,7 +1395,7 @@ class CommonToolsMixin:
         if ttype == 'ambiguous':
             return None, cls._read_ambiguity(
                 token, cls._public_places(
-                    cls._describe_places(detail['places'], detail['devices'])))
+                    cls._describe_places(detail['places'], detail['devices'], detail.get('plots', ()))))
         if tid and ttype == 'plot':
             # 작물 이름은 그 구획으로 풀린다 — 곳 인자에는 구획이 든 구역을 준다.
             try:
@@ -1063,7 +1413,8 @@ class CommonToolsMixin:
                 return row, None
         if tid and ttype in ('input', 'output'):
             return None, {"error": ("'%s' is a device, not a zone or site — pass a "
-                                    "place here." % token)}
+                                    "place here." % token),
+                          "reason": "device_not_place"}
         return None, {"error": "No zone or site named '%s'." % token,
                       "available_targets": cls._geoshape_name_candidates()}
 
@@ -1115,6 +1466,22 @@ class CommonToolsMixin:
                 for p in hits])
         names = sorted({str(p.get('name') or p.get('subject') or '')
                         for p in plots} - {''})
+        # 대지·구역·시설을 구획 자리에 넘긴 경우 — 왜 안 되는지와 갈 곳을 말한다
+        # (2026-10-11 외부 AI: '1포장' id 로 get_plot 을 불러 "No growing plot"
+        # 만 받고 이유를 몰랐다).
+        try:
+            place, _perr = cls._read_place(token)
+        except Exception:                                   # noqa: BLE001
+            place = None
+        if place is not None:
+            kind = place.type or 'place'
+            return None, {
+                "error": ("'%s' is a %s, not a plot — this argument takes one "
+                          "growing plot. For the plots inside it call "
+                          "list_plots(zone_id='%s')." % (
+                              cls._shape_display_name(place) or token, kind,
+                              place.unique_id)),
+                "growing_plots": names[:20]}
         return None, {"error": "No growing plot named '%s'." % token,
                       "growing_plots": names[:20]}
 

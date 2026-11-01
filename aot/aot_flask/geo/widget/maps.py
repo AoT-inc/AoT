@@ -134,6 +134,21 @@ def _int_option(widget_options, key, fallback):
 
 
 # @manual geo/map-widget#device-filter
+def _bearing_kind_of(meas, eff_unit, module_id, device_name, chan):
+    """측정값 행 하나가 풍향인지(wind/other/unknown), 방위가 아니면 ''.
+
+    판정 규칙과 한계는 ``weather_state.bearing_kind`` 주석. 방위가 아닌 대부분의 측정값은
+    입력 모듈 정의를 읽지 않고 바로 빠진다(모듈 목록은 방위값이 나올 때 한 번만 읽는다).
+    """
+    from aot.aot_flask.geo import weather_state as _ws
+    m = (getattr(meas, 'measurement', '') or '')
+    probe = _ws.bearing_kind(m, eff_unit, '', meas.name or '', device_name or '')
+    if not probe:
+        return ''
+    mod_name = _ws.module_channel_name(module_id, chan) if module_id else ''
+    return _ws.bearing_kind(m, eff_unit, mod_name, meas.name or '', device_name or '')
+
+
 def extract_device_ids(widget_options: dict) -> list:
     """Robustly extract device IDs from saved option keys.
 
@@ -299,6 +314,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
 
             # [New] Fetch Device Names for Measurements Panel
             dev_name_lookup = {}
+            dev_module_lookup = {}   # Input.unique_id -> 입력 모듈 id (방위값이 풍향인지 가르는 근거)
             # Group By Type
             ids_by_type = {'input': [], 'output': [], 'function': []}
             for dev_id, meas_list in measurements_config.items():
@@ -310,8 +326,9 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                 else: ids_by_type['function'].append(dev_id) # catch-all for func/pid/etc
 
             if ids_by_type['input']:
-                for r in Input.query.filter(Input.unique_id.in_(ids_by_type['input'])).options(load_only(Input.unique_id, Input.name)).all():
+                for r in Input.query.filter(Input.unique_id.in_(ids_by_type['input'])).options(load_only(Input.unique_id, Input.name, Input.device)).all():
                     dev_name_lookup[r.unique_id] = r.name
+                    dev_module_lookup[r.unique_id] = r.device
             if ids_by_type['output']:
                 for r in Output.query.filter(Output.unique_id.in_(ids_by_type['output'])).options(load_only(Output.unique_id, Output.name)).all():
                     dev_name_lookup[r.unique_id] = r.name
@@ -355,7 +372,7 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                             meas.measurement_type, raw_name, eff_unit,
                             meas.measurement or '')
 
-                        measurements_map[dev_id].append({
+                        entry = {
                             'id': m_id,
                             'device_unique_id': dev_id,
                             'channel': chan,
@@ -368,7 +385,14 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                             'unit': eff_unit,
                             'display_unit': disp_unit,
                             'last_value': getattr(meas, 'last_value', '')
-                        })
+                        }
+                        # 방위 항목이면 풍향인지 서버가 가른다(wind/other/unknown). 독 화살표는
+                        # 풍향일 때만 불어 가는 쪽(+180°)으로 돈다. 방위가 아니면 키를 붙이지 않는다.
+                        dir_kind = _bearing_kind_of(meas, eff_unit, dev_module_lookup.get(dev_id),
+                                                    dev_name_lookup.get(dev_id), chan)
+                        if dir_kind:
+                            entry['dir_kind'] = dir_kind
+                        measurements_map[dev_id].append(entry)
                         measurement_device_ids.append(f"{dev_id}::{chan}")
 
     # NOTE: Initial InfluxDB last-value prefetch removed to avoid N+1 sync HTTP calls
@@ -772,9 +796,10 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
     if default_zoom is None and geo_setting and geo_setting.zoom is not None:
         default_zoom = geo_setting.zoom
 
-    if default_zoom is None and misc and misc.map_zoom is not None:
-        default_zoom = misc.map_zoom
-        
+    # 공통 위치(Misc)에는 줌이 없다 — 중심(map_latitude/longitude)만 있다. 예전에는
+    # 여기서 없는 `misc.map_zoom` 을 읽어, 위젯·지도·지오 설정 어디에도 줌이 없는
+    # 화면(새 설치, 테스트 순서에 따라 지오 설정이 빈 DB)에서 지도 위젯이 통째로
+    # AttributeError 로 죽었다. 남은 기본값은 아래 상수다.
     if default_zoom is None:
         default_zoom = MAP_DEFAULT_ZOOM
 

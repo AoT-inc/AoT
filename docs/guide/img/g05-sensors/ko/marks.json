@@ -1,0 +1,881 @@
+{
+  "step-1-input-add-list.png": [
+    {
+      "name": "input-type-select",
+      "x": 11.91,
+      "y": 17.94,
+      "w": 14.32,
+      "h": 4.63
+    },
+    {
+      "name": "input-search-field",
+      "x": 12.43,
+      "y": 24.54,
+      "w": 35.42,
+      "h": 4.05
+    },
+    {
+      "name": "input-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-1-input-add-list.sq.png": [
+    {
+      "name": "input-type-select",
+      "x": 1.74,
+      "y": 18.06,
+      "w": 25.46,
+      "h": 4.63
+    },
+    {
+      "name": "input-search-field",
+      "x": 2.66,
+      "y": 24.54,
+      "w": 62.96,
+      "h": 4.05
+    },
+    {
+      "name": "input-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-3-mqtt-subscribe-option.png": [
+    {
+      "name": "mqtt-json-option",
+      "x": 11.91,
+      "y": 38.77,
+      "w": 36.46,
+      "h": 3.24
+    },
+    {
+      "name": "input-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-3-mqtt-subscribe-option.sq.png": [
+    {
+      "name": "mqtt-json-option",
+      "x": 1.74,
+      "y": 38.77,
+      "w": 64.81,
+      "h": 3.24
+    },
+    {
+      "name": "input-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-3b-mqtt-connection.png": [
+    {
+      "name": "mqtt-host-field",
+      "x": 87.5,
+      "y": 47.82,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "mqtt-port-field",
+      "x": 91.67,
+      "y": 53.12,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "mqtt-topic-field",
+      "x": 87.5,
+      "y": 58.42,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "mqtt-login-toggle",
+      "x": 94.01,
+      "y": 74.32,
+      "w": 3.91,
+      "h": 3.24
+    }
+  ],
+  "step-3b-mqtt-connection.sq.png": [
+    {
+      "name": "mqtt-host-field",
+      "x": 77.78,
+      "y": 47.82,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "mqtt-port-field",
+      "x": 85.19,
+      "y": 53.12,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "mqtt-topic-field",
+      "x": 77.78,
+      "y": 58.42,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "mqtt-login-toggle",
+      "x": 89.35,
+      "y": 74.32,
+      "w": 6.94,
+      "h": 3.24
+    }
+  ],
+  "step-3c-mqtt-channel-path.png": [
+    {
+      "name": "channel-json-path-field",
+      "x": 87.5,
+      "y": 47.8,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "measurement-unit-select",
+      "x": 88.54,
+      "y": 74.35,
+      "w": 10.42,
+      "h": 3.7
+    }
+  ],
+  "step-3c-mqtt-channel-path.sq.png": [
+    {
+      "name": "channel-json-path-field",
+      "x": 77.78,
+      "y": 47.8,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "measurement-unit-select",
+      "x": 79.63,
+      "y": 74.35,
+      "w": 18.52,
+      "h": 3.7
+    }
+  ],
+  "step-3d-max-age.png": [
+    {
+      "name": "max-age-field",
+      "x": 91.67,
+      "y": 47.79,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-3d-max-age.sq.png": [
+    {
+      "name": "max-age-field",
+      "x": 85.19,
+      "y": 47.79,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-2-api-key-add.png": [
+    {
+      "name": "api-key-menu",
+      "x": 0,
+      "y": 64.99,
+      "w": 15.62,
+      "h": 5.81
+    },
+    {
+      "name": "api-key-name-field",
+      "x": 86.52,
+      "y": 16.8,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-body-field",
+      "x": 67.25,
+      "y": 53.44,
+      "w": 29.69,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-add-submit",
+      "x": 94.34,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-2-api-key-add.sq.png": [
+    {
+      "name": "api-key-menu",
+      "x": 0,
+      "y": 64.99,
+      "w": 27.78,
+      "h": 5.81
+    },
+    {
+      "name": "api-key-name-field",
+      "x": 76.04,
+      "y": 16.8,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-body-field",
+      "x": 41.78,
+      "y": 53.44,
+      "w": 52.78,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-add-submit",
+      "x": 89.93,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-4d-api-key-add-kma.png": [
+    {
+      "name": "api-key-menu",
+      "x": 0,
+      "y": 64.99,
+      "w": 15.62,
+      "h": 5.81
+    },
+    {
+      "name": "api-key-name-field",
+      "x": 86.52,
+      "y": 16.8,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-body-field",
+      "x": 67.25,
+      "y": 53.44,
+      "w": 29.69,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-add-submit",
+      "x": 94.34,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-4d-api-key-add-kma.sq.png": [
+    {
+      "name": "api-key-menu",
+      "x": 0,
+      "y": 64.99,
+      "w": 27.78,
+      "h": 5.81
+    },
+    {
+      "name": "api-key-name-field",
+      "x": 76.04,
+      "y": 16.8,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-body-field",
+      "x": 41.78,
+      "y": 53.44,
+      "w": 52.78,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-add-submit",
+      "x": 89.93,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-2b-chirpstack-connection.png": [
+    {
+      "name": "chirpstack-server-field",
+      "x": 72.88,
+      "y": 24.81,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "chirpstack-api-token-select",
+      "x": 72.88,
+      "y": 30.49,
+      "w": 5.99,
+      "h": 3.7
+    },
+    {
+      "name": "chirpstack-mqtt-host-field",
+      "x": 72.88,
+      "y": 36.16,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "chirpstack-save-button",
+      "x": 79.39,
+      "y": 8.56,
+      "w": 3.91,
+      "h": 4.63
+    }
+  ],
+  "step-2b-chirpstack-connection.sq.png": [
+    {
+      "name": "chirpstack-server-field",
+      "x": 76.16,
+      "y": 24.81,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "chirpstack-api-token-select",
+      "x": 76.16,
+      "y": 30.49,
+      "w": 10.65,
+      "h": 3.7
+    },
+    {
+      "name": "chirpstack-mqtt-host-field",
+      "x": 76.16,
+      "y": 36.16,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "chirpstack-save-button",
+      "x": 87.73,
+      "y": 8.56,
+      "w": 6.94,
+      "h": 4.63
+    }
+  ],
+  "step-4-weather-input-location.png": [
+    {
+      "name": "weather-location-map",
+      "x": 67.19,
+      "y": 9.61,
+      "w": 31.77,
+      "h": 30.56
+    },
+    {
+      "name": "move-label-to-center-button",
+      "x": 67.9,
+      "y": 22.8,
+      "w": 2.5,
+      "h": 4.17
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-4-weather-input-location.sq.png": [
+    {
+      "name": "weather-location-map",
+      "x": 41.67,
+      "y": 9.61,
+      "w": 56.48,
+      "h": 30.56
+    },
+    {
+      "name": "move-label-to-center-button",
+      "x": 42.94,
+      "y": 22.8,
+      "w": 4.44,
+      "h": 4.17
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-4b-measurement-period.png": [
+    {
+      "name": "measurement-period-field",
+      "x": 91.67,
+      "y": 47.78,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-4b-measurement-period.sq.png": [
+    {
+      "name": "measurement-period-field",
+      "x": 85.19,
+      "y": 47.78,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-4c-acquire-now-key-button.png": [
+    {
+      "name": "acquire-now-button",
+      "x": 92.61,
+      "y": 32.54,
+      "w": 5.31,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-picker-button",
+      "x": 94.01,
+      "y": 47.77,
+      "w": 3.91,
+      "h": 3.7
+    }
+  ],
+  "step-4c-acquire-now-key-button.sq.png": [
+    {
+      "name": "acquire-now-button",
+      "x": 86.86,
+      "y": 32.54,
+      "w": 9.44,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-picker-button",
+      "x": 89.35,
+      "y": 47.77,
+      "w": 6.94,
+      "h": 3.7
+    }
+  ],
+  "step-5-wired-sensor-search.png": [
+    {
+      "name": "input-search-field",
+      "x": 12.43,
+      "y": 24.54,
+      "w": 32.32,
+      "h": 4.05
+    },
+    {
+      "name": "bme280-option",
+      "x": 11.91,
+      "y": 29.05,
+      "w": 33.36,
+      "h": 3.24
+    }
+  ],
+  "step-5-wired-sensor-search.sq.png": [
+    {
+      "name": "input-search-field",
+      "x": 2.66,
+      "y": 24.54,
+      "w": 57.45,
+      "h": 4.05
+    },
+    {
+      "name": "bme280-option",
+      "x": 1.74,
+      "y": 29.05,
+      "w": 59.3,
+      "h": 3.24
+    }
+  ],
+  "step-6-test-input-channels.png": [
+    {
+      "name": "channel-count-field",
+      "x": 91.67,
+      "y": 47.78,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-6-test-input-channels.sq.png": [
+    {
+      "name": "channel-count-field",
+      "x": 85.19,
+      "y": 47.78,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-6d-test-input-command.png": [
+    {
+      "name": "command-channel-field",
+      "x": 91.67,
+      "y": 37.18,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "command-value-field",
+      "x": 91.67,
+      "y": 42.48,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "store-measurement-run-button",
+      "x": 94.36,
+      "y": 47.79,
+      "w": 3.56,
+      "h": 3.7
+    }
+  ],
+  "step-6d-test-input-command.sq.png": [
+    {
+      "name": "command-channel-field",
+      "x": 85.19,
+      "y": 37.18,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "command-value-field",
+      "x": 85.19,
+      "y": 42.48,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "store-measurement-run-button",
+      "x": 89.96,
+      "y": 47.79,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-6b-measurement-select.png": [
+    {
+      "name": "measurement-unit-select",
+      "x": 88.54,
+      "y": 47.78,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "measurement-name-field",
+      "x": 88.54,
+      "y": 42.76,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-6b-measurement-select.sq.png": [
+    {
+      "name": "measurement-unit-select",
+      "x": 79.63,
+      "y": 47.78,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "measurement-name-field",
+      "x": 79.63,
+      "y": 42.76,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-6c-activate-button.png": [
+    {
+      "name": "input-activate-button",
+      "x": 60.77,
+      "y": 28.24,
+      "w": 23.93,
+      "h": 3.7
+    },
+    {
+      "name": "input-settings-button",
+      "x": 84.96,
+      "y": 27.31,
+      "w": 2.6,
+      "h": 5.56
+    }
+  ],
+  "step-6c-activate-button.sq.png": [
+    {
+      "name": "input-activate-button",
+      "x": 63.32,
+      "y": 28.24,
+      "w": 28.92,
+      "h": 3.7
+    },
+    {
+      "name": "input-settings-button",
+      "x": 92.71,
+      "y": 27.31,
+      "w": 4.63,
+      "h": 5.56
+    }
+  ],
+  "step-6e-live-no-data.png": [
+    {
+      "name": "live-test-input-card",
+      "x": 11.91,
+      "y": 20.23,
+      "w": 76.17,
+      "h": 9.54
+    }
+  ],
+  "step-6e-live-no-data.sq.png": [
+    {
+      "name": "live-test-input-card",
+      "x": 1.74,
+      "y": 20.23,
+      "w": 96.53,
+      "h": 9.54
+    }
+  ],
+  "check-live-measurements.png": [
+    {
+      "name": "live-test-input-card",
+      "x": 11.91,
+      "y": 20.23,
+      "w": 76.17,
+      "h": 9.54
+    },
+    {
+      "name": "live-weather-card",
+      "x": 11.91,
+      "y": 32.54,
+      "w": 76.17,
+      "h": 29.95
+    }
+  ],
+  "check-live-measurements.sq.png": [
+    {
+      "name": "live-test-input-card",
+      "x": 1.74,
+      "y": 20.23,
+      "w": 96.53,
+      "h": 9.54
+    },
+    {
+      "name": "live-weather-card",
+      "x": 1.74,
+      "y": 32.54,
+      "w": 96.53,
+      "h": 29.95
+    }
+  ],
+  "step-7-device-mode-select-list.png": [
+    {
+      "name": "device-mode-tab",
+      "x": 45.69,
+      "y": 73.59,
+      "w": 5.58,
+      "h": 3.24
+    },
+    {
+      "name": "select-list-open-button",
+      "x": 93.38,
+      "y": 87.67,
+      "w": 3.56,
+      "h": 3.7
+    }
+  ],
+  "step-7-device-mode-select-list.sq.png": [
+    {
+      "name": "select-list-open-button",
+      "x": 86.38,
+      "y": 87.67,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-7b-input-select-popup.png": [
+    {
+      "name": "input-select-popup",
+      "x": 29.49,
+      "y": 9.26,
+      "w": 39.06,
+      "h": 39.12
+    },
+    {
+      "name": "device-show-toggle",
+      "x": 61.46,
+      "y": 26.97,
+      "w": 3.91,
+      "h": 3.24
+    }
+  ],
+  "step-7b-input-select-popup.sq.png": [
+    {
+      "name": "input-select-popup",
+      "x": 13.54,
+      "y": 9.26,
+      "w": 69.44,
+      "h": 39.12
+    },
+    {
+      "name": "device-show-toggle",
+      "x": 70.37,
+      "y": 26.97,
+      "w": 6.94,
+      "h": 3.24
+    }
+  ],
+  "step-7c-facility-sensor-slot.png": [
+    {
+      "name": "component-type-select",
+      "x": 77.06,
+      "y": 17.17,
+      "w": 12.37,
+      "h": 3.7
+    },
+    {
+      "name": "component-add-button",
+      "x": 92.73,
+      "y": 17.17,
+      "w": 4.21,
+      "h": 3.7
+    },
+    {
+      "name": "sensor-channel-button",
+      "x": 75.59,
+      "y": 51.64,
+      "w": 20.83,
+      "h": 3.7
+    },
+    {
+      "name": "facility-save-button",
+      "x": 92.67,
+      "y": 94.33,
+      "w": 5.31,
+      "h": 4.63
+    }
+  ],
+  "step-7c-facility-sensor-slot.sq.png": [
+    {
+      "name": "component-type-select",
+      "x": 61.76,
+      "y": 17.17,
+      "w": 17.36,
+      "h": 3.7
+    },
+    {
+      "name": "component-add-button",
+      "x": 87.08,
+      "y": 17.17,
+      "w": 7.48,
+      "h": 3.7
+    },
+    {
+      "name": "sensor-channel-button",
+      "x": 65.39,
+      "y": 55.81,
+      "w": 28.24,
+      "h": 3.7
+    },
+    {
+      "name": "facility-save-button",
+      "x": 86.97,
+      "y": 94.33,
+      "w": 9.44,
+      "h": 4.63
+    }
+  ],
+  "step-7d-sensor-channel-select.png": [
+    {
+      "name": "sensor-channel-button",
+      "x": 75.59,
+      "y": 51.64,
+      "w": 20.83,
+      "h": 3.7
+    },
+    {
+      "name": "channel-checkbox-list",
+      "x": 75.59,
+      "y": 55.81,
+      "w": 11.72,
+      "h": 25.46
+    }
+  ],
+  "step-7d-sensor-channel-select.sq.png": [
+    {
+      "name": "sensor-channel-button",
+      "x": 65.39,
+      "y": 55.81,
+      "w": 28.24,
+      "h": 3.7
+    },
+    {
+      "name": "channel-checkbox-list",
+      "x": 65.39,
+      "y": 59.97,
+      "w": 20.83,
+      "h": 25.46
+    }
+  ]
+}

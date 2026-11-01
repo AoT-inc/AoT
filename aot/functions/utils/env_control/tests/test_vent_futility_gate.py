@@ -61,12 +61,29 @@ def _state(start=55.0, aid='v1'):
     return st
 
 
+from aot.functions.utils.env_control import coordinator as C
+
+
 class TestGateFires:
     def test_parks_when_outdoor_is_on_the_wrong_side(self):
         """실외 VPD 가 목표 반대쪽이면 무익 판정 → 닫는 방향."""
-        cmd, _st, _r = _cycle(_vent(), _state(), gate=True)
+        # 열려 있는 창은 FUTILE_DWELL_S 동안 제자리 — 짧은 흔들림이 톱니가 되지 않게.
+        cmd, st, _r = _cycle(_vent(), _state(), gate=True)
         assert cmd.reason == REASON_NO_GRADIENT
-        assert cmd.aperture < 55.0, '무익 판정인데 개도가 안 줄었다'
+        assert cmd.aperture == 55.0, '대기 중에는 제자리여야 한다'
+        # 무익이 대기 시간 넘게 이어지면 그때부터 닫는 방향.
+        cmd = None
+        for _ in range(int(C.FUTILE_DWELL_S // 600) + 1):
+            cmd, st, _r = _cycle(_vent(), st, gate=True)
+        assert cmd.reason == REASON_NO_GRADIENT
+        assert cmd.aperture < 55.0, '무익 판정이 이어지는데 개도가 안 줄었다'
+
+    def test_a_short_blip_does_not_move_an_open_vent(self):
+        """무익이 한두 사이클 스쳐 가도 창은 움직이지 않는다 — 100 → 0 % 톱니 방지."""
+        p, st = _vent(), _state()
+        cmd, st, _ = _cycle(p, st, gate=True)                  # 무익 한 사이클
+        assert cmd.aperture == 55.0
+        assert st.futile_s.get('v1', 0.0) > 0.0
 
     def test_converges_to_closed_without_chatter(self):
         """여러 사이클에 걸쳐 safe_default(닫힘)로 수렴하고 다시 열리지 않는다."""

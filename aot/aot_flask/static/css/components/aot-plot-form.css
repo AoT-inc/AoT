@@ -90,3 +90,23 @@
   font-size: var(--aot-font-size-sm);
   color: var(--aot-color-text-secondary);
 }
+/* 한국어만 어절 경계에서 접는다(가이드 §4-6 '한국어 자연 줄바꿈') — 375px 에서 "직접 지 / 정" 처럼 낱말 가운데서 끊겼다. */
+:lang(ko) .aot-pf-note {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* 지도 '트윈' 탭(aot-map-twin-tab.js) — 예전에는 마크업에 인라인으로 적혀 있던 세 곳. */
+.aot-twin-notice {
+  margin-bottom: var(--aot-space-3);
+}
+.aot-twin-range {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--aot-space-2);
+}
+.aot-twin-range .aot-modern-input {
+  width: 5em;
+}

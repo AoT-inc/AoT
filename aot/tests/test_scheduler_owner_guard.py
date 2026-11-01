@@ -33,7 +33,7 @@ from aot.aot_flask.extensions import db
 from aot.databases.models import (AuditLog, MCPConfirmation, SchedulerJobMeta,
                                   User, UserGroupMember)
 from aot.databases.models.scheduler import SchedulerAuditLog
-from aot.tests.test_mcp_record_write_guard import _PREFIX
+from aot.tests.test_mcp_record_write_guard import _AGENT, _PREFIX
 from aot.tests.test_write_scope_entry_points import _MARK, _Entry, _sched_mod
 from aot.tools import mcp_safety_gate as gate
 
@@ -221,7 +221,7 @@ class TestExecuteApproved(_Owner):
                               tool_name='activate_function',
                               params_json=gate._canonical_params(
                                   {'function_id': self.cond}),
-                              agent_id='ext-agent', status='pending')
+                              agent_id=_AGENT, status='pending')
         row.created_at = datetime.utcnow() - timedelta(seconds=created_ago)
         row.expires_at = row.created_at + timedelta(seconds=gate._CONFIRM_TTL_SEC)
         db.session.add(row)

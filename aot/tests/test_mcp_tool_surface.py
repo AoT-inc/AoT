@@ -178,7 +178,8 @@ class TestDrawerSurface(unittest.TestCase):
             if name in core:
                 listed.append({k: v for k, v in getattr(
                     N, '_schema_' + name)([]).items() if not k.startswith('_')})
-        listed += [dict(t) for t in server._EXTRA_TOOLS]
+        # read_tool 은 가벼움 묶음에만 실린다 — 서랍 표면에는 없다.
+        listed += [dict(t) for t in server._EXTRA_TOOLS if t['name'] != 'read_tool']
         tokens = _estimate_tokens(json.dumps(listed, ensure_ascii=False))
         self.assertLessEqual(
             tokens, 11_500,
@@ -194,7 +195,11 @@ class TestDrawerSurface(unittest.TestCase):
         server = _load_server()
         self.assertEqual(
             set(server._TIER_EXEMPT_TOOLS),
-            {'respond_to_confirmation', 'open_drawer', 'get_tool_detail', 'use_tool'},
+            # read_tool(2026-10-10) — 가벼움에서 목록 밖 읽기 도구를 부르는 수단.
+            # use_tool 과 같은 위임이되 읽기만 받아 읽기 전용 표시를 달 수 있다
+            # (claude.ai 가 조회마다 허락을 묻지 않게). 서랍 표면에는 싣지 않는다.
+            {'respond_to_confirmation', 'open_drawer', 'get_tool_detail', 'use_tool',
+             'read_tool'},
             '면제 목록이 바뀌었다 — 늘리려면 근거를 주석에 적을 것')
 
     def test_use_tool_exists_because_hosts_cannot_call_unlisted_tools(self):
@@ -666,7 +671,9 @@ class TestSpatialTreeDepth(unittest.TestCase):
         조용히 사라진다."""
         out = self._patched(depth=0)
         self.assertEqual(4, self._depth(out['hierarchy']))
-        self.assertNotIn('_reading', out)
+        # 잘렸다는 안내가 없어야 한다(ID 안내는 늘 실린다).
+        self.assertNotIn('children_omitted', out.get('_reading', ''))
+        self.assertNotIn('depth', out)
 
     def test_a_cut_tree_says_so(self):
         out = self._patched(depth=2)
@@ -797,6 +804,90 @@ class TestJournalNarrowsAndFolds(unittest.TestCase):
         src = self._src()
         self.assertIn('if not granularity and stored ==', src)
 
+def _dm(device, channel, measurement, unit, name='', conv=None):
+    from types import SimpleNamespace
+    return SimpleNamespace(device_id=device, channel=channel, name=name,
+                           measurement=measurement, unit=unit,
+                           conversion_id=conv, rescaled_unit=None,
+                           rescaled_measurement=None)
+
+
+class _LatestHarness:
+    """`_latest_by_measurement` 를 DB·InfluxDB 없이 부르는 장치.
+
+    모델·Influx 함수를 가짜로 바꿔 **무엇을 몇 번 물었는지**를 기록한다.
+    소스 문자열이 아니라 행동을 보므로 리팩터링에 깨지지 않는다.
+    """
+
+    class _Col:
+        def in_(self, _v):
+            return None
+
+    def __init__(self, dms):
+        self.dms = dms
+        self.asked = []
+        self.single_reads = 0
+
+    def _model(self, rows, col):
+        outer = self
+
+        class _Q:
+            def filter(self, *_a):
+                return self
+
+            def all(self):
+                return rows
+
+        return type('M', (), {col: outer._Col(), 'query': _Q()})
+
+    def __enter__(self):
+        from types import SimpleNamespace
+        from unittest import mock
+        from aot.databases import models
+        from aot.utils import device_tz, influx, system_pi
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+
+        devs = {d.device_id for d in self.dms}
+        inputs = [SimpleNamespace(unique_id=d, name=d) for d in devs]
+        convs = [SimpleNamespace(unique_id=c.conversion_id, convert_unit_to='K')
+                 for c in self.dms if c.conversion_id]
+
+        def bulk(keys, past_sec=3600):
+            self.asked.append(list(keys))
+            return ({influx.bulk_key(u, d, c, m): (1_700_000_000, 21.5)
+                     for u, d, c, m in keys}, True)
+
+        def single(*_a, **_k):
+            self.single_reads += 1
+            return []
+
+        self._patches = [
+            mock.patch.object(models, 'Input', self._model(inputs, 'unique_id')),
+            mock.patch.object(models, 'DeviceMeasurements',
+                              self._model(self.dms, 'device_id')),
+            mock.patch.object(models, 'Conversion', self._model(convs, 'unique_id')),
+            mock.patch.object(influx, 'query_last_values_bulk_status', bulk),
+            mock.patch.object(influx, 'read_influxdb_list', single),
+            mock.patch.object(device_tz, 'location_iso',
+                              lambda at, dev, cache=None: at.isoformat()),
+            mock.patch.object(S, '_module_channel_name',
+                              classmethod(lambda cls, *_a: '')),
+        ]
+        for p in self._patches:
+            p.start()
+        self._S = S
+        return self
+
+    def __exit__(self, *exc):
+        for p in reversed(self._patches):
+            p.stop()
+
+    def call(self, wanted=None):
+        ids = sorted({d.device_id for d in self.dms})
+        return self._S._latest_by_measurement(ids, wanted=wanted)
+
+
+
 class TestPlotCurrentValuesAreNarrowed(unittest.TestCase):
     """`get_plot` 은 목표 대조에 쓰이는 measurement 만 읽어야 한다.
 
@@ -813,14 +904,30 @@ class TestPlotCurrentValuesAreNarrowed(unittest.TestCase):
     def test_narrowing_is_by_measurement_not_by_channel(self):
         """같은 측정을 재는 다른 센서를 `others` 로 내보내는 계약이 있다 —
         채널로 좁히면 그 목록이 조용히 비어, 공기 온도 목표가 토양 센서 값과
-        비교되던 실측 사고로 돌아간다."""
-        src = self._src()
-        self.assertIn('wanted', src)
-        # measurement 이름으로 거른다
-        self.assertIn('str(meas).strip().lower() not in want', src)
-        # 그리고 그 판정 뒤에도 센서별 후보를 계속 모은다(others 계약)
-        self.assertIn("found.setdefault", src)
-        self.assertIn("'others'", src.replace('"', "'"))
+        비교되던 실측 사고로 돌아간다. (행동 검사: 두 센서의 온도 채널은 모두
+        읽히고 `others` 로 나오며, 목표와 무관한 rssi 는 묻지 않는다.)"""
+        with _LatestHarness([
+            _dm('s1', 1, 'temperature', 'C', name='air a'),
+            _dm('s1', 2, 'rssi', 'dBm', name='rssi'),
+            _dm('s2', 1, 'temperature', 'C', name='air b'),
+        ]) as h:
+            out = h.call(wanted=['temperature'])
+        self.assertEqual(set(out), {'temperature'})
+        self.assertEqual(len(out['temperature']['others']), 1)
+        asked = {(d, c) for _u, d, c, _m in h.asked[0]}
+        self.assertEqual(asked, {('s1', 1), ('s2', 1)})
+
+    def test_conversion_channel_is_kept_and_still_narrowed(self):
+        """F9 회귀 + 좁히기 공존: 변환이 걸린 채널(meas=None)은 원래 측정
+        종류(m.measurement)로 읽히고, Influx 에는 원래 meas(None)로 묻는다.
+        그렇다고 목표와 무관한 변환 채널까지 읽어서는 안 된다."""
+        with _LatestHarness([
+            _dm('s1', 1, 'temperature', 'C', name='night temp', conv='cv1'),
+            _dm('s1', 2, 'rssi', 'dBm', name='rssi', conv='cv2'),
+        ]) as h:
+            out = h.call(wanted=['temperature'])
+        self.assertEqual(out['temperature']['value'], 21.5)
+        self.assertEqual(h.asked[0], [('K', 's1', 1, None)])
 
     def test_conversion_is_loaded_once_not_per_channel(self):
         """채널마다 `Conversion.query` 를 돌면 채널 수만큼 DB 를 왕복한다(N+1)."""
@@ -966,13 +1073,18 @@ class TestPlotCurrentValuesAreReadInOneRoundTrip(unittest.TestCase):
         return inspect.getsource(AoTDataToolService._latest_by_measurement)
 
     def test_the_bulk_query_is_issued_once_not_per_channel(self):
-        """루프 안에서 부르면 왕복 수가 그대로다 — 이름만 바뀐 셈이 된다."""
-        src = self._src()
-        self.assertEqual(src.count('query_last_values_bulk_status('), 1)
-        # 호출이 채널 루프보다 **앞**에 있어야 한다.
-        call_at = src.index('query_last_values_bulk_status(')
-        loop_at = src.index('for dev, unit, channel, meas in picks')
-        self.assertLess(call_at, loop_at)
+        """채널이 여럿이어도 벌크 질의는 1회, 개별 조회는 0회여야 한다 —
+        루프 안에서 부르면 왕복 수가 그대로다. (행동 검사)"""
+        with _LatestHarness([
+            _dm('s1', 1, 'temperature', 'C', name='a'),
+            _dm('s1', 2, 'humidity', 'percent', name='b'),
+            _dm('s2', 1, 'temperature', 'C', name='c'),
+            _dm('s2', 2, 'co2', 'ppm', name='d'),
+        ]) as h:
+            h.call()
+        self.assertEqual(len(h.asked), 1)
+        self.assertEqual(len(h.asked[0]), 4)
+        self.assertEqual(h.single_reads, 0)
 
     def test_a_failed_query_falls_back_but_an_empty_one_does_not(self):
         """빈 결과는 두 가지 뜻이다 — 못 돌았거나, 돌았는데 그 계열에 값이
@@ -993,11 +1105,16 @@ class TestPlotCurrentValuesAreReadInOneRoundTrip(unittest.TestCase):
 
     def test_narrowing_still_shrinks_what_is_asked(self):
         """한 번에 묻더라도 `wanted` 는 살아 있어야 한다 — 좁히면 묻는
-        unit·device 집합이 함께 작아진다."""
-        src = self._src()
-        picks_at = src.index('picks.append(')
-        want_at = src.index('str(meas).strip().lower() not in want')
-        self.assertLess(want_at, picks_at)
+        unit·device 집합이 함께 작아진다. (행동 검사: wanted 유무에 따른
+        질의 대상 수 비교)"""
+        dms = [_dm('s1', 1, 'temperature', 'C', name='a'),
+               _dm('s2', 1, 'rssi', 'dBm', name='b'),
+               _dm('s2', 2, 'co2', 'ppm', name='c')]
+        with _LatestHarness(dms) as h:
+            h.call(wanted=['temperature'])
+            h.call()
+        self.assertEqual(len(h.asked[0]), 1)
+        self.assertEqual(len(h.asked[1]), 3)
 
     def test_the_timestamp_stays_an_absolute_utc_instant(self):
         """벌크는 epoch 초를 돌려준다. 그대로 `str()` 하면 `at` 이 숫자가 되고,

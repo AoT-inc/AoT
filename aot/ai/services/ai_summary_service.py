@@ -15,6 +15,23 @@ from aot.databases.models.ai_summary import AISystemSummary
 logger = logging.getLogger(__name__)
 
 
+def _vpd_readout_for(summary):
+    """사이클 요약 → 공기 VPD(air_kpa)와, 잰 엽온이 있을 때만 잎 VPD(leaf_kpa) | None."""
+    try:
+        from aot.functions.utils.env_control.leaf_vpd import readout_from_summary
+        return readout_from_summary(summary)
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _vpd_basis_of_options(controller):
+    try:
+        from aot.functions.utils.env_control.leaf_vpd import normalise_basis
+        return normalise_basis(json.loads(controller.custom_options or '{}').get('vpd_target_basis'))
+    except Exception:                                       # noqa: BLE001
+        return 'air'
+
+
 def _plot_targets_for(controller):
     """이 코디네이터가 지금 따르는 목표 → dict (제어와 같은 계산).
 
@@ -27,6 +44,8 @@ def _plot_targets_for(controller):
         return {'vpd_kpa': (t.get('vpd') or {}).get('value'),
                 'co2_ppm': (t.get('co2') or {}).get('value'),
                 'dli': t.get('dli'), 'gdd_daily': t.get('gdd_daily'),
+                # vpd_kpa 가 어느 VPD 의 목표인가 — air(기본) 또는 leaf.
+                'vpd_basis': _vpd_basis_of_options(controller),
                 'plot': t.get('plot_name'), 'stage': (t.get('stage') or {}).get('name'),
                 'source': t.get('reason')}
     except Exception:                                       # noqa: BLE001
@@ -132,6 +151,13 @@ class AISummaryService:
             _zone = GeoShape.query.filter_by(id=int(scope_id)).first()
             _member_ids = device_ids_in_shape(_zone) if _zone else set()
             query = query.filter(Input.unique_id.in_(_member_ids))
+        elif scope_type in ('zone', 'site') and scope_id:
+            # 예전에는 이 분기가 없어 zone 범위가 **시스템 전체**로 계산됐다 —
+            # MCP 스키마는 scope_type='zone' 을 허용하고 있었다(2026-10-08).
+            # 소속은 정본(마커 + 바인딩 + 하위 장소). 못 찾은 장소는 0건이다 —
+            # 시스템 전체로 물러서지 않는다(아래 facility 분기와 같은 판단).
+            from aot.aot_flask.geo.device_membership import place_members
+            query = query.filter(Input.unique_id.in_(place_members(scope_id) or set()))
         elif scope_type == 'device' and scope_id:
             query = query.filter(Input.unique_id == scope_id)
         elif scope_type == 'facility' and scope_id:
@@ -178,6 +204,7 @@ class AISummaryService:
         # distort the ratio the anomaly detector thresholds on.
         comm_capable_count = 0
         comm_offline_count = 0
+        comm_offline_list = []
         try:
             from aot.aot_client import DaemonControl
             live = DaemonControl().input_status_all()  # {} if the daemon is down
@@ -188,10 +215,15 @@ class AISummaryService:
                 comm_capable_count += 1
                 if status.get('comm_is_fault'):
                     comm_offline_count += 1
+                    comm_offline_list.append(
+                        {"device_id": d.unique_id, "name": d.name})
         except Exception as e:
             logger.warning(f"[SummaryService] Could not read device comm status: {e}")
         data['metrics']['comm_capable_devices'] = comm_capable_count
         data['metrics']['comm_offline_devices'] = comm_offline_count
+        # 숫자만으로는 어느 장치인지 알 수 없다 — 목록은 metrics 밖(요약 비교·저장
+        # 대상이 아님)에 둔다.
+        data['comm_offline_list'] = comm_offline_list
 
         # 2. Gather measurements for these devices
         device_ids_list = [d.unique_id for d in devices]
@@ -273,7 +305,12 @@ class AISummaryService:
                 state = FunctionRuntimeState.query.filter_by(function_id=controller.unique_id).first()
                 if state and state.summary_json:
                     try:
-                        entry['latest_cycle_summary'] = json.loads(state.summary_json)
+                        summ = json.loads(state.summary_json)
+                        # 공기 VPD 는 air_kpa, 잎 VPD 는 잰 엽온이 있을 때만 leaf_kpa.
+                        _vr = _vpd_readout_for(summ)
+                        if _vr and isinstance(summ, dict):
+                            summ['vpd'] = _vr
+                        entry['latest_cycle_summary'] = summ
                     except (ValueError, TypeError):
                         pass
                 out.append(entry)
@@ -370,7 +407,9 @@ class AISummaryService:
             "\n[환경 제어 근거]: 'env_control'에 이 시설의 환경제어(env_coordinator) 함수 설정과 "
             "최근 사이클의 실제 제어 근거(limiting_factor, deviation, gate 등)가 이미 포함되어 있습니다. "
             "장치 개수만으로 판단하지 말고, 이 설정값(목표 VPD/CO2/온습도 범위, 제어 모드)과 최근 판단 "
-            "근거를 실제로 인용하여 왜 그렇게 판단했는지 설명하세요. 이 데이터에 없는 수치는 지어내지 마세요."
+            "근거를 실제로 인용하여 왜 그렇게 판단했는지 설명하세요. 이 데이터에 없는 수치는 지어내지 마세요. "
+            "VPD 는 공기 VPD(vpd.air_kpa)와 잎 VPD(vpd.leaf_kpa, 잰 엽온이 있을 때만 존재)를 구분해 말하고, "
+            "leaf_kpa 가 없으면 잎 VPD 를 추정해 말하지 마세요."
         ) if current_data.get('env_control') else ""
 
         _domain_context_directive = (

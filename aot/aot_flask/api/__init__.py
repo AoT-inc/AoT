@@ -75,5 +75,6 @@ def init_api(app):
     import aot.aot_flask.api.pid
     import aot.aot_flask.api.settings
     import aot.aot_flask.api.timezone
+    import aot.aot_flask.api.twin  # 실험·비공개 — 개발 설정이 꺼져 있으면 404
 
     app.register_blueprint(api_blueprint)

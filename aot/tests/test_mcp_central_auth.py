@@ -394,6 +394,10 @@ class TestAccountLink(_Base):
         with self.app.app_context():
             link = MCPExternalAccount.query.filter_by(user_id=self.boss_id).one()
             self.assertEqual((link.issuer, link.subject, link.label), (ISSUER, 'acct-1', 'staff@example.net'))
+            # audit_log 의 detail 은 문자열 칸이라 dict 를 그대로 넘기면 줄이 사라진다.
+            from aot.databases.models import AuditLog
+            row = AuditLog.query.filter_by(action='mcp.account_link').one()
+            self.assertEqual(json.loads(row.detail), {'issuer': ISSUER})
 
         ok, agent, _role, _err = self._auth(_access_token())
         self.assertTrue(ok)
@@ -402,6 +406,9 @@ class TestAccountLink(_Base):
         client.post('/settings/mcp_auth/unlink')
         with self.app.app_context():
             self.assertEqual(MCPExternalAccount.query.count(), 0)
+            from aot.databases.models import AuditLog
+            row = AuditLog.query.filter_by(action='mcp.account_unlink').one()
+            self.assertEqual(json.loads(row.detail), {'issuers': [ISSUER]})
 
     def test_state_mismatch_or_wrong_nonce_does_not_link(self):
         from aot.databases.models import MCPExternalAccount

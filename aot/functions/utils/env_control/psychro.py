@@ -33,8 +33,12 @@ env_control/psychro.py — 습공기 계산과 분무 증발(증발냉각 액추
   (`include_unevaporated_sensible`) — 분무 1 kg 중 0.8 kg 증발 시 잠열 ≈ 1,950 kJ,
   못 날린 물 현열 ≈ 6 kJ. 물방울은 공기 온도가 아니라 습구온도 근처까지만 데워진다.
 
-⚠ 포화 수증기압은 이 저장소의 다른 곳과 **같은 Magnus 식**이다
-  (`situation.svp`). 식이 둘이면 같은 상태에서 VPD 가 두 값이 된다.
+⚠ **Magnus 상수·포화 수증기압·이슬점·VPD 의 정본은 이 모듈 하나다** (2026-10-09).
+  식이 둘이면 같은 상태에서 VPD 가 두 값이 된다. `situation`·`basis`·`effect_functions`·
+  `coordinator`·`_helpers_mixin`·`facility_sensors`·`ext_context_collector` 는 여기를
+  부른다 — 새 곳에서 `0.6108`/`17.27`/`237.3` 을 직접 쓰지 말 것.
+  (센서 입력 드라이버 `inputs/sensorutils.py` 는 August-Roche-Magnus 계수 17.62/243.12 를
+  쓰는 별개의 식이다 — 이 모듈이 소유하지 않는다.)
 """
 
 from __future__ import annotations
@@ -52,13 +56,62 @@ CP_W      = 4.186         # kJ/(kg·K) 액체 물
 L_V0      = 2501.0        # kJ/kg 0 °C 증발잠열
 
 
+# Magnus 포화 수증기압 상수 — es(T) = A·exp(B·T/(T+C)) [kPa]. 정본은 여기 하나.
+MAGNUS_A_KPA = 0.6108
+MAGNUS_B     = 17.27
+MAGNUS_C     = 237.3      # °C
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 기본 상태량
 # ─────────────────────────────────────────────────────────────────────────────
 
 def svp(T: float) -> float:
-    """포화 수증기압 [kPa] (Magnus). `situation.svp` 와 같은 식이다."""
-    return 0.6108 * math.exp(17.27 * T / (T + 237.3))
+    """포화 수증기압 [kPa] (Magnus). 저장소 전체의 정본이다."""
+    return MAGNUS_A_KPA * math.exp(MAGNUS_B * T / (T + MAGNUS_C))
+
+
+def svp_pa(T: float) -> float:
+    """포화 수증기압 [Pa] — `svp` 의 1000 배. Pa 단위로 쓰는 계산(수증기 밀도 등)용.
+
+    예전 `effect_functions` 의 Pa 사본은 계수가 610.78 이었다(여기는 610.8). 차이는
+    상대 3.3e-5 로, 하나로 합치며 이쪽으로 맞췄다.
+    """
+    return svp(T) * 1000.0
+
+
+def svp_slope(T: float) -> float:
+    """d(포화 수증기압)/dT [kPa/°C] — Magnus 식의 해석적 미분."""
+    return svp(T) * MAGNUS_B * MAGNUS_C / (T + MAGNUS_C) ** 2
+
+
+def latent_heat(T: float = 20.0) -> float:
+    """물의 증발잠열 [kJ/kg] — 0 °C 값에서 (액체 − 수증기) 비열 차만큼 선형으로 준다."""
+    return L_V0 - (CP_W - CP_V) * float(T)
+
+
+def psychrometric_constant(p: float = P_STD_KPA, T: float = 20.0) -> float:
+    """건습구 상수 γ = cp·p / (ε·λ) [kPa/°C] — 해면·20 °C 에서 약 0.067.
+
+    공기 1 °C 를 데우는 현열과 같은 에너지가 잠열로 갔을 때 오르는 수증기압이다.
+    증산이 나눠 가진 일사(잠열)를 수증기압 변화로 옮길 때 쓴다(`effect_functions`
+    차광막 효과). **정본은 여기 하나다** — 0.066·0.067 을 효과 식에 직접 쓰지 말 것.
+    """
+    return CP_DA * float(p) / (EPS_MW * latent_heat(T))
+
+
+def temperature_from_svp(es: float) -> Optional[float]:
+    """포화 수증기압 [kPa] → 온도 [°C] (`svp` 의 역함수). `es` 가 0 이하면 None.
+
+    Magnus 의 점근선(es ≥ A·e^B)을 넘으면 +inf — 물리적 상한 밖이다.
+    수증기압 `e` 를 넣으면 곧 이슬점이다(`dewpoint`).
+    """
+    if es is None or es <= 0.0:
+        return None
+    a = math.log(es / MAGNUS_A_KPA)
+    if a >= MAGNUS_B:
+        return math.inf
+    return MAGNUS_C * a / (MAGNUS_B - a)
 
 
 def pressure_from_elevation(z_m: Optional[float]) -> float:
@@ -107,15 +160,47 @@ def temperature_from_enthalpy(h: float, w: float) -> float:
 
 def dewpoint(e: float) -> Optional[float]:
     """이슬점 [°C]. 수증기압이 0 이면 None."""
-    if e is None or e <= 0.0:
-        return None
-    a = math.log(e / 0.6108)
-    return 237.3 * a / (17.27 - a)
+    return temperature_from_svp(e)
 
 
 def vpd(T: float, e: float) -> float:
     """VPD [kPa]."""
     return max(0.0, svp(T) - e)
+
+
+def vpd_from_rh(T: float, RH: float) -> float:
+    """VPD [kPa] = (1 − RH/100)·svp(T), 0 미만은 0. RH 는 자르지 않는다(% 단위 그대로).
+
+    `vapor_pressure` + `vpd` 조합과 달리 RH 를 0~100 으로 자르지 않는다 — 센서 값이
+    100 을 넘으면 0, 음수면 svp 보다 커지는 옛 계산을 그대로 둔다.
+    """
+    return max(0.0, (1 - RH / 100.0) * svp(T))
+
+
+def leaf_vpd(T_leaf: float, T_air: float, RH: float) -> float:
+    """잎–공기 VPD [kPa] = svp(T_leaf) − RH/100·svp(T_air). 0 미만은 0.
+
+    증산을 미는 것은 **잎 안(포화, 잎 온도)과 둘레 공기(실제 수증기압)** 의 차다. 공기의
+    수증기압은 공기 온도의 포화압에 공기 습도를 곱한 것이다 — 공기 RH 를 잎 포화압에 곱하면
+    (옛 `auto_vpd`·`AoT_VPD`) 잎이 공기보다 찰 때 값이 부풀고(25 °C·70 %·잎 −1.5 °C: 바른 값 0.68,
+    옛 값 0.87 kPa) 따뜻할 때 줄어든다. **잎 VPD 의 정본은 이 함수 하나다**(2026-10-09).
+
+    RH 는 % 이며 자르지 않는다(`vpd_from_rh` 와 같다). 잎이 이슬점 아래면(결로) 0.
+    """
+    return max(0.0, svp(T_leaf) - RH / 100.0 * svp(T_air))
+
+
+def air_target_from_leaf(vpd_leaf_target: float, T_air: float, T_leaf: float) -> float:
+    """잎 VPD 목표를 **지금의 잎–공기 온도차에서** 같은 뜻의 공기 VPD 목표로 옮긴다 [kPa].
+
+        공기 VPD = svp(T_air)·(1 − RH)      잎 VPD = svp(T_leaf) − svp(T_air)·RH
+        ⇒ 공기 VPD = 잎 VPD + svp(T_air) − svp(T_leaf)
+
+    잎이 공기보다 차면 공기 목표가 잎 목표보다 높고, 따뜻하면 낮다. 음수가 될 수 있다(잎이
+    충분히 따뜻하면 포화 공기에서도 잎 VPD 가 목표를 넘는다) — 자르는 것은 호출자 몫이다
+    (`leaf_vpd_basis`). 온도차는 이번 사이클의 값이다 — 온도 자체를 바꾸면 차이도 바뀐다.
+    """
+    return vpd_leaf_target + svp(T_air) - svp(T_leaf)
 
 
 def adiabatic_saturation_temperature(T: float, w: float,
@@ -223,7 +308,11 @@ def evaporate(T_in: float, RH_in: float, m_da: float, m_w: float,
 
 
 __all__ = [
-    'P_STD_KPA', 'svp', 'pressure_from_elevation', 'vapor_pressure',
+    'P_STD_KPA', 'MAGNUS_A_KPA', 'MAGNUS_B', 'MAGNUS_C',
+    'svp', 'svp_pa', 'svp_slope', 'temperature_from_svp', 'vpd_from_rh',
+    'leaf_vpd', 'air_target_from_leaf',
+    'latent_heat', 'psychrometric_constant',
+    'pressure_from_elevation', 'vapor_pressure',
     'relative_humidity', 'humidity_ratio', 'vapor_pressure_from_ratio', 'w_sat',
     'enthalpy', 'temperature_from_enthalpy', 'dewpoint', 'vpd',
     'adiabatic_saturation_temperature', 'dry_air_density', 'dry_air_mass_flow',

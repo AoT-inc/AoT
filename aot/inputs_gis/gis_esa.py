@@ -24,6 +24,7 @@ INPUT_INFORMATION = {
     'options_enabled': [],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'overlay',
+    'ambient_role': 'ground.field',
     'custom_options': [
         {
             'id': 'date_mode',

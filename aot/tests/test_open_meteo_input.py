@@ -118,6 +118,36 @@ class TestRowSelection:
             ['쓰레기', '2026-08-25T12:00'], now) == 1
 
 
+class TestCellRowSelection:
+    """③ 강수·일사는 지금이 속한 칸이 끝나는 정시 행 — Open-Meteo 가 직전 1시간 값으로 준다."""
+
+    TIMES = ['2026-10-23T03:00', '2026-10-23T04:00',
+             '2026-10-23T05:00', '2026-10-23T06:00']
+
+    def _pick(self, hh, mm):
+        now = datetime(2026, 10, 23, hh, mm, tzinfo=timezone.utc)
+        return InputModule._pick_cell_row(self.TIMES, now)
+
+    def test_04시26분은_04시에서_05시_칸이라_05시_행(self):
+        assert self._pick(4, 26) == 2
+
+    def test_정시_정각은_방금_끝난_칸의_행(self):
+        assert self._pick(4, 0) == 1
+
+    def test_순간값_행과_칸_행은_한_칸_차이(self):
+        now = datetime(2026, 10, 23, 4, 26, tzinfo=timezone.utc)
+        assert InputModule._pick_cell_row(self.TIMES, now) == \
+            InputModule._pick_row(self.TIMES, now) + 1
+
+    def test_응답_끝_너머면_None(self):
+        assert self._pick(6, 30) is None
+
+    def test_빈_입력과_망가진_문자열에_죽지_않는다(self):
+        now = datetime(2026, 10, 23, 4, 26, tzinfo=timezone.utc)
+        assert InputModule._pick_cell_row(None, now) is None
+        assert InputModule._pick_cell_row(['쓰레기', '2026-10-23T05:00'], now) == 1
+
+
 class TestRegistration:
     """시스템이 이 모듈을 실제로 집는가."""
 

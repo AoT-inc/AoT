@@ -310,6 +310,30 @@ AGENT_MANIFEST_TOKEN_CEILING = 32_200
 # API 키의 도구 묶음이 정하며, 그 상한은 test_mcp_tool_profiles 의
 # TestOperationsBudget(운영 20,000 · 운영+설정 45,000)이 잰다. 이 전량 상한은
 # 묶음을 끈 배포(AOT_MCP_TOOL_PROFILES=0)의 크기다. xfail 은 걷었다.
+#
+# 2026-10-19 기록(상한은 그대로) — screen_action 에 AI 수신함 카드(action='post',
+# title)를 흡수했다(post_to_screen 신설 안 함). 카탈로그 43,349 → 43,344(-5),
+# screen_action 1,498자/749토큰 → 1,489자/744토큰. 설명 +60자는 dashboard·center
+# 설명 삭제와 tab 설명 축약, enum 'toast'→'post' 로 상쇄했다. 순증 0 이하가 조건이다.
+#
+# 2026-10-19 기록(P1, 상한은 그대로) — screen_action 에 read 액션과 attach 인자(이미지·
+# 파일, 읽기)를 더했다. screen_action 744 → 783토큰(+39, 1,489 → 1,566자). 같은 변경에서
+# get_plot 의 row_spacing_cm·rows_per_bed 인자 설명 중복 문장을 줄여 상쇄했다.
+# 카탈로그 43,344 → 43,333(-11), 운영 21,888 → 21,877(-11). 순증 0 이하가 조건이다.
+#
+# 2026-10-20 기록(P4, 상한은 그대로) — attach 에 url(공개 https 가져오기)을 더했다. attach 설명
+# `post file {name, text|b64|ref}` → `…|url}`(+4자)를 같은 설명의 `their AI inbox` →
+# `AI inbox`(-6자)로 상쇄했다. screen_action 1,566 → 1,564자, 783 → 782토큰(-1).
+# 카탈로그 43,333 → 43,332. 상한 43,500 은 올리지 않았다.
+#
+# 2026-10-21 기록(P5, 상한은 그대로) — attach 를 배열(최대 8)로도 받는다. attach 설명
+# `post file {…}` → `post {…} or list`(+3자)를 같은 도구 설명 첫 문장의 `(+attach)`(-10자)로,
+# 도메인 보조 인자(registry_data)는 `post: file {…}` → `post: {…} or list`(+3)와 confirm_token
+# `from the first call, after the user agrees` → `…, after user OK`(-8)로 상쇄했다. 영상 링크 인식은
+# 설명에 쓰지 않는다. screen_action 1,564 → 1,557자, 782 → 778토큰(-4). 카탈로그 43,332 → 43,329.
+#
+# 2026-10-31 기록(weather.now 지난 구간, 상한은 그대로) — 명부 검사가 FROM/TO 를 읽도록 get_weather 의 time_range 에
+# 설명을 달았다. 같은 도구의 설명 문장과 zone_name·zone_id 설명을 줄여 도구 글자 수가 늘지 않는다.
 MCP_CATALOG_TOKEN_CEILING = 43_500
 
 # 등급(`AOT_AI_TOOL_TIERING=1`)을 켰을 때의 매니페스트. 2026-08-21 실측

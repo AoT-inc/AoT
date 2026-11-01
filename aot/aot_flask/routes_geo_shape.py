@@ -64,6 +64,12 @@ def _shapes_to_geojson(shape_type, default_color, map_uuid=None):
     if map_uuid:
         query = query.filter_by(geo_id=map_uuid)
     shapes = query.all()
+    # 접힌 zone 표시 — 판정은 geo_hierarchy 한 곳, 화면은 이 플래그만 따른다.
+    collapsed = {}
+    if shape_type in ('site', 'zone'):
+        from aot.utils.geo_hierarchy import collapsed_zone_site_map
+        collapsed = collapsed_zone_site_map()
+    collapsed_site_zone = {v: k for k, v in collapsed.items()}
     features = []
     for shape in shapes:
         try:
@@ -80,6 +86,10 @@ def _shapes_to_geojson(shape_type, default_color, map_uuid=None):
             props['shape_uuid'] = shape.unique_id
             props.setdefault('name', props.get('name') or '')
             props['category'] = shape_type
+            if shape.unique_id in collapsed:
+                props['collapsed'] = True
+            elif shape.unique_id in collapsed_site_zone:
+                props['collapsed_zone'] = collapsed_site_zone[shape.unique_id]
             props.setdefault('color', props.get('fill') or default_color)
             features.append({
                 'type': 'Feature',

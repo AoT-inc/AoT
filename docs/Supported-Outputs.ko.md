@@ -514,6 +514,18 @@ This output uses a 315 or 433 MHz transmitter to turn wireless power outlets on 
 - Default Value: 22558</td><td>출력이 꺼지도록 지시되었을 때 실행할 명령</td></tr><tr><td>프로토콜</td><td>Select(Options: [<strong>1</strong> | 2 | 3 | 4 | 5] (Default in <strong>bold</strong>)</td><td></td></tr><tr><td>펄스 길이</td><td>Integer
 - Default Value: 189</td><td></td></tr><tr><td>시작 상태</td><td>Select</td><td>AoT가 시작될 때 출력의 상태</td></tr><tr><td>종료 상태</td><td>Select</td><td>AoT가 종료될 때 출력의 상태</td></tr><tr><td>시작 시 작동 함수</td><td>Boolean</td><td>시작 시 작동 함수</td></tr><tr><td>강제 명령</td><td>Boolean</td><td>현재 상태와 상관없이 항상 명령을 전송</td></tr><tr><td>현재 (암페어)</td><td>Decimal</td><td>출력이 제어하는 장비의 전류 소비량</td></tr></tbody></table>
 
+### 디머: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: PWM
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+AoT Matter fabric에 있는 Matter 장치의 조명·플러그 엔드포인트 밝기를 조절합니다. 설정 > Matter에서 장치를 AoT로 공유하면 자동으로 만들어지며, 채널 하나가 엔드포인트 하나입니다. 듀티 사이클 0 %는 끄고, 그 밖의 값은 해당 레벨로 설정하면서 켭니다. 표시되는 상태는 장치가 알려 준 값입니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>노드 ID</td><td>Integer</td><td>AoT Matter fabric에서의 노드 ID입니다. Matter 장치에서 가져옵니다</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>이 채널의 이름</td></tr><tr><td>엔드포인트</td><td>Integer
+- Default Value: 1</td><td>장치에서 이 디머의 Matter 엔드포인트 번호</td></tr><tr><td>전환 시간 (초)</td><td>Decimal</td><td>장치가 새 레벨에 도달하는 데 걸리는 시간입니다. 0 = 가능한 한 빠르게</td></tr></tbody></table>
+
 ### 디지털 포텐시미터: DS3502
 
 - Manufacturer: Maxim Integrated
@@ -590,6 +602,31 @@ This Output allows remote control of another AoT PWM Output over a network using
 - Default Value: True</td><td>원격 서버의 인증서를 검증합니다. 신뢰할 수 있는 망의 자체 서명 인증서일 때만 끄세요 — 꺼 두는 동안에는 중간자가 API 키를 읽을 수 있습니다</td></tr><tr><td>요청 제한시간(초)</td><td>Integer
 - Default Value: 60</td><td>듀티사이클 명령의 HTTP 읽기 제한시간. 원격 호스트에서 가장 오래 걸리는 명령보다 길어야 합니다</td></tr><tr><td>State Query Period (Seconds)</td><td>Integer
 - Default Value: 120</td><td>How often to query the state of the output</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Remote AoT Output</td></td><td>The Remote AoT Output to control</td></tr><tr><td>시작 상태</td><td>Select</td><td>Set the state when AoT starts</td></tr><tr><td>Start Duty Cycle</td><td>Decimal</td><td>The duty cycle to set at startup, if enabled</td></tr><tr><td>종료 상태</td><td>Select</td><td>Set the state when AoT shuts down</td></tr><tr><td>Shutdown Duty Cycle</td><td>Decimal</td><td>The duty cycle to set at shutdown, if enabled</td></tr><tr><td>신호 반전</td><td>Boolean</td><td>Invert the PWM signal</td></tr><tr><td>저장된 신호 반전</td><td>Boolean</td><td>Invert the value that is saved to the measurement database</td></tr><tr><td colspan="3">Commands</td></tr><tr><td colspan="3">Set the Duty Cycle.</td></tr><tr><td>Duty Cycle</td><td>Decimal</td><td>The duty cycle to set</td></tr><tr><td>Set Duty Cycle</td><td>Button</td><td></td></tr></tbody></table>
+
+### 켜기/끄기: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: On/Off
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+AoT Matter fabric에 있는 Matter 장치의 켜기/끄기 엔드포인트(플러그, 릴레이, 조명)를 제어합니다. 설정 > Matter에서 장치를 AoT로 공유하면 자동으로 만들어지며, 채널 하나가 엔드포인트 하나입니다. 장치가 새 상태를 직접 알려 줘야 명령이 완료된 것으로 처리합니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>노드 ID</td><td>Integer</td><td>AoT Matter fabric에서의 노드 ID입니다. Matter 장치에서 가져옵니다</td></tr><tr><td>명령 제한 시간 (초)</td><td>Text
+- Default Value: 5</td><td>장치의 응답을 기다리는 동안 명령한 상태를 낙관적으로 얼마나 유지할지 정합니다 (0 = 즉시). 무선/원격 장치는 예상 응답 지연 시간을 설정하고, 유선 장치는 0으로 두어도 됩니다.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>이 채널의 이름</td></tr><tr><td>엔드포인트</td><td>Integer
+- Default Value: 1</td><td>장치에서 이 스위치의 Matter 엔드포인트 번호</td></tr><tr><td>시작 상태</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>AoT가 시작될 때 채널 상태를 설정합니다. "아무것도 하지 않음"을 선택하면 장치를 그대로 둡니다</td></tr><tr><td>종료 상태</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>AoT가 종료될 때 채널 상태를 설정합니다</td></tr><tr><td>시작 시 작동 함수</td><td>Boolean</td><td>시작 시 채널이 전환될 때 함수를 실행할지 여부</td></tr><tr><td>강제 명령</td><td>Boolean</td><td>항상 명령을 보냅니다. 현재 상태에 관계없이</td></tr><tr><td>전류 (암페어)</td><td>Decimal</td><td>출력이 제어하는 장비의 전류 소비량</td></tr></tbody></table>
+
+### 커튼 / 차광막: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: Value
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+AoT Matter fabric에 있는 Matter 커튼, 차광막, 블라인드, 전동 환기창을 지정한 위치로 움직입니다. 다른 AoT 위치 구동기와 마찬가지로 100 %는 완전히 열림(걷힘), 0 %는 완전히 닫힘(펼침)입니다. 끄기는 모터를 멈춥니다. 장치가 자신의 위치를 알려 주며, 이 값이 여기에 표시되고 통합 환경 제어에서 쓰입니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>노드 ID</td><td>Integer</td><td>AoT Matter fabric에서의 노드 ID입니다. Matter 장치에서 가져옵니다</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>이 채널의 이름</td></tr><tr><td>엔드포인트</td><td>Integer
+- Default Value: 1</td><td>장치에서 이 커튼의 Matter 엔드포인트 번호</td></tr></tbody></table>
 
 ### 원격 AoT Output: 끄기
 

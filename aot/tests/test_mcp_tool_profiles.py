@@ -479,8 +479,19 @@ class TestNoPointersOutsideTheProfile(unittest.TestCase):
 #: (입력 37·출력 106): 도구 34개 목록 17,454 + 안내문 881 = **18,335**.
 #: 그때는 네이티브 스키마가 장치 id 를 선택지로 실어 장치 수만큼 커졌다(R1).
 BASELINE_HOST_TOKENS = 18_335
-#: 운영 묶음 상한 = 기준선의 115%.
-OPERATIONS_TOKEN_CEILING = BASELINE_HOST_TOKENS * 115 // 100      # 21,085
+#: 운영 묶음 상한 = 기준선의 115% + 화면 조작 여유.
+#: 화면 조작(screen_action, 약 680)은 2026-10-10 사용자 결정으로 운영에 들어왔다 —
+#: 키마다 켜는 모듈이었을 때 운영·설정 연결의 AI 가 "화면 제어 권한이 없다" 고
+#: 답했다. 설명은 이미 짧아 줄일 몫이 100여 토큰뿐이라(인자 설명을 지우면 잘못
+#: 부른다) 상한에 그 도구만큼 더했다. 다른 도구의 증가에 이 여유를 쓰지 말 것.
+SCREEN_CONTROL_ALLOWANCE = 700
+#: 26-10-13 예보에 장소·시작 인자(김제 고정 해소, 사용자 요구) — 실측 +108.
+#: 다른 도구의 증가에 쓰지 말 것.
+#: 임시 예외 — 후속 작업에서 다른 도구 설명을 110 이상 줄여 21,785 로 되돌림.
+FORECAST_PLACE_ALLOWANCE = 110
+OPERATIONS_TOKEN_CEILING = (BASELINE_HOST_TOKENS * 115 // 100
+                            + SCREEN_CONTROL_ALLOWANCE
+                            + FORECAST_PLACE_ALLOWANCE)              # 21,895
 #: 운영 + 설정 묶음 상한(안내문 포함) — 줄이기 전 전량(서랍 끔, 136개,
 #: 62,679)의 약 72%.
 CONFIGURATION_TOKEN_CEILING = 45_000
@@ -523,8 +534,53 @@ CONFIGURATION_TOKEN_CEILING = 45_000
 #: 상세로 미루면 조용한 오답 위험이 커 보류했다.
 #: 같은 방법(TestHostSurfaceBudget._host_tokens, 입력 37·출력 106 DB 사본)으로
 #: 잰 실측값 — 운영 상한까지 271 남는다.
-OPERATIONS_MEASURED_TOKENS = 20_794
-CONFIGURATION_MEASURED_TOKENS = 42_780
+#:
+#: 26-10-08 네 번째 기록(20,903 / 42,891) — list_plots·get_crop_status 의
+#: `limit` 을 광고했다(+109). 세 번째 기록 때 숨기고 잘린 응답의 안내문이
+#: 알려 주리라 봤는데, Sonnet 이 안내문("limit 을 올려 다시")과 스키마를
+#: 대조해 "도구가 설명과 다르다" 고 보고했다. 운영 상한까지 182 남는다.
+#:
+#: 26-10-10 다섯 번째 기록(20,647 / 41,696) — 구획 단계 6종을 묶음 도구
+#: `plot_stage` 하나로 냈다(tool_registry.MCP_FACADES). 같은 날 묶기 전 값은
+#: 20,947 / 42,936 이었다(10-08 기록 이후 +44 는 다른 변경). 운영 키는 그 키가
+#: 고를 수 있는 3개(확인·일정 변경·되돌리기)만 실어 −300, 설정 전체는 −1,240.
+#: 운영 상한까지 438 남는다. 모듈 기록(MODULE_MEASURED_TOKENS)은 카탈로그로
+#: 재므로 그대로다 — 안쪽 도구는 카탈로그에 남는다.
+#:
+#: 26-10-10 여섯 번째 기록(20,211 / 41,260) — 일정 만들기 2종(add_schedule·
+#: add_schedule_batch)을 `schedule_add` 로 묶었다(−436 / −436). 고치기·취소
+#: 쌍은 묶어도 586 → 567 이라 묶지 않았다. 운영 상한까지 874 남는다.
+#:
+#: 26-10-10 일곱 번째 기록(20,211 / 40,986) — 공지 쓰기 3종을 `notice` 로 묶었다.
+#: 운영 키에는 create_notice 하나만 보여 원래 도구 그대로 나가므로 운영은 그대로,
+#: 설정 −274. 보관 쓰기 3종은 0.62 라 묶지 않았다.
+#:
+#: 26-10-10 여덟 번째 기록(20,802 / 41,577) — 운영에 get_place_overview(장소·농장
+#: 현황 한 번에)와 set_tool_profile(이 키의 묶음 바꾸기)을 더했다(+591). 가벼움
+#: 묶음(lite)은 따로 잰다(test_mcp_lite_profile, 상한 5,000). 운영 상한까지 283.
+#:
+#: 26-10-11 아홉 번째 기록(21,631 / 41,577) — 화면 보기·조작(get_screen·
+#: screen_action)이 운영에 들어왔다(사용자 결정 — SCREEN_CONTROL_ALLOWANCE 주석).
+#: 설정 묶음은 원래 화면 제어 모듈을 포함해 그대로다. 운영 상한까지 154.
+#:
+#: 26-10-13 열 번째 기록(21,886 / 설정 묶음은 같은 +108) — get_weather_forecast 에
+#: place·start 인자를 더했다(+108, FORECAST_PLACE_ALLOWANCE). 직전 기록 21,631 은
+#: 그 사이 다른 변경으로 이미 21,766 이었다(이 변경 전 main 실측). 운영 상한까지 9 (rebase 후 다른 변경 +12 포함).
+#:
+#: 26-10-19 열한 번째 기록(기록값 그대로) — screen_action 에 AI 수신함 카드(post)를
+#: 흡수하고 설명·스키마를 상쇄해 순증이 없다(운영 21,685 → 21,680, 설정 44,091 →
+#: 44,087 실측, -5/-4). 상한은 올리지 않았다.
+#:
+#: 26-10-19 열두 번째 기록(기록값 그대로) — screen_action 에 read 액션·attach 인자(AI 카드
+#: P1)를 더해 +39(744 → 783)였고, 같은 변경에서 get_plot 의 row_spacing_cm·rows_per_bed
+#: 인자 설명 중복 문장을 줄여 상쇄했다. 이 테스트 DB 실측 운영 21,888 → 21,877(-11),
+#: lite 5,086 그대로. 상한 21,895·5,100 은 올리지 않았다.
+#:
+#: 26-10-20 열세 번째 기록(기록값 그대로) — screen_action attach 에 url(AI 카드 P4)을 더해 +4자,
+#: 같은 설명의 `their` 를 지워 -6자: 783 → 782토큰(-1), 운영 21,877 → 21,876. lite 는 그대로
+#: (help 전용 extra_args). 상한 21,895·5,100 은 올리지 않았다.
+OPERATIONS_MEASURED_TOKENS = 21_886
+CONFIGURATION_MEASURED_TOKENS = 41_577
 RATCHET_SLACK = 1.03
 #: 서랍을 다시 켰을 때(AOT_MCP_TOOL_TIERING=1) 운영 키의 상시 노출(카탈로그
 #: 추정, 안내문 제외 — 선택 기능이라 예전 방법 그대로 둔다).
@@ -549,7 +605,7 @@ class TestOperationsBudget(unittest.TestCase):
         self.assertGreater(cfg, ops)
 
     def test_ceilings_follow_the_baseline(self):
-        self.assertEqual(21_085, OPERATIONS_TOKEN_CEILING)
+        self.assertEqual(21_895, OPERATIONS_TOKEN_CEILING)
         self.assertLessEqual(OPERATIONS_MEASURED_TOKENS, OPERATIONS_TOKEN_CEILING)
         self.assertLessEqual(CONFIGURATION_MEASURED_TOKENS,
                              CONFIGURATION_TOKEN_CEILING)
@@ -851,6 +907,32 @@ class TestServerInstructions(unittest.TestCase):
         self.assertIn(', '.join(MODS), cfg)
         self.assertEqual(_name_pattern(cfg_only).findall(cfg), [])
 
+    def test_switch_place_follows_the_connection_kind(self):
+        """키 연결은 키 화면, 키 없는 OAuth 연결은 설정의 AI 도구 목록."""
+        from aot.tools import mcp_auth
+        link_place = 'Settings > General > AI Tool List'
+        key_role = mcp_auth.RoleInfo(name='Editor', can_write=True, user_id='u',
+                                     key_id='k1')
+        link_role = mcp_auth.RoleInfo(name='Editor', can_write=True,
+                                      user_id='u', link_id=7)
+        by_key = self.te._server_instructions(OPS, key_role)
+        by_link = self.te._server_instructions(OPS, link_role)
+        self.assertIn(_SWITCH_PLACE, by_key)
+        self.assertNotIn(link_place, by_key)
+        self.assertIn(link_place, by_link)
+        self.assertNotIn(_SWITCH_PLACE, by_link)
+        # role 이 없으면 기존대로 키 화면.
+        self.assertIn(_SWITCH_PLACE, self.te._server_instructions(OPS))
+        tool = sorted(R.profile_tools(CFG) - R.profile_tools(OPS))[0]
+        body = self.te._profile_refusal_body(tool, OPS, link_role)
+        self.assertIn(link_place, body['message'])
+        self.assertNotIn(_SWITCH_PLACE, body['message'])
+        body = self.te._profile_refusal_body(tool, OPS, key_role)
+        self.assertIn(_SWITCH_PLACE, body['message'])
+
+    def test_plots_summary_mentions_assigning_a_program(self):
+        self.assertIn('assign to unassigned plots', R.TOOL_MODULE_SUMMARIES['plots'])
+
     def test_refusal_names_the_module(self):
         from aot.tools import mcp_auth
         editor = mcp_auth.RoleInfo(name='Editor', can_write=True, user_id='u',
@@ -979,12 +1061,22 @@ class _AppFixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # create_app() 이 고른 DB 가 곧 이 픽스처가 만지는 DB 다 — 라이브면 거부.
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         from aot.aot_flask.app import create_app
         cls.app = create_app()
         cls.app.config['WTF_CSRF_ENABLED'] = False
         cls.app.config['TESTING'] = True
         cls.ctx = cls.app.app_context()
         cls.ctx.push()
+        # 이 클래스가 시작하기 전에 있던 감사 행은 건드리지 않는다. 내부 AI 진입점
+        # (`execute_for_agent`)은 에이전트 id 를 'internal-ai' 로 남겨 이름으로는
+        # 우리 것을 알아볼 수 없으므로, 시작 시점 이후에 생긴 행도 우리 것으로 센다.
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import MCPAuditLog
+        cls._audit_floor = db.session.query(
+            db.func.max(MCPAuditLog.id)).scalar() or 0
 
     @classmethod
     def tearDownClass(cls):
@@ -1029,13 +1121,44 @@ class _AppFixture(unittest.TestCase):
         if ids:
             UserAPIKey.query.filter(UserAPIKey.user_id.in_(ids)).delete(
                 synchronize_session=False)
-        MCPAuditLog.query.delete(synchronize_session=False)
-        MCPConfirmation.query.delete(synchronize_session=False)
+        # 이 파일이 만든 행만 — 테이블 전체를 지우면 라이브 DB 의 감사 기록이
+        # 사라진다(2026-10-10). 에이전트 id 가 사용자 이름(`proftest*`)을 품거나
+        # 승인 대기 시험용 'test-agent' 인 것만 우리 것이다.
+        self._mine_audit().delete(synchronize_session=False)
+        self._mine_confirmations().delete(synchronize_session=False)
         User.query.filter(User.name.like(_PREFIX.lower() + '%')).delete(
             synchronize_session=False)
         Role.query.filter(Role.name.like(_PREFIX + '%')).delete(
             synchronize_session=False)
         db.session.commit()
+
+    @staticmethod
+    def _mine_keys():
+        """이 파일의 사용자(`proftest*`)가 가진 키 — 키를 건드리는 시험은 이것만."""
+        from aot.databases.models import User, UserAPIKey
+        ids = [u.id for u in User.query.filter(
+            User.name.like(_PREFIX.lower() + '%')).all()]
+        return UserAPIKey.query.filter(UserAPIKey.user_id.in_(ids))
+
+    @staticmethod
+    def _service_key_ids(service_id):
+        from aot.databases.models import UserAPIKey
+        return {k.id for k in UserAPIKey.query.filter(
+            UserAPIKey.user_id == service_id).all()}
+
+    @classmethod
+    def _mine_audit(cls):
+        from aot.databases.models import MCPAuditLog
+        return MCPAuditLog.query.filter(
+            MCPAuditLog.agent_id.like('%' + _PREFIX.lower() + '%')
+            | (MCPAuditLog.id > cls._audit_floor))
+
+    @staticmethod
+    def _mine_confirmations():
+        from aot.databases.models import MCPConfirmation
+        return MCPConfirmation.query.filter(
+            MCPConfirmation.agent_id.like('%' + _PREFIX.lower() + '%')
+            | (MCPConfirmation.agent_id == 'test-agent'))
 
     def _user(self, who):
         from aot.databases.models import User
@@ -1053,11 +1176,14 @@ class _AppFixture(unittest.TestCase):
         return role
 
     def _listed(self, role, tiered=False):
+        """그 키가 tools/list 로 **닿는** 도구 이름. 묶음 도구(MCP_FACADES)는
+        그 키에 실린 operation(= 안쪽 도구 이름)으로 펼친다 — 묶음 판정의 뜻은
+        "무엇을 부를 수 있는가" 이지 "목록 몇 줄인가" 가 아니다."""
         from aot.tools import mcp_auth
         from aot.tools import tool_execution as te
-        return {t['name'] for t in te._get_all_tools(
+        return te.reachable_tool_names(te._get_all_tools(
             self.app, role=role, tiered=tiered,
-            profile=mcp_auth.tool_profile_of(role))}
+            profile=mcp_auth.tool_profile_of(role)))
 
 
 class TestHostSurfaceBudget(_AppFixture):
@@ -1069,7 +1195,9 @@ class TestHostSurfaceBudget(_AppFixture):
         with mock.patch.dict(os.environ, {'AOT_MCP_TOOL_TIERING': '0'}):
             tools = te._get_all_tools(self.app, role=role, profile=profile)
             text = te._server_instructions(profile)
-        return (te._estimate_tokens(json.dumps(tools, ensure_ascii=False))
+        # annotations(읽기 전용 표시)는 모델에 실리지 않는다 — 빼고 잰다.
+        return (te._estimate_tokens(json.dumps(te.model_view(tools),
+                                               ensure_ascii=False))
                 + te._estimate_tokens(text))
 
     def test_operations_within_ceiling(self):
@@ -1127,8 +1255,8 @@ class TestAuthenticationCarriesTheProfile(_AppFixture):
     def test_unassigned_key_is_operations(self):
         from aot.databases.models import UserAPIKey
         key = self._issue('Editor', profile=CFG)
-        UserAPIKey.query.update({UserAPIKey.tool_profile: None},
-                                synchronize_session=False)
+        self._mine_keys().update({UserAPIKey.tool_profile: None},
+                                 synchronize_session=False)
         self.db.session.commit()
         self.assertEqual(self._auth(key).tool_profile, OPS)
 
@@ -1344,7 +1472,7 @@ class TestOutOfProfileCalls(_AppFixture):
     def _last_audit(self):
         from aot.databases.models import MCPAuditLog
         self.db.session.remove()
-        return MCPAuditLog.query.order_by(MCPAuditLog.id.desc()).first()
+        return self._mine_audit().order_by(MCPAuditLog.id.desc()).first()
 
     def test_refused_on_every_external_transport(self):
         from aot.databases.models import MCPConfirmation
@@ -1371,7 +1499,7 @@ class TestOutOfProfileCalls(_AppFixture):
                         self.assertEqual(row.transport, transport)
                         self.assertEqual(row.permission, permission)
             run.assert_not_called()
-        self.assertEqual(MCPConfirmation.query.count(), 0)
+        self.assertEqual(self._mine_confirmations().count(), 0)
 
     def test_retired_tool_is_refused_for_keys(self):
         role = self._auth(self._issue('Editor', 'full', CFG))
@@ -1493,11 +1621,14 @@ class TestOutOfProfileCalls(_AppFixture):
         from aot.tools import mcp_safety_gate as gate
         service = mcp_auth.ensure_service_account()
         service_id = service.id
+        had = self._service_key_ids(service_id)
         key = base64.b64encode(service.issue_api_key('internal')).decode()
         self.db.session.commit()
+        # 서비스 계정에는 라이브 키가 이미 있다 — 방금 발급한 것만 지운다.
         self.addCleanup(lambda: (
             self.db.session.rollback(),
-            UserAPIKey.query.filter(UserAPIKey.user_id == service_id).delete(
+            UserAPIKey.query.filter(UserAPIKey.user_id == service_id,
+                                    ~UserAPIKey.id.in_(had)).delete(
                 synchronize_session=False),
             self.db.session.commit()))
         run = mock.patch('aot.tools.aot_native_tool_engine.AoTNativeToolEngine'
@@ -1647,11 +1778,12 @@ class TestModuleKeys(_AppFixture):
         ops = self._listed(self._auth(self._issue('Admin', 'full', OPS)))
         every = self._listed(self._auth(self._issue(
             'Admin', 'full', R.TOOL_PROFILE_SEP.join((OPS,) + MODS))))
-        union = frozenset().union(*(R.module_tools(m) for m in MODS))
+        # 도메인 전용 안쪽 도구(DOMAIN_ONLY_TOOLS)는 옛 목록에 싣지 않는다.
+        union = frozenset().union(*(R.module_tools(m) for m in MODS)) - R.DOMAIN_ONLY_TOOLS
         self.assertEqual(cfg, every)
         self.assertEqual(cfg - ops, union & _catalog_names())
         # 'configuration' 키의 모듈 칸에 무엇이 남아 있어도 보지 않는다.
-        row = UserAPIKey.query.filter(UserAPIKey.tool_profile == CFG).first()
+        row = self._mine_keys().filter(UserAPIKey.tool_profile == CFG).first()
         row.tool_modules = 'plots'
         self.db.session.commit()
         self.assertEqual(self._listed(self._auth(cfg_key)), cfg)
@@ -1754,10 +1886,14 @@ class TestBackfill(_AppFixture):
             timestamp=datetime.utcnow() - timedelta(days=days_ago)))
         self.db.session.commit()
 
-    def _null_all(self):
-        from aot.databases.models import UserAPIKey
-        UserAPIKey.query.update({UserAPIKey.tool_profile: None},
-                                synchronize_session=False)
+    def _null_all(self, *extra_user_ids):
+        """이 테스트의 키만 비운다 — 전부 비우면 라이브 키의 묶음이 날아간다.
+        시험이 직접 발급한 서비스 계정 키는 `extra_user_ids` 로 넘긴다."""
+        from aot.databases.models import User, UserAPIKey
+        mine = [u.id for u in User.query.filter(
+            User.name.like(_PREFIX.lower() + '%')).all()] + list(extra_user_ids)
+        UserAPIKey.query.filter(UserAPIKey.user_id.in_(mine)).update(
+            {UserAPIKey.tool_profile: None}, synchronize_session=False)
         self.db.session.commit()
 
     def _profiles_of(self, who):
@@ -1802,9 +1938,16 @@ class TestBackfill(_AppFixture):
         from aot.tools import mcp_auth
         service = mcp_auth.ensure_service_account()
         service_id = service.id
+        had = self._service_key_ids(service_id)
         service.issue_api_key('internal')
         self.db.session.commit()
-        self._null_all()
+        self.addCleanup(lambda: (
+            self.db.session.rollback(),
+            UserAPIKey.query.filter(UserAPIKey.user_id == service_id,
+                                    ~UserAPIKey.id.in_(had)).delete(
+                synchronize_session=False),
+            self.db.session.commit()))
+        self._null_all(service_id)
         mcp_auth.backfill_key_tool_profiles()
         self.db.session.remove()
         values = {r.tool_profile for r in
@@ -1816,7 +1959,7 @@ class TestBackfill(_AppFixture):
         from aot.tools import mcp_auth
         self._issue('Editor', profile=CFG)             # 이미 배정된 키
         self._issue('Monitor', profile=OPS)
-        UserAPIKey.query.filter(UserAPIKey.tool_profile == OPS).update(
+        self._mine_keys().filter(UserAPIKey.tool_profile == OPS).update(
             {UserAPIKey.tool_profile: None}, synchronize_session=False)
         self.db.session.commit()
         first = mcp_auth.backfill_key_tool_profiles()

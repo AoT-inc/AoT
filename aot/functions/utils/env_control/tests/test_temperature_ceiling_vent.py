@@ -212,13 +212,78 @@ def test_켜진_온도_상한_항은_진입선보다_더_내려가야_꺼진다(
     (2026-09-24 영양 천창 — 켜짐 'PI 로 식힘' ↔ 꺼짐 '환기 무익 파킹' 을 10분마다 오갔다)."""
     import types
     from aot.functions.utils.env_control.coordinator import (
-        T_CEILING_HYST, T_CEILING_TOL, _temperature_ceiling)
+        T_CEILING_HOLD_BAND, T_CEILING_HYST, T_CEILING_TOL, _temperature_ceiling)
     sit = types.SimpleNamespace(deviation_native={'vpd': 0.5})
     ceiling = 29.0
     just_below = ceiling - T_CEILING_TOL - T_CEILING_HYST / 2      # 27.75 °C
     ctx = {'T_int': just_below, 'T_ceiling': ceiling, 'T_trend': 0.0}
     assert _temperature_ceiling(sit, dict(ctx), 600.0) is None               # 꺼져 있었으면 안 켠다
     assert _temperature_ceiling(sit, dict(ctx, _t_ceiling_active_prev=True), 600.0) is not None
-    well_below = dict(ctx, T_int=ceiling - T_CEILING_TOL - T_CEILING_HYST - 0.1,
-                      _t_ceiling_active_prev=True)
+    # 꺼지는 선 아래는 유지 구간 — 미는 힘 0 인 항(0.0, False)이 서 있다(창 제자리)
+    in_band = dict(ctx, T_int=ceiling - T_CEILING_TOL - T_CEILING_HYST - 0.1,
+                   _t_ceiling_active_prev=True)
+    assert _temperature_ceiling(sit, in_band, 600.0) == (0.0, False)
+    well_below = dict(ctx, T_int=ceiling - T_CEILING_TOL - T_CEILING_HYST
+                      - T_CEILING_HOLD_BAND - 0.1, _t_ceiling_active_prev=True)
     assert _temperature_ceiling(sit, well_below, 600.0) is None              # 충분히 내려가면 끈다
+
+
+def test_유도_상한은_목표_온도_더하기_허용오차를_넘지_않는다():
+    """목표 25 °C · 허용 1 °C — 가이드 상한이 30 °C 여도 26 °C 부터 온도 항이 선다
+    (2026-10-08 イチゴ: 27.5~30.4 °C 인데 항이 꺼져 창이 VPD 하나만 보고 닫혀 있었다)."""
+    import types
+    sit = types.SimpleNamespace(
+        deviation_native={'vpd': 0.8},
+        target={'_temperature_constraint': TargetVar(
+            value=25.0, tolerance=1.0, priority=0.5, unit='°C')})
+    base = {'T_ceiling': 30.0, 'T_trend': 0.0}
+    assert _temperature_ceiling(sit, dict(base, T_int=25.9), 600.0) is None      # 목표+허용 아래
+    r = _temperature_ceiling(sit, dict(base, T_int=27.0), 600.0)
+    assert r is not None and r[1] is False and r[0] == pytest.approx(1.0)        # 초과 1 °C, 하드 아님
+    hard = _temperature_ceiling(sit, dict(base, T_int=27.0, temp_max=26.5), 600.0)
+    assert hard is not None and hard[1] is True                                  # 하드 상한은 그대로
+
+
+def test_목표_온도를_모르면_가이드_상한을_그대로_쓴다():
+    import types
+    sit = types.SimpleNamespace(deviation_native={'vpd': 0.8}, target={})
+    assert _temperature_ceiling(
+        sit, {'T_int': 27.0, 'T_ceiling': 30.0, 'T_trend': 0.0}, 600.0) is None
+
+
+class TestTargetFollowingCeiling:
+    """2026-10-08 イチゴ 14:00 — 실내 27.9 °C(목표 25 ± 1)·VPD 2.3, 가이드 상한 30 °C.
+
+    예전에는 항이 꺼져 있어 창이 VPD 하나만 보고 파킹(80 → 0 %)됐다."""
+
+    def _sit(self):
+        from aot.functions.utils.env_control.types import TargetVar
+        tgt = dict(_TARGET)
+        tgt['_temperature_constraint'] = TargetVar(
+            value=25.0, tolerance=1.0, priority=0.5, unit='°C')
+        return _Situation(tgt, {'vpd': -0.3}, _ctx(
+            T_int=27.9, T_trend=0.0, T_ceiling=30.0, temp_max=35.0))
+
+    def test_목표보다_더우면_가이드_상한_아래여도_창이_열린다(self):
+        cmds, _ = coordinate(self._sit(), [_profile('w', 'opening')],
+                             CoordinatorState(), unique_id='test')
+        assert cmds['w'].value > 0.0
+        assert cmds['w'].var_source == 'temperature'
+
+    def test_목표_온도를_모르면_종전처럼_가이드_상한까지_닫아_둔다(self):
+        sit = self._sit()
+        sit.target.pop('_temperature_constraint')
+        cmds, _ = coordinate(sit, [_profile('w', 'opening')],
+                             CoordinatorState(), unique_id='test')
+        assert cmds['w'].value == 0.0
+
+    def test_열려_있던_창은_더위가_이어지는_동안_닫히지_않는다(self):
+        p = _profile('w', 'opening')
+        st = CoordinatorState()
+        st.prev_commands['w'] = 60.0
+        st.integral['w'] = 60.0
+        traj = []
+        for _ in range(8):
+            cmds, st = coordinate(self._sit(), [p], st, unique_id='test')
+            traj.append(cmds['w'].value)
+        assert min(traj) >= 40.0, traj

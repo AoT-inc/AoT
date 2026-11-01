@@ -217,8 +217,9 @@ class TestSameNameTargets(unittest.TestCase):
         again = self.S.get_device_detail(device_id='v111')['candidates']
         self.assertEqual([c['where'] for c in first], [c['where'] for c in again])
         mapped = [c['where'] for c in first if 'on map' in c['where']]
-        # 도형 둘(마커+폴리곤)이 같은 지도라 지도 이름은 한 번만.
-        self.assertEqual(mapped, ['zone 3-2, on map 영양'], first)
+        # 도형 둘(마커+폴리곤)이 같은 지도라 지도 이름은 한 번만. 장소는 정본
+        # 경로로 적는다(2026-10-08 — 예전 'zone 3-2' 는 device_zone_map 의 값).
+        self.assertEqual(mapped, ['in 3-2, on map 영양'], first)
 
         out = self.S.get_device_detail(device_id='twin')
         self.assertTrue(out.get('needs_disambiguation'), out)

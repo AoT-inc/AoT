@@ -204,6 +204,25 @@
       {# @manual-end #}
       {% endif %}
 
+      {# 운영 상태 — 수리 중·철거됨·점검 중은 평균·침묵 경보에서 빠진다 #}
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label" title="{{_('Repair, removed and maintenance sensors are left out of averages and silence alerts.')}}">{{_('Device Status')}}</label>
+        <div class="aot-modal-option-control">
+          {%- set _ds = each_input.device_status or 'ok' -%}
+          <select class="form-control" id="device_status" name="device_status">
+            <option value="ok" {% if _ds == 'ok' %}selected{% endif %}>{{_('Normal')}}</option>
+            <option value="repair" {% if _ds == 'repair' %}selected{% endif %}>{{_('Under repair')}}</option>
+            <option value="removed" {% if _ds == 'removed' %}selected{% endif %}>{{_('Removed')}}</option>
+            <option value="maintenance" {% if _ds == 'maintenance' %}selected{% endif %}>{{_('Under maintenance')}}</option>
+          </select>
+          <input type="text" class="form-control mt-1" id="device_status_note" name="device_status_note"
+                 maxlength="200" placeholder="{{_('Status Note')}}" value="{{ each_input.device_status_note or '' }}">
+          <input type="date" class="form-control mt-1" id="device_status_since" name="device_status_since"
+                 title="{{_('Status Since')}}"
+                 value="{{ each_input.device_status_since.strftime('%Y-%m-%d') if each_input.device_status_since else '' }}">
+        </div>
+      </div>
+
       {% include 'pages/form_options/Period.html' %}
       {% include 'pages/form_options/Pre_Output.html' %}
       {% include 'pages/form_options/Measurements_Enabled.html' %}

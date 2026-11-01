@@ -17,6 +17,7 @@ Pyro5 는 클라이언트가 포기해도 데몬 스레드를 멈추지 않으�
 몰렸고, 그 시각 밸브들의 개방 시간은 정상 기록돼 있었다. 즉 꺼졌는데 실패로
 보고된 것이다.
 """
+import contextlib
 import threading
 import time
 
@@ -33,6 +34,21 @@ def _clean_queue(monkeypatch):
     lp._reset_for_test()
     yield
     lp._reset_for_test()
+
+
+@contextlib.contextmanager
+def _worker_held():
+    """워커를 첫 항목으로 붙잡아 둔다 — 큐 깊이를 세는 시험이 워커의 꺼내 가기와 경합하지 않게."""
+    gate = threading.Event()
+    try:
+        assert lp.submit_downlink('hold', gate.wait, merge=False) is True
+        deadline = time.monotonic() + 5
+        while lp.queue_depth() and time.monotonic() < deadline:
+            time.sleep(0.005)
+        assert lp.queue_depth() == 0
+        yield
+    finally:
+        gate.set()
 
 
 def test_submitting_does_not_block_the_caller():
@@ -52,51 +68,73 @@ def test_submitting_does_not_block_the_caller():
 
 def test_the_same_target_is_replaced_not_queued_twice():
     """의도 큐다 — 밸브에게 의미 있는 것은 마지막 명령 하나뿐이다."""
-    lp.submit_downlink(('out', 0, 'ctrl'), lambda: None, label='on')
-    lp.submit_downlink(('out', 0, 'ctrl'), lambda: None, label='off')
-    lp.submit_downlink(('out', 0, 'ctrl'), lambda: None, label='on')
-    assert lp.queue_depth() == 1
+    with _worker_held():
+        lp.submit_downlink(('out', 0, 'ctrl'), lambda: None, label='on')
+        lp.submit_downlink(('out', 0, 'ctrl'), lambda: None, label='off')
+        lp.submit_downlink(('out', 0, 'ctrl'), lambda: None, label='on')
+        assert lp.queue_depth() == 1
 
 
 def test_the_replacement_keeps_its_place_in_line():
     """자리를 뒤로 미루면 먼저 온 명령이 계속 밀려 굶는다."""
-    lp.submit_downlink('a', lambda: None)
-    lp.submit_downlink('b', lambda: None)
-    lp.submit_downlink('a', lambda: None)      # 갱신
-    with lp._Q_LOCK:
-        keys = [i['key'] for i in lp._QUEUE]
-    assert keys == ['a', 'b']
+    # 워커가 첫 항목을 곧바로 꺼내 가면(슬롯이 비어 있으면 즉시 전송) 'a' 가 갱신 전에 빠져
+    # ['b', 'a'] 가 된다 — 느린 러너에서만 보이는 경합이다. 막이 항목으로 워커를 붙잡아 두고 본다.
+    started, release = threading.Event(), threading.Event()
+    lp.submit_downlink('gate', lambda: (started.set(), release.wait(5)))
+    assert started.wait(5), "워커가 막이 항목을 집지 않았다"
+    try:
+        lp.submit_downlink('a', lambda: None)
+        lp.submit_downlink('b', lambda: None)
+        lp.submit_downlink('a', lambda: None)      # 갱신
+        with lp._Q_LOCK:
+            keys = [i['key'] for i in lp._QUEUE]
+        assert keys == ['a', 'b']
+    finally:
+        release.set()
 
 
 def test_different_targets_queue_separately():
-    lp.submit_downlink(('out', 0, 'ctrl'), lambda: None)
-    lp.submit_downlink(('out', 1, 'ctrl'), lambda: None)
-    lp.submit_downlink(('other', 0, 'ctrl'), lambda: None)
-    assert lp.queue_depth() == 3
+    with _worker_held():
+        lp.submit_downlink(('out', 0, 'ctrl'), lambda: None)
+        lp.submit_downlink(('out', 1, 'ctrl'), lambda: None)
+        lp.submit_downlink(('other', 0, 'ctrl'), lambda: None)
+        assert lp.queue_depth() == 3
 
 
 def test_config_commands_are_never_merged():
     """설정 명령은 내용이 제각각이라 덮어쓰면 조용히 유실된다."""
-    lp.submit_downlink('cfg-1', lambda: None, merge=False)
-    lp.submit_downlink('cfg-2', lambda: None, merge=False)
-    lp.submit_downlink('cfg-3', lambda: None, merge=False)
-    assert lp.queue_depth() == 3
+    with _worker_held():
+        lp.submit_downlink('cfg-1', lambda: None, merge=False)
+        lp.submit_downlink('cfg-2', lambda: None, merge=False)
+        lp.submit_downlink('cfg-3', lambda: None, merge=False)
+        assert lp.queue_depth() == 3
 
 
 def test_a_full_queue_refuses_instead_of_dropping_silently():
     """조용히 버리면 호출자는 성공으로 읽는다 — 그게 이 도메인의 최악이다."""
-    for i in range(lp.MAX_QUEUE_DEPTH):
-        assert lp.submit_downlink(f'k{i}', lambda: None, merge=False) is True
-    assert lp.submit_downlink('overflow', lambda: None, merge=False) is False
+    # 워커가 큐를 비우는 중이면 부하 큰 환경에서 가득 차지 않는다 — 첫 항목으로 워커를 붙잡아 둔다.
+    gate = threading.Event()
+    try:
+        assert lp.submit_downlink('hold', gate.wait, merge=False) is True
+        deadline = time.monotonic() + 5
+        while lp.queue_depth() and time.monotonic() < deadline:
+            time.sleep(0.005)
+        assert lp.queue_depth() == 0
+        for i in range(lp.MAX_QUEUE_DEPTH):
+            assert lp.submit_downlink(f'k{i}', lambda: None, merge=False) is True
+        assert lp.submit_downlink('overflow', lambda: None, merge=False) is False
+    finally:
+        gate.set()
 
 
 def test_backlog_estimate_grows_with_the_queue():
     """확인 창을 이만큼 넓히지 않으면, 늦게 나간 명령은 창이 닫힌 뒤에 전파돼
     멀쩡한 장치가 통신 장애로 판정된다."""
-    assert lp.backlog_seconds() == 0
-    lp.submit_downlink('a', lambda: None)
-    lp.submit_downlink('b', lambda: None)
-    assert lp.backlog_seconds() == pytest.approx(2 * lp.MIN_GLOBAL_DOWNLINK_INTERVAL_S)
+    with _worker_held():
+        assert lp.backlog_seconds() == 0
+        lp.submit_downlink('a', lambda: None)
+        lp.submit_downlink('b', lambda: None)
+        assert lp.backlog_seconds() == pytest.approx(2 * lp.MIN_GLOBAL_DOWNLINK_INTERVAL_S)
 
 
 # ---- 워커: 실제로 내보내는가, 간격을 지키는가 ----

@@ -20,6 +20,12 @@
         <a class="list-group-item collapsed{% if active_settings == 'action' %} active{% endif %}" href="{{url_for('routes_settings.settings_action')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Action')}}</a>
         <a class="list-group-item collapsed{% if active_settings == 'widget' %} active{% endif %}" href="{{url_for('routes_settings.settings_widget')}}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;{{_('User')}} {{_('Widget')}}</a>
         <a class="list-group-item collapsed{% if active_settings == 'chirpstack' %} active{% endif %}" href="{{url_for('routes_settings.settings_chirpstack')}}"><i class="fas fa-broadcast-tower"></i>&nbsp;&nbsp;{{_('ChirpStack')}}</a>
+        {% if settings and settings.matter_enabled %}
+        <a class="list-group-item collapsed{% if active_settings == 'matter' %} active{% endif %}" href="{{url_for('routes_settings.settings_matter')}}"><i class="fas fa-network-wired"></i>&nbsp;&nbsp;{{_('Matter')}}</a>
+        {% endif %}
+        {% if settings and settings.twin_enabled %}
+        <a class="list-group-item collapsed{% if active_settings == 'twin' %} active{% endif %}" href="{{url_for('routes_settings.settings_twin')}}"><i class="fas fa-seedling"></i>&nbsp;&nbsp;{{_('Digital Twin')}}</a>
+        {% endif %}
         <a class="list-group-item collapsed{% if active_settings == 'measurement' %} active{% endif %}" href="{{url_for('routes_settings.settings_measurement')}}"><i class="fas fa-weight"></i>&nbsp;&nbsp;{{_('Measurement')}}</a>
         <a class="list-group-item collapsed{% if active_settings == 'api_key' %} active{% endif %}" href="{{url_for('routes_settings.settings_api_key')}}"><i class="fas fa-key"></i>&nbsp;&nbsp;{{_('API Key Management')}}</a>
         <a class="list-group-item collapsed{% if active_settings == 'translations' %} active{% endif %}" href="{{url_for('routes_settings.settings_translations')}}"><i class="fas fa-language"></i>&nbsp;&nbsp;{{_('Name Translations')}}</a>

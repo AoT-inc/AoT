@@ -111,6 +111,37 @@
       </div>
     </div>
 
+  {%- if journal_info.supported %}
+    <div class="aot-code-block-group">
+      <div class="aot-code-block-label">
+        {{_('System Log Size Limit')}} (systemd journal)
+      </div>
+      <div class="aot-code-block">
+        {{_('Current usage')}}:
+        <span class="aot-kv-value">{% if journal_info.usage_mb is not none %}{{ '%.0f' % journal_info.usage_mb }} MB{% else %}-{% endif %}</span>
+        <br>{{_('Size limit')}}:
+        {%- if journal_info.limit_mb is not none %} <span class="aot-kv-value">{{ '%.0f' % journal_info.limit_mb }} MB</span>
+        {%- else %} <span class="aot-kv-value">{{_('Not set (system default)')}}</span>{% endif %}
+        <br><span class="aot-kv-note">{{_('The system log is kept in /var/log/journal. When it reaches the limit, the oldest entries are removed.')}}</span>
+        {% if journal_info.managed_elsewhere %}
+        <br><span class="aot-kv-note">{{_('The limit is set in %(path)s and cannot be changed here.', path=journal_info.limit_source)}}</span>
+        {% elif journal_info.can_edit %}
+        <form method="post" action="/info" class="mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="save_journal_limit">
+          <label for="journal_limit_mb">{{_('Size limit')}} (MB, {{journal_info.min_mb}}~{{journal_info.max_mb}}):</label>
+          <input id="journal_limit_mb" name="journal_limit_mb" type="number" required
+                 min="{{journal_info.min_mb}}" max="{{journal_info.max_mb}}" class="form-control aot-modern-input aot-ctrl-w-inline"
+                 value="{{ '%.0f' % journal_info.limit_mb if journal_info.limit_mb is not none else journal_info.default_mb }}">
+          <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{_('Save')}}</button>
+        </form>
+        <span class="aot-kv-note">{{_('Applied immediately; entries over the new limit are removed now.')}}
+          {{_('Recommended')}}: {{journal_info.default_mb}} MB</span>
+        {% endif %}
+      </div>
+    </div>
+  {%- endif %}
+
   {%- if uptime %}
     <div class="aot-code-block-group">
       <div class="aot-code-block-label">

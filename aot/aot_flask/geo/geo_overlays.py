@@ -269,10 +269,20 @@ class GeoOverlayManager:
 
                 features.append(feat)
                 
-            return {
+            out = {
                 'type': 'FeatureCollection',
                 'features': features
-            }, None
+            }
+            # 접힌 zone(site 와 같은 땅의 유일한 기본 이름 zone)의 uuid 목록.
+            # **feature.properties 에 넣지 않는다** — 설계 도구가 읽은 properties
+            # 를 그대로 다시 저장해, 파생값이 도형 JSON 에 박힌다. 판정은
+            # geo_hierarchy 한 곳이고 화면은 이 목록만 따른다.
+            if target_type in (None, 'site', 'zone'):
+                from aot.utils.geo_hierarchy import collapsed_zone_site_map
+                _map_shapes = {s.unique_id for s in shapes}
+                out['collapsed_zones'] = [
+                    z for z in collapsed_zone_site_map() if z in _map_shapes]
+            return out, None
         except Exception as e:
             current_app.logger.error(f"Overlay GET Error: {e}")
             return None, str(e)
@@ -357,6 +367,46 @@ class GeoOverlayManager:
                 '[GeoOverlays] 바인딩 기록 실패(type=%s, %d건) — %s',
                 target_type, len(wanted), exc)
 
+    @staticmethod
+    def _keep_unlisted_coverage(map_uuid, new_features, deletes):
+        """설비 전체 저장에서 스프링클러 커버리지가 통째로 빠졌을 때 기존 것을 되살린다.
+
+        payload 에 `sprinkler_coverage` 가 하나도 없고 기존 묶음에는 있으면, 명시 삭제(`deletes`,
+        node_id 또는 db_id)에 없는 기존 커버리지를 payload 에 되돌려 붙인다.
+        반환: (새 features, 되살린 개수). 커버리지가 한 개라도 payload 에 있으면 손대지 않는다.
+        """
+        def _is_cov(f):
+            return ((f or {}).get('properties') or {}).get('sub_type') == 'sprinkler_coverage'
+
+        if any(_is_cov(f) for f in new_features):
+            return new_features, 0
+        explicit = {str(t) for t in (deletes or [])}
+        kept = []
+        rows = GeoShape.query.filter_by(geo_id=map_uuid).filter(
+            GeoShape.type.in_(['equipment', 'equipment_collection'])).all()
+        for row in rows:
+            rf = row.feature
+            if isinstance(rf, str):
+                try:
+                    rf = json.loads(rf)
+                except Exception:
+                    continue
+            feats = (rf or {}).get('features') if (rf or {}).get('type') == 'FeatureCollection' else [rf]
+            for f in feats or []:
+                if not _is_cov(f):
+                    continue
+                props = f.get('properties') or {}
+                ids = {str(props.get('node_id')), str(props.get('db_id'))} - {'None'}
+                if ids & explicit:
+                    continue
+                kept.append(f)
+        if not kept:
+            return new_features, 0
+        current_app.logger.warning(
+            f"[GeoOverlay] Equipment full-save carried no sprinkler_coverage; kept "
+            f"{len(kept)} existing (map={map_uuid}). Deletions must be explicit.")
+        return list(new_features) + kept, len(kept)
+
     # @manual geo/design-tool#manual-save, geo/api-reference#details-post-apigeooverlays
     @staticmethod
     def save_overlays(data):
@@ -429,6 +479,14 @@ class GeoOverlayManager:
                                 'stats': {'skipped': 'empty_wipe_blocked',
                                           'would_delete': existing_eq}}, None
 
+                # [Safety] 스프링클러 커버리지가 통째로 빠진 전체 저장은 클라이언트 상태 이상이다.
+                # 이 경로는 '빠진 것 = 삭제' 라 payload 에 없으면 기존 묶음의 커버리지가 조용히 지워진다
+                # (2026-11-01: 모드 전환이 에디터 초기화보다 먼저 일어나 레이어가 고아가 된 채 전체 저장 →
+                # 김제 지도 커버리지 222개 소실). 삭제는 명시(`deletes`)로만 인정하고,
+                # payload 에 커버리지가 하나도 없는데 기존에 있고 명시 삭제도 아닌 것은 되살려 둔다.
+                new_features, kept_cov = GeoOverlayManager._keep_unlisted_coverage(
+                    map_uuid, new_features, data.get('deletes'))
+
                 # 1. Prepare Feature Collection payload
                 bundle = {
                     'type': 'FeatureCollection',
@@ -452,10 +510,13 @@ class GeoOverlayManager:
                 # 과하게 불러도 손해는 재계산 비용뿐이다.
                 _drop_containment_cache()
                 
+                _stats = {'deleted': 'all_legacy', 'inserted': 1, 'mode': 'bulk_bundle'}
+                if kept_cov:
+                    _stats['kept_coverage'] = kept_cov
                 return {
                     'ok': True,
                     'count': len(new_features),
-                    'stats': {'deleted': 'all_legacy', 'inserted': 1, 'mode': 'bulk_bundle'}
+                    'stats': _stats
                 }, None
                 
             except Exception as e:

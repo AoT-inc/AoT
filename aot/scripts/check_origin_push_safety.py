@@ -96,6 +96,8 @@ _ALLOWED_EXACT = {
 
 # 목록과 무관하게 공개 트리에 있으면 안 되는 경로(비공개 저장소 전용 파일).
 PRIVATE_ONLY_PATHS = ('CLAUDE.md',)
+# 이 접두사 아래의 모든 경로(나스 Gitea 러너용 CI — 공개 저장소에는 러너가 없다).
+PRIVATE_ONLY_PREFIXES = ('.gitea/',)
 
 
 def _tree_paths(sha):
@@ -126,7 +128,8 @@ def check_tree_contents(sha):
     offenders += [p for p in paths
                   if p.startswith(JS_ROOT) and p.endswith('.map')
                   and not p.startswith(JS_ROOT + 'vendor/')]
-    offenders += [p for p in paths if p in PRIVATE_ONLY_PATHS]
+    offenders += [p for p in paths if p in PRIVATE_ONLY_PATHS
+                  or p.startswith(PRIVATE_ONLY_PREFIXES)]
 
     # 보조: 목록에 적힌 것이 남아 있으면 그것도 잡는다(빌드 도구·테스트 등 .js 가 아닌 것들).
     try:

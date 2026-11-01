@@ -32,11 +32,11 @@
 무의미해진다.** 증상은 "분무를 켰더니 다른 제어가 이상해졌다" 라, 원인에
 닿기 어렵다.
 """
-import math
 
 import pytest
 
 from aot.functions.utils.env_control import effect_functions as ef
+from aot.functions.utils.env_control import psychro
 from aot.functions.utils.env_control.types import CmdConstraints
 
 VOL_M3 = 5463.0          # イチゴ 실측
@@ -57,7 +57,8 @@ def _env(rh=89.0, t=23.6, cycle=CYCLE_S):
 
 def _absorbable(t, rh, vol=VOL_M3):
     """테스트가 독립적으로 다시 계산한 흡수 가능 총량 [L]."""
-    svp = 610.78 * math.exp(17.27 * t / (t + 237.3))
+    # 포화 수증기압 [Pa] 은 psychro 정본(2026-10-09: 사본의 610.78 → 610.8, 상대 3.3e-5)
+    svp = psychro.svp_pa(t)
     rho_sat = svp * 0.018 / (8.314 * (t + 273.15)) * 1000.0
     return rho_sat * (1.0 - rh / 100.0) * vol / 1000.0
 

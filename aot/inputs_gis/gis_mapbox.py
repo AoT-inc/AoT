@@ -7,11 +7,11 @@ CHANNELS = {
     0: {'name': 'Streets', 'options': {'layer': 'mapbox/streets-v11'}},
     1: {'name': 'Outdoors', 'options': {'layer': 'mapbox/outdoors-v11'}},
     2: {'name': 'Light', 'options': {'layer': 'mapbox/light-v10'}},
-    3: {'name': 'Dark', 'options': {'layer': 'mapbox/dark-v10'}},
+    3: {'name': 'Dark', 'options': {'layer': 'mapbox/dark-v10', 'ambient_theme': 'dark'}},
     4: {'name': 'Satellite', 'options': {'layer': 'mapbox/satellite-v9'}},
     5: {'name': 'Satellite Streets', 'options': {'layer': 'mapbox/satellite-streets-v11'}},
     6: {'name': 'Navigation Day', 'options': {'layer': 'mapbox/navigation-day-v1'}},
-    7: {'name': 'Navigation Night', 'options': {'layer': 'mapbox/navigation-night-v1'}},
+    7: {'name': 'Navigation Night', 'options': {'layer': 'mapbox/navigation-night-v1', 'ambient_theme': 'dark'}},
 }
 
 # @manual geo/layers#international-general, geo/layers#mapbox-maptiler
@@ -40,6 +40,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'base',
+    'ambient_role': 'base',
     'custom_options': [
         {
             'id': 'api_key',

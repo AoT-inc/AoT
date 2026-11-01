@@ -370,14 +370,14 @@ def api_geo_site_contents(site_uuid):
     자기 설비를 그대로 센다.
     """
     from aot.databases.models import GeoShape as _GS
-    from aot.aot_flask.geo.device_membership import device_ids_in_area
+    from aot.aot_flask.geo.device_membership import screen_members
 
     site = _GS.query.filter_by(unique_id=site_uuid).first()
     if not site:
         return jsonify({'ok': False, 'error': 'site not found'}), 404
 
-    inv = _build_area_contents(
-        device_ids_in_area(site_uuid, include_facility_fittings=False) or set())
+    # 설비를 빼는 규칙은 `screen_members` 한 곳에 있다(지도 제어 제안과 공유).
+    inv = _build_area_contents(screen_members(site) or set())
 
     # "켜면 무엇이 함께 젖는가" — 구역 모달과 같은 경고를 단다. 한쪽에만 있으면
     # "필지에서 켜면 안전하다" 는 잘못된 대비가 생긴다.
@@ -463,6 +463,21 @@ def api_geo_site_weather(site_uuid):
     if shape is None:
         return jsonify({'ok': False, 'error': 'site not found'}), 404
 
+    from aot.aot_flask.geo import forecast_series
+
+    def _forecast_block():
+        # 대지의 예보 출처 — 디지털트윈·지도 날씨·AI 가 함께 읽는 한 저장소(트윈 탭 예보 칸도 같은 행)
+        out = {'selected': forecast_series.designated_ids(site_uuid),
+               'candidates': forecast_series.forecast_candidates(site_uuid)}
+        if out['selected']:
+            # 현장에 맞춰 고친 예보 — 지정한 예보가 있는 대지만. 대지마다 자동/켬/끔 하나(새 설정 칸 없음).
+            try:
+                from aot.utils.fc_cal import view as cal_view
+                out['calibration'] = cal_view.site_view(site_uuid)
+            except Exception:
+                current_app.logger.exception('forecast calibration view failed')
+        return out
+
     if request.method == 'GET':
         selected, source = device_membership.weather_device_ids(site_uuid)
         return jsonify({
@@ -470,6 +485,7 @@ def api_geo_site_weather(site_uuid):
             'source': source,
             'selected': selected,
             'candidates': device_membership.weather_candidates(site_uuid),
+            'forecast': _forecast_block(),
             'can_edit': utils_general.user_has_permission(
                 'edit_settings', silent=True),
         })
@@ -486,16 +502,31 @@ def api_geo_site_weather(site_uuid):
     # ⚠ 키가 **아예 없는 요청**과 "빈 목록으로 해제" 를 가른다. 없는 것을
     #   해제로 읽으면 화면의 다른 실수(조회 실패로 목록을 못 채운 상태에서
     #   저장) 하나가 지정을 통째로 지운다 — 스코프 부여 화면이 같은 함정을
-    #   겪었고, 거기서 배운 규칙이다.
-    if 'device_ids' not in data:
-        return jsonify({'ok': False, 'error': 'device_ids is required'}), 400
-    ids = data.get('device_ids')
-    if not isinstance(ids, list):
-        return jsonify({'ok': False, 'error': 'device_ids must be a list'}), 400
+    #   겪었고, 거기서 배운 규칙이다. 예보 출처(`forecast_ids`)도 같은 규칙.
+    if not any(k in data for k in ('device_ids', 'forecast_ids', 'cal_mode', 'cal_ack')):
+        return jsonify({'ok': False, 'error': 'device_ids, forecast_ids or cal_mode is required'}), 400
+    for key in ('device_ids', 'forecast_ids'):
+        if key in data and not isinstance(data.get(key), list):
+            return jsonify({'ok': False, 'error': '%s must be a list' % key}), 400
+    if 'cal_mode' in data and data.get('cal_mode') not in ('auto', 'on', 'off'):
+        return jsonify({'ok': False, 'error': 'cal_mode must be auto, on or off'}), 400
 
+    created = ended = 0
     try:
-        created, ended = device_binding.set_site_weather(
-            site_uuid, ids, commit=True)
+        if 'device_ids' in data:
+            created, ended = device_binding.set_site_weather(
+                site_uuid, data['device_ids'], commit=False)
+        if 'forecast_ids' in data:
+            c2, e2 = device_binding.set_site_forecast(
+                site_uuid, data['forecast_ids'], commit=False)
+            created, ended = created + c2, ended + e2
+        db.session.commit()
+        if 'cal_mode' in data or data.get('cal_ack'):
+            from aot.utils.fc_cal import store as cal_store, view as cal_view
+            if 'cal_mode' in data:
+                cal_store.set_site_mode(site_uuid, data['cal_mode'])
+            if data.get('cal_ack'):
+                cal_view.ack_events(site_uuid)
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception('api_geo_site_weather save failed')
@@ -503,7 +534,8 @@ def api_geo_site_weather(site_uuid):
 
     selected, source = device_membership.weather_device_ids(site_uuid)
     return jsonify({'ok': True, 'created': created, 'ended': ended,
-                    'source': source, 'selected': selected})
+                    'source': source, 'selected': selected,
+                    'forecast': _forecast_block()})
 
 
 # @manual geo/map-widget#control-right-from-the-popup, geo/api-reference#device-location-lists-detail
@@ -554,8 +586,9 @@ def api_geo_device_detail(device_uuid):
         output_type = getattr(row, 'output_type', None)
         try:
             from aot.outputs.paired_actuator_common import (
-                PAIRED_ACTUATOR_OUTPUT_TYPES)
-            if output_type in PAIRED_ACTUATOR_OUTPUT_TYPES:
+                PAIRED_ACTUATOR_OUTPUT_TYPES, is_self_positioning_output)
+            if (output_type in PAIRED_ACTUATOR_OUTPUT_TYPES
+                    or is_self_positioning_output(output_type)):
                 control_kind = 'value_3way'
         except Exception:
             current_app.logger.debug('paired actuator type lookup failed')

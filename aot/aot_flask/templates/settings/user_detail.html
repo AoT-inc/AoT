@@ -156,10 +156,14 @@
               data-profile-select="{{each_key.unique_id}}"
               role="group" aria-label="{{_('AI Tools')}}"
               title="{{_('Which AI tools an app connected with this key can see.')}}">
+              {% set key_lite = each_key.effective_tool_profile == 'lite' %}
+              <label class="mb-0 mr-3" title="{{_('Only a few tools are listed so every message to the AI stays small. Recommended for free AI plans. Day-to-day work stays available through the tool index.')}}"><input type="checkbox" data-profile-lite
+                {% if key_lite %}checked{% endif %}> {{_('Lite (small tool list)')}}</label>
               <label class="mb-0 mr-3"><input type="checkbox" checked disabled> {{_('Operations (always)')}}</label>
               {% for value, label in form_mod_user.api_key_tool_modules.choices %}
               <label class="mb-0 mr-3"><input type="checkbox" data-profile-module="{{value}}"
-                {% if value in key_modules %}checked{% endif %}> {{label}}</label>
+                {% if value in key_modules %}checked{% endif %}
+                {% if key_lite %}disabled{% endif %}> {{label}}</label>
               {% endfor %}
               <button type="submit" name="user_api_key_profile_save" value="1"
                 class="btn aot-pill-btn aot-pill-btn-secondary"
@@ -199,6 +203,7 @@
           title="{{_('Operations (always on): everyday tools for reading, control, schedules, notes and plot stages. Each setup module you tick adds its setup tools and makes the tool list sent to the AI in every conversation longer, so tick only what this key is for.')}}">{{_('AI Tools')}}</label>
         <div class="aot-modal-option-control d-flex flex-wrap align-items-center">
           {{form_mod_user.api_key_tool_profile()}}
+          <label class="mb-0 mr-3" title="{{_('Only a few tools are listed so every message to the AI stays small. Recommended for free AI plans. Day-to-day work stays available through the tool index.')}}"><input type="checkbox" data-issue-lite> {{_('Lite (small tool list)')}}</label>
           <label class="mb-0 mr-3"><input type="checkbox" checked disabled> {{_('Operations (always)')}}</label>
           {% for value, label in form_mod_user.api_key_tool_modules.choices %}
           <label class="mb-0 mr-3"><input type="checkbox" name="api_key_tool_modules" value="{{value}}"> {{label}}</label>

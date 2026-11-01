@@ -20,6 +20,16 @@ class AoTNativeToolEngine:
     @stability stable
     """
 
+    #: 도구 스키마에 싣지 않는 처리기 인자 — 도메인 표면(find.controllable)만 쓴다. 스키마에 싣지 않는 것은
+    #: 카탈로그 토큰을 늘리지 않으려는 것이고, 명부 계약 검사가 이 이름을 맞는 인자로 인정한다.
+    HANDLER_PARAMS = {
+        'list_available_devices': frozenset(
+            {'brief', 'detail', 'query', 'kind', 'place_id', 'limit', 'offset'}),
+    }
+
+    #: find.controllable 한 쪽의 건수.
+    CONTROLLABLE_PAGE = 40
+
     # ------------------------------------------------------------------ #
     # Public API
     # ------------------------------------------------------------------ #
@@ -201,9 +211,110 @@ class AoTNativeToolEngine:
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _exec_list_available_devices(_params: Dict) -> Dict:
+    def _exec_list_available_devices(params: Dict) -> Dict:
+        """전체 목록(인앱 AI·예전 소비자) — `brief` 를 주면 도메인 표면의 쪽 나눈 요약(`_controllable_brief`)."""
         devices = AoTNativeToolEngine._get_ai_devices()
-        return {"status": "success", "devices": devices, "count": len(devices)}
+        if not (params or {}).get("brief"):
+            return {"status": "success", "devices": devices, "count": len(devices)}
+        return AoTNativeToolEngine._controllable_brief(devices, params)
+
+    #: 종류 낱말 → 목록의 kind. 모델이 쓰는 말을 몇 가지 받는다.
+    _KIND_WORDS = {"input": "input", "inputs": "input", "sensor": "input", "sensors": "input",
+                   "output": "output", "outputs": "output", "actuator": "output",
+                   "actuators": "output"}
+
+    @staticmethod
+    def _norm_name(text) -> str:
+        import re
+        return re.sub(r"[\s_\-]+", "", str(text or "").lower())
+
+    @staticmethod
+    def _controllable_brief(devices: List[Dict[str, Any]], params: Dict) -> Dict:
+        """find.controllable — 이름·종류 표를 40건씩. 출력(켜고 끄는 것)을 먼저, 켜진 입력(센서)은 뒤에.
+
+        id·인터페이스는 기본에서 뺀다: 쓰기 흐름은 이름으로 대상을 풀고(`targets.resolve`) 이 응답의 id 를 읽지
+        않는다. 이름이 겹치는 장치만 구별할 id 를 달고, `detail` 이면 예전 칸(device_id·device_type·kind·interface)
+        그대로 쪽만 나눠 준다. 좁히는 길: `query`(이름·종류 낱말, 모두 들어야 함) · `kind` · 장소 대상(`place_id`)."""
+        N = AoTNativeToolEngine
+        wanted_kind = params.get("kind")
+        if wanted_kind not in (None, ""):
+            wanted_kind = N._KIND_WORDS.get(str(wanted_kind).strip().lower())
+            if wanted_kind is None:
+                return {"status": "error",
+                        "message": "kind is 'output' (things that switch) or 'input' (live sensors)."}
+        rows = list(devices)
+        place_id = params.get("place_id")
+        if place_id:
+            members = N._place_members(place_id)
+            if members is None:
+                return {"status": "not_found",
+                        "message": "No place with that id, so no devices were listed."}
+            rows = [d for d in rows if d["device_id"] in members]
+        if wanted_kind:
+            rows = [d for d in rows if d["kind"] == wanted_kind]
+        tokens = [N._norm_name(t) for t in str(params.get("query") or "").split() if t.strip()]
+        if tokens:
+            rows = [d for d in rows
+                    if all(t in N._norm_name(d["name"]) or t in N._norm_name(d["device_type"])
+                           for t in tokens)]
+        rows.sort(key=lambda d: d["kind"] != "output")        # 안정 정렬: 출력 먼저, 안은 예전 차례 그대로
+        counts: Dict[str, int] = {}
+        for d in rows:
+            counts[d["kind"]] = counts.get(d["kind"], 0) + 1
+        total = len(rows)
+        try:
+            limit = int(params.get("limit")) if params.get("limit") not in (None, "") else N.CONTROLLABLE_PAGE
+        except (TypeError, ValueError):
+            limit = N.CONTROLLABLE_PAGE
+        try:
+            offset = max(0, int(params.get("offset") or 0))
+        except (TypeError, ValueError):
+            offset = 0
+        limit = max(1, limit)
+        page = rows[offset:offset + limit]
+        nxt: Dict[str, Any] = {}
+        more = offset + len(page) < total
+        if more:
+            parts = ["offset=%d" % (offset + len(page))]
+            parts += ["%s=%r" % (k, params[k]) for k in ("query", "kind") if params.get(k)]
+            if place_id:
+                parts.append("same target")
+            nxt["call"] = "find(op='controllable', %s)" % ", ".join(parts)
+            nxt["why"] = "showing %d-%d of %d" % (offset + 1, offset + len(page), total)
+        nxt["more"] = "detail=true: one entry per device with device_id and interface"
+        out: Dict[str, Any] = {"status": "success", "next": nxt, "total": total, "counts": counts}
+        if offset or more:
+            out["page"] = {"offset": offset, "shown": len(page)}
+        if params.get("detail"):
+            out["devices"] = page
+            return out
+        names: Dict[str, int] = {}
+        for d in rows:
+            key = str(d["name"]).strip().lower()
+            names[key] = names.get(key, 0) + 1
+        out["columns"] = ["name", "kind", "type", "id (only when the name repeats)"]
+        out["rows"] = [[d["name"], d["kind"], d["device_type"]]
+                       + ([d["device_id"]] if names[str(d["name"]).strip().lower()] > 1 else [])
+                       for d in page]
+        return out
+
+    @staticmethod
+    def _place_members(place_id):
+        """장소(대지·구역·시설) id → 그 안 장치 id 집합. 모르는 id 면 None. 시설 행 id 도 받는다."""
+        try:
+            from aot.aot_flask.geo import device_membership as dm
+            from aot.databases.models import GeoFacility, GeoShape
+            uid = str(place_id)
+            fac = GeoFacility.query.filter_by(unique_id=uid).first()
+            if fac is not None and getattr(fac, "shape_uuid", None):
+                uid = fac.shape_uuid
+            if GeoShape.query.filter_by(unique_id=uid).first() is None:
+                return None
+            members = dm.place_members(uid)
+            return set(members) if members is not None else None
+        except Exception as exc:                            # noqa: BLE001
+            logger.debug("[NativeToolEngine] place members failed: %s", exc)
+            return None
 
     @staticmethod
     def _exec_get_sensor_reading(params: Dict) -> Dict:

@@ -37,7 +37,7 @@ ACTION_INFORMATION = {
             'options_select': [
                 'Output_Channels',
             ],
-            'name': 'Output',
+            'name': lazy_gettext('Output'),
             'phrase': 'Select an output to control'
         },
         {

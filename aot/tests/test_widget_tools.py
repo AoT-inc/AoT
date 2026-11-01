@@ -232,3 +232,54 @@ class TestWidgetToolsAreWiredEverywhere(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestFormOnlyModificationHooks(unittest.TestCase):
+    """폼 없이 저장하는 경로(AI 위젯 도구)가 웹 폼 전용 훅을 부르지 않는다.
+
+    그래프·게이지·풍향·공지의 수정 훅은 폼 입력에서 값을 다시 계산한다 — 폼 자리에
+    None 을 주면 죽고('NoneType' object has no attribute 'keys'), 빈 폼을 주면 그
+    설정(y축·색·카테고리)을 지운다. 2026-10-10 그래프 위젯의 장치 교체가 이것으로
+    실패해 발견했다 — 그때까지 도구로 이 종류들의 설정을 바꾸는 일은 늘 실패했다."""
+
+    def test_classifier_on_real_hooks(self):
+        from aot.tools.data_tools.system import _hook_reads_form
+        from aot.widgets import AoT_graph, AoT_map, widget_notice
+        self.assertTrue(_hook_reads_form(AoT_graph.execute_at_modification))
+        self.assertTrue(_hook_reads_form(widget_notice.execute_at_modification))
+        self.assertFalse(_hook_reads_form(AoT_map.execute_at_modification))
+
+    def test_truthiness_check_alone_is_not_form_dependence(self):
+        from aot.tools.data_tools.system import _hook_reads_form
+
+        def only_checks(w, request_form, pre, post):
+            if request_form:
+                pass
+            return True, False, w, post
+
+        def reads(w, request_form, pre, post):
+            post['x'] = request_form.get('x')
+            return True, False, w, post
+
+        self.assertFalse(_hook_reads_form(only_checks))
+        self.assertTrue(_hook_reads_form(reads))
+
+    def test_map_hook_derives_device_filter_without_a_form(self):
+        """지도가 실제로 쓰는 장치 필터(device_ids)는 선택 값에서 나온다 — 폼이
+        없어도 다시 계산해야 도구로 바꾼 장치 선택이 지도에 반영된다."""
+        import json
+        from types import SimpleNamespace
+        from aot.widgets import AoT_map
+        w = SimpleNamespace(custom_options=json.dumps(
+            {'device_selection_output': ['old'], 'device_ids': ['old']}))
+        allow, _r, _w, final = AoT_map.execute_at_modification(
+            w, None, {}, {'device_selection_output': ['new-a', 'new-b']})
+        self.assertTrue(allow)
+        self.assertEqual(['new-a', 'new-b'], final['device_ids'])
+        self.assertFalse(final['include_all_devices'])
+
+    def test_modify_widget_consults_the_classifier(self):
+        import inspect
+        from aot.tools.data_tools import system
+        src = inspect.getsource(system.SystemToolsMixin.modify_widget)
+        self.assertIn('_hook_reads_form(hook)', src)

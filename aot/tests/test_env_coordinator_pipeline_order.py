@@ -116,3 +116,48 @@ def test_mixing_produces_actuator_command_not_dict():
     src = inspect.getsource(_cycle_mixin.CycleMixin._apply_mixing_actuators)
     assert 'ActuatorCommand(' in src
     assert "{'value'" not in src, '혼합 제어가 dict 를 만들고 있다'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 극한 고온 보호의 자리 (2026-10-09)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _function_node(name):
+    path = inspect.getsourcefile(_cycle_mixin)
+    tree = ast.parse(open(path, encoding='utf-8').read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    raise AssertionError('%s 를 찾지 못했다' % name)
+
+
+def _name_call_line(tree, func_name):
+    return _line_of(tree, lambda n: (
+        isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+        and n.func.id == func_name))
+
+
+def test_heat_protect_override_sits_between_thresholds_and_fog_rules():
+    """광량 → 온습도 → **극한 고온 보호** → 분무 감쇠 → 분무 상한 → 부분 게이트 → 인터록.
+
+    온습도 한계 뒤여야 차광 전개가 light_min 의 강제 개방을 이길 수 있고(단계 2),
+    분무 감쇠·상한·게이트 앞이어야 분무를 줄이는 쪽과 강우·강풍·일소 잠금이 이긴다.
+    """
+    tree = _function_node('apply_threshold_and_gate_overrides')
+    order = [_name_call_line(tree, n) for n in (
+        'apply_light_threshold_overrides', 'apply_temp_humid_threshold_overrides',
+        'apply_heat_protect_overrides', 'apply_nursery_fog_derate',
+        'apply_wetting_fog_humidity_ceiling', 'apply_hvac_opposition_interlock')]
+    assert all(order), order
+    assert order == sorted(order), order
+
+
+def test_heat_protect_is_judged_after_hard_limits_and_before_l2():
+    """단계 2 는 `_force_cool` 이다 — 그 래치가 선 **뒤**에 판정하고, L2(모드)가 결론을 받는다."""
+    tree = _run_cycle_source()
+    hard = _call_line(tree, '_check_hard_constraints')
+    heat = _call_line(tree, '_evaluate_heat_protect')
+    l2 = _name_call_line(tree, 'assess')
+    control = _call_line(tree, '_run_control')
+    assert hard and heat and l2 and control
+    assert hard < heat < l2 < control

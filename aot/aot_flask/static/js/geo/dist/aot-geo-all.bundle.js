@@ -102,7 +102,7 @@ var AoTGeo = (function (exports) {
 		    
 		    try {
 		      // Create map instance
-		      this.map = new maplibregl.Map({
+		      this.map = window.AoTMapSeam.createMap({
 		        container: containerEl,
 		        style: config.style,
 		        center: config.center,
@@ -110,6 +110,7 @@ var AoTGeo = (function (exports) {
 		        maxBounds: config.maxBounds,
 		        attributionControl: config.attribution
 		      });
+		      if (!this.map) throw new Error('map create failed');
 		      
 		      // Add navigation controls
 		      if (config.navigation) {

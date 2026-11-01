@@ -27,6 +27,7 @@ INPUT_INFORMATION = {
     'dependencies_module': [],
     'default_url': 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     'layer_type': 'xyz',
+    'ambient_role': 'base',
     'time_enabled': False
 }
 

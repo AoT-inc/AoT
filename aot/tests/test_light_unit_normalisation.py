@@ -150,14 +150,24 @@ class TestTheRainUnitRecheckActuallyRuns(unittest.TestCase):
         # ⚠ 원본에서 자른 **뒤에** 토큰화한다. 먼저 토큰화하면 `'rain'` 이
         #   문자열이라 사라져 자를 기준이 없어진다.
         block = _code_only(src.split("measurement_type == 'rain'", 1)[1][:400])
-        self.assertIn('_effective_raw_unit(dm)', block)
+        # 강우 판정은 `_is_rain_channel` 한 곳으로 모였다(2026-10-10, 실측·예보 합치기) —
+        # 그 함수가 행 헬퍼 `_effective_raw_unit(dm)` 로 저장 단위를 본다.
+        self.assertIn('_is_rain_channel(dm)', block)
+        helper = _code_only(src.split('def _is_rain_channel(dm)', 1)[1][:600])
+        self.assertIn('_effective_raw_unit(dm)', helper)
 
     def test_both_rain_paths_are_fixed(self):
         """같은 깨진 호출이 **두 곳**에 있었다. 한 곳만 고치면 이름이 원시
         그대로인 강수 채널이 나머지 경로에서 그대로 안 잡힌다."""
         code = _code_only(_read('aot_flask', 'geo', 'facility_sensors.py'))
-        self.assertEqual(code.count('_RAIN_UNITS'), 3,
-                         '강수 단위 판정 자리가 늘거나 줄었다')
+        # 두 경로(측정 종류 지정 · 자동 스캔)가 같은 판정 함수를 부른다 — 정의 1 + 호출 2.
+        # 단위 집합은 그 함수 한 곳에서만 읽는다(정의 1 + 사용 1).
+        self.assertEqual(code.count('_is_rain_channel('), 3,
+                         '강수 판정을 부르는 자리가 늘거나 줄었다')
+        # `_NOT_RAIN_UNITS`(확률 % 제외)는 다른 이름이다 — `_code_only` 가 공백을 지워
+        #   낱말 경계로 가를 수 없으니 그 이름의 수를 뺀다.
+        self.assertEqual(code.count('_RAIN_UNITS') - code.count('_NOT_RAIN_UNITS'), 2,
+                         '강수 단위 집합을 읽는 자리가 판정 함수 밖으로 새었다')
         self.assertNotIn('return_measurement_info', code)
 
 

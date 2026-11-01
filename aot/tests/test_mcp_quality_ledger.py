@@ -33,6 +33,10 @@ from aot.tools import mcp_safety_gate as gate
 
 @pytest.fixture()
 def app():
+    # _clear() 가 mcp_audit_log 를 통째로 비운다 — pytest 는 conftest 의 임시
+    # DB 라 안전하지만, conftest 를 거치지 않는 실행이 라이브 DB 를 만나면 거부.
+    from aot.tests._live_db_guard import refuse_live_db
+    refuse_live_db()
     from aot.config import AOT_DB_PATH
     a = Flask(__name__)
     a.config['SQLALCHEMY_DATABASE_URI'] = AOT_DB_PATH

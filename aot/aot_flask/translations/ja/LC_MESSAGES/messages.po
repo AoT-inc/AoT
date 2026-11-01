@@ -26840,6 +26840,78 @@ msgstr "最小温度(°C)"
 msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
 msgstr "絶対下限値です。VPD目標に関係なく、下回った場合は暖房を強制的に実行します。"
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Extreme Heat Protection"
+msgstr "猛暑保護"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Above the threshold, keeping the crop out of heat stress comes before the target: shade drawn, heating off, circulation fans on, vents opened only while it is cooler outside, misting only while it can still cool."
+msgstr "しきい値を超えると、目標より作物の高温ストレスを防ぐことを優先します — 遮光カーテンを閉め、暖房を止め、循環扇を回し、窓は外の方が涼しいときだけ開け、噴霧はまだ冷やせるときだけ使います。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Heat Protection Threshold (°C)"
+msgstr "猛暑保護のしきい値 (°C)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Average indoor temperature at which protection starts. Set it to what your crop tolerates (20–45 °C)."
+msgstr "保護を始める室内の平均気温です。作物が耐えられる温度に設定してください（20–45 °C）。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Heat Protection Release Margin (°C)"
+msgstr "猛暑保護の解除幅 (°C)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Protection ends only after the temperature has stayed this far below the threshold for 10 minutes (0.5–5 °C)."
+msgstr "気温がしきい値よりこの幅だけ低い状態が10分続いてから保護を終えます（0.5–5 °C）。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Heat Protection Minimum Hold (min)"
+msgstr "猛暑保護の最短継続 (分)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Once started, protection stays on at least this long (5–120 min)."
+msgstr "一度始まると、少なくともこの時間は保護を続けます（5–120分）。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Check Misting Water Supply"
+msgstr "ミスト用の水供給を確認"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Stops every mister while the water supply you pick below says there is no water — a tank level, a line pressure or a flow switch. Off: water is assumed to be there."
+msgstr "下で選んだ水供給の信号(タンク水位・配管圧力・流量スイッチ)が水なしを示している間、すべての噴霧器を止めます。オフの場合は水があるものとみなします。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Water Supply Signal"
+msgstr "水供給の信号"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "A tank level (%), line pressure or flow switch. If this signal goes missing or stale the misters stay off, because it is not known whether there is water."
+msgstr "タンク水位(%)、配管圧力、または流量スイッチです。この信号が途絶えたり古くなったりすると、水があるか分からないため噴霧器は止めたままにします。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Water Supply Threshold"
+msgstr "水供給のしきい値"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "In whatever unit the signal above uses. For an on/off switch (0 or 1) leave it at 0.5; for a tank level use the lowest level you still want to mist at."
+msgstr "上の信号が使う単位のままです。オン/オフのスイッチ(0 または 1)は 0.5 のままにし、タンク水位は噴霧を続けたい最低水位に設定してください。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Water Is Available When the Signal Is"
+msgstr "信号が次のとき水があるとみなす"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Level, pressure and flow rise with water: pick \"at or above\". An empty-tank alarm switch reads 1 when dry: pick \"at or below\"."
+msgstr "水位・圧力・流量は水があるほど大きくなります — 「以上」を選んでください。空タンク警報スイッチは空のとき 1 になります — 「以下」を選んでください。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "At or above the threshold (level, pressure, flow)"
+msgstr "しきい値以上(水位・圧力・流量)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "At or below the threshold (empty-tank alarm switch)"
+msgstr "しきい値以下(空タンク警報スイッチ)"
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:613
 msgid "Max Humidity (%)"
 msgstr "最大湿度(%)"
@@ -26871,22 +26943,16 @@ msgid "Enable Sunburn/Evening Protection"
 msgstr "日焼け・夜間保護を有効化"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:675
-msgid ""
-"Blocks wetting-type misting in strong light (droplets can lens sunlight "
-"onto leaves) and, if set below, before sunset. Independent of how often "
-"misting runs — turn this on or off at any misting frequency."
-msgstr "強い光の中で湿式ミスティングを遮断します（水滴が太陽光をレンズのように集め、葉を焦がすことがあります）。下で設定すると日没前にも遮断します。ミスティングの頻度に関係なく、どの頻度でもオン・オフできます。"
+msgid "Blocks wetting-type misting in strong light (droplets can lens sunlight onto leaves) and, if set below, before sunset. In extreme heat and dryness short pulses are let through the lock (see the option below). Independent of how often misting runs — turn this on or off at any misting frequency."
+msgstr "強い光の中で湿式ミスティングを遮断します（水滴が太陽光をレンズのように集め、葉を焦がすことがあります）。下で設定すると日没前にも遮断します。極端な高温・乾燥のときは短いパルスが遮断を通ります（下のオプション）。ミスティングの頻度に関係なく、どの頻度でもオン・オフできます。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
 msgstr "噴霧遮断日射量 (W/m²)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:690
-msgid ""
-"Wetting-type misting is blocked outright at or above this indoor light "
-"level. The estimated indoor level is used, so closing the shade screen "
-"relaxes the lockout."
-msgstr "室内光量がこの値以上になると、濡らすタイプの噴霧を完全に遮断します。室内推定光量を基準とするため、遮光カーテンを閉じると遮断が緩和されます。"
+msgid "Wetting-type misting is blocked outright at or above this indoor light level, except for short pulses in extreme heat and dryness. The estimated indoor level is used, so closing the shade screen relaxes the lockout."
+msgstr "室内光量がこの値以上になると、濡らすタイプの噴霧を完全に遮断します。ただし極端な高温・乾燥のときは短いパルスが許可されます。室内推定光量を基準とするため、遮光カーテンを閉じると遮断が緩和されます。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:702
 msgid "Misting Release Irradiance (W/m²)"
@@ -26947,16 +27013,16 @@ msgid "Allow Misting Before Sunset"
 msgstr "日没前の噴霧を許可"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:752
-msgid "Allow misting near sunset. Turn off to leave the leaves dry overnight."
-msgstr "日没前後の噴霧を許可します。オフにすると葉を乾いたまま夜を越します。"
+msgid "Allow misting near sunset. Turn off to leave the leaves dry overnight. Only read while \"Stop Wetting Mist Toward Dusk\" is off — with it on (the default) misting already stops before sunset."
+msgstr "日没前後の噴霧を許可します。オフにすると葉を乾いたまま夜を越します。「夕暮れ前に湿式噴霧を止める」がオフのときだけ読まれます — オン(既定)なら噴霧はすでに日没前に止まります。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:762
 msgid "Stop Misting Before Sunset (min)"
 msgstr "日没前の噴霧停止時間 (分)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:764
-msgid "How long before sunset misting stops."
-msgstr "日没の何分前に噴霧を止めるか。"
+msgid "How long before sunset misting stops. Also sets when \"Stop Wetting Mist Toward Dusk\" starts in this mode."
+msgstr "日没の何分前に噴霧を止めるか。このモードでは「夕暮れ前に湿式噴霧を止める」が始まる時刻もこの値です。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:775
 msgid "Groundwater (untreated)"
@@ -27083,8 +27149,8 @@ msgid "Strong Wind Threshold (m/s)"
 msgstr "強風しきい値(m/s)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:911
-msgid "Openings (vents, side walls) are forced closed above this wind speed."
-msgstr "この風速を超えると、開口部(換気窓、側壁)を強制的に閉じます。"
+msgid "All openings (vents, side walls) close when the 10-minute average wind reaches this speed, or a measured gust reaches 1.5 times it. From 0.6 times it (or a measured gust at 0.9 times), windward and roof vents close and the rest open only part way."
+msgstr "10分平均風速がこの値に達するか、測った突風がこの値の1.5倍に達すると、開口部(換気窓、側壁)をすべて閉じます。この値の0.6倍(測った突風は0.9倍)からは、風上側の窓と天窓を閉め、ほかは一部だけ開けます。"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:918
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1482
@@ -29946,6 +30012,46 @@ msgstr "日中 — 保温カーテンは光のため開けておきます"
 msgid "Holding — waiting to see if the change of direction lasts"
 msgstr "そのままにしています — 向きの変化が続くか確認中です"
 
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Too humid — outside air is wetter, so venting would not help"
+msgstr "湿度が高すぎます — 外気のほうが湿っているため、換気しても効果がありません"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Too humid — venting limited to a small opening to let moisture out"
+msgstr "湿度が高すぎます — 湿気を逃がすため、窓を少しだけ開けています"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Holding — opening more has not reduced the gap"
+msgstr "現状維持 — さらに開けても偏差が縮まりませんでした"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Too humid — outside air is too cold to vent without losing heat"
+msgstr "湿度が高すぎます — 外気が冷たすぎて、開けると熱を失います"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Heat Protection"
+msgstr "猛暑保護"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat — it is hotter outside, so the vents stay closed"
+msgstr "猛暑 — 外の方が暑いため窓を閉めています"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat — misting cannot cool the air right now"
+msgstr "猛暑 — 今は噴霧で空気を冷やせません"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat protection — keeping the crop out of heat stress"
+msgstr "猛暑保護 — 作物を高温ストレスから守っています"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "No water for the misters — they stay off until the water supply returns"
+msgstr "ミスト用の水がありません — 水供給が戻るまで噴霧器は止まっています"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "This device looks faulty — it is held in place and the others take over its share"
+msgstr "この装置は故障の疑いがあります — その場に留め、残りの装置が分担を引き継ぎます"
+
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 #, python-format
 msgid "%(var)s cannot be measured right now, so the devices that move it are holding position"
@@ -30802,7 +30908,6 @@ msgstr "— チャンネルを選択 —"
 msgid "— Select —"
 msgstr "— 選択 —"
 
-
 #: カタログに無い項目を手で追加(再抽出は禁止 — fuzzy 大量汚染の履歴)
 #: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
 #: (2026-09-10)
@@ -31232,8 +31337,6 @@ msgstr "設定を読み込めませんでした"
 
 msgid "What the AI is waiting on you for — each item below waits for your decision."
 msgstr "AIが人の判断を待っているものです。以下の項目それぞれが判断を待っています。"
-
-
 
 #: aot/aot_flask/templates/layout_default.html
 msgid "Computer Screen Size"
@@ -32603,7 +32706,6 @@ msgstr "ラベルの言語"
 msgid "Language for map labels (e.g., ko, en, auto)"
 msgstr "地図ラベルの言語（例：ko、en、auto）"
 
-
 #: aot_flask/templates/modals/geo_settings_modal.html:171
 msgid "Max Site Polygons"
 msgstr "サイトポリゴンの最大数"
@@ -33359,3 +33461,3911 @@ msgstr "パスワードは保存済みです。空欄のままにすると変更
 #: aot_flask/templates/settings/alerts.html
 msgid "No password is saved."
 msgstr "保存されたパスワードはありません。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Shade drawn against the heat — the crop has light to spare today"
+msgstr "暑さを抑えるため遮光カーテンを閉じています — 今日は光に余裕があります"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Shade kept open — the crop needs the light, or vents and misting can still cool"
+msgstr "遮光カーテンを開けたままにしています — 作物に光が必要か、窓やミストでまだ冷やせます"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Use the Shade Screen Against Heat"
+msgstr "遮光カーテンで暑さを抑える"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Draws the shade screen to take heat and water stress off the crop, but only while the crop still gets enough light for the day — otherwise the screen stays open. Vents and misting are used first when the light is worth keeping."
+msgstr "作物がその日に必要な光を受けられる間だけ遮光カーテンを閉じ、暑さと水分ストレスを和らげます — そうでなければ開けたままにします。光を残したいときは窓とミストを先に使います。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Shade held where it is — it moved recently or has used today’s moves"
+msgstr "遮光カーテンをそのままにしています — 動いたばかりか、今日の移動回数を使い切りました"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Thermal curtain opened a crack to let night moisture out"
+msgstr "夜の湿気を逃がすため保温カーテンを少し開けています"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Thermal curtain opening in steps so the morning air does not chill the crop"
+msgstr "朝の冷気で作物が冷えないよう保温カーテンを段階的に開けています"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Open the Thermal Curtain a Crack Against Night Condensation"
+msgstr "夜の結露に保温カーテンを少し開ける"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "When the night air nears its dew point under a closed thermal curtain, opens it a crack (3, then 6, then 10 %) before any vent, and only as far as the heat it lets out allows. Only for curtain motors that can stop part-way."
+msgstr "閉じた保温カーテンの下で夜の空気が露点に近づくと、窓より先にカーテンを少し(3 → 6 → 10 %)開けます — 逃げる熱が許す範囲だけ。途中で止められるカーテンモーターだけに使います。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+#: widgets/AoT_facility.py
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Air VPD"
+msgstr "空気VPD"
+
+#: widgets/AoT_facility.py
+#: aot_flask/static/js/common/sensor-label.js
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Leaf VPD"
+msgstr "葉VPD"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Leaf VPD (needs a leaf temperature sensor)"
+msgstr "葉VPD(葉温センサーが必要)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD Target Applies To"
+msgstr "VPD目標の基準"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Air: the VPD target is compared with air VPD from temperature and humidity. Leaf: the target is a leaf VPD; each cycle it is turned into the air VPD that gives that leaf VPD at the measured leaf temperature. Without a fresh leaf temperature the target is used as an air VPD for that cycle."
+msgstr "空気: VPD目標を温度・湿度から計算した空気VPDと比べます。葉: 目標は葉VPDで、サイクルごとに測った葉温でその葉VPDになる空気VPDに換算して使います。新しい葉温がないサイクルは目標を空気VPDとして使います。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Leaf Temperature Sensor"
+msgstr "葉温センサー"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "An infrared leaf or canopy temperature. Shows leaf VPD next to air VPD, and is required for a leaf VPD target. Readings more than 10 °C away from the air are treated as not seeing leaves."
+msgstr "赤外線の葉温(群落温度)測定。空気VPDの横に葉VPDを表示し、葉VPD目標には必須です。気温と10 °C以上離れた値は葉を見ていないものとみなします。"
+
+#: widgets/AoT_facility.py
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "The VPD target is compared with this value."
+msgstr "VPD目標はこの値と比べます。"
+
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "Target basis"
+msgstr "目標基準"
+
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "Leaf temp"
+msgstr "葉温"
+
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "Leaf temperature is not available, so the target is compared with air VPD."
+msgstr "葉温が使えないため、目標を空気VPDと比べます。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Held at its current opening — the vents are about to close for the night"
+msgstr "現在の開度のまま保ちます — まもなく夜間の閉鎖で換気窓が閉まります"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Thermal curtain closed to keep the night heat in"
+msgstr "夜間の熱を逃がさないよう保温カーテンを閉めました"
+
+#: aot/aot_flask/templates/settings/user_detail.html
+msgid "Lite (small tool list)"
+msgstr "ライト (小さなツール一覧)"
+
+#: aot/aot_flask/templates/settings/user_detail.html
+msgid "Only a few tools are listed so every message to the AI stays small. Recommended for free AI plans. Day-to-day work stays available through the tool index."
+msgstr "AIへのメッセージごとに送られるツール一覧を小さく保つため、いくつかだけを表示します。無料のAIプランにおすすめです。日常の作業はツール索引からそのまま使えます。"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "AI Tool List"
+msgstr "AIツール一覧"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "How many tools your AI apps receive with each message. Lite keeps every message small, which is recommended for free AI plans."
+msgstr "AIアプリがメッセージごとに受け取るツールの数です。ライトはメッセージを小さく保つため、無料のAIプランにおすすめです。"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Changes apply after the AI app reconnects or a new chat starts. You can also ask the AI to change it."
+msgstr "変更はAIアプリの再接続後、または新しいチャットを始めた後に反映されます。AIに変更を頼むこともできます。"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "API key"
+msgstr "APIキー"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Lite — a few tools (free AI plans)"
+msgstr "ライト — 少数のツール (無料のAIプラン)"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Operations + setup modules (current)"
+msgstr "運用 + 設定モジュール (現在)"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Operations — every day-to-day tool"
+msgstr "運用 — 日常作業のツールすべて"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Configuration — day-to-day and all setup tools"
+msgstr "設定 — 日常作業とすべての設定ツール"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Tool list changed. Reconnect the AI app or start a new chat to see it."
+msgstr "ツール一覧を変更しました。AIアプリを再接続するか、新しいチャットを始めると反映されます。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Kept open to let the sun's heat out — sunny and above the temperature target"
+msgstr "日射の熱を逃がすため開けています — 日が差し、温度目標を上回っています"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "AI apps that sign in through the authorization server (for example a claude.ai connector) use this."
+msgstr "認可サーバーでサインインするAIアプリ(例: claude.aiのコネクター)がこの設定を使います。"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Signed-in AI apps"
+msgstr "サインイン接続のAIアプリ"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Decided by the sign-in permission (current)"
+msgstr "サインインの権限で決まる (現在)"
+
+msgid "Use Matter (Experimental)"
+msgstr "Matterを使用(実験的)"
+
+msgid "Adds Matter to the Settings menu, where devices already set up in Apple Home, Google Home, SmartThings and similar apps can be added to AoT. Needs a Linux host on the same network as the devices, and the Matter server started on that host. While Matter devices exist, Matter cannot be turned off."
+msgstr "設定メニューにMatterを追加します。Apple Home、Google Home、SmartThingsなどのアプリですでに設定されたデバイスをAoTに追加できます。デバイスと同じネットワーク上のLinuxホストと、そのホストで起動したMatterサーバーが必要です。Matterデバイスがある間はオフにできません。"
+
+msgid "Use devices from other smart-home apps. Experimental."
+msgstr "ほかのスマートホームアプリのデバイスを使います。実験的な機能です。"
+
+msgid "Matter stays on: remove the %(n)s Matter device(s) in Settings > Matter first."
+msgstr "Matterはオフにしていません。先に設定 > MatterでMatterデバイス%(n)s台を削除してください。"
+
+msgid "This AoT image does not include the packages Matter needs. Update AoT to a newer image, then open Settings > Matter."
+msgstr "このAoTイメージにはMatterに必要なパッケージが含まれていません。AoTを新しいイメージに更新してから、設定 > Matterを開いてください。"
+
+msgid "Install the packages Matter needs, then open Settings > Matter."
+msgstr "Matterに必要なパッケージをインストールしてから、設定 > Matterを開いてください。"
+
+msgid "Matter is off. Turn it on in Settings > General."
+msgstr "Matterはオフです。設定 > 一般設定でオンにしてください。"
+
+msgid "The Matter server is not running on this host."
+msgstr "このホストでMatterサーバーが動作していません。"
+
+msgid "The Matter server's log can keep this password or dataset, and AoT backups include that log. Treat backups as secret."
+msgstr "Matterサーバーのログにこのパスワードやデータセットが残ることがあり、AoTのバックアップにはそのログが含まれます。バックアップは秘密として扱ってください。"
+
+msgid "Bluetooth is off on the Matter server. Only a device already on the network (Ethernet) can be added."
+msgstr "MatterサーバーのBluetoothがオフです。すでにネットワーク(イーサネット)上にあるデバイスだけを追加できます。"
+
+msgid "In the other app, choose Add device, then Matter, and enter this code. Keep this dialog open until the other app has added the device."
+msgstr "ほかのアプリで「デバイスを追加」→「Matter」を選び、このコードを入力してください。ほかのアプリがデバイスを追加するまで、このダイアログを閉じないでください。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Limited for rain — roof vents shut, side vents opened only part way"
+msgstr "雨のため制限しています — 天窓は閉じ、側窓は一部だけ開けます"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Light or forecast rain — roof vents closed, side vents limited"
+msgstr "小雨または予報上の雨 — 天窓は閉じ、側窓は一部だけ開けます"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Rain in the forecast — roof vents not opened further"
+msgstr "予報に雨があります — 天窓をこれ以上開けません"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Wet misting is held back as the light fades — leaves would stay wet overnight"
+msgstr "光が弱まったため、濡らすタイプの噴霧を控えています — 葉が濡れたまま夜を越してしまいます"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Stop Wetting Mist Toward Dusk"
+msgstr "夕暮れ前に濡らす噴霧を止める"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Wetting-type misting eases off as the light fades and stops before sunset (90 minutes; with sunburn/evening protection on, the stop time set below), so leaves are not left wet overnight. Fine fog is not affected. Turn off to allow evening misting."
+msgstr "湿式噴霧は光が弱まると減り、日没前に止まります(90分前。日焼け・夜間保護がオンなら下の停止時間)。葉が濡れたまま夜を越さないようにするためです。霧タイプには影響しません。夕方も噴霧したいときはオフにします。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Dew Circulation Fan (Experimental)"
+msgstr "夜露の循環扇（試験）"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "After sunset, runs the circulation fans while the indoor air is within 2 °C of its dew point (stops at 3 °C, at least 30 minutes on). Off by default: in simulation it did not shorten the wet hours of a closed house and only added fan power and condensation."
+msgstr "日没後、室内空気が露点まで2 °C 以内に近づくと循環扇を回します（3 °C で停止、最低30分運転）。既定はオフです — シミュレーションでは閉め切ったハウスの濡れ時間を短くできず、ファン電力と結露が増えただけでした。"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Short Mist Pulses in Extreme Heat/Dryness"
+msgstr "極端な高温・乾燥の短いパルス噴霧"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "While the sunburn lock is on, let one short wetting-mist pulse (10 seconds on, at least 15 minutes off) through when the house is in extreme heat protection or the air is very dry (VPD above 3 kPa) and wet leaves would dry within minutes. Never toward dusk or at night, in rain or frost, when humidity is already high, or without water. Turn off to keep the lock absolute."
+msgstr "日焼け防止の遮断中でも、極端な高温保護中、または空気が非常に乾燥し（VPD 3 kPa 超）濡れた葉が数分で乾く日は、湿式噴霧を短いパルス1回（10秒オン、15分以上オフ）だけ許可します。夕方・夜間、雨・霜、湿度がすでに高いとき、水がないときは行いません。オフにすると遮断はそのまま保たれます。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Slightly open to let the night's moisture out — the sun is warming the house and the air outside is drier"
+msgstr "夜の間にこもった湿気を逃がすため少し開けています — 日が当たり、外の空気のほうが乾いています"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Strong wind — windward and roof vents closed, others limited"
+msgstr "強い風 — 風上側の窓と天窓は閉め、ほかは一部だけ開けます"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Limited for wind — opened only part way, windward side kept shut"
+msgstr "風のため制限しています — 一部だけ開け、風上側は閉めています"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Wind gust"
+msgstr "突風"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Frost risk tonight — thermal curtain closed, vents not opened further"
+msgstr "今夜は霜の恐れ — 保温カーテンを閉め、換気窓はこれ以上開けません"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Frost protection — vents and curtain closed, heating and circulation fans on"
+msgstr "霜対策中 — 換気窓と保温カーテンを閉め、暖房と循環ファンを動かしています"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Frost protection — kept sealed and warm so frost does not form on the crop"
+msgstr "霜対策 — 作物に霜がつかないよう閉め切って暖かく保っています"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat and dry air — one short misting burst is allowed through the sunburn lock"
+msgstr "極端な高温・乾燥 — 日焼け防止の遮断中でも短い噴霧を1回だけ許可します"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Closed while the outdoor reading is missing — it is night, so a small opening is shut"
+msgstr "外気の値がない間に閉じました — 夜なので少し開いていた窓を閉じました"
+
+msgid "On a native install, start it with docker/docker-compose.matter-native.yml and give the AoT services AOT_MATTER_URL (install/aot-matter.conf)."
+msgstr "ネイティブインストールでは docker/docker-compose.matter-native.yml で起動し、AoTのサービスに AOT_MATTER_URL を設定します(install/aot-matter.conf)。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Circulation fans on — the night air is close to its dew point, and moving air shortens how long the leaves stay wet"
+msgstr "夜の空気が露点に近いため循環ファンを動かしています — 空気を動かすと葉が濡れている時間が短くなります"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Open-Meteo forecast Input"
+msgstr "Open-Meteo予報入力"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Fill recommended connections from Open-Meteo forecast Input"
+msgstr "Open-Meteo予報入力から推奨接続を入力"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "No Open-Meteo hourly forecast Input is running. Add an Input with the \"Open-Meteo Hourly Forecast\" driver and activate it first."
+msgstr "稼働中のOpen-Meteo時間別予報入力がありません。先に「Open-Meteo Hourly Forecast」ドライバーで入力を追加して有効にしてください。"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Choose which Open-Meteo forecast Input to use."
+msgstr "使用するOpen-Meteo予報入力を選んでください。"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Filled the recommended connections. Review them, then save the facility."
+msgstr "推奨接続を入力しました。内容を確認してから施設を保存してください。"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Some channels were not found on this Input and were skipped:"
+msgstr "この入力に見つからずスキップしたチャンネルがあります:"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Other connections of the same item already exist and will be averaged with these."
+msgstr "同じ項目の他の接続が既にあり、これらの値と平均されます。"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Indoor reading missing — opened a little because a closed house heats fast in the sun (closed again after sunset)"
+msgstr "室内の値がないため日射を見て少し開けました — 閉めたハウスは日なたですぐ暑くなります(日が沈むと再び閉めます)"
+
+#: inputs/ecowitt_mqtt.py inputs/mqtt_paho.py inputs/mqtt_paho_json.py
+msgid "Store retained messages"
+msgstr "保持(retained)メッセージを保存"
+
+#: inputs/ecowitt_mqtt.py inputs/mqtt_paho.py inputs/mqtt_paho_json.py
+msgid "When off (default), messages the broker re-sends from its retained store right after subscribing are not saved as measurements, because they are old values that would otherwise be stamped with the current time. Turn on only if the publisher sends its state as retained messages only."
+msgstr "オフ(既定)の場合、購読直後にブローカーが保持領域から再送するメッセージは測定値として保存しません。古い値に現在時刻が付いて新しい測定のように見えてしまうためです。デバイスが状態を保持(retained)メッセージでのみ送信する場合にのみオンにしてください。"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "On-site observation"
+msgstr "現地観測"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Precip"
+msgstr "降水"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Wind dir"
+msgstr "風向"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Risk"
+msgstr "警戒"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observed"
+msgstr "観測"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observation delayed"
+msgstr "観測遅延"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Freeze"
+msgstr "凍結"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heat"
+msgstr "猛暑"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Sunrise / sunset glow"
+msgstr "日の出・日の入り前後"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Twilight"
+msgstr "薄明"
+
+#: widgets/AoT_map.py
+msgid "Auto (by sun position)"
+msgstr "自動（太陽位置）"
+
+#: widgets/AoT_map.py
+msgid "Always day"
+msgstr "常に昼"
+
+#: widgets/AoT_map.py
+msgid "Always night"
+msgstr "常に夜"
+
+#: widgets/AoT_map.py
+msgid "Day / Night Appearance"
+msgstr "昼夜の表現"
+
+#: widgets/AoT_map.py
+msgid "Darkens the base map at night and lights 3D models from the sun's position. Also fills the measurement dock with weather values (rain, wind, cloud, visibility, risk) and shows a day/night icon in the time dock. Off turns all of this off."
+msgstr "夜は背景地図を暗くし、3Dモデルに太陽の位置どおり光を当てます。測定値ドックに気象値（降水・風・雲量・視程・警戒）を表示し、時刻ドックに昼夜アイコンを表示します。オフにするとこれらをすべて無効にします。"
+
+#: widgets/AoT_map.py
+msgid "Weather First in Measurement Dock"
+msgstr "測定値ドックで気象を優先"
+
+#: widgets/AoT_map.py
+msgid "Puts weather values at the left of the measurement dock. A value you also picked from a field device is merged into it and marked with a pin. Turn off to keep the dock exactly as you configured it."
+msgstr "気象値を測定値ドックの左端に置きます。現地機器から選んだ同じ項目はここにまとめ、位置ピンを付けます。オフにするとドックは設定したままになります。"
+
+#: widgets/AoT_map.py
+msgid "Auto-adjust Overlay Opacity"
+msgstr "オーバーレイ透明度の自動調整"
+
+#: widgets/AoT_map.py
+msgid "Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, and their opacity is lowered automatically so the shapes stay visible. Turn off to go back to the old order: weather layers sit below the shapes and use each layer's own opacity as is."
+msgstr "気象オーバーレイ（雲・レーダー・風）を図形と3Dモデルの上に描き、図形が見えるよう透明度を自動で下げます。オフにすると従来の順序に戻り、気象レイヤーを図形の下に置いて各レイヤーの不透明度をそのまま使います。"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Cloud cover"
+msgstr "雲量"
+
+msgid "Weather Effects"
+msgstr "天気の演出"
+
+msgid "Subtle"
+msgstr "控えめ"
+
+msgid "Vivid"
+msgstr "はっきり"
+
+msgid "Draws the current weather over the map from observed values only, even when no weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow (by precipitation) and fog (by visibility). Effects are dimmer over facilities. They pause when the map is off-screen or when reduced motion is requested."
+msgstr "天気レイヤーをオンにしなくても、観測値だけで現在の天気を地図の上に描きます：雲の影（雲量）、風の流れ線、雨・雪（降水量）、霧（視程）。施設の上では薄くなり、地図が画面外のときや OS で視差効果の軽減が有効なときは停止します。"
+
+msgid "Show Weather Layers Automatically"
+msgstr "気象レイヤーの自動表示"
+
+msgid "When it rains, clouds cover the sky or the wind is strong, turns on the matching weather layer you registered in this widget (precipitation, cloud or wind) on screen only. Your saved layer selection is not changed, and a layer you turn off yourself stays off until the page is reloaded. Thresholds are set on the server."
+msgstr "雨が降っている、雲が多い、風が強いといった条件になると、このウィジェットに登録済みの該当する気象レイヤー（降水・雲・風）を画面上だけで自動的にオンにします。保存済みのレイヤー選択は変わらず、自分でオフにしたレイヤーはページを開き直すまで再びオンになりません。条件のしきい値はサーバーで決まります。"
+
+msgid "Field devices first"
+msgstr "現場デバイス優先"
+
+msgid "Weather inputs first"
+msgstr "気象入力優先"
+
+msgid "Weather Value Source Order"
+msgstr "気象値の取得元の順序"
+
+msgid "Weather values come from the weather stations you assigned to the site (field devices) and from the weather inputs registered in the map layers, even when their layer is off. Choose which one is used first; each value falls back to the other when it is missing or too old. With neither, no weather cells or effects are shown."
+msgstr "気象値は、サイトに気象観測所として指定したデバイス（現場デバイス）と、地図レイヤーに登録した気象入力から取得します。入力はレイヤーがオフでも使います。どちらを先に使うか選んでください。値がない、または古すぎる場合はもう一方に切り替わります。どちらもなければ気象セルと演出は表示しません。"
+
+msgid "Weather Value Max Age (Seconds)"
+msgstr "気象値の最大遅延（秒）"
+
+msgid "A field device value older than this is skipped in favor of the next source."
+msgstr "現場デバイスの値がこれより古い場合は飛ばして次の取得元を使います。"
+
+msgid "Risk: Wind Speed (m/s)"
+msgstr "リスク：風速（m/s）"
+
+msgid "Shows a risk in the weather cells when the current wind speed reaches this value."
+msgstr "現在の風速がこの値以上になると、気象セルにリスクを表示します。"
+
+msgid "Risk: Precipitation (mm/h)"
+msgstr "リスク：降水量（mm/h）"
+
+msgid "Shows a risk when the current precipitation reaches this value."
+msgstr "現在の降水量がこの値以上になるとリスクを表示します。"
+
+msgid "Risk: Low Temperature (°C)"
+msgstr "リスク：低温（°C）"
+
+msgid "Shows a frost risk when the current temperature falls to this value or below."
+msgstr "現在の気温がこの値以下になると霜のリスクを表示します。"
+
+msgid "Risk: High Temperature (°C)"
+msgstr "リスク：高温（°C）"
+
+msgid "Shows a heat risk when the current temperature reaches this value or above."
+msgstr "現在の気温がこの値以上になると猛暑のリスクを表示します。"
+
+msgid "Weather Effects Minimum Zoom"
+msgstr "気象演出の最小ズーム"
+
+msgid "Zoomed out beyond this level, the weather effects and the layers turned on automatically fade out over one zoom level, because one observation spread over a wide area is misleading. Layers you turn on yourself, the dock values and the day/night correction are not affected. 0 shows them at every zoom."
+msgstr "このズームより広く見ると、気象演出と自動でオンにしたレイヤーが1ズーム区間で徐々に消えます。観測値ひとつを広い範囲に均一に敷くと誤った絵になるためです。手動でオンにしたレイヤー、ドックの値、昼夜補正は変わりません。0なら常に表示します。"
+
+msgid "Temperature Tint"
+msgstr "気温の色味"
+
+msgid "Colors the temperature value in the dock blue when cold and red when hot, and adds a very faint tint to the base map (never over shapes or 3D models)."
+msgstr "ドックの気温値を寒いときは青、暑いときは赤で表示し、ベースマップにごく薄い色味を付けます（図形や3Dモデルの上には載せません）。"
+
+msgid "Tint: Neutral From (°C)"
+msgstr "色味：標準の開始（°C）"
+
+msgid "Below this temperature the cold tint starts; it is strongest at the frost risk temperature."
+msgstr "この気温より低いと寒色が始まり、霜リスク気温で最も濃くなります。"
+
+msgid "Tint: Neutral Up To (°C)"
+msgstr "色味：標準の上限（°C）"
+
+msgid "Above this temperature the hot tint starts; it is strongest at the heat risk temperature."
+msgstr "この気温より高いと暖色が始まり、猛暑リスク気温で最も濃くなります。"
+
+msgid "North wind"
+msgstr "北風"
+
+msgid "North-northeast wind"
+msgstr "北北東の風"
+
+msgid "Northeast wind"
+msgstr "北東の風"
+
+msgid "East-northeast wind"
+msgstr "東北東の風"
+
+msgid "East wind"
+msgstr "東風"
+
+msgid "East-southeast wind"
+msgstr "東南東の風"
+
+msgid "Southeast wind"
+msgstr "南東の風"
+
+msgid "South-southeast wind"
+msgstr "南南東の風"
+
+msgid "South wind"
+msgstr "南風"
+
+msgid "South-southwest wind"
+msgstr "南南西の風"
+
+msgid "Southwest wind"
+msgstr "南西の風"
+
+msgid "West-southwest wind"
+msgstr "西南西の風"
+
+msgid "West wind"
+msgstr "西風"
+
+msgid "West-northwest wind"
+msgstr "西北西の風"
+
+msgid "Northwest wind"
+msgstr "北西の風"
+
+msgid "North-northwest wind"
+msgstr "北北西の風"
+
+msgid "Calm"
+msgstr "静穏"
+
+msgid "Direction the wind blows from"
+msgstr "風が吹いてくる方向"
+
+#: aot_flask/routes_page.py
+msgid "The system log limit cannot be changed in this environment."
+msgstr "この環境ではシステムログの容量上限を変更できません。"
+
+#: aot_flask/routes_page.py
+#, python-format
+msgid "Enter an integer between %(min)s and %(max)s (MB)."
+msgstr "%(min)s～%(max)sの整数(MB)を入力してください。"
+
+#: aot_flask/routes_page.py
+msgid "The daemon is not running, so the system log limit cannot be applied."
+msgstr "デーモンが動作していないため、システムログの容量上限を適用できません。"
+
+#: aot_flask/routes_page.py
+#, python-format
+msgid "System log size limit set to %(mb)s MB."
+msgstr "システムログの容量上限を%(mb)s MBに設定しました。"
+
+#: aot_flask/routes_page.py
+msgid "The system log limit is set elsewhere and was not changed."
+msgstr "システムログの容量上限は別の場所で指定されているため、変更しませんでした。"
+
+#: aot_flask/routes_page.py
+msgid "Could not apply the system log limit. Check the daemon log."
+msgstr "システムログの容量上限を適用できませんでした。デーモンのログを確認してください。"
+
+#: aot_flask/templates/pages/info.html
+msgid "System Log Size Limit"
+msgstr "システムログの容量上限"
+
+#: aot_flask/templates/pages/info.html
+msgid "Current usage"
+msgstr "現在の使用量"
+
+#: aot_flask/templates/pages/info.html
+msgid "Size limit"
+msgstr "容量上限"
+
+#: aot_flask/templates/pages/info.html
+msgid "Not set (system default)"
+msgstr "未指定（システム既定値）"
+
+#: aot_flask/templates/pages/info.html
+msgid "The system log is kept in /var/log/journal. When it reaches the limit, the oldest entries are removed."
+msgstr "システムログは /var/log/journal に蓄積されます。上限に達すると古い記録から削除されます。"
+
+#: aot_flask/templates/pages/info.html
+#, python-format
+msgid "The limit is set in %(path)s and cannot be changed here."
+msgstr "上限は %(path)s で指定されているため、ここでは変更できません。"
+
+#: aot_flask/templates/pages/info.html
+msgid "Applied immediately; entries over the new limit are removed now."
+msgstr "すぐに適用され、新しい上限を超える記録は直ちに削除されます。"
+
+#: aot_flask/templates/pages/info.html
+msgid "Recommended"
+msgstr "推奨"
+
+msgid "Open AI screen: %s"
+msgstr "AI 画面を開く: %s"
+
+msgid "%s — screen made by AI"
+msgstr "%s — AI が作成した画面"
+
+msgid "This screen tried to go to another address, so it was closed."
+msgstr "この画面が別のアドレスへ移動しようとしたため、閉じました"
+
+msgid "This screen was made by AI. It is shown without scripts or outside connections. Do not enter passwords or other private information."
+msgstr "AI が作成した画面です。スクリプトや外部への接続なしで表示しています。パスワードなどは入力しないでください。"
+
+msgid "Post as notice"
+msgstr "お知らせとして投稿"
+
+msgid "View notice"
+msgstr "お知らせを見る"
+
+msgid "Attach the file too (%s)"
+msgstr "ファイルも一緒に添付 (%s)"
+
+msgid "Everyone on the farm will see this."
+msgstr "農場のすべてのユーザーに表示されます"
+
+msgid "External links (%s): %s. They open as previews or images in the notice."
+msgstr "外部リンク %s 件: %s — お知らせ内でプレビューや画像として開かれます"
+
+msgid "Posting…"
+msgstr "投稿中…"
+
+msgid "Posted as a notice."
+msgstr "お知らせとして投稿しました"
+
+msgid "Already posted as a notice."
+msgstr "すでにお知らせとして投稿されています"
+
+msgid "Could not post the notice."
+msgstr "お知らせを投稿できませんでした"
+
+msgid "You do not have permission to post notices."
+msgstr "お知らせを書く権限がありません"
+
+msgid "Please try again in a moment."
+msgstr "しばらくしてからもう一度お試しください"
+
+msgid "This file cannot be attached to a notice."
+msgstr "このファイルはお知らせに添付できません"
+
+msgid "Enter a title or a body."
+msgstr "タイトルまたは本文を入力してください"
+
+msgid "The notice is too long."
+msgstr "お知らせが長すぎます"
+
+msgid "This card is no longer available."
+msgstr "このカードはもう利用できません"
+
+msgid "More"
+msgstr "もっと見る"
+
+msgid "Less"
+msgstr "たたむ"
+
+msgid "This screen is out of date — reload"
+msgstr "この画面は古くなっています — 再読み込みしてください"
+
+msgid "Reload"
+msgstr "再読み込み"
+
+msgid "Show source"
+msgstr "原文を見る"
+
+msgid "Show formatted"
+msgstr "整形表示"
+
+msgid "Not done"
+msgstr "未完了"
+
+msgid "Table: %s columns × %s rows"
+msgstr "表: %s列 × %s行"
+
+msgid "%s more rows not shown"
+msgstr "残り%s行は表示していません"
+
+msgid "Table (scrolls sideways)"
+msgstr "表 (横にスクロール)"
+
+msgid "The rest is not shown."
+msgstr "残りは表示していません"
+
+msgid "AI Card Surface"
+msgstr "AIカードの面"
+
+msgid "AI Card Text"
+msgstr "AIカードの文字"
+
+msgid "AI Card"
+msgstr "AIカード"
+
+msgid "Click to edit AI Card Surface colors"
+msgstr "AIカードの面の色を編集するにはクリック"
+
+msgid "Dark face of AI cards — captions, inbox, viewer. Drawn at 0.8 opacity so the screen shows through. Change it together with AI Card Text"
+msgstr "AIカード(字幕・受信箱・ビューア)の暗い面です。画面が透けるよう不透明度0.8で描きます。AIカードの文字と一緒に変更してください"
+
+msgid "Light text on AI cards. Always opaque. Keep it far from AI Card Surface, or the text vanishes"
+msgstr "AIカード上の明るい文字です。常に不透明です。AIカードの面と十分に違う色にしないと文字が見えなくなります"
+
+msgid "AI connected"
+msgstr "AI連携中"
+
+msgid "AI connection"
+msgstr "AI連携"
+
+msgid "AI connected — open inbox, %s unread"
+msgstr "AI連携中 — 受信箱を開く、未読%s件"
+
+msgid "Turn off AI control of this screen"
+msgstr "この画面のAI操作をオフにする"
+
+msgid "AI screen control is off. You can turn it on again in the AI menu."
+msgstr "AIによる画面操作をオフにしました。AIメニューからもう一度オンにできます"
+
+msgid "Follow: auto"
+msgstr "追従: 自動"
+
+msgid "Follow: ask"
+msgstr "追従: 確認"
+
+msgid "Follow: off"
+msgstr "追従: オフ"
+
+msgid "Turn off"
+msgstr "オフにする"
+
+msgid "Show what AI looks up: Auto"
+msgstr "AIが調べた場所を画面に表示: 自動"
+
+msgid "Show what AI looks up: Ask first"
+msgstr "AIが調べた場所を画面に表示: 先に確認"
+
+msgid "Show what AI looks up: Off"
+msgstr "AIが調べた場所を画面に表示: オフ"
+
+msgid "Stop AI control of this screen"
+msgstr "この画面のAI操作を停止"
+
+msgid "Play"
+msgstr "再生"
+
+msgid "Return to the current time"
+msgstr "現在時刻に戻る"
+
+msgid "Time slider"
+msgstr "タイムスライダー"
+
+msgid "+{n}d"
+msgstr "+{n}日"
+
+msgid "Show forecast up to {n} days"
+msgstr "予報を最大{n}日まで表示"
+
+msgid "Map layers"
+msgstr "地図レイヤー"
+
+msgid "Day / night"
+msgstr "昼 / 夜"
+
+msgid "Out of range"
+msgstr "範囲外"
+
+msgid "Low confidence"
+msgstr "信頼度が低い"
+
+msgid "Reference only"
+msgstr "参考用"
+
+msgid "Recorded"
+msgstr "記録"
+
+msgid "Forecast values for the selected time"
+msgstr "選択した時刻の予報値"
+
+msgid "Recorded values for the selected time"
+msgstr "選択した時刻の記録値"
+
+msgid "Show Time Slider"
+msgstr "タイムスライダーを表示"
+
+msgid "Adds a slider under the time dock to look at the map at another time: radar frames of time-enabled layers, forecast or recorded weather values, and day / night. Needs \"Show Local Time\". Drag it back to \"Now\" to return to live values."
+msgstr "時刻ドックの下にスライダーを追加し、地図を別の時刻で見ます。時間対応レイヤーのレーダーフレーム、予報または記録された気象値、昼夜がその時刻に切り替わります。「現地時刻を表示」がオンの場合に使えます。「現在」に戻すとリアルタイムの値に戻ります。"
+
+msgid "%s attachments"
+msgstr "添付 %s"
+
+msgid "%s more attachments — open viewer"
+msgstr "添付があと%s件 — ビューアーで開く"
+
+msgid "View all"
+msgstr "すべて表示"
+
+msgid "Open link: %s"
+msgstr "リンクを開く: %s"
+
+msgid "Open original page"
+msgstr "元のページを開く"
+
+msgid "Play: %s"
+msgstr "再生: %s"
+
+msgid "Open: %s"
+msgstr "開く: %s"
+
+msgid "Plays from %s (outside site)"
+msgstr "%s（外部サイト）から再生されます"
+
+msgid "Open video: %s"
+msgstr "動画を開く: %s"
+
+msgid "Previous attachment"
+msgstr "前の添付"
+
+msgid "Next attachment"
+msgstr "次の添付"
+
+msgid "Video service"
+msgstr "動画サービス"
+
+msgid "Video host"
+msgstr "動画ホスト"
+
+msgid "Play on original site"
+msgstr "元のサイトで再生"
+
+msgid "Play here"
+msgstr "ここで再生"
+
+msgid "When you play, YouTube (an outside site) runs its own scripts on this device and sees this device's IP address."
+msgstr "再生すると、YouTube（外部サイト）がこの端末で独自のスクリプトを実行し、この端末のIPアドレスを確認できます。"
+
+msgid "When you play, the %s server sees this device's IP address and this farm server's address."
+msgstr "再生すると、%sのサーバーがこの端末のIPアドレスとこの農場サーバーのアドレスを確認できます。"
+
+msgid "Could not play this video here. Use the original site instead."
+msgstr "ここではこの動画を再生できません。元のサイトで再生してください。"
+
+msgid "Include %s attachments"
+msgstr "添付%s件を含める"
+
+msgid "Use Digital Twin (Experimental)"
+msgstr "デジタルツインを使う(実験)"
+
+msgid "Digital Twin Run Times"
+msgstr "デジタルツインの実行時刻"
+
+msgid "The Digital Twin cannot be turned on: %(reason)s"
+msgstr "デジタルツインをオンにできません: %(reason)s"
+
+msgid "Digital Twin run times must look like 06:10,18:10 (HH:MM, comma separated, at most %(n)s)."
+msgstr "デジタルツインの実行時刻は 06:10,18:10 のように入力してください(時:分、カンマ区切り、最大 %(n)s 件)。"
+
+msgid "This device runs with the LOW hardware profile."
+msgstr "この端末はハードウェアプロファイルが LOW に設定されています。"
+
+msgid "This Raspberry Pi model is too small."
+msgstr "この Raspberry Pi のモデルはスペックが低すぎます。"
+
+msgid "This device has less than %(gb)s GB of memory."
+msgstr "この端末のメモリが %(gb)s GB 未満です。"
+
+msgid "Digital Twin (Experimental)"
+msgstr "デジタルツイン(実験)"
+
+msgid "This is an experimental feature and is still at an early stage. Use it for development purposes only. Predictions are for reference and are never used for control. Behavior and data formats may change without notice."
+msgstr "実験的な機能で、まだ初期段階です。開発用途にのみ使用してください。予測は参考用で、制御には使われません。動作やデータ形式は予告なく変わることがあります。"
+
+msgid "Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program and must be installed and running."
+msgstr "予報とセンサーの値から土壌水分などを予測するデジタルツインサービスを実行します。このサービスは本体とは別に動き、インストールして起動している必要があります。"
+
+msgid "This device is too small to run the Digital Twin."
+msgstr "この端末はスペックが低いため、デジタルツインをオンにできません。"
+
+msgid "Using a remote node is still in preparation."
+msgstr "リモートノードを使う機能は準備中です。"
+
+msgid "Times of day the prediction runs, in local time. Separate several times with commas, for example 06:10,18:10."
+msgstr "予測を実行する時刻です(現地時間)。複数ある場合はカンマで区切ります。例: 06:10,18:10"
+
+msgid "Service Status"
+msgstr "サービスの状態"
+
+msgid "Twin service is not running"
+msgstr "ツインサービスが実行されていません"
+
+msgid "Failures"
+msgstr "失敗"
+
+msgid "The service stopped itself because this device is too small."
+msgstr "この端末はスペックが低いため、サービスが自動的に停止しました。"
+
+msgid "The Digital Twin runs as its own service. Docker: add COMPOSE_PROFILES=twin to the .env file and run docker compose up -d. Direct install: enable the aottwin.service systemd unit."
+msgstr "デジタルツインは別サービスとして動きます。Docker: .env に COMPOSE_PROFILES=twin を追加して docker compose up -d を実行してください。直接インストール: aottwin.service を有効にしてください。"
+
+msgid "1-day error"
+msgstr "1日誤差"
+
+msgid "80% band hit rate"
+msgstr "80%帯の的中率"
+
+msgid "Agreement"
+msgstr "一致度"
+
+msgid "Air temperature"
+msgstr "気温"
+
+msgid "Also fill empty sources with the first suggestion (sources you already chose are kept)"
+msgstr "空いている入力元を最初の提案で埋める(選択済みの入力元はそのまま)"
+
+msgid "Choose a channel"
+msgstr "チャンネルを選択"
+
+msgid "Choose a rain source — the twin cannot run without it."
+msgstr "雨の入力元を選んでください — ないとツインは動きません。"
+
+msgid "Daily sum"
+msgstr "日合計"
+
+msgid "Each site and plot is set up in its Twin tab on the map. Suggestions are only suggestions — nothing is used until you apply and save it."
+msgstr "各圃場・区画は地図の「ツイン」タブで設定します。提案はあくまで提案で、適用して保存するまで使われません。"
+
+msgid "Empty sources will be filled with the first suggestion."
+msgstr "空いている入力元は最初の提案で埋められます。"
+
+msgid "Experimental"
+msgstr "実験"
+
+msgid "Forecast input"
+msgstr "予報入力"
+
+msgid "Forecast rain days"
+msgstr "予報雨の反映日数"
+
+msgid "Hourly mean, summed"
+msgstr "時間平均の合計"
+
+msgid "Include this plot"
+msgstr "この区画を含める"
+
+msgid "Inputs whose channels declare forecast lead days are listed, nearest first. The lead-day ladder is built from the channel metadata."
+msgstr "チャンネルに予報リード日数を宣言した入力を近い順に表示します。リードの並びはチャンネルのメタデータから作ります。"
+
+msgid "Last value of the day"
+msgstr "その日の最後の値"
+
+msgid "Measured"
+msgstr "実測"
+
+msgid "Mirror"
+msgstr "ミラー"
+
+msgid "No field plot"
+msgstr "露地区画なし"
+
+msgid "No field plot under cultivation in any site."
+msgstr "栽培中の露地区画がある圃場はありません。"
+
+msgid "No field plot under cultivation in this site."
+msgstr "この圃場には栽培中の露地区画がありません。"
+
+msgid "No measured soil water sensor"
+msgstr "実測の土壌水分センサーなし"
+
+msgid "No plot has a measured soil water sensor yet — predictions cannot be synchronized."
+msgstr "実測の土壌水分センサーがある区画がまだありません — 予測を観測に合わせられません。"
+
+msgid "No rain source"
+msgstr "雨の入力元なし"
+
+msgid "No soil water sensor"
+msgstr "土壌水分センサーなし"
+
+msgid "None (assumes no rain ahead)"
+msgstr "なし(今後の雨なしと仮定)"
+
+msgid "None for this plot"
+msgstr "この区画ではなし"
+
+msgid "Not shown"
+msgstr "非表示"
+
+msgid "Observation sensors and sources"
+msgstr "観測センサーと入力元"
+
+msgid "Off for this site."
+msgstr "この圃場ではオフです。"
+
+msgid "Rain aggregation"
+msgstr "雨の集計方法"
+
+msgid "Ready."
+msgstr "準備完了。"
+
+msgid "Recent agreement"
+msgstr "最近の一致度"
+
+msgid "Reference ET (ET0)"
+msgstr "基準蒸発散量(ET0)"
+
+msgid "Run the twin for this site"
+msgstr "この圃場でツインを実行"
+
+msgid "Save failed."
+msgstr "保存できませんでした。"
+
+msgid "Saved. The twin service picks this up within an hour, or at its next run."
+msgstr "保存しました。ツインサービスが1時間以内、または次回の実行時に反映します。"
+
+msgid "Sensor suggestions"
+msgstr "センサーの提案"
+
+msgid "Sensors are chosen in each plot's Twin tab."
+msgstr "センサーは区画ごとに「ツイン」タブで選びます。"
+
+msgid "Show all channels"
+msgstr "すべてのチャンネルを表示"
+
+msgid "Soil temperature"
+msgstr "地温"
+
+msgid "Soil water (observation)"
+msgstr "土壌水分(観測)"
+
+msgid "Some plots have no measured soil water sensor; those plots are skipped."
+msgstr "実測の土壌水分センサーがない区画があります。その区画はスキップします。"
+
+msgid "Some plots ready"
+msgstr "一部の区画が準備完了"
+
+msgid "Source label"
+msgstr "入力元の区分"
+
+msgid "Source label — only measured inputs are used to synchronize and verify the twin."
+msgstr "入力元の区分 — ツインの同期・検証には実測の入力だけを使います。"
+
+msgid "Sources (plots inherit these)"
+msgstr "入力元(区画が引き継ぐ)"
+
+msgid "Suggestion"
+msgstr "提案"
+
+msgid "Suggestions are soil channels of sensors inside the plot or within 30 m of it. Nothing is used until you apply and save it."
+msgstr "提案は区画内または区画から30 m以内のセンサーの土壌チャンネルです。適用して保存するまで使われません。"
+
+msgid "This plot is not a twin target. Facility plots, finished crops and crops not yet planted are left out."
+msgstr "この区画はツインの対象ではありません。施設区画、終了した作期、まだ植えていない作期は除外されます。"
+
+msgid "Turn on for all sites"
+msgstr "すべての圃場でオン"
+
+msgid "Turn the Digital Twin on for every site?"
+msgstr "すべての圃場でデジタルツインをオンにしますか?"
+
+msgid "Turn the twin on in the site's Twin tab first."
+msgstr "先に圃場の「ツイン」タブでツインをオンにしてください。"
+
+msgid "Twin"
+msgstr "ツイン"
+
+msgid "Twin on"
+msgstr "ツイン オン"
+
+msgid "Twin off"
+msgstr "ツイン オフ"
+
+msgid "Unverified"
+msgstr "未確認"
+
+msgid "Verdict"
+msgstr "判定"
+
+msgid "Virtual"
+msgstr "仮想"
+
+msgid "from site"
+msgstr "圃場から引き継ぎ"
+
+msgid "inside the plot"
+msgstr "区画内"
+
+msgid "not measured"
+msgstr "実測ではない"
+
+msgid "off"
+msgstr "オフ"
+
+msgid "site weather station"
+msgstr "圃場の気象ステーション"
+
+msgid "Follow site"
+msgstr "圃場の値に従う"
+
+msgid "Choose"
+msgstr "選択"
+
+msgid "Plots outside any site"
+msgstr "圃場外の区画"
+
+msgid "Suggestions are soil channels of sensors inside the plot or within the search distance. Nothing is used until you apply and save it."
+msgstr "区画内や近くのセンサーの土壌チャンネルを提案します。区画内・30 m 以内になければ圃場全体のセンサー、それもなければ最も近いセンサーです。適用して保存するまでは何も使われません。"
+
+msgid "Development test"
+msgstr "開発テスト"
+
+msgid "Assimilation start date"
+msgstr "センサー値の反映開始日"
+
+msgid "Leave empty to start on the planting date. Use an earlier date only to test how well the model follows past sensor data."
+msgstr "空欄なら植え付け日から始めます。モデルが過去のセンサー値にどれだけ追従するかを試すときだけ、より早い日付を使ってください。"
+
+msgid "site-wide sensor"
+msgstr "圃場共通のセンサー"
+
+msgid "nearest sensor"
+msgstr "最も近いセンサー"
+
+msgid "weather station found in the site"
+msgstr "圃場内で見つかった気象観測所"
+
+msgid "nearest weather channel"
+msgstr "最も近い気象チャンネル"
+
+msgid "in this site"
+msgstr "この圃場内"
+
+msgid "No active forecast input is near this site."
+msgstr "この圃場の近くに有効な予報入力がありません。"
+
+msgid "Create one here"
+msgstr "ここに作成"
+
+msgid "Creating..."
+msgstr "作成中..."
+
+msgid "Forecast input created and chosen for this site."
+msgstr "予報入力を作成し、この圃場に指定しました。"
+
+msgid "Digital Twin Settings"
+msgstr "デジタルツイン設定"
+
+msgid "Run times, low-spec option, forecast inputs and the site table are on the Digital Twin settings page."
+msgstr "実行時刻、低スペックのオプション、予報入力、圃場の表はデジタルツイン設定ページにあります。"
+
+msgid "Digital Twin"
+msgstr "デジタルツイン"
+
+msgid "Service"
+msgstr "サービス"
+
+msgid "Allow on low-spec profile"
+msgstr "低スペックプロファイルでも許可"
+
+msgid "Create forecast inputs automatically"
+msgstr "予報入力を自動作成"
+
+msgid "When you turn the twin on for a site that has no forecast input nearby, a forecast input is created at the site location and chosen for the site. You can change or remove it in the input settings."
+msgstr "近くに予報入力がない圃場でツインをオンにすると、圃場の位置に予報入力を作成してその圃場に指定します。入力設定で変更・削除できます。"
+
+msgid "Development and test machines run with the LOW hardware profile, which locks the Digital Twin. Turn this on to run it anyway. Small Raspberry Pi models and devices with too little memory stay locked."
+msgstr "開発・試験用の機器は LOW ハードウェアプロファイルで動作し、デジタルツインがロックされます。このオプションをオンにすると、それでも実行します。小型の Raspberry Pi やメモリ不足の機器はロックされたままです。"
+
+msgid "The Digital Twin is off. Turn it on in Settings > General."
+msgstr "デジタルツインがオフです。設定 > 一般でオンにしてください。"
+
+msgid "AI result cards"
+msgstr "AI結果カード"
+
+msgid "When on, connected AI is told to also post key results (recommendations, summaries, comparisons, plans, reports, images, link lists) as AI cards on your screen."
+msgstr "オンにすると、接続したAIが主要な結果（提案・要約・比較・計画・レポート・画像・リンク一覧）を画面にAIカードとしても投稿するよう案内されます。"
+
+msgid "Rule for AI that ignores the server instructions"
+msgstr "サーバーの指示に従わないAI向けのルール"
+
+msgid "AI shortcut link"
+msgstr "AIショートカットのリンク"
+
+msgid "On phones, a button in the AI panel opens this address (the AI app opens if installed). Leave empty for no button."
+msgstr "スマートフォンでは、AIパネルのボタンがこのアドレスを開きます（アプリがあればアプリが開きます）。空にするとボタンは表示されません。"
+
+msgid "AI shortcut link must be an https address (for example https://claude.ai/new). It was not changed."
+msgstr "AIショートカットのリンクはhttpsのアドレスにしてください（例: https://claude.ai/new）。変更しませんでした。"
+
+msgid "Open %s"
+msgstr "%sを開く"
+
+msgid "Open %s in a new tab"
+msgstr "%sを新しいタブで開く"
+
+msgid "AI off"
+msgstr "AIオフ"
+
+msgid "AI settings"
+msgstr "AI設定"
+
+msgid "AI off — open inbox"
+msgstr "AIオフ — 受信箱を開く"
+
+msgid "Allow AI to control this screen"
+msgstr "この画面のAI操作を許可"
+
+msgid "Applies to this browser only."
+msgstr "このブラウザにのみ適用されます。"
+
+msgid "Ask first"
+msgstr "確認する"
+
+msgid "Show what AI looks up"
+msgstr "AIが調べた画面を表示"
+
+msgid "View AI requests"
+msgstr "AIリクエストを見る"
+
+msgid "Message options in General settings"
+msgstr "メッセージの設定は一般設定で"
+
+msgid "AI screen control is on."
+msgstr "AIによる画面操作をオンにしました。"
+
+msgid "AI screen control is off. You can turn it on again in AI settings."
+msgstr "AIによる画面操作をオフにしました。AI設定からもう一度オンにできます。"
+
+msgid "%s approval requests are waiting."
+msgstr "承認待ちのリクエストが %s 件あります。"
+
+msgid "1 approval request is waiting."
+msgstr "承認待ちのリクエストが 1 件あります。"
+
+msgid "Approval requests"
+msgstr "承認リクエスト"
+
+msgid "Approvals"
+msgstr "承認待ち"
+
+msgid "Approvals waiting: %s — review"
+msgstr "承認待ち %s 件 — 確認する"
+
+msgid "Approve all"
+msgstr "すべて承認"
+
+msgid "Reject all"
+msgstr "すべて拒否"
+
+msgid "Approved {done} of {total}."
+msgstr "{total} 件中 {done} 件を承認しました。"
+
+msgid "Rejected {done} of {total}."
+msgstr "{total} 件中 {done} 件を拒否しました。"
+
+msgid "Control request"
+msgstr "制御リクエスト"
+
+msgid "Could not refresh. This list may be out of date."
+msgstr "更新できませんでした。この一覧は古い可能性があります。"
+
+msgid "Invalid value: %s"
+msgstr "値が正しくありません: %s"
+
+msgid "Run now"
+msgstr "今すぐ実行"
+
+msgid "Save and approve"
+msgstr "保存して承認"
+
+msgid "View request history"
+msgstr "リクエスト履歴を見る"
+
+msgid "expires in {time}"
+msgstr "残り {time}"
+
+msgid "Screen action"
+msgstr "画面操作"
+
+msgid "Approval needed: %s"
+msgstr "承認が必要です: %s"
+
+msgid "AI wants to change this screen"
+msgstr "AIがこの画面を変更しようとしています"
+
+msgid "Allow"
+msgstr "許可"
+
+msgid "Decline"
+msgstr "拒否"
+
+msgid "Shows how many external AI write requests are waiting for approval. Click View to open the approval window at the bottom of the screen, where you can approve, reject, or edit-then-approve them. Approving runs the request immediately with exactly the values shown."
+msgstr "外部AIの書き込みリクエストが承認待ちの件数を表示します。[表示]を押すと画面下部の承認ウィンドウが開き、承認・拒否、または編集して承認できます。承認すると表示された値のまま即時に実行されます。"
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr "センサー・機器・スケジュール・メモを閲覧できます。"
+
+msgid "Turn devices and functions on and off."
+msgstr "機器や機能をオン・オフできます。"
+
+msgid "Change settings, plots and records."
+msgstr "設定・区画・記録を変更できます。"
+
+msgid "Read"
+msgstr "読み取り"
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr "AIアプリのリクエストが正しくありません(%(reason)s)。アプリに戻ってもう一度お試しください。"
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr "このAoTが認可サーバーになれるのはhttpsアドレスのみです(httpはlocalhostのみ)。"
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr "認証を有効にするには、MCP公開アドレスを入力してください。"
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr "設定は保存しましたが、署名鍵を作成できませんでした。データフォルダーに書き込めるか確認してください。"
+
+msgid "That connection was not found."
+msgstr "その接続が見つかりません。"
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr "接続を切断しました。そのAIアプリがこのAoTを使うには、再度許可が必要です。"
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr "MCP公開アドレスはhttpsである必要があります(httpはlocalhostのみ)。"
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr "発行者(このサーバー): %(issuer)s"
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr "署名鍵を作成または読み取りできません(%(error)s)。"
+
+msgid "Allow AI access"
+msgstr "AIのアクセスを許可"
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr "「%(client)s」を名乗るAIアプリが、このAoTであなたのアカウントを使おうとしています。"
+
+msgid "Signed in as %(user)s."
+msgstr "%(user)sとしてログイン中です。"
+
+msgid "What it may do"
+msgstr "許可される操作"
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr "実際にできる操作は、このAoTでのあなたの役割に制限されます。パスワードの変更または設定から、いつでも接続を切断できます。"
+
+msgid "Deny"
+msgstr "拒否"
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr "APIキーと、このAoTが発行したアクセストークン"
+
+msgid "OAuth Authentication"
+msgstr "OAuth認証"
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr "OAuthアクセストークンも受け付けます。claude.aiのコネクターはこの方式でログインします。トークンの発行元を下で選んでください。APIキーはどちらでも使えます。"
+
+msgid "Token Issuer"
+msgstr "トークン発行元"
+
+msgid "Central (AoT Central Authentication)"
+msgstr "中央(AoT中央認証)"
+
+msgid "This AoT (built in)"
+msgstr "このAoT(内蔵)"
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr "ログインと同意は別の認可サーバーで行い、このAoTはトークンの確認だけを行います。以下のアドレスは、このサーバーと認可サーバーに到達できるアドレスそのままで、ドメインやネットワークは問いません。"
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr "このAoTが自分でログインを受け付けトークンを発行するため、他のサーバーは不要です。AIサービス(例: claude.ai)がインターネット経由で接続するので、公開httpsアドレスが必要です。2つのうち有効にできるのは一方だけです。"
+
+msgid "Before You Turn This On"
+msgstr "有効にする前に"
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr "AoTをインターネットに公開すると、ログイン画面と/mcpアドレスが誰にでも見える状態になります。強いパスワードを使い、機器を制御できるすべてのアカウントで二段階認証(TOTP)を有効にしてください。"
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr "プライベートネットワークやVPN内では、AIサービスがこのAoTに到達できません。その場合はAPIキーを使ってください。"
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr "公開アドレスは次のように振り分けてください。/mcp と /.well-known/oauth-protected-resource はMCPサーバー(ポート5700)へ、/authorize・/token・/register・/revoke・/.well-known/oauth-authorization-server を含むそれ以外はWebサーバー(ポート8084)へ送ります。"
+
+msgid "Accepted Redirect Addresses"
+msgstr "許可するリダイレクト先"
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr "これらのアドレスのいずれかで登録したAIアプリだけが接続できます。http://localhost と http://127.0.0.1 は、Claude Codeのように利用者自身のコンピューターで動くツール用です。"
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr "このAoTは同じWebアドレスで自ら認可サーバーになるため、発行者はこのアドレスからパスを除いたものです。"
+
+msgid "My Connected AI Apps"
+msgstr "自分が接続したAIアプリ"
+
+msgid "last used"
+msgstr "最終使用"
+
+msgid "No AI app is connected with your account yet."
+msgstr "あなたのアカウントで接続されているAIアプリはまだありません。"
+
+msgid "Soil moisture forecast (twin)"
+msgstr "土壌水分予測（ツイン）"
+
+msgid "hatched = low confidence (far day) or wide spread"
+msgstr "斜線 = 信頼度が低い（先の日）または予測幅が広い"
+
+msgid "degraded (forecast rain covers {n}/8 days, the rest assumed dry)"
+msgstr "入力の一部を代替（予報雨 {n}/8 日分を反映、残りの日は無降雨と仮定）"
+
+msgid "degraded (forecast inputs substituted)"
+msgstr "入力の一部を代替（予報入力を仮定値で代用）"
+
+msgid "root-zone water content p50"
+msgstr "根域水分 p50"
+
+msgid "forecast publication expired"
+msgstr "予測の発行期限切れ"
+
+msgid "twin not synced with the sensors"
+msgstr "ツインがセンサーと合っていない"
+
+msgid "this plot cannot be simulated with its current setup"
+msgstr "現在の設定ではこの区画を計算できない"
+
+msgid "twin run failed"
+msgstr "ツインの実行に失敗"
+
+msgid "forecast publication incomplete"
+msgstr "予測の発行が不完全"
+
+msgid "no forecast in this period"
+msgstr "この期間の予測なし"
+
+msgid "Unavailable"
+msgstr "利用不可"
+
+msgid "valid until"
+msgstr "有効期限"
+
+msgid "No plot has a measured soil water sensor yet and prediction without a sensor is off — nothing is computed."
+msgstr "実測の土壌水分センサーを持つ区画がまだなく、センサーなし予測もオフです — 何も計算されません。"
+
+msgid "No plot has a measured soil water sensor — plots run without observation (model only, reference only). Accept the suggested sensors below to synchronize them."
+msgstr "実測の土壌水分センサーを持つ区画がありません — 区画は観測なし(モデルのみ・参考用)で動きます。下の候補センサーを受け入れると同期されます。"
+
+msgid "Some plots have no measured soil water sensor; they run without observation (reference only) or are skipped."
+msgstr "一部の区画には実測の土壌水分センサーがありません。それらは観測なし(参考用)で動くか、スキップされます。"
+
+msgid "This plot is excluded from the twin."
+msgstr "この区画はツインから除外されています。"
+
+msgid "The twin is off for this site - turn it on in the site's Twin tab."
+msgstr "この敷地はツインがオフです - 敷地のツインタブでオンにしてください。"
+
+msgid "This plot has no planting date, so it cannot be simulated - set the start date of its crop."
+msgstr "この区画には植え付け日がないため計算できません - 作期の開始日を設定してください。"
+
+msgid "No rain source - choose one in the site's Twin tab (plots inherit it)."
+msgstr "雨の出典がありません - 敷地のツインタブで選んでください(区画が引き継ぎます)。"
+
+msgid "The soil sensor is not labelled Measured, so it is not used - change the source label if it is a real sensor."
+msgstr "土壌センサーの出典表示が「実測」ではないため使われていません - 実際のセンサーなら出典表示を変更してください。"
+
+msgid "Synchronized with the soil sensor."
+msgstr "土壌センサーと同期しています。"
+
+msgid "No soil sensor chosen yet. A sensor is suggested - accept it to synchronize; until then the plot runs without observation (reference only)."
+msgstr "土壌センサーがまだ選ばれていません。センサーが提案されています - 受け入れると同期されます。それまで区画は観測なし(参考用)で動きます。"
+
+msgid "No soil sensor chosen yet. A sensor is suggested - accept it, because prediction without a sensor is off and the plot is not computed."
+msgstr "土壌センサーがまだ選ばれていません。センサーが提案されています - センサーなし予測がオフのため、受け入れないとこの区画は計算されません。"
+
+msgid "No soil sensor - the plot runs without observation (model only, reference only)."
+msgstr "土壌センサーがありません - 区画は観測なし(モデルのみ・参考用)で動きます。"
+
+msgid "No soil sensor and prediction without a sensor is off - the plot is not computed."
+msgstr "土壌センサーがなく、センサーなし予測もオフです - この区画は計算されません。"
+
+msgid "No observation (model only, reference only)"
+msgstr "観測なし(モデルのみ・参考用)"
+
+msgid "chosen for another site"
+msgstr "別の敷地で選択済み"
+
+msgid "Soil sensor suggestions"
+msgstr "土壌センサーの候補"
+
+msgid "Tick the sensors to use, check the source label, then Save. Nothing is used until you save. Plots left unticked keep running without observation (reference only)."
+msgstr "使うセンサーにチェックを入れ、出典表示を確認してから保存してください。保存するまで何も使われません。チェックしない区画は観測なし(参考用)で動き続けます。"
+
+msgid "Select all within the search distance"
+msgstr "検索距離内のセンサーをすべて選択"
+
+msgid "within the search distance"
+msgstr "検索距離内"
+
+msgid "This sensor is far from the plot - it may not represent it."
+msgstr "このセンサーは区画から遠く、区画を代表しない可能性があります。"
+
+msgid "Plots without a soil sensor: predict without observation (reference only)"
+msgstr "土壌センサーのない区画: 観測なしで予測のみ(参考用)"
+
+msgid "The model runs from the planting date on rain and weather alone. It is not synchronized or verified, so the spread is wide; the map marks these plots \"No observation - reference only\". Untick to skip such plots."
+msgstr "植え付け日から雨と天気だけでモデルを動かします。同期・検証がないため予測の幅が広く、地図には「観測なし - 参考用」と表示されます。チェックを外すとそのような区画はスキップされます。"
+
+msgid "Sensors can also be chosen in each plot's Twin tab."
+msgstr "センサーは各区画のツインタブでも選べます。"
+
+msgid "Without a soil sensor"
+msgstr "土壌センサーがないとき"
+
+msgid "Predict without observation (reference only)"
+msgstr "観測なしで予測のみ(参考用)"
+
+msgid "Do not compute"
+msgstr "計算しない"
+
+msgid "no observation - reference only"
+msgstr "観測なし — 参考用"
+
+msgid "cannot simulate: no rain source - choose it in the site's Twin tab"
+msgstr "計算不可: 雨の出典がありません - 敷地のツインタブで選んでください"
+
+msgid "cannot simulate: the plot has no planting date"
+msgstr "計算不可: 区画に植え付け日がありません"
+
+msgid "cannot simulate: the soil sensor is not labelled Measured - change it in the plot's Twin tab"
+msgstr "計算不可: 土壌センサーが「実測」と表示されていません - 区画のツインタブで変更してください"
+
+msgid "cannot simulate: no soil sensor and prediction without a sensor is off - change it in the plot's Twin tab"
+msgstr "計算不可: 土壌センサーがなくセンサーなし予測もオフです - 区画のツインタブで変更してください"
+
+msgid "not synchronized: the soil sensor has no valid recent readings"
+msgstr "未同期: 土壌センサーに最近の有効な値がありません"
+
+msgid "No sensor - reference only"
+msgstr "センサーなし — 参考用"
+
+msgid "Set the source label of the selected to"
+msgstr "選択したセンサーの出典表示を一括で"
+
+msgid "Forecast source"
+msgstr "予報の出典"
+
+msgid "The digital twin, the map weather and the AI read this forecast. Near days come from the hourly input, later days from the daily input."
+msgstr "デジタルツイン・地図の天気・AI がこの予報を共通で読みます。近い日は時間別入力、その後は日別入力から来ます。"
+
+msgid "No forecast source is set. The twin, the map weather and the AI all fall back to the map weather layer."
+msgstr "予報の出典が指定されていません。ツイン・地図の天気・AI はすべて地図の天気レイヤーを代わりに使います。"
+
+msgid "No forecast inputs to choose from."
+msgstr "選べる予報入力がありません。"
+
+msgid "Daily forecast"
+msgstr "日別予報"
+
+msgid "Hourly forecast"
+msgstr "時間別予報"
+
+msgid "This is the site's forecast source (Info tab). The twin, the map weather and the AI read the same forecast."
+msgstr "敷地の予報の出典（情報タブ）と同じ設定です。ツイン・地図の天気・AI が同じ予報を読みます。"
+
+msgid "High / low"
+msgstr "最高 / 最低"
+
+msgid "Rain (day)"
+msgstr "降水（1日）"
+
+msgid "Rain chance"
+msgstr "降水確率"
+
+msgid "Forecast values for the selected day"
+msgstr "選択した日の予報値"
+
+msgid "Beyond the forecast range"
+msgstr "予報の提供範囲外"
+
+msgid "No forecast source"
+msgstr "予報の出典なし"
+
+msgid "site forecast source"
+msgstr "敷地の予報の出典"
+
+msgid "map weather layer (no site forecast source)"
+msgstr "地図の天気レイヤー（敷地の予報の出典なし）"
+
+msgid "Hourly"
+msgstr "時間別"
+
+msgid "Weather forecast"
+msgstr "天気予報"
+
+msgid "14 days back"
+msgstr "14日前から"
+
+msgid "30 days back"
+msgstr "30日前から"
+
+msgid "Air temperature (forecast)"
+msgstr "気温（予報）"
+
+msgid "Forecast only"
+msgstr "今後のみ"
+
+msgid "Frost line (0 °C)"
+msgstr "霜の目安（0 °C）"
+
+msgid "Original values (not corrected)."
+msgstr "元の値（補正前）です。"
+
+msgid "Outside the map time range (past) — only the cursor moves."
+msgstr "地図の時間範囲外（過去）— カーソルだけ動きます。"
+
+msgid "Rain (forecast)"
+msgstr "雨（予報）"
+
+msgid "Rain (observed)"
+msgstr "雨（観測）"
+
+msgid "Rain · ET0"
+msgstr "雨 · ET0"
+
+msgid "Risks"
+msgstr "リスク"
+
+msgid "Soil water"
+msgstr "土壌水分"
+
+msgid "Soil water (forecast)"
+msgstr "土壌水分（予測）"
+
+msgid "The chart library could not be loaded."
+msgstr "グラフライブラリを読み込めませんでした。"
+
+msgid "The map shows this day."
+msgstr "地図はこの日を表示しています。"
+
+msgid "The soil water panel is in sensor units (percent of the sensor, not the root zone)."
+msgstr "土壌水分の欄はセンサー単位です（根圏ではなくセンサー値の％）。"
+
+msgid "The soil water panel is the root-zone average (model state)."
+msgstr "土壌水分の欄は根圏平均（モデル状態）です。"
+
+msgid "This plot is not a twin target."
+msgstr "この区画はツインの対象ではありません。"
+
+msgid "Water deficit"
+msgstr "水不足"
+
+msgid "Waterlogging"
+msgstr "過湿"
+
+msgid "in {n} days"
+msgstr "{n}日後"
+
+msgid "{n} days ago"
+msgstr "{n}日前"
+
+msgid "no forecast source"
+msgstr "予報の取得元なし"
+
+msgid "pinned"
+msgstr "固定"
+
+msgid "previewing"
+msgstr "プレビュー"
+
+msgid "sensor %"
+msgstr "センサー %"
+
+msgid "Dots: sensor. Line and band: forecast median and the 10th to 90th percentile range. Dashed bars: forecast rain."
+msgstr "点はセンサー実測、線と帯は予測の中央値と10〜90パーセンタイルの範囲、破線の棒は予報の雨です。"
+
+msgid "Days of forecast rain for the twin"
+msgstr "ツインが使う予報降水の日数"
+
+msgid "Same list and setting as the site's forecast source (Info tab): hourly and daily forecasts, in priority order. Near days come from the hourly input, later days from the daily input. The twin, the map weather and the AI read the same forecast."
+msgstr "敷地の予報の出典（情報タブ）と同じ一覧・同じ設定です。時間別・日別予報を優先順に選び、近い日は時間別入力、その後は日別入力から来ます。ツイン・地図の天気・AI が同じ予報を読みます。"
+
+msgid "Move up"
+msgstr "上へ"
+
+msgid "Move down"
+msgstr "下へ"
+
+msgid "No matching forecast inputs."
+msgstr "一致する予報入力がありません。"
+
+msgid "More results — type to narrow down"
+msgstr "さらに結果があります — 入力して絞り込んでください"
+
+msgid "No forecast source is chosen."
+msgstr "指定した予報がありません。"
+
+msgid "Apply nearest hourly + daily"
+msgstr "近い時間別 + 日別のおすすめを適用"
+
+msgid "Add forecast"
+msgstr "予報を追加"
+
+msgid "Search forecast inputs by name"
+msgstr "予報入力を名前で検索"
+
+msgid "Forecast inputs"
+msgstr "予報入力"
+
+msgid "Set manually"
+msgstr "手動で指定"
+
+msgid "Inherited"
+msgstr "継承"
+
+msgid "Not chosen yet"
+msgstr "未選択"
+
+msgid "Nothing found to inherit"
+msgstr "継承できるものがありません"
+
+msgid "Follow inheritance"
+msgstr "継承に従う"
+
+msgid "Shown on the map"
+msgstr "地図に表示"
+
+msgid "Sources and plots"
+msgstr "使用する入力元と区画"
+
+msgid "Sources in use"
+msgstr "ツインが使用する入力元"
+
+msgid "Choose the forecast source in the site window (Forecast source)."
+msgstr "予報の入力元は圃場ウィンドウの「予報の入力元」で選びます。"
+
+msgid "No forecast source is chosen for this site."
+msgstr "この圃場には予報の入力元がありません。"
+
+msgid "To use a different sensor for a plot, set it in that plot's Twin tab."
+msgstr "区画ごとに別のセンサーを使うには、その区画のツインタブで手動指定してください。"
+
+msgid "Sensors and sources are inherited from the shapes. Set one manually only when this plot needs a different one."
+msgstr "センサーと入力元は図形から継承されます。この区画に別のものが必要な場合のみ手動で指定してください。"
+
+msgid "The model runs from the planting date on rain and weather alone. It is not synchronized or verified, so the spread is wide; the map marks these plots \"No observation - reference only\". Turn off to skip such plots."
+msgstr "モデルは定植日から雨と天気だけで動きます。センサーとの同期や検証は行わないため幅が広く、地図には「観測なし - 参考用」と表示されます。このような区画を除外するにはオフにしてください。"
+
+msgid "Show details"
+msgstr "詳細を表示"
+
+msgid "Hide details"
+msgstr "詳細を閉じる"
+
+msgid "Experimental feature for development use. Predictions are for reference and never used for control."
+msgstr "実験機能で開発用です。予測は参考用で、制御には使われません。"
+
+msgid "Site is off"
+msgstr "圃場がオフ"
+
+msgid "Not planted"
+msgstr "未定植"
+
+msgid "Sensor not marked as measured"
+msgstr "センサーが実測として表示されていません"
+
+msgid "Synchronized with the sensor"
+msgstr "センサーと同期済み"
+
+msgid "Sensor available to set"
+msgstr "指定できるセンサーあり"
+
+msgid "Without observation"
+msgstr "観測なしで予測"
+
+msgid "Not computed"
+msgstr "計算しない"
+
+msgid "Show numbers"
+msgstr "数値を表示"
+
+msgid "Hide numbers"
+msgstr "数値を閉じる"
+
+msgid "Choose channels that record what the device actually did (opening or running, in percent)."
+msgstr "デバイスが実際に行ったこと(開度・稼働、パーセント)を記録するチャンネルを選んでください。"
+
+#: aot/tools/screen_follow.py
+msgid "AI is looking this up…"
+msgstr "AIが調べています…"
+
+#: aot/aot_flask/static/js/geo/journal-page.js
+msgid "On-site sensor measurements to include"
+msgstr "含める現場センサーの測定値"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "7 Days"
+msgstr "7日間"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Show today only"
+msgstr "今日の値だけ表示"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "Show the last 7 days"
+msgstr "直近7日を表示"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
+msgid "No data for the last 7 days."
+msgstr "直近7日間の記録がありません。"
+
+#: aot_flask/geo/plot_journal.py
+msgid "Notes pinned to a map location were not checked."
+msgstr "地図上の位置に固定されたノートは確認していません。"
+
+#: aot_flask/static/js/geo/journal-page.js
+msgid "No plots found."
+msgstr "区画が見つかりませんでした。"
+
+#: aot_flask/static/js/geo/journal-page.js
+msgid "Pick a plot, or a site or zone."
+msgstr "区画、またはサイト・ゾーンを選んでください。"
+
+#: aot_flask/static/js/geo/journal-page.js
+msgid "Looking up when data starts…"
+msgstr "データがいつからあるかを確認中…"
+
+#: aot_flask/static/js/geo/journal-page.js
+#, python-format
+msgid "Data for this area starts on %(d)s."
+msgstr "この範囲のデータは%(d)sからあります。"
+
+#: aot_flask/static/js/geo/journal-page.js
+msgid "No measurements found for this area yet."
+msgstr "この範囲にはまだ測定値がありません。"
+
+#: aot_flask/static/js/geo/journal-page.js
+#, python-format
+msgid "%(on)s of %(all)s"
+msgstr "%(all)s件中%(on)s件"
+
+#: aot_flask/geo/plot_journal.py
+#, python-format
+msgid "Device diagnostics were left out of this journal: %(names)s."
+msgstr "デバイスの診断値はこの日誌から除きました: %(names)s。"
+
+#: aot_flask/geo/plot_journal.py
+msgid "NNE"
+msgstr "北北東の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "ENE"
+msgstr "東北東の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "ESE"
+msgstr "東南東の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "SSE"
+msgstr "南南東の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "SSW"
+msgstr "南南西の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "WSW"
+msgstr "西南西の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "WNW"
+msgstr "西北西の風"
+
+#: aot_flask/geo/plot_journal.py
+msgid "NNW"
+msgstr "北北西の風"
+
+msgid "Show the last 8 weeks"
+msgstr "直近8週間を表示"
+
+msgid "No data for this period."
+msgstr "この期間の記録がありません。"
+
+msgid "This stage"
+msgstr "この生育段階"
+
+msgid "{n} pending"
+msgstr "{n}件待機中"
+
+msgid "raw params"
+msgstr "元のパラメーター"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s turned on (%(time)s)"
+msgstr "出力 %(name)s (%(id)s) チャンネル %(channel)s をオンにしました (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s turned off (%(time)s)"
+msgstr "出力 %(name)s (%(id)s) チャンネル %(channel)s をオフにしました (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid ""
+"Output %(name)s (%(id)s) channel %(channel)s turned on for %(seconds)s "
+"seconds (%(time)s)"
+msgstr ""
+"出力 %(name)s (%(id)s) チャンネル %(channel)s を%(seconds)s秒間オンにしました (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid ""
+"Output %(name)s (%(id)s) channel %(channel)s duty cycle set to %(duty)s%% "
+"(%(time)s)"
+msgstr ""
+"出力 %(name)s (%(id)s) チャンネル %(channel)s のデューティ比を%(duty)s%%に設定しました (%(time)s)"
+
+#: aot_flask/routes_general.py
+#, python-format
+msgid "Output %(name)s (%(id)s) channel %(channel)s command sent (%(time)s)"
+msgstr "出力 %(name)s (%(id)s) チャンネル %(channel)s にコマンドを送信しました (%(time)s)"
+
+msgid "Matter"
+msgstr "Matter"
+
+msgid "Matter support is experimental."
+msgstr "Matterへの対応は実験段階です。"
+
+msgid "Matter Server"
+msgstr "Matterサーバー"
+
+msgid "Not connected"
+msgstr "未接続"
+
+msgid "Server version"
+msgstr "サーバーのバージョン"
+
+msgid "Schema"
+msgstr "スキーマ"
+
+msgid "SDK"
+msgstr "SDK"
+
+msgid "Fabric ID"
+msgstr "ファブリックID"
+
+msgid "Reachable"
+msgstr "応答あり"
+
+msgid "Last error"
+msgstr "直近のエラー"
+
+msgid "How to turn it on"
+msgstr "オンにする方法"
+
+msgid ""
+"Matter needs a Linux host. The host must be on the same network as the "
+"devices, with host networking, IPv6 router advertisements and mDNS. Run "
+"aot/scripts/check_matter_host.sh on the host first and fix what it reports."
+msgstr ""
+"MatterにはLinuxホストが必要です。ホストはデバイスと同じネットワークにあり、ホストネットワーク、IPv6ルーター広告、mDNSが使える必要があります。先にホストでaot/scripts/check_matter_host.shを実行し、報告された問題を解決してください。"
+
+msgid ""
+"Then add COMPOSE_PROFILES=matter to docker/.env and start the Matter server:"
+msgstr "次にdocker/.envにCOMPOSE_PROFILES=matterを追加し、Matterサーバーを起動してください:"
+
+msgid "Add a shared device"
+msgstr "共有デバイスを追加"
+
+msgid ""
+"Add a device that is already set up in another app (Apple Home, Google Home,"
+" SmartThings, and so on)."
+msgstr "別のアプリ(Apple Home、Google Home、SmartThingsなど)で設定済みのデバイスを追加します。"
+
+msgid ""
+"1. In that app, open the device and choose its share, pairing mode or linked"
+" Matter apps option."
+msgstr "1. そのアプリでデバイスを開き、共有、ペアリングモード、またはMatterの連携アプリの項目を選びます。"
+
+msgid "2. The app shows an 11-digit code that is valid for about 15 minutes."
+msgstr "2. アプリに約15分間有効な11桁のコードが表示されます。"
+
+msgid "3. Enter the code here and press Add."
+msgstr "3. ここにコードを入力して「追加」を押します。"
+
+msgid "Pairing code"
+msgstr "ペアリングコード"
+
+msgid "This can take up to a minute"
+msgstr "最大1分ほどかかることがあります"
+
+msgid "Connect the Matter server first."
+msgstr "先にMatterサーバーを接続してください。"
+
+msgid "Matter Devices"
+msgstr "Matterデバイス"
+
+msgid "No Matter devices yet."
+msgstr "Matterデバイスはまだありません。"
+
+msgid "Sensors and switches"
+msgstr "センサーとスイッチ"
+
+msgid "AoT device"
+msgstr "AoTデバイス"
+
+msgid "Not reachable"
+msgstr "応答なし"
+
+msgid "No AoT device"
+msgstr "AoTデバイスなし"
+
+msgid "Unnamed device"
+msgstr "名前のないデバイス"
+
+msgid "%(n)s switches"
+msgstr "スイッチ%(n)s個"
+
+msgid "Added: %(sensors)s sensors, %(switches)s switches"
+msgstr "追加しました: センサー%(sensors)s個、スイッチ%(switches)s個"
+
+msgid "Re-connected to the existing device"
+msgstr "既存のデバイスに再接続しました"
+
+msgid "Adding the device failed."
+msgstr "デバイスの追加に失敗しました。"
+
+msgid "Removing the device failed."
+msgstr "デバイスの削除に失敗しました。"
+
+msgid "The request failed. Check the connection and try again."
+msgstr "リクエストに失敗しました。接続を確認してもう一度お試しください。"
+
+msgid ""
+"Remove this device? This deletes its AoT device and its sensor and switch "
+"entries, and removes AoT from the device. The recorded history stays in the "
+"database."
+msgstr ""
+"このデバイスを削除しますか? "
+"AoTデバイスとそのセンサー・スイッチの項目が削除され、デバイスからAoTも取り除かれます。記録済みの履歴はデータベースに残ります。"
+
+msgid ""
+"The Matter server is not reachable. Check that the matter_server and "
+"matter_socket containers are running."
+msgstr "Matterサーバーに接続できません。matter_serverとmatter_socketのコンテナが動作しているか確認してください。"
+
+msgid ""
+"The device did not finish joining in time. Share it again from the other app"
+" and enter the new code."
+msgstr "デバイスが時間内に参加を完了しませんでした。別のアプリからもう一度共有し、新しいコードを入力してください。"
+
+msgid "The pairing code is not valid. Check the digits and try again."
+msgstr "ペアリングコードが正しくありません。桁を確認してもう一度お試しください。"
+
+msgid ""
+"The device has no free slot for another ecosystem. Remove one of its other "
+"connections in that app, then share again."
+msgstr "デバイスに別のエコシステムを接続する空きがありません。そのアプリで他の接続を1つ削除してから、もう一度共有してください。"
+
+msgid ""
+"The device could not prove it is certified. Check that this AoT server can "
+"reach the internet (CSA DCL) and try again."
+msgstr ""
+"デバイスが認証済み製品であることを確認できませんでした。このAoTサーバーがインターネット(CSA "
+"DCL)に接続できるか確認して、もう一度お試しください。"
+
+msgid ""
+"The device was not found on the network. Make sure it is on the same network"
+" as this AoT server and that its sharing window is still open, then run "
+"aot/scripts/check_matter_host.sh on the host."
+msgstr ""
+"ネットワーク上にデバイスが見つかりませんでした。デバイスがこのAoTサーバーと同じネットワークにあり、共有可能な時間がまだ終わっていないことを確認してから、ホストでaot/scripts/check_matter_host.shを実行してください。"
+
+msgid ""
+"The device did not accept the code. The sharing window may have closed — "
+"share it again from the other app and enter the new code."
+msgstr ""
+"デバイスがコードを受け付けませんでした。共有可能な時間が終了した可能性があります。別のアプリからもう一度共有し、新しいコードを入力してください。"
+
+msgid "Adding the device failed: %(details)s"
+msgstr "デバイスの追加に失敗しました: %(details)s"
+
+msgid ""
+"Enter the 11-digit pairing code (or the MT: code) shown by the other app."
+msgstr "別のアプリに表示された11桁のペアリングコード(またはMT:コード)を入力してください。"
+
+msgid "The Matter server returned no device."
+msgstr "Matterサーバーからデバイスが返されませんでした。"
+
+msgid ""
+"The device joined, but AoT does not support any of its sensors or switches "
+"yet."
+msgstr "デバイスは参加しましたが、AoTはそのセンサーやスイッチにまだ対応していません。"
+
+msgid "Creating the AoT device failed."
+msgstr "AoTデバイスの作成に失敗しました。"
+
+msgid "Removing the device failed: %(details)s"
+msgstr "デバイスの削除に失敗しました: %(details)s"
+
+msgid ""
+"The device was not reachable, so it still lists AoT as connected. Remove AoT"
+" from it in the other app (or reset it) to free that slot."
+msgstr ""
+"デバイスに接続できなかったため、デバイス側ではAoTが接続済みのままです。別のアプリでAoTを削除する(またはデバイスを初期化する)と、その枠が空きます。"
+
+msgid ""
+"AoT could not remove itself from the Matter device now. It is listed on "
+"Settings > Matter, where you can remove it later."
+msgstr "AoTは今回、Matterデバイスから自分自身を取り除けませんでした。設定 > Matterに残っているので、後でそこから削除できます。"
+
+msgid ""
+"A Matter device shared to AoT from another ecosystem (Apple Home, Google "
+"Home, SmartThings and others). Add it from Settings > Matter with the "
+"pairing code the other app shows when you share the device. Its sensors and "
+"switches are created as the Input and Output under this device. Deleting "
+"this device also removes AoT from the device, so it frees its slot for other"
+" ecosystems."
+msgstr ""
+"別のエコシステム(Apple Home、Google "
+"Home、SmartThingsなど)からAoTに共有されたMatterデバイスです。デバイスを共有するときに別のアプリに表示されるペアリングコードを使って、設定"
+" > "
+"Matterから追加してください。デバイスのセンサーとスイッチは、このデバイスの下に入力と出力として作成されます。このデバイスを削除すると、デバイスからAoTも取り除かれ、他のエコシステム用の枠が空きます。"
+
+msgid "Node ID"
+msgstr "ノードID"
+
+msgid ""
+"Node ID on the AoT Matter fabric. Set when the device is added; change it "
+"only to re-bind this device to a node that was shared again"
+msgstr ""
+"AoT Matterファブリック上のノードIDです。デバイスの追加時に設定されます。再共有されたノードにこのデバイスを結び直すときだけ変更してください"
+
+msgid "Device Identity"
+msgstr "デバイスの識別子"
+
+msgid ""
+"Unique ID reported by the device. Used to find this device again when it is "
+"removed and shared again, so its history continues"
+msgstr "デバイスが報告する固有IDです。デバイスを削除して再共有したときに同じデバイスを見つけ、履歴を引き継ぐために使います"
+
+msgid "Vendor"
+msgstr "ベンダー"
+
+msgid "Reported by the device"
+msgstr "デバイスが報告した値"
+
+msgid "Serial Number"
+msgstr "シリアル番号"
+
+msgid ""
+"Matter devices are added from Settings > Matter with the pairing code shared"
+" from the other app."
+msgstr "Matterデバイスは、別のアプリで共有したペアリングコードを使って設定 > Matterから追加します。"
+
+msgid ""
+"Sensor values from a Matter device on the AoT Matter fabric. Created "
+"automatically when a device is shared to AoT from Settings > Matter; each "
+"channel is one sensor the device reported. Values are written when they "
+"change and again every sample interval while the device is reachable. "
+"Nothing is written while it is unreachable."
+msgstr ""
+"AoT Matterファブリック上のMatterデバイスのセンサー値です。設定 > "
+"Matterからデバイスを共有すると自動で作成され、1チャンネルがデバイスの報告するセンサー1つに対応します。値は変化したときに記録され、デバイスに接続できる間はサンプル間隔ごとにも記録されます。接続できない間は何も記録しません。"
+
+msgid "Node ID on the AoT Matter fabric. Inherited from the Matter device"
+msgstr "AoT Matterファブリック上のノードIDです。Matterデバイスから引き継ぎます"
+
+msgid "Sample Interval (seconds)"
+msgstr "サンプル間隔(秒)"
+
+msgid ""
+"How often the current value is written while the device is reachable, in "
+"addition to every change it reports"
+msgstr "デバイスが報告する変化のたびの記録とは別に、デバイスに接続できる間に現在値を記録する間隔"
+
+msgid "Matter endpoint number on the device"
+msgstr "デバイス上のMatterエンドポイント番号"
+
+msgid "Cluster ID"
+msgstr "クラスターID"
+
+msgid "Matter cluster id (decimal)"
+msgstr "MatterクラスターID(10進数)"
+
+msgid "Attribute ID"
+msgstr "属性ID"
+
+msgid "Matter attribute id (decimal)"
+msgstr "Matter属性ID(10進数)"
+
+msgid "Sensor Kind"
+msgstr "センサーの種類"
+
+msgid ""
+"How the raw value is scaled: temperature, humidity, illuminance, "
+"boolean_state or battery"
+msgstr ""
+"生の値の換算方法: "
+"temperature(温度)、humidity(湿度)、illuminance(照度)、boolean_state(真偽状態)、battery(電池)"
+
+msgid ""
+"Switch the On/Off endpoints of a Matter device on the AoT Matter fabric "
+"(plugs, relays, lights). Created automatically when a device is shared to "
+"AoT from Settings > Matter; each channel is one endpoint. A command counts "
+"as done when the device itself reports the new state."
+msgstr ""
+"AoT Matterファブリック上のMatterデバイスのオン/オフのエンドポイント(プラグ、リレー、照明)を切り替えます。設定 > "
+"Matterからデバイスを共有すると自動で作成され、1チャンネルがエンドポイント1つに対応します。デバイス自身が新しい状態を報告した時点でコマンドが完了したとみなします。"
+
+msgid "A name for this channel"
+msgstr "このチャンネルの名前"
+
+msgid "Matter endpoint number of this switch on the device"
+msgstr "デバイス上のこのスイッチのMatterエンドポイント番号"
+
+msgid ""
+"Set the channel state when AoT starts. \"Do Nothing\" leaves the device as "
+"it is"
+msgstr "AoTの起動時にチャンネルの状態を設定します。「何もしない」を選ぶとデバイスはそのままになります"
+
+msgid "Could not read the Matter server status."
+msgstr "Matterサーバーの状態を読み取れませんでした。"
+
+msgid "Could not read the list of Matter devices."
+msgstr "Matterデバイスの一覧を読み取れませんでした。"
+
+msgid "Adding the device failed. See the AoT log for details."
+msgstr "デバイスの追加に失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Unknown Matter device."
+msgstr "不明なMatterデバイスです。"
+
+msgid "Removing the device failed. See the AoT log for details."
+msgstr "デバイスの削除に失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Not on the Matter server — share it again to reconnect, or remove it"
+msgstr "Matterサーバーにありません — もう一度共有して再接続するか、削除してください"
+
+msgid "Dimmer"
+msgstr "ディマー"
+
+msgid ""
+"Dim the light or plug endpoints of a Matter device on the AoT Matter fabric."
+" Created automatically when a device is shared to AoT from Settings > "
+"Matter; each channel is one endpoint. A duty cycle of 0 switches it off; any"
+" other duty cycle sets the level and switches it on. The state shown is what"
+" the device reports."
+msgstr ""
+"AoT Matterファブリック上のMatterデバイスの照明・プラグのエンドポイントの明るさを調整します。設定 > "
+"Matterからデバイスを共有すると自動で作成され、1チャンネルがエンドポイント1つに対応します。デューティ比0はオフ、それ以外の値はそのレベルに設定してオンにします。表示される状態はデバイスが報告した値です。"
+
+msgid "Matter endpoint number of this dimmer on the device"
+msgstr "デバイス上のこのディマーのMatterエンドポイント番号"
+
+msgid "Transition (seconds)"
+msgstr "移行時間(秒)"
+
+msgid "How long the device takes to reach a new level. 0 = as fast as it can"
+msgstr "デバイスが新しいレベルに達するまでの時間。0 = 可能な限り速く"
+
+msgid "Curtain / Shade"
+msgstr "カーテン / 遮光"
+
+msgid ""
+"Move a Matter curtain, shade, blind or motorised vent on the AoT Matter "
+"fabric to a position. 100 is fully open (retracted) and 0 fully closed "
+"(deployed), as for other AoT position actuators. Off stops the motor. The "
+"device reports its own position, which is shown here and used by the "
+"environment coordinator."
+msgstr ""
+"AoT "
+"MatterファブリックのMatterカーテン、遮光カーテン、ブラインド、電動換気窓を指定した位置に動かします。他のAoT位置アクチュエーターと同様、100は全開(巻き取り)、0は全閉(展開)です。オフでモーターを停止します。デバイスは自分の位置を報告し、その値がここに表示され、統合環境制御でも使われます。"
+
+msgid "Matter endpoint number of this covering on the device"
+msgstr "デバイス上のこのカーテン類のMatterエンドポイント番号"
+
+msgid ""
+"This device is not on the Matter server. Share it again to reconnect it."
+msgstr "このデバイスはMatterサーバーにありません。もう一度共有して再接続してください。"
+
+msgid "Reading the device again failed. See the AoT log for details."
+msgstr "デバイスの再読み取りに失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Read again"
+msgstr "再読み取り"
+
+msgid ""
+"Add the sensors and controls AoT now supports that this device does not have"
+" yet"
+msgstr "AoTが現在対応していて、このデバイスにまだないセンサーと制御を追加します"
+
+msgid "Added %(sensors)s sensor channels and %(outputs)s control channels"
+msgstr "センサーチャンネル%(sensors)s個と制御チャンネル%(outputs)s個を追加しました"
+
+msgid "Nothing new to add"
+msgstr "追加するものはありません"
+
+msgid "Unknown network type."
+msgstr "不明なネットワークの種類です。"
+
+msgid "Enter the Wi-Fi network name."
+msgstr "Wi-Fiのネットワーク名を入力してください。"
+
+msgid "A Wi-Fi network name is at most 32 bytes."
+msgstr "Wi-Fiのネットワーク名は32バイトまでです。"
+
+msgid "Enter the Wi-Fi password (8 to 64 characters)."
+msgstr "Wi-Fiのパスワード(8〜64文字)を入力してください。"
+
+msgid "Enter the Thread operational dataset as hex (from your border router)."
+msgstr "Threadのオペレーショナルデータセットを16進数で入力してください(ボーダールーターから取得)。"
+
+msgid ""
+"Enter the 11-digit pairing code (or the MT: code) from the device or its "
+"box."
+msgstr "デバイスまたはその箱に記載された11桁のペアリングコード(またはMT:コード)を入力してください。"
+
+msgid "Unknown or expired job."
+msgstr "不明、または期限切れのジョブです。"
+
+msgid "This device is not on the Matter server."
+msgstr "このデバイスはMatterサーバーにありません。"
+
+msgid "The device is not reachable right now, so it cannot be shared."
+msgstr "デバイスに現在接続できないため、共有できません。"
+
+msgid "Opening the sharing window failed: %(details)s"
+msgstr "共有の受付を開始できませんでした: %(details)s"
+
+msgid "Closing the sharing window failed: %(details)s"
+msgstr "共有の受付を終了できませんでした: %(details)s"
+
+msgid "Reading the device's connections failed: %(details)s"
+msgstr "デバイスの接続の読み取りに失敗しました: %(details)s"
+
+msgid "Unknown connection."
+msgstr "不明な接続です。"
+
+msgid "This is AoT's own connection. Remove the device instead."
+msgstr "これはAoT自身の接続です。代わりにデバイスを削除してください。"
+
+msgid "Removing the connection failed: %(details)s"
+msgstr "接続の削除に失敗しました: %(details)s"
+
+msgid "The device did not remove that connection. Try again."
+msgstr "デバイスがその接続を削除しませんでした。もう一度お試しください。"
+
+msgid "Firmware updates are turned off on the Matter server."
+msgstr "Matterサーバーではファームウェア更新がオフになっています。"
+
+msgid "Checking for an update failed: %(details)s"
+msgstr "更新の確認に失敗しました: %(details)s"
+
+msgid "No update is available for this device."
+msgstr "このデバイスに利用できる更新はありません。"
+
+msgid ""
+"This update does not come from the certified (CSA) source, so AoT does not "
+"install it."
+msgstr "この更新は認証済み(CSA)の提供元からのものではないため、AoTはインストールしません。"
+
+msgid "The available update changed. Check again before updating."
+msgstr "利用可能な更新が変わりました。更新する前にもう一度確認してください。"
+
+msgid "The device is not reachable right now."
+msgstr "デバイスに現在接続できません。"
+
+msgid "The device is already busy with an update."
+msgstr "デバイスはすでに更新中です。"
+
+msgid "Starting the update failed: %(details)s"
+msgstr "更新の開始に失敗しました: %(details)s"
+
+msgid ""
+"The device did not finish joining in time. Put it back into pairing mode "
+"(see its manual) and try again."
+msgstr "デバイスが時間内に参加を完了しませんでした。デバイスをペアリングモードに戻して(取扱説明書を参照)、もう一度お試しください。"
+
+msgid ""
+"Bluetooth is not available to the Matter server. Run "
+"aot/scripts/check_matter_host.sh --ble on the host and start the server with"
+" docker/docker-compose.matter-ble.yml."
+msgstr ""
+"MatterサーバーでBluetoothを使えません。ホストでaot/scripts/check_matter_host.sh "
+"--bleを実行し、docker/docker-compose.matter-ble.ymlでサーバーを起動してください。"
+
+msgid ""
+"The device could not join the Wi-Fi network. Check the network name and "
+"password, and that the network is 2.4 GHz if the device needs it."
+msgstr ""
+"デバイスがWi-Fiネットワークに参加できませんでした。ネットワーク名とパスワードを確認し、デバイスが2.4 "
+"GHzを必要とする場合はネットワークが2.4 GHzか確認してください。"
+
+msgid ""
+"The device could not join the Thread network. Check the Thread dataset and "
+"that a Thread border router is running."
+msgstr ""
+"デバイスがThreadネットワークに参加できませんでした。Threadデータセットと、Threadボーダールーターが動作しているかを確認してください。"
+
+msgid ""
+"The device was not found. Keep it close to this AoT server, make sure it is "
+"in pairing mode, and check Bluetooth on the host."
+msgstr ""
+"デバイスが見つかりませんでした。デバイスをこのAoTサーバーの近くに置き、ペアリングモードになっていることと、ホストのBluetoothを確認してください。"
+
+msgid ""
+"The device did not accept the code. Check the code on the device or its box "
+"and try again."
+msgstr "デバイスがコードを受け付けませんでした。デバイスまたはその箱に記載のコードを確認して、もう一度お試しください。"
+
+msgid "This device already has an AoT device."
+msgstr "このデバイスにはすでにAoTデバイスがあります。"
+
+msgid ""
+"Endpoint %(endpoint)s is a dimmer but is still set up as a switch. Delete "
+"that switch output and read the device again to control it as a dimmer."
+msgstr ""
+"エンドポイント%(endpoint)sはディマーですが、まだスイッチとして設定されています。そのスイッチ出力を削除してデバイスを再読み取りすると、ディマーとして制御できます。"
+
+msgid "Creating the AoT device failed. See the AoT log for details."
+msgstr "AoTデバイスの作成に失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Could not read the progress. See the AoT log for details."
+msgstr "進行状況を読み取れませんでした。詳細はAoTのログを確認してください。"
+
+msgid "Opening the sharing window failed. See the AoT log for details."
+msgstr "共有の受付を開始できませんでした。詳細はAoTのログを確認してください。"
+
+msgid "Closing the sharing window failed. See the AoT log for details."
+msgstr "共有の受付を終了できませんでした。詳細はAoTのログを確認してください。"
+
+msgid "Reading the device's connections failed. See the AoT log for details."
+msgstr "デバイスの接続の読み取りに失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Removing the connection failed. See the AoT log for details."
+msgstr "接続の削除に失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Checking for an update failed. See the AoT log for details."
+msgstr "更新の確認に失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Unknown firmware version."
+msgstr "不明なファームウェアのバージョンです。"
+
+msgid "Starting the update failed. See the AoT log for details."
+msgstr "更新の開始に失敗しました。詳細はAoTのログを確認してください。"
+
+msgid "Add a new device"
+msgstr "新しいデバイスを追加"
+
+msgid ""
+"Add a device that is fresh out of the box, or that was reset to its factory "
+"settings."
+msgstr "箱から出したばかりの、または工場出荷状態にリセットしたデバイスを追加します。"
+
+msgid ""
+"AoT finds it over Bluetooth from this AoT server, so keep the device close "
+"to the server."
+msgstr "AoTはこのAoTサーバーからBluetoothでデバイスを探すので、デバイスをサーバーの近くに置いてください。"
+
+msgid "You need the pairing code printed on the device or its box."
+msgstr "デバイスまたはその箱に印刷されたペアリングコードが必要です。"
+
+msgid "Network"
+msgstr "ネットワーク"
+
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+msgid "Thread"
+msgstr "Thread"
+
+msgid "Already on the network (Ethernet)"
+msgstr "すでにネットワークに接続済み(Ethernet)"
+
+msgid "Wi-Fi network name"
+msgstr "Wi-Fiネットワーク名"
+
+msgid "Wi-Fi password"
+msgstr "Wi-Fiパスワード"
+
+msgid "Thread dataset (hex)"
+msgstr "Threadデータセット(16進数)"
+
+msgid ""
+"AoT does not keep the Wi-Fi password or the Thread dataset. It is used once "
+"to join the device to your network and is then removed from the Matter "
+"server."
+msgstr ""
+"AoTはWi-"
+"FiパスワードやThreadデータセットを保管しません。デバイスをネットワークに参加させるときに一度だけ使い、その後Matterサーバーから削除されます。"
+
+msgid ""
+"Bluetooth is not turned on for the Matter server, so a device cannot be "
+"found over Bluetooth yet. A device that is already on the network (Ethernet)"
+" can still be added without it."
+msgstr ""
+"MatterサーバーでBluetoothがオンになっていないため、まだBluetoothでデバイスを探せません。すでにネットワークに接続済み(Ethernet)のデバイスは、Bluetoothなしでも追加できます。"
+
+msgid ""
+"To turn it on, run aot/scripts/check_matter_host.sh --ble on the host and "
+"fix what it reports. Then start the Matter server with this extra file:"
+msgstr ""
+"オンにするには、ホストでaot/scripts/check_matter_host.sh "
+"--bleを実行し、報告された問題を解決してください。その後、次の追加ファイルを指定してMatterサーバーを起動してください:"
+
+msgid "Share this device"
+msgstr "このデバイスを共有"
+
+msgid ""
+"In the other app, choose Add device, then Matter, and enter this code. Most "
+"apps also accept the 11-digit code instead of scanning a QR code. Keep this "
+"dialog open until the other app has added the device: closing it closes the "
+"sharing window."
+msgstr ""
+"別のアプリで「デバイスを追加」、続いて「Matter」を選び、このコードを入力してください。ほとんどのアプリではQRコードのスキャンの代わりに11桁のコードも使えます。別のアプリがデバイスを追加するまでこのダイアログを開いたままにしてください。閉じると共有の受付も終了します。"
+
+msgid "QR code text (for apps that ask for it):"
+msgstr "QRコードの文字列(求められるアプリ向け):"
+
+msgid "Connected ecosystems"
+msgstr "接続中のエコシステム"
+
+msgid "Maker"
+msgstr "メーカー"
+
+msgid "Close sharing"
+msgstr "共有を終了"
+
+msgid "Firmware"
+msgstr "ファームウェア"
+
+msgid "Check for an update"
+msgstr "更新を確認"
+
+msgid "Release notes"
+msgstr "リリースノート"
+
+msgid "This update is not from the certified source. AoT will not install it."
+msgstr "この更新は認証済みの提供元のものではありません。AoTはインストールしません。"
+
+msgid "Create AoT device"
+msgstr "AoTデバイスを作成"
+
+msgid ""
+"This device is on the AoT Matter fabric but has no AoT device yet, for "
+"example because the page was closed while it was being added"
+msgstr ""
+"このデバイスはAoT Matterファブリック上にありますが、AoTデバイスがまだありません。たとえば、追加している途中でページを閉じた場合です"
+
+msgid "AoT device created"
+msgstr "AoTデバイスを作成しました"
+
+msgid ""
+"Let another app (Apple Home, Google Home, SmartThings, and so on) use this "
+"device too"
+msgstr "別のアプリ(Apple Home、Google Home、SmartThingsなど)でもこのデバイスを使えるようにします"
+
+msgid "Firmware %(version)s"
+msgstr "ファームウェア %(version)s"
+
+msgid "Checking for an update"
+msgstr "更新を確認中"
+
+msgid "Waiting to check for an update"
+msgstr "更新の確認を待機中"
+
+msgid "Downloading the update"
+msgstr "更新をダウンロード中"
+
+msgid "Installing the update"
+msgstr "更新をインストール中"
+
+msgid "Waiting to install the update"
+msgstr "更新のインストールを待機中"
+
+msgid "Rolling back the update"
+msgstr "更新を元に戻し中"
+
+msgid "Waiting for the device to accept the update"
+msgstr "デバイスが更新を受け付けるのを待機中"
+
+msgid ""
+"Looking for the device over Bluetooth and joining it to the network. This "
+"can take several minutes."
+msgstr "Bluetoothでデバイスを探し、ネットワークに参加させています。数分かかることがあります。"
+
+msgid "Creating the AoT device..."
+msgstr "AoTデバイスを作成中..."
+
+msgid ""
+"There is still no result after 12 minutes. Check the device and the AoT log,"
+" then try again."
+msgstr "12分たっても結果が出ません。デバイスとAoTのログを確認して、もう一度お試しください。"
+
+msgid ""
+"This job is no longer known. If the device was added, it is in the list "
+"below."
+msgstr "このジョブはもう存在しません。デバイスが追加されていれば、下の一覧にあります。"
+
+msgid "Enter the pairing code first."
+msgstr "先にペアリングコードを入力してください。"
+
+msgid "Opening the sharing window..."
+msgstr "共有の受付を開始中..."
+
+msgid "Sharing is open. The code stops working in %(time)s."
+msgstr "共有を受け付けています。コードは%(time)sで使えなくなります。"
+
+msgid ""
+"The sharing window has closed. Close this dialog and share again for a new "
+"code."
+msgstr "共有の受付が終了しました。このダイアログを閉じてもう一度共有すると、新しいコードが表示されます。"
+
+msgid "Sharing closed. The code no longer works."
+msgstr "共有を終了しました。コードはもう使えません。"
+
+msgid "Opening the sharing window failed."
+msgstr "共有の受付を開始できませんでした。"
+
+msgid "Closing the sharing window failed."
+msgstr "共有の受付を終了できませんでした。"
+
+msgid "Reading the connections..."
+msgstr "接続を読み取り中..."
+
+msgid "Reading the connections failed."
+msgstr "接続の読み取りに失敗しました。"
+
+msgid "No connections found."
+msgstr "接続が見つかりません。"
+
+msgid "Connections used: %(used)s of %(supported)s"
+msgstr "使用中の接続: %(used)s / %(supported)s"
+
+msgid "Connections used: %(used)s"
+msgstr "使用中の接続: %(used)s"
+
+msgid "This is AoT"
+msgstr "これはAoTです"
+
+msgid "Disconnected"
+msgstr "切断済み"
+
+msgid "Disconnecting failed."
+msgstr "切断に失敗しました。"
+
+msgid ""
+"Disconnect this app from the device? The other app loses control of the "
+"device and must add it again to use it."
+msgstr "このアプリをデバイスから切断しますか? 別のアプリはデバイスを制御できなくなり、再び使うにはデバイスを追加し直す必要があります。"
+
+msgid "Current version: %(version)s"
+msgstr "現在のバージョン: %(version)s"
+
+msgid "Checking..."
+msgstr "確認中..."
+
+msgid "Up to date"
+msgstr "最新です"
+
+msgid "Version %(version)s is available"
+msgstr "バージョン%(version)sが利用できます"
+
+msgid "Checking for an update failed."
+msgstr "更新の確認に失敗しました。"
+
+msgid ""
+"Update the firmware now? The device restarts and may stop working for a few "
+"minutes. Do not update a device that controls something critical right now."
+msgstr ""
+"今すぐファームウェアを更新しますか? デバイスが再起動し、数分間動作しなくなることがあります。重要なものを制御中のデバイスは、今は更新しないでください。"
+
+msgid "The update has started. Progress shows in the device list."
+msgstr "更新を開始しました。進行状況はデバイス一覧に表示されます。"
+
+msgid "Starting the update failed."
+msgstr "更新の開始に失敗しました。"
+
+msgid ""
+"The Matter server did not accept the network details. Check the Wi-Fi name "
+"and password or the Thread dataset."
+msgstr ""
+"Matterサーバーがネットワーク情報を受け付けませんでした。Wi-Fiの名前とパスワード、またはThreadデータセットを確認してください。"
+
+msgid "Could not check access to this device. Try again."
+msgstr "このデバイスへのアクセスを確認できませんでした。もう一度お試しください。"
+
+msgid ""
+"AoT does not keep the Wi-Fi password or the Thread dataset. It is used once "
+"to join the device to your network and then removed from the Matter server's"
+" credential list. The Matter server's storage log can still contain it, and "
+"that storage is part of AoT backups, so treat backups as secret."
+msgstr ""
+"AoTはWi-"
+"FiパスワードやThreadデータセットを保管しません。デバイスをネットワークに参加させるときに一度だけ使い、その後Matterサーバーの認証情報リストから削除されます。ただし、Matterサーバーのストレージのログには残る場合があり、このストレージはAoTのバックアップに含まれるため、バックアップは機密情報として扱ってください。"
+
+msgid "Open “%s”"
+msgstr "「%s」を開く"
+
+msgid "Highlight “%s”"
+msgstr "「%s」を強調表示"
+
+msgid "Open the settings of “%s”"
+msgstr "「%s」の設定を開く"
+
+msgid "Close the open dialog"
+msgstr "開いているダイアログを閉じる"
+
+msgid "Show a message"
+msgstr "メッセージを表示"
+
+msgid "Show an AI message"
+msgstr "AIメッセージを表示"
+
+msgid "AI inbox"
+msgstr "AI受信箱"
+
+msgid "Inbox"
+msgstr "受信箱"
+
+msgid "AI inbox: %s unread"
+msgstr "AI受信箱: 未読%s件"
+
+msgid "AI messages"
+msgstr "AIメッセージ"
+
+msgid "%s more in the AI inbox"
+msgstr "AI受信箱にあと%s件"
+
+msgid "No AI messages."
+msgstr "AIメッセージはありません。"
+
+msgid "Could not load the AI inbox."
+msgstr "AI受信箱を読み込めませんでした。"
+
+msgid "New"
+msgstr "新着"
+
+msgid "Dismiss"
+msgstr "閉じる"
+
+msgid "Show older"
+msgstr "以前の分をもっと見る"
+
+msgid "Mark all read"
+msgstr "すべて既読"
+
+msgid "Hide AI messages"
+msgstr "AIメッセージを隠す"
+
+msgid ""
+"Check to stop AI messages from popping up on screen. They still arrive in "
+"the AI inbox."
+msgstr "オンにすると、AIメッセージが画面にポップアップしなくなります。メッセージは引き続きAI受信箱に届きます。"
+
+msgid "Open file: %s"
+msgstr "ファイルを開く: %s"
+
+msgid "%s — toggle full size"
+msgstr "%s — 画面に合わせる/元の大きさの切り替え"
+
+msgid "Received at"
+msgstr "受信日時"
+
+msgid "Pin card"
+msgstr "カードを固定"
+
+msgid "Pinned card"
+msgstr "固定したカード"
+
+msgid "Pinned only"
+msgstr "固定のみ表示"
+
+msgid "Saved to notes"
+msgstr "ノートに保存しました"
+
+msgid "Save to notes"
+msgstr "ノートに保存"
+
+msgid "Dismiss card"
+msgstr "カードを閉じる"
+
+msgid "Search AI messages"
+msgstr "AIメッセージを検索"
+
+msgid "No matching AI messages."
+msgstr "該当するAIメッセージはありません。"
+
+msgid "Could not load the preview."
+msgstr "プレビューを読み込めませんでした。"
+
+msgid "Could not update the card."
+msgstr "カードを更新できませんでした。"
+
+msgid "Pin limit reached. Unpin a card first."
+msgstr "固定できる上限に達しました。先に別のカードの固定を解除してください。"
+
+msgid "You do not have permission to create notes."
+msgstr "ノートを作成する権限がありません。"
+
+msgid "Could not save to notes."
+msgstr "ノートに保存できませんでした。"
+
+msgid "Reload this page"
+msgstr "このページを再読み込み"
+
+msgid "Screen control"
+msgstr "画面操作"
+
+msgid "Open “%s” on the map"
+msgstr "地図で「%s」を開く"
+
+msgid "Open the “%s” tab"
+msgstr "「%s」タブを開く"
+
+msgid "Full screen map"
+msgstr "全画面の地図"
+
+msgid "Change map layers"
+msgstr "地図のレイヤーを変更"
+
+msgid "Change the map view"
+msgstr "地図の表示を変更"
+
+msgid "Device Status"
+msgstr "デバイスの状態"
+
+msgid "Status Note"
+msgstr "状態の理由"
+
+msgid "Status Since"
+msgstr "状態の開始日"
+
+msgid "Under repair"
+msgstr "修理中"
+
+msgid "Under maintenance"
+msgstr "メンテナンス中"
+
+msgid ""
+"Repair, removed and maintenance sensors are left out of averages and silence"
+" alerts."
+msgstr "修理中・撤去済み・メンテナンス中のセンサーは、平均値の計算と無通信アラートから除外されます。"
+
+msgid "Lightning Flash"
+msgstr "稲光の演出"
+
+msgid ""
+"When a weather source reports recent lightning, the screen brightens briefly"
+" now and then (never more than a few times per second). Turn off to avoid "
+"flashing. It is also skipped when reduced motion is requested."
+msgstr ""
+"気象の取得元が最近の落雷を報告すると、画面がときどき短く明るくなります(1秒に数回を超えることはありません)。点滅が気になる場合はオフにしてください。システムで視差効果や動きの低減が有効な場合も表示しません。"
+
+msgid "Lightning"
+msgstr "雷"
+
+msgid "Indoor temperature"
+msgstr "室内温度"
+
+msgid "Indoor CO2"
+msgstr "室内CO2"
+
+msgid "Outdoor temperature"
+msgstr "外気温度"
+
+msgid "Outdoor humidity"
+msgstr "外気湿度"
+
+msgid "Outdoor CO2"
+msgstr "外気CO2"
+
+msgid "Ventilation opening"
+msgstr "換気窓の開度"
+
+msgid "Fogging"
+msgstr "細霧"
+
+msgid "CO2 injection"
+msgstr "CO2施用"
+
+msgid "Shade screen"
+msgstr "遮光カーテン"
+
+msgid "Air flow"
+msgstr "風量"
+
+msgid "CO2 injector"
+msgstr "CO2 注入器"
+
+msgid "CO2 removal"
+msgstr "CO2 除去"
+
+msgid "CO2 scrubber"
+msgstr "CO2 除去器"
+
+msgid "CO2 supply"
+msgstr "CO2 供給量"
+
+msgid "Command log, estimated"
+msgstr "指令の記録(推定)"
+
+msgid "Curtain transmittance"
+msgstr "カーテン透過率"
+
+msgid "Dehumidifier"
+msgstr "除湿機"
+
+msgid "Device states are set by hand (below), so the states found by location are not used."
+msgstr "機器の状態を手動で指定しているため(下)、位置から見つけた状態は使いません。"
+
+msgid "Devices and effect channels"
+msgstr "機器と効果チャネル"
+
+msgid "Drip irrigation"
+msgstr "点滴灌漑"
+
+msgid "Effect not reflected"
+msgstr "効果は未反映"
+
+msgid "Follow device locations"
+msgstr "機器の位置に従う"
+
+msgid "Frost fan"
+msgstr "防霜ファン"
+
+msgid "Frost sprinkler"
+msgstr "防霜散水"
+
+msgid "Heat loss saved"
+msgstr "熱損失の削減"
+
+msgid "Heat output"
+msgstr "熱出力"
+
+msgid "Irrigation depth"
+msgstr "灌水深"
+
+msgid "Kind unknown"
+msgstr "種類不明"
+
+msgid "Kind unknown - the effect is not reflected in the twin."
+msgstr "種類が不明です - 効果はツインに反映されません。"
+
+msgid "Left out of the twin."
+msgstr "ツインから除外しました。"
+
+msgid "Measured state"
+msgstr "実測の状態"
+
+msgid "Mist irrigation"
+msgstr "ミスト灌漑"
+
+msgid "Mulch"
+msgstr "マルチ"
+
+msgid "No devices found for this place."
+msgstr "この場所で見つかった機器はありません。"
+
+msgid "No state series"
+msgstr "状態の系列なし"
+
+msgid "No state series was found - the device is left out of the twin run."
+msgstr "状態の系列が見つかりません - この機器はツインの実行から外れます。"
+
+msgid "Not applied to the field twin yet."
+msgstr "露地ツインにはまだ適用されません。"
+
+msgid "Opening area"
+msgstr "開口面積"
+
+msgid "Outside facilities"
+msgstr "施設外(露地)"
+
+msgid "Partly reflected"
+msgstr "一部反映"
+
+msgid "Reflected"
+msgstr "反映"
+
+msgid "Reflected in the twin."
+msgstr "ツインに反映されます。"
+
+msgid "Running log"
+msgstr "稼働履歴"
+
+msgid "Set device states by hand"
+msgstr "機器の状態を手動で指定"
+
+msgid "Shade net"
+msgstr "遮光ネット"
+
+msgid "Shade transmittance"
+msgstr "遮光幕の透過率"
+
+msgid "Spray flow"
+msgstr "噴霧流量"
+
+msgid "Sprinkler irrigation"
+msgstr "散水灌漑"
+
+msgid "Supplemental light"
+msgstr "補光"
+
+msgid "The devices of this facility could not be read."
+msgstr "この施設の機器を読み込めませんでした。"
+
+msgid "Tunnel cover"
+msgstr "トンネル被覆"
+
+msgid "Use in the twin"
+msgstr "ツインで使う"
+
+msgid "Window opening"
+msgstr "窓の開閉"
+
+msgid "air movement at the leaves"
+msgstr "葉まわりの空気の動き"
+
+msgid "air temperature near the ground"
+msgstr "地表付近の気温"
+
+msgid "default, estimated"
+msgstr "既定値・推定"
+
+msgid "dehumidification"
+msgstr "除湿"
+
+msgid "device setting"
+msgstr "機器の設定"
+
+msgid "facility drawing"
+msgstr "施設の図面"
+
+msgid "heat from lamps"
+msgstr "照明の発熱"
+
+msgid "humidity near the ground"
+msgstr "地表付近の湿度"
+
+msgid "latent heat of freezing"
+msgstr "凍結の潜熱"
+
+msgid "leaf wetting"
+msgstr "葉の濡れ"
+
+msgid "light for photosynthesis"
+msgstr "光合成のための光"
+
+msgid "night minimum temperature"
+msgstr "夜間の最低気温"
+
+msgid "no rule to combine devices"
+msgstr "機器をまとめる規則なし"
+
+msgid "not modeled"
+msgstr "モデルにない"
+
+msgid "not reflected"
+msgstr "未反映"
+
+msgid "not used for synchronization"
+msgstr "同期には使わない"
+
+msgid "rain interception"
+msgstr "雨の遮断"
+
+msgid "set by user"
+msgstr "利用者の指定"
+
+msgid "soil evaporation"
+msgstr "土壌蒸発"
+
+msgid "soil temperature"
+msgstr "地温"
+
+msgid "surface temperature"
+msgstr "表面温度"
+
+msgid "unknown kind of device"
+msgstr "不明な機器の種類"
+
+msgid "wetted area"
+msgstr "濡れた面積"
+
+msgid "Devices in this site"
+msgstr "この敷地の機器"
+
+msgid "Not an observation — excluded from synchronization"
+msgstr "観測ではない — 同期から除外"
+
+msgid "forecast"
+msgstr "予報"
+
+msgid "model value"
+msgstr "モデル値"
+
+msgid "simulator"
+msgstr "シミュレーター"
+
+msgid "Rain is not an observation"
+msgstr "雨が観測ではない"
+
+msgid "Sensor is not an observation"
+msgstr "センサーが観測ではない"
+
+msgid "The rain source is not an observation — excluded from synchronization, so the twin has no rain to run on."
+msgstr "雨の出所が観測ではなく同期から除外されるため、ツインに使える雨の系列がありません。"
+
+msgid "The soil sensor is not an observation — excluded from synchronization. The plot runs without observation (reference only)."
+msgstr "土壌センサーが観測ではなく同期から除外されます。この区画は観測なしで動きます(参考用)。"
+
+msgid "Forecast tuned to this site"
+msgstr "現場に合わせた予報"
+
+msgid "Always on"
+msgstr "常にオン"
+
+msgid "Adjusted"
+msgstr "補正済み"
+
+msgid "Unadjusted"
+msgstr "元データ"
+
+msgid "Unadjusted · comparing"
+msgstr "元データ · 比較中"
+
+msgid "Unadjusted · no sensor to compare"
+msgstr "元データ · 比較するセンサーなし"
+
+msgid "Unadjusted · no forecast source"
+msgstr "元データ · 予報の出典なし"
+
+msgid "Unadjusted · off"
+msgstr "元データ · オフ"
+
+msgid "Unadjusted · not checked yet"
+msgstr "元データ · まだ確認していません"
+
+msgid "Adjustment is off. The original forecast is used."
+msgstr "補正はオフです。元の予報を使います。"
+
+msgid "Using the forecast adjusted to your own weather station: {names}."
+msgstr "この敷地の気象観測に合わせて補正した予報を使っています: {names}。"
+
+msgid "Using the original forecast. It switches to the adjusted one by itself once about two weeks of comparison with your weather station show it is clearly better."
+msgstr "今は元の予報を使っています。気象観測と約2週間比べて明らかに良くなれば、自動で切り替わります。"
+
+msgid "{name} forecast is now adjusted"
+msgstr "{name}の予報を現場に合わせて補正し始めました"
+
+msgid "{name} forecast is back to the original"
+msgstr "{name}の予報を元に戻しました"
+
+msgid "The adjustment changed {n} time(s) since you last looked."
+msgstr "前回確認してから補正が{n}回変わりました。"
+
+msgid "Got it"
+msgstr "確認しました"
+
+msgid "Forecast adjustment details"
+msgstr "予報補正の詳細"
+
+msgid "Average error {a} → {b} {unit}"
+msgstr "平均誤差 {a} → {b} {unit}"
+
+msgid "The weather station is one spot and the forecast is an area average, so they can differ a little (distance, height, shelter)."
+msgstr "気象観測は一地点、予報は広い区画の平均なので、距離・高さ・遮蔽物によって少し違うことがあります。"
+
+msgid "Experimental · for reference"
+msgstr "実験機能 · 参考用"
+
+msgid "Daily high"
+msgstr "日最高"
+
+msgid "Daily low"
+msgstr "日最低"
+
+msgid "The latest forecast is out of date."
+msgstr "最新の予測が古くなっています。"
+
+msgid "The twin is not matched to the sensors yet."
+msgstr "まだセンサーの値と合わせられていません。"
+
+msgid "This plot cannot be calculated with its current setup."
+msgstr "現在の設定ではこの区画を計算できません。"
+
+msgid "The twin run failed."
+msgstr "計算中に問題が発生しました。"
+
+msgid "The latest forecast is incomplete."
+msgstr "最新の予測が不完全です。"
+
+msgid "No forecast has been made for this plot yet."
+msgstr "この区画の予測はまだありません。"
+
+msgid "There is no forecast for this period."
+msgstr "この期間の予測はありません。"
+
+msgid "No forecast is available."
+msgstr "利用できる予測がありません。"
+
+msgid "A forecast cannot be made right now"
+msgstr "今は先の予測を作れません"
+
+msgid "Soil water looks fine for the next week"
+msgstr "今後1週間は土の水分は適切そうです"
+
+msgid "Frost may come on the night of {d}"
+msgstr "{d}の夜に霜が降りるかもしれません"
+
+msgid "Frost may come around {d}"
+msgstr "{d}ごろ霜が降りるかもしれません"
+
+msgid "Water looks likely to run short around {d}"
+msgstr "{d}ごろ水が足りなくなりそうです"
+
+msgid "Water may run short around {d}"
+msgstr "{d}ごろ水が足りなくなるかもしれません"
+
+msgid "The ground may get too wet around {d}"
+msgstr "{d}ごろ土が濡れすぎるかもしれません"
+
+msgid "The ground could get wet around {d}"
+msgstr "{d}ごろ土が濡れるかもしれません"
+
+msgid "There is no sensor to check against, so it may differ from reality."
+msgstr "確認できるセンサーがないため、実際と異なる場合があります。"
+
+msgid "Off lately"
+msgstr "最近ずれています"
+
+msgid "Recent forecasts differed from the sensor. Treat this as a guide."
+msgstr "最近の予測はセンサーの値と大きく異なりました。参考程度にしてください。"
+
+msgid "Partly assumed"
+msgstr "一部は推定値です"
+
+msgid "Some forecast inputs were missing and were filled in."
+msgstr "足りない予報値を推定で補いました。"
+
+msgid "Matching well"
+msgstr "よく合っています"
+
+msgid "Yesterday's forecast was close to the sensor."
+msgstr "昨日の予測はセンサーの値とほぼ同じでした。"
+
+msgid "Short of water"
+msgstr "水が足りません"
+
+msgid "Getting dry"
+msgstr "少し乾いています"
+
+msgid "Moist"
+msgstr "しっとりしています"
+
+msgid "Soaked"
+msgstr "びっしょり濡れています"
+
+msgid "This plot has no soil sensor, so the soil water is only a calculation."
+msgstr "この区画には土壌センサーがないため、計算による推定値です。"
+
+msgid "The low may drop to {t} °C on {d}."
+msgstr "{d}の最低気温は{t} °Cまで下がりそうです。"
+
+msgid "The soil is slowly drying."
+msgstr "土は少しずつ乾いています。"
+
+msgid "The soil is getting wetter."
+msgstr "土は次第に湿ってきています。"
+
+msgid "The soil water is holding steady."
+msgstr "土の水分はほぼ変わりません。"
+
+msgid "About {mm} mm of rain is expected on {d}."
+msgstr "{d}に約{mm} mmの雨が降る予定です。"
+
+msgid "Only a little rain is expected in the next 7 days."
+msgstr "今後7日間の雨はわずかの予定です。"
+
+msgid "No rain is expected in the next 7 days."
+msgstr "今後7日間は雨の予報がありません。"
+
+msgid "Soil (forecast) {v}"
+msgstr "土(予測) {v}"
+
+msgid "Soil {v}"
+msgstr "土 {v}"
+
+msgid "Rain {mm} mm"
+msgstr "雨 {mm} mm"
+
+msgid "No rain"
+msgstr "雨なし"
+
+msgid "Rain forecast {mm} mm"
+msgstr "雨予報 {mm} mm"
+
+msgid "No rain forecast"
+msgstr "雨の予報なし"
+
+msgid "Temperature {lo}–{hi} °C"
+msgstr "気温 {lo}〜{hi} °C"
+
+msgid "Below {n}"
+msgstr "{n}未満"
+
+msgid "Short of water below {n}"
+msgstr "水不足 · {n}未満"
+
+msgid "Plenty after rain {n}"
+msgstr "雨の後は十分 {n}"
+
+msgid "Next 7 days: {mm} mm"
+msgstr "今後7日間: {mm} mm"
+
+msgid "Frost below 0 °C"
+msgstr "0 °C未満で霜"
+
+msgid "Soil water and rain chart"
+msgstr "土の水分と雨のグラフ"
+
+msgid "Set up this plot first"
+msgstr "まずこの区画を設定してください"
+
+msgid "Choose the soil sensor and the rain source in Settings."
+msgstr "設定で土壌センサーと雨のデータを選んでください。"
+
+msgid "Adjusted to the field"
+msgstr "現場に合わせた予報"
+
+msgid "2 weeks"
+msgstr "2週間"
+
+msgid "A month"
+msgstr "1か月"
+
+msgid "Ahead only"
+msgstr "先の予測のみ"
+
+msgid "Show temperature too"
+msgstr "気温も表示"
+
+msgid "Is the forecast reliable?"
+msgstr "予測は信頼できますか"
+
+msgid "Back to graph"
+msgstr "‹ グラフに戻る"
+
+msgid "today"
+msgstr "今日"
+
+msgid "Data Retention (days)"
+msgstr "データ保管(日)"
+
+msgid "How long to keep forecast and Digital Twin records. Sensor readings are never deleted."
+msgstr "予報とデジタルツインの記録を残しておく期間です。センサーの測定値は削除しません。"
+
+msgid "Data retention must be between %(lo)s and %(hi)s days."
+msgstr "データ保管は%(lo)s日から%(hi)s日の間で指定してください。"
+
+msgid "Storage is running low (%(gb).1f GB left). A shorter retention frees space."
+msgstr "保存容量が少なくなっています(残り%(gb).1f GB)。保管期間を短くすると空きが増えます。"
+
+msgid "A lot of forecast and twin data has piled up. A shorter retention reduces it."
+msgstr "予報とデジタルツインのデータが大量に溜まっています。保管期間を短くすると減ります。"
+
+msgid "Records of %(n)s deleted forecast input(s) stay until the retention ends."
+msgstr "削除した予報入力%(n)s件の記録は、保管期間が終わるまで残ります。"
+
+msgid "Last checked %(when)s. All good."
+msgstr "最終点検 %(when)s。問題ありません。"
+
+msgid "The Digital Twin results for this plot are kept until the retention ends. Erase them now too?"
+msgstr "この区画のデジタルツインの結果は、保管期間が終わるまで残ります。今すぐ一緒に削除しますか?"
+
+msgid "3 °C hotter"
+msgstr "3 °C 暑くなったら"
+
+msgid "Amount (mm)"
+msgstr "量 (mm)"
+
+msgid "Applies to the next 7 days of the forecast."
+msgstr "今後7日間の予想に当てはめます。"
+
+msgid "Bars: dark = recorded, light = estimated from run time, outline = command only, dotted outline = assumed, hatched = planned."
+msgstr "棒：濃いものは実際の記録、薄いものは稼働時間からの推定、輪郭は指示のみ、点線の輪郭は仮定、斜線は今後の計画です。"
+
+msgid "Base forecast"
+msgstr "基本の予想"
+
+msgid "By {d} the soil water is about the same as the base forecast."
+msgstr "{d}ごろの土の水分は基本の予想とほぼ同じです。"
+
+msgid "By {d} the soil water is about {v} higher than the base forecast."
+msgstr "{d}ごろの土の水分は基本の予想より{v}多くなります。"
+
+msgid "By {d} the soil water is about {v} lower than the base forecast."
+msgstr "{d}ごろの土の水分は基本の予想より{v}少なくなります。"
+
+msgid "CO2 feeding"
+msgstr "CO2 施用"
+
+msgid "Calculate again"
+msgstr "再計算"
+
+msgid "Calculating..."
+msgstr "計算中..."
+
+msgid "Choose a day and an hour."
+msgstr "日付と時刻を選んでください。"
+
+msgid "Choose what to try."
+msgstr "試す内容を選んでください。"
+
+msgid "Could not save. Try again."
+msgstr "保存できませんでした。もう一度お試しください。"
+
+msgid "Delete for sure?"
+msgstr "本当に削除しますか？"
+
+msgid "Effect not included"
+msgstr "効果未反映"
+
+msgid "Enter the amount between 1 and 100 mm."
+msgstr "量は1〜100 mmで入力してください。"
+
+msgid "Enter the hours between 1 and 12."
+msgstr "時間は1〜12で入力してください。"
+
+msgid "Fitted to the sensor"
+msgstr "センサーに合わせた値"
+
+msgid "Grow light"
+msgstr "補光灯"
+
+msgid "If so: soil {v}"
+msgstr "その場合：土 {v}"
+
+msgid "Included"
+msgstr "反映済み"
+
+msgid "Keep"
+msgstr "残す"
+
+msgid "Kept"
+msgstr "残してあります"
+
+msgid "No what-if yet. Try one below."
+msgstr "まだ仮定がありません。下で試してください。"
+
+msgid "Other devices"
+msgstr "その他の機器"
+
+msgid "Out of date: the base forecast has changed."
+msgstr "古くなりました：基本の予想が更新されています。"
+
+msgid "Over how many hours"
+msgstr "何時間かけて"
+
+msgid "Partly included"
+msgstr "一部反映"
+
+msgid "Sending..."
+msgstr "送信中..."
+
+msgid "Show each device"
+msgstr "機器ごとに表示"
+
+msgid "Show the past fitted to the sensor"
+msgstr "センサーに合わせた過去の値を表示"
+
+msgid "The calculation failed."
+msgstr "計算できませんでした。"
+
+msgid "The result has expired. Calculate again."
+msgstr "結果の保存期間が過ぎました。もう一度計算してください。"
+
+msgid "Thermal curtain"
+msgstr "保温カーテン"
+
+msgid ""
+"Choose the required sensors (indoor and outdoor temperature and humidity)."
+msgstr "必要なセンサー(室内と外気の温度・湿度)を選んでください。"
+
+msgid ""
+"No actual device state yet — the twin cannot be built until the real opening"
+" or running state of the devices is connected."
+msgstr "デバイスの実際の状態がまだありません — 装置の実際の開度・稼働状態を接続するまで、ツインは作れません。"
+
+msgid ""
+"Some sources are not marked as measured — the twin is not synchronized or "
+"verified with them."
+msgstr "一部の入力元が実測として指定されていません — それらではツインの同期・検証ができません。"
+
+msgid "Output tag"
+msgstr "出力タグ"
+
+msgid "environment control function"
+msgstr "環境制御ファンクション"
+
+msgid ""
+"No environment control function — the facility id is used as the output tag."
+msgstr "環境制御ファンクションがありません — 施設IDを出力タグとして使います。"
+
+msgid ""
+"Choose channels that record what the device actually did (opening or "
+"running, in percent). Virtual or test outputs cannot be marked as measured."
+msgstr "デバイスが実際に行った動作(開度・稼働、パーセント)を記録するチャンネルを選んでください。仮想・テスト用の出力は実測に指定できません。"
+
+msgid ""
+"Some channels are marked as measured although their input module does not "
+"declare them as measured (for example mirrored values). Make sure they come "
+"from the same real system."
+msgstr "入力モジュールが実測と宣言していないチャンネル(例: ミラー値)が実測に指定されています。同じ実際のシステムから来た値か確認してください。"
+
+msgid "facility indoor sensor"
+msgstr "施設の室内センサー"
+
+msgid "facility outdoor sensor"
+msgstr "施設の外気センサー"
+
+msgid "Required sensors missing"
+msgstr "必要なセンサーがありません"
+
+msgid "No actual device state"
+msgstr "デバイスの実際の状態なし"
+
+msgid "Not marked as measured"
+msgstr "実測として指定なし"
+
+msgid "No facility on the map."
+msgstr "地図上に施設がありません。"
+
+msgid "Facility id"
+msgstr "施設ID"
+
+msgid "The map is locked, so the view did not move to the selected item."
+msgstr "地図がロックされているため、選択した項目に表示を移動しませんでした。"
+
+msgid "Try it"
+msgstr "試す"
+
+msgid "Twice the rain"
+msgstr "雨が2倍降ったら"
+
+msgid "Waiting to be calculated..."
+msgstr "計算待ち..."
+
+msgid "Water {mm} mm on {d}"
+msgstr "{d} 水 {mm} mm"
+
+msgid "What do you want to try?"
+msgstr "何を試しますか？"
+
+msgid "What if..."
+msgstr "もしも..."
+
+msgid "You can keep up to {n} what-ifs. Delete an old one first."
+msgstr "仮定は{n}件まで保存できます。古いものを先に削除してください。"
+
+msgid "{n} devices are not counted in the forecast yet."
+msgstr "{n}台の機器はまだ予想に反映されていません。"
+
+msgid "{n} devices are only partly counted in the forecast."
+msgstr "{n}台の機器は予想に一部だけ反映されています。"
+
+msgid "{what} (if so) {v}"
+msgstr "{what}（その場合）{v}"
+
+msgid "{what} (plan) {v}"
+msgstr "{what}（計画）{v}"
+
+msgid "If it does not rain"
+msgstr "雨が降らなければ"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s forecast"
+msgstr "%(place)sの予報"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s weather now"
+msgstr "%(place)sの今の天気"
+
+#: tools/domain/server_card.py
+msgid "Weather now"
+msgstr "今の天気"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s weather, %(period)s"
+msgstr "%(place)sの天気・%(period)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Weather, %(period)s"
+msgstr "天気・%(period)s"
+
+#: tools/domain/server_card.py
+msgid "yesterday"
+msgstr "昨日"
+
+#: tools/domain/server_card.py
+msgid "this week"
+msgstr "今週"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "last %(span)s"
+msgstr "直近 %(span)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(name)s total %(value)s"
+msgstr "%(name)s 合計 %(value)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s summary"
+msgstr "%(place)sの状況"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(start)s → %(end)s, model forecast"
+msgstr "%(start)s → %(end)s、モデル予報"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "from %(start)s, model forecast"
+msgstr "%(start)sから、モデル予報"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(name)s %(low)s–%(high)s%(unit)s (max %(at)s)"
+msgstr "%(name)s %(low)s–%(high)s%(unit)s (最高 %(at)s)"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(name)s total %(value)s%(unit)s"
+msgstr "%(name)s 合計 %(value)s%(unit)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid ", from %(at)s"
+msgstr "、%(at)sから"
+
+#: tools/domain/server_card.py
+msgid "Air"
+msgstr "空気"
+
+#: tools/domain/server_card.py
+msgid "Soil"
+msgstr "土壌"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Alerts: %(n)s"
+msgstr "アラート %(n)s件"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Silent sensors: %(n)s"
+msgstr "応答のないセンサー %(n)s個"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Plots: %(n)s"
+msgstr "区画 %(n)s個"
+
+#: tools/domain/server_card.py
+msgid "Chance of rain"
+msgstr "降水確率"
+
+msgid "Turned on"
+msgstr "オン"
+
+msgid "Environment control"
+msgstr "環境制御"
+
+msgid "An environment control function is linked."
+msgstr "環境制御ファンクションに接続されています。"
+
+msgid "No environment control function is linked."
+msgstr "接続された環境制御ファンクションはありません。"
+
+msgid "Each facility is turned on in its own Twin tab on the map, independent of the site. Off by default."
+msgstr "施設は、地図の施設の「ツイン」タブで圃場とは別にオンにします。初期状態はオフです。"
+
+msgid "This facility is not a twin target."
+msgstr "この施設はツインの対象ではありません。"
+
+msgid "Value range mapped to 0–100 % (leave empty if already percent)"
+msgstr "0〜100 % に変換する値の範囲（すでにパーセントなら空のままにしてください）"
+
+msgid "Run the twin for this facility"
+msgstr "この施設でツインを実行"
+
+msgid "Turning this on is independent of the site setting."
+msgstr "オンにするのは圃場の設定とは関係ありません。"
+
+msgid "Indoor sensors"
+msgstr "施設内のセンサー"
+
+msgid "Outdoor sensors"
+msgstr "施設外のセンサー"
+
+msgid "Actual device state"
+msgstr "機器の実際の状態"
+
+msgid "Devices in this facility"
+msgstr "この施設の機器"
+
+msgid "Unknown device"
+msgstr "不明な機器"
+
+msgid "Show on the graph"
+msgstr "グラフに表示"
+
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr "地図を表示できません。ブラウザーのグラフィックアクセラレーション(WebGL)がオフか、使用できる地図画面がすべて使われている可能性があります。他の地図ウィンドウを閉じるか、ページを再読み込みしてください。"
+
+msgid "Well"
+msgstr "井戸"
+
+msgid "Tap water"
+msgstr "水道水"
+
+msgid "Max flow"
+msgstr "許容流量"
+
+msgid "Rated flow"
+msgstr "定格流量"
+
+msgid "Head"
+msgstr "揚程"
+
+msgid "Base height"
+msgstr "底面の高さ"
+
+msgid "Pressure loss"
+msgstr "圧力損失"
+
+msgid "Pipe diameter"
+msgstr "管径"
+
+msgid "Leave empty if unknown."
+msgstr "不明な場合は空欄のままにしてください。"
+
+msgid "Equipment is hidden on the map, so this part will not show. Turn on \"Show on map\" in the equipment settings."
+msgstr "設備図形が地図で非表示のため、この部品は表示されません。設備設定の\"地図で表示\"をオンにしてください。"
+
+msgid "Disconnected circuit"
+msgstr "途切れた回路"
+
+msgid "Circuit without a water source"
+msgstr "水源のない回路"
+
+msgid "Device area does not match pipes"
+msgstr "担当区域と配管の不一致"
+
+msgid "Emitters without flow"
+msgstr "流量のないノズル"
+
+msgid "Part not on a pipe"
+msgstr "配管に付いていない部品"
+
+msgid "Part with several devices nearby"
+msgstr "近くに装置が複数ある部品"
+
+msgid "Looped circuit"
+msgstr "ループ回路"
+
+msgid "Water Circuit Check"
+msgstr "水回路の点検"
+
+msgid "No circuit issues."
+msgstr "回路の問題はありません。"
+
+msgid "Based on the saved design."
+msgstr "保存済みの設計に基づきます。"
+
+msgid "Branch pipes joined"
+msgstr "接続された枝管"
+
+msgid "Emitters on a pipe"
+msgstr "配管に付いたノズル"
+
+msgid "Water volumes are limited by what the supply could deliver: %(delivered)s L, against %(design)s L by nozzle design alone."
+msgstr "水量は供給能力を反映した値です。送水量 %(delivered)s L、ノズル設計値 %(design)s L。"
+
+msgid "Demand was above the pump's rated flow for about %(min)s min, so the open valves shared what the pump could give."
+msgstr "約 %(min)s 分間、需要がポンプの定格を超えたため、開いたバルブがポンプの送水量を分け合いました。"
+
+msgid "Demand was above what the water source allows for about %(min)s min, so the open valves shared what the source could give."
+msgstr "約 %(min)s 分間、需要が水源の許容量を超えたため、開いたバルブが水源の供給量を分け合いました。"
+
+msgid "A valve was open while its pump was off for about %(min)s min. No water is counted for that time."
+msgstr "約 %(min)s 分間、ポンプが止まったままバルブが開いていました。その間の水量は 0 として計算しました。"
+
+msgid "The pump ran with no valve open for about %(min)s min."
+msgstr "約 %(min)s 分間、開いたバルブがないままポンプが動いていました。"
+
+msgid "The tank ran out at %(when)s. After that, water is limited to what flows into the tank."
+msgstr "タンクは %(when)s に空になりました。それ以降の水量はタンクへの流入分までとして計算しました。"
+
+msgid "How much this line can supply is not known — the pump has no rated flow, or there is no pump — so volumes are not limited by it."
+msgstr "この回路の供給能力は不明です。ポンプの定格が空欄か、ポンプがないため、供給の上限をかけていません。"
+
+msgid "The pump on this line is not tied to an output, so whether it was running is not known. It is counted as running whenever a valve is open."
+msgstr "この回路のポンプは出力装置に接続されていないため、稼働状況は不明です。バルブが開いている間は動いていたものとして計算しました。"
+
+msgid "The tank on this line has no water level reading, so the tank balance is left out. It is not assumed to be full."
+msgstr "この回路のタンクには水位の測定がないため、タンク収支を省きました。満水とは仮定していません。"
+
+msgid "A pump sits before the tank on this line. The flow limit is counted as if the pump drew from the tank, so volumes may be lower than what was delivered."
+msgstr "この回路はタンクの手前にポンプがあります。ポンプがタンクから取水するものとして計算するため、実際の送水量より少なく出ることがあります。"
+
+msgid "A drip line on this circuit has no emitter spacing or flow set, so it is left out of the demand."
+msgstr "この回路の点滴ラインにはエミッター間隔か流量の設定がないため、需要から除きました。"
+
+msgid "Run records for this water line could not be read, so volumes are not limited by the supply."
+msgstr "この回路の稼働記録を読めなかったため、供給の上限をかけていません。"
+
+msgid "Design"
+msgstr "設計値"
+
+msgid "Supply limited"
+msgstr "供給制限"
+
+msgid "Water depth"
+msgstr "灌水深"
+
+msgid "A supply limit is applied: the pump or water source could not deliver the full design flow."
+msgstr "供給制限を反映しています。ポンプまたは水源が設計流量を満たせませんでした。"
+
+msgid "Not entered - not counted"
+msgstr "未入力 — 計算に使いません"
+
+msgid "Entered"
+msgstr "入力した値"
+
+msgid "Linked device"
+msgstr "連携デバイス"
+
+msgid "Shown after the design is saved."
+msgstr "設計を保存すると表示されます。"
+
+msgid "Linked by position: a device marker within 5 m of the part."
+msgstr "位置で連携：部品から5 m以内のデバイスマーカーです。"
+
+msgid "If this output has no run records, delivered water counts as 0 L."
+msgstr "このOutputに作動記録がないと、供給水量は0 Lとして計算されます。"
+
+msgid "Several device markers are within 5 m, so none is linked. Move the part or the markers apart."
+msgstr "5 m以内に複数のデバイスマーカーがあるため連携していません。部品またはマーカーを離してください。"
+
+msgid "No device marker within 5 m."
+msgstr "5 m以内にデバイスマーカーがありません。"
+
+msgid "No pump in this circuit"
+msgstr "この回路にポンプがありません"
+
+msgid "Pump rating not entered"
+msgstr "ポンプ定格が未入力"
+
+msgid "No emitter flow in this circuit"
+msgstr "この回路にノズル流量がありません"
+
+msgid "No tank in this circuit"
+msgstr "この回路にタンクがありません"
+
+msgid "Tank capacity not entered"
+msgstr "タンク容量が未入力"
+
+msgid "Demand exceeds the pump"
+msgstr "需要がポンプ能力を超過"
+
+msgid "Water source"
+msgstr "水源"
+
+msgid "Pump / demand"
+msgstr "ポンプ / 需要"
+
+msgid "Tank lasts"
+msgstr "タンク継続時間"
+
+msgid "Tank time assumes a full tank and no refill."
+msgstr "タンク時間は満水で補充なしの場合です。"
+
+msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
+msgstr "水量は、各バルブが受け持つ範囲内に地図上で描いたスプリンクラーの流量と、そのバルブの稼働時間から推定した値で、流量計で測った値ではありません。この区画と重なる部分だけを数えるため、割合は仮定していません。"
+
+msgid "Forecast Model"
+msgstr "予報モデル"
+
+msgid "Hide AI Messages"
+msgstr "AIメッセージを非表示"
+
+msgid "Light Rain Threshold (mm/h)"
+msgstr "弱い雨のしきい値 (mm/h)"
+
+msgid "Precipitation below this value is drawn as no rain. The value itself is not changed."
+msgstr "この値未満の降水は雨なしとして描画します。値自体は変更されません。"
+
+msgid "Store Forecast Issues"
+msgstr "予報の発表データを保存"
+
+msgid "Window (hours)"
+msgstr "時間枠 (時間)"
+
+msgid "Write Hourly Forecast File"
+msgstr "時間別予報ファイルを書き出す"

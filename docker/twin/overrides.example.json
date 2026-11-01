@@ -1,0 +1,27 @@
+{
+  "_doc": "디지털트윈 배포형 서비스의 개발용 덮어쓰기(선택) — 정본은 지도 모달 '트윈' 탭에서 고른 대지·구획 트윈 설정(DB, twin_config 표)이다. --overrides 또는 AOT_TWIN_OVERRIDES 로 명시했을 때만 DB 설정 위에 겹친다(같은 모양, 이 파일이 이긴다). 구획 목록·심은 날·시간대·위도·예보 채널 번호는 DB 와 채널 메타에서 자동으로 채운다. 값은 '*' → 대지 → 구획 순으로 덮어쓴다. 설계: docs/design/digital-twin-node.md §3.4",
+  "sites": {
+    "*": {"enabled": false},
+    "<대지 id (지도의 site 도형 unique_id, 대지 밖 구획은 map:<지도 id>)>": {
+      "enabled": true,
+      "inputs": {
+        "rain":  {"unique_id": "<사용자가 고른 비 입력 id>", "unit": "mm", "channel": 0, "provenance": "measured"},
+        "t_air": {"unique_id": "<사용자가 고른 기온 입력 id>", "unit": "C", "channel": 0, "provenance": "measured"}
+      },
+      "options": {
+        "rain": {"agg": "hourly_mean_sum", "scale": 1.0, "kind": "station", "max_lag_d": 2}
+      },
+      "forecast": {"input": "<사용자가 고른 예보 입력 id — 채널 메타(forecast_lead_d·daily_stat)가 있는 입력>", "max_age_h": 36}
+    }
+  },
+  "plots": {
+    "<구획 id>": {
+      "inputs": {
+        "theta":  {"unique_id": "<토양수분 센서 id>", "unit": "percent", "channel": 0, "provenance": "measured"},
+        "soil_t": {"unique_id": "<같은 센서 id>", "unit": "C", "channel": 1, "provenance": "measured"}
+      },
+      "options": {"sensor": {"layer": 1}}
+    },
+    "<빼고 싶은 구획 id>": {"enabled": false}
+  }
+}

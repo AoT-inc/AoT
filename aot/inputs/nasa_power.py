@@ -180,6 +180,9 @@ INPUT_INFORMATION = {
     'input_manufacturer': 'NASA',
     'input_name': 'NASA POWER (Coords, Daily incl. ET0)',
     'input_name_short': 'NASA POWER',
+    # 재분석 모델 값이다(1~2주 지연) — 현장 실측이 아니다
+    # (aot.utils.inputs.model_input_drivers).
+    'data_origin': 'model',
     'measurements_name': 'ET0/Solar/Temperature/Humidity/Wind/Rain',
     'measurements_dict': measurements_dict,
     'url_additional': 'https://power.larc.nasa.gov/',

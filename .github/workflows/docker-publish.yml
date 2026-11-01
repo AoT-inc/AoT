@@ -6,9 +6,10 @@ name: Publish Docker image
 # zero-padded scheme (e.g. 26.07.3 / 26.07) is preserved (semver would drop the 0).
 #
 # Runs ONLY on the public repository (AoT-inc/AoT): the job below is guarded by
-# `github.repository`. The private working repository (AoT-inc/AoT-dev) keeps
-# Actions disabled, and if someone ever enables them there, the guard stops this
-# job from pushing an image built from the private tree. Forks are skipped too.
+# `github.repository`. The private working repository (AoT-inc/AoT-dev) has
+# Actions enabled (checked 2026-10-08), so this guard is what stops a tag pushed
+# there from building and pushing an image from the private tree. Do not remove
+# it. Forks are skipped too.
 # The tag that triggers it is the one pushed to the public repo by the release
 # procedure (CLAUDE.md "릴리스"), not the private tag of the same name.
 #

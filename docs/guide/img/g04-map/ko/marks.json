@@ -1,0 +1,985 @@
+{
+  "step-2-gis-service-select.png": [
+    {
+      "name": "gis-service-select",
+      "x": 11.91,
+      "y": 14.56,
+      "w": 14.32,
+      "h": 4.63
+    },
+    {
+      "name": "maptiler-vector-option",
+      "x": 11.91,
+      "y": 45.0,
+      "w": 16.8,
+      "h": 3.24
+    },
+    {
+      "name": "gis-add-button",
+      "x": 27.02,
+      "y": 14.68,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-2-gis-service-select.sq.png": [
+    {
+      "name": "gis-service-select",
+      "x": 1.74,
+      "y": 14.68,
+      "w": 25.46,
+      "h": 4.63
+    },
+    {
+      "name": "maptiler-vector-option",
+      "x": 1.74,
+      "y": 45.12,
+      "w": 29.87,
+      "h": 3.24
+    },
+    {
+      "name": "gis-add-button",
+      "x": 28.59,
+      "y": 14.56,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-2b-maptiler-input-settings.png": [
+    {
+      "name": "maptiler-api-key-field",
+      "x": 87.5,
+      "y": 47.77,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "name-language-field",
+      "x": 87.5,
+      "y": 53.07,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "map-channel-status-toggle",
+      "x": 94.01,
+      "y": 78.65,
+      "w": 3.91,
+      "h": 3.24
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-2b-maptiler-input-settings.sq.png": [
+    {
+      "name": "maptiler-api-key-field",
+      "x": 77.78,
+      "y": 47.77,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "name-language-field",
+      "x": 77.78,
+      "y": 53.07,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "map-channel-status-toggle",
+      "x": 89.35,
+      "y": 78.65,
+      "w": 6.94,
+      "h": 3.24
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-2c-activate-button.png": [
+    {
+      "name": "gis-activate-button",
+      "x": 60.77,
+      "y": 24.86,
+      "w": 23.93,
+      "h": 3.7
+    },
+    {
+      "name": "gis-settings-button",
+      "x": 84.96,
+      "y": 23.93,
+      "w": 2.6,
+      "h": 5.56
+    }
+  ],
+  "step-2c-activate-button.sq.png": [
+    {
+      "name": "gis-activate-button",
+      "x": 63.32,
+      "y": 24.86,
+      "w": 28.92,
+      "h": 3.7
+    },
+    {
+      "name": "gis-settings-button",
+      "x": 92.71,
+      "y": 23.93,
+      "w": 4.63,
+      "h": 5.56
+    }
+  ],
+  "step-5-map-select-new-map.png": [
+    {
+      "name": "map-select",
+      "x": 12.73,
+      "y": 27.75,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "new-map-option",
+      "x": 12.73,
+      "y": 36.09,
+      "w": 10.42,
+      "h": 3.24
+    }
+  ],
+  "step-5-map-select-new-map.sq.png": [
+    {
+      "name": "map-select",
+      "x": 4.05,
+      "y": 27.75,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "new-map-option",
+      "x": 4.05,
+      "y": 36.09,
+      "w": 18.52,
+      "h": 3.24
+    }
+  ],
+  "step-4-default-start-location.png": [
+    {
+      "name": "start-latitude-field",
+      "x": 60.19,
+      "y": 33.98,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "start-zoom-field",
+      "x": 60.19,
+      "y": 44.58,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "get-location-button",
+      "x": 59.57,
+      "y": 49.88,
+      "w": 6.86,
+      "h": 3.7
+    },
+    {
+      "name": "settings-save-button",
+      "x": 63.57,
+      "y": 18.7,
+      "w": 3.91,
+      "h": 3.7
+    }
+  ],
+  "step-4-default-start-location.sq.png": [
+    {
+      "name": "start-latitude-field",
+      "x": 68.11,
+      "y": 33.98,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "start-zoom-field",
+      "x": 68.11,
+      "y": 44.58,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "get-location-button",
+      "x": 67.02,
+      "y": 49.88,
+      "w": 12.2,
+      "h": 3.7
+    },
+    {
+      "name": "settings-save-button",
+      "x": 74.13,
+      "y": 18.7,
+      "w": 6.94,
+      "h": 3.7
+    }
+  ],
+  "step-5b-edit-map-name.png": [
+    {
+      "name": "map-edit-button",
+      "x": 74.06,
+      "y": 27.75,
+      "w": 3.91,
+      "h": 3.7
+    },
+    {
+      "name": "map-name-field",
+      "x": 56.54,
+      "y": 33.12,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "map-name-save-button",
+      "x": 64.36,
+      "y": 78.39,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-5b-edit-map-name.sq.png": [
+    {
+      "name": "map-name-field",
+      "x": 61.63,
+      "y": 33.12,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "map-name-save-button",
+      "x": 75.52,
+      "y": 78.39,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-3-layers-button.png": [
+    {
+      "name": "layers-button",
+      "x": 85.06,
+      "y": 9.24,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "layer-panel",
+      "x": 71.14,
+      "y": 9.24,
+      "w": 13.53,
+      "h": 34.72
+    }
+  ],
+  "step-3-layers-button.sq.png": [
+    {
+      "name": "layers-button",
+      "x": 92.01,
+      "y": 9.24,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "layer-panel",
+      "x": 67.27,
+      "y": 9.24,
+      "w": 24.05,
+      "h": 34.72
+    }
+  ],
+  "step-6-site-tab-polygon-tool.png": [
+    {
+      "name": "site-tab",
+      "x": 30.83,
+      "y": 73.59,
+      "w": 5.58,
+      "h": 3.24
+    },
+    {
+      "name": "polygon-tool",
+      "x": 85.06,
+      "y": 20.81,
+      "w": 1.89,
+      "h": 3.36
+    }
+  ],
+  "step-6-site-tab-polygon-tool.sq.png": [
+    {
+      "name": "site-tab",
+      "x": 17.77,
+      "y": 73.59,
+      "w": 9.3,
+      "h": 3.24
+    },
+    {
+      "name": "polygon-tool",
+      "x": 92.01,
+      "y": 20.81,
+      "w": 3.36,
+      "h": 3.36
+    }
+  ],
+  "step-6b-site-name-popup.png": [
+    {
+      "name": "site-name-field",
+      "x": 43.62,
+      "y": 30.24,
+      "w": 11.78,
+      "h": 3.59
+    },
+    {
+      "name": "site-name-save-button",
+      "x": 43.62,
+      "y": 34.76,
+      "w": 11.78,
+      "h": 3.99
+    }
+  ],
+  "step-6b-site-name-popup.sq.png": [
+    {
+      "name": "site-name-field",
+      "x": 38.72,
+      "y": 30.24,
+      "w": 20.95,
+      "h": 3.59
+    },
+    {
+      "name": "site-name-save-button",
+      "x": 38.72,
+      "y": 34.76,
+      "w": 20.95,
+      "h": 3.99
+    }
+  ],
+  "step-6c-site-drawer-address-search.png": [
+    {
+      "name": "site-tab",
+      "x": 13.9,
+      "y": 73.59,
+      "w": 5.58,
+      "h": 3.24
+    },
+    {
+      "name": "address-search-button",
+      "x": 93.38,
+      "y": 40.11,
+      "w": 3.56,
+      "h": 3.7
+    }
+  ],
+  "step-6c-site-drawer-address-search.sq.png": [
+    {
+      "name": "address-search-button",
+      "x": 86.38,
+      "y": 40.11,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-7-zone-tab.png": [
+    {
+      "name": "zone-tab",
+      "x": 37.19,
+      "y": 73.59,
+      "w": 5.58,
+      "h": 3.24
+    },
+    {
+      "name": "polygon-tool",
+      "x": 85.06,
+      "y": 20.81,
+      "w": 1.89,
+      "h": 3.36
+    }
+  ],
+  "step-7-zone-tab.sq.png": [
+    {
+      "name": "zone-tab",
+      "x": 28.45,
+      "y": 73.59,
+      "w": 9.3,
+      "h": 3.24
+    },
+    {
+      "name": "polygon-tool",
+      "x": 92.01,
+      "y": 20.81,
+      "w": 3.36,
+      "h": 3.36
+    }
+  ],
+  "step-9-plot-tab-split.png": [
+    {
+      "name": "plot-tab",
+      "x": 32.98,
+      "y": 73.59,
+      "w": 5.58,
+      "h": 3.24
+    },
+    {
+      "name": "rectangle-tool",
+      "x": 61.65,
+      "y": 14.1,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "split-into-plots-section",
+      "x": 66.21,
+      "y": 37.22,
+      "w": 31.77,
+      "h": 3.75
+    }
+  ],
+  "step-9-plot-tab-split.sq.png": [
+    {
+      "name": "rectangle-tool",
+      "x": 31.83,
+      "y": 14.1,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "split-into-plots-section",
+      "x": 41.78,
+      "y": 37.22,
+      "w": 52.78,
+      "h": 3.75
+    }
+  ],
+  "step-9b-new-plot-form.png": [
+    {
+      "name": "plot-kind-select",
+      "x": 56.54,
+      "y": 22.59,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "plot-subject-field",
+      "x": 56.54,
+      "y": 27.89,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "plot-name-field",
+      "x": 56.54,
+      "y": 38.49,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "plot-save-button",
+      "x": 64.36,
+      "y": 88.54,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-9b-new-plot-form.sq.png": [
+    {
+      "name": "plot-kind-select",
+      "x": 61.63,
+      "y": 22.59,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "plot-subject-field",
+      "x": 61.63,
+      "y": 27.89,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "plot-name-field",
+      "x": 61.63,
+      "y": 38.49,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "plot-save-button",
+      "x": 75.52,
+      "y": 88.54,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "check-design-info-card.png": [
+    {
+      "name": "design-info-card",
+      "x": 11.43,
+      "y": 5.65,
+      "w": 76.17,
+      "h": 67.87
+    },
+    {
+      "name": "design-summary-table",
+      "x": 12.47,
+      "y": 21.53,
+      "w": 74.09,
+      "h": 8.52
+    }
+  ],
+  "check-design-info-card.sq.png": [
+    {
+      "name": "design-info-card",
+      "x": 1.74,
+      "y": 5.65,
+      "w": 94.79,
+      "h": 67.87
+    },
+    {
+      "name": "design-summary-table",
+      "x": 3.59,
+      "y": 21.53,
+      "w": 91.09,
+      "h": 8.52
+    }
+  ],
+  "step-8-facility-basic-info.png": [
+    {
+      "name": "facility-step-bar",
+      "x": 0.98,
+      "y": 18.03,
+      "w": 63.22,
+      "h": 4.63
+    },
+    {
+      "name": "new-facility-button",
+      "x": 67.25,
+      "y": 40.88,
+      "w": 5.18,
+      "h": 3.7
+    },
+    {
+      "name": "facility-name-field",
+      "x": 84.57,
+      "y": 55.37,
+      "w": 12.37,
+      "h": 3.7
+    },
+    {
+      "name": "facility-save-button",
+      "x": 92.67,
+      "y": 94.33,
+      "w": 5.31,
+      "h": 4.63
+    }
+  ],
+  "step-8-facility-basic-info.sq.png": [
+    {
+      "name": "new-facility-button",
+      "x": 50.58,
+      "y": 40.88,
+      "w": 9.21,
+      "h": 3.7
+    },
+    {
+      "name": "facility-name-field",
+      "x": 77.2,
+      "y": 55.37,
+      "w": 17.36,
+      "h": 3.7
+    },
+    {
+      "name": "facility-save-button",
+      "x": 86.97,
+      "y": 94.33,
+      "w": 9.44,
+      "h": 4.63
+    }
+  ],
+  "step-9c-facility-plot-add.png": [
+    {
+      "name": "facility-plot-step",
+      "x": 26.72,
+      "y": 18.03,
+      "w": 3.56,
+      "h": 4.63
+    },
+    {
+      "name": "plot-subject-field",
+      "x": 84.57,
+      "y": 44.11,
+      "w": 12.37,
+      "h": 3.7
+    },
+    {
+      "name": "plot-share-field",
+      "x": 87.63,
+      "y": 70.62,
+      "w": 9.31,
+      "h": 3.7
+    },
+    {
+      "name": "facility-plot-save-button",
+      "x": 89.3,
+      "y": 85.34,
+      "w": 3.56,
+      "h": 3.7
+    }
+  ],
+  "step-9c-facility-plot-add.sq.png": [
+    {
+      "name": "plot-subject-field",
+      "x": 77.2,
+      "y": 39.54,
+      "w": 17.36,
+      "h": 3.7
+    },
+    {
+      "name": "plot-share-field",
+      "x": 78.01,
+      "y": 66.05,
+      "w": 16.55,
+      "h": 3.7
+    },
+    {
+      "name": "facility-plot-save-button",
+      "x": 80.97,
+      "y": 83.68,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-8b-facility-location-structure.png": [
+    {
+      "name": "facility-map-select",
+      "x": 90.76,
+      "y": 16.8,
+      "w": 0.03,
+      "h": 3.7
+    },
+    {
+      "name": "facility-site-select",
+      "x": 90.76,
+      "y": 22.1,
+      "w": 0.03,
+      "h": 3.7
+    },
+    {
+      "name": "facility-structure-toggle",
+      "x": 91.29,
+      "y": 41.72,
+      "w": 2.86,
+      "h": 3.36
+    },
+    {
+      "name": "place-on-map-button",
+      "x": 56.27,
+      "y": 24.91,
+      "w": 7.08,
+      "h": 3.53
+    }
+  ],
+  "step-8b-facility-location-structure.sq.png": [
+    {
+      "name": "facility-map-select",
+      "x": 85.88,
+      "y": 16.8,
+      "w": 0.06,
+      "h": 3.7
+    },
+    {
+      "name": "facility-site-select",
+      "x": 85.88,
+      "y": 22.1,
+      "w": 0.06,
+      "h": 3.7
+    },
+    {
+      "name": "facility-structure-toggle",
+      "x": 84.52,
+      "y": 41.72,
+      "w": 5.08,
+      "h": 3.36
+    },
+    {
+      "name": "place-on-map-button",
+      "x": 31.05,
+      "y": 24.91,
+      "w": 12.59,
+      "h": 3.53
+    }
+  ],
+  "step-5c-site-list.png": [
+    {
+      "name": "map-select",
+      "x": 13.22,
+      "y": 2.29,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "site-list-button",
+      "x": 12.57,
+      "y": 45.35,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "site-list-panel",
+      "x": 15.17,
+      "y": 45.35,
+      "w": 13.02,
+      "h": 4.42
+    },
+    {
+      "name": "site-list-item",
+      "x": 15.23,
+      "y": 45.46,
+      "w": 12.89,
+      "h": 4.19
+    }
+  ],
+  "step-5c-site-list.sq.png": [
+    {
+      "name": "map-select",
+      "x": 4.05,
+      "y": 2.29,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "site-list-button",
+      "x": 2.89,
+      "y": 45.35,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "site-list-panel",
+      "x": 7.52,
+      "y": 45.35,
+      "w": 23.15,
+      "h": 4.42
+    },
+    {
+      "name": "site-list-item",
+      "x": 7.64,
+      "y": 45.46,
+      "w": 22.92,
+      "h": 4.19
+    }
+  ],
+  "step-6d-layer-edit-vertices.png": [
+    {
+      "name": "site-tab",
+      "x": 31.32,
+      "y": 73.47,
+      "w": 5.58,
+      "h": 3.24
+    },
+    {
+      "name": "layer-edit-button",
+      "x": 85.55,
+      "y": 25.9,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "edit-actions",
+      "x": 80.47,
+      "y": 26.19,
+      "w": 4.43,
+      "h": 2.78
+    },
+    {
+      "name": "edit-save-button",
+      "x": 80.79,
+      "y": 26.19,
+      "w": 1.89,
+      "h": 2.78
+    },
+    {
+      "name": "edit-cancel-button",
+      "x": 82.68,
+      "y": 26.19,
+      "w": 1.89,
+      "h": 2.78
+    },
+    {
+      "name": "vertex-handle",
+      "x": 63.33,
+      "y": 55.83,
+      "w": 1.25,
+      "h": 2.22
+    },
+    {
+      "name": "midpoint-handle",
+      "x": 60.99,
+      "y": 38.98,
+      "w": 1.25,
+      "h": 2.22
+    }
+  ],
+  "step-6d-layer-edit-vertices.sq.png": [
+    {
+      "name": "site-tab",
+      "x": 18.63,
+      "y": 73.47,
+      "w": 9.3,
+      "h": 3.24
+    },
+    {
+      "name": "layer-edit-button",
+      "x": 93.75,
+      "y": 25.9,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "edit-actions",
+      "x": 84.72,
+      "y": 26.19,
+      "w": 7.87,
+      "h": 2.78
+    },
+    {
+      "name": "edit-save-button",
+      "x": 85.3,
+      "y": 26.19,
+      "w": 3.36,
+      "h": 2.78
+    },
+    {
+      "name": "edit-cancel-button",
+      "x": 88.66,
+      "y": 26.19,
+      "w": 3.36,
+      "h": 2.78
+    },
+    {
+      "name": "vertex-handle",
+      "x": 73.61,
+      "y": 55.83,
+      "w": 2.22,
+      "h": 2.22
+    },
+    {
+      "name": "midpoint-handle",
+      "x": 69.54,
+      "y": 38.98,
+      "w": 2.22,
+      "h": 2.22
+    }
+  ],
+  "step-6e-address-import-drawer.png": [
+    {
+      "name": "address-import-drawer",
+      "x": 66.15,
+      "y": 0,
+      "w": 33.85,
+      "h": 100
+    },
+    {
+      "name": "address-input-tab",
+      "x": 67.19,
+      "y": 7.87,
+      "w": 5.94,
+      "h": 4.63
+    },
+    {
+      "name": "csv-batch-tab",
+      "x": 73.13,
+      "y": 7.87,
+      "w": 5.92,
+      "h": 4.63
+    },
+    {
+      "name": "address-input-field",
+      "x": 67.19,
+      "y": 17.61,
+      "w": 31.84,
+      "h": 3.59
+    },
+    {
+      "name": "add-address-button",
+      "x": 67.19,
+      "y": 21.66,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "parcel-search-button",
+      "x": 73.96,
+      "y": 21.66,
+      "w": 4.6,
+      "h": 3.7
+    },
+    {
+      "name": "site-tab",
+      "x": 14.39,
+      "y": 73.47,
+      "w": 5.58,
+      "h": 3.24
+    }
+  ],
+  "step-6e-address-import-drawer.sq.png": [
+    {
+      "name": "address-import-drawer",
+      "x": 39.81,
+      "y": 0,
+      "w": 60.19,
+      "h": 100
+    },
+    {
+      "name": "address-input-tab",
+      "x": 41.67,
+      "y": 7.87,
+      "w": 10.56,
+      "h": 4.63
+    },
+    {
+      "name": "csv-batch-tab",
+      "x": 52.22,
+      "y": 7.87,
+      "w": 10.53,
+      "h": 4.63
+    },
+    {
+      "name": "address-input-field",
+      "x": 41.67,
+      "y": 17.61,
+      "w": 56.6,
+      "h": 3.59
+    },
+    {
+      "name": "add-address-button",
+      "x": 41.67,
+      "y": 21.66,
+      "w": 11.12,
+      "h": 3.7
+    },
+    {
+      "name": "parcel-search-button",
+      "x": 53.71,
+      "y": 21.66,
+      "w": 8.18,
+      "h": 3.7
+    },
+    {
+      "name": "site-tab",
+      "x": 6.91,
+      "y": 73.47,
+      "w": 3.17,
+      "h": 3.24
+    }
+  ]
+}

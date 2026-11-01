@@ -63,14 +63,34 @@ class RuntimeStateMixin:
                     self.logger.warning(
                         'EnvCoordinator: trend state restore failed: %s', trend_exc)
 
+            # 판단 규칙의 사이클 간 기억(일사·스크린·고온 보호·하드 한계 래치) — 재시작 직후 첫
+            # 사이클이 '꺼져 있었다' 고 가정하지 않게 한다. 낡았으면 버린다(`cycle_memory`).
+            if cal_raw:
+                try:
+                    from aot.functions.utils.env_control import cycle_memory as _cm
+                    _restored = _cm.restore_memory(
+                        self, (json.loads(cal_raw) or {}).get(_cm.STORE_KEY), time.time())
+                    if _restored:
+                        self.logger.info(
+                            'EnvCoordinator: 판단 기억 복원 — %s', ', '.join(_restored))
+                except Exception as mem_exc:
+                    self.logger.warning(
+                        'EnvCoordinator: 판단 기억 복원 실패 — 빈 기억으로 시작: %s', mem_exc)
+
             if cal_raw:
                 try:
                     from aot.functions.utils.env_control.calibration import CalibrationRegistry
                     cal_state = json.loads(cal_raw)
+                    # 레지스트리가 쓴 적 없는 행(판단 기억·그레이박스 키만 있음)에서 만들면
+                    # `enabled` 가 False 로 굳어 옵션을 덮는다 — 그때는 옵션 기본값(`_cal_registry`).
+                    if not ('enabled' in cal_state or 'cals' in cal_state):
+                        raise LookupError('레지스트리 상태 없음')
                     self._cal_registry_inst = CalibrationRegistry.from_state(cal_state)
                     self.logger.info(
                         'EnvCoordinator: calibration state restored — '
                         '%d actuator(s)', len(cal_state.get('cals', {})))
+                except LookupError:
+                    pass
                 except Exception as cal_exc:
                     self.logger.warning(
                         'EnvCoordinator: calibration state restore failed: %s', cal_exc)
@@ -156,6 +176,22 @@ class RuntimeStateMixin:
                             row.calibration_state_json = json.dumps(existing)
                         except Exception:
                             pass
+
+                    # 판단 규칙의 사이클 간 기억 — 같은 JSON 에 병합한다(`cycle_memory`
+                    # 머리말: 스키마를 바꾸지 않는다). 위 캘리브레이션 병합 **뒤**라 그 키를
+                    # 덮지 않는다.
+                    try:
+                        from aot.functions.utils.env_control import cycle_memory as _cm
+                        try:
+                            existing = json.loads(row.calibration_state_json or '{}')
+                        except Exception:
+                            existing = {}
+                        if not isinstance(existing, dict):
+                            existing = {}
+                        existing[_cm.STORE_KEY] = _cm.export_memory(self, now)
+                        row.calibration_state_json = json.dumps(existing)
+                    except Exception:
+                        self.logger.debug('판단 기억 저장 실패', exc_info=True)
 
                     sess.commit()
                 # 성공 시 누적 실패 카운터는 다음 실패까지 보존(외부 관찰자가

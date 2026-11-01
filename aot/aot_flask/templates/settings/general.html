@@ -125,6 +125,44 @@
           </div>
         </div>
 
+        {# AI 메시지(AI 자막·수신함)는 위 세 알림과 별개다. 위 옵션은 시스템 메시지만 제어하고,
+           이 옵션을 켜면 AI 글은 자막 없이 수신함 점으로만 알린다(수신함에는 계속 쌓인다). #}
+        <div class="aot-settings-row">
+          <label class="aot-settings-label aot-toggle-label" for="hide_ai_messages">{{_('Hide AI messages')}}</label>
+          <div class="aot-settings-control">
+            <label class="btn-toggle">
+              <input type="checkbox" class="btn-toggle-input" id="hide_ai_messages" name="hide_ai_messages" title="{{_('Check to stop AI messages from popping up on screen. They still arrive in the AI inbox.')}}"{% if settings.hide_ai_messages == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        {# AI 결과 카드 자동: 켜면 외부 AI(MCP)에게 "핵심 결과를 끝내면 카드로도 올려라" 규칙을 알린다.
+           지침을 무시하는 AI 에는 아래 규칙 글을 복사해 그 AI 의 지침(프로젝트 지침 등)에 붙여 넣는다. #}
+        <div class="aot-settings-row">
+          <label class="aot-settings-label aot-toggle-label" for="ai_card_auto">{{_('AI result cards')}}</label>
+          <div class="aot-settings-control">
+            <label class="btn-toggle">
+              <input type="checkbox" class="btn-toggle-input" id="ai_card_auto" name="ai_card_auto" title="{{_('When on, connected AI is told to also post key results (recommendations, summaries, comparisons, plans, reports, images, link lists) as AI cards on your screen.')}}"{% if settings.ai_card_auto is none or settings.ai_card_auto == true %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+        <details class="aot-settings-row">
+          <summary>{{_('Rule for AI that ignores the server instructions')}}</summary>
+          <textarea id="ai_card_rule" class="form-control" rows="6" readonly>{{ ai_card_rule }}</textarea>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="var t=document.getElementById('ai_card_rule');t.select();navigator.clipboard&&navigator.clipboard.writeText(t.value)">{{_('Copy')}}</button>
+        </details>
+
+        {# AI 바로가기: 휴대폰에서 AI 창구(수신함 머리줄)에 뜨는 단추가 새 탭으로 여는 https 주소. 비우면 단추가 없다.
+           음성 모드로 바로 들어가는 링크는 아직 없어서, 앱이 열린 뒤 음성 단추는 직접 누른다. #}
+        <div class="aot-settings-row">
+          <label class="aot-settings-label" for="ai_shortcut_url">{{_('AI shortcut link')}}</label>
+          <div class="aot-settings-control">
+            <input type="url" class="form-control" id="ai_shortcut_url" name="ai_shortcut_url" maxlength="512" value="{{ settings.ai_shortcut_url or '' }}" placeholder="https://claude.ai/new" title="{{_('On phones, a button in the AI panel opens this address (the AI app opens if installed). Leave empty for no button.')}}">
+          </div>
+        </div>
+
         <div class="aot-settings-row">
           {{form_settings_general.hide_tooltips.label(class_='aot-settings-label aot-toggle-label')}}
           <div class="aot-settings-control">
@@ -193,9 +231,84 @@
           <div class="aot-settings-control">
             <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-toggle="modal" data-target="#modal_mcp_auth">{{_('Configure')}}</button>
           </div>
-          <div class="aot-settings-sub">{% if mcp_auth.active %}{{_('API keys, and access tokens from %(issuer)s', issuer=mcp_auth.cfg.issuer)}}{% else %}{{_('API keys only')}}{% endif %}</div>
+          <div class="aot-settings-sub">{% if mcp_auth.active and mcp_auth.mode == 'embedded' %}{{_('API keys, and access tokens issued by this AoT')}}{% elif mcp_auth.active %}{{_('API keys, and access tokens from %(issuer)s', issuer=mcp_auth.cfg.issuer)}}{% else %}{{_('API keys only')}}{% endif %}</div>
         </div>
         {# @manual-end #}
+
+        {# AI 도구 목록(내 API 키의 도구 묶음) — 키를 발급한 뒤에도 사용자가 스스로
+           가벼움·운영·설정을 오가게 한다. 폼은 설정 폼 밖(모달)에 둔다. #}
+        {% if mcp_auth.my_keys %}
+        <div class="aot-settings-row">
+          <label class="aot-settings-label">{{_('AI Tool List')}}</label>
+          <div class="aot-settings-control">
+            <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-toggle="modal" data-target="#modal_mcp_tool_list">{{_('Configure')}}</button>
+          </div>
+          <div class="aot-settings-sub">{{_('How many tools your AI apps receive with each message. Lite keeps every message small, which is recommended for free AI plans.')}}</div>
+        </div>
+        {% endif %}
+
+      </div>
+      </div>
+
+      <!-- Section: Digital Twin (experimental, separate service aot_twin) -->
+      <div class="aot-settings-group-title">{{_('Digital Twin (Experimental)')}}</div>
+      <div class="aot-settings-stack">
+      {# 경고 상자는 토글 상태와 상관없이 항상 보인다. 문구는 켤 때의 확인창과 같다. #}
+      <div class="aot-notice-box aot-notice-box-warning" id="twin-warning" role="note">{{_('This is an experimental feature and is still at an early stage. Use it for development purposes only. Predictions are for reference and are never used for control. Behavior and data formats may change without notice.')}}</div>
+      <div class="aot-settings-card">
+
+        <div class="aot-settings-row">
+          {{form_settings_general.twin_enabled.label(class_='aot-settings-label aot-toggle-label')}}
+          <div class="aot-settings-control">
+            <label class="btn-toggle">
+              <input type="checkbox" class="btn-toggle-input" id="twin_enabled" name="twin_enabled" title="{{_('Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program and must be installed and running.')}}"{% if twin.enabled and twin.supported %} checked{% endif %}{% if not twin.supported %} disabled{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+          {% if not twin.supported %}
+          <div class="aot-settings-sub" id="twin-lock-reason">{{_('This device is too small to run the Digital Twin.')}} {{ twin.lock_reason }} {{_('Using a remote node is still in preparation.')}}</div>
+          {% endif %}
+        </div>
+
+        {% if twin.enabled and twin.supported %}
+        <div class="aot-settings-row" id="twin-settings-link">
+          <label class="aot-settings-label">{{_('Digital Twin Settings')}}</label>
+          <div class="aot-settings-control">
+            <a class="btn aot-pill-btn aot-pill-btn-secondary" href="{{ url_for('routes_settings.settings_twin') }}">{{_('Open')}}</a>
+          </div>
+          <div class="aot-settings-sub">{{_('Run times, low-spec option, forecast inputs and the site table are on the Digital Twin settings page.')}}</div>
+        </div>
+        {% endif %}
+
+        <div class="aot-settings-row" id="data-retention-row">
+          {{form_settings_general.data_retention_days.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            {{form_settings_general.data_retention_days(class_='form-control aot-modern-input', value=retention.days, min=retention.min, max=retention.max)}}
+          </div>
+          <div class="aot-settings-sub">{{_('How long to keep forecast and Digital Twin records. Sensor readings are never deleted.')}}</div>
+          {% if retention.status %}
+          <div class="aot-settings-sub" id="data-retention-status">{{ retention.status }}</div>
+          {% endif %}
+        </div>
+
+      </div>
+      </div>
+
+      <!-- Section: Matter (optional, experimental) -->
+      <div class="aot-settings-group-title">{{_('Matter')}}</div>
+      <div class="aot-settings-stack">
+      <div class="aot-settings-card">
+
+        <div class="aot-settings-row">
+          {{form_settings_general.matter_enabled.label(class_='aot-settings-label aot-toggle-label')}}
+          <div class="aot-settings-control">
+            <label class="btn-toggle">
+              <input type="checkbox" class="btn-toggle-input" id="matter_enabled" name="matter_enabled" title="{{_('Adds Matter to the Settings menu, where devices already set up in Apple Home, Google Home, SmartThings and similar apps can be added to AoT. Needs a Linux host on the same network as the devices, and the Matter server started on that host. While Matter devices exist, Matter cannot be turned off.')}}"{% if settings.matter_enabled %} checked{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+          <div class="aot-settings-sub">{{_('Use devices from other smart-home apps. Experimental.')}} <a href="{{ manual_url('Matter/') }}" target="_blank">{{_('Help')}}</a></div>
+        </div>
 
       </div>
       </div>
@@ -461,6 +574,48 @@
     </form>
 
     {# @manual ai/overview#central-auth #}
+    {% if mcp_auth.my_keys %}
+    <div class="modal fade aot-modern-modal" id="modal_mcp_tool_list" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{_('AI Tool List')}}</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="{{_('Close')}}"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <div class="aot-modal-body-text mb-3">{{_('Changes apply after the AI app reconnects or a new chat starts. You can also ask the AI to change it.')}}</div>
+            {% for k in mcp_auth.my_keys %}
+            <form method="post" action="{{ url_for('routes_mcp_auth.mcp_key_profile') }}" class="aot-modal-option-row">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              {% if k.kind == 'link' %}
+              <input type="hidden" name="link_id" value="{{ k.id }}">
+              <label class="aot-modal-option-label" title="{{_('AI apps that sign in through the authorization server (for example a claude.ai connector) use this.')}}">{{_('Signed-in AI apps')}} · {{ k.name }}</label>
+              {% else %}
+              <input type="hidden" name="api_key_id" value="{{ k.id }}">
+              <label class="aot-modal-option-label">{{ k.name or _('API key') }}</label>
+              {% endif %}
+              <div class="aot-modal-option-control d-flex align-items-center">
+                <select name="tool_profile" class="form-control aot-modern-input mr-2">
+                  {% if k.kind == 'link' and not k.spec %}
+                  <option value="" selected disabled>{{_('Decided by the sign-in permission (current)')}}</option>
+                  {% endif %}
+                  <option value="lite"{% if k.profile == 'lite' %} selected{% endif %}>{{_('Lite — a few tools (free AI plans)')}}</option>
+                  {% if k.profile == 'operations' and k.spec != 'operations' %}
+                  <option value="{{ k.spec }}" selected>{{_('Operations + setup modules (current)')}}</option>
+                  {% endif %}
+                  <option value="operations"{% if k.spec == 'operations' %} selected{% endif %}>{{_('Operations — every day-to-day tool')}}</option>
+                  <option value="configuration"{% if k.profile == 'configuration' %} selected{% endif %}>{{_('Configuration — day-to-day and all setup tools')}}</option>
+                </select>
+                <button type="submit" class="btn aot-pill-btn aot-pill-btn-primary">{{_('Change')}}</button>
+              </div>
+            </form>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     {# 외부 MCP 인증 — 설정 폼 밖에 둔다(폼 안에 폼을 넣을 수 없다). 계정 연결·해제는 아래 두 폼을 form 속성으로 가리킨다. #}
     {% set m = mcp_auth %}
     <form id="form-mcp-link" method="post" action="{{ url_for('routes_mcp_auth.mcp_auth_link') }}">
@@ -469,6 +624,12 @@
     <form id="form-mcp-unlink" method="post" action="{{ url_for('routes_mcp_auth.mcp_auth_unlink') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     </form>
+    {% for g in m.embedded.grants %}
+    <form id="form-mcp-disconnect-{{ loop.index }}" method="post" action="{{ url_for('routes_mcp_auth.mcp_auth_disconnect') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="gid" value="{{ g.gid }}">
+    </form>
+    {% endfor %}
 
     <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover" data-backdrop="false"
       id="modal_mcp_auth" tabindex="-1" role="dialog" aria-hidden="true">
@@ -493,7 +654,7 @@
                 <div class="aot-modal-body-text">{{_('An AI client sends a user\'s API key in the X-API-KEY header. Keys are issued under Settings > Users. This works on any network, including closed VPNs.')}}</div>
 
                 <div class="aot-modal-option-row">
-                  <label class="aot-modal-option-label" for="mcp_central_enabled">{{_('Central Authentication')}}</label>
+                  <label class="aot-modal-option-label" for="mcp_central_enabled">{{_('OAuth Authentication')}}</label>
                   <div class="aot-modal-option-control">
                     {% if not m.cfg.from_env.enabled %}<input type="hidden" name="mcp_central_enabled_shown" value="1">{% endif %}
                     <label class="btn-toggle">
@@ -502,19 +663,45 @@
                     </label>
                   </div>
                 </div>
-                <div class="aot-modal-body-text">{{_('Also accept access tokens issued by an OAuth authorization server, such as AoT Central Authentication. Sign-in and consent happen there; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works.')}}</div>
+                <div class="aot-modal-body-text">{{_('Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way.')}}</div>
+
+                <div class="aot-modal-option-row">
+                  <label class="aot-modal-option-label" for="mcp_auth_mode">{{_('Token Issuer')}}</label>
+                  <div class="aot-modal-option-control">
+                    <select id="mcp_auth_mode" name="mcp_auth_mode" class="form-control aot-modern-input"{% if m.cfg.from_env.mode %} disabled{% endif %}>
+                      <option value="central"{% if m.mode == 'central' %} selected{% endif %}>{{_('Central (AoT Central Authentication)')}}</option>
+                      <option value="embedded"{% if m.mode == 'embedded' %} selected{% endif %}>{{_('This AoT (built in)')}}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="aot-modal-body-text" data-mcp-mode="central">{{_('Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works.')}}</div>
+                <div class="aot-modal-body-text" data-mcp-mode="embedded">{{_('This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time.')}}</div>
+              </div>
+
+              <div data-mcp-mode="embedded">
+                <div class="aot-modal-group-title">{{_('Before You Turn This On')}}</div>
+                <div class="aot-modal-container">
+                  <div class="aot-modal-body-text">{{_('Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices.')}}</div>
+                  <div class="aot-modal-body-text">{{_('On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead.')}}</div>
+                  <div class="aot-modal-body-text">{{_('Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084).')}}</div>
+                  <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{_('Accepted Redirect Addresses')}}</label>
+                    <div class="aot-modal-option-control"><span class="aot-modal-option-value">{{ m.embedded.allowlist|join(' · ') }}</span></div>
+                  </div>
+                  <div class="aot-modal-body-text">{{_('Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person\'s own computer, such as Claude Code.')}}</div>
+                </div>
               </div>
 
               <div class="aot-modal-group-title">{{_('Addresses')}}</div>
               <div class="aot-modal-container">
-                <div class="aot-modal-option-row">
+                <div class="aot-modal-option-row" data-mcp-mode="central">
                   <label class="aot-modal-option-label" for="mcp_central_issuer">{{_('Authorization Server')}}</label>
                   <div class="aot-modal-option-control">
                     <input type="text" id="mcp_central_issuer" name="mcp_central_issuer" class="form-control aot-modern-input" spellcheck="false"
                       placeholder="https://auth.example.com" value="{{ m.cfg.issuer if m.cfg.from_env.issuer else m.saved.issuer }}"{% if m.cfg.from_env.issuer %} disabled{% endif %}>
                   </div>
                 </div>
-                <div class="aot-modal-body-text">{{_('The issuer address of the authorization server (https). Its signing keys are fetched from here, so this server must be able to reach it.')}}</div>
+                <div class="aot-modal-body-text" data-mcp-mode="central">{{_('The issuer address of the authorization server (https). Its signing keys are fetched from here, so this server must be able to reach it.')}}</div>
 
                 <div class="aot-modal-option-row">
                   <label class="aot-modal-option-label" for="mcp_public_url">{{_('Public MCP Address')}}</label>
@@ -524,17 +711,19 @@
                   </div>
                 </div>
                 <div class="aot-modal-body-text">{{_('The address AI clients connect to. Access tokens must name exactly this address. Route /mcp and /.well-known/oauth-protected-resource at this address to the MCP server (port 5700).')}}</div>
+                <div class="aot-modal-body-text" data-mcp-mode="embedded">{{_('This AoT is its own authorization server at the same web address, so its issuer is this address without the path.')}}</div>
 
-                <div class="aot-modal-option-row">
+                <div class="aot-modal-option-row" data-mcp-mode="central">
                   <label class="aot-modal-option-label" for="mcp_web_base_url">{{_('Public Web Address')}}</label>
                   <div class="aot-modal-option-control">
                     <input type="text" id="mcp_web_base_url" name="oauth_public_base_url" class="form-control aot-modern-input" spellcheck="false"
                       placeholder="https://farm.example.com" value="{{ m.cfg.web_base_url if m.cfg.from_env.web_base_url else m.saved.web_base_url }}"{% if m.cfg.from_env.web_base_url %} disabled{% endif %}>
                   </div>
                 </div>
-                <div class="aot-modal-body-text">{{_('The address people open this AoT at. Account linking returns here. Shared with the Google integration setting.')}}</div>
+                <div class="aot-modal-body-text" data-mcp-mode="central">{{_('The address people open this AoT at. Account linking returns here. Shared with the Google integration setting.')}}</div>
               </div>
 
+              <div data-mcp-mode="central">
               <div class="aot-modal-group-title">{{_('Account Linking Client')}}</div>
               <div class="aot-modal-container">
                 <div class="aot-modal-option-row">
@@ -573,6 +762,11 @@
                   <div class="aot-modal-option-control"><span class="aot-modal-option-value">{% for name, required in m.scopes %}{{ name }}{% if required %} ({{_('required')}}){% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</span></div>
                 </div>
                 <div class="aot-modal-body-text">{{_('aot.read lets the AI read; aot.control lets it operate devices; aot.config lets it change settings. The user\'s own role still applies on top.')}}</div>
+              </div>
+              </div>
+
+              <div class="aot-modal-group-title">{{_('Check')}}</div>
+              <div class="aot-modal-container">
                 <div class="aot-modal-option-row">
                   <label class="aot-modal-option-label">{{_('Check Connection')}}</label>
                   <div class="aot-modal-option-control">
@@ -582,7 +776,27 @@
                 <div id="mcp-auth-check-results" class="aot-modal-body-text" aria-live="polite"></div>
               </div>
 
-              {% if m.active %}
+              {% if m.active and m.mode == 'embedded' %}
+              <div data-mcp-mode="embedded">
+                <div class="aot-modal-group-title">{{_('My Connected AI Apps')}}</div>
+                <div class="aot-modal-container">
+                  {% for g in m.embedded.grants %}
+                  <div class="aot-modal-option-row">
+                    <label class="aot-modal-option-label">{{ g.name }}</label>
+                    <div class="aot-modal-option-control">
+                      <button type="submit" form="form-mcp-disconnect-{{ loop.index }}" class="btn aot-pill-btn aot-pill-btn-secondary">{{_('Disconnect')}}</button>
+                    </div>
+                  </div>
+                  <div class="aot-modal-body-text">{{ g.scopes|join(' · ') }} — {{_('connected')}} {{ g.created.strftime('%Y-%m-%d') }}{% if g.used %} — {{_('last used')}} {{ g.used.strftime('%Y-%m-%d') }}{% endif %}</div>
+                  {% else %}
+                  <div class="aot-modal-body-text">{{_('No AI app is connected with your account yet.')}}</div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+
+              {% if m.active and m.mode == 'central' %}
+              <div data-mcp-mode="central">
               <div class="aot-modal-group-title">{{_('My Account')}}</div>
               <div class="aot-modal-container">
                 <div class="aot-modal-option-row">
@@ -596,6 +810,7 @@
                   </div>
                 </div>
                 <div class="aot-modal-body-text">{% if m.can_link %}{{_('AI connections signed in at the authorization server act as the AoT user their account is linked to. Link your own account while signed in here as yourself.')}}{% else %}{{_('Account linking needs the client ID, client secret and public web address to be saved first.')}}{% endif %}</div>
+              </div>
               </div>
               {% endif %}
 
@@ -614,6 +829,18 @@
 
 <script src="{{ asset('app-widget-drawer') }}"></script>
 <script>
+  (function () {
+    // 디지털트윈을 켤 때는 상자에 적힌 문구로 한 번 더 확인한다. 거절하면 되돌린다.
+    var twinToggle = document.getElementById('twin_enabled');
+    var twinWarning = document.getElementById('twin-warning');
+    if (twinToggle && twinWarning) {
+      twinToggle.addEventListener('change', function () {
+        if (twinToggle.checked && !window.confirm(twinWarning.textContent.trim())) {
+          twinToggle.checked = false;
+        }
+      });
+    }
+  })();
   (function () {
     var params = new URLSearchParams(window.location.search);
     if (params.get('mcp_auth') === '1') {
@@ -638,6 +865,16 @@
       var el = document.getElementById(id);
       if (el) el.addEventListener('input', showRegistration);
     });
+    // 인증 서버 종류에 따라 해당하지 않는 칸을 감춘다(감춘 칸의 값은 그대로 저장된다).
+    var modeSelect = document.getElementById('mcp_auth_mode');
+    function showMode() {
+      var mode = modeSelect ? modeSelect.value : 'central';
+      document.querySelectorAll('#modal_mcp_auth [data-mcp-mode]').forEach(function (el) {
+        el.style.display = el.dataset.mcpMode === mode ? '' : 'none';
+      });
+    }
+    if (modeSelect) modeSelect.addEventListener('change', showMode);
+    showMode();
     var button = document.getElementById('mcp-auth-check');
     var out = document.getElementById('mcp-auth-check-results');
     if (!button || !out) return;

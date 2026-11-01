@@ -93,6 +93,19 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
         db.session.add(DeviceMeasurements(
             device_id='dev-1', channel=1, measurement='speed',
             unit='mph', conversion_id='conv-mph2ms'))
+        # 통신 상태 채널 — 종류를 지정하지 않은 요약에서는 빠진다(2026-10-09).
+        db.session.add(DeviceMeasurements(
+            device_id='dev-1', channel=2, measurement='rssi', name='RSSI',
+            unit='dBm'))
+        # 구역에 놓인 밸브(출력) — '센서' 목록에 섞이므로 표시가 붙는다.
+        from aot.databases.models import Output
+        db.session.add(Output(unique_id='valve-1', name='v311',
+                              output_type='on_off_virtual'))
+        shape('mk-valve-1', 'aot_device', 'Device 526', _point(0.002, 0.002),
+              device_id='valve-1')
+        db.session.add(DeviceMeasurements(
+            device_id='valve-1', channel=0, measurement='duration_time',
+            unit='s'))
         db.session.commit()
 
     @classmethod
@@ -118,8 +131,11 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
         # Influx 포인트에는 애초에 "measure" 태그가 없으므로(쓰기 쪽도 같은
         # None을 받는다) 그러면 결과가 통째로 사라진다. 호출마다 실제로
         # 넘어온 값을 기록해 두고 아래에서 검증한다.
-        self.measure_args_seen.append((channel, measure))
-        now = datetime.now(timezone.utc)
+        # 변환이 걸린 dev-1 의 채널만 본다 — 밸브 채널은 변환이 없다.
+        if device_id == 'dev-1':
+            self.measure_args_seen.append((channel, measure))
+        # 시각은 고정한다 — 한 장치의 채널이 같은 시각이면 장치에 한 번 싣는다.
+        now = datetime(2026, 10, 9, 0, 0, tzinfo=timezone.utc)
         value = 25.9 if channel == 0 else 1.7
         return [(now, value)]
 
@@ -127,10 +143,12 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
         """온도(F→C 변환) 채널의 measurement가 null로 비면 안 된다."""
         with mock.patch('aot.utils.influx.read_influxdb_list',
                         side_effect=self._fake_read_influxdb_list):
-            out = self.S.get_zone_sensor_summary(zone_ids=['육묘장'])
+            out = self.S.get_zone_sensor_summary(zone_ids=['육묘장'], detail=True)
 
         self.assertEqual(1, out.get('count'), out)
-        sensors = {r['channel']: r for r in out['zones'][0]['sensors']}
+        # 장치마다 한 항목이고 채널은 그 아래에 있다(2026-10-09).
+        sensors = {c['channel']: c for d in out['zones'][0]['sensors']
+                   if d['device_id'] == 'dev-1' for c in d['channels']}
         self.assertEqual(2, len(sensors), out)
 
         temp = sensors[0]
@@ -162,11 +180,73 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
         사라져야 한다."""
         with mock.patch('aot.utils.influx.read_influxdb_list',
                         side_effect=self._fake_read_influxdb_list):
-            out = self.S.get_zone_sensor_summary(zone_ids=['육묘장'])
+            out = self.S.get_zone_sensor_summary(zone_ids=['육묘장'], detail=True)
 
         notes = ' '.join(out.get('_reading') or [])
         self.assertNotIn('같은 측정', notes)
         self.assertNotIn('more than one channel', notes, out)
+
+
+    def _overview(self, **kw):
+        with mock.patch('aot.utils.influx.read_influxdb_list',
+                        side_effect=self._fake_read_influxdb_list):
+            return self.S.get_zone_sensor_summary(zone_ids=['육묘장'], detail=True, **kw)
+
+    def test_one_entry_per_device_with_its_channels(self):
+        """채널마다 한 줄이면 장치 ID·이름·시각이 채널 수만큼 되풀이되어 장소
+        없이 부를 때 응답 상한을 넘었다(2026-10-09)."""
+        out = self._overview()
+        devs = {d['device_id']: d for d in out['zones'][0]['sensors']}
+        self.assertEqual(set(devs), {'dev-1'})   # 출력은 'outputs' 로 분리(B3)
+        dev = devs['dev-1']
+        self.assertEqual(dev['device_name'], '미러-온습도01')
+        self.assertIn('last_time', dev)            # 채널 시각이 같으면 장치에 한 번
+        self.assertTrue(all('last_time' not in c for c in dev['channels']))
+        self.assertTrue(all({'min', 'max', 'avg'} <= set(c) for c in dev['channels']))
+
+    def test_link_channels_are_left_out_of_the_overview(self):
+        out = self._overview()
+        meas = [c['measurement'] for d in out['zones'][0]['sensors']
+                for c in d['channels']]
+        self.assertNotIn('rssi', meas)
+        self.assertEqual(out.get('link_channels_omitted'), 1)
+        self.assertTrue(any('RSSI' in n for n in out.get('_reading', [])))
+
+    def test_link_channels_come_back_when_asked_for(self):
+        out = self._overview(measurement_type='rssi')
+        meas = [c['measurement'] for d in out['zones'][0]['sensors']
+                for c in d['channels']]
+        self.assertEqual(meas, ['rssi'])
+        self.assertNotIn('link_channels_omitted', out)
+
+    def test_an_output_is_named_and_marked(self):
+        """밸브 동작 시간이 이름 없이(ID 로) 센서 값처럼 나갔다."""
+        out = self._overview()
+        valve = [d for d in out['zones'][0]['outputs'] if d['device_id'] == 'valve-1'][0]
+        self.assertEqual(valve['device_name'], 'v311')
+        self.assertEqual(valve['device_kind'], 'output')
+        self.assertTrue(any("'outputs'" in n for n in out.get('_reading', [])))
+
+    def test_outputs_are_split_from_sensors(self):
+        """B3: 측창·천창·밸브 같은 출력이 sensors 배열에 섞이면 안 된다."""
+        out = self._overview()
+        z = out['zones'][0]
+        self.assertEqual({d['device_id'] for d in z['sensors']}, {'dev-1'})
+        self.assertEqual({d['device_id'] for d in z['outputs']}, {'valve-1'})
+        # 입력에도 종류 표시가 있다.
+        self.assertTrue(all(d['device_kind'] == 'input' for d in z['sensors']))
+
+    def test_zone_pick_note_states_rule_and_others(self):
+        """B2: 대표 기기, 선택 규칙, 읽지 않은 다른 기기를 응답에 싣는다."""
+        from types import SimpleNamespace as NS
+        a = NS(unique_id='a', name='미러-기상대', device='MQTT')
+        b = NS(unique_id='b', name='온습도_7', device='MQTT')
+        note = self.S._zone_pick_note(a, [a, b])
+        self.assertEqual(note['answered_by'], '미러-기상대')
+        self.assertEqual(note['answered_by_device_id'], 'a')
+        self.assertEqual(note['devices_in_zone'], 2)
+        self.assertEqual([o['device_id'] for o in note['other_devices_in_zone']], ['b'])
+        self.assertIn('selection_rule', note)
 
 
 if __name__ == '__main__':

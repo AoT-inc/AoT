@@ -135,13 +135,54 @@ def settings_general():
         for each_success in messages["success"]:
             flash(each_success, "success")
 
-        return redirect(url_for('routes_settings.settings_general'))
+        return redirect(messages.get("redirect") or url_for('routes_settings.settings_general'))
 
     from aot.aot_flask.routes_mcp_auth import modal_context
+    from aot.utils import ai_screen_cards
     return render_template('settings/general.html',
                            form_settings_general=form_settings_general,
                            report_path=os.path.normpath(USAGE_REPORTS_PATH),
-                           mcp_auth=modal_context(flask_login.current_user))
+                           mcp_auth=modal_context(flask_login.current_user),
+                           ai_card_rule=ai_screen_cards.AUTO_CARD_RULE,
+                           twin=utils_settings.twin_panel_context(),
+                           retention=utils_settings.retention_panel_context())
+
+
+@blueprint.before_request
+def _twin_feature_gate():
+    """설정 > 디지털트윈은 설정 > 일반에서 디지털트윈을 켠 뒤에만 열린다(없으면 일반으로)."""
+    if (request.endpoint or '') != 'routes_settings.settings_twin':
+        return None
+    from aot.utils import twin_gate
+    if twin_gate.twin_flag():
+        return None
+    from flask_babel import gettext
+    flash(gettext('The Digital Twin is off. Turn it on in Settings > General.'), 'info')
+    return redirect(url_for('routes_settings.settings_general'))
+
+
+@blueprint.route('/settings/twin', methods=('GET', 'POST'))
+@flask_login.login_required
+def settings_twin():
+    """Digital Twin (experimental) settings: run times, low-spec option, forecast auto-create, sites."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    form_twin = forms_settings.SettingsTwin()
+    if request.method == 'POST':
+        if not utils_general.user_has_permission('edit_settings'):
+            messages = {"success": [], "info": [], "warning": [],
+                        "error": ["Your permissions do not allow this action"]}
+        else:
+            messages = utils_settings.settings_twin_mod(form_twin)
+        for level in ("error", "warning", "info", "success"):
+            for each in messages[level]:
+                flash(each, level)
+        return redirect(url_for('routes_settings.settings_twin'))
+
+    return render_template('settings/twin.html', form_twin=form_twin,
+                           twin=utils_settings.twin_panel_context(),
+                           can_edit=utils_general.user_has_permission('edit_settings', silent=True))
 
 
 @blueprint.route('/settings/chirpstack', methods=('GET', 'POST'))
@@ -273,6 +314,491 @@ def settings_chirpstack():
                            reg_input=reg_input,
                            reg_output=reg_output,
                            api_keys=api_keys)
+
+
+@blueprint.before_request
+def _matter_feature_gate():
+    """Settings > Matter and its API answer only when Matter is turned on in
+    Settings > General (Misc.matter_enabled). The page goes back to General,
+    where the switch is; the JSON endpoints answer 404 like a missing feature.
+    Deleting a Matter device elsewhere is not gated (on_device_delete)."""
+    endpoint = request.endpoint or ''
+    if not endpoint.startswith('routes_settings.settings_matter'):
+        return None
+    misc = Misc.query.first()
+    if misc is not None and misc.matter_enabled:
+        return None
+    if endpoint == 'routes_settings.settings_matter':
+        from flask_babel import gettext
+        flash(gettext('Matter is off. Turn it on in Settings > General.'), 'info')
+        return redirect(url_for('routes_settings.settings_general'))
+    return jsonify({'error': 'Matter is turned off'}), 404
+
+
+def _matter_snapshot():
+    """Server status and node list for Settings > Matter.
+
+    Never raises: the page and the refresh endpoint must work with no Matter
+    server (the sidecar is optional), so a failure becomes a disconnected
+    status plus a short note for the page.
+    """
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter
+
+    status = {'connected': False, 'endpoint': None, 'last_error': None,
+              'schema_version': None, 'sdk_version': None, 'fabric_id': None,
+              'node_count': 0, 'nodes_available': 0}
+    nodes = []
+    list_error = None
+    try:
+        got = utils_matter.server_status(wait_s=2.0)
+        if isinstance(got, dict):
+            status.update(got)
+    except Exception:
+        logger.exception("Matter server status failed")
+        list_error = gettext('Could not read the Matter server status.')
+    if status.get('connected'):
+        try:
+            nodes = utils_matter.list_nodes()
+        except Exception:
+            logger.exception("Matter node list failed")
+            list_error = gettext('Could not read the list of Matter devices.')
+    return status, nodes, list_error
+
+
+def _matter_bluetooth_enabled(status):
+    """Whether the Matter server can use Bluetooth (new devices out of the box).
+
+    Never raises. Only asked when the server is connected, so a page with no
+    server does not wait for a second connection attempt.
+    """
+    # server_status() already carries it (from the server's own info), so
+    # no second connection per page load.
+    return bool(status.get('connected') and status.get('bluetooth_enabled'))
+
+
+@blueprint.route('/settings/matter', methods=('GET',))
+@flask_login.login_required
+def settings_matter():
+    """Matter (experimental): add devices, share them, list and remove nodes."""
+    if not utils_general.user_has_permission('view_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    status, nodes, list_error = _matter_snapshot()
+    return render_template('settings/matter.html',
+                           status=status,
+                           nodes=nodes,
+                           list_error=list_error,
+                           bluetooth_enabled=_matter_bluetooth_enabled(status))
+
+
+@blueprint.route('/settings/matter/nodes', methods=('GET',))
+@flask_login.login_required
+def settings_matter_nodes():
+    """JSON status + node list, so the page can refresh after an action."""
+    from flask_babel import gettext
+
+    if not utils_general.user_has_permission('view_settings'):
+        return jsonify(ok=False,
+                       error=gettext('Your permissions do not allow this action')), 403
+
+    status, nodes, list_error = _matter_snapshot()
+    return jsonify(ok=True, status=status, nodes=nodes, error=list_error)
+
+
+def _matter_may_change():
+    """Adding or removing a Matter device creates or deletes AoT devices."""
+    return (utils_general.user_has_permission('edit_settings') and
+            utils_general.user_has_permission('edit_controllers'))
+
+
+@blueprint.route('/settings/matter/commission', methods=('POST',))
+@flask_login.login_required
+def settings_matter_commission():
+    """Add a device shared from another ecosystem, using its pairing code.
+
+    The code is a credential for up to ~15 minutes: it is passed straight to
+    the service and is never logged or stored here.
+    """
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter
+
+    if not _matter_may_change():
+        return jsonify(ok=False,
+                       error=gettext('Your permissions do not allow this action'),
+                       warnings=[]), 403
+
+    payload = request.get_json(silent=True) or {}
+    code = payload.get('code')
+    try:
+        result = utils_matter.commission(code if isinstance(code, str) else '')
+    except Exception:
+        logger.exception("Matter commissioning raised")
+        result = {'ok': False, 'warnings': [],
+                  'error': gettext('Adding the device failed. See the AoT log for details.')}
+    return jsonify(result)
+
+
+def _matter_device_for_node(node_id):
+    """AoT device id that wraps this Matter node, or None for an orphan."""
+    import json as _json
+    from aot.aot_flask.utils import utils_matter
+    from aot.databases.models import CustomController
+
+    try:
+        for row in utils_matter.list_nodes():
+            if row.get('node_id') == node_id:
+                return row.get('device_id')
+        return None
+    except Exception:
+        # Server unreachable: the device row is in our own database anyway.
+        logger.info("Matter node list unavailable, looking the device up in the database")
+    for row in CustomController.query.filter_by(device='device_matter_node').all():
+        try:
+            opts = _json.loads(row.custom_options or '{}')
+            if int(opts.get('node_id') or 0) == node_id:
+                return row.unique_id
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+@blueprint.route('/settings/matter/remove', methods=('POST',))
+@flask_login.login_required
+def settings_matter_remove():
+    """Remove a Matter node: delete its AoT device, or just the orphan node."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter
+    from aot.aot_flask.utils.utils_controller import controller_del
+
+    if not _matter_may_change():
+        return jsonify(ok=False,
+                       error=gettext('Your permissions do not allow this action'),
+                       warnings=[]), 403
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        node_id = int(payload.get('node_id'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error=gettext('Unknown Matter device.'), warnings=[]), 400
+
+    try:
+        device_id = _matter_device_for_node(node_id)
+        if device_id:
+            # Deleting the AoT device also takes AoT off the Matter device
+            # and deletes its sensor/switch entries (controller_del hook).
+            messages = controller_del(device_id)
+            errors = [str(m) for m in messages.get('error') or []]
+            return jsonify(ok=not errors,
+                           error='; '.join(errors) or None,
+                           warnings=[str(m) for m in messages.get('warning') or []])
+        ok, warning = utils_matter.remove_node(node_id)
+    except Exception:
+        logger.exception("Matter node removal raised")
+        return jsonify(ok=False, warnings=[],
+                       error=gettext('Removing the device failed. See the AoT log for details.'))
+    if ok:
+        return jsonify(ok=True, error=None, warnings=[warning] if warning else [])
+    return jsonify(ok=False, error=warning, warnings=[])
+
+
+@blueprint.route('/settings/matter/refresh', methods=('POST',))
+@flask_login.login_required
+def settings_matter_refresh():
+    """Re-read a Matter node and add channels AoT now supports."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter
+
+    if not _matter_may_change():
+        return jsonify(ok=False,
+                       error=gettext('Your permissions do not allow this action'),
+                       warnings=[]), 403
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        node_id = int(payload.get('node_id'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error=gettext('Unknown Matter device.'), warnings=[]), 400
+
+    try:
+        device_id = _matter_device_for_node(node_id)
+        if not device_id:
+            return jsonify(ok=False, error=gettext('Unknown Matter device.'), warnings=[]), 400
+        result = utils_matter.refresh_device(device_id)
+    except Exception:
+        logger.exception("Matter device refresh raised")
+        return jsonify(ok=False, warnings=[], added_inputs=0, added_outputs=0,
+                       error=gettext('Reading the device again failed. See the AoT log for details.'))
+    return jsonify(result)
+
+
+@blueprint.route('/settings/matter/adopt', methods=('POST',))
+@flask_login.login_required
+def settings_matter_adopt():
+    """Create the AoT device for a node on the fabric that has none."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter
+
+    if not _matter_may_change():
+        return jsonify(ok=False,
+                       error=gettext('Your permissions do not allow this action'),
+                       warnings=[]), 403
+    payload = request.get_json(silent=True) or {}
+    try:
+        node_id = int(payload.get('node_id'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error=gettext('Unknown Matter device.'), warnings=[]), 400
+    try:
+        result = utils_matter.adopt_node(node_id)
+    except Exception:
+        logger.exception("Matter adopt raised")
+        return jsonify(ok=False, warnings=[], error=gettext(
+            'Creating the AoT device failed. See the AoT log for details.'))
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------- phase 3
+# New devices over Bluetooth, sharing to another ecosystem, firmware updates.
+# Design: docs/design/matter-controller.md §13. None of these routes logs its
+# request body: it carries pairing codes and network secrets.
+
+def _matter_denied(read_only=False):
+    """403 JSON when the user may not use these Matter actions, else None."""
+    from flask_babel import gettext
+
+    allowed = (utils_general.user_has_permission('view_settings') if read_only
+               else _matter_may_change())
+    if allowed:
+        return None
+    return jsonify(ok=False, error=gettext('Your permissions do not allow this action')), 403
+
+
+def _matter_node_gate(node_id, read_only=False):
+    """Permission + group scope for an action on one Matter node.
+
+    Returns (node_id, None) or (None, error_response). Order: permission (403),
+    node id (400), group scope of the node's AoT device (403).
+    """
+    from flask_babel import gettext
+    from aot.aot_flask.access import scope
+
+    denied = _matter_denied(read_only=read_only)
+    if denied:
+        return None, denied
+    try:
+        node_id = int(node_id)
+    except (TypeError, ValueError):
+        return None, (jsonify(ok=False, error=gettext('Unknown Matter device.')), 400)
+    try:
+        device_id = _matter_device_for_node(node_id)
+    except Exception:
+        # Fail closed: without the device we cannot check its group scope.
+        logger.exception("Matter device lookup raised")
+        return None, (jsonify(ok=False, error=gettext(
+            'Could not check access to this device. Try again.')), 503)
+    if device_id:
+        if not scope.can_operate_device(device_id):
+            return None, (jsonify(ok=False, error=scope.deny_message()), 403)
+    elif scope.scoping_active() and not scope.is_exempt():
+        # A node with no AoT device belongs to no group; only users whose
+        # access is not limited to groups may act on it.
+        return None, (jsonify(ok=False, error=scope.deny_message()), 403)
+    return node_id, None
+
+
+@blueprint.route('/settings/matter/new_device', methods=('POST',))
+@flask_login.login_required
+def settings_matter_new_device():
+    """Start adding a brand-new device (pairing code + network) as a job.
+
+    The body holds the pairing code and the Wi-Fi password / Thread dataset:
+    nothing of it is logged here, and a failure logs only the exception type.
+    """
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    denied = _matter_denied()
+    if denied:
+        return denied
+
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    code = payload.get('code')
+    network = payload.get('network')
+    try:
+        result = utils_matter_admin.start_new_device(
+            code if isinstance(code, str) else '',
+            network if isinstance(network, dict) else {},
+            user_id=flask_login.current_user.id)
+    except Exception as err:
+        logger.error("Matter new-device start raised %s", type(err).__name__)
+        result = {'ok': False, 'job_id': None,
+                  'error': gettext('Adding the device failed. See the AoT log for details.')}
+    return jsonify(result)
+
+
+@blueprint.route('/settings/matter/new_device/<job_id>', methods=('GET',))
+@flask_login.login_required
+def settings_matter_new_device_status(job_id):
+    """Progress of an add-new-device job. Once the node is on the fabric this
+    request creates the AoT device, hence the same permission as adding."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    denied = _matter_denied()
+    if denied:
+        return denied
+
+    try:
+        result = utils_matter_admin.new_device_status(job_id)
+    except Exception:
+        logger.exception("Matter new-device status raised")
+        return jsonify(ok=False, state=None, node_id=None, result=None,
+                       error=gettext('Could not read the progress. See the AoT log for details.'))
+    return jsonify(ok=True, **result)
+
+
+@blueprint.route('/settings/matter/share', methods=('POST',))
+@flask_login.login_required
+def settings_matter_share():
+    """Open a pairing window on an AoT device so another app can add it."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    node_id, error = _matter_node_gate(payload.get('node_id'))
+    if error:
+        return error
+
+    timeout_s = payload.get('timeout_s')
+    if timeout_s is None:
+        timeout_s = utils_matter_admin.SHARE_TIMEOUT_DEFAULT_S
+    try:
+        result = utils_matter_admin.open_share_window(node_id, timeout_s)
+    except Exception:
+        logger.exception("Matter share window raised")
+        result = {'ok': False, 'manual_code': None, 'qr_code': None, 'expires_in': None,
+                  'error': gettext('Opening the sharing window failed. See the AoT log for details.')}
+    response = jsonify(result)
+    response.headers['Cache-Control'] = 'no-store'     # it carries a pairing code
+    return response
+
+
+@blueprint.route('/settings/matter/share/close', methods=('POST',))
+@flask_login.login_required
+def settings_matter_share_close():
+    """Close an open pairing window early."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    node_id, error = _matter_node_gate(payload.get('node_id'))
+    if error:
+        return error
+
+    try:
+        result = utils_matter_admin.close_share_window(node_id)
+    except Exception:
+        logger.exception("Matter share close raised")
+        result = {'ok': False,
+                  'error': gettext('Closing the sharing window failed. See the AoT log for details.')}
+    return jsonify(result)
+
+
+@blueprint.route('/settings/matter/fabrics/<int:node_id>', methods=('GET',))
+@flask_login.login_required
+def settings_matter_fabrics(node_id):
+    """Ecosystems (fabrics) a device belongs to."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    node_id, error = _matter_node_gate(node_id, read_only=True)
+    if error:
+        return error
+
+    try:
+        result = utils_matter_admin.list_fabrics(node_id)
+    except Exception:
+        logger.exception("Matter fabric list raised")
+        result = {'ok': False, 'fabrics': [], 'supported': None, 'used': None,
+                  'error': gettext('Reading the device\'s connections failed. See the AoT log for details.')}
+    return jsonify(result)
+
+
+@blueprint.route('/settings/matter/fabrics/remove', methods=('POST',))
+@flask_login.login_required
+def settings_matter_fabric_remove():
+    """Disconnect another ecosystem from a device (never AoT's own)."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    node_id, error = _matter_node_gate(payload.get('node_id'))
+    if error:
+        return error
+    try:
+        fabric_index = int(payload.get('fabric_index'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error=gettext('Unknown connection.')), 400
+
+    try:
+        result = utils_matter_admin.remove_other_fabric(node_id, fabric_index)
+    except Exception:
+        logger.exception("Matter fabric removal raised")
+        result = {'ok': False,
+                  'error': gettext('Removing the connection failed. See the AoT log for details.')}
+    return jsonify(result)
+
+
+@blueprint.route('/settings/matter/update/check', methods=('POST',))
+@flask_login.login_required
+def settings_matter_update_check():
+    """Ask whether a newer certified firmware exists for a device."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    node_id, error = _matter_node_gate(payload.get('node_id'))
+    if error:
+        return error
+
+    try:
+        result = utils_matter_admin.check_update(node_id)
+    except Exception:
+        logger.exception("Matter update check raised")
+        result = {'ok': False, 'update': None,
+                  'error': gettext('Checking for an update failed. See the AoT log for details.')}
+    return jsonify(result)
+
+
+@blueprint.route('/settings/matter/update/start', methods=('POST',))
+@flask_login.login_required
+def settings_matter_update_start():
+    """Start a firmware update a person asked for."""
+    from flask_babel import gettext
+    from aot.aot_flask.utils import utils_matter_admin
+
+    payload = request.get_json(silent=True)
+    payload = payload if isinstance(payload, dict) else {}
+    node_id, error = _matter_node_gate(payload.get('node_id'))
+    if error:
+        return error
+    try:
+        version = int(payload.get('version'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error=gettext('Unknown firmware version.')), 400
+
+    try:
+        result = utils_matter_admin.start_update(node_id, version)
+    except Exception:
+        logger.exception("Matter update start raised")
+        result = {'ok': False,
+                  'error': gettext('Starting the update failed. See the AoT log for details.')}
+    return jsonify(result)
 
 
 @blueprint.route('/settings/custom_ui', methods=('GET', 'POST'))

@@ -620,7 +620,11 @@ def delete_plot(unique_id):
         db.session.rollback()
         return None, str(exc)
     _invalidate_caches()
-    return {'ok': True, 'deleted': unique_id, 'archived_jobs': orphaned}, None
+    # 최신 트윈 곡선은 치운다. 검증 이력은 남기고, 지울지는 사용자가 고른다(DELETE /api/twin/history/plot/<id>).
+    from aot.utils import data_retention
+    twin = data_retention.on_target_deleted('plot', unique_id)
+    return {'ok': True, 'deleted': unique_id, 'archived_jobs': orphaned,
+            'twin_history_kept': twin['history_kept']}, None
 
 
 _UNSET = object()

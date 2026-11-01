@@ -37,13 +37,20 @@ from aot.databases import set_uuid
 SCOPE_FULL = 'full'
 SCOPE_READONLY = 'readonly'
 SCOPES = (SCOPE_FULL, SCOPE_READONLY)
+#: 걷어 낸 범위 — 이 값으로 발급된 행이 남아 있어도 읽기 전용으로 본다(전체 권한으로 넓어지지 않게).
+#: 'twin_ingest': 옛 트윈 노드 키(읽기 전용 + `/api/twin/ingest` 쓰기). 수신 API 와 함께 걷어 냈다
+#: (2026-10-24, 트윈 계획서 §9.19). 새로 발급하지 않으며 마이그레이션은 없다.
+RETIRED_READONLY_SCOPES = ('twin_ingest',)
 
 #: 도구 묶음(외부 MCP 에 보여 줄 도구의 범위). 값은
 #: `aot.tools.tool_registry.TOOL_PROFILES` 와 같아야 한다(검사가 대조한다).
 #: 모델이 도구 계층을 import 하지 않도록 여기에도 적는다.
 TOOL_PROFILE_OPERATIONS = 'operations'
 TOOL_PROFILE_CONFIGURATION = 'configuration'
-TOOL_PROFILES = (TOOL_PROFILE_OPERATIONS, TOOL_PROFILE_CONFIGURATION)
+#: 가벼움 — 운영과 같은 일을 하되 처음 싣는 목록만 작다(tool_registry 주석).
+TOOL_PROFILE_LITE = 'lite'
+TOOL_PROFILES = (TOOL_PROFILE_OPERATIONS, TOOL_PROFILE_CONFIGURATION,
+                 TOOL_PROFILE_LITE)
 #: 설정 모듈(2026-09-29) — `tool_registry.TOOL_MODULES` 와 같아야 한다(검사가
 #: 대조한다). 순서가 저장 순서·화면 순서다.
 TOOL_MODULES = ('plots', 'map', 'automation', 'devices', 'dashboard',
@@ -61,6 +68,8 @@ def tool_profile_columns(value, modules=None):
     생길 모듈까지 받는 "더하기" 뜻이 전부 체크한 사람의 뜻이기도 하다."""
     if value == TOOL_PROFILE_CONFIGURATION:
         return TOOL_PROFILE_CONFIGURATION, None
+    if value == TOOL_PROFILE_LITE:
+        return TOOL_PROFILE_LITE, None      # 가벼움에는 모듈을 켜지 않는다
     chosen = set(modules or ())
     if isinstance(value, str):
         head, _sep, rest = value.partition(TOOL_PROFILE_SEP)
@@ -161,7 +170,9 @@ class UserAPIKey(CRUDMixin, db.Model):
 
     @property
     def is_readonly(self):
-        return self.scope == SCOPE_READONLY
+        # 걷어 낸 범위(옛 트윈 키)도 읽기 전용으로 센다 — 요청 가드·MCP 쓰기 가드가 같은 판정을 쓴다.
+        # 모르는 값은 여기서 좁히지 않는다(발급 한 곳에서 좁힌다 — test_unknown_scope_is_not_treated_as_readonly).
+        return self.scope == SCOPE_READONLY or self.scope in RETIRED_READONLY_SCOPES
 
     @property
     def effective_tool_profile(self):

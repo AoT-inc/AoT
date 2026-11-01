@@ -94,6 +94,58 @@ def _dedupe_fittings(fittings):
     return cleaned, None
 
 
+def _forecast_inputs_in_sensor_fittings(fittings):
+    """실내·실외 센서 설비에 **예보 입력**이 묶였으면 거부 문구, 아니면 None.
+
+    센서 설비(kind='sensor', sensor_role indoor/outdoor)는 "지금 값" 자리다.
+    드라이버가 `data_time='forecast'`(몇 시간 뒤 예보 — OPEN_METEO_HOURLY_FORECAST)인
+    입력을 여기 두면 "+6h 강수" 가 실외 강우로 읽혀 지금 오지 않는 비로 창이
+    닫힌다. 환경제어 결정(2026-10-13, E4)은 경고가 아니라 **저장 거부**다.
+    예보는 기상 탭의 예보 바인딩(weather_bindings)으로 연결한다 — 그쪽은 막지 않는다.
+
+    표식이 없는 드라이버는 '현재' 다 — `OPEN_METEO_FORECAST`(지금 칸 모델값)를
+    일사 센서로 쓰는 기존 설치(구마모토)는 그대로 저장된다. 판정을 못 하면
+    막지 않는다.
+    """
+    if not isinstance(fittings, list):
+        return None
+    by_input = {}
+    for f in fittings:
+        if not isinstance(f, dict) or f.get('kind') != 'sensor':
+            continue
+        iid = f.get('input_id')
+        if isinstance(iid, str) and iid.strip():
+            by_input.setdefault(iid.strip(), []).append(f)
+    if not by_input:
+        return None
+    try:
+        from aot.utils.inputs import (FORECAST_TIME_MISUSE_MESSAGE,
+                                      forecast_time_device_ids)
+        hits = forecast_time_device_ids(list(by_input))
+    except Exception:                                       # noqa: BLE001
+        current_app.logger.debug('[FacilityManager] 예보 입력 판정 실패',
+                                 exc_info=True)
+        return None
+    if not hits:
+        return None
+    names = {}
+    try:
+        from aot.databases.models import Input
+        names = dict(Input.query.with_entities(Input.unique_id, Input.name)
+                     .filter(Input.unique_id.in_(sorted(hits))).all())
+    except Exception:                                       # noqa: BLE001
+        names = {}
+    items = []
+    for iid in sorted(hits):
+        for f in by_input[iid]:
+            role = '실외' if (f.get('sensor_role') or 'indoor') == 'outdoor' else '실내'
+            items.append("%s 센서 '%s' ← 입력 '%s'" % (
+                role, f.get('name') or f.get('id') or '?', names.get(iid) or iid))
+    more = '' if len(items) <= 5 else ' 외 %d건' % (len(items) - 5)
+    return ('%s. 저장하지 않았습니다: %s%s.'
+            % (FORECAST_TIME_MISUSE_MESSAGE, ', '.join(items[:5]), more))
+
+
 # 설비끼리 서로를 가리키는 자리. 관수 노즐은 배관을, 배관·노즐·밸브는 레이어를
 # 가리킨다 — id 를 새로 발급하면 이 참조도 같이 옮겨야 한다.
 _FITTING_REF_KEYS = ('layer_id', 'pipe_id', 'connected_main_id', 'draw_id')
@@ -234,6 +286,9 @@ class FacilityManager:
         fittings_clean, fittings_error = _dedupe_fittings(data.get('fittings') or [])
         if fittings_error:
             return None, fittings_error
+        forecast_error = _forecast_inputs_in_sensor_fittings(fittings_clean)
+        if forecast_error:
+            return None, forecast_error
 
         # Resolve site → parent_id mapping (option Y: hierarchy via GeoShape.parent_id)
         parent_site_id = None
@@ -700,6 +755,8 @@ class FacilityManager:
 
             db.session.delete(facility)
             db.session.commit()
+            from aot.utils import data_retention
+            data_retention.on_target_deleted('facility', facility_uuid)     # 최신 곡선만 치운다
             return {'ok': True, 'deleted': facility_uuid}, None
         except Exception as e:
             db.session.rollback()

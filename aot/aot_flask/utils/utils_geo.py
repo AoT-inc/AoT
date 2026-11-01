@@ -76,7 +76,8 @@ _MISC_CACHE_GEN = 0
 
 # [3-way Actuator] Output module types that expose Open/Stop/Close + position control.
 # Frontend renders a 3-button + slider popup instead of an on/off toggle.
-from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
+from aot.outputs.paired_actuator_common import (PAIRED_ACTUATOR_OUTPUT_TYPES,
+                                                  is_self_positioning_output)
 
 THREE_WAY_OUTPUT_TYPES = set(PAIRED_ACTUATOR_OUTPUT_TYPES)
 
@@ -514,6 +515,7 @@ def get_active_geo_layers(api_keys=None):
             # Frontend Logic (AoTMapLoader) will fallback to first available or use 'visible' option.
             'is_active': False,
             'role': layer_role,
+            'provider': layer.type,   # 입력 모듈 이름 — 프런트 분류기(ambient)의 제공자 기본값용
             'refresh_interval': 0,
         }
         # Populate Default Options if missing
@@ -598,6 +600,11 @@ def get_active_geo_layers(api_keys=None):
         # refresh_interval from InputModule instance (e.g. gis_openweather sets 600s)
         if inst and hasattr(inst, 'refresh_interval') and inst.refresh_interval:
             base_layer_data['refresh_interval'] = int(inst.refresh_interval)
+
+        # 시간을 지원하는 레이어(과거·예보 프레임) — 지도 위젯 시간 슬라이더와 기상 분류기가 읽는다.
+        # 프레임 목록 자체는 /api/geo/layer_time/<id> 가 모듈의 표준 메서드로 내보낸다.
+        te = getattr(inst, 'time_enabled', None) if inst else None
+        base_layer_data['time_enabled'] = bool(layer_def.get('time_enabled') if te is None else te)
 
         # [New] Legend Support (Dynamic)
         # Attempt to load dynamic legend from InputModule first
@@ -1237,7 +1244,7 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
             control_kind = 'on_off'
             if dev_type == 'output':
                 ot = getattr(record, 'output_type', None)
-                if ot in THREE_WAY_OUTPUT_TYPES:
+                if ot in THREE_WAY_OUTPUT_TYPES or is_self_positioning_output(ot):
                     control_kind = 'value_3way'
 
             for ch_num in sorted(list(channels_to_emit)):

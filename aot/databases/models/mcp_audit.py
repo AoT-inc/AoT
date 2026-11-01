@@ -112,7 +112,9 @@ class MCPConfirmation(CRUDMixin, db.Model):
     reason      = db.Column(db.Text, default='')
     agent_id    = db.Column(db.String(100), default='unknown')
     status      = db.Column(db.String(20), default='pending')
-    # pending | approved | rejected | expired | consumed | executed | failed
+    # pending | approved | rejected | expired | consumed | executing | executed | failed
+    #   executing = execute_approved 가 실행을 선점한 상태(2026-10-08). 전이는
+    #   mcp_safety_gate._transition(조건부 갱신)으로만 — 겹친 요청의 이중 실행 방지.
     #   executed/failed = 승인 시점에 서버가 직접 실행을 끝낸 상태(p6_26). 이후
     #   AI 가 _confirmation_id 로 재호출하면 재실행하지 않고 result_json 을 돌려준다.
     result_json = db.Column(db.Text, default=None)

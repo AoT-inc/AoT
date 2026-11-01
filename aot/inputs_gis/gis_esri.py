@@ -25,6 +25,7 @@ INPUT_INFORMATION = {
     'dependencies_module': [],
     'default_url': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     'layer_type': 'xyz',
+    'ambient_role': 'base',
     'time_enabled': False,
     'leaflet_options': {
         'maxZoom': 17,

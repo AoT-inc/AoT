@@ -52,6 +52,20 @@ DATA_IMPORT = 'data.import'
 API_KEY_ISSUE = 'apikey.issue'
 API_KEY_REVOKE = 'apikey.revoke'
 API_KEY_PROFILE_CHANGE = 'apikey.profile_change'   # 도구 묶음 변경(p6_75)
+#: AI 가 사용자 화면에서 한 일(실행·실패·거절) — 화면 명령 행은 12시간 뒤 지워진다.
+SCREEN_COMMAND = 'screen.command'
+#: AI 가 사용자의 AI 수신함에 카드를 남겼다(screen_action action='post', 2026-10-19).
+#: 읽음·닫기는 기록하지 않는다. 표시는 SCREEN_COMMAND 가 남긴다.
+AI_CARD_POST = 'ai_card.post'
+#: 사용자가 AI 카드를 [노트로 저장] 했다(P1). target_id=카드 uuid, detail=노트 id.
+AI_CARD_TO_NOTE = 'ai_card.to_note'
+#: 사용자가 AI 카드를 [공지로 게시] 했다(P2). target_id=카드 uuid, detail="notice_id · 제목 (+파일)".
+#: already(이미 게시)는 기록하지 않는다.
+AI_CARD_TO_NOTICE = 'ai_card.to_notice'
+#: 서버가 AI 가 준 https 주소의 파일을 가져오려 했다(P4 attach.url·본문 이미지 승격). 시도마다 1행,
+#: 실패·차단도 남는다(한도 거부는 0행). target_type AICardFetch, target_id=성공 시 카드 uuid,
+#: target_name=호스트만, detail='<code> <크기>'. 이 행 수가 시간 30·일 100 한도를 센다.
+AI_CARD_FETCH = 'ai_card.fetch'
 API_KEY_URL_AUTH = 'apikey.url_auth'   # 폐기 예정 경로 사용 추적 (S15)
 REMOTE_TOKEN_ISSUE = 'remote.token_issue'
 

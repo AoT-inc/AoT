@@ -101,6 +101,24 @@ settings/custom_ui 연동 구조를 정의한다. z-index 는 `z-index-system.md
   API 공유). 필드 추가 시: THEME_COLOR_FIELDS + theme_defaults.json +
   custom_ui.html(PRESETS/CSS_VAR_MAP) + routes_general var_map 네 곳을 갱신.
 
+### 2026-10-20 AI 카드 면·글자 쌍 (`ai_surface_bg` / `ai_surface_fg`)
+
+AI 카드(자막·수신함·뷰어)는 시스템 화면과 갈라 보이도록 **어두운 면 + 밝은 글자** 한 쌍을 쓴다
+(사용자 지시 — `plans/p3_ui_redesign_20261020.md`). 기존 토큰에는 "카드 면에 얹는 어두운 면 + 그 짝 글자"가
+없었다(`btn_*_bg` 는 버튼 면, `bg_warning`/`bg_fault` 는 상태 면 — 계열을 넘나들 수 없다).
+
+| 필드 | 토큰 | 기본값 | 쓰는 곳 |
+|---|---|---|---|
+| `ai_surface_bg` | `--aot-ai-surface-bg` | `#13261B` | AI 카드 면. 자막·수신함은 알파 0.8(`--aot-ai-surface`), 뷰어는 불투명 |
+| `ai_surface_fg` | `--aot-ai-surface-fg` | `#FFFFFF` | 그 면의 글자(항상 불투명), 뒤집힌 면(칩·주 버튼·배지)의 바탕 |
+
+- 다크 테마도 이 쌍은 그대로다(둘 다 어두운 면 위의 밝은 글자) — `dark_overridden` 에 넣지 않는다.
+- 파생(`aot-theme-variables.css`): `--aot-ai-surface`(면 80%), `--aot-ai-tint`(글자색 14% — 코드·표 머리 바탕),
+  `--aot-ai-rule`(글자색 28% — 표·항목 선). 승인 목록: `ui-guide.md` §3-3.
+- 배선: `forms_settings.THEME_COLOR_FIELDS` · `theme_defaults.json` · `routes_general.py` var_map · `custom_ui.html`
+  (필드 행·`PRESETS`·`CSS_VAR_MAP`·미리보기 `preview-ai-card`) · `aot-theme-variables.css` 기본값. 마이그레이션 없음
+  (`custom_theme_json` 은 JSON 이라 새 키가 비어 있으면 기본값을 쓴다).
+
 ## 3. 기본값 일치 계약
 
 같은 색의 기본값이 4곳에 존재한다. **항상 동일해야 한다**:

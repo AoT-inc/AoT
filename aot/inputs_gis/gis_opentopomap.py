@@ -23,6 +23,7 @@ INPUT_INFORMATION = {
     'options_enabled': [],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'base',
+    'ambient_role': 'base',
     'dependencies_module': [],
     'layer_type': 'xyz',
     'time_enabled': False,

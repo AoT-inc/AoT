@@ -19,7 +19,7 @@ def _coord(monkeypatch, readings, vpd_measured=False):
     c._sensors_resolved = [{'x': 1}]
     it = iter(readings)
 
-    def fake(_sr, max_age=None):
+    def fake(_sr, max_age=None, **_kw):
         T, RH = next(it)
         out = {'T': T, 'RH': RH, 'T_max': T, 'T_min': T,
                'VPD': round(compute_vpd(T, RH), 3), 'vpd_measured': vpd_measured}

@@ -125,3 +125,10 @@ def test_tree_check_passes_clean_tree(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     ok, _ = push_safety.check_tree_contents(sha)
     assert ok is True
+
+
+def test_tree_check_blocks_gitea_ci_files(tmp_path, monkeypatch):
+    sha = _tree_with(tmp_path, {'.gitea/workflows/e2e.yml': 'x', 'README.md': 'public'})
+    monkeypatch.chdir(tmp_path)
+    ok, reason = push_safety.check_tree_contents(sha)
+    assert ok is False and '.gitea/workflows/e2e.yml' in reason

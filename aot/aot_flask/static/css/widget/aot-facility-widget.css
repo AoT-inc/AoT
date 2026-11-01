@@ -192,6 +192,13 @@
   display: block;
   margin-top: .05rem;
 }
+/* 목표가 걸린 쪽(공기/잎 VPD) 표식 — 값이 비면 자리도 차지하지 않는다. */
+.env-basis-tag {
+  font-size: var(--aot-font-size-xs);
+  color: var(--aot-color-brand-primary);
+  font-weight: 600;
+}
+.env-basis-tag:empty { display: none; }
 .env-sp-hint {
   /* 사다리 예외: 카드 모서리에 절대배치되는 힌트 칩이다(top:3px). 사다리
      최소단(2xs = 11.2px)으로 키우면 아래 설정값 줄과 겹친다 — 본문 글자가

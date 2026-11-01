@@ -35,6 +35,13 @@
 근거 쏠림     한 장치가 창 내내 같은 근거로만 산 경우. 무구배·야간파킹·맞선짝은
               정상 사유이지만 **24시간 100%** 면 그 장치는 사실상 죽어 있다.
 긴급 사이클   emergency 모드 비율. 드물어야 정상이다.
+의심 액추에이터 (CH93, 근거 42)  전송 실패가 이어졌거나 오래 세게 명령했는데 반응이 없어 코디네이터가
+              부하 분담에서 빼고 제자리에 둔 장치. 있으면 그 장치를 점검해야 한다. 의심이 있을 때만 기록된다.
+분무용 물 공급 (CH92)  옵션을 켠 코디네이터만. 물이 없거나 신호가 끊겨 분무기가 멈춘 분.
+              0 이 아니면 사람이 탱크·수압·신호를 봐야 한다(설계된 보호이지만 끝내는 것은 사람).
+극한 고온 보호 단계(CH75)·플래그(CH76) — 활성 분, 단계 전환 횟수와 시각, 보호 중
+              무엇이 막혔나(바깥이 더 더움·증발 여력·물). debug 와 무관하게 늘
+              기록된다. 전환이 시간당 1회를 넘으면 문턱 근처의 들락거림이다.
 설정 점검     오늘 실제로 밟은 지뢰들 — 종료일 임박, 유도/하드 역전,
               신선도 상한이 센서 주기보다 짧아 값이 늘 만료되는 경우,
               차광막을 닫으면 광량 하한 아래로 떨어지는 모순 설정,
@@ -51,11 +58,21 @@ from datetime import date, datetime, timezone
 
 # `start_flask_ui` 를 import 하는 것만으로 기동 로그 여섯 줄이 stdout 으로
 # 쏟아져 보고서 머리를 덮는다. INFO 만 끈다 — 경고·오류는 그대로 보여야 한다.
-logging.disable(logging.INFO)
+# **CLI 로 돌 때만** 끈다. `logging.disable` 은 프로세스 전역이라 모듈 머리에서
+# 무조건 걸면, 이 모듈을 import 하는 테스트가 pytest 프로세스 전체의 INFO 이하를
+# 꺼 버려 뒤에 도는 assertLogs/caplog 검사가 순서에 따라 실패한다(PR #88 실측).
+# 아래 app import 보다 위에 있어야 기동 로그가 막힌다.
+if __name__ == '__main__':
+    logging.disable(logging.INFO)
 
 from aot.start_flask_ui import app
 from aot.databases.models import CustomController, Input, Output
 from aot.functions.utils.env_control import log_channels as LC
+from aot.functions.utils.env_control import heat_protect as HP
+from aot.functions.utils.env_control import sensor_status as SS
+from aot.functions.utils.env_control import water_supply as WS
+from aot.functions.utils.env_control import leaf_vpd as LV
+from aot.functions.utils.env_control import humid_regime as HR
 from aot.functions.utils.env_control.types import ACTUATOR_DOMAIN, DEFAULT_DOMAIN
 
 
@@ -79,6 +96,12 @@ REASON_LABEL = {
     LC.REASON_NO_MEASUREMENT:   '실내 값 없음',
     LC.REASON_CURTAIN_DAY_OPEN: '낮 걷음',
     LC.REASON_DIRECTION_UNSETTLED: '방향 확정 대기',
+    LC.REASON_HUMID_NO_RELIEF:  '과습·환기 무익',
+    LC.REASON_HUMID_CAPPED:     '과습·열림 제한',
+    LC.REASON_HUMID_COLD:       '과습·실외 너무 참',
+    LC.REASON_NO_RESPONSE:      '열어도 반응 없음',
+    LC.REASON_HEAT_VENT_HOT_OUTSIDE: '폭염·바깥이 더 더움',
+    LC.REASON_HEAT_FOG_BLOCKED: '폭염·분무 불가',
     # 임계 오버라이드 계열 — coordinate() 가 아니라
     # `apply_threshold_and_gate_overrides` 가 붙이는 근거다. 최종 명령
     # 로그(CH100 계열)에만 나타난다.
@@ -91,6 +114,27 @@ REASON_LABEL = {
     LC.REASON_FOG_DERATE:           '분무 감쇠',
     LC.REASON_FOG_HUMIDITY_CEILING: '분무 습도 상한',
     LC.REASON_NO_ACTUATOR:          '장치 없음',
+    LC.REASON_HEAT_PROTECT:         '극한 고온 보호',
+    LC.REASON_NO_WATER:             '분무용 물 없음',
+    LC.REASON_ACTUATOR_SUSPECT:     '의심 장치 보류',
+    # 스크린 판단(`screen_policy`) — 차광막을 열·VPD 에 씀 / 빛을 지키려 걷어 둠.
+    LC.REASON_SHADE_HEAT:           '차광·열부하',
+    LC.REASON_SHADE_LIGHT_KEEP:     '차광·빛 지킴',
+    LC.REASON_SCREEN_HOLD:          '차광·왕복 방지',
+    LC.REASON_CURTAIN_GAP:          '커튼·결로 틈',
+    LC.REASON_CURTAIN_RAMP:         '커튼·아침 단계 걷기',
+    LC.REASON_PREPARK_HOLD:         '파킹 직전·더 안 엶',
+    LC.REASON_CURTAIN_NIGHT_CLOSE:  '커튼·밤 보온 닫음',
+    LC.REASON_SOLAR_VENT_FLOOR:     '일사 부하·환기 하한',
+    LC.REASON_RAIN_RESTRICT:        '강우 단계 제한(천창 닫음·측창 상한)',
+    LC.REASON_WIND_RESTRICT:        '강풍 1단계(풍상측·천창 닫음·상한)',
+    LC.REASON_WETTING_FOG_DUSK:     '분무 해 질 녘 제한',
+    LC.REASON_MORNING_PURGE:        '아침 습기 빼기·환기 하한',
+    LC.REASON_FROST_PROTECT:        '서리 주의·보호(닫음·난방·유동팬)',
+    LC.REASON_EXTREME_PULSE_FOG:    '극한 고온·건조 짧은 펄스 분무',
+    LC.REASON_OUTAGE_CLOSE:         '실외 값 없음·밤 닫음',
+    LC.REASON_NIGHT_DEW_FAN:        '밤 이슬·순환팬',
+    LC.REASON_BLIND_SUN_VENT:       '실내 값 없음·해 보고 작은 환기',
     LC.REASON_UNKNOWN:              '근거 미상',
 }
 
@@ -98,8 +142,17 @@ REASON_LABEL = {
 IDLE_REASONS = frozenset({
     LC.REASON_IDLE, LC.REASON_NO_GRADIENT, LC.REASON_NO_OUTDOOR_DATA,
     LC.REASON_OPPOSING_PARKED, LC.REASON_NIGHT_PARKED,
+    LC.REASON_OUTAGE_CLOSE,         # 실외 값 없이 밤에 닫아 둔 창 — 쉬는 이유가 설명돼 있다
     LC.REASON_WRONG_DIRECTION, LC.REASON_NO_MEASUREMENT,
     LC.REASON_CURTAIN_DAY_OPEN,
+    # 과습에서 환기가 소용없다고 판단했거나, 열어도 반응이 없어 멈춘 것 — 설명이 끝난 쉼이다.
+    LC.REASON_HUMID_NO_RELIEF, LC.REASON_NO_RESPONSE, LC.REASON_HUMID_COLD,
+    # 극한 고온 보호 — 바깥이 더 더워 닫은 창, 증발 여력·물이 없어 쉬는 분무.
+    LC.REASON_HEAT_VENT_HOT_OUTSIDE, LC.REASON_HEAT_FOG_BLOCKED,
+    # 분무용 물이 없어 쉬는 분무기 — 쉬는 이유는 설명이 끝났다(물 공급 자체는 아래 `water` 에서 센다).
+    LC.REASON_NO_WATER,
+    # 빛을 지키려 걷어 둔 차광막 — 쉬는 이유가 설명돼 있다.
+    LC.REASON_SHADE_LIGHT_KEEP,
 })
 
 # 코디네이터의 요청을 **일부러** 0 으로 만드는 보호 장치의 근거들. 최종 명령의
@@ -114,6 +167,11 @@ GUARD_REASONS = frozenset({
     LC.REASON_LIMIT_TEMP_MAX, LC.REASON_LIMIT_TEMP_MIN,
     LC.REASON_LIMIT_HUMID_MAX, LC.REASON_LIMIT_HUMID_MIN,
     LC.REASON_FOG_DERATE, LC.REASON_FOG_HUMIDITY_CEILING,
+    LC.REASON_HEAT_PROTECT, LC.REASON_NO_WATER,
+    # 해 질 녘 습윤형 분무 제한 — 잎을 젖은 채 밤에 들이지 않으려는 설계된 0 이다.
+    LC.REASON_WETTING_FOG_DUSK,
+    # 서리 — 분무·CO₂·냉방·개구부를 0 으로, 난방·유동팬을 100 으로 몬다. 설계된 강제다.
+    LC.REASON_FROST_PROTECT,
 })
 
 # 스크린(보온커튼·차광막)은 0/100 두 자리뿐이라 명령이 문턱(닫혀 있다 걷으려면 60,
@@ -124,7 +182,7 @@ SCREEN_KINDS = frozenset({'curtain', 'shade'})
 
 MODE_LABEL = {
     1: '냉방', 2: '난방', 3: '가습', 4: '제습',
-    5: 'CO₂ 시비', 0: '보존', 99: '긴급',
+    5: 'CO₂ 시비', 6: '폭염 보호', 0: '보존', 99: '긴급',
 }
 LIMIT_LABEL = {0: '없음', 1: '광량', 2: 'CO₂', 3: '온도', 4: '수분'}
 
@@ -136,7 +194,38 @@ GATE_LABEL = [
     (LC.GATE_BIT_HEAT,        '고온'),
     (LC.GATE_BIT_COLD,        '저온'),
     (LC.GATE_BIT_FOG_SUNBURN, '일소 방지 분무 잠금'),
+    (LC.GATE_BIT_RAIN_LIGHT,  '강우 단계 제한(예보·약한 비)'),
+    (LC.GATE_BIT_WIND_LIGHT,  '강풍 1단계(풍상측 닫음·상한)'),
+    (LC.GATE_BIT_FROST_WATCH, '서리 주의'),
+    (LC.GATE_BIT_FROST,       '서리 보호'),
 ]
+
+# 극한 고온 보호 플래그(CH76) — 상수를 **참조**한다(근거 라벨과 같은 이유).
+HP_FLAG_LABEL = [
+    (HP.HP_FLAG_VENT_OPEN_OK,    '환기 가능'),
+    (HP.HP_FLAG_HOT_OUTSIDE,     '바깥이 더 더움'),
+    (HP.HP_FLAG_FOG_ALLOWED,     '분무 허용'),
+    (HP.HP_FLAG_FOG_WETBULB,     '증발 여력 부족'),
+    (HP.HP_FLAG_FOG_HUMID,       '습도로 분무 차단'),
+    (HP.HP_FLAG_NO_WATER,        '물 없음'),
+    (HP.HP_FLAG_SHADE_DEPLOY,    '차광 전개'),
+    (HP.HP_FLAG_LIGHT_MIN_YIELD, '광량 하한에 차광 양보'),
+    (HP.HP_FLAG_INDOOR_STALE,    '실내 값 끊김'),
+]
+# 보호가 이보다 자주 켜졌다 꺼졌다 하면 사람이 본다 — 진입 지연·해제 여유·최소 유지가
+# 막아야 할 30 °C 근처의 들락거림이다(설계 §6).
+HP_MAX_TRANSITIONS_PER_H = 1.0
+
+# 밤 이슬·서리 노출(2026-10-12) — 시설 문제를 코디네이터 결함과 섞지 않으려고 따로 센다.
+# 밤 이슬 분 = 해 진 뒤 실내 RH ≥ 95 % 이거나 이슬점 여유 < 1 °C 인 분. 잎은 복사로 공기보다 1~3 °C 식으므로
+# 공기 쪽 여유가 1 °C 아래면 잎은 이미 이슬점 아래다(밤 이슬 순환팬의 진입선은 2 °C, `night_dew`).
+NIGHT_DEW_RH_PCT = 95.0
+NIGHT_DEW_MARGIN_C = 1.0
+EXPOSURE_STEP_S = 300.0            # 센서 표본을 이 격자로 평균해 센다(센서 주기가 달라도 같은 잣대)
+EXPOSURE_DEW_MIN = 60.0            # 이만큼 넘고
+EXPOSURE_DEW_SHARE = 0.25          # 밤의 이 몫 이상이면 시설 권고를 낸다
+EXPOSURE_FROST_MIN = 15.0          # 실내 0 °C 이하가 이만큼 넘거나
+EXPOSURE_FROST_PROTECT_MIN = 60.0  # 서리 보호(게이트)가 이만큼 넘으면 권고
 
 # 상반 쌍 — `apply_hvac_opposition_interlock` 이 보는 것과 **같은 두 종류**다.
 # 분무(fogger)를 여기 넣으면 안 된다: VPD 를 목표로 하면 난방과 가습이 함께
@@ -326,6 +415,316 @@ def _split_suppressed(pairs, final_reasons, guard_codes):
     return guarded, unexplained
 
 
+def _heat_protect_summary(tiers, flags, flag_labels, hours):
+    """극한 고온 보호(CH75·76) → 활성 분·단계 전환·플래그 분포. 기록이 없으면 None.
+
+    `tiers`/`flags` 는 [(ts, 값)]. 활성 시간은 **사이클 간격**으로 센다 — 보호 단계는
+    매 사이클 남으므로 표본 하나가 그 간격만큼의 상태다. 간격이 중앙값의 3배를 넘으면
+    (사이클이 빠졌다) 중앙값만큼만 센다 — 멈춘 시간을 보호 중으로 부풀리지 않는다.
+    """
+    if not tiers:
+        return None
+    tiers = sorted(tiers)
+    gaps = [(b[0] - a[0]).total_seconds() for a, b in zip(tiers, tiers[1:])]
+    med = sorted(gaps)[len(gaps) // 2] if gaps else 0.0
+    active_s = tier2_s = 0.0
+    for i, (ts, tier) in enumerate(tiers):
+        g = gaps[i] if i < len(gaps) else med
+        if med and g > med * 3:
+            g = med
+        if tier >= 1:
+            active_s += g
+        if tier >= 2:
+            tier2_s += g
+    transitions = []
+    for (_t0, a), (t1, b) in zip(tiers, tiers[1:]):
+        if int(a) != int(b):
+            transitions.append((t1, int(a), int(b)))
+    counts = {}
+    for _ts, v in flags or []:
+        mask = int(v)
+        for bit, label in flag_labels:
+            if mask & bit:
+                counts[label] = counts.get(label, 0) + 1
+    span_h = hours if hours else 1
+    return {
+        'samples': len(tiers),
+        'active_min': active_s / 60.0,
+        'tier2_min': tier2_s / 60.0,
+        'transitions': len(transitions),
+        'transitions_per_h': len(transitions) / span_h,
+        'transition_times': [(t.isoformat(), a, b) for t, a, b in transitions[:12]],
+        'flags': counts,
+    }
+
+
+def _frost_summary(gate_events, median_gap_s):
+    """안전 게이트 마스크의 서리 비트 → 주의·보호 분과 진입 횟수. 서리가 한 번도 없었으면 None.
+
+    서리 단계는 따로 채널을 두지 않는다 — 단계가 서 있는 사이클은 게이트가 마스크를 남기므로
+    (`GATE_BIT_FROST_WATCH`·`GATE_BIT_FROST`, 둘은 함께 서지 않는다) 표본 하나가 사이클 간격만큼의
+    상태다. 서 있지 않은 사이클은 기록이 없다. 사이클 간격 3배 넘게 비면 다른 진입으로 센다.
+    """
+    ev = sorted((ts, int(v)) for ts, v in gate_events if v >= 0)
+    gap = float(median_gap_s or 0.0)
+    watch_s = protect_s = 0.0
+    entries = []
+    last_ts = None
+    last_lv = 0
+    for ts, mask in ev:
+        lv = 2 if mask & LC.GATE_BIT_FROST else (1 if mask & LC.GATE_BIT_FROST_WATCH else 0)
+        if not lv:
+            last_lv = 0
+            continue
+        if lv == 2:
+            protect_s += gap
+        else:
+            watch_s += gap
+        fresh = (last_ts is None or not gap
+                 or (ts - last_ts).total_seconds() > gap * 3)
+        if lv == 2 and (fresh or last_lv < 2):
+            entries.append(ts)
+        last_ts, last_lv = ts, lv
+    if not (watch_s or protect_s):
+        return None
+    return {'watch_min': watch_s / 60.0, 'protect_min': protect_s / 60.0,
+            'protect_entries': len(entries),
+            'protect_times': [t.isoformat() for t in entries[:6]]}
+
+
+def _bucket_means(series, step_s):
+    """[(epoch, 값)] → {격자 시작 epoch: 평균}. 값이 숫자가 아닌 표본은 건너뛴다."""
+    acc = {}
+    for ts, v in series or []:
+        try:
+            ts, v = float(ts), float(v)
+        except (TypeError, ValueError):
+            continue
+        if v != v:                                   # NaN
+            continue
+        b = int(ts // step_s) * step_s
+        tot, n = acc.get(b, (0.0, 0))
+        acc[b] = (tot + v, n + 1)
+    return {b: tot / n for b, (tot, n) in acc.items()}
+
+
+def _merge_sensors(series_list, step_s):
+    """센서 여럿 → 격자마다 센서별 평균의 평균(센서가 많은 쪽이 표본 수로 이기지 않게)."""
+    per = [_bucket_means(s, step_s) for s in series_list or []]
+    out = {}
+    for b in sorted(set().union(*per) if per else ()):
+        vals = [m[b] for m in per if b in m]
+        out[b] = sum(vals) / len(vals)
+    return out
+
+
+def _exposure_summary(t_series, rh_series, is_night, step_s=EXPOSURE_STEP_S):
+    """실내 온·습도 → 밤 이슬 분·서리 분. 온도와 습도가 **함께** 있는 격자만 센다. 기록이 없으면 None.
+
+    `t_series`/`rh_series` 는 센서별 [(epoch, 값)] 의 목록, `is_night(epoch)` 는 True/False/None(모름).
+    밤을 모르는 격자(좌표 없음)는 밤으로 세지 않는다 — `night_known` 이 False 면 밤 이슬 분은 0 이 아니라 "못 셈" 이다.
+    서리 분(실내 ≤ 0 °C)은 낮밤을 가리지 않는다.
+    """
+    T = _merge_sensors(t_series, step_s)
+    RH = _merge_sensors(rh_series, step_s)
+    both = sorted(set(T) & set(RH))
+    if not both:
+        return None
+    night_n = dew_n = frost_n = known_n = 0
+    t_min = None
+    for b in both:
+        t, rh = T[b], RH[b]
+        t_min = t if t_min is None else min(t_min, t)
+        if t <= 0.0:
+            frost_n += 1
+        night = is_night(b + step_s / 2.0)
+        if night is None:
+            continue
+        known_n += 1
+        if not night:
+            continue
+        night_n += 1
+        td = HR.dewpoint_c(t, rh)
+        if rh >= NIGHT_DEW_RH_PCT or (td is not None and t - td < NIGHT_DEW_MARGIN_C):
+            dew_n += 1
+    k = step_s / 60.0
+    return {'covered_min': len(both) * k, 'night_min': night_n * k,
+            'night_dew_min': dew_n * k, 'frost_min': frost_n * k,
+            'indoor_T_min': t_min, 'night_known': bool(known_n)}
+
+
+def _exposure_advice(summary, kinds, frost=None):
+    """노출이 크면 시설 권고 문장들 → [str]. 코디네이터 결함이 아니라 시설 몫이라 '볼 것' 으로 세지 않는다.
+
+    `kinds` 는 이 코디네이터 장치 종류의 집합(순환팬·난방기 유무로 문장을 바꾼다),
+    `frost` 는 `_frost_summary` 결과(서리 보호 분)."""
+    out = []
+    if not summary:
+        return out
+    kinds = set(kinds or ())
+    night = summary['night_min']
+    dew = summary['night_dew_min']
+    if dew >= EXPOSURE_DEW_MIN and night and dew >= EXPOSURE_DEW_SHARE * night:
+        line = (f'밤 이슬 위험이 큽니다 — 밤 {night:.0f}분 중 {dew:.0f}분({dew * 100.0 / night:.0f}%)이'
+                f' 실내 습도 {NIGHT_DEW_RH_PCT:.0f}% 이상이거나 이슬점 여유 {NIGHT_DEW_MARGIN_C:g} °C 미만 —'
+                ' 제습기·보온커튼·난방 검토')
+        if 'circulation_fan' not in kinds:
+            line += ' (순환팬이 없습니다 — 공기를 움직이면 잎이 젖어 있는 시간이 줄어듭니다)'
+        out.append(line)
+    fr_min = summary['frost_min']
+    prot = (frost or {}).get('protect_min', 0.0)
+    if fr_min >= EXPOSURE_FROST_MIN or prot >= EXPOSURE_FROST_PROTECT_MIN:
+        line = (f'서리 위험 — 실내 0 °C 이하 {fr_min:.0f}분(최저 {summary["indoor_T_min"]:.1f} °C)'
+                + (f' · 서리 보호 {prot:.0f}분' if prot else '') + ' — 보온커튼·난방 검토')
+        if 'heater' not in kinds:
+            line += ' (난방기가 없어 보호는 닫기만 합니다)'
+        out.append(line)
+    return out
+
+
+def _night_checker(target_id):
+    """epoch → 그 시각 시설 위치가 밤인가(True/False), 모르면 None. 같은 10분 격자는 한 번만 묻는다."""
+    cache = {}
+
+    def check(epoch):
+        key = int(epoch // 600)
+        if key not in cache:
+            try:
+                from aot.utils.solar import is_daytime
+                day = is_daytime(target_id=target_id,
+                                 at=datetime.fromtimestamp(epoch, timezone.utc))
+                cache[key] = None if day is None else (not day)
+            except Exception:                                # noqa: BLE001
+                cache[key] = None
+        return cache[key]
+    return check
+
+
+def _fetch_indoor_series(facility_uuid, hours):
+    """시설의 실내 온도·습도 센서 이력 → (온도 시계열 목록, 습도 시계열 목록). 못 읽으면 ([], [])."""
+    if not facility_uuid:
+        return [], []
+    try:
+        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.utils.influx import get_past_measurements
+        data, err = get_facility_integration(facility_uuid)
+        if err or not isinstance(data, dict):
+            return [], []
+        out = {'temperature': [], 'humidity': []}
+        seen = set()
+        for sensor in data.get('sensors_resolved') or []:
+            mtype = sensor.get('measurement_type')
+            iid, mid = sensor.get('input_uuid'), sensor.get('measurement_id')
+            if mtype not in out or not iid or not mid or (iid, mid) in seen:
+                continue
+            seen.add((iid, mid))
+            rows = get_past_measurements(iid, mid, max_age=int(hours * 3600)) or []
+            if rows:
+                out[mtype].append(rows)
+        return out['temperature'], out['humidity']
+    except Exception:                                        # noqa: BLE001
+        return [], []
+
+
+STATUS_NAME = {code: name for name, code in SS.STATUS_CODES.items()}
+VPD_SOURCE_NAME = {code: name for name, code in SS.VPD_SOURCE_CODES.items()}
+
+
+def _summarize_sensor_status(by_channel):
+    """`sensor_status` 측정(CH80~91)을 축별 상태 분포로 접는다.
+
+    반환 `None` = 기록이 없다. **0 으로 보고하지 않는다** — 디버그 로깅이 꺼진
+    코디네이터는 이 값을 쓰지 않으므로, 기록 없음과 "전부 valid" 는 다르다.
+    `axes` 는 valid 가 아닌 상태가 한 번이라도 있던 축만 담는다(valid 만 있는 축은
+    조용하다). out_of_range·frozen 은 제어에서 빠진 값이라 `problem` 으로 올린다.
+    """
+    if not by_channel:
+        return None
+    axes = {}
+    records = 0
+    for axis in LC.SENSOR_STATUS_AXES:
+        values = by_channel.get(LC.ch_sensor_status(axis)) or []
+        records = max(records, len(values))
+        counts = Counter(STATUS_NAME.get(int(v), f'코드 {int(v)}') for _t, v in values)
+        if any(name != SS.VALID for name in counts):
+            axes[axis] = dict(counts)
+    src = Counter(VPD_SOURCE_NAME.get(int(v), f'코드 {int(v)}')
+                  for _t, v in by_channel.get(LC.CH_VPD_SOURCE) or [])
+    diffs = [v for _t, v in by_channel.get(LC.CH_VPD_DEVICE_DIFF) or []]
+    return {
+        'records': records,
+        'axes': axes,
+        'out_of_range': {a: c[SS.OUT_OF_RANGE] for a, c in axes.items()
+                         if c.get(SS.OUT_OF_RANGE)},
+        'frozen': {a: c[SS.FROZEN] for a, c in axes.items() if c.get(SS.FROZEN)},
+        'vpd_source': dict(src),
+        'vpd_device_diff_mean': (sum(diffs) / len(diffs)) if diffs else None,
+        'vpd_device_diff_max_abs': max((abs(v) for v in diffs), default=None),
+    }
+
+
+def _state_minutes(series):
+    """매 사이클 남는 상태 채널(CH92·93) → {값: 분}. 기록이 없으면 None.
+
+    `_heat_protect_summary` 와 같은 규칙이다 — 표본 하나가 다음 표본까지의 간격만큼의
+    상태이고, 중앙값의 3배를 넘는 공백(재시작)은 중앙값만큼만 센다(멈춘 시간을 그 상태로
+    부풀리지 않는다). 0 분과 "기록 없음" 을 섞지 않으려고 빈 입력은 None 이다.
+    """
+    if not series:
+        return None
+    series = sorted(series)
+    gaps = [(b[0] - a[0]).total_seconds() for a, b in zip(series, series[1:])]
+    med = sorted(gaps)[len(gaps) // 2] if gaps else 0.0
+    out = {}
+    for i, (_ts, v) in enumerate(series):
+        g = gaps[i] if i < len(gaps) else med
+        if med and g > med * 3:
+            g = med
+        out[int(v)] = out.get(int(v), 0.0) + g / 60.0
+    return out
+
+
+def _water_summary(series):
+    """분무용 물 공급(CH92) → 상태별 분. 옵션을 켜지 않은 코디네이터는 None(기록이 없다)."""
+    mins = _state_minutes(series)
+    if mins is None:
+        return None
+    return {
+        'ok_min': mins.get(WS.WATER_OK, 0.0),
+        'low_min': mins.get(WS.WATER_LOW, 0.0),
+        'stale_min': mins.get(WS.WATER_STALE, 0.0),
+    }
+
+
+def _vpd_basis_summary(series):
+    """VPD 목표 기준(CH94) → 상태별 분. 엽온을 묶지 않은 공기 기준은 None(기록이 없다).
+
+    `leaf_fallback_min` 은 **잎 기준으로 정했는데 엽온을 못 써 공기 기준으로 돈** 시간이다 —
+    목표의 뜻이 그동안 달랐다(잎 목표 숫자를 공기 VPD 로 좇았다).
+    """
+    mins = _state_minutes(series)
+    if mins is None:
+        return None
+    return {
+        'air_min': mins.get(LV.TARGET_AIR, 0.0),
+        'leaf_min': mins.get(LV.TARGET_LEAF, 0.0),
+        'leaf_fallback_min': mins.get(LV.TARGET_LEAF_FALLBACK, 0.0),
+    }
+
+
+def _suspect_summary(series):
+    """의심 액추에이터 보류(CH93) → 보류 분·최대 대수. 한 번도 없으면 None.
+
+    CH93 은 의심이 있는 동안과 끝난 사이클(0 표식)에만 남는다 — 기록이 없다는 것은 의심이
+    없었다는 뜻이다(`_state_minutes` 와 달리 '기록 없음' 이 곧 0 이다). 그래서 None 이 정상이다.
+    """
+    if not series:
+        return None
+    mins = _state_minutes([(t, 1.0 if v > 0 else 0.0) for t, v in series])
+    return {'held_min': (mins or {}).get(1, 0.0),
+            'max_count': int(max(v for _t, v in series))}
+
+
 def _count_reversals(samples, min_delta):
     """방향을 뒤집은 횟수. 잔물결은 `min_delta` 로 걸러 낸다.
 
@@ -363,11 +762,17 @@ def analyse(row, hours, min_delta):
     final_by_act = defaultdict(list)        # 게이트까지 지난 **최종** 값 (CH100+)
     final_reason_by_act = defaultdict(list)
     env_by_channel = defaultdict(list)
+    status_by_channel = defaultdict(list)   # measurement 'sensor_status' (CH80~91)
     gb_by_channel = Counter()               # 그림자 기록 수(채널별)
     gate_events = []
     dispatch_fail = []
     clean_flags = []
     mismatch = []
+    heat_tiers = []                         # 극한 고온 보호 단계 (CH75, 매 사이클)
+    heat_flags = []                         # 극한 고온 보호 플래그 (CH76)
+    water_state = []                        # 분무용 물 공급 (CH92, 옵션을 켠 코디네이터만)
+    suspect_state = []                      # 제어에서 뺀 의심 액추에이터 수 (CH93, 있을 때만)
+    vpd_basis_state = []                    # VPD 목표 기준 (CH94, 엽온을 묶었거나 잎 기준일 때만)
 
     for ts, measurement, channel, value in rows:
         if measurement.startswith('coord_actuator_'):
@@ -396,6 +801,11 @@ def analyse(row, hours, min_delta):
                 env_by_channel[int(channel)].append((ts, float(value)))
             except (TypeError, ValueError):
                 pass
+        elif measurement == LC.MEAS_SENSOR_STATUS:
+            try:
+                status_by_channel[int(channel)].append((ts, float(value)))
+            except (TypeError, ValueError):
+                pass
         elif measurement == 'safety_gate_active':
             gate_events.append((ts, float(value)))
         elif measurement == 'dispatch_fail_count':
@@ -404,6 +814,16 @@ def analyse(row, hours, min_delta):
             clean_flags.append((ts, float(value)))
         elif measurement == 'actuator_mismatch_count':
             mismatch.append((ts, float(value)))
+        elif measurement == 'heat_protect_tier':
+            heat_tiers.append((ts, float(value)))
+        elif measurement == 'heat_protect_flags':
+            heat_flags.append((ts, float(value)))
+        elif measurement == 'water_supply_state':
+            water_state.append((ts, float(value)))
+        elif measurement == 'actuator_suspect_count':
+            suspect_state.append((ts, float(value)))
+        elif measurement == 'vpd_target_basis':
+            vpd_basis_state.append((ts, float(value)))
 
     # ── 사이클 리듬 ────────────────────────────────────────────────────────
     # ⚠ **`safety_gate_active` 도 사이클 신호에 넣는다** (2026-09-03). 안전
@@ -454,6 +874,9 @@ def analyse(row, hours, min_delta):
         top = [(REASON_LABEL.get(c, f'코드 {c}'), n * 100.0 / total_reasons)
                for c, n in reasons.most_common(3)]
         flags = _activity_flags(values, reasons)
+        # 의심 장치로 보류된 사이클 수 — 이 근거가 보이면 코디네이터가 그 장치를 부하 분담에서 빼고
+        # 제자리에 둔 것이다(전송도 하지 않았다). 설계된 보호이지만 사람이 장치를 점검해야 끝난다.
+        suspect_cycles = reasons.get(LC.REASON_ACTUATOR_SUSPECT, 0)
         req_values = [v for _t, v in requested]
         # 스크린은 0 이 위치(닫힘)라 억제로 세지 않는다(SCREEN_KINDS 주석).
         if kind in SCREEN_KINDS:
@@ -474,6 +897,7 @@ def analyse(row, hours, min_delta):
             'requested_mean': (sum(req_values) / len(req_values)
                                if req_values else 0.0),
             'requested_max': max(req_values) if req_values else 0.0,
+            'suspect_cycles': suspect_cycles,
             'suppressed': len(unexplained),
             'suppressed_max': max((w for _t, w in unexplained), default=0.0),
             'guarded': {REASON_LABEL.get(c, f'코드 {c}'): n
@@ -531,6 +955,13 @@ def analyse(row, hours, min_delta):
         1 for g in _cluster_cycles(gate_stamps)
         if not any(abs((g - c).total_seconds()) < 5.0 for c in cmd_cycles))
 
+    # ── 밤 이슬·서리 노출(시설 몫 — 코디네이터 결함과 섞지 않는다) ─────────────
+    t_series, rh_series = _fetch_indoor_series(facility_uuid, hours)
+    exposure = _exposure_summary(t_series, rh_series, _night_checker(row.unique_id))
+    frost_sum = _frost_summary(gate_events, median_gap)
+    exposure_advice = _exposure_advice(
+        exposure, {a['kind'] for a in actuators if a.get('kind')}, frost_sum)
+
     return {
         'uuid': row.unique_id,
         'name': row.name,
@@ -554,10 +985,19 @@ def analyse(row, hours, min_delta):
                           if modes else None),
         'limits': {LIMIT_LABEL.get(c, f'코드 {c}'): n for c, n in limits.most_common()},
         'gates': dict(gate_bits),
+        'frost': frost_sum,
+        'exposure': exposure,
+        'exposure_advice': exposure_advice,
         'dispatch_fail_total': int(sum(v for _t, v in dispatch_fail)),
         'actuator_mismatch_max': int(max((v for _t, v in mismatch), default=0)),
         'clean_ratio': clean_ratio,
         'greybox_records': dict(gb_by_channel),
+        'heat_protect': _heat_protect_summary(heat_tiers, heat_flags,
+                                              HP_FLAG_LABEL, hours),
+        'sensor_status': _summarize_sensor_status(status_by_channel),
+        'water_supply': _water_summary(water_state),
+        'suspected': _suspect_summary(suspect_state),
+        'vpd_basis': _vpd_basis_summary(vpd_basis_state),
         'settings': (_check_settings(opts, facility_uuid, row)
                      + _check_shadow_alive(opts, gb_by_channel, len(stamps))),
     }
@@ -610,7 +1050,57 @@ def _check_settings(opts, facility_uuid, row=None):
     findings.extend(_check_light_band(opts, facility_uuid))
     findings.extend(_check_combinations(opts, facility_uuid, row))
     findings.extend(_check_shared_actuators(facility_uuid, row))
+    findings.extend(_check_vent_azimuth(facility_uuid))
     return findings
+
+
+# @manual ai/env-control#safety-gates
+def _check_vent_azimuth(facility_uuid):
+    """풍향 센서는 있는데 개구부 방위각이 없으면 강풍 1단계가 풍향별로 못 가른다 (2026-10-10).
+
+    강풍 1단계(`safety_gates.classify_wind`, 근거 55)는 풍상측 개구부만 닫고 풍하측은 상한까지
+    쓴다. 방위각을 모르면 풍상측인지 알 수 없어 **천창은 닫고 측창은 상한(50 %)만** 건다 —
+    바람 받는 측창이 반쯤 열린 채 남을 수 있다. 김제 측창 둘이 그 상태였는데 화면도 로그도
+    조용했다(폭풍 시뮬 `foehn_dry_wind`). 방위각은 개구부 장치를 지도 도형(GeoShape)에 묶으면
+    도형에서 나온다(`facility_geo_helpers.shape_azimuth_area`).
+
+    풍향 채널이 없으면 방위각이 있어도 쓸 데가 없으므로 보고하지 않는다.
+    """
+    if not facility_uuid:
+        return []
+    try:
+        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.aot_flask.geo.device_binding import shapes_for_devices
+        from aot.aot_flask.geo.facility_geo_helpers import shape_azimuth_area
+        data, err = get_facility_integration(facility_uuid)
+        if err or not isinstance(data, dict):
+            return []
+        outdoor = {(x.get('measurement_type') or '').strip()
+                   for x in (data.get('sensors_outdoor') or []) if x.get('input_uuid')}
+        if 'wind_direction' not in outdoor:
+            return []
+        openings = {a.get('output_uuid'): a.get('output_name')
+                    for a in (data.get('actuators_resolved') or [])
+                    if a.get('kind') == 'opening' and a.get('output_uuid')}
+        if not openings:
+            return []
+        shapes = shapes_for_devices(list(openings))
+        missing = []
+        for oid, name in sorted(openings.items(), key=lambda kv: kv[1] or kv[0]):
+            rows = shapes.get(oid) or []
+            az = None
+            if rows and getattr(rows[0], 'feature', None):
+                az, _area = shape_azimuth_area(rows[0].feature)
+            if az is None:
+                missing.append(name or oid[:8])
+    except Exception:                                        # noqa: BLE001
+        return []
+    if not missing:
+        return []
+    return [('warn',
+             f'측창 방위각 미설정 — 풍향별 닫기를 못 함: {", ".join(missing)}. '
+             f'강풍 1단계(10분 평균 ≥ 문턱의 0.6 배)에서 풍상측을 가르지 못해 천창은 닫고 '
+             f'측창은 상한만 겁니다. 개구부 장치를 지도 도형에 묶으면 방위각이 생깁니다')]
 
 
 def _check_shadow_alive(opts, gb_by_channel, n_cycles):
@@ -1008,6 +1498,40 @@ def report(results, hours, min_delta):
                   f'"{top[0]}" {top[1]:.0f}% 입니다 — 수요가 없었는지'
                   f' 문턱을 못 넘었는지 확인하세요')
 
+        # ── 센서 상태 (기록 전용 — out_of_range·frozen 만 제어에서 빠진다) ───
+        sst = r.get('sensor_status')
+        if sst is None:
+            if not r['debug_logging']:
+                print('   센서 상태   기록 없음 (디버그 로깅 꺼짐)')
+        else:
+            if sst['out_of_range']:
+                problems += 1
+                oor = ' · '.join(f'{a} {n}회' for a, n in sst['out_of_range'].items())
+                print(f'   ! 물리적으로 불가능한 센서 값이 제어에서 빠졌습니다: {oor}'
+                      f' — 센서·단위 변환을 확인하세요')
+            if sst['frozen']:
+                problems += 1
+                frz = ' · '.join(f'{a} {n}회' for a, n in sst['frozen'].items())
+                print(f'   ! 값이 멈춘 센서가 제어에서 빠졌습니다: {frz}'
+                      f' — 시각은 새것인데 값이 그대로입니다. 센서·거울 장치를 확인하세요')
+            others = {a: {k: n for k, n in c.items()
+                          if k not in (SS.VALID, SS.OUT_OF_RANGE, SS.FROZEN)}
+                      for a, c in sst['axes'].items()}
+            others = {a: c for a, c in others.items() if c}
+            if others:
+                text = ' · '.join(
+                    a + ' ' + '/'.join(f'{k} {n}' for k, n in c.items())
+                    for a, c in others.items())
+                print(f'   · 센서 상태 (기록 {sst["records"]}회): {text}')
+            src = sst['vpd_source']
+            if src:
+                diff = ''
+                if sst['vpd_device_diff_mean'] is not None:
+                    diff = (f' · 장치 VPD 와 평균 {sst["vpd_device_diff_mean"]:+.2f} kPa'
+                            f' (최대 {sst["vpd_device_diff_max_abs"]:.2f})')
+                print('   · VPD 출처  ' + ' · '.join(
+                    f'{k} {n}' for k, n in src.items()) + diff)
+
         flagged = []
         if r['opposing_cycles']:
             problems += 1
@@ -1026,9 +1550,79 @@ def report(results, hours, min_delta):
             problems += 1
             flagged.append(f'⚠ 전송 실패 누계 {r["dispatch_fail_total"]}')
         if r['actuator_mismatch_max']:
-            flagged.append(f'· 의심 액추에이터 최대 {r["actuator_mismatch_max"]}대')
+            # 신뢰도(trust_score) 기반 — 학습 가중치용 로그 수치다. 제어에서 뺀 '고장 의심' 장치와 다르다.
+            flagged.append(f'· 신뢰도 낮은 액추에이터 최대 {r["actuator_mismatch_max"]}대 (학습 가중치용)')
         if r['clean_ratio'] is not None:
             flagged.append(f'· 학습 가능 사이클 {r["clean_ratio"]:.0f}%')
+        hp = r.get('heat_protect')
+        if hp and (hp['active_min'] or hp['transitions']):
+            when = ', '.join(f'{t[11:16]} {a}→{b}' for t, a, b in hp['transition_times'][:6])
+            flagged.append(
+                f'· 극한 고온 보호 활성 {hp["active_min"]:.0f}분'
+                f' (단계 2 {hp["tier2_min"]:.0f}분) · 단계 전환 {hp["transitions"]}회'
+                + (f' ({when})' if when else ''))
+            if hp['flags']:
+                flagged.append('  보호 중 ' + ' · '.join(
+                    f'{k} {v}' for k, v in sorted(hp['flags'].items(),
+                                                   key=lambda kv: -kv[1])[:5]))
+            if hp['transitions_per_h'] > HP_MAX_TRANSITIONS_PER_H:
+                problems += 1
+                flagged.append(
+                    f'⚠ 극한 고온 보호가 시간당 {hp["transitions_per_h"]:.1f}회 켜졌다 '
+                    f'꺼졌습니다 — 문턱 근처의 들락거림입니다(해제 여유·최소 유지 확인)')
+        fr = r.get('frost')
+        if fr:
+            # 서리 주의·보호에 있던 시간 — 설계된 보호이지만 **작물이 위험했던 시간**이다. 보호가
+            # 섰는데 난방기가 없으면(닫기만 한다) 사람이 해야 할 일이 남는다.
+            when = ', '.join(t[11:16] for t in fr['protect_times'])
+            flagged.append(
+                f'· 서리 주의 {fr["watch_min"]:.0f}분 · 보호 {fr["protect_min"]:.0f}분'
+                f' (보호 진입 {fr["protect_entries"]}회'
+                + (f': {when}' if when else '') + ')')
+        ex = r.get('exposure')
+        if ex:
+            # 시설 몫이다 — 코디네이터가 고칠 일이 아니라 '볼 것' 으로 세지 않는다. 설비 권고만 말한다.
+            night = (f'밤 이슬 {ex["night_dew_min"]:.0f}분 / 밤 {ex["night_min"]:.0f}분'
+                     if ex['night_known'] else '밤 이슬 계산 불가(시설 좌표 없음)')
+            flagged.append(
+                f'· {night} · 실내 0 °C 이하 {ex["frost_min"]:.0f}분'
+                f' (최저 {ex["indoor_T_min"]:.1f} °C · 온습도 모두 잰 {ex["covered_min"]:.0f}분 기준)')
+        else:
+            flagged.append('· 밤 이슬·서리 노출 기록 없음 (실내 온도·습도 센서 값을 읽지 못했습니다)')
+        for line in r.get('exposure_advice') or []:
+            flagged.append(f'→ {line}')
+        sp = r.get('suspected')
+        if sp and sp['max_count']:
+            # 제어에서 뺀 장치 — 설계된 보호이지만 끝내는 것은 사람이다(점검·수리).
+            problems += 1
+            names = [f'{a["name"]}({a["kind"]}) {a["suspect_cycles"]}사이클'
+                     for a in r['actuators'] if a.get('suspect_cycles')]
+            flagged.append(
+                f'⚠ 고장 의심 액추에이터를 제어에서 뺐습니다 — 최대 {sp["max_count"]}대, '
+                f'보류 {sp["held_min"]:.0f}분'
+                + (f' ({", ".join(names)})' if names else '')
+                + ' — 전송 실패가 이어졌거나 오래 세게 명령했는데 반응이 없었습니다. '
+                  '장치를 점검하세요(30분 뒤 자동으로 다시 시도합니다)')
+        ws = r.get('water_supply')
+        if ws and (ws['low_min'] or ws['stale_min']):
+            # 물이 없어 분무기가 멈춘 시간 — 설계된 보호이지만 **사람이 물을 채워야** 끝난다.
+            problems += 1
+            flagged.append(
+                f'⚠ 분무용 물 공급 부족 {ws["low_min"]:.0f}분 · 신호 끊김 '
+                f'{ws["stale_min"]:.0f}분 (정상 {ws["ok_min"]:.0f}분) — '
+                f'그동안 분무기는 모두 멈췄습니다. 탱크·수압·신호를 확인하세요')
+        elif ws:
+            flagged.append(f'· 분무용 물 공급 정상 {ws["ok_min"]:.0f}분')
+        vb = r.get('vpd_basis')
+        if vb and vb['leaf_fallback_min']:
+            # 잎 목표 숫자를 공기 VPD 로 좇은 시간 — 엽온 센서를 사람이 봐야 끝난다.
+            problems += 1
+            flagged.append(
+                f'⚠ VPD 목표를 잎 기준으로 정했는데 엽온을 못 써 공기 기준으로 돈 시간 '
+                f'{vb["leaf_fallback_min"]:.0f}분 (잎 기준 {vb["leaf_min"]:.0f}분) — '
+                f'엽온 센서의 신호·만료·멈춤·설치 방향(잎을 보고 있는가)을 확인하세요')
+        elif vb and vb['leaf_min']:
+            flagged.append(f'· VPD 목표 잎 기준 {vb["leaf_min"]:.0f}분')
         if flagged:
             print()
             for line in flagged:
@@ -1088,6 +1682,10 @@ def main():
         }, ensure_ascii=False, indent=2))
         return 1 if any(
             r['opposing_cycles'] or r['settings'] or not r['cycles']
+            or (r.get('suspected') or {}).get('max_count')
+            or (r.get('water_supply') or {}).get('low_min')
+            or (r.get('water_supply') or {}).get('stale_min')
+            or (r.get('vpd_basis') or {}).get('leaf_fallback_min')
             for r in results) else 0
 
     return report(results, args.hours, args.min_delta)

@@ -7,6 +7,7 @@ import time
 import requests
 from influxdb_client import InfluxDBClient, Point
 
+from aot.utils import influx_layers
 from aot.config import INFLUXDB_PORT, resolve_measurement_db_host
 from aot.databases.models import (Conversion, DeviceMeasurements, Misc,
                                      Output)
@@ -188,6 +189,210 @@ def add_measurements_influxdb_flux(unique_id, measurements, use_same_timestamp=T
             point = point.field(
                 "value", _as_influx_number(each_measurement['value']))
             write_api.write(bucket=bucket, record=point)
+
+
+def write_influxdb_points(points, batch_size=2000, layer=None):
+    """여러 점을 한 연결·동기 쓰기로 넣는다. 쓴 점 수를 돌려주고, 실패하면 예외를 올린다.
+
+    `write_influxdb_value` 는 점마다 클라이언트를 새로 열고 비동기 배치라 실패를 삼킨다.
+    트윈 발행(시설 한 건 약 4.7 천 점)은 그 경로로는 느리고, 트윈 서비스는 쓴 수를 정확히
+    알아야 한다(내장 통로 `aot.twin.sources.embedded.EmbeddedSink`). 점은 `measurement`·`device_id`·
+    `channel`·`timestamp`(epoch 초)·`value`·`tags` 속성을 가진 객체다(`aot.twin.types.Point`).
+
+    `layer` 를 주면 측정 이름이 정하는 계층 대신 그 계층의 버킷에 쓴다(고정한 시나리오의 `aot_hist` 사본).
+    """
+    from influxdb_client.client.write_api import SYNCHRONOUS
+    from influxdb_client.domain.write_precision import WritePrecision
+
+    params = _influx_connection_params()
+    if params is None:
+        raise RuntimeError('measurement DB 설정을 읽지 못했다')
+    url, token, bucket, _ver = params
+    # 측정 이름으로 계층 버킷을 고른다(influx_layers). 한 버킷 모드면 전부 `bucket` 이다.
+    by_bucket = {}
+    for p in points:
+        rec = Point(p.measurement).tag("device_id", p.device_id)
+        if p.channel is not None:                # fc_* 는 channel 대신 var·lead 태그를 쓴다
+            rec = rec.tag("channel", int(p.channel))
+        for k, v in (p.tags or {}).items():
+            rec = rec.tag(k, v)
+        rec = rec.field("value", float(p.value)).time(int(round(float(p.timestamp) * 1000)),
+                                                      WritePrecision.MS)
+        by_bucket.setdefault(_layer_write_bucket(p.measurement, bucket, layer), []).append(rec)
+    total = sum(len(v) for v in by_bucket.values())
+    if not total:
+        return 0
+    with InfluxDBClient(url=url, token=token, org='aot', timeout=30000) as client:
+        write_api = client.write_api(write_options=SYNCHRONOUS)
+        for target, records in by_bucket.items():
+            for i in range(0, len(records), batch_size):
+                chunk = records[i:i + batch_size]
+                try:
+                    write_api.write(bucket=target, record=chunk, write_precision=WritePrecision.MS)
+                except Exception:
+                    if target == bucket:
+                        raise
+                    # 계층 버킷이 사라졌거나 쓸 수 없다 — 해석을 다시 하고 한 버킷으로 돌려 쓴다.
+                    logger.warning("계층 버킷 %s 쓰기 실패 — %s 로 돌려 쓴다", target, bucket,
+                                   exc_info=True)
+                    influx_layers.invalidate()
+                    write_api.write(bucket=bucket, record=chunk, write_precision=WritePrecision.MS)
+    return total
+
+
+def _layer_write_bucket(measurement, legacy_bucket, layer=None):
+    """계층 해석이 실패해도 쓰기는 멈추지 않는다 — 한 버킷으로 돌아간다."""
+    try:
+        if layer is not None:
+            return influx_layers.layout().buckets[layer]
+        return influx_layers.write_bucket(measurement)
+    except Exception:                                           # noqa: BLE001
+        logger.debug("계층 버킷 해석 실패 — %s", legacy_bucket, exc_info=True)
+        return legacy_bucket
+
+
+def _layer_read_buckets(measurement, legacy_bucket):
+    try:
+        return influx_layers.read_buckets(measurement)
+    except Exception:                                           # noqa: BLE001
+        logger.debug("계층 버킷 해석 실패 — %s", legacy_bucket, exc_info=True)
+        return [legacy_bucket]
+
+
+def read_twin_series(device_id, measurement, channel, start_epoch, end_epoch, lead=None, tag_filters=None):
+    """`env_twin*` 한 계열을 [start, end] 로 읽는다 → [(epoch 초, 값)] 시각순.
+
+    `read_influxdb_list` 는 "지금부터 과거" 만 읽어 미래 시각인 예측 곡선이 빠지고, 측정 API 는
+    단위표에 없는 `env_twin*` 를 422 로 막는다. 트윈 읽기 API(`/api/twin/series`) 가 쓴다.
+    lead: `*_lead` 측정의 `lead_h`/`lead_d` 태그 값(그 선행 시간만).
+    tag_filters: 그 밖의 태그 조건 — 시나리오 곡선(`env_twin_scn*`)의 `{'scenario': id}`.
+    """
+    params = _influx_connection_params()
+    if params is None:
+        return []
+    url, token, bucket, _ver = params
+
+    def iso(t):
+        return datetime.datetime.fromtimestamp(float(t), datetime.timezone.utc).strftime(
+            '%Y-%m-%dT%H:%M:%SZ')
+
+    tail = (f' |> filter(fn: (r) => r["_measurement"] == "{_flux_str(measurement)}")'
+            f' |> filter(fn: (r) => r["device_id"] == "{_flux_str(device_id)}")'
+            f' |> filter(fn: (r) => r["channel"] == "{_flux_str(int(channel))}")'
+            f' |> filter(fn: (r) => r["_field"] == "value")')
+    if lead is not None:
+        key = 'lead_h' if measurement == 'env_twin_lead' else 'lead_d'
+        tail += f' |> filter(fn: (r) => r["{key}"] == "{_flux_str(lead)}")'
+    for k, v in (tag_filters or {}).items():
+        tail += f' |> filter(fn: (r) => r["{_flux_str(k)}"] == "{_flux_str(v)}")'
+    merged = {}
+    with InfluxDBClient(url=url, token=token, org='aot', timeout=30000) as client:
+        # 우선순위 순: 같은 시각에 값이 두 버킷에 있으면 앞 버킷(새 계층)이 이긴다.
+        for target in _layer_read_buckets(measurement, bucket):
+            q = (f'from(bucket: "{_flux_str(target)}") |> range(start: {iso(start_epoch)}, '
+                 f'stop: {iso(float(end_epoch) + 1)})' + tail)
+            try:
+                tables = client.query_api().query(q)
+            except Exception:
+                if target == bucket:
+                    raise
+                logger.warning("계층 버킷 %s 읽기 실패 — 건너뜀", target, exc_info=True)
+                continue
+            for t in tables:
+                for r in t.records:
+                    merged.setdefault(r.get_time().timestamp(), r.get_value())
+    return sorted(merged.items())
+
+
+def read_twin_many(measurement, device_ids, channels, start_epoch, end_epoch, tag_filters=None):
+    """`env_twin*` 여러 대상·채널을 한 번에 읽는다 → {(device_id, channel): [(epoch 초, 값)]}.
+
+    지도 예측 제공자(`/api/twin/plots`)가 구획마다 따로 왕복하지 않게 한다. `*_lead` 는 받지
+    않는다(선행 태그를 섞으면 같은 시각에 값이 여럿이다).
+    """
+    if not device_ids or not channels:
+        return {}
+    params = _influx_connection_params()
+    if params is None:
+        return {}
+    url, token, bucket, _ver = params
+
+    def iso(t):
+        return datetime.datetime.fromtimestamp(float(t), datetime.timezone.utc).strftime(
+            '%Y-%m-%dT%H:%M:%SZ')
+
+    ids = ', '.join('"%s"' % _flux_str(d) for d in device_ids)
+    chs = ', '.join('"%s"' % _flux_str(int(c)) for c in channels)
+    tail = (f' |> filter(fn: (r) => r["_measurement"] == "{_flux_str(measurement)}")'
+            f' |> filter(fn: (r) => contains(value: r["device_id"], set: [{ids}]))'
+            f' |> filter(fn: (r) => contains(value: r["channel"], set: [{chs}]))'
+            f' |> filter(fn: (r) => r["_field"] == "value")')
+    for k, v in (tag_filters or {}).items():
+        tail += f' |> filter(fn: (r) => r["{_flux_str(k)}"] == "{_flux_str(v)}")'
+    out = {}
+    with InfluxDBClient(url=url, token=token, org='aot', timeout=30000) as client:
+        for target in _layer_read_buckets(measurement, bucket):
+            q = (f'from(bucket: "{_flux_str(target)}") |> range(start: {iso(start_epoch)}, '
+                 f'stop: {iso(float(end_epoch) + 1)})' + tail)
+            try:
+                tables = client.query_api().query(q)
+            except Exception:
+                if target == bucket:
+                    raise
+                logger.warning("계층 버킷 %s 읽기 실패 — 건너뜀", target, exc_info=True)
+                continue
+            for t in tables:
+                for r in t.records:
+                    key = (r.values.get('device_id'), int(r.values.get('channel')))
+                    out.setdefault(key, {}).setdefault(r.get_time().timestamp(), r.get_value())
+    return {k: sorted(v.items()) for k, v in out.items()}
+
+
+_FLUX_INTERNAL_KEYS = frozenset(('result', 'table', '_start', '_stop', '_time', '_value', '_field',
+                                 '_measurement', 'device_id'))
+
+
+def read_layer_points(measurement, device_id, tag_filters, start_epoch, end_epoch):
+    """태그로 고른 한 대상의 점을 [start, end] 로 읽는다 → [(epoch 초, 값, {태그})] 시각순.
+
+    `fc_*` 처럼 `channel` 대신 `var`·`lead_*` 태그를 쓰는 계층 측정용이다. `device_id=None` 이면 대상을 가리지 않고 결과 태그에 `device_id` 를 싣는다. 계층 버킷과 `aot_db` 를
+    우선순위 순으로 읽어 병합한다(같은 시각·같은 태그면 앞 버킷이 이긴다). 태그 값은 문자열이다.
+    """
+    params = _influx_connection_params()
+    if params is None:
+        return []
+    url, token, bucket, _ver = params
+
+    def iso(t):
+        return datetime.datetime.fromtimestamp(float(t), datetime.timezone.utc).strftime(
+            '%Y-%m-%dT%H:%M:%SZ')
+
+    tail = f' |> filter(fn: (r) => r["_measurement"] == "{_flux_str(measurement)}")'
+    if device_id is not None:         # None 이면 모든 대상 — 결과 태그의 `device_id` 로 가른다(물 결과 컨텍스트)
+        tail += f' |> filter(fn: (r) => r["device_id"] == "{_flux_str(device_id)}")'
+    tail += ' |> filter(fn: (r) => r["_field"] == "value")'
+    for k, v in (tag_filters or {}).items():
+        tail += f' |> filter(fn: (r) => r["{_flux_str(k)}"] == "{_flux_str(v)}")'
+    merged = {}
+    with InfluxDBClient(url=url, token=token, org='aot', timeout=30000) as client:
+        for target in _layer_read_buckets(measurement, bucket):
+            q = (f'from(bucket: "{_flux_str(target)}") |> range(start: {iso(start_epoch)}, '
+                 f'stop: {iso(float(end_epoch) + 1)})' + tail)
+            try:
+                tables = client.query_api().query(q)
+            except Exception:
+                if target == bucket:
+                    raise
+                logger.warning("계층 버킷 %s 읽기 실패 — 건너뜀", target, exc_info=True)
+                continue
+            for tb in tables:
+                for r in tb.records:
+                    tags = {k: v for k, v in r.values.items() if k not in _FLUX_INTERNAL_KEYS}
+                    if device_id is None:                # 모든 대상을 읽을 때만 대상을 태그로 돌려준다
+                        tags['device_id'] = r.values.get('device_id')
+                    ts = r.get_time().timestamp()
+                    merged.setdefault((ts, tuple(sorted(tags.items()))), (r.get_value(), tags))
+    return sorted(((ts, v, tags) for (ts, _k), (v, tags) in merged.items()), key=lambda x: x[0])
 
 
 def write_fail(point_data, written_data, err):

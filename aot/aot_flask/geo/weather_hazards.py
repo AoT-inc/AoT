@@ -9,7 +9,8 @@
 
 `forecast.json`(기상청 단기예보) — env_coordinator 의 feedforward 와 AI 도구가
 읽는 그 파일이다. 다른 소스를 새로 붙이면 "화면은 서리라는데 제어는 몰랐다" 가
-된다.
+된다. 시설에 Open-Meteo 시간별 예보 입력이 묶여 있으면 시설 모달은 그 입력의
+시간열 파일(`forecast_path`) — 제어가 MPC·피드포워드에 쓰는 바로 그 파일 — 을 읽는다.
 
 ## 낡은 예보로는 경고하지 않는다
 
@@ -56,8 +57,12 @@ def _num(v):
         return None
 
 
-def upcoming(hours=_DEFAULT_WINDOW_H):
+def upcoming(hours=_DEFAULT_WINDOW_H, forecast_path=None):
     """앞으로 `hours` 시간 안의 기상 위험 → dict.
+
+    `forecast_path` 가 없으면 기상청 `forecast.json`. 시설 시간열 파일(Open-Meteo)을
+    주면 그 파일로 판정하고, 낡음 기준은 수신 시각(`fetched_epoch`) 2 h 다(제어와 같은
+    기준 — `forecast_feedforward.FACILITY_FILE_MAX_AGE_S`).
 
     반환:
       stale        bool   — 예보가 낡아 판정하지 않았다
@@ -70,8 +75,9 @@ def upcoming(hours=_DEFAULT_WINDOW_H):
     out = {'stale': False, 'age_hours': None, 'items': []}
     try:
         from aot.functions.utils.env_control.forecast_feedforward import (
-            _load_forecast, forecast_epoch, forecast_rows_ahead)
-        data = _load_forecast() or {}
+            FACILITY_FILE_MAX_AGE_S, _load_forecast, forecast_epoch,
+            forecast_rows_ahead)
+        data = _load_forecast(forecast_path) or {}
     except Exception as exc:                                # noqa: BLE001
         logger.debug('[hazards] 예보 로드 실패: %s', exc)
         return out
@@ -82,10 +88,15 @@ def upcoming(hours=_DEFAULT_WINDOW_H):
     # 발표 시각은 파일의 벽시계(`tz`, 없으면 KST)다. 예전에는 naive 로 두고
     # `datetime.now()` 와 뺐는데, 컨테이너 시계는 UTC 라 9시간 어긋났다.
     pub = forecast_epoch(data.get('pub_dt'), data.get('tz'))
+    stale_h = _STALE_HOURS
+    if forecast_path is not None:
+        stale_h = FACILITY_FILE_MAX_AGE_S / 3600.0
+        if data.get('fetched_epoch') is not None:
+            pub = _num(data.get('fetched_epoch'))
     if pub is not None:
         age = (time.time() - pub) / 3600.0
         out['age_hours'] = round(age, 1)
-        if age > _STALE_HOURS:
+        if age > stale_h:
             out['stale'] = True
             return out
 
@@ -111,18 +122,21 @@ def upcoming(hours=_DEFAULT_WINDOW_H):
     return out
 
 
-_CACHE = {'ts': 0.0, 'val': None}
+# {(hours, forecast_path): (ts, val)} — 시설 파일마다 따로 기억한다.
+_CACHE = {}
 _CACHE_TTL = 300.0
 
 
-def upcoming_cached(hours=_DEFAULT_WINDOW_H):
-    """모달이 열릴 때마다 파일을 훑지 않도록 5분 캐시.
+def upcoming_cached(hours=_DEFAULT_WINDOW_H, forecast_path=None):
+    """모달이 열릴 때마다 파일을 훑지 않도록 5분 캐시(파일별).
 
     예보는 시간 단위로 갱신되므로 5분 캐시가 판정을 바꾸지 않는다.
     """
     now = time.time()
-    if _CACHE['val'] is not None and (now - _CACHE['ts']) < _CACHE_TTL:
-        return _CACHE['val']
-    val = upcoming(hours)
-    _CACHE.update({'ts': now, 'val': val})
+    key = (hours, forecast_path)
+    hit = _CACHE.get(key)
+    if hit is not None and (now - hit[0]) < _CACHE_TTL:
+        return hit[1]
+    val = upcoming(hours, forecast_path=forecast_path)
+    _CACHE[key] = (now, val)
     return val

@@ -88,11 +88,45 @@ class TestDispatchReportsIgnoredArguments(unittest.TestCase):
         def handler(zone_ids=None, **extra):
             return {'status': 'success', 'zone_ids': zone_ids}
 
-        out = self._dispatch(handler, {'zone_id': 'abc'})
+        out = self._dispatch(handler, {'zone_ids': ['a'], 'colour': 'red'})
         self.assertEqual(out['status'], 'success')
-        self.assertEqual(out['_ignored_arguments'], ['zone_id'],
-                         '오타 하나가 필터를 없애는데 응답이 아무 말도 안 한다')
-        self.assertIn('zone_id', out['_ignored_note'])
+        self.assertEqual(out['_ignored_arguments'], ['colour'],
+                         '모르는 인자를 버렸는데 응답이 아무 말도 안 한다')
+        self.assertIn('colour', out['_ignored_note'])
+
+    def test_an_ignored_scope_argument_refuses_instead_of_answering_for_all(self):
+        """대상 인자를 버리고 돌리면 농장 전체가 그 대상의 답처럼 나간다
+        (2026-10-11 외부 AI: target_name='1포장' → 전체 목록, 잘려서 1포장은 빠짐).
+        알림만으로는 모델이 그것을 그곳의 답으로 읽었다 — 돌리지 않는다."""
+        ran = []
+
+        def handler(zone_ids=None, **extra):
+            ran.append(zone_ids)
+            return {'status': 'success', 'zone_ids': zone_ids}
+
+        for key in ('zone_id', 'target_name'):
+            out = self._dispatch(handler, {key: '1포장'})
+            self.assertEqual(out['status'], 'error', out)
+            self.assertIn(key, out['message'])
+            self.assertIn('zone_ids', out['message'], '맞는 인자를 알려야 한다')
+        self.assertEqual(ran, [], '대상을 버린 채 실행했다')
+
+    def test_plural_and_name_forms_are_scope_arguments_with_a_hint(self):
+        """C1: zone_names 를 zone_ids 로 추측해 불러도 전체 요약이 돌아오면 안 되고,
+        맞는 이름(zone_ids)을 알려야 한다."""
+        ran = []
+
+        def handler(zone_ids=None, **extra):
+            ran.append(zone_ids)
+            return {'status': 'success'}
+
+        out = self._dispatch(handler, {'zone_names': ['3포장']})
+        self.assertEqual(out['status'], 'error', out)
+        self.assertEqual(out['error'], 'unknown_scope_argument')
+        self.assertEqual(out['ignored_arguments'], ['zone_names'])
+        self.assertEqual(out['did_you_mean'], ["'zone_names' -> zone_ids"])
+        self.assertIn('Did you mean', out['message'])
+        self.assertEqual(ran, [])
 
     def test_a_correct_call_says_nothing(self):
         def handler(zone_ids=None, **extra):

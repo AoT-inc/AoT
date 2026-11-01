@@ -30,7 +30,7 @@ from aot.databases.models.function import Actions, Conditional, Trigger
 from aot.databases.models.user_group import (LEVEL_OPERATE,
                                              RESOURCE_DASHBOARD)
 from aot.tests.test_ai_requester_write_guard import _Base, _svc
-from aot.tests.test_mcp_record_write_guard import _PREFIX
+from aot.tests.test_mcp_record_write_guard import _AGENT, _PREFIX
 from aot.tools import mcp_safety_gate as gate
 from aot.tools import tool_execution as te
 
@@ -364,7 +364,7 @@ class TestApprovalPermissionPerTool(_WS):
 
     def _queue(self, tool, args):
         row = MCPConfirmation(unique_id=str(uuid.uuid4()), tool_name=tool,
-                              params_json=json.dumps(args), agent_id='user:test',
+                              params_json=json.dumps(args), agent_id=_AGENT,
                               status='pending')
         from datetime import datetime, timedelta
         row.expires_at = datetime.utcnow() + timedelta(minutes=5)
@@ -404,10 +404,10 @@ class TestApprovalPermissionPerTool(_WS):
                       te._hidden_tools(self._role('Editor', readonly=True)))
         cid = self._queue('modify_plot', {'plot_id': str(uuid.uuid4()), 'name': 'x'})
         r = te._respond_to_confirmation({'decision': 'approve', 'confirmation_id': cid},
-                                        'user:test', self._role('ControlOnly'))
+                                        _AGENT, self._role('ControlOnly'))
         self.assertEqual(r.get('reason_code'), 'insufficient_role', r)
         r = te._respond_to_confirmation({'decision': 'approve', 'confirmation_id': cid},
-                                        'user:test', self._role('PlotOnly'))
+                                        _AGENT, self._role('PlotOnly'))
         self.assertEqual(r.get('status'), 'success', r)
 
     def test_list_marks_what_the_viewer_may_decide(self):
@@ -505,6 +505,7 @@ class TestHandlersEnforceAtWriteTime(_WS):
             ('modify_output', lambda: S.modify_output(output_id=self.output_id, name='x')),
             ('delete_output', lambda: S.delete_output(output_id=self.output_id)),
             ('modify_input', lambda: S.modify_input(input_id=self.inp, name='x')),
+            ('activate_input', lambda: S.activate_input(input_id=self.inp, active=True)),
             ('delete_input', lambda: S.delete_input(input_id=self.inp)),
             ('rebind_device', lambda: S.rebind_device(
                 old_device_id=self.output_id, new_device_id=self.inp)),
@@ -655,6 +656,7 @@ _ENFORCED = {
     'delete_function': 'write_scope.enforce',
     'create_sequence_function': 'write_scope.enforce',
     'modify_input': 'write_scope.enforce',
+    'activate_input': 'write_scope.enforce',
     'delete_input': 'write_scope.enforce',
     'modify_output': 'write_scope.enforce',
     'delete_output': 'write_scope.enforce',
@@ -667,6 +669,11 @@ _ENFORCED = {
     'set_device_location': 'write_scope.enforce',
     'delete_geo_shape': 'write_scope.enforce',
     'create_note': 'write_scope.enforce',
+    # 기존 노트 고치기·보관 — 노트가 붙은 대상(target_id)의 그룹 범위로 묻는다.
+    'modify_note': 'write_scope.enforce',
+    # 대상 별칭 — 별칭이 붙는(지울 때는 붙어 있던) 대상의 그룹 범위로 묻는다.
+    'add_target_alias': 'write_scope.enforce',
+    'delete_target_alias': 'write_scope.enforce',
     # 새 행이지만 인자 속 장치·지도·시설에 묶인다 — 그 값으로 묻는다.
     'create_function': 'write_scope.enforce',
     'create_plot': 'write_scope.enforce',
@@ -692,6 +699,8 @@ _UNSCOPED = {
     'create_ai_agent': 'AI settings, not a scoped resource',
     'modify_ai_agent': 'AI settings, not a scoped resource',
     'delete_ai_agent': 'AI settings, not a scoped resource',
+    # 부른 연결 **자신의** API 키 묶음 — 키 id 는 인증에서 온다(남의 키 불가).
+    'set_tool_profile': "the caller's own API key, not a scoped resource",
     # GIS 입력(GeoLayer) — 전역 레이어, 스코프 종류가 아니다.
     'create_gis_input': 'global layer', 'modify_gis_input': 'global layer',
     'activate_gis_input': 'global layer', 'delete_gis_input': 'global layer',
@@ -759,6 +768,14 @@ class TestEveryWriteToolIsCovered(_WS):
         self.addCleanup(lambda: (GeoMap.query.filter_by(unique_id=gmap).delete(),
                                  db.session.commit()))
         jid = str(self._make_job().id)
+        from aot.databases.models import Notes
+        note_row = Notes(note='record-write-guard-test-note ws-scope',
+                         target_id=self.output_id)
+        db.session.add(note_row)
+        db.session.commit()
+        note_uid = note_row.unique_id
+        self.addCleanup(lambda: (Notes.query.filter_by(unique_id=note_uid)
+                                 .delete(), db.session.commit()))
         seq = _PREFIX + 'Seq'
         return {
             'activate_function': {'function_id': _PREFIX + 'Cond'},
@@ -780,6 +797,7 @@ class TestEveryWriteToolIsCovered(_WS):
             'create_sequence_function': {'name': _PREFIX + 'NewSeq',
                                          'device_ids': [self.output_id]},
             'modify_input': {'input_id': self.inp, 'name': 'x'},
+            'activate_input': {'input_id': self.inp, 'active': True},
             'delete_input': {'input_id': self.inp},
             'modify_output': {'output_id': self.output_id, 'name': 'x'},
             'delete_output': {'output_id': self.output_id},
@@ -793,6 +811,9 @@ class TestEveryWriteToolIsCovered(_WS):
             'set_device_location': {'device_id': self.output_id, 'lat': 1, 'lng': 2},
             'delete_geo_shape': {'shape_id': self.shape},
             'create_note': {'note': 'ws', 'target_id': self.output_id},
+            'modify_note': {'note_id': note_uid, 'name': 'x'},
+            'add_target_alias': {'target_id': self.output_id, 'name': _PREFIX + 'alias'},
+            'delete_target_alias': {'name': _PREFIX + 'alias', 'target_id': self.output_id},
             'create_function': {'function_type': 'conditional_conditional',
                                 'params': {'measurement': self.output_id + ','
                                            + str(uuid.uuid4())}},

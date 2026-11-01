@@ -29,7 +29,7 @@ A "design" is one `GeoMap` row — a named map with its own center/zoom/layer st
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/geo/overlays/list?map_uuid=&target_type=&parent_id=&device_id=` | The same one-map `FeatureCollection` as below — note the filter is named `target_type` here, not `type`. Without `map_uuid` it returns an empty collection. |
-| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | One map's features as a GeoJSON `FeatureCollection`. `type` also matches legacy aliases (`equipment` ⇒ `equipment_collection`, `aot_device` ⇒ `device`). Each feature is enriched server-side with `db_id`, `shape_uuid` (the shape's own identifier — the client-made `node_id` is a different value), resolved `device_id`/`device_type`, `parent_id`, and (for `type=facility`) 3D metadata. Bundled equipment is unpacked back into individual features on the way out. |
+| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | One map's features as a GeoJSON `FeatureCollection`. `type` also matches legacy aliases (`equipment` ⇒ `equipment_collection`, `aot_device` ⇒ `device`). Each feature is enriched server-side with `db_id`, `shape_uuid` (the shape's own identifier — the client-made `node_id` is a different value), resolved `device_id`/`device_type`, `parent_id`, and (for `type=facility`) 3D metadata. Bundled equipment is unpacked back into individual features on the way out. When `type` is omitted, `site`, or `zone`, the response also includes `collapsed_zones`: the uuids of returned zones that are redundant with their site (near-identical outline, no name of their own, no data attached) and should be treated as collapsed into the site rather than drawn as a separate layer. |
 | POST | `/api/geo/overlays` | Bulk save/replace for one `map_uuid` + `type`. See **Details** below — this is the trickiest endpoint on the page. |
 | POST | `/api/geo/overlays/delta` | Send only what changed instead of the full feature set — for large maps. Body: `{map_uuid, upserts: [...], deletes: [node_id_or_db_id, ...]}`. Equipment upserts are merged into the bundled row, and transient sprinkler dot markers are dropped here too. Also requires `edit_settings` and map scope. |
 | GET | `/api/geo/sites` | All `site`-type shapes as GeoJSON. `?map_uuid=` optional. |
@@ -43,10 +43,11 @@ A "design" is one `GeoMap` row — a named map with its own center/zoom/layer st
 - **A feature missing from the payload is never deleted.** Only an explicit `deletes: [node_id_or_db_id, ...]` list, or `features: []` combined with `allow_empty: true`, removes rows. (A prior incident wiped shapes because "not present" was once treated as "delete".)
 - An empty `aot_device` payload is refused outright instead of clearing every marker — device placement only goes through `POST /api/geo/device/location`.
 - `equipment` features are stored as one bundled `equipment_collection` row (the whole set is replaced together), everything else is saved feature-by-feature. Because the bundle path clears the old set first, an empty equipment payload is refused unless `allow_empty: true` confirms the clear, and it reports how many rows it would have deleted.
+- Within that same equipment bundle, sprinkler coverage shapes get an extra safety net: if the incoming payload contains none at all but the existing bundle does, the coverage shapes not explicitly named in `deletes` are carried over automatically instead of being wiped.
 - Transient sprinkler dot markers are dropped rather than stored, so a payload made only of them counts as empty.
 - Geometry rules are checked before anything is written, and a single invalid feature aborts the whole save with a geometry error (equipment is exempt from that check).
 - `aot_type`, `device_id`, and `channel_id` are stripped from the saved JSON blob — they're derived on read, not stored, so don't rely on round-tripping them.
-- Response: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}` (or a `stats.mode: 'bulk_bundle'` shape for the equipment path).
+- Response: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}` (or a `stats.mode: 'bulk_bundle'` shape for the equipment path, which also reports `kept_coverage` when the sprinkler-coverage safety net above kicked in).
 
 ---
 
@@ -90,7 +91,7 @@ Shared fields (`spatial_kind`, `spatial_id`, `role`, `device_id`, `device_kind`,
 | GET | `/api/geo/devices?map_uuid=&device_ids=&include_all=` | Devices available for placement on a map. Response: `{ok, devices, all_measurements_map}`. Supports conditional (304) responses. |
 | GET | `/api/geo/inputs` | Flat per-channel list (`DeviceMeasurements`) for the sensor-fitting binding picker — activated inputs only, each entry carrying the device, the channel, and a label with the converted unit. |
 | GET | `/api/geo/outputs` | Flat `Output` list for the actuator-fitting binding picker, with each output's type and interface. |
-| GET | `/api/geo/device/<device_uuid>/detail` | One device's full modal payload: identity, parent area, control kind (on/off, value, PWM, 3-way), channels, sub-devices for a compound device, and runtime info (elapsed/last-duration/pending schedules). `?channel=` (default `0`) picks which channel the runtime figures come from. |
+| GET | `/api/geo/device/<device_uuid>/detail` | One device's full modal payload: identity, parent area, control kind (on/off, value, PWM, 3-way — 3-way covers paired open/close actuators and self-positioning value outputs such as a Matter window covering), channels, sub-devices for a compound device, and runtime info (elapsed/last-duration/pending schedules). `?channel=` (default `0`) picks which channel the runtime figures come from. |
 | POST | `/api/geo/link_status` | Batch battery/RSSI lookup for map badges. Body: `{ids: [...]}` (max 100). A `null` battery or link means no channel carries that value — the badge is left off rather than drawn as zero. |
 | POST | `/api/geo/device/split-apply` | Splits a zone into strips/grid cells and creates one device-marker shape per cell, auto-assigning each cell to whichever device marker falls inside it. Requires `edit_plots`. `name` sets the name base; optional `device_kind` narrows which kind of device may claim a cell — leave it empty and every kind is a candidate, which on a mixed map leaves most cells ambiguous. The server recomputes the geometry from the same parameters instead of trusting the polygons the preview showed. Shares those split parameters and its *preview* endpoint (`GET /api/geo/plot/split-preview`, below) with the cultivation-plot splitter — geometry math doesn't care whether the pieces end up as devices or plots. Response: `{ok, created, info, assigned, unassigned, message?}`, where `message` says how many cells ended up with no single device inside. |
 
@@ -117,8 +118,8 @@ Shared fields (`spatial_kind`, `spatial_id`, `role`, `device_id`, `device_kind`,
 |---|---|---|
 | GET | `/api/geo/site/<site_uuid>/contents` | Device inventory inside a site (excludes facility-fitting actuators — those belong to their facility, not the enclosing site). |
 | GET | `/api/geo/site/<site_uuid>/summary?force=` | Aggregated status / today's tasks / notes for the site. 30-second cache unless `force=1`. |
-| GET | `/api/geo/site/<site_uuid>/weather` | Currently assigned weather-station device(s). Response: `{selected, source, candidates}`. |
-| POST | `/api/geo/site/<site_uuid>/weather` | Body: `{device_ids: [...]}` (key required even if empty) — sets the site's weather source. |
+| GET | `/api/geo/site/<site_uuid>/weather` | Currently assigned weather-station device(s) and forecast source. Response: `{selected, source, candidates, forecast: {selected, candidates, calibration?}}` — `forecast.selected` is in priority order; each candidate has `kind` (`hourly`/`daily`) and `distance_km`. `forecast.calibration` is only present when the site has a designated forecast source, and reports the site's forecast-calibration mode (`off`/`applied`/`collecting`), the per-variable gains, recent calibration events, and how many are unacknowledged. |
+| POST | `/api/geo/site/<site_uuid>/weather` | Body: `{device_ids?: [...], forecast_ids?: [...], cal_mode?: "auto"\|"on"\|"off", cal_ack?: true}` — at least one key is required and only the keys given change (empty array = clear). `forecast_ids` is the site's forecast source, read by the twin, the map weather and the AI alike; order is priority. `cal_mode` sets the site's forecast-calibration mode. `cal_ack` marks that site's unacknowledged calibration events as read. |
 
 ---
 
@@ -175,12 +176,12 @@ This is a **different URL prefix** (`/api/aot/`, not `/api/geo/`) for the live s
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/aot/facility/<facility_uuid>/status?function_uuid=` | Lightweight status badge for polling (~5s): `{level: 'idle'\|'warn'\|'active'\|'emergency', reasons, active_count, total_count, function_active, function_stale, function_name}`. |
+| GET | `/api/aot/facility/<facility_uuid>/status?function_uuid=` | Lightweight status badge for polling (~5s): `{level: 'idle'\|'warn'\|'active'\|'emergency', reasons, active_count, total_count, function_active, function_stale, function_name}`. A VPD deviation is judged on the air VPD computed from the indoor temperature and humidity — or on the leaf VPD when the running coordinator's target is on the leaf basis. |
 | GET | `/api/aot/facility/<facility_uuid>/setpoints` | Saved **safety-range** limits plus `effective` (the live target the control loop is actually following, which comes from the plot's program/stage — not from here). |
 | POST | `/api/aot/facility/<facility_uuid>/setpoints` | Requires `edit_settings`. Body: any of `guide_t_min_c`/`guide_t_max_c`, `guide_rh_min_pct`/`guide_rh_max_pct`, `temp_min_c`/`temp_max_c`, `humid_min_pct`/`humid_max_pct` (all range-validated). Sending `target_vpd_kpa`/`target_co2_ppm` here is rejected — targets are set through the cultivation program, not here. Mirrors changed values into every linked environment-coordinator function and triggers a live reload. |
 | POST | `/api/aot/facility/<facility_uuid>/control` | Manual single-actuator control, bypassing the coordinator, with safety-gate interlocks (e.g. won't open a vent a wind-safety gate has forced shut). Requires `edit_settings` + facility scope. Body: `{slot_key, action: 'on'\|'off'\|'set', percent?, reason?}`. On an on/off device a `set` percent becomes proportional ON time inside a 60-second cycle (under 5% is treated as off). `400` if the gate blocks the request, `502` if the command never reached the device. |
 | POST | `/api/aot/facility/<facility_uuid>/estop` | Emergency stop — **this stops the environment control as well, not just the outputs.** If any running environment coordinator controls this facility, its own emergency-stop command is used: every actuator is driven to its safe value (or switched off) and the coordinator's next cycle is held back 60 seconds, so it cannot move the equipment again right after. Only when no coordinator is attached or running — or one of them does not confirm the stop — does it fall back to commanding the outputs directly into a safe preset (heater/vents/fans/CO2/irrigation/lighting off, thermal curtain deployed, shade curtain retracted); on that fallback only devices currently bound to this facility are commanded. Body: `{confirm: "STOP"}` (exact string required). Requires `edit_settings`. The response says which path it took and carries the applied/failed counts with per-coordinator and per-device results; if even one actuator or coordinator could not be reached it is **not** `ok`. |
-| GET | `/api/aot/facility/<facility_uuid>/runtime` | The heavy real-time snapshot: actuator states with operation history, the saved display order, indoor/outdoor sensors, bays, plots (planned ones included), bay capacities. On/off devices also carry a usual-day baseline (7-day daily average, today excluded); the operation history is cached 120 seconds. Sensor values come from the running coordinator's own cycle snapshot, otherwise from a cache refreshed in the background (20 seconds), so a first call can arrive with the sensors still filling in. Supports conditional (304) responses. |
+| GET | `/api/aot/facility/<facility_uuid>/runtime` | The heavy real-time snapshot: actuator states with operation history, the saved display order, indoor/outdoor sensors, bays, plots (planned ones included), bay capacities. On/off devices also carry a usual-day baseline (7-day daily average, today excluded); the operation history is cached 120 seconds. Sensor values come from the running coordinator's own cycle snapshot, otherwise from a cache refreshed in the background (20 seconds), so a first call can arrive with the sensors still filling in. `indoor` carries `vpd_kpa` (the sensor's own VPD when it has one, otherwise computed), `vpd_air_kpa` (air VPD computed from temperature and humidity) and — only from a running coordinator's snapshot — `leaf_temp_c`, `vpd_leaf_kpa` (only with a measured leaf temperature), `vpd_target_basis` and `vpd_target_on`. Supports conditional (304) responses. |
 | GET | `/api/aot/facility/<facility_uuid>/env_summary` | The coordinator's last-cycle summary as the daemon stored it (no time-series query — a cheap single-row read). Also flags whether it is stale, together with the threshold used for that call (three control cycles, at least 300 seconds). |
 | GET | `/api/aot/facility/<facility_uuid>/env_week?bay=&days=` | Daily environment trend series (default 7 days, 1–31). 10-minute cache. Returns the window it drew (start/end dates) in the facility's own time zone. |
 | GET | `/api/aot/facility/<facility_uuid>/actuator_history?slot_key=&hours=` | One actuator's operation history (percent/duty series, or on/off durations as a fallback). `hours` default 24, clamped 1–168. |
@@ -357,6 +358,22 @@ The server relays these external services so browser clients never see the upstr
 
 ---
 
+## Water Network { #water-network }
+
+`GET /api/geo/water_net?map_uuid=<uuid>` resolves the pipes of a map into circuits from their geometry on every read and stores nothing. It needs `edit_settings` and the group scope of the map (`403` otherwise, `400` without `map_uuid`, `404` for an unknown map).
+
+| Field | Meaning |
+|---|---|
+| `summary` | Pipes, branches joined to another pipe, emitters on a pipe, parts, circuits |
+| `networks` | Each circuit with its pipes, emitters, supply parts and loops, plus the pump rating against demand (`pump_lpm`, `demand_lpm`, `pump_ratio`) and how long a full tank lasts (`tank_l`, `tank_min`). A value that is not known is `null` and `pump_note` / `tank_note` says why (`no-pump`, `no-rating`, `no-tank`, `no-capacity`, `no-demand`) |
+| `areas` | Each site and zone with the circuits of the emitters inside it and their shared upstream path |
+| `parts` | Each part with its linked device (`device`, `device_kind`), the nearby candidates when several markers are within 5 m (`candidates`; none is linked then), its upstream path and downstream emitter count |
+| `checks` | Findings: `network-disconnected`, `no-source`, `area-pipe-mismatch`, `emitter-no-flow`, `part-unattached`, `part-device-ambiguous`, `network-loop` |
+
+A circuit without a supply part has no upstream path. The response only reports findings and changes nothing. Which output owns an emitter is still decided by the device area.
+
+`GET /api/geo/water_net/paths?map_uuid=<uuid>` (login only, like the overlays) returns `outputs`: for each output, the ids of the pipes and parts its water passes, for circuits that have a supply. The map widget reads it once and draws the path of a running output thicker, in the same equipment colour.
+
 ## Map Ordering { #map-ordering }
 
 | Method | Path | Description |
@@ -370,8 +387,9 @@ The server relays these external services so browser clients never see the upstr
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/geo/local_time?lat=&lng=` | Local timezone/time plus a sunrise/sunset event window (yesterday through the day after tomorrow) — used by the map widget's clock dock. |
+| GET | `/api/geo/local_time?lat=&lng=&at=` | Local timezone/time (always the current moment) plus a sunrise/sunset event window (yesterday through the day after tomorrow) — centered on today, or, when the map's time slider has moved elsewhere, on `at` (epoch milliseconds, must stay within 30 days of now) — used by the map widget's clock dock. |
 | GET | `/api/geo/sun_event?target_id=` | Today's sunrise/sunset (seconds of day) for whatever location a target inherits. |
+| GET | `/api/geo/weather_state?site=&lat=&lng=&t=` | One bundle of weather state for the map widget's weather rendering — precipitation, wind speed/direction, cloud cover, visibility and temperature, the hazards those current values trip against the widget's thresholds (wind, precipitation, frost, heat), and the sun's elevation/azimuth/phase. Values come only from the sources you set up: GIS inputs registered on the map that supply weather values (with **Use as weather data source** left on) and devices bound to a site as its weather station. A widget option decides which of the two groups is consulted first, and each item takes the first source with a value that is not older than the allowed age. Takes `site` (a site's id) and/or `lat`+`lng`, an optional `t` (the time the map's time slider is at — ISO 8601 or epoch seconds/milliseconds) that, if more than 5 minutes from now, switches the response to that time's state (a GIS input forecast for the future, station/GIS input history for the past) rather than the current one (which also carries a `timeline`), plus the widget's options (`order`, `max_age`, `hz_wind`, `hz_precip`, `hz_temp`, `hz_heat`, `tint_lo`, `tint_hi`). With no source set up the values come back empty; GIS input results are cached for 5 minutes (device values are read every time), and the response still carries the sun position and whatever values are available when a source fails. |
 
 ---
 

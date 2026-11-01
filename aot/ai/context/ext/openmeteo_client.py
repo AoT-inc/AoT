@@ -83,7 +83,9 @@ OPERATIONS = {
         'category': '예보',
         'label_ko': '시간별 예보(기온·습도·VPD·강수) — 선제 제어용',
         'params': ['latitude', 'longitude'],
-        'optional': {'forecast_days': '2'},
+        # forecast_hours: 응답이 **지금 시간 칸**부터 시작한다. 없으면 오늘 0시부터라
+        # 25행 상한에 과거 칸이 먼저 걸린다.
+        'optional': {'forecast_days': '2', 'forecast_hours': '48'},
         # 48시간을 시간마다 주면 48행이고, 조회 상한(25행)에 걸려 **오늘까지만**
         # 남는다 — "내일 아침 추워지나" 가 정확히 잘려 나가는 자리다. 3시간
         # 간격으로 솎으면 이틀치가 16행에 들어간다. 농업 조언에 필요한 것은
@@ -189,6 +191,38 @@ def _rows_from_block(payload, block):
     return rows
 
 
+# Open-Meteo 시간별 "칸 값"은 행 시각이 칸의 **끝**이다 — `precipitation` 은 그 시각까지
+# 직전 1시간 합, `shortwave_radiation`·확률류도 직전 1시간 값이다. 그대로 "14:00 에
+# 4 mm" 로 읽으면 실제로는 13~14시에 내린 비다(구마모토에서 지도 입력과 AI 답이 한
+# 시간 어긋난 원인). AI 가 읽는 행에서는 값을 **칸의 시작** 시각에 붙인다 — 행 시각 T
+# 의 칸 값은 T~T+1h 동안의 값이다. 지도 입력(open_meteo_weather)은 같은 기준으로
+# "지금이 속한 칸"(= 끝나는 정시 행)을 읽는다.
+_CELL_END_VARS = frozenset((
+    'precipitation', 'precipitation_probability', 'rain', 'showers', 'snowfall',
+    'shortwave_radiation', 'et0_fao_evapotranspiration', 'sunshine_duration'))
+
+
+def _is_cell_key(key):
+    return str(key).split(' (', 1)[0] in _CELL_END_VARS
+
+
+def cells_to_interval_start(rows):
+    """시간별 행의 칸 값(직전 1시간)을 칸의 시작 시각 행으로 옮긴다.
+
+    행 i 의 칸 값은 행 i+1 에서 가져온다. 마지막 행은 다음 칸이 없어 칸 값이 빠진다.
+    순간값(기온·습도·풍속…)은 그대로다. 새 리스트를 돌려주고 입력은 건드리지 않는다.
+    """
+    out = []
+    for i, row in enumerate(rows):
+        new = {k: v for k, v in row.items() if not _is_cell_key(k)}
+        nxt = rows[i + 1] if i + 1 < len(rows) else {}
+        for k, v in nxt.items():
+            if k != 'time' and _is_cell_key(k):
+                new[k] = v
+        out.append(new)
+    return out
+
+
 def _sample(rows, step):
     """n행마다 하나씩. 마지막 행은 항상 남긴다 — 기간의 끝을 잘라 버리면
     "모레까지 비" 가 "내일까지 비" 로 바뀐다."""
@@ -288,6 +322,8 @@ def fetch_operation(op_key, params, operations=None):
 
     op = operations[op_key]
     rows = _rows_from_block(payload, op['block'])
+    if op['block'] == 'hourly':
+        rows = cells_to_interval_start(rows)
     if op.get('aggregate') == 'monthly':
         rows = _aggregate_monthly(rows)
     elif op.get('client_optional', {}).get('step'):
@@ -301,3 +337,39 @@ def fetch_operation(op_key, params, operations=None):
         'timezone': payload.get('timezone'),
     }
     return [head] + rows, None
+
+
+def fetch_forecast_bundle(lat, lon, tz, api_key=None, forecast_days=14):
+    """시간별 7변수 + 일별 7변수를 **한 번에** 조회한다. (bundle, reason).
+
+    AI 예보 도구(`get_weather_forecast`)용 — 장소별 좌표·시간대로 부르고,
+    `aot.utils.open_meteo_http` 가 재시도·429 대기를 맡는다. 기존
+    `fetch_operation` 은 그대로 둔다(입력 드라이버·데이터 소스 경로).
+    반환: {'meta': head, 'hourly': [행], 'daily': [행]}.
+    """
+    from aot.utils import open_meteo_http
+    h_op = OPERATIONS['forecast_hourly']
+    d_op = OPERATIONS['forecast_daily']
+    query = {
+        'latitude': str(lat), 'longitude': str(lon),
+        'hourly': ','.join(h_op['vars']),
+        'daily': ','.join(d_op['vars']),
+        'timezone': tz or 'auto',
+        'forecast_days': str(forecast_days),
+    }
+    key = str(api_key or '').strip()
+    if key:
+        query['apikey'] = key
+    url = _host_for(h_op['base'], key)
+    payload, reason = open_meteo_http.get_json(url, query)
+    if payload is None:
+        return None, reason
+    head = {
+        'grid_latitude': payload.get('latitude'),
+        'grid_longitude': payload.get('longitude'),
+        'elevation_m': payload.get('elevation'),
+        'timezone': payload.get('timezone'),
+    }
+    return {'meta': head,
+            'hourly': cells_to_interval_start(_rows_from_block(payload, 'hourly')),
+            'daily': _rows_from_block(payload, 'daily')}, None

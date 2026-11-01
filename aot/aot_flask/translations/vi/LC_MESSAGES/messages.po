@@ -32297,3 +32297,1372 @@ msgstr ""
 #: aot_flask/templates/settings/general.html:658
 msgid "Pass"
 msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "On-site observation"
+msgstr "Quan trắc tại chỗ"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Precip"
+msgstr "Mưa"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Wind dir"
+msgstr "Hướng gió"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Risk"
+msgstr "Cảnh báo"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observed"
+msgstr "Quan trắc"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observation delayed"
+msgstr "Quan trắc chậm"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Freeze"
+msgstr "Đóng băng"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Frost"
+msgstr "Sương giá"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heat"
+msgstr "Nắng nóng"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Strong wind"
+msgstr "Gió mạnh"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heavy rain"
+msgstr "Mưa lớn"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Sunrise / sunset glow"
+msgstr "Bình minh / hoàng hôn"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Twilight"
+msgstr "Chạng vạng"
+
+#: widgets/AoT_map.py
+msgid "Auto (by sun position)"
+msgstr "Tự động (theo vị trí mặt trời)"
+
+#: widgets/AoT_map.py
+msgid "Always day"
+msgstr "Luôn ban ngày"
+
+#: widgets/AoT_map.py
+msgid "Always night"
+msgstr "Luôn ban đêm"
+
+#: widgets/AoT_map.py
+msgid "Day / Night Appearance"
+msgstr "Hiển thị ngày / đêm"
+
+#: widgets/AoT_map.py
+msgid "Darkens the base map at night and lights 3D models from the sun's position. Also fills the measurement dock with weather values (rain, wind, cloud, visibility, risk) and shows a day/night icon in the time dock. Off turns all of this off."
+msgstr "Làm tối bản đồ nền vào ban đêm và chiếu sáng mô hình 3D theo vị trí mặt trời. Đồng thời hiển thị các giá trị thời tiết (mưa, gió, mây, tầm nhìn, cảnh báo) trên thanh số đo và biểu tượng ngày/đêm trên thanh thời gian. Chọn Tắt để tắt tất cả."
+
+#: widgets/AoT_map.py
+msgid "Weather First in Measurement Dock"
+msgstr "Ưu tiên thời tiết trên thanh số đo"
+
+#: widgets/AoT_map.py
+msgid "Puts weather values at the left of the measurement dock. A value you also picked from a field device is merged into it and marked with a pin. Turn off to keep the dock exactly as you configured it."
+msgstr "Đặt các giá trị thời tiết ở bên trái thanh số đo. Giá trị cùng loại bạn đã chọn từ thiết bị tại chỗ sẽ được gộp vào đây và gắn ghim vị trí. Tắt để giữ thanh số đo đúng như bạn đã cấu hình."
+
+#: widgets/AoT_map.py
+msgid "Auto-adjust Overlay Opacity"
+msgstr "Tự động chỉnh độ mờ lớp phủ"
+
+#: widgets/AoT_map.py
+msgid "Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, and their opacity is lowered automatically so the shapes stay visible. Turn off to go back to the old order: weather layers sit below the shapes and use each layer's own opacity as is."
+msgstr "Các lớp phủ thời tiết (mây, radar, gió) được vẽ trên hình khối và mô hình 3D, độ mờ tự động giảm để hình khối vẫn nhìn thấy. Tắt để quay về thứ tự cũ: lớp thời tiết nằm dưới hình khối và dùng đúng độ mờ của từng lớp."
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Cloud cover"
+msgstr "Lượng mây"
+
+msgid "Weather Effects"
+msgstr "Hiệu ứng thời tiết"
+
+msgid "Subtle"
+msgstr "Nhẹ nhàng"
+
+msgid "Vivid"
+msgstr "Rõ nét"
+
+msgid "Draws the current weather over the map from observed values only, even when no weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow (by precipitation) and fog (by visibility). Effects are dimmer over facilities. They pause when the map is off-screen or when reduced motion is requested."
+msgstr "Vẽ thời tiết hiện tại lên bản đồ chỉ từ các giá trị quan trắc, ngay cả khi không bật lớp thời tiết nào: bóng mây (theo độ che phủ mây), vệt gió, mưa hoặc tuyết (theo lượng mưa) và sương mù (theo tầm nhìn). Hiệu ứng mờ hơn trên các công trình. Hiệu ứng tạm dừng khi bản đồ nằm ngoài màn hình hoặc khi hệ thống yêu cầu giảm chuyển động."
+
+msgid "Show Weather Layers Automatically"
+msgstr "Tự động bật lớp thời tiết"
+
+msgid "When it rains, clouds cover the sky or the wind is strong, turns on the matching weather layer you registered in this widget (precipitation, cloud or wind) on screen only. Your saved layer selection is not changed, and a layer you turn off yourself stays off until the page is reloaded. Thresholds are set on the server."
+msgstr "Khi trời mưa, nhiều mây hoặc gió mạnh, tự động bật lớp thời tiết tương ứng (lượng mưa, mây hoặc gió) mà bạn đã đăng ký trong widget này, chỉ trên màn hình. Lựa chọn lớp đã lưu không bị thay đổi, và lớp bạn tự tắt sẽ không được bật lại cho đến khi tải lại trang. Ngưỡng điều kiện do máy chủ quyết định."
+
+msgid "Field devices first"
+msgstr "Thiết bị hiện trường trước"
+
+msgid "Weather inputs first"
+msgstr "Đầu vào thời tiết trước"
+
+msgid "Weather Value Source Order"
+msgstr "Thứ tự nguồn giá trị thời tiết"
+
+msgid "Weather values come from the weather stations you assigned to the site (field devices) and from the weather inputs registered in the map layers, even when their layer is off. Choose which one is used first; each value falls back to the other when it is missing or too old. With neither, no weather cells or effects are shown."
+msgstr "Giá trị thời tiết lấy từ các thiết bị bạn đã chỉ định làm trạm thời tiết của khu đất (thiết bị hiện trường) và từ các đầu vào thời tiết đã đăng ký trong lớp bản đồ, kể cả khi lớp đó đang tắt. Hãy chọn nguồn dùng trước; khi giá trị thiếu hoặc quá cũ sẽ chuyển sang nguồn còn lại. Nếu không có nguồn nào, sẽ không hiển thị ô thời tiết và hiệu ứng."
+
+msgid "Weather Value Max Age (Seconds)"
+msgstr "Độ trễ tối đa của giá trị thời tiết (giây)"
+
+msgid "A field device value older than this is skipped in favor of the next source."
+msgstr "Giá trị của thiết bị hiện trường cũ hơn mức này sẽ bị bỏ qua để dùng nguồn tiếp theo."
+
+msgid "Risk: Wind Speed (m/s)"
+msgstr "Rủi ro: tốc độ gió (m/s)"
+
+msgid "Shows a risk in the weather cells when the current wind speed reaches this value."
+msgstr "Hiển thị rủi ro trong ô thời tiết khi tốc độ gió hiện tại đạt giá trị này."
+
+msgid "Risk: Precipitation (mm/h)"
+msgstr "Rủi ro: lượng mưa (mm/h)"
+
+msgid "Shows a risk when the current precipitation reaches this value."
+msgstr "Hiển thị rủi ro khi lượng mưa hiện tại đạt giá trị này."
+
+msgid "Risk: Low Temperature (°C)"
+msgstr "Rủi ro: nhiệt độ thấp (°C)"
+
+msgid "Shows a frost risk when the current temperature falls to this value or below."
+msgstr "Hiển thị rủi ro sương giá khi nhiệt độ hiện tại giảm xuống bằng hoặc thấp hơn giá trị này."
+
+msgid "Risk: High Temperature (°C)"
+msgstr "Rủi ro: nhiệt độ cao (°C)"
+
+msgid "Shows a heat risk when the current temperature reaches this value or above."
+msgstr "Hiển thị rủi ro nắng nóng khi nhiệt độ hiện tại đạt hoặc vượt giá trị này."
+
+msgid "Weather Effects Minimum Zoom"
+msgstr "Mức thu phóng tối thiểu của hiệu ứng thời tiết"
+
+msgid "Zoomed out beyond this level, the weather effects and the layers turned on automatically fade out over one zoom level, because one observation spread over a wide area is misleading. Layers you turn on yourself, the dock values and the day/night correction are not affected. 0 shows them at every zoom."
+msgstr "Khi thu nhỏ vượt quá mức này, hiệu ứng thời tiết và các lớp tự động bật sẽ mờ dần trong khoảng 1 mức thu phóng, vì trải một giá trị quan trắc lên vùng rộng sẽ cho hình ảnh sai. Lớp bạn tự bật, giá trị trong thanh dữ liệu và hiệu chỉnh ngày/đêm không bị ảnh hưởng. Đặt 0 để luôn hiển thị."
+
+msgid "Temperature Tint"
+msgstr "Sắc độ nhiệt độ"
+
+msgid "Colors the temperature value in the dock blue when cold and red when hot, and adds a very faint tint to the base map (never over shapes or 3D models)."
+msgstr "Tô giá trị nhiệt độ trong thanh dữ liệu màu xanh khi lạnh và màu đỏ khi nóng, đồng thời thêm một sắc độ rất nhạt lên bản đồ nền (không bao giờ phủ lên hình khối hoặc mô hình 3D)."
+
+msgid "Tint: Neutral From (°C)"
+msgstr "Sắc độ: bình thường từ (°C)"
+
+msgid "Below this temperature the cold tint starts; it is strongest at the frost risk temperature."
+msgstr "Dưới nhiệt độ này sắc độ lạnh bắt đầu, đậm nhất ở nhiệt độ có nguy cơ sương giá."
+
+msgid "Tint: Neutral Up To (°C)"
+msgstr "Sắc độ: bình thường đến (°C)"
+
+msgid "Above this temperature the hot tint starts; it is strongest at the heat risk temperature."
+msgstr "Trên nhiệt độ này sắc độ nóng bắt đầu, đậm nhất ở nhiệt độ có nguy cơ nắng nóng."
+
+msgid "North wind"
+msgstr "Gió bắc"
+
+msgid "North-northeast wind"
+msgstr "Gió bắc đông bắc"
+
+msgid "Northeast wind"
+msgstr "Gió đông bắc"
+
+msgid "East-northeast wind"
+msgstr "Gió đông đông bắc"
+
+msgid "East wind"
+msgstr "Gió đông"
+
+msgid "East-southeast wind"
+msgstr "Gió đông đông nam"
+
+msgid "Southeast wind"
+msgstr "Gió đông nam"
+
+msgid "South-southeast wind"
+msgstr "Gió nam đông nam"
+
+msgid "South wind"
+msgstr "Gió nam"
+
+msgid "South-southwest wind"
+msgstr "Gió nam tây nam"
+
+msgid "Southwest wind"
+msgstr "Gió tây nam"
+
+msgid "West-southwest wind"
+msgstr "Gió tây tây nam"
+
+msgid "West wind"
+msgstr "Gió tây"
+
+msgid "West-northwest wind"
+msgstr "Gió tây tây bắc"
+
+msgid "Northwest wind"
+msgstr "Gió tây bắc"
+
+msgid "North-northwest wind"
+msgstr "Gió bắc tây bắc"
+
+msgid "Calm"
+msgstr "Lặng gió"
+
+msgid "Direction the wind blows from"
+msgstr "Hướng gió thổi tới"
+
+msgid "Play"
+msgstr "Phát"
+
+msgid "Now"
+msgstr "Hiện tại"
+
+msgid "Return to the current time"
+msgstr "Quay lại thời điểm hiện tại"
+
+msgid "Time slider"
+msgstr "Thanh trượt thời gian"
+
+msgid "+{n}d"
+msgstr "+{n} ngày"
+
+msgid "Show forecast up to {n} days"
+msgstr "Xem dự báo tối đa {n} ngày"
+
+msgid "Map layers"
+msgstr "Lớp bản đồ"
+
+msgid "Day / night"
+msgstr "Ngày / đêm"
+
+msgid "Out of range"
+msgstr "Ngoài phạm vi"
+
+msgid "Low confidence"
+msgstr "Độ tin cậy thấp"
+
+msgid "Reference only"
+msgstr "Chỉ để tham khảo"
+
+msgid "Recorded"
+msgstr "Đã ghi"
+
+msgid "Forecast values for the selected time"
+msgstr "Giá trị dự báo tại thời điểm đã chọn"
+
+msgid "Recorded values for the selected time"
+msgstr "Giá trị đã ghi tại thời điểm đã chọn"
+
+msgid "Show Time Slider"
+msgstr "Hiện thanh trượt thời gian"
+
+msgid "Adds a slider under the time dock to look at the map at another time: radar frames of time-enabled layers, forecast or recorded weather values, and day / night. Needs \"Show Local Time\". Drag it back to \"Now\" to return to live values."
+msgstr "Thêm một thanh trượt dưới bảng thời gian để xem bản đồ ở thời điểm khác: khung radar của các lớp có hỗ trợ thời gian, giá trị thời tiết dự báo hoặc đã ghi, và ngày/đêm. Cần bật \"Hiện giờ địa phương\". Kéo về \"Hiện tại\" để quay lại giá trị trực tiếp."
+
+msgid "Use Digital Twin (Experimental)"
+msgstr "Dùng bản sao số (thử nghiệm)"
+
+msgid "Digital Twin Run Times"
+msgstr "Giờ chạy bản sao số"
+
+msgid "The Digital Twin cannot be turned on: %(reason)s"
+msgstr "Không thể bật bản sao số: %(reason)s"
+
+msgid "Digital Twin run times must look like 06:10,18:10 (HH:MM, comma separated, at most %(n)s)."
+msgstr "Giờ chạy bản sao số phải có dạng 06:10,18:10 (giờ:phút, phân tách bằng dấu phẩy, tối đa %(n)s)."
+
+msgid "This device runs with the LOW hardware profile."
+msgstr "Thiết bị này đang chạy với cấu hình phần cứng LOW."
+
+msgid "This Raspberry Pi model is too small."
+msgstr "Mẫu Raspberry Pi này có cấu hình quá thấp."
+
+msgid "This device has less than %(gb)s GB of memory."
+msgstr "Thiết bị này có dưới %(gb)s GB bộ nhớ."
+
+msgid "Digital Twin (Experimental)"
+msgstr "Bản sao số (thử nghiệm)"
+
+msgid "This is an experimental feature and is still at an early stage. Use it for development purposes only. Predictions are for reference and are never used for control. Behavior and data formats may change without notice."
+msgstr "Đây là tính năng thử nghiệm và còn ở giai đoạn đầu. Chỉ dùng cho mục đích phát triển. Dự báo chỉ để tham khảo và không được dùng để điều khiển. Hoạt động và định dạng dữ liệu có thể thay đổi mà không báo trước."
+
+msgid "Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program and must be installed and running."
+msgstr "Chạy dịch vụ bản sao số, dự đoán độ ẩm đất và các giá trị tương tự từ dự báo thời tiết và cảm biến của bạn. Dịch vụ này tách riêng khỏi chương trình chính và phải được cài đặt và đang chạy."
+
+msgid "This device is too small to run the Digital Twin."
+msgstr "Thiết bị này có cấu hình quá thấp nên không thể bật bản sao số."
+
+msgid "Using a remote node is still in preparation."
+msgstr "Tính năng dùng nút từ xa đang được chuẩn bị."
+
+msgid "Times of day the prediction runs, in local time. Separate several times with commas, for example 06:10,18:10."
+msgstr "Các giờ trong ngày chạy dự đoán, theo giờ địa phương. Nhiều giờ được phân tách bằng dấu phẩy, ví dụ 06:10,18:10."
+
+msgid "Service Status"
+msgstr "Trạng thái dịch vụ"
+
+msgid "Twin service is not running"
+msgstr "Dịch vụ bản sao số không chạy"
+
+msgid "Last run"
+msgstr "Lần chạy gần nhất"
+
+msgid "Sites"
+msgstr "Địa điểm"
+
+msgid "Failures"
+msgstr "Lỗi"
+
+msgid "The service stopped itself because this device is too small."
+msgstr "Dịch vụ đã tự dừng vì thiết bị này có cấu hình quá thấp."
+
+msgid "The Digital Twin runs as its own service. Docker: add COMPOSE_PROFILES=twin to the .env file and run docker compose up -d. Direct install: enable the aottwin.service systemd unit."
+msgstr "Bản sao số chạy như một dịch vụ riêng. Docker: thêm COMPOSE_PROFILES=twin vào tệp .env rồi chạy docker compose up -d. Cài trực tiếp: bật đơn vị systemd aottwin.service."
+
+msgid "1-day error"
+msgstr "Sai số 1 ngày"
+
+msgid "80% band hit rate"
+msgstr "Tỷ lệ trúng dải 80%"
+
+msgid "Agreement"
+msgstr "Độ khớp"
+
+msgid "Air temperature"
+msgstr "Nhiệt độ không khí"
+
+msgid "Also fill empty sources with the first suggestion (sources you already chose are kept)"
+msgstr "Điền nguồn còn trống bằng đề xuất đầu tiên (giữ nguyên nguồn đã chọn)"
+
+msgid "Choose a channel"
+msgstr "Chọn kênh"
+
+msgid "Choose a rain source — the twin cannot run without it."
+msgstr "Hãy chọn nguồn mưa — thiếu nó bản sao số không chạy được."
+
+msgid "Daily sum"
+msgstr "Tổng ngày"
+
+msgid "Each site and plot is set up in its Twin tab on the map. Suggestions are only suggestions — nothing is used until you apply and save it."
+msgstr "Mỗi khu đất và lô được thiết lập trong thẻ Bản sao trên bản đồ. Đề xuất chỉ là đề xuất — không dùng cho đến khi bạn áp dụng và lưu."
+
+msgid "Empty sources will be filled with the first suggestion."
+msgstr "Nguồn còn trống sẽ được điền bằng đề xuất đầu tiên."
+
+msgid "Experimental"
+msgstr "Thử nghiệm"
+
+msgid "Forecast input"
+msgstr "Đầu vào dự báo"
+
+msgid "Forecast rain days"
+msgstr "Số ngày có mưa dự báo"
+
+msgid "Hourly mean, summed"
+msgstr "Tổng trung bình theo giờ"
+
+msgid "Include this plot"
+msgstr "Bao gồm lô này"
+
+msgid "Inputs whose channels declare forecast lead days are listed, nearest first. The lead-day ladder is built from the channel metadata."
+msgstr "Liệt kê các đầu vào có kênh khai báo số ngày dự báo trước, gần nhất trước. Chuỗi ngày dự báo được tạo từ siêu dữ liệu kênh."
+
+msgid "Last value of the day"
+msgstr "Giá trị cuối ngày"
+
+msgid "Measured"
+msgstr "Đo thực"
+
+msgid "Mirror"
+msgstr "Bản sao"
+
+msgid "No field plot"
+msgstr "Không có lô ngoài trời"
+
+msgid "No field plot under cultivation in any site."
+msgstr "Không khu đất nào có lô ngoài trời đang canh tác."
+
+msgid "No field plot under cultivation in this site."
+msgstr "Khu đất này không có lô ngoài trời đang canh tác."
+
+msgid "No measured soil water sensor"
+msgstr "Không có cảm biến độ ẩm đất đo thực"
+
+msgid "No plot has a measured soil water sensor yet — predictions cannot be synchronized."
+msgstr "Chưa có lô nào có cảm biến độ ẩm đất đo thực — không thể đồng bộ dự đoán."
+
+msgid "No rain source"
+msgstr "Không có nguồn mưa"
+
+msgid "No soil water sensor"
+msgstr "Không có cảm biến độ ẩm đất"
+
+msgid "None (assumes no rain ahead)"
+msgstr "Không (giả định không mưa sắp tới)"
+
+msgid "None for this plot"
+msgstr "Không dùng cho lô này"
+
+msgid "Not shown"
+msgstr "Không hiển thị"
+
+msgid "Observation sensors and sources"
+msgstr "Cảm biến quan trắc và nguồn"
+
+msgid "Off for this site."
+msgstr "Đang tắt cho khu đất này."
+
+msgid "Rain aggregation"
+msgstr "Cách gộp lượng mưa"
+
+msgid "Ready."
+msgstr "Sẵn sàng."
+
+msgid "Recent agreement"
+msgstr "Độ khớp gần đây"
+
+msgid "Reference ET (ET0)"
+msgstr "Bốc thoát hơi chuẩn (ET0)"
+
+msgid "Run the twin for this site"
+msgstr "Chạy bản sao số cho khu đất này"
+
+msgid "Save failed."
+msgstr "Lưu thất bại."
+
+msgid "Saved. The twin service picks this up within an hour, or at its next run."
+msgstr "Đã lưu. Dịch vụ bản sao số sẽ áp dụng trong vòng một giờ hoặc ở lần chạy tiếp theo."
+
+msgid "Sensor suggestions"
+msgstr "Đề xuất cảm biến"
+
+msgid "Sensors are chosen in each plot's Twin tab."
+msgstr "Cảm biến được chọn trong thẻ Bản sao của từng lô."
+
+msgid "Show all channels"
+msgstr "Hiện tất cả kênh"
+
+msgid "Soil temperature"
+msgstr "Nhiệt độ đất"
+
+msgid "Soil water (observation)"
+msgstr "Độ ẩm đất (quan trắc)"
+
+msgid "Some plots have no measured soil water sensor; those plots are skipped."
+msgstr "Một số lô không có cảm biến độ ẩm đất đo thực; các lô đó sẽ bị bỏ qua."
+
+msgid "Some plots ready"
+msgstr "Một số lô sẵn sàng"
+
+msgid "Source label"
+msgstr "Nhãn nguồn"
+
+msgid "Source label — only measured inputs are used to synchronize and verify the twin."
+msgstr "Nhãn nguồn — chỉ đầu vào đo thực được dùng để đồng bộ và kiểm chứng bản sao số."
+
+msgid "Sources (plots inherit these)"
+msgstr "Nguồn (các lô kế thừa)"
+
+msgid "Suggestion"
+msgstr "Đề xuất"
+
+msgid "Suggestions are soil channels of sensors inside the plot or within 30 m of it. Nothing is used until you apply and save it."
+msgstr "Đề xuất là các kênh đất của cảm biến trong lô hoặc trong vòng 30 m. Không dùng cho đến khi bạn áp dụng và lưu."
+
+msgid "This plot is not a twin target. Facility plots, finished crops and crops not yet planted are left out."
+msgstr "Lô này không thuộc đối tượng bản sao số. Lô trong nhà kính, vụ đã kết thúc và vụ chưa trồng bị loại ra."
+
+msgid "Turn on for all sites"
+msgstr "Bật cho tất cả khu đất"
+
+msgid "Turn the Digital Twin on for every site?"
+msgstr "Bật bản sao số cho mọi khu đất?"
+
+msgid "Turn the twin on in the site's Twin tab first."
+msgstr "Hãy bật bản sao số trong thẻ Bản sao của khu đất trước."
+
+msgid "Twin"
+msgstr "Bản sao"
+
+msgid "Twin on"
+msgstr "Bản sao đang bật"
+
+msgid "Twin off"
+msgstr "Bản sao đang tắt"
+
+msgid "Unverified"
+msgstr "Chưa xác minh"
+
+msgid "Verdict"
+msgstr "Đánh giá"
+
+msgid "Virtual"
+msgstr "Ảo"
+
+msgid "from site"
+msgstr "kế thừa từ khu đất"
+
+msgid "inside the plot"
+msgstr "trong lô"
+
+msgid "not measured"
+msgstr "không phải đo thực"
+
+msgid "off"
+msgstr "tắt"
+
+msgid "site weather station"
+msgstr "trạm thời tiết của khu đất"
+
+msgid "Follow site"
+msgstr "Theo khu đất"
+
+msgid "Choose"
+msgstr "Chọn"
+
+msgid "Plots outside any site"
+msgstr "Lô ngoài khu đất"
+
+msgid "Suggestions are soil channels of sensors inside the plot or within the search distance. Nothing is used until you apply and save it."
+msgstr "Gợi ý là các kênh đất của cảm biến trong thửa hoặc ở gần. Nếu không có trong thửa hay trong 30 m thì dùng cảm biến của khu đất, rồi đến cảm biến gần nhất. Chưa có gì được dùng cho đến khi bạn áp dụng và lưu."
+
+msgid "Development test"
+msgstr "Thử nghiệm phát triển"
+
+msgid "Assimilation start date"
+msgstr "Ngày bắt đầu đồng hóa"
+
+msgid "Leave empty to start on the planting date. Use an earlier date only to test how well the model follows past sensor data."
+msgstr "Để trống thì bắt đầu từ ngày trồng. Chỉ dùng ngày sớm hơn để thử xem mô hình bám theo dữ liệu cảm biến trong quá khứ tốt đến đâu."
+
+msgid "site-wide sensor"
+msgstr "cảm biến chung của khu đất"
+
+msgid "nearest sensor"
+msgstr "cảm biến gần nhất"
+
+msgid "weather station found in the site"
+msgstr "trạm thời tiết tìm thấy trong khu đất"
+
+msgid "nearest weather channel"
+msgstr "kênh thời tiết gần nhất"
+
+msgid "in this site"
+msgstr "trong khu đất này"
+
+msgid "No active forecast input is near this site."
+msgstr "Không có đầu vào dự báo đang bật gần khu đất này."
+
+msgid "Create one here"
+msgstr "Tạo tại đây"
+
+msgid "Creating..."
+msgstr "Đang tạo..."
+
+msgid "Forecast input created and chosen for this site."
+msgstr "Đã tạo đầu vào dự báo và chọn cho khu đất này."
+
+msgid "Digital Twin Settings"
+msgstr "Cài đặt Digital Twin"
+
+msgid "Run times, low-spec option, forecast inputs and the site table are on the Digital Twin settings page."
+msgstr "Giờ chạy, tùy chọn máy cấu hình thấp, đầu vào dự báo và bảng khu đất nằm ở trang cài đặt Digital Twin."
+
+msgid "Digital Twin"
+msgstr "Digital Twin"
+
+msgid "Service"
+msgstr "Dịch vụ"
+
+msgid "Allow on low-spec profile"
+msgstr "Cho phép trên cấu hình thấp"
+
+msgid "Create forecast inputs automatically"
+msgstr "Tự động tạo đầu vào dự báo"
+
+msgid "When you turn the twin on for a site that has no forecast input nearby, a forecast input is created at the site location and chosen for the site. You can change or remove it in the input settings."
+msgstr "Khi bật twin cho khu đất không có đầu vào dự báo ở gần, một đầu vào dự báo sẽ được tạo tại vị trí khu đất và chọn cho khu đất đó. Bạn có thể đổi hoặc xóa trong cài đặt đầu vào."
+
+msgid "Development and test machines run with the LOW hardware profile, which locks the Digital Twin. Turn this on to run it anyway. Small Raspberry Pi models and devices with too little memory stay locked."
+msgstr "Máy phát triển và thử nghiệm chạy với cấu hình phần cứng LOW nên Digital Twin bị khóa. Bật tùy chọn này để vẫn chạy. Raspberry Pi nhỏ và thiết bị thiếu bộ nhớ vẫn bị khóa."
+
+msgid "The Digital Twin is off. Turn it on in Settings > General."
+msgstr "Digital Twin đang tắt. Hãy bật trong Cài đặt > Chung."
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr ""
+
+msgid "Turn devices and functions on and off."
+msgstr ""
+
+msgid "Change settings, plots and records."
+msgstr ""
+
+msgid "Read"
+msgstr ""
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr ""
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr ""
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr ""
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr ""
+
+msgid "That connection was not found."
+msgstr ""
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr ""
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr ""
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr ""
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr ""
+
+msgid "Allow AI access"
+msgstr ""
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr ""
+
+msgid "Signed in as %(user)s."
+msgstr ""
+
+msgid "What it may do"
+msgstr ""
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr ""
+
+msgid "Deny"
+msgstr ""
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr ""
+
+msgid "OAuth Authentication"
+msgstr ""
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr ""
+
+msgid "Token Issuer"
+msgstr ""
+
+msgid "Central (AoT Central Authentication)"
+msgstr ""
+
+msgid "This AoT (built in)"
+msgstr ""
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr ""
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr ""
+
+msgid "Before You Turn This On"
+msgstr ""
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr ""
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr ""
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr ""
+
+msgid "Accepted Redirect Addresses"
+msgstr ""
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr ""
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr ""
+
+msgid "My Connected AI Apps"
+msgstr ""
+
+msgid "last used"
+msgstr ""
+
+msgid "No AI app is connected with your account yet."
+msgstr ""
+
+msgid "Soil moisture forecast (twin)"
+msgstr "Dự báo độ ẩm đất (bản sao)"
+
+msgid "hatched = low confidence (far day) or wide spread"
+msgstr "gạch chéo = độ tin cậy thấp (ngày xa) hoặc khoảng dự báo rộng"
+
+msgid "degraded (forecast rain covers {n}/8 days, the rest assumed dry)"
+msgstr "thay thế một phần đầu vào (mưa dự báo cho {n}/8 ngày, các ngày còn lại giả định không mưa)"
+
+msgid "degraded (forecast inputs substituted)"
+msgstr "thay thế một phần đầu vào (đầu vào dự báo được thay bằng giá trị giả định)"
+
+msgid "root-zone water content p50"
+msgstr "độ ẩm vùng rễ p50"
+
+msgid "forecast publication expired"
+msgstr "bản dự báo đã hết hạn"
+
+msgid "twin not synced with the sensors"
+msgstr "bản sao chưa khớp với cảm biến"
+
+msgid "this plot cannot be simulated with its current setup"
+msgstr "không thể mô phỏng ô này với thiết lập hiện tại"
+
+msgid "twin run failed"
+msgstr "chạy bản sao thất bại"
+
+msgid "forecast publication incomplete"
+msgstr "bản dự báo không đầy đủ"
+
+msgid "no forecast in this period"
+msgstr "không có dự báo trong khoảng này"
+
+msgid "Unavailable"
+msgstr "Không khả dụng"
+
+msgid "valid until"
+msgstr "hiệu lực đến"
+
+
+msgid "No plot has a measured soil water sensor yet and prediction without a sensor is off — nothing is computed."
+msgstr "Chưa có thửa nào có cảm biến độ ẩm đất đo thực và dự đoán không cảm biến đang tắt — không có gì được tính."
+
+msgid "No plot has a measured soil water sensor — plots run without observation (model only, reference only). Accept the suggested sensors below to synchronize them."
+msgstr "Không có thửa nào có cảm biến độ ẩm đất đo thực — các thửa chạy không có quan trắc (chỉ mô hình, chỉ tham khảo). Chấp nhận cảm biến được đề xuất bên dưới để đồng bộ."
+
+msgid "Some plots have no measured soil water sensor; they run without observation (reference only) or are skipped."
+msgstr "Một số thửa không có cảm biến độ ẩm đất đo thực; chúng chạy không có quan trắc (chỉ tham khảo) hoặc bị bỏ qua."
+
+msgid "This plot is excluded from the twin."
+msgstr "Thửa này bị loại khỏi bản sao số."
+
+msgid "The twin is off for this site - turn it on in the site's Twin tab."
+msgstr "Bản sao số đang tắt cho khu này - hãy bật ở tab Bản sao số của khu."
+
+msgid "This plot has no planting date, so it cannot be simulated - set the start date of its crop."
+msgstr "Thửa này chưa có ngày trồng nên không thể mô phỏng - hãy đặt ngày bắt đầu của vụ."
+
+msgid "No rain source - choose one in the site's Twin tab (plots inherit it)."
+msgstr "Chưa có nguồn mưa - hãy chọn ở tab Bản sao số của khu (các thửa sẽ kế thừa)."
+
+msgid "The soil sensor is not labelled Measured, so it is not used - change the source label if it is a real sensor."
+msgstr "Cảm biến đất chưa được gắn nhãn Đo thực nên không được dùng - nếu là cảm biến thật, hãy đổi nhãn nguồn."
+
+msgid "Synchronized with the soil sensor."
+msgstr "Đã đồng bộ với cảm biến đất."
+
+msgid "No soil sensor chosen yet. A sensor is suggested - accept it to synchronize; until then the plot runs without observation (reference only)."
+msgstr "Chưa chọn cảm biến đất. Đã có cảm biến được đề xuất - chấp nhận để đồng bộ; cho đến lúc đó thửa chạy không có quan trắc (chỉ tham khảo)."
+
+msgid "No soil sensor chosen yet. A sensor is suggested - accept it, because prediction without a sensor is off and the plot is not computed."
+msgstr "Chưa chọn cảm biến đất. Đã có cảm biến được đề xuất - hãy chấp nhận vì dự đoán không cảm biến đang tắt và thửa chưa được tính."
+
+msgid "No soil sensor - the plot runs without observation (model only, reference only)."
+msgstr "Không có cảm biến đất - thửa chạy không có quan trắc (chỉ mô hình, chỉ tham khảo)."
+
+msgid "No soil sensor and prediction without a sensor is off - the plot is not computed."
+msgstr "Không có cảm biến đất và dự đoán không cảm biến đang tắt - thửa không được tính."
+
+msgid "No observation (model only, reference only)"
+msgstr "Không có quan trắc (chỉ mô hình, chỉ tham khảo)"
+
+msgid "chosen for another site"
+msgstr "đã chọn cho khu khác"
+
+msgid "Soil sensor suggestions"
+msgstr "Đề xuất cảm biến đất"
+
+msgid "Tick the sensors to use, check the source label, then Save. Nothing is used until you save. Plots left unticked keep running without observation (reference only)."
+msgstr "Đánh dấu các cảm biến sẽ dùng, kiểm tra nhãn nguồn rồi Lưu. Không có gì được dùng cho đến khi bạn lưu. Các thửa không đánh dấu tiếp tục chạy không có quan trắc (chỉ tham khảo)."
+
+msgid "Select all within the search distance"
+msgstr "Chọn tất cả trong khoảng cách tìm kiếm"
+
+msgid "within the search distance"
+msgstr "trong khoảng cách tìm kiếm"
+
+msgid "This sensor is far from the plot - it may not represent it."
+msgstr "Cảm biến này ở xa thửa - có thể không đại diện cho thửa."
+
+msgid "Plots without a soil sensor: predict without observation (reference only)"
+msgstr "Thửa không có cảm biến đất: dự đoán không quan trắc (chỉ tham khảo)"
+
+msgid "The model runs from the planting date on rain and weather alone. It is not synchronized or verified, so the spread is wide; the map marks these plots \"No observation - reference only\". Untick to skip such plots."
+msgstr "Mô hình chạy từ ngày trồng chỉ dựa vào mưa và thời tiết. Không được đồng bộ hay kiểm chứng nên độ rộng dự đoán lớn; bản đồ đánh dấu các thửa này là \"Không quan trắc - chỉ tham khảo\". Bỏ chọn để bỏ qua các thửa như vậy."
+
+msgid "Sensors can also be chosen in each plot's Twin tab."
+msgstr "Cũng có thể chọn cảm biến ở tab Bản sao số của từng thửa."
+
+msgid "Without a soil sensor"
+msgstr "Khi không có cảm biến đất"
+
+msgid "Predict without observation (reference only)"
+msgstr "Dự đoán không quan trắc (chỉ tham khảo)"
+
+msgid "Do not compute"
+msgstr "Không tính"
+
+msgid "no observation - reference only"
+msgstr "không quan trắc — chỉ tham khảo"
+
+msgid "cannot simulate: no rain source - choose it in the site's Twin tab"
+msgstr "Không thể mô phỏng: chưa có nguồn mưa - hãy chọn ở tab Bản sao số của khu"
+
+msgid "cannot simulate: the plot has no planting date"
+msgstr "Không thể mô phỏng: thửa chưa có ngày trồng"
+
+msgid "cannot simulate: the soil sensor is not labelled Measured - change it in the plot's Twin tab"
+msgstr "Không thể mô phỏng: cảm biến đất chưa được gắn nhãn Đo thực - hãy đổi ở tab Bản sao số của thửa"
+
+msgid "cannot simulate: no soil sensor and prediction without a sensor is off - change it in the plot's Twin tab"
+msgstr "Không thể mô phỏng: không có cảm biến đất và dự đoán không cảm biến đang tắt - hãy đổi ở tab Bản sao số của thửa"
+
+msgid "not synchronized: the soil sensor has no valid recent readings"
+msgstr "Chưa đồng bộ: cảm biến đất không có số đọc hợp lệ gần đây"
+
+msgid "No sensor - reference only"
+msgstr "Không cảm biến — chỉ tham khảo"
+
+msgid "Set the source label of the selected to"
+msgstr "Đặt nhãn nguồn của các cảm biến đã chọn thành"
+
+msgid "14 days back"
+msgstr "Từ 14 ngày trước"
+
+msgid "30 days back"
+msgstr "Từ 30 ngày trước"
+
+msgid "Air temperature (forecast)"
+msgstr "Nhiệt độ không khí (dự báo)"
+
+msgid "Forecast only"
+msgstr "Chỉ dự báo"
+
+msgid "Frost line (0 °C)"
+msgstr "Ngưỡng sương giá (0 °C)"
+
+msgid "Original values (not corrected)."
+msgstr "Giá trị gốc (chưa hiệu chỉnh)."
+
+msgid "Outside the map time range (past) — only the cursor moves."
+msgstr "Ngoài phạm vi thời gian bản đồ (quá khứ) — chỉ con trỏ di chuyển."
+
+msgid "Rain (forecast)"
+msgstr "Mưa (dự báo)"
+
+msgid "Rain (observed)"
+msgstr "Mưa (quan trắc)"
+
+msgid "Rain · ET0"
+msgstr "Mưa · ET0"
+
+msgid "Risks"
+msgstr "Rủi ro"
+
+msgid "Soil water"
+msgstr "Độ ẩm đất"
+
+msgid "Soil water (forecast)"
+msgstr "Độ ẩm đất (dự đoán)"
+
+msgid "The chart library could not be loaded."
+msgstr "Không tải được thư viện biểu đồ."
+
+msgid "The map shows this day."
+msgstr "Bản đồ đang hiển thị ngày này."
+
+msgid "The soil water panel is in sensor units (percent of the sensor, not the root zone)."
+msgstr "Ô độ ẩm đất dùng đơn vị cảm biến (% theo cảm biến, không phải vùng rễ)."
+
+msgid "The soil water panel is the root-zone average (model state)."
+msgstr "Ô độ ẩm đất là trung bình vùng rễ (trạng thái mô hình)."
+
+msgid "This plot is not a twin target."
+msgstr "Lô này không phải đối tượng của bản sao số."
+
+msgid "Water deficit"
+msgstr "Thiếu nước"
+
+msgid "Waterlogging"
+msgstr "Úng nước"
+
+msgid "in {n} days"
+msgstr "sau {n} ngày"
+
+msgid "{n} days ago"
+msgstr "{n} ngày trước"
+
+msgid "no forecast source"
+msgstr "Chưa có nguồn dự báo"
+
+msgid "pinned"
+msgstr "đã ghim"
+
+msgid "previewing"
+msgstr "xem trước"
+
+msgid "sensor %"
+msgstr "% cảm biến"
+
+msgid "Dots: sensor. Line and band: forecast median and the 10th to 90th percentile range. Dashed bars: forecast rain."
+msgstr "Chấm: cảm biến. Đường và dải: trung vị dự đoán và khoảng phân vị 10 đến 90. Cột nét đứt: mưa dự báo."
+
+msgid "Forecast tuned to this site"
+msgstr "Dự báo hiệu chỉnh theo hiện trường"
+
+msgid "Always on"
+msgstr "Luôn bật"
+
+msgid "Adjusted"
+msgstr "Đã hiệu chỉnh"
+
+msgid "Unadjusted"
+msgstr "Bản gốc"
+
+msgid "Unadjusted · comparing"
+msgstr "Bản gốc · đang so sánh"
+
+msgid "Unadjusted · no sensor to compare"
+msgstr "Bản gốc · không có cảm biến để so sánh"
+
+msgid "Unadjusted · no forecast source"
+msgstr "Bản gốc · chưa có nguồn dự báo"
+
+msgid "Unadjusted · off"
+msgstr "Bản gốc · tắt"
+
+msgid "Unadjusted · not checked yet"
+msgstr "Bản gốc · chưa kiểm tra"
+
+msgid "Adjustment is off. The original forecast is used."
+msgstr "Đã tắt hiệu chỉnh. Đang dùng dự báo gốc."
+
+msgid "Using the forecast adjusted to your own weather station: {names}."
+msgstr "Đang dùng dự báo đã hiệu chỉnh theo trạm thời tiết của bạn: {names}."
+
+msgid "Using the original forecast. It switches to the adjusted one by itself once about two weeks of comparison with your weather station show it is clearly better."
+msgstr "Hiện dùng dự báo gốc. Sau khoảng hai tuần so sánh với trạm thời tiết, nếu rõ ràng tốt hơn thì sẽ tự chuyển."
+
+msgid "{name} forecast is now adjusted"
+msgstr "Dự báo {name} đã được hiệu chỉnh theo hiện trường"
+
+msgid "{name} forecast is back to the original"
+msgstr "Dự báo {name} đã trở lại bản gốc"
+
+msgid "The adjustment changed {n} time(s) since you last looked."
+msgstr "Hiệu chỉnh đã thay đổi {n} lần kể từ lần xem trước."
+
+msgid "Got it"
+msgstr "Đã hiểu"
+
+msgid "Forecast adjustment details"
+msgstr "Chi tiết hiệu chỉnh dự báo"
+
+msgid "Average error {a} → {b} {unit}"
+msgstr "Sai số trung bình {a} → {b} {unit}"
+
+msgid "The weather station is one spot and the forecast is an area average, so they can differ a little (distance, height, shelter)."
+msgstr "Trạm thời tiết là một điểm còn dự báo là trung bình của cả ô, nên có thể hơi khác do khoảng cách, độ cao, che chắn."
+
+msgid "Experimental · for reference"
+msgstr "Tính năng thử nghiệm · chỉ để tham khảo"
+
+msgid "Daily high"
+msgstr "Cao nhất trong ngày"
+
+msgid "Daily low"
+msgstr "Thấp nhất trong ngày"
+
+msgid "Show details"
+msgstr "Xem chi tiết"
+
+msgid "Hide details"
+msgstr "Ẩn chi tiết"
+
+msgid "The latest forecast is out of date."
+msgstr "Dự báo mới nhất đã cũ."
+
+msgid "The twin is not matched to the sensors yet."
+msgstr "Chưa khớp được với giá trị cảm biến."
+
+msgid "This plot cannot be calculated with its current setup."
+msgstr "Với thiết lập hiện tại, chưa thể tính toán cho lô này."
+
+msgid "The twin run failed."
+msgstr "Quá trình tính toán gặp sự cố."
+
+msgid "The latest forecast is incomplete."
+msgstr "Dự báo mới nhất chưa đầy đủ."
+
+msgid "No forecast has been made for this plot yet."
+msgstr "Chưa có dự báo cho lô này."
+
+msgid "There is no forecast for this period."
+msgstr "Không có dự báo cho khoảng thời gian này."
+
+msgid "No forecast is available."
+msgstr "Không có dự báo nào để hiển thị."
+
+msgid "A forecast cannot be made right now"
+msgstr "Hiện chưa thể đưa ra dự báo"
+
+msgid "Soil water looks fine for the next week"
+msgstr "Độ ẩm đất có vẻ ổn trong tuần tới"
+
+msgid "Frost may come on the night of {d}"
+msgstr "Đêm {d} có thể có sương giá"
+
+msgid "Frost may come around {d}"
+msgstr "Khoảng {d} có thể có sương giá"
+
+msgid "Water looks likely to run short around {d}"
+msgstr "Khoảng {d} có vẻ sẽ thiếu nước"
+
+msgid "Water may run short around {d}"
+msgstr "Khoảng {d} có thể thiếu nước"
+
+msgid "The ground may get too wet around {d}"
+msgstr "Khoảng {d} đất có thể quá ướt"
+
+msgid "The ground could get wet around {d}"
+msgstr "Khoảng {d} đất có thể bị ướt"
+
+msgid "There is no sensor to check against, so it may differ from reality."
+msgstr "Không có cảm biến để đối chiếu nên có thể khác thực tế."
+
+msgid "Off lately"
+msgstr "Gần đây chưa khớp"
+
+msgid "Recent forecasts differed from the sensor. Treat this as a guide."
+msgstr "Các dự báo gần đây khác nhiều so với cảm biến. Chỉ nên tham khảo."
+
+msgid "Partly assumed"
+msgstr "Một phần là giá trị giả định"
+
+msgid "Some forecast inputs were missing and were filled in."
+msgstr "Một số dữ liệu dự báo bị thiếu và đã được điền bằng giá trị ước tính."
+
+msgid "Matching well"
+msgstr "Khớp tốt"
+
+msgid "Yesterday's forecast was close to the sensor."
+msgstr "Dự báo hôm qua gần với giá trị cảm biến."
+
+msgid "Short of water"
+msgstr "Thiếu nước"
+
+msgid "Getting dry"
+msgstr "Hơi khô"
+
+msgid "Moist"
+msgstr "Ẩm vừa"
+
+msgid "Soaked"
+msgstr "Ướt đẫm"
+
+msgid "This plot has no soil sensor, so the soil water is only a calculation."
+msgstr "Lô này không có cảm biến đất nên độ ẩm chỉ là giá trị tính toán."
+
+msgid "The low may drop to {t} °C on {d}."
+msgstr "Nhiệt độ thấp nhất ngày {d} có thể xuống {t} °C."
+
+msgid "The soil is slowly drying."
+msgstr "Đất đang khô dần."
+
+msgid "The soil is getting wetter."
+msgstr "Đất đang ẩm dần lên."
+
+msgid "The soil water is holding steady."
+msgstr "Độ ẩm đất giữ ổn định."
+
+msgid "About {mm} mm of rain is expected on {d}."
+msgstr "Dự kiến có mưa khoảng {mm} mm vào {d}."
+
+msgid "Only a little rain is expected in the next 7 days."
+msgstr "Trong 7 ngày tới chỉ có ít mưa."
+
+msgid "No rain is expected in the next 7 days."
+msgstr "Trong 7 ngày tới không có mưa."
+
+msgid "Soil (forecast) {v}"
+msgstr "Đất (dự báo) {v}"
+
+msgid "Soil {v}"
+msgstr "Đất {v}"
+
+msgid "Rain {mm} mm"
+msgstr "Mưa {mm} mm"
+
+msgid "No rain"
+msgstr "Không mưa"
+
+msgid "Rain forecast {mm} mm"
+msgstr "Dự báo mưa {mm} mm"
+
+msgid "No rain forecast"
+msgstr "Không có dự báo mưa"
+
+msgid "Temperature {lo}–{hi} °C"
+msgstr "Nhiệt độ {lo}–{hi} °C"
+
+msgid "Today"
+msgstr "Hôm nay"
+
+msgid "Below {n}"
+msgstr "Dưới {n}"
+
+msgid "Short of water below {n}"
+msgstr "Thiếu nước · dưới {n}"
+
+msgid "Plenty after rain {n}"
+msgstr "Đủ sau mưa {n}"
+
+msgid "Next 7 days: {mm} mm"
+msgstr "7 ngày tới: {mm} mm"
+
+msgid "Frost below 0 °C"
+msgstr "Dưới 0 °C có sương giá"
+
+msgid "Soil water and rain chart"
+msgstr "Biểu đồ độ ẩm đất và mưa"
+
+msgid "Set up this plot first"
+msgstr "Hãy thiết lập lô này trước"
+
+msgid "Choose the soil sensor and the rain source in Settings."
+msgstr "Hãy chọn cảm biến đất và nguồn dữ liệu mưa trong Cài đặt."
+
+msgid "Adjusted to the field"
+msgstr "Dự báo đã điều chỉnh theo thực địa"
+
+msgid "2 weeks"
+msgstr "2 tuần"
+
+msgid "A month"
+msgstr "1 tháng"
+
+msgid "Ahead only"
+msgstr "Chỉ sắp tới"
+
+msgid "Show temperature too"
+msgstr "Hiển thị cả nhiệt độ"
+
+msgid "Is the forecast reliable?"
+msgstr "Dự báo có đáng tin không?"
+
+msgid "Back to graph"
+msgstr "‹ Về biểu đồ"
+
+msgid "today"
+msgstr "hôm nay"
+
+
+msgid "Data Retention (days)"
+msgstr "Lưu trữ dữ liệu (ngày)"
+
+msgid "How long to keep forecast and Digital Twin records. Sensor readings are never deleted."
+msgstr "Thời gian giữ bản ghi dự báo và bản sao số. Số đo cảm biến không bao giờ bị xóa."
+
+msgid "Data retention must be between %(lo)s and %(hi)s days."
+msgstr "Thời gian lưu trữ dữ liệu phải từ %(lo)s đến %(hi)s ngày."
+
+msgid "Storage is running low (%(gb).1f GB left). A shorter retention frees space."
+msgstr "Dung lượng lưu trữ sắp hết (còn %(gb).1f GB). Rút ngắn thời gian lưu sẽ giải phóng dung lượng."
+
+msgid "A lot of forecast and twin data has piled up. A shorter retention reduces it."
+msgstr "Dữ liệu dự báo và bản sao số đã tích tụ nhiều. Rút ngắn thời gian lưu sẽ giảm bớt."
+
+msgid "Records of %(n)s deleted forecast input(s) stay until the retention ends."
+msgstr "Bản ghi của %(n)s đầu vào dự báo đã xóa vẫn được giữ đến hết thời gian lưu."
+
+msgid "Last checked %(when)s. All good."
+msgstr "Kiểm tra lần cuối %(when)s. Mọi thứ ổn."
+
+msgid "The Digital Twin results for this plot are kept until the retention ends. Erase them now too?"
+msgstr "Kết quả bản sao số của lô này được giữ đến hết thời gian lưu. Xóa luôn bây giờ?"
+
+msgid "3 °C hotter"
+msgstr "Nóng hơn 3 °C"
+
+msgid "Amount (mm)"
+msgstr "Lượng (mm)"
+
+msgid "Applies to the next 7 days of the forecast."
+msgstr "Áp dụng cho dự báo 7 ngày tới."
+
+msgid "Bars: dark = recorded, light = estimated from run time, outline = command only, dotted outline = assumed, hatched = planned."
+msgstr "Cột: đậm là ghi nhận thực tế, nhạt là ước tính từ thời gian chạy, viền là chỉ có lệnh, viền chấm là giả định, gạch chéo là kế hoạch sắp tới."
+
+msgid "Base forecast"
+msgstr "Dự báo cơ bản"
+
+msgid "By {d} the soil water is about the same as the base forecast."
+msgstr "Khoảng {d}, nước trong đất gần như bằng dự báo cơ bản."
+
+msgid "By {d} the soil water is about {v} higher than the base forecast."
+msgstr "Khoảng {d}, nước trong đất cao hơn dự báo cơ bản khoảng {v}."
+
+msgid "By {d} the soil water is about {v} lower than the base forecast."
+msgstr "Khoảng {d}, nước trong đất thấp hơn dự báo cơ bản khoảng {v}."
+
+msgid "CO2 feeding"
+msgstr "Bơm CO2"
+
+msgid "Calculate again"
+msgstr "Tính lại"
+
+msgid "Calculating..."
+msgstr "Đang tính..."
+
+msgid "Choose a day and an hour."
+msgstr "Hãy chọn ngày và giờ."
+
+msgid "Choose what to try."
+msgstr "Hãy chọn điều muốn thử."
+
+msgid "Could not save. Try again."
+msgstr "Không lưu được. Hãy thử lại."
+
+msgid "Delete for sure?"
+msgstr "Xóa thật chứ?"
+
+msgid "Effect not included"
+msgstr "Chưa tính hiệu quả"
+
+msgid "Enter the amount between 1 and 100 mm."
+msgstr "Nhập lượng từ 1 đến 100 mm."
+
+msgid "Enter the hours between 1 and 12."
+msgstr "Nhập số giờ từ 1 đến 12."
+
+msgid "Fitted to the sensor"
+msgstr "Khớp với cảm biến"
+
+msgid "Fogging"
+msgstr "Phun sương"
+
+msgid "Grow light"
+msgstr "Đèn bổ sung ánh sáng"
+
+msgid "If so: soil {v}"
+msgstr "Nếu vậy: đất {v}"
+
+msgid "Included"
+msgstr "Đã tính"
+
+msgid "Keep"
+msgstr "Giữ lại"
+
+msgid "Kept"
+msgstr "Đã giữ lại"
+
+msgid "No what-if yet. Try one below."
+msgstr "Chưa có giả định nào. Hãy thử ở bên dưới."
+
+msgid "Other devices"
+msgstr "Thiết bị khác"
+
+msgid "Out of date: the base forecast has changed."
+msgstr "Đã cũ: dự báo cơ bản đã đổi."
+
+msgid "Over how many hours"
+msgstr "Trong bao nhiêu giờ"
+
+msgid "Partly included"
+msgstr "Tính một phần"
+
+msgid "Sending..."
+msgstr "Đang gửi..."
+
+msgid "Shade screen"
+msgstr "Lưới che nắng"
+
+msgid "Show each device"
+msgstr "Hiện từng thiết bị"
+
+msgid "Show the past fitted to the sensor"
+msgstr "Hiện quá khứ đã khớp với cảm biến"
+
+msgid "The calculation failed."
+msgstr "Không tính được."
+
+msgid "The result has expired. Calculate again."
+msgstr "Kết quả đã hết hạn. Hãy tính lại."
+
+msgid "Thermal curtain"
+msgstr "Rèm giữ nhiệt"
+
+msgid "Try it"
+msgstr "Thử"
+
+msgid "Twice the rain"
+msgstr "Mưa gấp đôi"
+
+msgid "Waiting to be calculated..."
+msgstr "Đang chờ tính..."
+
+msgid "Water {mm} mm on {d}"
+msgstr "Tưới {mm} mm vào {d}"
+
+msgid "What do you want to try?"
+msgstr "Bạn muốn thử gì?"
+
+msgid "What if..."
+msgstr "Nếu như..."
+
+msgid "You can keep up to {n} what-ifs. Delete an old one first."
+msgstr "Chỉ giữ được tối đa {n} giả định. Hãy xóa cái cũ trước."
+
+msgid "{n} devices are not counted in the forecast yet."
+msgstr "{n} thiết bị chưa được tính vào dự báo."
+
+msgid "{n} devices are only partly counted in the forecast."
+msgstr "{n} thiết bị mới được tính một phần vào dự báo."
+
+msgid "{what} (if so) {v}"
+msgstr "{what} (nếu vậy) {v}"
+
+msgid "{what} (plan) {v}"
+msgstr "{what} (kế hoạch) {v}"
+
+msgid "Window opening"
+msgstr "Độ mở cửa"
+
+msgid "If it does not rain"
+msgstr "Nếu không có mưa"
+
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr ""

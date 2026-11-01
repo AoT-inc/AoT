@@ -24,6 +24,75 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
+#: attach 중첩 허용 깊이(배열 안의 배열·JSON 문자열 안의 JSON).
+ATTACH_DEPTH = 6
+
+
+def _slim_params(params, depth=0):
+    """감사 행에 넣을 인자 사본 — screen_action 의 attach(P1)는 base64 파일 본문이 최대
+    ~6.7 MB 라 그대로 두면 감사 테이블이 부푼다. 이름과 크기만 남기고 본문은 뗀다
+    (use_tool 의 `arguments` 안쪽도 본다). attach 가 배열(P5, 최대 8)이어도 원소마다 같다."""
+    if not isinstance(params, dict) or depth > 2:
+        return params
+
+    def brief(v):
+        return '<%d chars>' % len(v) if isinstance(v, str) and len(v) > 200 else v
+
+    def host_only(v):
+        # attach.url(P4)은 서명 토큰이 쿼리에 실리는 일이 흔하다 — 90일 보관되는 감사 행에는 호스트만 남긴다.
+        if not isinstance(v, str):
+            return v
+        try:
+            from urllib.parse import urlsplit
+            u = urlsplit(v.strip())
+            return ('%s://%s/…' % (u.scheme, u.hostname)) if u.scheme and u.hostname else '<url>'
+        except Exception:
+            return '<url>'
+    def slim_attach(att, level=0):
+        # 깊이 제한(ATTACH_DEPTH): 중첩 배열 900단계가 RecursionError 로 감사 행을 통째로 잃게 하지
+        # 않는다 — 넘으면 안전하게 잘라 기록한다.
+        if level > ATTACH_DEPTH:
+            return '<nested>'
+        if isinstance(att, str):
+            # 문자열 attach 도 parse_attach 가 받는다 — `https://…` 는 {url}, `{…}`·`[…]` 는 JSON.
+            # 서명 토큰이 쿼리째 남지 않게 객체와 같은 규칙으로 줄인다(P4 보안 리뷰).
+            raw = att.strip()
+            if raw.startswith(('{', '[')):
+                try:
+                    parsed = json.loads(raw)
+                except (ValueError, RecursionError):
+                    parsed = None
+                if isinstance(parsed, (dict, list)):
+                    return slim_attach(parsed, level + 1)
+                return '<json %d chars>' % len(att) if len(att) > 200 else att
+            elif '://' in raw[:16]:
+                return host_only(raw)
+            return brief(att)
+        if isinstance(att, (list, tuple)):
+            # P5 — attach 배열(과 JSON 배열 문자열)은 원소마다 같은 규칙: b64·text → 길이, url → 호스트.
+            return [slim_attach(one, level + 1) for one in att[:16]]
+        if isinstance(att, dict):
+            out = {}
+            for k, v in list(att.items())[:32]:
+                if k in ('b64', 'text'):
+                    out[k] = brief(v)
+                elif k == 'url':
+                    out[k] = host_only(v)
+                elif isinstance(v, (dict, list, tuple)):
+                    out[k] = '<nested>'
+                else:
+                    out[k] = v
+            return out
+        return brief(att)
+    out = dict(params)
+    att = params.get('attach')
+    if att is not None:
+        out['attach'] = slim_attach(att)
+    if isinstance(params.get('arguments'), dict):
+        out['arguments'] = _slim_params(params['arguments'], depth + 1)
+    return out
+
+
 def log_call(
     tool_name: str,
     params: dict | None = None,
@@ -46,7 +115,7 @@ def log_call(
                 timestamp=datetime.utcnow(),
                 agent_id=agent_id,
                 tool_name=tool_name,
-                params_json=json.dumps(params or {}, ensure_ascii=False),
+                params_json=json.dumps(_slim_params(params) or {}, ensure_ascii=False),
                 reason=reason,
                 permission=permission,
                 confirmation_status='n/a' if permission == 'read' else 'pending',
@@ -104,7 +173,7 @@ def record_call(
                 timestamp=datetime.utcnow(),
                 agent_id=agent_id,
                 tool_name=tool_name,
-                params_json=json.dumps(params or {}, ensure_ascii=False),
+                params_json=json.dumps(_slim_params(params) or {}, ensure_ascii=False),
                 reason=reason,
                 permission=permission,
                 confirmation_status=confirmation_status,
@@ -119,6 +188,29 @@ def record_call(
     except Exception:
         logger.exception('audit.record_call failed — tool=%s', tool_name)
         return ''
+
+
+def append_result_summary(unique_id: str, text: str, limit: int = 500) -> None:
+    """이미 쓴 행의 result_summary 뒤에 한 줄을 덧붙인다(` | ` 로 이어서, 전체 limit 자).
+
+    읽기 도구의 결과가 정해진 뒤에 일어나는 일(화면 따라가기)을 같은 행에 남기려는 것이다
+    — 새 행을 만들면 호출 수·품질 지표가 한 번 호출에 두 줄로 센다."""
+    if not unique_id or not text:
+        return
+    try:
+        from aot.databases.models import MCPAuditLog
+        from aot.config import AOT_DB_PATH
+        from aot.databases.utils import session_scope
+
+        with session_scope(AOT_DB_PATH) as sess:
+            row = sess.query(MCPAuditLog).filter(
+                MCPAuditLog.unique_id == unique_id).first()
+            if row:
+                head = row.result_summary or ''
+                row.result_summary = ('%s | %s' % (head, text) if head else text)[:limit]
+                sess.commit()
+    except Exception:
+        logger.exception('audit.append_result_summary failed')
 
 
 def update_status(

@@ -187,6 +187,11 @@
      토큰을 발행한다 — 그전까지 여기 고정값이라 53곳을 못 바꿨다. */
   --aot-border-light: #f0f0f0;
   --aot-border-form: #ced4da;
+  /* AI 카드(자막·수신함·뷰어)의 어두운 면과 그 짝 글자 (2026-10-20, 사용자 승인 — ui-guide §3-3).
+     settings/custom_ui 의 ai_surface_bg / ai_surface_fg 가 /custom.css 로 이 두 토큰을 발행한다.
+     기본값은 theme_defaults.json 과 반드시 일치시킬 것. 다크 테마도 이 쌍은 그대로다(둘 다 어두운 면 위의 밝은 글자). */
+  --aot-ai-surface-bg: #13261B;
+  --aot-ai-surface-fg: #FFFFFF;
   /* 2026-09-10: 부트스트랩 파랑(#80bdff) 이었다 — settings/custom_ui 밖의
      고정색이라 사용자가 못 바꿨다. 이미 검증된 입력 포커스 색(브랜드 딥그린)
      을 그대로 참조한다. */
@@ -479,6 +484,7 @@
   --aot-z-fixed-panel:    2000;    /* @kind other */ /* 고정 떠있는 툴 팔레트(geo 디자인 등) */
   --aot-z-navbar:         3000;    /* @kind other */ /* 상단 내비게이션 바 */
   --aot-z-overlay:        4000;    /* @kind other */ /* 전체화면 오버레이: 로딩·지도 풀스크린·갤러리 뷰어 */
+  --aot-z-ai-dock:        calc(var(--aot-z-overlay) + 1);   /* @kind other */ /* 하단 AI 창구 = 4001 — 지도 풀스크린(4000)에 가리지 않고, 모달 배경(5000) 아래 */
   --aot-z-modal-backdrop: 5000;    /* @kind other */ /* 모달 배경 */
   --aot-z-modal:          5100;    /* @kind other */ /* 다이얼로그 */
   --aot-z-modal-nested:   5200;    /* @kind other */ /* 모달 안에서 밖으로 튀어나오는 드롭다운/select */
@@ -486,6 +492,8 @@
   --aot-z-confirm-backdrop: 5900;  /* @kind other */ /* 전역 confirm 다이얼로그 배경(일반 모달 위) */
   --aot-z-confirm:        6000;    /* @kind other */ /* 전역 confirm 다이얼로그 */
   --aot-z-toast:          6500;    /* @kind other */ /* 토스트·알림 (모달 위) */
+  --aot-z-ai-caption:     6501;    /* @kind other */ /* AI 자막·수신함 (토스트 바로 위, 툴팁 아래) */
+  --aot-z-ai-viewer:      calc(var(--aot-z-ai-caption) + 1);   /* @kind other */ /* AI 카드 이미지·파일 뷰어 = 6502 (자막·수신함 위, 툴팁 아래) */
 
   /* ── 뷰포트 단위 — 화면 배율 보정 (2026-09-11) ─────────────────────────
      화면 배율이 CSS zoom 으로 걸리면(iPhone·iPad·컴퓨터) vw·vh·dvh 에도 배율이
@@ -507,6 +515,60 @@
   --aot-shadow-md: 0 4px 12px rgba(0,0,0,0.055);
   --aot-shadow-lg: 0 10px 25px rgba(0,0,0,0.06);
   --aot-shadow-modal: 0 5px 20px rgba(0,0,0,0.15);
+
+  /* ── AI 자막·수신함·뷰어 (2026-10-19 → P3 재설계 2026-10-20) ──────────────────────
+     외부 AI 가 보낸 글을 화면 아래 중앙에 잠깐 띄우는 자막과 수신함·파일 뷰어. 면은 어둡고 글자는 밝다:
+     --aot-ai-surface-bg / -fg (위 Section 1.5, settings/custom_ui 필드). 면은 알파 0.8 — **배경색에만**
+     걸고 글자는 불투명이다(opacity 가 아니라 color-mix 로 면 색만 옅게). 블러는 쓰지 않는다. 사용자 승인:
+     ui-guide §3-3 '투명도는 승인 사항' 표(2026-10-20). 여기에는 치수·모양·간격과 면 파생값을 둔다. */
+  --aot-ai-surface-alpha: 80%;
+  --aot-ai-surface-solid: var(--aot-ai-surface-bg);
+  --aot-ai-surface: color-mix(in srgb, var(--aot-ai-surface-bg) var(--aot-ai-surface-alpha), transparent);
+  /* 면 안쪽 구분(승인 예외 — 같은 짝 글자색의 14% / 28% 혼합): 코드·표 머리 바탕 / 표·구분 선. 새 색이 아니다. */
+  --aot-ai-tint: color-mix(in srgb, var(--aot-ai-surface-fg) 14%, transparent);
+  --aot-ai-rule: color-mix(in srgb, var(--aot-ai-surface-fg) 28%, transparent);
+  --aot-ai-caption-radius: var(--aot-radius-lg);   /* 말풍선(16px) — 면의 기본(20px)보다 한 단 작게, 대화 느낌 */
+  --aot-ai-caption-shadow: var(--aot-shadow-modal);
+  --aot-ai-caption-max-w: 640px;
+  --aot-ai-caption-gap: var(--aot-space-2);
+  /* 하단 AI 창구(#aot-ai-dock, P4): 자막 바로 아래 가운데. 자막·수신함은 창구 위(reserve)에 붙는다.
+     max-w 는 오른쪽 아래 AI 버튼(#ai-fab 56px + 여백 25px)과 왼쪽 같은 폭을 비운다 — 크기 토큰, 색 아님. */
+  --aot-ai-dock-bottom: calc(var(--aot-space-4) + env(safe-area-inset-bottom));
+  --aot-ai-dock-reserve: calc(var(--aot-ai-dock-bottom) + var(--aot-ai-touch) + var(--aot-space-2));
+  --aot-ai-dock-max-w: min(28rem, calc(100% - 11rem));
+  --aot-ai-set-max-w: min(28rem, calc(100% - var(--aot-space-6)));   /* 'AI 설정' 모달 폭 */
+
+  /* 간격 — AI 카드 전용(화면을 덜 가리도록 촘촘하다). 모두 사다리(--aot-space-*)를 가리킨다. */
+  --aot-ai-pad-x: var(--aot-space-3);          /* 카드 좌우 12px */
+  --aot-ai-pad-y: var(--aot-space-2);          /* 카드 위아래 8px */
+  --aot-ai-row-gap: var(--aot-space-1);        /* 카드 안 줄 사이 4px */
+  --aot-ai-inline-gap: var(--aot-space-2);     /* 아이콘·글자·칩 사이 8px */
+  --aot-ai-action-gap: var(--aot-space-3);     /* 결정 버튼 사이 12px (ui-guide §2-3) */
+  --aot-ai-btn-h: 1.75rem;                     /* 버튼의 눈에 보이는 높이 — 눌리는 영역은 아래 touch */
+  --aot-ai-touch: 2.75rem;                     /* 눌리는 영역 = 터치 표적 최소(ui-guide §3-1, 투명 패딩으로 채운다) */
+  --aot-ai-icon-size: 1.125em;                 /* 아이콘은 곁의 글자 크기를 따른다 */
+  --aot-ai-icon-stroke: 1.75;                  /* 24px 격자 위 선 굵기 — 모든 아이콘 같다 */
+
+  /* ── AI 카드 파일 칩·뷰어 (P1, 2026-10-19) ───────────────────────────
+     칩은 알약. 면은 뒤집힌 짝(글자색 면 + 면색 글자). 섬네일은 칩 안의 작은 블록. */
+  --aot-ai-chip-thumb: 28px;
+  --aot-ai-chip-h: 1.75rem;
+  /* 이미지 칩 = 큰 타일 (2026-10-20, 섬네일이 작아 식별 불가 피드백).
+     자막: 데스크톱 160x112 / 휴대폰(<768) 128x92. 수신함은 더 크게 200x140 / 휴대폰 160x112.
+     서버 섬네일(긴 변 320px)이 2배 해상도에서도 또렷한 한계가 가로 160. 접힌 휴대폰 자막은 28px 알약을 그대로 쓴다. */
+  --aot-ai-thumb-w: 160px;
+  --aot-ai-thumb-h: 112px;
+  --aot-ai-thumb-w-sm: 128px;
+  --aot-ai-thumb-h-sm: 92px;
+  --aot-ai-inbox-thumb-w: 200px;
+  --aot-ai-inbox-thumb-h: 140px;
+  --aot-ai-inbox-thumb-w-sm: 160px;
+  --aot-ai-inbox-thumb-h-sm: 112px;
+  --aot-ai-viewer-max-w: min(960px, calc(92 * var(--aot-vw)));
+
+  /* AI 카드 아티팩트(AI 가 만든 HTML 화면) 프레임 높이 (P2, 2026-10-19) — 크기 토큰 1개, 색 아님.
+     프레임은 높이를 안쪽 문서에 맞춰 늘리지 않는다(자동 크기 조정 메시지 없음) — 고정 높이에서 스크롤. */
+  --aot-ai-viewer-frame-h: min(calc(70 * var(--aot-vh)), 40rem);
 
   /* Additional shadow tokens for component-specific shadows */
   --aot-shadow-dropdown: 0 4px 12px rgba(0,0,0,0.1);

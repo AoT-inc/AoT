@@ -25,6 +25,7 @@
 - [device-tier.md](device-tier.md) — 복합장치(Device) 1급 엔티티 설계
 - [device-onboarding.md](device-onboarding.md) — 장치 온보딩: 목록에서 고르기를 폴백으로
 - [plc-modbus-integration.md](plc-modbus-integration.md) — PLC(Modbus TCP) 연동
+- [matter-controller.md](matter-controller.md) — Matter 컨트롤러: 기존 Matter 장치를 Multi-Admin으로 들여오기
 - [lorawan_power_reliability_plan.md](lorawan_power_reliability_plan.md) — LoRaWAN 밸브 제어: 배터리 절감과 명령 신뢰성
 - [battery_optimization_report.md](battery_optimization_report.md) — 모바일 배터리 최적화 보고
 
@@ -35,12 +36,14 @@
 - [measurement_range_plan.md](measurement_range_plan.md) — 측정값 안전·위험 범위
 - [timer-counter-integration-plan.md](timer-counter-integration-plan.md) — 타이머와 on/off 카운터 통합
 - [scheduler-process-separation.md](scheduler-process-separation.md) — 스케줄러 프로세스 분리
+- [digital-twin.md](digital-twin.md) — 디지털트윈 출력 계약: 상태 벡터·48h 분위수 궤적·유효기한·`env_twin` 저장(초안)
 
 ## AI·MCP
 
 - [ai-agent-loop.md](ai-agent-loop.md) — 단일 에이전트 루프 재설계
 - [ai-tool-architecture.md](ai-tool-architecture.md) — AI 도구 표면: 해소·질의·표면의 분리
 - [ai-library-redesign.md](ai-library-redesign.md) — AI 라이브러리(통합 지식 저장소) 재설계
+- [mcp-embedded-oauth.md](mcp-embedded-oauth.md) — MCP 내장 인가 서버: 중앙 서버 없이 claude.ai 커넥터 연결(초안)
 
 ## 시간
 

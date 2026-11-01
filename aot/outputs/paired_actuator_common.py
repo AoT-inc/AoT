@@ -29,6 +29,22 @@ PAIRED_ACTUATOR_OUTPUT_TYPES = frozenset({
     'actuator_paired_bus',
 })
 
+def is_self_positioning_output(output_type):
+    """A value output whose device positions itself (Matter window covering,
+    OUTPUT_INFORMATION['self_positioning']). The map draws it with the same
+    Close / Stop / Open buttons as a paired actuator: they send value 0, off and
+    value 100, which is exactly this output's contract. The output page keeps
+    its plain value controls — its 3-way card wires paired relay legs."""
+    if not output_type:
+        return False
+    try:
+        from aot.utils.outputs import parse_output_information
+        return bool(((parse_output_information() or {}).get(output_type) or {})
+                    .get('self_positioning'))
+    except Exception:
+        return False
+
+
 ACTUATOR_KIND_OPTIONS = [
     ('side_vent',       lazy_gettext('Side Vent')),
     ('roof_vent',       lazy_gettext('Roof Vent')),

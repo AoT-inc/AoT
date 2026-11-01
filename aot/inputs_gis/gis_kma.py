@@ -1,4 +1,5 @@
 # coding=utf-8
+import time
 from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg
 
@@ -53,6 +54,23 @@ INPUT_INFORMATION = {
             'channel_def': CHANNELS,
             'default': [0, 1, 2],
             'multiple': True
+        },
+        {
+            # 지도 위젯 기상 표현(강수·바람·시정 칸과 효과)의 데이터 출처로 쓸지.
+            'id': 'use_for_ambient',
+            'type': 'bool',
+            'default': True,
+            'name': 'Use as weather data source',
+            'required': False
+        },
+        {
+            # 이 입력의 기상 값이 관측 시각 기준으로 이보다 오래되면(초) 다음 출처로 넘긴다.
+            # 비워 두면 이 모듈의 기본값(get_ambient_max_age)을 쓴다.
+            'id': 'ambient_max_age',
+            'type': 'text',
+            'default': '',
+            'name': 'Weather data max age in seconds (blank = module default)',
+            'required': False
         }
     ],
     'dependencies_module': [],
@@ -84,6 +102,11 @@ def _to_float_or_none(v):
 
 def _parse_kma_csv(text):
     """sfc_nc_var.php CSV 응답을 파싱해 최신 행의 dict를 반환."""
+    return _parse_kma_csv_with_ts(text)[1]
+
+
+def _parse_kma_csv_with_ts(text):
+    """(최신 행의 KST 타임스탬프 'YYYYmmddHHMM' | None, 최신 행 dict | None)."""
     best_ts = None
     best_row = {}
     for line in text.strip().split('\n'):
@@ -110,7 +133,7 @@ def _parse_kma_csv(text):
         if best_ts is None or ts > best_ts:
             best_ts = ts
             best_row = row
-    return best_row if best_ts else None
+    return (best_ts, best_row) if best_ts else (None, None)
 
 
 class InputModule(AbstractGisInput):
@@ -200,19 +223,23 @@ class InputModule(AbstractGisInput):
                  'unit': info['options']['unit']}
                 for info in CHANNELS.values()]
 
-    def get_data_at_location(self, lat, lng, **kwargs):
+    def _fetch_latest(self, lat, lng, window_min, timeout=30, end=None):
+        """(KST 타임스탬프, 최신 행) — 키가 없거나 실패하면 (None, None).
+
+        ``end``: 이 시각(epoch 초)까지의 ``window_min`` 분 창을 읽는다(관측 이력). 없으면 지금까지."""
         import requests
         import datetime
 
         self.api_key = self.get_custom_option('api_key') or ''
         if not self.api_key:
             self.logger.warning(f"[KMA GIS] API Key missing for Input {self.unique_id}")
-            return None
+            return None, None
 
-        # kma_weather_500과 동일한 5분 윈도우 요청
         now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)  # KST (naive)
+        if end is not None:
+            now = datetime.datetime.utcfromtimestamp(float(end)) + datetime.timedelta(hours=9)
         tm2 = now.strftime('%Y%m%d%H%M')
-        tm1 = (now - datetime.timedelta(minutes=5)).strftime('%Y%m%d%H%M')
+        tm1 = (now - datetime.timedelta(minutes=window_min)).strftime('%Y%m%d%H%M')
 
         url = (
             'https://apihub.kma.go.kr/api/typ01/url/sfc_nc_var.php'
@@ -221,15 +248,79 @@ class InputModule(AbstractGisInput):
             f'&itv=5&help=0&authKey={self.api_key}'
         )
         try:
-            resp = requests.get(url, timeout=30)
+            resp = requests.get(url, timeout=timeout)
             resp.raise_for_status()
             if 'error' in resp.text[:200].lower():
                 self.logger.error(f"[KMA GIS] API error: {resp.text[:200]}")
-                return None
-            return _parse_kma_csv(resp.text)
+                return None, None
+            return _parse_kma_csv_with_ts(resp.text)
         except Exception as e:
-            self.logger.exception(f"[KMA GIS] Exception: {e}")
+            # 예외 문구에는 authKey 가 든 URL 이 실려 오므로 종류만 남긴다.
+            self.logger.error(f"[KMA GIS] request failed: {type(e).__name__}")
+            return None, None
+
+    def get_data_at_location(self, lat, lng, **kwargs):
+        # kma_weather_500과 동일한 5분 윈도우 요청
+        return self._fetch_latest(lat, lng, 5)[1]
+
+    def get_ambient_max_age(self):
+        # 5분 간격 관측이 보고되기까지 걸리는 시간을 넉넉히 본다.
+        return 1800
+
+    def get_ambient_values(self, lat, lng):
+        """지도 위젯 기상 표현용 표준 값. 관측소망 밖이면 KMA 가 빈 응답을 주므로 None 이 된다."""
+        # 위젯 응답을 오래 붙잡지 않는다 — 8초 안에 못 받으면 이번엔 건너뛴다.
+        ts, row = self._fetch_latest(lat, lng, 30, timeout=8)
+        return self._standard_values(ts, row)
+
+    @staticmethod
+    def _standard_values(ts, row):
+        """KMA 행 → 표준 키·단위의 값 + 관측 시각(epoch 초)."""
+        import datetime
+        if not row:
             return None
+        values = {}
+        if row.get('ta') is not None:
+            values['temp'] = row['ta']
+        if row.get('ws_10m') is not None:
+            values['wind_speed'] = row['ws_10m']
+        if row.get('wd_10m') is not None:
+            values['wind_dir'] = row['wd_10m'] % 360.0
+        if row.get('rn_15m') is not None:
+            # 15분 강수량(mm) → 시간당
+            values['precip'] = max(0.0, row['rn_15m']) * 4.0
+        if row.get('vs') is not None:
+            # vs 는 km (sfc_nc_var 실측: 맑은 낮 36~41)
+            values['visibility'] = row['vs']
+        at = None
+        try:
+            at = (datetime.datetime.strptime(ts, '%Y%m%d%H%M') - datetime.timedelta(hours=9)
+                  ).replace(tzinfo=datetime.timezone.utc).timestamp()
+        except (TypeError, ValueError):
+            at = None
+        return {'values': values, 'at': at}
+
+    # ── 관측 이력 표준 메서드 ──
+    # 관측소망 API 가 임의의 시각 창을 읽게 해 주므로 슬라이더의 과거 시각을 같은 경로로 답한다.
+    _HISTORY_SPAN_S = 3 * 86400
+
+    def get_ambient_history_range(self):
+        if not (self.get_custom_option('api_key') or ''):
+            return None
+        now = time.time()
+        return {'start': now - self._HISTORY_SPAN_S, 'end': now, 'step_s': 600}
+
+    def get_ambient_history(self, lat, lng, t):
+        """시각 ``t`` 직전 30분 창의 가장 최근 관측. 이력 범위 밖이거나 관측소망 밖이면 None."""
+        try:
+            t = float(t)
+        except (TypeError, ValueError):
+            return None
+        now = time.time()
+        if t > now or now - t > self._HISTORY_SPAN_S:
+            return None
+        ts, row = self._fetch_latest(lat, lng, 30, timeout=8, end=t)
+        return self._standard_values(ts, row)
 
     def get_ai_reading(self, lat, lng):
         labels = {

@@ -88,7 +88,7 @@
                 </div>
                 {% endif %}
 
-                <div class="note-card-body" id="body-{{each_note.unique_id}}">{{ each_note.note }}</div>
+                <div class="note-card-body" id="body-{{each_note.unique_id}}" data-media-render>{{ each_note.note }}</div>
             </div>
 
             <div class="text-center pb-3 note-more-ctrl" id="ctrl-{{each_note.unique_id}}" style="display:none;">

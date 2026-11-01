@@ -1009,9 +1009,12 @@
     <table class="table table-sm aot-journal-table aot-journal-runtime">
       {#- 물량 열은 **채워질 때만** 낸다(단계 절과 같은 규칙). -#}
       {% set has_water = b.control | selectattr('water') | list %}
+      {#- 노즐 설계값 열은 공급 한계를 푼 장치가 있을 때만 낸다 — 공급 부품이 없는 구획의 표는 그대로다. -#}
+      {% set has_design = b.control | selectattr('water.design_litres', 'defined') | list %}
       <thead><tr>
         <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th>
         {% if has_water %}<th>{{ _('Water') }}</th>{% endif %}
+        {% if has_design %}<th>{{ _('Design') }}</th>{% endif %}
       </tr></thead>
       <tbody>
         {% for c in b.control %}
@@ -1025,9 +1028,14 @@
             {% if c.water %}
               {{ c.water.litres }} L
               <span class="text-muted small">({{ _('estimated') }}{% if c.water.share < 1 %}, {{ (c.water.share * 100) | round | int }}%{% endif %})</span>
+              {% if c.water.mm is defined and c.water.mm is not none %}<span class="text-muted small">{{ c.water.mm }} mm</span>{% endif %}
+              {% if c.water.delivered_ratio is defined and c.water.delivered_ratio < 1 %}
+              <div class="text-muted small">{{ _('Supply limited') }} {{ (c.water.delivered_ratio * 100) | round | int }}%</div>
+              {% endif %}
             {% endif %}
           </td>
           {% endif %}
+          {% if has_design %}<td>{% if c.water and c.water.design_litres is defined %}{{ c.water.design_litres }} L{% endif %}</td>{% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -1528,9 +1536,11 @@
           열이 통째로 비는데, 빈 열은 "계산이 안 된다" 로 읽힌다(실제로 그
           보고를 받았다). 없는 이유는 문서 안내가 한 번 말한다. -#}
       {% set has_water = sec.control | selectattr('water') | list %}
+      {% set has_design = sec.control | selectattr('water.design_litres', 'defined') | list %}
       <thead><tr>
         <th>{{ _('Device') }}</th><th>{{ _('Runtime') }}</th>
         {% if has_water %}<th>{{ _('Water') }}</th>{% endif %}
+        {% if has_design %}<th>{{ _('Design') }}</th>{% endif %}
       </tr></thead>
       <tbody>
         {% for c in sec.control %}
@@ -1540,9 +1550,14 @@
           {% if has_water %}
           <td>
             {% if c.water %}{{ c.water.litres }} L
-            <span class="text-muted small">({{ _('estimated') }})</span>{% endif %}
+            <span class="text-muted small">({{ _('estimated') }})</span>
+            {% if c.water.mm is defined and c.water.mm is not none %}<span class="text-muted small">{{ c.water.mm }} mm</span>{% endif %}
+            {% if c.water.delivered_ratio is defined and c.water.delivered_ratio < 1 %}
+            <div class="text-muted small">{{ _('Supply limited') }} {{ (c.water.delivered_ratio * 100) | round | int }}%</div>
+            {% endif %}{% endif %}
           </td>
           {% endif %}
+          {% if has_design %}<td>{% if c.water and c.water.design_litres is defined %}{{ c.water.design_litres }} L{% endif %}</td>{% endif %}
         </tr>
         {% endfor %}
       </tbody>

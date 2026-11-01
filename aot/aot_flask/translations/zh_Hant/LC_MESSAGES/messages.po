@@ -31105,3 +31105,395 @@ msgstr ""
 #: aot_flask/templates/settings/general.html:658
 msgid "Pass"
 msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "On-site observation"
+msgstr "現場觀測"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Precip"
+msgstr "降水"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Wind dir"
+msgstr "風向"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Risk"
+msgstr "風險"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observed"
+msgstr "觀測"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observation delayed"
+msgstr "觀測延遲"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Freeze"
+msgstr "結冰"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Frost"
+msgstr "霜凍"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heat"
+msgstr "高溫"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Strong wind"
+msgstr "強風"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heavy rain"
+msgstr "豪雨"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Sunrise / sunset glow"
+msgstr "日出／日落時分"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Twilight"
+msgstr "暮光"
+
+#: widgets/AoT_map.py
+msgid "Auto (by sun position)"
+msgstr "自動（依太陽位置）"
+
+#: widgets/AoT_map.py
+msgid "Always day"
+msgstr "一律白天"
+
+#: widgets/AoT_map.py
+msgid "Always night"
+msgstr "一律夜晚"
+
+#: widgets/AoT_map.py
+msgid "Day / Night Appearance"
+msgstr "晝夜外觀"
+
+#: widgets/AoT_map.py
+msgid "Darkens the base map at night and lights 3D models from the sun's position. Also fills the measurement dock with weather values (rain, wind, cloud, visibility, risk) and shows a day/night icon in the time dock. Off turns all of this off."
+msgstr "夜間調暗底圖，並依太陽位置為3D模型打光。同時在測量值列顯示天氣數值（降水、風、雲量、能見度、風險），並在時間列顯示晝夜圖示。選擇關閉將全部停用。"
+
+#: widgets/AoT_map.py
+msgid "Weather First in Measurement Dock"
+msgstr "測量值列天氣優先"
+
+#: widgets/AoT_map.py
+msgid "Puts weather values at the left of the measurement dock. A value you also picked from a field device is merged into it and marked with a pin. Turn off to keep the dock exactly as you configured it."
+msgstr "將天氣數值放在測量值列左側。你從現場裝置選擇的同類項目會合併到這裡並標上位置圖釘。關閉後，測量值列維持你設定的樣子。"
+
+#: widgets/AoT_map.py
+msgid "Auto-adjust Overlay Opacity"
+msgstr "自動調整疊加層透明度"
+
+#: widgets/AoT_map.py
+msgid "Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, and their opacity is lowered automatically so the shapes stay visible. Turn off to go back to the old order: weather layers sit below the shapes and use each layer's own opacity as is."
+msgstr "天氣疊加層（雲、雷達、風）繪製在圖形與3D模型之上，並自動降低透明度，使圖形保持可見。關閉則恢復舊順序：天氣圖層位於圖形之下，並直接使用各圖層自己的不透明度。"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Cloud cover"
+msgstr "雲量"
+
+msgid "Weather Effects"
+msgstr "天氣效果"
+
+msgid "Subtle"
+msgstr "柔和"
+
+msgid "Vivid"
+msgstr "鮮明"
+
+msgid "Draws the current weather over the map from observed values only, even when no weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow (by precipitation) and fog (by visibility). Effects are dimmer over facilities. They pause when the map is off-screen or when reduced motion is requested."
+msgstr "即使沒有開啟任何天氣圖層，也僅根據觀測值在地圖上繪製目前天氣：雲影（依雲量）、風向流線、雨或雪（依降水量）和霧（依能見度）。在設施上方效果會變淡；地圖不在螢幕內或系統開啟「減少動態效果」時會暫停。"
+
+msgid "Show Weather Layers Automatically"
+msgstr "自動顯示天氣圖層"
+
+msgid "When it rains, clouds cover the sky or the wind is strong, turns on the matching weather layer you registered in this widget (precipitation, cloud or wind) on screen only. Your saved layer selection is not changed, and a layer you turn off yourself stays off until the page is reloaded. Thresholds are set on the server."
+msgstr "當出現降雨、雲量大或風力強等情況時，僅在螢幕上自動開啟您在此小工具中註冊的對應天氣圖層（降水、雲或風）。已儲存的圖層選擇不會改變，您手動關閉的圖層在重新載入頁面之前不會再被自動開啟。判定條件的門檻由伺服器設定。"
+
+msgid "Field devices first"
+msgstr "優先現場裝置"
+
+msgid "Weather inputs first"
+msgstr "優先氣象輸入"
+
+msgid "Weather Value Source Order"
+msgstr "氣象資料來源順序"
+
+msgid "Weather values come from the weather stations you assigned to the site (field devices) and from the weather inputs registered in the map layers, even when their layer is off. Choose which one is used first; each value falls back to the other when it is missing or too old. With neither, no weather cells or effects are shown."
+msgstr "氣象資料來自您在地塊中指定為氣象站的裝置（現場裝置），以及地圖圖層中已登錄的氣象輸入，即使其圖層已關閉也會使用。請選擇優先使用哪一個；某個數值缺漏或過舊時會改用另一個。兩者都沒有時，不顯示氣象格和效果。"
+
+msgid "Weather Value Max Age (Seconds)"
+msgstr "氣象資料最大延遲（秒）"
+
+msgid "A field device value older than this is skipped in favor of the next source."
+msgstr "現場裝置的數值超過此時間則略過，改用下一個來源。"
+
+msgid "Risk: Wind Speed (m/s)"
+msgstr "風險：風速（m/s）"
+
+msgid "Shows a risk in the weather cells when the current wind speed reaches this value."
+msgstr "目前風速達到該值時，在氣象格中顯示風險。"
+
+msgid "Risk: Precipitation (mm/h)"
+msgstr "風險：降水量（mm/h）"
+
+msgid "Shows a risk when the current precipitation reaches this value."
+msgstr "目前降水量達到該值時顯示風險。"
+
+msgid "Risk: Low Temperature (°C)"
+msgstr "風險：低溫（°C）"
+
+msgid "Shows a frost risk when the current temperature falls to this value or below."
+msgstr "目前氣溫降至該值或以下時顯示霜凍風險。"
+
+msgid "Risk: High Temperature (°C)"
+msgstr "風險：高溫（°C）"
+
+msgid "Shows a heat risk when the current temperature reaches this value or above."
+msgstr "目前氣溫達到或超過該值時顯示高溫風險。"
+
+msgid "Weather Effects Minimum Zoom"
+msgstr "天氣效果最小縮放"
+
+msgid "Zoomed out beyond this level, the weather effects and the layers turned on automatically fade out over one zoom level, because one observation spread over a wide area is misleading. Layers you turn on yourself, the dock values and the day/night correction are not affected. 0 shows them at every zoom."
+msgstr "縮小到此級別以下時，天氣效果與自動開啟的圖層會在1級縮放內逐漸消失，因為把一個觀測值鋪滿大範圍會產生錯誤的畫面。手動開啟的圖層、面板數值與日夜校正不受影響。0 表示任何縮放級別都顯示。"
+
+msgid "Temperature Tint"
+msgstr "氣溫色調"
+
+msgid "Colors the temperature value in the dock blue when cold and red when hot, and adds a very faint tint to the base map (never over shapes or 3D models)."
+msgstr "面板中的氣溫值冷時顯示藍色、熱時顯示紅色，並為底圖加上極淡的色調（不會覆蓋圖形或3D模型）。"
+
+msgid "Tint: Neutral From (°C)"
+msgstr "色調：正常起點（°C）"
+
+msgid "Below this temperature the cold tint starts; it is strongest at the frost risk temperature."
+msgstr "低於此氣溫開始出現冷色調，在霜凍風險氣溫時最濃。"
+
+msgid "Tint: Neutral Up To (°C)"
+msgstr "色調：正常上限（°C）"
+
+msgid "Above this temperature the hot tint starts; it is strongest at the heat risk temperature."
+msgstr "高於此氣溫開始出現暖色調，在高溫風險氣溫時最濃。"
+
+msgid "North wind"
+msgstr "北風"
+
+msgid "North-northeast wind"
+msgstr "北北東風"
+
+msgid "Northeast wind"
+msgstr "東北風"
+
+msgid "East-northeast wind"
+msgstr "東北東風"
+
+msgid "East wind"
+msgstr "東風"
+
+msgid "East-southeast wind"
+msgstr "東南東風"
+
+msgid "Southeast wind"
+msgstr "東南風"
+
+msgid "South-southeast wind"
+msgstr "南南東風"
+
+msgid "South wind"
+msgstr "南風"
+
+msgid "South-southwest wind"
+msgstr "南南西風"
+
+msgid "Southwest wind"
+msgstr "西南風"
+
+msgid "West-southwest wind"
+msgstr "西南西風"
+
+msgid "West wind"
+msgstr "西風"
+
+msgid "West-northwest wind"
+msgstr "西北西風"
+
+msgid "Northwest wind"
+msgstr "西北風"
+
+msgid "North-northwest wind"
+msgstr "北北西風"
+
+msgid "Calm"
+msgstr "靜風"
+
+msgid "Direction the wind blows from"
+msgstr "風的來向"
+
+msgid "Play"
+msgstr "播放"
+
+msgid "Now"
+msgstr "現在"
+
+msgid "Return to the current time"
+msgstr "返回目前時間"
+
+msgid "Time slider"
+msgstr "時間滑桿"
+
+msgid "+{n}d"
+msgstr "+{n}天"
+
+msgid "Show forecast up to {n} days"
+msgstr "最多查看 {n} 天的預報"
+
+msgid "Map layers"
+msgstr "地圖圖層"
+
+msgid "Day / night"
+msgstr "晝 / 夜"
+
+msgid "Out of range"
+msgstr "超出範圍"
+
+msgid "Low confidence"
+msgstr "可信度低"
+
+msgid "Reference only"
+msgstr "僅供參考"
+
+msgid "Recorded"
+msgstr "記錄"
+
+msgid "Forecast values for the selected time"
+msgstr "所選時間的預報值"
+
+msgid "Recorded values for the selected time"
+msgstr "所選時間的記錄值"
+
+msgid "Show Time Slider"
+msgstr "顯示時間滑桿"
+
+msgid "Adds a slider under the time dock to look at the map at another time: radar frames of time-enabled layers, forecast or recorded weather values, and day / night. Needs \"Show Local Time\". Drag it back to \"Now\" to return to live values."
+msgstr "在時間列下方加入滑桿，以查看地圖在其他時間的樣子：支援時間的圖層的雷達影格、預報或已記錄的天氣值，以及晝夜。需要開啟「顯示當地時間」。拖回「現在」即可恢復即時數值。"
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr ""
+
+msgid "Turn devices and functions on and off."
+msgstr ""
+
+msgid "Change settings, plots and records."
+msgstr ""
+
+msgid "Read"
+msgstr ""
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr ""
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr ""
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr ""
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr ""
+
+msgid "That connection was not found."
+msgstr ""
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr ""
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr ""
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr ""
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr ""
+
+msgid "Allow AI access"
+msgstr ""
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr ""
+
+msgid "Signed in as %(user)s."
+msgstr ""
+
+msgid "What it may do"
+msgstr ""
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr ""
+
+msgid "Deny"
+msgstr ""
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr ""
+
+msgid "OAuth Authentication"
+msgstr ""
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr ""
+
+msgid "Token Issuer"
+msgstr ""
+
+msgid "Central (AoT Central Authentication)"
+msgstr ""
+
+msgid "This AoT (built in)"
+msgstr ""
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr ""
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr ""
+
+msgid "Before You Turn This On"
+msgstr ""
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr ""
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr ""
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr ""
+
+msgid "Accepted Redirect Addresses"
+msgstr ""
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr ""
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr ""
+
+msgid "My Connected AI Apps"
+msgstr ""
+
+msgid "last used"
+msgstr ""
+
+msgid "No AI app is connected with your account yet."
+msgstr ""
+
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr ""

@@ -130,6 +130,10 @@ def _parse_output_information_cached(exclude_custom, custom_only, locale):
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'on_state_internally_handled')
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'no_run')
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'output_types')
+            # Value outputs that drive a device which positions itself (a
+            # Matter window covering): the environment coordinator sends 0 %
+            # as a position, not as output_off (= Stop). dispatch_adapters.
+            dict_outputs = dict_has_value(dict_outputs, output_custom, 'self_positioning')
 
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'execute_at_creation')
             dict_outputs = dict_has_value(dict_outputs, output_custom, 'execute_at_modification')

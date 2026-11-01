@@ -43,9 +43,12 @@
 | Remote AoT Server | 収集用の入力（`AoT: Remote AoT: Measurements`）とオン/オフ制御用の出力（`Remote AoT Output: On/Off`） | リモートホスト（ポートを含めてもよい）、リモートAPIキー、プロトコル（HTTPS/HTTP）、TLS証明書の検証、リクエストタイムアウト |
 | Modbus PLC (Generic) | Modbus TCPの入力とModbus TCPコイルの出力 | ホスト、ポート（既定は502）、ユニット/スレーブID、タイムアウト、再試行回数 |
 | AoT-C (Solar 12V Relay Node) | ChirpStack MQTTのテレメトリ入力とChirpStackダウンリンクの出力 | DevEUI、MQTTブローカーのホスト/ポート/認証情報/TLS、ChirpStack gRPCサーバーとAPIキー、参加させる既存のLoRaWANクラススケジューラー |
+| Matter（実験的） | センサー入力と、制御できるエンドポイント(スイッチ・調光・カーテン)ごとの出力。デバイスが報告する内容から自動で埋められます | なし — **管理 → システム管理 → Matter** からのみ作成されます([Matter](Matter.md)参照) |
 | Custom (no fixed type) | 何も作成されません — 空のコンテナです | なし。既存の入力・出力・デバイスを自分でアタッチします。 |
 
 AoT-Cの種類は、**既存の** LoRaWANクラススケジューラーに参加する形をとり、新規にスケジューラーを作ることはありません。これは、複数のノードで1つのスケジューラーを共有するためです。
+
+Matterの種類は、このページのドロップダウンからは追加できません。実際のデバイスが先にAoTのMatterファブリックに参加している必要があるため、デバイスページは追加を拒否します。Matterデバイスは **管理 → システム管理 → Matter** でペアリングコードを使って追加してください。AoTデバイスは自動で作成されます。[Matter](Matter.md)を参照してください。
 
 ## デバイス一覧 { #device-list }
 

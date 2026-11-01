@@ -111,6 +111,30 @@ Publish a value to an MQTT server.
 
 ## Built-In Outputs (Devices)
 
+### Dimmer: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: PWM
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Dim the light or plug endpoints of a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A duty cycle of 0 switches it off; any other duty cycle sets the level and switches it on. The state shown is what the device reports.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>A name for this channel</td></tr><tr><td>エンドポイント</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number of this dimmer on the device</td></tr><tr><td>Transition (seconds)</td><td>Decimal</td><td>How long the device takes to reach a new level. 0 = as fast as it can</td></tr></tbody></table>
+
+### Curtain / Shade: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: Value
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Move a Matter curtain, shade, blind or motorised vent on the AoT Matter fabric to a position. 100 is fully open (retracted) and 0 fully closed (deployed), as for other AoT position actuators. Off stops the motor. The device reports its own position, which is shown here and used by the environment coordinator.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>A name for this channel</td></tr><tr><td>エンドポイント</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number of this covering on the device</td></tr></tbody></table>
+
 ### On/Off: ChirpStack gRPC
 
 - Interfaces: API
@@ -345,6 +369,19 @@ This output controls the the Kasa WiFi Light Bulbs, including the KL125, KL130, 
 
 Controls the 16 channels of the MCP23017.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>他と区別するための名前</td></tr><tr><td>起動状態</td><td>Select</td><td>Set the state of the GPIO when AoT starts</td></tr><tr><td>シャットダウン状態</td><td>Select</td><td>Set the state of the GPIO when AoT shuts down</td></tr><tr><td>オン状態</td><td>Select(Options: [<strong>HIGH</strong> | LOW] (Default in <strong>bold</strong>)</td><td>The state of the GPIO that corresponds to an On state</td></tr><tr><td>起動時に関数をトリガー</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>電流 (アンペア)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+
+### オン オフ: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: On/Off
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Switch the On/Off endpoints of a Matter device on the AoT Matter fabric (plugs, relays, lights). Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A command counts as done when the device itself reports the new state.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td>コマンドタイムアウト（秒）</td><td>Text
+- Default Value: 5</td><td>デバイスからの応答を待つ間、指示した状態を仮に保持する時間です（0 = 即時）。無線・リモートのデバイスには想定される応答遅延を設定してください。有線のデバイスは0のままで構いません。</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>名前</td><td>Text</td><td>A name for this channel</td></tr><tr><td>エンドポイント</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number of this switch on the device</td></tr><tr><td>起動状態</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the channel state when AoT starts. "Do Nothing" leaves the device as it is</td></tr><tr><td>シャットダウン状態</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>AoT の終了時にチャンネルの状態を設定します</td></tr><tr><td>起動時に関数をトリガー</td><td>Boolean</td><td>起動時にチャンネルが切り替わったときに関数を実行するかどうか</td></tr><tr><td>強制コマンド</td><td>Boolean</td><td>指示があれば現在の状態に関係なくコマンドを常に送信する</td></tr><tr><td>電流 (アンペア)</td><td>Decimal</td><td>制御対象デバイスの消費電流</td></tr></tbody></table>
 
 ### オン オフ: Modbus TCP Coil (PLC)
 

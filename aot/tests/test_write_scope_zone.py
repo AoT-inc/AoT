@@ -26,7 +26,8 @@ from aot.databases.models.user_group import (LEVEL_OPERATE,
                                              RESOURCE_GEO_FACILITY,
                                              RESOURCE_GEO_MAP)
 from aot.tests.test_ai_requester_write_guard import _svc
-from aot.tests.test_mcp_record_write_guard import _NOTE_MARK, _PREFIX
+from aot.tests.test_mcp_record_write_guard import (_AGENT, _NOTE_MARK,
+                                                    _PREFIX)
 from aot.tests.test_write_scope_entry_points import _Entry, _sched_mod
 from aot.tests.test_write_scope_enforcement import _sched, _svc_tools
 
@@ -245,7 +246,7 @@ class TestExternalMcp(_Zone):
         args = self._sched_args(target_id=self.zone)
         row = MCPConfirmation(unique_id=str(uuid.uuid4()), tool_name='add_schedule',
                               params_json=gate._canonical_params(args),
-                              agent_id='user:test', status='approved',
+                              agent_id=_AGENT, status='approved',
                               user_id=self.user_uuids['Editor'])
         row.expires_at = datetime.utcnow() + timedelta(minutes=5)
         db.session.add(row)

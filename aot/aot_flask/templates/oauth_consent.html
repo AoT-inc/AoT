@@ -1,0 +1,75 @@
+<!doctype html>
+{#- 내장 인가 서버의 동의 화면(docs/design/mcp-embedded-oauth.md §5). 레이아웃을 상속하지 않는 독립 문서(로그인과 같은 틀).
+    이 AoT 의 이름을 가장 크게 — 사용자가 "어느 AoT 에 무엇을 허락하는지" 를 한눈에 알아야 한다.
+    클라이언트 이름은 클라이언트가 스스로 적은 값이라 검증된 이름처럼 보이지 않게 따로 적는다. -#}
+<html lang="{{ current_locale | default(session.get('language', 'en')) }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/favicon.png">
+  <title>{{ farm_name }} - {{ _('Allow AI access') }}</title>
+
+  <link href="{{ url_for('static', filename='css/vendor-layer.css') }}" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/aot-theme-variables.css') }}" rel="stylesheet">
+  {% set effective_theme = current_user.theme if current_user.is_authenticated and current_user.theme else '/static/css/bootstrap-4-themes/aot.css' %}
+  {% if effective_theme in dark_themes %}
+  <link href="{{ url_for('static', filename='css/custom-dark.css') }}" rel="stylesheet">
+  {% else %}
+  <link href="{{ url_for('static', filename='css/custom-light.css') }}" rel="stylesheet">
+  {% endif %}
+  <link href="{{ effective_theme }}" rel="stylesheet">
+  <link href="/custom.css" rel="stylesheet">
+  <style>
+    body { margin: 0; background-color: var(--aot-surface-body); color: var(--aot-color-text-primary, #13261b); }
+    .consent { max-width: 28rem; margin: 0 auto; padding: 2rem 1rem; }
+    .consent-farm { font-size: 1.75rem; font-weight: 700; word-break: break-word; margin: 0; }
+    .consent-host { opacity: .7; word-break: break-all; margin-bottom: 1.25rem; }
+    .consent-client { margin: 1rem 0; }
+    .consent-scope { display: flex; gap: .6rem; align-items: flex-start; margin: .6rem 0; }
+    .consent-scope input { margin-top: .3rem; }
+    .consent-scope small { display: block; opacity: .7; }
+    .consent-actions { display: flex; gap: .6rem; margin-top: 1.5rem; }
+    .consent-actions .btn { flex: 1; }
+  </style>
+</head>
+<body>
+<div class="consent">
+{% if error_message %}
+  <h1 class="consent-farm">{{ farm_name }}</h1>
+  <div class="consent-host">{{ issuer_host }}</div>
+  <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+{% else %}
+  <h1 class="consent-farm">{{ farm_name }}</h1>
+  <div class="consent-host">{{ issuer_host }}</div>
+
+  <p class="consent-client">
+    {{ _('An AI app that calls itself "%(client)s" wants to use your account on this AoT.', client=client_name) }}
+    <br><small>{{ _('Signed in as %(user)s.', user=user_name) }}</small>
+  </p>
+
+  <form method="POST" action="/authorize">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for key, value in hidden.items() %}
+    <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endfor %}
+
+    <p><strong>{{ _('What it may do') }}</strong></p>
+    {% for item in scopes %}
+    <label class="consent-scope">
+      <input type="checkbox" name="grant" value="{{ item.name }}"
+             {% if item.checked %}checked{% endif %} {% if item.disabled %}disabled{% endif %}>
+      <span>{{ item.label }}<small>{{ item.help }}</small></span>
+    </label>
+    {% endfor %}
+    <p><small>{{ _('What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings.') }}</small></p>
+
+    <div class="consent-actions">
+      <button class="btn btn-outline-secondary" type="submit" name="decision" value="deny">{{ _('Deny') }}</button>
+      <button class="btn btn-primary" type="submit" name="decision" value="allow">{{ _('Allow') }}</button>
+    </div>
+  </form>
+{% endif %}
+</div>
+</body>
+</html>

@@ -6,7 +6,7 @@ _helpers_mixin.py — HelpersMixin: small per-cycle helpers.
 import json
 import time
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 from aot.databases.models import Actions
 from aot.functions.utils.env_control import (
@@ -15,6 +15,13 @@ from aot.functions.utils.env_control import (
     REASON_SAFETY_PRE_GATE,
     write_decision_log,
 )
+from aot.functions.utils.env_control import humid_regime as HR
+from aot.functions.utils.env_control.log_channels import REASON_FROST_PROTECT
+from aot.functions.utils.env_control import psychro
+from aot.functions.utils.env_control.dispatch_adapters import (
+    PulsedDoseAdapter, screen_partial_ok)
+from aot.functions.utils.env_control import pulse_fog as _PF
+from aot.functions.utils.env_control import sensor_status as _sensor_status
 from aot.functions.utils.env_control.types import SituationReport
 from aot.utils import measurement_freshness as _freshness
 from aot.utils.database import db_retrieve_table_daemon
@@ -55,8 +62,10 @@ def smooth_vpd(prev: Optional[float], raw: float,
 # 다시 계산한다** — 둘을 따로 거르면 VPD 와 T/RH 가 서로 다른 순간을 말한다.
 # snap 은 "실제 전이" 로 보고 즉시 따라붙는 폭이자 지연 상한이다: 온도 눈금
 # 0.1 °C·습도 눈금 1 % 의 디더는 누르고, 그보다 확실히 큰 변화는 바로 반영한다.
-# ⚠ **안전 판단은 원값을 쓴다.** 게이트(폭염·한파는 공간 극값)와 하드 한계는
+# ⚠ **안전 판단은 원값을 쓴다.** 게이트(한파는 공간 극값)와 하드 한계는
 #   `T_raw`/`RH_raw` 를 본다 — 보호를 필터 지연만큼 늦출 이유가 없다.
+#   극한 고온 보호(`heat_protect`) 단계 1 은 예외로 **필터된 평균** `T` 를 본다 —
+#   30 °C 대의 문턱을 극값이나 원값으로 재면 너무 잦게 선다(단계 2 는 하드 한계라 원값).
 # @manual ai/env-control#l2-situationreport-evaluation
 _T_EMA_SNAP  = 0.5      # °C
 _RH_EMA_SNAP = 3.0      # %
@@ -68,24 +77,40 @@ _RH_EMA_SNAP = 3.0      # %
 # ─────────────────────────────────────────────────────────────────────────────
 # 결로 위험 = 실내 온도와 이슬점의 차(이슬점 여유)가 작다. 들어가는 문턱과 나오는
 # 문턱을 나눈다 — 새벽 내내 여유가 문턱 위아래로 흔들리면 창이 따라 여닫힌다.
+# **두 문턱의 정의는 `humid_regime` 하나다**(2026-10-09): 과습 구간 판정(`HR.ENTER_MARGIN_C`
+# 2.0 / `HR.EXIT_MARGIN_C` 3.0)과 이 탈출구는 같은 "이슬점 여유" 이므로 따로 적지 않는다.
+# 여유가 이보다 작으면 위험(20 °C 에서 RH ≈ 88 %), 탈출 중이면 EXIT 만큼 회복돼야 다시 닫는다.
 # @manual ai/env-control#settings-ventilation
-_CONDENSATION_ENTER_C = 2.0   # 여유가 이보다 작으면 위험(20 °C 에서 RH ≈ 88 %)
-_CONDENSATION_EXIT_C  = 3.0   # 탈출 중이면 여유가 이만큼 회복돼야 다시 닫는다
 _MIX_FRACTION         = 0.1   # "조금 섞으면" — 외기 10 % 와 섞은 공기로 판정
+_CONDENSATION_MIN_GAIN_C = 0.3  # 섞었을 때 여유가 이만큼은 늘어야 연다(이미 열려 있으면 절반)
+# @manual-end
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 야간 파킹 직전의 완충 구간 (2026-10-09 김제 육묘장3)
+# ─────────────────────────────────────────────────────────────────────────────
+# 해 질 무렵에는 실내 상대습도가 오르고 실외 공기가 더 건조해서, "환기하면 VPD 가 오른다" 가
+# 창을 연다 — 그런데 10분 뒤 야간 파킹이 그 창을 닫는다. 실측: 16:48 12 % → 17:49 91 %
+# (근거 1), 17:59 파킹 → 18:42 0 %. 열었다 닫는 모터 이동, 일몰 직전의 온도 하강, 찬 공기가
+# 모종에 닿는 것이 전부 헛수고다.
+# 그래서 파킹이 **시작되기 전** 이 시간 안에서는 창이 VPD·습도 요구로 **더 열리지 않는다**
+# (닫는 쪽은 그대로, 안전·한계 사유는 그대로 이긴다 — `coordinator.decide_parking`).
+# 창의 끝은 파킹 시작과 같은 기준에서 센다(`_night_vent_clock` 한 곳) — 일몰 기준이면
+# 일몰 − 오프셋, 시각 기준이면 시작 시각. 45분은 사이클 4~5번이다: 위 실측의 오름세(17:09 40 % →
+# 17:49 91 %)를 끊기엔 충분하고, 오후의 정상 환기를 건드리지 않을 만큼은 짧다.
+# @manual ai/env-control#settings-ventilation
+NIGHT_VENT_TAPER_S = 45 * 60.0
 # @manual-end
 
 
 def _svp_kpa(T: float) -> float:
-    import math
-    return 0.6108 * math.exp(17.27 * T / (T + 237.3))
+    """포화 수증기압 [kPa] — 정본은 `psychro.svp`."""
+    return psychro.svp(T)
 
 
 def _dewpoint_from_e(e_kpa: float) -> Optional[float]:
-    import math
-    if e_kpa is None or e_kpa <= 0.0:
-        return None
-    a = math.log(e_kpa / 0.6108)
-    return 237.3 * a / (17.27 - a)
+    """수증기압 [kPa] → 이슬점 [°C]. 0 이하·None 이면 None — 정본은 `psychro.dewpoint`."""
+    return psychro.dewpoint(e_kpa)
 
 
 # @manual ai/env-control#settings-ventilation
@@ -99,7 +124,8 @@ def dewpoint_margin(T: Optional[float], RH: Optional[float]) -> Optional[float]:
 
 # @manual ai/env-control#settings-ventilation
 def condensation_escape(T_in, RH_in, T_out, RH_out,
-                        was_escaping: bool = False) -> bool:
+                        was_escaping: bool = False,
+                        warm_side: bool = False) -> bool:
     """야간 파킹을 풀어야 하는가 — 결로가 임박했고, 환기가 그것을 덜어 줄 때.
 
     외기를 `_MIX_FRACTION` 만큼 섞은 공기의 이슬점 여유가 지금보다 **커야** 한다.
@@ -109,13 +135,16 @@ def condensation_escape(T_in, RH_in, T_out, RH_out,
 
     실외 값을 모르면 풀지 않는다 — 파킹은 사용자가 켠 옵션이고, 모르는 채로
     푸는 것은 그 결정을 근거 없이 뒤집는 것이다(습도 상한 탈출구는 따로 있다).
+
+    `warm_side` — 보온이 필요한 쪽(난방 요구 또는 실내가 목표+허용오차 이하)이면 실외가
+    `HR.HEAT_DEMAND_COLD_DELTA_C` 넘게 차가울 때 열지 않는다(온도가 이슬점 판단을 이긴다).
     """
     if None in (T_in, RH_in, T_out, RH_out):
         return False
     margin = dewpoint_margin(T_in, RH_in)
     if margin is None:
         return False
-    limit = _CONDENSATION_EXIT_C if was_escaping else _CONDENSATION_ENTER_C
+    limit = HR.EXIT_MARGIN_C if was_escaping else HR.ENTER_MARGIN_C
     if margin >= limit:
         return False
     e_in  = RH_in / 100.0 * _svp_kpa(T_in)
@@ -125,7 +154,16 @@ def condensation_escape(T_in, RH_in, T_out, RH_out,
     td_mix = _dewpoint_from_e(e_mix)
     if td_mix is None:
         return False
-    return (T_mix - td_mix) > margin
+    # ⚠ **여유가 "조금이라도" 늘면 여는 것으로는 부족하다** (2026-10-01). 섞은 공기가
+    #   따뜻해서 여유가 0.2 °C 늘어나는 것만으로 밤새 창이 열렸다 — 실외 이슬점이 실내보다
+    #   **높아** 습기를 들이는 중이었는데도(로컬 3포장 22~01시). 두 조건을 더한다:
+    #   ① 실외 이슬점이 실내보다 `HR.RELIEF_DEW_GAP_C` 이상 낮다(수증기압 기준, 이미 열려
+    #   있으면 절반) ② 여유가 `_CONDENSATION_MIN_GAIN_C` 이상 는다.
+    if not HR.relief_allowed(T_in, RH_in, T_out, RH_out, was_open=was_escaping,
+                             heat_demand=warm_side):
+        return False
+    gain_needed = _CONDENSATION_MIN_GAIN_C * (0.5 if was_escaping else 1.0)
+    return (T_mix - td_mix) - margin >= gain_needed
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -147,6 +185,37 @@ def condensation_escape(T_in, RH_in, T_out, RH_out,
 #   2) 사용자가 지정한 가동 감지 신호 — 스마트플러그 전력(W), CT 전류(A),
 #      보조접점 on/off 등 무엇이든 '켜지면 값이 오르는' 측정값
 _HVAC_KINDS = frozenset({'cooler', 'heater'})
+
+
+def _gate_heat_view(owner, internal: dict) -> dict:
+    """게이트가 볼 극한 고온 보호 — {'T': 실내 평균, 'threshold': 문턱 | None, 'tier': 직전 단계}.
+
+    게이트는 보호 판정(`_evaluate_heat_protect`)보다 **먼저** 돈다 — 단계는 직전 사이클의 것이다
+    (강풍 2단계 사이클에도 보호는 판정된다, `_act_on_triggered_gate`). 실내는 보호와 같은 필터된
+    평균 `internal['T']`. 보호를 껐으면 문턱·단계 둘 다 없다 — 강풍 유지를 고온으로 줄이지 않는다.
+    문턱은 보호 설정과 같은 함수로 읽는다(`_heat_protect_config` — 범위 자르기 포함).
+    모듈 함수인 이유: 테스트·미리보기가 `_build_gate_env` 를 믹스인 없는 객체로 부른다.
+    """
+    T = (internal or {}).get('T')
+    cfg_fn = getattr(owner, '_heat_protect_config', None)
+    try:
+        if callable(cfg_fn):
+            cfg = cfg_fn(None)
+            enabled, thr = bool(cfg.enabled), float(cfg.threshold)
+        else:
+            en = getattr(owner, 'heat_protect_enabled', None)
+            enabled = True if en is None else bool(en)
+            v = getattr(owner, 'heat_protect_threshold', None)
+            thr = 30.0 if v is None else float(v)
+    except (TypeError, ValueError):
+        enabled, thr = True, 30.0
+    if not enabled:
+        return {'T': T, 'threshold': None, 'tier': 0}
+    try:
+        tier = int(getattr(getattr(owner, '_heat_state', None), 'tier', 0) or 0)
+    except (TypeError, ValueError):
+        tier = 0
+    return {'T': T, 'threshold': thr, 'tier': tier}
 
 
 def _first_not_none(*values):
@@ -653,11 +722,24 @@ class HelpersMixin:
 
     # @manual ai/env-control#settings-ventilation
     def _night_vent_parked(self, internal: dict = None,
-                           external: dict = None) -> bool:
-        """지금 개구부를 야간 파킹해야 하는가.
+                           external: dict = None,
+                           warm_side: bool = False) -> bool:
+        """지금 개구부를 야간 파킹해야 하는가 — `_night_vent_decide` 의 앞쪽만 본다."""
+        return self._night_vent_decide(internal, external, warm_side)[0]
 
-        밤에는 습도가 오르고 이슬이 맺힌다. 해질 무렵 "쓸모 있어 보이던" 개구도
-        아침까지 작물을 젖은 채로 둘 수 있어, 환기 대신 장치로 관리하는 편이
+    # @manual ai/env-control#settings-ventilation
+    def _night_vent_decide(self, internal: dict = None,
+                           external: dict = None,
+                           warm_side: bool = False) -> Tuple[bool, Optional[float]]:
+        """(지금 개구부를 야간 파킹해야 하는가, 파킹 시작까지 남은 초).
+
+        둘째 값은 **파킹 직전 완충 구간**(`NIGHT_VENT_TAPER_S`) 안에서만 있고 아니면 None
+        이다. 구간 안에서는 창이 VPD·습도 요구로 더 열리지 않는다(`coordinator.decide_parking`
+        의 `taper_ids`). 하드 임계·결로 탈출구가 파킹을 푸는 순간에는 이 값도 None 이다 —
+        열어야 하는 이유가 서 있는데 미리 묶어 둘 수는 없다.
+
+        밤에는 습도가 오르고 이슬이 맺힌다. 해질 무렵 "쓸모 있어 보이던" 개구도 아침까지
+        작물을 젖은 채로 둘 수 있어, 환기 대신 장치로 관리하는 편이
         나은 시간대다. 그래서 개구부만 닫고 **냉난방·제습은 그대로 돌린다.**
 
         ⚠ `time_enable`(시간창)과 섞지 말 것 — 그것은 창밖 시간에 제어를 통째로
@@ -683,19 +765,32 @@ class HelpersMixin:
 
         좌표가 없어 태양시를 못 구하면 **파킹하지 않는다.** 위치를 모른다는
         이유로 창을 밤새 잠그면, 사용자가 켠 적 없는 위험을 시스템이 만든다
-        (`_evening_fog_blocked` 과 같은 판단).
+        (`_evening_fog_blocked` 과 같은 판단). 완충 구간도 같다 — 파킹이 언제 시작할지
+        모르면 그 앞을 셀 수 없다.
         """
         if not getattr(self, 'night_vent_park', False):
-            return False
+            return False, None
 
         internal = internal or {}
         if internal.get('_force_cool') or internal.get('_force_dehumid'):
-            return False                      # 선을 넘었다 — 열어서 빼야 한다
+            return False, None                # 선을 넘었다 — 열어서 빼야 한다
 
-        escape = condensation_escape(
+        # 난방 요구가 서 있으면(`_force_heat`) 결로 탈출로 열지 않는다 — 난방 중에 창을 여는 것은
+        # 열을 버리는 일이다. 온도차가 큰 경우는 `condensation_escape` 가 거른다.
+        #
+        # **실외 값이 만료됐으면(`_stale` 마지막 캐시 · `_ext_synthetic` 지어낸 값) 탈출구로 열지 않는다**(근거 58,
+        # 2026-10-12 김제). 탈출은 "실외가 건조하다" 는 **지금의** 값이 열 근거인데, 만료된 캐시의 옛 값은 그 근거가
+        # 못 된다 — 10/10 22:30 밤새 제습으로 열린 창이 기상청 값이 끊긴 뒤에도 3 시간 13~25 % 로 남았다. 파킹이
+        # 유지되면 창은 근거 19 로 닫힌다. 하드 임계(`_force_dehumid`)는 위에서 이미 파킹을 풀었으므로 그대로다.
+        _ext = external or {}
+        _ext_unknown = bool(_ext.get('_stale')) or bool(_ext.get('_ext_synthetic'))
+        escape = (False if (internal.get('_force_heat') or _ext_unknown) else condensation_escape(
             internal.get('T'), internal.get('RH'),
             (external or {}).get('T'), (external or {}).get('RH'),
-            was_escaping=bool(getattr(self, '_night_condensation_escape', False)))
+            was_escaping=bool(getattr(self, '_night_condensation_escape', False)),
+            warm_side=warm_side))
+        # 결로는 보온커튼 틈이 먼저다(`screen_policy`) — 틈을 다 쓰고도 남을 때만 창으로 뺀다.
+        escape = escape and bool(getattr(self, '_screen_vent_escape_allowed', True))
         if escape != bool(getattr(self, '_night_condensation_escape', False)):
             # ⚠ error 등급 — 기본 로거가 ERROR 라 info 는 안 남는다. 바뀔 때만.
             self.logger.error(
@@ -705,42 +800,66 @@ class HelpersMixin:
                     dewpoint_margin(internal.get('T'), internal.get('RH')) or 0.0))
         self._night_condensation_escape = escape
         if escape:
-            return False
+            return False, None
 
+        return self._night_vent_clock()
+
+    # @manual ai/env-control#settings-ventilation
+    def _night_vent_clock(self) -> Tuple[bool, Optional[float]]:
+        """(밤 구간 안인가, 파킹 시작까지 남은 초) — 파킹이 **언제** 시작하는지의 정본.
+
+        둘째 값은 시작 **전** `NIGHT_VENT_TAPER_S` 안일 때만 값이 있다(밤 안이거나 더 이르면
+        None). 일몰 기준이든 시각 기준이든 완충 구간의 끝은 파킹의 시작과 같은 줄에서 나온다 —
+        따로 적으면 파킹은 10분 일찍 시작하는데 완충은 그 10분 뒤에 끝나는 어긋남이 생긴다.
+        시각을 알 수 없으면 (False, None) — 근거를 모르면 막지 않는다.
+        """
         basis = str(getattr(self, 'night_vent_basis', 'sun') or 'sun')
         if basis == 'clock':
             start = str(getattr(self, 'night_vent_start', '') or '18:00')
             end   = str(getattr(self, 'night_vent_end', '') or '06:00')
             try:
-                now = self._facility_local_now().strftime('%H:%M')
+                now_dt = self._facility_local_now()
+                now = now_dt.strftime('%H:%M')
             except Exception as exc:
                 self.logger.debug('야간 파킹 현지시각 실패 (파킹 안 함): %s', exc)
-                return False
+                return False, None
             # 자정을 넘는 구간이 정상이다 — 18:00~06:00 이 하룻밤이다.
             if start <= end:
-                return start <= now <= end
-            return now >= start or now <= end
+                in_night = start <= now <= end
+            else:
+                in_night = now >= start or now <= end
+            if in_night:
+                return True, None
+            try:
+                h, m = start.split(':')[:2]
+                until = (int(h) * 3600 + int(m) * 60 - (
+                    now_dt.hour * 3600 + now_dt.minute * 60 + now_dt.second)) % 86400
+            except (TypeError, ValueError):
+                return False, None
+            return False, (float(until) if 0 < until <= NIGHT_VENT_TAPER_S else None)
 
         try:
             from aot.utils.solar import sun_times
             from aot.utils.timekit import utc_now
             st = sun_times(target_id=self.unique_id)
             if st is None or st.sunset is None:
-                return False
+                return False, None
             # ⚠ 음수 오프셋은 받지 않는다 — 일몰 **뒤에** 닫히게 되는데, 그
             #   지연이야말로 이 옵션이 없애려는 것이다.
             offset = max(0.0, float(
                 getattr(self, 'night_vent_sunset_offset_min', 0.0) or 0.0))
             now = utc_now()
-            if now >= st.sunset - timedelta(minutes=offset):
-                return True
+            park_start = st.sunset - timedelta(minutes=offset)
+            if now >= park_start:
+                return True, None
             # 자정을 넘긴 이른 새벽 — 아직 일출 전이면 계속 파킹.
             if st.sunrise is not None and now < st.sunrise:
-                return True
-            return False
+                return True, None
+            until = (park_start - now).total_seconds()
+            return False, (until if until <= NIGHT_VENT_TAPER_S else None)
         except Exception as exc:
             self.logger.debug('야간 파킹 판정 실패 (파킹 안 함): %s', exc)
-            return False
+            return False, None
 
     # @manual ai/env-control#time-control, ai/env-control#settings-ventilation
     def _facility_local_now(self):
@@ -1262,6 +1381,118 @@ class HelpersMixin:
         except (TypeError, ValueError):
             return False
 
+    # @manual ai/env-control#water-supply
+    def _water_supply_config(self):
+        """분무용 물 공급 옵션 → `WaterSupplyConfig`. 켜지 않았거나 신호가 없으면 `bound=False`.
+
+        판정 규칙은 `env_control/water_supply.py` 한 곳이다 — 여기는 옵션을 모으기만 한다.
+        """
+        from aot.functions.utils.env_control import water_supply as _WS
+        dev = getattr(self, 'water_supply_signal_device_id', None)
+        meas = getattr(self, 'water_supply_signal_measurement_id', None)
+        bound = bool(getattr(self, 'water_supply_check', False)) and bool(dev) and bool(meas)
+        try:
+            thr = getattr(self, 'water_supply_threshold', None)
+            thr = 0.5 if thr is None else float(thr)
+        except (TypeError, ValueError):
+            thr = 0.5
+        return _WS.WaterSupplyConfig(
+            bound=bound, threshold=thr,
+            direction=_WS.normalise_direction(
+                getattr(self, 'water_supply_direction', None)))
+
+    # @manual ai/env-control#water-supply
+    def _read_water_supply_value(self):
+        """묶어 둔 물 공급 신호의 **신선한** 마지막 값. 없거나 만료면 None.
+
+        신선도는 이 신호의 자기 주기로 가른다(`_hvac_running` 과 같은 규칙) — 수위 센서가
+        10 분 주기여도 정상 장치가 만료로 읽히지 않는다. 읽기 실패도 None(= 모른다)이다:
+        `water_supply.judge` 가 모르는 것을 "없다" 로 읽는다.
+        """
+        dev = getattr(self, 'water_supply_signal_device_id', None)
+        meas = getattr(self, 'water_supply_signal_measurement_id', None)
+        if not dev or not meas:
+            return None
+        try:
+            from aot.utils import measurement_freshness as _fresh
+            _f = _fresh.lookup(_fresh.freshness_by_device([dev]), dev)
+            max_age = _fresh.effective_max_age(
+                self._sensor_max_age(), _f[0], _f[1], floor=300, factor=2.0)
+            ts, val = self.get_last_measurement(dev, meas, max_age=int(max_age))
+        except Exception as exc:
+            self.logger.debug('물 공급 신호 조회 실패: %s', exc)
+            return None
+        if ts is None or val is None:
+            return None
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return None
+
+    # @manual ai/env-control#leaf-vpd
+    def _read_leaf_temperature(self, T_air=None):
+        """묶어 둔 엽온 신호 → `leaf_vpd.LeafReading`(°C). 판정의 정본은 `leaf_vpd.classify_leaf`.
+
+        실내 센서와 같은 문을 지난다: 신선도는 이 신호의 자기 주기(`measurement_freshness`,
+        물 공급 신호와 같은 규칙) · 범위(`sensor_status.check_value`) · 멈춘 센서
+        (`FrozenTracker`, 실내 T 와 같은 창) · 공기와의 온도차. 만료면 `stale`, 데이터가 아예
+        없으면 `missing` 이다(값 없이 한 번 더 물어 가른다 — `_note_miss` 와 같은 방식).
+
+        ⚠ 값을 못 쓰면 **어림하지 않는다**(기온 − 1.5 °C 같은 고정 오프셋 없음). 추정 엽온을
+          넣게 되면 여기서 `LeafReading(추정값, VALID)` 를 만들면 된다 — 판정은 출처를 묻지 않는다.
+        """
+        from aot.functions.utils.env_control import leaf_vpd as _LV
+        dev = getattr(self, 'leaf_temp_signal_device_id', None)
+        meas = getattr(self, 'leaf_temp_signal_measurement_id', None)
+        if not dev or not meas:
+            return _LV.LeafReading(None, _LV.LEAF_UNBOUND)
+        try:
+            _f = _freshness.lookup(_freshness.freshness_by_device([dev]), dev)
+            max_age = _freshness.effective_max_age(
+                self._sensor_max_age(), _f[0], _f[1], floor=300, factor=2.0)
+            ts, val = self.get_last_measurement(dev, meas, max_age=int(max_age))
+        except Exception as exc:                                # noqa: BLE001
+            self.logger.debug('엽온 신호 조회 실패: %s', exc)
+            return _LV.LeafReading(None, _sensor_status.MISSING)
+        if ts is None or val is None:
+            try:
+                ts_any, _v = self.get_last_measurement(dev, meas, max_age=None)
+            except Exception:                                   # noqa: BLE001
+                ts_any = None
+            return _LV.LeafReading(
+                None, _sensor_status.STALE if ts_any is not None else _sensor_status.MISSING)
+        try:
+            val = float(val)
+            unit = self._leaf_temp_unit(meas)
+            if unit and unit not in ('C', 'c'):
+                from aot.inputs.sensorutils import convert_from_x_to_y_unit
+                val = convert_from_x_to_y_unit(unit, 'C', val)
+                if val is None:
+                    return _LV.LeafReading(None, _sensor_status.MISSING)
+                val = float(val)
+        except (TypeError, ValueError):
+            return _LV.LeafReading(None, _sensor_status.OUT_OF_RANGE)
+        reading = _LV.classify_leaf(val, T_air)
+        if reading.status == _sensor_status.VALID:
+            tracker = _sensor_status.tracker_of(self)
+            if tracker.observe((dev, meas), 'T', reading.temp, ts):
+                return _LV.LeafReading(None, _sensor_status.FROZEN)
+        return reading
+
+    def _leaf_temp_unit(self, meas_id) -> str:
+        """엽온 채널의 저장 단위(변환이 걸렸으면 변환 단위). 모르면 ''(섭씨로 본다)."""
+        cache = getattr(self, '_leaf_unit_cache', None)
+        if not isinstance(cache, dict):
+            cache = self._leaf_unit_cache = {}
+        if meas_id not in cache:
+            try:
+                from aot.aot_flask.geo.facility_sensors import _dm_row, _effective_raw_unit
+                dm = _dm_row(meas_id)
+                cache[meas_id] = _effective_raw_unit(dm) if dm is not None else ''
+            except Exception:                                   # noqa: BLE001
+                cache[meas_id] = ''
+        return cache[meas_id]
+
     # @manual ai/env-control#settings-advanced
     def _sensor_max_age(self):
         """신선도 상한 — **정하지 않았으면 `None`** 이다(센서가 정한다).
@@ -1290,19 +1521,32 @@ class HelpersMixin:
                           전달 시 outdoor 재조회를 생략한다 (InfluxDB 중복 쿼리 방지).
         """
         result = {}
-        _vpd_derived = False   # VPD 가 T/RH 계산값인가(아래 잡음 필터가 쓴다)
+        # 멈춘 센서 추적기 — 값이 오래 한 점에 붙은 센서는 범위 밖과 같이 버린다.
+        # 낮(실외 일사 > 100 W/m²)이거나 최근 장치가 움직였으면 짧은 창을 쓴다.
+        _frozen = _sensor_status.begin_frozen_cycle(
+            self, solar=(outdoor_data or {}).get('solar_wm2'))
+        _vpd_device = None      # 장치(센서)가 준 VPD — 제어 기준이 아니라 진단·폴백
+        _axes: dict = {}        # 축별 상태 요약 (sensor_status) — internal 에 넣지 않는다
+        _via: dict = {}         # 축 → 값을 대 준 출처가 센서 평균이 아닌 경우(예: 역할 폴백)
 
         # geo/facility single source: sensors_resolved (indoor) -> T, RH, CO2, VPD, light
         _sr = getattr(self, '_sensors_resolved', [])
         if _sr:
             try:
                 from aot.aot_flask.geo.facility_sensors import compute_spatial_internal
-                spatial = compute_spatial_internal(_sr, max_age=_freshness.as_seconds(max_age))
-                for _k in ('T', 'RH', 'CO2', 'VPD', 'light'):
+                spatial = compute_spatial_internal(
+                    _sr, max_age=_freshness.as_seconds(max_age), with_status=True,
+                    frozen=_frozen)
+                for _k in ('T', 'RH', 'CO2', 'light'):
                     if spatial.get(_k) is not None:
                         result[_k] = spatial[_k]
-                _vpd_derived = (spatial.get('VPD') is not None
-                                and spatial.get('vpd_measured') is False)
+                # 장치 VPD 는 제어에 쓰지 않고 따로 든다(아래 VPD 출처 판정).
+                # `VPD_device` 가 없는 옛 모양의 응답은 vpd_measured 로 가른다.
+                if 'VPD_device' in spatial:
+                    _vpd_device = spatial.get('VPD_device')
+                elif spatial.get('vpd_measured'):
+                    _vpd_device = spatial.get('VPD')
+                _axes.update(spatial.get('status') or {})
                 # Spatial extremes — safety_gates judge heatwave/cold using max/min, not the average
                 for _k in ('T_min', 'T_max', 'RH_min', 'RH_max'):
                     if spatial.get(_k) is not None:
@@ -1322,14 +1566,22 @@ class HelpersMixin:
         if not any(k in result for k in ('T', 'RH', 'CO2')) and _sr:
             try:
                 from aot.aot_flask.geo.facility_sensors import read_facility_sensors
-                role_data = read_facility_sensors(_sr, max_age=_freshness.as_seconds(max_age))
+                role_data = read_facility_sensors(
+                    _sr, max_age=_freshness.as_seconds(max_age), frozen=_frozen)
                 indoor = role_data.get('indoor') or {}
-                if indoor.get('temp_c') is not None and 'T' not in result:
-                    result['T'] = indoor['temp_c']
-                if indoor.get('humidity_pct') is not None and 'RH' not in result:
-                    result['RH'] = indoor['humidity_pct']
-                if indoor.get('co2_ppm') is not None and 'CO2' not in result:
-                    result['CO2'] = indoor['co2_ppm']
+                # 역할 기반 경로는 공간 경로의 범위 검사를 거치지 않는다 — 여기서 같은
+                # 검사를 한다(범위 밖이면 이 값도 쓰지 않는다).
+                for _key, _field in (('T', 'temp_c'), ('RH', 'humidity_pct'),
+                                     ('CO2', 'co2_ppm')):
+                    if indoor.get(_field) is None or _key in result:
+                        continue
+                    _st, _val = _sensor_status.check_value(_key, indoor[_field])
+                    if _st == _sensor_status.OUT_OF_RANGE:
+                        _axes[_key] = _sensor_status.summarize(
+                            [_sensor_status.OUT_OF_RANGE])
+                        continue
+                    result[_key] = _val
+                    _via[_key] = 'role_fallback'
                 if result:
                     self.logger.debug(
                         '_collect_internal: spatial failed -> using role-based fallback')
@@ -1345,7 +1597,8 @@ class HelpersMixin:
             if od is None:
                 try:
                     from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors
-                    od = read_outdoor_sensors(_sr_out, max_age=_freshness.as_seconds(max_age))
+                    od = read_outdoor_sensors(
+                        _sr_out, max_age=_freshness.as_seconds(max_age), frozen=_frozen)
                 except Exception as _se:
                     self.logger.debug('facility outdoor collect (wind/solar) failed: %s', _se)
                     od = {}
@@ -1362,6 +1615,9 @@ class HelpersMixin:
                     # 판별하는 플래그 — 실제 실내 센서가 있으면 이미 차광이
                     # 반영돼 있으므로 추정을 덧씌우면 이중 계산이 된다.
                     result['_light_is_outdoor'] = True
+
+        _vpd_source = _sensor_status.VPD_NONE
+        _vpd_diff = None
 
         # ── 측정 잡음 필터 (T·RH·VPD) ────────────────────────────────────────
         # 조율기의 입력이라 센서 눈금 디더가 그대로 개구부 명령이 된다.
@@ -1384,27 +1640,47 @@ class HelpersMixin:
                 result[_key + '_raw'] = _raw
                 result[_key] = _f
 
-            _vpd_raw = result.get('VPD')
-            if _vpd_derived and result.get('T') is not None and result.get('RH') is not None:
-                # 계산값 — 걸러진 T/RH 로 다시 계산(따로 한 번 더 거르지 않는다).
+            # ── VPD 출처 ────────────────────────────────────────────────────
+            # 제어 VPD 는 **걸러진 실내 T/RH 에서 계산한 공기 VPD** 다. 장치가 준 VPD
+            # 는 쓰지 않는다 — auto_vpd 처럼 엽온 어림(기온 - 1.5 °C) 기준이면 공기
+            # VPD 보다 0.1~0.45 kPa 낮은데(10~35 °C, 2026-10-09 바른 잎–공기 식; 그 전
+            # 식은 0.04~0.23), 목표와 `decompose_vpd_to_T_RH` 는 공기 VPD 를 가정한다.
+            # 잎 기준 목표는 잰 엽온으로 **목표 쪽을** 옮긴다(`leaf_vpd`). 센서가 VPD 채널을 달고 있다는 이유만으로 같은 목표를
+            # 추종하는 기준이 시설마다 달라지던 것을 없앤다. 장치 값과의 차이는
+            # 진단으로 남긴다(`_vpd_device_diff`).
+            # T 또는 RH 를 잃고 장치 VPD 만 살아 있을 때만 그것으로 잇는다.
+            if result.get('T') is not None and result.get('RH') is not None:
                 from aot.functions.utils.env_control.situation import compute_vpd
                 result['VPD'] = round(compute_vpd(result['T'], result['RH']), 3)
                 self._vpd_ema = result['VPD']
-            elif _vpd_raw is not None:
+                _vpd_source = _sensor_status.VPD_COMPUTED
+                if _vpd_device is not None:
+                    _vpd_diff = round(float(_vpd_device) - result['VPD'], 3)
+            elif _vpd_device is not None:
                 _prev = getattr(self, '_vpd_ema', None)
                 if not isinstance(_prev, float):
                     _prev = None   # 첫 샘플 / 재시작 직후
-                _vpd_ema = smooth_vpd(_prev, float(_vpd_raw))
+                _vpd_ema = smooth_vpd(_prev, float(_vpd_device))
                 self._vpd_ema = _vpd_ema
-                if abs(_vpd_ema - float(_vpd_raw)) > 1e-9 and getattr(
+                if abs(_vpd_ema - float(_vpd_device)) > 1e-9 and getattr(
                         self, 'log_level_debug', False):
                     self.logger.debug(
                         'VPD 잡음필터: 원값 %.3f → %.3f kPa',
-                        float(_vpd_raw), _vpd_ema)
+                        float(_vpd_device), _vpd_ema)
                 result['VPD'] = _vpd_ema
+                _vpd_source = _sensor_status.VPD_DEVICE
         except (TypeError, ValueError):
             pass   # 측정값이 숫자가 아니면 원값을 그대로 둔다
 
+        # ── 센서 상태 기록 (제어에는 쓰지 않는다) ────────────────────────────
+        # `internal` 에 넣지 않는다 — 비어 있는지로 사이클 스킵을 가르는 호출부
+        # (`_run_cycle` 의 `if not internal`)가 상태 키 하나 때문에 달라진다.
+        _sensor_status.log_frozen_events(self, self.logger)
+        self._indoor_status = _sensor_status.indoor_summary(
+            result, _axes, _via, _vpd_source)
+        self._vpd_source = _vpd_source
+        self._vpd_device_value = _vpd_device
+        self._vpd_device_diff = _vpd_diff
         return result
 
     # @manual ai/env-control#pre-gate-checked-before-l1l3
@@ -1419,8 +1695,11 @@ class HelpersMixin:
         wind_dir_val = internal.get('wind_dir')
         if wind_dir_val is None:
             wind_dir_val = external.get('wind_dir')
-        # Heatwave/cold judgment uses spatial extremes, not the average — if one corner is
-        # at a dangerous level, emergency must fire even when the average is still normal.
+        # Cold judgment uses spatial extremes, not the average — if one corner is at a
+        # dangerous level, emergency must fire even when the average is still normal.
+        # (There is no heat gate since 2026-10-09 — the gate no longer reads `T_max`;
+        # it stays in this dict as the spatial maximum. Extreme heat is `heat_protect`,
+        # judged on the filtered average.)
         #
         # ⚠ **실내 온습도도 없으면 None 이다**(2026-09-20). 25 °C · 60 % 를 채우면
         #   둘이 한꺼번에 무너진다 — 게이트가 "실내 값을 잃었다" 를 영영 못 보고
@@ -1458,7 +1737,13 @@ class HelpersMixin:
                 'RH':       external.get('RH_ext', 60.0),
                 'wind':     wind_val,
                 'wind_dir': wind_dir_val,
+                # 잰 돌풍(시설 실외 센서의 `wind_gust` 채널) — 없으면 None. 게이트는 돌풍을
+                # 추정하지 않는다(`safety_gates.classify_wind`).
+                'wind_gust': external.get('wind_gust'),
                 'rain':     external.get('rain'),     # 없으면 None(위 wind 주석)
+                # 강우의 출처 — 'model'(예보) 이면 전면 폐쇄 대신 단계 제한(근거 52).
+                # 없으면 None → 게이트는 실측으로 본다(더 엄격한 쪽).
+                'rain_origin': external.get('rain_origin'),
                 # 기본값 0.0 을 넣지 않는다 — 육묘 일소 게이트가 "측정 없음"과
                 # "측정 0"을 구분해야 태양고도 어림값 폴백으로 넘어갈 수 있다.
                 # 여기서 0.0 을 채우면 일사 센서가 없는 시설은 게이트가 늘
@@ -1466,6 +1751,10 @@ class HelpersMixin:
                 'solar':    external.get('solar'),
             },
             'now_ts':      time.time(),
+            # 서리 보호선이 따라가는 작물의 하드 하한(`safety_gates.frost_thresholds`) — 없으면 None.
+            'temp_min':    getattr(self, 'temp_min', None),
+            # 강풍 2단계의 고온 빠른 내림(`safety_gates._wind_hot`) — 실내 평균·보호 문턱·직전 보호 단계.
+            'heat_protect': _gate_heat_view(self, internal),
             # `last_ext_ts`·`last_int_ts` 는 싣지 않는다 — 게이트는 나이를 재지
             # 않는다(`PreGateConfig.ext_context_max_age` 주석). 실외는 예전에
             # 기본값이 now 라 시설 센서 설치에서는 영영 신선, 수집기 설치에서는
@@ -1577,10 +1866,12 @@ class HelpersMixin:
                 output_info = parse_output_information()
             except Exception:
                 output_info = {}
-            types_list = (output_info.get(module_name, {}) or {}).get('output_types') or []
+            module_info = output_info.get(module_name, {}) or {}
+            types_list = module_info.get('output_types') or []
             profile = getattr(self, '_by_id', {}).get(actuator_id)
             cap_meta = getattr(profile, 'capacity_meta', None) or {}
-            return select_adapter(module_name, types_list, cap_meta)
+            return select_adapter(module_name, types_list, cap_meta,
+                                  bool(module_info.get('self_positioning')))
         except Exception as exc:
             self.logger.warning(
                 'EnvCoordinator: _resolve_adapter failed actuator=%s err=%s',
@@ -1634,6 +1925,12 @@ class HelpersMixin:
             e = p.cmd_constraints.effective_end_pct
             aperture = ((motor - s) / (e - s) * 100.0) if e > s else motor
             aperture = max(0.0, min(100.0, aperture))
+            # 장치가 보고한 실제 위치를 피드백 레코드에 싣는다(`effective_pct`·`state_dict` 가 읽는다).
+            # 위치 피드백이 있는 장치(`last_position_pct`)만 채워진다 — 없는 장치는 None 그대로.
+            try:
+                self._feedback_registry.get(p.actuator_id).actual_pct = aperture
+            except Exception:                                    # noqa: BLE001
+                pass
             prev = state.prev_commands.get(p.actuator_id)
             if prev is None or abs(prev - aperture) > 0.5:
                 state.prev_commands[p.actuator_id] = aperture
@@ -1739,7 +2036,8 @@ class HelpersMixin:
             _reason = (cmd.get('reason') if isinstance(cmd, dict)
                        else getattr(cmd, 'reason', None))
             safety_forced = _reason in (REASON_SAFETY_PRE_GATE,
-                                        REASON_SAFETY_POST_GATE)
+                                        REASON_SAFETY_POST_GATE,
+                                        REASON_FROST_PROTECT)
 
             step = (profile.cmd_constraints.move_step_pct
                     if (profile and profile.kind in self._MOTOR_KINDS) else 0.0)
@@ -1815,7 +2113,9 @@ class HelpersMixin:
                 # 정상 사이클은 기록 앞에서 이미 0/100 으로 정했다(`snap_screen_commands`,
                 # 히스테리시스 포함) — 여기는 그 밖의 경로를 위한 안전망이다.
                 send_val = val
-                if profile and profile.kind in ('curtain', 'shade'):
+                if (profile and profile.kind in ('curtain', 'shade')
+                        and not screen_partial_ok(profile, val, _reason)):
+                    # 위치를 잡는 커튼의 틈·램프 정지점(근거 46·47)만 그대로 간다 — 기록값 = 전송값.
                     send_val = 100.0 if val >= 50.0 else 0.0
 
                 # Convert output_type + amount via the per-device-type adapter.
@@ -1829,7 +2129,22 @@ class HelpersMixin:
                     if adapter is not None:
                         _adapters[actuator_id] = adapter
                 if adapter is not None:
-                    adapter.send(self.control, actuator_id, send_val, ch, cycle_sec)
+                    if _reason == _PF.PULSE_FOG_REASON and isinstance(adapter, PulsedDoseAdapter):
+                        # 극한 고온·건조의 짧은 펄스(근거 57, `pulse_fog`). 쉬는 시간의 시계는 **코디네이터**가
+                        # 쥔다 — 어댑터 맵은 10분마다 다시 지어진다(`_reload_profiles`). 이제 쉼은 새 어댑터로
+                        # 넘겨지지만(`carry_adapter_state`), 이 15분은 설정이 아니라 규칙의 값이라 따로 쥔다.
+                        # 켜는 시간은 어댑터에 상한(`pulse_cap`)만 얹어 사용자의 더 짧은 설정을 지킨다.
+                        _rest = getattr(self, '_pulse_fog_next_ok', None)
+                        if _rest is None:
+                            _rest = self._pulse_fog_next_ok = {}
+                        if now < _rest.get(actuator_id, 0.0):
+                            adapter.send(self.control, actuator_id, 0.0, ch, cycle_sec)
+                        else:
+                            adapter.send(self.control, actuator_id, send_val, ch, cycle_sec,
+                                         pulse_cap=(_PF.PF_ON_SEC, _PF.PF_MIN_OFF_SEC))
+                            _rest[actuator_id] = now + _PF.PF_ON_SEC + _PF.PF_MIN_OFF_SEC
+                    else:
+                        adapter.send(self.control, actuator_id, send_val, ch, cycle_sec)
                 else:
                     # Last-resort fallback: value-based passthrough. Send even 0% as
                     # output_on(amount=0) so the driver handles it as a closed target (no output_off).
@@ -1861,3 +2176,28 @@ class HelpersMixin:
             except Exception:
                 pass
         return failed
+
+    @staticmethod
+    def _night_warm_side(internal: dict, situation) -> bool:
+        """야간 결로 탈출의 `warm_side` — 보온이 필요한 쪽인가. 과습 열림(2.65)과 같은 함수(`HR.warm_side`).
+
+        ⚠ 기준선은 'temperature' **제어 목표**(온도 제어 모드)이거나 유도 범위의 아래 끝(`T_guide_low`, VPD 직접
+        모드)이다. VPD 직접 모드의 `_temperature_constraint` 는 유도 온도 목표(실내 + 0.6 × 필요한 만큼)라 늘 실내보다
+        앞서 있어 '실내 ≤ 목표 + 허용오차' 가 늘 참이다 — 그것으로 읽으면 밤마다 결로 탈출이 `condensation_escape` 의
+        온도 거름에 걸려 닫힌다(과습 열림이 김제 2026-10-13 에 겪은 것과 같은 함정).
+        """
+        ctx = getattr(situation, 'context', None) or {}
+        return HR.warm_side(
+            (internal or {}).get('T'), (getattr(situation, 'target', None) or {}).get('temperature'),
+            ctx.get('T_guide_low'), force_heat=bool((internal or {}).get('_force_heat')))
+
+    @staticmethod
+    def _screen_temp_band(situation, guide) -> tuple:
+        """스크린 판단의 온도 띠 `(T_low, T_high)` — `HR.temp_band_c` 한 곳(`_night_warm_side` 와 같은 기준선).
+
+        ⚠ 'temperature' **제어 목표**만 목표 ∓ 허용오차로 쓴다. VPD 직접 모드의 `_temperature_constraint` 는 유도 온도
+        목표라 실내보다 앞서 가서(습하면 위로·건조하면 아래로), 그것으로 띠를 그으면 보온커튼 밤 닫기가 습한 밤에는 늘
+        '춥다'(건조한 밤에는 늘 '덥다'), 틈의 열 손실 판정이 늘 '추운 쪽' 이 된다. 그때는 유도 범위의 양 끝(`guide[0]`·`guide[1]`).
+        """
+        g = tuple(guide or ()) + (None, None)
+        return HR.temp_band_c((getattr(situation, 'target', None) or {}).get('temperature'), g[0], g[1])

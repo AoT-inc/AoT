@@ -10,11 +10,15 @@ name: Unit Tests
 #
 # 이 워크플로가 없으면 E2E 를 아무리 잘 만들어도 같은 구멍이 남는다.
 
+# **비공개 저장소(AoT-dev)에서는 수동 실행으로만 돈다**(2026-10-09). Actions 분(分) 한도가
+# 하루 만에 90% 까지 닳았다(PR 푸시마다 약 8분, E2E 와 합쳐 전체의 86%). PR 에서 빼는 것으로는
+# 부족해 main 병합 때도 건너뛴다(잡의 `if`). 공개 저장소(AoT-inc/AoT)에서는 릴리스 발행 push 마다
+# 자동으로 돌고(무료), 발행 스크립트도 걸러낸 트리에서 같은 스위트를 미리 돌린다. 평소 확인은
+# 로컬 `python3 -m pytest aot/tests -q`(약 4분)이거나, 이 워크플로를 그 브랜치로 수동 실행한다.
 on:
   push:
     branches:
       - main
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -27,6 +31,9 @@ concurrency:
 
 jobs:
   pytest:
+    # 비공개 저장소(AoT-dev)에서는 수동 실행일 때만 돈다 — 건너뛴 잡은 분(分)을 쓰지 않는다.
+    # 공개 저장소(AoT-inc/AoT)에서는 push(릴리스 발행)마다 자동으로 돈다(무료).
+    if: github.repository == 'AoT-inc/AoT' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # 로컬 실측 3분 11초. 두 배 남짓으로 상한을 둔다 — 넘으면 무언가
     # (네트워크를 타는 테스트 등) 새로 들어온 것이다.

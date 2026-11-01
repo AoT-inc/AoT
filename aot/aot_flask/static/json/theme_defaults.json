@@ -49,5 +49,7 @@
   "toggle_track_off": "#DDDDDD",
   "bg_fault": "#FBE7E7",
   "bd_divider": "#DDDDDD",
-  "bd_divider_soft": "#f0f0f0"
+  "bd_divider_soft": "#f0f0f0",
+  "ai_surface_bg": "#13261B",
+  "ai_surface_fg": "#FFFFFF"
 }

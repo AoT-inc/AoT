@@ -162,6 +162,10 @@ class DaemonControl:
         """Runtime environment snapshot collected at daemon startup."""
         return self.proxy().system_environment()
 
+    def journal_limit_apply(self, mb):
+        """Set the systemd journal size cap (MB). Returns (ok, message)."""
+        return self.proxy().journal_limit_apply(mb)
+
     #
     # Daemon
     #

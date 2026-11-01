@@ -12,15 +12,16 @@ D4: VPD 분해 (Phase C 구현, 유지)
 
 from __future__ import annotations
 
-import math
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from . import psychro
 from .types import (
     EnvContext, EnvTarget, SituationReport, TargetVar,
     MODE_COOLING, MODE_HEATING, MODE_HUMIDIFY, MODE_DEHUMIDIFY,
     MODE_CO2_ENRICH, MODE_CONSERVATION, MODE_DEGRADED, MODE_NATURAL,
+    MODE_HEAT_PROTECT, MODE_EMERGENCY,
 )
 
 
@@ -55,6 +56,22 @@ def _update_trend(state: TrendState, now: float, values: Dict[str, float]) -> Di
     return slopes
 
 
+def peek_trend(state: Optional[TrendState], now: float, var: str,
+               value: Optional[float]) -> float:
+    """이번 값을 **넣었다고 치고** 그 변수의 변화율(단위/min) — 상태는 바꾸지 않는다.
+
+    `assess` 보다 앞에서 추세가 필요한 판정(극한 고온 보호의 예측 진입)용이다.
+    같은 이력·같은 회귀를 쓴다 — 추세 계산을 두 벌 두지 않는다. 이력에 넣는 일은
+    여전히 `assess` 의 `_update_trend` 한 곳이 한다.
+    """
+    if state is None or value is None:
+        return 0.0
+    cutoff = now - state.window_sec
+    pts = [(t, v) for t, v in state.history.get(var, []) if t >= cutoff]
+    pts.append((now, float(value)))
+    return _slope_per_min(pts)
+
+
 def _slope_per_min(points: List[Tuple[float, float]]) -> float:
     """최소제곱 선형 회귀 기울기 (단위/min). 포인트 2개 미만이면 0 반환."""
     n = len(points)
@@ -87,6 +104,7 @@ def assess(
     trend_state: Optional[TrendState] = None,
     authority: Optional[Dict] = None,
     light_sat: Optional[float] = None,
+    heat_protect_tier: int = 0,
 ) -> Tuple[SituationReport, TrendState]:
     """
     L2 상황 평가: 편차 계산 + VPD 분해 + 추세 + 제한 인자 + 운전 모드.
@@ -100,6 +118,8 @@ def assess(
         last_ext_ts:  외부 센서 마지막 수신 epoch
         last_int_ts:  내부 센서 마지막 수신 epoch
         trend_state:  이전 사이클 TrendState (None 이면 새로 생성)
+        heat_protect_tier: 극한 고온 보호 단계(`heat_protect`). 1 이상이면 그 모드가
+                      목록 맨 앞에 서고, 온·습도 직접 모드에서는 온도 우선순위를 올린다.
 
     Returns:
         (SituationReport, 업데이트된 TrendState)
@@ -173,6 +193,13 @@ def assess(
 
     # ── D4: VPD 분해 (§5.4 옵션 A) ───────────────────────────────────────────
     working_target = _decompose_vpd(env_target, ctx)
+    if heat_protect_tier and 'temperature' in working_target:
+        # 온·습도 직접 모드에서는 `coordinator._temperature_ceiling` 이 서지 않는다(온도가
+        # 이미 제어목표다). 보호 중에는 온도가 습도와 겨뤄 이기도록 우선순위를 올린다 —
+        # `working_target` 은 사본이라 설정값은 바뀌지 않는다.
+        from .heat_protect import HP_T_PRIORITY
+        _tv = working_target['temperature']
+        _tv.priority = max(float(_tv.priority or 0.0), HP_T_PRIORITY)
 
     # ── 편차 계산 (native 단위, R1) ───────────────────────────────────────────
     # ⚠ **목표는 있는데 측정이 없는 변수**를 따로 모은다. 편차가 없다는 사실
@@ -196,7 +223,8 @@ def assess(
     limiting = _assess_limiting_factor(ctx, light_sat=light_sat)
 
     # ── D3: 운전 모드 결정 ────────────────────────────────────────────────────
-    modes = _decide_modes(working_target, ctx, limiting)
+    modes = _decide_modes(working_target, ctx, limiting,
+                          heat_protect_tier=heat_protect_tier)
 
     # ── P5-2/P5-3: Authority 기반 모드 보강 + 목표 완화 ─────────────────────
     auth = authority or {}
@@ -214,6 +242,10 @@ def assess(
                     modes = modes + [MODE_DEGRADED]
                 # 일부 NATURAL 변수만 완화
                 degrade_target(working_target, auth, external)
+    if heat_protect_tier:
+        # 보호 모드는 권한 보강 뒤에도 **맨 앞**이다 — 화면·로그가 첫 모드를 읽는다.
+        _hp = MODE_EMERGENCY if heat_protect_tier >= 2 else MODE_HEAT_PROTECT
+        modes = [_hp] + [m for m in modes if m != _hp]
 
     report = SituationReport(
         context=ctx,
@@ -306,6 +338,7 @@ def _decide_modes(
     target: EnvTarget,
     ctx: EnvContext,
     limiting: Optional[str],
+    heat_protect_tier: int = 0,
 ) -> List[str]:
     """
     운전 모드를 결정한다. 편차(정적) + 추세(동적) + 제한 인자(광합성)를 모두 반영.
@@ -391,6 +424,12 @@ def _decide_modes(
     if not modes:
         modes.append(MODE_CONSERVATION)
 
+    # 극한 고온 보호(`heat_protect`) — 목록 맨 앞. 단계 2 는 비상(MODE_EMERGENCY).
+    # 보존(conservation)은 "할 일 없음" 이라 보호 중에는 뺀다.
+    if heat_protect_tier:
+        _hp = MODE_EMERGENCY if heat_protect_tier >= 2 else MODE_HEAT_PROTECT
+        modes = [_hp] + [m for m in modes if m != MODE_CONSERVATION]
+
     return modes
 
 
@@ -416,6 +455,7 @@ def _decompose_vpd(target: EnvTarget, ctx: EnvContext) -> EnvTarget:
     t = copy.deepcopy(target)
     vpd_tv  = t.get('vpd')
     vpd_int = ctx.get('VPD_int') or 0.0
+    ctx['vpd_fallback'] = False
 
     if vpd_tv is not None and getattr(vpd_tv, 'limit', False):
         # 온도 우선 모드의 VPD **경계** 항(`basis.py`) — 온도·습도가 1차 목표다.
@@ -432,6 +472,10 @@ def _decompose_vpd(target: EnvTarget, ctx: EnvContext) -> EnvTarget:
     # 폴백: VPD 사용 불가 → T/RH 제어 기준. vpd 는 진단으로 강등.
     if vpd_tv is not None:
         t['_vpd_diag'] = t.pop('vpd')
+        # VPD 목표가 있는데 잴 수 없어 물러났다 — 습도(또는 온도)를 잃은 사이클이다.
+        # 기록·화면용 표식(`_warn_missing_measurements`). 온도만 남았으면 창·냉난방은
+        # 온도 축으로 계속 제어하고, 습도만 미는 장치는 근거 21 로 제자리다.
+        ctx['vpd_fallback'] = True
     return t
 
 
@@ -441,14 +485,14 @@ def _decompose_vpd(target: EnvTarget, ctx: EnvContext) -> EnvTarget:
 
 # @manual ai/env-control#vpd-vapor-pressure-deficit
 def svp(T: float) -> float:
-    """포화 수증기압 [kPa], Magnus 공식. T: °C."""
-    return 0.6108 * math.exp(17.27 * T / (T + 237.3))
+    """포화 수증기압 [kPa], Magnus 공식. T: °C. 식의 정본은 `psychro.svp`."""
+    return psychro.svp(T)
 
 
 # @manual ai/env-control#vpd-vapor-pressure-deficit
 def compute_vpd(T: float, RH: float) -> float:
-    """실제 VPD [kPa] = SVP(T) × (1 - RH/100)."""
-    return max(0.0, (1 - RH / 100.0) * svp(T))
+    """실제 VPD [kPa] = SVP(T) × (1 - RH/100). 정본은 `psychro.vpd_from_rh`."""
+    return psychro.vpd_from_rh(T, RH)
 
 
 # @manual ai/env-control#settings-advanced
@@ -564,10 +608,8 @@ def _invert_svp_for_T(vpd_target: float, RH: float, T_ref: float = 20.0) -> floa
     s_need = vpd_target + ea
     if s_need <= 0.0:
         return max(-10.0, min(50.0, T_ref))
-    r = math.log(s_need / 0.6108)
-    if r >= 17.27:                       # Magnus 의 점근선 — 물리적 상한 밖
-        return 50.0
-    return max(-10.0, min(50.0, 237.3 * r / (17.27 - r)))
+    # Magnus 역함수 — 점근선 밖(물리적 상한 밖)이면 +inf 가 와서 50 으로 잘린다.
+    return max(-10.0, min(50.0, psychro.temperature_from_svp(s_need)))
 
 
 def _lerp(a: float, b: float, t: float) -> float:

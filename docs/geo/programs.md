@@ -100,9 +100,9 @@ By calendar alone, a cool spring and a hot summer change stage on the same day. 
 3. the plot has at least **80%** temperature history coverage
 4. the plot's own schedule has **no dates set on it** — a date you set wins, and stages go by it until you clear them all
 
-If any is missing, stages fall back to the calendar and the plot modal states **why** — "By days · No base temperature set", "Not enough temperature history".
+If any is missing, stages fall back to the calendar and the plot modal states **why** — "By days · No base temperature set", "Not enough temperature history". Where it is only the history that is thin, the value banked so far is still shown next to the share of days that have data, rather than hidden.
 
-The formula is the daily mean: `GDD = max(0, (Tmax + Tmin) / 2 − T_base)`. Temperature comes from sensors inside the plot, falling back to the enclosing zone. Where the program also carries a **Suggested GDD per day**, the plot shows what has been banked against what that daily rate would have banked over the same days.
+The formula is the daily mean: `GDD = max(0, (Tmax + Tmin) / 2 − T_base)`, counted over whole days — today is left out until it is over. Each day takes its temperature from the **narrowest source that has a reading that day**: sensors inside the plot, then the plot's bay, then the facility, then the enclosing zone (the nearest one, where the distance is known). Because the choice is made day by day against where each sensor was at the time, a sensor since removed still counts for the days it was in place, and the days before an in-plot sensor was placed are still covered by the zone. Several sensors in the same layer are averaged, highs with highs and lows with lows. Where the program also carries a **Suggested GDD per day**, the plot shows what has been banked against what that daily rate would have banked over the same days.
 
 !!! note "Different from the environment-control GDD"
     The env_coordinator function also accumulates GDD, but that one is **for control compensation**, uses a different formula, and requires that function to exist. Open-field plots have no coordinator, so this calculation uses temperature history alone. **The two values differing is normal.**
@@ -133,6 +133,7 @@ Stage lengths in the program are a **standard**; a plot only **references** them
 - Edit the **length** of any stage still ahead and press **[Save]**.
 - Changing one stage **moves the ones after it.** To keep a later date fixed, shorten the next stage by the same amount.
 - The last stage has no length (**until the end**) — when it ends is decided by ending the plot.
+- Where the programme does give the last stage a length and it runs out, the plot **stays on that stage** — the schedule keeps it as the current row and the plot modal reads **"Past the planned end"**. AI lookups carry that stage's name, guidance and how many days past it is (not its targets). A season ends when you end it, not when the standard runs out.
 - **Typing the programme's own length back** returns that stage to the standard — there is no separate revert button.
 
 ### Stage guidance, adding and removing stages { #stage-guidance-adding-and-removing-stages }
@@ -158,7 +159,8 @@ Once you have tuned lengths, added stages and written guidance, that knowledge l
 - **[Postpone]** on the Stage change row moves the change to the date shown. **[Confirm]** means "it happened that day" (a fact); **[Postpone]** means "it will happen that day" (a plan).
 - Boundaries already past are not edited here — that is what **[Confirm]** and **[Undo last]** are for.
 - Setting any date makes that plot judge stages **by date rather than growing degree days**. Clear them all and GDD comes back.
-- The expected end date follows the edited schedule.
+- The expected end date follows the edited schedule. **Where the last stage has no length there is no expected end date at all** — the axis reads *open-ended* and no date is shown, because when it ends is decided by ending the plot.
+- **A date you entered yourself still wins.** Where it differs from the schedule's last day by three days or more, AI lookups mention the gap — the day the schedule ends and how many days apart the two are — and change nothing by it.
 
 ## Automatic advance { #auto }
 

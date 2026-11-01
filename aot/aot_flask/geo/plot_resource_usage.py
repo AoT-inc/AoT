@@ -13,7 +13,7 @@
 |------|------|
 | 이 구획에 닿는 출력 | `plot_context.actuators_for_plot` |
 | 얼마나 돌았나 | `runtime.get_operational_seconds_by_day` |
-| 물이 얼마나 나갔나 | `plot_journal.irrigation_flow_for_plot` |
+| 물이 얼마나 나갔나 | `water_net_link.plot_water` |
 
 ⚠ **여기서 새 판정을 만들지 말 것.** 특히 "이 구획의 장치가 무엇인가" 와 "노즐이
   몇 개인가" 는 각각 한 벌씩만 있어야 한다 — 갈라지면 일지와 모달이 같은 밸브에
@@ -38,9 +38,9 @@
 
 ## 물량은 추정이다
 
-설계 유량(시설의 배관 도면 · 노지 지도의 이미터) × 가동시간 × 구획 몫이고
-유량계 실측이 아니다. 화면이 늘 그렇게 말해야 한다 — 실측과 같은 신뢰도로
-읽히면 사람이 그 숫자로 시비 농도를 정한다.
+설계 유량(시설의 배관 도면 · 노지 지도의 이미터) × 가동시간 × 구획 몫에 회로의
+공급 한계를 반영한 값이고 유량계 실측이 아니다. 화면이 늘 그렇게 말해야 한다 —
+실측과 같은 신뢰도로 읽히면 사람이 그 숫자로 시비 농도를 정한다.
 
 ## 0 과 "기록 없음" 은 다르다
 
@@ -103,7 +103,7 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
     start = today - timedelta(days=max(int(days), 1) - 1)
     start_str, end_str = local_day_bounds_utc(start, today, tz)
 
-    flows = _flows_for(plot)
+    water = _water_for(plot, start_str, end_str, tz)
     roles = _roles_by_output(plot)
     kinds = plot_context.resource_fitting_kinds()
 
@@ -123,7 +123,7 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
         seen.add(oid)
         by_day = _seconds_by_day(oid, start_str, end_str, tz)
         devices.append(_device_row(oid, a.get('name'), by_day, today,
-                                   flows.get(oid), roles.get(oid)))
+                                   water, roles.get(oid)))
     devices.sort(key=lambda d: (str(d.get('name') or ''), d['output_id']))
     return {'days': days, 'today': today.isoformat(),
             'unassigned_areas': unassigned,
@@ -170,19 +170,19 @@ def _roles_by_output(plot):
     return out
 
 
-def _flows_for(plot):
-    """설계 유량 → `{output_id: {'lph', 'share', 'source'}}`. 실패하면 `{}`.
+def _water_for(plot, start_str, end_str, tz):
+    """물량 읽기(`PlotWater`). 실패하면 유량 근거가 빈 것으로 낸다.
 
     일지와 **같은 함수**다. 여기서 다시 세면 같은 밸브의 물량이 화면마다
     달라지는데, 이 저장소는 이미 그 실패(노즐 계수 규칙 두 벌)로 크게 데었다.
     """
-    from aot.aot_flask.geo.plot_journal import irrigation_flow_for_plot
+    from aot.utils import water_net_link
 
     try:
-        return irrigation_flow_for_plot(plot) or {}
+        return water_net_link.plot_water(plot, start_str, end_str, tz)
     except Exception:                                       # noqa: BLE001
-        logger.debug('[자원사용] 설계 유량 조회 실패', exc_info=True)
-        return {}
+        logger.debug('[자원사용] 물량 조회 실패', exc_info=True)
+        return water_net_link.PlotWater()
 
 
 def _seconds_by_day(output_id, start_str, end_str, tz):
@@ -199,7 +199,8 @@ def _seconds_by_day(output_id, start_str, end_str, tz):
         return {}
 
 
-def _device_row(output_id, name, by_day, today, flow, roles):
+def _device_row(output_id, name, by_day, today, water, roles):
+    flow = water.flows.get(output_id)
     secs_today = float(by_day.get(today) or 0.0)
     secs_window = float(sum(by_day.values()))
     row = {
@@ -222,12 +223,18 @@ def _device_row(output_id, name, by_day, today, flow, roles):
     }
     lph = (flow or {}).get('lph')
     if lph:
-        share = float(flow.get('share', 1.0) or 1.0)
-        row['share'] = share
+        row['share'] = float(flow.get('share', 1.0) or 1.0)
         row['source'] = flow.get('source')
-        row['litres_today'] = round(secs_today / 3600.0 * float(lph) * share, 1)
-        row['litres_window'] = round(
-            secs_window / 3600.0 * float(lph) * share, 1)
+        row['litres_today'] = water.litres(output_id, {today: secs_today})
+        row['litres_window'] = water.litres(output_id, by_day)
+        # 공급을 푼 장치만: 노즐 설계 물량과 공급 한계. 공급 부품이 없으면 키가 없다(응답이 예전과 같다).
+        design = water.design(output_id, by_day)
+        if design is not None:
+            row['design_litres_today'] = water.design(output_id, {today: secs_today})
+            row['design_litres_window'] = design
+            row['limited'] = (row['litres_window'] or 0.0) < design - 0.05
+            if water.area_m2:
+                row['mm_window'] = round((row['litres_window'] or 0.0) / water.area_m2, 2)
     return row
 
 
@@ -242,7 +249,7 @@ def _fold(devices):
     # 몫은 **전부 같을 때만** 낸다. 서로 다른 몫을 하나로 적으면 그 숫자가 어느
     # 장치의 것인지 알 수 없는데, 화면은 그것을 전체의 몫으로 읽는다.
     shares = {d['share'] for d in with_water}
-    return {
+    out = {
         'seconds_today': sum(d['seconds_today'] for d in devices),
         'seconds_window': sum(d['seconds_window'] for d in devices),
         'litres_today': (round(sum(d['litres_today'] for d in with_water), 1)
@@ -258,3 +265,10 @@ def _fold(devices):
         # 유량계 실측이 아니다 — 화면이 늘 그렇게 말해야 한다.
         'estimated': has_water,
     }
+    solved = [d for d in with_water if 'design_litres_window' in d]
+    if solved:
+        out['design_litres_window'] = round(sum(d['design_litres_window'] for d in solved), 1)
+        out['limited'] = any(d['limited'] for d in solved)
+        if all('mm_window' in d for d in solved) and len(solved) == len(with_water):
+            out['mm_window'] = round(sum(d['mm_window'] for d in solved), 2)
+    return out

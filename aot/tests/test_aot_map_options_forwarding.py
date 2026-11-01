@@ -130,3 +130,24 @@ def test_dead_options_removed():
         "enable_3d_controls 는 소비처가 없는 죽은 옵션이라 제거되었다. "
         "재도입하려면 실제 3D 컨트롤 렌더 로직을 함께 배선할 것."
     )
+
+
+def test_model_attributes_read_by_maps_exist():
+    """maps.py 가 `misc.` · `geo_setting.` 으로 읽는 속성은 모두 실제 모델 열이어야 한다.
+
+    `misc.map_zoom` 은 Misc 에 한 번도 없던 열이었는데, 줌의 앞선 출처(위젯 옵션·지도·
+    지오 설정)가 모두 비었을 때만 닿는 자리라 오래 숨어 있었다. 지오 설정이 빈 DB 에서
+    지도 위젯이 AttributeError 로 죽었고, 단위 스위트에서는 실행 순서에 따라 가끔만
+    깨져 무관한 PR 의 CI 를 붉게 만들었다(2026-10-12).
+    """
+    from aot.databases.models import GeoSetting, Misc
+
+    tree = ast.parse(MAPS.read_text())
+    for var, model in (('misc', Misc), ('geo_setting', GeoSetting)):
+        cols = set(model.__table__.columns.keys())
+        # 실제 속성 접근만 센다(주석·문자열 속 이름은 제외).
+        used = {n.attr for n in ast.walk(tree)
+                if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)
+                and n.value.id == var}
+        missing = sorted(used - cols)
+        assert not missing, '%s 에 없는 열을 읽는다: %s' % (model.__name__, missing)

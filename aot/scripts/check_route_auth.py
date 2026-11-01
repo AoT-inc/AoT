@@ -85,6 +85,15 @@ PUBLIC_ROUTES = {
     '/api/v1/locale/set': '언어 변경(세션 값만 바꾼다) — 로그인 전 언어 선택 지원',
     '/api/v1/locale/js': 'JS 번역 사전 — 로그인 화면에서도 로드된다',
 
+    # 내장 OAuth 인가 서버(routes_oauth_embedded.py) — AI 서비스(서버)가 로그인 세션 없이 부른다.
+    # 내장 모드가 꺼져 있으면 전부 404. 켜져 있어도 권한은 라우트 안에서 따로 검증한다.
+    '/.well-known/oauth-authorization-server': '인가 서버 메타데이터(공개 정보, RFC 8414)',
+    '/.well-known/jwks.json': '토큰 서명 공개키(공개 정보)',
+    '/register': '동적 클라이언트 등록(RFC 7591) — 등록만으로는 권한이 없다, 사용자의 동의가 있어야 코드가 나간다',
+    '/authorize': '동의 화면 — 미로그인이면 /login 으로 보내고 로그인 뒤 같은 요청으로 돌아온다',
+    '/token': '토큰 교환 — 인가 코드+PKCE verifier 또는 refresh_token 으로 인증',
+    '/revoke': '토큰 폐기 — 토큰과 client_id 가 일치해야 한다',
+
     # 법적 고지 — 로그인 없이 열람 가능해야 한다
     '/privacy-policy': '개인정보처리방침',
     '/terms-of-service': '이용약관',

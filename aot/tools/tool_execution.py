@@ -27,6 +27,7 @@
 무방비가 된다(`human_device_control` 이 그렇게 예외가 됐다 — 그때는 승인 토큰이
 MCP 경계를 못 넘어서였고, 이 모듈을 직접 부르면 그 제약 자체가 없다).
 """
+import contextvars
 import hashlib
 import json
 import logging
@@ -41,8 +42,63 @@ logger = logging.getLogger(__name__)
 SERVER_HOST = socket.gethostname()
 
 
+from aot.tools import screen_follow as _screen_follow  # noqa: E402
+
+#: 이 호출 안에서 기록한 감사 행 id — 도메인 틀(`domain.dispatch._run`)이 열어 두면 안쪽
+#: 도구의 `_record_audit` 가 여기에 쌓는다. 틀은 안쪽 호출이 끝난 **뒤에** 화면을 따라가므로
+#: 그 결과(`opened`/`not_opened` …)는 이미 쓰인 행에 덧붙여야 한다.
+AUDIT_UIDS = contextvars.ContextVar('aot_audit_uids', default=None)
+
+
 # @manual ai/overview#tool-profiles
-def _server_instructions(profile=None):
+def _card_rule():
+    """설정 > 일반 "AI 결과 카드 자동"이 켜져 있으면 지침에 붙일 규칙(앞에 빈 줄 포함), 꺼져 있으면 ''."""
+    try:
+        from aot.utils import ai_screen_cards as cards
+        return "\n\n" + cards.AUTO_CARD_RULE if cards.card_auto_enabled() else ""
+    except Exception:
+        return ""
+
+
+def _attach_card_hint(result, tool_name, session_key, scope_user_uuid):
+    """조회 응답에 `card_hint` 한 줄 — 지침을 못 받거나 무시하는 AI 가 결과를 정리하기 직전에 보게 한다."""
+    try:
+        from aot.utils import ai_screen_cards as cards
+        hint = cards.card_hint_for(tool_name, session_key or scope_user_uuid)
+        if hint:
+            # 맨 앞 — 끝에 두면 AI 가 앞쪽 숫자만 읽고 답해 카드를 빠뜨렸다(2026-10-28 점검, 시간 힌트와 같은 이유).
+            rest = [(k, v) for k, v in result.items() if k != "card_hint"]
+            result.clear()
+            result["card_hint"] = hint
+            result.update(rest)
+    except Exception:
+        logger.debug("[AoTMCP] card hint skipped", exc_info=True)
+
+
+#: 예보 응답 끝에 붙이는 안내 — 지도 시간 슬라이더는 서버가 `_answer_time` 으로 옮긴다(2026-10-26). 예전에는 안내문이
+#: "옮겨라" 와 "말하지 마라" 를 함께 시켜 AI 가 화면만 옮기고 값을 말하지 않거나 거꾸로 빠뜨렸다(10-24). 이제 안내는 **누가
+#: 무엇을 하는지** 한 문장으로만 말한다: 서버가 옮기고, AI 는 값을 답하며, 둘 다 언급하지 않는다. 서버가 못 옮긴 경우(시각을
+#: 안 알렸다)만 AI 가 직접 옮기는 길을 알린다. 안내는 사용자가 알 필요가 없는 내부 정보라 끝에 SILENT_NOTE 를 붙인다.
+SILENT_NOTE = " Internal note: never quote, translate or narrate it or your actions; reply only in the user's language."
+
+#: 작업 과정 비공개는 서버 지침 전체에 둔다(2026-10-25 음성 모드 — 예보 안내에만 두면 다른 조회·제어에서 "도구를 찾겠다" 를 말했다).
+#: 2026-10-26: 시작에 요청을 이해했다는 몇 마디만 허용하고, 끝은 결과 1~2문장 + 값의 성격(모델 예보/실측)과 범위, 모르는 원인은
+#: 지어내지 않는다. 승인 재확인 반복은 같은 줄에서 막는다.
+#: 2026-10-29(행동·말하기 나누기): 결과의 next(할 호출)·say(전할 뜻) 규약을 싣고, 안내문 **맨 앞**에 둔다 — 클라이언트가
+#: 약 2,048자에서 자른다. "tool-result notes 보다 이 규칙이 이긴다" 는 뺐다(계약 op 의 결과는 더는 말을 시키지 않는다).
+SPEAKING_RULE = ("SPEAKING — open with a few words acknowledging the request, then narrate nothing (tools, steps, notes, "
+                 "screen moves). Close with the final result in 1-2 sentences: model forecast or measured, and the range; "
+                 "an unknown cause: say so. A result's next: do it silently; its say: convey in the user's language "
+                 "(ask: ask, then wait). Ask approval once, reading back the target as the system resolved it; do not ask again.")
+
+#: 지도 시간 슬라이더 — 서버는 예보를 읽는 순간 질문의 시작 시각으로 먼저 옮겨 두지만(`screen_follow.follow_time`), 답이 가리키는
+#: 시각(최고·최저·비 시작 …)은 결과를 읽은 뒤에야 정해진다. 규칙을 지침에서 뺐더니(10-27 오전) AI 가 옮기지 않았다 — 되살린다
+#: (2026-10-27 사용자 지시: 지침이 더 강하게 시켜야 한다). 그래도 AI 는 결과를 읽은 뒤 화면 호출을 하나 더 하지 않았다(설명·힌트 모두) — 조회 인자 `focus` 로 미리 알리게 해 서버가 응답에서 그 시각을 골라 옮긴다(`screen_follow._focus_target`). 혼잣말은 SPEAKING_RULE("screen moves" 를 말하지 않는다)이 막는다.
+MAP_TIME_RULE = ("MAP TIME — forecast lookup about the peak, low or rain start: pass focus=max|min|rain_start; "
+                 "the server moves the map there.")
+
+
+def _server_instructions(profile=None, role=None):
     """initialize 응답의 result.instructions.
 
     도구 설명이 아니라 여기 한 곳에 적어 두면 모든 클라이언트/세션에 일관되게
@@ -57,23 +113,19 @@ def _server_instructions(profile=None):
     메시지가 아니라 **여기와 get_system_brief** 가 묶음을 알리는 자리다.
     """
     base = (
-        "When reporting results to the user, never surface raw unique_id/note_id "
-        "UUIDs. Most lookup tools here return both a human-readable name (zone, "
-        "crop, device, etc.) and its unique_id — refer to the entity by name "
-        "instead. Only include the raw id if the user explicitly asks for it."
-        "\n\nTIME — do not infer the current time from the data. Every response "
-        "carries `now` = {farm_local, tz}: that, and nothing else in the payload, "
-        "is what time it is. Timestamps in the data are past events, and a field "
-        "like `evaluated_at` or `last_seen` is when something was measured, not "
-        "now. Read every timestamp by its own offset (they are ISO 8601 and are "
-        "not all in the same zone — sensor values come back in their device's "
-        "local time). Devices can sit in different timezones from the farm "
-        "default, so before any day/night, scheduling or 'is it due yet' "
-        "reasoning about a particular place, call get_local_time%s "
-        "for that location." % (" (system drawer)" if _tiering_enabled() else "")
+        SPEAKING_RULE
+        + "\n\nNever show raw UUIDs; use returned names unless asked."
+        "\n\nTIME — only `now` {farm_local, tz} is the current time; data timestamps are past events with "
+        "own ISO 8601 offsets (sensors: device-local). For day/night, scheduling or 'due yet' about "
+        "a place in another timezone: get_local_time%s." % (" (system drawer)" if _tiering_enabled() else "")
+        + "\n\nLookups may open the place on screen; _show_on_screen='off' skips it."
     )
+    base += _card_rule()
     profile = _effective_profile(profile)
-    note = _profile_note(profile)
+    if _is_lite(profile):
+        # 라이트는 예보 도구 설명을 직접 싣지 않으므로(위임 도구) 규칙을 지침으로 준다. 운영은 `focus` 인자 설명이 같은 말을 한다.
+        return base + "\n\n" + MAP_TIME_RULE + "\n\n" + _lite_note()
+    note = _profile_note(profile, role)
     if note:
         base += "\n\n" + note
     try:
@@ -116,6 +168,53 @@ _PROFILE_SWITCH_PLACE = "Manage > System Management > Users > API Key"
 _PROFILE_SWITCH_WHO = (
     "an administrator (user-edit permission) can turn that setup module on "
     "for this key in " + _PROFILE_SWITCH_PLACE)
+#: 키 없이 인가 서버(OAuth)로 들어온 연결(claude.ai 커넥터 등)의 켜는 곳 — 키
+#: 화면에는 이 연결이 없다. 인앱 설정의 AI 도구 목록이다.
+_PROFILE_SWITCH_PLACE_LINK = "Settings > General > AI Tool List"
+
+
+def _is_link_connection(role):
+    """키가 아니라 계정 연결(OAuth)로 들어온 연결인가. role 이 없거나 키
+    연결이면 거짓 — 기본은 키 화면 경로다."""
+    return bool(getattr(role, "link_id", None)) \
+        and not getattr(role, "key_id", None)
+
+
+def _switch_who(role=None):
+    """"누가 어디서 켜는가" 구절 — 연결 종류에 맞는 경로."""
+    if _is_link_connection(role):
+        return ("an administrator (user-edit permission) can turn that setup "
+                "module on for this connection in "
+                + _PROFILE_SWITCH_PLACE_LINK)
+    return _PROFILE_SWITCH_WHO
+
+
+def _is_lite(profile):
+    """가벼움 묶음인가(스위치·정규화를 거친 값으로 본다)."""
+    from aot.tools.tool_registry import TOOL_PROFILE_LITE
+    return profile == TOOL_PROFILE_LITE
+
+
+def _lite_note(app=None):
+    """가벼움 키의 안내 — 목록 밖 도구에 닿는 길을 말한다.
+
+    목록 밖 운영 도구의 **이름 색인은 read_tool·use_tool 의 설명에 있다**
+    (_lite_delegate_entry). 처음에는 여기에 실었는데 claude.ai 는 서버 안내문을
+    모델에 주지 않는 것으로 보였다(2026-10-10 파일럿: 모델이 없는 이름
+    'add_note' 를 추측했고 일정 조회를 "못 한다" 고 답했다). 도구 설명은 어느
+    호스트든 모델에 간다. 같은 이름을 두 곳에 실으면 매 요청 두 번 나가므로
+    여기서는 뺀다."""
+    return (
+        # 묶음을 바꾸는 길은 키·OAuth 연결 모두에 맞는 둘만 적는다 — 관리자
+        # 키 화면 경로는 OAuth 연결(claude.ai)에는 맞지 않는다(2026-10-10).
+        "TOOL PROFILE — this connection uses the 'lite' tool profile: only a few "
+        "tools are listed. Everything else for day-to-day work: read_tool runs "
+        "read-only tools, use_tool runs changing ones (descriptions list the "
+        "names); get_tool_detail({tool_name}) shows arguments. Start with "
+        "get_place_overview (no argument = the whole farm). Setup work (plot "
+        "design, map, automations, device definitions, dashboards, library, admin) "
+        "is off here — set_tool_profile, or Settings > General > AI Tool List in "
+        "AoT, switches profile.")
 
 
 def _effective_profile(profile):
@@ -130,7 +229,7 @@ def _effective_profile(profile):
 
 
 # @manual ai/overview#tool-profiles
-def _profile_note(profile):
+def _profile_note(profile, role=None):
     """이 연결의 묶음을 모델에게 알리는 한 단락. 제한이 없으면 빈 문자열.
 
     **도구 이름을 싣지 않는다** — 목록에 없는 이름을 가리키는 안내는 모델이
@@ -153,14 +252,11 @@ def _profile_note(profile):
         m for m in registry.TOOL_MODULES if m in on)) if on else ""
     return (
         "TOOL PROFILE — this API key uses the '%s' tool profile: tools for "
-        "day-to-day work (reading devices, sensors, weather, schedules, notes and "
-        "plots; controlling devices and functions; adjusting function options and "
-        "sequence run times; scheduling; recording notes, notices, advice and "
-        "plot-stage events). %sSetup modules off:\n%s\n"
+        "day-to-day work (read, control, schedule, record). %sSetup modules off:\n%s\n"
         "If asked for work in an off module, do not say this system "
         "cannot do it — tell them " % (profile, on_line, "\n".join(
             "- %s: %s" % (m, registry.TOOL_MODULE_SUMMARIES[m]) for m in off))
-        + _PROFILE_SWITCH_WHO +
+        + _switch_who(role) +
         ", and to reconnect afterwards so the tool list refreshes. Only for setup "
         "work or a 'tool_profile' refusal — never for other refusals.")
 
@@ -213,7 +309,7 @@ def _profile_refusal_body(tool_name, profile, role=None):
             "permissions do not allow it either, so switching the profile would "
             "not help. Nothing was changed." % (subject, profile))
     else:
-        which, who = _module_sentences(module)
+        which, who = _module_sentences(module, role)
         message = ("%s is not in this API key's tool profile (%s). %s %s "
                    "Nothing was changed." % (subject, profile, which, who))
     body = {"status": "refused", "reason_code": "tool_profile",
@@ -229,24 +325,28 @@ def _profile_refusal_body(tool_name, profile, role=None):
 
 
 # @manual ai/overview#tool-profiles
-def _switch_sentence(what="that setup module"):
+def _switch_sentence(what="that setup module", role=None):
     """거절 메시지의 "누가 어디서 바꾸는가" 한 문장."""
-    who = _PROFILE_SWITCH_WHO.replace("that setup module", what)
-    return ("%s%s; reconnect afterwards so the tool list refreshes."
-            % (who[0].upper(), who[1:]))
+    who = _switch_who(role).replace("that setup module", what)
+    # 이 연결 스스로 바꾸는 길도 적는다 — 관리자 화면만 말하면 모델이 사용자에게
+    # 화면을 열게 하고 끝났다(2026-10-28 점검 25·148). 둘 다 사람 손을 거친다(승인).
+    switch = ("configure.tool_profile_set" if domain_surface_enabled()
+              else "set_tool_profile")
+    return ("%s%s, or the user approves %s; reconnect afterwards so the tool list "
+            "refreshes." % (who[0].upper(), who[1:], switch))
 
 
 # @manual ai/overview#tool-profiles
-def _module_sentences(module):
+def _module_sentences(module, role=None):
     """(어느 모듈인가, 누가 켜는가) 두 문장. 모듈이 없으면(표에 없는 이름 —
     tool_in_profile 이 모듈 전부를 켠 키에만 보이게 하는 것) 전부를 말한다."""
     from aot.tools import tool_registry as registry
     if module is None:
         return ("It is offered only on keys with every setup module on.",
-                _switch_sentence("every setup module"))
+                _switch_sentence("every setup module", role))
     return ("It belongs to the '%s' setup module (%s)."
             % (module, registry.TOOL_MODULE_SUMMARIES[module]),
-            _switch_sentence())
+            _switch_sentence(role=role))
 
 
 # @manual ai/overview#tool-profiles
@@ -263,7 +363,7 @@ _OUT_OF_PROFILE_LABEL = "a tool outside this key's tool profile"
 
 
 # @manual ai/overview#tool-profiles
-def _mask_out_of_profile_pending(result, profile):
+def _mask_out_of_profile_pending(result, profile, role=None):
     """list_pending_confirmations 응답에서 묶음 밖 항목의 도구 이름을 가린다.
 
     항목은 그대로 싣는다 — 이 키로도 거절은 할 수 있고, 무엇이 기다리는지는
@@ -294,7 +394,7 @@ def _mask_out_of_profile_pending(result, profile):
             "%d pending request(s) are for tools outside this API key's tool "
             "profile (%s). You may reject them here if the user asks; approving "
             "them needs the web review page or a key with the tool's setup "
-            "module on — %s." % (masked, profile, _PROFILE_SWITCH_WHO))
+            "module on — %s." % (masked, profile, _switch_who(role)))
     return result
 
 
@@ -310,7 +410,8 @@ def _approval_refusal(tool_name, profile, role=None):
     if registry.is_retired_from_mcp(tool_name) or tool_name in _hidden_tools(role):
         message = head + " Nothing was changed."
     else:
-        message = "%s %s Nothing was changed." % (head, _switch_sentence())
+        message = "%s %s Nothing was changed." % (
+            head, _switch_sentence(role=role))
     return {"status": "refused", "reason_code": "tool_profile",
             "tool_profile": profile, "message": message}
 
@@ -376,22 +477,13 @@ _EXTRA_TOOLS = [
     {
         "name": _CONFIRMATION_RESPONSE_TOOL,
         "description": (
-            "Approves or rejects ONE OR MORE pending confirmations (from a prior "
-            "'pending_approval' response or from list_pending_confirmations) over MCP — "
-            "this is the primary approval path; the web review page is only an "
-            "alternative for whoever is at a browser. Call this ONLY after the user has "
-            "explicitly told you, in THIS conversation, to approve or reject THOSE "
-            "SPECIFIC confirmation_id(s) — never call it on your own judgment, and "
-            "never infer approval from the user's ORIGINAL task request alone (e.g. "
-            "'create these schedules' is the task; it is NOT, by itself, 'yes, execute "
-            "confirmation_id X' — that needs its own explicit go-ahead, even if it "
-            "comes right after you show the pending confirmation). This applies just as "
-            "much to a batch as to a single one: 'clean up whatever is pending' is NOT "
-            "authorization to approve/reject an unnamed set — only a set the user "
-            "actually named or that you listed and the user confirmed applies here). If "
-            "you are unsure whether the user actually approved, ask them plainly before "
-            "calling this. Approving executes nothing by itself — retry the original "
-            "write tool call with the same arguments plus '_confirmation_id' afterward. "
+            "Approves or rejects pending confirmations (from a 'pending_approval' response "
+            "or list_pending_confirmations). Approving also RUNS the request in the same "
+            "call — the result is in 'execution'; do not retry the original tool. Call it "
+            "only after the user said yes/no (typed or spoken) to a read-back of what the "
+            "system resolved (confirm_with_user); once they did, do it at once, without "
+            "asking again. Never on your own judgment, never from their request alone, "
+            "never for a vague 'clean up whatever is pending'. "
             "Requires an Admin/Editor-role key."
         ),
         "inputSchema": {
@@ -461,7 +553,23 @@ _EXTRA_TOOLS = [
             "required": ["tool_name"],
         },
     },
+    {
+        # 가벼움 전용(2026-10-10). use_tool 과 같지만 **읽기 도구만** 받는다 —
+        # 그래서 읽기 전용 표시를 달 수 있고, claude.ai 가 조회마다 허락을 묻지
+        # 않는다. 설명은 _lite_delegate_entry 가 이름 색인으로 채운다.
+        "name": "read_tool",
+        "description": "Runs a READ-ONLY tool that is not listed, by name.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tool_name": {"type": "string", "description": "Name of the read-only tool to run."},
+                "arguments": {"type": "object", "description": "That tool's arguments, exactly as its own schema defines them."},
+            },
+            "required": ["tool_name"],
+        },
+    },
 ]
+_EXTRA_NAMES = frozenset(t["name"] for t in _EXTRA_TOOLS)
 
 
 # ── 도구 노출 등급(서랍) ──────────────────────────────────────────────────────
@@ -476,7 +584,8 @@ _EXTRA_TOOLS = [
 # 받아도 **그것을 호출할 수단이 없다.** 내부 AI 매니페스트는 프롬프트 텍스트라
 # 이 제약이 없어서, 같은 서랍이 두 표면에서 다르게 동작한다 — MCP 쪽에만
 # 실행 도구가 필요한 이유가 이것이다.
-_DRAWER_MACHINERY = frozenset({"open_drawer", "get_tool_detail", "use_tool"})
+_DRAWER_MACHINERY = frozenset({"open_drawer", "get_tool_detail", "use_tool",
+                               "read_tool"})
 _TIER_EXEMPT_TOOLS = frozenset({_CONFIRMATION_RESPONSE_TOOL}) | _DRAWER_MACHINERY
 
 
@@ -529,6 +638,21 @@ def _tiering_enabled():
     return _env_flag_on("AOT_MCP_TOOL_TIERING")
 
 
+def domain_surface_enabled():
+    """도메인 표면 스위치 — `AOT_MCP_SURFACE=domain` 일 때만(옮기는 동안 기본 꺼짐)."""
+    return os.environ.get("AOT_MCP_SURFACE", "").strip().lower() == "domain"
+
+
+def _facades_enabled():
+    """묶음 도구(tool_registry.MCP_FACADES)로 tools/list 를 내는가. 기본 켬.
+
+    끄면(AOT_MCP_FACADES=0) 안쪽 도구를 예전처럼 하나씩 싣는다. 켜든 끄든 안쪽
+    도구는 이름으로 직접 부를 수 있고 묶음 도구도 부를 수 있다 — 스위치는
+    목록의 모양만 바꾼다(목록을 캐시한 호스트가 어느 쪽을 불러도 깨지지 않게)."""
+    return os.environ.get("AOT_MCP_FACADES", "1").strip().lower() not in (
+        "0", "false", "no", "off")
+
+
 #: 켬으로 읽는 스위치 값(대소문자 무시). 예전 기본(켬) 시절에는 "0" 만 끔이라
 #: `true` 도 켬으로 동작했다 — 기본을 뒤집으며 "1" 만 받으면 그 설정이 조용히
 #: 꺼진다.
@@ -574,7 +698,7 @@ def _drawer_contents(app, role=None, profile=None):
     """
     return _exclude_always_listed(
         {t["name"] for t in _get_all_tools(app, role=role, tiered=False,
-                                           profile=profile)})
+                                           profile=profile, facades=False)})
 
 
 def _exclude_always_listed(names):
@@ -610,7 +734,7 @@ def _open_drawer(app, arguments, role=None, profile=None):
         }
 
     every = {t["name"]: t for t in _get_all_tools(app, role=role, tiered=False,
-                                                  profile=profile)}
+                                                  profile=profile, facades=False)}
     names = tools_in_drawer(drawer, available=_drawer_contents(
         app, role=role, profile=profile))
     tools = [every[n] for n in names]
@@ -654,7 +778,8 @@ def _empty_drawer_refusal(app, drawer, role, profile):
             "tool_profile": profile, "performed": False,
             "message": ("The '%s' drawer has no tools in this API key's tool "
                         "profile (%s). Its tools belong to %s. %s"
-                        % (drawer, profile, where, _switch_sentence())),
+                        % (drawer, profile, where,
+                          _switch_sentence(role=role))),
             "drawers": _drawer_index(app, role=role, profile=profile)}
 
 
@@ -670,7 +795,9 @@ def _get_tool_detail(app, arguments, role=None, profile=None):
     if not name:
         return {"error": "tool_name is required"}
     name = str(name).strip()
-    for t in _get_all_tools(app, role=role, tiered=False, profile=profile):
+    # 묶음 도구는 묶음 목록에서, 그 밖(안쪽 도구 포함)은 실제 도구 목록에서 찾는다.
+    for t in _get_all_tools(app, role=role, tiered=False, profile=profile,
+                            facades=name in registry.MCP_FACADES):
         if t["name"] == name:
             full = dict(t)
             detail = _tool_detail(name)
@@ -735,7 +862,160 @@ def _hidden_tools(role):
     return frozenset(hidden)
 
 
-def _get_all_tools(app, role=None, tiered=None, profile=None):
+def _facade_entry(name, hidden, profile, in_drawer):
+    """묶음 도구 하나의 tools/list 항목 — 이 호출자가 쓸 수 있는 operation 만.
+
+    operation 하나하나가 안쪽 도구이므로 목록 판정도 안쪽 도구의 판정을 그대로
+    따른다: 역할로 숨긴 것·묶음 밖·서랍에 든 것은 뺀다. 남는 것이 없으면 None
+    (그 키에는 이 묶음 도구 자체가 없다).
+
+    **하나만 남으면 그 도구를 원래 모양 그대로** 싣는다 — operation 이 하나뿐인
+    묶음은 묶음 설명만큼 원래 도구보다 크다(운영 키의 공지 쓰기가 create_notice
+    하나뿐이다). 실행은 어느 이름으로 불러도 같다."""
+    from aot.tools import tool_registry as registry
+    ops = [op for op in registry.MCP_FACADES[name]['operations']
+           if op not in hidden and not in_drawer(op)]
+    if len(ops) == 1:
+        from aot.tools.virtual_tools import VIRTUAL_TOOLS
+        for vt in VIRTUAL_TOOLS:
+            if vt["tool_name"] == ops[0]:
+                return {"name": vt["tool_name"], "description": vt["description"],
+                        "inputSchema": vt.get("input_schema",
+                                              {"type": "object", "properties": {}})}
+    payload = registry.facade_payload(name, ops)
+    if payload is None:
+        return None
+    return {"name": name, "description": payload["description"],
+            "inputSchema": payload["input_schema"]}
+
+
+def reachable_tool_names(tools):
+    """tools/list 항목들 → 그것으로 **부를 수 있는** 도구 이름 집합.
+
+    묶음 도구는 실린 operation(= 안쪽 도구 이름)으로 펼친다. "이 키가 무엇을
+    할 수 있는가" 를 목록으로 따지는 자리(검사·테스트)는 이것을 쓴다 — 목록
+    줄 이름만 세면 묶음 안의 도구가 없는 것으로 보인다."""
+    from aot.tools import tool_registry as registry
+    names = set()
+    for t in tools:
+        if t["name"] in registry.MCP_FACADES:
+            names |= set(t["inputSchema"]["properties"]["operation"]["enum"])
+        else:
+            names.add(t["name"])
+    return names
+
+
+def _facade_target(name, arguments):
+    """묶음 도구 호출 → (안쪽 도구 이름, 안쪽 인자) 또는 (None, 오류 본문)."""
+    from aot.tools import tool_registry as registry
+    ops = list(registry.MCP_FACADES[name]['operations'])
+    op = arguments.get("operation")
+    if not isinstance(op, str) or op.strip() not in ops:
+        return None, _tool_error(
+            "%s needs 'operation' — one of: %s. Each is the name of the tool "
+            "that runs; the other arguments are that tool's own."
+            % (name, ", ".join(ops)))
+    inner_args = {k: v for k, v in arguments.items() if k != "operation"}
+    return op.strip(), inner_args
+
+
+#: 읽기 전용 표시를 붙이는 위임·조회 도구(게이트가 모르는 이름이라 따로 적는다).
+_READ_ONLY_EXTRA = frozenset({"open_drawer", "get_tool_detail", "read_tool"})
+
+
+def model_view(tools):
+    """모델이 실제로 받는 모양 — annotations 를 뺀다(크기 측정용).
+
+    annotations 는 호스트(클라이언트)가 허락 창을 정하는 데 쓰는 힌트이고
+    Anthropic API 도구 정의에는 이 칸이 없어 모델 프롬프트에 실리지 않는다.
+    크기 예산이 이것까지 세면 실제로 늘지 않은 비용을 막게 된다."""
+    return [{k: v for k, v in t.items() if k != "annotations"} for t in tools]
+
+
+def _with_read_only_hint(entry):
+    """읽기 도구에 MCP annotations.readOnlyHint 를 붙인다(2026-10-10).
+
+    claude.ai 는 이 표시가 없는 도구를 부를 때마다 사용자에게 허락을 물었다
+    (파일럿: get_tool_detail 이 매번 '입력이 필요합니다'). 표시는 클라이언트용
+    힌트라 모델 프롬프트에 실리지 않는다 — Anthropic API 도구 정의에는 이 칸이
+    없다. 쓰기 도구에는 붙이지 않는다(호스트의 확인 + AoT 승인이 그대로)."""
+    from aot.tools import mcp_safety_gate as gate
+    name = entry.get("name")
+    from aot.tools.tool_registry import ACTS_WITHOUT_SAVING
+    if name in _READ_ONLY_EXTRA or (
+            name not in _EXTRA_NAMES and name not in _registry_facades()
+            and name not in ACTS_WITHOUT_SAVING
+            and gate.classify_permission(name) == "read"):
+        entry = dict(entry)
+        entry["annotations"] = dict(entry.get("annotations") or {},
+                                    readOnlyHint=True)
+    return entry
+
+
+def _registry_facades():
+    from aot.tools.tool_registry import MCP_FACADES
+    return MCP_FACADES
+
+
+def _is_reading(name):
+    """read_tool 이 맡는 도구인가 — 게이트상 읽기이고, 보이는 것을 바꾸지 않는다
+    (화면 조작은 쓰기 쪽 — tool_registry.ACTS_WITHOUT_SAVING)."""
+    from aot.tools import mcp_safety_gate as gate
+    from aot.tools.tool_registry import ACTS_WITHOUT_SAVING
+    return (name not in ACTS_WITHOUT_SAVING
+            and gate.classify_permission(name) == "read")
+
+
+def _lite_index(hidden, reads):
+    """가벼움에서 목록 밖 운영 도구 이름 — 읽기(reads=True) 또는 쓰기."""
+    from aot.tools import mcp_safety_gate as gate
+    from aot.tools import tool_registry as registry
+    names = []
+    for n in sorted(registry.profile_tools(registry.TOOL_PROFILE_OPERATIONS)):
+        if n in registry.LITE_LISTED or n in hidden or \
+                registry.mcp_profile_of(n) != registry.TOOL_PROFILE_OPERATIONS:
+            continue
+        if _is_reading(n) == reads:
+            names.append(n)
+    return names
+
+
+def _lite_signature(name):
+    """색인 한 칸 — 인자 명부(LITE_ARG_HINTS)에 있으면 `이름(인자, 선택?)`."""
+    from aot.tools import tool_registry as registry
+    args = registry.LITE_ARG_HINTS.get(name)
+    if not args:
+        return name
+    schema = _tool_schema(name) or {}
+    required = set(schema.get("required") or ())
+    return "%s(%s)" % (name, ", ".join(
+        a if a in required else a + "?" for a in args))
+
+
+def _lite_delegate_entry(et, hidden):
+    """가벼움 목록의 read_tool·use_tool 항목 — 설명에 부를 수 있는 이름을 싣는다."""
+    entry = dict(et)
+    if et["name"] == "read_tool":
+        names = _lite_index(hidden, reads=True)
+        entry["description"] = (
+            "Runs a READ-ONLY tool that is not listed, by name — use it before "
+            "saying something cannot be looked up. Arguments are shown for common "
+            "tools (? = optional); get_tool_detail gives the rest. Available: "
+            + ", ".join(_lite_signature(n) for n in names) + ".")
+    elif et["name"] == "use_tool":
+        names = _lite_index(hidden, reads=False)
+        if not names:
+            return None
+        entry["description"] = (
+            "Runs a tool that CHANGES something, by name (notes, notices, "
+            "schedules, functions, plot stages, …). It still needs human approval "
+            "when the tool does. Arguments are shown for common tools "
+            "(? = optional); get_tool_detail gives the rest. Available: "
+            + ", ".join(_lite_signature(n) for n in names) + ".")
+    return entry
+
+
+def _get_all_tools(app, role=None, tiered=None, profile=None, facades=None):
     """Return merged list of VIRTUAL_TOOLS + AoTNativeToolEngine tools.
 
     Priority: VIRTUAL_TOOLS first (richer descriptions), then native tools
@@ -761,22 +1041,47 @@ def _get_all_tools(app, role=None, tiered=None, profile=None):
     Only tools in the profile are listed; the drawer machinery follows the
     drawer switch, not the profile. Order: role hiding → profile → drawer split
     (all three are intersections, so the order does not change the result).
-    """
-    from aot.tools.tool_registry import tier_of, tool_in_profile
 
-    hidden = _hidden_tools(role)
+    `facades` (None = follow _facades_enabled()) replaces each family in
+    tool_registry.MCP_FACADES by ONE tool listing only the operations this
+    caller can use — placed where the family's first member stood. The drawer
+    contents pass False: a drawer hands out the real tools, run by use_tool.
+    """
+    from aot.tools.tool_registry import DOMAIN_ONLY_TOOLS, LITE_LISTED, tier_of, tool_in_profile
+    from aot.tools.tool_registry import facade_of as registry_facade_of
+
+    # 도메인 표면(스위치 뒤) — 목록은 도메인 도구뿐이다. 상세 조회·서랍처럼 전체
+    # 표면이 필요한 자리(tiered=False)는 지금 표면을 그대로 쓴다.
+    if domain_surface_enabled() and tiered is not False:
+        from aot.tools.domain import surface as _domain_surface
+        return _domain_surface.for_key(app, role, profile)
+
+    hidden = _hidden_tools(role) | DOMAIN_ONLY_TOOLS
+    # tiered=False 로 부르는 자리(상세 조회·서랍)는 **전체 표면**이 필요하다 —
+    # 가벼움의 좁은 목록을 거기에도 걸면 목록 밖 도구의 정의를 영영 못 얻는다
+    # (2026-10-10 claude.ai 파일럿: get_tool_detail('get_plot') 이 실패했다).
+    full_surface = tiered is False
     if tiered is None:
         tiered = _tiering_enabled()
     profile = _effective_profile(profile)
 
+    lite = _is_lite(profile)
+
     def _in_drawer(name):
         if not tool_in_profile(name, profile):
             return True          # 묶음 밖 — 목록에도 서랍에도 없다
+        if lite and not full_surface:
+            # 가벼움 — 정해 둔 몇 개만 목록에, 나머지는 이름 색인 + read_tool/use_tool.
+            return name not in LITE_LISTED
         return (tiered
                 and name not in _TIER_EXEMPT_TOOLS
                 and tier_of(name)[1] != 'core')
 
     tools = []
+    if facades is None:
+        facades = _facades_enabled()
+    facade_of = registry_facade_of if facades else (lambda _n: None)
+    emitted = set()
 
     # 1. VIRTUAL_TOOLS — owned by the tool layer itself (aot/tools/virtual_tools.py,
     #    derived from tool_registry.virtual_tools()). mcp_aot.py re-exports the same
@@ -785,6 +1090,14 @@ def _get_all_tools(app, role=None, tiered=None, profile=None):
     try:
         from aot.tools.virtual_tools import VIRTUAL_TOOLS
         for vt in VIRTUAL_TOOLS:
+            fac = facade_of(vt["tool_name"])
+            if fac is not None:
+                if fac not in emitted:
+                    emitted.add(fac)
+                    entry = _facade_entry(fac, hidden, profile, _in_drawer)
+                    if entry is not None:
+                        tools.append(entry)
+                continue
             if vt["tool_name"] in hidden or _in_drawer(vt["tool_name"]):
                 continue
             tools.append({
@@ -819,6 +1132,20 @@ def _get_all_tools(app, role=None, tiered=None, profile=None):
         if et["name"] in hidden or et["name"] in existing \
                 or not tool_in_profile(et["name"], profile):
             continue
+        if lite and not full_surface:
+            # 가벼움은 read_tool·use_tool·get_tool_detail 로 나머지에 닿는다.
+            # 이름 색인은 **그 두 도구의 설명**에 싣는다(_lite_delegate_entry) —
+            # claude.ai 는 서버 안내문(instructions)을 모델에 주지 않는 것으로
+            # 보였다(파일럿: 모델이 없는 이름 'add_note' 를 추측했다).
+            if et["name"] not in LITE_LISTED:
+                continue
+            entry = _lite_delegate_entry(et, hidden)
+            if entry is not None:
+                tools.append(entry)
+            continue
+        if et["name"] == "read_tool":
+            continue                 # 가벼움 전용
+
         # 서랍 기구는 서랍을 켰을 때만 목록에 싣는다. 끈 목록에 두면 모델이
         # "목록이 전부가 아니다" 로 읽고 서랍을 뒤지는 왕복을 만든다.
         # tiered=False 로 부르는 서랍 내부 조회는 어차피 이 셋을 걸러 낸다.
@@ -826,7 +1153,7 @@ def _get_all_tools(app, role=None, tiered=None, profile=None):
             continue
         tools.append(dict(et))
 
-    return tools
+    return [_with_read_only_hint(t) for t in tools]
 
 
 # ── 응답 크기 상한 ────────────────────────────────────────────────────────────
@@ -848,6 +1175,29 @@ def _get_all_tools(app, role=None, tiered=None, profile=None):
 # 아래 추정기의 오차가 그보다 컸다 — **여유가 오차보다 작으면 캡은 없는 것과 같다.**
 # 15,000 으로 낮춰 1.67배를 둔다. 추정기를 함께 고쳤으므로 이중 안전장치다.
 _MAX_RESPONSE_TOKENS = int(os.environ.get("AOT_MCP_MAX_RESPONSE_TOKENS", "15000"))
+
+#: 가벼움 묶음의 응답 상한(2026-10-10). 응답은 대화에 남아 **이후 모든 요청에
+#: 다시 실린다** — claude.ai 파일럿에서 가벼움 대화의 입력 중 도구 목록은 27%
+#: 뿐이었고 나머지는 쌓인 응답이었다(구획 목록 하나 6.6K 가 뒤 8턴 내내 실렸다).
+#: 무료 요금제용 묶음이므로 한 응답이 대화를 키우는 폭을 여기서 막는다. 보통
+#: 설치의 응답은 대부분 이 아래이고, 넘으면 기존 캡이 구조를 유지한 채 항목을
+#: 줄이고 "N건 중 M건 — 좁혀서 다시" 를 남긴다. 0 이면 가벼움도 기본 상한을 쓴다.
+_LITE_MAX_RESPONSE_TOKENS = int(os.environ.get("AOT_MCP_LITE_MAX_RESPONSE_TOKENS",
+                                               "6000"))
+
+
+def _response_cap_for(tool_profile):
+    """이 호출의 응답 상한 — 가벼움이면 더 작은 쪽, 아니면 기본.
+
+    기본 상한이 꺼져 있으면(0) 그대로 끈다 — 가벼움 상한이 끄는 수단을
+    되살리면 안 된다."""
+    base = _MAX_RESPONSE_TOKENS
+    if not base or not _LITE_MAX_RESPONSE_TOKENS:
+        return base
+    if _is_lite(_effective_profile(tool_profile)):
+        return min(base, _LITE_MAX_RESPONSE_TOKENS)
+    return base
+
 
 #: 도구가 응답에 실어 보내는 캡 우선순위 힌트의 키. `_cap_result` 가 읽고
 #: **응답에서 떼어낸다** — 클라이언트가 볼 내용이 아니다.
@@ -1056,7 +1406,11 @@ def _thin_lists(result, target, priority=None):
                 if not col:
                     continue
                 cand = (col[1], parent, key, path, lst, col[0])
-                if (path, col[0]) in keep_last:
+                # `('*', 열)` 은 깊이와 무관하게 그 열을 지킨다 — 중첩 목록의
+                # 경로에는 인덱스가 붙어(`zones[3].sensors`) 도구가 미리 적을
+                # 수 없다. 공간 트리의 children·센서 요약의 sensors 처럼
+                # "이게 빠지면 응답이 통째로 빈다" 인 열에 쓴다(2026-10-09).
+                if (path, col[0]) in keep_last or ('*', col[0]) in keep_last:
                     continue
                 if best is None or col[1] > best[0]:
                     best = cand
@@ -1303,7 +1657,8 @@ def _cap_result(result, tool_name, max_tokens=None, stats=None):
 
 def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
                   elicit_fn=None, scope_user_uuid=None, transport=None,
-                  session_key=None, via_drawer=False, tool_profile=None):
+                  session_key=None, via_drawer=False, tool_profile=None,
+                  resource_links=False):
     """Execute a named tool and return MCP-format content list.
 
     Every call — read or write, executed or refused — is recorded in
@@ -1327,6 +1682,11 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         use_tool 위임이 True 로 넘긴다. 이 함수 안에서 요청 헤더를 읽지 않는다 —
         여기는 test_request_context 라 원래 요청이 보이지 않는다.
 
+    resource_links: 이 연결이 협상한 프로토콜 버전이 ≥2025-06-18 이라 `resource_link` 블록을
+        받을 수 있는가(P2). 전송 계층이 정한다 — mcp_stdio·mcp_http 일 때만 의미가 있고
+        (REST·인앱은 무시), 도구가 결과에 숨은 키 `_resource_links` 로 실어 둔 블록을
+        거짓이면 버린다.
+
     tool_profile: 이 연결의 도구 묶음(`mcp_auth.tool_profile_of(role)`).
         None 이면 제한 없음. 외부 전송(mcp_stdio·mcp_http·rest)에서 묶음 밖
         도구를 부르면 게이트 앞에서 거절한다(reason_code=tool_profile, 승인 큐에
@@ -1340,10 +1700,63 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
 
     arguments = arguments or {}
 
+    # 묶음 도구도 use_tool 처럼 **위임**한다 — 승인 큐·감사에는 안쪽 도구 이름이
+    # 남고, 묶음·스코프·인자 검사도 안쪽 도구 기준으로 한 번만 일어난다.
+    from aot.tools import tool_registry as _registry
+    # 도메인 도구(설계 docs/design/mcp-domain-surface.md) — 스위치 뒤에서만.
+    # 실행은 안쪽 도구를 이 함수로 다시 부르는 것 하나뿐이다(dispatch.run).
+    from aot.tools.domain import registry as _domain_registry
+    if tool_name in _domain_registry.DOMAIN_TOOLS and domain_surface_enabled():
+        from aot.tools.domain import dispatch as _domain_dispatch
+        return _domain_dispatch.run(app, tool_name, arguments, agent_id=agent_id,
+                                    role=role, elicit_fn=elicit_fn,
+                                    scope_user_uuid=scope_user_uuid,
+                                    transport=transport, session_key=session_key,
+                                    via_drawer=via_drawer, tool_profile=tool_profile,
+                                    **_links_kw(resource_links))
+    if tool_name in _registry.MCP_FACADES:
+        inner, inner_args = _facade_target(tool_name, arguments)
+        if inner is None:
+            return inner_args
+        return _execute_tool(app, inner, inner_args, agent_id=agent_id,
+                             role=role, elicit_fn=elicit_fn,
+                             scope_user_uuid=scope_user_uuid,
+                             transport=transport, session_key=session_key,
+                             via_drawer=via_drawer, tool_profile=tool_profile,
+                             **_links_kw(resource_links))
+
+    # 키 묶음 바꾸기는 **부른 연결의 키**만 바꾼다 — 인자의 key_id 는 무엇이든
+    # 인증에서 온 값으로 덮어쓴다(남의 키를 바꾸는 수단이 되면 안 된다). 저장된
+    # 승인 인자에도 이 값이 실려, 웹 승인으로 실행돼도 같은 키다.
+    if tool_name == "set_tool_profile":
+        arguments = dict(arguments, key_id=getattr(role, "key_id", None),
+                         link_id=getattr(role, "link_id", None))
+    # 화면 조회도 **부른 키 주인의 것**만 — 인자의 user_id 는 무엇이든 덮어쓴다.
+    # 예보도 같은 키 주인의 화면에서 "지금 보는 장소" 를 읽는다.
+    if tool_name in ("get_screen", "screen_action", "get_weather_forecast"):
+        arguments = dict(arguments, user_id=scope_user_uuid)
+    # AI 수신함 카드(screen_action post)의 보낸 쪽 이름은 **인증된 연결의 키**에서만 온다 —
+    # 인자로 들어온 ai_key_id/ai_link_id 는 무엇이든 덮어쓴다(출처 위조 방지).
+    if tool_name == "screen_action":
+        arguments = dict(arguments, ai_key_id=getattr(role, "key_id", None),
+                         ai_link_id=getattr(role, "link_id", None))
+
     # use_tool 은 실행을 **위임**한다 — 게이트도 감사도 안쪽 호출이 남긴다.
     # 여기서 한 겹 더 기록하면 같은 실행이 감사 로그에 두 줄로 남아 호출 횟수를
     # 셀 수 없게 되고, 바깥에서 게이트를 한 번 더 태우면 승인 대상이 use_tool
     # 이라는 이름으로 큐에 들어가 사람이 무엇을 승인하는지 알 수 없게 된다.
+    if tool_name == "read_tool":
+        inner = arguments.get("tool_name")
+        inner = inner.strip() if isinstance(inner, str) else inner
+        from aot.tools.tool_registry import MCP_FACADES
+        if inner in _EXTRA_NAMES or inner in MCP_FACADES or (
+                isinstance(inner, str) and not _is_reading(inner)):
+            # 읽기 전용이라고 표시한 도구가 쓰기를 실행하면 호스트의 확인을
+            # 건너뛰게 된다 — 이름이 비었으면 use_tool 쪽 오류 문구로 넘긴다.
+            return _tool_error(
+                "read_tool runs read-only tools only — '%s' changes something. "
+                "Run it with use_tool instead (it may need approval)." % inner)
+        tool_name = "use_tool"
     if tool_name == "use_tool":
         inner = arguments.get("tool_name")
         inner_args = arguments.get("arguments")
@@ -1371,10 +1784,24 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
                              role=role, elicit_fn=elicit_fn,
                              scope_user_uuid=scope_user_uuid,
                              transport=transport, session_key=session_key,
-                             via_drawer=True, tool_profile=tool_profile)
+                             via_drawer=True, tool_profile=tool_profile,
+                             **_links_kw(resource_links))
     # 호출 품질의 duration_ms 는 여기서부터 잰다 — use_tool 의 인자 검증은
     # 빼고, 스코프·게이트·실행·캡·최종 직렬화를 넣는다(감사 쓰기·전송은 뺀다).
     _t0 = time.monotonic()
+    # 화면 따라가기의 호출별 옵션(`_show_on_screen`) — 도구 스키마에 없는 메타
+    # 인자다. 게이트·처리기·감사·승인 큐에 섞이지 않게 실행 전에 떼어 두고
+    # 따라가기에만 넘긴다(2026-10-12 A6).
+    arguments, show_on_screen = _screen_follow.pop_show_arg(arguments)
+    arguments, answer_time = _screen_follow.pop_answer_time(arguments)
+    # 화면 지정은 한 이름이다 — 화면 도구는 `screen`, 조회는 `_show_on_screen`. 조회도 `screen` 을 받는다(도메인 틀과 같다).
+    # 화면 도구에서 지정한 화면은 이 대화의 지정 화면으로 적어 두고, 이후 조회가 여러 화면 속에서도 그 화면을 따라간다.
+    if tool_name in ("screen_action", "get_screen"):
+        _screen_follow.remember_screen(scope_user_uuid, session_key, (arguments or {}).get("screen"))
+    elif show_on_screen is None and isinstance(arguments, dict) and arguments.get("screen") \
+            and (tool_name in _screen_follow.FOLLOW_TOOLS or tool_name in _screen_follow.TIME_FOLLOW_TOOLS):
+        arguments = dict(arguments)
+        show_on_screen = arguments.pop("screen")
     # `agent_id` is decided by the transport (API key, or the declared name when
     # auth is off) and is NOT overridable from the arguments. An earlier version
     # honoured a `_agent_id` argument here, which let any caller stamp someone
@@ -1412,7 +1839,9 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         # tools was silently broken here until now (found 2026-07-26 testing
         # create_gis_input). test_request_context() pushes both a request and an
         # app context, so this is a strict superset of the old app_context() call.
-        with app.test_request_context():
+        # 읽기가 느리면(2.5초~) 사용자 화면에 "조회 중" 자막을 띄운다 — 말없이 일하는 AI 가 고장으로 보이지 않게(2026-10-26).
+        with _screen_follow.slow_read_notice(app, tool_name, permission, scope_user_uuid, tool_profile,
+                                             transport, show_on_screen), app.test_request_context():
             # 코드가 연 가짜 요청이라는 표지 — 인앱 AI 가 이 안에서 사람을
             # 찾지 않게 한다(aot/ai/ai_request_context.SYNTHETIC_REQUEST_KEY).
             from flask import request as _req
@@ -1453,12 +1882,41 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
                         reason=reason, elicit_fn=elicit_fn,
                         scope_user_uuid=scope_user_uuid)
                     if blocked is None and tool_name == "get_system_brief":
-                        _attach_profile_note(result, tool_profile)
+                        _attach_profile_note(result, tool_profile, role)
                     elif blocked is None and enforced is not None and \
                             tool_name == "list_pending_confirmations":
-                        _mask_out_of_profile_pending(result, enforced)
+                        _mask_out_of_profile_pending(result, enforced, role)
                     elif blocked is None and tool_name == "knowledge_search":
                         _attach_shelve_hint(result, enforced, role)
+                    # 화면 따라가기 — 조회한 장소·구획·장치의 창을 사용자 화면에도
+                    # 연다(그 화면이 허용했을 때만). 정보 응답은 기다리지 않는다.
+                    if blocked is None and tool_name in _screen_follow.FOLLOW_TOOLS \
+                            and isinstance(result, dict):
+                        shown = _screen_follow.follow(
+                            tool_name, arguments, result, scope_user_uuid,
+                            tool_profile, transport, show=show_on_screen,
+                            session_key=session_key)
+                        if shown:
+                            result["screen"] = shown
+                    # 결과를 정리해 줄 조회에는 카드 안내를 한 줄 붙인다(설정 '자동', 대화마다 5분에 한 번).
+                    if blocked is None and isinstance(result, dict) \
+                            and result.get("status") != "error":
+                        _attach_card_hint(result, tool_name, session_key, scope_user_uuid)
+                        # 예보 뒤 슬라이더 — 서버가 먼저 옮긴다. 결과(`slider`)는 감사 기록에만 쓰고 응답에서 뗀다. 응답에는 힌트(`time_hint`)만.
+                        if tool_name in _screen_follow.TIME_FOLLOW_TOOLS:
+                            moved = _screen_follow.follow_time(
+                                tool_name, arguments, result, scope_user_uuid,
+                                tool_profile, transport, show=show_on_screen,
+                                answer_time=answer_time, session_key=session_key)
+                            if moved:
+                                result.update(moved)
+                                # 서버가 옮겼으면 힌트를 붙인다 — 답이 특정 시각을 말하면 AI 가 그 시각으로 옮긴다.
+                                _hint = _screen_follow.time_hint_for(scope_user_uuid, moved)
+                                if _hint:
+                                    _rest = [(k, v) for k, v in result.items() if k != "time_hint"]
+                                    result.clear()
+                                    result["time_hint"] = _hint        # 맨 앞 — 끝에 두면 AI 가 앞쪽 숫자만 읽는다
+                                    result.update(_rest)
             except ValueError as exc:
                 error_text = str(exc)
                 result = {"status": "error", "message": error_text}
@@ -1468,10 +1926,14 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
                 result = {"status": "error", "message": error_text}
 
         outcome = _audit_outcome(tool_name, permission, blocked, result,
-                                 error_text)
+                                 error_text, arguments)
+        if isinstance(result, dict):
+            result.pop("slider", None)          # 감사에만 쓴다 — AI 가 슬라이더 얘기를 되풀이하지 않게
         record_error = error_text
         out = _finish_result(result, tool_name, blocked, error_text,
-                             quality, cap_stats)
+                             quality, cap_stats,
+                             max_tokens=_response_cap_for(tool_profile),
+                             transport=transport, resource_links=resource_links)
     except Exception as exc:
         quality["call_state"] = "failed"
         quality["response_bytes"] = None
@@ -1488,7 +1950,7 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
         quality["duration_ms"] = int(round((time.monotonic() - _t0) * 1000))
         if outcome is None:
             outcome = _audit_outcome(tool_name, permission, blocked, result,
-                                     error_text)
+                                     error_text, arguments)
         _record_audit(audit, tool_name, arguments, agent_id, permission,
                       reason, outcome, record_error, quality,
                       transport=transport, session_key=session_key,
@@ -1496,7 +1958,7 @@ def _execute_tool(app, tool_name, arguments, agent_id="unknown", role=None,
     return out
 
 
-def _attach_profile_note(result, profile):
+def _attach_profile_note(result, profile, role=None):
     """get_system_brief 응답에 이 연결의 묶음을 싣는다(시작점이라 여기서 알린다).
 
     서버 안내문을 보여 주지 않는 호스트도 있어, 대화의 첫 조회에도 같은 말을
@@ -1504,7 +1966,7 @@ def _attach_profile_note(result, profile):
     profile = _effective_profile(profile)
     if profile is None or not isinstance(result, dict):
         return result
-    result["tool_profile"] = {"name": profile, "note": _profile_note(profile)}
+    result["tool_profile"] = {"name": profile, "note": _profile_note(profile, role)}
     return result
 
 
@@ -1564,15 +2026,20 @@ def _run_gated_tool(tool_name, arguments, agent_id, role, reason, elicit_fn,
                                     elicit_fn=elicit_fn)
             if blocked is not None:
                 return blocked, blocked
+            _why = gate.stale_target(arguments)
+            if _why:
+                refusal = gate.target_changed_refusal(_why)
+                return refusal, refusal
             call_args = gate.inject_agent(
-                tool_name, gate.strip_meta(arguments), agent_id)
+                tool_name, gate.handler_args(arguments), agent_id)
             # 승인된 확인 번호로 다시 부른 호출이면 **승인한 사람도** 함께
             # 판정한다(설계 §6-2a). 부른 사람과 승인한 사람이 다를 수 있고,
             # 한쪽만 보면 다른 쪽의 그룹 밖 대상이 움직인다 — 둘 다 통과해야
             # 쓴다. 게이트가 방금 소비한 행에 승인자가 적혀 있다.
             approver = (_confirmation_approver(arguments)
                         if is_write else None)
-            with write_scope.also_acting_as(approver, tool=tool_name):
+            with write_scope.also_acting_as(approver, tool=tool_name), \
+                    gate.approval_granted():
                 if tool_name in _NATIVE_TOOLS:
                     from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
                     result = AoTNativeToolEngine.execute(tool_name, call_args)
@@ -1601,6 +2068,9 @@ def _run_gated_tool(tool_name, arguments, agent_id, role, reason, elicit_fn,
 #: 도구별 추가 검증 — AoTDataToolService 의 메서드 이름. (인자) → None | 오류 dict.
 _PRE_GATE_VALIDATORS = {
     'modify_function_options': 'validate_function_options',
+    # 입출력 옵션 키·값 — 정의 밖 키를 저장하고 성공하던 것(2026-10-28 점검).
+    'modify_input': 'validate_device_options',
+    'modify_output': 'validate_device_options',
     'confirm_plot_stage': 'validate_confirm_plot_stage',
     # 'AI 판단에 포함' 을 끈 출력 — 승인 큐에 넣지 않고 이유와 함께 거절한다.
     'operate_device': 'validate_ai_control_target',
@@ -1616,6 +2086,8 @@ _TRANSPORT_KEYS = frozenset({"tool_name", "server_id", "agent_unique_id",
 def _tool_schema(tool_name):
     """MCP 에 광고하는 inputSchema(앱 없이). 모르면 None."""
     from aot.tools import tool_registry as registry
+    if tool_name in registry.MCP_FACADES:
+        return registry.facade_payload(tool_name)["input_schema"]
     for p in registry._MCP_TOOL_PAYLOADS:
         if p.get("tool_name") == tool_name:
             return p.get("input_schema")
@@ -1686,7 +2158,9 @@ def _handler_param_names(tool_name):
     import inspect
     try:
         if tool_name in _NATIVE_TOOLS:
-            return set()
+            # 네이티브 도구는 서명이 없다 — 엔진이 스키마 밖 처리기 인자를 직접 밝힌다.
+            from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
+            return set(AoTNativeToolEngine.HANDLER_PARAMS.get(tool_name, ()))
         from aot.tools.tool_registry import build_tool_map
         handler = build_tool_map().get(tool_name)
         return {n for n, p in inspect.signature(handler).parameters.items()
@@ -1716,7 +2190,13 @@ def _handler_optional_names(tool_name):
 #: `_ignored_arguments` 가 알린다.
 _CLIENT_META_ARGS = frozenset({"reason", "title", "confirm", "confirmed",
                                "confirmation", "rationale", "justification",
-                               "dry_run"})
+                               "dry_run",
+                               # 화면 따라가기 옵션 — _execute_tool 이 실행 전에
+                               # 떼지만, 다른 길로 와도 오타로 보지 않게.
+                               "show_on_screen", "_show_on_screen",
+                               # get_zone_sensor_summary 의 센서 목록 토글 — 스키마에
+                               # 싣지 않는다(도구 토큰 예산). 처리기가 받는다.
+                               "detail", "_detail"})
 
 
 # @manual ai/overview#tool-arguments
@@ -1881,7 +2361,18 @@ def _result_items(result):
     return len(lists[0]) if len(lists) == 1 else None
 
 
-def _finish_result(result, tool_name, blocked, error_text, quality, cap_stats):
+#: resource_link 블록을 붙일 수 있는 전송(표준 MCP). REST·인앱 AI 는 받지 않는다.
+_RESOURCE_LINK_TRANSPORTS = ("mcp_stdio", "mcp_http")
+
+
+def _links_kw(resource_links):
+    """재귀 호출에 resource_links 를 실을 때의 키워드 — 거짓이면 아무것도 싣지 않는다
+    (인자 목록이 정해진 호출 대역·시험용 가짜가 깨지지 않게)."""
+    return {"resource_links": True} if resource_links else {}
+
+
+def _finish_result(result, tool_name, blocked, error_text, quality, cap_stats,
+                   max_tokens=None, transport=None, resource_links=False):
     """실행 결과 → MCP 블록. 호출 품질 칸을 `quality` 에 채운다."""
     from aot.tools import mcp_safety_gate as gate
 
@@ -1898,8 +2389,12 @@ def _finish_result(result, tool_name, blocked, error_text, quality, cap_stats):
     # 계산되지 텍스트 글자 수로 계산되지 않으므로, 애초에 캡의 자에 올리지
     # 않는 것이 옳다.
     _blocks = None
+    _links = None
     if isinstance(result, dict):
         _blocks = result.pop("_content_blocks", None)
+        # 숨은 키 `_resource_links`(P2) — 항상 꺼내 JSON 본문에는 나가지 않게 하고, 표준 MCP
+        # 전송이면서 협상한 버전이 받을 수 있을 때만 블록으로 붙인다(아니면 버린다).
+        _links = result.pop("_resource_links", None)
         result.setdefault("server_host", SERVER_HOST)
         # 호출이 실제로 돌았는지를 도구별 어휘와 무관하게 한 키로 알린다.
         # 여기가 stdio/HTTP 양쪽이 반드시 지나는 단일 지점이라 한 번만 찍으면 된다.
@@ -1911,7 +2406,8 @@ def _finish_result(result, tool_name, blocked, error_text, quality, cap_stats):
         # 건수는 `now`·`_truncated` 를 붙이기 전, 캡이 목록을 줄이기 전에 센다.
         quality["result_items"] = _result_items(result)
         result["now"] = _farm_now()
-        result = _cap_result(result, tool_name, stats=cap_stats)
+        result = _cap_result(result, tool_name, max_tokens=max_tokens,
+                             stats=cap_stats)
         quality["truncated"] = "_truncated" in result
     text = json.dumps(result, ensure_ascii=False)
     # 실제로 나간 크기 — 잘린 뒤의 텍스트. 이미지 블록은 넣지 않는다.
@@ -1919,6 +2415,8 @@ def _finish_result(result, tool_name, blocked, error_text, quality, cap_stats):
     out = [{"type": "text", "text": text}]
     if _blocks:
         out.extend(_blocks)
+    if _links and resource_links and transport in _RESOURCE_LINK_TRANSPORTS:
+        out.extend(_links)
     return out
 
 
@@ -2196,7 +2694,8 @@ def _tool_error(message):
          "server_host": SERVER_HOST}, ensure_ascii=False)}]
 
 
-def _audit_outcome(tool_name, permission, blocked, result, error_text):
+def _audit_outcome(tool_name, permission, blocked, result, error_text,
+                   arguments=None):
     """감사 행의 (confirmation_status, result_summary) — 예전 2단계 기록과 같은 값.
 
     캡이 결과를 줄이기 **전에** 부른다. 예전 방식에서 이 둘이 정해지는
@@ -2213,7 +2712,9 @@ def _audit_outcome(tool_name, permission, blocked, result, error_text):
     try:
         if permission == "read":
             status = "n/a"
-        elif blocked is None and tool_name in gate.approval_exempt_writes():
+        elif (blocked is None and tool_name in gate.approval_exempt_writes()
+              and not (tool_name in gate.CONDITIONAL_APPROVAL_TOOLS
+                       and (arguments or {}).get("_confirmation_id"))):
             # 승인이 면제된 쓰기(설정 편집·기록·조언). 'approved' 로 적으면
             # 아무도 보지 않은 동작을 사람이 승인한 것처럼 남는다 — 안전 감사
             # 로그에서 그건 거짓이다. 승인이 애초에 요구되지 않았음을 적는다.
@@ -2226,6 +2727,17 @@ def _audit_outcome(tool_name, permission, blocked, result, error_text):
             status = "rejected"
         summary = (blocked or {}).get("reason_code") or (
             "" if error_text else str(result.get("status", ""))[:100])
+        # 읽기 응답에 화면 따라가기 결과(`screen`)가 실렸으면 한 줄 덧붙인다 — 읽기 호출에
+        # 따라가기가 붙었는지·무엇을 했는지 기록에 없어 사후에 시각을 맞춰 추정해야 했다.
+        note = _screen_follow.audit_note(result.get("screen")) \
+            if isinstance(result, dict) else None
+        if note:
+            summary = ("%s | %s" % (summary, note)) if summary else note
+        # 예보를 읽을 때 서버가 슬라이더를 옮겼는지(또는 왜 못 옮겼는지) — 어제는 이 사실이 기록에 없어
+        # "옮겼어야 하는데 안 옮겼다" 를 사후에 가릴 수 없었다.
+        if isinstance(result, dict) and result.get("slider"):
+            slider = "slider:%s" % str(result["slider"])[:100]
+            summary = ("%s | %s" % (summary, slider)) if summary else slider
         return {"status": status, "summary": summary,
                 "confirmation_id": confirmation_id}
     except Exception:
@@ -2280,7 +2792,7 @@ def _record_audit(audit, tool_name, arguments, agent_id, permission,
                 "call_state": quality.get("call_state"),
                 "result_items": quality.get("result_items"),
             }
-        audit.record_call(
+        uid = audit.record_call(
             tool_name=tool_name,
             params=arguments,
             agent_id=agent_id,
@@ -2292,6 +2804,10 @@ def _record_audit(audit, tool_name, arguments, agent_id, permission,
             error=error_text,
             **fields,
         )
+        # 도메인 틀이 안쪽 호출 뒤에 이 행에 화면 따라가기 결과를 덧붙일 수 있게 id 를 남긴다.
+        bucket = AUDIT_UIDS.get()
+        if bucket is not None and uid:
+            bucket.append(uid)
     except Exception:
         logger.exception("[AoTMCP] audit record failed for '%s'", tool_name)
 
@@ -2357,6 +2873,8 @@ def _respond_to_confirmation(arguments, agent_id, role, profile=None):
             r = _approval_refusal(target, profile, role)
         elif decision == "approve":
             r = gate.approve(cid, user_id=user_id, role=role)
+            if r.get("status") == "success":
+                r = _run_after_approval(cid, r)
         else:
             r = gate.reject(cid, user_id=user_id, role=role)
         results.append({"confirmation_id": cid, **r})
@@ -2371,6 +2889,42 @@ def _respond_to_confirmation(arguments, agent_id, role, profile=None):
         "succeeded": sum(1 for r in results if r.get("status") == "success"),
         "results": results,
     }
+
+
+#: 승인과 함께 서버가 실행까지 마친 응답의 안내 — AI 가 "다시 부르라" 는 안내를 기다리다 사용자에게 같은 승인을
+#: 되묻지 않게 결과를 보고하라고만 적는다(웹 승인 화면의 "승인이 곧 실행" 과 같은 동작).
+_APPROVED_RAN = ("Approved and already carried out — report the outcome in 'execution' to the user. "
+                 "Do NOT call the tool again or ask for approval again." + SILENT_NOTE)
+_APPROVED_NOT_RUN = ("Approved, but it did not run: see 'execution'. Report that to the user; "
+                     "do not retry on your own." + SILENT_NOTE)
+
+
+def _run_after_approval(cid, approved):
+    """MCP 로 승인한 건을 **그 자리에서** 실행한다 — 승인 뒤 같은 도구를 다시 부르게 하지 않는다.
+
+    예전에는 승인(`respond_to_confirmation`)과 실행(`_confirmation_id` 로 재호출)이 두 번의 호출이었고, 음성
+    모드의 AI 는 그 사이에서 사용자에게 승인을 다시 물었다(2026-10-25: "승인한다" 를 여러 번 말해도 되묻기 반복).
+    웹 승인 화면은 이미 승인이 곧 실행이다(`routes_mcp_api.mcp_confirmation_approve`) — 같은 호출을 쓴다.
+
+    저장해 둔 인자로만 돌리므로 승인한 것과 실행되는 것이 어긋나지 않는다. 실행 신원이 없어(승인자 미기록)
+    서버가 돌리지 못하면 승인만 남기고, 기존 방식(같은 도구 + `_confirmation_id` 재호출)이 그대로 이어진다.
+    """
+    from aot.tools import mcp_safety_gate as gate
+    try:
+        exec_status, exec_result = gate.execute_approved(cid)
+    except Exception:
+        logger.exception("[AoTMCP] 승인 직후 실행 실패 confirmation=%s", cid)
+        return approved
+    if (exec_status == 'refused' and isinstance(exec_result, dict)
+            and exec_result.get('reason_code') == 'not_approved'):
+        return approved                                     # 재호출 경로로 이어진다
+    approved["executed"] = (exec_status == 'executed')
+    approved["execution"] = exec_result
+    if exec_status == 'failed' and isinstance(exec_result, dict) \
+            and exec_result.get('performed') == 'unknown':
+        approved["unconfirmed"] = True                      # 명령은 나갔을 수 있다 — 상태 확인
+    approved["message"] = _APPROVED_RAN if exec_status == 'executed' else _APPROVED_NOT_RUN
+    return approved
 
 
 _KWARG_SINK_CACHE = {}
@@ -2425,6 +2979,32 @@ def _discarded_kwarg_sink(handler):
     return sink
 
 
+#: 대상(장소·장치·구획)을 가리키는 인자 이름 — 도구가 받지 않으면 거절한다
+#: (`_dispatch_virtual_tool`). 버리고 돌리면 필터 없는 전체가 그 대상의 답이 된다.
+_SCOPE_ARGS = frozenset({
+    'target_name', 'target_names', 'target', 'target_id', 'place', 'place_name',
+    'place_id', 'zone', 'zone_name', 'zone_id', 'zone_ids', 'site', 'site_name',
+    'site_id', 'facility', 'facility_name', 'facility_id', 'plot', 'plot_name',
+    'plot_id', 'area', 'area_name', 'location', 'device', 'device_name',
+    'device_id', 'device_ids',
+    # 복수형·이름형 — 외부 AI 가 `zone_ids` 를 `zone_names` 로 추측해 부르면
+    # 전체 요약이 돌아왔다(2026-10-11 리허설 C1).
+    'zone_names', 'zones', 'place_names', 'place_ids', 'places', 'site_names',
+    'site_ids', 'sites', 'facility_names', 'facility_ids', 'facilities',
+    'plot_names', 'plot_ids', 'plots', 'area_names', 'area_ids', 'device_names',
+    'devices', 'target_ids', 'targets', 'loc_ids', 'location_ids',
+    'location_names'})
+
+
+def _suggest_scope_arg(key, accepts):
+    """무시된 대상 인자(`zone_names`)에 가장 가까운 받는 인자(`zone_ids`)를
+    고른다. 앞부분(zone, place …)이 같은 것을 우선하고, 없으면 None."""
+    stem = key.split('_')[0].rstrip('s')
+    hits = [a for a in accepts
+            if a.split('_')[0].rstrip('s') == stem and a != key]
+    return hits
+
+
 def _dispatch_virtual_tool(tool_name, arguments):
     """Map a virtual tool name to its AoTDataToolService handler.
 
@@ -2447,7 +3027,9 @@ def _dispatch_virtual_tool(tool_name, arguments):
     # already removes the gate's own meta keys, but this stays defensive for any
     # caller that reaches this helper directly.
     from aot.tools.mcp_safety_gate import META_KEYS
-    _meta = {"tool_name", "server_id", "agent_unique_id", "context"} | set(META_KEYS)
+    from aot.tools.mcp_safety_gate import SNAPSHOT_ONLY_KEYS
+    _meta = ({"tool_name", "server_id", "agent_unique_id", "context"} | set(META_KEYS)
+             | set(SNAPSHOT_ONLY_KEYS))
     kwargs = {k: v for k, v in (arguments or {}).items() if k not in _meta}
 
     # 시그니처에 없는 인자는 버린다. 외부 AI는 잉여 인자를 흔히 실어 보내는데,
@@ -2502,6 +3084,41 @@ def _dispatch_virtual_tool(tool_name, arguments):
                 f"Check this tool's input schema in tools/list for the "
                 f"exact parameter names — a near-miss name (e.g. 'query' instead of "
                 f"'target_name') is silently NOT what you meant."),
+        }, tool_name)
+
+    # 대상을 가리키는 인자를 버린 채 돌리면 **농장 전체**가 그 대상의 답처럼
+    # 돌아온다(2026-10-11 외부 AI: get_crop_status·get_zone_sensor_summary 에
+    # target_name='1포장' → 전체 목록, 상한에 잘려 1포장은 빠짐). 알림만으로는
+    # 모델이 잘린 전체를 그곳의 답으로 읽었다. 돌리지 않고 맞는 인자를 알린다.
+    from aot.tools import mcp_safety_gate as _gate
+    # 읽기 도구만 — 쓰기는 대상이 빠지면 처리기가 거절한다(전체에 쓰지 않는다).
+    scoped = [k for k in ignored if k in _SCOPE_ARGS] if \
+        _gate.classify_permission(tool_name) == 'read' else []
+    if scoped:
+        try:
+            import inspect as _insp
+            accepts = [n for n, p in _insp.signature(handler).parameters.items()
+                       if p.kind not in (p.VAR_KEYWORD, p.VAR_POSITIONAL)]
+        except (TypeError, ValueError):
+            accepts = []
+        _hints = []
+        for _k in scoped:
+            _sg = _suggest_scope_arg(_k, accepts)
+            if _sg:
+                _hints.append("'%s' -> %s" % (_k, " or ".join(_sg)))
+        return _attach_detail({
+            "status": "error",
+            "error": "unknown_scope_argument",
+            "ignored_arguments": scoped,
+            "did_you_mean": _hints or None,
+            "message": (
+                "'%s' does not take %s, so it would have answered for everything "
+                "instead of that place — nothing was run. It accepts: %s. "
+                "Pass the place through one of those (names work where the "
+                "argument says so), or use a tool that takes the place, e.g. "
+                "get_place_overview(place) or list_plots(zone_id).%s" % (
+                    tool_name, ", ".join(scoped), ", ".join(accepts) or "(none)",
+                    (" Did you mean: " + "; ".join(_hints) + "?") if _hints else "")),
         }, tool_name)
 
     result = handler(**kwargs)

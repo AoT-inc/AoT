@@ -26995,7 +26995,6 @@ msgstr ""
 msgid "%(n)s notes"
 msgstr ""
 
-
 #: config_devices_units.py:342
 msgid "Vapor Pressure Deficit"
 msgstr ""
@@ -28345,7 +28344,6 @@ msgstr ""
 msgid "Language for map labels (e.g., ko, en, auto)"
 msgstr ""
 
-
 #: aot_flask/templates/modals/geo_settings_modal.html:171
 msgid "Max Site Polygons"
 msgstr ""
@@ -29287,4 +29285,1420 @@ msgstr ""
 #: aot/utils/sequence_warnings.py
 msgid ""
 "The cycle repeats every %(period)ds inside a %(window)ds window, so it runs about %(repeats)s times that day rather than once."
+msgstr ""
+
+#: aot_flask/templates/layout-settings.html:23
+#: aot_flask/templates/settings/matter.html:5
+#: aot_flask/templates/settings/matter.html:12
+msgid "Matter"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:18
+msgid "Matter support is experimental."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:21
+msgid "Matter Server"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:30
+msgid "Not connected"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:44
+msgid "Server version"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:46
+msgid "Schema"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:48
+msgid "SDK"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:52
+msgid "Fabric ID"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:59
+#: aot_flask/templates/settings/matter.html:119
+#: aot_flask/templates/settings/matter.html:137
+msgid "Reachable"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:66
+msgid "Last error"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:71
+msgid "How to turn it on"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:72
+msgid "Matter needs a Linux host. The host must be on the same network as the devices, with host networking, IPv6 router advertisements and mDNS. Run aot/scripts/check_matter_host.sh on the host first and fix what it reports."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:73
+msgid "Then add COMPOSE_PROFILES=matter to docker/.env and start the Matter server:"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:81
+msgid "Add a shared device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:84
+msgid "Add a device that is already set up in another app (Apple Home, Google Home, SmartThings, and so on)."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:85
+msgid "1. In that app, open the device and choose its share, pairing mode or linked Matter apps option."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:86
+msgid "2. The app shows an 11-digit code that is valid for about 15 minutes."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:87
+msgid "3. Enter the code here and press Add."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:91
+msgid "Pairing code"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:100
+msgid "This can take up to a minute"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:104
+msgid "Connect the Matter server first."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:110
+msgid "Matter Devices"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:113
+msgid "No Matter devices yet."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:118
+msgid "Sensors and switches"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:120
+msgid "AoT device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:138
+msgid "Not reachable"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:139
+msgid "No AoT device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:141
+msgid "Unnamed device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:143
+#, python-format
+msgid "%(n)s switches"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:144
+#, python-format
+msgid "Added: %(sensors)s sensors, %(switches)s switches"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:145
+msgid "Re-connected to the existing device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:146
+msgid "Adding the device failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:147
+msgid "Removing the device failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:149
+msgid "The request failed. Check the connection and try again."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:150
+msgid "Remove this device? This deletes its AoT device and its sensor and switch entries, and removes AoT from the device. The recorded history stays in the database."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:136
+msgid "The Matter server is not reachable. Check that the matter_server and matter_socket containers are running."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:140
+msgid "The device did not finish joining in time. Share it again from the other app and enter the new code."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:146
+msgid "The pairing code is not valid. Check the digits and try again."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:150
+msgid "The device has no free slot for another ecosystem. Remove one of its other connections in that app, then share again."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:154
+msgid "The device could not prove it is certified. Check that this AoT server can reach the internet (CSA DCL) and try again."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:159
+msgid "The device was not found on the network. Make sure it is on the same network as this AoT server and that its sharing window is still open, then run aot/scripts/check_matter_host.sh on the host."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:164
+msgid "The device did not accept the code. The sharing window may have closed — share it again from the other app and enter the new code."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:166
+#: aot_flask/utils/utils_matter.py:167
+#, python-format
+msgid "Adding the device failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:183
+msgid "Enter the 11-digit pairing code (or the MT: code) shown by the other app."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:201
+msgid "The Matter server returned no device."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:209
+msgid "The device joined, but AoT does not support any of its sensors or switches yet."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:280
+msgid "Creating the AoT device failed."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:357
+#, python-format
+msgid "Removing the device failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:364
+msgid "The device was not reachable, so it still lists AoT as connected. Remove AoT from it in the other app (or reset it) to free that slot."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:387
+msgid "AoT could not remove itself from the Matter device now. It is listed on Settings > Matter, where you can remove it later."
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:38
+msgid "A Matter device shared to AoT from another ecosystem (Apple Home, Google Home, SmartThings and others). Add it from Settings > Matter with the pairing code the other app shows when you share the device. Its sensors and switches are created as the Input and Output under this device. Deleting this device also removes AoT from the device, so it frees its slot for other ecosystems."
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:53
+#: inputs/matter_node.py:88
+#: outputs/on_off_matter.py:96
+msgid "Node ID"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:55
+msgid "Node ID on the AoT Matter fabric. Set when the device is added; change it only to re-bind this device to a node that was shared again"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:63
+msgid "Device Identity"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:65
+msgid "Unique ID reported by the device. Used to find this device again when it is removed and shared again, so its history continues"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:73
+msgid "Vendor"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:74
+#: functions/custom_functions/device_matter_node.py:82
+#: functions/custom_functions/device_matter_node.py:90
+msgid "Reported by the device"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:89
+msgid "Serial Number"
+msgstr ""
+
+#: functions/custom_functions/device_matter_node.py:129
+msgid "Matter devices are added from Settings > Matter with the pairing code shared from the other app."
+msgstr ""
+
+#: inputs/matter_node.py:61
+msgid "Sensor values from a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one sensor the device reported. Values are written when they change and again every sample interval while the device is reachable. Nothing is written while it is unreachable."
+msgstr ""
+
+#: inputs/matter_node.py:90
+#: outputs/on_off_matter.py:98
+msgid "Node ID on the AoT Matter fabric. Inherited from the Matter device"
+msgstr ""
+
+#: inputs/matter_node.py:100
+msgid "Sample Interval (seconds)"
+msgstr ""
+
+#: inputs/matter_node.py:102
+msgid "How often the current value is written while the device is reachable, in addition to every change it reports"
+msgstr ""
+
+#: inputs/matter_node.py:122
+msgid "Matter endpoint number on the device"
+msgstr ""
+
+#: inputs/matter_node.py:129
+msgid "Cluster ID"
+msgstr ""
+
+#: inputs/matter_node.py:130
+msgid "Matter cluster id (decimal)"
+msgstr ""
+
+#: inputs/matter_node.py:137
+msgid "Attribute ID"
+msgstr ""
+
+#: inputs/matter_node.py:138
+msgid "Matter attribute id (decimal)"
+msgstr ""
+
+#: inputs/matter_node.py:145
+msgid "Sensor Kind"
+msgstr ""
+
+#: inputs/matter_node.py:147
+msgid "How the raw value is scaled: temperature, humidity, illuminance, boolean_state or battery"
+msgstr ""
+
+#: outputs/on_off_matter.py:72
+msgid "Switch the On/Off endpoints of a Matter device on the AoT Matter fabric (plugs, relays, lights). Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A command counts as done when the device itself reports the new state."
+msgstr ""
+
+#: outputs/on_off_matter.py:109
+msgid "A name for this channel"
+msgstr ""
+
+#: outputs/on_off_matter.py:117
+msgid "Matter endpoint number of this switch on the device"
+msgstr ""
+
+#: outputs/on_off_matter.py:130
+msgid "Set the channel state when AoT starts. \"Do Nothing\" leaves the device as it is"
+msgstr ""
+
+#: aot_flask/routes_settings.py:299
+msgid "Could not read the Matter server status."
+msgstr ""
+
+#: aot_flask/routes_settings.py:305
+msgid "Could not read the list of Matter devices."
+msgstr ""
+
+#: aot_flask/routes_settings.py:366
+msgid "Adding the device failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:411
+msgid "Unknown Matter device."
+msgstr ""
+
+#: aot_flask/routes_settings.py:427
+msgid "Removing the device failed. See the AoT log for details."
+msgstr ""
+
+#: aot/aot_flask/templates/settings/matter.html
+msgid "Not on the Matter server — share it again to reconnect, or remove it"
+msgstr ""
+
+#: outputs/pwm_matter_level.py:57
+msgid "Dimmer"
+msgstr ""
+
+#: outputs/pwm_matter_level.py:65
+msgid "Dim the light or plug endpoints of a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A duty cycle of 0 switches it off; any other duty cycle sets the level and switches it on. The state shown is what the device reports."
+msgstr ""
+
+#: outputs/pwm_matter_level.py:109
+msgid "Matter endpoint number of this dimmer on the device"
+msgstr ""
+
+#: outputs/pwm_matter_level.py:116
+msgid "Transition (seconds)"
+msgstr ""
+
+#: outputs/pwm_matter_level.py:118
+msgid "How long the device takes to reach a new level. 0 = as fast as it can"
+msgstr ""
+
+#: outputs/value_matter_covering.py:73
+msgid "Curtain / Shade"
+msgstr ""
+
+#: outputs/value_matter_covering.py:83
+msgid "Move a Matter curtain, shade, blind or motorised vent on the AoT Matter fabric to a position. 100 is fully open (retracted) and 0 fully closed (deployed), as for other AoT position actuators. Off stops the motor. The device reports its own position, which is shown here and used by the environment coordinator."
+msgstr ""
+
+#: outputs/value_matter_covering.py:127
+msgid "Matter endpoint number of this covering on the device"
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:449
+msgid "This device is not on the Matter server. Share it again to reconnect it."
+msgstr ""
+
+#: aot_flask/routes_settings.py:459
+msgid "Reading the device again failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:150
+msgid "Read again"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:151
+msgid "Add the sensors and controls AoT now supports that this device does not have yet"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:152
+#, python-format
+msgid "Added %(sensors)s sensor channels and %(outputs)s control channels"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:153
+msgid "Nothing new to add"
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:147
+#: aot_flask/utils/utils_matter_admin.py:168
+msgid "Unknown network type."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:155
+msgid "Enter the Wi-Fi network name."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:157
+msgid "A Wi-Fi network name is at most 32 bytes."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:159
+msgid "Enter the Wi-Fi password (8 to 64 characters)."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:166
+msgid "Enter the Thread operational dataset as hex (from your border router)."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:189
+msgid ""
+"Enter the 11-digit pairing code (or the MT: code) from the device or its "
+"box."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:293
+msgid "Unknown or expired job."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:370
+#: aot_flask/utils/utils_matter_admin.py:378
+msgid "This device is not on the Matter server."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:382
+msgid "The device is not reachable right now, so it cannot be shared."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:393
+#, python-format
+msgid "Opening the sharing window failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:420
+#, python-format
+msgid "Closing the sharing window failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:445
+#, python-format
+msgid "Reading the device's connections failed: %(details)s"
+msgstr ""
+
+#: aot_flask/routes_settings.py:678 aot_flask/utils/utils_matter_admin.py:468
+msgid "Unknown connection."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:476
+msgid "This is AoT's own connection. Remove the device instead."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:486
+#, python-format
+msgid "Removing the connection failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:490
+msgid "The device did not remove that connection. Try again."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:528
+msgid "Firmware updates are turned off on the Matter server."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:530
+#, python-format
+msgid "Checking for an update failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:556
+msgid "No update is available for this device."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:559
+msgid ""
+"This update does not come from the certified (CSA) source, so AoT does not "
+"install it."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:567
+#: aot_flask/utils/utils_matter_admin.py:570
+msgid "The available update changed. Check again before updating."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:578
+msgid "The device is not reachable right now."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:582
+msgid "The device is already busy with an update."
+msgstr ""
+
+#: aot_flask/utils/utils_matter_admin.py:588
+#, python-format
+msgid "Starting the update failed: %(details)s"
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:228
+msgid ""
+"The device did not finish joining in time. Put it back into pairing mode "
+"(see its manual) and try again."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:237
+msgid ""
+"Bluetooth is not available to the Matter server. Run "
+"aot/scripts/check_matter_host.sh --ble on the host and start the server with"
+" docker/docker-compose.matter-ble.yml."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:242
+msgid ""
+"The device could not join the Wi-Fi network. Check the network name and "
+"password, and that the network is 2.4 GHz if the device needs it."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:246
+msgid ""
+"The device could not join the Thread network. Check the Thread dataset and "
+"that a Thread border router is running."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:259
+msgid ""
+"The device was not found. Keep it close to this AoT server, make sure it is "
+"in pairing mode, and check Bluetooth on the host."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:268
+msgid ""
+"The device did not accept the code. Check the code on the device or its box "
+"and try again."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:373
+msgid "This device already has an AoT device."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:588
+#, python-format
+msgid ""
+"Endpoint %(endpoint)s is a dimmer but is still set up as a switch. Delete "
+"that switch output and read the device again to control it as a dimmer."
+msgstr ""
+
+#: aot_flask/routes_settings.py:496
+msgid "Creating the AoT device failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:590
+msgid "Could not read the progress. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:615
+msgid "Opening the sharing window failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:639
+msgid "Closing the sharing window failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:659
+msgid "Reading the device's connections failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:685
+msgid "Removing the connection failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:707
+msgid "Checking for an update failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/routes_settings.py:726
+msgid "Unknown firmware version."
+msgstr ""
+
+#: aot_flask/routes_settings.py:733
+msgid "Starting the update failed. See the AoT log for details."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:110
+msgid "Add a new device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:113
+msgid ""
+"Add a device that is fresh out of the box, or that was reset to its factory "
+"settings."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:114
+msgid ""
+"AoT finds it over Bluetooth from this AoT server, so keep the device close "
+"to the server."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:115
+msgid "You need the pairing code printed on the device or its box."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:134
+msgid "Network"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:137
+msgid "Wi-Fi"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:138
+msgid "Thread"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:139
+msgid "Already on the network (Ethernet)"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:145
+msgid "Wi-Fi network name"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:152
+msgid "Wi-Fi password"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:160
+msgid "Thread dataset (hex)"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:168
+msgid ""
+"AoT does not keep the Wi-Fi password or the Thread dataset. It is used once "
+"to join the device to your network and is then removed from the Matter "
+"server."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:173
+msgid ""
+"Bluetooth is not turned on for the Matter server, so a device cannot be "
+"found over Bluetooth yet. A device that is already on the network (Ethernet)"
+" can still be added without it."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:174
+msgid ""
+"To turn it on, run aot/scripts/check_matter_host.sh --ble on the host and "
+"fix what it reports. Then start the Matter server with this extra file:"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:215
+msgid "Share this device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:221
+msgid ""
+"In the other app, choose Add device, then Matter, and enter this code. Most "
+"apps also accept the 11-digit code instead of scanning a QR code. Keep this "
+"dialog open until the other app has added the device: closing it closes the "
+"sharing window."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:226
+msgid "QR code text (for apps that ask for it):"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:230
+msgid "Connected ecosystems"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:237
+msgid "Maker"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:246
+msgid "Close sharing"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:258
+#: aot_flask/templates/settings/matter.html:314
+msgid "Firmware"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:266
+msgid "Check for an update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:269
+msgid "Release notes"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:270
+msgid "This update is not from the certified source. AoT will not install it."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:293
+msgid "Create AoT device"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:294
+msgid ""
+"This device is on the AoT Matter fabric but has no AoT device yet, for "
+"example because the page was closed while it was being added"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:295
+msgid "AoT device created"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:313
+msgid ""
+"Let another app (Apple Home, Google Home, SmartThings, and so on) use this "
+"device too"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:315
+#, python-format
+msgid "Firmware %(version)s"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:317
+msgid "Checking for an update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:318
+msgid "Waiting to check for an update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:319
+msgid "Downloading the update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:320
+msgid "Installing the update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:321
+msgid "Waiting to install the update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:322
+msgid "Rolling back the update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:323
+msgid "Waiting for the device to accept the update"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:326
+msgid ""
+"Looking for the device over Bluetooth and joining it to the network. This "
+"can take several minutes."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:327
+msgid "Creating the AoT device..."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:328
+msgid ""
+"There is still no result after 12 minutes. Check the device and the AoT log,"
+" then try again."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:329
+msgid ""
+"This job is no longer known. If the device was added, it is in the list "
+"below."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:330
+msgid "Enter the pairing code first."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:331
+msgid "Opening the sharing window..."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:332
+#, python-format
+msgid "Sharing is open. The code stops working in %(time)s."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:333
+msgid ""
+"The sharing window has closed. Close this dialog and share again for a new "
+"code."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:334
+msgid "Sharing closed. The code no longer works."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:335
+msgid "Opening the sharing window failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:336
+msgid "Closing the sharing window failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:337
+msgid "Reading the connections..."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:338
+msgid "Reading the connections failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:339
+msgid "No connections found."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:340
+#, python-format
+msgid "Connections used: %(used)s of %(supported)s"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:341
+#, python-format
+msgid "Connections used: %(used)s"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:343
+msgid "This is AoT"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:345
+msgid "Disconnected"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:346
+msgid "Disconnecting failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:347
+msgid ""
+"Disconnect this app from the device? The other app loses control of the "
+"device and must add it again to use it."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:348
+#, python-format
+msgid "Current version: %(version)s"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:350
+msgid "Checking..."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:351
+msgid "Up to date"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:352
+#, python-format
+msgid "Version %(version)s is available"
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:353
+msgid "Checking for an update failed."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:354
+msgid ""
+"Update the firmware now? The device restarts and may stop working for a few "
+"minutes. Do not update a device that controls something critical right now."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:355
+msgid "The update has started. Progress shows in the device list."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:356
+msgid "Starting the update failed."
+msgstr ""
+
+#: aot_flask/utils/utils_matter.py:247
+msgid ""
+"The Matter server did not accept the network details. Check the Wi-Fi name "
+"and password or the Thread dataset."
+msgstr ""
+
+#: aot_flask/routes_settings.py:538
+msgid "Could not check access to this device. Try again."
+msgstr ""
+
+#: aot_flask/templates/settings/matter.html:168
+msgid ""
+"AoT does not keep the Wi-Fi password or the Thread dataset. It is used once "
+"to join the device to your network and then removed from the Matter server's"
+" credential list. The Matter server's storage log can still contain it, and "
+"that storage is part of AoT backups, so treat backups as secret."
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "On-site observation"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Precip"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Wind dir"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Risk"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observed"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observation delayed"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Freeze"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Frost"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heat"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Strong wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heavy rain"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Sunrise / sunset glow"
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Twilight"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Auto (by sun position)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Always day"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Always night"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Day / Night Appearance"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Darkens the base map at night and lights 3D models from the sun's position. Also fills the measurement dock with weather values (rain, wind, cloud, visibility, risk) and shows a day/night icon in the time dock. Off turns all of this off."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather First in Measurement Dock"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Puts weather values at the left of the measurement dock. A value you also picked from a field device is merged into it and marked with a pin. Turn off to keep the dock exactly as you configured it."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Auto-adjust Overlay Opacity"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, and their opacity is lowered automatically so the shapes stay visible. Turn off to go back to the old order: weather layers sit below the shapes and use each layer's own opacity as is."
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Cloud cover"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather Effects"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Subtle"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Vivid"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Draws the current weather over the map from observed values only, even when no weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow (by precipitation) and fog (by visibility). Effects are dimmer over facilities. They pause when the map is off-screen or when reduced motion is requested."
+msgstr ""
+
+msgid "Lightning Flash"
+msgstr ""
+
+msgid "When a weather source reports recent lightning, the screen brightens briefly now and then (never more than a few times per second). Turn off to avoid flashing. It is also skipped when reduced motion is requested."
+msgstr ""
+
+msgid "Lightning"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Show Weather Layers Automatically"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "When it rains, clouds cover the sky or the wind is strong, turns on the matching weather layer you registered in this widget (precipitation, cloud or wind) on screen only. Your saved layer selection is not changed, and a layer you turn off yourself stays off until the page is reloaded. Thresholds are set on the server."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Field devices first"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather inputs first"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather Value Source Order"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather values come from the weather stations you assigned to the site (field devices) and from the weather inputs registered in the map layers, even when their layer is off. Choose which one is used first; each value falls back to the other when it is missing or too old. With neither, no weather cells or effects are shown."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather Value Max Age (Seconds)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "A field device value older than this is skipped in favor of the next source."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Risk: Wind Speed (m/s)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Shows a risk in the weather cells when the current wind speed reaches this value."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Risk: Precipitation (mm/h)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Shows a risk when the current precipitation reaches this value."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Risk: Low Temperature (°C)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Shows a frost risk when the current temperature falls to this value or below."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Risk: High Temperature (°C)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Shows a heat risk when the current temperature reaches this value or above."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Weather Effects Minimum Zoom"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Zoomed out beyond this level, the weather effects and the layers turned on automatically fade out over one zoom level, because one observation spread over a wide area is misleading. Layers you turn on yourself, the dock values and the day/night correction are not affected. 0 shows them at every zoom."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Temperature Tint"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Colors the temperature value in the dock blue when cold and red when hot, and adds a very faint tint to the base map (never over shapes or 3D models)."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Tint: Neutral From (°C)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Below this temperature the cold tint starts; it is strongest at the frost risk temperature."
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Tint: Neutral Up To (°C)"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Above this temperature the hot tint starts; it is strongest at the heat risk temperature."
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "North wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "North-northeast wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Northeast wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "East-northeast wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "East wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "East-southeast wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Southeast wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "South-southeast wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "South wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "South-southwest wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Southwest wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "West-southwest wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "West wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "West-northwest wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Northwest wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "North-northwest wind"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Calm"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Direction the wind blows from"
+msgstr ""
+
+#: aot_flask/routes_page.py
+msgid "The system log limit cannot be changed in this environment."
+msgstr ""
+
+#: aot_flask/routes_page.py
+#, python-format
+msgid "Enter an integer between %(min)s and %(max)s (MB)."
+msgstr ""
+
+#: aot_flask/routes_page.py
+msgid "The daemon is not running, so the system log limit cannot be applied."
+msgstr ""
+
+#: aot_flask/routes_page.py
+#, python-format
+msgid "System log size limit set to %(mb)s MB."
+msgstr ""
+
+#: aot_flask/routes_page.py
+msgid "The system log limit is set elsewhere and was not changed."
+msgstr ""
+
+#: aot_flask/routes_page.py
+msgid "Could not apply the system log limit. Check the daemon log."
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "System Log Size Limit"
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "Current usage"
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "Size limit"
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "Not set (system default)"
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "The system log is kept in /var/log/journal. When it reaches the limit, the oldest entries are removed."
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+#, python-format
+msgid "The limit is set in %(path)s and cannot be changed here."
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "Applied immediately; entries over the new limit are removed now."
+msgstr ""
+
+#: aot_flask/templates/pages/info.html
+msgid "Recommended"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Play"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Return to the current time"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Time slider"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "+{n}d"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Show forecast up to {n} days"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Out of range"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Low confidence"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-ui.js
+msgid "Reference only"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-providers.js
+msgid "Map layers"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-timeline-providers.js
+msgid "Day / night"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Recorded"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Forecast values for the selected time"
+msgstr ""
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Recorded values for the selected time"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Show Time Slider"
+msgstr ""
+
+#: widgets/AoT_map.py
+msgid "Adds a slider under the time dock to look at the map at another time: radar frames of time-enabled layers, forecast or recorded weather values, and day / night. Needs \"Show Local Time\". Drag it back to \"Now\" to return to live values."
+msgstr ""
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr ""
+
+msgid "Turn devices and functions on and off."
+msgstr ""
+
+msgid "Change settings, plots and records."
+msgstr ""
+
+msgid "Read"
+msgstr ""
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr ""
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr ""
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr ""
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr ""
+
+msgid "That connection was not found."
+msgstr ""
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr ""
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr ""
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr ""
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr ""
+
+msgid "Allow AI access"
+msgstr ""
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr ""
+
+msgid "Signed in as %(user)s."
+msgstr ""
+
+msgid "What it may do"
+msgstr ""
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr ""
+
+msgid "Deny"
+msgstr ""
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr ""
+
+msgid "OAuth Authentication"
+msgstr ""
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr ""
+
+msgid "Token Issuer"
+msgstr ""
+
+msgid "Central (AoT Central Authentication)"
+msgstr ""
+
+msgid "This AoT (built in)"
+msgstr ""
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr ""
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr ""
+
+msgid "Before You Turn This On"
+msgstr ""
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr ""
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr ""
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr ""
+
+msgid "Accepted Redirect Addresses"
+msgstr ""
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr ""
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr ""
+
+msgid "My Connected AI Apps"
+msgstr ""
+
+msgid "last used"
+msgstr ""
+
+msgid "No AI app is connected with your account yet."
+msgstr ""
+
+#: aot_flask/static/js/geo/aot-maplibre-seam.js
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""

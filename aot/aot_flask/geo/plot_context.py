@@ -694,6 +694,14 @@ def stage_schedule_view(plot, program=None, on=None, sched=None, events=None,
             'ends_on': b['ends_on'].isoformat() if b['ends_on'] else None,
             'source': b['source'],
             'state': state,
+            # 마지막 단계를 넘겼으면(stage.state='past_end') 그 단계는 여전히
+            # 'current' 다 — 구획이 끝나지 않았으니 아직 그 단계에 있는 것이
+            # 사실이고, 화면이 이 칸으로 현재 단계를 강조한다. 넘긴 날수는 함께
+            # 실어 stage 와 같은 말을 하게 한다(2026-10-09, 사용자 결정).
+            **({'days_past': stage.get('days_past')}
+               if (state == 'current' and stage
+                   and stage.get('state') == 'past_end'
+                   and stage.get('days_past') is not None) else {}),
             # 이 시기에 무엇을 하나. 구획이 적었으면 그것이, 아니면 프로그램의
             # 것이 온다(`effective_stages`).
             'guidance': b.get('guidance'),
@@ -854,9 +862,8 @@ def _stage_by_dates(sched, program_row, plot):
     if ends_on is not None and ref > ends_on:
         # 마지막 단계에 길이가 있고 그마저 지났다(중간 단계는 다음 경계가
         # 잡아 주므로 여기 오지 않는다).
-        return {'state': 'past_end', 'source': 'days',
-                'total': base_index + len(run),
-                'days_past': (ref - ends_on).days}
+        return _past_end_payload(run, base_index, 'days',
+                                 days_past=(ref - ends_on).days)
 
     start = b['starts_on']
     day_in_stage = None if start is None else (ref - start).days + 1
@@ -1086,9 +1093,8 @@ def _stage_by_gdd(stages, gdd, program_row, base_index=0, plot=None):
             return out
         cursor += length
 
-    return {'state': 'past_end', 'source': 'gdd',
-            'total': len(stages) + base_index,
-            'gdd_past': round(total - cursor, 1)}
+    return _past_end_payload(stages, base_index, 'gdd',
+                             gdd_past=round(total - cursor, 1))
 
 
 
@@ -1124,6 +1130,27 @@ def _gdd_payload(st, idx, stages, gdd_in_stage, gdd_left, program_row,
     return out
 
 
+def _past_end_payload(stages, base_index, source, **past):
+    """마지막 단계까지 지난 구획의 단계 → 마지막 단계의 이름·지침과 지난 양.
+
+    상태는 `past_end` 그대로다 — "수확기" 로 눌러 두면 프로그램이 끝난 사실이
+    사라진다(`stage_of` 주석). 다만 예전에는 그때 `{'total': N}` 만 남겨 단계
+    이름과 지침까지 버렸다: 성숙 단계를 하루 넘긴 구획의 "수확 적기" 안내가
+    사라지고, AI 는 "이 단계에는 지침이 없다" 고 답했다(2026-10-09 외부 MCP 점검).
+    목표값(`targets`)과 자원은 싣지 않는다 — 끝난 단계의 목표를 지금 목표로
+    읽지 않게. 제어는 어차피 `running` 일 때만 목표를 읽는다(`_stage_values`).
+    """
+    last = stages[-1] if stages else {}
+    out = {'state': 'past_end', 'source': source,
+           'key': last.get('key'),
+           'name': last.get('name') or last.get('key'),
+           'index': len(stages) + base_index,
+           'total': len(stages) + base_index,
+           'guidance': last.get('guidance') or None}
+    out.update(past)
+    return out
+
+
 def _stage_payload(st, idx, stages, day_in_stage, days_left,
                    program_row=None, base_index=0, plot=None):
     nxt = stages[idx + 1] if idx + 1 < len(stages) else None
@@ -1139,6 +1166,9 @@ def _stage_payload(st, idx, stages, day_in_stage, days_left,
         'total': len(stages) + base_index,
         'day_in_stage': day_in_stage,
         'days_left': days_left,                # None = 끝까지
+        # 같은 값의 이름 붙이기 — 이것은 **이 단계 끝까지** 남은 날이지 종료일까지가
+        # 아니다(`days_to_expected_end`). 마지막 단계가 아니면 0 이어도 정상이다.
+        'days_left_in_stage': days_left,
         'next_key': (nxt or {}).get('key'),
         'next_name': (nxt or {}).get('name') if nxt else None,
         'targets': _stage_targets(st, program_row),
@@ -1265,7 +1295,8 @@ def stage_targets_full(stage, program_row=None, plot=None):
 
 
 # @manual geo/plots#edit, geo/programs#stage-schedule
-def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
+def expected_end(plot, program=None, sched=None, programs=None, anchors=None,
+                 open_end_unknown=True):
     """예상 종료일 → `(date, source)`. 없으면 `(None, None)`.
 
     **사람이 적은 값이 이긴다.** 프로그램의 기간은 표준이고, 현장에서 그것과
@@ -1275,6 +1306,11 @@ def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
     사람 값이 없을 때만 `started_on + 총 기간 − 1` 로 파생한다(심은 날이 1일차라
     −1 이다 — `elapsed_days` 와 같은 기준이어야 "140일 프로그램" 의 마지막 날이
     140일차가 된다).
+
+    **마지막 단계가 길이 없는 열린 단계면 파생 종료일은 모른다**
+    (`open_end_unknown=True`, 기본). 길이 없는 단계를 0일로 세어 합한 날은
+    "수확기가 시작되는 날" 일 뿐 끝이 아니다 — 가짜 종료일로 나가지 않게 None 이다.
+    제어 쪽 "계획 시점 경과" 표시(`plot_brief_for_control`)만 옛 동작을 유지한다.
 
     ⚠ **파생값을 컬럼에 써 넣지 않는다.** 저장하면 프로그램을 바꿔도 옛 날짜가
     남고, 그 값이 사람이 적은 것인지 계산된 것인지 구분할 수 없게 된다.
@@ -1295,6 +1331,9 @@ def expected_end(plot, program=None, sched=None, programs=None, anchors=None):
                                programs=programs)
     if sched is not None and sched.get('end_on') is not None:
         return sched['end_on'], 'program'
+    if (open_end_unknown and sched is not None
+            and sched.get('open_end')):
+        return None, None
 
     total = program.get('total_days') or 0
     if total <= 0:
@@ -1664,7 +1703,8 @@ def plot_brief_for_control(row, on=None, capacities=None):
     호출부가 **한 번** 읽어 넘기는 형태다 — 구획마다 시설을 다시 조회하면 목록
     하나에 N+1 이 된다.
     """
-    due, _src = expected_end(row)
+    # 열린 마지막 단계의 "계획 시점 경과" 표시를 그대로 유지한다(위 주석).
+    due, _src = expected_end(row, open_end_unknown=False)
     ref = on or date.today()
     # 계획 종료일이 지나도 제어는 멈추지 않는다 — `ended_on`(사람이 확정한
     # 실제 종료)만 근거로 삼기로 한 결정은 그대로 맞다(2026-09-01, 영양·
@@ -1720,6 +1760,23 @@ def plot_brief_for_control(row, on=None, capacities=None):
 
 
 # @manual geo/map-widget#plot
+def _zone_sensor_ids(zone):
+    """구역 폴백 센서 — 정본 소속(마커 + 구역 안 도형의 바인딩 + 그릇)의 Input.
+
+    예전에는 구역 안 **마커만** 봐서, 구역 폴리곤에 바인딩으로 맡긴 센서가
+    구획의 센서 목록·측정 가능 항목·일지에서 빠졌다(2026-10-08). 구역 화면과
+    같은 규칙이라 구역 안 시설 설비에 매인 센서도 포함한다(사용자 결정 —
+    구역 화면과 다르게 세는 자리를 만들지 않는다). 참조 PID·함수 단계는 센서를
+    더하지 않으므로 건너뛴다(구획마다 불려 PID·함수 전체를 훑으면 비싸다).
+
+    이 목록은 제어로 흐르지 않는다 — 환경 제어는 구획을 시설·동 지정으로 고르고
+    센서는 시설 바인딩에서 읽는다(coordinator_plot·facility_sensors).
+    """
+    ids = device_membership.place_members(
+        zone.unique_id, include_references=False) or set()
+    return _only_sensor_ids(ids)
+
+
 def sensors_for_plot(plot, containers=None, markers=None):
     """구획이 참조할 장치 → `{'in_plot', 'from_zone', 'zone_uuid', 'source'}`.
 
@@ -1751,8 +1808,7 @@ def sensors_for_plot(plot, containers=None, markers=None):
         zone = zone_for_plot(plot, containers=containers)
         from_zone = []
         if zone is not None:
-            from_zone = sorted(_only_sensor_ids(
-                device_membership.device_ids_in_shape(zone, markers=markers)))
+            from_zone = sorted(_zone_sensor_ids(zone))
         if fs['in_bay']:
             source = 'bay'
         elif fs['facility']:
@@ -1795,8 +1851,7 @@ def sensors_for_plot(plot, containers=None, markers=None):
     zone = zone_for_plot(plot, containers=containers)
     from_zone = []
     if zone is not None:
-        from_zone = sorted(_only_sensor_ids(
-            device_membership.device_ids_in_shape(zone, markers=markers)))
+        from_zone = sorted(_zone_sensor_ids(zone))
 
     if in_plot:
         source = 'plot'
@@ -2435,6 +2490,36 @@ def days_until_start(row, on=None):
     return (row.started_on - on).days if row.started_on > on else None
 
 
+END_CHECK_GAP_DAYS = 3
+
+
+def end_check(due, due_src, sched, stage=None, on=None):
+    """사람이 적은 종료일 vs 단계 일정의 끝 → dict|None.
+
+    수동 종료일이 이기는 규칙은 그대로고, 어긋나면 **알리기만** 한다.
+      state  aligned | schedule_earlier(일정이 종료일보다 3일+ 먼저 끝남)
+             | schedule_later(일정이 3일+ 뒤에 끝남)
+    일정 끝이 없거나(열린 단계·일정 없음) 종료일이 manual 이 아니면 None.
+    """
+    if due is None or due_src != 'manual' or not sched:
+        return None
+    end_on = sched.get('end_on')
+    if end_on is None:
+        return None
+    gap = (due - end_on).days
+    if abs(gap) < END_CHECK_GAP_DAYS:
+        state = 'aligned'
+    else:
+        state = 'schedule_earlier' if gap > 0 else 'schedule_later'
+    out = {'state': state, 'schedule_end_on': end_on.isoformat(),
+           'gap_days': abs(gap)}
+    ref = on or date.today()
+    if (stage and stage.get('state') == 'past_end' and due > ref):
+        out['note'] = ('단계 일정은 %d/%d 에 끝났고 입력한 종료일은 %d/%d 입니다.'
+                       % (end_on.month, end_on.day, due.month, due.day))
+    return out
+
+
 def days_to_expected_end(row, on=None, programs=None, anchors=None):
     """예상 종료일까지 남은 날 (음수 = 지났다). 없으면 None.
 
@@ -2450,6 +2535,23 @@ def days_to_expected_end(row, on=None, programs=None, anchors=None):
         return None
     return (due - (on or date.today())).days
 
+
+
+def _collapsed_zone_fields(zone):
+    """구획의 zone 이 접힌 zone(site 와 같은 땅의 유일한 기본 이름 zone)이면
+    `zone_collapsed`·상위 site 를 낸다. 아니면 빈 dict.
+
+    판정은 `geo_hierarchy.collapsed_zone_site_map` 한 곳이다 — 화면·MCP 는 이
+    플래그만 따른다. `zone_kind` 는 건드리지 않는다(사실 그대로)."""
+    if zone is None or getattr(zone, 'type', None) != 'zone':
+        return {}
+    from aot.utils.geo_hierarchy import collapsed_zone_site_map
+    site_uid = collapsed_zone_site_map().get(zone.unique_id)
+    if not site_uid:
+        return {}
+    site = GeoShape.query.filter_by(unique_id=site_uid).first()
+    return {'zone_collapsed': True, 'site_uuid': site_uid,
+            'site_name': _shape_name(site) if site is not None else None}
 
 def to_dict(row, containers=None, with_sensors=False, markers=None,
             with_valves=None, with_dims=None, facilities=None,
@@ -2592,6 +2694,16 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         out['expected_end_on'] = due.isoformat()
         # 사람이 적은 값인지 프로그램에서 나온 값인지 화면이 구분해 말해야 한다.
         out['expected_end_source'] = due_src
+    if prog:
+        chk = end_check(due, due_src, sched, stage=out.get('stage'))
+        if chk:
+            out['end_check'] = chk
+        if (due is None and sched is not None and sched.get('open_end')):
+            # 마지막 단계에 길이가 없다 — 끝은 사람이 정한다. 가짜 날짜를 내지 않는다.
+            out['expected_end_unknown'] = 'open_ended_stage'
+    elif row.ended_on is None:
+        out['no_program'] = ('프로그램이 배정되지 않아 단계가 없습니다. '
+                             '단계 작업에 plots 모듈(도구 프로필)이 필요하면 관리자가 켭니다.')
 
     if with_valves is None:
         with_valves = with_sensors
@@ -2607,6 +2719,10 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
     if with_sensors:
         out['sensors'] = sensors_for_plot(row, containers=containers,
                                               markers=markers)
+        _zu = out['sensors'].get('zone_uuid')
+        if _zu and out['sensors'].get('zone_kind') == 'zone':
+            out.update(_collapsed_zone_fields(
+                GeoShape.query.filter_by(unique_id=_zu).first()))
     else:
         zone = zone_for_plot(row, containers=containers)
         out['zone_uuid'] = zone.unique_id if zone is not None else None
@@ -2618,6 +2734,9 @@ def to_dict(row, containers=None, with_sensors=False, markers=None,
         # 기다려야 하고, 그동안 제목줄의 화살표만 늦게 나타난다.
         out['zone_name'] = _shape_name(zone) if zone is not None else None
         out['zone_kind'] = getattr(zone, 'type', None) if zone is not None else None
+        # 접힌 zone(site 와 같은 땅의 유일한 기본 이름 zone)이면 true — 판정은
+        # geo_hierarchy 한 곳이고 화면·MCP 는 이 플래그만 따른다. 거짓이면 키째 뺀다.
+        out.update(_collapsed_zone_fields(zone))
         # site — zone 과 별개 축으로 낸다. zone 이 site 를 이기므로 위 zone 이
         # 이미 site 종류면 그 자신이 site 다. zone 종류면 그 zone 을 감싸는
         # site 를 따로 찾는다(device_membership.site_for_geometry).

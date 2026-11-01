@@ -12,16 +12,16 @@ CHANNELS = {
     # --- Background Maps (WMTS) ---
     0: {'name': lg('Base Map'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'Base'}},
     1: {'name': lg('Satellite'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'Satellite'}},
-    2: {'name': lg('Hybrid'), 'type': 'wmts', 'category': 'overlay', 'options': {'layer': 'Hybrid', 'role': 'overlay'}},
+    2: {'name': lg('Hybrid'), 'type': 'wmts', 'category': 'overlay', 'options': {'layer': 'Hybrid', 'role': 'overlay', 'ambient_role': 'ground.boundary'}},
     3: {'name': lg('Gray Map'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'white', 'maxNativeZoom': 18}},
-    4: {'name': lg('Dark Map'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'midnight', 'maxNativeZoom': 18}},
+    4: {'name': lg('Dark Map'), 'type': 'wmts', 'category': 'base', 'options': {'layer': 'midnight', 'maxNativeZoom': 18, 'ambient_theme': 'dark'}},
 
     # --- Data Overlays (WMS) ---
-    10: {'name': lg('Cadastral Map'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lp_pa_cbnd_bubun', 'role': 'overlay', 'type': 'wms', 'min_zoom': 16.5, 'min_native_zoom': 18}},
-    11: {'name': lg('Agricultural Promotion Area'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d036', 'role': 'overlay', 'type': 'wms', 'url': 'https://api.vworld.kr/ned/wms/FarmngSpceService', 'min_zoom': 10.5, 'min_native_zoom': 12}},
-    12: {'name': lg('Ecological Naturalness'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lt_c_uq111', 'role': 'overlay', 'type': 'wms', 'min_zoom': 10.5, 'min_native_zoom': 12}},
-    13: {'name': lg('Development Restriction Zone'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'LT_C_UD801', 'role': 'overlay', 'type': 'wms', 'style': 'LT_C_UD801', 'min_zoom': 10.5, 'min_native_zoom': 12}},
-    14: {'name': lg('Individual Official Land Price'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d150', 'role': 'overlay', 'type': 'wms', 'style': 'dt_d150', 'url': 'https://api.vworld.kr/ned/wms/getIndvdLandPriceWMS', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    10: {'name': lg('Cadastral Map'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lp_pa_cbnd_bubun', 'role': 'overlay', 'ambient_role': 'ground.boundary', 'type': 'wms', 'min_zoom': 16.5, 'min_native_zoom': 18}},
+    11: {'name': lg('Agricultural Promotion Area'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d036', 'role': 'overlay', 'ambient_role': 'ground.boundary', 'type': 'wms', 'url': 'https://api.vworld.kr/ned/wms/FarmngSpceService', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    12: {'name': lg('Ecological Naturalness'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'lt_c_uq111', 'role': 'overlay', 'ambient_role': 'ground.boundary', 'type': 'wms', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    13: {'name': lg('Development Restriction Zone'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'LT_C_UD801', 'role': 'overlay', 'ambient_role': 'ground.boundary', 'type': 'wms', 'style': 'LT_C_UD801', 'min_zoom': 10.5, 'min_native_zoom': 12}},
+    14: {'name': lg('Individual Official Land Price'), 'type': 'wms', 'category': 'overlay', 'options': {'layer': 'dt_d150', 'role': 'overlay', 'ambient_role': 'ground.boundary', 'type': 'wms', 'style': 'dt_d150', 'url': 'https://api.vworld.kr/ned/wms/getIndvdLandPriceWMS', 'min_zoom': 10.5, 'min_native_zoom': 12}},
 }
 
 # @manual geo/layers#domestic-korea, geo/layers#vworld
@@ -50,6 +50,7 @@ INPUT_INFORMATION = {
     'options_disabled': ['period', 'measurements_delay'],
     # Layer role is dynamic, set default here but will be overridden
     'layer_role': 'base',
+    'ambient_role': 'base',
     'custom_options': [
         {
             'id': 'api_key',

@@ -129,6 +129,48 @@ def ai_excluded(row) -> bool:
     return value is not None and not bool(value)
 
 
+# ── 장치 운영 상태(Input.device_status) ────────────────────────────────────
+#
+# ok 가 아닌 센서는 값이 신뢰 불가이거나 의도적으로 멈춘 것이다 — 평균에서 빼고
+# 침묵 경보에서도 뺀다(오탐 방지). 판정은 아래 한 곳만 쓴다.
+
+DEVICE_STATUSES = ('ok', 'repair', 'removed', 'maintenance')
+
+
+def device_status(row) -> str:
+    """행의 운영 상태. 칸이 없거나 비었거나 모르는 값이면 'ok'."""
+    value = getattr(row, 'device_status', None)
+    return value if value in DEVICE_STATUSES else 'ok'
+
+
+def is_reliable_sensor(row) -> bool:
+    """평균·침묵 판정에 넣어도 되는 센서인가(상태가 ok 인가)."""
+    return device_status(row) == 'ok'
+
+
+def device_status_info(row) -> Optional[dict]:
+    """ok 가 아니면 {status, note, since}, ok 면 None (응답에 싣는 모양)."""
+    st = device_status(row)
+    if st == 'ok':
+        return None
+    since = getattr(row, 'device_status_since', None)
+    return {"status": st,
+            "note": getattr(row, 'device_status_note', None),
+            "since": since.isoformat() if since is not None else None}
+
+
+def known_status_ids() -> dict:
+    """{Input.unique_id: 상태} — ok 가 아닌 입력만(목록 도구가 거를 때)."""
+    from aot.databases.models import Input
+    try:
+        return {uid: st for uid, st in Input.query.with_entities(
+            Input.unique_id, Input.device_status).all()
+            if st in DEVICE_STATUSES and st != 'ok'}
+    except Exception as exc:                                # noqa: BLE001
+        logger.warning("[known_status_ids] 조회 실패: %s", exc)
+        return {}
+
+
 def ai_excluded_error(row) -> Optional[str]:
     """빠진 장치면 AI 에게 줄 이유 문장, 아니면 None."""
     if row is None or not ai_excluded(row):
@@ -179,6 +221,20 @@ def _match(model, token, kind, allow_partial, ai) -> DeviceMatch:
     if hidden:
         return DeviceMatch(error=ai_excluded_error(hidden[0]),
                            reason=AI_EXCLUDED)
+
+    # 표기만 다른 이름('온습도 7' ↔ '온습도_7') — 열쇠가 같은 것이 하나일 때만.
+    from aot.tools.name_key import name_key
+    _k = name_key(token)
+    if _k:
+        norm, hidden = _pick([r for r in model.query.all()
+                              if r.name and name_key(r.name) == _k], ai)
+        if len(norm) == 1:
+            return DeviceMatch(row=norm[0])
+        if len(norm) > 1:
+            return DeviceMatch(error=_ambiguous(kind, token, norm))
+        if hidden:
+            return DeviceMatch(error=ai_excluded_error(hidden[0]),
+                               reason=AI_EXCLUDED)
 
     if allow_partial:
         partial, hidden = _pick(

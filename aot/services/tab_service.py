@@ -49,8 +49,11 @@ class TabService:
             return []
 
     @staticmethod
-    def visible_tabs_for_page(page_type: str) -> List[Tab]:
+    def visible_tabs_for_page(page_type: str, user=None) -> List[Tab]:
         """이 사람에게 **보여줄** 탭만. 조작할 수 없는 탭은 뺀다.
+
+        user: 요청 사용자가 없는 자리(외부 AI 의 실행층 — 화면 연동의 탭 목록)에서
+        그 사람을 직접 넘긴다. None 이면 지금 요청의 사용자다.
 
         정본 설계: `docs/design/access-scope-groups.md`
 
@@ -69,7 +72,7 @@ class TabService:
         tabs = TabService.get_tabs_for_page(page_type)
         try:
             from aot.aot_flask.access import scope
-            denied = scope.denied_resource_uuids('tab')
+            denied = scope.denied_resource_uuids('tab', user=user)
         except Exception as exc:
             # 판정이 깨져도 화면이 비면 안 된다 — 그때는 전부 보인다(A 범위의
             # 기본값과 같은 방향이다).
@@ -770,6 +773,15 @@ class TabService:
         # Deactivate if active
         if controller.is_activated:
             controller_deactivate(controller_id)
+
+        # Matter 장치는 AoT Fabric 도 장치에서 뺀다(utils_controller.controller_del
+        # 과 같은 훅). 탭 삭제 연쇄에는 메시지를 돌려줄 곳이 없어 로그로만 남긴다.
+        if controller.device == 'device_matter_node':
+            from aot.aot_flask.utils.utils_matter import on_device_delete
+            notes = {'warning': []}
+            on_device_delete(controller, notes)
+            for note in notes['warning']:
+                logger.warning("Matter device %s: %s", controller_id, note)
         
         # Delete DeviceMeasurements
         measurements = DeviceMeasurements.query.filter_by(device_id=controller_id).all()

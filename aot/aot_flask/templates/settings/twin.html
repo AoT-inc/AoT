@@ -1,0 +1,211 @@
+{% extends "layout-settings.html" %}
+{% set active_page = "settings" %}
+{% set active_settings = "twin" %}
+
+{% block title %} - {{_('Digital Twin')}}{% endblock %}
+
+{% block head %}{% endblock %}
+
+{% block settings %}
+  <!-- Route: /settings/twin -->
+  <div class="container">
+    <div class="aot-settings-title">
+      <h3>{{_('Digital Twin (Experimental)')}}</h3>
+      <div class="aot-btn-group">
+        <button class="btn aot-pill-btn aot-pill-btn-secondary" id="menu-toggle">{{_('Settings Menu')}}</button>
+        {% if can_edit %}<button type="submit" form="form-twin" class="btn aot-pill-btn aot-pill-btn-primary aot-w-60">{{_('Save')}}</button>{% endif %}
+      </div>
+    </div>
+
+    <div class="aot-notice-box aot-notice-box-warning" id="twin-warning" role="note">{{_('This is an experimental feature and is still at an early stage. Use it for development purposes only. Predictions are for reference and are never used for control. Behavior and data formats may change without notice.')}}</div>
+
+    <form id="form-twin" method="post" action="{{ url_for('routes_settings.settings_twin') }}" autocomplete="off">
+      {{form_twin.csrf_token}}
+
+      <div class="aot-settings-group-title">{{_('Service')}}</div>
+      <div class="aot-settings-card">
+
+        <div class="aot-settings-row" id="twin-service-status">
+          <label class="aot-settings-label">{{_('Service Status')}}</label>
+          <div class="aot-settings-control">
+            {% if twin.running %}
+              <span class="aot-status-badge aot-status-ok">{{_('Running')}}</span>
+            {% else %}
+              <span class="aot-status-badge aot-status-fail">{{_('Twin service is not running')}}</span>
+            {% endif %}
+          </div>
+          {% if twin.running %}
+          <div class="aot-settings-sub">
+            {{_('Last run')}}: {{ twin.last_run_at or '—' }} ·
+            {{_('Sites')}}: {{ twin.sites }} · {{_('Plots')}}: {{ twin.plots }} ·
+            {{_('Failures')}}: {{ twin.failures }}{% if twin.version %} · {{_('Version')}}: {{ twin.version }}{% endif %}
+            {% if twin.status == 'locked' %}<br>{{_('The service stopped itself because this device is too small.')}} {{ twin.service_locked_reason }}{% endif %}
+          </div>
+          {% elif twin.supported %}
+          <div class="aot-settings-sub" id="twin-install-help">
+            {{_('The Digital Twin runs as its own service. Docker: add COMPOSE_PROFILES=twin to the .env file and run docker compose up -d. Direct install: enable the aottwin.service systemd unit.')}}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_twin.twin_run_times.label(class_='aot-settings-label')}}
+          <div class="aot-settings-control">
+            <input type="text" id="twin_run_times" name="twin_run_times" class="form-control aot-modern-input" spellcheck="false" autocomplete="off" placeholder="06:10,18:10" value="{{ twin.run_times }}"{% if not can_edit %} disabled{% endif %}>
+          </div>
+          <div class="aot-settings-sub">{{_('Times of day the prediction runs, in local time. Separate several times with commas, for example 06:10,18:10.')}}</div>
+        </div>
+
+      </div>
+
+      <div class="aot-settings-group-title">{{_('Options')}}</div>
+      <div class="aot-settings-card">
+
+        <div class="aot-settings-row">
+          {{form_twin.twin_auto_forecast.label(class_='aot-settings-label aot-toggle-label')}}
+          <div class="aot-settings-control">
+            <label class="btn-toggle">
+              <input type="checkbox" class="btn-toggle-input" id="twin_auto_forecast" name="twin_auto_forecast"{% if twin.auto_forecast %} checked{% endif %}{% if not can_edit %} disabled{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+          <div class="aot-settings-sub">{{_('When you turn the twin on for a site that has no forecast input nearby, a forecast input is created at the site location and chosen for the site. You can change or remove it in the input settings.')}}</div>
+        </div>
+
+        <div class="aot-settings-row">
+          {{form_twin.twin_ignore_profile.label(class_='aot-settings-label aot-toggle-label')}}
+          <div class="aot-settings-control">
+            <label class="btn-toggle">
+              <input type="checkbox" class="btn-toggle-input" id="twin_ignore_profile" name="twin_ignore_profile"{% if twin.ignore_profile %} checked{% endif %}{% if not can_edit %} disabled{% endif %}>
+              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+            </label>
+          </div>
+          <div class="aot-settings-sub">{{_('Development and test machines run with the LOW hardware profile, which locks the Digital Twin. Turn this on to run it anyway. Small Raspberry Pi models and devices with too little memory stay locked.')}}</div>
+        </div>
+
+      </div>
+    </form>
+
+    {# 대지별 트윈 설정. 표는 열 때 API 로 읽는다. 세부(출처·센서·구획 포함)는 지도에서 대지·구획의 '트윈' 탭. #}
+    <div class="aot-settings-group-title">{{_('Sites')}}</div>
+    <div class="aot-settings-card">
+      {% if twin.enabled and twin.supported %}
+      {% if can_edit %}
+      <div class="aot-settings-row" id="twin-enable-all-row">
+        <label class="aot-settings-label">{{_('Turn on for all sites')}}</label>
+        <div class="aot-settings-control">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" id="twin-enable-all">{{_('On')}}</button>
+        </div>
+      </div>
+      <div class="aot-settings-row" id="twin-apply-suggestions-row">
+        <label class="aot-settings-label aot-toggle-label" for="twin-apply-suggestions">{{_('Also fill empty sources with the first suggestion (sources you already chose are kept)')}}</label>
+        <div class="aot-settings-control">
+          <label class="btn-toggle">
+            <input type="checkbox" class="btn-toggle-input" id="twin-apply-suggestions">
+            <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+      {% endif %}
+      <div class="aot-settings-row" id="twin-sites-row">
+        <div class="aot-settings-sub">{{_('Each site and plot is set up in its Twin tab on the map. Suggestions are only suggestions — nothing is used until you apply and save it.')}}</div>
+        <div class="aot-settings-sub aot-table-scroll" id="twin-sites" data-loading="{{_('Loading...')}}"></div>
+      </div>
+      <div class="aot-settings-row" id="twin-facilities-row">
+        <label class="aot-settings-label">{{_('Facilities')}}</label>
+        <div class="aot-settings-sub">{{_('Each facility is turned on in its own Twin tab on the map, independent of the site. Off by default.')}}</div>
+        <div class="aot-settings-sub aot-table-scroll" id="twin-facilities" data-loading="{{_('Loading...')}}"></div>
+      </div>
+      {% else %}
+      <div class="aot-settings-row"><div class="aot-settings-sub" id="twin-lock-reason">{{_('This device is too small to run the Digital Twin.')}} {{ twin.lock_reason }}</div></div>
+      {% endif %}
+    </div>
+  </div>
+
+<script>
+  (function () {
+    // 대지별 트윈 표 — 대지·켜짐·구획·비·예보·센서 제안·판정. 출처 칸은 "설정 / 제안" 을 함께 보인다.
+    var box = document.getElementById('twin-sites');
+    if (!box) return;
+    var ACCEPT = 'application/vnd.aot.v1+json';
+    var T = window._ || function (k) { return k; };
+    var VERDICT = {
+      off: T('Twin off'), no_plots: T('No field plot'), no_rain: T('No rain source'),
+      no_sensor: T('No measured soil water sensor'), sensorless: T('No sensor - reference only'),
+      partial: T('Some plots ready'), ready: T('Ready')
+    };
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function cell(set, sug) {
+      if (set) return esc(set);
+      if (sug) return '<span class="aot-settings-sub">' + esc(T('Suggestion')) + ': ' + esc(sug) + '</span>';
+      return '—';
+    }
+    function render(rows) {
+      if (!rows.length) { box.textContent = T('No field plot under cultivation in any site.'); return; }
+      var h = '<table class="aot-module-table"><thead><tr><td>' + esc(T('Site')) + '</td><td>' + esc(T('Twin')) +
+              '</td><td>' + esc(T('Plots')) + '</td><td>' + esc(T('Rain')) + '</td><td>' + esc(T('Forecast input')) +
+              '</td><td>' + esc(T('Sensor suggestions')) + '</td><td>' + esc(T('Verdict')) + '</td></tr></thead><tbody>';
+      rows.forEach(function (r) {
+        var v = r.verdict || {};
+        var nm = r.outside ? T('Plots outside any site') + (r.name ? ' · ' + r.name : '') : (r.name || r.site_id);
+        h += '<tr><td>' + esc(nm) + '</td><td>' + (r.enabled ? esc(T('Turned on')) : '') + '</td><td>' +
+             esc(v.ready || 0) + '/' + esc(r.plots) + '</td><td>' + cell(r.rain, r.rain_suggested) + '</td><td>' +
+             cell(r.forecast, r.forecast_suggested) + '</td><td>' + esc(r.sensor_suggested_plots || 0) + '</td><td>' +
+             esc(VERDICT[v.code] || v.code || '') + '</td></tr>';
+      });
+      box.innerHTML = h + '</tbody></table>';
+    }
+    var fbox = document.getElementById('twin-facilities');
+    var FVERDICT = {
+      missing_inputs: T('Required sensors missing'), no_controls: T('No actual device state'),
+      unverified: T('Not marked as measured'), ready: T('Ready')
+    };
+    function renderFacilities(rows) {
+      if (!fbox) return;
+      if (!rows.length) { fbox.textContent = T('No facility on the map.'); return; }
+      var h = '<table class="aot-module-table"><thead><tr><td>' + esc(T('Facility')) + '</td><td>' + esc(T('Site')) +
+              '</td><td>' + esc(T('Twin')) + '</td><td>' + esc(T('Environment control')) + '</td><td>' + esc(T('Verdict')) +
+              '</td></tr></thead><tbody>';
+      rows.forEach(function (r) {
+        var v = r.verdict || {};
+        h += '<tr><td>' + esc(r.name || r.facility_id) + '</td><td>' + esc(r.site_name || r.site_id) + '</td><td>' +
+             (r.enabled ? esc(T('Turned on')) : '') + '</td><td>' + esc(r.coordinator ? T('Linked') : T('Not linked')) +
+             '</td><td>' + esc(FVERDICT[v.code] || v.code || '') + '</td></tr>';
+      });
+      fbox.innerHTML = h + '</tbody></table>';
+    }
+    function call(method, url, body) {
+      return fetch(url, { method: method, credentials: 'same-origin',
+                          headers: { 'Accept': ACCEPT, 'Content-Type': 'application/json' },
+                          body: body ? JSON.stringify(body) : undefined })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); });
+    }
+    function load() {
+      box.textContent = box.getAttribute('data-loading');
+      call('GET', '/api/twin/config/overview').then(function (r) {
+        if (!r.ok) { box.textContent = T('Failed to load data.'); return; }
+        render(r.data.sites || []);
+        renderFacilities(r.data.facilities || []);
+      }).catch(function () { box.textContent = T('Failed to load data.'); });
+    }
+    var btn = document.getElementById('twin-enable-all');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        var apply = document.getElementById('twin-apply-suggestions').checked;
+        if (!window.confirm(T('Turn the Digital Twin on for every site?') +
+                            (apply ? '\n' + T('Empty sources will be filled with the first suggestion.') : ''))) return;
+        btn.disabled = true;
+        call('POST', '/api/twin/config/enable_all', { apply_suggestions: apply }).then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) { box.textContent = (r.data && r.data.message) || T('Save failed.'); return; }
+          render(r.data.sites_table || []);
+        }).catch(function () { btn.disabled = false; });
+      });
+    }
+    load();
+  })();
+</script>
+
+{% endblock %}

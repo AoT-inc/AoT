@@ -152,6 +152,9 @@ Options:
   update-aotmcp-service-enable  Enable and start the AoT MCP Server service
   update-aotmcp-service-disable Disable and stop the AoT MCP Server service
   restart-aotmcp                Restart the AoT MCP Server service if enabled (run on every upgrade)
+  install-aottwin               Install and enable the Digital Twin service (experimental, off by default)
+  update-aottwin-service-disable Disable and stop the Digital Twin service
+  restart-aottwin               Restart the Digital Twin service if enabled (run on every upgrade)
   mosquitto-check               Warn if the mosquitto broker accepts anonymous network connections (read-only)
   update-packages               Ensure required apt packages are installed/up-to-date
   update-permissions            Set permissions for AoT directories/files
@@ -846,6 +849,28 @@ case "${1:-''}" in
         printf "\n#### Restarting AoT MCP Server\n"
         if systemctl is-enabled --quiet aotmcp 2>/dev/null; then
             systemctl restart aotmcp || true
+        fi
+    ;;
+    'install-aottwin')
+        # 디지털트윈(실험) — 기본 설치에는 들어가지 않는다(setup.sh 가 부르지 않음). 사양이 낮은 기기에서는
+        # 서비스가 시작할 때 스스로 잠겨 일하지 않는다.
+        printf "\n#### Installing AoT Digital Twin service (experimental)\n"
+        /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-aottwin-service-disable
+        systemctl enable "${AOT_PATH}"/install/aottwin.service
+        systemctl start aottwin || true
+        printf "#### AoT Digital Twin installed — turn it on in Settings > General > Digital Twin\n"
+    ;;
+    'update-aottwin-service-disable')
+        printf "\n#### Disabling AoT Digital Twin service\n"
+        systemctl stop aottwin || true
+        systemctl disable aottwin.service || true
+        rm -rf /etc/systemd/system/aottwin.service || true
+        systemctl daemon-reload || true
+    ;;
+    'restart-aottwin')
+        if systemctl is-enabled --quiet aottwin 2>/dev/null; then
+            printf "\n#### Restarting AoT Digital Twin\n"
+            systemctl restart aottwin || true
         fi
     ;;
     'update-packages')

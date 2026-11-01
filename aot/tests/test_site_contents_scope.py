@@ -84,7 +84,12 @@ class TestOnlyTheSiteEndpointTurnsItOff(unittest.TestCase):
         body = inspect.getsource(
             __import__('aot.aot_flask.routes_geo_summary', fromlist=['x'])
             .api_geo_site_contents)
-        self.assertIn('include_facility_fittings=False', body)
+        # 2026-10-08: 규칙은 device_membership.screen_members 한 곳으로 옮겼다
+        # (지도 화면 기준 제어 제안과 같은 규칙을 쓰려고). 엔드포인트는 그것을 부른다.
+        self.assertIn('screen_members(site)', body)
+        rule = inspect.getsource(device_membership.screen_members)
+        self.assertIn("== 'site'", rule)
+        self.assertIn('include_facility_fittings=False', rule)
 
     def test_the_zone_endpoint_does_not(self):
         """구역은 그대로다 — 구역 안 시설의 설비는 구역의 것이 맞다."""
@@ -120,7 +125,10 @@ class TestOnlyTheSiteEndpointTurnsItOff(unittest.TestCase):
                             hits.append('%s:%d' % (os.path.relpath(p, root),
                                                    node.lineno))
         self.assertEqual(len(hits), 1,
-                         '끄는 자리는 필지 엔드포인트 하나여야 합니다: %s' % hits)
+                         '끄는 자리는 화면 규칙(screen_members) 하나여야 합니다: %s' % hits)
+        self.assertTrue(hits[0].startswith(os.path.join('aot_flask', 'geo',
+                                                        'device_membership.py')),
+                        hits)
 
 
 class TestTheSiteSummaryIsUntouched(unittest.TestCase):
@@ -128,9 +136,15 @@ class TestTheSiteSummaryIsUntouched(unittest.TestCase):
     def test_summary_asks_per_child(self):
         """요약이 필지 전체로 한 번에 물으면 이 변경과 어긋나게 된다."""
         from aot.aot_flask.geo import site_summary
+        # 2026-10-08: 정본 이름(place_members)으로 바뀌었다 — 같은 4겹 판정이고
+        # 시설 설비도 그대로 센다. 대지 전체를 한 번 더 묻는 호출(대지에 직접
+        # 놓인 장치를 빠뜨리지 않으려고)도 같은 함수를 지나므로 설비를 빼지 않는다.
         src = inspect.getsource(site_summary._device_ids_for)
-        self.assertIn('device_ids_in_area(shape.unique_id)', src)
+        self.assertIn('place_members(shape.unique_id)', src)
         self.assertNotIn('include_facility_fittings', src)
+        build = inspect.getsource(site_summary._build_summary)
+        self.assertNotIn('include_facility_fittings', build)
+        self.assertIn('_device_ids_for(shape)', build)   # 자식마다 묻는다
 
 
 if __name__ == '__main__':

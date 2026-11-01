@@ -33,6 +33,9 @@ class TestLightweightTierDoesNotCrash(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # 테이블을 비우는 픽스처 — 라이브 DB 면 거부(aot/tests/_live_db_guard.py).
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         from flask import Flask
         from aot.aot_flask.extensions import db, cache
         import aot.databases.models  # noqa: F401 — 모델 등록

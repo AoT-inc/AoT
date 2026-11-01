@@ -20,6 +20,7 @@ from flask_babel import gettext
 from sqlalchemy import and_
 from sqlalchemy import or_
 
+from aot.utils import ai_shortcut
 from aot.config import DAEMON_LOG_FILE
 from aot.config import DEPENDENCY_INIT_FILE
 from aot.config import DEPENDENCY_LOG_FILE
@@ -1039,6 +1040,241 @@ def get_api_key_usage(api_key_val):
 #
 
 
+def _twin_settings_apply(mod_misc, form, messages, audit_before):
+    """디지털트윈(실험) 토글·실행 시각을 Misc 에 반영한다.
+
+    낮은 사양 잠금은 화면(토글 비활성)과 여기서 **이중으로** 건다 — 화면만 막으면 직접 POST 로
+    잠긴 기기에서도 켜진다. 잠긴 기기에서 켜려는 요청은 거부하고 저장된 값을 건드리지 않는다.
+    잠긴 기기에서 켜지 않는 요청(비활성 체크박스는 늘 '끔' 으로 온다)은 플래그를 끈다.
+    판정은 aot/utils/twin_gate.py 가 정본이다.
+    """
+    from aot.utils import twin_gate
+
+    want = bool(form.twin_enabled.data)
+    have = bool(mod_misc.twin_enabled)
+    supported, reason = twin_gate.twin_supported()
+    if want and not supported:
+        messages["warning"].append(gettext(
+            'The Digital Twin cannot be turned on: %(reason)s',
+            reason=twin_lock_text(reason)))
+        want = have
+    if want != have:
+        audit_before['twin_enabled'] = have
+        mod_misc.twin_enabled = want
+
+    # 실행 시각은 설정 > 디지털트윈 페이지로 옮겼다. 옛 화면(칸이 아직 있는 요청)만 여기서 받는다.
+    from flask import request
+    if 'twin_run_times' in request.form:
+        _twin_run_times_apply(mod_misc, form.twin_run_times.data, messages, audit_before)
+
+
+def _twin_run_times_apply(mod_misc, raw, messages, audit_before):
+    from aot.utils import twin_gate
+    norm, err = twin_gate.normalize_run_times(raw)
+    if err:
+        messages["error"].append(gettext(
+            'Digital Twin run times must look like 06:10,18:10 (HH:MM, comma separated, '
+            'at most %(n)s).', n=twin_gate.MAX_RUN_TIMES))
+    elif norm != (mod_misc.twin_run_times or twin_gate.DEFAULT_RUN_TIMES):
+        audit_before['twin_run_times'] = mod_misc.twin_run_times
+        mod_misc.twin_run_times = norm
+
+
+def settings_twin_mod(form):
+    """설정 > 디지털트윈 저장 — 실행 시각, 낮은 사양 잠금 해제, 예보 입력 자동 만들기.
+
+    낮은 사양 잠금 해제는 HARDWARE_PROFILE 항목만 건너뛴다(파이 모델·기기 메모리 잠금은 그대로).
+    """
+    messages = {"success": [], "info": [], "warning": [], "error": []}
+    if not form.validate():
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages["error"].append(gettext(
+                    "Error in the %(field)s field - %(err)s", field=getattr(form, field).label.text, err=error))
+        return messages
+    mod_misc = Misc.query.first()
+    before = {}
+    _twin_run_times_apply(mod_misc, form.twin_run_times.data, messages, before)
+    for col in ('twin_ignore_profile', 'twin_auto_forecast'):
+        want = bool(getattr(form, col).data)
+        if want != bool(getattr(mod_misc, col) if getattr(mod_misc, col) is not None else col == 'twin_auto_forecast'):
+            before[col] = getattr(mod_misc, col)
+            setattr(mod_misc, col, want)
+    if messages["error"]:
+        db.session.rollback()
+        return messages
+    try:
+        db.session.commit()
+        audit_log(audit.SETTINGS_CHANGE, target_type='Misc', target_name='Digital Twin Settings',
+                  before=before,
+                  after={k: getattr(mod_misc, k) for k in before})
+        invalidate_misc_cache()
+        messages["success"].append('{action} {controller}'.format(
+            action=TRANSLATIONS['modify']['title'], controller=gettext('Digital Twin (Experimental)')))
+    except Exception as e:
+        db.session.rollback()
+        messages["error"].append(str(e))
+    return messages
+
+
+def _data_retention_apply(mod_misc, form, messages, audit_before):
+    """설정 > 일반 '데이터 보관' 한 칸 → `misc.data_layers.retention_days`(예보 발표본·분석 이력, 설계 §5).
+
+    칸이 없는 요청(옛 화면)은 건드리지 않는다. 범위를 벗어나면 저장하지 않고 알린다. 버킷 보존은 하루 한 번 점검이
+    맞추지만, 바꾼 값은 바로 반영해 본다(Influx 가 꺼져 있어도 저장은 된다).
+    """
+    from flask import request
+    from aot.utils import data_retention
+
+    if 'data_retention_days' not in request.form:
+        return
+    try:
+        days = data_retention.validate_days(form.data_retention_days.data)
+    except ValueError:
+        lo, hi = data_retention.USER_BOUNDS
+        messages["error"].append(gettext(
+            'Data retention must be between %(lo)s and %(hi)s days.', lo=lo, hi=hi))
+        return
+    if days == data_retention.user_days(mod_misc.data_layers or {}):
+        return
+    audit_before['data_retention_days'] = data_retention.user_days(mod_misc.data_layers or {})
+    mod_misc.data_layers = data_retention.merged_config(mod_misc.data_layers, days)
+    try:
+        from aot.utils import influx_layers
+        influx_layers.invalidate()
+        influx_layers.apply_retention(influx_layers.desired_retention_days(mod_misc.data_layers))
+    except Exception:
+        logger.warning('Data retention was saved but not applied to Influx yet', exc_info=True)
+
+
+def retention_panel_context():
+    """설정 > 일반 '데이터 보관' 칸이 그리는 값: 보관 일수, 범위, 마지막 점검에서 나온 한 문장."""
+    from aot.utils import data_retention
+
+    misc = Misc.query.first()
+    cfg = (misc.data_layers if misc is not None else None) or {}
+    check = cfg.get(data_retention.CHECK_KEY) or {}
+    warns = check.get('warnings') or []
+    status = ''
+    if 'disk_low' in warns:
+        free = check.get('free_bytes')
+        status = gettext('Storage is running low (%(gb).1f GB left). A shorter retention frees space.',
+                         gb=(free or 0) / float(1 << 30))
+    elif 'many_points' in warns:
+        status = gettext('A lot of forecast and twin data has piled up. A shorter retention reduces it.')
+    elif check.get('orphans'):
+        status = gettext('Records of %(n)s deleted forecast input(s) stay until the retention ends.',
+                         n=check['orphans'])
+    elif check.get('at') and check.get('mode') == 'layered':
+        status = gettext('Last checked %(when)s. All good.', when=_local_stamp(misc, check['at']))
+    lo, hi = data_retention.USER_BOUNDS
+    return {'days': data_retention.user_days(cfg), 'min': lo, 'max': hi,
+            'status': status, 'warn': bool(warns)}
+
+
+def _local_stamp(misc, epoch):
+    try:
+        import datetime
+        import pytz
+        at = datetime.datetime.fromtimestamp(float(epoch), pytz.utc)
+        at = at.astimezone(pytz.timezone(getattr(misc, 'timezone', None) or 'UTC'))
+        return at.strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        return ''
+
+
+def twin_panel_context():
+    """설정 > 일반 '디지털트윈 (실험)' 그룹이 그리는 값. 판정은 twin_gate 가 정본.
+
+    running 은 하트비트가 신선할 때만 True — 서비스가 설치되지 않았거나 멈췄으면 False 이고
+    화면이 설치 안내를 보인다. 시각은 Misc.timezone 으로 바꿔 보인다.
+    """
+    from aot.utils import twin_gate
+
+    supported, reason = twin_gate.twin_supported()
+    hb = twin_gate.read_heartbeat() or {}
+    running = not twin_gate.heartbeat_stale(heartbeat=hb)
+    misc = Misc.query.first()
+
+    def _local(value):
+        at = twin_gate._parse_ts(value)
+        if at is None:
+            return ''
+        try:
+            import pytz
+            at = at.astimezone(pytz.timezone(getattr(misc, 'timezone', None) or 'UTC'))
+        except Exception:
+            pass
+        return at.strftime('%Y-%m-%d %H:%M')
+
+    return {
+        'supported': supported,
+        'lock_reason': twin_lock_text(reason),
+        'enabled': bool(misc is not None and misc.twin_enabled),
+        'run_times': (misc.twin_run_times if misc is not None and misc.twin_run_times
+                      else twin_gate.DEFAULT_RUN_TIMES),
+        'ignore_profile': bool(misc is not None and getattr(misc, 'twin_ignore_profile', False)),
+        'auto_forecast': (True if misc is None or getattr(misc, 'twin_auto_forecast', None) is None
+                          else bool(misc.twin_auto_forecast)),
+        'running': running,
+        'status': hb.get('status') if running else None,
+        'version': hb.get('version') or '',
+        'last_run_at': _local(hb.get('last_run_at')),
+        'sites': hb.get('sites') or 0,
+        'plots': hb.get('plots') or 0,
+        'failures': hb.get('failures') or 0,
+        'service_locked_reason': twin_lock_text(hb.get('locked_reason') or '') if running else '',
+    }
+
+
+def twin_lock_text(reason):
+    """잠금 reason 코드(twin_gate.twin_supported) → 사용자에게 보일 번역 문구."""
+    from aot.utils import twin_gate
+    if reason == twin_gate.REASON_PROFILE_LOW:
+        return gettext('This device runs with the LOW hardware profile.')
+    if reason == twin_gate.REASON_PI_MODEL:
+        return gettext('This Raspberry Pi model is too small.')
+    if reason == twin_gate.REASON_LOW_MEMORY:
+        return gettext('This device has less than %(gb)s GB of memory.',
+                       gb=twin_gate.TWIN_MIN_MEM_GB)
+    return ''
+
+
+def _matter_toggle(enable, messages):
+    """New value of Misc.matter_enabled for a request to turn Matter on/off.
+
+    Off is refused while Matter devices exist: the Matter page is the only
+    place they are managed, so hiding it would strand them. On checks the
+    global 'matter' dependencies (config.DEPENDENCIES_GENERAL): a native
+    install is sent to the dependency page to install them; a Docker image
+    already carries them (requirements.txt), and an in-container install would
+    not reach the daemon container or survive an update (design C6), so a
+    Docker image without them is told to update instead.
+    """
+    if not enable:
+        from aot.databases.models import CustomController
+        in_use = CustomController.query.filter_by(device='device_matter_node').count()
+        if in_use:
+            messages["warning"].append(gettext(
+                'Matter stays on: remove the %(n)s Matter device(s) in Settings > Matter first.',
+                n=in_use))
+            return True
+        return False
+
+    from aot.aot_flask.utils.utils_general import return_dependencies
+    unmet, _met, _msg = return_dependencies('matter')
+    if unmet:
+        if os.environ.get('DOCKER_CONTAINER', '').lower() in ('true', '1', 'yes'):
+            messages["warning"].append(gettext(
+                'This AoT image does not include the packages Matter needs. '
+                'Update AoT to a newer image, then open Settings > Matter.'))
+        else:
+            messages["info"].append(gettext(
+                'Install the packages Matter needs, then open Settings > Matter.'))
+            messages["redirect"] = url_for('routes_admin.admin_dependencies', device='matter')
+    return True
+
+
 def settings_general_mod(form):
     """Modify General settings."""
     messages = {
@@ -1113,7 +1349,21 @@ def settings_general_mod(form):
                 mod_misc.hide_alert_success = form.hide_success.data
                 mod_misc.hide_alert_info = form.hide_info.data
                 mod_misc.hide_alert_warning = form.hide_warning.data
+                mod_misc.hide_ai_messages = form.hide_ai_messages.data
+                mod_misc.ai_card_auto = form.ai_card_auto.data
+                try:
+                    mod_misc.ai_shortcut_url = ai_shortcut.normalize(form.ai_shortcut_url.data)
+                except ValueError:
+                    messages["error"].append(gettext(
+                        'AI shortcut link must be an https address (for example https://claude.ai/new). '
+                        'It was not changed.'))
                 mod_misc.hide_tooltips = form.hide_tooltips.data
+                if bool(mod_misc.matter_enabled) != bool(form.matter_enabled.data):
+                    _audit_before['matter_enabled'] = bool(mod_misc.matter_enabled)
+                    mod_misc.matter_enabled = _matter_toggle(
+                        bool(form.matter_enabled.data), messages)
+                _twin_settings_apply(mod_misc, form, messages, _audit_before)
+                _data_retention_apply(mod_misc, form, messages, _audit_before)
 
                 mod_misc.sample_rate_controller_conditional = form.sample_rate_controller_conditional.data
                 mod_misc.sample_rate_controller_function = form.sample_rate_controller_function.data
@@ -1185,7 +1435,13 @@ def settings_general_mod(form):
                                     if 'timezone' in _audit_before else {}),
                                  # 시스템 시간대를 따라 값이 바뀐 장치 수
                                  **({'devices_following_system_tz': _tz_synced}
-                                    if _tz_synced else {})})
+                                    if _tz_synced else {}),
+                                 **({'matter_enabled': bool(mod_misc.matter_enabled)}
+                                    if 'matter_enabled' in _audit_before else {}),
+                                 **({'twin_enabled': bool(mod_misc.twin_enabled)}
+                                    if 'twin_enabled' in _audit_before else {}),
+                                 **({'twin_run_times': mod_misc.twin_run_times}
+                                    if 'twin_run_times' in _audit_before else {})})
                 invalidate_misc_cache()
                 control = DaemonControl()
                 control.refresh_daemon_misc_settings()

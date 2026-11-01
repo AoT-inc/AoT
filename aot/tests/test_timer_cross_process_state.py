@@ -32,6 +32,10 @@ import time as _t
 import pytest
 
 
+# 상태 파일 디렉터리를 테스트마다 격리하고 남은 워커를 멈춘다 — conftest.timer_sessions 참고.
+pytestmark = pytest.mark.usefixtures('timer_sessions')
+
+
 class _FakeDaemon:
     """output_on_off/output_state 호출만 기록하는 가짜 데몬. 즉시 'on' 을
     확인해 주므로 _wait_for_confirm 이 곧바로 통과한다."""

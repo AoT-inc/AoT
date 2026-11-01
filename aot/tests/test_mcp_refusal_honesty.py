@@ -229,6 +229,20 @@ class TestNotPerformedVocabulary(unittest.TestCase):
         self.assertEqual(gate.call_state(None, {'status': 'refused'}),
                          'executed')   # 도구 이름이 없으면 예전 판정 그대로
 
+    def test_a_read_that_asks_which_one_ran(self):
+        """되묻는 응답이 error 키를 함께 실어 failed 로 기록됐다(2026-10-09).
+        읽기 도구는 조회가 돌았고 답이 후보 목록이다 — 쓰기 도구는 그대로 미실행."""
+        amb = {'status': 'needs_disambiguation', 'error': 'ambiguous_name',
+               'candidates': [{}, {}]}
+        self.assertEqual(gate.call_state(None, dict(amb), tool_name='resolve_target'),
+                         'executed')
+        self.assertEqual(gate.call_state(None, dict(amb), tool_name='search_devices'),
+                         'executed')
+        self.assertEqual(gate.call_state(None, dict(amb), tool_name='create_note'),
+                         'failed')
+        self.assertEqual(gate.call_state(None, {'error': 'boom'},
+                                         tool_name='resolve_target'), 'failed')
+
     def test_record_handlers_status_words_are_in_the_vocabulary(self):
         """처리기가 쓰는 단어가 어휘 밖으로 새지 않게 — 소스에서 직접 센다."""
         import re

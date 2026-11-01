@@ -856,6 +856,34 @@ _SH_SETTINGS_TTL = 60.0
 _sh_settings_cache = {}     # {unique_id: (settings, expires_at)}
 
 
+#: 레이어 종류 → (파일 지문, 입력 정의). `parse_input_information()` 은 부를 때마다 입력 모듈 200여 개를 다시 실행해 한 번에
+#: 0.1초 남짓 걸린다 — 시간 칸마다 인스턴스를 만드는 예보 조회에서 수 초가 됐다. 그 종류의 파일이 그대로면 정의도 그대로다.
+_GIS_LAYER_DEFS = {}
+
+
+def _gis_layer_def(layer_type):
+    """레이어 종류의 입력 정의(복사본). 파일이 바뀌었거나 처음이면 `parse_input_information()` 으로 다시 읽는다.
+    못 찾은 종류는 캐시하지 않는다(새로 올린 커스텀 모듈이 바로 보이게)."""
+    import copy
+    hit = _GIS_LAYER_DEFS.get(layer_type)
+    if hit is not None:
+        try:
+            st = os.stat(hit[0])
+            if (st.st_mtime_ns, st.st_size) == hit[1]:
+                return copy.deepcopy(hit[2])
+        except OSError:
+            pass
+    layer_def = parse_input_information().get(layer_type, {})
+    path = layer_def.get('file_path')
+    if path:
+        try:
+            st = os.stat(path)
+            _GIS_LAYER_DEFS[layer_type] = (path, (st.st_mtime_ns, st.st_size), copy.deepcopy(layer_def))
+        except OSError:
+            pass
+    return layer_def
+
+
 def _load_gis_layer_instance(unique_id):
     """GeoLayer 하나를 그 입력 모듈 인스턴스로 만든다. 못 찾으면 None.
 
@@ -863,7 +891,7 @@ def _load_gis_layer_instance(unique_id):
     전역 키 폴백 → `get_custom_option` 대체)을 한 곳에 모은 것이다.
     """
     import re as _re
-    from aot.utils.modules import load_module_from_file
+    from aot.utils.modules import load_module_cached
     from aot.aot_flask.utils.utils_geo import MockInputDev
 
     channel_id = None
@@ -878,11 +906,12 @@ def _load_gis_layer_instance(unique_id):
     if not layer:
         return None
 
-    layer_def = parse_input_information().get(layer.type, {})
+    layer_def = _gis_layer_def(layer.type)
     if not layer_def.get('file_path'):
         return None
 
-    mod, _status = load_module_from_file(layer_def['file_path'], 'inputs')
+    # 같은 파일이면 같은 모듈 객체 — 모듈 전역 캐시(예보 10분·토큰 …)가 인스턴스를 넘어 살아남는다.
+    mod, _status = load_module_cached(layer_def['file_path'], 'inputs')
     if not mod or not hasattr(mod, 'InputModule'):
         return None
 
@@ -942,6 +971,25 @@ def _load_gis_layer_instance(unique_id):
     inst.custom_options = opts
     inst.get_custom_option = lambda opt, default=None: opts.get(opt, default)
     return inst
+
+
+# 지도 위젯 시간 슬라이더가 시간을 지원하는 타일 레이어(time_enabled)의 프레임 목록을 읽는 경로.
+# 제공자(프레임을 어디서 받고 URL 의 어느 자리를 바꾸는지)는 각 gis 모듈이 표준 메서드
+# (get_time_range / get_time_steps / get_time_params)로 답하고, 여기는 그 답을 내보내기만 한다.
+@blueprint.route('/api/geo/layer_time/<unique_id>', methods=['GET'])
+@login_required
+@cache.cached(timeout=30)
+def api_geo_layer_time(unique_id):
+    """GIS 레이어의 시간 정보. ``time`` 은 ``{range: {start_ms, end_ms}, frames: [{t, params}, …]}`` 또는 null(시간 미지원·프레임 없음)."""
+    inst = _load_gis_layer_instance(unique_id)
+    if inst is None:
+        return jsonify({'ok': False, 'error': 'not found'}), 404
+    try:
+        info = inst.get_time_info()
+    except Exception as exc:                                    # noqa: BLE001
+        current_app.logger.warning('[layer_time] %s 실패: %s', unique_id, type(exc).__name__)
+        info = None
+    return jsonify({'ok': True, 'time': info})
 
 
 # @manual geo/layers#sentinel-hub-sentinel-2

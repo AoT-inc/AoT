@@ -23,6 +23,7 @@ Input, Output, and Function devices placed in **Device** mode in `/geo/design` a
 - **Marker color**: Changes automatically based on the device's active/inactive/error state.
 - **Overlap handling**: When markers overlap at a low zoom level, they collapse into a single badge showing the count; zooming in spreads them back out into individual markers.
 - **Device icons**: Icons vary by device type (temperature sensor, relay, pump, and so on).
+- **Control type**: An output marker opens an On/Off toggle by default. A paired open/close actuator, or a value output that positions itself and reports its own 0–100 % position (such as a Matter window covering), opens the Close/Stop/Open buttons with a position slider instead.
 
 ### Control Right From the Popup { #control-right-from-the-popup }
 
@@ -48,7 +49,7 @@ shows how long it last ran (dimmed); the moment it turns on that same slot
 becomes a live running timer (bold). It keeps following the device while the
 window stays open, even if another window or a schedule switches it.
 
-Position actuators (windows, curtains, …) get Close/Stop/Open buttons in place of the toggle, and a PWM output shows its current percentage with a 0–100% slider. Neither gets the **Settings** button.
+Position actuators (windows, curtains, …) get Close/Stop/Open buttons in place of the toggle — this covers paired open/close actuators and also a value output that positions itself and reports its own 0–100 % position (such as a Matter window covering); Close sends 0, Stop sends off, Open sends 100 — and a PWM output shows its current percentage with a 0–100% slider. Neither gets the **Settings** button.
 
 A composite device runs nothing of its own, so its window opens with **Contents** — the sensors and devices held inside it — and no history. Click a line to drop into that device's own window.
 
@@ -72,7 +73,7 @@ The order you drag the devices into belongs to the **zone**, so everyone who ope
 
 Plots drawn in the design tool's [Plot mode](design-tool.md#plot) appear on the map; clicking one opens its operational view. The window has three tabs: **Overview / Environment & Control / Settings**.
 
-- **[Overview] > Resources** — two layers: what the current stage declares it needs, and under it, for each irrigation device that reaches this plot, how long it ran **today** and over the **last 7 days** and how much water that is (estimated), with a **Total** row once more than one device has a volume. The volume is designed flow (a facility's piping layout, or the emitters drawn on an outdoor map) x run time x the plot's share, so it is **not a flow-meter reading**. A device with no run in the window says so rather than showing 0. A device whose volume cannot be worked out gets no row at all — the note **below the table** names it and says which reason applies: no emitter is mapped inside this plot, or the flow rate is unknown. That same note says once, for the table as a whole, that the figures are estimates and what the plot's share is. If an area lying over this plot has no device assigned to it yet, **[Overview]** says so too — that is a missing means of control, not a device to list. For the same figures broken down by period, use the [Journal](journal.md).
+- **[Overview] > Resources** — two layers: what the current stage declares it needs, and under it, for each irrigation device that reaches this plot, how long it ran **today** and over the **last 7 days** and how much water that is (estimated), with a **Total** row once more than one device has a volume. The volume is designed flow (a facility's piping layout, or the emitters drawn on an outdoor map) x run time x the plot's share, so it is **not a flow-meter reading**. A device with no run in the window says so rather than showing 0. A device whose volume cannot be worked out gets no row at all — the note **below the table** names it and says which reason applies: no emitter is mapped inside this plot, or the flow rate is unknown. That same note says once, for the table as a whole, that the figures are estimates and what the plot's share is. If an area lying over this plot has no device assigned to it yet, **[Overview]** says so too — that is a missing means of control, not a device to list. For the same figures broken down by period, use the [Journal](journal.md). Where a pump, water source or tank supplies the valve, each device also shows its **Design** volume (by nozzle design alone), the depth in mm and **Supply limited** when the pump or source could not give the full flow. On a map with such supply parts, the pipes and parts a running output's water passes are drawn thicker in the same equipment colour.
 - **[Overview]** — a **Program stages** card with the current stage, days elapsed, accumulated heat and the current stage's guidance, plus a live **Environment** card with day-of-target readings including **GDD** (accumulated heat since the season started, [see Journals](journal.md#gdd)) and **DLI** (today's light vs. target, [see Journals](journal.md#dli)) where the program and sensors support them. If either can't be calculated, the card says why (no program, no base temperature, not enough measured days) instead of just showing nothing.
 - **[Overview] > Stage change** — when the calculation says the next stage has begun, **Confirm** or **Postpone** it here. The record of confirmed changes (**Stage log**) and **Undo last** are under **[Settings] > Program**. Stage targets are shown next to the current readings in the **Environment** card. See [Management Programs](programs.md#stage-events).
 - **[Settings] > Stage schedule** — where the real schedule is edited. Programme lengths are only a reference, so stages can be **postponed or pulled forward**, and this one plot can be set to advance automatically. See [Editing the schedule](programs.md#stage-schedule).
@@ -165,8 +166,26 @@ expand when clicked.
 | Select Map | The saved map to display. Leave empty to use the most recently modified map. |
 | Show Labels | The master switch for all site/zone/facility/device/sensor labels. Fine-tune which types show up under **Layers → Labels** in the map's right-hand tools. |
 | Display Data Only (Hide Map) | Hides the map background and overlays, showing only the side measurement panel. |
+| Auto-adjust Overlay Opacity | On by default. Weather overlays (cloud, precipitation/radar, wind and temperature fields) are drawn **above** the shapes and 3D models rather than underneath, and their opacity is lowered automatically so what is beneath stays visible — lowered further as you zoom in, and capped as a group when several are on at once. A cloud overlay is also toned towards light grey so white cloud stays readable over a bright base map, and an overlay whose own tiles are already semi-transparent is compensated so it shows at the strength the policy intends. Turn it off to go back to the previous order: weather layers sit below the shapes, use each layer's own opacity as set for that layer, and get neither of those corrections. Ground-type overlays (imagery, soil, boundaries) stay below the shapes either way. |
+| Day / Night Appearance | **Auto (by sun position)** by default. After dark the base map and ground overlays are dimmed and desaturated, around sunrise and sunset they take a warm tint, and 3D models are lit from the sun's direction. It also fills the measurement dock with weather values (precipitation, wind, cloud cover, visibility, temperature, risk and the time of observation) and puts a day/night icon in the local-time clock. **Always day** and **Always night** hold the lighting at one of the two whatever the real time is; **Off** turns all of this off. Sun position is worked out for wherever the map is centred, and the weather values are taken there from the sources set below; both are refreshed every few minutes, and an observation older than 30 minutes is marked as delayed and the weather overlays fade. |
+| Weather Effects | **Subtle** by default. Draws the weather right now over the map from the observed values alone, even when no weather layer is on — cloud shadows drifting with the wind (by cloud cover), wind streaks (amber when the wind is strong), rain or snow (by precipitation; snow when it is around freezing or colder) and a fog veil (by visibility). Whatever is not measured is simply not drawn. The effects are fainter over facilities, and faintest over a facility whose window you have open. If a weather layer of the same kind is already on, the cloud shadow and wind streaks step aside and only rain/snow and fog remain. **Vivid** draws them more strongly, **Off** draws nothing. They pause while the map is off-screen or its tab is in the background, and are drawn as a single still frame if your system asks for reduced motion. This works whatever **Day / Night Appearance** is set to; a delayed observation (older than 30 minutes) halves the effects. |
+| Lightning Flash | On by default. When a weather source reports recent lightning, the screen brightens briefly now and then, kept at least 4 seconds apart — stronger when **Weather Effects** is set to **Vivid**, and not shown at all while **Weather Effects** is **Off**. Turn it off to avoid the flashing; it is also skipped when reduced motion is requested. |
+| Show Weather Layers Automatically | Off by default. When precipitation, cloud cover or wind passes its threshold, the matching weather layer you registered in this widget (precipitation, cloud or wind) is turned on **on screen only** — one layer per kind, and none for a kind that already has a layer on. Your saved layer selection is not changed, and a layer you turn off yourself is not turned back on until the page is reloaded. The thresholds are decided on the server and are not settings here. This also works whatever **Day / Night Appearance** is set to. |
+| Weather Effects Minimum Zoom | 11 by default (0–22). Zoomed out further than this, the weather effects and the layers turned on automatically fade away over one zoom level, because one observation spread evenly over a wide area is misleading. Layers you turned on yourself, the dock values and the day/night correction are not affected. Set 0 to show them at every zoom. |
+| Temperature Tint | On by default. Colours the temperature value in the measurement dock blue when it is cold and red when it is hot, and lays a very faint tint of the same colour over the base map and the ground overlays — never over the shapes or the 3D models. The colour appears once the temperature leaves the neutral range set below, and is strongest at the low- and high-temperature risk thresholds. It needs **Day / Night Appearance** to be anything other than **Off**, and the colouring in the dock also needs **Weather First in Measurement Dock**. |
+| Tint: Neutral From (°C) | 10 by default (−60–70). Below this temperature the cold tint starts; it is strongest at the low-temperature (frost) risk threshold. |
+| Tint: Neutral Up To (°C) | 28 by default (−60–70). Above this temperature the hot tint starts; it is strongest at the high-temperature risk threshold. Set it to the same value as the one above or lower, and both fall back to their defaults. |
+| Weather First in Measurement Dock | On by default. Puts the weather values from the day/night option at the left of the measurement dock, in a fixed order. If you also picked a matching value from one of your own devices (rain, wind speed or direction, cloud cover, visibility, temperature), that value moves into the group and carries a location pin instead of being listed twice. Turn it off to keep the dock exactly as you configured it. It has no effect while **Day / Night Appearance** is **Off**. |
+| Weather Value Source Order | **Field devices first** by default. The weather values come from two places: the weather stations you assigned to the site, and the weather inputs registered in this map's layers (used even while their layer is off, unless **Use as weather data source** is turned off on that input). This picks which of the two is read first; for each value the other one is used when the first has none or its reading is too old. A field device that totals rainfall (mm) rather than reporting it per hour is only read when the period it covers is written in its unit or measurement name (for example a unit of `mm_15min`, or a name containing `15min`); without that, the reading is skipped as if it were missing. With neither in place there are no weather values at all, so no weather cells and no weather effects are drawn. |
+| Weather Value Max Age (Seconds) | 300 by default (10–86400). A field device reading older than this is passed over and the next source is used. For a weather input, an allowed age set on that input itself is used as it stands; where that is left blank, whichever is longer applies — this value or the age that input declares for itself. |
+| Risk: Wind Speed (m/s) | 10 by default (0–100). A risk appears in the weather cells once the current wind speed reaches this value, and is marked severe at 1.4 times it or more. Set 0 to never show a wind risk. |
+| Risk: Precipitation (mm/h) | 5 by default (0–500). A risk appears once the current precipitation reaches this value, and is shown as heavy rain at twice it or more. Set 0 to never show a precipitation risk. |
+| Light Rain Threshold (mm/h) | 0.1 by default (0–5). Precipitation below this amount is drawn as no rain or snow in **Weather Effects** — the measured value itself is not changed, and the figure shown in the measurement dock is unaffected. |
+| Risk: Low Temperature (°C) | 2 by default (−60–60). A frost risk appears once the current temperature falls to this value or below, and is shown as a freeze at 0 °C or below. |
+| Risk: High Temperature (°C) | 33 by default (−60–70). A heat risk appears once the current temperature reaches this value or above, and is marked severe 2 °C above it. A low-temperature risk takes precedence, so only one of the two is ever shown. |
 | Show AI Advice | Shows the latest AI advice summary for this map's facility/site as a clickable chip at the top of the map (requires the global AI to be configured). |
 | Show Local Time | Shows a three-cell dock at the top-centre of the map with the time **for wherever the map is centred** — the current time in the middle, the sun event that just passed on the left, and the next one on the right. So it reads `sunrise · now · sunset` during the day and `sunset · now · tomorrow's sunrise` at night. Pan the map and it recomputes for that location's timezone. When the map's local date differs from your browser's, the clock also carries that date, and hovering it names the timezone (or says the location's timezone could not be resolved and the farm timezone is being used). Where the sun does not rise or set, an extra cell reads **Midnight sun** or **Polar night** in place of the events. Scroll the wheel over the small circle at its bottom-left (drag vertically on a phone) to resize the clock; the size is saved with the widget. While it is on, the address search bar and AI advice chips move below it. |
+| Show Time Slider | On by default. Adds a slider under the **Show Local Time** dock to look at the map at another time — radar frames of time-enabled layers, forecast or recorded weather values, and day/night lighting all move with it. Needs **Show Local Time** to be on, and the slider does not appear if there is nothing time-aware to show. Drag it back to "Now" to return to live values. |
 
 !!! note
     Switching **Select Map** to a different map automatically resets the stored position and zoom, so they can be re-fit to the new map.
@@ -184,6 +203,8 @@ expand when clicked.
 | Option | Description |
 | :--- | :--- |
 | Input / Output / Function | Choose which devices of each type to **hide** from the map (an exclude list). If none are selected, every device placed in `/geo/design` is shown — only use this to hide specific devices. |
+
+The filter is applied the same way whether you change it in the widget settings or an AI changes the widget for you.
 
 ### Measurement Panel { #measurement-panel }
 
@@ -264,7 +285,7 @@ A legend is displayed automatically in the bottom-right of the map — there's n
 
 ## 3D Facility Popup { #3d-facility-popup }
 
-Clicking a Facility marker or polygon shows a brief 3D preview and an environment-data summary in a popup. The **Overview** pane's environment card includes GDD and DLI the same way a [plot's does](#plot) — for the facility as a whole, regardless of which bay you're looking at. When the facility holds more than one plot, those two figures follow its first plot rather than totalling all of them. The same pane also carries the last irrigation run and any weather hazard coming up, read from the same forecast outdoor areas use. For the full facility view, use the [AoT_facility widget](facility-widget.md).
+Clicking a Facility marker or polygon shows a brief 3D preview and an environment-data summary in a popup. The **Overview** pane's environment card includes GDD and DLI the same way a [plot's does](#plot) — for the facility as a whole, regardless of which bay you're looking at. When the facility holds more than one plot, those two figures follow its first plot rather than totalling all of them. The same pane also carries the last irrigation run and any weather hazard coming up, read from the same forecast outdoor areas use — unless the facility has an Open-Meteo hourly forecast input linked whose file was received within the last 2 hours, in which case that file (the one control uses) is read. For the full facility view, use the [AoT_facility widget](facility-widget.md).
 
 ---
 
@@ -278,7 +299,101 @@ A site's popup has an **About** pane, and in it a **Weather station** section fo
 
 Each row names a device and, under the name, what that device measures; on a site with many devices that second line is often the only way to tell two of them apart. Devices that only switch something are left out, and the ones AoT found on its own are listed first. A line above the list says which rule is in force right now — set here, found automatically, or nothing found at all. Your choices take effect when you press **Apply**, and without edit permission the list is read-only.
 
+### Forecast source { #site-forecast-source }
+
+**Forecast source**, under the same heading, chooses which forecast inputs this site's weather forecast comes from. The digital twin, the weather dock and effects of the map's time slider, and the AI's forecast answers **all read this one place**, so the three never show different forecasts. The forecast field on the Twin tab is the same setting.
+
+- Only inputs whose values are for future times (hourly or daily forecasts) are offered, nearest to the site first.
+- **Near days come from the hourly input, later days from the daily input.** When you look at a time after the hourly input ends, the weather dock shows that day's high/low temperature, daily rain and chance of rain.
+- Past the end of the forecast nothing is filled in from another source; the dock says **Beyond the forecast range**. The legend and the dock's Forecast cell tell you which input the values come from.
+- **If nothing is chosen**, all three fall back to the same thing: the weather layer (GIS layer) registered on the map.
+
+### Forecast adjustment { #site-forecast-calibration }
+
+Once a forecast source is chosen above, a **Forecast tuned to this site** row appears in this panel, showing how AoT is comparing that forecast against the site's weather station and quietly correcting it where it tends to run too high, too low, and so on.
+
+- **Automatic** (default) keeps using the original forecast until roughly two weeks of comparison with the site's weather station show the adjusted version is clearly better, then switches on its own, variable by variable.
+- **Always on** forces the adjustment on even before that comparison is in.
+- **Off** always uses the original forecast.
+
+A summary line says which variables are currently adjusted, or that the original forecast is still in use while AoT keeps comparing. If the adjustment has switched on or reverted since you last looked, a line counts how many times, with a button to acknowledge it.
+
+**Show details** expands a breakdown per variable — temperature, humidity, wind speed, solar radiation and rain for the near-term forecast; daily high, daily low and rain for the far-term forecast — each marked adjusted, still comparing, or not adjustable (no weather station to compare against, no forecast source chosen, or switched off), with the error reduction shown when adjusted. Below that, a short history logs each time an adjustment turned on or reverted, and a note explains that a weather station is one point while a forecast is an area average, so some mismatch is expected. This is marked **experimental, for reference** — treat the adjusted numbers as a refinement of the forecast, not a guarantee.
+
 ---
+
+## Digital Twin Tab { #twin-tab }
+
+!!! warning "Experimental feature"
+    The digital twin is an **experimental feature** still in development. Predictions are for reference and are **never used to control devices.** Behavior and data formats may change without notice.
+
+The digital twin computes the state of things to come from your sensor readings and the weather forecast (for now, the soil water of field plots) and paints it on the map. In the map widget you set it up in the **Twin** tab of a site, plot, or facility window, and you see the result as a layer of the map's time slider. **Open-field sites and plots are supported first**; facilities (greenhouses) are at an early stage.
+
+### Turning it on, and where settings live { #twin-enable }
+
+1. Turn the feature itself on under **Settings → General → Digital Twin (Experimental)** (off by default). A confirmation about the experimental status appears. Only with this switch on does the **Twin** tab appear in the map windows.
+2. The twin runs as a **separate service** (`aot_twin`) from the main program, so it has to be installed and running on its own. On a low-spec device the service stops itself and the switch is locked.
+3. Overall settings — service status, run times, turning on every site at once — are on the screen opened with **Open** next to **Digital Twin Settings** in **Settings → General**.
+4. Per-site, per-plot, and per-facility details are set in the **Twin** tab of the map window. **The source of truth for these settings is the `twin_config` table**; the twin service reads it to run. After you save, the service picks the change up within an hour, or at its next run.
+
+### The Site Window's Twin Tab { #twin-site-tab }
+
+The tab is laid out top to bottom as **toggle → summary → fold**.
+
+- **Top line**: the "Run the twin for this site" toggle (on the right). Just below are one status line (ready, a rain source is needed, and so on) and one summary line (number of plots · forecast span · plots painted on the map). The experimental notice under it is one short line; **Details** opens the full text.
+- **Show details** opens the folded part.
+    - **Sources in use**: rain, air temperature, and reference evapotranspiration (ET0). Unless you pick otherwise, the **inherited value** from the site's weather station is used, and a line below says where it came from. To use another device, press **Set manually** and pick one, or accept a suggestion with **Apply**. Return a manual line to inheritance with **Follow inheritance**. A source that turns out not to be an actual observation — a forecast value, a value derived from a model, or a simulator — is automatically left out of synchronization; the line is marked **Not an observation** and the site's readiness reflects it.
+    - **Rain aggregation**: how the rain input is turned into daily rain (hourly mean summed, daily sum, or last value of the day), together with a scale factor.
+    - **Forecast**: one line showing the forecast span in use (hourly → daily) and how many of 8 days have forecast rain. The forecast source is not chosen here; it is chosen once in the [site window's Forecast source](#site-forecast-source). If none is chosen, a hint says so.
+    - **Plots without a soil sensor: predict without observation (reference only)**: see [Plots Without a Sensor](#twin-sensorless) below.
+    - **Devices and effect channels**: a summary line for every device in this site that can affect its environment, grouped by the facility it belongs to, with one more group, **Outside facilities**, for outputs that are not part of any facility. A device bound to a facility slot gets its kind and effect channel automatically from its position; the detail view lists each device's kind, the channel it feeds, and whether the effect is reflected, partly reflected, not reflected, or of unknown kind. Use **Set manually** to leave a device out of the twin or, for a device of unknown kind (mainly outputs outside a facility), to choose its role. Effects of outputs outside a facility are shown for reference only — they are **not yet applied** to the twin.
+    - **Plot list**: per plot, the name, a one-word status, and an include toggle. **Show numbers** adds the soil water sensor in use and the recent agreement, one fact per line. A blocked plot also gets one sentence on the cause and what to do (for example, no planting date, no rain source, or a chosen source that turns out not to be an observation).
+- Changes take effect only after **Save**. Without edit permission the tab is read-only.
+
+### The Plot Window's Twin Tab { #twin-plot-tab }
+
+- The **Include this plot** toggle adds or removes the plot from the twin. If the site's twin is off, a hint tells you to turn it on in the site's tab first.
+- **Sources in use** are read-only lines like the site's. Soil water and soil temperature sensors are inherited automatically from the shapes, in the order **inside the plot, nearby, whole zone** (with where from and the distance in meters); rain, air temperature, and ET0 follow the site. To make this plot differ, press **Set manually** to enter editing, then **Change** or choose **None for this plot**. Inherited values follow when you change the shapes. A source that turns out not to be an actual observation — a forecast value, a model value, or a simulator — is automatically left out of synchronization and marked **Not an observation**; the plot then runs without observation (reference only) until a different source is set.
+- **Without a soil sensor** offers Follow site / Predict without observation / Do not compute.
+- **Recent agreement** shows the last run date, the one-day error, and how often the 80 % band contained the actual value.
+- Under **Development test**, the **Assimilation start date** starts at the planting date when left empty. Enter an earlier date only to test how well the model follows past sensor data.
+- Facility plots, finished crops, and plots not yet planted are not twin targets; the tab says so.
+
+### Plots Without a Sensor { #twin-sensorless }
+
+A plot without a soil water sensor can still run **prediction without observation** (a toggle in the site tab, on by default). The model then runs a water balance from the planting date on rain and weather alone. A soil sensor that turns out not to be an observation — forecast, model-derived, or simulated — is treated the same way: the plot is excluded from synchronization and runs without observation until a different sensor is set. Since nothing checks it against a sensor, the spread is wide and the result is **for reference only**. The map marks such plots with a **dotted outline** and the legend reads "No observation - reference only". With the toggle off, plots without a sensor are not computed. Once you connect a sensor, the plot synchronizes to it and its agreement builds up. A planting date and a rain source are still needed without a sensor.
+
+### The Facility (Greenhouse) Twin Tab { #twin-facility-tab }
+
+The facility window also has a **Twin** tab. Turning a facility on is **independent of the site setting** and off by default.
+
+- Choose **indoor sensors** (temperature, humidity, CO₂) and **outdoor sensors** (temperature, humidity, solar radiation, wind speed, CO₂). Accept a suggestion with **Apply**.
+- **Devices and effect channels**: a device bound to one of the facility's slots (a fitting) gets its kind — heater, cooler, window opening, fogger, and so on — and its effect channel automatically from its position, with no manual channel picking needed. The list shows, device by device, the kind, the channel it feeds, and whether the effect is reflected, partly reflected, not reflected, or of unknown kind; **Show numbers** adds the device's ratings and which log (measured state, running log, or command log) stands in for it. Use **Set manually** to leave a device out of the twin or to choose the role of a device of unknown kind.
+- **Set device states by hand** turns the automatic link off for this facility and returns to choosing, one by one for heating, cooling, ventilation opening, fogging, CO₂ injection, shade screen, and thermal curtain, the channel that records what the device actually did (opening or running, in percent). If the values are not in percent, enter the minimum and maximum to map them to 0-100 %.
+- Until the needed sensors are chosen and either the automatic device link or a hand-wired state is in place, a hint says the twin cannot be built.
+
+### The Plot Chart { #twin-chart }
+
+Opening a plot window's **[Twin]** tab shows a chart first. A **one-line conclusion** at the top names the first day in the next 7 where a risk becomes likely, in plain words. It checks frost, then water shortage, then waterlogging: above 50 % it says "Water looks likely to run short around…", at 20–50 % "Water may run short around…", and if all are under 20 % "Soil water looks fine for the next week". If no forecast can be made, it says why.
+
+- **The two default rows** are soil water and rain. Past values are solid lines and dark bars; the days ahead are dotted lines, a pale band and pale bars. Tapping a day draws a thin vertical line with a one-line readout, and the map time dock moves to the same day.
+- **Device lanes**: each effect channel, such as watering, gets one more row showing what ran (dark = recorded, light = estimated from run time, outline = command only, dotted outline = assumed) and what is planned (hatched). Devices the forecast does not count are not silently dropped; they are marked **Effect not included** or **Partly included**.
+- **[Details]** opens the period (2 weeks, A month, Ahead only), **Show temperature too**, **Show the past fitted to the sensor**, **Show each device**, and whether the forecast is reliable (Matching well, Reference only, and so on). **[Settings]** at the lower right goes to the source settings.
+
+**[What if...]**: build one assumption and see it overlaid as a dotted line on the base forecast. Choose watering (day, amount in mm, over how many hours), If it does not rain, Twice the rain or 3 °C hotter, then press **[Try it]**. Each what-if can be hidden, calculated again, kept or deleted, and is marked out of date when the base forecast changes. A what-if you do not keep has its curve removed after about 30 days, and each plot can hold up to 20. What-ifs appear only on the chart and are never used to control devices.
+
+### The Soil Water Forecast Layer on the Map { #twin-map-layer }
+
+Plots of a site whose twin is on appear in the map's time slider (the time dock) as a **Soil moisture forecast (twin)** layer. Moving the slider day by day from today to about a week ahead paints each plot with the median root-zone soil water, and the legend shows the color scale.
+
+- **Hatching** means low confidence (a far day) or a wide spread.
+- A **dotted outline** marks a plot predicted without observation.
+- Plots that cannot be painted, because the publication expired, the twin is not synchronized with the sensors, or the setup does not fit, are left unpainted and the legend gives the reason.
+- The legend carries an "Experimental" badge, and the result is for reference only.
+
+### Data Retention { #twin-data-retention }
+
+In **Settings → General**, the Digital Twin group has one field, **Data Retention (days)** (default 730, range 30–3650). It sets how long forecast and Digital Twin records (forecast issues and analysis history) are kept; **sensor readings are never deleted.** The daemon checks once a day (after 03:00 system time), applies the retention, clears expired what-if curves, and reports under the field when storage is running low or a lot of data has piled up. When you delete a plot, its twin results are kept until the retention ends, and the delete screen asks once more whether to erase them now as well.
 
 ---
 

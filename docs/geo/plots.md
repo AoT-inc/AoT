@@ -61,7 +61,7 @@ The basics block holds:
 | Item / Variety | Labels follow the kind. The item is required — saving with it blank is refused; variety left blank means "the default for this crop" |
 | Plot name | Optional — shown in lists when set |
 | Program | Narrowed to programs of the plot's own kind. Attaching one brings in its stage schedule and targets |
-| Start date / Expected end | Left blank, the expected end is derived from the stage schedule, so postponing a stage moves it; a date typed here wins and stays where you put it |
+| Start date / Expected end | Left blank, the expected end is derived from the stage schedule, so postponing a stage moves it; a date typed here wins and stays where you put it. If the last stage of the programme has no length, nothing is derived — a plan left open has no end until you set one |
 | Share (facility plots only) | [Below](#crop) |
 | Colour | Optional, for map display |
 
@@ -111,7 +111,7 @@ This page does not end, succeed or delete a plot. Ending and succession are one 
 
 - **Ending** a plot records an end date and a reason (Harvested, Lost, Replaced or Removed) without removing the row — it keeps appearing on this page, marked **Ended**. The dialog says so plainly, because the question people actually have there is whether the shape disappears; it does not.
 - **Succeeding** a plot ends it and starts a new one in the same spot in a single step. The same dialog asks what comes after the end date: leave the place empty, let it rest for a while (same place, no programme, with a resting name filled in for you to change), or start the next one (same place and share, programme and item carried forward). Unless you say otherwise, the new one starts the day after the end date.
-- **Deleting** a plot removes the row entirely, for miskeyed entries — a normal end of season uses ending instead, so the history stays. Schedules still aimed at that plot are filed away with it, so nothing is left pointing at a target that no longer exists.
+- **Deleting** a plot removes the row entirely, for miskeyed entries — a normal end of season uses ending instead, so the history stays. Schedules still aimed at that plot are filed away with it, so nothing is left pointing at a target that no longer exists. If the plot has Digital Twin results, the dialog also asks whether to erase them now — left alone, they stay until the data retention period runs out.
 
 ## Journal and dashboard widgets { #related-uses }
 

@@ -39,10 +39,11 @@ PRESET_ATTRIBUTION = {
     },
 }
 
-# 응답에 함께 싣는 한 줄. 이것이 없으면 모델은 attribution 을 그냥
-# 메타데이터로 읽고 답변에 옮기지 않는다.
-ATTRIBUTION_NOTE = ("Licence requires this credit wherever these values appear — "
-                    "include it in your answer.")
+# 응답에 함께 싣는 한 줄. 출처는 화면(측정값 독·소스 카드)이 표시하므로
+# 모델은 답변에서 말하지 않는다 — 사용자가 낭독을 원치 않았다(2026-10-24).
+# (이 줄이 없으면 모델은 attribution 을 메타데이터로 읽고 되풀이할 수 있다.)
+ATTRIBUTION_NOTE = ("The app already shows this credit on screen. "
+                    "Never mention, quote or read it in your answers.")
 
 
 def defaults_for(preset_key):

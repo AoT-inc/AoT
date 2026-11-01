@@ -123,6 +123,31 @@ class TestListPlotsDefaultLimit(_DBTestCase):
         self.assertEqual(self.N_PLOTS, len(out_all['plots']))
         self.assertNotIn('truncated', out_all)
 
+    def test_truncated_summary_warns_and_offset_pages_through(self):
+        out = self.S.list_plots(map_id='map-many')
+        self.assertIn('INCOMPLETE', out['summary'])
+        self.assertIn('offset=10', out['summary'])
+        self.assertEqual(10, out['next_offset'])
+        seen = [p['subject'] for p in out['plots']]
+        self.assertEqual(sorted(seen), seen)          # 이름순 고정
+        while out.get('truncated'):
+            out = self.S.list_plots(map_id='map-many', offset=out['next_offset'])
+            seen += [p['subject'] for p in out['plots']]
+        self.assertEqual(self.N_PLOTS, len(seen))
+        self.assertEqual(len(set(seen)), len(seen))   # 누락·중복 없음
+        self.assertIn('last page', out['summary'])
+
+    def test_complete_list_summary_has_no_warning(self):
+        out = self.S.list_plots(map_id='map-many', limit=100)
+        self.assertNotIn('INCOMPLETE', out['summary'])
+
+    def test_tool_description_exposes_filters_and_offset(self):
+        from aot.tools.tool_registry import TOOLS
+        t = next(x for x in TOOLS if x.name == 'list_plots')
+        txt = t.manifest['description'] + t.manifest['usage_hint']
+        for k in ('zone_id', 'map_id', 'offset', 'limit'):
+            self.assertIn(k, txt)
+
 
 class TestCropStatusDefaultLimit(_DBTestCase):
     N_PLOTS = 35
@@ -151,6 +176,10 @@ class TestCropStatusDefaultLimit(_DBTestCase):
         self.assertGreater(out['plot_count'], len(out['open_field_plots']))
         self.assertTrue(out.get('truncated'))
         self.assertIn('10', out['truncated_note'])
+        # 잘린 구획도 이름은 남는다(최대 40건, 넘으면 마지막에 '+N more').
+        hidden = out['plot_count'] - 10
+        self.assertEqual(hidden if hidden <= 40 else 41, len(out['open_field_rest']))
+        self.assertIn('find.plots', out['open_field_rest_note'])
 
     def test_system_brief_crops_summary_uses_the_true_total_not_len(self):
         """get_system_brief 는 get_crop_status 가 자른 목록의 len() 이 아니라
@@ -160,6 +189,21 @@ class TestCropStatusDefaultLimit(_DBTestCase):
         brief = S.get_system_brief()
         self.assertGreaterEqual(brief['crops']['plot_count'], self.N_PLOTS)
         self.assertGreaterEqual(brief['crops']['open_field'], self.N_PLOTS)
+
+    def test_system_brief_subjects_are_not_cut_at_the_list_limit(self):
+        """작물 이름은 잘린 목록이 아니라 전체에서 모은다 — 예전에는 기본
+        limit(10)에서 잘린 뒤에 모아 47건 중 13개 이름만 나왔다(I-10). 40개를
+        넘으면 '… +N more' 로 몇 개가 더 있는지 밝힌다."""
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+        subjects = S.get_system_brief()['crops']['subjects']
+        named = [x for x in subjects if not x.startswith('…')]
+        more = [x for x in subjects if x.startswith('…')]
+        if more:
+            self.assertEqual(40, len(named))
+        else:
+            for i in range(self.N_PLOTS):
+                self.assertIn('작물%03d' % i, named)
+        self.assertNotIn('note', S.get_system_brief()['crops'])
 
 
 class TestControlStateSummary(_DBTestCase):
@@ -259,6 +303,83 @@ class TestControlStateSummary(_DBTestCase):
         self.assertLess(len(after), len(before))
 
 
+class TestControlStateVpdBasis(_DBTestCase):
+    """AI 에게 가는 VPD: 공기 VPD 는 air_kpa 로 라벨을 달고, 잎 VPD 는 잰 엽온이 있을 때만."""
+
+    @classmethod
+    def seed(cls):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import CustomController, FunctionRuntimeState
+        from aot.functions.utils.env_control import leaf_vpd as LV
+
+        def _add(uid, name, basis, leaf_temp_status, leaf_c):
+            db.session.add(CustomController(
+                unique_id=uid, name=name, device='env_coordinator', is_activated=True,
+                custom_options=json.dumps({
+                    'geo_facility_id': None, 'vpd_target_basis': basis,
+                    'temp_min': 10.0, 'temp_max': 35.0})))
+            leaf = LV.LeafReading(leaf_c, leaf_temp_status)
+            res = LV.resolve(0.8, basis, 25.0, 70.0, leaf)
+            summary = {
+                'ts': 1.0, 'limiting_factor': 'vpd', 'deviation': {'vpd': 0.12},
+                'targets': {'vpd': round(res.air_target, 3)},
+                'photo': {'enabled': True, 'vpd': 0.95},
+                'vpd_target': res.as_summary() if leaf_c is not None or basis == 'leaf' else None,
+                'commands': [],
+            }
+            db.session.add(FunctionRuntimeState(
+                function_id=uid, summary_json=json.dumps(summary)))
+
+        _add('ctl-vpdb-air', 'VPD Air Only', 'air', 'unbound', None)
+        _add('ctl-vpdb-leaf', 'VPD Leaf Measured', 'leaf', 'valid', 23.5)
+        _add('ctl-vpdb-fall', 'VPD Leaf Fallback', 'leaf', 'stale', None)
+
+    def _coord(self, name, **kw):
+        out = self.S.get_control_state(**kw)
+        return next(c for c in out['coordinators'] if c['function_name'] == name)
+
+    def test_air_basis_reports_air_vpd_only(self):
+        c = self._coord('VPD Air Only')
+        self.assertEqual(c['targets']['vpd_basis'], 'air')
+        self.assertEqual(c['latest_cycle_summary']['vpd'], {'air_kpa': 0.95})
+
+    def test_measured_leaf_temperature_adds_leaf_vpd(self):
+        c = self._coord('VPD Leaf Measured')
+        v = c['latest_cycle_summary']['vpd']
+        self.assertEqual(c['targets']['vpd_basis'], 'leaf')
+        self.assertEqual(v['air_kpa'], 0.95)
+        self.assertAlmostEqual(v['leaf_kpa'], 0.68, delta=0.01)
+        self.assertEqual(v['leaf_temp_c'], 23.5)
+        self.assertEqual(v['target_applied'], 'leaf')
+        self.assertEqual(v['target_kpa'], 0.8)
+
+    def test_leaf_basis_without_measurement_has_no_leaf_vpd(self):
+        v = self._coord('VPD Leaf Fallback')['latest_cycle_summary']['vpd']
+        self.assertNotIn('leaf_kpa', v)
+        self.assertEqual((v['target_basis'], v['target_applied']), ('leaf', 'air'))
+
+    def test_vpd_readout_survives_detail_false_and_stays_small(self):
+        c = self._coord('VPD Leaf Measured')
+        self.assertIn('vpd', c['latest_cycle_summary'])
+        self.assertNotIn('photo', c['latest_cycle_summary'])    # 진단값은 여전히 뺀다
+        self.assertLess(len(json.dumps(c['latest_cycle_summary']['vpd'])), 220)
+        full = self._coord('VPD Leaf Measured', detail=True)
+        self.assertIn('vpd', full['latest_cycle_summary'])
+
+
+class TestAiSummaryVpd(unittest.TestCase):
+    def test_readout_label_and_targets_basis(self):
+        from aot.ai.services.ai_summary_service import (
+            _vpd_basis_of_options, _vpd_readout_for)
+
+        class _C:
+            custom_options = json.dumps({'vpd_target_basis': 'leaf'})
+        self.assertEqual(_vpd_basis_of_options(_C()), 'leaf')
+        self.assertEqual(_vpd_basis_of_options(type('X', (), {'custom_options': None})()), 'air')
+        self.assertEqual(_vpd_readout_for({'photo': {'vpd': 1.234}}), {'air_kpa': 1.23})
+        self.assertIsNone(_vpd_readout_for({'photo': {}}))
+
+
 class TestFunctionListGrouping(_DBTestCase):
 
     @classmethod
@@ -306,6 +427,20 @@ class TestFunctionListGrouping(_DBTestCase):
         out = self.S.get_function_list(function_type='trigger')
         self.assertEqual({'trigger'}, set(out['functions'].keys()))
         self.assertEqual(60, out['functions']['trigger'][0]['period'])
+
+    def test_driver_name_filters_custom_functions(self):
+        # env_coordinator 같은 드라이버 이름도 필터로 받는다(리허설 F6/G9).
+        out = self.S.get_function_list(function_type='Bang_Bang')
+        self.assertEqual({'custom'}, set(out['functions'].keys()))
+        self.assertEqual({'cc1'}, {f['function_id'] for f in out['functions']['custom']})
+        self.assertNotIn('valid_function_types', out)
+
+    def test_unknown_type_lists_valid_values_and_suggestion(self):
+        out = self.S.get_function_list(function_type='bang_bnag')
+        self.assertEqual(0, out['count'])
+        self.assertIn('trigger', out['valid_function_types'])
+        self.assertIn('bang_bang', out['valid_function_types'])
+        self.assertEqual('bang_bang', out['did_you_mean'])
 
 
 class TestSearchScheduleSummary(_DBTestCase):

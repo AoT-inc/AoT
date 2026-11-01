@@ -13,11 +13,28 @@ name: E2E
 #   L2  aot/tests/e2e/test_journey_*.py    — 사용자 여정 8종 (저장하고 되읽기까지)
 #   L3  aot/tests/e2e/test_control_loop.py — 제어 폐루프 (데몬까지 왕복, ~1분)
 
+# **비공개 저장소(AoT-dev)에서는 수동 실행으로만 돈다**(2026-10-09). Actions 분(分) 한도가
+# 하루 만에 90% 까지 닳았고 이 워크플로가 전체의 56%(PR 푸시마다 약 16분)였다. PR 에서 빼는
+# 것으로는 부족해 main 병합 때도 건너뛴다(잡의 `if`). 대신:
+#   - 공개 저장소(AoT-inc/AoT)에서는 릴리스 발행 push 마다 자동으로 돈다 — 공개 저장소의
+#     Actions 는 무료라 마지막 관문은 비용 없이 남는다. 앱에 영향 없는 발행은 건너뛴다(paths).
+#   - 화면을 건드린 PR 은 병합 전에 로컬에서 돌리거나(`docs/design/e2e-testing.md`),
+#     이 워크플로를 그 브랜치로 수동 실행한다(Actions 탭 > E2E > Run workflow).
 on:
   push:
     branches:
       - main
-  pull_request:
+    # 앱이 실제로 뜨는 데 영향을 주는 경로만. aot/tests 는 E2E 가 읽는 것(e2e/·conftest)만 포함한다.
+    paths:
+      - 'aot/**'
+      - '!aot/tests/**'
+      - 'aot/tests/e2e/**'
+      - 'aot/tests/conftest.py'
+      - 'alembic_db/**'
+      - 'docker/**'
+      - 'install/**'
+      - 'requirements.txt'
+      - '.github/workflows/e2e.yml'
   workflow_dispatch:
 
 permissions:
@@ -29,6 +46,9 @@ concurrency:
 
 jobs:
   e2e:
+    # 비공개 저장소(AoT-dev)에서는 수동 실행일 때만 돈다 — 건너뛴 잡은 분(分)을 쓰지 않는다.
+    # 공개 저장소(AoT-inc/AoT)에서는 push(릴리스 발행)마다 자동으로 돈다(무료).
+    if: github.repository == 'AoT-inc/AoT' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

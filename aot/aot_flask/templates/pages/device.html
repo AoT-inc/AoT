@@ -201,6 +201,14 @@
     return { text: {{ _('Unverifiable')|tojson }}, cls: 'inactive-background' };
   }
 
+  // toastr 는 HTML 을 해석한다(escapeHtml 꺼짐, aot-control-feedback.js 참고).
+  // 서버 문구에는 장치 이름이 섞이고, Matter 장치 이름은 장치가 스스로 정한다.
+  function plainText(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function submitFunctionAction(fields, onDone, queryString) {
     var body = new URLSearchParams(fields);
     var url = '/function_submit' + (queryString ? ('?' + queryString) : '');
@@ -209,11 +217,15 @@
       headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString()
     }).then(function (r) { return r.json(); }).then(function (data) {
-      var errs = (data && data.data && data.data.messages && data.data.messages.error) || [];
+      var msgs = (data && data.data && data.data.messages) || {};
+      var errs = msgs.error || [];
+      // 경고(예: Matter 장치에서 AoT 를 빼지 못함)도 사용자에게 알린다.
+      var warns = msgs.warning || [];
+      warns.forEach(function (w) { window.showToast(plainText(w), 'warning'); });
       if (errs.length) {
-        window.showToast(errs.join(', '), 'error');
+        window.showToast(plainText(errs.join(', ')), 'error');
       } else {
-        if (onDone) onDone(data);
+        if (onDone) onDone(data, warns.length > 0);
       }
     }).catch(function (err) {
       window.showToast('Request failed: ' + err, 'error');
@@ -624,10 +636,12 @@
       function_id: currentSettingsDeviceId,
       csrf_token: csrfToken(),
       function_delete: '1'
-    }, function () {
+    }, function (data, hasWarnings) {
       window.showToast({{ _('Deleted')|tojson }}, 'success');
       if ($settingsModal) $settingsModal.modal('hide');
-      window.location.reload();
+      // 경고 토스트를 읽을 시간을 주고 새로고침한다.
+      if (hasWarnings) { setTimeout(function () { window.location.reload(); }, 6000); }
+      else { window.location.reload(); }
     });
   });
 

@@ -67,6 +67,7 @@ from aot.utils.audit import audit_log
 from aot.utils.update_availability import check_upgrade_exists, updater_status
 from aot.utils.stats import (add_update_csv, recreate_stat_file,
                                 return_stat_file_dict, send_anonymous_stats)
+from aot.utils import journal_limit
 from aot.utils.system_environment import detect as detect_system_environment
 from aot.utils.tools import generate_output_usage_report, next_schedule
 from aot.ai.services.ai_action_service import AIActionService
@@ -166,6 +167,11 @@ class DaemonController:
         if DOCKER_CONTAINER:
             self.logger.info("Detected running inside a Docker continaer")
 
+        # systemd 저널 상한 기본값(500M). 값이 이미 있으면(우리 것이든 사람 것이든)
+        # 건드리지 않는다. journald 재시작이 걸리므로 기동을 막지 않게 따로 돌린다.
+        threading.Thread(target=journal_limit.ensure_default,
+                         args=(self.logger,), daemon=True).start()
+
         self.startup_timer = timeit.default_timer()
         self.startup_time = None
         self.daemon_run = True
@@ -205,6 +211,11 @@ class DaemonController:
         self.timer_upgrade_message = time.time()
         self.timer_ai_summary = time.time() + 60 # Start soon after boot
         self.timer_ai_archive = time.time() + 300 # Initial archiving soon after boot
+        # 예보 현장 보정 점검(forecast_data.calibrate) — 부팅 10분 뒤부터 매시간 차례인 대지를 본다
+        self.timer_fc_cal = time.time() + 600
+        self.timer_data_retention = time.time() + 1200
+        # 물 회로 결과 저장 — 닫힌 작동 구간을 계산해 쓴다. 예보 보정 점검과 같은 시간 틱을 쓰지 않고 따로 둔다
+        self.timer_water_net = time.time() + 900
 
         # Update Misc settings
         self.output_usage_report_gen = None
@@ -302,6 +313,24 @@ class DaemonController:
                     while now > self.timer_ai_archive:
                         self.timer_ai_archive += 86400 * 7 # 1 week
                     self.archive_all_ai_summaries()
+
+                # 예보 현장 보정 점검 — 별도 낮은 우선순위 스레드(제어 루프를 막지 않는다)
+                if now > self.timer_fc_cal:
+                    while now > self.timer_fc_cal:
+                        self.timer_fc_cal += 3600
+                    self.start_fc_calibration()
+
+                # 물 회로 결과 저장 — 별도 낮은 우선순위 스레드
+                if now > self.timer_water_net:
+                    while now > self.timer_water_net:
+                        self.timer_water_net += 3600
+                    self.start_water_net_store()
+
+                # 데이터 보관 하루 한 번 점검 — 차례가 아니면 곧바로 끝난다
+                if now > self.timer_data_retention:
+                    while now > self.timer_data_retention:
+                        self.timer_data_retention += 3600
+                    self.start_data_retention()
 
             except Exception:
                 self.logger.exception("Daemon Error")
@@ -1520,6 +1549,33 @@ class DaemonController:
             self.logger.exception("Error checking AI background state")
             return False
 
+    def start_fc_calibration(self):
+        """예약 작업 `forecast_data.calibrate`: 차례인 대지의 예보 보정을 점검한다(설계 §4.5).
+
+        시간 제한·낮은 우선순위·저사양 축소는 `aot.utils.fc_cal.job` 이 맡는다. 실패해도 데몬은 계속 돈다."""
+        try:
+            from aot.utils.fc_cal import job
+            if job.enabled():
+                job.run_in_thread(self.flask_app)
+        except Exception:
+            self.logger.exception("Could not start forecast calibration job")
+
+    def start_water_net_store(self):
+        """물 회로 결과 저장(`water_job`): 닫힌 작동 구간의 실행별 물량과 닫힌 날의 일 합계를 쓴다. 실패해도 데몬은 계속 돈다."""
+        try:
+            from aot.utils import water_job
+            water_job.run_in_thread(self.flask_app)
+        except Exception:
+            self.logger.exception("Could not start water net store job")
+
+    def start_data_retention(self):
+        """데이터 보관 점검(설계 D6): 보존 설정 동기화·만료 시나리오 삭제·용량 점검. 하루 한 번만 실제로 돈다."""
+        try:
+            from aot.utils import data_retention
+            data_retention.run_in_thread(self.flask_app)
+        except Exception:
+            self.logger.exception("Could not start data retention job")
+
     def check_all_ai_summaries(self):
         """
         v26.0: Trigger periodic AI Semantic Snapshot generation.
@@ -1637,6 +1693,12 @@ class PyroServer(object):
     def system_environment(self):
         """Runtime environment snapshot collected at daemon startup."""
         return self.aot.system_environment
+
+    def journal_limit_apply(self, mb):
+        """Set the systemd journal size cap (MB). The daemon runs as root;
+        the web server (unprivileged) cannot write /etc/systemd.
+        Returns (ok, message)."""
+        return journal_limit.apply(mb, logger=self.logger)
 
     def get_condition_measurement_dict(self, condition_id):
         return self.aot.get_condition_measurement_dict(condition_id)

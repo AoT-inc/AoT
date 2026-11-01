@@ -32640,3 +32640,395 @@ msgstr ""
 #: aot_flask/templates/settings/general.html:658
 msgid "Pass"
 msgstr ""
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "On-site observation"
+msgstr "Observation sur site"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Precip"
+msgstr "Précip."
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Wind dir"
+msgstr "Dir. du vent"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Risk"
+msgstr "Risque"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observed"
+msgstr "Observé"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observation delayed"
+msgstr "Observation retardée"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Freeze"
+msgstr "Gel"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Frost"
+msgstr "Gelée"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heat"
+msgstr "Chaleur"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Strong wind"
+msgstr "Vent fort"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heavy rain"
+msgstr "Fortes pluies"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Sunrise / sunset glow"
+msgstr "Lever / coucher du soleil"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Twilight"
+msgstr "Crépuscule"
+
+#: widgets/AoT_map.py
+msgid "Auto (by sun position)"
+msgstr "Automatique (selon la position du soleil)"
+
+#: widgets/AoT_map.py
+msgid "Always day"
+msgstr "Toujours jour"
+
+#: widgets/AoT_map.py
+msgid "Always night"
+msgstr "Toujours nuit"
+
+#: widgets/AoT_map.py
+msgid "Day / Night Appearance"
+msgstr "Aspect jour / nuit"
+
+#: widgets/AoT_map.py
+msgid "Darkens the base map at night and lights 3D models from the sun's position. Also fills the measurement dock with weather values (rain, wind, cloud, visibility, risk) and shows a day/night icon in the time dock. Off turns all of this off."
+msgstr "Assombrit le fond de carte la nuit et éclaire les modèles 3D selon la position du soleil. Remplit aussi la barre de mesures avec des valeurs météo (pluie, vent, nébulosité, visibilité, risque) et affiche une icône jour/nuit dans la barre d’heure. « Désactivé » coupe tout cela."
+
+#: widgets/AoT_map.py
+msgid "Weather First in Measurement Dock"
+msgstr "Météo en premier dans la barre de mesures"
+
+#: widgets/AoT_map.py
+msgid "Puts weather values at the left of the measurement dock. A value you also picked from a field device is merged into it and marked with a pin. Turn off to keep the dock exactly as you configured it."
+msgstr "Place les valeurs météo à gauche de la barre de mesures. Une valeur que vous avez aussi choisie depuis un appareil de terrain est fusionnée ici et marquée d’une épingle. Désactivez pour garder la barre exactement comme vous l’avez configurée."
+
+#: widgets/AoT_map.py
+msgid "Auto-adjust Overlay Opacity"
+msgstr "Ajuster automatiquement l’opacité des surcouches"
+
+#: widgets/AoT_map.py
+msgid "Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, and their opacity is lowered automatically so the shapes stay visible. Turn off to go back to the old order: weather layers sit below the shapes and use each layer's own opacity as is."
+msgstr "Les surcouches météo (nuages, radar, vent) sont dessinées au-dessus des formes et des modèles 3D, et leur opacité est réduite automatiquement pour que les formes restent visibles. Désactivez pour revenir à l’ancien ordre : les couches météo passent sous les formes et gardent leur propre opacité."
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Cloud cover"
+msgstr "Nébulosité"
+
+msgid "Weather Effects"
+msgstr "Effets météo"
+
+msgid "Subtle"
+msgstr "Discret"
+
+msgid "Vivid"
+msgstr "Marqué"
+
+msgid "Draws the current weather over the map from observed values only, even when no weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow (by precipitation) and fog (by visibility). Effects are dimmer over facilities. They pause when the map is off-screen or when reduced motion is requested."
+msgstr "Dessine la météo actuelle sur la carte à partir des seules valeurs observées, même si aucune couche météo n’est activée : ombres de nuages (selon la nébulosité), traits de vent, pluie ou neige (selon les précipitations) et brouillard (selon la visibilité). Les effets sont plus discrets au-dessus des installations. Ils se mettent en pause lorsque la carte est hors écran ou que la réduction des animations est demandée."
+
+msgid "Show Weather Layers Automatically"
+msgstr "Afficher automatiquement les couches météo"
+
+msgid "When it rains, clouds cover the sky or the wind is strong, turns on the matching weather layer you registered in this widget (precipitation, cloud or wind) on screen only. Your saved layer selection is not changed, and a layer you turn off yourself stays off until the page is reloaded. Thresholds are set on the server."
+msgstr "En cas de pluie, de ciel très nuageux ou de vent fort, active à l’écran uniquement la couche météo correspondante enregistrée dans ce widget (précipitations, nuages ou vent). Votre sélection de couches enregistrée n’est pas modifiée, et une couche que vous désactivez vous-même reste désactivée jusqu’au rechargement de la page. Les seuils sont fixés par le serveur."
+
+msgid "Field devices first"
+msgstr "Appareils de terrain d'abord"
+
+msgid "Weather inputs first"
+msgstr "Entrées météo d'abord"
+
+msgid "Weather Value Source Order"
+msgstr "Ordre des sources de valeurs météo"
+
+msgid "Weather values come from the weather stations you assigned to the site (field devices) and from the weather inputs registered in the map layers, even when their layer is off. Choose which one is used first; each value falls back to the other when it is missing or too old. With neither, no weather cells or effects are shown."
+msgstr "Les valeurs météo proviennent des appareils que vous avez désignés comme station météo du site (appareils de terrain) et des entrées météo enregistrées dans les couches de la carte, même si leur couche est désactivée. Choisissez laquelle est utilisée en premier ; si une valeur manque ou est trop ancienne, l'autre source prend le relais. Sans aucune des deux, aucune cellule ni aucun effet météo n'est affiché."
+
+msgid "Weather Value Max Age (Seconds)"
+msgstr "Âge maximal des valeurs météo (secondes)"
+
+msgid "A field device value older than this is skipped in favor of the next source."
+msgstr "Une valeur d'un appareil de terrain plus ancienne que cela est ignorée au profit de la source suivante."
+
+msgid "Risk: Wind Speed (m/s)"
+msgstr "Risque : vitesse du vent (m/s)"
+
+msgid "Shows a risk in the weather cells when the current wind speed reaches this value."
+msgstr "Affiche un risque dans les cellules météo lorsque la vitesse actuelle du vent atteint cette valeur."
+
+msgid "Risk: Precipitation (mm/h)"
+msgstr "Risque : précipitations (mm/h)"
+
+msgid "Shows a risk when the current precipitation reaches this value."
+msgstr "Affiche un risque lorsque les précipitations actuelles atteignent cette valeur."
+
+msgid "Risk: Low Temperature (°C)"
+msgstr "Risque : basse température (°C)"
+
+msgid "Shows a frost risk when the current temperature falls to this value or below."
+msgstr "Affiche un risque de gel lorsque la température actuelle descend à cette valeur ou en dessous."
+
+msgid "Risk: High Temperature (°C)"
+msgstr "Risque : haute température (°C)"
+
+msgid "Shows a heat risk when the current temperature reaches this value or above."
+msgstr "Affiche un risque de chaleur lorsque la température actuelle atteint cette valeur ou plus."
+
+msgid "Weather Effects Minimum Zoom"
+msgstr "Zoom minimal des effets météo"
+
+msgid "Zoomed out beyond this level, the weather effects and the layers turned on automatically fade out over one zoom level, because one observation spread over a wide area is misleading. Layers you turn on yourself, the dock values and the day/night correction are not affected. 0 shows them at every zoom."
+msgstr "En dézoomant au-delà de ce niveau, les effets météo et les couches activées automatiquement s'estompent sur un niveau de zoom, car étendre une seule observation sur une grande zone donne une image trompeuse. Les couches que vous activez vous-même, les valeurs du bandeau et la correction jour/nuit ne changent pas. 0 les affiche à tous les zooms."
+
+msgid "Temperature Tint"
+msgstr "Teinte de température"
+
+msgid "Colors the temperature value in the dock blue when cold and red when hot, and adds a very faint tint to the base map (never over shapes or 3D models)."
+msgstr "Colore la température du bandeau en bleu par temps froid et en rouge par temps chaud, et ajoute une teinte très légère au fond de carte (jamais sur les formes ni les modèles 3D)."
+
+msgid "Tint: Neutral From (°C)"
+msgstr "Teinte : normal à partir de (°C)"
+
+msgid "Below this temperature the cold tint starts; it is strongest at the frost risk temperature."
+msgstr "En dessous de cette température la teinte froide commence ; elle est maximale à la température de risque de gel."
+
+msgid "Tint: Neutral Up To (°C)"
+msgstr "Teinte : normal jusqu'à (°C)"
+
+msgid "Above this temperature the hot tint starts; it is strongest at the heat risk temperature."
+msgstr "Au-dessus de cette température la teinte chaude commence ; elle est maximale à la température de risque de chaleur."
+
+msgid "North wind"
+msgstr "Vent du nord"
+
+msgid "North-northeast wind"
+msgstr "Vent du nord-nord-est"
+
+msgid "Northeast wind"
+msgstr "Vent du nord-est"
+
+msgid "East-northeast wind"
+msgstr "Vent d'est-nord-est"
+
+msgid "East wind"
+msgstr "Vent d'est"
+
+msgid "East-southeast wind"
+msgstr "Vent d'est-sud-est"
+
+msgid "Southeast wind"
+msgstr "Vent du sud-est"
+
+msgid "South-southeast wind"
+msgstr "Vent du sud-sud-est"
+
+msgid "South wind"
+msgstr "Vent du sud"
+
+msgid "South-southwest wind"
+msgstr "Vent du sud-sud-ouest"
+
+msgid "Southwest wind"
+msgstr "Vent du sud-ouest"
+
+msgid "West-southwest wind"
+msgstr "Vent d'ouest-sud-ouest"
+
+msgid "West wind"
+msgstr "Vent d'ouest"
+
+msgid "West-northwest wind"
+msgstr "Vent d'ouest-nord-ouest"
+
+msgid "Northwest wind"
+msgstr "Vent du nord-ouest"
+
+msgid "North-northwest wind"
+msgstr "Vent du nord-nord-ouest"
+
+msgid "Calm"
+msgstr "Calme"
+
+msgid "Direction the wind blows from"
+msgstr "Direction d'où souffle le vent"
+
+msgid "Play"
+msgstr "Lecture"
+
+msgid "Now"
+msgstr "Maintenant"
+
+msgid "Return to the current time"
+msgstr "Revenir à l'heure actuelle"
+
+msgid "Time slider"
+msgstr "Curseur temporel"
+
+msgid "+{n}d"
+msgstr "+{n} j"
+
+msgid "Show forecast up to {n} days"
+msgstr "Afficher les prévisions jusqu'à {n} jours"
+
+msgid "Map layers"
+msgstr "Couches de la carte"
+
+msgid "Day / night"
+msgstr "Jour / nuit"
+
+msgid "Out of range"
+msgstr "Hors plage"
+
+msgid "Low confidence"
+msgstr "Faible fiabilité"
+
+msgid "Reference only"
+msgstr "À titre indicatif"
+
+msgid "Recorded"
+msgstr "Enregistré"
+
+msgid "Forecast values for the selected time"
+msgstr "Valeurs prévues pour l'heure choisie"
+
+msgid "Recorded values for the selected time"
+msgstr "Valeurs enregistrées pour l'heure choisie"
+
+msgid "Show Time Slider"
+msgstr "Afficher le curseur temporel"
+
+msgid "Adds a slider under the time dock to look at the map at another time: radar frames of time-enabled layers, forecast or recorded weather values, and day / night. Needs \"Show Local Time\". Drag it back to \"Now\" to return to live values."
+msgstr "Ajoute un curseur sous le bandeau horaire pour voir la carte à un autre moment : images radar des couches temporelles, valeurs météo prévues ou enregistrées, et jour/nuit. Nécessite « Afficher l'heure locale ». Ramenez-le sur « Maintenant » pour revenir aux valeurs en direct."
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr ""
+
+msgid "Turn devices and functions on and off."
+msgstr ""
+
+msgid "Change settings, plots and records."
+msgstr ""
+
+msgid "Read"
+msgstr ""
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr ""
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr ""
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr ""
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr ""
+
+msgid "That connection was not found."
+msgstr ""
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr ""
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr ""
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr ""
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr ""
+
+msgid "Allow AI access"
+msgstr ""
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr ""
+
+msgid "Signed in as %(user)s."
+msgstr ""
+
+msgid "What it may do"
+msgstr ""
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr ""
+
+msgid "Deny"
+msgstr ""
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr ""
+
+msgid "OAuth Authentication"
+msgstr ""
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr ""
+
+msgid "Token Issuer"
+msgstr ""
+
+msgid "Central (AoT Central Authentication)"
+msgstr ""
+
+msgid "This AoT (built in)"
+msgstr ""
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr ""
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr ""
+
+msgid "Before You Turn This On"
+msgstr ""
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr ""
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr ""
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr ""
+
+msgid "Accepted Redirect Addresses"
+msgstr ""
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr ""
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr ""
+
+msgid "My Connected AI Apps"
+msgstr ""
+
+msgid "last used"
+msgstr ""
+
+msgid "No AI app is connected with your account yet."
+msgstr ""
+
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr ""

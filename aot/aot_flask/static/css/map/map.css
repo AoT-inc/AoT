@@ -45,7 +45,8 @@
    Rule: 도구 버튼/출력 > 팝업 > 지도 패널/오버레이 > 지도 위 라벨
      1   map labels base (site/zone/memo/length/device)
      5   map labels on hover (still below all tool surfaces)
-    10   attribution / legend / measurement panel
+    10   선택(호버/클릭 핀) 라벨 = LABEL_Z_FRONT — 라벨 중 최상위, 아래 패널보다는 밑
+    11   attribution / legend / measurement panel / time dock
     15   AI advice panel
     20   tool buttons (map-tools-left/right, search overlay, draw toolbar,
          site-list control container)
@@ -54,9 +55,7 @@
     55   facility 액추에이터 팝업         → var(--z-map-popup-act)
     60   bootstrap tooltips (for tool buttons)
     70   facility widget IEC 설정점 패널  → var(--z-facility-panel)
-  9500   모달 도킹 패널(.aot-map-panel-layer) — 스케일 밖이다. 라벨 핀
-         (LABEL_Z_FRONT=9000, JS 가 인라인으로 준다)이 이 스케일 밖에 있어서
-         그 위에 둘 수밖에 없다. 라벨 핀을 스케일 안으로 되돌리면 80 으로 내릴 것.
+    80   모달 도킹 패널(.aot-map-panel-layer)
    ── 전역 토큰(지도 밖으로 뜨는 UI) ──
    var(--aot-z-overlay)  pseudo-fullscreen / fullscreen parent
    var(--aot-z-tooltip)  clipped-name bubble (.aot-meas-sum-tip)
@@ -677,7 +676,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
   margin-bottom: 0 !important;
   /* Height grows with content; capped so it doesn't overflow the map */
   max-height: calc(50 * var(--aot-vh)) !important;
-  z-index: 10 !important;
+  z-index: 11 !important; /* 선택 라벨(10)보다 위 */
   overflow-y: auto;
   box-sizing: border-box;
   display: flex;
@@ -972,7 +971,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     border-radius: var(--aot-radius-md);
     box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     padding: 0; /* Padding moved to Pages */
-    z-index: 10;
+    z-index: 11; /* 선택 라벨(LABEL_Z_FRONT=10)보다 위 */
     
     display: flex;
     flex-direction: row;
@@ -999,7 +998,8 @@ body.aot-map-fullscreen-active .grid-stack-item {
     scroll-behavior: smooth;
     
     /* [New] Consistent Height */
-    height: 80px !important; 
+    /* 저작권 줄 예약 높이(--aot-attrib-row-h)는 독에서만 0 이 아니다 — 아래 "저작권 줄" 절 */
+    height: calc(80px + var(--aot-attrib-row-h, 0px)) !important;
     box-sizing: border-box;
     padding: 0; /* Padding moved to Pages */
 
@@ -1267,7 +1267,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
    text never clips at full measurement scale. */
 @media (max-width: 768px) {
     .aot-measurement-panel.aot-meas-dock:not(.has-summary):not(.aot-dock-collapsed) {
-        height: calc(3.45em + 16px) !important;
+        height: calc(3.45em + 16px + var(--aot-attrib-row-h, 0px)) !important;
     }
 }
 /* Fixed two-row height, derived from the content (constant across balance):
@@ -1276,7 +1276,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
    + row gap 4 + summary padding 8 + divider 1 + summary item gap 2 + name
    margin 2 = 33px, plus 8px slack for sub-pixel rounding/descenders. */
 .aot-meas-dock.has-summary:not(.aot-dock-collapsed) {
-    height: calc(5.4em + 41px) !important;
+    height: calc(5.4em + 41px + var(--aot-attrib-row-h, 0px)) !important;
     padding-top: 8px;
     padding-bottom: 8px;
     gap: 4px;
@@ -1291,7 +1291,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-meas-dock.has-summary .aot-dock-collapse-btn { top: 0; transform: none; }
 /* Collapsed: slim tab, rows hidden, only the handle stays visible */
 .aot-measurement-panel.aot-meas-dock.aot-dock-collapsed {
-    height: 22px !important;
+    height: calc(22px + var(--aot-attrib-row-h, 0px)) !important;
     min-width: 120px;
     padding-top: 0;
     padding-bottom: 0;
@@ -1299,6 +1299,166 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-meas-dock.aot-dock-collapsed .aot-meas-summary-row,
 .aot-meas-dock.aot-dock-collapsed .aot-meas-body-row {
     display: none !important;
+}
+
+/* ==========================================================================
+   저작권 줄 — 측정값 독 맨 아래 (AoTMapAttribution, aot-map-attribution.js)
+   --------------------------------------------------------------------------
+   저작권(attribution)은 독의 맨 아래 한 줄이다. 독이 접혀도 줄은 남는다.
+   줄 높이는 **고정으로 예약**한다 — 출처가 늘거나 줄어도 독 높이가 변하지 않아야 범례·카메라 여백
+   (--aot-dock-h 소비자)이 따라 흔들리지 않는다. 글이 줄보다 길면 줄 안에서 가로로 미끄러진다(두 줄로 늘리지 않는다).
+   독이 없거나 숨겨지면(시트·폰 가로 side·마스터 스위치 끔) JS 가 .has-attrib 를 떼고 모서리 ⓘ 가 집이 된다.
+   구분선은 두지 않는다 — 여백으로 충분하다.
+   높이는 이 절에서 다시 정하지 않는다 — 독의 !important 높이 규칙(위 .aot-meas-dock·.aot-measurement-panel)에
+   `+ var(--aot-attrib-row-h, 0px)` 를 얹었다. 줄이 없으면 0 이라 기존 값 그대로다. 같은 무게의 !important 를
+   더 높은 특이도로 덮으면 !important 가 한 줄씩 늘어난다.
+   ========================================================================== */
+.aot-measurement-panel.aot-meas-dock { --aot-attrib-row-h: 0px; }
+.aot-measurement-panel.aot-meas-dock.has-attrib {
+    --aot-attrib-row-h: 20px;
+    min-width: min(100%, 240px);
+}
+/* 측정값만 있는 독 — 기본 80px */
+.aot-measurement-panel.aot-meas-dock.has-attrib:not(.has-summary):not(.aot-dock-collapsed) {
+    padding-bottom: var(--aot-attrib-row-h);
+}
+/* 요약 행이 있는 독 */
+.aot-meas-dock.has-summary.has-attrib:not(.aot-dock-collapsed) {
+    padding-bottom: calc(8px + var(--aot-attrib-row-h));
+}
+@media (max-width: 768px) {
+    .aot-measurement-panel.aot-meas-dock.has-attrib { --aot-attrib-row-h: 18px; }
+}
+.aot-meas-dock .aot-attrib-row {
+    position: absolute;
+    left: 24px;
+    right: 12px;
+    bottom: 0;
+    height: var(--aot-attrib-row-h, 20px);
+    display: none;
+    align-items: center;
+    font-size: var(--aot-font-size-2xs, 0.7rem);
+    line-height: 1.5;
+    color: var(--aot-color-text-secondary, #5e6b64);
+    white-space: nowrap;
+    user-select: text;
+    -webkit-user-select: text;
+}
+.aot-meas-dock.has-attrib .aot-attrib-row { display: flex; }
+.aot-attrib-vp { overflow: hidden; width: 100%; min-width: 0; }
+.aot-attrib-track {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+.aot-attrib-sym { font-weight: 700; flex: none; }
+.aot-attrib-ent { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.aot-attrib-sep { flex: none; opacity: 0.5; }
+.aot-attrib-row a { color: inherit; text-decoration: underline; }
+/* 로고형 출처는 줄 높이에 맞춘다(원래 크기는 모서리 패널에서 그대로 보인다). */
+.aot-attrib-row img {
+    width: auto;
+    height: auto;
+    max-height: 16px;
+    vertical-align: middle;
+    margin: 0;
+}
+/* 글이 줄보다 길면 처음 → 끝으로 천천히 오간다. 올려 두거나 누르고 있으면 멈춘다. */
+@keyframes aot-attrib-slide {
+    0%, 12% { transform: translateX(0); }
+    88%, 100% { transform: translateX(var(--aot-attrib-shift, 0px)); }
+}
+.aot-attrib-row.is-slide .aot-attrib-vp {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+.aot-attrib-row.is-slide .aot-attrib-track {
+    animation: aot-attrib-slide var(--aot-attrib-dur, 12s) ease-in-out infinite alternate;
+}
+.aot-attrib-row.is-slide:hover .aot-attrib-track,
+.aot-attrib-row.is-slide:focus-within .aot-attrib-track,
+.aot-attrib-row.is-slide.is-held .aot-attrib-track {
+    animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+    /* 움직임을 끄면 손으로 밀어서 본다. */
+    .aot-attrib-row.is-slide .aot-attrib-track { animation: none; }
+    .aot-attrib-row.is-slide .aot-attrib-vp {
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+    .aot-attrib-row.is-slide .aot-attrib-vp::-webkit-scrollbar { display: none; }
+}
+/* 독이 저작권의 집이면 모서리 ⓘ(와 그 패널)는 숨긴다. 독이 사라지면 JS 가 이 클래스를 떼어 ⓘ 가 돌아온다. */
+.aot-attrib-home-dock > [id^="map-attrib-"] { display: none; }
+
+/* 오른쪽 기능 레일(레이어·측정·노트…)의 시작 높이. 모서리 ⓘ(29px + 위 10px + 여백 8px)가 보이면 그 아래 47px 에서 시작해
+   겹치지 않는다. 저작권이 독으로 옮겨 가 ⓘ 가 숨겨지면 왼쪽 레일(top: 10px)과 같은 높이로 올려 좌우를 맞춘다.
+   독이 사라져 ⓘ 가 돌아오면 클래스가 떨어지며 다시 내려간다. */
+[id^="map-tools-right-"] {
+    top: 47px;
+    transition: top 0.2s ease;
+}
+.aot-attrib-home-dock > [id^="map-tools-right-"] {
+    top: 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+    [id^="map-tools-right-"] { transition: none; }
+}
+
+/* ==========================================================================
+   기상 묶음 (측정값 독) — 위젯 옵션 ambient_mode ≠ off · meas_ambient_first on.
+   기존 칸 스타일(.aot-measurement-item / .aot-meas-value / .aot-meas-name-row)을 그대로 쓰고,
+   본문 행 맨 앞에 놓는 것과 칸 폭 규칙만 더한다. 따로 바탕·고정·그림자·모서리를 두지 않는다 —
+   패널의 반투명 바탕(--panel-bg-rgba, blur)이 그대로 비쳐 기존 칸과 같아 보이고, 다른 칸과
+   함께 가로로 스크롤된다. 기존 독에 없는 장식은 구분선(--aot-border-light 1px)뿐이다.
+   ========================================================================== */
+.aot-meas-dock .aot-meas-weather-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding-right: 8px;
+    border-right: 1px solid var(--aot-border-light);
+}
+.aot-meas-weather-group .aot-measurement-item.is-stale { opacity: 0.6; }
+.aot-meas-weather-group .aot-meas-value .is-on,
+.aot-meas-weather-group .aot-meas-value span.is-on { color: var(--aot-band-5, #cf5c58); }
+/* 기온 칸 값 색 — 차가움 band-1(파랑)·더움 band-5(빨강)로 기존 글자색에서 --aot-temp-k(0~1)만큼 섞는다. */
+.aot-meas-weather-group .aot-meas-value.is-temp-cold {
+  color: color-mix(in srgb, var(--aot-band-1, #2db4ff) calc(var(--aot-temp-k, 0) * 100%), var(--aot-color-text-primary, #13261b)) !important;   /* 칸의 인라인 글자색을 이긴다 */
+}
+.aot-meas-weather-group .aot-meas-value.is-temp-hot {
+  color: color-mix(in srgb, var(--aot-band-5, #cf5c58) calc(var(--aot-temp-k, 0) * 100%), var(--aot-color-text-primary, #13261b)) !important;   /* 칸의 인라인 글자색을 이긴다 */
+}
+.aot-meas-weather-group .aot-meas-name-row,
+.aot-measurement-item.is-field .aot-meas-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+/* 위험 칸은 값 자리에 낱말이 들어와 숫자보다 작게 둔다. */
+.aot-meas-dock .aot-meas-weather-group [data-ambient-key="hazard"] .aot-meas-value {
+    font-size: calc(0.95em * var(--aot-meas-body-scale, 1)) !important;
+}
+/* 현장 장치에서 온 값의 위치 핀 — 아이콘이라 언어와 무관하게 폭이 같다. */
+.aot-meas-pin {
+    width: 1em;
+    height: 1em;
+    margin-left: 3px;
+    flex: 0 0 auto;
+    opacity: 0.75;
+}
+/* 상한(136px)을 넘는 이름은 끝을 흐리게 자른다 — 전체 이름은 title. */
+.aot-meas-name-row.is-clipped {
+    justify-content: flex-start;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent);
 }
 
 /* ==========================================================================
@@ -1323,13 +1483,21 @@ body.aot-map-fullscreen-active .grid-stack-item {
        무시되고 상자가 그 사이를 꽉 채운다 — 독이 지도 높이만큼 세로로 늘어났다
        (실측: 230px 위젯에서 독 180px). 아래 가장자리는 이 독의 것이 아니다. */
     bottom: auto !important;
-    left: 50% !important;
+    /* 오른쪽 패널(data-aot-panel=side)이 열리면 측정 도크처럼 남은 폭의 중앙으로
+       간다. 카메라(_visibleMapRect)가 도형을 패널 뺀 폭의 한가운데에 놓는데 시계만
+       컨테이너 한가운데에 남으면 도형 위에서 치우쳐 보이고 패널 밑으로 걸친다.
+       --aot-panel-w 는 side 일 때만 JS 가 채우고(시트는 --aot-panel-h) 닫으면
+       지운다 — 없으면 0px 라 기본 자리 그대로다. 별도 규칙을 얹지 않고 이 값에
+       변수를 넣은 것은, 아래 left·max-width 가 이미 !important 라 그것을 이기려면
+       또 !important 가 필요해지기 때문이다. 숨기지 않는다 — 폰 가로에서도 시간은
+       계속 보여야 한다. */
+    left: calc(50% - var(--aot-panel-w, 0px) / 2) !important;
     right: auto !important;
     transform: translateX(-50%) !important;
     margin: 0;
     width: max-content;
     /* 좌우 툴레일을 넘지 않는다 — 주소 검색바와 같은 여백(60px x 2). */
-    max-width: calc(100% - 120px) !important;
+    max-width: calc(100% - var(--aot-panel-w, 0px) - 120px) !important;
     /* 높이는 내용이 정한다. 시계는 크기 손잡이로 커지고 작아진다. */
     height: auto !important;
     border-radius: 0 0 var(--aot-radius-md) var(--aot-radius-md);
@@ -1532,7 +1700,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
    같은 값) — 독도 그만큼 넓게 쓸 수 있다. */
 @media (max-width: 768px) {
     .aot-measurement-panel.aot-time-dock {
-        max-width: calc(100% - 108px) !important;
+        max-width: calc(100% - var(--aot-panel-w, 0px) - 108px) !important;
     }
 }
 
@@ -1559,6 +1727,141 @@ body.aot-map-fullscreen-active .grid-stack-item {
     display: none !important;
 }
 
+/* ==========================================================================
+   시간 슬라이더 (시간 독 안, 세 칸 아래 한 줄) — 날씨 시각화 P3.
+
+   세 칸(직전 사건 · 현재 시각 · 다음 사건)의 대칭은 그대로다 — 칸을 더하지 않고, 칸 줄 **아래**에 얇은 줄 하나를
+   더한다. 독의 바탕·테두리·글자색 토큰을 그대로 쓰고, 좌우 24px 손잡이가 앉는 안쪽 여백(32px) 안에서 끝나므로
+   크기 손잡이·접기 버튼과 겹치지 않는다. 접으면 독과 함께 사라진다.
+   시계 칸의 이름줄에 들어오는 `+6h` / `−1h` 는 숫자와 부호뿐이라 언어와 무관하게 폭이 같다.
+   ========================================================================== */
+.aot-measurement-panel.aot-time-dock.has-timeline {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.aot-time-dock .aot-timeline {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 15em;
+    max-width: 26em;
+    font-size: 0.8em;
+}
+.aot-time-dock.aot-dock-collapsed .aot-timeline { display: none; }
+.aot-timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+.aot-timeline-track {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 6em;
+    display: flex;
+    align-items: center;
+}
+.aot-timeline-range {
+    width: 100%;
+    margin: 0;
+    height: 1.6em;
+    cursor: pointer;
+    accent-color: var(--aot-color-text-primary, #13261b);
+    background: transparent;
+}
+/* 지금 눈금 — 슬라이더를 어디로 끌었든 "지금"이 어디인지 보인다. */
+.aot-timeline-nowtick {
+    position: absolute;
+    top: 50%;
+    width: 2px;
+    height: 0.9em;
+    transform: translate(-1px, -50%);
+    background: var(--aot-color-text-secondary, #5e6b64);
+    opacity: 0.55;
+    pointer-events: none;
+}
+.aot-timeline-btn,
+.aot-timeline-now,
+.aot-timeline-long {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--aot-color-text-primary, #13261b);
+    cursor: pointer;
+    padding: 0;
+    flex: 0 0 auto;
+}
+.aot-timeline-btn {
+    width: 1.8em;
+    height: 1.8em;
+    opacity: 0.7;
+    font-size: 0.917em;
+}
+.aot-timeline-btn:hover { opacity: 1; }
+.aot-timeline-now,
+.aot-timeline-long {
+    padding: 0.1em 0.55em;
+    border: 1px solid var(--aot-border-light);
+    border-radius: var(--aot-radius-sm);
+    font-size: var(--aot-font-size-2xs, 0.7rem);
+    line-height: 1.5;
+    white-space: nowrap;
+}
+.aot-timeline-now:hover:not(:disabled),
+.aot-timeline-long:hover { background: var(--aot-gray-200, rgba(0, 0, 0, 0.06)); }
+.aot-timeline-now:disabled { opacity: 0.45; cursor: default; }
+.aot-timeline-long.is-on { background: var(--aot-gray-200, rgba(0, 0, 0, 0.06)); font-weight: 600; }
+/* 사유·낮은 신뢰도 한 줄 — 칠하지 않은 제공자와 이유. */
+.aot-timeline-note {
+    margin-top: 2px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    font-size: var(--aot-font-size-2xs, 0.7rem);
+    color: var(--aot-color-text-secondary, #5e6b64);
+}
+/* 제공자가 legend(t) 로 준 범례 — 기존 지도 범례의 제목·색 띠·라벨 모양을 그대로 쓴다. */
+.aot-timeline-legend { margin-top: 4px; white-space: normal; }
+.aot-timeline-legend-item { padding: 4px 0; }
+.aot-timeline-legend-item + .aot-timeline-legend-item { border-top: 1px solid var(--aot-gray-200); }
+.aot-timeline-legend .aot-legend-title { margin-bottom: 4px; font-size: var(--aot-font-size-xs, 0.75rem); }
+.aot-timeline-badge {
+    margin-left: 6px;
+    padding: 0 0.5em;
+    border: 1px solid var(--aot-border-light);
+    border-radius: var(--aot-radius-sm);
+    font-size: var(--aot-font-size-2xs, 0.7rem);
+    font-weight: 500;
+    color: var(--aot-color-text-secondary, #5e6b64);
+    white-space: nowrap;           /* 좁은 범례 카드에서 '실험' 이 두 줄로 쪼개지지 않게 */
+}
+/* 지도 위젯 범례 카드 안의 제공자 범례(디지털트윈 등): 레이어 범례 항목과 같은 카드, 위쪽만 구분선 */
+.aot-legend-timeline { margin-top: 0; white-space: normal; }
+.aot-vector-legend .aot-legend-timeline .aot-timeline-legend-item { padding: 6px 0 0; }
+.aot-vector-legend .aot-legend-item-wrapper + .aot-legend-timeline .aot-timeline-legend-item:first-child { border-top: 1px solid var(--aot-gray-200); margin-top: 6px; }
+.aot-timeline-legend-line {
+    font-size: var(--aot-font-size-2xs, 0.7rem);
+    color: var(--aot-color-text-secondary, #5e6b64);
+}
+.aot-timeline-legend-line.is-error { color: var(--aot-band-5, #cf5c58); }
+
+/* 시계 칸의 지금과의 차이(+6h · −1h) — 미래는 강조색, 과거는 보조색. 칸의 크기·위치는 그대로다. */
+.aot-time-dock .aot-time-clock.is-future .aot-meas-name-row { color: var(--aot-color-info, #029acf); font-weight: 600; }
+.aot-time-dock .aot-time-clock.is-past .aot-meas-name-row { font-weight: 600; }
+
+/* 측정값 독: 슬라이더가 지금이 아닌 시각에 있다. 사용자가 고른 장치 값은 지금의 값이라 옅게 하고,
+   같은 종류의 기상 칸이 그 시각의 값을 대신한다. 관측시각 칸은 이름이 '예측'·'기록'으로 바뀐다. */
+.aot-meas-dock.is-forecast .aot-meas-body-row > .aot-measurement-item,
+.aot-meas-dock.is-history .aot-meas-body-row > .aot-measurement-item { opacity: 0.4; }
+.aot-meas-dock.is-forecast .aot-meas-weather-group .aot-measurement-item:not(.is-weather),
+.aot-meas-dock.is-history .aot-meas-weather-group .aot-measurement-item:not(.is-weather) { display: none; }
+.aot-meas-weather-group .aot-measurement-item.is-forecast .aot-meas-name-row { color: var(--aot-color-info, #029acf); font-weight: 600; }
+.aot-meas-weather-group .aot-measurement-item.is-history .aot-meas-name-row { font-weight: 600; }
+
 /* Dock height var consumers — all default to 0px so pages without the dock
    (Leaflet v3, geo design) are unaffected. --aot-dock-h is set by the vector
    widget JS (_updateDockHeightVar). */
@@ -1574,7 +1877,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
     transition: bottom 0.2s ease;
     /* Match dock/legend layer (see hierarchy comment at top of file) so
        attribution is never hidden beneath them by an unrelated stacking context. */
-    z-index: 10;
+    z-index: 11;
 }
 /* The native bottom-left credit box is always replaced by our own styled ⓘ
    button + panel (addLayerPanel) — in the tool rail normally, or standalone in
@@ -1664,15 +1967,13 @@ body.aot-map-fullscreen-active .grid-stack-item {
     text-shadow: 0 0 2px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.8);
 }
 
-/* Legend anchoring. On a roomy widget the dock is a centered tab, so the legend
-   owns the bottom-right corner outright and should not be shoved around by the
-   dock's height. Only when the widget is narrow (dock spans the full width)
-   does it ride above the dock. Overlapping the tool rail is acceptable. */
+/* Legend anchoring. 범례(펼침·chip 모두)는 폭과 상관없이 측정값 독 **위**에 놓는다.
+   독은 폭이 내용(요약+측정값+기상 묶음)을 따라 늘다가 위젯 폭에서 멈추므로, 넓은 위젯에서도
+   독의 오른쪽 칸(기온·관측·풍향)이 범례 자리까지 닿는다. 예전에는 넓은 위젯의 독이 작은 중앙 탭이라
+   범례가 bottom:10px 로 오른쪽 모서리를 독차지해도 됐다 — 기상 묶음이 들어와 독이 넓어진 뒤로 덮는다.
+   --aot-dock-h 는 독의 실제 렌더 높이(_updateDockHeightVar, 접으면 22px, 숨기면 0)라 접힘·높이 변화를 따라간다.
+   도구 레일과 겹치는 것은 허용한다. */
 .aot-legend-container.aot-vector-legend {
-    bottom: 10px !important;
-    max-height: calc(100% - 20px) !important;
-}
-.aot-map-w-sm .aot-legend-container.aot-vector-legend {
     bottom: calc(var(--aot-dock-h, 0px) + 8px) !important;
     max-height: calc(100% - var(--aot-dock-h, 0px) - 56px) !important;
 }
@@ -1681,7 +1982,7 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-legend-chip {
     position: absolute;
     right: 10px;
-    bottom: 10px;
+    bottom: calc(var(--aot-dock-h, 0px) + 8px);
     background-color: var(--panel-bg-rgba, rgba(255, 255, 255, 0.9));
     border: 1px solid var(--aot-border-light);
     border-radius: var(--aot-radius-lg);
@@ -1701,9 +2002,6 @@ body.aot-map-fullscreen-active .grid-stack-item {
     transition: bottom 0.2s ease;
 }
 .aot-legend-chip i { font-size: 0.833em; opacity: 0.6; }
-.aot-map-w-sm .aot-legend-chip {
-    bottom: calc(var(--aot-dock-h, 0px) + 8px);
-}
 
 /* [New] Left-Alignment Class for Side-by-Side (Legend) */
 .aot-measurement-panel.left-aligned {

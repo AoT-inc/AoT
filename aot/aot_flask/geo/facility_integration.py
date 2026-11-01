@@ -56,6 +56,10 @@ _DM_NAME_TO_MTYPE = {
     'vapor_pressure_deficit': 'vpd', 'auto_vpd': 'vpd',
     'speed': 'wind_speed', 'wind': 'wind_speed', 'wind_speed': 'wind_speed',
     'windspeed': 'wind_speed', 'wind_ms': 'wind_speed',
+    # 돌풍 — 'wind' 보다 앞서 잡혀야 한다(`peak_wind_gust` 의 낱말 'wind' 가 풍속으로 새지
+    # 않게 `_infer_mtype_from_dm` 이 'gust' 낱말을 먼저 본다).
+    'gust': 'wind_gust', 'wind_gust': 'wind_gust', 'wind_gusts': 'wind_gust',
+    'wind_gusts_10m': 'wind_gust', 'gust_speed': 'wind_gust',
     'direction': 'wind_direction', 'wind_direction': 'wind_direction',
     'wind_dir': 'wind_direction', 'wind_bearing': 'wind_direction',
     'radiation': 'light', 'solar': 'light', 'lux': 'light', 'light': 'light',
@@ -76,7 +80,7 @@ _DM_NAME_TO_MTYPE = {
 # 끌어오면 고르지도 않은 채널이 센서 목록에 나타난다.
 _AUTO_RESOLVABLE_MTYPES = frozenset({
     'temperature', 'humidity', 'co2', 'vpd',
-    'light', 'wind_speed', 'wind_direction', 'rain',
+    'light', 'wind_speed', 'wind_direction', 'wind_gust', 'rain',
 })
 
 
@@ -111,6 +115,26 @@ def auto_channels_for_device(dm_rows, explicit_types):
             for mt, rows in sorted(by_type.items()) if len(rows) == 1]
 
 
+def auto_channels_for_input(driver, dm_rows, explicit_types):
+    """`auto_channels_for_device` + **예보 입력은 자동 해석하지 않는다**.
+
+    드라이버가 `data_time='forecast'`(몇 시간 뒤 예보, 예: OPEN_METEO_HOURLY_FORECAST)
+    이면 빈 목록이다 (2026-10-13, 환경제어 E4). "+6h 강수" 처럼 종류마다 채널이
+    하나뿐인 것은 모호하지 않아 일반 규칙으로는 끌려온다 — 그러면 지금 오지 않는
+    비가 실외 강우로 읽힌다. 명시 선택은 저장 단계(`facility_io`)가 거부한다.
+
+    드라이버 표식을 못 읽으면 일반 규칙 그대로다(기존 입력의 동작을 바꾸지 않는다).
+    """
+    if driver:
+        try:
+            from aot.utils.inputs import forecast_time_input_drivers
+            if driver in forecast_time_input_drivers():
+                return []
+        except Exception:                                   # noqa: BLE001
+            pass
+    return auto_channels_for_device(dm_rows, explicit_types)
+
+
 # @manual geo/facility#sensor-roles
 def _infer_mtype_from_dm(dm_row):
     """DeviceMeasurements 행에서 measurement_type을 자동 추론한다.
@@ -131,7 +155,10 @@ def _infer_mtype_from_dm(dm_row):
     direct = _DM_NAME_TO_MTYPE.get(name_key)
     if direct:
         return direct
-    for token in re.split(r'[_\-\s.]+', name_key):
+    tokens = re.split(r'[_\-\s.]+', name_key)
+    if 'gust' in tokens or 'gusts' in tokens:
+        return 'wind_gust'
+    for token in tokens:
         mt = _DM_NAME_TO_MTYPE.get(token)
         if mt:
             return mt
@@ -206,6 +233,25 @@ def _irrigation_actuator_kind(nozzle_summary):
     if not nozzle_summary:
         return None
     return 'fogger' if nozzle_summary.get('sprinkler_count') else None
+
+
+def _fitting_airflow_cmh(fitting):
+    """팬 피팅에 적힌 정격 풍량(m³/h). 없거나 읽을 수 없으면 0.0.
+
+    풍량은 목록형 액추에이터에는 `specs.airflow_cmh` 로, 팬 피팅에는 `airflow_cmh`
+    (또는 `specs.airflow_cmh`)로 적힌다. 목록형만 읽으면 피팅으로 묶은 팬은
+    제어기에서 종류 기본값(3000 m³/h)으로 떨어진다 — 48,000 m³/h 팬이 16분의 1로
+    계산된다.
+    """
+    if fitting.get('kind') != 'fan':
+        return 0.0
+    raw = fitting.get('airflow_cmh')
+    if raw in (None, ''):
+        raw = (fitting.get('specs') or {}).get('airflow_cmh')
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 # @manual geo/facility#actuator-roles
@@ -388,6 +434,8 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
         if aid:
             openings_by_actuator.setdefault(aid, []).append(op)
 
+    fitting_airflow = {}   # actuator_id → 팬 피팅 풍량 합 (m³/h)
+
     # Second pass: attach fitting ids; synthesize slot-less Output entries.
     # G1 정책: slot_key 가 없어도 fitting.kind 로부터 ActuatorProfile.kind 를
     # 추론할 수 있으면 채워서 로더가 등록할 수 있도록 한다.
@@ -430,6 +478,17 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
                     entry['kind'] = inferred
                     entry['capabilities'] = _KIND_CAPABILITIES.get(inferred, [])
         actuators_resolved[aid]['fitting_ids'].append(f.get('id'))
+        fan_cmh = _fitting_airflow_cmh(f)
+        if fan_cmh > 0:
+            fitting_airflow[aid] = fitting_airflow.get(aid, 0.0) + fan_cmh
+
+    # 팬 피팅의 풍량 — 목록형 사양(위)이 있으면 그쪽이 권위(디자이너 현행 저장본)
+    # 이고, 없거나 0 일 때만 피팅 값을 쓴다. 한 장치에 팬 피팅이 여럿 묶였으면 각각
+    # 실제 팬이므로 합한다(개구부 면적을 합하는 것과 같다).
+    for aid, cmh in fitting_airflow.items():
+        entry = actuators_resolved.get(aid)
+        if entry is not None and not entry.get('rated_m3h'):
+            entry['rated_m3h'] = cmh
 
     # Third pass: aggregate vent area per actuator from G1-resolved vent_openings.
     for aid, ops in openings_by_actuator.items():
@@ -483,7 +542,9 @@ def get_facility_integration(facility_uuid, bypass_cache=False):
     def _auto_channels(iid, explicit_types):
         if not iid:
             return []
-        return auto_channels_for_device(dm_by_device.get(iid, []), explicit_types)
+        row = inp_lookup.get(iid)
+        return auto_channels_for_input(getattr(row, 'device', None),
+                                       dm_by_device.get(iid, []), explicit_types)
 
     def _explicit_list(f):
         """이 fitting 에서 사용자가 **직접 고른** 채널 목록."""

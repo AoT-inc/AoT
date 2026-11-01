@@ -38,36 +38,38 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
         for k, v in custom_options_postsave.items():
             final_options[k] = v
 
-    # 2. Manual/Legacy Exception Handling
-    if request_form:
-        # Resolve 'device_ids' from measurement selectors if needed (Legacy Support)
-        manual_logic_keys = ['device_selection_input', 'device_selection_output', 'device_selection_function']
-        selected_dev_unique_ids = []
-        for key in manual_logic_keys:
-            raw_val = final_options.get(key, '')
-            if raw_val:
-                if isinstance(raw_val, list):
-                    ids = [str(x).strip() for x in raw_val if str(x).strip()]
-                elif isinstance(raw_val, str):
-                    ids = [x.strip() for x in raw_val.split(',') if x.strip()]
-                else: ids = []
-                selected_dev_unique_ids.extend(ids)
-        
-        if selected_dev_unique_ids:
-            final_options['device_ids'] = selected_dev_unique_ids
-            final_options['include_all_devices'] = False
-        else:
-            # [Fix] Empty device filter must mean "show every device placed on
-            # this map", not "show none". This branch previously forced
-            # include_all_devices=False whenever the filter was left blank,
-            # which made collect_devices() return an empty list
-            # (utils_geo.py collect_devices: `if not target_ids and not
-            # include_all: return []`) — silently hiding every marker the
-            # moment a widget was saved once with the (now-Advanced, optional)
-            # Device Filter left untouched. That contradicts the widget's
-            # basic-view promise: placing a device on the map IS showing it.
-            final_options['device_ids'] = []
-            final_options['include_all_devices'] = True
+    # 2. device_ids — 지도가 실제로 쓰는 장치 필터. **선택 값만으로 정해지므로
+    #    폼 유무와 상관없이 다시 계산한다.** 예전에는 웹 폼이 있을 때만 계산해,
+    #    폼 없이 저장하는 경로(AI 위젯 도구)로 장치 선택을 바꾸면 선택 값만 바뀌고
+    #    필터는 옛 장치를 계속 가리켰다(2026-10-10, 위젯 3개의 v111 교체에서 발견).
+    # Resolve 'device_ids' from measurement selectors if needed (Legacy Support)
+    manual_logic_keys = ['device_selection_input', 'device_selection_output', 'device_selection_function']
+    selected_dev_unique_ids = []
+    for key in manual_logic_keys:
+        raw_val = final_options.get(key, '')
+        if raw_val:
+            if isinstance(raw_val, list):
+                ids = [str(x).strip() for x in raw_val if str(x).strip()]
+            elif isinstance(raw_val, str):
+                ids = [x.strip() for x in raw_val.split(',') if x.strip()]
+            else: ids = []
+            selected_dev_unique_ids.extend(ids)
+    
+    if selected_dev_unique_ids:
+        final_options['device_ids'] = selected_dev_unique_ids
+        final_options['include_all_devices'] = False
+    else:
+        # [Fix] Empty device filter must mean "show every device placed on
+        # this map", not "show none". This branch previously forced
+        # include_all_devices=False whenever the filter was left blank,
+        # which made collect_devices() return an empty list
+        # (utils_geo.py collect_devices: `if not target_ids and not
+        # include_all: return []`) — silently hiding every marker the
+        # moment a widget was saved once with the (now-Advanced, optional)
+        # Device Filter left untouched. That contradicts the widget's
+        # basic-view promise: placing a device on the map IS showing it.
+        final_options['device_ids'] = []
+        final_options['include_all_devices'] = True
 
     # 3. Handle Map Change -> Reset View if Map Changed
     # [Fix] Handle None values safely to prevent false 'Map Changed' triggers
@@ -159,6 +161,12 @@ WIDGET_HEAD_HTML = """
      → actuator-order → bay → facility-runtime → label-layers → plot → widget-vector.
      아래 three/facility-3d/map-3d document.write 가드 블록은 유지(AoT_facility 위젯 공존 시
      중복로드 방지). 소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
+{#- 디지털트윈(실험) 화면 게이트 — 설정 > 일반 '디지털트윈 (실험)' 플래그 AND 안 잠김. 트윈 탭·예측 제공자
+    (aot-map-twin-tab.js·aot-map-twin-field.js)는 번들 안에 있고 이 값이 막는다. 서버 API 도 같은 판정으로 404. -#}
+{% if twin_enabled is defined and twin_enabled() and "js_twin_flag" not in dashboard_dict %}
+<script>window.AOT_TWIN_ENABLED = true;</script>
+{% set _dummy = dashboard_dict.update({"js_twin_flag": 1}) %}
+{% endif %}
 <script src="{{ asset('aot-map-widget') }}"></script>
 
 <!-- 3D Facility rendering (three.js + AoTFacility3D + AoTFacilityMap3D)
@@ -197,6 +205,7 @@ WIDGET_HEAD_HTML = """
 {% set _dummy = dashboard_dict.update({"css_time_wheel": 1}) %}
 {% endif %}
 <script src="{{ asset('widget-map-tail') }}"></script>
+
 
 <!-- Actuator group panel -->
 {% if "css_facility_widget" not in dashboard_dict %}
@@ -592,6 +601,198 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext('Hide the overlay map and show only the data panel.')
         },
         {
+            'id': 'overlay_auto_opacity',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Auto-adjust Overlay Opacity'),
+            'phrase': lazy_gettext(
+                'Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, '
+                'and their opacity is lowered automatically so the shapes stay visible. '
+                'Turn off to go back to the old order: weather layers sit below the shapes '
+                'and use each layer\'s own opacity as is.'
+            )
+        },
+        {
+            'id': 'ambient_mode',
+            'type': 'select',
+            'default_value': 'auto',
+            'options_select': [
+                ('auto',  lazy_gettext('Auto (by sun position)')),
+                ('day',   lazy_gettext('Always day')),
+                ('night', lazy_gettext('Always night')),
+                ('off',   lazy_gettext('Off')),
+            ],
+            'name': lazy_gettext('Day / Night Appearance'),
+            'phrase': lazy_gettext(
+                'Darkens the base map at night and lights 3D models from the sun\'s position. '
+                'Also fills the measurement dock with weather values (rain, wind, cloud, '
+                'visibility, risk) and shows a day/night icon in the time dock. '
+                'Off turns all of this off.'
+            )
+        },
+        {
+            'id': 'weather_fx',
+            'type': 'select',
+            'default_value': 'subtle',
+            'options_select': [
+                ('subtle', lazy_gettext('Subtle')),
+                ('full',   lazy_gettext('Vivid')),
+                ('off',    lazy_gettext('Off')),
+            ],
+            'name': lazy_gettext('Weather Effects'),
+            'phrase': lazy_gettext(
+                'Draws the current weather over the map from observed values only, even when no '
+                'weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow '
+                '(by precipitation) and fog (by visibility). Effects are dimmer over facilities. '
+                'They pause when the map is off-screen or when reduced motion is requested.'
+            )
+        },
+        {
+            'id': 'weather_flash',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Lightning Flash'),
+            'phrase': lazy_gettext(
+                'When a weather source reports recent lightning, the screen brightens briefly '
+                'now and then (never more than a few times per second). Turn off to avoid '
+                'flashing. It is also skipped when reduced motion is requested.'
+            )
+        },
+        {
+            'id': 'weather_auto_layers',
+            'type': 'bool',
+            'default_value': False,
+            'name': lazy_gettext('Show Weather Layers Automatically'),
+            'phrase': lazy_gettext(
+                'When it rains, clouds cover the sky or the wind is strong, turns on the matching '
+                'weather layer you registered in this widget (precipitation, cloud or wind) on '
+                'screen only. Your saved layer selection is not changed, and a layer you turn off '
+                'yourself stays off until the page is reloaded. Thresholds are set on the server.'
+            )
+        },
+        {
+            'id': 'weather_min_zoom',
+            'type': 'float',
+            'default_value': '11',
+            'name': lazy_gettext('Weather Effects Minimum Zoom'),
+            'phrase': lazy_gettext(
+                'Zoomed out beyond this level, the weather effects and the layers turned on '
+                'automatically fade out over one zoom level, because one observation spread '
+                'over a wide area is misleading. Layers you turn on yourself, the dock values '
+                'and the day/night correction are not affected. 0 shows them at every zoom.'
+            ),
+            'constraints': {'min': 0, 'max': 22}
+        },
+        {
+            'id': 'temp_tint',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Temperature Tint'),
+            'phrase': lazy_gettext(
+                'Colors the temperature value in the dock blue when cold and red when hot, and '
+                'adds a very faint tint to the base map (never over shapes or 3D models).'
+            )
+        },
+        {
+            'id': 'temp_tint_low_c',
+            'type': 'float',
+            'default_value': '10',
+            'name': lazy_gettext('Tint: Neutral From (°C)'),
+            'phrase': lazy_gettext(
+                'Below this temperature the cold tint starts; it is strongest at the frost risk '
+                'temperature.'
+            ),
+            'constraints': {'min': -60, 'max': 70}
+        },
+        {
+            'id': 'temp_tint_high_c',
+            'type': 'float',
+            'default_value': '28',
+            'name': lazy_gettext('Tint: Neutral Up To (°C)'),
+            'phrase': lazy_gettext(
+                'Above this temperature the hot tint starts; it is strongest at the heat risk '
+                'temperature.'
+            ),
+            'constraints': {'min': -60, 'max': 70}
+        },
+        {
+            'id': 'meas_ambient_first',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Weather First in Measurement Dock'),
+            'phrase': lazy_gettext(
+                'Puts weather values at the left of the measurement dock. A value you also '
+                'picked from a field device is merged into it and marked with a pin. '
+                'Turn off to keep the dock exactly as you configured it.'
+            )
+        },
+        {
+            'id': 'ambient_source_order',
+            'type': 'select',
+            'default_value': 'field_first',
+            'options_select': [
+                ('field_first', lazy_gettext('Field devices first')),
+                ('gis_first',   lazy_gettext('Weather inputs first')),
+            ],
+            'name': lazy_gettext('Weather Value Source Order'),
+            'phrase': lazy_gettext(
+                'Weather values come from the weather stations you assigned to the site (field '
+                'devices) and from the weather inputs registered in the map layers, even when '
+                'their layer is off. Choose which one is used first; each value falls back to the '
+                'other when it is missing or too old. With neither, no weather cells or effects are shown.'
+            )
+        },
+        {
+            'id': 'max_measure_age',
+            'type': 'integer',
+            'default_value': '300',
+            'name': lazy_gettext('Weather Value Max Age (Seconds)'),
+            'phrase': lazy_gettext(
+                'A field device value older than this is skipped in favor of the next source.'
+            ),
+            'constraints': {'min': 10, 'max': 86400}
+        },
+        {
+            'id': 'hazard_wind_ms',
+            'type': 'float',
+            'default_value': '10',
+            'name': lazy_gettext('Risk: Wind Speed (m/s)'),
+            'phrase': lazy_gettext('Shows a risk in the weather cells when the current wind speed reaches this value.'),
+            'constraints': {'min': 0, 'max': 100}
+        },
+        {
+            'id': 'hazard_precip_mm_h',
+            'type': 'float',
+            'default_value': '5',
+            'name': lazy_gettext('Risk: Precipitation (mm/h)'),
+            'phrase': lazy_gettext('Shows a risk when the current precipitation reaches this value.'),
+            'constraints': {'min': 0, 'max': 500}
+        },
+        {
+            'id': 'precip_trace_mm_h',
+            'type': 'float',
+            'default_value': '0.1',
+            'name': lazy_gettext('Light Rain Threshold (mm/h)'),
+            'phrase': lazy_gettext('Precipitation below this value is drawn as no rain. The value itself is not changed.'),
+            'constraints': {'min': 0, 'max': 5}
+        },
+        {
+            'id': 'hazard_temp_c',
+            'type': 'float',
+            'default_value': '2',
+            'name': lazy_gettext('Risk: Low Temperature (°C)'),
+            'phrase': lazy_gettext('Shows a frost risk when the current temperature falls to this value or below.'),
+            'constraints': {'min': -60, 'max': 60}
+        },
+        {
+            'id': 'hazard_heat_c',
+            'type': 'float',
+            'default_value': '33',
+            'name': lazy_gettext('Risk: High Temperature (°C)'),
+            'phrase': lazy_gettext('Shows a heat risk when the current temperature reaches this value or above.'),
+            'constraints': {'min': -60, 'max': 70}
+        },
+        {
             # @ANCHOR: ai_advice_enabled_option [2026-07-07]
             # Backend fetch (generate_page_variables_logic in maps.py) already reads
             # widget_options.get('ai_advice_enabled', ...) and embeds the latest
@@ -620,6 +821,20 @@ WIDGET_INFORMATION = {
             'phrase': lazy_gettext(
                 'Show a dock at the top of the map with the current time, sunrise '
                 'and sunset for wherever the map is centered.'
+            )
+        },
+        {
+            # 시간 독 안의 시간 슬라이더. 시간 독이 있어야 보이고(독 없이 혼자 뜨지 않는다), 슬라이더는 지금(실시간)에서
+            # 시작하므로 건드리지 않으면 지도는 예전과 똑같다. 기본 켬: 슬라이더가 움직이는 것은 사용자가 끌 때뿐이고,
+            # 보여 줄 제공자(시간 지원 레이어·예보·해 위치)가 하나도 없으면 줄 자체가 나타나지 않는다.
+            'id': 'time_slider',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Show Time Slider'),
+            'phrase': lazy_gettext(
+                'Adds a slider under the time dock to look at the map at another time: radar frames of '
+                'time-enabled layers, forecast or recorded weather values, and day / night. '
+                'Needs "Show Local Time". Drag it back to "Now" to return to live values.'
             )
         },
         # --- Data Transfer Period ---

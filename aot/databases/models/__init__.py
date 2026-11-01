@@ -78,6 +78,8 @@ from .notice import NoticePollOption
 from .notice import NoticePollVote
 from .notice import NoticeReply
 from .notice import NoticeAck
+from .ai_screen_card import AIScreenCard
+from .ai_card_attachment import AICardAttachment
 from .geo import GeoMap
 from .geo import GeoSetting
 from .geo import GeoShape
@@ -90,6 +92,10 @@ from .geo_plot import GeoPlot
 from .geo_plot_stage_event import GeoPlotStageEvent
 from .geo_marker_position import GeoMarkerPosition
 from .geo_program import GeoProgram
+from .twin_config import TwinConfig
+from .fc_calibration import FcCalEvent, FcCalibration, FcCalibrationSite
+from .twin_scenario import TwinRun, TwinScenario
+from .target_alias import TargetAlias
 # 옛 이름 — 한 릴리스 동안만 남긴다(p6_43 에서 관리 프로그램으로 넓혔다).
 GeoCropProgram = GeoProgram
 from .irrigation import IrrigationDesign
@@ -111,6 +117,7 @@ from .scheduler import SchedulerJobMeta
 from .scheduler import SchedulerAuditLog
 from .ai_settings import AIGlobalSettings
 from .mcp_external_account import MCPExternalAccount
+from .oauth_embedded import OAuthClient, OAuthCode, OAuthGrant
 from .ai_domain_glossary import AIDomainGlossary
 from .ai_user_profile import AIUserProfile
 from .ai_context_record import AIContextRecord

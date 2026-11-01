@@ -35,6 +35,9 @@ _FALLBACK = '4.1.2'
 
 _cache = {}
 
+# DEM 소스가 정해질 때까지 False. 정본 판단은 `supports_terrain` 주석에 있다.
+TERRAIN_DEM_READY = False
+
 
 def _scan():
     found = []
@@ -84,13 +87,20 @@ def supports_terrain():
     고도 데이터를 제대로 넣어도(전 지구 DEM) 그대로였으므로 데이터가 아니라
     4 의 line+terrain 렌더 결함이다.
 
-    그래서 5 가 반입되기 전까지 이 옵션은 설정 화면에 나오지 않고, 저장된
-    값이 켜져 있어도 지도는 지형을 켜지 않는다.
+    5 는 엔진으로는 지형을 그릴 수 있지만(`engine_supports_terrain`), **DEM
+    소스가 정해지기 전까지는 5 에서도 끈다** (`TERRAIN_DEM_READY`). 지금 코드가
+    가리키는 `demotiles.maplibre.org/terrain-tiles` 는 이름이 `jaxa_terrainrgb_
+    N047E011` 인 알프스 한 구역짜리 데모 데이터다 — 국내 좌표는 z2 부터 전부
+    404 이고 고도가 어디서나 0 이다. 즉 지형을 켜도 아무 일이 일어나지 않으면서
+    저작권 표시만 붙는다. 그래서 옵션은 설정 화면에 나오지 않고, 저장된 값이
+    켜져 있어도 지도는 지형을 켜지 않는다.
 
-    ⚠ 5 를 반입해 이 함수가 True 를 돌려주기 시작하면, **그 전에 DEM 소스를
-    먼저 바꿔야 한다.** 지금 코드가 가리키는 `demotiles.maplibre.org/
-    terrain-tiles` 는 이름이 `jaxa_terrainrgb_N047E011` 인 알프스 한 구역짜리
-    데모 데이터다 — 국내 좌표는 z2 부터 전부 404 이고 고도가 어디서나 0 이다.
-    즉 지형을 켜도 아무 일이 일어나지 않으면서 저작권 표시만 붙는다.
+    DEM 을 정했으면 `TERRAIN_DEM_READY` 를 True 로 바꾼다(JS 의
+    `AoTMapLibreCaps` 도 같이).
     """
+    return TERRAIN_DEM_READY and engine_supports_terrain()
+
+
+def engine_supports_terrain():
+    """반입한 MapLibre 엔진이 지형을 그릴 수 있는 버전인가(4 는 외곽선 결함)."""
     return bundled_major() >= 5

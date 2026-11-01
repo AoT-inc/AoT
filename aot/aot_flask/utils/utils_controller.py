@@ -270,9 +270,23 @@ def controller_del(cond_id):
         CustomController.unique_id == cond_id).first()
     map_config_id = cond.map_config_id if cond else None
 
+    # Matter 장치: 비활성화·행 삭제보다 먼저 본다. 하위가 아직 쓰이고 있으면
+    # 아무것도 바꾸지 않고 멈춘다. 아니면 장치에서 AoT Fabric 을 빼고(안 그러면
+    # 장치의 Fabric 자리가 남아 다른 생태계 추가를 막는다) 노드 없이는 동작할
+    # 수 없는 하위 Input/Output 을 지운다. 서버에 닿지 않아도 삭제는 막지 않는다
+    # — 경고로 알리고, 남은 노드는 설정 > Matter 에 고아로 보여 나중에 지울 수
+    # 있다. docs/design/matter-controller.md §5-4.
+    if cond.device == 'device_matter_node':
+        from aot.aot_flask.utils.utils_matter import on_device_delete
+        on_device_delete(cond, messages)
+        if messages["error"]:
+            # 하위가 아직 쓰이고 있다 — Fabric 을 떠나기 전에 멈춘다.
+            return messages
+
     # 활성화된 경우 컨트롤러 비활성화
     if cond.is_activated:
         controller_deactivate(cond_id)
+
 
     try:
         if not messages["error"]:

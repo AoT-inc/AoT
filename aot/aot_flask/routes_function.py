@@ -344,7 +344,8 @@ def page_function_submit():
                  dep_name,
                  dep_list,
                  action_id,
-                 page_refresh) = utils_action.action_add(form_actions, request.form)
+                 page_refresh,
+                 dep_message) = utils_action.action_add(form_actions, request.form)
                 if dep_list:
                     dep_unmet = form_actions.action_type.data
                 function_id = form_actions.device_id.data

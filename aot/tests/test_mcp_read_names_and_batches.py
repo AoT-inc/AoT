@@ -163,6 +163,33 @@ class TestReadTargetsByName(unittest.TestCase):
         self.assertEqual('out-v121', out.get('device_id'), out)
         self.assertEqual('v121', out.get('name'))
 
+    def test_get_plot_with_a_place_says_why_and_where_to_go(self):
+        """대지 id·이름을 구획 자리에 넘기면 왜 안 되는지와 갈 곳을 말한다
+        (2026-10-11 외부 AI: "No growing plot" 만 받고 이유를 몰랐다)."""
+        for token in ('site-3', '3포장'):
+            out = self.S.get_plot(plot_id=token)
+            msg = out.get('error') or out.get('message') or ''
+            self.assertIn('is a site, not a plot', msg, out)
+            self.assertIn("list_plots(zone_id='site-3')", msg)
+
+    def test_screen_confirmation_wait_is_not_reported_as_executed(self):
+        """screen_action 의 확인 대기는 실행이 아니다(게이트상 '읽기' 도구라
+        쓰기 규칙을 타지 않았다 — 2026-10-11 외부 AI)."""
+        from aot.tools import mcp_safety_gate as gate
+        self.assertEqual('pending_approval', gate.call_state(
+            None, {'status': 'needs_confirmation'}, None, 'screen_action'))
+        self.assertEqual('failed', gate.call_state(
+            None, {'status': 'expired'}, None, 'screen_action'))
+        self.assertEqual('executed', gate.call_state(
+            None, {'status': 'success'}, None, 'screen_action'))
+        # 화면이 아직 실행을 알리지 않은 것·사용자가 거절한 것도 실행이 아니다
+        # (2026-10-14 사용자 시험: queued 가 executed 로 나갔다).
+        for status, want in (('queued', 'queued'), ('sent', 'queued'),
+                             ('rejected', 'approval_rejected')):
+            self.assertEqual(want, gate.call_state(
+                None, {'status': status}, None, 'screen_action'), status)
+        self.assertIn('queued', gate.CALL_STATES)
+
     def test_output_state_id_still_works(self):
         self.assertEqual('out-v121',
                          self.S.get_output_state(device_id='out-v121')['device_id'])
@@ -193,8 +220,9 @@ class TestReadTargetsByName(unittest.TestCase):
         amb = self.S._sensor_loc_by_name('1')
         self.assertEqual('needs_disambiguation', amb.get('status'), amb)
         self.assertEqual(2, len(amb['candidates']))
+        # 출력(밸브·천창 …)도 이력을 읽는다 — 거절하지 않고 id 로 푼다.
         out = self.S._sensor_loc_by_name('v121')
-        self.assertIn('get_output_state', out.get('error', ''))
+        self.assertIsInstance(out, str, out)
 
     def test_zone_summary_takes_names_and_reports_the_unresolved(self):
         out = self.S.get_zone_sensor_summary(zone_ids=['3-1', '1'],

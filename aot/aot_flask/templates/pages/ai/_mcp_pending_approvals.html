@@ -1,171 +1,32 @@
 {# @manual ai/overview#safety-approval-model #}
 {# 외부 AI 제어 요청 승인 대기 — AI → 요청 화면의 첫 구획(include).
 
-   외부 AI(MCP)가 쓰기 도구를 부르면 실행이 보류되고 여기 한 장씩 쌓인다. 승인은
-   유효시간이 짧아(5분) 발견이 늦으면 그대로 만료된다 — 그래서 결정할 것을 한
-   화면(요청)에 모았다(2026-09-10). 예전에는 일정 화면과 "AI 요청 및 조언" 두 곳에
-   이 조각이 있었다.
+   외부 AI(MCP)가 쓰기 도구를 부르면 실행이 보류된다. 예전에는 이 구획과 대시보드 위젯이 각자 목록·승인 단추를 그렸지만,
+   결정 자리를 한 곳으로 모았다(2026-10-23): 이제 이 구획은 **건수 한 줄과 [보기]** 뿐이고, 결정은 하단 AI 창구의
+   [승인 대기 N] 칩이 여는 승인 모달(static/js/common/aot-ai-approvals.js)에서 한다. 승인은 유효시간이 짧아(5분)
+   발견이 늦으면 그대로 만료되므로 칩이 화면 어디에서나 떠 있게 했다.
 
-   include 하는 쪽이 준비할 것:
-     - aot-settings.css (구획 제목·카드 역할)
-     - 라우트 컨텍스트에 physical_tools (mcp_safety_gate.PHYSICAL_TOOLS 가 정본)
-     - 라우트 컨텍스트에 can_decide_requests (제어·작기 운영·설정 편집 중 하나 —
-       없으면 can_decide). 둘 다 없으면 버튼을 그린다. 항목별로는 목록 API 가
-       싣는 r.can_decide 가 false 면 그 항목만 버튼을 그리지 않는다(작기 운영만
-       맡은 사람은 구획 요청만 결정한다). 막는 것은 서버(routes_mcp_api·
-       mcp_safety_gate._decide)이고, 이 값은 누를 수 없는 버튼을 감출 뿐이다.
-   승인/거부가 일어나면 document 에 'aot:mcp-approval-changed' 를 쏜다.
+   모달은 항목별 [승인]·[거부]·[수정], 일괄 처리, 물리 동작 한 번 더 확인을 그대로 한다. 막는 것은 서버(routes_mcp_api·
+   mcp_safety_gate._decide)이고 화면은 can_decide 가 false 인 항목의 버튼을 감출 뿐이다.
+   승인/거부가 일어나면 document 에 'aot:mcp-approval-changed' 를 쏜다(모달이 쏜다). #}
 
-   2026-09-10 다시 짬:
-   - 구획 제목·설명·카드를 공용 설정 역할로(.aot-settings-group-title + p,
-     .aot-settings-card). 예전에는 모달용 역할(aot-modal-group-title)을 카드 밖에
-     썼고, 카드는 양옆 16 여백을 스스로 가져 설정 화면에 두면 글자가 80 에 섰다.
-   - 원본 인자(raw params) 펼침을 뺐다. 기계 JSON 이고 대상 UUID 가 그대로 보였다.
-     제목과 안내문은 서버가 **실제 인자로** 만든 사람 말이다(synthesize_title,
-     _build_human_briefing) — 승인하는 사람이 믿을 근거로 그것이면 된다.
-   - 되돌릴 수 없는 물리 동작 확인을 브라우저 confirm 대신 앱 공용 확인창으로. #}
-
-<div class="aot-settings-group-title" id="mcp-pending-title">{{ _('Control requests awaiting approval') }}<span class="aot-appr-count" id="mcp-pending-count" hidden></span></div>
+<div class="aot-settings-group-title" id="mcp-pending-title">{{ _('Control requests awaiting approval') }}</div>
 <p>{{ _('These have not run. Approving runs exactly what is described here — you do not need to go back and tell the AI.') }}</p>
-<div id="mcp-pending-list"></div>
+<div class="aot-settings-card"><div id="mcp-pending-summary"></div></div>
 
 <script>
 (function () {
-    var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-    var T = {
-        none_pending: {{ _('No control requests are waiting.')|tojson }},
-        load_failed: {{ _('Could not load control requests')|tojson }},
-        approve: {{ _('Approve')|tojson }},
-        reject: {{ _('Reject')|tojson }},
-        // 어순이 언어마다 달라 숫자를 끼워 넣는 한 문장으로 둔다. '%(sec)s' 가 아니라
-        // '{sec}' 인 이유: jinja2 gettext 는 번역문에 늘 %-포맷을 적용해 서버에서 깨진다.
-        expires_fmt: {{ _('expires in {sec}s')|tojson }},
-        failed: {{ _('Request failed')|tojson }},
-        confirm_physical: {{ _('This moves real equipment (valves, pumps) as soon as you approve. Run it now?')|tojson }},
-        executed: {{ _('Approved and carried out.')|tojson }},
-        exec_failed: {{ _('Approved, but it failed to run')|tojson }},
-        exec_unconfirmed: {{ _('Command sent, but whether it took effect is unconfirmed — check the device state.')|tojson }},
-        cannot_decide: {{ _('Only people who can edit controllers can decide on these.')|tojson }}
-    };
-    // 결정할 수 없는 사람에게 승인 버튼을 보이면, 눌러 보고 나서야 "권한 부족" 을
-    // 듣는다. 목록은 그대로 보인다 — 무엇이 기다리는지 아는 것은 해가 없다.
-    var CAN_DECIDE = {{ (can_decide_requests|default(can_decide|default(true)))|tojson }};
-    // 되돌릴 수 없는 물리 동작만 한 번 더 확인한다. 설정 변경까지 매번 물으면
-    // 확인창이 의미 없는 클릭으로 전락해 정작 중요한 순간에도 그냥 눌리게 된다.
-    var PHYSICAL_TOOLS = {{ physical_tools|tojson }};
-    var listEl = document.getElementById('mcp-pending-list');
-    var countEl = document.getElementById('mcp-pending-count');
-
-    function esc(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    function mount() {
+        if (!window.AoTAIApprovals) { return; }
+        window.AoTAIApprovals.mountSummary('#mcp-pending-summary', {
+            count_fmt: {{ _('{n} pending approval')|tojson }},
+            none_pending: {{ _('No control requests are waiting.')|tojson }},
+            loading: {{ _('Loading...')|tojson }},
+            load_failed: {{ _('Could not load control requests')|tojson }},
+            view: {{ _('View')|tojson }}
         });
     }
-    function toast(msg, type) { if (typeof window.showToast === 'function') { window.showToast(msg, type); } }
-    /* 사람 말이 아닌 식별자(UUID)는 싣지 않는다. */
-    function human(s) { s = String(s || '').trim(); return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s) ? '' : s; }
-
-    function post(url, onData) {
-        fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF } })
-            .then(function (r) { return r.json().catch(function () { return {}; }); })
-            .then(function (d) {
-                if (d && d.status === 'error') { toast(T.failed + ': ' + (d.message || ''), 'error'); }
-                else if (onData) { onData(d); }
-            })
-            .catch(function (e) { toast(T.failed + ': ' + e, 'error'); })
-            // 성공이든 실패든 목록은 다시 읽는다. 실패했는데 행이 사라지면
-            // "처리됐다"로 오인되고, 성공했는데 남아 있으면 두 번 누르게 된다.
-            .then(function () {
-                load();
-                document.dispatchEvent(new CustomEvent('aot:mcp-approval-changed'));
-            });
-    }
-
-    function render(rows) {
-        rows = rows || [];
-        countEl.textContent = rows.length ? rows.length : '';
-        countEl.hidden = !rows.length;
-        if (!rows.length) {
-            listEl.innerHTML = '<div class="aot-settings-card"><div class="aot-settings-row"><div class="aot-settings-sub">'
-                + esc(T.none_pending) + '</div></div></div>';
-            return;
-        }
-        // 카드 하나에 결정 하나: 무엇을(핵심) · 누가·만료(부연) · 실행 계획(본문) · 행동(오른쪽 아래).
-        // r.title 은 서버가 만든 사람 문구다 — tool_name 같은 내부 이름은 data-tool 에만 남긴다.
-        listEl.innerHTML = rows.map(function (r) {
-            var sub = [];
-            if (human(r.agent_id)) { sub.push(esc(r.agent_id)); }
-            sub.push(esc(T.expires_fmt.replace('{sec}', r.expires_in_sec)));
-            return '<div class="aot-settings-card">'
-                + '<div class="aot-appr-what">' + esc(r.title) + '</div>'
-                + '<div class="aot-appr-sub">' + sub.join(' · ') + '</div>'
-                + (r.reason ? '<div class="aot-appr-reason">' + esc(r.reason) + '</div>' : '')
-                + ((CAN_DECIDE && r.can_decide !== false)
-                    ? '<div class="aot-appr-acts">'
-                      + '<button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-reject-conf="' + esc(r.confirmation_id) + '">' + esc(T.reject) + '</button>'
-                      + '<button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-approve="' + esc(r.confirmation_id) + '" data-tool="' + esc(r.tool_name || '') + '">' + esc(T.approve) + '</button>'
-                      + '</div>'
-                    : '')
-                + '</div>';
-        }).join('')
-            + (CAN_DECIDE ? '' : '<p class="aot-settings-sub aot-settings-bare">' + esc(T.cannot_decide) + '</p>');
-    }
-
-    // 읽기에 실패하면 "대기 없음" 이라고 말하지 않는다 — 승인은 유효 5분이라, 오류를
-    // 빈 목록으로 그리면 기다리는 요청이 아무도 모르게 만료된다.
-    function renderError(msg) {
-        countEl.hidden = true;
-        listEl.innerHTML = '<div class="aot-settings-card"><div class="aot-settings-row"><div class="aot-settings-sub">'
-            + esc(T.load_failed + (msg ? ': ' + msg : '')) + '</div></div></div>';
-    }
-
-    function load() {
-        fetch('/api/v1/mcp/confirmations')
-            .then(function (r) {
-                return r.json().catch(function () { return {}; }).then(function (d) {
-                    if (!r.ok || d.status === 'error') { renderError(d.message || d.error || r.status); return; }
-                    render(d.pending);
-                });
-            })
-            .catch(function (e) { renderError(String(e)); });
-    }
-
-    function approve(btn, id) {
-        btn.disabled = true;
-        post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/approve', function (d) {
-            if (d && d.unconfirmed) {
-                /* 명령은 나갔는데 결과를 모른다 — 실패라고 하지 않는다. */
-                toast(T.exec_unconfirmed, 'warning');
-            } else if (d && d.executed === false) {
-                var m = (d.execution && (d.execution.message || d.execution.error)) || '';
-                toast(T.exec_failed + (m ? ': ' + m : ''), 'error');
-            } else if (d && d.executed) {
-                toast(T.executed, 'success');
-            }
-        });
-    }
-
-    // 이 include 안에서만 듣는다. 페이지 전역 핸들러에 얹으면 include 를 쓰는
-    // 화면마다 중복 처리돼 승인이 두 번 전송된다.
-    listEl.addEventListener('click', function (ev) {
-        var t = ev.target.closest('button');
-        if (!t) { return; }
-        var id;
-        if ((id = t.getAttribute('data-approve'))) {
-            if (PHYSICAL_TOOLS.indexOf(t.getAttribute('data-tool')) !== -1) {
-                window.aotConfirm(T.confirm_physical, function () { approve(t, id); });
-                return;
-            }
-            approve(t, id);
-        } else if ((id = t.getAttribute('data-reject-conf'))) {
-            t.disabled = true;
-            post('/api/v1/mcp/confirmations/' + encodeURIComponent(id) + '/reject');
-        }
-    });
-
-    // 승인 유효시간이 5분이라 대기 목록은 짧은 주기로 새로 읽는다.
-    load();
-    setInterval(load, 15000);
-    document.addEventListener('aot:mcp-reload-pending', load);
+    // AI 창구 번들은 본문 끝에서 실린다 — 문서가 다 읽힌 뒤에 붙는다
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', mount); } else { mount(); }
 })();
 </script>

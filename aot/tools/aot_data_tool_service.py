@@ -105,6 +105,9 @@ _WEATHER_METRIC_KEYWORDS = (
     'speed', 'direction',
 )
 
+# `weather.now` 만 더 읽는 하늘 항목(`wide`) — 구름량(sky_condition)·일사(light). 위 묶음은 인앱 AI 가 그대로 읽는다.
+_WEATHER_SKY_KEYWORDS = ('sky', 'cloud', 'light')
+
 
 def _devices_on_map_p2(map_uuid):
     """[P2] 지도에 배치된 장치 uuid 집합. map_config_id 조회의 대체.
@@ -127,6 +130,24 @@ def _map_for_device_p2(device_uuid, prefer=None):
     except Exception:
         return None
 
+
+
+def _vpd_basis_of(opts):
+    """함수 옵션 → VPD 목표의 설정 기준('air'|'leaf'). 알 수 없으면 air."""
+    try:
+        from aot.functions.utils.env_control.leaf_vpd import normalise_basis
+        return normalise_basis((opts or {}).get('vpd_target_basis'))
+    except Exception:                                       # noqa: BLE001
+        return 'air'
+
+
+def _vpd_readout_of(summary):
+    """사이클 요약 → AI 용 VPD 현황(공기 VPD, 잰 엽온이 있을 때만 잎 VPD) | None."""
+    try:
+        from aot.functions.utils.env_control.leaf_vpd import readout_from_summary
+        return readout_from_summary(summary)
+    except Exception:                                       # noqa: BLE001
+        return None
 
 
 def _control_targets_for(controller):

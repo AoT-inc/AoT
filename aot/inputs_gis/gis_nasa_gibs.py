@@ -9,6 +9,7 @@ CHANNELS = {
         'name': _('MODIS Terra TrueColor'),
         'options': {
             'layer': 'MODIS_Terra_CorrectedReflectance_TrueColor',
+            'ambient_role': 'ground.imagery',
             'ext': 'jpg',
             'tilematrixset': 'GoogleMapsCompatible_Level9',
             'maxNativeZoom': 9
@@ -18,6 +19,7 @@ CHANNELS = {
         'name': _('VIIRS SNPP TrueColor'),
         'options': {
             'layer': 'VIIRS_SNPP_CorrectedReflectance_TrueColor',
+            'ambient_role': 'ground.imagery',
             'ext': 'jpg',
             'tilematrixset': 'GoogleMapsCompatible_Level9',
             'maxNativeZoom': 9
@@ -27,6 +29,7 @@ CHANNELS = {
         'name': _('Blue Marble (Precip)'),
         'options': {
             'layer': 'BlueMarble_NextGeneration',
+            'ambient_role': 'ground.imagery',
             'ext': 'jpg',
             'tilematrixset': 'GoogleMapsCompatible_Level8',
             'maxNativeZoom': 8
@@ -36,6 +39,7 @@ CHANNELS = {
         'name': _('Soil Moisture (SMAP)'),
         'options': {
             'layer': 'SMAP_L4_Analyzed_Root_Zone_Soil_Moisture',
+            'ambient_role': 'ground.field',
             'ext': 'png',
             'tilematrixset': 'GoogleMapsCompatible_Level6',
             'maxNativeZoom': 6,
@@ -47,6 +51,7 @@ CHANNELS = {
         'name': _('Vegetation Index (NDVI)'),
         'options': {
             'layer': 'MODIS_Terra_NDVI_8Day',
+            'ambient_role': 'ground.field',
             'ext': 'png',
             'tilematrixset': 'GoogleMapsCompatible_Level9',
             'maxNativeZoom': 9,
@@ -57,6 +62,7 @@ CHANNELS = {
         'name': _('Land Surface Temp (Day)'),
         'options': {
             'layer': 'MODIS_Terra_Land_Surface_Temp_Day',
+            'ambient_role': 'weather.field',
             'ext': 'png',
             'tilematrixset': 'GoogleMapsCompatible_Level7',
             'maxNativeZoom': 7,
@@ -85,6 +91,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'base',
+    'ambient_role': 'unknown',
     'custom_options': [
         {
             'id': 'active_channels',

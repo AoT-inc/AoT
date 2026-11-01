@@ -14,7 +14,6 @@ from ._shared import (  # noqa: F401 -- logging re-exported for plot_journal.log
     logging, logger, AVG_IS_TIME_WEIGHTED, CHANNEL_ZERO_ONLY, MAX_JOURNAL_ROWS,
     resolve_target_row,
 )
-from .mapview import irrigation_flow_for_plot
 
 # ── 상수 ────────────────────────────────────────────────────────────────────
 
@@ -1114,12 +1113,23 @@ def _merge_bucket_group(box, to):
                               'estimated': True,
                               'source': water.get('source')})
                 box['litres'] += float(water['litres'])
+                # 공급 한계를 반영한 행이면 설계값도 같이 접는다. 비율은 합에서 다시 낸다.
+                if 'design_litres' in water:
+                    box['supply_limited'] = True
+                box['design'] = box.get('design', 0.0) + float(
+                    water.get('design_litres', water['litres']))
     control_rows = []
     for key in ctrl_order:
         row = ctrl_acc[key]
         row['hours'] = round(row['hours'], 2)
         if row.get('water'):
-            row['water']['litres'] = round(row['water']['litres'], 1)
+            box = row['water']
+            box['litres'] = round(box['litres'], 1)
+            design = box.pop('design', 0.0)
+            if box.pop('supply_limited', False):
+                box['design_litres'] = round(design, 1)
+                box['delivered_ratio'] = (round(box['litres'] / design, 3)
+                                          if design > 0 else None)
         control_rows.append(row)
 
     notes = []
@@ -2231,7 +2241,7 @@ def env_rows_by_bucket(series, labels, tz=None, bucket_sec=3600,
 # @manual geo/journal#irrigation
 def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
                            granularity='day', bucket_sec=3600, labels=None,
-                           flows=None):
+                           water=None):
     """출력 장치 목록 → `({bucket_key: [control row, …]}, errors)`.
 
     `actuators` 는 `plot_context.actuators_for_plot()` 형태
@@ -2279,21 +2289,12 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
                 'seconds': int(secs),
                 'hours': round(secs / 3600.0, 2),
             }
-            # 설계 유량이 있으면 물량을 **추정**한다. 유량계 실측이 있으면
+            # 유량을 아는 장치면 물량을 **추정**한다. 유량계 실측이 있으면
             # 그쪽이 이기므로(env 행의 `usage`) 여기서는 늘 '추정' 이다.
-            flow = (flows or {}).get(oid)
-            if flow and flow.get('lph'):
-                litres = secs / 3600.0 * flow['lph'] * flow.get('share', 1.0)
-                row['water'] = {
-                    'litres': round(litres, 1),
-                    'share': flow.get('share', 1.0),
-                    'estimated': True,
-                    # 근거가 배관 도면인지 지도 장비인지 — 나누는 방식이
-                    # 아예 달라(동의 몫 · 구획 안 노즐) 문서 문장이 갈린다.
-                    # 여기서 안 실으면 조립부가 알 길이 없어 시설용 문장이
-                    # 노지 문서에 붙는다(실측으로 그랬다).
-                    'source': flow.get('source'),
-                }
+            # 값은 `water_net_link.PlotWater` 하나가 낸다 — 구획 [현황]과 같은 값이다.
+            cell = water.cell(oid, key, secs) if water is not None else None
+            if cell:
+                row['water'] = cell
             out[key].append(row)
         _pace(_t0)
         if not any(key in out for key in by_bucket):
@@ -2301,6 +2302,18 @@ def control_rows_by_bucket(actuators, start_str, end_str, tz,   # noqa: C901
     for key in out:
         out[key].sort(key=lambda r: str(r.get('name') or ''))
     return out, errors, silent
+
+
+def outputs_without_water(ctrl_rows, supply_outputs=()):
+    """물량 칸이 빈 장치 → set. 공급 부품에 연결된 Output(펌프 등)은 뺀다.
+
+    펌프는 물을 나르는 쪽이라 칸이 비는 것이 맞다. 그것을 "담당 영역이 없다" 고 말하면
+    거짓이 된다. 어느 Output 이 펌프인지는 부품 자리의 마커로 정한다 — 이름으로 맞히지 않는다.
+    """
+    with_water = {(c.get('output_id') or c.get('name'))
+                  for c in ctrl_rows if c.get('water')}
+    return ({(c.get('output_id') or c.get('name')) for c in ctrl_rows}
+            - with_water - set(supply_outputs))
 
 
 def stage_at(stages, on_day):
@@ -3129,13 +3142,15 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
                     journal_target_view(stage_targets) + photo_targets)
 
     # ── 제어(§4-4) ───────────────────────────────────────────────────────
-    # 설계 유량 — 시설 구획에만 있다(노지에는 배관 도면이라는 것이 없다).
-    flows = (irrigation_flow_for_plot(target_row)
-             if target_type == 'plot' else {})
+    # 물량 — 구획에만 있다. 설계 유량에 회로의 공급 한계를 반영한다.
+    from aot.utils import water_net_link
+    water = (water_net_link.plot_water(target_row, s_str, e_str, tz,
+                                       granularity=granularity, bucket_sec=bucket_sec)
+             if target_type == 'plot' else None)
 
     control_by_bucket, ctrl_errors, silent_outputs = control_rows_by_bucket(
         actuators, s_str, e_str, tz, granularity=granularity,
-        bucket_sec=bucket_sec, labels=labels, flows=flows)
+        bucket_sec=bucket_sec, labels=labels, water=water)
     errors.extend({'kind': 'control', **e} for e in ctrl_errors)
 
     # ── 노트(§5) ─────────────────────────────────────────────────────────
@@ -3241,11 +3256,8 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
         #   (Output 은 통신 방식만 알 뿐 의미 분류가 없다 — 아래
         #   `water-no-flow-basis` 와 같은 이유) — 그래서 "장치 하나가
         #   특별하다" 가 아니라 "이 열 자체의 한계" 로 말한다.
-        _with_water = {(c.get('output_id') or c.get('name'))
-                       for c in _ctrl_rows if c.get('water')}
-        _without_water = {(c.get('output_id') or c.get('name'))
-                          for c in _ctrl_rows} - _with_water
-        if _without_water:
+        if outputs_without_water(
+                _ctrl_rows, water.supply_outputs if water is not None else ()):
             caveats.append('water-partial-coverage')
     elif _ctrl_rows:
         # 물량 칸이 하나도 안 채워졌다. 화면은 그 열을 아예 내지 않고(§10),
@@ -3298,6 +3310,8 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
         caveats.append('partial-query-failures:%d' % len(errors))
     if unassigned_areas:
         caveats.append('unassigned-areas:%d' % unassigned_areas)
+    if water is not None:
+        caveats.extend(water.caveats)
 
     from aot.utils.timekit import utc_now
 

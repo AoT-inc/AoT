@@ -204,9 +204,9 @@ A sensor has no separate role name to pick. What you set on its row in the **Com
 | Field | Choices | Meaning |
 |-------|---------|---------|
 | **— Select channel —** | Measurement channels of Input and Function devices | You can tick several channels of one device (e.g. temperature and humidity of one probe). Ticking a channel on another device moves the whole sensor to that device. |
-| Measurement item | **— Auto —** · **Temperature** · **Humidity** · **CO2** · **VPD** · **Solar radiation** · **Wind speed** · **Wind direction** · **Precipitation** | **— Auto —** guesses the item from the channel; pick one by hand if the guess is wrong. |
+| Measurement item | **— Auto —** · **Temperature** · **Humidity** · **CO2** · **VPD** · **Solar radiation** · **Wind speed** · **Wind direction** · **Wind gust** · **Precipitation** | **— Auto —** guesses the item from the channel; pick one by hand if the guess is wrong. A gust channel named only "speed" (some stations report the peak gust that way) must be set to **Wind gust** by hand, or it is read as wind speed. |
 | Location | **Indoor** · **Outdoor** | Indoor sensors give the facility's indoor values (several are combined as a weighted average); outdoor sensors give the outside conditions. |
-| Priority (**Outdoor** only) | **Main sensor** · **Backup sensor** | A backup sensor is used only while the main sensor is silent; the two are not averaged. |
+| Priority (**Outdoor** only) | **Main sensor** · **Backup sensor** | A backup sensor is used only while the main sensor is silent; the two are not averaged. Within the same priority, a forecast-model input (Open-Meteo and the like) is not averaged with a measured sensor either — it fills in only what no measured sensor provides. For rainfall a fresh measured value always wins over a forecast, whatever the priority. |
 
 Ticking one channel of a device does not throw the rest away: the device's other channels are read as well, as long as a measurement item has exactly one candidate channel on that device — so a weather station bound only by its solar-radiation channel still supplies temperature, humidity, wind speed, wind direction and precipitation. Where one device reports the same item on several channels (a console sending six temperature channels), nothing is filled in automatically, because averaging readings from different places would be wrong; tick the channel you want. A channel you ticked yourself always wins, and an item already ticked on another sensor of the same **Location** is not pulled in a second time.
 
@@ -236,11 +236,32 @@ Every row that is not a sensor has an **Actuator** field (**— None —** or an
 3. In the **Components** table, pick the measurement channel for a sensor row with **— Select channel —** and set its measurement item and **Indoor**/**Outdoor**. For every other row, pick the actuator that drives it.
 4. Click **Save Facility**.
 
+### Weather Forecast Bindings { #weather-forecast-bindings }
+
+The facility's forecast values (used for pre-emptive control such as warming up before a cold night) come from the **Weather** tab under **Connections**. Each row ties one measurement item, such as **Temperature (°C)**, to one Input channel.
+
+To use an **Open-Meteo Hourly Forecast** Input, click **Fill recommended connections from Open-Meteo forecast Input**. The table is filled with one channel per measurement item:
+
+| Measurement item | Channel it fills in |
+|---|---|
+| Temperature | Temperature +3h |
+| Humidity | Window Max Humidity |
+| Wind speed | Window Max Wind |
+| Precipitation probability | Window Max Rain Probability |
+| Precipitation | Window Max Hourly Rain |
+| Solar radiation | Solar +1h |
+
+- Only one channel is filled per item, because several connections of the same item are averaged.
+- Each filled row is set to ignore values older than 1 hour (3600 s). A forecast Input refreshes every 30 minutes, so a value that missed two refreshes is no longer used.
+- The button only fills the table. Check the rows, then click **Save Facility**.
+- If you have more than one Open-Meteo hourly forecast Input, choose the one to use in the list next to the button. If none is active, the screen tells you to add one first.
+- A row of the same item that already uses this Input is updated in place (your own row name is kept). Rows that use another Input are left alone and are averaged with the new ones.
+
 ---
 
 ## Integration View { #integration-view }
 
-The `/api/geo/facility/<uuid>/integration` endpoint returns the current state of all sensors and actuators bound to a facility in a unified response. The AoT_facility widget's environment panel uses this API.
+The `/api/geo/facility/<uuid>/integration` endpoint returns the current state of all sensors and actuators bound to a facility in a unified response. The AoT_facility widget's environment panel uses this API. For fans, each actuator entry carries the rated airflow (`rated_m3h`) read from the actuator's Airflow spec or, when that is empty, from the airflow set on the fan fitting. Channels of an hourly forecast Input (**Open-Meteo Hourly Forecast**) are never filled in automatically for a sensor, and such an Input cannot be saved as a facility sensor at all — a value for a few hours ahead would be read as a present one. Connect forecasts in the **Weather** tab under **Connections** instead.
 
 ---
 

@@ -245,6 +245,135 @@ class TestReasonLabelsCoverEveryCode(unittest.TestCase):
                          '이름 없는 근거 코드가 있습니다')
 
 
+class TestNightDewFrostExposure(unittest.TestCase):
+    """밤 이슬 분·서리 분(2026-10-12) — 시설 몫의 노출이라 결함 카운트(`problems`)에 섞지 않고 권고만 낸다."""
+
+    @classmethod
+    def setUpClass(cls):
+        from aot.functions.utils.env_control import humid_regime as HR
+        ns = {'HR': HR}
+        tree = ast.parse(_source(_SCRIPT))
+        const_names = {'NIGHT_DEW_RH_PCT', 'NIGHT_DEW_MARGIN_C', 'EXPOSURE_STEP_S', 'EXPOSURE_DEW_MIN',
+                       'EXPOSURE_DEW_SHARE', 'EXPOSURE_FROST_MIN', 'EXPOSURE_FROST_PROTECT_MIN'}
+        fn_names = {'_bucket_means', '_merge_sensors', '_exposure_summary', '_exposure_advice'}
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id in const_names for t in node.targets):
+                exec(compile(ast.Module([node], []), _SCRIPT, 'exec'), ns)
+            elif isinstance(node, ast.FunctionDef) and node.name in fn_names:
+                exec(compile(ast.Module([node], []), _SCRIPT, 'exec'), ns)
+        cls.ns = ns
+        cls.summary = staticmethod(ns['_exposure_summary'])
+        cls.advice = staticmethod(ns['_exposure_advice'])
+        cls.merge = staticmethod(ns['_merge_sensors'])
+
+    @staticmethod
+    def _series(values, t0=0.0, step=300.0):
+        return [(t0 + i * step, float(v)) for i, v in enumerate(values)]
+
+    def test_no_overlap_is_none_not_zero(self):
+        self.assertIsNone(self.summary([], [], lambda t: True))
+        self.assertIsNone(self.summary([self._series([20.0])], [], lambda t: True))
+        # 온도와 습도가 서로 다른 시각에만 있으면 겹치는 격자가 없다
+        self.assertIsNone(self.summary([self._series([20.0], t0=0.0)],
+                                       [self._series([99.0], t0=10_000.0)], lambda t: True))
+
+    def test_night_dew_counts_high_rh_or_small_margin(self):
+        # 20 °C·RH 96 → 밤 이슬(RH ≥ 95) / 20 °C·RH 80 → 여유 3.6 °C(아님) /
+        # 30 °C·RH 94 → 여유 1.07 °C(아님 — 문턱 1 °C 바로 위) / 30 °C·RH 97 → 여유 0.6 °C(밤 이슬)
+        t = self._series([20.0] * 3 + [20.0] * 3 + [30.0] * 3 + [30.0] * 3)
+        rh = self._series([96.0] * 3 + [80.0] * 3 + [94.0] * 3 + [97.0] * 3)
+        out = self.summary([t], [rh], lambda e: True)
+        self.assertEqual(out['night_min'], 12 * 5.0)
+        self.assertEqual(out['night_dew_min'], 6 * 5.0)
+        self.assertTrue(out['night_known'])
+
+    def test_daytime_does_not_count_as_night_dew(self):
+        t = self._series([20.0] * 6)
+        rh = self._series([99.0] * 6)
+        out = self.summary([t], [rh], lambda e: False)
+        self.assertEqual((out['night_min'], out['night_dew_min']), (0.0, 0.0))
+        self.assertTrue(out['night_known'])
+
+    def test_unknown_night_is_not_zero_dew(self):
+        """좌표를 몰라 밤을 못 가르면 0 이 아니라 '못 셈' 이다."""
+        t = self._series([20.0] * 6)
+        rh = self._series([99.0] * 6)
+        out = self.summary([t], [rh], lambda e: None)
+        self.assertFalse(out['night_known'])
+        self.assertEqual(out['night_dew_min'], 0.0)
+
+    def test_frost_minutes_ignore_day_and_night(self):
+        t = self._series([3.0, 0.0, -1.0, -2.5, 0.5, 4.0])
+        rh = self._series([90.0] * 6)
+        out = self.summary([t], [rh], lambda e: False)
+        self.assertEqual(out['frost_min'], 3 * 5.0)             # 0.0 도 서리(≤ 0)
+        self.assertEqual(out['indoor_T_min'], -2.5)
+
+    def test_sensors_are_averaged_not_summed(self):
+        a = self._series([10.0, 10.0])
+        b = self._series([20.0, 20.0])
+        out = self.merge([a, b], 300.0)
+        self.assertEqual(list(out.values()), [15.0, 15.0])
+
+    def test_a_sensor_with_many_samples_does_not_outvote_a_sparse_one(self):
+        dense = [(i * 60.0, 10.0) for i in range(5)]            # 같은 5 분 격자에 5 표본
+        sparse = [(0.0, 20.0)]
+        out = self.merge([dense, sparse], 300.0)
+        self.assertEqual(out[0.0], 15.0)
+
+    def test_non_numeric_samples_are_skipped(self):
+        out = self.merge([[(0.0, 'x'), (60.0, None), (120.0, float('nan')), (180.0, 12.0)]], 300.0)
+        self.assertEqual(out, {0.0: 12.0})
+
+    def test_big_night_dew_recommends_dehumidifier_curtain_heating(self):
+        summ = {'night_min': 600.0, 'night_dew_min': 400.0, 'frost_min': 0.0,
+                'indoor_T_min': 18.0, 'night_known': True, 'covered_min': 1440.0}
+        lines = self.advice(summ, {'opening', 'fogger'})
+        self.assertEqual(len(lines), 1)
+        self.assertIn('제습기·보온커튼·난방 검토', lines[0])
+        self.assertIn('순환팬이 없습니다', lines[0])             # 순환팬이 없으면 그 말도 한다
+        with_fan = self.advice(summ, {'opening', 'circulation_fan'})
+        self.assertNotIn('순환팬이 없습니다', with_fan[0])
+
+    def test_small_or_short_dew_is_quiet(self):
+        base = {'night_min': 600.0, 'frost_min': 0.0, 'indoor_T_min': 18.0,
+                'night_known': True, 'covered_min': 1440.0}
+        self.assertEqual(self.advice({**base, 'night_dew_min': 30.0}, set()), [])        # 60 분 미만
+        self.assertEqual(self.advice({**base, 'night_dew_min': 100.0}, set()), [])       # 밤의 25 % 미만
+        self.assertEqual(self.advice(None, set()), [])
+
+    def test_frost_recommendation_mentions_missing_heater(self):
+        summ = {'night_min': 600.0, 'night_dew_min': 0.0, 'frost_min': 40.0,
+                'indoor_T_min': -2.0, 'night_known': True, 'covered_min': 1440.0}
+        lines = self.advice(summ, {'curtain'}, {'protect_min': 90.0})
+        self.assertEqual(len(lines), 1)
+        self.assertIn('보온커튼·난방 검토', lines[0])
+        self.assertIn('서리 보호 90분', lines[0])
+        self.assertIn('난방기가 없어', lines[0])
+        self.assertNotIn('난방기가 없어', self.advice(summ, {'heater'})[0])
+
+    def test_frost_protect_alone_triggers_even_if_sensors_saw_no_frost(self):
+        summ = {'night_min': 600.0, 'night_dew_min': 0.0, 'frost_min': 0.0,
+                'indoor_T_min': 3.0, 'night_known': True, 'covered_min': 1440.0}
+        self.assertEqual(self.advice(summ, {'heater'}, {'protect_min': 30.0}), [])
+        self.assertEqual(len(self.advice(summ, {'heater'}, {'protect_min': 60.0})), 1)
+
+    def test_exposure_is_a_facility_note_not_a_defect_count(self):
+        """권고는 `problems` 를 올리지 않는다 — 시설 몫이라 종료 코드를 바꾸지 않는다."""
+        src = _source(_SCRIPT)
+        i = src.index("ex = r.get('exposure')")
+        j = src.index("sp = r.get('suspected')")
+        block = src[i:j]
+        self.assertNotIn('problems', block)
+        self.assertIn("r.get('exposure_advice')", block)
+        self.assertNotIn("r.get('exposure')", src[src.index('return 1 if any('):])
+
+    def test_reason_59_is_labelled(self):
+        from aot.functions.utils.env_control import log_channels as lc
+        self.assertEqual(lc.REASON_NIGHT_DEW_FAN, 59)
+
+
 if __name__ == '__main__':
     unittest.main()
 
@@ -517,8 +646,17 @@ class TestMostlyGuardedIsNotPuzzling(TestActivityFlags):
 class TestFinalCommandsAreActuallyLogged(unittest.TestCase):
     """기록이 없으면 위 검사는 영원히 요청값 폴백으로 돈다."""
 
-    def test_the_cycle_logs_final_commands_after_the_overrides(self):
+    @staticmethod
+    def _run_cycle_src():
+        """`_run_cycle` 본문만 — 게이트 사이클의 기록(`_write_gate_final_commands`,
+        2026-10-10)도 같은 함수를 부르므로 파일 전체에서 첫 출현을 찾으면 그쪽을 본다."""
         src = _source(_CYCLE_MIXIN)
+        i = src.index('    def _run_cycle(')
+        j = src.index('\n    def ', i + 1)
+        return src[i:j]
+
+    def test_the_cycle_logs_final_commands_after_the_overrides(self):
+        src = self._run_cycle_src()
         i_override = src.index('apply_threshold_and_gate_overrides(\n')
         i_write = src.index('write_final_commands(')
         self.assertLess(
@@ -529,7 +667,7 @@ class TestFinalCommandsAreActuallyLogged(unittest.TestCase):
     def test_final_logging_is_not_behind_the_debug_flag(self):
         """`write_cycle_metrics` 와 달리 이 기록은 디버그 로깅과 무관해야 한다.
         장치가 왜 안 돌았는지는 기본 설치에서도 답할 수 있어야 한다."""
-        src = _source(_CYCLE_MIXIN)
+        src = self._run_cycle_src()
         i_write = src.index('write_final_commands(')
         # 디버그 분기(`if getattr(self, 'log_level_debug', False):`) 안이면
         # 한 단계 더 들여써져 12칸이 된다. 메서드 본문 직속은 8칸이다.
@@ -538,6 +676,19 @@ class TestFinalCommandsAreActuallyLogged(unittest.TestCase):
         self.assertEqual(len(line) - len(line.lstrip()), 8,
                          '디버그 분기 안으로 들어가 있습니다 — 기본 설치에서 '
                          '최종 명령 기록이 통째로 사라집니다')
+
+
+    def test_gate_cycles_log_final_commands_too(self):
+        """게이트가 선 사이클도 최종 명령을 남긴다(2026-10-10 구마모토 — 강우 게이트
+        5시간 동안 CH100+ 가 통째로 비어 그 시각의 창을 로그로 설명할 수 없었다)."""
+        src = _source(_CYCLE_MIXIN)
+        i = src.index('    def _act_on_triggered_gate(')
+        j = src.index('\n    def ', i + 1)
+        self.assertIn('self._write_gate_final_commands(', src[i:j])
+        k = src.index('    def _write_gate_final_commands(')
+        body = src[k:src.index('\n    def ', k + 1)]
+        self.assertIn('write_final_commands(', body)
+        self.assertNotIn('log_level_debug', body)
 
 
 class TestShadowAliveCheck(unittest.TestCase):
@@ -580,3 +731,219 @@ class TestShadowAliveCheck(unittest.TestCase):
         src = _source(_SCRIPT)
         self.assertIn("'greybox_records'", src)
         self.assertIn("_check_shadow_alive(", src)
+
+
+class TestHeatProtectSummary(unittest.TestCase):
+    """극한 고온 보호(CH75·76) 요약 — 활성 분·단계 전환·플래그."""
+
+    def setUp(self):
+        self.fn = _load_helpers('_heat_protect_summary')['_heat_protect_summary']
+        self.t0 = datetime(2026, 7, 20, 3, 0, tzinfo=timezone.utc)
+        self.labels = [(1, '환기 가능'), (2, '바깥이 더 더움'), (64, '차광 전개')]
+
+    def _series(self, values, step=60):
+        return [(self.t0 + timedelta(seconds=i * step), float(v))
+                for i, v in enumerate(values)]
+
+    def test_no_records_is_not_zero(self):
+        """기록이 없는 것과 보호가 0 분이었던 것은 다르다."""
+        self.assertIsNone(self.fn([], [], self.labels, 24))
+
+    def test_active_minutes_and_transitions(self):
+        tiers = self._series([0] * 10 + [1] * 30 + [2] * 5 + [1] * 5 + [0] * 10)
+        out = self.fn(tiers, [], self.labels, 1)
+        self.assertAlmostEqual(out['active_min'], 40.0)
+        self.assertAlmostEqual(out['tier2_min'], 5.0)
+        self.assertEqual(out['transitions'], 4)          # 0→1, 1→2, 2→1, 1→0
+        self.assertEqual([(a, b) for _t, a, b in out['transition_times']],
+                         [(0, 1), (1, 2), (2, 1), (1, 0)])
+
+    def test_a_missing_stretch_is_not_counted_as_protection(self):
+        """사이클이 빠진 공백(재시작)은 보호 중으로 부풀리지 않는다."""
+        tiers = self._series([1] * 5)
+        tiers.append((tiers[-1][0] + timedelta(hours=3), 1.0))
+        out = self.fn(tiers, [], self.labels, 4)
+        self.assertLess(out['active_min'], 10.0)
+
+    def test_flags_are_counted_by_label(self):
+        flags = self._series([1 | 64, 2 | 64, 2])
+        out = self.fn(self._series([1, 1, 1]), flags, self.labels, 1)
+        self.assertEqual(out['flags'], {'환기 가능': 1, '바깥이 더 더움': 2,
+                                        '차광 전개': 2})
+
+    def test_flag_labels_reference_the_module_constants(self):
+        src = _source(_SCRIPT)
+        self.assertIn('HP.HP_FLAG_HOT_OUTSIDE', src)
+        self.assertIn("measurement == 'heat_protect_tier'", src)
+
+
+class TestSensorStatusSummary(unittest.TestCase):
+    """센서 상태(CH80~91)를 접는 헬퍼 — 기록 없음을 0 으로 말하지 않는다."""
+
+    @classmethod
+    def setUpClass(cls):
+        from collections import Counter
+        from aot.functions.utils.env_control import log_channels as LC
+        from aot.functions.utils.env_control import sensor_status as SS
+        src = _source(_SCRIPT)
+        env = {'LC': LC, 'SS': SS, 'Counter': Counter,
+               'STATUS_NAME': {c: n for n, c in SS.STATUS_CODES.items()},
+               'VPD_SOURCE_NAME': {c: n for n, c in SS.VPD_SOURCE_CODES.items()}}
+        for node in ast.parse(src).body:
+            if isinstance(node, ast.FunctionDef) and node.name == '_summarize_sensor_status':
+                exec(compile(ast.Module([node], []), _SCRIPT, 'exec'), env)
+        cls.fn = staticmethod(env['_summarize_sensor_status'])
+        cls.LC, cls.SS = LC, SS
+
+    def _series(self, values):
+        t0 = datetime(2026, 10, 1, tzinfo=timezone.utc)
+        return [(t0 + timedelta(minutes=i), float(v)) for i, v in enumerate(values)]
+
+    def test_기록이_없으면_None_이다(self):
+        self.assertIsNone(self.fn({}))
+
+    def test_valid_만_있는_축은_조용하다(self):
+        by = {self.LC.ch_sensor_status('T'): self._series([0, 0, 0])}
+        out = self.fn(by)
+        self.assertEqual(out['axes'], {})
+        self.assertEqual(out['records'], 3)
+
+    def test_범위밖은_따로_센다(self):
+        by = {self.LC.ch_sensor_status('RH'): self._series([0, 4, 4, 1]),
+              self.LC.CH_VPD_SOURCE: self._series([1, 1, 2, 1]),
+              self.LC.CH_VPD_DEVICE_DIFF: self._series([-0.2, -0.1])}
+        out = self.fn(by)
+        self.assertEqual(out['axes']['RH'], {'valid': 1, 'out_of_range': 2, 'stale': 1})
+        self.assertEqual(out['out_of_range'], {'RH': 2})
+        self.assertEqual(out['vpd_source'], {'computed': 3, 'device': 1})
+        self.assertAlmostEqual(out['vpd_device_diff_mean'], -0.15)
+        self.assertAlmostEqual(out['vpd_device_diff_max_abs'], 0.2)
+
+    def test_멈춘_센서는_코드_5_이고_라벨은_frozen_이다(self):
+        """CH80~89 의 5 는 `frozen` 으로 읽히고 out_of_range 와 따로 센다."""
+        self.assertEqual(self.SS.STATUS_CODES[self.SS.FROZEN], 5)
+        by = {self.LC.ch_sensor_status('T'): self._series([0, 5, 5, 5, 0]),
+              self.LC.ch_sensor_status('RH'): self._series([0, 4, 5])}
+        out = self.fn(by)
+        self.assertEqual(out['axes']['T'], {'valid': 2, 'frozen': 3})
+        self.assertEqual(out['frozen'], {'T': 3, 'RH': 1})
+        self.assertEqual(out['out_of_range'], {'RH': 1})
+        self.assertNotIn('코드 5', str(out['axes']))
+
+    def test_멈춘_센서는_볼_것으로_올라간다(self):
+        src = _source(_SCRIPT)
+        self.assertIn("if sst['frozen']:", src)
+        self.assertIn("SS.FROZEN", src)
+
+
+class TestWaterAndSuspectSummaries(unittest.TestCase):
+    """분무용 물 공급(CH92)·의심 액추에이터(CH93) 요약 — 분 단위, 기록 없음 ≠ 0."""
+
+    def setUp(self):
+        from aot.functions.utils.env_control import water_supply as WS
+        self.ns = _load_helpers('_state_minutes', '_water_summary', '_suspect_summary')
+        self.ns['WS'] = WS
+        self.WS = WS
+        self.t0 = datetime(2026, 7, 20, 3, 0, tzinfo=timezone.utc)
+
+    def _series(self, values, step=60):
+        return [(self.t0 + timedelta(seconds=i * step), float(v))
+                for i, v in enumerate(values)]
+
+    def test_water_without_records_is_none_not_zero(self):
+        """옵션을 켜지 않은 코디네이터는 CH92 를 남기지 않는다."""
+        self.assertIsNone(self.ns['_water_summary']([]))
+
+    def test_water_minutes_by_state(self):
+        ws = self.WS
+        out = self.ns['_water_summary'](self._series(
+            [ws.WATER_OK] * 10 + [ws.WATER_LOW] * 5 + [ws.WATER_STALE] * 3
+            + [ws.WATER_OK] * 2))
+        self.assertAlmostEqual(out['ok_min'], 12.0)
+        self.assertAlmostEqual(out['low_min'], 5.0)
+        self.assertAlmostEqual(out['stale_min'], 3.0)
+
+    def test_a_restart_gap_is_not_counted_as_a_state(self):
+        series = self._series([self.WS.WATER_LOW] * 4)
+        series.append((series[-1][0] + timedelta(hours=5), float(self.WS.WATER_LOW)))
+        out = self.ns['_water_summary'](series)
+        self.assertLess(out['low_min'], 10.0)
+
+    def test_no_suspect_records_means_none(self):
+        """CH93 은 의심이 있을 때만 남는다 — 기록이 없다는 것이 곧 의심이 없었다는 뜻이다."""
+        self.assertIsNone(self.ns['_suspect_summary']([]))
+
+    def test_suspect_minutes_and_peak(self):
+        out = self.ns['_suspect_summary'](self._series([1, 1, 2, 2, 1, 0]))
+        self.assertAlmostEqual(out['held_min'], 5.0)      # 마지막 0 은 종료 표식
+        self.assertEqual(out['max_count'], 2)
+
+    def test_summaries_are_wired_into_analyse_and_the_exit_code(self):
+        src = _source(_SCRIPT)
+        self.assertIn("measurement == 'water_supply_state'", src)
+        self.assertIn("measurement == 'actuator_suspect_count'", src)
+        self.assertIn("'suspected': _suspect_summary(suspect_state)", src)
+        self.assertIn("(r.get('suspected') or {}).get('max_count')", src)
+
+    def test_vpd_basis_minutes_and_wiring(self):
+        """CH94 — 잎 기준인데 엽온 없이 공기로 돈 시간은 볼 것이다(`leaf_vpd`)."""
+        from aot.functions.utils.env_control import leaf_vpd as LV
+        ns = _load_helpers('_state_minutes', '_vpd_basis_summary')
+        ns['LV'] = LV
+        self.assertIsNone(ns['_vpd_basis_summary']([]))
+        out = ns['_vpd_basis_summary'](self._series(
+            [LV.TARGET_LEAF] * 6 + [LV.TARGET_LEAF_FALLBACK] * 3 + [LV.TARGET_LEAF]))
+        self.assertAlmostEqual(out['leaf_min'], 7.0)
+        self.assertAlmostEqual(out['leaf_fallback_min'], 3.0)
+        src = _source(_SCRIPT)
+        self.assertIn("measurement == 'vpd_target_basis'", src)
+        self.assertIn("(r.get('vpd_basis') or {}).get('leaf_fallback_min')", src)
+
+    def test_the_two_new_reason_codes_are_labelled_from_the_constants(self):
+        src = _source(_SCRIPT)
+        self.assertIn("LC.REASON_NO_WATER:", src)
+        self.assertIn("LC.REASON_ACTUATOR_SUSPECT:", src)
+
+
+class TestVentAzimuthCheck(unittest.TestCase):
+    """풍향 센서는 있는데 개구부 방위각이 없으면 강풍 1단계가 풍향별로 못 가른다(2026-10-10).
+
+    김제 측창 둘이 그 상태였고 화면도 로그도 조용했다 — 설정 점검이 말해야 한다.
+    """
+
+    def _run(self, outdoor, shapes):
+        from unittest import mock
+        import aot.aot_flask.geo.facility_integration as fi
+        import aot.aot_flask.geo.device_binding as db
+        ns = _load_helpers('_check_vent_azimuth')
+        integ = {'sensors_outdoor': [{'input_uuid': 'wx', 'measurement_type': m}
+                                     for m in outdoor],
+                 'actuators_resolved': [
+                     {'output_uuid': 'o-right', 'output_name': '측창 우', 'kind': 'opening'},
+                     {'output_uuid': 'o-left', 'output_name': '측창 좌', 'kind': 'opening'},
+                     {'output_uuid': 'o-fog', 'output_name': '분무', 'kind': 'fogger'}]}
+        with mock.patch.object(fi, 'get_facility_integration', lambda uid: (integ, None)), \
+                mock.patch.object(db, 'shapes_for_devices', lambda ids: shapes):
+            return ns['_check_vent_azimuth']('fac')
+
+    def test_방위각_없는_개구부를_말한다(self):
+        out = self._run(['wind_speed', 'wind_direction'], {})
+        self.assertEqual(len(out), 1)
+        level, msg = out[0]
+        self.assertEqual(level, 'warn')
+        self.assertTrue(msg.startswith('측창 방위각 미설정 — 풍향별 닫기를 못 함'))
+        self.assertIn('측창 우', msg)
+        self.assertIn('측창 좌', msg)
+        self.assertNotIn('분무', msg)
+
+    def test_풍향_센서가_없으면_말하지_않는다(self):
+        self.assertEqual(self._run(['wind_speed'], {}), [])
+
+    def test_도형에서_방위각이_나오면_말하지_않는다(self):
+        import types
+        line = {'type': 'Feature', 'geometry': {
+            'type': 'LineString', 'coordinates': [[127.0, 36.0], [127.0005, 36.0]]},
+            'properties': {}}
+        shp = types.SimpleNamespace(feature=line)
+        out = self._run(['wind_direction'], {'o-right': [shp], 'o-left': [shp]})
+        self.assertEqual(out, [])

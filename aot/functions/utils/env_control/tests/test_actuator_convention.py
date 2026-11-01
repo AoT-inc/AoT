@@ -76,15 +76,21 @@ class TestSafetyGateOpennessConvention:
         return {'external': e, 'internal': {'T': e['T']}, 'now_ts': 0,
                 'last_ext_ts': 0, 'last_int_ts': 0}
 
-    def test_heat_deploys_shade_closed(self):
-        """폭염: 차광막을 닫아(0%) 햇빛 차단 (과거 100=열림은 반대였음)."""
-        cfg = PreGateConfig(heat_ext_threshold=40.0, heat_int_threshold=35.0)
-        gate = SafetyPreGate(cfg)
-        env = self._gate_env(T=42.0)
-        env['internal'] = {'T': 38.0, 'T_max': 38.0}
-        res = gate.evaluate(env, self._profiles(), '')
-        assert res.forced_commands['shade']['value'] == pytest.approx(0.0)   # 닫힘=차광
-        assert res.forced_commands['vent']['value'] == pytest.approx(100.0)  # 열림=환기
+    def test_heat_protection_deploys_shade_closed(self):
+        """극한 고온 보호: 차광막을 닫아(0%) 햇빛 차단, 창은 열림=100 (과거 100=열림은 반대였음).
+
+        2026-10-09 전에는 폭염 비상 게이트가 같은 규약으로 강제했다 — 그 게이트는
+        없앴고 같은 규약을 `heat_protect` 의 direct 오버라이드가 쓴다.
+        """
+        from aot.functions.utils.env_control.heat_protect import (
+            HeatProtectDecision, apply_heat_protect_overrides)
+        dec = HeatProtectDecision(tier=1, vent_open_ok=True,
+                                  vent_open_ids=frozenset({'vent'}),
+                                  shade_deploy=True)
+        cmds = {}
+        apply_heat_protect_overrides(dec, self._profiles(), cmds, mode='direct')
+        assert cmds['shade']['value'] == pytest.approx(0.0)   # 닫힘=차광
+        assert cmds['vent']['value'] == pytest.approx(100.0)  # 열림=환기
 
     def test_cold_deploys_curtain_closed(self):
         """한파: 보온커튼을 닫아(0%) 단열 (과거 100=열림은 반대였음)."""

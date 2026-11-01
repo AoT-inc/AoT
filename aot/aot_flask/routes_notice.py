@@ -1,15 +1,13 @@
 # coding=utf-8
 """collection of Notice board endpoints."""
-import ipaddress
 import logging
 import mimetypes
 import os
-import socket
+import threading
 from functools import lru_cache
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import flask_login
-import requests
 from bs4 import BeautifulSoup
 from flask import (Blueprint, current_app, flash, jsonify, redirect,
                     render_template, request, send_file, url_for)
@@ -27,10 +25,8 @@ from aot.utils.time_utils import utc_now
 
 logger = logging.getLogger('aot.aot_flask.routes_notice')
 
-LINK_PREVIEW_USER_AGENT = 'Mozilla/5.0 (compatible; AoTNoticeBot/1.0)'
-LINK_PREVIEW_FETCH_TIMEOUT = 5
+LINK_PREVIEW_TOTAL_SECONDS = 8
 LINK_PREVIEW_MAX_BYTES = 200_000
-LINK_PREVIEW_MAX_REDIRECTS = 3
 
 blueprint = Blueprint('routes_notice',
                        __name__,
@@ -204,16 +200,35 @@ def page_notice_edit(unique_id):
                             is_admin=utils_general.user_is_admin())
 
 
+#: 공지 첨부로 서빙하지 않는 능동 콘텐츠 — 올릴 수 없는 형식이지만(허용 목록 밖) 혹시 폴더에
+#: 들어와 있어도 화면에 그리지 않고 내려받게만 한다.
+_ACTIVE_ATTACHMENT_EXTS = frozenset({'html', 'htm', 'xhtml', 'svg', 'xml', 'js', 'mjs'})
+
+
 @blueprint.route('/notice_attachment/<path:filename>')
 @flask_login.login_required
 def send_notice_attachment(filename):
-    """Return a file from the notice attachment directory."""
-    file_path = os.path.join(PATH_NOTICE_ATTACHMENTS, filename)
-    if not os.path.exists(file_path):
+    """Return a file from the notice attachment directory.
+
+    P2 보강: 요청 값을 그대로 이어 붙이지 않고 realpath 로 풀어 첨부 폴더 **안의 파일**
+    인지(commonpath) 확인한다 — `..`·절대경로·심볼릭 링크로 폴더 밖을 가리키면 404.
+    응답에는 nosniff 를 건다(확장자로 정한 MIME 을 브라우저가 바꾸지 못하게)."""
+    root = os.path.realpath(PATH_NOTICE_ATTACHMENTS)
+    try:
+        file_path = os.path.realpath(os.path.join(root, filename))
+        inside = os.path.commonpath([file_path, root]) == root
+        is_file = inside and file_path != root and os.path.isfile(file_path)
+    except ValueError:                 # NUL 문자 등
+        is_file = False
+    if not is_file:
         return "File not found", 404
     try:
         mime_type, _enc = mimetypes.guess_type(file_path)
-        return send_file(file_path, mimetype=mime_type)
+        ext = file_path.rsplit('.', 1)[-1].lower() if '.' in file_path else ''
+        resp = send_file(file_path, mimetype=mime_type,
+                         as_attachment=ext in _ACTIVE_ATTACHMENT_EXTS)
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        return resp
     except Exception:
         logger.exception("Send notice attachment failed")
         return "Internal error", 500
@@ -353,61 +368,42 @@ def api_notice_delete(unique_id):
     return jsonify({'ok': True})
 
 
-def _is_public_http_url(url):
-    """Reject anything that isn't a plain http(s) URL resolving to a public
-    address, to keep the link-preview fetch from being used as an SSRF probe
-    against internal services (localhost, Docker/LAN ranges, cloud metadata, etc.)."""
+#: 미리보기 실패는 이유를 가리지 않고 이 한 가지로만 답한다(차단·연결 실패·시간 초과를 구분하면
+#: 내부망 존재를 알아내는 오라클이 된다). 상태 코드도 항상 200 이다.
+_PREVIEW_UNAVAILABLE = {'error': 'Preview unavailable'}
+#: 동시에 외부로 나가는 미리보기 수 — 공지 한 장에 링크가 많아도 웹 스레드를 다 쥐지 못하게 한다.
+_PREVIEW_SLOTS = threading.BoundedSemaphore(3)
+
+
+class _PreviewUnavailable(Exception):
+    pass
+
+
+def _fetch_link_preview(url):
+    """링크 미리보기(제목·설명·og:image). 성공한 것만 캐시하고, 실패는 일반 응답을 돌려준다."""
     try:
-        parsed = urlparse(url)
-        if parsed.scheme not in ('http', 'https') or not parsed.hostname:
-            return False
-        for info in socket.getaddrinfo(parsed.hostname, None):
-            ip = ipaddress.ip_address(info[4][0])
-            if (ip.is_private or ip.is_loopback or ip.is_link_local or
-                    ip.is_reserved or ip.is_multicast or ip.is_unspecified):
-                return False
-        return True
-    except Exception:
-        return False
-
-
-def _resolve_safe_redirect_chain(url):
-    """Follow redirects with HEAD requests, re-validating each hop against
-    _is_public_http_url so a safe URL can't redirect to an internal address.
-    Returns the final URL to GET, or None if unsafe/unreachable."""
-    for _ in range(LINK_PREVIEW_MAX_REDIRECTS + 1):
-        if not _is_public_http_url(url):
-            return None
-        try:
-            resp = requests.head(
-                url, timeout=LINK_PREVIEW_FETCH_TIMEOUT, allow_redirects=False,
-                headers={'User-Agent': LINK_PREVIEW_USER_AGENT})
-        except requests.RequestException:
-            return url  # Some servers reject HEAD; try the GET directly.
-        if resp.status_code in (301, 302, 303, 307, 308) and resp.headers.get('Location'):
-            url = requests.compat.urljoin(url, resp.headers['Location'])
-            continue
-        return url
-    return None
+        return _cached_link_preview(url)
+    except _PreviewUnavailable:
+        return dict(_PREVIEW_UNAVAILABLE)
 
 
 @lru_cache(maxsize=256)
-def _fetch_link_preview(url):
-    """Fetch and parse Open Graph / basic <title>/<meta> data for a URL.
-    Cached for the process lifetime (link content is effectively static for
-    preview purposes, and this keeps repeat post views from re-fetching)."""
-    safe_url = _resolve_safe_redirect_chain(url)
-    if not safe_url:
-        return {'error': 'Invalid or unsafe URL'}
+def _cached_link_preview(url):
+    """Open Graph / <title> / <meta> 를 가져와 파싱한다. 실패는 예외라 캐시되지 않는다.
 
+    SSRF 방어는 전부 aot.utils.ai_card_fetch.fetch_public 이 한다(https 만, 해석된 모든 주소가 공인,
+    검증한 IP 로 직접 연결해 리바인딩 차단, 리다이렉트는 수동 3회·홉마다 재검증, 프록시 환경변수
+    무시, 크기·총 시간 상한). 여기서 requests 를 쓰지 않는다."""
+    from aot.utils import ai_card_fetch
+    if not _PREVIEW_SLOTS.acquire(blocking=False):
+        raise _PreviewUnavailable()
     try:
-        resp = requests.get(
-            safe_url, timeout=LINK_PREVIEW_FETCH_TIMEOUT, stream=True,
-            headers={'User-Agent': LINK_PREVIEW_USER_AGENT})
-        content = resp.raw.read(LINK_PREVIEW_MAX_BYTES, decode_content=True)
-        resp.close()
-    except requests.RequestException:
-        return {'error': 'Fetch failed'}
+        content, safe_url = ai_card_fetch.fetch_public(
+            url, LINK_PREVIEW_MAX_BYTES, truncate=True, total_s=LINK_PREVIEW_TOTAL_SECONDS)
+    except ai_card_fetch.FetchError:
+        raise _PreviewUnavailable() from None
+    finally:
+        _PREVIEW_SLOTS.release()
 
     title = description = image = None
     try:
@@ -432,17 +428,40 @@ def _fetch_link_preview(url):
     return {
         'title': (title or domain)[:200],
         'description': (description or '')[:300] or None,
-        'image': image,
+        'image': _safe_preview_image(safe_url, image),
         'domain': domain,
     }
+
+
+_fetch_link_preview.cache_clear = _cached_link_preview.cache_clear     # 테스트·운영 도구 호환
+
+#: og:image 로 받아 줄 수 없는 글자 — 따옴표·꺾쇠·공백이 있으면 화면의 <img src="…"> 속성을
+#: 벗어날 수 있다(2026-10-19 P2 보안 리뷰: 남의 페이지 og:image 가 공지 화면에 onerror 를 심음).
+_PREVIEW_IMAGE_BAD = frozenset('"\'<>`\\ \t\r\n\f\v')
+
+
+def _safe_preview_image(page_url, image):
+    """og:image 값을 페이지 주소 기준 절대 http(s) 주소로 바꾼다. 그 밖의 모양·위험 글자는 None."""
+    if not image or not isinstance(image, str):
+        return None
+    try:
+        absolute = urljoin(page_url, image.strip())
+        parsed = urlparse(absolute)
+    except Exception:
+        return None
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc or len(absolute) > 2048:
+        return None
+    if any(ch in _PREVIEW_IMAGE_BAD for ch in absolute):
+        return None
+    return absolute
 
 
 @blueprint.route('/notice/api/link_preview', methods=['GET'])
 @flask_login.login_required
 def api_notice_link_preview():
     url = (request.args.get('url') or '').strip()
-    if not url or not _is_public_http_url(url):
-        return jsonify({'error': 'Invalid or unsafe URL'}), 400
+    if not url:
+        return jsonify(dict(_PREVIEW_UNAVAILABLE))
     return jsonify(_fetch_link_preview(url))
 
 

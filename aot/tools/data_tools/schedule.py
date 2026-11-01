@@ -154,7 +154,7 @@ class ScheduleToolsMixin:
                 result["target_id"] = target_id
                 result["target_type"] = target_type
             else:
-                result["attached"] = False
+                result["no_location"] = True
                 result["note_hint"] = ("위치 미지정 — 특정 구역/시설에 표시되지 않는 "
                                        "농장 전체 일정입니다.")
             return result
@@ -217,7 +217,7 @@ class ScheduleToolsMixin:
             return True
         if r[1] == 'ambiguous':
             try:
-                cands = cls._describe_places(d['places'], d['devices'])
+                cands = cls._describe_places(d['places'], d['devices'], d.get('plots', ()))
             except Exception:
                 cands = []
             return any(c.get('target_id') == tid for c in cands)
@@ -589,15 +589,15 @@ class ScheduleToolsMixin:
             else:
                 return {"error": "You must provide one of: scheduled_time, delay_seconds, solar_event.", "dispatched": False}
 
-            # 3. 시간 변환 — duration_seconds 지원
-            if duration_seconds is not None:
-                _duration_minutes = max(1, int(duration_seconds) // 60)
-            elif duration_minutes is not None:
-                _duration_minutes = int(duration_minutes)
-            else:
-                _duration_minutes = 5  # default
-
-            duration_sec = _duration_minutes * 60
+            # 3. 가동 시간 — 초 단위로 정확히 둔다. 분을 정수로 깎으면 0.5분이 0분이 되어
+            # 실행 때 타이머 없이 켜진다(2026-10-30). 숫자가 아니거나 0 이하면 등록하지 않는다.
+            from aot.outputs.command_forms import parse_run_seconds, run_time_text
+            duration_sec, _run_err = parse_run_seconds(duration_seconds, duration_minutes)
+            if _run_err:
+                return {"error": _run_err, "dispatched": False}
+            if duration_sec is None:
+                duration_sec = 5 * 60  # default
+            _run_text = run_time_text(duration_sec)
 
             # scheduled_dt is UTC-aware — display in the DEVICE'S OWN location tz
             # (every Output resolves its tz from coordinates, see device_tz.py),
@@ -613,7 +613,8 @@ class ScheduleToolsMixin:
             meta = scheduler.propose_job(
                 action_type='control_output',
                 target_id=output.unique_id,
-                params={'state': state, 'duration_minutes': _duration_minutes},
+                params={'state': state, 'duration_seconds': duration_sec,
+                        'duration_minutes': round(duration_sec / 60.0, 4)},
                 reasoning=f"User request: {output.name} {state} at {_display_dt.strftime('%H:%M')}",
                 schedule_time=scheduled_dt,
                 duration_sec=duration_sec,
@@ -636,7 +637,8 @@ class ScheduleToolsMixin:
             logger.info(f"[AI Schedule] Registered APScheduler job: {output.name} {state} at {scheduled_dt} (meta_id={meta.id if hasattr(meta, 'id') else meta})")
             return {
                 "status": "success",
-                "message": f"Scheduled {output.name} to {state} at {_display_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {_duration_minutes} min)",
+                "message": f"Scheduled {output.name} to {state} at {_display_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {_run_text})",
+                "duration_seconds": duration_sec,
                 "scheduler_job_id": meta.id if hasattr(meta, 'id') else str(meta),
             }
         except Exception as e:
@@ -724,8 +726,13 @@ class ScheduleToolsMixin:
             # {state, duration_minutes}) — falling back to the raw internal
             # `reasoning` log line ("User request: Valve1 on at 16:00") read as
             # a debug message, not a summary, once this became user-facing.
-            dur = params.get('duration_minutes')
-            content = f"{str(params['state']).capitalize()}" + (f" ({dur}min)" if dur else "")
+            dur = params.get('duration_seconds')
+            if dur:
+                from aot.outputs.command_forms import run_time_text
+                dur = run_time_text(dur)
+            elif params.get('duration_minutes'):
+                dur = f"{params['duration_minutes']}min"
+            content = f"{str(params['state']).capitalize()}" + (f" ({dur})" if dur else "")
         content = content or meta.reasoning or meta.action_type
 
         # Display the wall-clock in the schedule's anchor tz (device-local by

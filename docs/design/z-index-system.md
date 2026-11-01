@@ -28,16 +28,19 @@ UI를 올릴 때 "무슨 값을 줘야 위에 뜨나"를 매번 추측하지 않
 | `--aot-z-map-overlay` | 400 | 지도/캔버스 위 떠있는 컨트롤·패널 | 지도 툴 버튼, 커스텀 컨트롤 |
 | `--aot-z-dropdown` | 1000 | 메뉴·selectpicker·자동완성 | bootstrap-select, 컬러피커 |
 | `--aot-z-drawer` | 1500 | 슬라이드 사이드바·드로어 | geo 헤더/사이드 |
-| `--aot-z-fixed-panel` | 2000 | 고정 떠있는 툴 팔레트 | geo 디자인 툴 패널 |
+| `--aot-z-fixed-panel` | 2000 | 고정 떠있는 툴 팔레트 | geo 디자인 툴 패널, AI 버튼 `#ai-fab` |
 | `--aot-z-navbar` | 3000 | 상단 내비게이션 바 | `.navbar.main-navbar` |
 | `--aot-z-overlay` | 4000 | 전체화면 오버레이 | 지도 풀스크린, 노트 갤러리, 로딩 |
+| `--aot-z-ai-dock` | 4001 | 하단 AI 창구 — 전체화면 오버레이 바로 위, 모달 배경 아래 (지도 풀스크린에 가리지 않는다) | `#aot-ai-dock` (`calc(var(--aot-z-overlay) + 1)`) |
 | `--aot-z-modal-backdrop` | 5000 | 모달 배경 | `.modal-backdrop` |
 | `--aot-z-modal` | 5100 | 다이얼로그 | `.modal`, 센서값 모달 |
 | `--aot-z-modal-nested` | 5200 | 모달 안에서 밖으로 튀어나오는 드롭다운/select | 모달 내 selectpicker, gridstack fs |
 | `--aot-z-popover` | 5300 | 모달 콘텐츠에 앵커된 팝오버 | 모달 내 팝오버 |
 | `--aot-z-confirm-backdrop` | 5900 | 전역 confirm 배경(일반 모달 위) | `#aotConfirmBackdrop` |
 | `--aot-z-confirm` | 6000 | 전역 confirm 다이얼로그 | `#aotConfirmModal` |
-| `--aot-z-toast` | 6500 | 토스트·알림 (모달 위) | `#toast-container` |
+| `--aot-z-toast` | 6500 | 토스트·알림 (모달 위) | `#toast-container` (toastr 의 999999 를 `aot-ai-caption.css` 가 이 토큰으로 내린다) |
+| `--aot-z-ai-caption` | 6501 | AI 자막·수신함 (토스트 바로 위, 툴팁 아래) | `#aot-ai-caption-root`, `#aot-ai-inbox` |
+| `--aot-z-ai-viewer` | 6502 | AI 카드 이미지·파일 뷰어 (자막·수신함 위, 툴팁 아래) | `#aot-ai-viewer` 와 뒤 배경 `.aot-ai-viewer__scrim` (`calc(var(--aot-z-ai-caption) + 1)`), 'AI 설정' 모달 `.aot-ai-set`·승인 대기 모달 `.aot-ai-appr` 과 뒤 배경 `.aot-ai-set__scrim`·`.aot-ai-appr__scrim` |
 | `--aot-z-tooltip` | 7000 | 툴팁 — 항상 최상위 | `.tooltip` |
 
 값 사이 간격이 넓은 것은 의도적이다. 같은 계층에서 미세하게 순서를 조정해야 하면

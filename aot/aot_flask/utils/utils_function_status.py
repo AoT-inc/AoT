@@ -31,6 +31,7 @@ _MODE_LABELS = {
     'cooling': lg('Cooling'), 'heating': lg('Heating'), 'humidify': lg('Humidify'),
     'dehumidify': lg('Dehumidify'), 'co2_enrich': lg('CO2 Enrichment'),
     'conservation': lg('Conservation'), 'emergency': lg('Emergency'),
+    'heat_protect': lg('Heat Protection'),
     'degraded': lg('Partial Control'), 'natural': lg('Natural Ventilation'),
     'unattainable': lg('Target Unattainable'),
 }

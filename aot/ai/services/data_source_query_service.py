@@ -108,6 +108,22 @@ def _sources():
     return out
 
 
+def source_api_key(source_id):
+    """그 소스에 저장된 API 키(없으면 ''). 예보 도구가 상업 호스트 판정에 쓴다."""
+    for src, cfg in _sources():
+        if src.source_id == source_id:
+            return (cfg.get('api_key') or '').strip()
+    return ''
+
+
+def source_config(source_id):
+    """그 소스의 설정 사본(없으면 {}). 예보 도구가 운영자가 고친 출처 문구를 쓰려고 꺼낸다."""
+    for src, cfg in _sources():
+        if src.source_id == source_id:
+            return dict(cfg)
+    return {}
+
+
 def _operations(preset_key):
     ops_for, _ = _client_for(preset_key)
     return ops_for(preset_key)
@@ -233,8 +249,15 @@ def query(source_id, operation, params=None, limit=_DEFAULT_LIMIT, columns=None)
     records, err = fetch_operation(operation, call_params, operations=ops)
     if err:
         return None, err
-    total = len(records or [])
-    rows = _trim(records or [], columns, limit)
+    records = list(records or [])
+    # Open-Meteo 는 첫 행에 "어느 격자가 답했는지" 를 싣는다(데이터 행이 아니다).
+    # 그대로 두면 limit 을 한 칸 먹고 total_available 도 하나 부풀어, 25행을
+    # 청하면 24행의 예보만 온다. 별도 `meta` 로 떼어 낸다.
+    meta = None
+    if records and isinstance(records[0], dict) and 'grid_latitude' in records[0]:
+        meta = {k: v for k, v in records.pop(0).items() if v not in (None, '')}
+    total = len(records)
+    rows = _trim(records, columns, limit)
     payload = {
         'rows': rows,
         'returned': len(rows),
@@ -247,6 +270,8 @@ def query(source_id, operation, params=None, limit=_DEFAULT_LIMIT, columns=None)
         'source_ref': src.source_id,
         'operation': operation,
     }
+    if meta:
+        payload['meta'] = meta
     if total > len(rows):
         payload['truncated'] = ("Showing %d of %d rows. Narrow the parameters (or raise "
                                 "limit, max %d) — do NOT treat this as the complete set."

@@ -106,6 +106,25 @@ nav:
     - guide/g06-map.md
     - guide/g07-facility.md
     - guide/g08-output.md
+    - Detailed Guide:
+      - Overview: guide/g00-overview.md
+      - Installation: guide/g01-install.md
+      - Key Settings: guide/g02-settings.md
+      - Network Connection: guide/g03-network.md
+      - Building the Map: guide/g04-map.md
+      - Connecting Sensors: guide/g05-sensors.md
+      - Connecting Outputs: guide/g06-outputs.md
+      - Functions: guide/g07-functions.md
+      - Email Alerts: guide/g08-email.md
+      - Monitoring: guide/g09-monitoring.md
+      - Dashboard Setup: guide/g10-dashboard.md
+      - Cautions: guide/g11-cautions.md
+      - Settings: guide/g11-settings.md
+      - AI & MCP Connection: guide/g12-ai-mcp.md
+      - Alerts: guide/g12-alerts.md
+      - Crisis Response: guide/g13-crisis.md
+      - Help and Reporting Problems: guide/g13-help.md
+      - AI: guide/g14-ai.md
   - About: About.md
   - Usage:
     - Data Viewing: Data-Viewing.md
@@ -152,6 +171,7 @@ nav:
     - Analog-To-Digital Converters: Analog-To-Digital-Converters.md
     - PLC (Modbus TCP): PLC-Modbus.md
     - LoRaWAN (ChirpStack): LoRaWAN-ChirpStack.md
+    - Matter: Matter.md
     - Interfaces.md
     - Dependencies.md
     - Device Notes: Device-Notes.md
@@ -163,6 +183,7 @@ nav:
     - Log Viewer: Log-Viewer.md
     - Security.md
     - Time & Timezones: time-handling.md
+    - Raspberry Pi Install: Raspberry-Pi-Install.md
     - Upgrade/Backup/Restore: Upgrade-Backup-Restore.md
     - Export/Import: Export-Import.md
     - Error Codes: Error-Codes.md
@@ -171,4 +192,4 @@ nav:
   - Troubleshooting.md
 
 extra:
-  version: 26.09.08
+  version: 26.11.1

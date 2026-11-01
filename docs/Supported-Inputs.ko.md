@@ -1140,6 +1140,19 @@ A topic is subscribed to for each channel Subscription Topic and the returned pa
 커스터마이징이 뛰어난 세련된 Mapbox 벡터·타일 지도입니다. Streets, Satellite, Dark, Light 스타일을 지원하며 우수한 렌더링 성능으로 부드러운 지도 조작이 가능합니다.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Mapbox Access Token</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
 
+### Matter: Matter Node (Sensors)
+
+- Manufacturer: Matter
+- Measurements: Variable measurements
+- Interfaces: IP
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+AoT Matter fabric에 있는 Matter 장치의 센서 값입니다. 설정 > Matter에서 장치를 AoT로 공유하면 자동으로 만들어지며, 채널 하나가 장치가 알려 준 센서 하나입니다. 값은 변할 때 기록되고, 장치에 연결할 수 있는 동안에는 샘플링 간격마다 다시 기록됩니다. 연결할 수 없는 동안에는 아무것도 기록하지 않습니다.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>측정값 사용</td><td>Multi-Select</td><td>기록할 측정값</td></tr><tr><td>노드 ID</td><td>Integer</td><td>AoT Matter fabric에서의 노드 ID입니다. Matter 장치에서 가져옵니다</td></tr><tr><td>샘플링 간격 (초)</td><td>Integer
+- Default Value: 60</td><td>장치가 알려 주는 변경 때마다 기록하는 것과 별개로, 장치에 연결할 수 있는 동안 현재 값을 기록하는 주기</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>이름</td><td>Text</td><td>다른 것과 구별하기 위한 이름</td></tr><tr><td>엔드포인트</td><td>Integer
+- Default Value: 1</td><td>장치의 Matter 엔드포인트 번호</td></tr><tr><td>클러스터 ID</td><td>Integer</td><td>Matter 클러스터 ID (10진수)</td></tr><tr><td>속성 ID</td><td>Integer</td><td>Matter 속성 ID (10진수)</td></tr><tr><td>센서 종류</td><td>Text</td><td>원시 값을 변환하는 방식: temperature, humidity, illuminance, boolean_state 또는 battery</td></tr></tbody></table>
+
 ### Melexis: MLX90393
 
 - Manufacturer: Melexis

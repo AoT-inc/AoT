@@ -36,6 +36,7 @@ PROVIDER_NAMES = (
     'reverse_lookup',
     'action_service',
     'data_source_query',
+    'forecast_bundle',
     'smartfarmkorea',
 )
 

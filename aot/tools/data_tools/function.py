@@ -70,8 +70,34 @@ class FunctionToolsMixin:
         return (match.row, cls._LABEL_TO_KIND.get(match.kind, match.kind),
                 match.kind, None)
 
+    @staticmethod
+    def _facility_names_for(rows):
+        """함수가 어느 시설용인지 — custom_options 의 geo_facility_id 로 푼다.
+        시설을 가리키지 않는 함수는 결과에 없다."""
+        import json as _json
+        try:
+            from aot.databases.models import GeoFacility
+            names = {f.unique_id: f.name for f in GeoFacility.query.all()}
+        except Exception:
+            return {}
+        out = {}
+        for r in rows:
+            try:
+                o = _json.loads(r.custom_options) if r.custom_options else {}
+            except (ValueError, TypeError):
+                continue
+            fid = o.get('geo_facility_id') if isinstance(o, dict) else None
+            if not fid:
+                continue
+            d = {"facility_id": fid, "facility_name": names.get(fid)}
+            bay = (o.get('bay_scope') or '').strip()
+            if bay:
+                d["bay_scope"] = bay
+            out[r.unique_id] = d
+        return out
+
     @classmethod
-    def get_function_list(cls, function_type=None, active_only=False):
+    def get_function_list(cls, function_type=None, active_only=False, limit=None, offset=None):
         """
         Returns all registered Function-type controllers with their name, type,
         activation state, and period. Trigger entries also carry trigger_type
@@ -79,7 +105,8 @@ class FunctionToolsMixin:
         timer/edge trigger without a separate get_function_detail call per row.
 
         :param function_type: Filter by type string — one of 'conditional',
-                              'trigger', 'pid', 'custom'. Case-insensitive.
+                              'trigger', 'pid', 'custom' (or a custom driver
+                              name such as 'env_coordinator'). Case-insensitive.
                               None returns all types.
         :param active_only:   If True, returns only is_activated=True entries.
         :returns:             {"functions": {type: [...]}, "count": int} — see
@@ -101,6 +128,14 @@ class FunctionToolsMixin:
 
             # Normalize filter
             _type_filter = function_type.lower().strip() if function_type else None
+
+            _KINDS = ('conditional', 'trigger', 'pid', 'custom')
+            # 네 종류가 아닌 값은 custom 의 드라이버 이름(env_coordinator 등)
+            # 으로도 받는다. 예전엔 오류 없이 빈 결과라 모델이 "없다" 로 읽었다.
+            _driver = None
+            if _type_filter and _type_filter not in _KINDS:
+                _driver = _type_filter
+                _type_filter = 'custom'
 
             def _should_include(type_key):
                 return _type_filter is None or _type_filter == type_key
@@ -141,13 +176,48 @@ class FunctionToolsMixin:
             if _should_include('custom'):
                 rows = [r for r in CustomController.query.all()
                         if not active_only or getattr(r, 'is_activated', False)]
+                if _driver:
+                    rows = [r for r in rows
+                            if str(getattr(r, 'device', '') or '').lower() == _driver]
                 if rows:
+                    fac_names = cls._facility_names_for(rows)
                     groups['custom'] = [
-                        _row(r, device=getattr(r, 'device', None))
+                        _row(r, device=getattr(r, 'device', None),
+                             **fac_names.get(r.unique_id, {}))
                         for r in rows]
 
             count = sum(len(v) for v in groups.values())
-            return {"functions": groups, "count": count}
+            _page_info = None
+            if limit or offset:
+                flat = [(g, r) for g, rows in groups.items() for r in rows]
+                flat, _page_info = cls._page_rows(flat, limit, offset)
+                groups = {}
+                for g, r in flat:
+                    groups.setdefault(g, []).append(r)
+                count = len(flat)
+            out = {"functions": groups, "count": count}
+            if _page_info:
+                out["page"] = _page_info
+            if _driver and not count:
+                import difflib
+                drivers = sorted({str(getattr(r, 'device', '') or '')
+                                  for r in CustomController.query.all()} - {''})
+                out["valid_function_types"] = list(_KINDS) + drivers
+                close = difflib.get_close_matches(
+                    _driver, list(_KINDS) + drivers, n=1, cutoff=0.5)
+                if close:
+                    out["did_you_mean"] = close[0]
+            # 이름이 같은 함수(예: Env Coordinator 둘)는 이름으로 구분되지
+            # 않는다 — 시설 표시가 구분 수단임을 말해 준다.
+            names = [f["name"] for rows in groups.values() for f in rows]
+            dups = sorted({n for n in names if names.count(n) > 1})
+            if dups:
+                out["duplicate_names"] = dups
+                out["note"] = (
+                    "Some functions share a name (see duplicate_names). Tell "
+                    "them apart by facility_name/facility_id (environment "
+                    "coordinators) or function_id — never by name alone.")
+            return out
         except Exception as e:
             logger.exception("Error in get_function_list")
             return {"error": f"Error while querying Function list: {str(e)}"}
@@ -551,6 +621,31 @@ class FunctionToolsMixin:
         if ignored_args:
             logger.warning(f"[create_function] ignoring unexpected args {ignored_args} "
                            f"(only function_type/name/params are accepted)")
+
+        # 모듈 옵션 제약(값 검사) — 만들기 **전에** 본다. 거부할 값이면 빈 함수
+        # 행도 남기지 않는다(외기 수집기의 예보 입력 거부 등, 2026-10-13 E4).
+        if params and isinstance(params, dict):
+            try:
+                from aot.utils.functions import parse_function_information
+                _info = parse_function_information().get(function_type) or {}
+            except Exception:                               # noqa: BLE001
+                _info = {}
+            # 측정 선택 칸만 본다 — 다른 종류의 값 검사를 여기 새로 들이면
+            # 지금까지 받던 생성 요청이 바뀐다(그 검사는 modify 쪽 몫이다).
+            _spec = {o['id']: o for o in (_info.get('custom_options') or [])
+                     if isinstance(o, dict) and o.get('id')
+                     and o.get('type') in ('select_measurement',
+                                           'select_measurement_channel')}
+            _bad = {}
+            for _k, _v in params.items():
+                if _k in _spec:
+                    _why = cls._option_value_problem(_spec[_k], _v)
+                    if _why:
+                        _bad[_k] = _why
+            if _bad:
+                return {"error": "invalid value(s): %s" % '; '.join(
+                    '%s %s' % (k, v) for k, v in sorted(_bad.items())),
+                        "invalid": _bad}
 
         # 쓰기 시점 그룹 스코프 — 새 함수 행 자체는 탭 없이 생기지만, `params`
         # 에 적은 장치(select_measurement 의 'device_id,measurement_id' 등)를
@@ -969,6 +1064,17 @@ class FunctionToolsMixin:
             allowed = [a for a in allowed if isinstance(a, (str, int, float))]
             if allowed and value not in allowed and str(value) not in map(str, allowed):
                 return 'must be one of: %s' % ', '.join(map(str, allowed[:20]))
+        elif kind in ('select_measurement', 'select_measurement_channel'):
+            # 모듈이 선언한 제약(웹 설정 폼과 같은 함수) — 예: 외기 수집기의
+            # "지금 값" 칸에 몇 시간 뒤 예보 입력을 고르면 거부(2026-10-13, E4).
+            check = opt.get('constraints_pass')
+            if callable(check) and value not in (None, ''):
+                try:
+                    passed, errors, _ = check(None, value)
+                except Exception:                           # noqa: BLE001
+                    passed, errors = True, []
+                if not passed:
+                    return '; '.join(str(e) for e in errors) or 'rejected'
         return None
 
     #: 정의(custom_options)에 없지만 모듈이 저장값에서 직접 읽는 키 — 모듈이

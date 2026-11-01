@@ -1,0 +1,29 @@
+[Unit]
+Description=AoT Digital Twin (experimental)
+# 디지털트윈(실험 · '준비 중' 기능) — 기본 비활성. 켜는 법:
+#   sudo /opt/AoT/aot/scripts/upgrade_commands.sh install-aottwin
+# 그다음 설정 > 일반 > 디지털트윈 (실험) 토글. 토글이 꺼져 있으면 떠 있어도 일하지 않는다.
+# 사양이 낮은 기기(라즈베리파이 등)는 시작할 때 잠금을 판정해 일하지 않는다 — 설치하지 말 것.
+# 데몬과 분리된 프로세스라 죽거나 메모리가 불어도 제어에는 영향이 없다.
+After=aotflask.service influxdb.service
+Wants=influxdb.service
+
+[Service]
+User=root
+Group=aot
+WorkingDirectory=/opt/AoT
+Environment=PYTHONPATH=/opt/AoT
+# 스케줄러를 띄우지 않는다 — 데몬과 잡 저장소가 충돌한다(aot_mcp 와 같다).
+Environment=AOT_SKIP_SCHEDULER=1
+# 켤 대지·출처는 지도 모달 '트윈' 탭(DB)에서 고른다. 아래는 개발용으로 그 위에 겹칠 JSON(선택).
+#Environment=AOT_TWIN_OVERRIDES=/opt/AoT/aot_local/twin/overrides.json
+ExecStart=/opt/AoT/env/bin/python -m aot.twin
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=on-failure
+RestartSec=30s
+# 메모리가 불어도 데몬을 밀어내지 않게(대략 노지 구획 수백 개 기준)
+MemoryMax=768M
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

@@ -22,6 +22,9 @@ services:
       - aot_data:/app/aot_local
       # Flask session store also off the bind mount (atomic rename works on a real Linux fs).
       - flask_session:/app/aot/databases/flask_session
+      # Matter 사이드카 데이터 볼륨(소켓 + 백업용 Fabric), 읽기 전용.
+      # docker-compose.prod.yml 의 같은 마운트 주석 참고.
+      - matter_data:/app/matter_data:ro
     environment:
       # Container-local time = KST so log timestamps and any naive datetime.now()
       # scheduling (env_coordinator, lorawan schedulers, KMA inputs, pump timing)
@@ -156,6 +159,7 @@ services:
       - ../aot/databases:/app/aot/databases
       # Same named volume as aot-app: the daemon and UI must open the SAME aot.db.
       - aot_data:/app/aot_local
+      - matter_data:/app/matter_data:ro
     environment:
       # See aot-app: KST container time for readable logs + local-time scheduling.
       - TZ=Asia/Seoul
@@ -179,6 +183,94 @@ services:
           memory: 1536M
     depends_on:
       - influxdb
+    restart: always
+
+  # 디지털트윈 (실험 · '준비 중' 기능) — 기본 꺼짐. 켜는 법: .env 에 COMPOSE_PROFILES=twin 후 up -d,
+  # 그다음 설정 > 일반 > 디지털트윈 (실험) 토글. 별도 서비스라 죽거나 메모리가 불어도 데몬·웹과 무관하다.
+  # - 이 기기의 DB·Influx 를 직접 읽고 결과를 env_twin* 측정으로 쓴다(내장 통로). 수신 API·원격 REST 는 쓰지 않는다.
+  # - 토글이 꺼져 있으면 떠 있어도 일하지 않고 플래그만 가끔 본다. 낮은 사양 기기는 시작할 때 잠금을 판정해
+  #   일하지 않는다(설정 화면과 같은 판정 — 이중 잠금). 그런 기기에서는 이 profile 을 켜지 말 것.
+  # - 켤 대지·출처(비·센서·예보 입력)는 지도 모달의 '트윈' 탭(대지·구획 트윈 설정, DB)에서 고른다.
+  # - 다른 서버를 읽는 개발용 원격 방식(NAS 등)은 docker-compose.twin-nas.yml.
+  # 설계: docs/design/digital-twin-node.md
+  aot_twin:
+    image: aot_ai
+    profiles: ["twin"]
+    command: python -m aot.twin
+    volumes:
+      - ../:/app
+      - aot_data:/app/aot_local
+    environment:
+      - TZ=Asia/Seoul
+      - PYTHONPATH=/app
+      - DOCKER_CONTAINER=TRUE
+      # 앱과 같은 값이어야 잠금 판정이 설정 화면과 같다(이중 잠금)
+      - HARDWARE_PROFILE=LOW
+      - AOT_LOCAL_DIR=/app/aot_local
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      # 스케줄러를 띄우지 않는다 — aot-app/daemon 과 잡 저장소가 충돌한다(aot_mcp 와 같다).
+      - AOT_SKIP_SCHEDULER=1
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  # Matter 컨트롤러 사이드카 — 실험 기능, 기본 꺼짐(COMPOSE_PROFILES=matter).
+  # 설정의 이유는 docker-compose.prod.yml 의 같은 서비스 주석 참고. 주의: macOS·
+  # Windows Docker Desktop 의 host 네트워크는 VM 안이라 LAN mDNS 가 닿지 않는다 —
+  # 여기서는 소켓 연결·재연결까지만 확인할 수 있고 실제 장치 커미셔닝은 Linux
+  # 호스트에서 한다.
+  matter_server:
+    image: ghcr.io/matter-js/matterjs-server:${MATTER_SERVER_TAG:-1.4.0}
+    profiles: ["matter"]
+    network_mode: host
+    volumes:
+      - matter_data:/data
+    environment:
+      - TZ=Asia/Seoul
+      - STORAGE_PATH=/data
+      # 호스트 루프백 전용(host network). LAN 에서는 닿지 않는다. AoT 쪽은
+      # 아래 matter_socket 이 만드는 unix socket 으로 들어온다.
+      - LISTEN_ADDRESS=127.0.0.1
+      - PORT=5580
+      - DISABLE_DASHBOARD=true
+      # 10진수로 적는다 — 서버는 이 값을 parseInt(값, 10) 으로 읽어 "0xFFF1" 이
+      # 0 이 된다(실측: 다른 앱에 AoT 가 "[Matter Standard]" 로 보였다).
+      # 65521 = 0xFFF1(테스트 VID). 첫 기동 전에 정한다.
+      - VENDOR_ID=65521
+      - FABRIC_ID=1
+      # 개발용 장치(VID 0xFFF1, matter.js 예제 등)의 테스트 인증서를 받을지.
+      # 실제 설치에서는 끈다.
+      - ENABLE_TEST_NET_DCL=${MATTER_TEST_DCL:-false}
+      # 주의: debug 로 올리면 서버가 WS 요청을 가리지 않고 그대로 로그에 남긴다 —
+      # BLE 커미셔닝에 보내는 Wi-Fi 비밀번호도 평문으로 찍힌다. 진단 후 반드시
+      # info 로 되돌릴 것(docker/.env 에 debug 를 남겨두지 말 것).
+      - LOG_LEVEL=${MATTER_LOG_LEVEL:-info}
+    restart: always
+
+  # matter_server 의 루프백 포트를 /data/matter-server.sock 으로 중계한다.
+  # matterjs-server 1.4.0 은 unix socket 을 못 연다(지원은 upstream #1111,
+  # 2026-10-05 머지 — 1.4.1 정식판부터). AoT 컨테이너는 bridge 네트워크라 호스트
+  # 루프백에 닿지 못하므로, 같은 볼륨 안의 소켓으로 들어오게 한다. 1.4.1 이
+  # 나오면 이 서비스를 지우고 matter_server 의 LISTEN_ADDRESS 를
+  # /data/matter-server.sock 으로 바꾸면 끝이다 — AoT 쪽 경로는 그대로다.
+  # root 로 돌며 소켓을 0660 root:root 로 만든다(AoT 컨테이너는 root).
+  matter_socket:
+    image: alpine/socat:1.8.1.1
+    profiles: ["matter"]
+    network_mode: host
+    volumes:
+      - matter_data:/data
+    command:
+      - UNIX-LISTEN:/data/matter-server.sock,fork,unlink-early,mode=0660
+      - TCP:127.0.0.1:5580
+    depends_on:
+      - matter_server
     restart: always
 
   influxdb:
@@ -221,4 +313,5 @@ volumes:
   # InfluxDB's own CLI config store — kept off the tracked aot/influxdb_config
   # template (see influxdb service volumes comment).
   influxdb_config:
-
+  # Matter 사이드카 Fabric 저장소 + API 소켓 (matter_server 서비스 주석 참고).
+  matter_data:

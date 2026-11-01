@@ -15,6 +15,11 @@ write_decision_log() 헬퍼를 제공한다.
   50+   : L3 액추에이터 근거  (actuator_idx × 2 + 41, 위 채널과 쌍)
   60+   : L3 적분 누적 (debug)
   70    : Gate 활성 비트마스크
+  75·76 : 극한 고온 보호 단계·플래그 (매 사이클, debug 무관)
+  80~91 : 센서 상태·VPD 출처 (measurement `sensor_status`, 아래 CH_SENSOR_STATUS_BASE)
+  92    : 분무용 물 공급 판정 (옵션을 켰을 때만, debug 무관)
+  93    : 제어에서 빼 둔 의심 액추에이터 수 (매 사이클, debug 무관)
+  94~96 : VPD 목표 기준(공기/잎)·잎 VPD·잎 기준 목표 (엽온을 묶었거나 잎 기준일 때만, debug 무관)
 
 참조: docs/dev/integrated_env_control_design.md §10
 """
@@ -106,6 +111,35 @@ CH_DISPATCH_FAIL         = 71   # 한 사이클에서 dispatch 실패한 액추�
 CH_RUNTIME_STATE_FAIL    = 72   # runtime state DB 저장 실패 누적 카운트
 CH_ACTUATOR_MISMATCH     = 73   # trust_score < 0.5 인 의심 액추에이터 수
 CH_CLEAN_FOR_LEARNING    = 74   # 이번 사이클 학습 가능 여부 (1.0 = clean, 0.0 = dirty)
+# 극한 고온 보호(`heat_protect`, 2026-10-09) — **debug 여부와 무관하게 매 사이클** 기록한다.
+# 보호가 섰는지·왜 그 조치였는지는 사후에 반드시 답해야 하는 질문이라 `env_control`
+# (debug 전용)에 싣지 않는다. 71·72 는 이중 의미라(위 주석) 쓰지 않는다.
+CH_HEAT_PROTECT_TIER     = 75   # 0 보호 아님 · 1 문턱 초과 · 2 하드 상한(temp_max) 초과
+CH_HEAT_PROTECT_FLAGS    = 76   # 비트마스크 — `heat_protect.HP_FLAG_*`
+# ── 센서 상태 (measurement 'sensor_status') ──────────────────────────────────
+# 75·76 은 극한 고온 보호(heat_protect_*)가 쓰고, 80 미만은 건드리지 않는다.
+# 71·72 처럼 번호를 다른 측정과 나눠 쓰지 않도록 **자기 측정 이름**을 갖는다.
+# 값은 `sensor_status.STATUS_CODES`: 0 valid · 1 stale · 2 missing · 3 outlier ·
+# 4 out_of_range · 5 frozen. 축을 먹이는 센서 중 **가장 좋은** 상태다(`best_status`).
+CH_SENSOR_STATUS_BASE    = 80   # + 축 위치 — 아래 SENSOR_STATUS_AXES 순서(80~89)
+CH_VPD_SOURCE            = 90   # 제어 VPD 출처: 0 none · 1 computed(T/RH) · 2 device
+CH_VPD_DEVICE_DIFF       = 91   # 장치 VPD − 제어 VPD [kPa] (둘 다 있을 때만 기록)
+MEAS_SENSOR_STATUS       = 'sensor_status'
+# 축 순서가 곧 채널 번호다 — 바꾸면 과거 기록과 이어지지 않는다.
+SENSOR_STATUS_AXES = ('T', 'RH', 'CO2', 'VPD', 'light',
+                      'T_ext', 'RH_ext', 'wind', 'rain', 'solar')
+# 분무용 물 공급(`water_supply`, 2026-10-09) — 옵션을 켠 코디네이터만 매 사이클 남긴다
+# (켜지 않은 설치에 쓸모없는 행을 쌓지 않는다). 77~79 는 비워 두고 80~91 은 센서 상태가 쓴다.
+CH_WATER_SUPPLY          = 92   # 1 정상 · 2 부족(문턱 미달) · 3 신호 끊김(없음·만료) — `water_supply.WATER_*`
+# 의심 액추에이터(`actuator_feedback`, 2026-10-09) — 제어에서 빼고 제자리에 둔(보류 중인) 수.
+# 73 은 trust_score 기반의 **로그 전용** 수이고 debug 에서만 남는다 — 이것은 제어 결정이라 늘 남긴다.
+CH_ACTUATOR_SUSPECT      = 93
+# VPD 목표 기준(`leaf_vpd`, 2026-10-09) — 엽온 신호를 묶었거나 `vpd_target_basis=leaf` 인
+# 코디네이터만 매 사이클 남긴다(기본 설치에는 행이 없다). 잎 기준이면 CH3(goal_target_vpd)은
+# **옮긴 공기 목표**가 되므로, 사람이 정한 잎 목표는 96 에서 읽는다.
+CH_VPD_TARGET_BASIS      = 94   # 0 공기 기준 · 1 잎 기준(엽온으로 옮김) · 2 잎 기준인데 엽온 없음 → 공기 — `leaf_vpd.TARGET_*`
+CH_LEAF_VPD              = 95   # 잰 엽온의 잎 VPD [kPa] (엽온이 유효할 때만)
+CH_LEAF_VPD_TARGET       = 96   # 잎 기준 목표 [kPa] — 옮기기 전, 사람이 정한 값(잎 기준·목표가 있을 때만)
 CH_GREYBOX_KPI_PASSED   = 99   # greybox shadow KPI pass notification (value = 1.0)
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -160,6 +194,29 @@ REASON_DIRECTION_UNSETTLED = 23  # 미는 방향이 막 뒤집혔다 — 확정�
                                # 합이라, 실외 습도가 조금만 흔들려도 부호가 사이클마다
                                # 바뀐다(2026-09-24 영양 천창: 6시간 반전 24회). 1 과
                                # 뭉치면 "왜 안 움직이나" 에 답이 없다.
+REASON_HUMID_NO_RELIEF = 24    # 과습 — 환기로 해소할 수 없다: 실외 이슬점이 실내보다 낮지
+                               # 않아 창을 열면 습기를 들인다. 창은 닫는 쪽으로 가고 난방·
+                               # 제습 장치가 있으면 그쪽이 맡는다. **15(무구배)와 구분한다**
+                               # — 15 는 "차이가 없다" 이고 24 는 "차이는 있는데 방향이
+                               # 나쁘다" 다. 뭉치면 화면이 "효과가 없다" 고만 말해, 실제로는
+                               # 해소 수단이 없는 과습 상태라는 사실이 가려진다.
+REASON_HUMID_CAPPED    = 25    # 과습 — 환기가 습기를 빼지만 열림을 제한한다(기본 30 %).
+                               # 습기를 빼는 것이 목적이지 환기로 온도·VPD 를 맞추는 것이
+                               # 아니다. 1(주작용)로 두면 "왜 더 안 여나" 에 답이 없다.
+REASON_HUMID_COLD      = 27    # 과습이지만 실외가 너무 차다(또는 난방 요구 중) — 열면 열을 버린다.
+                               # 24 와 구분한다: 24 는 실외가 **더 습하다**, 27 은 실외는 건조한데
+                               # **차다**. 뭉치면 겨울 난방 중 "환기해도 소용없다" 고만 읽혀 닫힌
+                               # 이유(열 손실)가 가려진다.
+REASON_NO_RESPONSE     = 26    # 창을 열어도 편차가 줄지 않는다 — 더 열지 않는다. 효과가 작은
+                               # 창(유효도 낮음)이 오래 열려 있는데 실내가 안 변하면, 적분만
+                               # 쌓여 창이 천천히 100 % 로 올라간다(드리프트, 2026-10-01).
+REASON_HEAT_VENT_HOT_OUTSIDE = 28  # 극한 고온 보호 중인데 바깥이 더 덥다 — 환기를 닫는 쪽(파킹).
+                               # 15(무구배)와 구분한다: 15 는 "차이가 없다" 이고 28 은 "열면
+                               # 더 뜨거운 공기를 들인다" 다. 뭉치면 폭염 중 창이 닫힌 이유가
+                               # 화면에서 "효과 없음" 으로만 읽힌다(`heat_protect`).
+REASON_HEAT_FOG_BLOCKED = 29   # 극한 고온 보호 중 분무를 쉰다 — 물이 없거나, 증발 여력(건구 −
+                               # 습구)이 모자라거나, 습도가 이미 높다. 17(맞선 짝)과 구분한다:
+                               # 냉각이 필요한데 분무로는 식힐 수 없거나 해롭다는 판단이다.
 
 # ── 임계 오버라이드 계열 (30~) ────────────────────────────────────────────────
 # `apply_threshold_and_gate_overrides` 가 지나는 헬퍼들은 근거를 **문자열**로
@@ -180,6 +237,94 @@ REASON_FOG_DERATE          = 36
 REASON_FOG_HUMIDITY_CEILING = 37
 REASON_NO_ACTUATOR         = 38
 REASON_UNKNOWN             = 39   # 표에 없는 근거 — 삼키지 않고 '모른다'로 남긴다
+REASON_HEAT_PROTECT        = 40   # 극한 고온 보호 오버라이드(`heat_protect.apply_heat_protect_overrides`)
+REASON_NO_WATER            = 41   # 분무용 물이 없다 — 분무기 전부를 쉰다(`water_supply`). 29(폭염 중 분무 불가:
+                                  # 물·증발 여력·습도 중 하나)와 구분한다: 41 은 **원인이 물**이라는 뜻이고
+                                  # 폭염이 아니어도 선다. 둘이 겹치면 41 이 이긴다 — 사람이 할 일(물 채우기)이 보인다.
+REASON_ACTUATOR_SUSPECT    = 42   # 의심 액추에이터 — 고장일 수 있어 부하 분담에서 빼고 제자리에 둔다
+                                  # (`actuator_feedback`; 같은 도메인의 나머지가 몫을 이어받는다).
+                                  # 13(REASON_UNAVAILABLE, 통신 실패)과 구분한다: 13 은 한 번의 실패,
+                                  # 42 는 반복된 전송 실패 또는 오래 세게 명령했는데 반응이 없다는 **판정**이다.
+# 43~47 = 스크린 판단(`screen_policy`, 2026-10-09). 1(주작용)·15(무구배)와 뭉치지 말 것 — 스크린은
+# 빛·결로를 함께 다뤄 "왜 이 막이 이 자리인가" 의 답이 열·VPD 편차만이 아니다.
+REASON_SHADE_HEAT          = 43   # 차광막을 열부하·증산 조절에 쓰는 중(광 상태가 허락한다)
+REASON_SHADE_LIGHT_KEEP    = 44   # 차광막을 걷어 둔다 — 빛이 모자라거나(DLI·light_min) 더 싼 냉각 수단이 남았다
+REASON_SCREEN_HOLD         = 45   # 차광막 왕복 방지 — 최소 유지·진입 지속·일사 이력·하루 이동 한도로 제자리
+REASON_CURTAIN_GAP         = 46   # 밤 결로 — 보온커튼을 조금(3·6·10 %) 연다(부분 개도가 되는 커튼만)
+REASON_CURTAIN_RAMP        = 47   # 아침 — 보온커튼을 단계(10·30·60 %)로 걷는 중(부분 개도가 되는 커튼만)
+REASON_PREPARK_HOLD        = 48   # 야간 파킹 직전 — 해 질 무렵 창을 VPD·습도 요구로 더 열지 않는다(제자리).
+                                  # 19(REASON_NIGHT_PARKED)와 구분한다: 19 는 닫는 중이고 48 은 닫기 **전에**
+                                  # 열림을 키우지 않는 중이다 — 요구는 열라고 하는데 곧 닫힐 것이라 묶어 둔 것.
+                                  # 16(실외 모름)·23(방향 확정 대기)과도 다르다: 이유가 시각(파킹 시작 45분 전)이다.
+REASON_CURTAIN_NIGHT_CLOSE = 49   # 밤 보온 — 열 수요(실내가 목표 하한 근처·아래, 또는 실외가 목표 하한 아래)로
+                                  # 보온커튼을 닫아 둔다(`screen_policy._curtain_night_close`, 2026-10-10).
+                                  # 15(무구배)와 뭉치지 말 것: 걷힌 커튼 아래의 작은 안팎 온도차는 커튼이
+                                  # 지운 것이라 "닫아도 소용없다" 의 근거가 못 된다. 33(최저 온도 한계)은
+                                  # 하드 한계가 닫은 것이고 49 는 그 전에 보온으로 닫은 것이다.
+# 50 은 비워 둔다 — 병합 전 다른 브랜치가 쓰고 있다(2026-10-10).
+REASON_SOLAR_VENT_FLOOR    = 51   # 낮 일사 부하 — 해가 들고 실내가 온도 목표 위라 환기를 하한까지 연다
+                                  # (`solar_vent`, 2026-10-10 영양). VPD·습도 항은 그 아래로 닫지 못한다 —
+                                  # 모자라는 습도는 분무·차광이 맡는다. 1(주작용)·15(무구배)와 뭉치지 말 것:
+                                  # 요구가 닫으라고 하는데 일사 열을 빼려고 열어 둔 것이다. 40(극한 고온
+                                  # 보호)과도 다르다 — 그 문턱 **아래**에서, 일사가 있을 때만 선다.
+REASON_RAIN_RESTRICT       = 52   # 비 — 전면 폐쇄까지는 아닌 강우의 단계 제한(`safety_gates.classify_rain`,
+                                  # 2026-10-10 구마모토). 예보 모델 강우(Open-Meteo 등)나 바람 없는 약한 실측
+                                  # 강우에서 천창을 닫고(0) 측창은 상한(30 %) 아래로만 쓴다. 약한 모델 강우에서는
+                                  # 천창을 **더 열지 않는다**(제자리). 12(전면 강제 폐쇄)와 뭉치지 말 것 — 12 는
+                                  # 실측 강우·강풍으로 L1~L3 를 건너뛴 것이고, 52 는 제어가 돌면서 비 때문에
+                                  # 열림을 묶은 것이다. 16(실외 모름, 더 열지 않음)과도 다르다: 값은 있다.
+REASON_WETTING_FOG_DUSK    = 53   # 습윤형 분무를 해 질 녘에 줄이거나 쉰다 — 일사가 약하거나(150→50 W/m² 비례 감쇠)
+                                  # 일몰 90분 전부터 일출까지(육묘 모드는 `nursery_evening_cutoff_min`, 기본 120분)
+                                  # (`wet_fog_dusk`, 2026-10-10 영양·김제). 36(분무 감쇠)과
+                                  # 뭉치지 말 것: 36 은 육묘 모드에서 **강한** 햇빛 쪽을 줄이고 53 은 **약한**
+                                  # 햇빛·저녁 쪽을 줄인다. 37(분무 습도 상한)과도 다르다 — 이유가 습도 숫자가 아니라
+                                  # 잎이 밤을 젖은 채 넘기는 것이다. 29(폭염 중 분무 불가)와도 다르다.
+REASON_MORNING_PURGE       = 54   # 아침 습기 빼기 — 해가 들었고 실내가 과습인데 실외 공기가 더 건조해, 27(실외가 너무
+                                  # 참)로 닫는 대신 환기창을 조금(5~15 %) 연다(`humid_regime.morning_purge`,
+                                  # 2026-10-10 영양·김제). 27·24·25 와 뭉치지 말 것: 27 은 닫은 것, 25 는 상한,
+                                  # 54 는 닫으라는 판단을 **이기고** 열어 둔 하한이다. 51(일사 부하)과도 다르다 —
+                                  # 51 은 실내가 온도 목표 위일 때의 열 빼기이고 54 는 목표 아래에서도 서는 습기 빼기다.
+REASON_WIND_RESTRICT       = 55   # 바람 — 전면 폐쇄까지는 아닌 강풍 1단계(`safety_gates.classify_wind`, 2026-10-10
+                                  # 폭풍 시뮬 푄). 10분 평균이 문턱의 0.6 배 이상이거나 돌풍이 0.9 배 이상이면 풍상측
+                                  # 개구부·방위각 모르는 천창을 닫고(0) 나머지는 상한(천창 30 %·측창 50 %) 아래로만
+                                  # 쓴다. 12(전면 강제 폐쇄 = 강풍 2단계)와 뭉치지 말 것 — 12 는 L1~L3 를 건너뛴
+                                  # 것이고 55 는 제어가 돌면서 바람 때문에 열림을 묶은 것이다. 52(비 단계 제한)와도
+                                  # 다르다: 같은 상한 장치를 쓰지만 이유가 바람이다.
+
+REASON_FROST_PROTECT       = 56   # 서리 — 서리 주의·보호 단계가 시킨 값(`safety_gates.evaluate_frost`, 2026-10-10
+                                  # 극단 날씨 폐루프 cold_snap_frost). 보호: 개구부 닫음·커튼 닫음·난방 100·유동팬 100·분무
+                                  # ·CO₂ 끔. 주의: 커튼 닫음, 개구부는 더 열지 않음. 12(한파 비상·강우·강풍 전면 폐쇄)와
+                                  # 뭉치지 말 것 — 12 는 실외 −5 °C **그리고** 실내 5 °C 이하의 비상이고, 56 은 그보다 훨씬
+                                  # 일찍(실내 4 °C·복사냉각이면 6 °C) 서는 작물 보호다. 33(최저 온도 한계)과도 다르다 — 그쪽은
+                                  # 사용자가 정한 선이고 56 은 얼음이 맺히는 물리의 선이다. 52(강우 제한)와도 같이 서지 않는다.
+
+REASON_EXTREME_PULSE_FOG   = 57   # 극한 고온·건조의 짧은 펄스 분무 — 일소 잠금이 서 있어도(극한 고온 보호 단계 ≥ 1 또는
+                                  # 실내 VPD > 3 kPa, 건구−습구 ≥ 8 °C, 습도·물·저녁 제한·게이트 모두 통과) 10초 켜고 15분 이상
+                                  # 쉬는 펄스 하나를 낸다(`pulse_fog`, 2026-10-12). 36(분무 감쇠)·53(해 질 녘 제한)과 뭉치지 말 것:
+                                  # 둘은 분무를 **줄이는** 이유이고 57 은 잠금 속에서 **허용한** 펄스다. 29(폭염 중 분무 불가)와도
+                                  # 반대다 — 29 는 증발 여력이 없어 막은 것, 57 은 여력이 커서 짧게 연 것이다.
+
+REASON_OUTAGE_CLOSE        = 58   # 실외 값이 없는 동안 닫는 쪽 — 해가 진 뒤 조금(≤ 10 %) 열린 창을 닫는다. 두절이 30 분 넘게
+                                  # 이어진 밤에는 습도(하드 상한·파킹 해제)로 열린 창도 사이클당 5 %p 씩 0 까지 내린다
+                                  # (`coordinator.decide_parking` 2.6b·`outage_clock`, 2026-10-12 김제). 16(실외 모름, 제자리)과
+                                  # 뭉치지 말 것: 16 은 움직이지 않는 것이고 58 은 **닫는** 이동이다 — 실외를 몰라
+                                  # 열 근거는 없지만, 밤에 조금 열린 창은 닫아 두는 쪽이 안전하다(비·찬 공기). 19(야간
+                                  # 파킹)와도 다르다: 19 는 사용자가 켠 파킹 옵션이 시킨 닫음이고 58 은 옵션과 무관하다.
+
+REASON_NIGHT_DEW_FAN       = 59   # 밤 이슬 — 해 진 뒤 닫힌 집의 이슬점 여유가 작아(< 2 °C, 풀림 3 °C) 순환팬을 100 % 로 돌린다
+                                  # (`night_dew`, 2026-10-12 폐루프 heatwave_tropical_night: 열대야에는 창을 열어도 습기가
+                                  # 안 빠져 밤 작물 젖음 1148 분). 습기를 빼는 것이 아니라 잎이 젖어 있는 시간을 줄이는 수단이다.
+                                  # 1(주작용)과 뭉치지 말 것 — 1 은 효과 방향이 맞는 일반 명령이고 59 는 이 규칙만이 팬을 세운
+                                  # 사이클이다(공간 불균일·극한 고온 보호로 선 팬은 1·40 을 그대로 둔다). 56·40(서리·고온 보호가
+                                  # 세운 유동팬)과도 다르다: 그쪽이 이긴다.
+
+REASON_BLIND_SUN_VENT      = 60   # 실내 측정이 모두 끊긴 동안 **해를 보고** 정한 작은 환기 — 맑은 낮(일사 · 외기 ≥ 12 °C ·
+                                  # 외기 + 0.02 × 일사 > 작물 선)이면 환기창을 10~20 % 까지 사이클당 5 %p 씩 열고, 해가 진
+                                  # 뒤에도 실내를 모르면 그 크기 이하로 열린 창을 같은 폭으로 닫는다(`solar_vent` 머리말 마지막
+                                  # 절, 2026-10-14 김제·구마모토: 실내 두절 중 맑은 낮에 창 0 %). 21(실내 모름, 제자리)과
+                                  # 뭉치지 말 것 — 21 은 움직이지 않은 것이고 60 은 실외·해만으로 **움직인** 것이다. 51(일사
+                                  # 부하 하한)과도 다르다: 51 은 실내가 선 위인 것을 **재서** 연 것이다. 58(실외 모름 닫기)은
+                                  # 실외를 모를 때의 닫음이고 60 은 실내를 모를 때다.
 
 # 문자열 근거 → 정수 코드. **새 문자열 근거를 만들면 여기 넣을 것** — 빠뜨려도
 # 이제 죽지는 않지만(REASON_UNKNOWN 으로 떨어진다) 화면이 이유를 말하지 못한다.
@@ -194,6 +339,10 @@ STRING_REASON_CODES = {
     'fog_humidity_ceiling': REASON_FOG_HUMIDITY_CEILING,
     'no_actuator':          REASON_NO_ACTUATOR,
     'unavailable':          REASON_UNAVAILABLE,
+    'heat_protect':         REASON_HEAT_PROTECT,
+    'no_water':             REASON_NO_WATER,
+    'wetting_fog_dusk':     REASON_WETTING_FOG_DUSK,
+    'extreme_pulse_fog':    REASON_EXTREME_PULSE_FOG,
 }
 
 
@@ -213,6 +362,19 @@ def reason_code(reason) -> float:
     except (TypeError, ValueError):
         return float(REASON_UNKNOWN)
 
+def reason_name(reason) -> str:
+    """근거 → 이름(`REASON_HUMID_COLD` → 'humid_cold'). 예외를 던지지 않는다.
+
+    이름은 이 모듈의 상수에서 파생한다 — 표를 따로 두면 새 코드가 생길 때
+    갈라진다. 외부 AI 가 `get_control_state` 의 숫자 근거(27·12)만 보고는 창이
+    왜 닫혀 있는지 알 수 없었다(2026-10-10 외부 AI 5차 점검)."""
+    code = int(reason_code(reason))
+    for k, v in globals().items():
+        if k.startswith('REASON_') and v == code and isinstance(v, int):
+            return k[len('REASON_'):].lower()
+    return 'unknown'
+
+
 # 안전 게이트 비트마스크 (CH_SAFETY_GATE)
 GATE_BIT_RAIN    = 1 << 0
 GATE_BIT_WIND    = 1 << 1
@@ -223,10 +385,25 @@ GATE_BIT_INT_EXP = 1 << 3   # 실내 값을 잃음 → 근거를 잃은 장치�
                             # 전 액추에이터 safe_default 강제. 그 타이머는
                             # 호출자가 `last_int_ts` 에 매번 now 를 실어 보내
                             # 한 번도 돈 적이 없다)
+# ⚠ 폭염 비상 게이트는 2026-10-09 에 없앴다(`heat_protect` 가 대신한다). 이 비트는
+#   **옛 CH70 기록을 해독하려고만** 남긴다 — 지금 코드는 세우지 않는다.
 GATE_BIT_HEAT    = 1 << 4
 GATE_BIT_COLD    = 1 << 5
 # 육묘 일소 방지 — 고일사 중 습윤형 분무 잠금 (2026-07-31 aot-005 사건)
 GATE_BIT_FOG_SUNBURN = 1 << 6
+# 강우 **단계 제한**(2026-10-10) — 예보 모델 강우 또는 바람 없는 약한 실측 강우. 전면 폐쇄
+# (`GATE_BIT_RAIN`)가 아니라 제약이다: 천창 닫음·측창 상한·천창 더 열지 않음(근거 52),
+# L1~L3 는 그대로 돈다. RAIN 과 같은 사이클에 서지 않는다(전면 폐쇄가 이긴다).
+GATE_BIT_RAIN_LIGHT = 1 << 7
+# 강풍 **1단계**(2026-10-10) — 10분 평균 ≥ 문턱×0.6 또는 돌풍 ≥ 문턱×0.9. 전면 폐쇄
+# (`GATE_BIT_WIND` = 2단계)가 아니라 제약이다: 풍상측·방위각 모르는 천창 닫음, 나머지 상한
+# (근거 55), L1~L3 는 그대로 돈다. WIND 와 같은 사이클에 서지 않는다(2단계가 이긴다).
+GATE_BIT_WIND_LIGHT = 1 << 8
+# 서리(2026-10-10) — 한파 비상(`GATE_BIT_COLD`, 실외 −5 °C·실내 5 °C)보다 훨씬 일찍 서는 작물 보호.
+# WATCH 는 제약이다(커튼 닫음·개구부 더 열지 않음, L1~L3 는 그대로 돈다), 보호(`GATE_BIT_FROST`)는
+# 한파 비상처럼 L1~L3 를 건너뛰고 강제 명령을 낸다. 둘은 같은 사이클에 함께 서지 않는다.
+GATE_BIT_FROST_WATCH = 1 << 9
+GATE_BIT_FROST       = 1 << 10
 
 # 운전 모드 → 정수 코드 (CH_SITUATION_MODE)
 MODE_CODES = {
@@ -235,6 +412,7 @@ MODE_CODES = {
     'humidify':     3,
     'dehumidify':   4,
     'co2_enrich':   5,
+    'heat_protect': 6,    # 극한 고온 보호 단계 1 (단계 2 는 'emergency' 99)
     'conservation': 0,
     'emergency':    99,
 }
@@ -445,3 +623,42 @@ def write_final_commands(unique_id: str, final_cmds: Dict,
         except Exception as exc:   # noqa: BLE001 — 제어를 막지 않는 것이 우선
             logger.warning(
                 '최종 명령 기록 실패 — 제어는 계속한다 (%s): %s', aid, exc)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 센서 상태 기록 — 축별 상태와 VPD 출처
+# ─────────────────────────────────────────────────────────────────────────────
+
+def ch_sensor_status(axis: str) -> int:
+    """축 이름 → 채널 번호. 모르는 축이면 ValueError (조용히 다른 번호로 가지 않게)."""
+    return CH_SENSOR_STATUS_BASE + SENSOR_STATUS_AXES.index(axis)
+
+
+def write_sensor_status(unique_id: str, snapshot: Optional[Dict],
+                        facility_id: Optional[str] = None):
+    """사이클의 센서 상태·VPD 출처를 기록한다. **실패해도 제어를 막지 않는다.**
+
+    snapshot: `{'axes': {축: {'status': …}}, 'vpd_source': 'computed'|'device'|'none',
+               'vpd_device_diff': float|None}`. 축이 빠져 있으면 missing 으로 적는다 —
+    "기록 없음" 과 "센서 없음" 을 가르려면 늘 열 개 축이 다 있어야 한다.
+    `write_cycle_metrics` 와 같은 조건(디버그 로깅)에서 호출된다.
+    """
+    if not unique_id or not snapshot:
+        return
+    from aot.functions.utils.env_control import sensor_status as _ss
+    extra = {'facility_id': facility_id} if facility_id else None
+    try:
+        axes = snapshot.get('axes') or {}
+        for axis in SENSOR_STATUS_AXES:
+            _safe_write(unique_id, MEAS_SENSOR_STATUS,
+                        float(_ss.encode(axes.get(axis))),
+                        ch_sensor_status(axis), extra)
+        _safe_write(unique_id, MEAS_SENSOR_STATUS,
+                    float(_ss.encode_vpd_source(snapshot.get('vpd_source'))),
+                    CH_VPD_SOURCE, extra)
+        diff = snapshot.get('vpd_device_diff')
+        if diff is not None:
+            _safe_write(unique_id, MEAS_SENSOR_STATUS, float(diff),
+                        CH_VPD_DEVICE_DIFF, extra)
+    except Exception as exc:   # noqa: BLE001 — 로그 한 줄이 제어를 멈춰선 안 된다
+        logger.warning('센서 상태 기록 실패 — 제어는 계속한다: %s', exc)

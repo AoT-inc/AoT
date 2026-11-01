@@ -79,10 +79,14 @@ SERVICE_ACCOUNT_PROVIDER = 'system'
 # 'unrestricted'(tool_registry.TOOL_PROFILE_UNRESTRICTED) — 인앱 물리 제어가
 # 그 키로 stdio 하위 프로세스를 거치므로, 인앱과 같이 제한이 없다.
 # 권한 판단에는 쓰지 않는다 — 표면(무엇을 보여 주는가)이다.
+# key_id — 이 연결이 쓴 API 키 행(user_api_key.unique_id). link_id — 인가 서버
+# (OAuth)로 들어온 연결의 계정 연결 행(mcp_external_account.id). 묶음을 바꾸는
+# 도구(set_tool_profile)가 "부른 연결의 것" 만 고치려면 둘 중 하나가 필요하다.
 RoleInfo = namedtuple('RoleInfo', ['name', 'can_write', 'user_id',
                                    'can_edit_settings', 'can_use_ai_chat',
-                                   'can_edit_plots', 'tool_profile'],
-                      defaults=(None, None, None, None))
+                                   'can_edit_plots', 'tool_profile', 'key_id',
+                                   'link_id'],
+                      defaults=(None, None, None, None, None, None))
 
 
 def role_row_allows(row, permission) -> bool:
@@ -167,11 +171,25 @@ def tool_profile_of(role):
     return value or default_tool_profile()
 
 
+def narrow_profile(role, requested):
+    """연결 주소의 `?tools=lite` 로 이 연결의 묶음을 **좁힌다**(2026-10-10).
+
+    키 하나로 claude.ai 커넥터를 둘(가벼움·전체) 둘 수 있게 한다. 좁히기만 한다 —
+    가벼움은 운영과 같은 도구에 닿으므로 어느 키의 묶음보다도 넓지 않다. 그 밖의
+    값은 무시한다(넓히는 수단이 되면 안 된다). role 이 없으면(인증을 끈 서버)
+    그대로 둔다."""
+    from aot.tools.tool_registry import TOOL_PROFILE_LITE
+    if role is None or (requested or '').strip().lower() != TOOL_PROFILE_LITE:
+        return role
+    return role._replace(tool_profile=TOOL_PROFILE_LITE)
+
+
 def _with_key_profile(role, user, key_row):
     """인증된 스냅샷에 키의 묶음을 싣는다. role 이 없으면 그대로 None."""
     if role is None:
         return None
-    return role._replace(tool_profile=key_tool_profile(user, key_row))
+    return role._replace(tool_profile=key_tool_profile(user, key_row),
+                         key_id=getattr(key_row, 'unique_id', None))
 
 
 def require_auth() -> bool:
@@ -479,7 +497,12 @@ def _authenticate_central(token, declared_agent_id=None):
     label = _clean_label(result.claims.client_name or declared_agent_id)
     if label:
         agent_id = f"user:{user.name}/{label}"
-    return True, agent_id, mcp_central.restrict_role(_role_for(user), result.claims.scopes), None
+    link = result.link
+    role = mcp_central.restrict_role(_role_for(user), result.claims.scopes,
+                                     getattr(link, 'tool_profile', None))
+    if role is not None and link is not None:
+        role = role._replace(link_id=link.id)
+    return True, agent_id, role, None
 
 
 def authenticate_stdio(declared_agent_id=None):

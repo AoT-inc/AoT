@@ -157,9 +157,10 @@ GOLDEN_SET = [
     #
     # Device/zone/site names below are REAL values verified against a dev DB
     # snapshot (2026-07-08): site 1포장 has zones 1-1..1-4, each holding exactly
-    # one valve (밸브1..밸브4) — confirmed via AIContextService.get_zone_site_map()
-    # / get_device_zone_map() and AoTDataToolService.search_devices() run
-    # directly against a sandboxed copy (never the live DB). Replace with your
+    # one valve (밸브1..밸브4) — confirmed then via the zone maps of the day and
+    # AoTDataToolService.search_devices(), run directly against a sandboxed copy
+    # (never the live DB). Membership is now decided by
+    # aot.aot_flask.geo.device_membership (PlaceIndex · place_members). Replace with your
     # own facility's real names if these devices don't exist in your target DB.
     {
         'id': 'dc_recent_01', 'category': 'deterministic_control',
@@ -188,10 +189,10 @@ GOLDEN_SET = [
     {
         # Same zone precision check via the MAP-viewport path instead of named
         # location text — map_context carries the viewport's lat/lng (NOT a
-        # site/zone name: AIContextService.resolve_point_to_location() derives
-        # the site/zone by spatial containment of this point). The coordinate
-        # below is zone 1-1's real centroid — verified live:
-        # resolve_point_to_location(lat, lng) -> {'site': '1포장', 'zone': '1-1'}.
+        # site/zone name: device_membership.place_at_point() picks the smallest
+        # site/zone containing this point, and its devices come from
+        # screen_members()). The coordinate below is zone 1-1's real centroid —
+        # verified live (2026-07-08) as site '1포장', zone '1-1'.
         'id': 'dc_map_01', 'category': 'deterministic_control',
         'prompt': '밸브 다 열어줘',
         'page_context': {'map_context': {'lat': 35.852741015363335, 'lng': 126.86601694245914}},

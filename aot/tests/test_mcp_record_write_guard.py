@@ -44,6 +44,8 @@ from aot.tools import tool_registry as R
 
 _PREFIX = 'RecWrite'
 _NOTE_MARK = 'record-write-guard-test-note'
+# 이 파일이 만든 감사·승인 행을 알아보는 표식 — _wipe 가 이것만 지운다.
+_AGENT = 'user:recwrite-test'
 
 
 def _uuid():
@@ -92,15 +94,31 @@ class _Fixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # create_app() 이 고른 DB 가 곧 이 픽스처가 만지는 DB 다 — 라이브면 거부.
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         cls.app = create_app()
         cls.app.config['WTF_CSRF_ENABLED'] = False
         cls.app.config['TESTING'] = True
         cls.app_context = cls.app.app_context()
         cls.app_context.push()
+        # 이 클래스가 시작하기 전에 있던 감사 행은 건드리지 않는다. 내부 AI 진입점
+        # (`execute_for_agent`)은 에이전트 id 를 'internal-ai' 로 남겨 `_AGENT` 로는
+        # 우리 행을 알아볼 수 없고, 정리하지 않으면 같은 세션 DB 를 쓰는 뒤 파일
+        # (test_mcp_facades 의 `MCPAuditLog.query.all()`)이 그 행을 자기 것으로
+        # 읽는다 — 시작 시점 이후에 생긴 행도 우리 것으로 센다.
+        cls._audit_floor = db.session.query(
+            db.func.max(MCPAuditLog.id)).scalar() or 0
 
     @classmethod
     def tearDownClass(cls):
-        cls.app_context.pop()
+        try:
+            # 마지막 시험이 남긴 행 — setUp 의 _wipe 는 다음 시험 앞에서만 돈다.
+            db.session.rollback()
+            cls._mine_audit().delete(synchronize_session=False)
+            db.session.commit()
+        finally:
+            cls.app_context.pop()
 
     def setUp(self):
         self._env = mock.patch.dict(os.environ, {'AOT_MCP_WRITE_ENABLED': '1'})
@@ -148,21 +166,38 @@ class _Fixture(unittest.TestCase):
 
     def _wipe(self):
         db.session.rollback()
-        GroupGrant.query.delete(synchronize_session=False)
-        UserGroupMember.query.delete(synchronize_session=False)
+        # 이 파일이 만든 것만 — 테이블 전체를 지우면 라이브 DB 의 그룹 부여와
+        # 감사 기록이 사라진다(2026-10-10).
+        mine = [g.unique_id for g in UserGroup.query.filter(
+            UserGroup.name == _PREFIX + 'Group').all()]
+        GroupGrant.query.filter(GroupGrant.group_uuid.in_(mine)).delete(
+            synchronize_session=False)
+        UserGroupMember.query.filter(
+            UserGroupMember.group_uuid.in_(mine)).delete(
+            synchronize_session=False)
         UserGroup.query.filter(UserGroup.name == _PREFIX + 'Group').delete(
             synchronize_session=False)
         Output.query.filter(Output.name == _PREFIX + 'Valve').delete(
             synchronize_session=False)
         Notes.query.filter(Notes.note.like(_NOTE_MARK + '%')).delete(
             synchronize_session=False)
-        MCPAuditLog.query.delete(synchronize_session=False)
-        MCPConfirmation.query.delete(synchronize_session=False)
+        self._mine_audit().delete(synchronize_session=False)
+        self._mine_confirmations().delete(synchronize_session=False)
         User.query.filter(User.name.like(_PREFIX.lower() + '%')).delete(
             synchronize_session=False)
         Role.query.filter(Role.name.like(_PREFIX + '%')).delete(
             synchronize_session=False)
         db.session.commit()
+
+    @classmethod
+    def _mine_audit(cls):
+        return MCPAuditLog.query.filter(
+            (MCPAuditLog.agent_id == _AGENT)
+            | (MCPAuditLog.id > cls._audit_floor))
+
+    @staticmethod
+    def _mine_confirmations():
+        return MCPConfirmation.query.filter(MCPConfirmation.agent_id == _AGENT)
 
     @staticmethod
     def _clear_scope_cache():
@@ -186,7 +221,7 @@ class _Fixture(unittest.TestCase):
 
     def _call(self, tool, args, role, scope_user_uuid=None):
         self._clear_scope_cache()
-        out = te._execute_tool(self.app, tool, dict(args), agent_id='user:test',
+        out = te._execute_tool(self.app, tool, dict(args), agent_id=_AGENT,
                                role=role, scope_user_uuid=scope_user_uuid,
                                transport='mcp_http')
         return json.loads(out[0]['text'])
@@ -207,7 +242,7 @@ class _Fixture(unittest.TestCase):
 
     def _last_audit(self):
         db.session.remove()
-        return MCPAuditLog.query.order_by(MCPAuditLog.id.desc()).first()
+        return self._mine_audit().order_by(MCPAuditLog.id.desc()).first()
 
     def _scope_to_other_group(self):
         """장치 탭을 아무도 속하지 않은 그룹에만 부여한다."""
@@ -282,7 +317,7 @@ class TestMcpRecordWrite(_Fixture):
                 self.assertEqual(row.permission, 'write')
                 self.assertEqual(row.confirmation_status, 'not_required')
         db.session.remove()
-        self.assertEqual(MCPConfirmation.query.count(), 0,
+        self.assertEqual(self._mine_confirmations().count(), 0,
                          'record writes must not create approval requests')
 
     def test_group_scope_applies_to_record_writes(self):
@@ -354,8 +389,9 @@ class TestMcpRecordWrite(_Fixture):
 class TestToolListing(_Fixture):
 
     def _names(self, role):
-        return {t['name'] for t in te._get_all_tools(self.app, role=role,
-                                                     tiered=False)}
+        # 묶음 도구(plot_stage·schedule_add)는 실린 operation 으로 펼친다.
+        return te.reachable_tool_names(te._get_all_tools(self.app, role=role,
+                                                         tiered=False))
 
     def test_readonly_key_sees_no_write_tools(self):
         names = self._names(self._role('Editor', readonly=True))

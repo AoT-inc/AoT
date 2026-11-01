@@ -31,9 +31,11 @@ mcp_safety_gate.py — 외부 MCP 경로(aot_mcp_server.py)의 안전·감사 �
 1회용이며 소비되면 status='consumed' 로 표시해 재사용(replay)을 막는다.
 """
 
+import contextlib
 import json
 import logging
 import os
+import threading
 import time
 from datetime import datetime, timedelta
 
@@ -55,6 +57,7 @@ _TOOL_ACTION_LABELS = {
     'modify_function_options': '함수 설정 변경',
     'create_notice': '공지 작성',
     'modify_notice': '공지 수정',
+    'modify_note': '노트 수정·보관',
     'delete_notice': '공지 삭제',
     'edit_schedule': '일정 수정',
     'delete_schedule': '일정 삭제',
@@ -96,6 +99,12 @@ def synthesize_title(tool_name, params):
         return existing_title.strip()
 
     label = _TOOL_ACTION_LABELS.get(tool_name, tool_name)
+    if tool_name == 'activate_input' and params.get('input_id'):
+        from aot.tools.data_tools.definition import DefinitionToolsMixin
+        name = _resolve_device_display_name(params['input_id']) or params['input_id']
+        on = DefinitionToolsMixin._as_active(params.get('active', True))
+        if on is not None:
+            return f"{name} {'켜기' if on else '끄기'}"
     device_id = params.get('device_id')
     state = params.get('state')
     if device_id and state in ('on', 'off'):
@@ -114,6 +123,41 @@ def synthesize_title(tool_name, params):
         return f"{name} {label}"
     return label
 
+def _input_activation_text(args):
+    """입력 켜기/끄기의 되읽기 — 이름·놓인 곳, 끌 때는 이 입력을 쓰는 것들(DB 참조). 못 만들면 None."""
+    try:
+        from aot.tools.data_tools import input_impact
+        from aot.tools.data_tools.definition import DefinitionToolsMixin
+        on = DefinitionToolsMixin._as_active(args.get('active', True))
+        if on is None or not args.get('input_id'):
+            return None
+        return input_impact.readback(args['input_id'], on)
+    except Exception:
+        logger.exception('[MCPGate] 입력 켜기/끄기 되읽기 실패 (기본 문구로)')
+        return None
+
+
+def read_back_text(tool_name, arguments):
+    """사용자에게 되읽어 줄 한 줄 — 서버가 풀어 낸 대상과 동작.
+
+    AI 가 보낸 `_title` 은 쓰지 않는다. 사용자의 말을 AI 가 다른 장치로 알아들었는지 확인하는 줄이라,
+    AI 가 쓴 글이 아니라 서버가 id 에서 찾은 이름이어야 한다(2026-10-25: 요청이 곧 승인이 되어 오인한
+    장치가 그대로 움직일 수 있다는 지적). 켜기/끄기 말고 값이 더 있으면(시간·개도 등) 함께 싣는다.
+    """
+    args = {k: v for k, v in (arguments or {}).items() if k not in META_KEYS}
+    if tool_name == 'activate_input':
+        text = _input_activation_text(args)
+        if text:
+            return text
+    text = synthesize_title(tool_name, args)
+    extra = [f"{k}={v}" for k, v in args.items()
+             if k not in ('device_id', 'state', 'title') and v not in (None, '')
+             and isinstance(v, (str, int, float, bool))]
+    if extra and tool_name in PHYSICAL_TOOLS:
+        text += " (" + ", ".join(extra[:6]) + ")"
+    return text
+
+
 # 레지스트리에 없는 네이티브 도구 중 물리 제어에 해당하는 것.
 # (AoTNativeToolEngine 은 tool_registry.TOOLS 에 선언돼 있지 않다.)
 _NATIVE_WRITE_TOOLS = frozenset({'set_output_state'})
@@ -131,6 +175,53 @@ _NATIVE_WRITE_TOOLS = frozenset({'set_output_state'})
 _CONFIRM_TTL_SEC = int(os.environ.get('AOT_MCP_CONFIRM_TTL_SEC', '900'))
 #   2) 승인 → 실행   : 승인이 살아있는 시간. 승인 시점부터 새로 시작한다.
 _APPROVED_TTL_SEC = int(os.environ.get('AOT_MCP_APPROVED_TTL_SEC', '300'))
+
+
+# ── 승인 상태 전이는 조건부 갱신으로만 (2026-10-08) ────────────────────────
+#
+# 승인된 요청을 실행하는 경로가 셋이다(웹 승인 → execute_approved, MCP
+# respond_to_confirmation → 재호출 소비, 승인 화면의 일괄 승인). 셋 다 예전에는
+# "행을 읽어 상태를 본 뒤 나중에 쓴다" 였고, 그 사이에 겹친 요청은 둘 다 확인을
+# 통과했다 — 같은 장치 명령이 두 번 나간다. 그래서 전이를 `WHERE status IN
+# (기대값)` 갱신으로 **선점**하고, 갱신된 행이 없으면 실행하지 않는다.
+# 회귀: aot/tests/test_mcp_approval_replay.py
+
+#: 결정마다 허락하는 출발 상태. 승인은 대기 중인 것만. 거부는 실행 전까지
+#: (approved 도) — 승인을 거두는 것은 아무것도 실행하지 않는다.
+_DECIDABLE_FROM = {
+    'approved': ('pending',),
+    'rejected': ('pending', 'approved'),
+}
+
+#: 실행 중 표시. execute_approved 가 approved → executing 으로 선점하고 끝나면
+#: executed/failed(또는 스코프 거부 시 pending)로 바꾼다. 실행 도중 프로세스가
+#: 죽으면 이 상태로 남는다 — 다시 실행되지 않는 쪽이 안전하다(장치 명령이
+#: 나갔는지 모르는 요청을 자동으로 다시 보내지 않는다).
+EXECUTING = 'executing'
+
+
+def _transition(confirmation_id, from_statuses, values):
+    """`status IN from_statuses` 인 행만 `values` 로 바꾼다. 바꿨으면 True.
+
+    선점의 유일한 수단이다. 행 객체를 고쳐 save() 하면 읽은 시점의 상태를
+    믿고 쓰게 되어, 그 사이 다른 요청이 바꾼 것을 덮는다."""
+    from aot.aot_flask.extensions import db
+    from aot.databases.models import MCPConfirmation
+    n = (MCPConfirmation.query
+         .filter(MCPConfirmation.unique_id == confirmation_id,
+                 MCPConfirmation.status.in_(list(from_statuses)))
+         .update(values, synchronize_session=False))
+    db.session.commit()
+    return n == 1
+
+
+def db_refresh(row):
+    """조건부 갱신 뒤 행 객체를 DB 값으로 다시 읽는다(세션의 옛 값을 버린다)."""
+    from aot.aot_flask.extensions import db
+    try:
+        db.session.refresh(row)
+    except Exception:
+        logger.debug('[MCPGate] 행 새로 읽기 실패', exc_info=True)
 
 # 도구별 시간당 호출 상한.
 _DEFAULT_CALLS_PER_HOUR = 10
@@ -213,8 +304,51 @@ def config_only_tools() -> frozenset:
 
 # 레지스트리를 못 읽을 때의 폴백. 여기서 실패가 '읽기' 쪽으로 기울면 노트·지식
 # 쓰기가 누구에게나 열린다(2026-09-23 고친 구멍 그대로) — 이름이라도 고정해 둔다.
-_RECORD_WRITE_FALLBACK = frozenset({'create_note', 'knowledge_shelve', 'note'})
+_RECORD_WRITE_FALLBACK = frozenset({'create_note', 'knowledge_shelve', 'note',
+                                    'modify_note', 'add_target_alias',
+                                    'delete_target_alias'})
 _ADVISORY_WRITE_FALLBACK = frozenset({'submit_advice'})
+
+
+#: 기록 쓰기이면서 **호출마다** 승인 여부가 갈리는 도구. 노트 수정은 본인(또는
+#: 사용자 요청으로 AI 가 만든) 노트는 바로, 남의 노트·작성자 불명 노트는 승인
+#: 대기다. 역할·읽기 전용 키·그룹 스코프는 다른 기록 쓰기와 같다.
+CONDITIONAL_APPROVAL_TOOLS = frozenset({'modify_note'})
+
+_approval_state = threading.local()
+
+
+@contextlib.contextmanager
+def approval_granted():
+    """이 안에서 실행되는 처리기는 승인 게이트를 지난 호출이다.
+
+    승인 게이트가 통과시킨 호출(`_run_gated_tool`)과 승인된 대기 항목의 서버
+    실행(`execute_approved`)이 연다. 처리기의 두 번째 방어선이 읽는다 —
+    게이트를 거치지 않고 처리기에 곧바로 닿은 호출(인앱 AI)은 이 표지가 없다."""
+    prev = getattr(_approval_state, 'granted', False)
+    _approval_state.granted = True
+    try:
+        yield
+    finally:
+        _approval_state.granted = prev
+
+
+def approval_granted_now():
+    return bool(getattr(_approval_state, 'granted', False))
+
+
+def conditional_needs_approval(tool_name, arguments) -> bool:
+    """CONDITIONAL_APPROVAL_TOOLS 의 이 호출이 승인 대기로 가야 하는가.
+    판정이 깨지면 **승인 쪽**으로 닫는다."""
+    if tool_name not in CONDITIONAL_APPROVAL_TOOLS:
+        return False
+    try:
+        from aot.tools.aot_data_tool_service import AoTDataToolService
+        return bool(AoTDataToolService.note_edit_needs_approval(
+            (arguments or {}).get('note_id')))
+    except Exception:
+        logger.exception('[MCPGate] 노트 수정 승인 판정 실패 — 승인 대기로 처리')
+        return True
 
 
 # @manual ai/overview#safety-approval-model
@@ -336,8 +470,40 @@ def classify_permission(tool_name: str) -> str:
 
 
 def strip_meta(arguments: dict) -> dict:
-    """게이트 메타 키를 제거한 인자 사본 — 핸들러에 넘길 값."""
+    """게이트 메타 키를 제거한 인자 사본 — 승인 스냅샷·비교의 기준."""
     return {k: v for k, v in (arguments or {}).items() if k not in META_KEYS}
+
+
+#: 승인 스냅샷(`params_json`)에는 남지만 처리기에는 넘기지 않는 키 — 도메인 틀이
+#: 해석한 대상(docs/design/mcp-domain-surface.md §9-2). 스냅샷에 남아야 승인 실행
+#: 직전에 "그사이 대상이 바뀌었는가" 를 비교할 수 있다.
+SNAPSHOT_ONLY_KEYS = frozenset({'_domain_target'})
+
+
+def handler_args(arguments: dict) -> dict:
+    """처리기에 넘길 인자 — 메타 키와 스냅샷 전용 키를 뺀다."""
+    return {k: v for k, v in strip_meta(arguments).items()
+            if k not in SNAPSHOT_ONLY_KEYS}
+
+
+def stale_target(params):
+    """스냅샷의 대상이 승인 뒤 지워졌거나 바뀌었으면 그 이유, 아니면 None.
+    확인 자체가 실패하면 이유를 낸다 — 확인 못 함은 실행하지 않는다."""
+    if not params or not any(k in params for k in SNAPSHOT_ONLY_KEYS):
+        return None
+    try:
+        from aot.tools.domain.dispatch import snapshot_changed
+        return snapshot_changed(params)
+    except Exception as exc:                                # noqa: BLE001
+        logger.exception('[MCPGate] 대상 재확인 실패')
+        return 'the target could not be re-checked (%s)' % exc
+
+
+def target_changed_refusal(why):
+    return mark_not_performed({
+        "status": "error", "reason_code": "target_changed",
+        "message": ("Not run: %s since this was requested. Resolve the target "
+                    "again and ask the user to approve the new request." % why)})
 
 
 # 호출자 신원을 핸들러 인자로 받아야 하는 도구.
@@ -464,6 +630,21 @@ def _build_human_briefing(tool_name, arguments):
                              f"(duration_minutes={args.get('duration_minutes', 60)} per entry)")
         elif tool_name == 'add_schedule':
             lines.append(f"Schedule: {args.get('date', '?')} {args.get('time', '?')} - {args.get('content', '')}")
+        elif tool_name == 'activate_input':
+            text = _input_activation_text(args)
+            if text:
+                lines.append(text)
+        elif tool_name == 'modify_note':
+            from aot.databases.models import Notes
+            n = Notes.query.filter_by(unique_id=args.get('note_id')).first()
+            if n is not None:
+                who = getattr(getattr(n, 'author', None), 'name', None)
+                lines.append(f"Note '{n.name}' written by "
+                             f"{who or 'an unknown author'} - editing it needs approval.")
+            changes = [k for k in ('name', 'note', 'tags') if args.get(k) is not None]
+            if args.get('archive') is not None:
+                changes.append('archive=%s' % args.get('archive'))
+            lines.append("Change: " + ', '.join(changes))
     except Exception:
         logger.exception('[MCPGate] briefing 생성 실패 (건너뜀)')
 
@@ -638,10 +819,12 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
     refused = role_refusal(tool_name, role)
     if refused is not None:
         return refused
-    # 역할 검사를 지난 조언 제출·읽기·기록 쓰기는 승인 없이 통과한다.
+    # 역할 검사를 지난 조언 제출·읽기·기록 쓰기는 승인 없이 통과한다. 단 노트
+    # 수정은 남의 노트·작성자 불명 노트일 때 아래 승인 흐름을 탄다.
     if (tool_name in advisory_write_tools()
             or classify_permission(tool_name) == 'read'
-            or tool_name in record_write_tools()):
+            or (tool_name in record_write_tools()
+                and not conditional_needs_approval(tool_name, arguments))):
         return None
 
     # 설정 편집 도구는 여기서 통과시킨다 — 역할 검사와 write_enabled 검사를
@@ -777,6 +960,17 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
                 "reason_code": "confirmation_expired",
                 "message": "The confirmation expired. Request approval again.",
             }
+        if row.status == EXECUTING:
+            # 승인 화면에서 서버가 지금 실행하는 중이다 — 끝나면 위의
+            # executed/failed 재생 경로가 결과를 돌려준다. "대기 중" 으로
+            # 답하면 모델이 사람에게 다시 승인을 청한다.
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_in_progress",
+                "confirmation_id": row.unique_id,
+                "message": ("This approved request is being carried out right now. "
+                            "Do not call the tool again; check its result shortly."),
+            }
         if row.status != 'approved':
             return {
                 "status": "pending_approval",
@@ -793,9 +987,16 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
                             "Changing arguments requires a new approval."),
                 "approved_params": json.loads(row.params_json or '{}'),
             }
-        # 1회용 소비
-        row.status = 'consumed'
-        row.save()
+        # 1회용 소비 — 조건부 갱신으로 선점한다. 위의 확인은 읽은 시점의
+        # 값이라, 같은 확인 번호로 겹쳐 들어온 재호출이 둘 다 통과할 수
+        # 있었다(2026-10-08). 선점에 실패하면 이미 쓰인 것이다.
+        if not _transition(row.unique_id, ('approved',), {'status': 'consumed'}):
+            return {
+                "status": "refused",
+                "reason_code": "confirmation_already_used",
+                "message": "This confirmation was already used. Request a new one if needed.",
+            }
+        db_refresh(row)
         logger.info("[MCPGate] 승인 소비 tool=%s agent=%s confirmation=%s",
                     tool_name, agent_id, row.unique_id)
         return None
@@ -870,18 +1071,25 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
         "tool_name": tool_name,
         "expires_in_sec": _CONFIRM_TTL_SEC,
         "execute_within_sec": _APPROVED_TTL_SEC,
+        "confirm_with_user": read_back_text(tool_name, arguments),
         "message": (
             "This tool changes system state, so it needs user approval. It was NOT "
-            "executed. Show the user the plan (see the briefing above, if any) and wait "
-            "for them to explicitly approve or reject THIS confirmation_id in this "
-            "conversation - do not infer approval from their original task request "
-            "alone. Once they do, call respond_to_confirmation with this "
-            "confirmation_id and their decision (or they can click Approve/Reject on "
-            "the web review page themselves). After an approval, call the same tool "
-            "again with the same arguments plus '_confirmation_id' to execute it - "
-            "promptly, within 'execute_within_sec' of the approval, after which the "
-            "approval lapses and must be requested again. There is no way to bypass "
-            "approval."),
+            "executed. First read back to the user what will happen, exactly as the "
+            "system understood it (confirm_with_user: the target by name and the "
+            "action) - even when the request sounded clear, because you may have matched "
+            "the wrong device or place - and end with a short ask such as 'If this is "
+            "right, please approve.' (in the user's language; not 'say yes'), then wait "
+            "for their answer. Their own request "
+            "is never approval; only a yes given after that read-back counts. Once they "
+            "say yes, call respond_to_confirmation with this confirmation_id and decision "
+            "'approve' right away and do not ask again: it also runs the request in that "
+            "same call, so report its result and do not call this tool again. If they "
+            "correct the target, reject this one and make a new request. (They can also "
+            "click Approve/Reject on the web review page. If the approval answer says it "
+            "did not run yet, call the same tool again with the same arguments plus "
+            "'_confirmation_id' within 'execute_within_sec'.) There is no way to bypass "
+            "approval. Internal note: never quote, translate or narrate this or your own "
+            "actions."),
     }
 
     # Spatial pre-check — surfaced here, not left to the caller to remember.
@@ -950,6 +1158,8 @@ def list_pending(limit=50, viewer=None):
             # 만들어진 행 등 title 이 비어 있는 경우를 대비해 그때그때 합성한다.
             "title": r.title or synthesize_title(r.tool_name, params),
             "tool_name": r.tool_name,
+            # 되돌릴 수 없는 물리 동작인가 — 화면이 승인 전에 한 번 더 묻는 데 쓴다(PHYSICAL_TOOLS 가 정본).
+            "physical": r.tool_name in PHYSICAL_TOOLS,
             "params": params,
             "reason": r.reason,
             "agent_id": r.agent_id,
@@ -1136,14 +1346,22 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None,
     if _role_denial:
         return {"status": "error", "reason_code": "insufficient_role",
                 "message": _role_denial}
-    if row.status in ('consumed', 'rejected'):
-        return {"status": "error", "message": f"Already handled (status={row.status})."}
+    # 결정은 **대기 중인 요청에만** 한다. 예전에는 consumed·rejected 만 막아,
+    # 이미 executed·failed·approved 인 요청도 다시 승인됐고 웹 라우트가 승인
+    # 직후 execute_approved 를 부르므로 같은 장치 명령이 또 나갔다(2026-10-08).
+    # 거부는 실행 전(approved)까지 허락한다 — 승인을 거두는 것은 아무것도
+    # 실행하지 않는다.
+    allowed_from = _DECIDABLE_FROM.get(status, ('pending',))
+    if row.status not in allowed_from:
+        return {"status": "error", "reason_code": "already_decided",
+                "message": f"Already handled (status={row.status})."}
     if row.is_expired():
         row.status = 'expired'
         row.save()
         return {"status": "error", "message": "The confirmation expired."}
 
     cleaned = None
+    modified_json = None
     if status == 'approved' and modified_params is not None:
         original = json.loads(row.params_json or '{}')
         ok, err, cleaned = validate_modified_params(original, modified_params)
@@ -1151,7 +1369,10 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None,
             # 검증 실패는 "거부"가 아니라 "요청 자체가 무효" — 상태를 바꾸지
             # 않고 pending 그대로 둬서 다른 값으로 다시 시도할 수 있게 한다.
             return {"status": "error", "message": err}
-        row.modified_params_json = json.dumps(cleaned, ensure_ascii=False, sort_keys=True)
+        # 행에 바로 쓰지 않는다 — 아래 조건부 갱신이 다른 칸과 함께 한 번에
+        # 쓴다. 미리 쓰면 스코프 거부로 돌아가도 세션에 남아 다른 커밋에
+        # 실려 나간다.
+        modified_json = json.dumps(cleaned, ensure_ascii=False, sort_keys=True)
 
     if status == 'approved':
         # 승인자 신원 — `user_id` 가 있으면 **반드시** 그 사람으로 판정한다.
@@ -1209,15 +1430,22 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None,
             return {"status": "error", "message": message,
                     "reason_code": "group_scope_denied"}
 
-    row.status = status
+    values = {'status': status}
     if user_id:
-        row.user_id = user_id
+        values['user_id'] = user_id
     if status == 'approved':
         # 승인 시점부터 실행 유효시간을 새로 센다 — 남은 판단 시간이 얼마였든
         # 승인 후 실행 창은 항상 같은 길이다. 같은 컬럼을 재사용해 승인 이후
         # 만료 판정(gate() 2단계의 row.is_expired())이 그대로 동작한다.
-        row.expires_at = datetime.utcnow() + timedelta(seconds=_APPROVED_TTL_SEC)
-    row.save()
+        values['expires_at'] = datetime.utcnow() + timedelta(seconds=_APPROVED_TTL_SEC)
+        if modified_json is not None:
+            values['modified_params_json'] = modified_json
+    # 조건부 갱신으로 선점한다 — 위에서 읽은 상태는 그 사이 다른 요청이 바꿨을
+    # 수 있다(두 탭·두 사람·재시도). 갱신된 행이 없으면 누군가 먼저 결정한 것이다.
+    if not _transition(confirmation_id, allowed_from, values):
+        return {"status": "error", "reason_code": "already_decided",
+                "message": "Already handled by another request."}
+    db_refresh(row)
 
     # 감사 로그의 해당 호출 상태도 갱신 (confirmation_id 로 연결돼 있다)
     try:
@@ -1249,6 +1477,7 @@ CALL_STATES = (
     'executed',            # 이번 호출에서 실제로 실행됨 (읽기 도구 포함)
     'already_executed',    # 승인 시점에 서버가 이미 실행함 — 결과 재생
     'pending_approval',    # 실행 안 됨, 사람 승인 대기
+    'queued',              # 화면에 넘겼으나 화면이 아직 실행을 알리지 않음(화면 조작)
     'approval_rejected',   # 사람이 거부함
     'approval_expired',    # 승인 대기가 만료됨
     'refused',             # 그 밖의 거부 (레이트 리밋, 인자 불일치, 쓰기 비활성 등)
@@ -1515,12 +1744,35 @@ def call_state(blocked, result=None, error_text='', tool_name=None):
         # 실패를 알리는 관행이 두 가지다 — {"status": "error"} 38곳,
         # {"error": "..."} 217곳. 뒤쪽이 주류라 이걸 빠뜨리면 "없는 id 조회"
         # 같은 명백한 실패가 executed 로 보고된다.
+        # 읽기 도구가 "어느 것인가" 를 되묻는 응답은 실패가 아니다 — 조회는
+        # 돌았고 답이 후보 목록이다. 그 응답이 관행대로 error 키를 함께 싣는
+        # 탓에 failed 로 기록돼, 외부 점검이 "정상 처리인데 실패로 표시" 로
+        # 짚었다(2026-10-09). 쓰기 도구는 그대로 둔다 — 아무것도 바뀌지
+        # 않았으니 미실행이 맞다.
+        if (_is_disambiguation(result) and tool_name
+                and classify_permission(tool_name) == 'read'):
+            return 'executed'
         if result.get('status') == 'error' or result.get('error'):
             return 'failed'
         if tool_name and _status_not_performed(result) and \
                 classify_permission(tool_name) == 'write':
             return NOT_PERFORMED_STATUSES[result['status']]
+        # 저장하지 않고 화면을 바꾸는 도구(screen_action)는 게이트상 '읽기' 라
+        # 위 규칙을 타지 않는다. 그 확인 대기·만료는 실행이 아니다(2026-10-11
+        # 외부 AI: needs_confirmation 인데 executed 로 보였다).
+        if tool_name and result.get('status') in _SCREEN_NOT_DONE:
+            from aot.tools.tool_registry import ACTS_WITHOUT_SAVING
+            if tool_name in ACTS_WITHOUT_SAVING:
+                return _SCREEN_NOT_DONE[result['status']]
     return 'executed'
+
+
+# 화면 조작 응답 상태 → 이번 호출에서 실제로 돌았는가. 표에 없는 상태가 '실행됨' 으로
+# 빠지면 안 된다(2026-10-14 사용자 시험: queued·sent 가 executed 로 나갔다).
+_SCREEN_NOT_DONE = {'needs_confirmation': 'pending_approval',
+                    'sent': 'queued', 'queued': 'queued',
+                    'rejected': 'approval_rejected',
+                    'expired': 'failed', 'error': 'failed'}
 # @manual-end
 
 
@@ -1588,6 +1840,28 @@ def execute_approved(confirmation_id, role=None):
              "message": "The approving account no longer exists, "
                         "so the request was not run."})
 
+    # 실행을 선점한다(approved → executing). 위의 확인은 읽은 시점의 값이라
+    # 그 사이 다른 요청(두 번 누른 승인 버튼·두 사람)이 먼저 실행을 시작했을
+    # 수 있다 — 선점에 실패하면 실행하지 않는다(2026-10-08, 재진입 시 장치
+    # 명령이 두 번 나가는 것을 재현했다).
+    if not _transition(confirmation_id, ('approved',), {'status': EXECUTING}):
+        db_refresh(row)
+        if row.status == EXECUTING:
+            code, msg = ('confirmation_in_progress',
+                         'This approved request is already being carried out.')
+        elif row.status in ('executed', 'failed', 'consumed'):
+            code, msg = ('confirmation_already_used',
+                         'This approved request was already carried out.')
+        else:
+            code, msg = ('not_approved',
+                         'This request has not been approved by a person, '
+                         'so it was not run.')
+        logger.warning('[MCPGate] 실행 선점 실패 tool=%s status=%s — 실행하지 않는다',
+                       row.tool_name, row.status)
+        return 'refused', mark_not_performed(
+            {"status": "error", "reason_code": code, "message": msg})
+    db_refresh(row)
+
     try:
         params = _json.loads(row.modified_params_json or row.params_json or '{}')
     except Exception:
@@ -1605,18 +1879,30 @@ def execute_approved(confirmation_id, role=None):
         from aot.tools.tool_execution import (
             _dispatch_virtual_tool, _NATIVE_TOOLS)
 
-        call_args = inject_agent(row.tool_name, strip_meta(params), row.agent_id)
+        # 승인 뒤 대상이 바뀌었으면 돌리지 않는다(§9-2) — 저장된 인자 자체가
+        # 낡았으므로 같은 요청을 다시 승인해도 소용없다. 닫고 새로 묻게 한다.
+        _why = stale_target(params)
+        if _why:
+            result = target_changed_refusal(_why)
+            row.status = 'failed'
+            row.result_json = _json.dumps(result, ensure_ascii=False, default=str)
+            row.save()
+            logger.warning('[MCPGate] 승인 뒤 대상 변경 — 실행하지 않음 tool=%s: %s',
+                           row.tool_name, _why)
+            return 'refused', result
+        call_args = inject_agent(row.tool_name, handler_args(params), row.agent_id)
         # 쓰기 시점 그룹 스코프 — 승인자로 판정한다(설계 §6-2a). 승인 단계의
         # `_approval_scope_denial` 은 인자를 훑어 짐작할 뿐이고, 처리기가
         # 이름·일정 id 등으로 실제 대상을 풀 때 여기서 다시 묻는다.
         from aot.aot_flask.access import write_scope
         with write_scope.acting_as(row.user_id, tool=row.tool_name) as _principal:
             try:
-                if row.tool_name in _NATIVE_TOOLS:
-                    from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
-                    result = AoTNativeToolEngine.execute(row.tool_name, call_args)
-                else:
-                    result = _dispatch_virtual_tool(row.tool_name, call_args)
+                with approval_granted():
+                    if row.tool_name in _NATIVE_TOOLS:
+                        from aot.tools.aot_native_tool_engine import AoTNativeToolEngine
+                        result = AoTNativeToolEngine.execute(row.tool_name, call_args)
+                    else:
+                        result = _dispatch_virtual_tool(row.tool_name, call_args)
             except write_scope.WriteScopeDenied as exc:
                 result = write_scope.refusal(exc)
             if write_scope.was_denied(_principal):

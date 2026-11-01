@@ -200,6 +200,19 @@ INPUT_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Use Websockets'),
             'phrase': lazy_gettext('Use websockets to connect to the server.')
+        },
+        {
+            'id': 'mqtt_store_retained',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Store retained messages'),
+            'phrase': lazy_gettext(
+                'When off (default), messages the broker re-sends from its '
+                'retained store right after subscribing are not saved as '
+                'measurements, because they are old values that would otherwise '
+                'be stamped with the current time. Turn on only if the publisher '
+                'sends its state as retained messages only.')
         }
     ],
 
@@ -266,6 +279,7 @@ class InputModule(AbstractInput):
         self.mqtt_username = None
         self.mqtt_password = None
         self.mqtt_use_websockets = None
+        self.mqtt_store_retained = None
 
         # Communication status (comm_* contract) — see comm_is_fault() below.
         self._comm_connected = False
@@ -405,6 +419,18 @@ class InputModule(AbstractInput):
         self.logger.info("Log: {}".format(string))
 
     def on_message(self, client, userdata, msg):
+        # retained 메시지는 측정으로 저장하지 않는다 (기본) — 구독 직후 브로커가
+        # 다시 보내는 낡은 값에 수신 시각(utcnow)이 붙어 '방금 잰 값'이 되기
+        # 때문이다. 사정은 mqtt_paho_json.py 의 같은 자리 주석 참고. 이 입력에도
+        # 페이로드 시각을 쓰는 설정이 없어 건너뛰는 것이 안전하다. 'Store retained
+        # messages' 를 켜면 예전처럼 저장하고, 건너뛴 메시지는 _comm_last_ts 도
+        # 갱신하지 않는다.
+        if getattr(msg, 'retain', False) and not self.mqtt_store_retained:
+            self.logger.debug(
+                "Ignoring retained message on '{}' (Store retained messages is off)".format(
+                    msg.topic))
+            return
+
         # Any delivered message proves the broker link is alive, recorded before
         # decoding so an undecodable payload still counts as proof of life.
         self._comm_last_ts = time.time()

@@ -8,6 +8,22 @@ env_coordinator.py 에서 `from ._function_info import *` 로 임포트.
 from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.functions.utils.env_control.heat_protect import HP_OPTION_RANGES
+
+
+def _range_constraint(option_id):
+    """`HP_OPTION_RANGES[option_id]` 범위 검사 — 화면 검증과 코드 자르기가 같은 표를 본다."""
+    lo, hi = HP_OPTION_RANGES[option_id]
+
+    def _check(mod_dev, value):
+        errors = []
+        try:
+            if value < lo or value > hi:
+                errors.append('Must be between %g and %g' % (lo, hi))
+        except TypeError:
+            pass                        # 비어 있으면 기본값으로 읽는다
+        return not errors, errors, mod_dev
+    return _check
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 액추에이터 종류 상수 (env_coordinator.py 전역 참조)
@@ -90,7 +106,9 @@ FUNCTION_INFORMATION = {
         "linked plot's crop and current stage (with control_basis 'temperature', "
         "the stage's day/night temperature); these options only set the range "
         "they are kept in (guide_T_min/guide_T_max, guide_RH_min/guide_RH_max) "
-        "and hard limits (temp_min/temp_max, humid_min/humid_max)."
+        "and hard limits (temp_min/temp_max, humid_min/humid_max). "
+        "heat_protect_threshold (default 30 °C, indoor average) is where extreme-heat "
+        "protection starts — it is a stress limit, not a target."
     ),
 
     'options_enabled': ['custom_options', 'enable_actions'],
@@ -574,6 +592,44 @@ FUNCTION_INFORMATION = {
             'phrase': lazy_gettext('Higher value = processed first. Default 1.2.'),
         },
         # @manual-end
+        # VPD 목표의 기준(2026-10-09, `env_control/leaf_vpd.py`). 기본은 공기 — 종전과 같다.
+        # 잎 기준은 **잰 엽온이 있을 때만** 목표를 옮긴다(고정 오프셋으로 어림하지 않는다).
+        # 엽온 신호는 기준과 무관하게 묶을 수 있다 — 묶으면 잎 VPD 가 화면·기록에 나온다.
+        # @manual ai/env-control#leaf-vpd
+        {
+            'id': 'vpd_target_basis',
+            'type': 'select',
+            'default_value': 'air',
+            'required': False,
+            'options_select': [
+                ('air',  lazy_gettext('Air VPD')),
+                ('leaf', lazy_gettext('Leaf VPD (needs a leaf temperature sensor)')),
+            ],
+            'name': lazy_gettext('VPD Target Applies To'),
+            'phrase': lazy_gettext(
+                'Air: the VPD target is compared with air VPD from temperature and humidity. '
+                'Leaf: the target is a leaf VPD; each cycle it is turned into the air VPD that '
+                'gives that leaf VPD at the measured leaf temperature. Without a fresh leaf '
+                'temperature the target is used as an air VPD for that cycle.'
+            ),
+        },
+        {
+            'id': 'leaf_temp_signal',
+            'type': 'select_measurement',
+            'default_value': '',
+            'required': False,
+            'options_select': [
+                'Input',
+                'Function',
+            ],
+            'name': lazy_gettext('Leaf Temperature Sensor'),
+            'phrase': lazy_gettext(
+                'An infrared leaf or canopy temperature. Shows leaf VPD next to air VPD, and is '
+                'required for a leaf VPD target. Readings more than 10 °C away from the air are '
+                'treated as not seeing leaves.'
+            ),
+        },
+        # @manual-end
         # @manual ai/env-control#settings-target
         {
             'id': 'tolerance_vpd',
@@ -622,6 +678,58 @@ FUNCTION_INFORMATION = {
                 'Switch supplemental lighting on below this light level. '
                 '0 = no supplemental lighting, which is most facilities.'
                 ' Measured under the screen — the estimate applies cover and screen transmittance to outdoor sunlight.'
+            ),
+        },
+        # @manual-end
+
+        # ── 스크린 판단 (2026-10-09) ──────────────────────────────────────────
+        # 판단은 `env_control/screen_policy.py` 한 곳이다. 끄면 차광막은 종전처럼 VPD·온도
+        # 편차만 보고 움직인다(빛을 따지지 않는다).
+        # @manual ai/env-control#shade-heat
+        {
+            'id': 'shade_heat_assist',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Use the Shade Screen Against Heat'),
+            'phrase': lazy_gettext(
+                'Draws the shade screen to take heat and water stress off the crop, but only '
+                'while the crop still gets enough light for the day — otherwise the screen '
+                'stays open. Vents and misting are used first when the light is worth keeping.'
+            ),
+        },
+        # @manual-end
+        # @manual ai/env-control#curtain-gap
+        {
+            'id': 'curtain_humidity_gap',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Open the Thermal Curtain a Crack Against Night Condensation'),
+            'phrase': lazy_gettext(
+                'When the night air nears its dew point under a closed thermal curtain, opens it '
+                'a crack (3, then 6, then 10 %) before any vent, and only as far as the heat it '
+                'lets out allows. Only for curtain motors that can stop part-way.'
+            ),
+        },
+        # @manual-end
+        # 밤 이슬 순환팬(`night_dew`, 근거 59)의 스위치 — **기본 꺼짐**(2026-10-12 최종 폐루프 회귀 R3). 열대야 폐루프에서
+        # 밤 젖음은 918 분 그대로였고 팬 전력 +17 %·결로 +80 분·작물 이슬 +39 분만 늘었다(닫힌 집은 팬만으로 잎을
+        # 이슬점 위로 못 올린다). 효과가 확인될 때까지 시험하는 사람만 켠다 — 그래서 [고급] 이다. 건강 점검의 밤 이슬·
+        # 서리 시간은 이 스위치와 무관하게 센다.
+        # @manual ai/env-control#night-dew-fan
+        {
+            'id': 'night_dew_fan',
+            'advanced_only': True,
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Night Dew Circulation Fan (Experimental)'),
+            'phrase': lazy_gettext(
+                'After sunset, runs the circulation fans while the indoor air is within 2 °C of its '
+                'dew point (stops at 3 °C, at least 30 minutes on). Off by default: in simulation it '
+                'did not shorten the wet hours of a closed house and only added fan power and '
+                'condensation.'
             ),
         },
         # @manual-end
@@ -687,6 +795,70 @@ FUNCTION_INFORMATION = {
                 'Hard lower limit. Forces heating when below, regardless of VPD target.'
             ),
         },
+        # @manual-end
+
+        # ── 극한 고온 보호 (2026-10-09) ───────────────────────────────────────
+        # 판정·정책은 `env_control/heat_protect.py` 한 곳이다. 문턱은 작물마다 다르다
+        # (사용자 결정 — 기본 30 °C, **실내 평균** 기준). 해제 여유·최소 유지는 30 °C
+        # 근처에서 보호가 켜졌다 꺼졌다 하지 않게 하는 값이라 [고급] 에 둔다. 습구·습도
+        # 문턱·환기 하한 같은 것은 재배자가 판단할 값이 아니라 모듈 상수(`HP_*`)다.
+        # 화면 자리는 `_LAYOUT` 의 '@range:temperature' 바로 뒤다.
+        # @manual ai/env-control#heat-protect
+        {
+            'id': 'heat_protect_enabled',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Extreme Heat Protection'),
+            'phrase': lazy_gettext(
+                'Above the threshold, keeping the crop out of heat stress comes before '
+                'the target: shade drawn, heating off, circulation fans on, vents '
+                'opened only while it is cooler outside, misting only while it can '
+                'still cool.'
+            ),
+        },
+        {
+            'id': 'heat_protect_threshold',
+            'depends_on': 'heat_protect_enabled',
+            'type': 'float',
+            'default_value': 30.0,
+            'required': False,
+            'constraints_pass': _range_constraint('heat_protect_threshold'),
+            'name': lazy_gettext('Heat Protection Threshold (°C)'),
+            'phrase': lazy_gettext(
+                'Average indoor temperature at which protection starts. Set it to what '
+                'your crop tolerates (20–45 °C).'
+            ),
+        },
+        {
+            'id': 'heat_protect_release_margin',
+            'advanced_only': True,
+            'depends_on': 'heat_protect_enabled',
+            'type': 'float',
+            'default_value': 1.5,
+            'required': False,
+            'constraints_pass': _range_constraint('heat_protect_release_margin'),
+            'name': lazy_gettext('Heat Protection Release Margin (°C)'),
+            'phrase': lazy_gettext(
+                'Protection ends only after the temperature has stayed this far below '
+                'the threshold for 10 minutes (0.5–5 °C).'
+            ),
+        },
+        {
+            'id': 'heat_protect_min_hold_min',
+            'advanced_only': True,
+            'depends_on': 'heat_protect_enabled',
+            'type': 'float',
+            'default_value': 20.0,
+            'required': False,
+            'constraints_pass': _range_constraint('heat_protect_min_hold_min'),
+            'name': lazy_gettext('Heat Protection Minimum Hold (min)'),
+            'phrase': lazy_gettext(
+                'Once started, protection stays on at least this long (5–120 min).'
+            ),
+        },
+        # @manual-end
+        # @manual ai/env-control#settings-target
 
         # ── Humidity (Constraints — not a primary target) ─────────────────────
         {
@@ -765,8 +937,28 @@ FUNCTION_INFORMATION = {
             'phrase': lazy_gettext(
                 'Blocks wetting-type misting in strong light (droplets can '
                 'lens sunlight onto leaves) and, if set below, before sunset. '
-                'Independent of how often misting runs — turn this on or off '
-                'at any misting frequency.'
+                'In extreme heat and dryness short pulses are let through the '
+                'lock (see the option below). Independent of how often '
+                'misting runs — turn this on or off at any misting frequency.'
+            ),
+        },
+        # 해 질 녘 제한(`wet_fog_dusk`, 근거 53) — 육묘 모드를 **포함해** 서는 스위치다(2026-10-10 김제: 일소 잠금이
+        # 풀린 저녁에 해 진 뒤까지 분무가 돌아 잎이 밤마다 590분쯤 젖었다). 기본 켜짐: 켜 두는 쪽이 안전한
+        # 방향이고, 끄고 싶은 재배(저녁 관수를 겸하는 분무)는 [고급] 에서 끈다. 상수(150→50 W/m² 비례 감쇠)는
+        # 옵션으로 내지 않는다 — 재배자가 판단할 값이 아니다. 일몰 전 분: 육묘 모드가 아니면 90분, 육묘 모드면
+        # `nursery_evening_cutoff_min`. `nursery_evening_fog` 는 이 스위치를 껐을 때만 읽힌다 — 문구에 적는다.
+        {
+            'id': 'wetting_fog_dusk_stop',
+            'advanced_only': True,
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Stop Wetting Mist Toward Dusk'),
+            'phrase': lazy_gettext(
+                'Wetting-type misting eases off as the light fades and stops before '
+                'sunset (90 minutes; with sunburn/evening protection on, the stop time '
+                'set below), so leaves are not left wet overnight. Fine fog is not '
+                'affected. Turn off to allow evening misting.'
             ),
         },
         {
@@ -779,8 +971,9 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('Misting Lockout Irradiance (W/m²)'),
             'phrase': lazy_gettext(
                 'Wetting-type misting is blocked outright at or above this '
-                'indoor light level. The estimated indoor level is used, so '
-                'closing the shade screen relaxes the lockout.'
+                'indoor light level, except for short pulses in extreme heat '
+                'and dryness. The estimated indoor level is used, so closing '
+                'the shade screen relaxes the lockout.'
             ),
         },
         {
@@ -796,6 +989,29 @@ FUNCTION_INFORMATION = {
                 'level, and is tapered linearly between here and the lockout '
                 'threshold. The gap between the two prevents the mist from '
                 'switching on and off as clouds pass.'
+            ),
+        },
+        # 극한 고온·건조의 짧은 펄스(`pulse_fog`, 근거 57) — 일소 잠금 **속에서** 허용하는 펄스의 스위치. 잠금의 이유(지하수
+        # 염분·경도 잔여물, 물방울 렌즈)는 관찰이 아니라 추측이었다(사용자 2026-10-11). 기본 켜짐: 켜 두는 쪽이 작물이 사는
+        # 방향이다(42 °C·VPD 7 kPa 에 하루 종일 가습 0 이던 폐루프 결과). 끄고 싶은 재배는 [고급] 에서 끈다. 상수(10초·15분·
+        # VPD 3 kPa·건구−습구 8 °C)는 옵션으로 내지 않는다 — 재배자가 판단할 값이 아니다. 잠금이 있어야 뜻이 있으므로
+        # `nursery_mode` 에 묶는다(잠금은 육묘 모드에서만 선다).
+        {
+            'id': 'extreme_pulse_fog',
+            'advanced_only': True,
+            'depends_on': 'nursery_mode',
+            'type': 'bool',
+            'default_value': True,
+            'required': False,
+            'name': lazy_gettext('Short Mist Pulses in Extreme Heat/Dryness'),
+            'phrase': lazy_gettext(
+                'While the sunburn lock is on, let one short wetting-mist pulse '
+                '(10 seconds on, at least 15 minutes off) through when the '
+                'house is in extreme heat protection or the air is very dry '
+                '(VPD above 3 kPa) and wet leaves would dry within minutes. '
+                'Never toward dusk or at night, in rain or frost, when '
+                'humidity is already high, or without water. Turn off to keep '
+                'the lock absolute.'
             ),
         },
         # ── Misting Timing (1회 몇 초 · 다음까지 몇 초) ─────────────────────
@@ -840,7 +1056,9 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Allow Misting Before Sunset'),
             'phrase': lazy_gettext(
-                'Allow misting near sunset. Turn off to leave the leaves dry overnight.'
+                'Allow misting near sunset. Turn off to leave the leaves dry overnight. '
+                'Only read while "Stop Wetting Mist Toward Dusk" is off — with it on '
+                '(the default) misting already stops before sunset.'
             ),
         },
         {
@@ -852,7 +1070,8 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Stop Misting Before Sunset (min)'),
             'phrase': lazy_gettext(
-                'How long before sunset misting stops.'
+                'How long before sunset misting stops. Also sets when "Stop Wetting '
+                'Mist Toward Dusk" starts in this mode.'
             ),
         },
         {
@@ -870,6 +1089,73 @@ FUNCTION_INFORMATION = {
             'name': lazy_gettext('Misting Water Source'),
             'phrase': lazy_gettext(
                 'Harder or colder water needs a lower sunburn threshold, which this sets for you.'
+            ),
+        },
+        # @manual-end
+
+        # ── 분무용 물 공급 (2026-10-09) ───────────────────────────────────────
+        # 판정은 `env_control/water_supply.py` 한 곳이다. 수위·수압·유량 스위치 중 **하나**를
+        # 묶는다. 켜지 않으면 종전과 완전히 같다(물이 있는 것으로 본다). 신호가 끊기면
+        # "없다" 로 본다 — 물이 있는지 모르는 채 펌프를 돌리지 않는다.
+        # 문턱·방향 칸은 켰을 때만 보인다(`depends_on`). 신호 칸 자체는 `depends_on` 이 걸린
+        # 선택 칸이라 `hvac_interlock_signal` 과 같은 방식이다.
+        # @manual ai/env-control#water-supply
+        {
+            'id': 'water_supply_check',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Check Misting Water Supply'),
+            'phrase': lazy_gettext(
+                'Stops every mister while the water supply you pick below says there is '
+                'no water — a tank level, a line pressure or a flow switch. Off: water '
+                'is assumed to be there.'
+            ),
+        },
+        {
+            'id': 'water_supply_signal',
+            'depends_on': 'water_supply_check',
+            'type': 'select_measurement',
+            'default_value': '',
+            'required': False,
+            'options_select': [
+                'Input',
+                'Function',
+            ],
+            'name': lazy_gettext('Water Supply Signal'),
+            'phrase': lazy_gettext(
+                'A tank level (%), line pressure or flow switch. If this signal goes '
+                'missing or stale the misters stay off, because it is not known whether '
+                'there is water.'
+            ),
+        },
+        {
+            'id': 'water_supply_threshold',
+            'depends_on': 'water_supply_check',
+            'type': 'float',
+            'default_value': 0.5,
+            'required': False,
+            'name': lazy_gettext('Water Supply Threshold'),
+            'phrase': lazy_gettext(
+                'In whatever unit the signal above uses. For an on/off switch (0 or 1) '
+                'leave it at 0.5; for a tank level use the lowest level you still want '
+                'to mist at.'
+            ),
+        },
+        {
+            'id': 'water_supply_direction',
+            'depends_on': 'water_supply_check',
+            'type': 'select',
+            'default_value': 'above',
+            'required': False,
+            'options_select': [
+                ('above', lazy_gettext('At or above the threshold (level, pressure, flow)')),
+                ('below', lazy_gettext('At or below the threshold (empty-tank alarm switch)')),
+            ],
+            'name': lazy_gettext('Water Is Available When the Signal Is'),
+            'phrase': lazy_gettext(
+                'Level, pressure and flow rise with water: pick "at or above". An '
+                'empty-tank alarm switch reads 1 when dry: pick "at or below".'
             ),
         },
         # @manual-end
@@ -1009,7 +1295,10 @@ FUNCTION_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Strong Wind Threshold (m/s)'),
             'phrase': lazy_gettext(
-                'Openings (vents, side walls) are forced closed above this wind speed.'
+                'All openings (vents, side walls) close when the 10-minute average wind reaches '
+                'this speed, or a measured gust reaches 1.5 times it. From 0.6 times it (or a '
+                'measured gust at 0.9 times), windward and roof vents close and the rest open only '
+                'part way.'
             ),
         },
         # @manual-end
@@ -1554,7 +1843,12 @@ _LAYOUT = [
     #   난방기와 냉방기를 동시에 100% 로 맞서게 한 원인이었다
     #   (`clamp_guide_range_to_hard_limits` 주석의 温室環境制御 실측).
     (False, lazy_gettext('Target and Temperament'), [
-        (None, ['@range:temperature', '@range:humidity',
+        # 극한 고온 보호는 온도 범위 **바로 뒤**다 — "넘으면 어떻게 하나" 는 범위와 같은
+        # 질문이다(문턱이 하드 상한 이상이면 사이클이 한 번 error 로 알린다).
+        (None, ['@range:temperature',
+                'heat_protect_enabled', 'heat_protect_threshold',
+                'heat_protect_release_margin', 'heat_protect_min_hold_min',
+                '@range:humidity',
                 'tolerance_co2', '@group:responsiveness']),
     ]),
 
@@ -1594,9 +1888,13 @@ _LAYOUT = [
         #     3) `nursery_mode` 에 딸린 것들 — 일사 임계 → 저녁 차단(토글+분)
         #        → 수원(원수 종류로 임계를 자동 조정).
         (None, ['use_wetting_fog_for_humidity', 'nursery_mode',
+                'wetting_fog_dusk_stop',
                 '@group:misting_care', '@range:misting_light',
+                'extreme_pulse_fog',
                 'nursery_evening_fog', 'nursery_evening_cutoff_min',
-                'nursery_water_source']),
+                'nursery_water_source',
+                'water_supply_check', 'water_supply_signal',
+                'water_supply_threshold', 'water_supply_direction']),
     ]),
 
     # ── 도메인 3: 빛 (screen + 보광) ──────────────────────────────────────
@@ -1610,7 +1908,7 @@ _LAYOUT = [
     #   같은 값을 시설의 냉방부하 계산이 **0.50 으로 하드코딩**하고 있었으므로,
     #   옮기면서 그 상수도 함께 사라졌다.
     (False, lazy_gettext('Light and Shading'), [
-        (None, ['@range:light']),
+        (None, ['@range:light', 'shade_heat_assist', 'curtain_humidity_gap']),
     ]),
 
     # ── 도메인 4: CO₂ (aux) ───────────────────────────────────────────────
@@ -1637,8 +1935,10 @@ _LAYOUT = [
         # `control_basis` 는 시험 단계의 opt-in 이라 여기 둔다 — 현장 관찰 뒤
         # 기본값을 바꿀지 정하면(계획서 4단계) 목표 쪽으로 올린다.
         (None, ['sensor_max_age', 'control_basis',
+                'vpd_target_basis', 'leaf_temp_signal',
                 'photosynth_mode_enabled', 'source_plot_id', 'vpd_weight_T',
-                'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled']),
+                'priority_vpd', 'priority_co2', 'cumulative_tracker_enabled',
+                'night_dew_fan']),
         (lazy_gettext('Effect Calibration'),
          ['effect_engine', 'calibration_enabled',
           'enable_active_probing', 'probe_interval_sec']),

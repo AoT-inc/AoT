@@ -1,0 +1,94 @@
+{
+  "step-4-logo-manage-menu.png": [
+    {
+      "name": "logo-status",
+      "x": 1.24,
+      "y": 1.16,
+      "w": 2.21,
+      "h": 3.47
+    },
+    {
+      "name": "manage-menu",
+      "x": 92.54,
+      "y": 0.32,
+      "w": 3.24,
+      "h": 5.38
+    },
+    {
+      "name": "system-info-menu-item",
+      "x": 83.42,
+      "y": 18.91,
+      "w": 12.36,
+      "h": 4.13
+    },
+    {
+      "name": "system-log-menu-item",
+      "x": 83.42,
+      "y": 10.64,
+      "w": 12.36,
+      "h": 4.13
+    }
+  ],
+  "step-4-logo-manage-menu.sq.png": [
+    {
+      "name": "logo-status",
+      "x": 2.2,
+      "y": 1.16,
+      "w": 3.94,
+      "h": 3.47
+    },
+    {
+      "name": "manage-menu",
+      "x": 86.74,
+      "y": 0.32,
+      "w": 5.76,
+      "h": 5.38
+    },
+    {
+      "name": "system-info-menu-item",
+      "x": 70.53,
+      "y": 18.91,
+      "w": 21.97,
+      "h": 4.13
+    },
+    {
+      "name": "system-log-menu-item",
+      "x": 70.53,
+      "y": 10.64,
+      "w": 21.97,
+      "h": 4.13
+    }
+  ],
+  "step-4b-system-info.png": [
+    {
+      "name": "daemon-status",
+      "x": 17.6,
+      "y": 46.11,
+      "w": 3.37,
+      "h": 1.85
+    },
+    {
+      "name": "database-version",
+      "x": 21.6,
+      "y": 39.44,
+      "w": 19.74,
+      "h": 1.85
+    }
+  ],
+  "step-4b-system-info.sq.png": [
+    {
+      "name": "daemon-status",
+      "x": 12.71,
+      "y": 46.11,
+      "w": 5.99,
+      "h": 1.85
+    },
+    {
+      "name": "database-version",
+      "x": 19.83,
+      "y": 39.44,
+      "w": 35.09,
+      "h": 1.85
+    }
+  ]
+}

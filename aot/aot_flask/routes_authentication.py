@@ -310,7 +310,7 @@ def login_password():
                     utils_general.regenerate_session_id()
                     flask_login.login_user(user, remember=remember_me)
 
-                    return redirect(url_for('routes_general.home'))
+                    return redirect(utils_general.after_login_url())
                 else:
                     user = User.query.filter(User.name == username).first()
                     role_name = Role.query.filter(Role.id == user.role_id).first().name
@@ -379,7 +379,7 @@ def login_totp():
             # 로그인 정보가 새 ID 에 실린다. (utils_general 주석 참조)
             utils_general.regenerate_session_id()
             flask_login.login_user(user, remember=remember_me)
-            return redirect(url_for('routes_general.home'))
+            return redirect(utils_general.after_login_url())
 
         login_log(user.name, 'NA', user_ip, 'FAIL')
         failed_login(user.name, user_ip)
@@ -471,7 +471,7 @@ def login_keypad_code(code):
         utils_general.regenerate_session_id()
         flask_login.login_user(user, remember=remember_me)
 
-        return redirect(url_for('routes_general.home'))
+        return redirect(utils_general.after_login_url())
 
     return render_template('login_keypad.html',
                            dict_translation=TRANSLATIONS,
@@ -548,7 +548,7 @@ def complete_google_login(tokens, email):
         flask_login.login_user(user, remember=True)
 
         _link_google_calendar_connection(user.id, tokens, email)
-        return redirect(url_for('routes_general.home'))
+        return redirect(utils_general.after_login_url())
 
     # No matching account by email — self-register, pending admin approval.
     guest_role = Role.query.filter_by(name='Guest').first()

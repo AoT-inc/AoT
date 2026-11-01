@@ -154,7 +154,7 @@ def _get_opt(inst, key, default=None):
 measurements_dict = {
     0: {'measurement': 'temperature', 'unit': 'C', 'name': lazy_gettext('Temperature')},
     1: {'measurement': 'humidity', 'unit': 'percent', 'name': lazy_gettext('Humidity')},
-    2: {'measurement': 'pressure', 'unit': 'hPa', 'name': lazy_gettext('Pressure')},
+    2: {'measurement': 'pressure', 'unit': 'kPa', 'name': lazy_gettext('Pressure')},
     3: {'measurement': 'direction', 'unit': 'bearing', 'name': lazy_gettext('Wind Direction')},
     4: {'measurement': 'speed', 'unit': 'm_s', 'name': lazy_gettext('Wind Speed')},
     5: {'measurement': 'precipitation', 'unit': 'none', 'name': lazy_gettext('Rain')},
@@ -272,7 +272,7 @@ INPUT_INFORMATION = {
 class InputModule(AbstractInput):
     """KMA API weather station driver for high-resolution 500m grid observation data.
 
-    Produces temperature (C), humidity (percent), pressure (hPa), wind direction (bearing),
+    Produces temperature (C), humidity (percent), pressure (kPa), wind direction (bearing),
     wind speed (m/s), precipitation, visibility (km), snowfall (cm), and dew point (C).
 
     @phase active
@@ -354,7 +354,7 @@ class InputModule(AbstractInput):
         candidates = (
             (0, 'C', 'temperature'),
             (1, 'percent', 'humidity'),
-            (2, 'hPa', 'pressure'),
+            (2, 'kPa', 'pressure'),
             (9, 'C', 'dewpoint'),
             (4, 'm_s', 'speed'),
             (3, 'bearing', 'direction'),
@@ -741,7 +741,8 @@ class InputModule(AbstractInput):
             if self.is_enabled(1) and row.get('hm') is not None:
                 measurements[1] = {'measurement': 'humidity', 'unit': 'percent', 'value': row['hm'], 'timestamp_utc': ts}
             if self.is_enabled(2) and row.get('pa') is not None:
-                measurements[2] = {'measurement': 'pressure', 'unit': 'hPa', 'value': row['pa'], 'timestamp_utc': ts}
+                # KMA reports hPa; stored as kPa (hPa / 10) like the other weather inputs.
+                measurements[2] = {'measurement': 'pressure', 'unit': 'kPa', 'value': row['pa'] / 10.0, 'timestamp_utc': ts}
             if self.is_enabled(3) and row.get('wd_10m') is not None:
                 measurements[3] = {'measurement': 'direction', 'unit': 'bearing', 'value': row['wd_10m'], 'timestamp_utc': ts}
             if self.is_enabled(4) and row.get('ws_10m') is not None:
@@ -1140,7 +1141,7 @@ class InputModule(AbstractInput):
         if self.is_enabled(1) and hm is not None:
             self.value_set(1, hm, timestamp=live_ts)
         if self.is_enabled(2) and pressure is not None:
-            self.value_set(2, pressure, timestamp=live_ts)
+            self.value_set(2, pressure / 10.0, timestamp=live_ts)  # hPa -> kPa
         if self.is_enabled(3) and wd_10m is not None:
             self.value_set(3, wd_10m, timestamp=live_ts)
         if self.is_enabled(4) and ws_10m is not None:

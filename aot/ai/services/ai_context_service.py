@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from aot.utils.time_utils import get_local_now, utc_now, to_local, serialize_ts
 from sqlalchemy import or_, func
 
-from aot.databases.models import GeoMap, GeoShape, Input, Camera, EnergyUsage, Notes, DeviceMeasurements, Conversion, IrrigationDesign, Actions, Misc, db
+from aot.databases.models import GeoMap, GeoShape, Input, Camera, EnergyUsage, Notes, DeviceMeasurements, Conversion, Actions, Misc, db
 from aot.utils.tools import return_energy_usage
 from aot.utils.system_pi import return_measurement_info
 from aot.utils.influx import query_string
@@ -173,8 +173,10 @@ class AIContextService:
 
             # --- Phase 6: Spatial Cache Check ---
             global _SPATIAL_CACHE, _LAST_GEO_UPDATE
-            latest_geo = GeoShape.query.order_by(GeoShape.id.desc()).first()
-            current_tag = latest_geo.id if latest_geo else 0
+            # 태그는 추가·삭제·제자리 수정을 모두 잡아야 한다. 예전에는 max(id)
+            # 만 봐서 도형을 고치거나 중간 것을 지워도 옛 트리가 그대로 나갔다
+            # (2026-10-08) — 같은 판정을 이미 하는 태그 함수를 쓴다.
+            current_tag = AIContextService._geo_shape_revision_tag()
 
             if _SPATIAL_CACHE is not None and _LAST_GEO_UPDATE == current_tag:
                 return AIContextService._without_ai_excluded_nodes(
@@ -200,8 +202,17 @@ class AIContextService:
             # 쪽도 루트가 못 되고 누구의 자식으로도 안 잡혀 트리 전체에서
             # 사라졌다 — resolve_target 으로는 정상 조회되는데
             # get_spatial_tree 목록에만 없던 이유가 이것이다.
-            from aot.utils.geo_hierarchy import build_geo_parent_map
+            from aot.utils.geo_hierarchy import (
+                build_geo_parent_map, collapsed_zones_by_site)
             parent_map = build_geo_parent_map(all_shapes)
+            # 접힌 zone(site 와 같은 땅의 유일한 기본 이름 zone)은 트리에서 한 겹
+            # 건너뛴다 — 판정은 geo_hierarchy 한 곳(docs: collapse-single-zone).
+            # zone 자체는 DB 에 그대로고, site 노드의 `collapsed_zone` 으로 id 만 남긴다.
+            try:
+                _collapsed = collapsed_zones_by_site(all_shapes)
+            except Exception:                               # noqa: BLE001
+                _collapsed = {}
+            _collapsed_zone_ids = {z.id for z in _collapsed.values()}
 
             # build_tree 가 쓸 파싱된 feature 를 도형마다 캐싱해 둔다.
             for s in all_shapes:
@@ -284,8 +295,18 @@ class AIContextService:
 
                 # v14.0: Equipment Aggregation Logic
                 # Separate children into 'Spatial' (Site/Zone/Device) and 'Asset' (Equipment/Fixed Feature)
-                raw_children = [child for child in all_shapes if parent_map.get(child.id) == s.id]
-                
+                raw_children = []
+                for child in all_shapes:
+                    if parent_map.get(child.id) == s.id:
+                        if child.id in _collapsed_zone_ids and s.id in _collapsed:
+                            # 접힌 zone: 자기 노드는 건너뛰고 그 자식을 site 바로 아래로.
+                            node["collapsed_zone"] = child.unique_id
+                            raw_children.extend(
+                                c for c in all_shapes
+                                if parent_map.get(c.id) == child.id)
+                        else:
+                            raw_children.append(child)
+
                 equipment_counts = {}
                 for child in raw_children:
                     # v14.1: Use pre-parsed feature to avoid AttributeError on string features
@@ -520,18 +541,13 @@ class AIContextService:
         try:
             supply_ctx = []
 
-            # 1. Irrigation (Moisture)
-            designs = IrrigationDesign.query.all()
-            for design in designs:
-                supply_ctx.append({
-                    "type": "moisture",
-                    "source": design.name,
-                    "device_id": design.function_id, # If function_id is linked to a device/output
-                    "value": design.total_volume_applied,
-                    "unit": "L",
-                    "status": design.status,
-                    "last_run": serialize_ts(design.last_run_at) if design.last_run_at else None
-                })
+            # 1. Irrigation (Moisture) — 구획마다 최근 7일 물량. 옛 `IrrigationDesign` 표가 아니라 물 회로의
+            #    닫힌 날 결과(`water_day`)를 읽는다(일지·지도·MCP 와 같은 숫자). 저장된 날이 없으면 비어 있다.
+            try:
+                from aot.utils import water_net_link
+                supply_ctx.extend(water_net_link.recent_supply())
+            except Exception:
+                logger.exception("Error reading water results for supply context")
 
             # 2. Sequential Actions (Chemicals/Dosing)
             # Fetch actions that involve 'output' and have 'amount'
@@ -1068,9 +1084,14 @@ class AIContextService:
         in place (`row.feature = feat; row.updated_at = utcnow()`), leaving its id
         and the table's max(id) unchanged. A tag keyed on max(id) alone never
         invalidates for a pure reshape/reassign edit — combine with max(updated_at)
-        so any insert, delete, OR in-place edit changes the tag."""
-        row = db.session.query(func.max(GeoShape.id), func.max(GeoShape.updated_at)).one()
-        return (row[0] or 0, row[1])
+        so any insert, delete, OR in-place edit changes the tag.
+
+        2026-10-08: count 도 함께 본다 — 가장 큰 id 가 아닌 도형을 지우면 max(id)
+        도 max(updated_at) 도 그대로라 태그가 안 바뀌었다(지운 구역이 공간 트리에
+        계속 남는다). 공간 트리 캐시(_SPATIAL_CACHE)도 이 태그를 쓴다."""
+        row = db.session.query(func.max(GeoShape.id), func.max(GeoShape.updated_at),
+                               func.count(GeoShape.id)).one()
+        return (row[0] or 0, row[1], row[2] or 0)
 
     @staticmethod
     def get_device_zone_map():
@@ -1142,111 +1163,6 @@ class AIContextService:
         except Exception as e:
             logger.debug(f"[DeviceZone] map failed: {e}")
             return {}
-
-    _ZONE_SITE_CACHE = None
-    _ZONE_SITE_TAG = None
-
-    @staticmethod
-    def get_zone_site_map():
-        """Return {zone_name: site_name} by SPATIAL containment of each zone's
-        centroid inside a site polygon. Lets a location-scoped proposal name the
-        site for a zone ("1-3" → "1포장") without re-resolving per request. Cached
-        per GeoShape revision."""
-        from shapely.geometry import shape as _shape
-        try:
-            tag = AIContextService._geo_shape_revision_tag()
-            if AIContextService._ZONE_SITE_CACHE is not None and AIContextService._ZONE_SITE_TAG == tag:
-                return AIContextService._ZONE_SITE_CACHE
-
-            def _feat(s):
-                f = s.feature
-                if isinstance(f, str):
-                    try: f = json.loads(f)
-                    except Exception: f = {}
-                return f or {}
-
-            sites = []
-            zones = []
-            for s in GeoShape.query.filter(GeoShape.type.in_(['site', 'zone'])).all():
-                f = _feat(s)
-                geom = f.get('geometry')
-                name = (f.get('properties', {}) or {}).get('name')
-                if not geom or not name:
-                    continue
-                try:
-                    g = _shape(geom)
-                    if not g.is_valid or g.geom_type not in ('Polygon', 'MultiPolygon'):
-                        continue
-                except Exception:
-                    continue
-                (sites if s.type == 'site' else zones).append({'name': name, 'geom': g, 'area': g.area})
-
-            from aot.utils.geo_hierarchy import containment_point
-
-            out = {}
-            for z in zones:
-                c = containment_point(z['geom'])
-                if c is None:
-                    continue
-                containing = [s for s in sites if s['geom'].contains(c)]
-                if containing:
-                    containing.sort(key=lambda x: x['area'])  # smallest containing site
-                    out[z['name']] = containing[0]['name']
-            AIContextService._ZONE_SITE_CACHE = out
-            AIContextService._ZONE_SITE_TAG = tag
-            return out
-        except Exception as e:
-            logger.debug(f"[ZoneSite] map failed: {e}")
-            return {}
-
-    @staticmethod
-    def resolve_point_to_location(lat, lng):
-        """Given a map viewport center (lat, lng), return {'site': name|None,
-        'zone': name|None} it falls within by SPATIAL containment.
-
-        zone = the most-specific (smallest-area) containing 'zone' polygon; site =
-        the smallest containing 'site' polygon. Lets a vague control command
-        ("밸브 다 열어줘") be scoped to whatever site/zone the user is looking at on
-        the dashboard map. Read-only."""
-        from shapely.geometry import Point, shape as _shape
-        try:
-            pt = Point(float(lng), float(lat))  # GeoJSON order is (x=lng, y=lat)
-        except (TypeError, ValueError):
-            return {'site': None, 'zone': None}
-        try:
-            site_name, site_area = None, None
-            zone_name, zone_area = None, None
-            for s in GeoShape.query.filter(GeoShape.type.in_(['site', 'zone'])).all():
-                f = s.feature
-                if isinstance(f, str):
-                    try: f = json.loads(f)
-                    except Exception: f = {}
-                f = f or {}
-                geom = f.get('geometry')
-                name = (f.get('properties', {}) or {}).get('name')
-                if not geom or not name:
-                    continue
-                try:
-                    g = _shape(geom)
-                    if not g.is_valid or g.geom_type not in ('Polygon', 'MultiPolygon'):
-                        continue
-                    b = g.bounds
-                    if pt.x < b[0] or pt.x > b[2] or pt.y < b[1] or pt.y > b[3]:
-                        continue
-                    if not g.contains(pt):
-                        continue
-                    if s.type == 'zone':
-                        if zone_area is None or g.area < zone_area:
-                            zone_area, zone_name = g.area, name
-                    else:
-                        if site_area is None or g.area < site_area:
-                            site_area, site_name = g.area, name
-                except Exception:
-                    continue
-            return {'site': site_name, 'zone': zone_name}
-        except Exception as e:
-            logger.debug(f"[PointLoc] resolve failed: {e}")
-            return {'site': None, 'zone': None}
 
     # @manual ai/overview#device-ai-toggle
     @staticmethod

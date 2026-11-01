@@ -23,8 +23,8 @@ Shown when **Show Status Strip** is on. A badge polled every 5 seconds from `/ap
 |-------|---------|
 | `IDLE` | No linked IEC function, or nothing to report |
 | `ACTIVE` | The linked function ran its last control cycle recently, or at least one actuator is currently running |
-| `WARN` | The linked function is not activated; or it has not reported a cycle within three times its cycle period (at least 5 minutes); or some of the facility's sensors are not resolving; or VPD is more than 0.15 kPa off target; or CO₂ is more than 10 % above target |
-| `EMERGENCY` | Fewer than half of the facility's sensors are resolving; or VPD is more than 0.45 kPa off target; or the indoor temperature is outside the safety limits |
+| `WARN` | The linked function is not activated; or it has not reported a cycle within three times its cycle period (at least 5 minutes); or some of the facility's sensors are not resolving; or VPD is more than 0.15 kPa off target (judged on the air VPD computed from indoor temperature and humidity, or on the leaf VPD when the target is on the [leaf basis](../ai/env-control.md#leaf-vpd)); or CO₂ is more than 10 % above target |
+| `EMERGENCY` | Fewer than half of the facility's sensors are resolving; or VPD is more than 0.45 kPa off target (judged the same way); or the indoor temperature is outside the safety limits |
 | `ERR` | The status request itself failed — "Connection error" appears instead of the timestamp |
 
 Next to the badge: the linked function's name, the reasons behind the current level, and a timestamp with the active/total actuator count.
@@ -44,11 +44,12 @@ A building model rendered with Three.js, automatically generated from the envelo
 
 ### B. Environment { #b-environment }
 
-7 cells with real-time values. Two of them open a range editor when clicked, if **Show Setpoints** is on and the viewer has permission to control (`edit_settings`):
+7 cells with real-time values, plus an eighth — **Leaf VPD** — when the linked coordinator has a leaf temperature sensor. Two of them open a range editor when clicked, if **Show Setpoints** is on and the viewer has permission to control (`edit_settings`):
 
 | Cell | Clickable to edit ranges? |
 |------|----|
-| VPD | No — the target is set in the attached [Program](programs.md) |
+| Air VPD | No — the target is set in the attached [Program](programs.md) |
+| Leaf VPD (only with a leaf temperature sensor) | No — same target |
 | Indoor temperature | Yes — guidance range and hard safety limits |
 | Indoor humidity | Yes — guidance range and hard safety limits |
 | CO₂ | No — the target is set in the attached [Program](programs.md) |
@@ -56,7 +57,9 @@ A building model rendered with Three.js, automatically generated from the envelo
 | Wind | No — weather data or an anemometer |
 | Solar | No — weather data or a PAR sensor |
 
-Cells without data display `—`. The VPD and CO₂ cells show the current target next to the reading — this is the *effective* target, read the same way control reads it from the attached Program stage ("Follows a curve" when that stage target follows a curve), not a separately-stored number that could silently disagree with it. The indoor temperature and humidity cells show their guidance range instead. All four are tinted by how far the reading sits from that target or range.
+Cells without data display `—`. **Air VPD** is computed from the indoor temperature and humidity — the value control uses — even when a sensor reports its own VPD channel (that channel may be an estimate based on air − 1.5 °C). **Leaf VPD** appears only when the coordinator has a usable measured leaf temperature, and shows that temperature under the value; it is never estimated from a fixed offset, so without a sensor the cell stays hidden. A **Target basis** tag marks the cell the VPD target is compared with — Air VPD normally, Leaf VPD when the coordinator's [VPD Target Applies To](../ai/env-control.md#leaf-vpd) is *Leaf VPD* and the leaf temperature is usable. When the leaf basis is chosen but the leaf temperature is not usable, the tag stays on Air VPD and its tooltip says so. The target line and the tint go to the tagged cell only.
+
+The VPD and CO₂ cells show the current target next to the reading — this is the *effective* target, read the same way control reads it from the attached Program stage ("Follows a curve" when that stage target follows a curve), not a separately-stored number that could silently disagree with it. The indoor temperature and humidity cells show their guidance range instead. All four are tinted by how far the reading sits from that target or range.
 
 The editor holds two pairs per cell: a **guidance range**, the band within which the VPD target is decomposed into temperature and humidity, and **hard safety limits**, which force protective action regardless of the target. Targets cannot be set here — a target sent to this editor is refused, with a note that the Program is where it belongs.
 
@@ -128,7 +131,7 @@ Real-time measurement values shown next to each sensor in the 3D scene.
 
 The widget calls `/api/aot/facility/<uuid>/runtime` once on load and then at the configured **Period** (skipped while the browser tab is hidden) to refresh environment readings and actuator states, and — independent of Period, whenever the status strip is on — `/api/aot/facility/<uuid>/status` every 5 seconds.
 
-Actuator states are always read live. Environment readings come from the linked function's own last control cycle while that function is activated and reporting, so they are as fresh as its cycle. Without such a function they are built in the background rather than holding up the response: right after a dashboard loads the cells can still show `—` and fill in on a later poll.
+Actuator states are always read live. Environment readings come from the linked function's own last control cycle while that function is activated and reporting, so they are as fresh as its cycle. The same snapshot carries the leaf temperature, the leaf VPD and which VPD the target is compared with, so the Leaf VPD cell and the *Target basis* tag follow that cycle. Without such a function they are built in the background rather than holding up the response, and that snapshot has air VPD only (the Leaf VPD cell stays hidden): right after a dashboard loads the cells can still show `—` and fill in on a later poll.
 
 - Facilities without sensor bindings will display only `—`.
 - Outdoor values come from the facility's outdoor sensor and weather Inputs; anything left unset is filled in from the shared external environment context, and only while that context is less than 10 minutes old.

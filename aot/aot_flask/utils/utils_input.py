@@ -392,6 +392,43 @@ def apply_max_age_s(mod_input, form_mod, options_enabled):
     mod_input.max_age_s = int(_ma) if _ma else None
 
 
+def apply_device_status(mod_input, form_mod):
+    """운영 상태(ok/repair/removed/maintenance)·사유·시작 시각을 저장한다.
+
+    폼에 칸이 없거나(구버전 화면) 상태 값이 비어 있으면 건드리지 않는다. ok 로
+    되돌리면 사유·시작 시각도 비운다. 시작 시각은 날짜(YYYY-MM-DD)를 받으면 그
+    날 0시(UTC), 비어 있으면 상태가 바뀐 순간으로 둔다.
+    """
+    from datetime import datetime
+    from aot.services.resolvers.device_resolver import (
+        DEVICE_STATUSES, device_status)
+    if not hasattr(form_mod, 'device_status'):
+        return
+    new = (form_mod.device_status.data or '').strip()
+    if new not in DEVICE_STATUSES:
+        return
+    if new == 'ok':
+        mod_input.device_status = 'ok'
+        mod_input.device_status_note = None
+        mod_input.device_status_since = None
+        return
+    changed = device_status(mod_input) != new
+    mod_input.device_status = new
+    note = (form_mod.device_status_note.data or '').strip()
+    mod_input.device_status_note = note[:200] or None
+    since = None
+    raw = (form_mod.device_status_since.data or '').strip()
+    if raw:
+        try:
+            since = datetime.strptime(raw[:10], '%Y-%m-%d')
+        except ValueError:
+            since = None
+    if since is not None:
+        mod_input.device_status_since = since
+    elif changed or mod_input.device_status_since is None:
+        mod_input.device_status_since = datetime.utcnow()
+
+
 def input_mod(form_mod, request_form):
     messages = {
         "success": [],
@@ -551,6 +588,7 @@ def input_mod(form_mod, request_form):
                     each_measurement.is_enabled = False
 
         mod_input.log_level_debug = form_mod.log_level_debug.data
+        apply_device_status(mod_input, form_mod)
         # 자동 VPD 를 이 입력에서 끈 경우, 서비스가 만든 VPD 채널을 정리한다.
         auto_vpd_turned_off = (bool(mod_input.auto_vpd_enabled) and
                                not form_mod.auto_vpd_enabled.data)
@@ -896,7 +934,11 @@ def input_del(input_id):
     return messages
 
 
-def input_activate(form_mod):
+def input_activation_checks(input_id):
+    """입력을 켜기 전 점검 — 부작용 없이 messages(error 에 이유)를 돌려준다.
+
+    웹 `input_activate` 와 MCP `modify_input(active=…)` 가 같은 점검을 쓴다(주기·사전 출력·측정 채널·
+    필수 옵션). 켜는 일(DB 표시·데몬)은 부르는 쪽이 한다."""
     messages = {
         "success": [],
         "info": [],
@@ -905,7 +947,6 @@ def input_activate(form_mod):
     }
 
     dict_inputs = parse_input_information()
-    input_id = form_mod.input_id.data
     input_dev = Input.query.filter(Input.unique_id == input_id).first()
     device_measurements = DeviceMeasurements.query.filter(
         DeviceMeasurements.device_id == input_dev.unique_id)
@@ -967,6 +1008,12 @@ def input_activate(form_mod):
         if not measure_set:
             messages["error"].append(gettext("All measurements must have a name and unit/measurement set"))
 
+    return messages
+
+
+def input_activate(form_mod):
+    input_id = form_mod.input_id.data
+    messages = input_activation_checks(input_id)
 
     messages = controller_activate_deactivate(
         messages, 'activate', 'Input',  input_id, flash_message=False)

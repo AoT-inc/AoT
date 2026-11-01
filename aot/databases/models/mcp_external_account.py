@@ -27,6 +27,9 @@ class MCPExternalAccount(CRUDMixin, db.Model):
     # 연결할 때 인가 서버가 알려 준 이름·이메일 — 화면 표시용. 판정에 쓰지 않는다.
     label = db.Column(db.String(255), default='', nullable=True)
     linked_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # 이 연결로 들어온 AI 앱이 보는 도구 묶음(p6_83). 비면 토큰 범위로 정한다
+    # (mcp_central.restrict_role). API 키의 tool_profile 과 같은 묶음 값이다.
+    tool_profile = db.Column(db.String(255), nullable=True)
 
     def __repr__(self):
         return "<MCPExternalAccount(user_id={}, issuer={})>".format(self.user_id, self.issuer)

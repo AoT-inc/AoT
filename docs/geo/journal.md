@@ -134,6 +134,10 @@ Printing expands the collapsed sensor rows.
 
 Either way, the figure shown is **time run × flow rate × share** — an estimate, not a direct measurement, and it is labelled "estimated". Where the plot also has a real flow meter, its reading is shown as well and is the one to trust. A device whose flow rate is not known leaves the Water column blank, and where no device's flow is known the column is left out altogether and the document's notes say why — neither means no water was used. In a folded (weekly/monthly) log, the volume is **summed** across the period, the same way runtime is.
 
+Where a pump, water source or tank is on that valve's circuit, the volume also counts what the supply could give: when the open valves ask for more than the pump or source allows, they share what it gives in proportion to their demand, even if the other valve is outside this plot. The journal then gives the figure by nozzle design as well, and notes why the two differ — for example a valve open while its pump was off counts no water. These notes only inform; they never stop a valve. Maps with no supply parts, and facility plots, keep the plain figure.
+
+For such a plot the table adds a **Design** column (the figure by nozzle design alone), the depth in mm, and "Supply limited" with the share the supply could give. Days that are over are stored (`water_run` per run, `water_day` per day), so the journal, the plot's status tab and the MCP `measure` / `water_delivered` read the same numbers; the days not stored yet, and today, are worked out when you open the page. A stored run keeps the circuit it was worked out with, so changing the drawing later does not rewrite earlier days.
+
 ---
 
 ## Weather readings { #weather-readings }

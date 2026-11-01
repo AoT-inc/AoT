@@ -35,6 +35,10 @@ os.environ['AOT_LOCAL_DIR'] = _TEST_DIR
 # 테스트 수집 중 alembic 자동 마이그레이션이 도는 것을 막는다.
 os.environ.setdefault('ALEMBIC_RUNNING', '1')
 
+# 예보 계열의 L0(Influx) 읽기를 기본으로 끈다 — Influx 가 없는 시험이 연결을 기다리지 않게.
+# (import 부작용을 피하려고 환경변수로 끈다. L0 를 시험하는 곳은 forecast_series.L0_READ 를 monkeypatch 로 켠다.)
+os.environ.setdefault('AOT_FC_L0_READ', '0')
+
 import pytest  # noqa: E402
 
 # aot.tools 는 aot.ai 를 직접 import 하지 않는다(tools-no-ai 가드) — 필요한 것은
@@ -44,6 +48,36 @@ import pytest  # noqa: E402
 # 만 단독으로 import 하는 테스트는 그 경로를 안 타므로 여기서 명시적으로
 # 바인딩해 둔다.
 import aot.ai  # noqa: E402,F401
+
+# 테스트 DB 는 어차피 버리므로 SQLite 의 fsync 를 끈다. 많은 테스트가 setUp 마다 파일 DB 에 스키마를
+# 만들고 지우는데 DDL 은 문장마다 커밋이라, fsync 가 느린 나스 러너(커밋당 15ms, 맥 1ms)에서는 이것이
+# 단위 스위트 시간의 대부분이었다. 2026-11-01 실측: 31분 → 10분. SQLAlchemy 를 거치는 연결에만 적용된다.
+import sqlite3  # noqa: E402
+
+from sqlalchemy import event  # noqa: E402
+from sqlalchemy.engine import Engine  # noqa: E402
+
+
+@event.listens_for(Engine, 'connect')
+def _sqlite_skip_fsync(dbapi_conn, _record):
+    if isinstance(dbapi_conn, sqlite3.Connection):
+        dbapi_conn.execute('PRAGMA synchronous=OFF')
+
+
+# 비밀번호 해시 비용을 테스트에서만 낮춘다. `User.set_password` 는 bcrypt 기본 비용(12)을 쓰는데
+# 한 번에 0.24초(맥)~2초 안팎(나스)이고, 사용자를 만드는 테스트가 수백 건이라 단위 스위트 시간의
+# 상당 부분이 해시 계산이었다. 비용 4 는 1ms 다. 검증(`hashpw(입력, 저장된 해시)`)은 저장된 해시의
+# 비용을 따라가므로 코드 쪽은 그대로 두고 소금(salt)만 싸게 만든다 — 운영 코드는 건드리지 않는다.
+import bcrypt as _bcrypt  # noqa: E402
+
+_real_gensalt = _bcrypt.gensalt
+
+
+def _cheap_gensalt(rounds=12, prefix=b'2b'):
+    return _real_gensalt(rounds=4, prefix=prefix)
+
+
+_bcrypt.gensalt = _cheap_gensalt
 
 
 def pytest_configure(config):
@@ -67,41 +101,9 @@ def pytest_configure(config):
     config._aot_test_db = AOT_DB_PATH
 
 
-@pytest.fixture(autouse=True)
-def _isolate_aot_logger():
-    """`'aot'` 로거의 전역 상태를 테스트마다 되돌린다.
-
-    `aot/aot_daemon.py` 는 import 시점에 `'aot'` 로거에 자기 핸들러를 달고
-    **`propagate = False`** 를 건다. 데몬 프로세스에서는 옳다 — 그 모듈을
-    import 하는 것은 데몬 진입점뿐이다. 하지만 테스트가 데몬 함수를
-    monkeypatch 하려고 import 하는 순간 그 설정이 프로세스에 남고, 그 뒤에
-    도는 테스트에서는 `aot.*` 의 로그가 root 까지 올라오지 않아 pytest 의
-    `caplog` 이 아무것도 못 받는다.
-
-    실제로 겪었다: `test_safety_service` 의 "실패를 조용히 삼키지 않는다"
-    검사가 **전체 스위트에서만** 실패하고 그 파일만 돌리면 통과했다. 로그는
-    화면에 멀쩡히 찍히는데 `caplog.records` 만 비어 있어 원인을 찾기 어려웠다.
-
-    핸들러 목록까지 되돌리는 이유는 남은 핸들러가 테스트의 임시 로그 파일을
-    계속 붙들기 때문이다.
-    """
-    import logging
-    aot_logger = logging.getLogger('aot')
-    saved = (aot_logger.propagate, list(aot_logger.handlers), aot_logger.level)
-    # **되돌리는 것만으로는 부족하다.** 이 픽스처는 함수 스코프라 `setUpClass`
-    # 나 세션 픽스처보다 **나중에** 돈다. 그래서 그쪽에서 오염되면(예:
-    # `test_mcp_rate_limit` 의 `setUpClass` 가 부르는 `create_app()`) 이미
-    # 오염된 상태를 저장했다가 그대로 되돌려 놓아, 그 뒤 스위트 전체가
-    # `propagate=False` 로 돈다 — 2026-08-20 까지 `test_safety_service` 의
-    # "실패를 조용히 삼키지 않는다" 검사가 **전체 스위트에서만** 실패한 원인이다.
-    #
-    # 핸들러는 건드리지 않는다(그쪽은 되돌리기만 한다 — 임시 로그 파일을 붙드는
-    # 문제 때문이다). 필요한 것은 기록이 root 까지 올라오는 것뿐이고, 그래야
-    # caplog 이 받는다. 데몬 핸들러도 그대로 받으므로 잃는 것이 없다.
-    aot_logger.propagate = True
-    yield
-    aot_logger.propagate, aot_logger.handlers[:], aot_logger.level = (
-        saved[0], saved[1], saved[2])
+# `'aot'` 로거 격리 픽스처(`_isolate_aot_logger`)는 한 단계 위 `aot/conftest.py`
+# 로 옮겼다 — 여기 두면 `aot/functions/**/tests` 같은 다른 테스트 디렉터리에는
+# 적용되지 않는다.
 
 
 @pytest.fixture(scope='session')
@@ -109,3 +111,60 @@ def test_db_path():
     """이 세션이 쓰는 임시 DB 경로 — 격리가 깨졌는지 확인할 때 쓴다."""
     from aot.config import SQL_DATABASE_AOT
     return SQL_DATABASE_AOT
+
+
+@pytest.fixture
+def timer_sessions(tmp_path, monkeypatch):
+    """타이머 위젯의 상태 파일 디렉터리를 테스트마다 따로 쓰고, 남은 워커를 멈춘다.
+
+    ## 왜 필요한가
+
+    `AoT_timer._SESS_DIR` 은 고정 경로(`/tmp/aot_timer_sessions`)다. 거기에는
+    두 가지가 얽혀 있다.
+
+    1. `recover_scheduled_workers()` 는 **그 디렉터리의 모든 상태 파일**을 훑어
+       "주인을 잃은 실행" 을 되살린다. 그래서 다른 테스트가 같은 디렉터리에
+       남겨 둔(또는 지금 쓰고 있는) 상태 파일이 복구 대상으로 줍혀 올라온다.
+    2. 테스트가 띄운 워커 스레드는 테스트가 끝난 뒤에도 돈다. 정리 코드가 상태
+       파일을 지운 *뒤에* 스레드가 다시 써서 파일이 되살아나기도 한다.
+
+    pytest-xdist 에서는 같은 디렉터리를 **프로세스끼리도** 공유하므로 순서와
+    무관하게 터진다. 2026-10-09 나스 Gitea 실행 332:
+    `test_timer_start_at_persistence::test_recovery_passes_the_persisted_start_at_through`
+    가 자기 장치(`dev-startat-recovery`)가 아니라
+    `test_timer_off_confirm_and_origin` 의 `dev-off-cross-process` 상태를
+    복구하다 `'00:00' == '22:10'` 로 실패했다(재실행하면 통과, 단독으로도 통과).
+
+    ## 하는 일
+
+    - `_SESS_DIR` 을 테스트 전용 임시 디렉터리로 돌린다 → 다른 테스트·프로세스의
+      파일이 보이지 않는다.
+    - 테스트가 끝나면 이 테스트가 새로 띄운 `_cyc_worker` 스레드를 멈추고
+      기다린다. 디렉터리가 원래대로 돌아오기 *전에* 해야 늦게 깬 스레드가 진짜
+      `/tmp` 에 쓰지 못한다.
+    """
+    import threading
+
+    import aot.widgets.AoT_timer as timer
+
+    sess_dir = tmp_path / 'aot_timer_sessions'
+    sess_dir.mkdir()
+    monkeypatch.setattr(timer, '_SESS_DIR', str(sess_dir))
+
+    before = set(threading.enumerate())
+    yield str(sess_dir)
+
+    # `_cyc_start_worker` 가 만든 스레드는 target=_cyc_worker 이고 stop_event 가
+    # 위치 인자의 마지막이다(resume 은 kwargs). 레지스트리는 테스트의 정리
+    # 코드가 이미 비웠을 수 있어 거기서 찾지 않고 스레드를 직접 센다.
+    workers = [
+        th for th in threading.enumerate()
+        if th not in before and getattr(th, '_target', None) is timer._cyc_worker]
+    for th in workers:
+        th._args[-1].set()
+    for th in workers:
+        th.join(timeout=10.0)
+    with timer._CYCLE_LOCK:
+        timer._CYCLE_WORKERS.clear()
+    stuck = [th for th in workers if th.is_alive()]
+    assert not stuck, f'타이머 워커 스레드가 멈추지 않았다: {stuck}'

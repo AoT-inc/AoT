@@ -220,3 +220,6 @@ class AIGlobalSettings(CRUDMixin, db.Model):
     # 계정 연결(중앙 계정 ↔ 이 AoT 사용자)에 쓰는 기밀 클라이언트. 비밀은 crypto.encrypt_secret 으로 저장한다.
     mcp_link_client_id = db.Column(db.String(255), default='', nullable=True)
     mcp_link_client_secret = db.Column(db.Text, default=None, nullable=True)
+    # 인증 서버를 어디에 둘지: 'central'(중앙 인가 서버, 위 칸들) / 'embedded'(이 AoT 가 직접 — 발급자는 공개 주소의
+    # 출처, 계정 연결 없음). 한 번에 하나만 켠다. 비어 있으면 'central' (docs/design/mcp-embedded-oauth.md §8).
+    mcp_auth_mode = db.Column(db.String(16), default='central', nullable=True)

@@ -27,6 +27,10 @@ This page serves to provide information about the AoT frontend and backend as we
 <td>Shows &quot;Running&quot;, or a red &quot;Not Running&quot; and a help link. The navigation bar shows the same state by tinting the brand (logo) area at the top left: no tint = daemon and web app are fine, red = the daemon is down, gray = the browser cannot reach the web app. The page checks every 60 seconds.</td>
 </tr>
 <tr>
+<td>System Log Size Limit</td>
+<td>How much disk the system log (systemd journal, kept in <code>/var/log/journal</code>) may use. Without a limit it grows up to 10% of the disk (4 GB at most), which is a lot on a small SD card. AoT sets 500 MB the first time the daemon starts, unless a limit is already set on the system. Users with the edit-settings permission can change it here (50 to 10240 MB); it is applied at once and entries over the new limit are removed. If the limit is set in another journald configuration file, it is shown but cannot be changed here. Not shown in Docker.</td>
+</tr>
+<tr>
 <td>...</td>
 <td>Several other status indicators and commands are listed to provide information about the health of the system. Use these in addition to others to investigate software or hardware issues.</td>
 </tr>

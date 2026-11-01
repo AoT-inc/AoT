@@ -1,10 +1,19 @@
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
 
+def _tag_sim(entry, name):
+    """목록 항목(type·device 를 가진 dict)에 시뮬레이션 표시를 붙인다 — 표시 전용."""
+    entry.update(_sim_fields(entry.get("type"), entry.get("device"), name))
+    return entry
+
+
 from aot.tools.aot_data_tool_service import _control_targets_for
 from aot.tools.aot_data_tool_service import _plot_ended_on
+from aot.tools.aot_data_tool_service import _vpd_basis_of
+from aot.tools.aot_data_tool_service import _vpd_readout_of
 from aot.tools.aot_data_tool_service import _plot_started_on
 from aot.aot_flask.extensions import db
 from aot.databases.models import Camera
@@ -13,15 +22,19 @@ from aot.databases.models import DeviceMeasurements
 from aot.databases.models import GeoShape
 from aot.databases.models import Input
 from aot.databases.models import Output
+from aot.tools.sim_marker import sim_fields as _sim_fields
 from aot.utils.command_origin import TYPE_AI
 from aot.utils.execution_context import clear_execution_context
 from aot.utils.execution_context import set_execution_context
-from aot.utils.time_utils import serialize_ts
+from aot.outputs.command_forms import (
+    parse_run_seconds, plan_output_command, timed_run_refusal)
 from datetime import datetime
 from sqlalchemy import or_
 
 
 class DeviceToolsMixin:
+    #: 키워드 없는 장치 전체 목록의 한 쪽 크기 — 129개를 한 번에 쏟지 않는다(2026-10-28 점검).
+    _DEVICE_LIST_PAGE = 40
 
     _SEARCH_STOPWORDS = frozenset({
         'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -82,20 +95,18 @@ class DeviceToolsMixin:
         return results
 
     @classmethod
-    def _annotate_device_zone(cls, results):
-        """결과에 소속 구역 이름을 제자리에서 채운다(있는 것만)."""
-        try:
-            from aot.tools import providers
-            zmap = providers.get('device_zone_map')()
-        except Exception:
-            return results
-        for r in results:
-            if r.get('type') in ('input', 'output') and zmap.get(r.get('id')):
-                r['zone'] = zmap[r['id']]
-        return results
+    def search_devices(cls, query=None, measurement_type=None, limit=None, offset=None):
+        """이름·측정으로 장치 찾기. limit·offset 은 결과 목록을 쪽으로 나눈다(조회 도구 공통)."""
+        out = cls._search_devices_all(query=query, measurement_type=measurement_type)
+        if isinstance(out, dict) and isinstance(out.get('results'), list) and (limit or offset):
+            page, info = cls._page_rows(out['results'], limit, offset)
+            out = dict(out, results=page, count=len(page))
+            if info:
+                out['page'] = info
+        return out
 
     @classmethod
-    def search_devices(cls, query=None, measurement_type=None):
+    def _search_devices_all(cls, query=None, measurement_type=None):
         """
         이름 또는 타입으로 장치를 검색합니다.
         v2: Multi-token query expansion.
@@ -135,12 +146,12 @@ class DeviceToolsMixin:
                 results = []
                 for item in Input.query.filter(
                         Input.unique_id.in_(list(candidate_ids))).all():
-                    results.append({"id": item.unique_id, "name": item.name,
-                                    "type": "input", "device": item.device})
+                    results.append(_tag_sim({"id": item.unique_id, "name": item.name, "type": "input", "device": item.device},
+                         item.name))
                 for item in Output.query.filter(
                         Output.unique_id.in_(list(candidate_ids))).all():
-                    results.append({"id": item.unique_id, "name": item.name,
-                                    "type": "output", "device": item.output_type})
+                    results.append(_tag_sim({"id": item.unique_id, "name": item.name, "type": "output", "device": item.output_type},
+                         item.name))
                 # 집계 함수(VPD·평균 등)도 자기 측정 채널을 갖는다. 빼면
                 # measurement_type='vapor_pressure_deficit' 이 0건이 되는데,
                 # get_sensor_detail 은 그 값을 읽을 수 있다(찾을 수만 없다).
@@ -149,7 +160,8 @@ class DeviceToolsMixin:
                     results.append({"id": item.unique_id, "name": item.name,
                                     "type": "function", "device": item.device})
                 results = cls._without_ai_excluded(results)
-                results = cls._annotate_device_zone(results)
+                from aot.aot_flask.geo.device_membership import annotate_places
+                annotate_places(results)
                 results = cls._annotate_device_membership(results)
                 out = {"results": results, "count": len(results)}
                 cls._mark_same_names(out)
@@ -170,6 +182,11 @@ class DeviceToolsMixin:
                 spaced = re.sub(r'(\d)([\uAC00-\uD7A3])', r'\1 \2', spaced)
                 if spaced != term:
                     variants.append(spaced)
+                # 밑줄 표기('온습도_7')도 같은 이름이다 — 변형마다 한 벌 더.
+                for v in list(variants):
+                    u = re.sub(r'\s+', '_', v.strip()) if ' ' in v else v
+                    if u != v and u not in variants:
+                        variants.append(u)
                 return variants
 
             # Build search token list: individual tokens + full query.
@@ -233,14 +250,16 @@ class DeviceToolsMixin:
                 ).all():
                     if item.unique_id not in seen_ids:
                         seen_ids.add(item.unique_id)
-                        results.append({"id": item.unique_id, "name": item.name, "type": "input", "device": item.device})
+                        results.append(_tag_sim({"id": item.unique_id, "name": item.name, "type": "input", "device": item.device},
+                         item.name))
 
                 for item in Output.query.filter(
                     or_(Output.name.like(q), Output.output_type.like(q))
                 ).all():
                     if item.unique_id not in seen_ids:
                         seen_ids.add(item.unique_id)
-                        results.append({"id": item.unique_id, "name": item.name, "type": "output", "device": item.output_type})
+                        results.append(_tag_sim({"id": item.unique_id, "name": item.name, "type": "output", "device": item.output_type},
+                         item.name))
 
                 # 복합장치(Device) — is_device=True 모듈이 만드는 CustomController
                 # 행. PLC 처럼 "장치 하나"로 물어보면 그 자체가 검색되고,
@@ -292,108 +311,91 @@ class DeviceToolsMixin:
                     if term.lower() in name.lower() or term.lower() in item.geo_id.lower():
                         if item.unique_id not in seen_ids:
                             seen_ids.add(item.unique_id)
+                            # 장소(site·zone·facility)는 그 종류로, 그 밖의 도형
+                            # (장치 영역 폴리곤·마커)은 장소가 아니라고 표기한다.
+                            # 예전에는 모두 type='zone' 에 진짜 종류를 'device'
+                            # 칸에 실어, 대지가 "zone" 으로 읽혔다(2026-10-08).
+                            from aot.aot_flask.geo.device_membership import PLACE_TYPES as _PT
                             results.append({
                                 "id": item.unique_id,
                                 "geo_id": item.geo_id,
                                 "name": name,
-                                "type": "zone",
-                                "device": item.type
+                                "type": item.type if item.type in _PT else "map_shape",
+                                **({} if item.type in _PT else {"shape_type": item.type}),
                             })
 
-            # Zone-aware expansion: devices carry a SPATIALLY-derived zone (their geo
-            # shape's centroid inside a zone polygon). When the query references a zone
-            # (e.g. "1-4구역"), include the devices LOCATED in that zone — otherwise
-            # "1포장 1-4구역 밸브 켜줘" finds the zone shape but never the valves in it.
-            # `zone_scoped_query` also flags this for the caller (see _zone_scope_note
-            # below): a location-scoped device search must not be read as "everything
-            # that exists at this location" — plots/crops live in a separate registry
-            # keyed by variety name, not by zone name, so they never surface here.
-            zone_scoped_query = False
-            try:
-                from aot.tools import providers
-                zmap = providers.get('device_zone_map')()  # {device_id: zone_name}
-            except Exception:
-                zmap = {}
-            if zmap:
-                # Annotate existing device results with their zone.
-                for r in results:
-                    if r.get('type') in ('input', 'output') and zmap.get(r['id']):
-                        r['zone'] = zmap[r['id']]
-
-                def _add_device_by_id(did, zn):
+            # 장소 범위 — 질의에 장소 이름이 들어 있으면 그 장소(하위 포함) 안의
+            # 장치만 남긴다. 소속은 정본(device_membership)으로 판정한다.
+            # 예전에는 `device_zone_map`(장치 영역 폴리곤만 · 지도 무관 · 바인딩
+            # 안 봄)과 "N포장 → N-*" 이름 규칙을 섞어 써서, 대지를 물으면 밸브만
+            # 나오고 센서는 빠졌으며 소속도 3-1/3-2 로만 보였다(2026-10-08).
+            # `zone_scoped_query` 는 호출자에게 알린다(_zone_scope_note): 장소로
+            # 좁힌 장치 검색은 "그곳에 있는 모든 것" 이 아니다 — 구획(작물)은
+            # 품종명으로 등록돼 여기 나오지 않는다.
+            from aot.aot_flask.geo import device_membership as _dm
+            _places = _dm.PlaceIndex()
+            _scoped = _dm.places_named(query, index=_places)
+            # 이름이 같은 장소가 여럿이면 섞지 않는다 — 두 곳의 장치를 한 목록에
+            # 내면 어느 쪽 것인지 알 수 없다(2026-10-08: '1포장' 이 김제 대지와
+            # 그린하트바이오 구역을 함께 잡았다). resolve_target 과 같은 후보를
+            # 돌려준다 — 후보의 use_name('김제 1포장')으로 다시 물으면 좁혀진다.
+            _dups = _dm.same_name_groups(_scoped)
+            if _dups:
+                _label = _dm.place_label(_dups[0][0])
+                _cands = cls._public_places(cls._describe_places(
+                    [{'rep': (sh, _label), 'device_id': None} for sh in _dups[0]]))
+                return {
+                    "status": "needs_disambiguation",
+                    "error": "ambiguous_name",
+                    "message": ("'%s' names %d different places, so their devices "
+                                "were not mixed into one list — see 'candidates'."
+                                % (_label, len(_cands))),
+                    "candidates": _cands,
+                    "results": [], "count": 0,
+                    "_reading": [
+                        "Ask the user which place they mean, describing each "
+                        "candidate by its 'where' — or, if the question only reads "
+                        "data, search again once per candidate. Put that candidate's "
+                        "'use_name' in the query (e.g. its map name before the place "
+                        "name) and the search narrows to it."],
+                }
+            zone_scoped_query = bool(_scoped)
+            if _scoped:
+                allowed = set()
+                for _pl in _scoped:
+                    allowed |= (_dm.place_members(_pl.unique_id) or set())
+                for did in sorted(allowed):
                     if did in seen_ids:
-                        return
+                        continue
                     o = Output.query.filter_by(unique_id=did).first()
                     if o:
                         seen_ids.add(did)
-                        results.append({"id": o.unique_id, "name": o.name, "type": "output", "device": o.output_type, "zone": zn})
-                        return
+                        results.append(_tag_sim({"id": o.unique_id, "name": o.name, "type": "output", "device": o.output_type},
+                         o.name))
+                        continue
                     i = Input.query.filter_by(unique_id=did).first()
                     if i:
                         seen_ids.add(did)
-                        results.append({"id": i.unique_id, "name": i.name, "type": "input", "device": i.device, "zone": zn})
-
-                zone_index = {}
-                for did, zn in zmap.items():
-                    zone_index.setdefault(zn, []).append(did)
-
-                # Determine the location the query scopes to, most-specific first.
-                # (1) Zone-level: a specific zone is named (e.g. "1-4구역" → "1-4").
-                #     Require length ≥2 so a bare "1" in "1포장" doesn't match.
-                # (2) Site-level: only when NO specific zone is named — a whole site
-                #     (e.g. "3포장" / "site 3"). Zone names follow the "N-M" convention
-                #     where N is the site number, so "3포장" → every zone "3-*". A
-                #     specific zone always wins over its site ("1포장 1-4구역" → 1-4).
-                referenced = {zn for zn in zone_index if zn and len(zn) >= 2 and zn in query}
-                allowed_zones = set(referenced)
-                if not referenced:
-                    def _shape_display_name(s):
-                        feat = s.feature or {}
-                        if isinstance(feat, str):
-                            import json as _json
-                            try:
-                                feat = _json.loads(feat)
-                            except Exception:
-                                feat = {}
-                        props = feat.get('properties', {}) if isinstance(feat, dict) else {}
-                        return str(props.get('name') or props.get('label') or '').strip()
-
-                    # (a) Geometric: the query names an actual 'site' GeoShape → every
-                    # descendant zone/feature is in scope, regardless of naming
-                    # convention (a zone need not be named "N-M" to belong to site N).
-                    from aot.utils.geo_hierarchy import geo_descendant_shapes
-                    for site_shape in GeoShape.query.filter_by(type='site').all():
-                        s_name = _shape_display_name(site_shape)
-                        if s_name and len(s_name) >= 2 and s_name in query:
-                            for child in geo_descendant_shapes(site_shape):
-                                c_name = _shape_display_name(child)
-                                if c_name and c_name in zone_index:
-                                    allowed_zones.add(c_name)
-
-                    # (b) Naming-convention fallback ("N포장"/"site N" → zone "N-*") —
-                    # kept for zones that follow this convention but whose polygon
-                    # isn't (yet) drawn spatially inside the site's polygon.
-                    site_nums = set(re.findall(r'(\d+)\s*포장', query))
-                    site_nums |= {m for m in re.findall(r'site\s*(\d+)', query, re.IGNORECASE)}
-                    if site_nums:
-                        for zn in zone_index:
-                            m = re.match(r'\s*(\d+)\s*[-–]', zn or '')
-                            if m and m.group(1) in site_nums:
-                                allowed_zones.add(zn)
-
-                zone_scoped_query = bool(allowed_zones)
-
-                if allowed_zones:
-                    # Include every device located in the scoped zones...
-                    for zn in allowed_zones:
-                        for did in zone_index.get(zn, []):
-                            _add_device_by_id(did, zn)
-                    # ...and DROP device results that are outside that location. A
-                    # location-scoped command ("1포장 1-4구역 밸브") must not sweep in
-                    # broad name matches (밸브1..51) that live nowhere near the zone.
-                    results = [r for r in results
-                               if r.get('type') not in ('input', 'output')
-                               or r.get('zone') in allowed_zones]
+                        results.append(_tag_sim({"id": i.unique_id, "name": i.name, "type": "input", "device": i.device},
+                         i.name))
+                # 장소 밖의 장치 결과는 뺀다 — "1포장 1-4구역 밸브" 가 다른
+                # 곳의 밸브1..51 까지 쓸어 오지 않게.
+                results = [r for r in results
+                           if r.get('type') not in ('input', 'output')
+                           or r.get('id') in allowed]
+                # 이름으로 걸린 장소·도형도 범위의 지도 것만 — '김제 1포장' 으로
+                # 물었는데 그린하트바이오의 구역 '1포장' 이 이름 일치로 섞였다.
+                _maps = {_pl.geo_id for _pl in _scoped}
+                results = [r for r in results
+                           if not r.get('geo_id') or r.get('geo_id') in _maps]
+            _dm.annotate_places(results, index=_places,
+                                kinds=('input', 'output', 'function', 'device'))
+            for r in results:
+                if r.get('type') in _dm.PLACE_TYPES:
+                    _shape = _places.by_uid.get(r.get('id'))
+                    _p = _places.path(_shape) if _shape is not None else ''
+                    if _p:
+                        r['place'] = _p
 
             if candidate_ids is not None:
                 # 이름 검색이 끝난 뒤에 거른다 — 구역 확장까지 마친 집합에
@@ -476,25 +478,28 @@ class DeviceToolsMixin:
 
     @classmethod
     def _zone_scope_note(cls, zone_scoped_query):
-        """질의가 zone/site를 가리켰을 때만, 이 결과의 한계를 알린다.
+        """질의가 zone/site를 가리켰을 때만, 이 결과가 무엇인지 알린다.
 
-        `search_devices`는 장치(Input/Output/Camera/복합장치)와 구역 도형의
-        **이름**만 뒤진다. 작물 구획(plot)은 별도 레지스트리에 품종명으로
-        등록돼 zone 이름을 담지 않으므로 여기 결과에 절대 나타나지 않는다.
-        "이 구역 장치를 찾아봤는데 결과가 이거다"를 "이 구역엔 이게 전부다"로
-        읽으면(특히 작물 유무 판단) 실제 사례로 확인된 오판이 재발한다
-        (.local/plans/mcp_tool_audit_tracker.md 8번 항목).
+        장소로 좁힌 센서·출력은 **이름이 아니라 소속**(정본 `device_membership`
+        — 지도 위 위치 또는 바인딩, 하위 장소 포함)으로 나온다. 예전 문구는
+        "이름이 일치한 것뿐" 이라고 말했는데 2026-10-08 소속 통일 뒤로는 사실이
+        아니다 — 모델이 응답과 문구를 대조해 "도구가 설명과 다르다" 고 읽는다.
+        나머지(장소 자체·함수·카메라)는 여전히 이름으로 걸린 것이다.
+
+        작물 구획(plot)은 별도 레지스트리라 여기 결과에 절대 나타나지 않는다.
+        이것을 "이 장소엔 작물이 없다" 로 읽으면 실제 사례로 확인된 오판이
+        재발한다(.local/plans/mcp_tool_audit_tracker.md 8번 항목).
         """
         if not zone_scoped_query:
             return None
-        return ("This query was matched to a specific zone/site. These results are "
-                "devices and zone shapes whose NAME matched — they are not an "
-                "inventory of everything at that location. Plots/crops are a "
-                "separate registry keyed by variety name (not by zone name), so "
-                "they never appear here even when a plot is actively growing "
-                "there. Do not conclude 'no crop/plot here' from this result — "
-                "call list_plots (filtered by map_id or the plot's zone) to check "
-                "plot existence.")
+        return ("This query named a place (site/zone). The sensors and outputs "
+                "listed are the ones that BELONG to it — placed inside it on the "
+                "map or bound to it, sub-zones included — and each carries its "
+                "'place' path (e.g. 'Site > Zone'). Other entries (the place "
+                "itself, functions, cameras) matched by name. Plots/crops are a "
+                "separate registry and never appear here, even when something "
+                "is growing there — call list_plots with zone_id set to this "
+                "place to see what is planted.")
 
     @classmethod
     def _complex_device_note(cls, results):
@@ -517,7 +522,7 @@ class DeviceToolsMixin:
                 "standalone.")
 
     @classmethod
-    def get_device_list_tool(cls, **kwargs):
+    def get_device_list_tool(cls, limit=None, offset=None, **kwargs):
         """
         Returns all registered devices (inputs, outputs, cameras, complex
         devices) with id/name/type.
@@ -531,15 +536,20 @@ class DeviceToolsMixin:
             for item in Input.query.all():
                 if item.unique_id not in seen_ids:
                     seen_ids.add(item.unique_id)
-                    results.append({"id": item.unique_id, "name": item.name, "type": "input", "device": item.device})
+                    # active — 켜짐 여부(출력은 켜고 끄는 상태가 아니라 칸이 없다).
+                    results.append(_tag_sim({"id": item.unique_id, "name": item.name, "type": "input", "device": item.device,
+                                             "active": bool(item.is_activated)},
+                         item.name))
             for item in Output.query.all():
                 if item.unique_id not in seen_ids:
                     seen_ids.add(item.unique_id)
-                    results.append({"id": item.unique_id, "name": item.name, "type": "output", "device": item.output_type})
+                    results.append(_tag_sim({"id": item.unique_id, "name": item.name, "type": "output", "device": item.output_type},
+                         item.name))
             for item in Camera.query.all():
                 if item.unique_id not in seen_ids:
                     seen_ids.add(item.unique_id)
-                    results.append({"id": item.unique_id, "name": item.name, "type": "camera", "device": item.camera_type})
+                    results.append({"id": item.unique_id, "name": item.name, "type": "camera", "device": item.camera_type,
+                                    "active": bool(item.is_activated)})
 
             # 복합장치(Device) — search_devices() 와 동일한 이유로 목록에도
             # 포함한다. 여기서는 필터가 없으므로 전수 조회.
@@ -561,6 +571,7 @@ class DeviceToolsMixin:
                             results.append({
                                 "id": item.unique_id, "name": item.name,
                                 "type": "device", "device": item.device,
+                                "active": bool(item.is_activated),
                                 "member_ids": member_ids,
                             })
             except Exception:
@@ -568,7 +579,21 @@ class DeviceToolsMixin:
 
             results = cls._without_ai_excluded(results)
             results = cls._annotate_device_membership(results)
+            # 꺼진 것의 수 — 쪽으로 자르기 전 전체에서 센다(첫 쪽에 안 보여도 알린다).
+            off = sum(1 for r in results if r.get("active") is False)
+            by_type = {}
+            for r in results:
+                by_type[r.get("type")] = by_type.get(r.get("type"), 0) + 1
+            # 필터 없는 전체 목록은 한 쪽(기본 40)만 — 129개를 다 싣지 않는다. 이어 받기는 offset.
+            results, page = cls._page_rows(results, limit, offset, default=cls._DEVICE_LIST_PAGE)
             out = {"results": results, "count": len(results)}
+            if off:
+                out["inactive"] = off
+            if page:
+                out["page"] = page
+                out["count_by_type"] = by_type
+                out["more"] = ("Showing %d of %d. Narrow with find.devices(query, measurement) or "
+                               "page with offset." % (page["shown"], page["total"]))
             note = cls._complex_device_note(results)
             if note:
                 out["_reading"] = [note]
@@ -587,12 +612,40 @@ class DeviceToolsMixin:
         from aot.services.resolvers.device_resolver import (
             AI_EXCLUDED, ai_control_refusal)
         message = ai_control_refusal(device_id)
-        if not message:
-            return None
-        return {"error": message, "reason_code": AI_EXCLUDED}
+        if message:
+            return {"error": message, "reason_code": AI_EXCLUDED}
+        return cls._run_time_refusal(device_id, extra)
 
     @classmethod
-    def operate_device_tool(cls, device_id, state, **kwargs):
+    def _run_time_refusal(cls, device_id, extra):
+        """요청한 가동 시간이 숫자로 맞지 않거나 이 출력·상태가 못 받는 것이면 오류, 아니면 None.
+
+        승인 앞에서 막는다 — 30초를 부탁했는데 0분으로 깎여 타이머 없이 켜지던 일(2026-10-30)을
+        승인 큐에 올리지 않는다. 예약(시각 인자가 있는 호출)은 상태가 꺼짐이어도 숫자만 본다."""
+        sec, minutes = extra.get('duration_seconds'), extra.get('duration_minutes')
+        if sec is None and minutes is None:
+            return None
+        run_sec, err = parse_run_seconds(sec, minutes)
+        if err:
+            return {"error": err, "reason_code": "bad_run_time"}
+        scheduled = any(extra.get(k) is not None
+                        for k in ('scheduled_time', 'delay_seconds', 'solar_event'))
+        state = str(extra.get('state') or 'on').lower()
+        if scheduled and state != 'on':
+            return None
+        try:
+            from aot.services.resolvers.device_resolver import resolve_output
+            row = resolve_output(device_id, allow_partial=scheduled, ai=True).row
+        except Exception:                                   # noqa: BLE001
+            row = None
+        why = timed_run_refusal(state, getattr(row, 'output_type', None))
+        if why:
+            return {"error": why, "reason_code": "no_timed_run"}
+        return None
+
+    @classmethod
+    def operate_device_tool(cls, device_id, state, duration_seconds=None,
+                            duration_minutes=None, **kwargs):
         """
         [분류 A - 물리 제어 전용 도구]
         장치를 직접 제어합니다. (on, off, open, close, set_value 등)
@@ -630,19 +683,16 @@ class DeviceToolsMixin:
                 return {"error": f"Device (output) to control not found: {device_id}",
                         "dispatched": False}
 
-            # 3. 시간/값 파라미터 정규화 (Deep Discovery)
-            # duration_seconds, duration_minutes, duration, value 등 다양한 variant 대응
-            d_sec = kwargs.get('duration_seconds')
-            d_min = kwargs.get('duration_minutes') or kwargs.get('duration')
+            # 3. 시간/값 파라미터 정규화 — duration_seconds | duration_minutes(소수 가능) | duration(옛 이름, 분)
+            # | value. 분을 정수로 깎지 않는다: 0.5분은 30초다(2026-10-30: 0 으로 깎여 타이머 없이 켜졌다).
+            if duration_seconds is None and duration_minutes is None:
+                duration_minutes = kwargs.get('duration')
+            run_sec, run_err = parse_run_seconds(duration_seconds, duration_minutes)
+            if run_err:
+                return {"error": run_err, "dispatched": False}
             val = kwargs.get('value')
-            
-            # 우선순위: duration_seconds > duration_minutes/duration (*60) > value > 0
-            if d_sec is not None:
-                duration = float(d_sec)
-            elif d_min is not None:
-                duration = float(d_min) * 60.0
-            else:
-                duration = float(val or 0)
+            # 우선순위: duration_seconds/duration_minutes > value > 0
+            duration = float(run_sec) if run_sec is not None else float(val or 0)
 
             # 4. @ANCHOR: OPERATE_DEVICE_CHANNEL_INJECTION (TASK_17)
             # Resolve physical output_channel from OutputChannel table before daemon call.
@@ -651,7 +701,8 @@ class DeviceToolsMixin:
             output_channel = None
             try:
                 from aot.databases.models.output import OutputChannel as _OC
-                oc_row = _OC.query.filter_by(output_id=resolved_uid).first()
+                oc_row = (_OC.query.filter_by(output_id=resolved_uid)
+                          .order_by(_OC.channel).first())
                 if oc_row is not None and oc_row.channel is not None:
                     output_channel = int(oc_row.channel)
                     logger.info(
@@ -676,6 +727,13 @@ class DeviceToolsMixin:
                     f"for device='{resolved_uid}': {_ch_err}"
                 )
 
+            # 5. 출력 모듈이 받는 명령 형식으로 바꾼다. 데몬의 output_on_off 는
+            # 모듈이 모르는 형식(PWM 출력에 'sec', 값 출력에 'on')을 받으면
+            # 아무것도 하지 않고 성공을 돌려준다 — 여기서 맞춰 보내거나 거절한다.
+            plan = plan_output_command(state, target.output_type, val, duration)
+            if 'error' in plan:
+                return {"error": plan['error'], "dispatched": False}
+
             from aot.aot_client import DaemonControl
             daemon = DaemonControl()
 
@@ -689,24 +747,10 @@ class DeviceToolsMixin:
             try:
                 # 여기서부터는 명령이 데몬으로 나간다 — 이후 실패는 결과를 모른다.
                 sent = True
-                if state in ('on', 'open'):
-                    out_err, out_msg = daemon.output_on_off(
-                        resolved_uid, 'on', output_type='sec', amount=duration,
-                        output_channel=output_channel
-                    )
-                elif state in ('off', 'close'):
-                    out_err, out_msg = daemon.output_on_off(
-                        resolved_uid, 'off', output_type='sec', amount=0,
-                        output_channel=output_channel
-                    )
-                elif state == 'set_value':
-                    out_err, out_msg = daemon.output_on_off(
-                        resolved_uid, 'on', output_type='value', amount=duration,
-                        output_channel=output_channel
-                    )
-                else:
-                    return {"error": f"Unsupported state: {state}",
-                            "dispatched": False}
+                out_err, out_msg = daemon.output_on_off(
+                    resolved_uid, plan['state'], output_type=plan['output_type'],
+                    amount=plan['amount'], output_channel=output_channel
+                )
             finally:
                 clear_execution_context()
 
@@ -722,15 +766,61 @@ class DeviceToolsMixin:
             return {"error": f"Error while controlling device: {str(e)}",
                     "dispatched": sent}
 
+    #: "Rain (daily sum) +3d" 처럼 이름 끝에 시간 오프셋이 붙은 채널 — 같은 계열로 묶는다.
+    _CHANNEL_OFFSET = re.compile(r'^(.*?)\s*\+(\d+)\s*([A-Za-z]+)$')
+
     @classmethod
-    def get_device_measurements(cls, device_id):
+    def _channel_table(cls, rows, with_measurement=False):
+        """채널 목록 → 이름·단위 표. 같은 계열(이름 끝의 `+Nh`/`+Nd` 만 다른 것)은 한 줄로 묶는다.
+
+        예: `Rain (daily sum) +0d` … `+15d` 16개 → `{"name": "Rain (daily sum) +0d~+15d", "unit": "mm", "n": 16}`.
+        한 줄뿐인 채널은 이름 그대로(`n` 없음). 순서는 처음 나온 차례다. id 는 싣지 않는다 — 채널 id·select_value 는
+        `measurement` 로 고른 채널에만 따라온다(`get_device_measurements`). `with_measurement` 면 이름에 저장
+        측정 이름이 안 들어 있을 때만 그 이름을 덧붙인다(고를 때 쓰는 낱말)."""
+        order, groups = [], {}
+        for r in rows:
+            name = str(r.get('name') or r.get('measurement') or '')
+            unit = r.get('unit')
+            m = cls._CHANNEL_OFFSET.match(name)
+            key = (m.group(1), m.group(3), unit) if m else ('', len(order), unit)
+            if key not in groups:
+                groups[key] = {'base': m.group(1) if m else name, 'u': m.group(3) if m else '',
+                               'offs': [], 'rows': [], 'name': name, 'unit': unit}
+                order.append(key)
+            if m:
+                groups[key]['offs'].append(int(m.group(2)))
+            groups[key]['rows'].append(r)
+        table = []
+        for key in order:
+            g = groups[key]
+            if len(g['rows']) >= 2 and g['offs']:
+                label = "%s +%d%s~+%d%s" % (g['base'], min(g['offs']), g['u'], max(g['offs']), g['u'])
+            else:
+                label = g['name']
+            row = {"name": label, "unit": g['unit']}
+            if len(g['rows']) >= 2 and g['offs']:
+                row["n"] = len(g['rows'])
+            first = g['rows'][0]
+            meas = first.get('measurement')
+            if with_measurement and meas and str(meas).lower() not in label.lower():
+                row["measurement"] = meas
+            table.append(row)
+        return table
+
+    @classmethod
+    def get_device_measurements(cls, device_id, measurement_type=None, brief=False):
         """
         Returns all measurement channels for a given Input or CustomController device_id.
         device_id may be the unique_id or the device's name (ambiguous names
         return candidates). Also accepts a search_devices result dict — extracts
         the first device_id automatically.
         Used by the AI to resolve measurement IDs needed for select_measurement options.
-        """
+
+        `brief`·`measurement_type` 는 도구 스키마에 없는 처리기 인자다 — 도메인 표면(measure.channels)만 쓴다.
+        - `brief` 만: 이름·단위 표(같은 계열은 묶음, id 없음) + `next`. 채널이 40개인 예보 장치가 5천 토큰이었다.
+        - `brief` + `measurement_type`: 이름이나 측정 이름에 그 낱말이 든 채널만, 지금 모양 그대로(id·select_value 포함) —
+          위젯·함수 설정에 쓰는 id 를 받는 길이다.
+        둘 다 안 주면(인앱 AI·장치 상세) 예전과 같은 전체 응답이다."""
         try:
             row, _kind, err = cls._read_device(device_id)
             if err:
@@ -741,18 +831,61 @@ class DeviceToolsMixin:
             if not rows:
                 return {"error": f"No measurements found for device_id: {device_id}"}
 
+            from aot.databases.models import Conversion
+            from aot.utils.system_pi import return_measurement_info
+            conversions = {c.unique_id: c for c in Conversion.query.filter(
+                Conversion.unique_id.in_(
+                    [r.conversion_id for r in rows if r.conversion_id])).all()}
+
+            def _stored_unit(r):
+                # 변환이 걸린 채널은 변환 뒤 단위로 저장된다 — 원 단위(r.unit)로 알리면
+                # 값과 단위가 어긋난다.
+                return return_measurement_info(
+                    r, conversions.get(r.conversion_id))[1] or r.unit
+
+            if brief and not measurement_type:
+                return {
+                    "status": "success",
+                    "next": {
+                        "call": ("measure(op='channels', target=<same target>, measurement=<a word from "
+                                 "name or measurement>) gives only those channels with measurement_id "
+                                 "and select_value"),
+                        "why": "names and units only; the ids that widget and function settings need "
+                               "come with a chosen measurement"},
+                    "device_id": device_id,
+                    "channel_count": len(rows),
+                    "channels": cls._channel_table(
+                        [{"name": getattr(r, 'name', ''), "measurement": r.measurement,
+                          "unit": _stored_unit(r)} for r in rows], with_measurement=True),
+                }
+
             measurements = [
                 {
                     "measurement_id": r.unique_id,
                     "channel": r.channel,
                     "measurement": r.measurement,
-                    "unit": r.unit,
+                    "unit": _stored_unit(r),
                     "name": getattr(r, 'name', ''),
                     # Ready-to-use value for select_measurement fields: "device_id,measurement_id"
                     "select_value": f"{device_id},{r.unique_id}",
                 }
                 for r in rows
             ]
+
+            if brief and measurement_type:
+                word = str(measurement_type).strip().lower()
+                matched = [m for m in measurements
+                           if word in str(m["measurement"] or "").lower()
+                           or word in str(m["name"] or "").lower()]
+                if not matched:
+                    return {
+                        "status": "not_found",
+                        "message": "No channel of this device has '%s' in its name or measurement." % measurement_type,
+                        "device_id": device_id,
+                        "channels": cls._channel_table(
+                            [{"name": m["name"], "measurement": m["measurement"], "unit": m["unit"]}
+                             for m in measurements], with_measurement=True)}
+                measurements = matched
 
             # Convenience map: measurement_type → select_value  (e.g. "temperature" → "uuid,uuid")
             # Makes it easy for the AI to pick the right channel by type name.
@@ -868,15 +1001,16 @@ class DeviceToolsMixin:
         - 지도: 정본 경로(`device_binding.shapes_for_devices` — 바인딩 우선,
           없으면 레거시 `GeoShape.device_id`)로 찾는다. 도형이 여럿이면 지도
           이름을 정렬해 모두 적는다(첫 도형은 DB 순서라 호출마다 달랐다).
-        - 구역: `device_zone_map` 은 도형 feature 의 장치 표시(레거시 쪽)로
-          잡는다 — 바인딩과 어긋날 수 있다. 구역이 잡혔는데 바인딩 도형이
-          없으면 "지도에 없음" 이라고 쓰지 않는다(구역이 곧 지도 위라는 뜻이다).
+        - 장소: 정본 경로(`device_membership.PlaceIndex.device_paths` — 마커·
+          바인딩·시설 설비)로 '3포장 > 3-1' 처럼 적는다. 장소가 잡혔는데 지도
+          도형이 없으면 "지도에 없음" 이라고 쓰지 않는다(장소가 곧 지도 위다).
         - 문장은 모델이 읽는 영어라 번역하지 않는다. 탭 이름이 없으면 뺀다.
         - 단서가 똑같은 후보끼리는 종류·모듈을 덧붙여 가른다.
         """
         try:
-            from aot.tools import providers
-            zmap = providers.get('device_zone_map')() or {}
+            from aot.aot_flask.geo.device_membership import PlaceIndex
+            zmap = {d: ps[0] for d, ps in PlaceIndex().device_paths(
+                [r.unique_id for r, _k in rows_kinds]).items()}
         except Exception:
             zmap = {}
         pmap = cls._device_parent_map()
@@ -909,7 +1043,7 @@ class DeviceToolsMixin:
             parts = []
             zone = zmap.get(r.unique_id)
             if zone:
-                parts.append('zone %s' % zone)
+                parts.append('in %s' % zone)
             if r.unique_id in placed:
                 names = placed[r.unique_id]
                 parts.append('on map %s' % ', '.join(names) if names else 'on the map')
@@ -964,6 +1098,43 @@ class DeviceToolsMixin:
             elif isinstance(v, (str, int, float, bool)) and v not in (None, ''):
                 out[k] = v
         return out
+
+    #: 장치 옵션 보기에 싣는 최대 개수 — 큰 모듈도 한 화면 분량으로.
+    _DEVICE_OPTION_CAP = 30
+
+    @classmethod
+    def _device_options_view(cls, kind, module_type, row):
+        """입력·출력의 설정 옵션 — 키·이름·지금 값. 입출력 수정의 params 키가 이것이다.
+
+        2026-10-28 claude.ai 점검: 장치 상세에 옵션 id·지금 값이 없어 AI 가 매뉴얼의
+        옵션 이름(사람 말)만 보고 params 에 무엇을 넣을지 몰랐다. 원천은 종류의 옵션
+        정의(웹 설정 화면과 같다)·입력의 표준 칸(주기·사전 출력)·저장값이다 — 정의에
+        없는 저장 키는 싣지 않는다. 비밀 값(키·토큰·비밀번호)은 연결 필드 요약과 같은
+        규칙으로 set/unset 만 낸다."""
+        import json as _json
+        import re as _re
+        spec = cls._device_option_spec(kind, module_type)
+        if not spec:
+            return []
+        custom, columns = spec
+        try:
+            stored = _json.loads(getattr(row, 'custom_options', None) or '{}')
+        except (ValueError, TypeError):
+            stored = {}
+        if not isinstance(stored, dict):
+            stored = {}
+        secret = _re.compile(r'password|token|secret|key|credential|passphrase|auth', _re.I)
+        out = [{"key": col, "name": label, "value": getattr(row, col, None)}
+               for col, (label, _typ) in columns.items()]
+        for key, o in custom.items():
+            value = stored.get(key, o.get('default_value'))
+            if secret.search(str(key)):
+                value = 'set' if value else 'unset'
+            item = {"key": key, "value": value}
+            if o.get('name'):
+                item["name"] = str(o['name'])
+            out.append(item)
+        return out[:cls._DEVICE_OPTION_CAP]
 
     @classmethod
     def _spatial_label(cls, spatial_kind, spatial_id):
@@ -1042,8 +1213,73 @@ class DeviceToolsMixin:
             "notes": notes,
         }
 
+    #: `fields` 로 더 청할 수 있는 갈래 → 전체 응답의 칸. 요약은 이 칸들을 싣지 않는다.
+    _DETAIL_MORE = {
+        'options': ('options',),
+        'connection': ('communication', 'communication_note'),
+        'measurements': ('measurements', 'measurements_note'),
+        'bindings': ('geo_bindings', 'geo_bindings_note'),
+        'constraints': ('constraints',),
+        'location': ('location', 'location_note'),
+        'outputs': ('output_channels', 'output_channels_note'),
+    }
+
     @classmethod
-    def get_device_detail(cls, device_id=None, **extra):
+    def _detail_summary(cls, full, fields):
+        """전체 응답 → 요약(이름·종류·켜짐·상태·위치·최근 수신·측정 채널 이름과 단위) + `fields` 로 청한 갈래.
+
+        접속 옵션 전체와 장치 옵션 전체, 측정 채널의 id·select_value 는 길어서(MQTT 장치 하나가 수백 토큰)
+        기본 응답에서 뺀다. 이름을 모르는 갈래는 무시하지 않고 알려 준다. 'all' 이면 전체."""
+        want = [str(f).strip().lower() for f in (fields if isinstance(fields, (list, tuple)) else [fields])
+                if f not in (None, '')]
+        if 'all' in want:
+            return full
+        what = full.get('what') or {}
+        keep = {k: what[k] for k in what if k not in ('active_note',)}
+        out = {"device_id": full.get("device_id"), "what": keep}
+        loc = full.get("location") or {}
+        if loc.get("place"):
+            out["place"] = loc["place"]
+        elif loc.get("lat") is not None and loc.get("lng") is not None:
+            out["lat"], out["lng"] = loc["lat"], loc["lng"]
+        else:
+            out["place"] = None
+        if full.get("last_seen") is not None:
+            out["last_seen"] = full["last_seen"]
+        # 같은 계열(`Rain +0d`…`+15d`)은 한 줄로 — 채널이 수십 개인 예보 장치가 이름만으로도 길었다.
+        chans = cls._channel_table(full.get("measurements") or [])
+        if chans:
+            out["channels"] = chans
+        outs = [{"channel": c.get("channel"), "name": c.get("name")} for c in full.get("output_channels") or []]
+        if outs:
+            out["output_channels"] = outs
+        spaces = [b.get("space_name") for b in full.get("geo_bindings") or [] if b.get("space_name")]
+        if spaces:
+            out["bound_to"] = spaces
+        unknown = []
+        for name in want:
+            if name == 'summary':
+                continue
+            cols = cls._DETAIL_MORE.get(name)
+            if not cols:
+                unknown.append(name)
+                continue
+            for col in cols:
+                if col in full:
+                    out[col] = full[col]
+        if 'measurements' in out:
+            # 채널 id 를 청했으면 `measurements` 가 이름·단위도 이미 싣는다 — 같은 표를 두 번 싣지 않는다.
+            out.pop("channels", None)
+        left = [n for n in ('options', 'connection', 'measurements', 'bindings', 'constraints')
+                if cls._DETAIL_MORE[n][0] in full and cls._DETAIL_MORE[n][0] not in out]
+        if unknown:
+            out["unknown_fields"] = unknown
+        if left:
+            out["more"] = "fields=[%s] adds the rest (all = everything)" % ", ".join(left)
+        return out
+
+    @classmethod
+    def get_device_detail(cls, device_id=None, fields=None, **extra):
         """장치 하나의 정체·위치·측정·제어·통신·담당구역·제약을 **한 번에** 낸다.
 
         지금까지는 장치 하나를 파악하려면 search_devices(무엇인지) →
@@ -1082,7 +1318,14 @@ class DeviceToolsMixin:
             if kind == 'input':
                 module_type = row.device
                 active = bool(row.is_activated)
-                active_note = None
+                from aot.services.resolvers.device_resolver import (
+                    device_status_info)
+                status_info = device_status_info(row)
+                active_note = (
+                    "상태 %s%s — 켜 둔 채지만 평균·침묵 판정에서 빠집니다."
+                    % (status_info["status"],
+                       (": " + status_info["note"]) if status_info["note"] else "")
+                    if status_info else None)
             elif kind == 'output':
                 module_type = row.output_type
                 active = None
@@ -1102,6 +1345,10 @@ class DeviceToolsMixin:
                 "active": active,
                 "active_note": active_note,
             }
+            if kind == 'input':
+                what["device_status"] = status_info or {"status": "ok"}
+            if kind in ('input', 'output'):
+                what.update(_sim_fields(kind, module_type, row.name))
 
             # 2) 어디에 있는가 — get_device_location 은 Input/Output만 안다.
             if kind in ('input', 'output'):
@@ -1175,7 +1422,7 @@ class DeviceToolsMixin:
             # 7) 무엇을 못 하는가.
             constraints = cls._device_constraints(kind, what)
 
-            return {
+            out = {
                 "device_id": resolved_id,
                 "what": what,
                 "location": location,
@@ -1190,6 +1437,22 @@ class DeviceToolsMixin:
                 "geo_bindings_note": geo_bindings_note,
                 "constraints": constraints,
             }
+            if kind in ('input', 'output'):
+                out["options"] = cls._device_options_view(kind, module_type, row)
+            if fields is not None:
+                # 요약 보기(도메인 틀의 detail.device) — 전체는 fields 로 청한 갈래만 더한다.
+                if kind == 'input':
+                    try:
+                        # 채널 수는 measure.freshness 와 같게 — 2개만 물으면 온도·습도가 조용하고
+                        # 배터리만 오는 장치를 '7일 동안 수신 없음' 으로 잘못 보였다(2026-10-31).
+                        age, seen, _label = cls._last_seen_seconds(
+                            resolved_id, window_s=7 * 86400)
+                        out["last_seen"] = ({"at": seen, "age_s": int(age)} if seen is not None
+                                            else {"at": None, "within": "7d"})
+                    except Exception:
+                        logger.debug("get_device_detail: 최근 수신 조회 실패", exc_info=True)
+                return cls._detail_summary(out, fields)
+            return out
         except Exception as e:
             logger.exception("Error in get_device_detail")
             return {"error": str(e)}
@@ -1245,8 +1508,13 @@ class DeviceToolsMixin:
 
     @classmethod
     def get_control_state(cls, facility_name=None, facility_id=None,
-                          include_inactive=False, detail=False, **extra):
+                          include_inactive=False, detail=False, brief=False, **extra):
         """[읽기전용] 환경제어 코디네이터의 현재 목표값과 최근 판단 결과.
+
+        `brief` 는 도구 스키마에 없는 처리기 인자다 — 도메인 표면(overview.control_state)만 켠다(2026-10-31).
+        시설을 안 정하고 `detail` 도 아니면 제어기마다 **한 줄**(이름·시설·동작 여부·제한 요인·게이트·편차·움직이는 명령)만 낸다
+        (제어기 3개에 5천 토큰). 시설을 정하면 아래 `detail=False` 의 줄인 형태, `detail=True` 면 전부 — 예전과 같다.
+        안 주면(인앱 AI·개요) 예전과 같다.
 
         무엇이 목표이고(setpoint), 무엇이 제약을 걸었고(limiting factor),
         안전게이트가 열렸는지, 어떤 액추에이터에 왜 명령이 갔는지를 반환한다.
@@ -1273,6 +1541,7 @@ class DeviceToolsMixin:
         `_omitted`가 말한다 — 없는 값이 아니라 줄인 값이다.
         """
         import json as _json
+        lean = bool(brief) and not detail and not facility_id and not facility_name
         try:
             from aot.databases.models import CustomController, FunctionRuntimeState, GeoFacility
 
@@ -1285,7 +1554,21 @@ class DeviceToolsMixin:
                         "message": "No environment-control coordinator (env_coordinator) is registered."}
 
             # 시설 이름 해석용 (geo_facility_id → GeoFacility.unique_id)
-            fac_names = {f.unique_id: f.name for f in GeoFacility.query.all()}
+            _facs = GeoFacility.query.all()
+            fac_names = {f.unique_id: f.name for f in _facs}
+            # 시설은 ID 가 둘이다 — GeoFacility.unique_id(코디네이터 옵션이 가리킨다)
+            # 와 그 시설 도형의 GeoShape.unique_id(공간 트리·장소 경로가 쓴다).
+            # 한쪽만 내면 두 도구를 대조할 수 없었다(2026-10-09 외부 점검). 둘 다
+            # 싣고, facility_id 인자는 어느 쪽이든 받는다.
+            fac_shape = {f.unique_id: f.shape_uuid for f in _facs}
+            _tfac = None        # 정확히 풀린 시설 하나 — 결과에 대상 id 로 싣는다
+            if facility_id:
+                _fr = cls._resolve_facility(facility_id)
+                if _fr is not None:
+                    facility_id = _fr.unique_id
+                    _tfac = _fr
+            elif facility_name:
+                _tfac = cls._resolve_facility(str(facility_name).strip())
 
             wanted_name = (facility_name or '').strip().lower() or None
             out = []
@@ -1309,7 +1592,7 @@ class DeviceToolsMixin:
                 # 다를 수 있었다).
                 _bay = (o.get('bay_scope') or '').strip() or None
                 _plants = []
-                if fid:
+                if fid and not lean:
                     try:
                         from aot.aot_flask.geo import plot_context as _pc
                         _plants = [
@@ -1324,6 +1607,7 @@ class DeviceToolsMixin:
                     "function_name": c.name,
                     "is_activated": bool(c.is_activated),
                     "facility_id": fid,
+                    "facility_place_id": fac_shape.get(fid),
                     "facility_name": fname,
                     "bay_scope": o.get('bay_scope') or None,
                     "plots": _plants,
@@ -1331,6 +1615,8 @@ class DeviceToolsMixin:
                     "targets": {
                         "source": "plot program",
                         **_control_targets_for(c),
+                        # vpd_kpa 가 어느 VPD 의 목표인가 — air(기본) 또는 leaf.
+                        "vpd_basis": _vpd_basis_of(o),
                     },
                     "safety_range": {
                         "temp_c": [o.get('temp_min'), o.get('temp_max')],
@@ -1366,8 +1652,31 @@ class DeviceToolsMixin:
                 if state and state.summary_json:
                     try:
                         summary = _json.loads(state.summary_json)
-                        entry["latest_cycle_summary"] = (
-                            summary if detail else cls._cycle_summary_brief(summary))
+                        # 공기 VPD 는 air_kpa, 잎 VPD 는 잰 엽온이 있을 때만(`vpd`).
+                        _vr = _vpd_readout_of(summary)
+                        if _vr:
+                            summary["vpd"] = _vr
+                        _dr = cls._degraded_reasons(summary)
+                        if _dr:
+                            summary["degraded_reasons"] = _dr
+                        summary = (summary if detail
+                                   else cls._cycle_summary_brief(summary))
+                        # 근거는 숫자(27)로 저장된다 — 이름을 곁들인다.
+                        if isinstance(summary, dict):
+                            from aot.functions.utils.env_control import \
+                                log_channels as _LC
+                            for _cmd in summary.get('commands') or []:
+                                if isinstance(_cmd, dict) and 'reason' in _cmd:
+                                    _cmd['reason_name'] = _LC.reason_name(
+                                        _cmd['reason'])
+                        # 사이클 시각은 epoch 초로 저장된다 — 그대로 내면 모델이
+                        # 숫자를 읽지 못한다. 시설(없으면 함수)의 위치 시각으로.
+                        if isinstance(summary, dict) and isinstance(
+                                summary.get('ts'), (int, float)):
+                            from aot.utils.device_tz import location_iso
+                            summary = dict(summary, ts=location_iso(
+                                summary['ts'], fid or c.unique_id))
+                        entry["latest_cycle_summary"] = summary
                     except (ValueError, TypeError):
                         entry["latest_cycle_summary_error"] = "Failed to parse summary_json"
                 else:
@@ -1377,13 +1686,18 @@ class DeviceToolsMixin:
                         "or summary recording is disabled.")
                 out.append(entry)
 
+            if lean and out:
+                return cls._control_lines(out)
             result = {"status": "success", "count": len(out), "coordinators": out}
+            if out and _tfac is not None and getattr(_tfac, 'shape_uuid', None):
+                cls._with_target(result, 'facility', _tfac.shape_uuid,
+                                 ref=facility_id or facility_name, exact=True)
             if out and not detail:
                 result["_omitted"] = (
                     "Each coordinator's 'tolerance'/'priority' (rarely-changing "
                     "config) and 'latest_cycle_summary' fields other than "
                     "ts/limiting_factor/strain/deviation/targets/gate/"
-                    "feedforward/schedule/commands/unmeasured/modes (display-"
+                    "feedforward/schedule/commands/unmeasured/modes/vpd (display-"
                     "only diagnostics: capability, greybox_skill, mpc_shadow, "
                     "solar_lead, basis, actuation, vent, outputs_by_kind, "
                     "trend, photo) were dropped to fit the response size. "
@@ -1396,14 +1710,107 @@ class DeviceToolsMixin:
             logger.exception("Error in get_control_state")
             return {"status": "error", "message": str(e)}
 
+    @classmethod
+    def _control_lines(cls, entries):
+        """overview.control_state 대상 없음 — 제어기마다 한 줄. 값은 전체 응답의 것을 그대로 옮긴다(반올림·단위 변경 없음).
+
+        이름이 겹치는 제어기('Env Coordinator' 동명 2개 사례)에만 function_id 를 단다. 명령은 움직이는 것(0% 아님)만
+        "slot kind pct%" 로, 쉬는 것은 개수만. 시설을 주면 목표·안전 범위·구획·판단 전체(줄인 형태)를 받는다."""
+        names = {}
+        for e in entries:
+            key = str(e.get('function_name') or '').strip().lower()
+            names[key] = names.get(key, 0) + 1
+        rows = []
+        for e in entries:
+            row = {"function_name": e.get("function_name"), "facility_name": e.get("facility_name"),
+                   "is_activated": e.get("is_activated")}
+            if names[str(e.get('function_name') or '').strip().lower()] > 1:
+                row["function_id"] = e.get("function_id")
+            cyc = e.get("latest_cycle_summary")
+            if not isinstance(cyc, dict):
+                row["latest_cycle"] = None
+                rows.append(row)
+                continue
+            row["ts"] = cyc.get("ts")
+            row["limiting_factor"] = cyc.get("limiting_factor")
+            gate = cyc.get("gate") or {}
+            row["gate_triggered"] = bool(gate.get("triggered"))
+            if gate.get("triggered") and gate.get("description"):
+                row["gate"] = gate["description"]
+            if cyc.get("deviation"):
+                row["deviation"] = cyc["deviation"]
+            if cyc.get("unmeasured"):
+                row["unmeasured"] = cyc["unmeasured"]
+            moving, idle = [], 0
+            for c in cyc.get("commands") or []:
+                if not isinstance(c, dict):
+                    continue
+                if c.get("pct"):
+                    moving.append("%s %s %s%%" % (c.get("slot_key"), c.get("kind"), c.get("pct")))
+                else:
+                    idle += 1
+            if moving:
+                row["commands"] = moving
+            if idle:
+                row["idle_commands"] = idle
+            rows.append(row)
+        return {"status": "success",
+                "next": {"call": "overview(op='control_state', target=<facility name>)",
+                         "why": "that facility's targets, safety range, plots and every command with its reason; "
+                                "detail=true gives every controller in full"},
+                "count": len(rows), "coordinators": rows}
+
     #: `latest_cycle_summary` 의 키 중 이 도구의 존재 이유(목표·제약·게이트·
     #: 액추에이터+사유)에 해당하는 것만. 나머지는 화면 [현황] 탭의 관측용
     #: 진단값(greybox_skill·mpc_shadow·solar_lead·capability·basis·actuation·
     #: vent·outputs_by_kind·trend·photo)이라 기본 응답에서 뺀다.
     _CYCLE_SUMMARY_KEEP = (
         'ts', 'limiting_factor', 'strain', 'deviation', 'targets', 'gate',
+        'degraded_reasons',
         'feedforward', 'schedule', 'commands', 'unmeasured', 'modes',
+        # 현재 VPD — 공기 VPD(air_kpa)와, 잰 엽온이 있을 때만 잎 VPD(leaf_kpa), 목표 기준.
+        # 목표 편차(`deviation.vpd`)가 어느 VPD 의 것인지 읽는 근거다.
+        'vpd',
     )
+
+    _AXIS_LABEL = {'T': 'temperature', 'RH': 'humidity', 'CO2': 'CO2',
+                   'Light': 'light'}
+
+    @classmethod
+    def _degraded_reasons(cls, summary):
+        """모드에 'degraded' 가 있으면 어느 변수·방향이 왜 NATURAL 인지.
+
+        NATURAL 은 센서 상태가 아니라 **그 축을 움직일 구동기 종류가 등록되지
+        않았다**는 뜻이다(authority.derive_authority). 센서가 안 들어와 제어에서
+        빠진 변수는 `unmeasured` 가 따로 말한다 — 둘을 섞지 않는다.
+        """
+        if not isinstance(summary, dict) or 'degraded' not in (summary.get('modes') or []):
+            return None
+        try:
+            from aot.functions.utils.env_control.authority import _KIND_AUTHORITY
+        except Exception:                                   # noqa: BLE001
+            _KIND_AUTHORITY = {}
+        axes = summary.get('natural_axes')
+        if axes is None:
+            return [{"reason": "some variables are NATURAL (no actuator registered "
+                               "for that axis); this cycle record predates the axis "
+                               "list - it appears after the next cycle."}]
+        out = []
+        for key in axes:
+            var, _, direction = key.partition('_')
+            kinds = sorted(k for k, m in _KIND_AUTHORITY.items() if key in m)
+            out.append({
+                "axis": key,
+                "meaning": "%s %s" % (cls._AXIS_LABEL.get(var, var),
+                                      'increase' if direction == 'up' else 'decrease'),
+                "reason": "no registered actuator can move this axis (needs one of: "
+                          "%s) - not a sensor fault" % (', '.join(kinds) or 'n/a'),
+            })
+        um = summary.get('unmeasured') or []
+        if um:
+            out.append({"axis": "unmeasured", "variables": list(um),
+                        "reason": "target set but no measurement (sensor off/no data)"})
+        return out
 
     @classmethod
     def _cycle_summary_brief(cls, summary):
@@ -1530,8 +1937,10 @@ class DeviceToolsMixin:
                 try:
                     started = _read_latest_started_at(device_id, ch, lookback_sec=7 * 86400)
                     if started:
-                        entry["started_at"] = serialize_ts(
-                            datetime.utcfromtimestamp(started["selected_epoch"]))
+                        # 이 출력이 놓인 곳의 시각(예전엔 농장 시각).
+                        from aot.utils.device_tz import location_iso
+                        entry["started_at"] = location_iso(
+                            started["selected_epoch"], device_id)
                 except Exception:
                     pass
                 channels_out[str(ch)] = entry
@@ -1617,7 +2026,8 @@ class DeviceToolsMixin:
                 output.unique_id, 'percent', 0, measure='duty_cycle',
                 duration_sec=30 * 86400, value='LAST')
             if ts is not None:
-                pos["last_moved_at"] = serialize_ts(datetime.utcfromtimestamp(ts))
+                from aot.utils.device_tz import location_iso
+                pos["last_moved_at"] = location_iso(ts, output.unique_id)
                 if _num(val) is not None:
                     pos["value_logged_then"] = round(float(val), 1)
         except Exception:

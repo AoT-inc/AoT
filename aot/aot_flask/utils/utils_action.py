@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 def action_add(form, request_form=None):
-    """Add an action."""
+    """Add an action.
+
+    Returns (messages, dep_name, dep_list, action_id, page_refresh, dep_message).
+    """
     messages = {
         "success": [],
         "info": [],
@@ -40,7 +43,7 @@ def action_add(form, request_form=None):
                 f"{form.action_type.data} " + _("has unmet dependencies. They must be installed before the action can be added."))
             dep_name = form.action_type.data
 
-            return messages, dep_name, list_unmet_deps, dep_message, None
+            return messages, dep_name, list_unmet_deps, None, False, dep_message
 
     dict_actions = parse_action_information()
     # ⚠ 버리는 값을 `_` 로 받지 말 것 — 이 함수가 위에서 쓰는 `_(...)`(gettext)와
@@ -139,7 +142,7 @@ def action_add(form, request_form=None):
     except Exception as except_msg:
         messages["error"].append(str(except_msg))
 
-    return messages, dep_name, list_unmet_deps, action_id, page_refresh
+    return messages, dep_name, list_unmet_deps, action_id, page_refresh, ''
 
 
 def action_mod(form, request_form):
@@ -260,7 +263,10 @@ def action_del(form):
         "error": []
     }
 
-    controller_type, _, controller_entry = which_controller(form.device_id.data)
+    # `_` 로 받으면 함수 전체에서 gettext `_` 가 지역변수로 가려져, 아래
+    # `_("Action deleted")` 가 모델 인스턴스 호출이 된다(행은 이미 지워진 뒤라
+    # 화면에는 오류만 뜬다). `action_add` 가 같은 이유로 `_unused_ctrl` 을 쓴다.
+    controller_type, _unused_table, controller_entry = which_controller(form.device_id.data)
 
     if (controller_type in ['conditional', 'function', 'input'] and  # Note: trigger controller types are not activated
             controller_entry and controller_entry.is_activated):

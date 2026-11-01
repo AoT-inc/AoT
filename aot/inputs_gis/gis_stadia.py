@@ -5,7 +5,7 @@ import requests
 
 CHANNELS = {
     0: {'name': 'Alidade Smooth', 'options': {'layer': 'alidade_smooth'}},
-    1: {'name': 'Alidade Smooth Dark', 'options': {'layer': 'alidade_smooth_dark'}},
+    1: {'name': 'Alidade Smooth Dark', 'options': {'layer': 'alidade_smooth_dark', 'ambient_theme': 'dark'}},
     2: {'name': 'OSM Bright', 'options': {'layer': 'osm_bright'}},
     3: {'name': 'Stamen Toner', 'options': {'layer': 'stamen_toner'}},
     4: {'name': 'Stamen Toner Lite', 'options': {'layer': 'stamen_toner_lite'}},
@@ -41,6 +41,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'base',
+    'ambient_role': 'base',
     'custom_options': [
         {
             'id': 'api_key',

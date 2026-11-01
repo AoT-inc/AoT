@@ -90,7 +90,7 @@ class TestWeatherDeviceSelection(unittest.TestCase):
         far = _fake_input('w-map', '기상청-9포장', 'KMA_weather_500')
         with patch.object(S, '_weather_inputs',
                           return_value={'w-in': near, 'w-map': far}), \
-             patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
+             patch('aot.aot_flask.geo.device_membership.place_members',
                    return_value={'w-in', 'soil-1'}), \
              patch.object(ADT_MEASUREMENT, '_devices_on_map_p2', return_value={'w-in', 'w-map'}):
             chosen, scope, others = S._pick_weather_input(_fake_shape(), '1포장')
@@ -104,13 +104,57 @@ class TestWeatherDeviceSelection(unittest.TestCase):
         b = _fake_input('kma-3', '기상청-3포장', 'KMA_weather_500')
         with patch.object(S, '_weather_inputs',
                           return_value={'kma-1': a, 'kma-3': b}), \
-             patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
+             patch('aot.aot_flask.geo.device_membership.place_members',
                    return_value=set()), \
              patch.object(ADT_MEASUREMENT, '_devices_on_map_p2', return_value=set()):
             chosen, scope, others = S._pick_weather_input(_fake_shape(), '3포장')
+        # 위치를 모르는 입력은 이름이 그 장소를 가리킬 때만 쓴다(2026-10-09).
         self.assertEqual('kma-3', chosen.unique_id)
-        self.assertEqual('elsewhere', scope)
-        self.assertEqual(['kma-1'], [o['device_id'] for o in others])
+        self.assertEqual('named', scope)
+        self.assertEqual([], [o['device_id'] for o in others])
+
+    def _pick_with(self, cands, coords, site_ids=(), placed=()):
+        from aot.utils import device_tz
+        with patch.object(S, '_weather_inputs', return_value=cands), \
+             patch('aot.aot_flask.geo.device_membership.place_members',
+                   return_value=set(placed)), \
+             patch('aot.aot_flask.geo.device_membership.site_for_geometry',
+                   return_value=None), \
+             patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+                   return_value=(list(site_ids), 'inferred')), \
+             patch.object(device_tz, 'resolve_location_coords',
+                          side_effect=lambda i: coords.get(i, (None, None))):
+            return S._pick_weather_input(_fake_shape(), '3-1')
+
+    def test_a_far_station_is_never_this_places_weather(self):
+        """김제 구역에 이천(OpenWeather)·일본(Kumamoto) 장치를 답했다(2026-10-09)."""
+        far = _fake_input('owm', 'OpenWeather', 'OPENWEATHERMAP_CALL_WEATHER')
+        jp = _fake_input('kum', 'Kumamoto', 'OPENWEATHERMAP_CALL_WEATHER')
+        chosen, scope, _ = self._pick_with(
+            {'owm': far, 'kum': jp},
+            {'shape-1': (35.86, 126.88), 'owm': (37.24, 127.54), 'kum': (32.8, 130.7)})
+        self.assertIsNone(chosen)
+
+    def test_the_sites_weather_source_is_used_like_get_plot(self):
+        """get_plot 과 같은 규칙(대지의 기상원) — 이름순 첫 장치가 아니다."""
+        owm = _fake_input('owm', 'OpenWeather', 'OPENWEATHERMAP_CALL_WEATHER')
+        sim = _fake_input('sim', 'SIM 김제 기상대', 'OPEN_METEO_FORECAST')
+        chosen, scope, others = self._pick_with(
+            {'owm': owm, 'sim': sim},
+            {'shape-1': (35.86, 126.88), 'owm': (37.24, 127.54), 'sim': (35.86, 126.88)},
+            site_ids=['sim'])
+        self.assertEqual(('sim', 'site'), (chosen.unique_id, scope))
+        self.assertNotIn('owm', [o['device_id'] for o in others])
+
+    def test_the_nearest_within_range_when_the_site_has_none(self):
+        a = _fake_input('a', 'A 기상', 'KMA_weather_500')
+        b = _fake_input('b', 'B 기상', 'KMA_weather_500')
+        chosen, scope, others = self._pick_with(
+            {'a': a, 'b': b},
+            {'shape-1': (35.86, 126.88), 'a': (35.95, 126.88), 'b': (35.87, 126.88)})
+        self.assertEqual(('b', 'nearby'), (chosen.unique_id, scope))
+        self.assertEqual(others[0]['device_id'], 'a')
+        self.assertIn('distance_km', others[0])
 
     def test_no_weather_device_at_all(self):
         with patch.object(S, '_weather_inputs', return_value={}):
@@ -152,7 +196,7 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
              "readings": [{"t": "2026-08-17T09:00:00+09:00", "v": 27.1, "u": "C"}]}]
         with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
              patch.object(ADT_MEASUREMENT, 'Input', inp), \
-             patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
+             patch('aot.aot_flask.geo.device_membership.place_members',
                    return_value={'any-1'}), \
              patch.object(S, '_pick_weather_input',
                           return_value=(chosen, scope, others or [])), \
@@ -169,8 +213,8 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
 
     def test_out_of_zone_station_is_flagged(self):
         out = self._run(_fake_input('w1', '기상청-1포장', 'KMA_weather_500'),
-                        scope='elsewhere')
-        self.assertEqual('elsewhere', out['weather_device_scope'])
+                        scope='nearby')
+        self.assertEqual('nearby', out['weather_device_scope'])
         self.assertIn('weather_device_note', out)
 
     def test_fallback_is_never_presented_as_weather(self):
@@ -196,12 +240,43 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
             inp.query.filter.return_value.first.return_value = slow
             with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
                  patch.object(ADT_MEASUREMENT, 'Input', inp), \
-                 patch('aot.aot_flask.geo.device_membership.device_ids_in_shape',
+                 patch('aot.aot_flask.geo.device_membership.place_members',
                        return_value={'slow-1'}), \
                  patch.object(S, '_pick_weather_input', return_value=(None, None, [])):
                 S.get_weather_tool(zone_id='shape-1')
         spy.assert_called_once_with(slow)
         self.assertEqual('72h', read.call_args_list[0].kwargs['time_range'])
+
+    def _lookup(self, read_place_result, **kw):
+        """id 정확일치는 비고, 이름은 공용 리졸버(_read_place)로 간다."""
+        geo = MagicMock()
+        geo.query.filter_by.return_value.first.return_value = None
+        with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
+             patch.object(S, '_read_place', return_value=read_place_result) as rp:
+            return S.get_weather_tool(**kw), rp
+
+    def test_a_name_in_zone_id_is_looked_up_by_name(self):
+        """zone_id='3-1' 이 id 로만 찾아져 '구역 없음' 이었다(2026-10-09)."""
+        out, rp = self._lookup((None, {"error": "No zone or site named '3-1'."}),
+                               zone_id='3-1')
+        rp.assert_called_once_with('3-1', arg='zone_id')
+
+    def test_a_repeated_name_is_a_question_not_a_pick(self):
+        """'1포장' 이 두 지도에 있으면 첫 도형을 조용히 골랐다."""
+        amb = {"status": "needs_disambiguation", "error": "ambiguous_name",
+               "candidates": [{"name": "1포장", "use_name": "김제 1포장"},
+                              {"name": "1포장", "use_name": "그린 1포장"}]}
+        out, _ = self._lookup((None, amb), zone_name='1포장')
+        self.assertEqual(out['error'], 'ambiguous_name')
+        self.assertEqual(len(out['candidates']), 2)
+
+    def test_not_found_lists_named_places_only(self):
+        """예전엔 '쓸 수 있는 구역' 에 이름 없는 도형의 id 가 섞였다."""
+        out, _ = self._lookup((None, {"error": "No zone or site named 'x'.",
+                                      "available_targets": ['3-1', '3-2']}),
+                              zone_name='x')
+        self.assertEqual(out['error'], 'zone_not_found')
+        self.assertEqual(out['available_zones'], ['3-1', '3-2'])
 
     def test_zone_not_found_still_returns_the_old_error_contract(self):
         geo = MagicMock()
@@ -377,3 +452,14 @@ class TestKmaPrecipitationNaming(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+
+class TestReadingsShownIsSaid(unittest.TestCase):
+    """'전체 6건' 옆에 5건만 있어 모순으로 읽혔다(2026-10-09 외부 점검)."""
+
+    def test_the_trim_is_stated(self):
+        import inspect
+        src = inspect.getsource(ADT_MEASUREMENT)
+        self.assertIn('_row["readings_shown"]', src)
+        self.assertIn('if len(readings) > _keep:', src)
+

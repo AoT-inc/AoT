@@ -71,6 +71,12 @@ GROUP_DASHBOARD = 'E2E Group Dashboard'
 
 DASHBOARD = 'E2E Dashboard'
 
+# 지도 위젯 렌더 검사 — 시설이 놓인 지도를 보여 주는 대시보드.
+MAP_DASHBOARD = 'E2E Map Dashboard'
+MAP_FACILITY = 'E2E Map Facility'
+# 시설·지도 중심(시드의 부지·구역 옆). 카메라가 시설 위에 있어야 3D 가 화면에 들어온다.
+MAP_FACILITY_CENTER = (127.0025, 37.0005)
+
 # 공지 — 작성한 것이 대시보드 위젯까지 가는지 보는 데 쓴다.
 # 시설 — 만들고 다시 열어 확인하는 데 쓴다.
 FACILITY_NAME = 'E2E Facility'

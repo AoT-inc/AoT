@@ -460,6 +460,8 @@ def _weather_summary_job():
 # @ANCHOR: REALTIME_ALERT_CHECK_JOB
 # Per-scope cooldown tracker: scope_key -> last_alert datetime
 _realtime_alert_last_sent: dict = {}
+# scope_key -> (signature, level, sent_at) of the last alert actually sent
+_realtime_alert_last_state: dict = {}
 _realtime_alert_lock = threading.Lock()
 
 
@@ -470,8 +472,7 @@ def _realtime_alert_check_job() -> None:
     Runs every REALTIME_ALERT_CHECK_MINUTES (default 5 min).  Unlike the
     full context broadcast job this function never calls an AI model — it
     only evaluates rule-based thresholds via AIAnomalyDetector and pushes
-    an SSE event if a violation is detected and the per-scope cooldown has
-    expired.
+    an admin email if a violation is detected and dedup rules allow it.
 
     Call Hierarchy
     --------------
@@ -480,15 +481,18 @@ def _realtime_alert_check_job() -> None:
     AIAnomalyDetector._check_threshold_violations(current_data, previous_summary=None)
       ↓  (if violations at warning/critical level)
     NotificationService.send_anomaly_alert(...)  → email to admins (if SMTP set)
-    NotificationService.send_webui_toast(...)    → retired no-op since 2026-07-19
-      (the in-app SSE toast path was removed; it held a gthread worker per tab
-       and starved the pool. Deliver alerts via email / Conditional Functions.)
+      (The in-app SSE toast path was removed 2026-07-19: it held a gthread
+       worker per tab and starved the pool. Email is the only push channel.)
+
+    Flood control: warning/critical only; the same violation set is re-sent
+    only after REALTIME_ALERT_REPEAT_HOURS; a new/escalated set goes out at
+    once, but never closer than REALTIME_ALERT_COOLDOWN_MINUTES.
 
     Parent  : APScheduler (interval trigger, period = REALTIME_ALERT_CHECK_MINUTES)
               registered inside AISchedulerService.init_app()
     Children: AISummaryService.gather_scope_data()
               AIAnomalyDetector._check_threshold_violations()
-              NotificationService.send_webui_toast()
+              NotificationService.send_anomaly_alert()
     """
     global _flask_app, _realtime_alert_last_sent
     if not _flask_app:
@@ -521,8 +525,13 @@ def _realtime_alert_check_job() -> None:
             if level not in ('warning', 'critical'):
                 return
 
+            from aot.config.mcp_config import REALTIME_ALERT_REPEAT_HOURS
+
             scope_key = 'system:None'
             now = datetime.now(timezone.utc)
+            signature = tuple(sorted(
+                (v.get('type', ''), v.get('level', '')) for v in violations
+            ))
             with _realtime_alert_lock:
                 last = _realtime_alert_last_sent.get(scope_key)
                 if last is not None:
@@ -533,17 +542,28 @@ def _realtime_alert_check_job() -> None:
                             elapsed_minutes, REALTIME_ALERT_COOLDOWN_MINUTES,
                         )
                         return
+                prev = _realtime_alert_last_state.get(scope_key)
+                if prev is not None and prev[0] == signature:
+                    if (now - prev[2]).total_seconds() / 3600 < REALTIME_ALERT_REPEAT_HOURS:
+                        logger.debug("[RealtimeAlert] same violations already sent, skip")
+                        return
                 _realtime_alert_last_sent[scope_key] = now
+                _realtime_alert_last_state[scope_key] = (signature, level, now)
 
-            first_msg = violations[0].get('message', 'Threshold exceeded')
-            toast_level = 'error' if level == 'critical' else 'warning'
-            NotificationService.send_webui_toast(
-                user_id='__all__',
-                message=f"[{level.upper()}] {first_msg}",
-                level=toast_level,
-                duration=8000 if level == 'critical' else 5000,
+            anomaly_results = {
+                'anomaly_detected': True,
+                'alert_level': level,
+                'anomalies': violations,
+            }
+            result = NotificationService.send_anomaly_alert(
+                anomaly_results=anomaly_results,
+                scope_info={'scope_type': 'system', 'scope_id': None, 'scope_name': 'System'},
             )
-            logger.warning("[RealtimeAlert] SSE pushed — %s: %s", level.upper(), first_msg)
+            logger.warning(
+                "[RealtimeAlert] %s: %s → email %s",
+                level.upper(), violations[0].get('message', 'Threshold exceeded'),
+                (result or {}).get('status'),
+            )
 
         except Exception as exc:
             logger.error("[RealtimeAlert] Job failed: %s", exc, exc_info=True)
@@ -828,6 +848,18 @@ def _audit_log_purge_job() -> None:
         except Exception as exc:
             logger.error("[AuditLogPurge] Job failed: %s", exc, exc_info=True)
 
+        # AI 카드(P1): 만료 행 정리 + 어느 행도 가리키지 않는 고아 파일 쓸기. 위 정리가
+        # 실패해도 이쪽은 돌고, 이쪽이 실패해도 위는 이미 끝났다.
+        try:
+            from aot.utils import ai_screen_cards
+
+            rows, orphans = ai_screen_cards.sweep()
+            if rows or orphans:
+                logger.info("[AuditLogPurge] AI cards: removed %d expired rows and "
+                            "%d orphan files", rows, orphans)
+        except Exception as exc:
+            logger.error("[AuditLogPurge] AI card purge failed: %s", exc, exc_info=True)
+
 
 def _user_string_translation_job() -> None:
     """Background job: 사용자 지정 이름을 UI 언어로 번역해 캐시에 채운다.
@@ -985,6 +1017,12 @@ class AISchedulerService:
         'group_scope_denied',
         # 승인되지 않았거나 승인자가 기록되지 않은 요청(`execute_approved`).
         'not_approved',
+        # 승인 상태 전이 선점 실패(2026-10-08) — 다른 요청이 먼저 결정했거나
+        # 지금 실행 중이다. 어느 쪽이든 **이번 호출은** 실행하지 않았다.
+        'already_decided', 'confirmation_in_progress',
+        # 승인 뒤 대상이 지워졌거나 바뀌어 실행하지 않음(도메인 틀, 2026-10-13
+        # — docs/design/mcp-domain-surface.md §9-2).
+        'target_changed',
     )
 
     # AoT MCP 서버가 **모든** tools/call 응답에 찍는 단일 판정 축

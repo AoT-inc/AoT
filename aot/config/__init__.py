@@ -18,8 +18,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p6_80_api_key_tool_modules_20260929'
-AOT_VERSION = '26.09.08'
+ALEMBIC_VERSION = 'p7_00_target_alias_20261028'
+AOT_VERSION = '26.11.1'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -108,6 +108,10 @@ USAGE_REPORTS_PATH = os.path.join(INSTALL_DIRECTORY, 'output_usage_reports')
 DEPENDENCY_INIT_FILE = os.path.join(INSTALL_DIRECTORY, '.dependency')
 UPGRADE_INIT_FILE = os.path.join(INSTALL_DIRECTORY, '.upgrade')
 BACKUP_PATH = os.path.join(INSTALL_DIRECTORY, 'aot/tests/backups')  # Where AoT backups are stored
+# Matter 사이드카(matter_server)의 Fabric 저장소. Docker 에서는 aot-app 이 읽기
+# 전용으로 마운트해 백업에만 쓴다(docs/design/matter-controller.md §6). 없으면
+# (직접 설치·Matter 미사용) 백업이 그냥 건너뛴다.
+PATH_MATTER_DATA = os.environ.get('AOT_MATTER_DATA_DIR') or '/app/matter_data'
 
 # Log files
 if DOCKER_CONTAINER:
@@ -165,6 +169,8 @@ PATH_CAMERAS = os.path.join(INSTALL_DIRECTORY, 'cameras')
 
 # Notes
 PATH_NOTE_ATTACHMENTS = os.path.join(INSTALL_DIRECTORY, 'uploads/notes')
+#: AI 카드 첨부(P1) — static 아래에 두지 않는다(로그인 없이 노출되므로). 서빙은 API 만.
+PATH_AI_CARD_FILES = os.path.join(INSTALL_DIRECTORY, 'uploads/ai_cards')
 PATH_FACILITY_PHOTOS = os.path.join(INSTALL_DIRECTORY, 'uploads/facility_photos')
 PATH_GEO_ZONE_PHOTOS = os.path.join(INSTALL_DIRECTORY, 'uploads/geo_zone_photos')
 
@@ -531,10 +537,20 @@ PID_INFO = {
     }
 }
 
-# 장치·위젯 정의 밖에서 쓰는 공통 의존성. 예전에는 그래프 화면이 쓰던 Highstock
-# 파일 묶음이 있었다 — 2026-09-21 차트를 레포에 든 ECharts 로 옮기면서 내려받을
-# 것이 없어졌다. 형식을 쓰는 코드(관리 > 의존성)는 그대로 둔다.
-DEPENDENCIES_GENERAL = {}
+# 장치·위젯 정의 밖에서 쓰는 공통 의존성(관리 > 패키지 관리). 예전에는 그래프
+# 화면이 쓰던 Highstock 파일 묶음이 있었다(2026-09-21 ECharts 로 옮기며 빠짐).
+#
+# matter: 설정 > 일반에서 Matter 를 켤 때 확인하는 것. 네이티브 설치는 여기서 설치한다.
+# Docker 이미지는 requirements.txt 로 이미 들고 있다 — 컨테이너 안의 주문형 설치는
+# 실행 중인 인터프리터·데몬 컨테이너에 닿지 않고 재생성 때 사라진다(설계 C6).
+DEPENDENCIES_GENERAL = {
+    'matter': {
+        'name': 'Matter',
+        'dependencies_module': [
+            ('pip-pypi', 'websockets', 'websockets==16.0'),
+        ],
+    },
+}
 
 # Conditional Functions
 CONDITIONAL_CONDITIONS = [

@@ -48,6 +48,9 @@ class _Fixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # 테이블을 비우는 픽스처 — 라이브 DB 면 거부(aot/tests/_live_db_guard.py).
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         cls.app = create_app()
         cls.app.config['WTF_CSRF_ENABLED'] = False
         cls.app.config['TESTING'] = True

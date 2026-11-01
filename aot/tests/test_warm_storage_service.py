@@ -393,7 +393,9 @@ class TestWarmStorageService(unittest.TestCase):
             self.service.set(doc.doc_id, doc)
 
         elapsed = time.time() - start_time
-        self.assertLess(elapsed, 5.0, f"Bulk insert took {elapsed:.2f}s for 100 docs")
+        # 맥에서는 0.1초지만 디스크가 붐비는 나스 러너에서 5.7초가 나와 간헐 실패했다(2026-10-26).
+        # 느려진 구현(문서당 수백 ms)만 잡도록 여유를 크게 둔다.
+        self.assertLess(elapsed, 30.0, f"Bulk insert took {elapsed:.2f}s for 100 docs")
 
     # =========================================================================
     # Concurrent Access Tests

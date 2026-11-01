@@ -34,6 +34,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'overlay',
+    'ambient_role': 'ground.field',
     'custom_options': [
         {
             'id': 'active_channels',

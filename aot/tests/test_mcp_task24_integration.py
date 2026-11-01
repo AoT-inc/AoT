@@ -11,6 +11,9 @@ from aot.ai.services.ai_action_service import AIActionService
 class TestMCPTask24Integration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # 테이블을 비우는 픽스처 — 라이브 DB 면 거부(aot/tests/_live_db_guard.py).
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         cls.app = create_app()
         cls.app_context = cls.app.app_context()
         cls.app_context.push()

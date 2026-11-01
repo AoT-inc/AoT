@@ -6,6 +6,8 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+{# 노트 본문의 링크·이미지·영상은 공지와 같은 렌더러(AoTNoticeRender → AoTMediaEmbed)가 펼친다. #}
+<script src="{{ asset('app-notice-render') }}"></script>
 <style>
     /* Inline overrides for Gray Theme */
     .btn-dark { background-color: #343a40; border-color: #343a40; }
@@ -510,7 +512,18 @@
         }
 
         // Helper to reveal cards (Initial or Ajax)
+        // 본문 속 주소를 공용 렌더러로 펼친다(유튜브·쇼츠는 썸네일+재생, 사진은 그 자리에, 그 밖은 미리보기 카드).
+        // 줄바꿈은 CSS(pre-wrap)가 지키므로 <br> 을 더하지 않는다. 높이는 상자(16:9)가 미리 잡아 둬 접기 판정이 흔들리지 않는다.
+        function renderNoteBodies($items) {
+            if (!window.AoTNoticeRender) return;
+            $items.find('.note-card-body[data-media-render]').each(function() {
+                window.AoTNoticeRender.renderInto(this, this.textContent, { keepNewlines: true, embedLinks: true });
+                this.removeAttribute('data-media-render');
+            });
+        }
+
         function revealCards($items) {
+            renderNoteBodies($items);
             $items.css('display', '').hide().fadeIn(400);
             $items.removeClass('lazy-card');
             initExpansionControls($items);

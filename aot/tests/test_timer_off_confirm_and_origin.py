@@ -24,7 +24,13 @@
 import os
 import time as _t
 
+import pytest
+
 import aot.widgets.AoT_timer as timer
+
+
+# 상태 파일 디렉터리를 테스트마다 격리하고 남은 워커를 멈춘다 — conftest.timer_sessions 참고.
+pytestmark = pytest.mark.usefixtures('timer_sessions')
 
 
 class _FakeDaemon:

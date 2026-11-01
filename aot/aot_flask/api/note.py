@@ -176,7 +176,10 @@ class NotesByTarget(Resource):
     def get(self, target_id):
         """Get all notes associated with a specific target_id."""
         try:
-            notes = Notes.query.filter_by(target_id=target_id).order_by(Notes.date_time.desc()).all()
+            from aot.aot_flask.geo.device_membership import facility_identity_ids
+            notes = Notes.query.filter(
+                Notes.target_id.in_(facility_identity_ids([target_id]))
+            ).order_by(Notes.date_time.desc()).all()
             
             result = []
             for n in notes:

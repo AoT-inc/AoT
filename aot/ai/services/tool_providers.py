@@ -85,6 +85,7 @@ def _anomaly_summary(scope_type, scope_id):
         "alert_level": verdict.get('alert_level', 'none'),
         "anomalies": verdict.get('anomalies', []),
         "metrics": current.get('metrics', {}),
+        "comm_offline_list": current.get('comm_offline_list', []),
         "previous_version": (previous.version if previous is not None else None),
         "timestamp": current.get('timestamp'),
     }
@@ -183,8 +184,33 @@ class _DataSourceQuery:
         return dsq.query(source_id, operation, params=params, limit=limit,
                          columns=columns)
 
+    @staticmethod
+    def forecast_hourly_at(latitude, longitude, step=1, forecast_hours=None):
+        """좌표로 Open-Meteo 시간별 예보를 직접 조회한다. (records, err)."""
+        from aot.ai.context.ext.openmeteo_client import fetch_operation
+        return fetch_operation('forecast_hourly', {
+            'latitude': latitude, 'longitude': longitude, 'step': str(step),
+            'forecast_hours': str(forecast_hours or '')})
+
+
+    @staticmethod
+    def source_api_key(source_id):
+        from aot.ai.services import data_source_query_service as dsq
+        return dsq.source_api_key(source_id)
+
+    @staticmethod
+    def source_config(source_id):
+        from aot.ai.services import data_source_query_service as dsq
+        return dsq.source_config(source_id)
+
 
 _DATA_SOURCE_QUERY = _DataSourceQuery()
+
+
+def _forecast_bundle(lat, lon, tz, api_key=None):
+    """장소별 Open-Meteo 예보 묶음(캐시·재시도 포함). (bundle, info, err)."""
+    from aot.ai.context.ext import openmeteo_forecast_cache
+    return openmeteo_forecast_cache.get_bundle(lat, lon, tz, api_key)
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +245,7 @@ def bind_all():
     providers.register('device_zone_map', _device_zone_map)
     providers.register('job_scheduler', _JOB_SCHEDULER)
     providers.register('anomaly_summary', _anomaly_summary)
+    providers.register('forecast_bundle', _forecast_bundle)
     providers.register('knowledge_search', _knowledge_search)
     providers.register('knowledge_library_populated', _knowledge_library_populated)
     providers.register('knowledge_shelve', _knowledge_shelve)

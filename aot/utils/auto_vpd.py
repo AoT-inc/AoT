@@ -8,7 +8,12 @@ vapor_pressure_deficit 측정값으로 같이 기록한다. 원하는 입력에�
 측정 저장 공통 후크인 run_input_actions(aot/utils/actions.py) 끝에서 호출되며,
 주입된 값은 호출자의 add_measurements_influxdb 가 온습도와 동일 타임스탬프로 기록한다.
 
-- 온도 기준: 엽온 = 기온 - 1.5°C (AoT_VPD 기본값과 동일)
+- 온도 기준: 엽온 = 기온 - 1.5°C (AoT_VPD 기본값과 동일) — **추정 엽온**이다. 값은 잎–공기
+  VPD = svp(엽온) − RH·svp(기온) (`psychro.leaf_vpd`, 2026-10-09). 그 전에는 공기 RH 를
+  엽온 포화압에 곱해(svp(엽온)·(1−RH)) 잎이 공기보다 찬 이 오프셋에서 늘 부풀었다
+  (25 °C·70 %: 0.87 → 바른 값 0.68 kPa). 같은 채널의 저장값이 그날부터 낮아진다(CHANGELOG).
+  ⚠ 고정 오프셋은 측정이 아니다 — 통합환경제어는 이 값을 제어에 쓰지 않는다
+  (공기 VPD 를 T/RH 로 계산하고, 잎 기준 목표는 잰 엽온으로만 옮긴다).
 - 채널: **최초 생성 시 1회만** 그 입력의 실제(auto 제외) 채널 중 최댓값 + 1 로
   배치(예: 0=온도,1=습도,2=배터리 → 3=VPD). 이후에는 그 채널 번호를 절대 바꾸지
   않는다 — InfluxDB 는 채널 번호 단위로 기록되므로, 번호가 바뀌면 같은 측정의
@@ -119,8 +124,8 @@ def _inject(unique_id, measurements_dict):
     from aot.config import AOT_DB_PATH
     from aot.databases.models import DeviceMeasurements
     from aot.databases.utils import session_scope
-    from aot.inputs.sensorutils import (
-        calculate_vapor_pressure_deficit, convert_from_x_to_y_unit)
+    from aot.functions.utils.env_control.psychro import leaf_vpd
+    from aot.inputs.sensorutils import convert_from_x_to_y_unit
 
     with session_scope(AOT_DB_PATH) as session:
         temp_row, hum_row, native_vpd_row, auto_row, max_channel = _classify_channels(
@@ -160,13 +165,9 @@ def _inject(unique_id, measurements_dict):
         if temp_c is None or hum_percent is None:
             return measurements_dict
 
+        # 잎–공기 VPD: 잎의 포화압 − **공기의** 수증기압(공기 RH × 기온 포화압).
         leaf_c = temp_c + LEAF_TEMP_OFFSET
-        vpd_pa = calculate_vapor_pressure_deficit(leaf_c, hum_percent)
-        if vpd_pa is None:
-            return measurements_dict
-        vpd_kpa = convert_from_x_to_y_unit('Pa', AUTO_VPD_UNIT, vpd_pa)
-        if vpd_kpa is None:
-            return measurements_dict
+        vpd_kpa = leaf_vpd(leaf_c, temp_c, hum_percent)
 
         # auto VPD 채널 지연 생성. auto_row 유무를 매 호출 DB 조회로 판단하므로
         # 비활성화→재활성화(채널 삭제 후 재생성)에도 스스로 복구된다.

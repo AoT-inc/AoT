@@ -146,6 +146,9 @@ INPUT_INFORMATION = {
     "input_name_unique": "KMA_forecast",
     "input_manufacturer": "KMA",
     "input_name": lazy_gettext("KMA Short-term Forecast"),
+    # 단기예보다 — 현장 실측이 아니다. 강우 게이트·도구가 이 표식으로 가른다
+    # (aot.utils.inputs.model_input_drivers).
+    "data_origin": "model",
     "measurements_dict": measurements_dict,
     "data_format": "json",
     "error_handling": "kma_forecast",

@@ -111,6 +111,18 @@ Publish a value to an MQTT server.
 
 ## Built-In Outputs (Devices)
 
+### Curtain / Shade: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: Value
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Move a Matter curtain, shade, blind or motorised vent on the AoT Matter fabric to a position. 100 is fully open (retracted) and 0 fully closed (deployed), as for other AoT position actuators. Off stops the motor. The device reports its own position, which is shown here and used by the environment coordinator.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name for this channel</td></tr><tr><td>Endpoint</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number of this covering on the device</td></tr></tbody></table>
+
 ### Digital Potentiometer: DS3502
 
 - Manufacturer: Maxim Integrated
@@ -135,6 +147,18 @@ The DS3502 can generate a 0 - 10k Ohm resistance with 7-bit precision. This equa
 - Product URL: [Link](https://www.adafruit.com/product/4470)
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td>VREF (volts)</td><td>Decimal
 - Default Value: 4.096</td><td>Set the VREF voltage</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>VREF</td><td>Select(Options: [<strong>Internal</strong> | VDD] (Default in <strong>bold</strong>)</td><td>Select the channel VREF</td></tr><tr><td>Gain</td><td>Select(Options: [<strong>1X</strong> | 2X] (Default in <strong>bold</strong>)</td><td>Select the channel Gain</td></tr><tr><td>Start State</td><td>Select(Options: [<strong>Previously-Saved State</strong> | Specified Value] (Default in <strong>bold</strong>)</td><td>Select the channel start state</td></tr><tr><td>Start Value (volts)</td><td>Decimal</td><td>If Specified Value is selected, set the start state value</td></tr><tr><td>Shutdown State</td><td>Select(Options: [<strong>Previously-Saved Value</strong> | Specified Value] (Default in <strong>bold</strong>)</td><td>Select the channel shutdown state</td></tr><tr><td>Shutdown Value (volts)</td><td>Decimal</td><td>If Specified Value is selected, set the shutdown state value</td></tr></tbody></table>
+
+### Dimmer: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: PWM
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Dim the light or plug endpoints of a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A duty cycle of 0 switches it off; any other duty cycle sets the level and switches it on. The state shown is what the device reports.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name for this channel</td></tr><tr><td>Endpoint</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number of this dimmer on the device</td></tr><tr><td>Transition (seconds)</td><td>Decimal</td><td>How long the device takes to reach a new level. 0 = as fast as it can</td></tr></tbody></table>
 
 ### Motor: Stepper Motor, Bipolar (Generic) (Pi <= 4)
 
@@ -343,6 +367,19 @@ This output controls the the Kasa WiFi Light Bulbs, including the KL125, KL130, 
 
 Controls the 16 channels of the MCP23017.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>I<sup>2</sup>C Address</td><td>Text</td><td>The address of the I<sup>2</sup>C device.</td></tr><tr><td>I<sup>2</sup>C Bus</td><td>Integer</td><td>The Bus the I<sup>2</sup>C device is connected.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Startup State</td><td>Select</td><td>Set the state of the GPIO when AoT starts</td></tr><tr><td>Shutdown State</td><td>Select</td><td>Set the state of the GPIO when AoT shuts down</td></tr><tr><td>On State</td><td>Select(Options: [<strong>HIGH</strong> | LOW] (Default in <strong>bold</strong>)</td><td>The state of the GPIO that corresponds to an On state</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the output switches at startup</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
+
+### On/Off: Matter
+
+- Manufacturer: Matter
+- Interfaces: IP
+- Output Types: On/Off
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Switch the On/Off endpoints of a Matter device on the AoT Matter fabric (plugs, relays, lights). Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A command counts as done when the device itself reports the new state.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td>Command Timeout (seconds)</td><td>Text
+- Default Value: 5</td><td>How long to optimistically hold the commanded state while awaiting the device (0 = immediate). For wireless/remote devices set the expected response delay; wired devices can leave this at 0.</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name for this channel</td></tr><tr><td>Endpoint</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number of this switch on the device</td></tr><tr><td>Startup State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the channel state when AoT starts. "Do Nothing" leaves the device as it is</td></tr><tr><td>Shutdown State</td><td>Select(Options: [<strong>Do Nothing</strong> | Off | On] (Default in <strong>bold</strong>)</td><td>Set the channel state when AoT shuts down</td></tr><tr><td>Trigger Functions at Startup</td><td>Boolean</td><td>Whether to trigger functions when the channel switches at startup</td></tr><tr><td>Force Command</td><td>Boolean</td><td>Always send the command if instructed, regardless of the current state</td></tr><tr><td>Current (Amps)</td><td>Decimal</td><td>The current draw of the device being controlled</td></tr></tbody></table>
 
 ### On/Off: Modbus TCP Coil (PLC)
 

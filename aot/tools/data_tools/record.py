@@ -67,6 +67,25 @@ class RecordToolsMixin:
             scope = None
             if target_id:
                 candidate_ids = [target_id]
+                # 장소 id 도 이름과 같이 **그 안 전부**로 넓힌다. 예전에는 id 면
+                # 정확 일치만 봐서, 같은 장소를 이름으로 물을 때와 답이 달랐다
+                # (2026-10-08).
+                try:
+                    from aot.databases.models import GeoShape
+                    _sh = GeoShape.query.filter_by(unique_id=target_id).first()
+                    if _sh is None:
+                        # 시설 id(GeoFacility)로 물어도 그 도형으로 넓힌다.
+                        from aot.databases.models import GeoFacility
+                        _fac = GeoFacility.query.filter_by(
+                            unique_id=target_id).first()
+                        if _fac is not None:
+                            _sh = GeoShape.query.filter_by(
+                                unique_id=_fac.shape_uuid).first()
+                    if _sh is not None:
+                        _more, _b = cls._expand_place_ids(_sh)
+                        candidate_ids = list(dict.fromkeys([target_id] + list(_more)))
+                except Exception:
+                    candidate_ids = [target_id]
             elif target_name:
                 # 대상 안에서 일어나는 일 **전부** — 구역·시설·장치·식생.
                 # 예전에는 site 일 때만 자손 도형을 붙였고, 식생은 GeoShape 가
@@ -101,12 +120,20 @@ class RecordToolsMixin:
                     resolved_name = resolved_name or _q_name
                     entity_query = True
 
-            if not candidate_ids and not (query and query.strip()):
-                return {"error": "Either 'query' or 'target_name' (a location/device) is required."}
-
+            # query·대상이 모두 없으면 가장 최근 노트(최근 순, limit 건)다 — 오류로 막지 않는다
+            # (2026-10-28 점검: 최근 노트를 보는 길이 없었다).
             db_query = Notes.query.filter(Notes.is_archived == False)  # noqa: E712
 
             if candidate_ids:
+                # 시설은 id 가 둘(GeoFacility·GeoShape)이다 — 웹은 시설 id, 예전
+                # MCP 는 도형 id 에 붙였으니 둘 다 읽는다.
+                from aot.aot_flask.geo.device_membership import \
+                    facility_identity_ids
+                _before = len(candidate_ids)
+                candidate_ids = facility_identity_ids(candidate_ids)
+                if len(candidate_ids) > _before and scope is not None:
+                    scope['facility_ids'] = ('시설은 id 가 둘(facility·shape)이고 '
+                                             '둘 다 읽었다')
                 # Per-entity read — matches the web UI /notes/target/<id>, but
                 # across every identity the named device/shape resolves to.
                 db_query = db_query.filter(Notes.target_id.in_(candidate_ids))
@@ -121,7 +148,8 @@ class RecordToolsMixin:
 
             if not rows:
                 _where = (f"location/device '{resolved_name or target_name}'"
-                          if (target_name or target_id) else f"query '{query}'")
+                          if (target_name or target_id) else
+                          (f"query '{query}'" if query else "any note"))
                 out = {
                     "status": "success", "count": 0, "results": [],
                     "message": f"No notes found for {_where}.",
@@ -234,6 +262,10 @@ class RecordToolsMixin:
                 _files = [f.strip() for f in (r.files or "").split(",") if f.strip()]
                 if _files:
                     entry["files"] = _files
+                # 본문에 적힌 영상·사진·링크(note_add attach 가 붙이는 줄 포함)는 종류·제목을 나눠 싣는다.
+                _media = cls._note_media(r.note)
+                if _media:
+                    entry["media"] = _media
                 results.append(entry)
 
             out = {
@@ -262,6 +294,29 @@ class RecordToolsMixin:
             logger.error(f"Error in search_notes_tool: {e}")
             return {"error": f"Error while querying notes: {str(e)}"}
 
+    @staticmethod
+    def _match_attachment_name(available, filename):
+        """요청한 파일 이름을 노트의 첨부 목록에서 찾는다. (찾은 이름 또는 None, 여럿에 맞음).
+
+        순서: 정확히 같음 → 경로 뺀 이름이 같음 → 대소문자·앞뒤 공백 무시 →
+        일부 일치(**하나일 때만**). 일부 일치가 여럿이면 고르지 않고 알린다.
+        """
+        import os as _os
+        want = _os.path.basename(str(filename).strip())
+        if not want:
+            return None, False
+        for f in available:
+            if f == want or _os.path.basename(f) == want:
+                return f, False
+        low = want.casefold()
+        same = [f for f in available if _os.path.basename(f).strip().casefold() == low]
+        if len(same) == 1:
+            return same[0], False
+        part = same or [f for f in available if low in _os.path.basename(f).casefold()]
+        if len(part) == 1:
+            return part[0], False
+        return None, len(part) > 1
+
     @classmethod
     def get_note_attachment_tool(cls, note_id=None, filename=None, max_dimension=1024,
                                  **extra):
@@ -275,6 +330,10 @@ class RecordToolsMixin:
         터지거나 클라이언트가 거부한다. 이미지는 `_content_blocks` 로 실려
         캡의 자를 비껴가고(tool_execution._execute_tool 참조), 대신 호출당
         한 장으로 묶어 총량을 사람이 통제하게 둔다.
+
+        파일 이름: 첨부가 하나뿐이면 생략해도 열고, 여럿인데 없거나 틀리면
+        `files`(첨부 이름 목록)와 함께 돌려준다. 이름은 대소문자·앞뒤 공백을
+        무시하고, 일부만 맞아도 하나로 좁혀지면 찾는다.
         """
         import base64
         import io
@@ -299,21 +358,30 @@ class RecordToolsMixin:
                 return {"status": "error", "note_id": note.unique_id,
                         "message": "This note has no attachments."}
 
-            if filename:
+            if filename and str(filename).strip():
                 # 요청한 이름은 **반드시 이 노트가 실제로 가진 목록 안**이어야
                 # 한다. 이 대조가 곧 경로 탈출 방어다 — 사용자가 준 문자열로
                 # 경로를 만들지 않고, 목록에서 고른 값으로만 만든다.
-                want = _os.path.basename(str(filename).strip())
-                match = next((f for f in available
-                              if f == want or _os.path.basename(f) == want), None)
-                if match is None:
+                target, near = cls._match_attachment_name(available, filename)
+                if target is None:
+                    # 틀린 이름이면 실패만 말하지 않고 무엇이 있는지 함께 준다
+                    # (2026-10-19 리허설: 인자를 잘못 줘 한 번 실패했다).
                     return {"status": "error", "note_id": note.unique_id,
                             "requested": filename, "files": available,
-                            "message": "That filename is not attached to this note. "
-                                       "Pick one from 'files'."}
-                target = match
-            else:
+                            "message": (
+                                "'%s' matches more than one attachment — pick one "
+                                "from 'files'." % filename if near else
+                                "That filename is not attached to this note. "
+                                "Pick one from 'files'.")}
+            elif len(available) == 1:
                 target = available[0]
+            else:
+                # 여럿인데 이름이 없으면 임의의 한 장을 고르지 않는다 — 어느 사진을
+                # 묻는지 모른 채 첫 장을 보여 주면 엉뚱한 사진으로 답하게 된다.
+                return {"status": "error", "note_id": note.unique_id,
+                        "files": available, "attachment_count": len(available),
+                        "message": ("This note has %d attachments. Call again with "
+                                    "filename = one of 'files'." % len(available))}
 
             path = _os.path.join(PATH_NOTE_ATTACHMENTS, target)
             # 심볼릭 링크·상대경로로 첨부 디렉터리를 벗어나지 않았는지 최종 확인.
@@ -473,10 +541,55 @@ class RecordToolsMixin:
             return {"error": "; ".join(str(e) for e in errors)}
         return {"notice_id": notice_id, "status": "deleted"}
 
+    #: 노트에 붙이는 링크(attach)는 본문 끝의 `- [이름](주소)` 줄이 된다 — 노트 화면이 본문 속 영상·사진
+    #: 주소를 카드와 같은 렌더러로 펼친다(aot-media-embed.js). 새 칸·마이그레이션 없이 본문이 정본이다.
+    _NOTE_ATTACH_MAX = 8
+
+    @classmethod
+    def _note_attach_lines(cls, attach):
+        """attach([{url, name}] 또는 주소 문자열) → (본문에 붙일 줄들, 받지 않은 개수)."""
+        from urllib.parse import urlsplit
+        items = attach if isinstance(attach, list) else ([attach] if attach else [])
+        lines, skipped = [], 0
+        for it in items:
+            url = it.get('url') if isinstance(it, dict) else it
+            name = (it.get('name') or it.get('title')) if isinstance(it, dict) else None
+            url = url.strip() if isinstance(url, str) else ''
+            try:
+                u = urlsplit(url)
+            except ValueError:
+                u = None
+            if (len(lines) >= cls._NOTE_ATTACH_MAX or u is None or u.scheme not in ('http', 'https')
+                    or not u.hostname or u.username or u.password or len(url) > 2048
+                    or any(c in url for c in ' \t\r\n()<>"\'')):
+                skipped += 1
+                continue
+            label = ' '.join(str(name or '').replace('[', '').replace(']', '').split())[:120] or u.hostname
+            lines.append('- [%s](%s)' % (label, url))
+        return lines, skipped
+
+    @staticmethod
+    def _note_media(text):
+        """노트 본문의 영상·사진·링크 → [{kind, title?, url}] (최대 8). 첨부 종류와 제목을 AI 가 다시 인용하게."""
+        try:
+            from aot.utils import ai_card_video as video_links
+            found = video_links.find_body_media(text or '', 8, 8, (), 8)
+            out = []
+            for pos, kind, url in found[:8]:
+                entry = {"kind": kind, "url": url}
+                title = video_links.label_near(text, pos, url)
+                if title:
+                    entry["title"] = title
+                out.append(entry)
+            return out
+        except Exception:
+            logger.exception('[note] 본문 미디어 읽기 실패')
+            return []
+
     @classmethod
     def create_note(cls, name=None, note=None, tags=None, category='general',
                     target_id=None, target_type=None, target_name=None,
-                    gps_lat=None, gps_lng=None, priority=None, **extra):
+                    gps_lat=None, gps_lng=None, priority=None, attach=None, **extra):
         """Create a plain memo/note. For a dated work task (weeding, inspection)
         use add_schedule instead — that registers a SchedulerJobMeta job, not a
         Notes row.
@@ -509,6 +622,12 @@ class RecordToolsMixin:
         _alias = pop_target_name_alias(extra)
         if not target_name:
             target_name = _alias
+
+        attach_skipped = 0
+        if attach:
+            _lines, attach_skipped = cls._note_attach_lines(attach)
+            if _lines:
+                note = ((note or '').rstrip() + '\n\n' + '\n'.join(_lines)).strip()
 
         gps_lat = _to_float(gps_lat)
         gps_lng = _to_float(gps_lng)
@@ -551,6 +670,13 @@ class RecordToolsMixin:
             if gps_lng is None:
                 gps_lng = _to_float(_lng)
 
+        # 시설이면 웹과 같이 GeoFacility.unique_id / 'GeoFacility' 로 붙인다
+        # (도형 id 든 시설 id 든, 이름으로 풀렸든 직접 줬든). 시설이 아니면 그대로.
+        from aot.aot_flask.geo.device_membership import \
+            normalize_facility_note_target
+        target_id, target_type = normalize_facility_note_target(
+            target_id, target_type)
+
         # 쓰기 시점 그룹 스코프 — 노트를 붙일 대상으로 묻는다. 이름으로 풀린
         # 대상은 리졸버가 이미 물었고, 직접 준 target_id 는 여기서 묻는다
         # (쓰기 호출이 묶여 있을 때만; write_scope.enforce).
@@ -564,6 +690,10 @@ class RecordToolsMixin:
         from aot.aot_flask.utils import utils_notes as _un
         _tags = _un.ensure_target_tag(tags or '', target_id)
 
+        # 작성자 — 이 호출 동안 묶인 사람(외부 MCP 는 키 소유자, 인앱 AI 는 요청자).
+        # 모르면(사람이 없는 호출·익명) 비워 둔다 → modify_note 가 '작성자 불명'
+        # 으로 다룬다.
+        _author = cls._acting_user()
         n = Notes(
             name=name or (note[:50] if note else 'Note'),
             note=note or '', tags=_tags, category=category or 'general',
@@ -571,6 +701,7 @@ class RecordToolsMixin:
             target_type=target_type or None,
             gps_lat=gps_lat,
             gps_lng=gps_lng,
+            user_id=getattr(_author, 'id', None),
         )
         _prio = _to_int(priority)
         if _prio is not None:
@@ -589,11 +720,157 @@ class RecordToolsMixin:
             r["target_type"] = target_type
             r["attached_to"] = resolved_name or target_id
         else:
-            # Surfaced so the AI can tell the user it's a general (unattached) memo,
-            # not claim it's "on 1포장 1-1" when it isn't.
-            r["attached"] = False
+            # Surfaced so the AI can tell the user it's a general memo with no place,
+            # not claim it's "on 1포장 1-1" when it isn't. (Not `attached`: that read as
+            # "links not attached" next to attached_links.)
+            r["no_location"] = True
             r["note_hint"] = ("Saved as a general memo with no location; it will not "
                               "appear on any specific device or zone.")
+        if attach:
+            r["attached_links"] = len(_lines)
+            if attach_skipped:
+                r["attach_skipped"] = attach_skipped   # http(s) 주소가 아니거나 8개를 넘은 것
+        if extra:
+            r["ignored_args"] = list(extra.keys())
+        return r
+
+    @classmethod
+    def _acting_user(cls):
+        """이 호출 동안 묶인 사람의 User 행. 사람이 없거나(백그라운드·인증 끔)
+        익명이거나 행을 못 찾으면 None."""
+        try:
+            from aot.aot_flask.access import write_scope
+            principal = write_scope.current()
+            if principal is None or principal.anonymous \
+                    or not principal.user_uuid:
+                return None
+            user = principal.user()
+            return user if getattr(user, 'id', None) is not None else None
+        except Exception:
+            logger.exception('[note] 호출자 확인 실패 — 작성자 없이 진행')
+            return None
+
+    @staticmethod
+    def _note_needs_approval(note, actor_id):
+        """이 노트를 고치려면 사람의 승인이 필요한가(가장 보수적으로).
+
+        승인 없이 되는 경우는 둘뿐이다.
+          1. 기록된 작성자가 지금 호출한 사람과 같다.
+          2. 작성자가 없는 노트 중 AI 가 사용자 요청으로 만든 것
+             (context_state='user_requested' — 작성자 기록이 생기기 전의 노트).
+        작성자가 다른 사람으로 적혀 있으면 AI 가 만든 노트여도 승인 대기이고,
+        작성자가 없는 나머지(웹·시스템이 만든 옛 노트)는 '작성자 불명' 이라
+        남의 노트와 같이 승인 대기다. 호출한 사람을 모르면(actor_id None)
+        1 은 성립하지 않는다."""
+        author = getattr(note, 'user_id', None)
+        if author is not None:
+            return actor_id is None or author != actor_id
+        return getattr(note, 'context_state', None) != 'user_requested'
+
+    @classmethod
+    def note_edit_needs_approval(cls, note_id):
+        """modify_note 호출이 승인 대기로 가야 하는가 — 게이트가 부른다.
+        노트가 없거나 note_id 가 비면 False(처리기가 오류를 돌려준다)."""
+        from aot.databases.models import Notes
+        if not isinstance(note_id, str) or not note_id.strip():
+            return False
+        n = Notes.query.filter_by(unique_id=note_id.strip()).first()
+        if n is None:
+            return False
+        return cls._note_needs_approval(
+            n, getattr(cls._acting_user(), 'id', None))
+
+    @classmethod
+    def modify_note(cls, note_id=None, name=None, note=None, tags=None,
+                    archive=None, **extra):
+        """Edit a note's name/body/tags and/or archive it (archive=true) or bring
+        it back (archive=false). Notes are never deleted here — archiving hides
+        the note, the web page keeps the permanent delete. Before/after values
+        go to the audit log so an edit can be undone by hand."""
+        from aot.databases.models import Notes
+        if not isinstance(note_id, str) or not note_id.strip():
+            return {"error": "note_id is required (from search_notes)"}
+        n = Notes.query.filter_by(unique_id=note_id.strip()).first()
+        if n is None:
+            return {"error": f"Note not found: {note_id}"}
+
+        want_archive = None
+        if archive is not None and archive != '':
+            if isinstance(archive, bool):
+                want_archive = archive
+            elif str(archive).strip().lower() in ('true', '1', 'yes'):
+                want_archive = True
+            elif str(archive).strip().lower() in ('false', '0', 'no'):
+                want_archive = False
+            else:
+                return {"error": "archive must be true or false"}
+        if name is None and note is None and tags is None \
+                and want_archive is None:
+            return {"error": "nothing to change — pass name, note, tags or archive"}
+
+        # 그룹 스코프 — 노트가 붙은 대상으로 묻는다(웹 노트 고치기와 같은 판정).
+        if isinstance(n.target_id, str) and n.target_id.strip():
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(n.target_id.strip())
+
+        # 두 번째 방어선 — 게이트가 승인 대기로 보냈어야 할 호출이 승인 없이
+        # 여기까지 왔다(승인 게이트를 거치지 않는 경로, 예: 인앱 AI 직접 호출).
+        actor = cls._acting_user()
+        if cls._note_needs_approval(n, getattr(actor, 'id', None)):
+            from aot.tools import mcp_safety_gate as _gate
+            if not _gate.approval_granted_now():
+                return {"error": "approval_required",
+                        "message": ("This note was written by someone else (or "
+                                    "its author is unknown), so editing it needs "
+                                    "a person's approval. Use the external MCP "
+                                    "approval flow or the web notes page."),
+                        "note_id": n.unique_id}
+
+        before = {"name": n.name, "note": n.note, "tags": n.tags,
+                  "is_archived": bool(n.is_archived)}
+        changed = []
+        if name is not None and name != n.name:
+            n.name = name
+            changed.append('name')
+        if note is not None and note != n.note:
+            n.note = note
+            changed.append('note')
+        if tags is not None:
+            from aot.aot_flask.utils import utils_notes as _un
+            new_tags = _un.ensure_target_tag(tags or '', n.target_id)
+            if new_tags != (n.tags or ''):
+                n.tags = new_tags
+                changed.append('tags')
+        if want_archive is not None and want_archive != bool(n.is_archived):
+            n.is_archived = want_archive
+            changed.append('archive' if want_archive else 'restore')
+        if not changed:
+            return {"note_id": n.unique_id, "status": "done", "changed": [],
+                    "message": "The note was already in that state."}
+        after = {"name": n.name, "note": n.note, "tags": n.tags,
+                 "is_archived": bool(n.is_archived)}
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}
+
+        # 되돌리기 수단 — 바꾸기 전 값이 감사 로그(before_json)에 그대로 남는다.
+        from aot.utils.audit import audit_log
+        audit_log('note.modify', target_type='Notes', target_id=n.unique_id,
+                  target_name=before["name"], detail=','.join(changed),
+                  before=before, after=after,
+                  user_id=getattr(actor, 'id', None),
+                  username=getattr(actor, 'name', None))
+        if 'archive' in changed:
+            status = 'archived'
+        elif 'restore' in changed and len(changed) == 1:
+            status = 'restored'
+        else:
+            status = 'modified'
+        r = {"note_id": n.unique_id, "status": status, "changed": changed,
+             "name": n.name,
+             "undo": "Previous name/body/tags are kept in the audit log."}
         if extra:
             r["ignored_args"] = list(extra.keys())
         return r
@@ -737,23 +1014,23 @@ class RecordToolsMixin:
             # 부르는 법을 **여기서 바로** 준다. 제목만 주면 모델이 id 를 얻으려
             # list_lookup_sources 를 한 번 더 불러야 하고, 그 한 번이 판단
             # 지점이자 단계 하나다(LOOKUP_BRIEF 주석 참조).
+            # 같은 안내가 결과마다 길게 붙어 응답의 절반을 먹었다(2026-10-28 점검). 부르는 법은
+            # 한 줄로, 무엇에 답하는지는 짧게 — 명령형("모른다고 답하지 마라")은 그대로 둔다.
             _lines = []
             for b in _briefs[:3]:
                 _line = "  - %s → %s" % (b['title'], b['call'])
                 if b['answers']:
-                    _line += "\n      answers: %s" % b['answers'][:150]
+                    _line += " (%s)" % b['answers'][:70].rstrip(' ,.;')
                 if b['name_language']:
-                    _line += ("\n      rows are named in: %s — translate the user's word "
-                              "yourself if needed." % b['name_language'][:80])
+                    # 표가 어느 언어로 매겨졌는지 모르면 사용자의 말로 조회해 0건을 받는다 — 유지.
+                    _line += ("\n      rows are named in: %s — translate the user's word yourself "
+                              "if needed." % b['name_language'][:80])
                 _lines.append(_line)
             _more = ("\n  (…%d more — list_lookup_sources for the rest)"
                      % (len(_briefs) - 3)) if len(_briefs) > 3 else ""
-            _pointer = ("\n\n[NOTE] This search does NOT cover the %d registered lookup "
-                        "source(s). They are queried on demand and can hold exactly what "
-                        "was just missing. Call one DIRECTLY — you do not need "
-                        "list_lookup_sources first:\n%s%s\nDo NOT say the information is "
-                        "unavailable, and do NOT ask the user to supply it, until you "
-                        "have queried every source whose 'answers' fits the question."
+            _pointer = ("\n\n[NOTE] Not searched here: %d lookup source(s), queried on demand — "
+                        "call one DIRECTLY, you do not need list_lookup_sources first:\n%s%s\nDo NOT say the information is unavailable or "
+                        "ask the user for it until every source that fits was queried."
                         % (len(_briefs), "\n".join(_lines), _more))
         # 두 안내는 서로 다른 것을 말한다 — 하나가 다른 하나를 덮으면 안 된다.
         _pointer = _tag_note + _pointer
@@ -1700,3 +1977,52 @@ class RecordToolsMixin:
             logger.exception("Error in delete_archive")
             return {"status": "error", "message": str(e)}
 
+
+    # --- 대상 별칭 (MCP 점검 2026-10-28 세션 E) --------------------------------
+    # 사용자가 대상을 부르는 다른 이름을 서버에 남긴다 — 규칙은 aot/tools/domain/aliases.py.
+    # 기록 쓰기(record_write): 장치·설정을 바꾸지 않고 언제든 지워 되돌릴 수 있어 승인은 없다.
+
+    @classmethod
+    def _alias_target(cls, target_id):
+        from aot.tools.domain import targets
+        try:
+            t = targets._by_id(str(target_id or '').strip()) if target_id else None
+        except targets._Refused as r:
+            return None, dict(r.error, status="error")
+        if t is None:
+            return None, {"status": "error", "reason_code": "unknown_target",
+                          "message": "No target with id '%s'." % target_id}
+        return t, None
+
+    @classmethod
+    def add_target_alias(cls, target_id=None, name=None, **extra):
+        """대상(target_id)에 별칭(name)을 붙인다. 다른 대상에 있는 별칭이면 저장하지 않는다."""
+        from aot.aot_flask.access import write_scope
+        from aot.tools.domain import aliases
+        target, err = cls._alias_target(target_id)
+        if err:
+            return err
+        # 그룹 스코프 — 별칭을 붙일 대상으로 묻는다(노트와 같다).
+        write_scope.enforce(target['id'])
+        return aliases.add(name, target,
+                           user=getattr(cls._acting_user(), 'unique_id', None))
+
+    @classmethod
+    def delete_target_alias(cls, name=None, target_id=None, **extra):
+        """별칭(name)을 지운다. target_id 를 주면 그 대상에 붙은 것만."""
+        from aot.aot_flask.access import write_scope
+        from aot.databases.models import TargetAlias
+        from aot.tools.domain import aliases
+        from aot.tools.name_key import name_key
+        target = None
+        if target_id:
+            target, err = cls._alias_target(target_id)
+            if err:
+                return err
+            write_scope.enforce(target['id'])
+        # 지울 별칭이 붙은 대상마다 그룹 스코프를 묻는다 — 남의 대상의 별칭을 이름만으로 지우지 않게.
+        for row in TargetAlias.query.filter(
+                TargetAlias.alias_key == name_key(' '.join(str(name or '').split()))).all():
+            if target is None or row.target_id == target['id']:
+                write_scope.enforce(row.target_id)
+        return aliases.delete(name, target)

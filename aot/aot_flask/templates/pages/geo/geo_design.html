@@ -712,6 +712,8 @@
 
 <script>
     window.AOT_GEO_CONFIG = {{ geo_config | tojson | safe }};
+    // 설비 부품 표(놓을 부품 목록·정격 입력) — 정본은 functions/utils/water_net/parts.py
+    window.AOT_EQUIPMENT_PARTS = {{ equipment_parts | tojson | safe }};
 </script>
 
 <!-- geo-design-compat 번들

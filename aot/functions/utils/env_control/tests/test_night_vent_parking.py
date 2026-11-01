@@ -156,7 +156,7 @@ class TestTheDecisionLivesWithTheCaller:
     def test_the_hard_limit_escape_exists(self):
         """탈출구가 없으면 닫힌 온실이 익거나 잠긴다."""
         src = _helpers_src()
-        block = src.split('def _night_vent_parked', 1)[1].split(
+        block = src.split('def _night_vent_decide', 1)[1].split(
             '\n    def ', 1)[0]
         assert "_force_cool" in block and "_force_dehumid" in block, (
             '하드 임계를 넘어도 파킹이 안 풀린다')
@@ -165,7 +165,7 @@ class TestTheDecisionLivesWithTheCaller:
         """위치를 모른다는 이유로 밤새 창을 잠그면, 사용자가 켠 적 없는
         위험을 시스템이 만든다(`_evening_fog_blocked` 과 같은 판단)."""
         src = _helpers_src()
-        block = src.split('def _night_vent_parked', 1)[1].split(
+        block = src.split('def _night_vent_clock', 1)[1].split(
             '\n    def ', 1)[0]
         i_none = block.index('st is None')
         assert 'return False' in block[i_none:i_none + 120]
@@ -174,7 +174,7 @@ class TestTheDecisionLivesWithTheCaller:
         """음수 오프셋은 일몰 **뒤에** 닫히게 하는데, 그 지연이야말로 이
         옵션이 없애려는 것이다."""
         src = _helpers_src()
-        block = src.split('def _night_vent_parked', 1)[1].split(
+        block = src.split('def _night_vent_clock', 1)[1].split(
             '\n    def ', 1)[0]
         assert 'max(0.0, float(' in block
 
@@ -182,7 +182,7 @@ class TestTheDecisionLivesWithTheCaller:
         """18:00~06:00 이 하룻밤이다 — 뒤집힌 구간을 안 다루면 밤에 한 번도
         파킹되지 않는다."""
         src = _helpers_src()
-        block = src.split('def _night_vent_parked', 1)[1].split(
+        block = src.split('def _night_vent_clock', 1)[1].split(
             '\n    def ', 1)[0]
         assert 'now >= start or now <= end' in block
 
@@ -190,7 +190,7 @@ class TestTheDecisionLivesWithTheCaller:
         """같은 서버가 여러 지역의 시설을 돌린다 — 서버 시각을 쓰면 쿠마모토
         온실이 서울 시각으로 밤을 맞는다."""
         src = _helpers_src()
-        block = src.split('def _night_vent_parked', 1)[1].split(
+        block = src.split('def _night_vent_clock', 1)[1].split(
             '\n    def ', 1)[0]
         assert '_facility_local_now' in block
 
@@ -220,7 +220,8 @@ class TestOptionSchema:
             import _cycle_mixin as m
         src = inspect.getsource(m.CycleMixin._run_cycle)
         assert "situation.context['night_vent_park']" in src
-        assert '_night_vent_parked(\n            internal, external_for_control)' in src, (
+        assert "situation.context['night_vent_taper_s']" in src
+        assert '_night_vent_decide(internal, external_for_control, warm_side=_warm)' in src, (
             '내부·실외 상태를 안 넘기면 하드 임계·결로 탈출구가 판정할 근거가 없다')
 
 

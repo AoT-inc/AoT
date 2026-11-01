@@ -98,10 +98,13 @@ On Docker, `[Gear Icon] -> Backup Restore` writes to the ``aot_backups`` volume 
 
 | | Included | Not included |
 |---|---|---|
-| **Docker** | Settings database (users, roles, devices, functions, dashboards), uploads (notes, notices, facility and zone photos), facility 3D models, map overlay images, user scripts | **InfluxDB measurements** (sensor history), logs, ``custom_*`` extension modules (host folders) |
+| **Docker** | Settings database (users, roles, devices, functions, dashboards), uploads (notes, notices, facility and zone photos), facility 3D models, map overlay images, user scripts, the Matter fabric (``matter_data``, only if you use [Matter](Matter.md); saved but never restored automatically) | **InfluxDB measurements** (sensor history), logs, ``custom_*`` extension modules (host folders) |
 | **Native** | The whole install folder except ``env`` and ``cameras`` (database, uploads, overlays, scripts) | **InfluxDB measurements** (a system service outside the install folder) |
 
 The pre-update backup taken by the updater uses the same list.
+
+!!! danger "The Matter data in a backup is a master key"
+    ``matter_data`` holds the Matter fabric of this AoT, including its **root CA private key**. Whoever has a backup file that contains it can control every Matter device that was added to AoT, from inside the same network. Store backups and volume copies like passwords. If you added a device over Bluetooth with a Wi-Fi password or Thread dataset, those values can also remain in this data (see [Matter](Matter.md#new-device)). A restore from the web interface does not touch ``matter_data``; to bring the fabric back, use the volume copy below with the stack stopped. Without it, every Matter device has to be shared to AoT again.
 
 !!! warning "A restore does not bring measurements back"
     Restoring a backup returns settings to that moment. Sensor history is left exactly as it is now. To keep history, back it up separately using one of the two methods below.
@@ -116,7 +119,7 @@ The pre-update backup taken by the updater uses the same list.
 ```bash
 # 0) Find the real volume names. The prefix is the compose project name
 #    (the folder name of the compose file, "docker" by default).
-docker volume ls --format '{{.Name}}' | grep -E 'aot_|influxdb_'
+docker volume ls --format '{{.Name}}' | grep -E 'aot_|matter_|influxdb_'
 P=docker            # <- set to the prefix you saw above
 mkdir -p ~/aot-volume-backup && cd ~/aot-volume-backup
 
@@ -124,7 +127,7 @@ mkdir -p ~/aot-volume-backup && cd ~/aot-volume-backup
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml stop
 
 # 2) Archive each volume into its own .tgz.
-for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts influxdb_data influxdb_config; do
+for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts matter_data influxdb_data influxdb_config; do
   docker run --rm -v ${P}_$v:/v:ro -v "$PWD":/out alpine tar czf /out/$v.tgz -C /v .
 done
 
@@ -141,7 +144,7 @@ cd ~/aot-volume-backup
 P=docker
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml stop
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml create   # creates any missing (empty) volumes
-for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts influxdb_data influxdb_config; do
+for v in aot_data aot_uploads aot_model_assets aot_geo_overlays aot_user_scripts matter_data influxdb_data influxdb_config; do
   docker run --rm -v ${P}_$v:/v -v "$PWD":/out alpine sh -c "rm -rf /v/* /v/.[!.]* 2>/dev/null; tar xzf /out/$v.tgz -C /v"
 done
 docker compose -f /opt/AoT/docker/docker-compose.prod.yml up -d

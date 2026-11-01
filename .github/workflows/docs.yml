@@ -17,8 +17,13 @@ concurrency:
   group: docs-deploy
   cancel-in-progress: false
 
+# 공개 저장소(AoT-inc/AoT)에서만 배포한다. 비공개 작업 저장소(AoT-inc/AoT-dev)도
+# Actions 가 켜져 있어, 가드가 없으면 main push 마다 미공개 문서를 그 저장소의
+# gh-pages 에 올린다 — 지금은 Pages 가 꺼져 있어 밖으로 나가지 않지만, 켜는 순간
+# 그대로 서비스된다. docker-publish.yml 과 같은 가드다. 포크도 건너뛴다.
 jobs:
   deploy:
+    if: github.repository == 'AoT-inc/AoT'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

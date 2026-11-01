@@ -140,7 +140,7 @@ class TestTheRosterMatchesTheCode:
     def test_the_night_basis_condition_matches_the_resolver(self):
         src = self._read('functions', 'custom_functions',
                          'env_coordinator_impl', '_helpers_mixin.py')
-        block = src.split('def _night_vent_parked', 1)[1].split('\n    def ', 1)[0]
+        block = src.split('def _night_vent_clock', 1)[1].split('\n    def ', 1)[0]
         assert "basis == 'clock'" in block, (
             "해석 규칙이 바뀌었다 — `_INERT_UNLESS` 의 'clock'/'sun' 도 함께 볼 것")
 

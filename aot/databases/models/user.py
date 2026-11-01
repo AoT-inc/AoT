@@ -190,6 +190,11 @@ class User(UserMixin, CRUDMixin, db.Model):
         if isinstance(new_password, str):
             new_password = new_password.encode('utf-8')
         self.password_hash = bcrypt.hashpw(new_password, bcrypt.gensalt())
+        # 비밀번호가 바뀌면 이 사용자가 AI 앱에 내준 연결(내장 인가 서버, mcp-embedded-oauth §6)을 끊는다.
+        # 이 사용자 행의 커밋과 함께 확정된다.
+        if self.id is not None:
+            from aot.tools import mcp_embedded
+            mcp_embedded.revoke_user_grants(self.id, 'password_changed')
 
     @staticmethod
     def hash_api_key(raw_key):
@@ -260,8 +265,8 @@ class User(UserMixin, CRUDMixin, db.Model):
         커밋은 하지 않는다. 호출자가 자기 트랜잭션 경계에서 커밋한다.
         """
         from aot.databases import set_api_key
-        from .user_api_key import (SCOPE_FULL, SCOPE_READONLY, SCOPES,
-                                   UserAPIKey, tool_profile_columns)
+        from .user_api_key import (SCOPE_FULL, SCOPE_READONLY, SCOPES, UserAPIKey,
+                                   tool_profile_columns)
 
         raw_key = set_api_key(128)
         row = UserAPIKey()

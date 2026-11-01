@@ -49,6 +49,7 @@ class _SessionAppFixture(unittest.TestCase):
 
         self.app = Flask(__name__)
         self.app.config['SECRET_KEY'] = 'test-secret'
+        self.app.config['SESSION_SWEEP_INTERVAL'] = 0  # 시험에서는 스레드를 띄우지 않는다
         app_module.extension_session(self.app)
         self.iface = self.app.session_interface
 
@@ -275,19 +276,245 @@ class TestRememberCookieFollowsSessionSecurity(unittest.TestCase):
 
 
 class TestSessionFileThreshold(_SessionAppFixture):
-    """cachelib 기본 threshold(500)를 그대로 쓰면 살아 있는 로그인이 밀려난다.
+    """threshold 는 0(무제한)이어야 한다 — 요청 경로에서 디렉터리를 훑지 않는다.
 
-    세션 파일은 로그인한 사람 수가 아니라 세션 쿠키를 받은 방문 수만큼 쌓인다
-    (실측: 502개 중 로그인 23 · 익명 479). threshold 를 넘으면 cachelib 은 세션을
-    저장할 때마다 만료가 이른 것부터 지우는데, 익명 쓰레기가 소진되면 그 다음
-    차례는 실제 사용자다.
+    cachelib 은 threshold 가 0 이 아니면 파일 수가 그것을 넘은 뒤 세션을 저장할
+    때마다 전체 파일을 두 번 읽는다(2026-10-31 실측: 쿠키 없는 요청 건당 약 165ms).
+    정리는 `_start_session_sweeper` 가 요청 밖에서 한다.
     """
 
-    def test_threshold_is_raised_above_the_cachelib_default(self):
-        self.assertGreater(
-            self.app.config.get('SESSION_FILE_THRESHOLD', 500), 500,
-            "SESSION_FILE_THRESHOLD 가 cachelib 기본값(500) 이하다 — "
-            "방문자가 쌓이면 로그인 세션이 예고 없이 삭제된다")
+    def test_threshold_is_zero_so_requests_never_scan_the_directory(self):
+        self.assertEqual(
+            self.app.config.get('SESSION_FILE_THRESHOLD'), 0,
+            "SESSION_FILE_THRESHOLD 가 0 이 아니다 — 세션을 저장할 때마다 "
+            "디렉터리 전체를 훑는 비용이 요청 경로로 돌아온다")
+        self.assertEqual(self.iface.cache._threshold, 0)
+
+
+class TestAnonymousSessionsAreNotStored(_SessionAppFixture):
+    """쓸 내용이 없는 익명 요청은 세션 파일도 Set-Cookie 도 만들지 않는다.
+
+    flask-session 0.5.0 은 새 세션에 `_permanent` 를 넣어 세션이 늘 비어 있지 않게
+    만든다. 그래서 404·401·robots.txt 까지 요청마다 파일 하나가 생겼다(하루 약
+    1만 개). 로그인 화면은 CSRF 토큰 때문에 세션이 필요하므로 예외다.
+    """
+
+    def _cycle(self, path, mutate=None, status=200, cookie=None):
+        from flask import Response, request as _rq
+        headers = {'Cookie': 'session=%s' % cookie} if cookie else {}
+        with self.app.test_request_context(path, headers=headers):
+            sess = self.iface.open_session(self.app, _rq)
+            if mutate:
+                mutate(sess)
+            resp = Response('', status=status)
+            self.iface.save_session(self.app, sess, resp)
+            return sess, resp
+
+    def test_untouched_anonymous_request_stores_nothing(self):
+        # flask-login 이 익명 요청마다 하는 일: _fresh=False
+        sess, resp = self._cycle('/api/geo/devices', lambda s: s.update(
+            {'_fresh': False}), status=401)
+        self.assertEqual(self.writes, [])
+        self.assertNotIn('Set-Cookie', resp.headers)
+
+    def test_bare_new_session_stores_nothing(self):
+        sess, resp = self._cycle('/robots.txt')
+        self.assertTrue(sess.get('_permanent'),
+                        "전제가 바뀌었다: flask-session 이 더는 _permanent 를 넣지 않는다")
+        self.assertEqual(self.writes, [])
+        self.assertNotIn('Set-Cookie', resp.headers)
+
+    def test_404_with_only_a_csrf_token_stores_nothing(self):
+        sess, resp = self._cycle('/nope', lambda s: s.update(
+            {'_fresh': False, 'csrf_token': 'T'}), status=404)
+        self.assertEqual(self.writes, [])
+        self.assertNotIn('Set-Cookie', resp.headers)
+
+    def test_login_page_still_gets_a_session_for_csrf(self):
+        sess, resp = self._cycle('/login_password', lambda s: s.update(
+            {'_fresh': False, 'csrf_token': 'T'}), status=200)
+        self.assertEqual(len(self.writes), 1)
+        self.assertIn('session=', resp.headers.get('Set-Cookie', ''))
+
+    def test_flash_redirect_still_stores_the_message(self):
+        sess, resp = self._cycle('/dashboard', lambda s: s.update(
+            {'_fresh': False, '_flashes': [('error', 'x')]}), status=302)
+        self.assertEqual(len(self.writes), 1)
+
+    def test_logout_still_rewrites_a_session_that_had_content(self):
+        """내용이 있던 세션은 비워져도 다시 써야 한다 — 안 쓰면 _user_id 가 남는다."""
+        first, _ = self._cycle('/login_password', lambda s: s.update(
+            {'csrf_token': 'T', '_user_id': '7'}))
+        self.assertEqual(len(self.writes), 1)
+
+        def logout(s):
+            s.pop('_user_id', None)
+            s.pop('csrf_token', None)
+            s['_fresh'] = False
+            s.modified = True
+        self._cycle('/logout', logout, status=302, cookie=first.sid)
+        self.assertEqual(len(self.writes), 2, "로그아웃이 저장되지 않았다")
+        stored = self.iface.cache.get(self.iface.key_prefix + first.sid)
+        self.assertNotIn('_user_id', stored, "로그아웃했는데 로그인 표지가 남았다")
+
+    def test_session_with_a_login_marker_is_stored_even_on_404(self):
+        sess, resp = self._cycle('/nope', lambda s: s.update(
+            {'_user_id': '7', 'csrf_token': 'T'}), status=404)
+        self.assertEqual(len(self.writes), 1)
+
+    def test_pending_login_state_is_stored(self):
+        sess, resp = self._cycle('/login_totp', lambda s: s.update(
+            {'_totp_pending_user': 3}), status=200)
+        self.assertEqual(len(self.writes), 1)
+
+
+class TestUnauthorizedFlashOnlyForNavigation(unittest.TestCase):
+    """로그아웃된 탭의 폴링(fetch/XHR)이 flash 로 세션을 쌓지 않아야 한다."""
+
+    def _nav(self, headers):
+        from flask import Flask
+        from aot.aot_flask import app as app_module
+        app = Flask(__name__)
+        with app.test_request_context('/x', headers=headers):
+            from flask import request
+            return app_module._is_document_navigation(request)
+
+    def test_browser_navigation_is_a_document(self):
+        self.assertTrue(self._nav({'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8'}))
+        self.assertTrue(self._nav({'Sec-Fetch-Dest': 'document'}))
+
+    def test_fetch_xhr_and_curl_are_not(self):
+        self.assertFalse(self._nav({'Accept': '*/*'}))
+        self.assertFalse(self._nav({}))
+        self.assertFalse(self._nav({'Sec-Fetch-Dest': 'empty',
+                                    'Accept': 'text/html'}))
+        self.assertFalse(self._nav({'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'text/html'}))
+
+
+class TestSessionSweeper(unittest.TestCase):
+    """요청 밖 정리: 만료·오래된 익명만 지우고 로그인 세션은 지키지 않는다(=건드리지 않는다)."""
+
+    def setUp(self):
+        import tempfile
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = self._tmp.name
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _write(self, name, value, expires, age=7200.0):
+        import pickle
+        import struct
+        path = os.path.join(self.dir, name)
+        with open(path, 'wb') as f:
+            f.write(struct.pack('<I', expires))
+            pickle.dump(value, f)
+        mtime = __import__('time').time() - age
+        os.utime(path, (mtime, mtime))
+        return path
+
+    def test_expired_files_are_removed_and_login_sessions_survive(self):
+        import time
+        now = time.time()
+        gone = self._write('exp', {'_user_id': '1'}, int(now) - 10)
+        login = self._write('login', {'_user_id': '1', 'csrf_token': 'T'},
+                            int(now) + 3600)
+        from aot.aot_flask import app as app_module
+        expired, evicted, kept = app_module._sweep_session_files(
+            self.dir, anon_max=0)
+        self.assertEqual((expired, evicted), (1, 0))
+        self.assertFalse(os.path.exists(gone))
+        self.assertTrue(os.path.exists(login), "로그인 세션이 지워졌다")
+
+    def test_oldest_anonymous_evicted_first_down_to_the_cap(self):
+        import time
+        now = time.time()
+        paths = [self._write('a%d' % i, {'_permanent': True, '_fresh': False},
+                             int(now) + 3600, age=7200.0 + i) for i in range(5)]
+        login = self._write('login', {'_user_id': '1'}, int(now) + 3600,
+                            age=99999.0)
+        from aot.aot_flask import app as app_module
+        _, evicted, kept = app_module._sweep_session_files(self.dir, anon_max=2)
+        self.assertEqual((evicted, kept), (3, 2))
+        # age 가 큰(=오래된) 3개가 지워진다
+        self.assertEqual([os.path.exists(p) for p in paths],
+                         [True, True, False, False, False])
+        self.assertTrue(os.path.exists(login))
+
+    def test_unknown_keys_and_fresh_files_are_not_disposable(self):
+        import time
+        now = time.time()
+        lang = self._write('lang', {'language': 'ko', '_permanent': True},
+                           int(now) + 3600)
+        pending = self._write('totp', {'_totp_pending_user': 3},
+                              int(now) + 3600)
+        young = self._write('young', {'_permanent': True}, int(now) + 3600,
+                            age=5.0)
+        from aot.aot_flask import app as app_module
+        app_module._sweep_session_files(self.dir, anon_max=0)
+        for p in (lang, pending, young):
+            self.assertTrue(os.path.exists(p), "지우면 안 되는 파일이 지워졌다: " + p)
+
+    def test_unreadable_and_management_files_are_left_alone(self):
+        bad = os.path.join(self.dir, 'bad')
+        with open(bad, 'wb') as f:
+            f.write(b'\x00\x00\x00\x00not-a-pickle')
+        tmp = os.path.join(self.dir, 'x.__wz_cache')
+        open(tmp, 'wb').close()
+        from aot.aot_flask import app as app_module
+        app_module._sweep_session_files(self.dir, anon_max=0)
+        self.assertTrue(os.path.exists(bad))
+        self.assertTrue(os.path.exists(tmp))
+
+
+class TestSlowRequestLog(unittest.TestCase):
+    """느린 요청만, 쿼리 문자열 없이 한 줄로 남긴다."""
+
+    def _app(self, threshold_ms):
+        import time
+        from flask import Flask
+        from aot.aot_flask import app as app_module
+        os.environ['AOT_SLOW_REQUEST_MS'] = str(threshold_ms)
+        try:
+            app = Flask(__name__)
+            app_module.register_slow_request_log(app)
+        finally:
+            os.environ.pop('AOT_SLOW_REQUEST_MS', None)
+
+        @app.route('/slow')
+        def slow():
+            time.sleep(0.05)
+            return 'ok'
+
+        @app.route('/static/x.js')
+        def static_x():
+            time.sleep(0.05)
+            return 'ok'
+        return app
+
+    def test_slow_request_logged_without_query_string(self):
+        app = self._app(10)
+        with self.assertLogs('aot.aot_flask.app', level='WARNING') as cm:
+            app.test_client().get('/slow?token=SECRET&q=hello')
+        line = cm.output[0]
+        self.assertIn('GET /slow', line)
+        self.assertIn('200', line)
+        self.assertNotIn('SECRET', line)
+        self.assertNotIn('hello', line)
+
+    def test_fast_requests_and_static_are_not_logged(self):
+        app = self._app(10000)
+        with self.assertNoLogs('aot.aot_flask.app', level='WARNING'):
+            app.test_client().get('/slow')
+        app = self._app(10)
+        with self.assertNoLogs('aot.aot_flask.app', level='WARNING'):
+            app.test_client().get('/static/x.js')
+
+    def test_zero_disables(self):
+        app = self._app(0)
+        with self.assertNoLogs('aot.aot_flask.app', level='WARNING'):
+            app.test_client().get('/slow')
 
 
 if __name__ == '__main__':

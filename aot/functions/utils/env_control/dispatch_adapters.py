@@ -24,8 +24,13 @@ coordinator 가 0~100% percent 명령을 내리면, 장치 output_types 에 따�
 # @manual ai/env-control#actuators-adapters
 from __future__ import annotations
 
+from .log_channels import REASON_CURTAIN_GAP, REASON_CURTAIN_RAMP
+
 # on/off 어댑터 최소 작동 임계 (%)
 _MIN_ON_PCT = 5.0
+
+# 펄스 도징 쉼의 사이클 흔들림 여유 (s) — `PulsedDoseAdapter._grace` 참조.
+_PULSE_JITTER_SEC = 5.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -92,6 +97,14 @@ class DispatchAdapter:
             _raise_if_failed(
                 control.output_off(actuator_id, output_channel=ch),
                 actuator_id, 'output_off')
+
+    def adopt_runtime_state(self, prev: 'DispatchAdapter') -> bool:
+        """재적재 전 어댑터(`prev`)의 사이클 간 상태를 이어받는다 — 이어받았으면 True.
+
+        기본 어댑터는 사이클 간 상태가 없다(설정값뿐이다). 상태를 가진 어댑터만
+        덮어쓴다 — 지금은 `PulsedDoseAdapter`(분무 쉼) 하나다. `carry_adapter_state` 참조.
+        """
+        return False
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}()'
@@ -248,11 +261,32 @@ class PulsedDoseAdapter(DispatchAdapter):
         self._min_off_sec = max(0.0, float(min_off_sec))
         self._flow_lpm    = max(0.0, float(flow_lpm))
         self._blocked_until: float = 0.0
+        # 마지막 펄스가 끝난 시각과 그 펄스에 걸린 쉼 하한(`pulse_cap[1]`, 없으면 0).
+        # 재적재 때 새 설정(min_off_sec)으로 쉼을 다시 계산하는 데 쓴다(`adopt_runtime_state`).
+        self._last_pulse_end: 'float | None' = None
+        self._last_on_sec: float = 0.0
+        self._rest_floor: float = 0.0
 
     @property
     def blocked_until(self) -> float:
-        """다음 분무가 허용되는 시각 (epoch). 테스트·로깅용."""
+        """마지막 펄스 끝 + 쉼 (epoch). 실제 허용은 `_grace` 만큼 앞당겨진다. 테스트·로깅용."""
         return self._blocked_until
+
+    def _grace(self) -> float:
+        """막힌 시각을 이만큼 앞당겨 허용한다 (s) — 쉼을 "펄스 **시작** 간격 ≥ min_off" 로 읽는다.
+
+        쉼을 펄스 **끝**부터 재면, 주기 600 s · 쉼 600 s · 켬 20 s 에서 막힌 시각이 다음
+        사이클을 20 s 넘겨 분무가 10분이 아니라 20분마다 나간다. "쉼 600 s" 를 정한 뜻은
+        사실상 "사이클마다 한 번까지" 다. 그래서 남은 막힘이 켬 시간 + 흔들림 여유
+        (`_PULSE_JITTER_SEC` — 사이클마다 계산·전송 지연이 몇 초씩 달라 간격이 597 s 처럼 짧아진다)
+        이하면 허용한다. 상한은 쉼의 10 % — 쉼이 짧은 설정에서 건조 시간을 크게 깎지 않는다.
+
+        근거 57 펄스(`pulse_cap`)가 남긴 쉼에는 적용하지 않는다 — 그 15분 하한은 그대로다.
+        """
+        if self._rest_floor > 0.0 or self._last_on_sec <= 0.0:
+            return 0.0
+        return max(0.0, min(self._last_on_sec + _PULSE_JITTER_SEC,
+                            0.1 * self._min_off_sec))
 
     def send(
         self,
@@ -261,18 +295,34 @@ class PulsedDoseAdapter(DispatchAdapter):
         pct: float,
         ch: int,
         cycle_sec: float,
+        pulse_cap: 'tuple[float, float] | None' = None,
     ) -> None:
+        """`pulse_cap` = (켜는 시간 상한 s, 쉬는 시간 하한 s) — 이번 한 번만 더 조이는 값.
+
+        극한 고온·건조의 짧은 펄스(`pulse_fog`, 근거 57)가 쓴다: 켜는 시간은 min(설정, 상한),
+        쉬는 시간은 max(설정, 하한). 사용자가 더 짧게·더 드물게 정했으면 그쪽이 이긴다. 새 타이머를
+        만들지 않고 이 어댑터의 시계(`_blocked_until`)를 그대로 쓴다 — 펄스가 끝난 뒤의 쉬는 시간은
+        그 규칙이 풀려도 이어진다.
+        """
         import time as _t
         now = _t.time()
+        max_on, min_off = self._max_on_sec, self._min_off_sec
+        if pulse_cap is not None:
+            max_on = max(1.0, min(max_on, float(pulse_cap[0])))
+            min_off = max(min_off, float(pulse_cap[1]))
 
-        if pct < _MIN_ON_PCT or now < self._blocked_until:
-            # 요청 없음, 또는 건조 시간 중 — 확실히 끈다.
+        can_pulse = ((isinstance(self._inner, VolumetricAdapter) and self._flow_lpm > 0.0)
+                     or isinstance(self._inner, TimeProportionalAdapter))
+        if pct < _MIN_ON_PCT or now < self._blocked_until - self._grace() \
+                or (pulse_cap is not None and not can_pulse):
+            # 요청 없음, 또는 건조 시간 중 — 확실히 끈다. 짧은 펄스는 시간·용량으로 끊을 수 있는
+            # 장치에만 나간다: PWM/값 장치는 켜 놓으면 다음 사이클까지 그대로라 10초를 지킬 수 없다.
             _raise_if_failed(
                 control.output_off(actuator_id, output_channel=ch),
                 actuator_id, 'output_off')
             return
 
-        on_sec = max(1.0, self._max_on_sec * min(100.0, pct) / 100.0)
+        on_sec = max(1.0, max_on * min(100.0, pct) / 100.0)
 
         if isinstance(self._inner, VolumetricAdapter) and self._flow_lpm > 0.0:
             vol_ml = self._flow_lpm * on_sec / 60.0 * 1000.0
@@ -295,11 +345,69 @@ class PulsedDoseAdapter(DispatchAdapter):
             # 건조 간격 억제만으로 습윤 시간을 줄인다.
             self._inner.send(control, actuator_id, pct, ch, cycle_sec)
 
-        self._blocked_until = now + on_sec + self._min_off_sec
+        self._last_pulse_end = now + on_sec
+        self._last_on_sec = on_sec
+        self._rest_floor = float(pulse_cap[1]) if pulse_cap is not None else 0.0
+        self._blocked_until = self._last_pulse_end + min_off
+
+    def adopt_runtime_state(self, prev: 'DispatchAdapter') -> bool:
+        """재적재 전 펄스 도징 어댑터의 쉼(`_blocked_until`)을 이어받는다.
+
+        어댑터 맵은 10분마다(`_reload_profiles`) 새로 지어진다. 이어받지 않으면 새 어댑터의
+        시계가 0 이라 **방금 뿌린 분무기가 바로 다시 뿌린다** — 사용자가 정한 최소 쉼
+        (`nursery_min_off_sec`)이 재적재 직후 한 번씩 풀린다(10/12 회귀 보고의 알려진 과제).
+
+        설정값(max_on_sec·min_off_sec·flow)은 **새 것**이고, 이어받는 것은 "마지막 펄스가 언제
+        끝났나" 라는 사실뿐이다. 내부 장치 종류가 바뀌었으면(릴레이 → 펌프 등) 다른 장치로 보고
+        이어받지 않는다.
+
+        쉼은 새 min_off_sec 로 **다시 계산한다**: 끝난 시각 + max(새 min_off, 그 펄스의 하한).
+          * 새 값이 더 길면 늘어난다 — 새 설정이 이기고, 보수적인 쪽이다.
+          * 새 값이 더 짧으면 **줄어든다.** 최소 쉼은 사용자(또는 단계별 분무 빈도 축
+            `misting_care`)가 잎이 마를 시간으로 직접 고른 값이고, 그것을 줄였다는 것은
+            "이제 이만큼이면 마른다" 는 새 판단이다. 옛 값으로 한 번 더 붙잡으면 바뀐 설정이
+            펄스 한 번 늦게 먹을 뿐 얻는 안전이 없다. 다만 극한 고온 펄스(근거 57)가 얹은
+            하한(`pulse_cap[1]`, 15분)은 설정이 아니라 그 펄스의 성질이라 그대로 지킨다.
+          * 끝난 시각을 모르면(옛 판에서 만든 어댑터) 막혀 있던 시각을 그대로 쓴다.
+        """
+        if not isinstance(prev, PulsedDoseAdapter):
+            return False
+        if type(prev._inner) is not type(self._inner):
+            return False
+        end = prev._last_pulse_end
+        if end is None:
+            self._blocked_until = float(prev._blocked_until)
+        else:
+            self._last_pulse_end = end
+            self._last_on_sec = prev._last_on_sec
+            self._rest_floor = prev._rest_floor
+            self._blocked_until = end + max(self._min_off_sec, prev._rest_floor)
+        return True
 
     def __repr__(self) -> str:
         return (f'PulsedDoseAdapter(inner={self._inner!r}, '
                 f'max_on_sec={self._max_on_sec}, min_off_sec={self._min_off_sec})')
+
+
+def carry_adapter_state(prev_map: 'dict | None', new_map: dict) -> list:
+    """재적재 전 어댑터 맵의 사이클 간 상태를 새 맵으로 넘긴다 — 넘긴 actuator_id 목록.
+
+    같은 actuator_id 이고 **같은 어댑터 종류**일 때만 넘긴다. 장치가 빠졌으면 새 맵에 없어
+    넘길 곳이 없고, 종류가 바뀌었으면 각 어댑터의 `adopt_runtime_state` 가 거절한다.
+    새 맵은 제자리에서 바뀐다(설정은 새 것, 런타임 상태만 옛 것).
+    """
+    carried = []
+    for aid, new in (new_map or {}).items():
+        old = (prev_map or {}).get(aid)
+        if old is None or old is new or type(old) is not type(new):
+            continue
+        try:
+            if new.adopt_runtime_state(old):
+                carried.append(aid)
+        except Exception:                                           # noqa: BLE001
+            # 상태를 못 넘겨도 어댑터 자체는 쓸 수 있다 — 재적재를 막지 않는다.
+            continue
+    return carried
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -310,6 +418,7 @@ def select_adapter(
     output_name_unique: str,
     output_types_list: list,
     capacity_meta: dict | None = None,
+    self_positioning: bool = False,
 ) -> DispatchAdapter:
     """output_name_unique 와 output_types 목록으로 적합한 어댑터를 반환한다.
 
@@ -319,6 +428,9 @@ def select_adapter(
                             예: ['on_off'], ['pwm'], ['value'], ['vol']
         capacity_meta:      ActuatorProfile.capacity_meta
                             (irrigation_flow_lpm 조회용)
+        self_positioning:   OUTPUT_INFORMATION['self_positioning'] — 장치가 스스로
+                            위치를 잡는 value 출력(Matter 창 덮개). paired 와 같이
+                            0 % 도 위치 명령으로 보낸다(output_off 는 Stop 이다).
 
     Returns:
         DispatchAdapter 인스턴스
@@ -331,6 +443,12 @@ def select_adapter(
     # 우선순위 1: paired 액추에이터(actuator_paired / actuator_paired_bus) → 내부 변환 위임
     from aot.outputs.paired_actuator_common import PAIRED_ACTUATOR_OUTPUT_TYPES
     if output_name_unique in PAIRED_ACTUATOR_OUTPUT_TYPES:
+        return PairedAdapter()
+
+    # 우선순위 1b: 스스로 위치를 잡는 value 출력 — paired 와 같은 전달 방식.
+    # PAIRED_ACTUATOR_OUTPUT_TYPES 에 넣지 않는 이유: 그 집합은 자동 발견·3방향
+    # UI·다리(leg) 인터록까지 끌고 오는데, 이런 장치에는 다리가 없다.
+    if self_positioning and 'value' in types:
         return PairedAdapter()
 
     # 우선순위 2: 용량형 펌프 (vol / volume)
@@ -397,7 +515,8 @@ def build_adapter_map(by_id: dict) -> dict:
         module_info  = output_info.get(module_name, {})
         types_list   = module_info.get('output_types') or []
         cap_meta     = getattr(profile, 'capacity_meta', None) or {}
-        adapter      = select_adapter(module_name, types_list, cap_meta)
+        adapter      = select_adapter(module_name, types_list, cap_meta,
+                                      bool(module_info.get('self_positioning')))
 
         # 관수식 펄스 도징: 프로필에 max_on_sec/min_off_sec 가 설정돼 있으면
         # (분무 액추에이터 + 육묘장 모드) 어댑터를 펄스 도징으로 감싼다.
@@ -425,6 +544,25 @@ SCREEN_OPEN_AT = 60.0      # 닫혀 있을 때 이 이상이면 걷는다
 SCREEN_CLOSE_AT = 40.0     # 걷혀 있을 때 이 이하면 닫는다
 
 
+# 부분 개도의 예외 — **위치를 잡을 수 있는** 스크린(`capacity_meta['screen_positional']`:
+# Paired/Value 어댑터 + 주행 시간을 안다)에, 스크린 판단(`screen_policy`)이 정한 정지점만.
+# PI 의 명령은 지금처럼 0/100 이다. 근거 46(밤 결로 틈)·47(아침 램프)만 정지점 그대로 둔다.
+CURTAIN_STOPS = (0.0, 3.0, 6.0, 10.0, 30.0, 60.0, 100.0)
+SCREEN_PARTIAL_REASONS = (REASON_CURTAIN_GAP, REASON_CURTAIN_RAMP)
+
+
+def screen_partial_ok(profile, value, reason) -> bool:
+    """이 스크린 명령을 0/100 으로 자르지 않고 그대로 보내는가."""
+    if not (getattr(profile, 'capacity_meta', None) or {}).get('screen_positional'):
+        return False
+    try:
+        r = int(reason)
+        v = float(value)
+    except (TypeError, ValueError):
+        return False
+    return r in SCREEN_PARTIAL_REASONS and any(abs(v - s) < 1e-6 for s in CURTAIN_STOPS)
+
+
 def snap_screen_value(value: float, current: 'float | None') -> float:
     """스크린 명령을 0/100 으로. `current` 는 지금 서 있는 개도(모르면 None)."""
     v = float(value)
@@ -436,12 +574,20 @@ def snap_screen_value(value: float, current: 'float | None') -> float:
 
 
 def snap_screen_commands(final_cmds: dict, profiles, positions: dict) -> None:
-    """`final_cmds` 의 스크린 명령을 제자리에서 0/100 으로 바꾼다(기록·전송 공통)."""
-    kinds = {p.actuator_id: getattr(p, 'kind', '') for p in profiles or []}
+    """`final_cmds` 의 스크린 명령을 제자리에서 0/100 으로 바꾼다(기록·전송 공통).
+
+    예외는 `screen_partial_ok` 하나 — 위치를 잡는 스크린의 틈·램프 정지점은 그대로 둔다.
+    """
+    by_id = {p.actuator_id: p for p in profiles or []}
     for aid, cmd in final_cmds.items():
-        if kinds.get(aid) not in SCREEN_KINDS:
+        p = by_id.get(aid)
+        if getattr(p, 'kind', '') not in SCREEN_KINDS:
             continue
         if isinstance(cmd, dict):
+            if screen_partial_ok(p, cmd.get('value', 0.0), cmd.get('reason')):
+                continue
             cmd['value'] = snap_screen_value(cmd.get('value', 0.0), positions.get(aid))
         elif hasattr(cmd, 'value'):
+            if screen_partial_ok(p, cmd.value, getattr(cmd, 'reason', None)):
+                continue
             cmd.value = snap_screen_value(cmd.value, positions.get(aid))

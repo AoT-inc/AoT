@@ -22,7 +22,7 @@ class TestApply:
         payload = sa.apply({}, {'attribution': 'FAO ECOCROP (CC BY 4.0)'})
 
         assert payload['attribution'] == 'FAO ECOCROP (CC BY 4.0)'
-        assert 'answer' in payload['attribution_note']
+        assert 'Never' in payload['attribution_note']
 
     def test_nothing_is_added_when_there_is_nothing_to_credit(self):
         """빈 필드를 실으면 응답만 커지고, 모델은 '출처 없음' 을 출처로 읽는다."""

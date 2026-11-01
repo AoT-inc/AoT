@@ -919,6 +919,7 @@
   </div><!-- /#fac-tab-sensors -->
 
   <!-- ── Weather tab ── -->
+  {# @manual geo/facility#weather-forecast-bindings #}
   <div id="fac-tab-weather" class="fac-step-pane" data-step="connect" role="tabpanel">
   <div class="aot-modal-group-title">{{ _('Weather') }}</div>
   <p class="aot-modal-body-text fac-section-desc">
@@ -946,7 +947,10 @@
     </div>
     <div class="fac-card-actions">
       <button type="button" id="btn-weather-add" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add Connection') }}</button>
+      <select id="weather-recommend-pick" style="display:none;font-size:var(--aot-font-size-sm);" aria-label="{{ _('Open-Meteo forecast Input') }}"></select>
+      <button type="button" id="btn-weather-recommend" class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Fill recommended connections from Open-Meteo forecast Input') }}</button>
     </div>
+    <div id="weather-recommend-msg" class="fac-table-empty" style="display:none;margin-top:6px;" role="status"></div>
 
     <div class="aot-modal-body-text aot-modal-desc">
       <strong>{{ _('Measurement Item Guide') }}</strong><br>
@@ -960,6 +964,7 @@
 
   </div>
   </div><!-- /#fac-tab-weather -->
+  {# @manual-end #}
 
   <!-- ── Groups tab ── -->
   <div id="fac-tab-groups" class="fac-step-pane" data-step="connect" role="tabpanel">
@@ -1263,6 +1268,7 @@ window._IEC = {
   plot_orphan_confirm:{{ _('These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?')|tojson }},
   plot_orphan_warn:{{ _('Plots without a zone after this change: {list}')|tojson }},
   plot_delete_confirm:{{ _('Delete this record? Use "End" instead if it was actually grown — deleting removes it from the history.')|tojson }},
+  plot_delete_twin_history:{{ _('The Digital Twin results for this plot are kept until the retention ends. Erase them now too?')|tojson }},
   edit:{{ _('Edit')|tojson }}, delete:{{ _('Delete')|tojson }},
   cancel:{{ _('Cancel')|tojson }}, save:{{ _('Save')|tojson }},
   save_failed:{{ _('Save failed')|tojson }}, delete_failed:{{ _('Delete failed')|tojson }},

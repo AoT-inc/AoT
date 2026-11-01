@@ -232,7 +232,10 @@ def create_app(config=ProdConfig, run_scheduler=False):
         (no-store 가 아니라 no-cache: ETag 로 304 재검증되어 트래픽 부담은 적음.)
         """
         try:
-            if response.mimetype == 'text/html':
+            # 뷰가 스스로 no-store 를 건 응답은 그대로 둔다 — AI 카드 아티팩트(`/api/v1/ai-inbox/
+            # <id>/artifact`)는 로그인한 사람의 비공개 HTML 이라 `private, no-store` 여야 한다.
+            if response.mimetype == 'text/html' and \
+                    'no-store' not in (response.headers.get('Cache-Control') or ''):
                 response.headers['Cache-Control'] = 'no-cache, must-revalidate'
         except Exception:
             pass
@@ -271,6 +274,8 @@ def create_app(config=ProdConfig, run_scheduler=False):
         return response
 
     register_response_guards(app)
+    register_web_presence(app)
+    register_slow_request_log(app)
 
     @app.context_processor
     def inject_current_locale():
@@ -432,35 +437,33 @@ def create_app(config=ProdConfig, run_scheduler=False):
     # tools/bundle.mjs) and returns "/static/js/dist/<name>.bundle.js?v=<hash>".
     # Eliminates manual ?v= bumping (stale-cache footgun). Usable in page
     # templates AND widget head strings (both rendered by this Jinja env).
-    _BUNDLE_MANIFEST_PATH = os.path.join(
-        os.path.dirname(__file__), 'static', 'js', 'dist', 'manifest.json')
-    _bundle_manifest = {'data': None, 'mtime': 0}
-
+    # 매니페스트 읽기는 aot.utils.bundle_manifest 가 한다 — /api/v1/screen/sync 가 같은 해시를
+    # 화면(오래 열어 둔 탭)에 알려 주므로 출처를 하나로 둔다.
     @app.context_processor
     def inject_bundle_asset():
-        import json
+        from aot.utils import bundle_manifest as _bm
 
         def asset(name):
             base = '/static/js/dist/%s.bundle.js' % name
-            try:
-                st = os.stat(_BUNDLE_MANIFEST_PATH)
-                if _bundle_manifest['data'] is None or st.st_mtime != _bundle_manifest['mtime']:
-                    with open(_BUNDLE_MANIFEST_PATH, encoding='utf-8') as fh:
-                        _bundle_manifest['data'] = json.load(fh)
-                    _bundle_manifest['mtime'] = st.st_mtime
-                h = (_bundle_manifest['data'] or {}).get(name)
-            except Exception:
-                h = None
+            h = _bm.hash_of(name)
             return ('%s?v=%s' % (base, h)) if h else base
 
         def bundle_manifest():
             """번들명 → 내용해시 전체. layout 이 window.AOT_BUNDLES 로 내보내,
             런타임에 <script> 를 만드는 JS(지연 로더들)도 같은 해시 URL 을 쓴다.
             그쪽은 url_for/asset 을 지나지 않아 예전엔 소스 경로를 직접 박고 있었다."""
-            asset('')  # 매니페스트 로드/갱신을 위 캐시 로직에 위임한다
-            return _bundle_manifest['data'] or {}
+            return dict(_bm.load())
 
-        return {'asset': asset, 'bundle_manifest': bundle_manifest}
+        def twin_enabled():
+            """디지털트윈(실험) 화면 게이트 — 설정 > 일반 플래그 AND 안 잠김. 꺼져 있으면 지도
+            위젯이 트윈 탭·예측 레이어를 붙이지 않는다(코드는 번들에 있고 이 값이 막는다)."""
+            try:
+                from aot.utils.twin_config import ui_enabled
+                return ui_enabled()
+            except Exception:
+                return False
+
+        return {'asset': asset, 'bundle_manifest': bundle_manifest, 'twin_enabled': twin_enabled}
 
     # ── Google account status — used by the nav-bar "User Settings" modal
     # (Google sign-in / connect) and the login page's "Sign in with Google"
@@ -952,6 +955,12 @@ def register_blueprints(app):
     app.register_blueprint(routes_integrations.blueprint)  # register external integrations (Google Calendar OAuth)
     from aot.aot_flask import routes_mcp_auth
     app.register_blueprint(routes_mcp_auth.blueprint)  # 외부 MCP 인증 설정·계정 연결
+    from aot.aot_flask import routes_oauth_embedded
+    app.register_blueprint(routes_oauth_embedded.blueprint)  # 내장 OAuth 인가 서버(설정에서 켠 경우만 응답)
+    from aot.aot_flask import routes_screen_api
+    app.register_blueprint(routes_screen_api.blueprint)  # 외부 AI 화면 연동 동기화
+    from aot.aot_flask import routes_ai_inbox_api
+    app.register_blueprint(routes_ai_inbox_api.blueprint)  # AI 수신함(자막 카드) 목록·읽음·닫기
     from aot.aot_flask.routes_ai_library import ai_library_bp
     app.register_blueprint(ai_library_bp)  # register ai library routes
     from aot.aot_flask import routes_notice
@@ -1098,6 +1107,11 @@ def extension_limiter(app):
     limiter.limit("1000/hour")(routes_authentication.remote_auth)
     limiter.limit("20/hour")(routes_password_reset.blueprint)
     limiter.limit("200/minute")(api_blueprint)
+    # 내장 인가 서버는 인터넷에 열리는 경로다. 서비스(claude.ai)가 대신 부르는 경로는 키가 서비스의 공유 주소라
+    # 넉넉히, 등록은 한 번이면 되니 촘촘히 둔다. 로그인 시도 횟수는 위 routes_authentication 의 제한이 그대로 맡는다.
+    from aot.aot_flask import routes_oauth_embedded
+    limiter.limit("600/hour")(routes_oauth_embedded.blueprint)
+    limiter.limit("30/hour")(routes_oauth_embedded.register)
 
     # Register a user-friendly handler for 429 responses so browsers receive
     # a redirect to the login page instead of a bare 429 body.
@@ -1305,6 +1319,85 @@ def register_response_guards(app):
     return app
 
 
+# 느린 요청 로그 기준(ms). 0 이하면 끈다. 환경변수 AOT_SLOW_REQUEST_MS 로 바꾼다.
+_SLOW_REQUEST_DEFAULT_MS = 500
+
+
+def register_slow_request_log(app):
+    """느린 요청만 한 줄로 남긴다 (메서드·경로·상태·소요 ms).
+
+    gunicorn 접근 로그를 켜면 모든 요청이 쌓여 양이 폭증하고, 정작 필요한 것은
+    "어느 화면이 느린가" 하나다. 임계값(기본 500ms)을 넘은 요청만 남기므로 평소
+    로그는 거의 늘지 않는다.
+
+    **쿼리 문자열은 남기지 않는다** — 검색어·좌표·토큰이 URL 에 실리는 경로가
+    있다. 경로(`request.path`)와 메서드·상태·시간만 기록한다. `/static/` 은
+    nginx 가 직접 서빙하거나 정적 캐시 대상이라 제외한다.
+    """
+    try:
+        threshold_ms = float(os.environ.get('AOT_SLOW_REQUEST_MS',
+                                            _SLOW_REQUEST_DEFAULT_MS))
+    except ValueError:
+        threshold_ms = float(_SLOW_REQUEST_DEFAULT_MS)
+    if threshold_ms <= 0:
+        return app
+
+    @app.before_request
+    def _slow_request_start():
+        request.environ['aot.request_t0'] = time.monotonic()
+
+    @app.after_request
+    def _slow_request_log(response):
+        try:
+            t0 = request.environ.get('aot.request_t0')
+            if t0 is None or request.path.startswith('/static/'):
+                return response
+            elapsed_ms = (time.monotonic() - t0) * 1000.0
+            if elapsed_ms >= threshold_ms:
+                logger.warning("[slow-request] %s %s -> %s %.0fms",
+                               request.method, request.path,
+                               response.status_code, elapsed_ms)
+        except Exception:
+            pass
+        return response
+    return app
+
+
+def register_web_presence(app):
+    """사용자가 어느 기기로 어느 화면을 보고 있는지 남긴다(MCP get_screen 용).
+
+    로그인 쿠키로 들어온 사람의 요청만 본다 — API 키로 들어온 요청은 스크립트나
+    외부 AI 라 "사람이 보는 화면" 이 아니다. 해석과 저장은 utils.web_presence.
+    """
+    @app.after_request
+    def _web_presence(response):
+        try:
+            # 키 후보는 생성기라 참거짓으로 볼 수 없다 — 하나라도 나오는지 본다.
+            if next(_raw_api_keys_from_request(request), None) is None:
+                from flask_login import current_user
+                from aot.utils import web_presence
+                web_presence.record_flask_request(
+                    request, response, current_user, _READONLY_POST_PATHS)
+        except Exception:
+            pass
+        return response
+    return app
+
+
+def _is_document_navigation(req):
+    """브라우저가 화면(문서)을 여는 요청인가 — fetch/XHR·스크립트·봇 폴링이 아닌가.
+
+    `Sec-Fetch-Dest` 가 오면 그것이 정답이다(문서는 `document`). 안 오는 클라이언트는
+    `Accept` 에 `text/html` 이 **명시**됐는지로 본다 — fetch 와 curl 은 `*/*` 만 보낸다.
+    """
+    dest = req.headers.get('Sec-Fetch-Dest')
+    if dest:
+        return dest in ('document', 'iframe', 'frame')
+    if req.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return False
+    return 'text/html' in req.headers.get('Accept', '')
+
+
 def extension_login_manager(app):
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)
@@ -1380,7 +1473,12 @@ def extension_login_manager(app):
             response = jsonify({'error': 'Unauthorized'})
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response, 401
-        flash(gettext('Please log in to access this page'), "error")
+        # 안내 메시지는 사람이 보는 화면 이동(문서 탐색)일 때만 남긴다. 위젯 폴링
+        # 같은 fetch/XHR 는 그 메시지를 보지 못하는데도 flash 가 세션 파일과
+        # Set-Cookie 를 만들어, 로그아웃된 탭 하나가 폴링 주기마다 세션을 쌓았다.
+        # 리다이렉트 자체는 그대로다.
+        if _is_document_navigation(request):
+            flash(gettext('Please log in to access this page'), "error")
         return redirect(url_for('routes_authentication.login_check'))
 
     return app
@@ -1404,16 +1502,18 @@ def extension_session(app):
     os.makedirs(session_dir, exist_ok=True)
     app.config['SESSION_FILE_DIR'] = session_dir
 
-    # cachelib 의 기본 threshold 는 500 이다. 세션 파일은 **로그인한 사람 수**가
-    # 아니라 **세션 쿠키를 받은 방문 수**만큼 쌓인다 — 로그인 페이지를 열기만 한
-    # 브라우저, 봇, 404 한 번도 각자 파일 하나다(실측: 502개 중 로그인 세션은 23개,
-    # 나머지 479개가 익명). 파일 수가 threshold 를 넘으면 cachelib 은 세션을 저장할
-    # 때마다 `_remove_older()` 로 **만료가 가장 이른 것부터 지운다** — 익명 쓰레기가
-    # 다 소진되면 그 다음은 살아 있는 로그인 세션이다. 지워진 사람은 아무 예고 없이
-    # 로그아웃된다. 익명 세션 쪽을 줄이는 것이 정공법이지만(로그인 폼의 CSRF 토큰을
-    # 담아야 해서 없앨 수는 없다), 우선 실제 사용자가 밀려나지 않을 만큼 올린다.
-    # 파일 하나가 100~300B 라 1만 개라도 3MB 수준이다.
-    app.config.setdefault('SESSION_FILE_THRESHOLD', 10000)
+    # **threshold 는 0(무제한)이다 — 요청 경로에서 파일을 훑지 않게 하려는 것이다.**
+    # cachelib 은 threshold 가 0 이 아니면, 파일 수가 그것을 넘는 순간 세션을 저장할
+    # 때마다 `_remove_expired` + `_remove_older` 로 **디렉터리 전체를 두 번**
+    # 읽는다. 2026-10-31 실측: 파일이 상한(1만 개)에 고정돼 쿠키 없는 요청이 건당
+    # 약 165ms(쿠키 있으면 10~12ms), 동시 요청은 건당 약 0.6초였다. 게다가 정리
+    # 순서가 "만료가 이른 것부터"라 익명 쓰레기가 소진되면 다음은 살아 있는 로그인
+    # 세션이다 — 사용자는 예고 없이 로그아웃된다.
+    #
+    # 그래서 정리는 요청 밖으로 뺐다: 아래 `_start_session_sweeper` 가 주기적으로
+    # 만료분과 오래된 **익명** 세션만 지운다(로그인 세션은 만료 전엔 건드리지 않는다).
+    # 세션 파일은 100~300B 라 그 사이 쌓여도 디스크 부담은 작다.
+    app.config.setdefault('SESSION_FILE_THRESHOLD', 0)
 
     Session(app)
 
@@ -1422,6 +1522,7 @@ def extension_session(app):
     # (e.g. left over from before the volume fix) that would otherwise yield empty
     # sessions with no CSRF token.
     _purge_corrupt_session_files(session_dir)
+    _start_session_sweeper(app, session_dir)
 
     # Skip the session entirely for /static/ requests. Static assets never need a
     # session, but the filesystem session backend otherwise opens (reads) and
@@ -1499,7 +1600,17 @@ def extension_session(app):
                 # in-memory; save_session() below is still a no-op for /static/, so
                 # there is no disk I/O and no Set-Cookie — the optimization stands.
                 return SecureCookieSession()
-            return _inner_interface.open_session(app, request)
+            sess = _inner_interface.open_session(app, request)
+            # 저장소에서 읽어 온 세션이 "의미 있는 내용"을 갖고 있었는지 표시해 둔다.
+            # save_session 이 "아무것도 쓸 게 없는 새 세션은 저장하지 않는다" 를
+            # 판정할 때, 이미 내용이 있던 세션(로그아웃·키 삭제로 비워지는 경우)은
+            # 반드시 다시 써야 하기 때문이다.
+            try:
+                sess._aot_had_content = any(
+                    k not in _SESSION_NOISE_KEYS for k in sess)
+            except Exception:
+                pass
+            return sess
 
         def save_session(self, app, session, response):
             if self._is_static():
@@ -1532,6 +1643,9 @@ def extension_session(app):
             # 겹치는 요청의 대부분은 세션을 **읽기만** 한다(/custom.css 는
             # current_user.theme 를 보므로 세션이 필요해 /static 처럼 건너뛸 수도
             # 없다). 그 요청들이 쓰지 않게 하면 경합 자체가 사라진다.
+            if _session_not_worth_saving(session, response):
+                return
+
             sid = getattr(session, 'sid', None)
             now = time.monotonic()
             if not getattr(session, 'modified', True):
@@ -1593,6 +1707,147 @@ def _purge_corrupt_session_files(session_dir):
         logger.info(
             f"Purged {removed} corrupt and {expired} expired session file(s) "
             f"from {session_dir}")
+
+
+# 세션에 들어 있어도 "사용자가 남긴 내용"이 아닌 키.
+#
+# flask-session 0.5.0 은 새 세션을 만들 때 `permanent=True` 를 주는데, 그것이
+# `_permanent` 키로 세션에 들어가 **세션이 늘 비어 있지 않게 된다.** 그래서
+# `save_session` 의 `if not session:` 이 한 번도 참이 되지 않고, 요청마다 — 404 든
+# API 401 이든 robots.txt 든 — 파일 하나와 Set-Cookie 가 생겼다(2026-10-31 실측:
+# 하루 약 1만 개, 60초에 7개). `_fresh` 는 flask-login 이 익명 요청마다 False 로
+# 적는다.
+_SESSION_NOISE_KEYS = frozenset(('_permanent', '_fresh'))
+
+# 정리 대상이 될 수 있는 "익명 쓰레기" 세션의 키 집합. 이 안에서만 구성된 세션은
+# 로그인도, 진행 중인 로그인(TOTP·OAuth 대기)도, 언어 선택도 담고 있지 않다.
+# 모르는 키가 하나라도 있으면 쓰레기로 보지 않는다 — 지워서 잃는 쪽이 더 비싸다.
+_SESSION_DISPOSABLE_KEYS = frozenset(
+    ('_permanent', '_fresh', 'csrf_token', '_flashes', '_id'))
+
+
+def _session_not_worth_saving(session, response):
+    """True 면 이 세션을 저장하지 않고 Set-Cookie 도 내보내지 않는다.
+
+    대상은 **저장소에 내용이 없던 새 세션**뿐이다. 이미 내용이 있던 세션은 비워졌더라도
+    (로그아웃) 반드시 다시 써야 하므로 여기서 걸러지지 않는다.
+
+    - 노이즈 키(`_permanent`·`_fresh`)만 있다 → 쓸 내용이 없다.
+    - `csrf_token` 하나뿐이고 응답이 404 → 전역 컨텍스트 프로세서가 폼을 만들면서
+      토큰이 생겼을 뿐, 404 페이지의 어떤 폼도 그 토큰을 쓰지 않는다.
+      (로그인 화면은 200 이라 이 예외에 걸리지 않는다 — CSRF 때문에 세션이 필요하다.)
+    """
+    try:
+        if getattr(session, '_aot_had_content', True):
+            return False
+        meaningful = set(session.keys()) - _SESSION_NOISE_KEYS
+        if not meaningful:
+            return True
+        if meaningful == {'csrf_token'} and response.status_code == 404:
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _sweep_session_files(session_dir, anon_max=3000, now=None,
+                         min_anon_age=3600.0):
+    """세션 디렉터리를 정리한다 (요청 경로 밖에서 주기적으로 부른다).
+
+    - **만료된** 파일은 로그인 세션이든 아니든 지운다(어차피 쓸 수 없다).
+    - 만료 전인 **로그인 세션은 절대 지우지 않는다.**
+    - 익명 쓰레기(`_SESSION_DISPOSABLE_KEYS` 안의 키만 가진 것)가 `anon_max` 를
+      넘으면 가장 오래된 것부터 지운다. 막 만든 것(`min_anon_age` 초 이내)은 로그인
+      직전의 세션일 수 있어 건드리지 않는다.
+    - 읽다가 실패한 파일은 건드리지 않는다(깨진 파일 제거는 기동 시 한 번만).
+
+    cachelib 은 임시 파일에 쓴 뒤 rename 하므로 읽는 도중 내용이 바뀌지 않는다.
+    지우기 직전에 mtime 이 그대로인지 한 번 더 확인해, 읽은 뒤 로그인으로 바뀐 파일을
+    지우지 않게 한다.
+
+    반환: (만료로 지운 수, 익명 상한으로 지운 수, 남은 익명 수)
+    """
+    import pickle
+    import struct
+    now = time.time() if now is None else now
+    expired = 0
+    anon = []  # (mtime, path)
+    try:
+        entries = list(os.scandir(session_dir))
+    except OSError:
+        return 0, 0, 0
+    for entry in entries:
+        name = entry.name
+        if name.endswith('.__wz_cache') or not entry.is_file(follow_symlinks=False):
+            continue
+        path = entry.path
+        try:
+            mtime = entry.stat().st_mtime
+            with open(path, 'rb') as f:
+                header = f.read(4)
+                if len(header) < 4:
+                    continue
+                stamp = struct.unpack('<I', header)[0]
+                if stamp and stamp <= now:
+                    value = None
+                else:
+                    value = pickle.load(f)
+        except Exception:
+            continue
+        if value is None:  # 만료
+            try:
+                os.remove(path)
+                expired += 1
+            except OSError:
+                pass
+            continue
+        if (isinstance(value, dict) and '_user_id' not in value
+                and set(value.keys()) <= _SESSION_DISPOSABLE_KEYS
+                and now - mtime >= min_anon_age):
+            anon.append((mtime, path))
+    evicted = 0
+    if anon_max is not None and len(anon) > anon_max:
+        anon.sort()
+        for mtime, path in anon[:len(anon) - anon_max]:
+            try:
+                if os.stat(path).st_mtime != mtime:
+                    continue
+                os.remove(path)
+                evicted += 1
+            except OSError:
+                pass
+    if expired or evicted:
+        logger.info("Session sweep: %d expired, %d anonymous evicted "
+                    "(%d anonymous kept) in %s",
+                    expired, evicted, len(anon) - evicted, session_dir)
+    return expired, evicted, len(anon) - evicted
+
+
+def _start_session_sweeper(app, session_dir):
+    """세션 파일 정리를 데몬 스레드에서 주기적으로 돌린다.
+
+    `SESSION_FILE_THRESHOLD=0` 이라 cachelib 은 더 이상 요청 중에 정리하지 않는다.
+    간격은 `SESSION_SWEEP_INTERVAL`(초, 기본 900; 0 이하면 끈다), 익명 상한은
+    `SESSION_ANON_MAX`(기본 3000).
+    """
+    interval = app.config.get('SESSION_SWEEP_INTERVAL', 900)
+    if not interval or interval <= 0 or app.config.get('TESTING'):
+        return None
+    anon_max = app.config.get('SESSION_ANON_MAX', 3000)
+
+    def _loop():
+        # 기동 직후의 요청 몰림을 피해 첫 실행을 조금 미룬다.
+        time.sleep(30)
+        while True:
+            try:
+                _sweep_session_files(session_dir, anon_max=anon_max)
+            except Exception:
+                logger.exception("Session sweep failed")
+            time.sleep(interval)
+
+    t = threading.Thread(target=_loop, name='session-sweeper', daemon=True)
+    t.start()
+    return t
 
 
 def extension_csrf(app):

@@ -240,25 +240,24 @@ class TestSyncDoesNotIngest:
             assert result is not None
 
 
-class TestForecastFallback:
-    def test_the_korea_only_path_points_at_the_registered_source(self, app):
-        """한국 밖에서 "예보 없음" 으로 끝내면 대안이 있어도 모델이 못 찾는다."""
+class TestForecastDefault:
+    def test_a_registered_source_is_the_default_forecast_source(self, app):
+        """등록된 Open-Meteo 소스가 있으면 예보 입력 안내는 나가지 않는다."""
         from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.app_context():
             src = _make_source({'preset_key': 'ext_openmeteo',
                                 'latitude': '35.8', 'longitude': '126.88'})
-            hint = AoTDataToolService._forecast_fallback_hint()
+            found = AoTDataToolService._open_meteo_forecast_source()
 
-            assert 'query_data_source' in hint
-            assert src.source_id in hint
+            assert found and found['kind'] == 'data_source'
+            assert found['src']['source_id'] == src.source_id
+            assert AoTDataToolService.forecast_input_hint() is None
 
-    def test_it_does_not_recommend_a_source_that_is_not_registered(self, app):
-        """없는 것을 권하면 모델이 부를 수 없는 것을 부르고, 그 실패는
-        사용자에게 그냥 고장으로 보인다."""
+    def test_no_source_at_all_says_to_add_the_input(self, app):
+        """예보 출처가 하나도 없으면 무엇을 추가할지 한 줄로 말한다."""
         from aot.tools.aot_data_tool_service import AoTDataToolService
 
         with app.app_context():
-            hint = AoTDataToolService._forecast_fallback_hint()
-            assert 'query_data_source' not in hint
-            assert 'AI Library' in hint
+            hint = AoTDataToolService.forecast_input_hint()
+            assert hint and 'OPEN_METEO_FORECAST' in hint

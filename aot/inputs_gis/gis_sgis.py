@@ -30,6 +30,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'overlay',
+    'ambient_role': 'ground.boundary',
     'custom_options': [
         {
             'id': 'consumer_key',

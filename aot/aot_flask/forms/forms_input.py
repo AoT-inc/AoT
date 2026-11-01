@@ -128,6 +128,16 @@ class InputMod(FlaskForm):
                     validators.NumberRange(min=1, max=604800)],
         widget=NumberInput()
     )
+    # 운영 상태(Input.device_status). 값 검증은 저장 쪽(apply_device_status)이 한다.
+    device_status = StringField(
+        lazy_gettext('Device Status'),
+        validators=[validators.Optional()])
+    device_status_note = StringField(
+        lazy_gettext('Status Note'),
+        validators=[validators.Optional(), validators.Length(max=200)])
+    device_status_since = StringField(
+        lazy_gettext('Status Since'),
+        validators=[validators.Optional()])
     start_offset = DecimalField(
         lazy_gettext('Start Offset'),
         validators=[DataRequired(),

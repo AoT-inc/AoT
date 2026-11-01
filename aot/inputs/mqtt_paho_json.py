@@ -159,6 +159,19 @@ INPUT_INFORMATION = {
             'required': False,
             'name': lazy_gettext('Use Websockets'),
             'phrase': lazy_gettext('Use websockets to connect to the server.')
+        },
+        {
+            'id': 'mqtt_store_retained',
+            'type': 'bool',
+            'default_value': False,
+            'required': False,
+            'name': lazy_gettext('Store retained messages'),
+            'phrase': lazy_gettext(
+                'When off (default), messages the broker re-sends from its '
+                'retained store right after subscribing are not saved as '
+                'measurements, because they are old values that would otherwise '
+                'be stamped with the current time. Turn on only if the publisher '
+                'sends its state as retained messages only.')
         }
     ],
 
@@ -210,6 +223,7 @@ class InputModule(AbstractInput):
         self.mqtt_username = None
         self.mqtt_password = None
         self.mqtt_use_websockets = None
+        self.mqtt_store_retained = None
 
         # Communication status (comm_* contract) — see comm_is_fault() below.
         self._comm_connected = False
@@ -320,6 +334,26 @@ class InputModule(AbstractInput):
         self.logger.info("Log: {}".format(string))
 
     def on_message(self, client, userdata, msg):
+        # retained 메시지는 측정으로 저장하지 않는다 (기본). 브로커는 구독 직후
+        # 마지막 retained 메시지를 즉시 다시 보내는데, 이것은 방금 잰 값이 아니라
+        # 이미 오래된 값이다. 그런데 아래에서 수신 시각(utcnow)을 붙여 저장하므로,
+        # 데몬이 재시작될 때마다 낡은 값이 '지금 측정한 값'으로 둔갑한다
+        # (2026-10-14: 07:29:32 의 마지막 실측이 재시작 직후 08:03:17 로 다시
+        # 기록돼, 환경제어가 34분 묵은 값을 신선한 실측으로 읽고 창을 열고
+        # 커튼을 닫았다).
+        # 페이로드 안의 측정 시각을 쓰도록 하는 입력 설정이 이 입력에는 없으므로
+        # '원래 시각으로 저장' 하는 길은 없다 — 건너뛰는 것이 유일하게 안전하다.
+        # (시각 필드를 쓰는 옵션이 생기면, 그때는 retained 라도 원래 시각이라
+        # 저장해도 된다.) 상태를 retained 로만 내보내는 장치를 쓰는 설치를 위해
+        # 'Store retained messages' 옵션을 켜면 예전처럼 저장한다.
+        # 건너뛴 메시지는 _comm_last_ts 도 갱신하지 않는다: 낡은 값이 '방금 수신'
+        # 으로 보이면 안 된다 (브로커 연결 여부는 _comm_connected 가 따로 안다).
+        if getattr(msg, 'retain', False) and not self.mqtt_store_retained:
+            self.logger.debug(
+                "Ignoring retained message on '{}' (Store retained messages is off)".format(
+                    msg.topic))
+            return
+
         # Any delivered message proves the broker link is alive, recorded before
         # decoding so an undecodable payload still counts as proof of life.
         self._comm_last_ts = time.time()

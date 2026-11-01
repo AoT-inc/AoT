@@ -773,6 +773,79 @@ def set_site_weather(shape_uuid, device_ids, commit=False):
     return (created, ended)
 
 
+#: 대지의 **예보 출처** 지정 — 같은 `weather` 행에 역할만 다르다(트윈·지도 날씨·AI 가 함께 읽는 한 저장소).
+#: 실측 기상대(`station`)를 읽는 곳은 이 역할을 뺀다 — "+7d 강수" 가 관측 비로 새지 않게.
+SITE_FORECAST_ROLE = 'forecast'
+
+
+def site_forecast_ids(shape_uuid):
+    """대지의 예보 출처로 지정한 장치 id — 지정 순서(``params.order``, 같으면 등록 순서)."""
+    if not shape_uuid:
+        return []
+    rows = current('weather', shape_uuid, role=SITE_FORECAST_ROLE)
+
+    def order(r):
+        p = r.params if isinstance(r.params, dict) else {}
+        o = p.get('order')
+        return (o if isinstance(o, int) and not isinstance(o, bool) else 1 << 30, r.id or 0)
+
+    out = []
+    for r in sorted(rows, key=order):
+        if r.device_id and r.device_id not in out:
+            out.append(r.device_id)
+    return out
+
+
+# @manual geo/map-widget#site-weather
+def set_site_forecast(shape_uuid, device_ids, commit=False):
+    """대지의 예보 출처를 **지정한 목록·순서 그대로** 맞춘다. 반환: (추가, 종료).
+
+    순서가 우선순위다(``params.order``). 빈 목록은 "지정 없음" — 그러면 세 소비자가 같은 폴백
+    (`forecast_series` 의 지도 레이어)으로 간다. 기상대 지정(`set_site_weather`)과 같은 행 종류라
+    한쪽 저장이 다른 쪽을 지우지 않는다(역할이 다르다).
+    """
+    if not shape_uuid:
+        raise BindingError('shape_uuid 가 비었다')
+    want = []
+    for d in device_ids or []:
+        dev = str(d).split('::')[0] if d else ''
+        if dev and dev not in want:
+            want.append(dev)
+    rows = current('weather', shape_uuid, role=SITE_FORECAST_ROLE)
+    have = {r.device_id: r for r in rows}
+
+    ended = 0
+    for dev, row in have.items():
+        if dev not in want:
+            unbind(row.unique_id, 'unbound')
+            ended += 1
+
+    created = 0
+    for i, dev in enumerate(want):
+        row = have.get(dev)
+        if row is not None:
+            p = dict(row.params) if isinstance(row.params, dict) else {}
+            if p.get('order') != i:
+                p['order'] = i
+                row.params = p
+            continue
+        device_kind = resolve_device_kind(dev)
+        if device_kind is None:
+            logger.warning('[GeoBinding] 예보 출처 지정 건너뜀 — 없는 장치: %s', dev)
+            continue
+        bind('weather', shape_uuid, SITE_FORECAST_ROLE, device_kind, dev, params={'order': i})
+        created += 1
+
+    if created or ended:
+        logger.info('[GeoBinding] 대지 %s 예보 출처 지정: +%d / 종료 %d',
+                    shape_uuid, created, ended)
+    if commit:
+        db.session.commit()
+    from aot.aot_flask.geo import forecast_series
+    forecast_series.clear_cache()                   # 바뀐 지정이 슬라이더·AI 에 바로 보이게
+    return (created, ended)
+
+
 def rebind_device(old_device_id, new_device_id, commit=False):
     """장치 단위 교체 — 옛 장치가 맡던 **지도 자리 전부**를 새 장치로 옮긴다.
 

@@ -215,6 +215,85 @@ def resolve_location_tz(target_id: Optional[str]) -> pytz.BaseTzInfo:
     return resolve_location_tz_and_source(target_id)[0]
 
 
+def location_iso(value, target_id: Optional[str], cache: Optional[dict] = None):
+    """UTC 시각 → `target_id` 가 놓인 곳의 현지 시각 ISO 문자열. 없으면 None.
+
+    AI·MCP 도구가 측정·장치 사건의 시각을 내보낼 때 지나는 **단 하나의**
+    자리다(2026-10-09). 그 전에는 도구마다 `astimezone(resolve_location_tz(..))`
+    를 따로 적었고, 일부는 변환을 빠뜨려 UTC 를 그대로 냈으며(구역 센서 요약,
+    구획 목표 대조, 제어 주기), 나머지도 위치를 못 풀면 예외 처리에서 UTC 로
+    떨어졌다. 화면은 장치 위치 시각으로 보이는데 LLM 만 UTC 를 받았다.
+
+    - `value`: datetime(naive 는 UTC 로 본다), epoch 초(int/float), ISO 문자열.
+    - 위치를 못 풀면 UTC 가 아니라 **농장 시각**(`serialize_ts`)으로 떨어진다.
+    - `cache`: 같은 응답에서 여러 행을 바꿀 때 넘기면 대상마다 한 번만 찾는다.
+    """
+    if value is None or value == '':
+        return None
+    try:
+        if isinstance(value, datetime):
+            dt = value
+        elif isinstance(value, (int, float)):
+            dt = datetime.fromtimestamp(float(value), tz=timezone.utc)
+        else:
+            dt = datetime.fromisoformat(str(value).strip().replace('Z', '+00:00'))
+    except (TypeError, ValueError, OverflowError, OSError):
+        return value if isinstance(value, str) else None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    tz = None
+    if target_id:
+        if cache is not None and target_id in cache:
+            tz = cache[target_id]
+        else:
+            try:
+                tz = resolve_location_tz(target_id)
+            except Exception as exc:                        # noqa: BLE001
+                logger.debug("location_iso: tz lookup failed for %s: %s", target_id, exc)
+                tz = None
+            if cache is not None:
+                cache[target_id] = tz
+    if tz is not None:
+        try:
+            return dt.astimezone(tz).isoformat()
+        except Exception:                                   # noqa: BLE001
+            pass
+    from aot.utils.time_utils import serialize_ts
+    return serialize_ts(dt)
+
+
+def location_window(start, end, target_id: Optional[str]):
+    """현지 날짜·시각 구간 → (시작 UTC, 끝 UTC, 시작 현지 ISO, 끝 현지 ISO).
+
+    `target_id` 가 놓인 곳의 시간대로 읽는다(`location_iso` 와 같은 해석 — 측정 시각을
+    다루는 도구는 시간대를 직접 풀지 않는다). 'YYYY-MM-DD' 만 주면 start 는 그날 0시,
+    end 는 **그날을 포함**(다음 날 0시). 시각이나 오프셋을 주면 그대로. end 가 없으면 지금.
+    못 읽으면 ValueError.
+    """
+    from datetime import timedelta
+    try:
+        tz = resolve_location_tz(target_id)
+    except Exception:                                       # noqa: BLE001
+        tz = pytz.utc
+
+    def parse(text, is_end):
+        text = str(text).strip()
+        if len(text) == 10:
+            d = datetime.strptime(text, '%Y-%m-%d')
+            if is_end:
+                d += timedelta(days=1)
+        else:
+            d = datetime.fromisoformat(text.replace('Z', '+00:00'))
+        if d.tzinfo is None:
+            d = tz.localize(d) if hasattr(tz, 'localize') else d.replace(tzinfo=tz)
+        return d
+
+    t0 = parse(start, False)
+    t1 = parse(end, True) if end else datetime.now(timezone.utc)
+    local = lambda d: d.astimezone(tz).isoformat(timespec='minutes')
+    return t0.astimezone(timezone.utc), t1.astimezone(timezone.utc), local(t0), local(t1)
+
+
 def resolve_location_coords(target_id: Optional[str]):
     """Resolve (lat, lng) for ANY location/entity identified by `target_id` —
     mirrors resolve_location_tz's dispatch (GeoShape first, which also covers

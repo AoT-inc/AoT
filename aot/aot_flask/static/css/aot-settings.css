@@ -435,6 +435,13 @@
     margin-top: var(--aot-space-1);
 }
 
+/* 부연 안의 명령 예시(<pre>). 폰에서는 한 줄에 다 안 들어가므로 화면에서만 줄을 바꾼다 —
+   복사하면 원래 한 줄 그대로다. */
+pre.aot-settings-sub {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 /* 목록 항목 행 — 이름이 길면 이름 칸 **안에서** 줄바꿈하고, 오른쪽 표지(배지
    하나)는 같은 줄 오른쪽에 남는다. 기본 결정 행은 컨트롤을 아랫줄로 내리는데
    (§4-6), 목록에서 그러면 폰에서 항목마다 배지만 홀로 선 줄이 생긴다(실측:
@@ -558,8 +565,12 @@ select.aot-settings-select:focus {
     max-width: 340px;
 }
 @media (max-width: 480px) {
+    /* nowrap: 행의 flex-wrap: wrap 을 세로 방향에서 그대로 두면 한 줄(flex line)의
+       폭이 가장 넓은 항목(줄바꿈 없는 명령 <pre>)을 따라가, 부연까지 카드 밖으로
+       나간다(실측 2026-10-10 설정 > Matter, 375px: 행 313 · 자식 448). */
     .aot-settings-row-stack {
         flex-direction: column;
+        flex-wrap: nowrap;
         align-items: stretch;
         gap: var(--aot-space-2);
     }

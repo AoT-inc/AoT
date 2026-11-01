@@ -60,8 +60,7 @@ PUBLIC_PREFIXES = (
     '/auth/', '/newremote/', '/remote_login', '/oauth/', '/health',
     # 로그인 화면 자체가 쓰는 것들 — 로그인 전에 받아야 한다.
     '/custom.css', '/csrf-token', '/api/v1/locale',
-    # 비로그인 방문자에게 보여 주는 소개 화면(routes_general.home 이
-    # 인증 여부로 갈라 landing.html 을 그린다).
+    # 비로그인 방문자를 /login 으로 보내는 시작 경로(routes_general.home).
     '/',
     # flask-restx 가 자동으로 붙이는 문서 표면. 스키마가 드러나는 것이
     # 의도인지는 별도 판단이 필요하다 — 지금 상태를 사실대로 적어 둔다.

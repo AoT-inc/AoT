@@ -25,7 +25,9 @@ _K_PRIMARY = {
     'fogger':       'K_FOG_RH',
     'co2_injector': 'K_CO2_INJ',
     'shade':        'K_SHADE_T',
-    'curtain':      'K_CURTAIN_T',
+    # ⚠ 효과 함수가 읽는 키는 `K_CURTAIN_U` 다(보온커튼은 외피 열교환 계수 U).
+    #   예전에 `K_CURTAIN_T` 로 적어 수동 K 오버라이드가 조용히 무시됐다.
+    'curtain':      'K_CURTAIN_U',
     'lighting':     'K_LIGHT_PPFD',
 }
 
@@ -264,6 +266,48 @@ def _bay_capacity_fraction(bay_slices, bay_id):
     return mine / total
 
 
+def _paired_outside_facility_scope(candidate_ids, facility_uuid, my_geo_id) -> set:
+    """시설이 정해진 코디네이터의 자동 발견에서 뺄 actuator_paired 출력 id.
+
+    자동 발견은 DB 전체의 paired 출력을 훑는다. 다른 시설 소유·다른 지도의
+    마커는 앞의 두 판정이 이미 걸렀지만, **어느 시설에도 매이지 않고 지도에도
+    없는 출력**(시험용 `TEST 측창` 따위, 바인딩이 모두 끝난 옛 장치)은 둘 다
+    비껴가 시설 코디네이터에 줄줄이 편입됐다 — 김제 스냅숏에서 6개. 시설에
+    없는 장치라 환경이 반응하지 않는데도 매 사이클 개도 명령이 나간다.
+
+    시설을 정한 코디네이터는 **"내 시설 것" 이라는 증거가 있는 출력만** 데려온다.
+
+      * 내 시설의 fitting/actuator 슬롯에 현재 바인딩이 있다
+        (시설 경로가 이미 등록하므로 여기까지 오면 비활성·구역 밖으로 뺀 것 —
+        `by_id`·`bay_excluded_ids`·`disabled_actuators` 가 그 판단을 이어받는다)
+      * 내 시설의 지도에 마커가 있다 (`7401dace9` 가 정한 기준)
+
+    다른 시설의 슬롯에 현재 바인딩이 있으면 마커가 내 지도에 있어도 남의 것이다.
+    시설을 안 정한 코디네이터(수동 설치)는 이 판정을 받지 않는다 — 호출하지 않는다.
+    """
+    ids = {c for c in (candidate_ids or []) if c}
+    if not ids or not facility_uuid:
+        return set()
+    from aot.aot_flask.geo.device_binding import shapes_for_devices
+    from aot.databases.models import GeoBinding
+
+    mine, elsewhere = set(), set()
+    prefix = facility_uuid + ':'
+    for dev, sid in (GeoBinding.query.with_entities(
+            GeoBinding.device_id, GeoBinding.spatial_id).filter(
+            GeoBinding.device_id.in_(ids),
+            GeoBinding.spatial_kind.in_(('fitting', 'actuator')),
+            GeoBinding.valid_to.is_(None)).all()):
+        (mine if sid.startswith(prefix) else elsewhere).add(dev)
+
+    on_my_map = set()
+    if my_geo_id:
+        for dev, shapes in shapes_for_devices(ids - mine - elsewhere).items():
+            if any(s.geo_id == my_geo_id for s in shapes):
+                on_my_map.add(dev)
+    return ids - mine - on_my_map
+
+
 class ProfileLoaderMixin:
     """Mixin: actuator profile loading from facility, paired outputs, and manual actions."""
 
@@ -330,6 +374,9 @@ class ProfileLoaderMixin:
         self._sensors_resolved_outdoor = []
         self._sensors_forecast         = []  # facility weather_bindings → forecast Input 장치
         self._bay_scope_active         = None
+        # 자동 제어에서 뺀 장치 목록 — 시설 경로(섹션 1)와 자동 발견(섹션 2)이 채운다.
+        # 시설이 없거나 통합 적재가 실패한 사이클에 옛 목록이 남지 않게 비운다.
+        self._excluded_actuators       = []
         # bay_scope 로 제외된 액추에이터 — 섹션 2(자동 발견)가 재등록하지 않도록 차단
         bay_excluded_ids: set = set()
         n_manual_new = 0
@@ -905,6 +952,36 @@ class ProfileLoaderMixin:
                     'actuator_paired 지도 배치 판정 실패 — 필터 없이 진행',
                     exc_info=True)
 
+        # ── 시설 소속 증거가 없는 출력 제외 ─────────────────────────────────────
+        # 위 두 판정은 "남의 것" 임이 확인된 장치만 거른다. 어느 시설에도 매이지
+        # 않고 지도에도 없는 출력은 임자가 없는 것이 아니라 **이 시설과 무관한**
+        # 것인데, 그대로 통과해 시설 코디네이터에 편입됐다. 시설을 정한 코디네이터는
+        # 내 시설·내 지도에 닿는 출력만 데려온다(`_paired_outside_facility_scope`).
+        # 시설이 없는 코디네이터(수동 설치)는 예전 그대로 전체를 훑는다.
+        if paired_outputs and facility_uuid:
+            try:
+                from aot.databases.models import GeoFacility
+                _fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+                _unrelated = _paired_outside_facility_scope(
+                    [o.unique_id for o in paired_outputs
+                     if o.unique_id not in foreign_paired_ids],
+                    facility_uuid, _fac.geo_id if _fac else None)
+                if _unrelated:
+                    self.logger.info(
+                        '_reload_profiles: 이 시설과 무관한 actuator_paired '
+                        '출력 %d개 자동 등록에서 제외', len(_unrelated))
+                    foreign_paired_ids |= _unrelated
+            except Exception:
+                self.logger.debug(
+                    'actuator_paired 시설 범위 판정 실패 — 필터 없이 진행',
+                    exc_info=True)
+
+        # 사용자가 자동 제어에서 뺀 장치 — 시설 경로(섹션 1)가 거르는 것과 **같은
+        # 목록**을 자동 발견에도 건다. 안 걸면 화면에서 껐는데 발견 경로가 같은
+        # 장치를 다시 등록해 계속 움직인다(시설 경로에서 빠진 바로 그 장치가 발견
+        # 대상이기도 하다). 프로필을 만들기 전에 거르므로 안전 게이트도 함께 빠진다.
+        paired_disabled_ids = parse_disabled_actuators(self.disabled_actuators)
+
         for out in paired_outputs:
             out_uuid = out.unique_id
             if out_uuid in by_id:
@@ -925,6 +1002,12 @@ class ProfileLoaderMixin:
             actuator_kind = ch_opts.get('actuator_kind') or 'side_vent'
             profile_kind = KIND_TO_PROFILE_KIND.get(actuator_kind)
             if not profile_kind:
+                continue
+            if out_uuid in paired_disabled_ids:
+                # 건강 점검·기능 상태가 "사람이 뺀 장치" 를 이름으로 말할 수 있게 적는다.
+                self._excluded_actuators.append(
+                    {'name': out.name or out_uuid[:8], 'kind': profile_kind,
+                     'reason': 'disabled'})
                 continue
 
             azimuth_deg = ch_opts.get('azimuth_deg')
@@ -1235,15 +1318,7 @@ class ProfileLoaderMixin:
 
         # ── Stage 0/P0: 어댑터 맵 빌드 (장치 output_types → DispatchAdapter) ──
         # by_id 는 leader + follower 모두 포함 → 팔로워도 직접 dispatch 할 때 필요.
-        try:
-            from aot.functions.utils.env_control.dispatch_adapters import build_adapter_map
-            self._adapter_by_id = build_adapter_map(by_id)
-            self.logger.debug(
-                '_reload_profiles: adapter map built (%d entries)', len(self._adapter_by_id))
-        except Exception as _ae:
-            self._adapter_by_id = {}
-            self.logger.warning(
-                '_reload_profiles: adapter map build failed — value passthrough 사용: %s', _ae)
+        self._rebuild_adapter_map(by_id)
 
         self.logger.debug(
             '_reload_profiles: total=%d (facility=%d, paired=%d, '
@@ -1252,11 +1327,82 @@ class ProfileLoaderMixin:
             n_manual_new, n_manual_merged, len(groups))
 
         self._attach_electric_kw()
+        self._mark_screen_positional()
         self._warn_shared_actuators(facility_uuid)
 
         # ── Commissioning bridge: consume pending calibration anchors ─────────
         if facility_uuid:
             self._apply_pending_commissioning_anchors(facility_uuid)
+
+    def _rebuild_adapter_map(self, by_id: dict) -> None:
+        """어댑터 맵을 새로 짓고, 옛 맵의 사이클 간 상태를 넘긴다.
+
+        재적재(10분 주기·`cmd_reload`)마다 어댑터가 새로 만들어진다. 설정이 바뀌었을 수
+        있으니 새로 짓는 것은 맞지만, 펄스 도징 어댑터의 쉼(`_blocked_until`)까지 0 으로
+        돌아가면 방금 뿌린 분무기가 재적재 직후 바로 다시 뿌린다. 같은 장치·같은 종류면
+        런타임 상태만 이어받는다(`dispatch_adapters.carry_adapter_state`).
+        """
+        prev = getattr(self, '_adapter_by_id', None) or {}
+        try:
+            from aot.functions.utils.env_control.dispatch_adapters import (
+                build_adapter_map, carry_adapter_state)
+            new_map = build_adapter_map(by_id)
+            carried = carry_adapter_state(prev, new_map)
+            self._adapter_by_id = new_map
+            self.logger.debug(
+                '_reload_profiles: adapter map built (%d entries, 상태 이어받음 %d)',
+                len(new_map), len(carried))
+        except Exception as _ae:
+            self._adapter_by_id = {}
+            self.logger.warning(
+                '_reload_profiles: adapter map build failed — value passthrough 사용: %s', _ae)
+
+    # @manual ai/env-control#curtain-gap
+    def _mark_screen_positional(self) -> None:
+        """스크린이 **부분 개도**를 잡을 수 있는가 → `capacity_meta['screen_positional']`.
+
+        위치를 받는 어댑터(Paired·Value — on/off 릴레이·PWM 은 아니다)이고 전 주행 시간을
+        알 때만 참이다. 주행 시간은 프로필(`full_stroke_sec`, 자동 발견·Action)이나 출력 채널
+        옵션(`travel_time_open/close_sec`, 시설 도면 경로는 프로필에 싣지 않는다)에서 읽고
+        `capacity_meta['screen_stroke_s']` 에 남긴다(왕복 방지의 최소 유지 시간도 이것을 쓴다).
+        참이 아니면 커튼 틈·아침 램프를 내지 않는다(`screen_policy`) — 0/100 만 쓴다.
+        """
+        from aot.functions.utils.env_control.dispatch_adapters import (
+            PairedAdapter, ValueAdapter)
+        screens = [p for p in (getattr(self, '_profiles', None) or [])
+                   if getattr(p, 'kind', '') in ('curtain', 'shade')]
+        if not screens:
+            return
+        travel = {}
+        try:
+            from aot.databases.models import OutputChannel
+            from aot.databases.utils import session_scope
+            from aot.config import AOT_DB_PATH
+            with session_scope(AOT_DB_PATH) as sess:
+                for ch in sess.query(OutputChannel).filter(
+                        OutputChannel.output_id.in_([p.actuator_id for p in screens]),
+                        OutputChannel.channel == 0).all():
+                    try:
+                        o = json.loads(ch.custom_options or '{}')
+                        t_o = float(o.get('travel_time_open_sec') or 0.0)
+                        t_c = float(o.get('travel_time_close_sec') or 0.0)
+                    except (TypeError, ValueError):
+                        continue
+                    travel[ch.output_id] = ((t_o + t_c) / 2.0 if t_o > 0 and t_c > 0
+                                            else (t_o or t_c))
+        except Exception as exc:                                # noqa: BLE001
+            self.logger.debug('스크린 주행 시간 조회 실패 — 0/100 으로만 쓴다: %s', exc)
+        adapters = getattr(self, '_adapter_by_id', None) or {}
+        for p in screens:
+            stroke = max(float(getattr(p.cmd_constraints, 'full_stroke_sec', 0.0) or 0.0),
+                         float(travel.get(p.actuator_id) or 0.0))
+            meta = p.capacity_meta if p.capacity_meta is not None else {}
+            meta['screen_stroke_s'] = stroke
+            meta['screen_positional'] = bool(
+                stroke > 0.0
+                # ⚠ `ValueAdapter` 는 기반 클래스의 별칭이라 isinstance 로는 on/off·PWM 도 걸린다.
+                and type(adapters.get(p.actuator_id)) in (PairedAdapter, ValueAdapter))
+            p.capacity_meta = meta
 
     def _warn_shared_actuators(self, facility_uuid: str) -> None:
         """내가 제어하는 장치를 **다른 시설의 활성 코디네이터도** 제어하는가.

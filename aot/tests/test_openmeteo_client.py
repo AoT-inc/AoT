@@ -159,3 +159,48 @@ class TestFamilyDispatch(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class TestCellsToIntervalStart(unittest.TestCase):
+    """Open-Meteo 칸 값은 행 시각이 칸의 끝이다 — AI 가 읽는 행은 칸의 시작에 붙인다."""
+
+    _PAYLOAD = {
+        'hourly_units': {'temperature_2m': '°C', 'precipitation': 'mm',
+                         'shortwave_radiation': 'W/m²', 'precipitation_probability': '%'},
+        'hourly': {'time': ['2026-10-23T13:00', '2026-10-23T14:00', '2026-10-23T15:00'],
+                   'temperature_2m': [21.2, 21.3, 21.4],
+                   'precipitation': [1.0, 4.0, 5.2],
+                   'shortwave_radiation': [119.0, 81.0, 65.0],
+                   'precipitation_probability': [50, 80, 90]},
+    }
+
+    def _rows(self):
+        return om.cells_to_interval_start(om._rows_from_block(self._PAYLOAD, 'hourly'))
+
+    def test_rain_moves_to_the_hour_it_starts(self):
+        """14:00 행의 4.0 mm 는 13~14시에 내린 비 → 13:00 행에 붙는다."""
+        rows = self._rows()
+        self.assertEqual(rows[0]['precipitation (mm)'], 4.0)
+        self.assertEqual(rows[1]['precipitation (mm)'], 5.2)
+
+    def test_radiation_and_probability_move_too(self):
+        rows = self._rows()
+        self.assertEqual(rows[0]['shortwave_radiation (W/m²)'], 81.0)
+        self.assertEqual(rows[0]['precipitation_probability (%)'], 80)
+
+    def test_instant_values_stay_on_their_row(self):
+        rows = self._rows()
+        self.assertEqual([r['temperature_2m (°C)'] for r in rows], [21.2, 21.3, 21.4])
+
+    def test_last_row_has_no_cell_value(self):
+        last = self._rows()[-1]
+        self.assertNotIn('precipitation (mm)', last)
+        self.assertEqual(last['time'], '2026-10-23T15:00')
+
+    def test_input_rows_are_not_mutated(self):
+        raw = om._rows_from_block(self._PAYLOAD, 'hourly')
+        om.cells_to_interval_start(raw)
+        self.assertEqual(raw[0]['precipitation (mm)'], 1.0)
+
+    def test_daily_keys_are_not_cell_keys(self):
+        self.assertFalse(om._is_cell_key('precipitation_sum (mm)'))
+        self.assertFalse(om._is_cell_key('precipitation_probability_max (%)'))

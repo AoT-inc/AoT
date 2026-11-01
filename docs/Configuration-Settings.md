@@ -87,6 +87,10 @@ Page\: `Manage -> System Management -> General Settings`
 <td>Enable External MCP Server</td>
 <td>Allows or refuses requests from external MCP clients (for example Claude Desktop) to the MCP server that is already running. It takes effect immediately. The address and port it listens on are not set here: on Docker edit the <code>ports:</code> entry of the <code>aot_mcp</code> service and run <code>docker compose up -d</code> again; on a native install edit and restart the <code>aotmcp</code> systemd service.</td>
 </tr>
+<tr>
+<td>Use Matter (Experimental)</td>
+<td>Off by default. Turning it on adds <a href="../Matter/">Matter</a> to the Settings menu, where devices already set up in other smart-home apps are added to AoT. A native install is sent to the package page first if the packages Matter needs are missing. The Matter server itself runs on the host and is started separately. Matter cannot be turned off while Matter devices exist.</td>
+</tr>
 </tbody>
 </table>
 

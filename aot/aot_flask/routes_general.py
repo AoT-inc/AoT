@@ -66,7 +66,8 @@ def home():
         return clear_cookie_auth()
 
     if not is_authenticated:
-        return render_template('pages/landing.html')
+        # 시작 화면은 소개 페이지가 아니라 로그인 페이지다(기존 방식).
+        return redirect('/login')
 
     try:
         landing_page = flask_login.current_user.landing_page
@@ -222,6 +223,9 @@ def custom_css():
             'bd_divider': ['--aot-border-neutral'],
             # 옅은 구분선. 목록 행처럼 값이 촘촘한 자리에 쓴다.
             'bd_divider_soft': ['--aot-border-light'],
+            # AI 카드(자막·수신함·뷰어) 면과 짝 글자. 면은 알파 0.8 로 쓰이고(aot-ai-caption.css) 글자는 불투명.
+            'ai_surface_bg': ['--aot-ai-surface-bg'],
+            'ai_surface_fg': ['--aot-ai-surface-fg'],
             'bd_btn_border': ['--bd-btn-border', '--aot-btn-border-primary'],
             'band_1': ['--aot-band-1'],
             'band_2': ['--aot-band-2'],

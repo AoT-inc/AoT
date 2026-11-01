@@ -29,7 +29,7 @@
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | `/api/geo/overlays/list?map_uuid=&target_type=&parent_id=&device_id=` | 下と同じ、地図1つ分の `FeatureCollection` です — ただしここでは絞り込みの引数名が `type` ではなく `target_type` です。`map_uuid` がない場合は空のコレクションが返ります。 |
-| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 1つの地図の図形をGeoJSONの `FeatureCollection` として返します。`type` は旧名称もマッチします(`equipment` ⇒ `equipment_collection`、`aot_device` ⇒ `device`)。各図形にはサーバー側で `db_id`、`shape_uuid`(図形自身の識別子 — クライアントが作る `node_id` とは別の値)、解決済みの `device_id`/`device_type`、`parent_id`、(`type=facility` の場合)3Dメタデータが付与されます。まとめて保存された機器は、返すときに再び個々の図形に展開されます。 |
+| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 1つの地図の図形をGeoJSONの `FeatureCollection` として返します。`type` は旧名称もマッチします(`equipment` ⇒ `equipment_collection`、`aot_device` ⇒ `device`)。各図形にはサーバー側で `db_id`、`shape_uuid`(図形自身の識別子 — クライアントが作る `node_id` とは別の値)、解決済みの `device_id`/`device_type`、`parent_id`、(`type=facility` の場合)3Dメタデータが付与されます。まとめて保存された機器は、返すときに再び個々の図形に展開されます。`type` を省略するか `site`・`zone` を指定した場合、レスポンスには `collapsed_zones` も含まれます — 返されたゾーンのうち、自分のサイトと重複している(輪郭がほぼ同じで、自分の名前もなく、付随データもない)ため、別レイヤーとして描く代わりにサイトに折り込んで扱うべきゾーンのuuid一覧です。 |
 | POST | `/api/geo/overlays` | 1つの `map_uuid` + `type` に対する一括保存/置換です。このページで最も複雑なエンドポイントなので、下の**詳細**で別途説明します。 |
 | POST | `/api/geo/overlays/delta` | 全図形の代わりに変更分だけを送ります — 大規模な地図で有利です。ボディ: `{map_uuid, upserts: [...], deletes: [node_idまたはdb_id, ...]}`。機器の upsert はまとめ行にマージされ、一時的なスプリンクラーの点マーカーはこの経路でも除外されます。こちらも `edit_settings` と地図スコープが必要です。 |
 | GET | `/api/geo/sites` | `site` タイプの図形すべてをGeoJSONで。`?map_uuid=` は任意。 |
@@ -43,10 +43,11 @@
 - **ボディに含まれていないというだけでは削除されません。** 明示的な `deletes: [node_idまたはdb_id, ...]` リスト、または `features: []` と `allow_empty: true` の組み合わせだけがレコードを削除します(過去に「ボディにない」を「削除」として扱ってしまい、図形が丸ごと消えた事故があったための仕様です)。
 - `aot_device` の空のボディは、すべてのマーカーを消す代わりにそのまま拒否されます — デバイスの配置は `POST /api/geo/device/location` を通してのみ行います。
 - `equipment` の図形は1つにまとめられた `equipment_collection` レコードとして保存されます(セット全体を丸ごと置換)。それ以外は図形単位で保存されます。まとめ保存の経路は既存のセットを先に削除するため、空の機器ボディは `allow_empty: true` で確認しない限り拒否され、何件削除しようとしたかも併せて返します。
+- 同じ機器のまとめの中で、スプリンクラーのカバレッジ図形にはもう1段の安全装置があります — 送られてきたボディにカバレッジが1つもないが既存のまとめにはある場合、`deletes` に明示的に名前が挙がっていないカバレッジ図形は削除されずそのまま引き継がれます。
 - 一時的に表示されるスプリンクラーの点マーカーは保存されずに除外されます — そのマーカーだけのボディは空として扱われます。
 - 幾何ルールは何かを書き込む前に検査され、不正な図形が1つでもあれば保存全体が幾何エラーで中断されます(機器はこの検査の対象外)。
 - `aot_type`・`device_id`・`channel_id` は保存されるJSONから取り除かれます — 読み取り時に導出される値のため、そのまま往復保存されることは期待できません。
-- レスポンス: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}`(機器の一括保存経路では `stats.mode: 'bulk_bundle'` 形式)。
+- レスポンス: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}`(機器の一括保存経路では `stats.mode: 'bulk_bundle'` 形式で、上のスプリンクラーカバレッジの安全装置が働いたときは `kept_coverage` も併せて返します)。
 
 ---
 
@@ -90,7 +91,7 @@
 | GET | `/api/geo/devices?map_uuid=&device_ids=&include_all=` | 地図に配置可能なデバイスの一覧。レスポンス: `{ok, devices, all_measurements_map}`。条件付き(304)レスポンスに対応。 |
 | GET | `/api/geo/inputs` | センサーフィッティングの割り当て画面用、チャンネル単位のフラットな一覧(`DeviceMeasurements`) — 有効化された入力のみで、各項目にデバイス・チャンネルと換算後の単位を含むラベルが入ります。 |
 | GET | `/api/geo/outputs` | アクチュエーターフィッティングの割り当て画面用の `Output` フラット一覧。出力ごとに種類とインターフェースも含まれます。 |
-| GET | `/api/geo/device/<device_uuid>/detail` | デバイスモーダルの全データ: 識別情報、所属エリア、制御方式(オン/オフ、値、PWM、3方向)、チャンネル、複合デバイスの子デバイス、ランタイム情報(経過時間/前回作動時間/保留中のスケジュール)。`?channel=`(デフォルト `0`)でランタイムの数値をどのチャンネルから見るかを決めます。 |
+| GET | `/api/geo/device/<device_uuid>/detail` | デバイスモーダルの全データ: 識別情報、所属エリア、制御方式(オン/オフ、値、PWM、3方向 — 3方向は対になった開閉アクチュエーターと、自分で位置を決める値出力(Matterの窓カバリングなど)が該当)、チャンネル、複合デバイスの子デバイス、ランタイム情報(経過時間/前回作動時間/保留中のスケジュール)。`?channel=`(デフォルト `0`)でランタイムの数値をどのチャンネルから見るかを決めます。 |
 | POST | `/api/geo/link_status` | 地図バッジ用のバッテリー/RSSI一括取得。ボディ: `{ids: [...]}`(最大100件)。バッテリーや通信品質が `null` の場合、その値を持つチャンネルが無いという意味です — このときバッジは0%として描かず、まったく描きません。 |
 | POST | `/api/geo/device/split-apply` | ゾーンを複数の区画(ストリップ/グリッド)に分割し、各区画にデバイスマーカーの図形を作成して、その区画内にあるデバイスマーカーへ自動的に割り当てます。`edit_plots` が必要です。`name` で名前のベースを決め、`device_kind` でどの種類のデバイスが区画を取れるかを絞れます — 空にすると全種類が候補になり、マーカーが混在する地図ではほとんどが曖昧なまま残ります。サーバーはプレビューが見せたポリゴンを信頼せず、同じパラメータで幾何を再計算します。その分割パラメータと*プレビュー*エンドポイント(下記 `GET /api/geo/plot/split-preview`)は、栽培区画の分割機能と共有しています — 分割結果がデバイスになろうと区画になろうと、幾何計算自体は同じだからです。レスポンス: `{ok, created, info, assigned, unassigned, message?}` で、`message` は中のデバイスが1つに特定できなかった区画がいくつあるかを伝えます。 |
 
@@ -117,8 +118,8 @@
 |---|---|---|
 | GET | `/api/geo/site/<site_uuid>/contents` | サイト内のデバイス一覧(施設のフィッティングとして使われているアクチュエーターは除く — それらはサイトではなく所属する施設に属します)。 |
 | GET | `/api/geo/site/<site_uuid>/summary?force=` | サイトのステータス/本日のタスク/ノートの集計。30秒キャッシュ(`force=1` で無視)。 |
-| GET | `/api/geo/site/<site_uuid>/weather` | 現在割り当てられている気象観測デバイス。レスポンス: `{selected, source, candidates}`。 |
-| POST | `/api/geo/site/<site_uuid>/weather` | ボディ: `{device_ids: [...]}`(空配列でもキー自体は必須) — サイトの気象ソースを設定します。 |
+| GET | `/api/geo/site/<site_uuid>/weather` | 現在割り当てられている気象観測デバイスと予報の出典。レスポンス: `{selected, source, candidates, forecast: {selected, candidates, calibration?}}` — `forecast.selected` は優先順、候補ごとに `kind`（`hourly`/`daily`）・`distance_km`。`forecast.calibration` はサイトに指定された予報の出典がある場合のみ含まれ、サイトの予報補正モード(`off`/`applied`/`collecting`)と変数ごとの補正値、直近の補正イベント、未確認件数を持ちます。 |
+| POST | `/api/geo/site/<site_uuid>/weather` | ボディ: `{device_ids?: [...], forecast_ids?: [...], cal_mode?: "auto"\|"on"\|"off", cal_ack?: true}` — 少なくとも1つのキーが必要で、渡したキーだけが変わります（空配列 = 指定解除）。`forecast_ids` はツイン・地図の天気・AI が共通で読むサイトの予報の出典で、順序が優先順です。`cal_mode` はサイトの予報補正モードを設定します。`cal_ack` はそのサイトの未確認の補正イベントを既読にします。 |
 
 ---
 
@@ -175,12 +176,12 @@
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/aot/facility/<facility_uuid>/status?function_uuid=` | ポーリング用の軽量ステータスバッジ(約5秒間隔): `{level: 'idle'\|'warn'\|'active'\|'emergency', reasons, active_count, total_count, function_active, function_stale, function_name}`。 |
+| GET | `/api/aot/facility/<facility_uuid>/status?function_uuid=` | ポーリング用の軽量ステータスバッジ(約5秒間隔): `{level: 'idle'\|'warn'\|'active'\|'emergency', reasons, active_count, total_count, function_active, function_stale, function_name}`。VPDの偏差は、室内の温度・湿度から計算した空気VPDで判定し、稼働中のコーディネーターの目標が葉基準なら葉VPDで判定します。 |
 | GET | `/api/aot/facility/<facility_uuid>/setpoints` | 保存済みの**安全範囲**の上下限に加え、`effective`(制御ループが実際に追従しているリアルタイムの目標 — これはここではなく区画のプログラム/ステージから来ます)。 |
 | POST | `/api/aot/facility/<facility_uuid>/setpoints` | `edit_settings` が必要。ボディ: `guide_t_min_c`/`guide_t_max_c`、`guide_rh_min_pct`/`guide_rh_max_pct`、`temp_min_c`/`temp_max_c`、`humid_min_pct`/`humid_max_pct` のいずれか(すべて範囲検証あり)。`target_vpd_kpa`/`target_co2_ppm` をここに送ると拒否されます — 目標値は栽培プログラム経由でのみ設定します。変更値は連携しているすべての環境コーディネーターのファンクションに反映され、即座に再読み込みがトリガーされます。 |
 | POST | `/api/aot/facility/<facility_uuid>/control` | コーディネーターを経由しない単一アクチュエーターの手動制御で、安全ゲートのインターロックが働きます(例: 風速の安全ゲートが強制的に閉じている換気窓を開けようとするリクエストは拒否されます)。`edit_settings` + 施設スコープが必要。ボディ: `{slot_key, action: 'on'\|'off'\|'set', percent?, reason?}`。オン/オフ機器に `set` でパーセントを与えると、60秒周期内の比例ON時間に変換されます(5%未満はオフ扱い)。ゲートに阻まれた場合は `400`、命令が機器に届かなかった場合は `502`。 |
 | POST | `/api/aot/facility/<facility_uuid>/estop` | 非常停止 — **出力だけでなく、環境制御そのものを止めます。** この施設を制御していて稼働中の環境コーディネーターがあれば、そのコーディネーター自身の非常停止コマンドを使います: すべてのアクチュエーターを安全値へ(安全値がなければオフへ)送り、コーディネーターの次サイクルを60秒保留して、直後に機器を動かし直せないようにします。紐づくコーディネーターが無い、または停止している場合 — もしくはそのうち1つでも停止を確認できなかった場合 — に限り、出力を直接、安全な既定状態へ送る経路にフォールバックします(暖房/換気窓/ファン/CO2/灌水/照明はオフ、保温カーテンは展開、遮光カーテンは収納)。このフォールバックで命令を受けるのは、今この施設に紐づいている機器だけです。ボディ: `{confirm: "STOP"}`(この文字列と完全一致が必要)。`edit_settings` が必要。レスポンスはどちらの経路を通ったかに加え、適用/失敗の台数と、コーディネーターごと・機器ごとの結果を返します。アクチュエーターかコーディネーターのいずれか1つでも届かなかった場合、レスポンスは `ok` に**なりません**。 |
-| GET | `/api/aot/facility/<facility_uuid>/runtime` | 重量級のリアルタイムスナップショット: 稼働履歴を含むアクチュエーター状態、保存済みの表示順、室内外センサー、ベイ、区画(予定のものも含む)、ベイごとの容量。オン/オフ機器には平常値(直近7日の日平均、当日は除外)も付き、稼働履歴は120秒キャッシュです。センサー値はコーディネーターが稼働していればそのサイクルスナップショットから、そうでなければバックグラウンドで更新されるキャッシュ(20秒)から来るため、最初の呼び出しではセンサーがまだ埋まりきっていないことがあります。条件付き(304)レスポンス対応。 |
+| GET | `/api/aot/facility/<facility_uuid>/runtime` | 重量級のリアルタイムスナップショット: 稼働履歴を含むアクチュエーター状態、保存済みの表示順、室内外センサー、ベイ、区画(予定のものも含む)、ベイごとの容量。オン/オフ機器には平常値(直近7日の日平均、当日は除外)も付き、稼働履歴は120秒キャッシュです。センサー値はコーディネーターが稼働していればそのサイクルスナップショットから、そうでなければバックグラウンドで更新されるキャッシュ(20秒)から来るため、最初の呼び出しではセンサーがまだ埋まりきっていないことがあります。`indoor`には`vpd_kpa`(センサーが自前のVPDを出していればその値、なければ計算値)と`vpd_air_kpa`(温度・湿度から計算した空気VPD)が載り、稼働中のコーディネーターのスナップショットのときだけ`leaf_temp_c`、`vpd_leaf_kpa`(葉温を実際に測っているときのみ)、`vpd_target_basis`、`vpd_target_on`が加わります。条件付き(304)レスポンス対応。 |
 | GET | `/api/aot/facility/<facility_uuid>/env_summary` | コーディネーターが直近サイクルでデーモンに保存したサマリー(時系列クエリなし — 1行だけを読む軽量な呼び出し)。古くなっているかどうかと、その判定に実際に使った基準(制御周期の3倍、最低300秒)も併せて返します。 |
 | GET | `/api/aot/facility/<facility_uuid>/env_week?bay=&days=` | 日次の環境推移シリーズ(デフォルト7日、1〜31)。10分キャッシュ。描画した区間(開始・終了の日付)を施設自身のタイムゾーンで併せて返します。 |
 | GET | `/api/aot/facility/<facility_uuid>/actuator_history?slot_key=&hours=` | アクチュエーター1件の稼働履歴(パーセント/デューティのシリーズ、なければオン/オフの継続時間で代替)。`hours` はデフォルト24、1〜168に制限。 |
@@ -357,6 +358,22 @@
 
 ---
 
+## 水回路 { #water-network }
+
+`GET /api/geo/water_net?map_uuid=<uuid>` は地図の配管を読み取るたびに形状から回路に解き、何も保存しません。`edit_settings` 権限とその地図のグループスコープが必要です(なければ `403`、`map_uuid` がなければ `400`、存在しない地図は `404`)。
+
+| 項目 | 意味 |
+|---|---|
+| `summary` | 配管数、他の配管とつながった枝管、配管に付いたノズル、部品、回路数 |
+| `networks` | 回路ごとの配管・ノズル・供給部品・ループ、およびポンプ定格と需要(`pump_lpm`, `demand_lpm`, `pump_ratio`)、満水タンクが持つ時間(`tank_l`, `tank_min`)。分からない値は `null` で、`pump_note` / `tank_note` が理由を示します(`no-pump`, `no-rating`, `no-tank`, `no-capacity`, `no-demand`) |
+| `areas` | 敷地・区域ごとの、中のノズルの回路と共通の上流経路 |
+| `parts` | 部品ごとの接続装置(`device`, `device_kind`)、5 m 以内にマーカーが複数あるときは候補(`candidates`、その場合どれも接続しない)、上流経路、下流ノズル数 |
+| `checks` | 点検項目: `network-disconnected`, `no-source`, `area-pipe-mismatch`, `emitter-no-flow`, `part-unattached`, `part-device-ambiguous`, `network-loop` |
+
+供給部品のない回路には上流経路がありません。応答は項目を知らせるだけでデータを変更しません。ノズルがどの出力のものかは、これまでどおり担当区域が決めます。
+
+`GET /api/geo/water_net/paths?map_uuid=<uuid>`(オーバーレイと同じくログインのみ)は、出力ごとにその水が通る配管・部品の id を `outputs` として返します(供給のある回路のみ)。地図ウィジェットが一度読み、稼働中の出力の経路を同じ設備色で太く描きます。
+
 ## 地図の並び順 { #map-ordering }
 
 | メソッド | パス | 説明 |
@@ -370,8 +387,9 @@
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/geo/local_time?lat=&lng=` | 地図ウィジェットの時計ドック用 — 現地のタイムゾーン/時刻、および日の出・日の入りのイベントウィンドウ(昨日から明後日まで)。 |
+| GET | `/api/geo/local_time?lat=&lng=&at=` | 地図ウィジェットの時計ドック用 — 現地のタイムゾーン/時刻(常に今この瞬間)と、日の出・日の入りのイベントウィンドウ(昨日から明後日まで)。基準は通常今日だが、地図の時間スライダーが別の時刻に動いている場合は `at`(epoch ミリ秒、今から30日以内)基準に切り替わる。 |
 | GET | `/api/geo/sun_event?target_id=` | 対象が継承している位置に基づく、今日の日の出・日の入り(1日のうちの秒数)。 |
+| GET | `/api/geo/weather_state?site=&lat=&lng=&t=` | 地図ウィジェットの気象表現用の状態一式 — 降水・風速・風向・雲量・視程・気温、その現在値がウィジェットのしきい値(風・降水・霜・熱波)を超えたときの危険、太陽の高度・方位・段階。値は利用者が用意した出所からのみ得られる — 地図に登録された GIS 入力のうち気象の値を返すもの(**気象データの出所として使う** を有効にしたもの)と、敷地に気象観測点として指定した機器。この2つのうちどちらを先に見るかはウィジェットのオプションが決め、項目ごとに許容する遅れを超えていない値が最初にある出所を使う。`site`(敷地の id)および/または `lat`+`lng`、さらに任意で `t`(地図の時間スライダーが位置している時刻 — ISO 8601 または epoch 秒・ミリ秒)を受け取る — 今から5分を超えて異なる場合、今の状態(この場合は `timeline` も一緒に載る)ではなく、その時刻の状態(未来は GIS 入力の予報、過去は気象観測点・GIS 入力の履歴)に応答が切り替わる。加えてウィジェットのオプション(`order`・`max_age`・`hz_wind`・`hz_precip`・`hz_temp`・`hz_heat`・`tint_lo`・`tint_hi`)も受け取る。出所が一つもなければ値は空で返り、GIS 入力の結果は5分間キャッシュし(機器の値は毎回読む)、出所が失敗しても太陽の位置と得られた値だけで応答する。 |
 
 ---
 

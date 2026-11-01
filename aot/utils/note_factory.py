@@ -28,6 +28,8 @@ def create_note_record(
     gps_lat=None,
     gps_lng=None,
     append_text=None,
+    files=None,
+    user_id=None,
 ):
     """Create a Notes record and return its unique_id. Returns None on failure.
 
@@ -46,6 +48,8 @@ def create_note_record(
     :param gps_lat:      latitude (float, optional)
     :param gps_lng:      longitude (float, optional)
     :param append_text:  text to append at the end of the body (system messages, etc.)
+    :param files:        list of attachment paths relative to PATH_NOTE_ATTACHMENTS
+    :param user_id:      users.id of the author (None = system/daemon note)
     :return:             the created Notes.unique_id, or None
     """
     try:
@@ -99,6 +103,10 @@ def create_note_record(
             new_note.priority = int(priority)
             new_note.gps_lat = gps_lat
             new_note.gps_lng = gps_lng
+            if files:
+                new_note.files = ','.join(f for f in files if f)
+            if user_id is not None:
+                new_note.user_id = user_id
 
             # Detect [task:UUID] pattern → auto-set parent_task_id
             task_match = re.search(r'\[task:([a-f0-9\-]{36})\]', body, re.I)

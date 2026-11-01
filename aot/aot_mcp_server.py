@@ -54,6 +54,10 @@ logger = logging.getLogger("aot_mcp_server")
 PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "aot-mcp-server"
 SERVER_VERSION = "1.0.0"
+#: HTTP 요청 본문 상한. 앞의 것은 Flask(MAX_CONTENT_LENGTH, JSON-RPC 413 본문), 뒤의 것은
+#: waitress(max_request_body_size — 받는 중에 끊어 디스크·메모리에 쌓이지 않게).
+MCP_HTTP_BODY_LIMIT = 8 * 1024 * 1024
+MCP_HTTP_BODY_HARD_LIMIT = 16 * 1024 * 1024
 # 동일 사용자가 여러 AoT 인스턴스의 MCP 서버를 동시에 붙였을 때 응답을 구분할 수
 # 있도록, 관리자가 별도로 설정하지 않아도 프로세스 호스트명을 자동으로 싣는다.
 SERVER_HOST = socket.gethostname()
@@ -82,14 +86,19 @@ from aot.tools.tool_execution import (  # noqa: E402
 )
 
 
+#: initialize 응답의 능력 선언 — 도구와 읽기 전용 자료(resources). subscribe·listChanged 는 없다.
+_CAPABILITIES = {"tools": {}, "resources": {}}
+
+
 class StdioMCPServer:
     """Reads JSON-RPC requests from stdin, writes responses to stdout.
 
-    Follows MCP protocol 2024-11-05:
+    Follows MCP protocol 2024-11-05 (요청한 버전이 _SUPPORTED_PROTOCOLS 안이면 그 버전으로 협상):
       1. initialize       → capabilities handshake
       2. notifications/initialized → client ready signal
       3. tools/list       → return all available tools
       4. tools/call       → execute tool and return result
+      5. resources/list·read·templates/list → AI 수신함 카드(P2, 읽기 전용)
     """
 
     def __init__(self, app, out=None):
@@ -110,6 +119,8 @@ class StdioMCPServer:
         self._tool_profile = None
         # initialize 에서 인증에 성공해야 True. 실패하면 tools/* 를 거부한다.
         self._authed = False
+        # initialize 에서 협상한 프로토콜 버전. ≥2025-06-18 이면 post 결과에 resource_link 를 싣는다.
+        self._protocol = PROTOCOL_VERSION
         # 클라이언트가 initialize에서 capabilities.elicitation을 선언했는가.
         # 참이면 쓰기 도구 승인을 비동기 큐 대신 실시간 elicitation으로 처리한다
         # (2026-07-26 확인: Claude Code는 이 capability를 선언한다).
@@ -225,7 +236,11 @@ class StdioMCPServer:
                             "error": {"code": -32001, "message": err.get("message")}})
                 return
             self._authed = True
+            asked = str((params or {}).get("protocolVersion") or "").strip()
+            self._protocol = asked if asked in _SUPPORTED_PROTOCOLS else PROTOCOL_VERSION
             self._agent_id = agent_id
+            # stdio 는 연결 주소가 없으므로 환경변수로 좁힌다(HTTP 의 ?tools=lite).
+            role = mcp_auth.narrow_profile(role, os.environ.get("AOT_MCP_TOOLS"))
             self._role = role
             self._tool_profile = mcp_auth.tool_profile_of(role)
             logger.info(f"[AoTMCP] Client identified as '{self._agent_id}' "
@@ -234,11 +249,11 @@ class StdioMCPServer:
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
-                    "protocolVersion": PROTOCOL_VERSION,
-                    "capabilities": {"tools": {}},
+                    "protocolVersion": self._protocol,
+                    "capabilities": dict(_CAPABILITIES),
                     "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                    "host": SERVER_HOST},
-                    "instructions": _server_instructions(self._tool_profile),
+                    "instructions": _server_instructions(self._tool_profile, self._role),
                 },
             })
 
@@ -246,10 +261,14 @@ class StdioMCPServer:
             self._initialized = True
             logger.info("[AoTMCP] Client initialized — ready to serve tools.")
 
-        elif method in ("tools/list", "tools/call") and not self._authed:
+        elif (method in ("tools/list", "tools/call") or method in _RESOURCE_METHODS) \
+                and not self._authed:
             self._send({"jsonrpc": "2.0", "id": msg_id,
                         "error": {"code": -32001,
                                   "message": "인증되지 않은 세션입니다. initialize 를 먼저 수행하세요."}})
+
+        elif method in _RESOURCE_METHODS:
+            self._resources(msg_id, method, params)
 
         elif method == "tools/list":
             tools = _get_all_tools(self._app, role=self._role,
@@ -281,7 +300,8 @@ class StdioMCPServer:
                                             self._role, 'user_id', None),
                                         transport="mcp_stdio",
                                         session_key=self._session_key,
-                                        tool_profile=self._tool_profile)
+                                        tool_profile=self._tool_profile,
+                                        resource_links=_resource_links_ok(self._protocol))
                 self._send({
                     "jsonrpc": "2.0",
                     "id": msg_id,
@@ -300,6 +320,21 @@ class StdioMCPServer:
                 "id": msg_id,
                 "error": {"code": -32601, "message": f"Method not found: {method}"},
             })
+
+    def _resources(self, msg_id, method, params):
+        """resources/* — AI 수신함 카드(키 주인 본인 것만). 실패는 JSON-RPC 오류로."""
+        from aot.utils import ai_card_resources as res
+        if msg_id is None:                    # 알림에는 응답하지 않는다
+            return
+        try:
+            result = res.handle(self._app, method, params,
+                                getattr(self._role, "user_id", None),
+                                agent_id=self._agent_id, transport="mcp_stdio",
+                                session_key=self._session_key)
+            self._send({"jsonrpc": "2.0", "id": msg_id, "result": result})
+        except res.RpcError as exc:
+            self._send({"jsonrpc": "2.0", "id": msg_id,
+                        "error": {"code": exc.code, "message": exc.message}})
 
     def run(self):
         logger.info("[AoTMCP] stdio mode started. Waiting for JSON-RPC input...")
@@ -326,6 +361,17 @@ class StdioMCPServer:
 #: 능력 선언이 동일하고, 클라이언트가 요구한 버전을 그대로 돌려주면 된다.
 #: 2025-03-26 부터 Streamable HTTP 가 표준 전송이다.
 _SUPPORTED_PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
+
+#: resources/* 로 처리하는 메서드(읽기 전용 AI 카드 자료). 그 밖의 resources/* 는 "없는 메서드".
+_RESOURCE_METHODS = ("resources/list", "resources/read", "resources/templates/list")
+
+
+def _resource_links_ok(version):
+    """협상한 버전이 post 결과의 resource_link 블록을 받을 수 있는가(≥2025-06-18).
+    http 는 요청의 `MCP-Protocol-Version` 헤더 값을 넘긴다(없으면 2025-03-26 으로 본다)."""
+    from aot.utils import ai_card_resources
+    return ai_card_resources.supports_links(version)
+
 
 #: `Mcp-Session-Id` 헤더를 세션 열쇠로 받을 최대 길이. 넘으면 없는 것으로 본다.
 _SESSION_HEADER_MAX_LEN = 128
@@ -362,6 +408,16 @@ def _run_http_server(app, port=5700):
     from aot.databases.models import AIGlobalSettings
 
     http_app = Flask("aot_mcp_http")
+    # 요청 본문 상한 8 MiB — screen_action 의 attach.b64 (5 MiB 파일 ≈ 6.7 MB) + JSON
+    # 여유. 넘으면 413(JSON-RPC 본문). 받기 자체의 상한은 아래 serve() 의
+    # max_request_body_size 가 맡는다(웹 쪽 nginx 30M 은 그대로).
+    http_app.config["MAX_CONTENT_LENGTH"] = MCP_HTTP_BODY_LIMIT
+
+    @http_app.errorhandler(413)
+    def _too_large(_err):
+        return jsonify({"jsonrpc": "2.0", "id": None, "error": {
+            "code": -32600,
+            "message": "Request body too large (limit 8 MiB). Attach a smaller file."}}), 413
 
     # @manual ai/overview#enable-and-start
     def _http_server_enabled():
@@ -408,7 +464,8 @@ def _run_http_server(app, port=5700):
             return jsonify({"error": "not found"}), 404
         return jsonify(mcp_central.protected_resource_metadata(cfg))
 
-    def _handle_rpc(msg, agent_id, role, session_key=None, blocked=None):
+    def _handle_rpc(msg, agent_id, role, session_key=None, blocked=None,
+                    protocol=None):
         """One JSON-RPC message → response dict, or None for a notification.
 
         Routes to the same _get_all_tools/_execute_tool the stdio transport and
@@ -421,6 +478,9 @@ def _run_http_server(app, port=5700):
 
         blocked: 토큰은 맞지만 이 AoT 사용자와 이어지지 않은 연결의 안내문. 연결과
         목록은 그대로 주고, 도구 실행만 이 안내를 담은 도구 오류로 돌려준다.
+
+        protocol: 요청의 `MCP-Protocol-Version` 헤더 원문(없으면 None = 2025-03-26 취급).
+        ≥2025-06-18 이면 post 결과에 resource_link 블록을 싣는다.
         """
         if not isinstance(msg, dict):
             return _rpc_error(None, -32600, "Invalid Request")
@@ -433,12 +493,20 @@ def _run_http_server(app, port=5700):
         if method == "initialize":
             asked = (params.get("protocolVersion") or "").strip()
             version = asked if asked in _SUPPORTED_PROTOCOLS else PROTOCOL_VERSION
+            # 어떤 AI 클라이언트가 붙었는지 남긴다(stdio 는 이미 남김). 화면 연동
+            # 설계(2026-10)에서 클라이언트별 동작을 실측하려는 것 — 사용자 기기는
+            # 여기서 알 수 없다(원격 커넥터는 그 회사 서버가 호출한다).
+            client = params.get("clientInfo") or {}
+            logger.info("[AoTMCP] http initialize client=%s/%s agent=%s ua=%s",
+                        str(client.get("name") or "unknown")[:64],
+                        str(client.get("version") or "")[:32], agent_id,
+                        (request.headers.get("User-Agent") or "")[:120])
             return {"jsonrpc": "2.0", "id": msg_id, "result": {
                 "protocolVersion": version,
-                "capabilities": {"tools": {}},
+                "capabilities": dict(_CAPABILITIES),
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION,
                                "host": SERVER_HOST},
-                "instructions": (blocked + "\n\n" if blocked else "") + _server_instructions(profile),
+                "instructions": (blocked + "\n\n" if blocked else "") + _server_instructions(profile, role),
             }}
         if method.startswith("notifications/"):
             return None                      # 알림에는 응답하지 않는다
@@ -448,6 +516,18 @@ def _run_http_server(app, port=5700):
             return {"jsonrpc": "2.0", "id": msg_id,
                     "result": {"tools": _get_all_tools(app, role=role,
                                                        profile=profile)}}
+        if method in _RESOURCE_METHODS:
+            if msg_id is None:
+                return None
+            if blocked:
+                return _rpc_error(msg_id, -32001, blocked)
+            from aot.utils import ai_card_resources as res
+            try:
+                return {"jsonrpc": "2.0", "id": msg_id, "result": res.handle(
+                    app, method, params, getattr(role, "user_id", None),
+                    agent_id=agent_id, transport="mcp_http", session_key=session_key)}
+            except res.RpcError as exc:
+                return _rpc_error(msg_id, exc.code, exc.message)
         if method == "tools/call":
             name = params.get("name", "")
             if not name:
@@ -463,7 +543,8 @@ def _run_http_server(app, port=5700):
                                             role, 'user_id', None),
                                         transport="mcp_http",
                                         session_key=session_key,
-                                        tool_profile=profile)
+                                        tool_profile=profile,
+                                        resource_links=_resource_links_ok(protocol))
                 return {"jsonrpc": "2.0", "id": msg_id,
                         "result": {"content": content}}
             except Exception as exc:
@@ -485,6 +566,7 @@ def _run_http_server(app, port=5700):
         declared = request.headers.get("X-MCP-Agent-Id")
         with app.app_context():
             ok, agent_id, role, err = mcp_auth.authenticate_http(request.headers, declared)
+        role = mcp_auth.narrow_profile(role, request.args.get("tools"))
         blocked = None
         if not ok:
             if (err or {}).get("error") != mcp_auth.ERROR_NOT_LINKED:
@@ -501,7 +583,9 @@ def _run_http_server(app, port=5700):
         session_key = _session_header(request.headers)
         batch = isinstance(payload, list)
         messages = payload if batch else [payload]
-        responses = [r for r in (_handle_rpc(m, agent_id, role, session_key, blocked)
+        protocol = (request.headers.get("MCP-Protocol-Version") or "").strip()[:32] or None
+        responses = [r for r in (_handle_rpc(m, agent_id, role, session_key, blocked,
+                                             protocol)
                                  for m in messages)
                      if r is not None]
 
@@ -553,6 +637,7 @@ def _run_http_server(app, port=5700):
             ok, _agent, role, err = mcp_auth.authenticate_http(request.headers)
         if not ok:
             return _unauthorized(err)
+        role = mcp_auth.narrow_profile(role, request.args.get("tools"))
         tools = _get_all_tools(app, role=role,
                                profile=mcp_auth.tool_profile_of(role))
         return jsonify({"tools": tools})
@@ -598,6 +683,7 @@ def _run_http_server(app, port=5700):
             ok, agent_id, role, err = mcp_auth.authenticate_http(request.headers, declared)
         if not ok:
             return _unauthorized(err)
+        role = mcp_auth.narrow_profile(role, request.args.get("tools"))
         try:
             # 그룹 스코프(A2) — 신원은 키 소유자(`RoleInfo.user_id`).
             content = _execute_tool(app, tool_name, arguments,
@@ -632,7 +718,12 @@ def _run_http_server(app, port=5700):
         return
 
     logger.info(f"[AoTMCP] HTTP mode started on {host}:{port} (waitress)")
-    serve(http_app, host=host, port=port, threads=4, ident='AoT-MCP')
+    # waitress 는 본문 전체를 받아 둔 뒤에야 Flask 를 부른다(기본 상한 1 GiB, 넘치면
+    # 임시 파일). MAX_CONTENT_LENGTH 만으로는 인증 전 요청도 1 GiB 까지 디스크에 쌓인다
+    # (P1 보안 리뷰 M1). 8~16 MiB 는 Flask 가 JSON-RPC 413 을 주고, 그 위는 waitress 가
+    # 받기 전에 끊는다.
+    serve(http_app, host=host, port=port, threads=4, ident='AoT-MCP',
+          max_request_body_size=MCP_HTTP_BODY_HARD_LIMIT)
 
 
 # =============================================================================
@@ -736,6 +827,13 @@ def main():
     set_process_role(ROLE_MCP)
 
     if args.http:
+        # AI·슬라이더의 예보 조회가 첫 호출에 계산(0.7~1.1초)을 기다리지 않게 대지 예보 계열을 미리 채운다.
+        # 이 프로세스의 캐시는 웹 워커와 따로다. stdio 모드는 앱이 띄우는 부속 프로세스라 하지 않는다.
+        try:
+            from aot.aot_flask.geo.forecast_series import start_prewarm
+            start_prewarm(app)
+        except Exception as e:  # never block server startup
+            logger.warning(f"[AoTMCP] forecast series prewarm scheduling failed: {e}")
         _run_http_server(app, port=args.port)
     else:
         server = StdioMCPServer(app, out=protocol_stdout)

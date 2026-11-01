@@ -63,6 +63,9 @@ class _Fixture(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # 테이블을 비우는 픽스처 — 라이브 DB 면 거부(aot/tests/_live_db_guard.py).
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         cls.app = create_app()
         # 실제 HTTP 라운드트립 테스트가 CSRF 토큰 없이 POST 한다 — 이 검사가
         # 보려는 것은 그룹 스코프 게이트지 CSRF 가 아니다.
@@ -380,6 +383,9 @@ class TestApprovalGroupScopeHTTP(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # 테이블을 비우는 픽스처 — 라이브 DB 면 거부(aot/tests/_live_db_guard.py).
+        from aot.tests._live_db_guard import refuse_live_db
+        refuse_live_db()
         cls.app = create_app()
         cls.app.config['WTF_CSRF_ENABLED'] = False
         cls.app.config['TESTING'] = True

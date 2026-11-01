@@ -125,7 +125,7 @@ def api_notes_target_get(target_id):
         if want_desc:
             try:
                 from aot.databases.models import GeoShape
-                from aot.utils.geo_hierarchy import descendant_target_ids
+                from aot.aot_flask.geo.device_membership import place_scope_ids
                 sh = GeoShape.query.filter_by(unique_id=target_id).first()
                 if sh is None:
                     # 시설은 정체성이 둘이다 — 노트는 GeoFacility uuid 에
@@ -136,10 +136,21 @@ def api_notes_target_get(target_id):
                         sh = GeoShape.query.filter_by(
                             unique_id=getattr(fac, 'shape_uuid', None)).first()
                 if sh is not None:
-                    more, _bd = descendant_target_ids(sh, include_self=False)
+                    # AI(search_notes)와 같은 정본 — 계층 자손에 바인딩 장치까지.
+                    # 예전에는 자손만 봐서 구역에 매인 밸브의 노트가 빠졌다.
+                    more, _bd = place_scope_ids(sh, include_self=False)
                     target_ids.extend(more)
+                    # 도형 자신의 노트도(시설이면 MCP 가 예전에 도형 id 에 붙였다).
+                    target_ids.append(sh.unique_id)
             except Exception:
                 current_app.logger.exception('notes: 자손 확장 실패')
+
+        # 시설은 id 가 둘(시설·도형)이다 — 어느 쪽으로 열어도 둘 다 읽는다.
+        try:
+            from aot.aot_flask.geo.device_membership import facility_identity_ids
+            target_ids = facility_identity_ids(target_ids)
+        except Exception:
+            current_app.logger.exception('notes: 시설 id 확장 실패')
 
         # [Fix] Filter by target_id.
         # Note: notes table now has target_id column
@@ -245,6 +256,12 @@ def api_notes_create():
         denied = _note_target_denial(target_id, 'create_note')
         if denied:
             return jsonify({'error': denied}), 403
+
+        # 시설이면 도형 id 로 와도 시설 id/'GeoFacility' 로 붙인다(MCP 쓰기와 같은 규칙).
+        from aot.aot_flask.geo.device_membership import \
+            normalize_facility_note_target
+        target_id, target_type = normalize_facility_note_target(
+            target_id, target_type)
 
         if gps_lat is None:
             gps_lat, gps_lng = resolve_target_gps(target_type, target_id)

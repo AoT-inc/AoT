@@ -1140,6 +1140,19 @@ High-performance vector tile map service. Supports multiple styles (streets, lig
 Stylish Mapbox vector and tile maps with excellent customization. Supports Streets, Satellite, Dark, and Light styles with superior rendering performance for smooth map interaction.
 <table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Mapbox Access Token</td><td>Text</td><tr><td>Map Style</td></td></tbody></table>
 
+### Matter: Matter Node (Sensors)
+
+- Manufacturer: Matter
+- Measurements: Variable measurements
+- Interfaces: IP
+- Libraries: websockets
+- Dependencies: [websockets](https://pypi.org/project/websockets)
+
+Sensor values from a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one sensor the device reported. Values are written when they change and again every sample interval while the device is reachable. Nothing is written while it is unreachable.
+<table><thead><tr class="header"><th>Option</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>Measurements Enabled</td><td>Multi-Select</td><td>The measurements to record</td></tr><tr><td>Node ID</td><td>Integer</td><td>Node ID on the AoT Matter fabric. Inherited from the Matter device</td></tr><tr><td>Sample Interval (seconds)</td><td>Integer
+- Default Value: 60</td><td>How often the current value is written while the device is reachable, in addition to every change it reports</td></tr><tr><td colspan="3">Channel Options</td></tr><tr><td>Name</td><td>Text</td><td>A name to distinguish this from others</td></tr><tr><td>Endpoint</td><td>Integer
+- Default Value: 1</td><td>Matter endpoint number on the device</td></tr><tr><td>Cluster ID</td><td>Integer</td><td>Matter cluster id (decimal)</td></tr><tr><td>Attribute ID</td><td>Integer</td><td>Matter attribute id (decimal)</td></tr><tr><td>Sensor Kind</td><td>Text</td><td>How the raw value is scaled: temperature, humidity, illuminance, boolean_state or battery</td></tr></tbody></table>
+
 ### Melexis: MLX90393
 
 - Manufacturer: Melexis

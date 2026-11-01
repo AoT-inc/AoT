@@ -258,6 +258,27 @@ def get_operational_seconds_by_day(device_unique_id, start_str, end_str,
         logger.error(f"get_operational_seconds_by_day error for {device_unique_id}: {e}")
         return {}
 
+def get_operational_intervals(device_unique_id, start_str, end_str, channel_id=0):
+    """지정 구간에 **켠** 작동 구간 → `[(켠 epoch, 끈 epoch), …]`. 읽기 실패면 None.
+
+    `get_operational_seconds_by_day` 와 같은 원천(`duration_time`)이다 — 사건 하나가 켠 시각에
+    찍힌 켜진 초이고, 그쪽은 그 값을 합만 내고 여기서는 구간으로 편다. 음수 초는 크기로 읽는다
+    (`twin_effects.state.duty_step_series` 와 같다). 끈 시각이 기록되지 않은 진행 중 실행은 없다.
+
+    ⚠ **None 과 `[]` 는 다르다.** 앞은 못 읽었고 뒤는 그 기간에 안 켰다. 물 수지는 다른 밸브가
+      안 켰다는 전제로 전달량을 계산하므로, 못 읽은 것을 빈 목록으로 접으면 조용히 틀린다.
+    """
+    ch_index = _resolve_channel_index(device_unique_id, channel_id)
+    if ch_index is None:
+        ch_index = 0
+    rows = read_influxdb_list(device_unique_id, 's', ch_index, measure='duration_time',
+                              start_str=start_str, end_str=end_str)
+    if rows is None:
+        return None
+    return sorted((float(t), float(t) + abs(float(v)))
+                  for t, v in rows if v is not None and abs(float(v)) > 0)
+
+
 def _resolve_channel_index(device_unique_id, channel_id):
     """
     채널 ID(숫자 또는 UUID)를 채널 인덱스(int)로 변환합니다.

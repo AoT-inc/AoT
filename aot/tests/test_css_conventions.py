@@ -514,7 +514,11 @@ _IMPORTANT_BUDGET = {
     # 좌상단(gs-x=0,gs-y=0)이 아닌 위젯은 42vh 밴드로 뜨지 않고 원래 그리드
     # 좌표에 남아 있었다 — 좌상단 위젯은 값이 우연히 0 이라 회귀가 가려졌다.
     "aot-modal-modern.css": 10,
-    "map/map.css": 181,
+    # 184: 측정값 독 기상 묶음의 세 줄(2026-10-20). 기온 칸 글자색(.is-temp-cold/.is-temp-hot)
+    # 두 줄은 칸을 만드는 JS 가 인라인 style 로 박은 글자색을, 위험 칸 font-size 한 줄은 인라인
+    # font-size 를 이긴다 — 인라인은 선택자로 못 이기고 !important 로만 이긴다.
+    # 182: 범례 위치 규칙을 폭 구분 없이 하나로 합쳐 두 줄을 걷었다(2026-10-20).
+    "map/map.css": 182,
     "components/aot-base-ui.css": 129,
     # 37: 마지막 하나는 통합 표(.integ-table)의 동작 열이다. aot-settings.css 의
     # `td:last-child { width: var(--aot-col-w-actions) !important }` 가 그 표에도

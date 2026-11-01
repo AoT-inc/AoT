@@ -10,6 +10,7 @@ from aot.databases.models import GeoMap, GeoSetting, GeoLayer, GeoShape, Input
 from aot.aot_flask.extensions import db
 from aot.utils.inputs import parse_input_information
 from aot.aot_flask.utils import utils_geo
+from aot.functions.utils.water_net import parts as water_parts
 from aot.aot_flask.access import scope
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 
@@ -580,6 +581,7 @@ def page_design():
                            active_page='geo_design',
                            map_configs=design_maps,
                            geo_config=utils_geo.get_geo_config(),
+                           equipment_parts=water_parts.panel_catalog(_),
                            design_search_inputs=design_search_inputs))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
@@ -626,6 +628,49 @@ def _geo_map_state(geo_map):
         return parsed if isinstance(parsed, dict) else {}
     except Exception:
         return {}
+
+
+# @manual geo/api-reference#water-network
+@blueprint.route('/api/geo/water_net', methods=['GET'])
+@login_required
+def api_geo_water_net():
+    """지도 설비의 물 회로 — 회로·상류 경로·점검 항목. 저장 상태를 읽을 때마다 푼다.
+
+    설계 페이지 전용 읽기라 그 페이지와 같은 역할을 요구하고, 그룹 스코프도 본다.
+    """
+    map_uuid = (request.args.get('map_uuid') or '').strip()
+    if not map_uuid:
+        return jsonify({'ok': False, 'message': 'map_uuid required'}), 400
+
+    if not utils_general.user_has_permission('edit_settings', silent=True):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
+    # 그룹 스코프 — 지도는 자기 자신이 부여 단위다.
+    if not scope.can_operate('geo_map', map_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
+
+    if not GeoMap.query.filter_by(unique_id=map_uuid).first():
+        return jsonify({'ok': False, 'message': 'map not found'}), 404
+
+    from aot.utils import water_net_link
+    return jsonify({'ok': True, **water_net_link.report_for_map(map_uuid)})
+
+
+# @manual geo/api-reference#water-network
+@blueprint.route('/api/geo/water_net/paths', methods=['GET'])
+@login_required
+def api_geo_water_net_paths():
+    """출력마다 그 물이 지나는 배관·부품 id — 지도 위젯이 켜진 출력의 경로를 굵게 그린다.
+
+    도형을 읽는 `/api/geo/overlays` 와 같은 수준의 읽기다(로그인). 설계 기준이라 한 번만 읽으면 된다.
+    """
+    map_uuid = (request.args.get('map_uuid') or '').strip()
+    if not map_uuid:
+        return jsonify({'ok': False, 'message': 'map_uuid required'}), 400
+    if not GeoMap.query.filter_by(unique_id=map_uuid).first():
+        return jsonify({'ok': False, 'message': 'map not found'}), 404
+    from aot.utils import water_net_link
+    return jsonify({'ok': True, **water_net_link.output_paths(map_uuid)})
 
 
 # @manual geo/api-reference#map-ordering

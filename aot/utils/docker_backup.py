@@ -14,10 +14,11 @@ import logging
 import os
 import shutil
 import sqlite3
+import stat
 import time
 
-from aot.config import (AOT_VERSION, BACKUP_PATH, PATH_STATIC, PATH_USER_SCRIPTS,
-                        SQL_DATABASE_AOT)
+from aot.config import (AOT_VERSION, BACKUP_PATH, PATH_MATTER_DATA, PATH_STATIC,
+                        PATH_USER_SCRIPTS, SQL_DATABASE_AOT)
 from aot.utils.service_control import reload_frontend
 from aot.utils.system_pi import (assure_path_exists, get_directory_free_space,
                                     get_directory_size)
@@ -46,6 +47,21 @@ UPLOAD_DIRS = UPLOAD_DIRECTORIES + [
     (PATH_GEO_OVERLAYS, "geo_overlays"),
 ]
 
+# Captured but never restored automatically. The Matter controller's fabric
+# (root CA private key, operational credentials, node list) lives in the
+# matter_server container's volume, mounted read-only here, and must not be
+# swapped under a running server -- aot-app has no docker.sock to stop it. A
+# backup without it would mean every Matter device has to be re-shared from
+# its other ecosystem after a host loss, so it is still worth capturing.
+# Restore is a manual step (docs/design/matter-controller.md §6). Anyone
+# holding a backup that contains this can control every Matter device on the
+# LAN through the AoT fabric. The server's storage log can also still hold a
+# Wi-Fi password or Thread dataset used for commissioning a new device (it
+# is removed from the credential list after use, not from the log).
+BACKUP_ONLY_DIRS = [
+    (PATH_MATTER_DATA, "matter_data"),
+]
+
 BACKUP_DIR_PREFIX = "AoT-backup-"
 
 # How many pre-restore DB safety copies to keep. Each restore leaves one
@@ -70,6 +86,13 @@ def docker_backup_estimate_size():
     for src_dir, _subfolder in UPLOAD_DIRS:
         if os.path.isdir(src_dir):
             total += get_directory_size(src_dir)
+    for src_dir, _subfolder in BACKUP_ONLY_DIRS:
+        # Written by a live server: files can vanish mid-walk.
+        if os.path.isdir(src_dir):
+            try:
+                total += get_directory_size(src_dir)
+            except OSError:
+                pass
     return total
 
 
@@ -84,6 +107,45 @@ def docker_can_perform_backup():
     free_before = get_directory_free_space(BACKUP_PATH)
     free_after = free_before - backup_size
     return backup_size, free_before, free_after
+
+
+def _ignore_special_files(directory, names):
+    """copytree() ignore hook: skip sockets, FIFOs and devices. copy2() would
+    try to open() them and fail the whole backup -- the Matter server keeps
+    its API socket inside its data volume (BACKUP_ONLY_DIRS)."""
+    skipped = []
+    for name in names:
+        try:
+            mode = os.lstat(os.path.join(directory, name)).st_mode
+        except OSError:
+            continue
+        if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode) or stat.S_ISLNK(mode)):
+            skipped.append(name)
+    return skipped
+
+
+def _copy_live_dir(src_dir, dest_dir, attempts=3):
+    """Copy a directory another container is writing to (BACKUP_ONLY_DIRS).
+
+    A file renamed or deleted mid-copy makes copytree() raise at the end. Retry
+    a couple of times; if it still fails, leave this directory out and log it,
+    rather than failing the whole backup -- the DB is what a backup is for,
+    and the updater refuses to update without one. A partial copy is removed:
+    half a fabric store is worse than none.
+    """
+    if not os.path.isdir(src_dir):
+        return
+    for attempt in range(1, attempts + 1):
+        try:
+            shutil.copytree(src_dir, dest_dir, ignore=_ignore_special_files)
+            return
+        except (shutil.Error, OSError) as err:
+            shutil.rmtree(dest_dir, ignore_errors=True)
+            if attempt == attempts:
+                logger.warning("Backup: left out %s after %d attempts: %s",
+                               src_dir, attempts, err)
+                return
+            time.sleep(0.5)
 
 
 def _hot_copy_sqlite(src_path, dest_path):
@@ -209,7 +271,10 @@ def docker_backup_create():
             for src_dir, subfolder in UPLOAD_DIRS:
                 if not os.path.isdir(src_dir):
                     continue
-                shutil.copytree(src_dir, os.path.join(tmp_dir, subfolder))
+                shutil.copytree(src_dir, os.path.join(tmp_dir, subfolder),
+                                ignore=_ignore_special_files)
+            for src_dir, subfolder in BACKUP_ONLY_DIRS:
+                _copy_live_dir(src_dir, os.path.join(tmp_dir, subfolder))
         except Exception:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             raise
@@ -281,6 +346,13 @@ def docker_backup_restore(src_dir):
             if not os.path.isdir(extract_dir):
                 continue
             _replace_dir_contents(target_dir, extract_dir)
+
+        for _target_dir, subfolder in BACKUP_ONLY_DIRS:
+            if os.path.isdir(os.path.join(src_dir, subfolder)):
+                logger.warning(
+                    "Backup %s contains %s; it is not restored automatically. "
+                    "See docs/design/matter-controller.md section 6.",
+                    src_dir, subfolder)
 
         # Force a clean restart against the just-restored DB in case
         # restart:always already revived the daemon mid-swap against the

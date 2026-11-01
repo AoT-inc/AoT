@@ -71,8 +71,10 @@ class TestMapInitializationPerformance:
             
         parsing_time = performance_metrics.stop_timer('style_parsing')
         
-        avg_time = performance_metrics.get_average('style_parsing')
-        assert avg_time < 0.01  # Should parse in under 10ms per style
+        # 타이머는 1000회 반복 전체를 한 번 잰 값이다. 예전에는 그 합계를 10ms 와 비교해서
+        # 부하가 걸린 나스 러너에서 14ms 로 간헐 실패했다(주석의 '스타일당 10ms' 와도 어긋났다).
+        # 스타일 하나당 시간으로 비교한다.
+        assert parsing_time / parsed_count < 0.01  # Should parse in under 10ms per style
     
     def test_source_registration_performance(self, performance_metrics):
         """Measure source registration performance"""

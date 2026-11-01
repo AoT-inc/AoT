@@ -29,7 +29,7 @@ measurements_dict = {
     },
     4: {
         'measurement': 'pressure',
-        'unit': 'Pa'
+        'unit': 'kPa'
     },
     5: {
         'measurement': 'dewpoint',
@@ -263,7 +263,8 @@ class InputModule(AbstractInput):
         if self.is_enabled(3):
             self.value_set(3, humidity)
         if self.is_enabled(4):
-            self.value_set(4, pressure)
+            # The API reports hPa; store kPa (hPa / 10).
+            self.value_set(4, pressure / 10.0 if pressure is not None else None)
 
         if self.is_enabled(0) and self.is_enabled(3) and self.is_enabled(5):
             self.value_set(5, calculate_dewpoint(temperature, humidity))

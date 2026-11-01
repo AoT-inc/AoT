@@ -76,6 +76,7 @@ def api_facility_iec_status(facility_uuid):
     function_active = False
     function_stale = False
     function_name = None
+    rs = None
 
     # ── IEC function state ────────────────────────────────────────────────────
     # facility 에 실제로 연결된 코디네이터만 본다 (env_summary 와 동일 기준 —
@@ -147,6 +148,11 @@ def api_facility_iec_status(facility_uuid):
         # remap spatial keys to downstream-compatible names
         indoor = {
             'vpd_kpa': sr.get('VPD'),
+            # 목표 편차는 **공기 VPD** 와 견준다 — 목표·제어가 공기 기준이다.
+            # 장치가 준 VPD(`vpd_kpa`)는 엽온 어림 기준일 수 있어(auto_vpd: 기온-1.5 °C)
+            # 0.1~0.45 kPa 낮다(10~35 °C, 2026-10-09 바른 잎–공기 식 — 그 전 식은
+            # 0.04~0.23). 잎 기준 목표는 아래에서 잰 엽온의 잎 VPD 와 견준다.
+            'vpd_air_kpa': sr.get('VPD_calc'),
             'temp_c':  sr.get('T'),
             'co2_ppm': sr.get('CO2'),
         }
@@ -160,15 +166,25 @@ def api_facility_iec_status(facility_uuid):
         # "목표대로" 라는데 제어는 다른 값을 좇는 상태가 보이지 않는다.
         eff = _effective_targets(facility_uuid)
 
-        if eff.get('vpd') is not None and indoor.get('vpd_kpa') is not None:
+        _vpd_cmp = (indoor.get('vpd_air_kpa')
+                    if indoor.get('vpd_air_kpa') is not None
+                    else indoor.get('vpd_kpa'))
+        _vpd_lbl = 'VPD'
+        # 목표가 **잎 기준으로 걸린** 사이클이면(코디네이터 스냅숏, `leaf_vpd`) 같은 목표를
+        # 잎 VPD 와 견준다 — 잎 목표를 공기 VPD 와 견주면 잎이 찰 때 늘 "건조" 로 보인다.
+        # 엽온을 못 써 공기 기준으로 돈 사이클은 공기 VPD 그대로(제어와 같은 판정).
+        _leaf = _snapshot_leaf_vpd(rs) if (function_active and not function_stale) else None
+        if _leaf is not None:
+            _vpd_cmp, _vpd_lbl = _leaf, 'Leaf VPD'
+        if eff.get('vpd') is not None and _vpd_cmp is not None:
             tol = 0.15
-            deviation = abs(indoor['vpd_kpa'] - eff['vpd'])
+            deviation = abs(_vpd_cmp - eff['vpd'])
             if deviation > tol * 3:
-                reasons.append('VPD dev {:.2f} kPa'.format(deviation))
+                reasons.append('{} dev {:.2f} kPa'.format(_vpd_lbl, deviation))
                 if level != 'emergency':
                     level = 'emergency'
             elif deviation > tol:
-                reasons.append('VPD off target ({:.2f} kPa)'.format(deviation))
+                reasons.append('{} off target ({:.2f} kPa)'.format(_vpd_lbl, deviation))
                 if level == 'idle':
                     level = 'warn'
 
@@ -223,6 +239,20 @@ def api_facility_iec_status(facility_uuid):
         'function_name':   function_name,
         'ts':             _time.time(),
     })
+
+
+# @manual ai/env-control#leaf-vpd, geo/facility-widget#b-environment
+def _snapshot_leaf_vpd(rs):
+    """코디네이터 스냅숏에서 **목표가 잎 기준으로 걸렸을 때의** 잎 VPD → kPa, 아니면 None."""
+    try:
+        import json as _j
+        snap = _j.loads(rs.runtime_json) if rs is not None and rs.runtime_json else None
+        ind = (snap or {}).get('indoor') or {}
+        if ind.get('vpd_target_on') == 'leaf' and ind.get('vpd_leaf_kpa') is not None:
+            return float(ind['vpd_leaf_kpa'])
+    except Exception:                                       # noqa: BLE001
+        pass
+    return None
 
 
 # @manual geo/facility-widget#b-environment
@@ -1487,11 +1517,20 @@ def _build_facility_overview(facility_uuid):
     area_status = None
     rep_key = None
     hidden_rows = {}
+    hazard_path = None
     try:
         from aot.databases.models import GeoFacility, GeoShape
         from aot.aot_flask.geo.site_summary import (
             parent_site_for_shape, status_for_shape, rep_key_of, hidden_rows_of)
         row = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
+        if row is not None and row.weather_bindings:
+            # 시설에 묶인 Open-Meteo 시간별 예보 파일 — 신선(2 h)할 때만. 아니면 기상청
+            # forecast.json(기존). 제어(MPC·피드포워드)가 쓰는 것과 같은 파일이다.
+            try:
+                from aot.aot_flask.geo.facility_sensors import fresh_forecast_file_for
+                hazard_path = fresh_forecast_file_for(row.weather_bindings)
+            except Exception:                               # noqa: BLE001
+                hazard_path = None
         if row is not None and row.shape_uuid:
             site = parent_site_for_shape(row.shape_uuid)
             area_status = status_for_shape(row.shape_uuid)
@@ -1558,7 +1597,7 @@ def _build_facility_overview(facility_uuid):
         'irrigation':  irrigation_status.last_irrigation(facility_uuid, _plot),
         # 곧 닥칠 기상 위험 — 시설·노지가 **같은 판정**을 쓴다(같은 예보 파일).
         # 여기 실어 보내면 모달이 별도 요청 없이 그린다.
-        'hazards':     weather_hazards.upcoming_cached(),
+        'hazards':     weather_hazards.upcoming_cached(forecast_path=hazard_path),
         'env_summary': _unwrap_json(api_facility_env_summary(facility_uuid)),
         'status':      _unwrap_json(api_facility_iec_status(facility_uuid)),
         'info':        info,

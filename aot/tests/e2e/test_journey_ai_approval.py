@@ -71,8 +71,22 @@ def _set_output(admin_http, base_url, output_id, state):
     assert resp.status_code == 200, f'출력 {state} 이 HTTP {resp.status_code}'
 
 
-def _card(page, title):
-    return page.locator('#mcp-pending-list .aot-settings-card', has_text=title)
+def _open_approvals(page, base_url):
+    """요청 페이지의 "N건 승인 대기 [보기]" 로 승인 모달을 연다.
+
+    2026-10-23(S4)부터 요청 페이지는 건수 요약만 그리고 결정은 하단 AI 창구의
+    승인 모달 하나에서 한다. 모달 안의 항목 하나를 집는 것은 `_item`.
+    """
+    page.goto(f'{base_url}/ai', wait_until='domcontentloaded')
+    btn = page.locator('.aot-ai-apprsum__btn')
+    btn.wait_for(state='visible', timeout=20000)
+    btn.click()
+    page.locator('.aot-ai-appr[role="dialog"]').wait_for(state='visible',
+                                                         timeout=20000)
+
+
+def _item(page, title):
+    return page.locator('.aot-ai-appr__item', has_text=title)
 
 
 @pytest.fixture
@@ -94,11 +108,11 @@ def guest_page(browser, base_url):
 # 1. 보이고, 결정 전에는 실행되지 않는다
 # --------------------------------------------------------------------------
 def test_a_waiting_request_shows_up_with_its_decision_buttons(page, base_url):
-    page.goto(f'{base_url}/ai', wait_until='domcontentloaded')
-    card = _card(page, F.APPROVAL_FOR_APPROVE)
+    _open_approvals(page, base_url)
+    card = _item(page, F.APPROVAL_FOR_APPROVE)
     card.wait_for(state='visible', timeout=20000)
-    assert card.locator('[data-approve]').count() == 1, '승인 버튼이 없습니다'
-    assert card.locator('[data-reject-conf]').count() == 1, '거부 버튼이 없습니다'
+    assert card.locator('.aot-ai-appr__approve').count() == 1, '승인 버튼이 없습니다'
+    assert card.locator('.aot-ai-appr__reject').count() == 1, '거부 버튼이 없습니다'
 
 
 def test_nothing_runs_until_someone_decides(admin_http, base_url):
@@ -127,11 +141,17 @@ def test_a_guest_cannot_decide(guest_http, admin_http, base_url, action):
 
 def test_a_guest_sees_the_request_but_no_buttons(guest_page, base_url):
     """보는 것은 된다. 누를 수 없는 버튼은 그리지 않는다."""
-    guest_page.goto(f'{base_url}/ai', wait_until='domcontentloaded')
-    card = _card(guest_page, F.APPROVAL_FOR_GUEST)
+    _open_approvals(guest_page, base_url)
+    card = _item(guest_page, F.APPROVAL_FOR_GUEST)
     card.wait_for(state='visible', timeout=20000)
     assert card.locator('button').count() == 0, (
         '게스트 화면에 승인·거부 버튼이 있습니다 — 눌러 보고 나서야 거절당합니다')
+    # 항목뿐 아니라 일괄 처리 단추도 없어야 한다(모달 본문 어디에도 결정 단추가 없다).
+    assert guest_page.locator(
+        '.aot-ai-appr__body .aot-ai-appr__approve, .aot-ai-appr__body .aot-ai-appr__reject, '
+        '.aot-ai-appr__body .aot-ai-appr__approve-all, '
+        '.aot-ai-appr__body .aot-ai-appr__reject-all').count() == 0, (
+        '게스트 모달에 승인·거부(일괄 포함) 버튼이 있습니다')
 
 
 def test_a_guest_cannot_read_or_run_mcp_server_config(guest_http, base_url):
@@ -150,12 +170,12 @@ def test_a_guest_cannot_read_or_run_mcp_server_config(guest_http, base_url):
 # 3. 거부하면 움직이지 않고, 승인하면 적힌 그대로 실행된다
 # --------------------------------------------------------------------------
 def test_rejecting_takes_it_off_the_list(page, admin_http, base_url):
-    page.goto(f'{base_url}/ai', wait_until='domcontentloaded')
-    card = _card(page, F.APPROVAL_FOR_REJECT)
+    _open_approvals(page, base_url)
+    card = _item(page, F.APPROVAL_FOR_REJECT)
     card.wait_for(state='visible', timeout=20000)
     with page.expect_response(lambda r: r.url.endswith('/reject'),
                               timeout=20000) as decided:
-        card.locator('[data-reject-conf]').click()
+        card.locator('.aot-ai-appr__reject').click()
     assert decided.value.status == 200, (
         f'거부가 HTTP {decided.value.status} 로 끝났습니다')
     card.wait_for(state='detached', timeout=20000)
@@ -176,14 +196,19 @@ def test_approving_runs_exactly_what_was_asked(daemon, page, admin_http,
         '시작 상태를 off 로 만들지 못했습니다')
 
     try:
-        page.goto(f'{base_url}/ai', wait_until='domcontentloaded')
-        card = _card(page, F.APPROVAL_FOR_APPROVE)
+        _open_approvals(page, base_url)
+        card = _item(page, F.APPROVAL_FOR_APPROVE)
         card.wait_for(state='visible', timeout=20000)
-        card.locator('[data-approve]').click()
-        # 물리 동작은 한 번 더 묻는다(되돌릴 수 없으므로).
+        card.locator('.aot-ai-appr__approve').click()
+        # 물리 동작은 한 번 더 묻는다(되돌릴 수 없으므로) — 모달 안 항목에서
+        # "지금 실행" 을 눌러야 나간다. 묻는 동안에는 아직 아무것도 움직이지 않는다.
+        run = card.locator('.aot-ai-appr__run')
+        run.wait_for(state='visible', timeout=20000)
+        assert _channel_zero(output_states, output_id) == 'off', (
+            '확인을 누르기 전에 출력이 움직였습니다')
         with page.expect_response(lambda r: r.url.endswith('/approve'),
                                   timeout=40000) as decided:
-            page.locator('#aotConfirmModal.show .aot-confirm-ok').first.click()
+            run.click()
         body = decided.value.json()
         assert decided.value.status == 200 and body.get('executed') is True, (
             f'승인 후 실행되지 않았습니다: HTTP {decided.value.status}, '

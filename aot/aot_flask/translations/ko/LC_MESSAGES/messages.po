@@ -27175,6 +27175,78 @@ msgstr "최소 온도 (°C)"
 msgid "Hard lower limit. Forces heating when below, regardless of VPD target."
 msgstr "절대 하한값입니다. VPD 목표와 무관하게 미달 시 난방을 강제로 실행합니다."
 
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Extreme Heat Protection"
+msgstr "폭염 보호"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Above the threshold, keeping the crop out of heat stress comes before the target: shade drawn, heating off, circulation fans on, vents opened only while it is cooler outside, misting only while it can still cool."
+msgstr "문턱을 넘으면 목표보다 작물의 고온 스트레스를 막는 것이 먼저입니다 — 차광막을 치고, 난방을 끄고, 유동팬을 돌리며, 창은 바깥이 더 시원할 때만 열고, 분무는 아직 식힐 수 있을 때만 씁니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Heat Protection Threshold (°C)"
+msgstr "폭염 보호 문턱 (°C)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Average indoor temperature at which protection starts. Set it to what your crop tolerates (20–45 °C)."
+msgstr "보호를 시작하는 실내 평균 온도입니다. 작물이 견디는 온도로 정하세요 (20–45 °C)."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Heat Protection Release Margin (°C)"
+msgstr "폭염 보호 해제 여유 (°C)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Protection ends only after the temperature has stayed this far below the threshold for 10 minutes (0.5–5 °C)."
+msgstr "온도가 문턱보다 이만큼 낮은 상태로 10분 이어져야 보호를 끝냅니다 (0.5–5 °C)."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Heat Protection Minimum Hold (min)"
+msgstr "폭염 보호 최소 유지 (분)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Once started, protection stays on at least this long (5–120 min)."
+msgstr "한 번 시작하면 적어도 이만큼은 보호를 유지합니다 (5–120분)."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Check Misting Water Supply"
+msgstr "분무용 물 공급 확인"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Stops every mister while the water supply you pick below says there is no water — a tank level, a line pressure or a flow switch. Off: water is assumed to be there."
+msgstr "아래에서 고른 물 공급 신호(탱크 수위·배관 압력·유량 스위치)가 물이 없다고 말하는 동안 분무기를 모두 멈춥니다. 끄면 물이 있는 것으로 봅니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Water Supply Signal"
+msgstr "물 공급 신호"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "A tank level (%), line pressure or flow switch. If this signal goes missing or stale the misters stay off, because it is not known whether there is water."
+msgstr "탱크 수위(%), 배관 압력 또는 유량 스위치입니다. 이 신호가 없어지거나 오래되면 물이 있는지 알 수 없으므로 분무기를 멈춘 채로 둡니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Water Supply Threshold"
+msgstr "물 공급 문턱"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "In whatever unit the signal above uses. For an on/off switch (0 or 1) leave it at 0.5; for a tank level use the lowest level you still want to mist at."
+msgstr "위 신호가 쓰는 단위 그대로입니다. 켜짐/꺼짐 스위치(0 또는 1)는 0.5 로 두고, 탱크 수위는 그래도 분무하고 싶은 가장 낮은 수위로 정하세요."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Water Is Available When the Signal Is"
+msgstr "신호가 이럴 때 물이 있음"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Level, pressure and flow rise with water: pick \"at or above\". An empty-tank alarm switch reads 1 when dry: pick \"at or below\"."
+msgstr "수위·압력·유량은 물이 있을수록 커집니다 — \"이상\"을 고르세요. 빈 탱크 경보 스위치는 말랐을 때 1 이 됩니다 — \"이하\"를 고르세요."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "At or above the threshold (level, pressure, flow)"
+msgstr "문턱 이상 (수위·압력·유량)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "At or below the threshold (empty-tank alarm switch)"
+msgstr "문턱 이하 (빈 탱크 경보 스위치)"
+
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:613
 msgid "Max Humidity (%)"
 msgstr "최대 습도 (%)"
@@ -27206,24 +27278,16 @@ msgid "Enable Sunburn/Evening Protection"
 msgstr "일소·저녁 보호 사용"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:675
-msgid ""
-"Blocks wetting-type misting in strong light (droplets can lens sunlight "
-"onto leaves) and, if set below, before sunset. Independent of how often "
-"misting runs — turn this on or off at any misting frequency."
-msgstr ""
-"강한 빛에서 습윤형 분무를 차단합니다(물방울이 렌즈처럼 빛을 모아 잎을 태울 수 있습니다). 아래에서 설정하면 일몰 전에도 "
-"차단합니다. 분무 빈도와 무관하게 어떤 빈도에서도 켜고 끌 수 있습니다."
+msgid "Blocks wetting-type misting in strong light (droplets can lens sunlight onto leaves) and, if set below, before sunset. In extreme heat and dryness short pulses are let through the lock (see the option below). Independent of how often misting runs — turn this on or off at any misting frequency."
+msgstr "강한 빛에서 습윤형 분무를 차단합니다(물방울이 렌즈처럼 빛을 모아 잎을 태울 수 있습니다). 아래에서 설정하면 일몰 전에도 차단합니다. 극한 고온·건조에서는 짧은 펄스가 잠금을 통과합니다(아래 옵션). 분무 빈도와 무관하게 어떤 빈도에서도 켜고 끌 수 있습니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:688
 msgid "Misting Lockout Irradiance (W/m²)"
 msgstr "분무 잠금 일사량 (W/m²)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:690
-msgid ""
-"Wetting-type misting is blocked outright at or above this indoor light "
-"level. The estimated indoor level is used, so closing the shade screen "
-"relaxes the lockout."
-msgstr "실내 광량이 이 값 이상이면 습윤형 분무를 완전히 차단합니다. 실내 추정 광량을 기준으로 하므로, 차광막을 닫으면 잠금이 완화됩니다."
+msgid "Wetting-type misting is blocked outright at or above this indoor light level, except for short pulses in extreme heat and dryness. The estimated indoor level is used, so closing the shade screen relaxes the lockout."
+msgstr "실내 광량이 이 값 이상이면 습윤형 분무를 완전히 차단합니다. 단, 극한 고온·건조에서는 짧은 펄스가 풀립니다. 실내 추정 광량을 기준으로 하므로, 차광막을 닫으면 잠금이 완화됩니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:702
 msgid "Misting Release Irradiance (W/m²)"
@@ -27288,16 +27352,16 @@ msgid "Allow Misting Before Sunset"
 msgstr "일몰 전 분무 허용"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:752
-msgid "Allow misting near sunset. Turn off to leave the leaves dry overnight."
-msgstr "일몰 무렵 분무를 허용합니다. 끄면 잎을 마른 채로 밤을 넘깁니다."
+msgid "Allow misting near sunset. Turn off to leave the leaves dry overnight. Only read while \"Stop Wetting Mist Toward Dusk\" is off — with it on (the default) misting already stops before sunset."
+msgstr "일몰 무렵 분무를 허용합니다. 끄면 잎을 마른 채로 밤을 넘깁니다. \"해 질 녘 습윤 분무 중단\"이 꺼져 있을 때만 읽습니다 — 켜 두면(기본) 분무는 이미 일몰 전에 멈춥니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:762
 msgid "Stop Misting Before Sunset (min)"
 msgstr "일몰 전 분무 중단 시간 (분)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:764
-msgid "How long before sunset misting stops."
-msgstr "일몰 몇 분 전에 분무를 멈출지."
+msgid "How long before sunset misting stops. Also sets when \"Stop Wetting Mist Toward Dusk\" starts in this mode."
+msgstr "일몰 몇 분 전에 분무를 멈출지. 이 모드에서는 \"해 질 녘 습윤 분무 중단\"이 시작되는 시각도 이 값입니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:775
 msgid "Groundwater (untreated)"
@@ -27427,8 +27491,8 @@ msgid "Strong Wind Threshold (m/s)"
 msgstr "강풍 임계값 (m/s)"
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:911
-msgid "Openings (vents, side walls) are forced closed above this wind speed."
-msgstr "이 풍속을 초과하면 개폐부(환기창, 측벽)를 강제로 닫습니다."
+msgid "All openings (vents, side walls) close when the 10-minute average wind reaches this speed, or a measured gust reaches 1.5 times it. From 0.6 times it (or a measured gust at 0.9 times), windward and roof vents close and the rest open only part way."
+msgstr "10분 평균 풍속이 이 값에 이르거나 잰 돌풍이 이 값의 1.5 배에 이르면 개폐부(환기창, 측벽)를 모두 닫습니다. 이 값의 0.6 배(잰 돌풍은 0.9 배)부터는 바람 받는 쪽 창과 천창을 닫고 나머지는 일부만 엽니다."
 
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:918
 #: functions/custom_functions/env_coordinator_impl/_function_info.py:1482
@@ -30309,6 +30373,46 @@ msgstr "낮 — 보온커튼은 빛을 위해 걷어 둡니다"
 msgid "Holding — waiting to see if the change of direction lasts"
 msgstr "그대로 둡니다 — 바뀐 방향이 이어지는지 확인 중입니다"
 
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Too humid — outside air is wetter, so venting would not help"
+msgstr "습도가 너무 높습니다 — 바깥 공기가 더 습해서 환기해도 소용없습니다"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Too humid — venting limited to a small opening to let moisture out"
+msgstr "습도가 너무 높습니다 — 습기를 빼도록 창을 조금만 열어 둡니다"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Holding — opening more has not reduced the gap"
+msgstr "그대로 둡니다 — 더 열어도 편차가 줄지 않았습니다"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Too humid — outside air is too cold to vent without losing heat"
+msgstr "습도가 너무 높습니다 — 바깥 공기가 너무 차서 열면 열을 잃습니다"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Heat Protection"
+msgstr "폭염 보호"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat — it is hotter outside, so the vents stay closed"
+msgstr "폭염 — 바깥이 더 더워서 창을 닫아 둡니다"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat — misting cannot cool the air right now"
+msgstr "폭염 — 지금은 분무로 공기를 식힐 수 없습니다"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat protection — keeping the crop out of heat stress"
+msgstr "폭염 보호 — 작물이 고온 스트레스를 받지 않게 합니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "No water for the misters — they stay off until the water supply returns"
+msgstr "분무용 물이 없습니다 — 물 공급이 돌아올 때까지 분무기를 멈춥니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "This device looks faulty — it is held in place and the others take over its share"
+msgstr "이 장치는 고장으로 의심됩니다 — 제자리에 두고 나머지 장치가 몫을 이어받습니다"
+
 #: aot/aot_flask/static/js/widgets/AoT_map/aot-map-popup.js
 #, python-format
 msgid "%(var)s cannot be measured right now, so the devices that move it are holding position"
@@ -31247,7 +31351,6 @@ msgstr "— 채널 선택 —"
 msgid "— Select —"
 msgstr "— 선택 —"
 
-
 #: widgets/widget_mcp_review.py (MCP 승인 처리 위젯 — 신규 2026-09-09)
 msgid "MCP Approval Requests"
 msgstr "MCP 승인 요청"
@@ -31282,7 +31385,6 @@ msgstr "수정 후 승인"
 msgid "Save & approve"
 msgstr "저장 후 승인"
 
-
 #: widgets/widget_mcp_review.py (MCP 승인 위젯 재설계 — 헤드라인/필드라벨, 2026-09-09)
 msgid "Duration (min)"
 msgstr "지속 시간 (분)"
@@ -31302,14 +31404,12 @@ msgstr "세부 정보"
 msgid "This runs real equipment (valves, pumps)."
 msgstr "실제 장비(밸브·펌프)가 작동합니다."
 
-
 #: widgets/widget_mcp_review.py (트리거 텍스트+버튼 분리, 2026-09-09)
 msgid "View"
 msgstr "보기"
 
 msgid "{n} pending approval"
 msgstr "{n}건 승인 대기"
-
 
 #: 카탈로그에 없던 항목을 손으로 채운다(재추출 금지 — fuzzy 대량오염 이력).
 #: templates/modals/geo_settings_modal.html · templates/settings/measurement.html
@@ -31740,8 +31840,6 @@ msgstr "설정을 불러오지 못했습니다"
 
 msgid "What the AI is waiting on you for — each item below waits for your decision."
 msgstr "AI 가 사람의 결정을 기다리는 것들입니다. 아래 항목마다 결정을 기다립니다."
-
-
 
 #: aot/aot_flask/templates/layout_default.html
 msgid "Computer Screen Size"
@@ -33043,7 +33141,6 @@ msgstr "이름 표시 언어"
 msgid "Language for map labels (e.g., ko, en, auto)"
 msgstr "지도에 표시되는 이름의 언어(예: ko, en, auto)"
 
-
 #: aot_flask/templates/modals/geo_settings_modal.html:171
 msgid "Max Site Polygons"
 msgstr "최대 대지 폴리곤 수"
@@ -33824,3 +33921,3592 @@ msgstr "비밀번호가 저장되어 있습니다. 비워 두면 그대로 유�
 #: aot_flask/templates/settings/alerts.html
 msgid "No password is saved."
 msgstr "저장된 비밀번호가 없습니다."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Shade drawn against the heat — the crop has light to spare today"
+msgstr "열을 막으려 차광막을 쳤습니다 — 오늘은 빛이 넉넉합니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Shade kept open — the crop needs the light, or vents and misting can still cool"
+msgstr "차광막을 걷어 둡니다 — 작물에 빛이 필요하거나, 창·분무로 아직 식힐 수 있습니다"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Use the Shade Screen Against Heat"
+msgstr "차광막으로 더위 막기"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Draws the shade screen to take heat and water stress off the crop, but only while the crop still gets enough light for the day — otherwise the screen stays open. Vents and misting are used first when the light is worth keeping."
+msgstr "작물이 그날 필요한 빛을 받을 수 있을 때만 차광막을 쳐서 열·수분 스트레스를 덜어 줍니다 — 그렇지 않으면 걷어 둡니다. 빛을 아껴야 할 때는 창과 분무를 먼저 씁니다."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Shade held where it is — it moved recently or has used today’s moves"
+msgstr "차광막을 제자리에 둡니다 — 방금 움직였거나 오늘 이동 횟수를 다 썼습니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Thermal curtain opened a crack to let night moisture out"
+msgstr "밤 습기를 빼려고 보온커튼을 조금 열었습니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Thermal curtain opening in steps so the morning air does not chill the crop"
+msgstr "아침 찬 공기가 작물을 식히지 않게 보온커튼을 단계로 걷는 중입니다"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Open the Thermal Curtain a Crack Against Night Condensation"
+msgstr "밤 결로에 보온커튼 조금 열기"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "When the night air nears its dew point under a closed thermal curtain, opens it a crack (3, then 6, then 10 %) before any vent, and only as far as the heat it lets out allows. Only for curtain motors that can stop part-way."
+msgstr "닫힌 보온커튼 아래 밤공기가 이슬점에 가까워지면 창보다 먼저 커튼을 조금(3 → 6 → 10 %) 엽니다 — 빠져나가는 열이 허락하는 만큼만. 중간에서 멈출 수 있는 커튼 모터에만 쓰입니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+#: widgets/AoT_facility.py
+#: aot_flask/static/js/common/sensor-label.js
+msgid "Air VPD"
+msgstr "공기 VPD"
+
+#: widgets/AoT_facility.py
+#: aot_flask/static/js/common/sensor-label.js
+#: aot_flask/static/js/common/aot-env-status.js
+msgid "Leaf VPD"
+msgstr "잎 VPD"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Leaf VPD (needs a leaf temperature sensor)"
+msgstr "잎 VPD (엽온 센서 필요)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "VPD Target Applies To"
+msgstr "VPD 목표 기준"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Air: the VPD target is compared with air VPD from temperature and humidity. Leaf: the target is a leaf VPD; each cycle it is turned into the air VPD that gives that leaf VPD at the measured leaf temperature. Without a fresh leaf temperature the target is used as an air VPD for that cycle."
+msgstr "공기: VPD 목표를 온도·습도로 계산한 공기 VPD 와 견줍니다. 잎: 목표는 잎 VPD 이며, 사이클마다 잰 엽온에서 그 잎 VPD 를 만드는 공기 VPD 로 옮겨 씁니다. 신선한 엽온이 없으면 그 사이클은 목표를 공기 VPD 로 씁니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Leaf Temperature Sensor"
+msgstr "엽온 센서"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "An infrared leaf or canopy temperature. Shows leaf VPD next to air VPD, and is required for a leaf VPD target. Readings more than 10 °C away from the air are treated as not seeing leaves."
+msgstr "적외선 엽온(군락 온도) 측정. 공기 VPD 옆에 잎 VPD 를 보여 주고, 잎 VPD 목표에는 반드시 필요합니다. 기온과 10 °C 넘게 차이 나는 값은 잎을 보고 있지 않은 것으로 봅니다."
+
+#: widgets/AoT_facility.py
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "The VPD target is compared with this value."
+msgstr "VPD 목표를 이 값과 견줍니다."
+
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "Target basis"
+msgstr "목표 기준"
+
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "Leaf temp"
+msgstr "엽온"
+
+#: aot_flask/static/js/widgets/AoT_facility/aot-facility-widget.js
+msgid "Leaf temperature is not available, so the target is compared with air VPD."
+msgstr "엽온을 쓸 수 없어 목표를 공기 VPD 와 견줍니다."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Held at its current opening — the vents are about to close for the night"
+msgstr "현재 열림을 그대로 둡니다 — 곧 밤 파킹으로 환기창이 닫힐 예정입니다"
+
+msgid "Matter"
+msgstr "Matter"
+
+msgid "Matter support is experimental."
+msgstr "Matter 지원은 실험 기능입니다."
+
+msgid "Matter Server"
+msgstr "Matter 서버"
+
+msgid "Not connected"
+msgstr "연결되지 않음"
+
+msgid "Server version"
+msgstr "서버 버전"
+
+msgid "Schema"
+msgstr "스키마"
+
+msgid "SDK"
+msgstr "SDK"
+
+msgid "Fabric ID"
+msgstr "Fabric ID"
+
+msgid "Reachable"
+msgstr "응답 중"
+
+msgid "Last error"
+msgstr "마지막 오류"
+
+msgid "How to turn it on"
+msgstr "켜는 방법"
+
+msgid "Matter needs a Linux host. The host must be on the same network as the devices, with host networking, IPv6 router advertisements and mDNS. Run aot/scripts/check_matter_host.sh on the host first and fix what it reports."
+msgstr "Matter는 Linux 호스트가 필요합니다. 호스트는 장치와 같은 네트워크에 있어야 하며, 호스트 네트워킹, IPv6 라우터 광고, mDNS를 사용할 수 있어야 합니다. 먼저 호스트에서 aot/scripts/check_matter_host.sh를 실행하고 보고된 문제를 해결하세요."
+
+msgid "Then add COMPOSE_PROFILES=matter to docker/.env and start the Matter server:"
+msgstr "그다음 docker/.env에 COMPOSE_PROFILES=matter를 추가하고 Matter 서버를 시작하세요."
+
+msgid "Add a shared device"
+msgstr "공유된 장치 추가"
+
+msgid "Add a device that is already set up in another app (Apple Home, Google Home, SmartThings, and so on)."
+msgstr "다른 앱(Apple Home, Google Home, SmartThings 등)에 이미 설정된 장치를 추가합니다."
+
+msgid "1. In that app, open the device and choose its share, pairing mode or linked Matter apps option."
+msgstr "1. 해당 앱에서 장치를 열고 공유, 페어링 모드 또는 연결된 Matter 앱 옵션을 선택하세요."
+
+msgid "2. The app shows an 11-digit code that is valid for about 15 minutes."
+msgstr "2. 앱에 11자리 코드가 표시되며, 약 15분 동안 사용할 수 있습니다."
+
+msgid "3. Enter the code here and press Add."
+msgstr "3. 여기에 코드를 입력하고 추가를 누르세요."
+
+msgid "Pairing code"
+msgstr "페어링 코드"
+
+msgid "This can take up to a minute"
+msgstr "최대 1분까지 걸릴 수 있어요"
+
+msgid "Connect the Matter server first."
+msgstr "먼저 Matter 서버를 연결하세요."
+
+msgid "Matter Devices"
+msgstr "Matter 장치"
+
+msgid "No Matter devices yet."
+msgstr "아직 Matter 장치가 없습니다."
+
+msgid "Sensors and switches"
+msgstr "센서와 스위치"
+
+msgid "AoT device"
+msgstr "AoT 장치"
+
+msgid "Not reachable"
+msgstr "응답 없음"
+
+msgid "No AoT device"
+msgstr "AoT 장치 없음"
+
+msgid "Unnamed device"
+msgstr "이름 없는 장치"
+
+msgid "%(n)s switches"
+msgstr "스위치 %(n)s개"
+
+msgid "Added: %(sensors)s sensors, %(switches)s switches"
+msgstr "추가됨: 센서 %(sensors)s개, 스위치 %(switches)s개"
+
+msgid "Re-connected to the existing device"
+msgstr "기존 장치에 다시 연결했습니다"
+
+msgid "Adding the device failed."
+msgstr "장치를 추가하지 못했습니다."
+
+msgid "Removing the device failed."
+msgstr "장치를 제거하지 못했습니다."
+
+msgid "The request failed. Check the connection and try again."
+msgstr "요청에 실패했습니다. 연결을 확인하고 다시 시도하세요."
+
+msgid "Remove this device? This deletes its AoT device and its sensor and switch entries, and removes AoT from the device. The recorded history stays in the database."
+msgstr "이 장치를 제거할까요? AoT 장치와 센서·스위치 항목이 삭제되고, 장치에서 AoT도 제거됩니다. 기록된 이력은 데이터베이스에 그대로 남습니다."
+
+msgid "The Matter server is not reachable. Check that the matter_server and matter_socket containers are running."
+msgstr "Matter 서버에 연결할 수 없습니다. matter_server와 matter_socket 컨테이너가 실행 중인지 확인하세요."
+
+msgid "The device did not finish joining in time. Share it again from the other app and enter the new code."
+msgstr "장치가 제시간에 참여를 마치지 못했습니다. 다른 앱에서 다시 공유하고 새 코드를 입력하세요."
+
+msgid "The pairing code is not valid. Check the digits and try again."
+msgstr "페어링 코드가 올바르지 않습니다. 숫자를 확인하고 다시 시도하세요."
+
+msgid "The device has no free slot for another ecosystem. Remove one of its other connections in that app, then share again."
+msgstr "장치에 다른 생태계를 연결할 빈 자리가 없습니다. 해당 앱에서 다른 연결 하나를 제거한 뒤 다시 공유하세요."
+
+msgid "The device could not prove it is certified. Check that this AoT server can reach the internet (CSA DCL) and try again."
+msgstr "장치가 인증된 제품임을 확인하지 못했습니다. 이 AoT 서버가 인터넷(CSA DCL)에 접속할 수 있는지 확인하고 다시 시도하세요."
+
+msgid "The device was not found on the network. Make sure it is on the same network as this AoT server and that its sharing window is still open, then run aot/scripts/check_matter_host.sh on the host."
+msgstr "네트워크에서 장치를 찾지 못했습니다. 장치가 이 AoT 서버와 같은 네트워크에 있고 공유 시간이 아직 끝나지 않았는지 확인한 뒤, 호스트에서 aot/scripts/check_matter_host.sh를 실행하세요."
+
+msgid "The device did not accept the code. The sharing window may have closed — share it again from the other app and enter the new code."
+msgstr "장치가 코드를 받아들이지 않았습니다. 공유 시간이 끝났을 수 있으니 다른 앱에서 다시 공유하고 새 코드를 입력하세요."
+
+msgid "Adding the device failed: %(details)s"
+msgstr "장치를 추가하지 못했습니다: %(details)s"
+
+msgid "Enter the 11-digit pairing code (or the MT: code) shown by the other app."
+msgstr "다른 앱에 표시된 11자리 페어링 코드(또는 MT: 코드)를 입력하세요."
+
+msgid "The Matter server returned no device."
+msgstr "Matter 서버가 장치를 반환하지 않았습니다."
+
+msgid "The device joined, but AoT does not support any of its sensors or switches yet."
+msgstr "장치는 참여했지만, AoT가 아직 이 장치의 센서나 스위치를 지원하지 않습니다."
+
+msgid "Creating the AoT device failed."
+msgstr "AoT 장치를 만들지 못했습니다."
+
+msgid "Removing the device failed: %(details)s"
+msgstr "장치를 제거하지 못했습니다: %(details)s"
+
+msgid "The device was not reachable, so it still lists AoT as connected. Remove AoT from it in the other app (or reset it) to free that slot."
+msgstr "장치에 연결할 수 없어 장치에는 AoT가 여전히 연결된 것으로 남아 있습니다. 다른 앱에서 AoT를 제거하거나 장치를 초기화해 그 자리를 비우세요."
+
+msgid "AoT could not remove itself from the Matter device now. It is listed on Settings > Matter, where you can remove it later."
+msgstr "AoT가 지금은 Matter 장치에서 자신을 제거하지 못했습니다. 설정 > Matter에 남아 있으니 나중에 거기서 제거할 수 있습니다."
+
+msgid "A Matter device shared to AoT from another ecosystem (Apple Home, Google Home, SmartThings and others). Add it from Settings > Matter with the pairing code the other app shows when you share the device. Its sensors and switches are created as the Input and Output under this device. Deleting this device also removes AoT from the device, so it frees its slot for other ecosystems."
+msgstr "다른 생태계(Apple Home, Google Home, SmartThings 등)에서 AoT로 공유된 Matter 장치입니다. 장치를 공유할 때 다른 앱에 표시되는 페어링 코드로 설정 > Matter에서 추가하세요. 장치의 센서와 스위치는 이 장치 아래의 입력과 출력으로 만들어집니다. 이 장치를 삭제하면 장치에서 AoT도 함께 제거되어, 다른 생태계가 쓸 자리가 비워집니다."
+
+msgid "Node ID"
+msgstr "노드 ID"
+
+msgid "Node ID on the AoT Matter fabric. Set when the device is added; change it only to re-bind this device to a node that was shared again"
+msgstr "AoT Matter fabric에서의 노드 ID입니다. 장치를 추가할 때 설정되며, 다시 공유된 노드에 이 장치를 다시 연결할 때만 변경하세요"
+
+msgid "Device Identity"
+msgstr "장치 식별 정보"
+
+msgid "Unique ID reported by the device. Used to find this device again when it is removed and shared again, so its history continues"
+msgstr "장치가 알려 주는 고유 ID입니다. 장치를 제거했다가 다시 공유할 때 같은 장치를 찾아 이력을 이어 가는 데 사용합니다"
+
+msgid "Vendor"
+msgstr "제조사"
+
+msgid "Reported by the device"
+msgstr "장치가 알려 준 값"
+
+msgid "Serial Number"
+msgstr "일련번호"
+
+msgid "Matter devices are added from Settings > Matter with the pairing code shared from the other app."
+msgstr "Matter 장치는 다른 앱에서 공유한 페어링 코드로 설정 > Matter에서 추가합니다."
+
+msgid "Sensor values from a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one sensor the device reported. Values are written when they change and again every sample interval while the device is reachable. Nothing is written while it is unreachable."
+msgstr "AoT Matter fabric에 있는 Matter 장치의 센서 값입니다. 설정 > Matter에서 장치를 AoT로 공유하면 자동으로 만들어지며, 채널 하나가 장치가 알려 준 센서 하나입니다. 값은 변할 때 기록되고, 장치에 연결할 수 있는 동안에는 샘플링 간격마다 다시 기록됩니다. 연결할 수 없는 동안에는 아무것도 기록하지 않습니다."
+
+msgid "Node ID on the AoT Matter fabric. Inherited from the Matter device"
+msgstr "AoT Matter fabric에서의 노드 ID입니다. Matter 장치에서 가져옵니다"
+
+msgid "Sample Interval (seconds)"
+msgstr "샘플링 간격 (초)"
+
+msgid "How often the current value is written while the device is reachable, in addition to every change it reports"
+msgstr "장치가 알려 주는 변경 때마다 기록하는 것과 별개로, 장치에 연결할 수 있는 동안 현재 값을 기록하는 주기"
+
+msgid "Matter endpoint number on the device"
+msgstr "장치의 Matter 엔드포인트 번호"
+
+msgid "Cluster ID"
+msgstr "클러스터 ID"
+
+msgid "Matter cluster id (decimal)"
+msgstr "Matter 클러스터 ID (10진수)"
+
+msgid "Attribute ID"
+msgstr "속성 ID"
+
+msgid "Matter attribute id (decimal)"
+msgstr "Matter 속성 ID (10진수)"
+
+msgid "Sensor Kind"
+msgstr "센서 종류"
+
+msgid "How the raw value is scaled: temperature, humidity, illuminance, boolean_state or battery"
+msgstr "원시 값을 변환하는 방식: temperature, humidity, illuminance, boolean_state 또는 battery"
+
+msgid "Switch the On/Off endpoints of a Matter device on the AoT Matter fabric (plugs, relays, lights). Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A command counts as done when the device itself reports the new state."
+msgstr "AoT Matter fabric에 있는 Matter 장치의 켜기/끄기 엔드포인트(플러그, 릴레이, 조명)를 제어합니다. 설정 > Matter에서 장치를 AoT로 공유하면 자동으로 만들어지며, 채널 하나가 엔드포인트 하나입니다. 장치가 새 상태를 직접 알려 줘야 명령이 완료된 것으로 처리합니다."
+
+msgid "A name for this channel"
+msgstr "이 채널의 이름"
+
+msgid "Matter endpoint number of this switch on the device"
+msgstr "장치에서 이 스위치의 Matter 엔드포인트 번호"
+
+msgid "Set the channel state when AoT starts. \"Do Nothing\" leaves the device as it is"
+msgstr "AoT가 시작될 때 채널 상태를 설정합니다. \"아무것도 하지 않음\"을 선택하면 장치를 그대로 둡니다"
+
+msgid "Could not read the Matter server status."
+msgstr "Matter 서버 상태를 읽지 못했습니다."
+
+msgid "Could not read the list of Matter devices."
+msgstr "Matter 장치 목록을 읽지 못했습니다."
+
+msgid "Adding the device failed. See the AoT log for details."
+msgstr "장치를 추가하지 못했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Unknown Matter device."
+msgstr "알 수 없는 Matter 장치입니다."
+
+msgid "Removing the device failed. See the AoT log for details."
+msgstr "장치를 제거하지 못했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Not on the Matter server — share it again to reconnect, or remove it"
+msgstr "Matter 서버에 없음 — 다시 공유해 연결하거나 제거하세요"
+
+msgid "Dimmer"
+msgstr "디머"
+
+msgid "Dim the light or plug endpoints of a Matter device on the AoT Matter fabric. Created automatically when a device is shared to AoT from Settings > Matter; each channel is one endpoint. A duty cycle of 0 switches it off; any other duty cycle sets the level and switches it on. The state shown is what the device reports."
+msgstr "AoT Matter fabric에 있는 Matter 장치의 조명·플러그 엔드포인트 밝기를 조절합니다. 설정 > Matter에서 장치를 AoT로 공유하면 자동으로 만들어지며, 채널 하나가 엔드포인트 하나입니다. 듀티 사이클 0 %는 끄고, 그 밖의 값은 해당 레벨로 설정하면서 켭니다. 표시되는 상태는 장치가 알려 준 값입니다."
+
+msgid "Matter endpoint number of this dimmer on the device"
+msgstr "장치에서 이 디머의 Matter 엔드포인트 번호"
+
+msgid "Transition (seconds)"
+msgstr "전환 시간 (초)"
+
+msgid "How long the device takes to reach a new level. 0 = as fast as it can"
+msgstr "장치가 새 레벨에 도달하는 데 걸리는 시간입니다. 0 = 가능한 한 빠르게"
+
+msgid "Curtain / Shade"
+msgstr "커튼 / 차광막"
+
+msgid "Move a Matter curtain, shade, blind or motorised vent on the AoT Matter fabric to a position. 100 is fully open (retracted) and 0 fully closed (deployed), as for other AoT position actuators. Off stops the motor. The device reports its own position, which is shown here and used by the environment coordinator."
+msgstr "AoT Matter fabric에 있는 Matter 커튼, 차광막, 블라인드, 전동 환기창을 지정한 위치로 움직입니다. 다른 AoT 위치 구동기와 마찬가지로 100 %는 완전히 열림(걷힘), 0 %는 완전히 닫힘(펼침)입니다. 끄기는 모터를 멈춥니다. 장치가 자신의 위치를 알려 주며, 이 값이 여기에 표시되고 통합 환경 제어에서 쓰입니다."
+
+msgid "Matter endpoint number of this covering on the device"
+msgstr "장치에서 이 커튼의 Matter 엔드포인트 번호"
+
+msgid "This device is not on the Matter server. Share it again to reconnect it."
+msgstr "이 장치가 Matter 서버에 없습니다. 다시 공유해 연결하세요."
+
+msgid "Reading the device again failed. See the AoT log for details."
+msgstr "장치를 다시 읽지 못했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Read again"
+msgstr "다시 읽기"
+
+msgid "Add the sensors and controls AoT now supports that this device does not have yet"
+msgstr "AoT가 이제 지원하지만 이 장치에는 아직 없는 센서와 제어를 추가합니다"
+
+msgid "Added %(sensors)s sensor channels and %(outputs)s control channels"
+msgstr "센서 채널 %(sensors)s개와 제어 채널 %(outputs)s개를 추가했습니다"
+
+msgid "Nothing new to add"
+msgstr "새로 추가할 것이 없습니다"
+
+msgid "Unknown network type."
+msgstr "알 수 없는 네트워크 종류입니다."
+
+msgid "Enter the Wi-Fi network name."
+msgstr "Wi-Fi 네트워크 이름을 입력하세요."
+
+msgid "A Wi-Fi network name is at most 32 bytes."
+msgstr "Wi-Fi 네트워크 이름은 최대 32바이트입니다."
+
+msgid "Enter the Wi-Fi password (8 to 64 characters)."
+msgstr "Wi-Fi 비밀번호(8~64자)를 입력하세요."
+
+msgid "Enter the Thread operational dataset as hex (from your border router)."
+msgstr "Thread 운영 데이터셋을 16진수로 입력하세요(보더 라우터에서 확인)."
+
+msgid "Enter the 11-digit pairing code (or the MT: code) from the device or its box."
+msgstr "장치 또는 포장 상자에 적힌 11자리 페어링 코드(또는 MT: 코드)를 입력하세요."
+
+msgid "Unknown or expired job."
+msgstr "알 수 없거나 만료된 작업입니다."
+
+msgid "This device is not on the Matter server."
+msgstr "이 장치가 Matter 서버에 없습니다."
+
+msgid "The device is not reachable right now, so it cannot be shared."
+msgstr "장치에 지금 연결할 수 없어 공유할 수 없습니다."
+
+msgid "Opening the sharing window failed: %(details)s"
+msgstr "공유 창을 여는 데 실패했습니다: %(details)s"
+
+msgid "Closing the sharing window failed: %(details)s"
+msgstr "공유 창을 닫는 데 실패했습니다: %(details)s"
+
+msgid "Reading the device's connections failed: %(details)s"
+msgstr "장치의 연결을 읽는 데 실패했습니다: %(details)s"
+
+msgid "Unknown connection."
+msgstr "알 수 없는 연결입니다."
+
+msgid "This is AoT's own connection. Remove the device instead."
+msgstr "AoT 자신의 연결입니다. 대신 장치를 제거하세요."
+
+msgid "Removing the connection failed: %(details)s"
+msgstr "연결을 제거하는 데 실패했습니다: %(details)s"
+
+msgid "The device did not remove that connection. Try again."
+msgstr "장치가 해당 연결을 제거하지 않았습니다. 다시 시도하세요."
+
+msgid "Firmware updates are turned off on the Matter server."
+msgstr "Matter 서버에서 펌웨어 업데이트가 꺼져 있습니다."
+
+msgid "Checking for an update failed: %(details)s"
+msgstr "업데이트 확인에 실패했습니다: %(details)s"
+
+msgid "No update is available for this device."
+msgstr "이 장치에 사용할 수 있는 업데이트가 없습니다."
+
+msgid "This update does not come from the certified (CSA) source, so AoT does not install it."
+msgstr "이 업데이트는 인증된(CSA) 출처의 것이 아니므로 AoT가 설치하지 않습니다."
+
+msgid "The available update changed. Check again before updating."
+msgstr "사용 가능한 업데이트가 바뀌었습니다. 업데이트하기 전에 다시 확인하세요."
+
+msgid "The device is not reachable right now."
+msgstr "장치에 지금 연결할 수 없습니다."
+
+msgid "The device is already busy with an update."
+msgstr "장치가 이미 업데이트 중입니다."
+
+msgid "Starting the update failed: %(details)s"
+msgstr "업데이트를 시작하는 데 실패했습니다: %(details)s"
+
+msgid "The device did not finish joining in time. Put it back into pairing mode (see its manual) and try again."
+msgstr "장치가 제때 연결을 마치지 못했습니다. 장치를 다시 페어링 모드로 두고(설명서 참고) 다시 시도하세요."
+
+msgid "Bluetooth is not available to the Matter server. Run aot/scripts/check_matter_host.sh --ble on the host and start the server with docker/docker-compose.matter-ble.yml."
+msgstr "Matter 서버에서 Bluetooth를 사용할 수 없습니다. 호스트에서 aot/scripts/check_matter_host.sh --ble를 실행하고, docker/docker-compose.matter-ble.yml로 서버를 시작하세요."
+
+msgid "The device could not join the Wi-Fi network. Check the network name and password, and that the network is 2.4 GHz if the device needs it."
+msgstr "장치가 Wi-Fi 네트워크에 연결하지 못했습니다. 네트워크 이름과 비밀번호를 확인하고, 장치가 2.4 GHz를 요구하는 경우 네트워크가 2.4 GHz인지 확인하세요."
+
+msgid "The device could not join the Thread network. Check the Thread dataset and that a Thread border router is running."
+msgstr "장치가 Thread 네트워크에 연결하지 못했습니다. Thread 데이터셋을 확인하고 Thread 보더 라우터가 작동 중인지 확인하세요."
+
+msgid "The device was not found. Keep it close to this AoT server, make sure it is in pairing mode, and check Bluetooth on the host."
+msgstr "장치를 찾지 못했습니다. 장치를 이 AoT 서버 가까이에 두고, 페어링 모드인지 확인하고, 호스트의 Bluetooth를 확인하세요."
+
+msgid "The device did not accept the code. Check the code on the device or its box and try again."
+msgstr "장치가 코드를 받아들이지 않았습니다. 장치나 포장 상자에 적힌 코드를 확인하고 다시 시도하세요."
+
+msgid "This device already has an AoT device."
+msgstr "이 장치에는 이미 AoT 장치가 있습니다."
+
+msgid "Endpoint %(endpoint)s is a dimmer but is still set up as a switch. Delete that switch output and read the device again to control it as a dimmer."
+msgstr "엔드포인트 %(endpoint)s는 디머이지만 아직 스위치로 설정되어 있습니다. 해당 스위치 출력을 삭제하고 장치를 다시 읽으면 디머로 제어할 수 있습니다."
+
+msgid "Creating the AoT device failed. See the AoT log for details."
+msgstr "AoT 장치를 만드는 데 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Could not read the progress. See the AoT log for details."
+msgstr "진행 상황을 읽지 못했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Opening the sharing window failed. See the AoT log for details."
+msgstr "공유 창을 여는 데 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Closing the sharing window failed. See the AoT log for details."
+msgstr "공유 창을 닫는 데 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Reading the device's connections failed. See the AoT log for details."
+msgstr "장치의 연결을 읽는 데 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Removing the connection failed. See the AoT log for details."
+msgstr "연결을 제거하는 데 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Checking for an update failed. See the AoT log for details."
+msgstr "업데이트 확인에 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Unknown firmware version."
+msgstr "알 수 없는 펌웨어 버전입니다."
+
+msgid "Starting the update failed. See the AoT log for details."
+msgstr "업데이트를 시작하는 데 실패했습니다. 자세한 내용은 AoT 로그를 확인하세요."
+
+msgid "Add a new device"
+msgstr "새 장치 추가"
+
+msgid "Add a device that is fresh out of the box, or that was reset to its factory settings."
+msgstr "막 개봉한 장치나 공장 초기화한 장치를 추가합니다."
+
+msgid "AoT finds it over Bluetooth from this AoT server, so keep the device close to the server."
+msgstr "AoT가 이 AoT 서버에서 Bluetooth로 장치를 찾으므로, 장치를 서버 가까이에 두세요."
+
+msgid "You need the pairing code printed on the device or its box."
+msgstr "장치 또는 포장 상자에 인쇄된 페어링 코드가 필요합니다."
+
+msgid "Network"
+msgstr "네트워크"
+
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+msgid "Thread"
+msgstr "Thread"
+
+msgid "Already on the network (Ethernet)"
+msgstr "이미 네트워크에 연결됨(Ethernet)"
+
+msgid "Wi-Fi network name"
+msgstr "Wi-Fi 네트워크 이름"
+
+msgid "Wi-Fi password"
+msgstr "Wi-Fi 비밀번호"
+
+msgid "Thread dataset (hex)"
+msgstr "Thread 데이터셋(16진수)"
+
+msgid "AoT does not keep the Wi-Fi password or the Thread dataset. It is used once to join the device to your network and is then removed from the Matter server."
+msgstr "AoT는 Wi-Fi 비밀번호나 Thread 데이터셋을 보관하지 않습니다. 장치를 네트워크에 연결할 때 한 번만 사용되며, 이후 Matter 서버에서 제거됩니다."
+
+msgid "Bluetooth is not turned on for the Matter server, so a device cannot be found over Bluetooth yet. A device that is already on the network (Ethernet) can still be added without it."
+msgstr "Matter 서버에서 Bluetooth가 켜져 있지 않아 아직 Bluetooth로 장치를 찾을 수 없습니다. 이미 네트워크에 연결된 장치(Ethernet)는 Bluetooth 없이도 추가할 수 있습니다."
+
+msgid "To turn it on, run aot/scripts/check_matter_host.sh --ble on the host and fix what it reports. Then start the Matter server with this extra file:"
+msgstr "켜려면 호스트에서 aot/scripts/check_matter_host.sh --ble를 실행하고 보고된 문제를 해결하세요. 그다음 이 추가 파일로 Matter 서버를 시작하세요:"
+
+msgid "Share this device"
+msgstr "이 장치 공유"
+
+msgid "In the other app, choose Add device, then Matter, and enter this code. Most apps also accept the 11-digit code instead of scanning a QR code. Keep this dialog open until the other app has added the device: closing it closes the sharing window."
+msgstr "다른 앱에서 장치 추가, Matter를 차례로 선택하고 이 코드를 입력하세요. 대부분의 앱은 QR 코드를 스캔하는 대신 11자리 코드도 받아들입니다. 다른 앱이 장치를 추가할 때까지 이 창을 열어 두세요. 이 창을 닫으면 공유 창도 닫힙니다."
+
+msgid "QR code text (for apps that ask for it):"
+msgstr "QR 코드 텍스트(요구하는 앱용):"
+
+msgid "Connected ecosystems"
+msgstr "연결된 생태계"
+
+msgid "Maker"
+msgstr "제조사"
+
+msgid "Close sharing"
+msgstr "공유 닫기"
+
+msgid "Firmware"
+msgstr "펌웨어"
+
+msgid "Check for an update"
+msgstr "업데이트 확인"
+
+msgid "Release notes"
+msgstr "릴리스 노트"
+
+msgid "This update is not from the certified source. AoT will not install it."
+msgstr "이 업데이트는 인증된 출처의 것이 아닙니다. AoT는 설치하지 않습니다."
+
+msgid "Create AoT device"
+msgstr "AoT 장치 만들기"
+
+msgid "This device is on the AoT Matter fabric but has no AoT device yet, for example because the page was closed while it was being added"
+msgstr "이 장치는 AoT Matter fabric에 있지만 아직 AoT 장치가 없습니다. 예를 들어 추가하는 도중에 페이지를 닫은 경우입니다"
+
+msgid "AoT device created"
+msgstr "AoT 장치를 만들었습니다"
+
+msgid "Let another app (Apple Home, Google Home, SmartThings, and so on) use this device too"
+msgstr "다른 앱(Apple Home, Google Home, SmartThings 등)도 이 장치를 사용할 수 있게 합니다"
+
+msgid "Firmware %(version)s"
+msgstr "펌웨어 %(version)s"
+
+msgid "Checking for an update"
+msgstr "업데이트 확인 중"
+
+msgid "Waiting to check for an update"
+msgstr "업데이트 확인 대기 중"
+
+msgid "Downloading the update"
+msgstr "업데이트 다운로드 중"
+
+msgid "Installing the update"
+msgstr "업데이트 설치 중"
+
+msgid "Waiting to install the update"
+msgstr "업데이트 설치 대기 중"
+
+msgid "Rolling back the update"
+msgstr "업데이트 되돌리는 중"
+
+msgid "Waiting for the device to accept the update"
+msgstr "장치가 업데이트를 받아들이기를 기다리는 중"
+
+msgid "Looking for the device over Bluetooth and joining it to the network. This can take several minutes."
+msgstr "Bluetooth로 장치를 찾아 네트워크에 연결하는 중입니다. 몇 분 걸릴 수 있습니다."
+
+msgid "Creating the AoT device..."
+msgstr "AoT 장치를 만드는 중..."
+
+msgid "There is still no result after 12 minutes. Check the device and the AoT log, then try again."
+msgstr "12분이 지나도 결과가 없습니다. 장치와 AoT 로그를 확인한 뒤 다시 시도하세요."
+
+msgid "This job is no longer known. If the device was added, it is in the list below."
+msgstr "이 작업을 더 이상 알 수 없습니다. 장치가 추가되었다면 아래 목록에 있습니다."
+
+msgid "Enter the pairing code first."
+msgstr "먼저 페어링 코드를 입력하세요."
+
+msgid "Opening the sharing window..."
+msgstr "공유 창을 여는 중..."
+
+msgid "Sharing is open. The code stops working in %(time)s."
+msgstr "공유가 열려 있습니다. 이 코드는 %(time)s 후에 사용할 수 없게 됩니다."
+
+msgid "The sharing window has closed. Close this dialog and share again for a new code."
+msgstr "공유 창이 닫혔습니다. 이 창을 닫고 다시 공유하면 새 코드를 받을 수 있습니다."
+
+msgid "Sharing closed. The code no longer works."
+msgstr "공유가 닫혔습니다. 이 코드는 더 이상 사용할 수 없습니다."
+
+msgid "Opening the sharing window failed."
+msgstr "공유 창을 여는 데 실패했습니다."
+
+msgid "Closing the sharing window failed."
+msgstr "공유 창을 닫는 데 실패했습니다."
+
+msgid "Reading the connections..."
+msgstr "연결을 읽는 중..."
+
+msgid "Reading the connections failed."
+msgstr "연결을 읽는 데 실패했습니다."
+
+msgid "No connections found."
+msgstr "연결이 없습니다."
+
+msgid "Connections used: %(used)s of %(supported)s"
+msgstr "사용 중인 연결: %(used)s / %(supported)s"
+
+msgid "Connections used: %(used)s"
+msgstr "사용 중인 연결: %(used)s"
+
+msgid "This is AoT"
+msgstr "AoT입니다"
+
+msgid "Disconnected"
+msgstr "연결 해제됨"
+
+msgid "Disconnecting failed."
+msgstr "연결 해제에 실패했습니다."
+
+msgid "Disconnect this app from the device? The other app loses control of the device and must add it again to use it."
+msgstr "이 앱을 장치에서 연결 해제할까요? 다른 앱은 장치를 제어할 수 없게 되며, 다시 사용하려면 장치를 다시 추가해야 합니다."
+
+msgid "Current version: %(version)s"
+msgstr "현재 버전: %(version)s"
+
+msgid "Checking..."
+msgstr "확인하는 중..."
+
+msgid "Up to date"
+msgstr "최신 버전입니다"
+
+msgid "Version %(version)s is available"
+msgstr "버전 %(version)s 사용 가능"
+
+msgid "Checking for an update failed."
+msgstr "업데이트 확인에 실패했습니다."
+
+msgid "Update the firmware now? The device restarts and may stop working for a few minutes. Do not update a device that controls something critical right now."
+msgstr "지금 펌웨어를 업데이트할까요? 장치가 다시 시작되며 몇 분 동안 작동하지 않을 수 있습니다. 중요한 대상을 제어 중인 장치는 지금 업데이트하지 마세요."
+
+msgid "The update has started. Progress shows in the device list."
+msgstr "업데이트를 시작했습니다. 진행 상황은 장치 목록에 표시됩니다."
+
+msgid "Starting the update failed."
+msgstr "업데이트를 시작하는 데 실패했습니다."
+
+msgid "The Matter server did not accept the network details. Check the Wi-Fi name and password or the Thread dataset."
+msgstr "Matter 서버가 네트워크 정보를 받아들이지 않았습니다. Wi-Fi 이름과 비밀번호 또는 Thread 데이터셋을 확인하세요."
+
+msgid "Could not check access to this device. Try again."
+msgstr "이 장치에 대한 접근 권한을 확인하지 못했습니다. 다시 시도하세요."
+
+msgid "AoT does not keep the Wi-Fi password or the Thread dataset. It is used once to join the device to your network and then removed from the Matter server's credential list. The Matter server's storage log can still contain it, and that storage is part of AoT backups, so treat backups as secret."
+msgstr "AoT는 Wi-Fi 비밀번호나 Thread 데이터셋을 보관하지 않습니다. 장치를 네트워크에 연결할 때 한 번만 사용되며, 이후 Matter 서버의 자격 증명 목록에서 제거됩니다. 다만 Matter 서버의 저장소 로그에는 여전히 남아 있을 수 있고, 이 저장소는 AoT 백업에 포함되므로 백업 파일을 비밀 정보로 취급하세요."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Thermal curtain closed to keep the night heat in"
+msgstr "밤 동안 열을 지키려고 보온커튼을 닫았습니다"
+
+#: aot/aot_flask/templates/settings/user_detail.html
+msgid "Lite (small tool list)"
+msgstr "가벼움 (작은 도구 목록)"
+
+#: aot/aot_flask/templates/settings/user_detail.html
+msgid "Only a few tools are listed so every message to the AI stays small. Recommended for free AI plans. Day-to-day work stays available through the tool index."
+msgstr "AI 에 보내는 메시지마다 실리는 도구 목록을 작게 유지하려고 몇 개만 보여 줍니다. 무료 AI 요금제에 권장합니다. 일상 작업은 도구 색인으로 그대로 쓸 수 있습니다."
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "AI Tool List"
+msgstr "AI 도구 목록"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "How many tools your AI apps receive with each message. Lite keeps every message small, which is recommended for free AI plans."
+msgstr "AI 앱이 메시지마다 받는 도구 수입니다. 가벼움은 메시지를 작게 유지해 무료 AI 요금제에 권장합니다."
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Changes apply after the AI app reconnects or a new chat starts. You can also ask the AI to change it."
+msgstr "바꾼 내용은 AI 앱이 다시 연결하거나 새 대화를 시작한 뒤에 적용됩니다. AI 에게 바꿔 달라고 요청해도 됩니다."
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "API key"
+msgstr "API 키"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Lite — a few tools (free AI plans)"
+msgstr "가벼움 — 몇 가지 도구 (무료 AI 요금제)"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Operations + setup modules (current)"
+msgstr "운영 + 설정 모듈 (현재)"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Operations — every day-to-day tool"
+msgstr "운영 — 일상 작업 도구 전부"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Configuration — day-to-day and all setup tools"
+msgstr "설정 — 일상 작업과 모든 설정 도구"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Tool list changed. Reconnect the AI app or start a new chat to see it."
+msgstr "도구 목록을 바꿨습니다. AI 앱을 다시 연결하거나 새 대화를 시작하면 보입니다."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Kept open to let the sun's heat out — sunny and above the temperature target"
+msgstr "햇빛 열을 빼려고 열어 두었습니다 — 해가 들고 온도 목표보다 높습니다"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "AI apps that sign in through the authorization server (for example a claude.ai connector) use this."
+msgstr "인가 서버로 로그인하는 AI 앱(예: claude.ai 커넥터)이 이 설정을 씁니다."
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Signed-in AI apps"
+msgstr "로그인 연결 AI 앱"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Decided by the sign-in permission (current)"
+msgstr "로그인 권한에 따라 정해짐 (현재)"
+
+msgid "Use Matter (Experimental)"
+msgstr "Matter 사용 (실험)"
+
+msgid "Adds Matter to the Settings menu, where devices already set up in Apple Home, Google Home, SmartThings and similar apps can be added to AoT. Needs a Linux host on the same network as the devices, and the Matter server started on that host. While Matter devices exist, Matter cannot be turned off."
+msgstr "설정 메뉴에 Matter 를 추가합니다. Apple Home, Google Home, SmartThings 같은 앱에 이미 설정된 장치를 AoT 로 가져올 수 있습니다. 장치와 같은 네트워크의 Linux 호스트와, 그 호스트에서 시작한 Matter 서버가 필요합니다. Matter 장치가 있는 동안은 끌 수 없습니다."
+
+msgid "Use devices from other smart-home apps. Experimental."
+msgstr "다른 스마트홈 앱의 장치를 씁니다. 실험 기능입니다."
+
+msgid "Matter stays on: remove the %(n)s Matter device(s) in Settings > Matter first."
+msgstr "Matter 를 끄지 않았습니다. 먼저 설정 > Matter 에서 Matter 장치 %(n)s개를 제거하세요."
+
+msgid "This AoT image does not include the packages Matter needs. Update AoT to a newer image, then open Settings > Matter."
+msgstr "이 AoT 이미지에는 Matter 에 필요한 패키지가 없습니다. AoT 를 새 이미지로 업데이트한 뒤 설정 > Matter 를 여세요."
+
+msgid "Install the packages Matter needs, then open Settings > Matter."
+msgstr "Matter 에 필요한 패키지를 설치한 뒤 설정 > Matter 를 여세요."
+
+msgid "Matter is off. Turn it on in Settings > General."
+msgstr "Matter 가 꺼져 있습니다. 설정 > 일반 설정에서 켜세요."
+
+msgid "The Matter server is not running on this host."
+msgstr "이 호스트에서 Matter 서버가 실행되고 있지 않습니다."
+
+msgid "The Matter server's log can keep this password or dataset, and AoT backups include that log. Treat backups as secret."
+msgstr "Matter 서버의 로그에 이 비밀번호나 데이터셋이 남을 수 있고, AoT 백업에 그 로그가 들어갑니다. 백업은 비밀로 다루세요."
+
+msgid "Bluetooth is off on the Matter server. Only a device already on the network (Ethernet) can be added."
+msgstr "Matter 서버의 블루투스가 꺼져 있습니다. 이미 네트워크(이더넷)에 있는 장치만 추가할 수 있습니다."
+
+msgid "In the other app, choose Add device, then Matter, and enter this code. Keep this dialog open until the other app has added the device."
+msgstr "다른 앱에서 장치 추가 → Matter 를 고르고 이 코드를 입력하세요. 다른 앱이 장치를 추가할 때까지 이 창을 닫지 마세요."
+
+msgid "Allow AI to control this screen"
+msgstr "이 화면을 AI가 조작하도록 허용"
+
+msgid "Stop AI control of this screen"
+msgstr "AI 화면 조작 끄기"
+
+msgid "Show what AI looks up: Auto"
+msgstr "AI가 조회한 곳 화면에 띄우기: 자동"
+
+msgid "Show what AI looks up: Ask first"
+msgstr "AI가 조회한 곳 화면에 띄우기: 먼저 묻기"
+
+msgid "Show what AI looks up: Off"
+msgstr "AI가 조회한 곳 화면에 띄우기: 끔"
+
+msgid "Follow: auto"
+msgstr "따라가기: 자동"
+
+msgid "Follow: ask"
+msgstr "따라가기: 묻기"
+
+msgid "Follow: off"
+msgstr "따라가기: 끔"
+
+msgid "AI connected"
+msgstr "AI 연결됨"
+
+msgid "Turn off"
+msgstr "끄기"
+
+msgid "AI wants to change this screen"
+msgstr "AI가 이 화면을 바꾸려고 합니다"
+
+msgid "Allow"
+msgstr "허용"
+
+msgid "Decline"
+msgstr "거절"
+
+msgid "Open “%s”"
+msgstr "“%s” 열기"
+
+msgid "Highlight “%s”"
+msgstr "“%s” 강조"
+
+msgid "Open the settings of “%s”"
+msgstr "“%s” 설정 창 열기"
+
+msgid "Close the open dialog"
+msgstr "열린 창 닫기"
+
+msgid "Show a message"
+msgstr "메시지 표시"
+
+msgid "Show an AI message"
+msgstr "AI 메시지 표시"
+
+msgid "AI inbox"
+msgstr "AI 수신함"
+
+msgid "Inbox"
+msgstr "수신함"
+
+msgid "AI inbox: %s unread"
+msgstr "AI 수신함: 읽지 않은 글 %s개"
+
+msgid "AI messages"
+msgstr "AI 메시지"
+
+msgid "%s more in the AI inbox"
+msgstr "AI 수신함에 %s개 더 있음"
+
+msgid "No AI messages."
+msgstr "AI 메시지가 없습니다."
+
+msgid "Could not load the AI inbox."
+msgstr "AI 수신함을 불러오지 못했습니다."
+
+msgid "New"
+msgstr "새 글"
+
+msgid "Dismiss"
+msgstr "닫기"
+
+msgid "Show older"
+msgstr "이전 글 더 보기"
+
+msgid "Mark all read"
+msgstr "모두 읽음"
+
+msgid "AI result cards"
+msgstr "AI 결과 카드"
+
+msgid "When on, connected AI is told to also post key results (recommendations, summaries, comparisons, plans, reports, images, link lists) as AI cards on your screen."
+msgstr "켜면 연결된 AI가 핵심 결과(추천·요약·비교·계획·리포트·이미지·링크 목록)를 화면에 AI 카드로도 올리도록 안내받습니다."
+
+msgid "Rule for AI that ignores the server instructions"
+msgstr "서버 지침을 따르지 않는 AI용 규칙"
+
+msgid "Hide AI messages"
+msgstr "AI 메시지 숨기기"
+
+msgid "Check to stop AI messages from popping up on screen. They still arrive in the AI inbox."
+msgstr "체크하면 AI가 보낸 메시지가 화면에 자막으로 뜨지 않습니다. 메시지는 AI 수신함에 계속 쌓이고, 헤더의 AI 단추에 점으로 알립니다."
+
+msgid "Open file: %s"
+msgstr "파일 열기: %s"
+
+msgid "%s — toggle full size"
+msgstr "%s — 화면에 맞춤/원래 크기 전환"
+
+msgid "Received at"
+msgstr "받은 시각"
+
+msgid "Pin card"
+msgstr "고정"
+
+msgid "Pinned card"
+msgstr "고정"
+
+msgid "Pinned only"
+msgstr "고정만 보기"
+
+msgid "Saved to notes"
+msgstr "노트에 저장됨"
+
+msgid "Save to notes"
+msgstr "노트로 저장"
+
+msgid "Dismiss card"
+msgstr "카드 닫기"
+
+msgid "Search AI messages"
+msgstr "AI 메시지 검색"
+
+msgid "No matching AI messages."
+msgstr "찾는 AI 메시지가 없습니다."
+
+msgid "Could not load the preview."
+msgstr "미리보기를 불러오지 못했습니다."
+
+msgid "Could not update the card."
+msgstr "카드를 바꾸지 못했습니다."
+
+msgid "Pin limit reached. Unpin a card first."
+msgstr "고정할 수 있는 카드 수에 도달했습니다. 다른 카드의 고정을 먼저 풀어 주세요."
+
+msgid "You do not have permission to create notes."
+msgstr "노트를 만들 권한이 없습니다."
+
+msgid "Could not save to notes."
+msgstr "노트로 저장하지 못했습니다."
+
+msgid "Reload this page"
+msgstr "이 페이지 새로고침"
+
+msgid "Screen control"
+msgstr "화면 제어"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Limited for rain — roof vents shut, side vents opened only part way"
+msgstr "비 때문에 제한합니다 — 천창은 닫고 측창은 일부만 엽니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Light or forecast rain — roof vents closed, side vents limited"
+msgstr "약한 비 또는 예보상 비 — 천창은 닫고 측창은 일부만 엽니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Rain in the forecast — roof vents not opened further"
+msgstr "예보에 비가 있습니다 — 천창을 더 열지 않습니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Wet misting is held back as the light fades — leaves would stay wet overnight"
+msgstr "빛이 약해져 습윤 분무를 줄였습니다 — 잎이 젖은 채 밤을 넘기게 됩니다"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Stop Wetting Mist Toward Dusk"
+msgstr "해 질 녘 습윤 분무 중단"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Wetting-type misting eases off as the light fades and stops before sunset (90 minutes; with sunburn/evening protection on, the stop time set below), so leaves are not left wet overnight. Fine fog is not affected. Turn off to allow evening misting."
+msgstr "습윤형 분무는 빛이 약해지면 줄고, 일몰 전에 멈춥니다(90분 전, 일소·저녁 보호를 켜면 아래 중단 시간). 잎이 젖은 채 밤을 넘기지 않게 하려는 것입니다. 미세 포그에는 영향이 없습니다. 저녁에도 분무하려면 끄세요."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Night Dew Circulation Fan (Experimental)"
+msgstr "밤 이슬 순환팬(실험)"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "After sunset, runs the circulation fans while the indoor air is within 2 °C of its dew point (stops at 3 °C, at least 30 minutes on). Off by default: in simulation it did not shorten the wet hours of a closed house and only added fan power and condensation."
+msgstr "해가 진 뒤 실내 공기가 이슬점에서 2 °C 안으로 다가오면 순환팬을 돌립니다(3 °C 에서 멈춤, 최소 30분 가동). 기본은 꺼짐입니다 — 시뮬레이션에서 닫힌 집의 젖은 시간을 줄이지 못했고 팬 전력과 결로만 늘었습니다."
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "Short Mist Pulses in Extreme Heat/Dryness"
+msgstr "극한 고온·건조 짧은 펄스 분무"
+
+#: functions/custom_functions/env_coordinator_impl/_function_info.py
+msgid "While the sunburn lock is on, let one short wetting-mist pulse (10 seconds on, at least 15 minutes off) through when the house is in extreme heat protection or the air is very dry (VPD above 3 kPa) and wet leaves would dry within minutes. Never toward dusk or at night, in rain or frost, when humidity is already high, or without water. Turn off to keep the lock absolute."
+msgstr "일소 잠금이 켜져 있어도, 극한 고온 보호 중이거나 공기가 매우 건조하고(VPD 3 kPa 초과) 젖은 잎이 몇 분 안에 마르는 날에는 습윤형 분무를 짧은 펄스 하나(10초 켬, 15분 이상 쉼)로 허용합니다. 해 질 녘·밤, 비·서리, 습도가 이미 높을 때, 물이 없을 때는 하지 않습니다. 끄면 잠금이 그대로 유지됩니다."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Slightly open to let the night's moisture out — the sun is warming the house and the air outside is drier"
+msgstr "밤새 쌓인 습기를 빼려고 조금 열어 두었습니다 — 해가 집을 데우고 바깥 공기가 더 건조합니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Strong wind — windward and roof vents closed, others limited"
+msgstr "센 바람 — 바람 받는 쪽 창과 천창은 닫고 나머지는 일부만 엽니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Limited for wind — opened only part way, windward side kept shut"
+msgstr "바람 때문에 제한합니다 — 일부만 열고 바람 받는 쪽은 닫아 둡니다"
+
+#: aot_flask/static/js/geo/facility/sensor-ui.js
+msgid "Wind gust"
+msgstr "돌풍"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Frost risk tonight — thermal curtain closed, vents not opened further"
+msgstr "오늘 밤 서리 위험 — 보온커튼을 닫고 환기창은 더 열지 않습니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Frost protection — vents and curtain closed, heating and circulation fans on"
+msgstr "서리 보호 중 — 환기창과 보온커튼을 닫고 난방과 유동팬을 켭니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Frost protection — kept sealed and warm so frost does not form on the crop"
+msgstr "서리 보호 — 작물에 서리가 맺히지 않게 닫아 두고 따뜻하게 유지합니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Extreme heat and dry air — one short misting burst is allowed through the sunburn lock"
+msgstr "극한 고온·건조 — 일소 잠금 중에도 짧은 분무 한 번을 허용합니다"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Closed while the outdoor reading is missing — it is night, so a small opening is shut"
+msgstr "실외 값이 없는 동안 닫음 — 밤이라 조금 열린 창을 닫았습니다"
+
+msgid "Open “%s” on the map"
+msgstr "지도에서 “%s” 열기"
+
+msgid "On a native install, start it with docker/docker-compose.matter-native.yml and give the AoT services AOT_MATTER_URL (install/aot-matter.conf)."
+msgstr "네이티브 설치에서는 docker/docker-compose.matter-native.yml 로 시작하고, AoT 서비스에 AOT_MATTER_URL 을 줍니다(install/aot-matter.conf)."
+
+msgid "Open the “%s” tab"
+msgstr "“%s” 탭 열기"
+
+msgid "Full screen map"
+msgstr "지도 전체화면"
+
+msgid "Change map layers"
+msgstr "지도 레이어 바꾸기"
+
+msgid "Change the map view"
+msgstr "지도 보기 바꾸기"
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Circulation fans on — the night air is close to its dew point, and moving air shortens how long the leaves stay wet"
+msgstr "밤 공기가 이슬점에 가까워 순환팬을 켭니다 — 공기를 움직이면 잎이 젖어 있는 시간이 줄어듭니다"
+
+msgid "Device Status"
+msgstr "장치 상태"
+
+msgid "Status Note"
+msgstr "상태 사유"
+
+msgid "Status Since"
+msgstr "상태 시작일"
+
+msgid "Under repair"
+msgstr "수리 중"
+
+msgid "Under maintenance"
+msgstr "점검 중"
+
+msgid "Repair, removed and maintenance sensors are left out of averages and silence alerts."
+msgstr "수리 중·철거됨·점검 중인 센서는 평균과 침묵 경보에서 빠집니다."
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Open-Meteo forecast Input"
+msgstr "Open-Meteo 예보 입력"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Fill recommended connections from Open-Meteo forecast Input"
+msgstr "Open-Meteo 예보 입력에서 추천 연결 채우기"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "No Open-Meteo hourly forecast Input is running. Add an Input with the \"Open-Meteo Hourly Forecast\" driver and activate it first."
+msgstr "실행 중인 Open-Meteo 시간별 예보 입력이 없습니다. 먼저 \"Open-Meteo Hourly Forecast\" 드라이버로 입력을 추가하고 활성화하세요."
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Choose which Open-Meteo forecast Input to use."
+msgstr "사용할 Open-Meteo 예보 입력을 고르세요."
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Filled the recommended connections. Review them, then save the facility."
+msgstr "추천 연결을 채웠습니다. 내용을 확인한 뒤 시설을 저장하세요."
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Some channels were not found on this Input and were skipped:"
+msgstr "이 입력에서 찾지 못해 건너뛴 채널이 있습니다:"
+
+#: aot_flask/static/js/geo/facility/weather-ui.js
+msgid "Other connections of the same item already exist and will be averaged with these."
+msgstr "같은 항목의 다른 연결이 이미 있어 이 값들과 평균됩니다."
+
+#: aot_flask/static/js/common/aot-map-popup.js
+msgid "Indoor reading missing — opened a little because a closed house heats fast in the sun (closed again after sunset)"
+msgstr "실내 값이 없어 해를 보고 조금 열었습니다 — 닫힌 집은 해 아래서 빨리 더워집니다(해가 지면 다시 닫습니다)"
+
+#: inputs/ecowitt_mqtt.py inputs/mqtt_paho.py inputs/mqtt_paho_json.py
+msgid "Store retained messages"
+msgstr "보존(retained) 메시지 저장"
+
+#: inputs/ecowitt_mqtt.py inputs/mqtt_paho.py inputs/mqtt_paho_json.py
+msgid "When off (default), messages the broker re-sends from its retained store right after subscribing are not saved as measurements, because they are old values that would otherwise be stamped with the current time. Turn on only if the publisher sends its state as retained messages only."
+msgstr "끄면(기본) 구독 직후 브로커가 보존 저장소에서 다시 보내는 메시지를 측정값으로 저장하지 않습니다. 그 값은 이미 오래된 값인데 현재 시각이 찍혀 새 측정처럼 보이기 때문입니다. 장치가 상태를 보존(retained) 메시지로만 내보낼 때만 켜세요."
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "On-site observation"
+msgstr "현장 관측"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Precip"
+msgstr "강수"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Wind dir"
+msgstr "풍향"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Risk"
+msgstr "위험"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observed"
+msgstr "관측"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Observation delayed"
+msgstr "관측 지연"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Freeze"
+msgstr "결빙"
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Heat"
+msgstr "폭염"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Sunrise / sunset glow"
+msgstr "해 뜰·질 녘"
+
+#: aot_flask/static/js/geo/aot-map-custom-controls.js
+msgid "Twilight"
+msgstr "박명"
+
+#: widgets/AoT_map.py
+msgid "Auto (by sun position)"
+msgstr "자동 (태양 위치 기준)"
+
+#: widgets/AoT_map.py
+msgid "Always day"
+msgstr "항상 낮"
+
+#: widgets/AoT_map.py
+msgid "Always night"
+msgstr "항상 밤"
+
+#: widgets/AoT_map.py
+msgid "Day / Night Appearance"
+msgstr "주야 표현"
+
+#: widgets/AoT_map.py
+msgid "Darkens the base map at night and lights 3D models from the sun's position. Also fills the measurement dock with weather values (rain, wind, cloud, visibility, risk) and shows a day/night icon in the time dock. Off turns all of this off."
+msgstr "밤에는 바닥 지도를 어둡게 하고 3D 모형에 해의 위치대로 빛을 줍니다. 측정값 독에 기상 값(강수·바람·운량·시정·위험)을 채우고 시간 독에 주야 아이콘을 보여 줍니다. 끄면 이 모두를 끕니다."
+
+#: widgets/AoT_map.py
+msgid "Weather First in Measurement Dock"
+msgstr "측정값 독에서 기상 먼저"
+
+#: widgets/AoT_map.py
+msgid "Puts weather values at the left of the measurement dock. A value you also picked from a field device is merged into it and marked with a pin. Turn off to keep the dock exactly as you configured it."
+msgstr "기상 값을 측정값 독의 왼쪽에 놓습니다. 현장 장치에서 직접 고른 같은 항목은 여기에 합치고 위치 핀을 붙입니다. 끄면 독이 설정한 그대로 유지됩니다."
+
+#: widgets/AoT_map.py
+msgid "Auto-adjust Overlay Opacity"
+msgstr "오버레이 투명도 자동 조정"
+
+#: widgets/AoT_map.py
+msgid "Weather overlays (clouds, radar, wind) are drawn above shapes and 3D models, and their opacity is lowered automatically so the shapes stay visible. Turn off to go back to the old order: weather layers sit below the shapes and use each layer's own opacity as is."
+msgstr "날씨 오버레이(구름·레이더·바람)를 도형과 3D 모형 위에 그리고, 도형이 보이도록 투명도를 자동으로 낮춥니다. 끄면 예전 순서로 돌아가 날씨 레이어를 도형 아래에 두고 각 레이어의 불투명도를 그대로 씁니다."
+
+#: aot_flask/static/js/widgets/AoT_map/aot-map-ambient.js
+msgid "Cloud cover"
+msgstr "운량"
+
+msgid "Weather Effects"
+msgstr "날씨 연출"
+
+msgid "Subtle"
+msgstr "은은하게"
+
+msgid "Vivid"
+msgstr "뚜렷하게"
+
+msgid "Draws the current weather over the map from observed values only, even when no weather layer is on: cloud shadows (by cloud cover), wind streaks, rain or snow (by precipitation) and fog (by visibility). Effects are dimmer over facilities. They pause when the map is off-screen or when reduced motion is requested."
+msgstr "날씨 레이어를 켜지 않아도 관측값만으로 지도 위에 현재 날씨를 그립니다: 구름 그림자(운량), 바람 흐름선, 비·눈(강수량), 안개(시정). 시설 위에서는 더 옅어지고, 지도가 화면 밖이거나 시스템에서 움직임 줄이기를 켜면 멈춥니다."
+
+msgid "Lightning Flash"
+msgstr "번개 섬광"
+
+msgid "When a weather source reports recent lightning, the screen brightens briefly now and then (never more than a few times per second). Turn off to avoid flashing. It is also skipped when reduced motion is requested."
+msgstr "기상 출처가 최근 낙뢰를 알려 주면 화면이 가끔 짧게 밝아집니다(초당 몇 번을 넘지 않습니다). 깜빡임이 불편하면 끄세요. 시스템에서 움직임 줄이기를 켠 경우에도 그리지 않습니다."
+
+msgid "Lightning"
+msgstr "낙뢰"
+
+msgid "Show Weather Layers Automatically"
+msgstr "기상 레이어 자동 켜기"
+
+msgid "When it rains, clouds cover the sky or the wind is strong, turns on the matching weather layer you registered in this widget (precipitation, cloud or wind) on screen only. Your saved layer selection is not changed, and a layer you turn off yourself stays off until the page is reloaded. Thresholds are set on the server."
+msgstr "비가 오거나 구름이 많거나 바람이 센 조건이 되면, 이 위젯에 등록해 둔 해당 기상 레이어(강수·구름·바람)를 화면에서만 자동으로 켭니다. 저장된 레이어 선택은 바뀌지 않으며, 직접 끈 레이어는 페이지를 다시 열 때까지 다시 켜지 않습니다. 조건의 기준값은 서버에서 정합니다."
+
+msgid "Field devices first"
+msgstr "현장 장치 먼저"
+
+msgid "Weather inputs first"
+msgstr "기상 입력 먼저"
+
+msgid "Weather Value Source Order"
+msgstr "기상 값 출처 순서"
+
+msgid "Weather values come from the weather stations you assigned to the site (field devices) and from the weather inputs registered in the map layers, even when their layer is off. Choose which one is used first; each value falls back to the other when it is missing or too old. With neither, no weather cells or effects are shown."
+msgstr "기상 값은 대지에 기상대로 지정한 장치(현장 장치)와 지도 레이어에 등록한 기상 입력에서 가져옵니다. 입력은 레이어가 꺼져 있어도 씁니다. 어느 쪽을 먼저 쓸지 고르세요. 값이 없거나 너무 오래되면 다른 쪽으로 넘어갑니다. 둘 다 없으면 기상 칸과 효과를 보여 주지 않습니다."
+
+msgid "Weather Value Max Age (Seconds)"
+msgstr "기상 값 최대 지연(초)"
+
+msgid "A field device value older than this is skipped in favor of the next source."
+msgstr "현장 장치 값이 이보다 오래되면 건너뛰고 다음 출처를 씁니다."
+
+msgid "Risk: Wind Speed (m/s)"
+msgstr "위험: 풍속(m/s)"
+
+msgid "Shows a risk in the weather cells when the current wind speed reaches this value."
+msgstr "현재 풍속이 이 값 이상이면 기상 칸에 위험을 표시합니다."
+
+msgid "Risk: Precipitation (mm/h)"
+msgstr "위험: 강수량(mm/h)"
+
+msgid "Shows a risk when the current precipitation reaches this value."
+msgstr "현재 강수량이 이 값 이상이면 위험을 표시합니다."
+
+msgid "Risk: Low Temperature (°C)"
+msgstr "위험: 저온(°C)"
+
+msgid "Shows a frost risk when the current temperature falls to this value or below."
+msgstr "현재 기온이 이 값 이하로 내려가면 서리 위험을 표시합니다."
+
+msgid "Risk: High Temperature (°C)"
+msgstr "위험: 고온(°C)"
+
+msgid "Shows a heat risk when the current temperature reaches this value or above."
+msgstr "현재 기온이 이 값 이상이면 폭염 위험을 표시합니다."
+
+msgid "Weather Effects Minimum Zoom"
+msgstr "날씨 연출 최소 줌"
+
+msgid "Zoomed out beyond this level, the weather effects and the layers turned on automatically fade out over one zoom level, because one observation spread over a wide area is misleading. Layers you turn on yourself, the dock values and the day/night correction are not affected. 0 shows them at every zoom."
+msgstr "이 줌보다 더 멀리 보면 날씨 연출과 자동으로 켠 레이어가 1줌 구간에서 서서히 사라집니다. 관측값 하나를 넓은 지역에 고르게 깔면 틀린 그림이 되기 때문입니다. 직접 켠 레이어, 독의 값, 주야 보정은 그대로입니다. 0이면 어떤 줌에서도 보여 줍니다."
+
+msgid "Temperature Tint"
+msgstr "온도 색조"
+
+msgid "Colors the temperature value in the dock blue when cold and red when hot, and adds a very faint tint to the base map (never over shapes or 3D models)."
+msgstr "독의 기온 값을 추우면 파랑, 더우면 빨강으로 칠하고 바닥 지도에 아주 옅은 색조를 줍니다(도형·3D 모형 위에는 올리지 않습니다)."
+
+msgid "Tint: Neutral From (°C)"
+msgstr "색조: 보통 시작 (°C)"
+
+msgid "Below this temperature the cold tint starts; it is strongest at the frost risk temperature."
+msgstr "이 기온보다 낮으면 차가운 색조가 시작되고, 서리 위험 기온에서 가장 진합니다."
+
+msgid "Tint: Neutral Up To (°C)"
+msgstr "색조: 보통 끝 (°C)"
+
+msgid "Above this temperature the hot tint starts; it is strongest at the heat risk temperature."
+msgstr "이 기온보다 높으면 더운 색조가 시작되고, 폭염 위험 기온에서 가장 진합니다."
+
+msgid "North wind"
+msgstr "북풍"
+
+msgid "North-northeast wind"
+msgstr "북북동풍"
+
+msgid "Northeast wind"
+msgstr "북동풍"
+
+msgid "East-northeast wind"
+msgstr "동북동풍"
+
+msgid "East wind"
+msgstr "동풍"
+
+msgid "East-southeast wind"
+msgstr "동남동풍"
+
+msgid "Southeast wind"
+msgstr "남동풍"
+
+msgid "South-southeast wind"
+msgstr "남남동풍"
+
+msgid "South wind"
+msgstr "남풍"
+
+msgid "South-southwest wind"
+msgstr "남남서풍"
+
+msgid "Southwest wind"
+msgstr "남서풍"
+
+msgid "West-southwest wind"
+msgstr "서남서풍"
+
+msgid "West wind"
+msgstr "서풍"
+
+msgid "West-northwest wind"
+msgstr "서북서풍"
+
+msgid "Northwest wind"
+msgstr "북서풍"
+
+msgid "North-northwest wind"
+msgstr "북북서풍"
+
+msgid "Calm"
+msgstr "고요"
+
+msgid "Direction the wind blows from"
+msgstr "불어오는 방향"
+
+#: aot_flask/routes_page.py
+msgid "The system log limit cannot be changed in this environment."
+msgstr "이 환경에서는 시스템 로그 용량 상한을 바꿀 수 없습니다."
+
+#: aot_flask/routes_page.py
+#, python-format
+msgid "Enter an integer between %(min)s and %(max)s (MB)."
+msgstr "%(min)s에서 %(max)s 사이의 정수(MB)를 입력하세요."
+
+#: aot_flask/routes_page.py
+msgid "The daemon is not running, so the system log limit cannot be applied."
+msgstr "데몬이 실행 중이 아니어서 시스템 로그 용량 상한을 적용할 수 없습니다."
+
+#: aot_flask/routes_page.py
+#, python-format
+msgid "System log size limit set to %(mb)s MB."
+msgstr "시스템 로그 용량 상한을 %(mb)s MB로 설정했습니다."
+
+#: aot_flask/routes_page.py
+msgid "The system log limit is set elsewhere and was not changed."
+msgstr "시스템 로그 용량 상한이 다른 곳에서 지정되어 있어 바꾸지 않았습니다."
+
+#: aot_flask/routes_page.py
+msgid "Could not apply the system log limit. Check the daemon log."
+msgstr "시스템 로그 용량 상한을 적용하지 못했습니다. 데몬 로그를 확인하세요."
+
+#: aot_flask/templates/pages/info.html
+msgid "System Log Size Limit"
+msgstr "시스템 로그 용량 상한"
+
+#: aot_flask/templates/pages/info.html
+msgid "Current usage"
+msgstr "현재 사용량"
+
+#: aot_flask/templates/pages/info.html
+msgid "Size limit"
+msgstr "용량 상한"
+
+#: aot_flask/templates/pages/info.html
+msgid "Not set (system default)"
+msgstr "지정 안 함 (시스템 기본값)"
+
+#: aot_flask/templates/pages/info.html
+msgid "The system log is kept in /var/log/journal. When it reaches the limit, the oldest entries are removed."
+msgstr "시스템 로그는 /var/log/journal 에 쌓입니다. 상한에 이르면 오래된 기록부터 지워집니다."
+
+#: aot_flask/templates/pages/info.html
+#, python-format
+msgid "The limit is set in %(path)s and cannot be changed here."
+msgstr "상한이 %(path)s 에 지정되어 있어 여기서는 바꿀 수 없습니다."
+
+#: aot_flask/templates/pages/info.html
+msgid "Applied immediately; entries over the new limit are removed now."
+msgstr "바로 적용되며, 새 상한을 넘는 기록은 지금 지워집니다."
+
+#: aot_flask/templates/pages/info.html
+msgid "Recommended"
+msgstr "권장"
+
+msgid "Open AI screen: %s"
+msgstr "AI 화면 열기: %s"
+
+msgid "%s — screen made by AI"
+msgstr "%s — AI가 만든 화면"
+
+msgid "This screen tried to go to another address, so it was closed."
+msgstr "이 화면이 다른 주소로 이동하려 해 닫았습니다"
+
+msgid "This screen was made by AI. It is shown without scripts or outside connections. Do not enter passwords or other private information."
+msgstr "AI가 만든 화면입니다. 스크립트·외부 연결 없이 보여 줍니다. 비밀번호 등을 입력하지 마세요."
+
+msgid "Post as notice"
+msgstr "공지로 게시"
+
+msgid "View notice"
+msgstr "공지 보기"
+
+msgid "Attach the file too (%s)"
+msgstr "첨부 함께 게시(%s)"
+
+msgid "Everyone on the farm will see this."
+msgstr "농장의 모든 사용자에게 보입니다"
+
+msgid "External links (%s): %s. They open as previews or images in the notice."
+msgstr "외부 링크 %s개: %s — 공지에서 미리보기·이미지로 열립니다"
+
+msgid "Posting…"
+msgstr "게시하는 중…"
+
+msgid "Posted as a notice."
+msgstr "공지로 게시했습니다"
+
+msgid "Already posted as a notice."
+msgstr "이미 공지로 게시되어 있습니다"
+
+msgid "Could not post the notice."
+msgstr "공지를 게시하지 못했습니다"
+
+msgid "You do not have permission to post notices."
+msgstr "공지를 쓸 권한이 없습니다"
+
+msgid "Please try again in a moment."
+msgstr "잠시 뒤 다시 시도하세요"
+
+msgid "This file cannot be attached to a notice."
+msgstr "이 파일은 공지에 첨부할 수 없습니다"
+
+msgid "Enter a title or a body."
+msgstr "제목이나 본문을 입력하세요"
+
+msgid "The notice is too long."
+msgstr "공지가 너무 깁니다"
+
+msgid "This card is no longer available."
+msgstr "이 카드는 더 이상 없습니다"
+
+msgid "More"
+msgstr "더 보기"
+
+msgid "Less"
+msgstr "접기"
+
+msgid "This screen is out of date — reload"
+msgstr "화면이 오래됐습니다 — 새로고침"
+
+msgid "Reload"
+msgstr "새로고침"
+
+msgid "Show source"
+msgstr "원문 보기"
+
+msgid "Show formatted"
+msgstr "서식 보기"
+
+msgid "Not done"
+msgstr "미완료"
+
+msgid "Table: %s columns × %s rows"
+msgstr "표: %s열 × %s행"
+
+msgid "%s more rows not shown"
+msgstr "%s개 행은 표시하지 않았습니다"
+
+msgid "Table (scrolls sideways)"
+msgstr "표 (옆으로 밀어서 보기)"
+
+msgid "The rest is not shown."
+msgstr "나머지는 표시하지 않았습니다"
+
+msgid "AI Card Surface"
+msgstr "AI 카드 면"
+
+msgid "AI Card Text"
+msgstr "AI 카드 글자"
+
+msgid "AI Card"
+msgstr "AI 카드"
+
+msgid "Click to edit AI Card Surface colors"
+msgstr "AI 카드 면 색을 편집하려면 누르세요"
+
+msgid "Dark face of AI cards — captions, inbox, viewer. Drawn at 0.8 opacity so the screen shows through. Change it together with AI Card Text"
+msgstr "AI 카드(자막·수신함·뷰어)의 어두운 면입니다. 화면이 비치도록 불투명도 0.8로 그립니다. AI 카드 글자와 함께 바꾸세요"
+
+msgid "Light text on AI cards. Always opaque. Keep it far from AI Card Surface, or the text vanishes"
+msgstr "AI 카드 위의 밝은 글자입니다. 항상 불투명합니다. AI 카드 면과 충분히 다른 색이어야 글자가 보입니다"
+
+msgid "AI connection"
+msgstr "AI 연결"
+
+msgid "AI connected — open inbox, %s unread"
+msgstr "AI 연결됨 — 수신함 열기, 읽지 않은 글 %s개"
+
+msgid "Turn off AI control of this screen"
+msgstr "이 화면의 AI 조작 끄기"
+
+msgid "AI screen control is off. You can turn it on again in the AI menu."
+msgstr "AI 화면 조작을 껐습니다. AI 메뉴에서 다시 켤 수 있습니다."
+
+msgid "Play"
+msgstr "재생"
+
+msgid "Return to the current time"
+msgstr "현재 시각으로 돌아가기"
+
+msgid "Time slider"
+msgstr "시간 슬라이더"
+
+msgid "+{n}d"
+msgstr "+{n}일"
+
+msgid "Show forecast up to {n} days"
+msgstr "예보를 최대 {n}일까지 보기"
+
+msgid "Map layers"
+msgstr "지도 레이어"
+
+msgid "Day / night"
+msgstr "낮 / 밤"
+
+msgid "Out of range"
+msgstr "범위 밖"
+
+msgid "Low confidence"
+msgstr "낮은 신뢰도"
+
+msgid "Reference only"
+msgstr "참고용"
+
+msgid "Recorded"
+msgstr "기록"
+
+msgid "Forecast values for the selected time"
+msgstr "선택한 시각의 예보 값"
+
+msgid "Recorded values for the selected time"
+msgstr "선택한 시각의 기록 값"
+
+msgid "Show Time Slider"
+msgstr "시간 슬라이더 표시"
+
+msgid "Adds a slider under the time dock to look at the map at another time: radar frames of time-enabled layers, forecast or recorded weather values, and day / night. Needs \"Show Local Time\". Drag it back to \"Now\" to return to live values."
+msgstr "시간 독 아래에 슬라이더를 더해 지도를 다른 시각으로 봅니다. 시간 지원 레이어의 레이더 프레임, 예보 또는 기록된 기상 값, 낮과 밤이 그 시각으로 바뀝니다. \"현지 시각 표시\"가 켜져 있어야 합니다. \"현재\"로 되돌리면 실시간 값으로 돌아갑니다."
+
+msgid "%s attachments"
+msgstr "첨부 %s"
+
+msgid "%s more attachments — open viewer"
+msgstr "첨부 %s개 더 — 뷰어 열기"
+
+msgid "View all"
+msgstr "모두 보기"
+
+msgid "Open link: %s"
+msgstr "링크 열기: %s"
+
+msgid "Open original page"
+msgstr "원본 페이지 열기"
+
+msgid "Play: %s"
+msgstr "재생: %s"
+
+msgid "Open: %s"
+msgstr "열기: %s"
+
+msgid "Plays from %s (outside site)"
+msgstr "%s(외부 사이트)에서 재생됩니다"
+
+msgid "Open video: %s"
+msgstr "영상 열기: %s"
+
+msgid "Previous attachment"
+msgstr "이전 첨부"
+
+msgid "Next attachment"
+msgstr "다음 첨부"
+
+msgid "Video service"
+msgstr "영상 서비스"
+
+msgid "Video host"
+msgstr "영상 호스트"
+
+msgid "Play on original site"
+msgstr "원본에서 재생"
+
+msgid "Play here"
+msgstr "여기서 재생"
+
+msgid "When you play, YouTube (an outside site) runs its own scripts on this device and sees this device's IP address."
+msgstr "재생하면 YouTube(외부 사이트)가 이 기기에서 자체 스크립트를 실행하고 이 기기의 IP 주소를 볼 수 있습니다."
+
+msgid "When you play, the %s server sees this device's IP address and this farm server's address."
+msgstr "재생하면 %s 서버가 이 기기의 IP 주소와 이 농장 서버의 주소를 볼 수 있습니다."
+
+msgid "Could not play this video here. Use the original site instead."
+msgstr "여기서는 이 영상을 재생할 수 없습니다. 원본 사이트에서 재생해 주세요."
+
+msgid "Include %s attachments"
+msgstr "첨부 %s개 포함"
+
+msgid "Use Digital Twin (Experimental)"
+msgstr "디지털트윈 사용 (실험)"
+
+msgid "Digital Twin Run Times"
+msgstr "디지털트윈 실행 시각"
+
+msgid "The Digital Twin cannot be turned on: %(reason)s"
+msgstr "디지털트윈을 켤 수 없습니다: %(reason)s"
+
+msgid "Digital Twin run times must look like 06:10,18:10 (HH:MM, comma separated, at most %(n)s)."
+msgstr "디지털트윈 실행 시각은 06:10,18:10 처럼 적어 주세요(시:분, 쉼표로 구분, 최대 %(n)s개)."
+
+msgid "This device runs with the LOW hardware profile."
+msgstr "이 기기는 하드웨어 프로파일이 LOW 로 설정되어 있습니다."
+
+msgid "This Raspberry Pi model is too small."
+msgstr "이 라즈베리 파이 모델은 사양이 낮습니다."
+
+msgid "This device has less than %(gb)s GB of memory."
+msgstr "이 기기의 메모리가 %(gb)s GB 미만입니다."
+
+msgid "Digital Twin (Experimental)"
+msgstr "디지털트윈 (실험)"
+
+msgid "This is an experimental feature and is still at an early stage. Use it for development purposes only. Predictions are for reference and are never used for control. Behavior and data formats may change without notice."
+msgstr "실험 기능이며 아직 초기 단계입니다. 개발을 위한 용도로만 사용하세요. 예측은 참고용이며 제어에 쓰이지 않습니다. 동작과 데이터 형식은 예고 없이 바뀔 수 있습니다."
+
+msgid "Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program and must be installed and running."
+msgstr "예보와 센서 값으로 토양 수분 같은 값을 예측하는 디지털트윈 서비스를 실행합니다. 이 서비스는 본체와 따로 돌며, 설치되어 실행 중이어야 합니다."
+
+msgid "This device is too small to run the Digital Twin."
+msgstr "이 기기는 사양이 낮아 디지털트윈을 켤 수 없습니다."
+
+msgid "Using a remote node is still in preparation."
+msgstr "원격 노드를 쓰는 기능은 준비 중입니다."
+
+msgid "Times of day the prediction runs, in local time. Separate several times with commas, for example 06:10,18:10."
+msgstr "예측을 돌리는 시각입니다(현지 시간). 여러 개는 쉼표로 구분합니다. 예: 06:10,18:10"
+
+msgid "Service Status"
+msgstr "서비스 상태"
+
+msgid "Twin service is not running"
+msgstr "트윈 서비스가 실행 중이 아님"
+
+msgid "Failures"
+msgstr "실패"
+
+msgid "The service stopped itself because this device is too small."
+msgstr "이 기기는 사양이 낮아 서비스가 스스로 멈췄습니다."
+
+msgid "The Digital Twin runs as its own service. Docker: add COMPOSE_PROFILES=twin to the .env file and run docker compose up -d. Direct install: enable the aottwin.service systemd unit."
+msgstr "디지털트윈은 별도 서비스로 실행됩니다. Docker: .env 에 COMPOSE_PROFILES=twin 을 추가하고 docker compose up -d 를 실행하세요. 직접 설치: aottwin.service 를 활성화하세요."
+
+msgid "1-day error"
+msgstr "1일 오차"
+
+msgid "80% band hit rate"
+msgstr "80% 띠 적중률"
+
+msgid "Agreement"
+msgstr "일치도"
+
+msgid "Air temperature"
+msgstr "기온"
+
+msgid "Also fill empty sources with the first suggestion (sources you already chose are kept)"
+msgstr "비어 있는 출처 칸은 첫 제안으로 채우기(이미 고른 출처는 그대로)"
+
+msgid "Choose a channel"
+msgstr "채널 고르기"
+
+msgid "Choose a rain source — the twin cannot run without it."
+msgstr "비 출처를 고르세요 — 없으면 트윈이 돌지 않습니다."
+
+msgid "Daily sum"
+msgstr "하루 합"
+
+msgid "Each site and plot is set up in its Twin tab on the map. Suggestions are only suggestions — nothing is used until you apply and save it."
+msgstr "대지·구획마다 지도의 '트윈' 탭에서 정합니다. 제안은 제안일 뿐이며, 적용하고 저장하기 전에는 쓰이지 않습니다."
+
+msgid "Empty sources will be filled with the first suggestion."
+msgstr "비어 있는 출처는 첫 제안으로 채워집니다."
+
+msgid "Experimental"
+msgstr "실험"
+
+msgid "Forecast input"
+msgstr "예보 입력"
+
+msgid "Forecast rain days"
+msgstr "예보 비 반영 일수"
+
+msgid "Hourly mean, summed"
+msgstr "시간 평균의 합"
+
+msgid "Include this plot"
+msgstr "이 구획 포함"
+
+msgid "Inputs whose channels declare forecast lead days are listed, nearest first. The lead-day ladder is built from the channel metadata."
+msgstr "채널에 예보 리드 일수를 밝힌 입력을 가까운 순으로 보입니다. 리드 사다리는 채널 메타데이터로 만듭니다."
+
+msgid "Last value of the day"
+msgstr "하루 마지막 값"
+
+msgid "Measured"
+msgstr "실측"
+
+msgid "Mirror"
+msgstr "미러"
+
+msgid "No field plot"
+msgstr "노지 구획 없음"
+
+msgid "No field plot under cultivation in any site."
+msgstr "재배 중인 노지 구획이 있는 대지가 없습니다."
+
+msgid "No field plot under cultivation in this site."
+msgstr "이 대지에는 재배 중인 노지 구획이 없습니다."
+
+msgid "No measured soil water sensor"
+msgstr "실측 토양수분 센서 없음"
+
+msgid "No plot has a measured soil water sensor yet — predictions cannot be synchronized."
+msgstr "실측 토양수분 센서가 있는 구획이 아직 없습니다 — 예측을 관측에 맞출 수 없습니다."
+
+msgid "No rain source"
+msgstr "비 출처 없음"
+
+msgid "No soil water sensor"
+msgstr "토양수분 센서 없음"
+
+msgid "None (assumes no rain ahead)"
+msgstr "없음(앞날 비 없음으로 가정)"
+
+msgid "None for this plot"
+msgstr "이 구획에서는 없음"
+
+msgid "Not shown"
+msgstr "표시 안 함"
+
+msgid "Observation sensors and sources"
+msgstr "관측 센서와 출처"
+
+msgid "Off for this site."
+msgstr "이 대지에서는 꺼져 있습니다."
+
+msgid "Rain aggregation"
+msgstr "비 묶는 법"
+
+msgid "Ready."
+msgstr "준비됨."
+
+msgid "Recent agreement"
+msgstr "최근 일치도"
+
+msgid "Reference ET (ET0)"
+msgstr "기준 증발산량(ET0)"
+
+msgid "Run the twin for this site"
+msgstr "이 대지에서 트윈 켜기"
+
+msgid "Save failed."
+msgstr "저장하지 못했습니다."
+
+msgid "Saved. The twin service picks this up within an hour, or at its next run."
+msgstr "저장했습니다. 트윈 서비스가 한 시간 안에, 또는 다음 실행 때 반영합니다."
+
+msgid "Sensor suggestions"
+msgstr "센서 제안"
+
+msgid "Sensors are chosen in each plot's Twin tab."
+msgstr "센서는 구획마다 '트윈' 탭에서 고릅니다."
+
+msgid "Show all channels"
+msgstr "모든 채널 보기"
+
+msgid "Soil temperature"
+msgstr "지온"
+
+msgid "Soil water (observation)"
+msgstr "토양수분(관측)"
+
+msgid "Some plots have no measured soil water sensor; those plots are skipped."
+msgstr "실측 토양수분 센서가 없는 구획이 있습니다. 그 구획은 건너뜁니다."
+
+msgid "Some plots ready"
+msgstr "일부 구획 준비됨"
+
+msgid "Source label"
+msgstr "출처 표시"
+
+msgid "Source label — only measured inputs are used to synchronize and verify the twin."
+msgstr "출처 표시 — 트윈의 동기화·검증에는 실측 입력만 씁니다."
+
+msgid "Sources (plots inherit these)"
+msgstr "출처(구획이 물려받음)"
+
+msgid "Suggestion"
+msgstr "제안"
+
+msgid "Suggestions are soil channels of sensors inside the plot or within 30 m of it. Nothing is used until you apply and save it."
+msgstr "제안은 구획 안이나 30 m 안 센서의 토양 채널입니다. 적용하고 저장하기 전에는 쓰이지 않습니다."
+
+msgid "This plot is not a twin target. Facility plots, finished crops and crops not yet planted are left out."
+msgstr "이 구획은 트윈 대상이 아닙니다. 시설 구획, 끝난 작기, 아직 심지 않은 작기는 빠집니다."
+
+msgid "Turn on for all sites"
+msgstr "모든 대지에 켜기"
+
+msgid "Turn the Digital Twin on for every site?"
+msgstr "모든 대지에 디지털트윈을 켤까요?"
+
+msgid "Turn the twin on in the site's Twin tab first."
+msgstr "먼저 대지의 '트윈' 탭에서 트윈을 켜세요."
+
+msgid "Twin"
+msgstr "트윈"
+
+msgid "Twin on"
+msgstr "트윈 켜짐"
+
+msgid "Twin off"
+msgstr "트윈 꺼짐"
+
+msgid "Unverified"
+msgstr "미확인"
+
+msgid "Verdict"
+msgstr "판정"
+
+msgid "Virtual"
+msgstr "가상"
+
+msgid "from site"
+msgstr "대지에서 물려받음"
+
+msgid "inside the plot"
+msgstr "구획 안"
+
+msgid "not measured"
+msgstr "실측 아님"
+
+msgid "off"
+msgstr "꺼짐"
+
+msgid "site weather station"
+msgstr "대지 기상대"
+
+msgid "Follow site"
+msgstr "대지 값 따르기"
+
+msgid "Choose"
+msgstr "고르기"
+
+msgid "Plots outside any site"
+msgstr "대지 밖 구획"
+
+msgid "Suggestions are soil channels of sensors inside the plot or within the search distance. Nothing is used until you apply and save it."
+msgstr "구획 안이나 가까운 센서의 토양 채널이 제안됩니다. 구획 안·30 m 안이 없으면 대지의 센서, 그것도 없으면 가장 가까운 센서입니다. 적용하고 저장하기 전에는 아무것도 쓰이지 않습니다."
+
+msgid "Development test"
+msgstr "개발 테스트"
+
+msgid "Assimilation start date"
+msgstr "센서 값 반영 시작일"
+
+msgid "Leave empty to start on the planting date. Use an earlier date only to test how well the model follows past sensor data."
+msgstr "비워 두면 심은 날부터 시작합니다. 모델이 과거 센서 값을 얼마나 따라가는지 시험할 때만 더 이른 날짜를 쓰세요."
+
+msgid "site-wide sensor"
+msgstr "대지 공용 센서"
+
+msgid "nearest sensor"
+msgstr "가장 가까운 센서"
+
+msgid "weather station found in the site"
+msgstr "대지 안에서 찾은 기상대"
+
+msgid "nearest weather channel"
+msgstr "가장 가까운 기상 채널"
+
+msgid "in this site"
+msgstr "이 대지 안"
+
+msgid "No active forecast input is near this site."
+msgstr "이 대지 가까이에 켜진 예보 입력이 없습니다."
+
+msgid "Create one here"
+msgstr "여기에 만들기"
+
+msgid "Creating..."
+msgstr "만드는 중..."
+
+msgid "Forecast input created and chosen for this site."
+msgstr "예보 입력을 만들고 이 대지에 지정했습니다."
+
+msgid "Digital Twin Settings"
+msgstr "디지털트윈 설정"
+
+msgid "Run times, low-spec option, forecast inputs and the site table are on the Digital Twin settings page."
+msgstr "실행 시각, 낮은 사양 옵션, 예보 입력, 대지 표는 디지털트윈 설정 페이지에 있습니다."
+
+msgid "Digital Twin"
+msgstr "디지털트윈"
+
+msgid "Service"
+msgstr "서비스"
+
+msgid "Allow on low-spec profile"
+msgstr "낮은 사양 프로파일에서도 허용"
+
+msgid "Create forecast inputs automatically"
+msgstr "예보 입력 자동 만들기"
+
+msgid "When you turn the twin on for a site that has no forecast input nearby, a forecast input is created at the site location and chosen for the site. You can change or remove it in the input settings."
+msgstr "가까이에 예보 입력이 없는 대지에 트윈을 켜면, 대지 위치에 예보 입력을 만들어 그 대지에 지정합니다. 입력 설정에서 바꾸거나 지울 수 있습니다."
+
+msgid "Development and test machines run with the LOW hardware profile, which locks the Digital Twin. Turn this on to run it anyway. Small Raspberry Pi models and devices with too little memory stay locked."
+msgstr "개발·시험용 기기는 LOW 하드웨어 프로파일로 돌아 디지털트윈이 잠깁니다. 이 옵션을 켜면 그래도 실행합니다. 작은 라즈베리파이 모델과 메모리가 부족한 기기는 계속 잠깁니다."
+
+msgid "The Digital Twin is off. Turn it on in Settings > General."
+msgstr "디지털트윈이 꺼져 있습니다. 설정 > 일반에서 켜세요."
+
+msgid "AI shortcut link"
+msgstr "AI 바로가기 주소"
+
+msgid "On phones, a button in the AI panel opens this address (the AI app opens if installed). Leave empty for no button."
+msgstr "휴대폰에서 AI 창의 단추가 이 주소를 엽니다(앱이 깔려 있으면 앱이 열립니다). 비우면 단추가 없습니다."
+
+msgid "AI shortcut link must be an https address (for example https://claude.ai/new). It was not changed."
+msgstr "AI 바로가기 주소는 https 주소여야 합니다(예: https://claude.ai/new). 바꾸지 않았습니다."
+
+msgid "Open %s"
+msgstr "%s 열기"
+
+msgid "Open %s in a new tab"
+msgstr "%s를 새 탭으로 열기"
+
+msgid "AI off"
+msgstr "AI 꺼짐"
+
+msgid "AI settings"
+msgstr "AI 설정"
+
+msgid "AI off — open inbox"
+msgstr "AI 꺼짐 — 수신함 열기"
+
+msgid "Applies to this browser only."
+msgstr "이 브라우저에만 적용됩니다."
+
+msgid "Ask first"
+msgstr "묻기"
+
+msgid "Show what AI looks up"
+msgstr "AI가 찾는 화면 보여 주기"
+
+msgid "View AI requests"
+msgstr "AI 요청 보기"
+
+msgid "Message options in General settings"
+msgstr "메시지 옵션은 일반 설정에서"
+
+msgid "AI screen control is on."
+msgstr "AI 화면 조작을 켰습니다."
+
+msgid "AI screen control is off. You can turn it on again in AI settings."
+msgstr "AI 화면 조작을 껐습니다. AI 설정에서 다시 켤 수 있습니다."
+
+msgid "%s approval requests are waiting."
+msgstr "승인 대기 요청이 %s건 있습니다."
+
+msgid "1 approval request is waiting."
+msgstr "승인 대기 요청이 1건 있습니다."
+
+msgid "Approval requests"
+msgstr "승인 요청"
+
+msgid "Approvals"
+msgstr "승인 대기"
+
+msgid "Approvals waiting: %s — review"
+msgstr "승인 대기 %s건 — 확인하기"
+
+msgid "Approve all"
+msgstr "모두 승인"
+
+msgid "Reject all"
+msgstr "모두 거부"
+
+msgid "Approved {done} of {total}."
+msgstr "{total}건 중 {done}건을 승인했습니다."
+
+msgid "Rejected {done} of {total}."
+msgstr "{total}건 중 {done}건을 거부했습니다."
+
+msgid "Control request"
+msgstr "제어 요청"
+
+msgid "Could not refresh. This list may be out of date."
+msgstr "새로 읽지 못했습니다. 이 목록이 오래됐을 수 있습니다."
+
+msgid "Invalid value: %s"
+msgstr "값이 올바르지 않습니다: %s"
+
+msgid "Run now"
+msgstr "지금 실행"
+
+msgid "Save and approve"
+msgstr "저장하고 승인"
+
+msgid "View request history"
+msgstr "요청 이력 보기"
+
+msgid "expires in {time}"
+msgstr "{time} 남음"
+
+msgid "Screen action"
+msgstr "화면 조작"
+
+msgid "Approval needed: %s"
+msgstr "승인 필요: %s"
+
+msgid "Shows how many external AI write requests are waiting for approval. Click View to open the approval window at the bottom of the screen, where you can approve, reject, or edit-then-approve them. Approving runs the request immediately with exactly the values shown."
+msgstr "외부 AI의 쓰기 요청이 몇 건 승인을 기다리는지 보여 줍니다. [보기]를 누르면 화면 아래의 승인 창이 열리고, 거기서 승인·거부하거나 수정한 뒤 승인할 수 있습니다. 승인하면 보인 값 그대로 즉시 실행됩니다."
+
+msgid "Indoor temperature"
+msgstr "실내 온도"
+
+msgid "Indoor CO2"
+msgstr "실내 CO₂"
+
+msgid "Outdoor temperature"
+msgstr "외기 온도"
+
+msgid "Outdoor humidity"
+msgstr "외기 습도"
+
+msgid "Outdoor CO2"
+msgstr "외기 CO₂"
+
+msgid "Ventilation opening"
+msgstr "환기 개도"
+
+msgid "Fogging"
+msgstr "분무"
+
+msgid "CO2 injection"
+msgstr "CO₂ 공급"
+
+msgid "Shade screen"
+msgstr "차광막"
+
+msgid "Thermal curtain"
+msgstr "보온커튼"
+
+msgid "Choose the required sensors (indoor and outdoor temperature and humidity)."
+msgstr "필수 센서(실내·외기 온도와 습도)를 고르세요."
+
+msgid "No actual device state yet — the twin cannot be built until the real opening or running state of the devices is connected."
+msgstr "장치 실제 상태가 아직 없습니다 — 장치의 실제 개도·가동 상태를 연결하기 전에는 트윈을 만들 수 없습니다."
+
+msgid "Some sources are not marked as measured — the twin is not synchronized or verified with them."
+msgstr "일부 출처가 '실측'이 아닙니다 — 그 값으로는 트윈을 동기화·검증하지 않습니다."
+
+msgid "This facility is not a twin target."
+msgstr "이 시설은 트윈 대상이 아닙니다."
+
+msgid "Output tag"
+msgstr "출력 태그"
+
+msgid "environment control function"
+msgstr "환경제어 함수"
+
+msgid "No environment control function — the facility id is used as the output tag."
+msgstr "환경제어 함수가 없어 시설 id 를 출력 태그로 씁니다."
+
+msgid "Run the twin for this facility"
+msgstr "이 시설에서 트윈 켜기"
+
+msgid "Turning this on is independent of the site setting."
+msgstr "켜기는 대지 설정과 무관합니다."
+
+msgid "Indoor sensors"
+msgstr "시설 안 센서"
+
+msgid "Outdoor sensors"
+msgstr "시설 밖 센서"
+
+msgid "Actual device state"
+msgstr "장치 실제 상태"
+
+msgid "Choose channels that record what the device actually did (opening or running, in percent). Virtual or test outputs cannot be marked as measured."
+msgstr "장치가 실제로 한 일(개도·가동, 퍼센트)을 기록하는 채널을 고르세요. 가상·시험 출력은 실측으로 정할 수 없습니다."
+
+msgid "Devices in this facility"
+msgstr "이 시설의 장치"
+
+msgid "Value range mapped to 0–100 % (leave empty if already percent)"
+msgstr "0~100 % 로 옮길 값 범위(이미 퍼센트면 비워 두세요)"
+
+msgid "Some channels are marked as measured although their input module does not declare them as measured (for example mirrored values). Make sure they come from the same real system."
+msgstr "입력 모듈이 실측이라고 밝히지 않은 채널(예: 미러 값)을 실측으로 정했습니다. 같은 실제 시스템에서 온 값인지 확인하세요."
+
+msgid "facility indoor sensor"
+msgstr "시설 실내 센서"
+
+msgid "facility outdoor sensor"
+msgstr "시설 외기 센서"
+
+msgid "Each facility is turned on in its own Twin tab on the map, independent of the site. Off by default."
+msgstr "시설은 지도의 시설 '트윈' 탭에서 대지와 따로 켭니다. 기본은 꺼짐입니다."
+
+msgid "Required sensors missing"
+msgstr "필수 센서 없음"
+
+msgid "No actual device state"
+msgstr "장치 실제 상태 없음"
+
+msgid "Not marked as measured"
+msgstr "실측 표시 아님"
+
+msgid "No facility on the map."
+msgstr "지도에 시설이 없습니다."
+
+msgid "Facility id"
+msgstr "시설 id"
+
+msgid "Look at sensors, devices, schedules and notes."
+msgstr "센서·장치·일정·메모를 볼 수 있습니다."
+
+msgid "Turn devices and functions on and off."
+msgstr "장치와 기능을 켜고 끌 수 있습니다."
+
+msgid "Change settings, plots and records."
+msgstr "설정·구획·기록을 바꿀 수 있습니다."
+
+msgid "Read"
+msgstr "읽기"
+
+msgid "This AI app's request is not valid (%(reason)s). Go back to the app and try again."
+msgstr "AI 앱의 요청이 올바르지 않습니다(%(reason)s). 앱으로 돌아가 다시 시도하세요."
+
+msgid "This AoT can act as the authorization server only at an https address (http only for localhost)."
+msgstr "이 AoT 는 https 주소에서만 인가 서버가 될 수 있습니다(http 는 localhost 만)."
+
+msgid "To turn on authentication, enter the public MCP address."
+msgstr "인증을 켜려면 MCP 공개 주소를 입력하세요."
+
+msgid "Settings were saved, but the signing key could not be created. Check that the data folder is writable."
+msgstr "설정은 저장했지만 서명 키를 만들지 못했습니다. 데이터 폴더에 쓸 수 있는지 확인하세요."
+
+msgid "That connection was not found."
+msgstr "그 연결을 찾을 수 없습니다."
+
+msgid "The connection was closed. That AI app has to be authorized again to use this AoT."
+msgstr "연결을 끊었습니다. 그 AI 앱이 이 AoT 를 쓰려면 다시 허용해야 합니다."
+
+msgid "The public MCP address must be https (http only for localhost)."
+msgstr "MCP 공개 주소는 https 여야 합니다(http 는 localhost 만)."
+
+msgid "Issuer (this server): %(issuer)s"
+msgstr "발급자(이 서버): %(issuer)s"
+
+msgid "Cannot create or read the signing key (%(error)s)."
+msgstr "서명 키를 만들거나 읽을 수 없습니다(%(error)s)."
+
+msgid "Allow AI access"
+msgstr "AI 접근 허용"
+
+msgid "An AI app that calls itself \"%(client)s\" wants to use your account on this AoT."
+msgstr "스스로 \"%(client)s\" 라고 밝힌 AI 앱이 이 AoT 에서 내 계정을 쓰려고 합니다."
+
+msgid "Signed in as %(user)s."
+msgstr "%(user)s 로 로그인했습니다."
+
+msgid "What it may do"
+msgstr "할 수 있는 일"
+
+msgid "What it can actually do is limited by your role on this AoT. You can cut the connection off by changing your password or from Settings."
+msgstr "실제로 할 수 있는 일은 이 AoT 에서 내 역할로 제한됩니다. 비밀번호를 바꾸거나 설정에서 언제든 연결을 끊을 수 있습니다."
+
+msgid "Deny"
+msgstr "거부"
+
+msgid "API keys, and access tokens issued by this AoT"
+msgstr "API 키, 그리고 이 AoT 가 발급한 접근 토큰"
+
+msgid "OAuth Authentication"
+msgstr "OAuth 인증"
+
+msgid "Also accept OAuth access tokens, which is how claude.ai connectors sign in. Choose below who issues them. API keys keep working either way."
+msgstr "OAuth 접근 토큰도 받습니다. claude.ai 커넥터가 이 방식으로 로그인합니다. 토큰을 누가 발급할지 아래에서 고르세요. API 키는 어느 쪽이든 계속 됩니다."
+
+msgid "Token Issuer"
+msgstr "토큰 발급처"
+
+msgid "Central (AoT Central Authentication)"
+msgstr "중앙(AoT 중앙 인증)"
+
+msgid "This AoT (built in)"
+msgstr "이 AoT(내장)"
+
+msgid "Sign-in and consent happen at a separate authorization server; this AoT only checks each token. The addresses below are whatever this server and the authorization server are reached at — any domain or network works."
+msgstr "로그인과 동의는 별도의 인가 서버에서 하고, 이 AoT 는 토큰만 확인합니다. 아래 주소는 이 서버와 인가 서버에 닿는 주소 그대로이며 도메인·네트워크는 무엇이든 됩니다."
+
+msgid "This AoT signs people in and issues the tokens itself, so no other server is needed. The AI service (for example claude.ai) reaches it over the internet, so it needs a public https address. Only one of the two can be on at a time."
+msgstr "이 AoT 가 직접 로그인을 받고 토큰을 발급하므로 다른 서버가 필요 없습니다. AI 서비스(예: claude.ai)가 인터넷으로 접속하므로 공개 https 주소가 있어야 합니다. 둘 중 하나만 켤 수 있습니다."
+
+msgid "Before You Turn This On"
+msgstr "켜기 전에"
+
+msgid "Opening this AoT to the internet exposes its sign-in page and the /mcp address to everyone. Use strong passwords and turn on two-factor authentication (TOTP) for every account that can control devices."
+msgstr "AoT 를 인터넷에 열면 로그인 화면과 /mcp 주소가 누구에게나 보입니다. 비밀번호를 강하게 하고, 장치를 제어할 수 있는 계정은 모두 2단계 인증(TOTP)을 켜세요."
+
+msgid "On a private network or VPN the AI service cannot reach this AoT. Use an API key there instead."
+msgstr "사설망이나 VPN 안에서는 AI 서비스가 이 AoT 에 닿지 못합니다. 그런 곳에서는 API 키를 쓰세요."
+
+msgid "Route the public address to this AoT like this: /mcp and /.well-known/oauth-protected-resource go to the MCP server (port 5700); everything else, including /authorize, /token, /register, /revoke and /.well-known/oauth-authorization-server, goes to the web server (port 8084)."
+msgstr "공개 주소는 이렇게 나눠 연결하세요. /mcp 와 /.well-known/oauth-protected-resource 는 MCP 서버(5700 포트)로, /authorize·/token·/register·/revoke·/.well-known/oauth-authorization-server 를 포함한 나머지는 웹 서버(8084 포트)로 보냅니다."
+
+msgid "Accepted Redirect Addresses"
+msgstr "허용하는 되돌림 주소"
+
+msgid "Only AI apps that register one of these addresses can connect. http://localhost and http://127.0.0.1 are for tools that run on a person's own computer, such as Claude Code."
+msgstr "이 주소 중 하나로 등록한 AI 앱만 연결할 수 있습니다. http://localhost 와 http://127.0.0.1 은 Claude Code 처럼 사용자 자신의 컴퓨터에서 도는 도구용입니다."
+
+msgid "This AoT is its own authorization server at the same web address, so its issuer is this address without the path."
+msgstr "이 AoT 는 같은 웹 주소에서 스스로 인가 서버가 되므로 발급자는 이 주소에서 경로를 뺀 값입니다."
+
+msgid "My Connected AI Apps"
+msgstr "내가 연결한 AI 앱"
+
+msgid "last used"
+msgstr "마지막 사용"
+
+msgid "No AI app is connected with your account yet."
+msgstr "내 계정으로 연결된 AI 앱이 아직 없습니다."
+
+msgid "Soil moisture forecast (twin)"
+msgstr "토양수분 예측 (트윈)"
+
+msgid "hatched = low confidence (far day) or wide spread"
+msgstr "빗금 = 신뢰 낮음(먼 날) 또는 예측 폭이 넓음"
+
+msgid "degraded (forecast rain covers {n}/8 days, the rest assumed dry)"
+msgstr "입력 일부 대체 (예보 비 {n}/8일 반영, 나머지 날은 비 없음 가정)"
+
+msgid "degraded (forecast inputs substituted)"
+msgstr "입력 일부 대체 (예보 입력을 가정값으로 대신함)"
+
+msgid "root-zone water content p50"
+msgstr "뿌리층 수분 p50"
+
+msgid "forecast publication expired"
+msgstr "예측 발행 만료"
+
+msgid "twin not synced with the sensors"
+msgstr "트윈이 센서와 맞지 않음"
+
+msgid "this plot cannot be simulated with its current setup"
+msgstr "지금 설정으로는 이 구획을 계산할 수 없음"
+
+msgid "twin run failed"
+msgstr "트윈 실행 실패"
+
+msgid "forecast publication incomplete"
+msgstr "예측 발행이 불완전함"
+
+msgid "no forecast in this period"
+msgstr "이 기간의 예측 없음"
+
+msgid "Unavailable"
+msgstr "사용할 수 없음"
+
+msgid "valid until"
+msgstr "유효기한"
+
+
+msgid "No plot has a measured soil water sensor yet and prediction without a sensor is off — nothing is computed."
+msgstr "아직 실측 토양수분 센서가 있는 구획이 없고 센서 없는 예측도 꺼져 있습니다 — 계산하는 것이 없습니다."
+
+msgid "No plot has a measured soil water sensor — plots run without observation (model only, reference only). Accept the suggested sensors below to synchronize them."
+msgstr "실측 토양수분 센서가 있는 구획이 없습니다 — 구획은 관측 없이(모델만, 참고용) 돌아갑니다. 아래 제안된 센서를 수락하면 동기화됩니다."
+
+msgid "Some plots have no measured soil water sensor; they run without observation (reference only) or are skipped."
+msgstr "일부 구획에는 실측 토양수분 센서가 없습니다. 그 구획은 관측 없이(참고용) 돌거나 건너뜁니다."
+
+msgid "This plot is excluded from the twin."
+msgstr "이 구획은 트윈에서 제외되어 있습니다."
+
+msgid "The twin is off for this site - turn it on in the site's Twin tab."
+msgstr "이 대지는 트윈이 꺼져 있습니다 - 대지의 트윈 탭에서 켜세요."
+
+msgid "This plot has no planting date, so it cannot be simulated - set the start date of its crop."
+msgstr "이 구획에는 심은 날이 없어 계산할 수 없습니다 - 작기의 시작일을 정하세요."
+
+msgid "No rain source - choose one in the site's Twin tab (plots inherit it)."
+msgstr "비 출처가 없습니다 - 대지의 트윈 탭에서 고르세요(구획이 물려받습니다)."
+
+msgid "The soil sensor is not labelled Measured, so it is not used - change the source label if it is a real sensor."
+msgstr "토양센서의 출처 표시가 '실측'이 아니라 쓰지 않습니다 - 실제 센서라면 출처 표시를 바꾸세요."
+
+msgid "Synchronized with the soil sensor."
+msgstr "토양센서와 동기화되어 있습니다."
+
+msgid "No soil sensor chosen yet. A sensor is suggested - accept it to synchronize; until then the plot runs without observation (reference only)."
+msgstr "아직 토양센서를 고르지 않았습니다. 센서가 제안되어 있습니다 - 수락하면 동기화됩니다. 그때까지 구획은 관측 없이(참고용) 돕니다."
+
+msgid "No soil sensor chosen yet. A sensor is suggested - accept it, because prediction without a sensor is off and the plot is not computed."
+msgstr "아직 토양센서를 고르지 않았습니다. 센서가 제안되어 있습니다 - 센서 없는 예측이 꺼져 있어 수락해야 이 구획이 계산됩니다."
+
+msgid "No soil sensor - the plot runs without observation (model only, reference only)."
+msgstr "토양센서가 없습니다 - 구획은 관측 없이(모델만, 참고용) 돕니다."
+
+msgid "No soil sensor and prediction without a sensor is off - the plot is not computed."
+msgstr "토양센서가 없고 센서 없는 예측이 꺼져 있습니다 - 이 구획은 계산하지 않습니다."
+
+msgid "No observation (model only, reference only)"
+msgstr "관측 없음(모델만, 참고용)"
+
+msgid "chosen for another site"
+msgstr "다른 대지에서 고른 것"
+
+msgid "Soil sensor suggestions"
+msgstr "토양센서 제안"
+
+msgid "Tick the sensors to use, check the source label, then Save. Nothing is used until you save. Plots left unticked keep running without observation (reference only)."
+msgstr "쓸 센서에 체크하고 출처 표시를 확인한 뒤 저장하세요. 저장하기 전에는 아무것도 쓰이지 않습니다. 체크하지 않은 구획은 관측 없이(참고용) 계속 돕니다."
+
+msgid "Select all within the search distance"
+msgstr "검색 거리 안의 센서 모두 선택"
+
+msgid "within the search distance"
+msgstr "검색 거리 안"
+
+msgid "This sensor is far from the plot - it may not represent it."
+msgstr "이 센서는 구획에서 멀어 구획을 대표하지 못할 수 있습니다."
+
+msgid "Plots without a soil sensor: predict without observation (reference only)"
+msgstr "토양센서 없는 구획: 관측 없이 예측만(참고용)"
+
+msgid "The model runs from the planting date on rain and weather alone. It is not synchronized or verified, so the spread is wide; the map marks these plots \"No observation - reference only\". Untick to skip such plots."
+msgstr "심은 날부터 비와 날씨만으로 모델을 돌립니다. 동기화·검증이 없어 예측 폭이 넓고, 지도에는 '관측 없음 - 참고용'으로 표시됩니다. 체크를 풀면 이런 구획은 건너뜁니다."
+
+msgid "Sensors can also be chosen in each plot's Twin tab."
+msgstr "센서는 각 구획의 트윈 탭에서도 고를 수 있습니다."
+
+msgid "Without a soil sensor"
+msgstr "토양센서가 없을 때"
+
+msgid "Predict without observation (reference only)"
+msgstr "관측 없이 예측만(참고용)"
+
+msgid "Do not compute"
+msgstr "계산하지 않음"
+
+msgid "no observation - reference only"
+msgstr "관측 없음 — 참고용"
+
+msgid "cannot simulate: no rain source - choose it in the site's Twin tab"
+msgstr "계산할 수 없음: 비 출처가 없습니다 - 대지의 트윈 탭에서 고르세요"
+
+msgid "cannot simulate: the plot has no planting date"
+msgstr "계산할 수 없음: 구획에 심은 날이 없습니다"
+
+msgid "cannot simulate: the soil sensor is not labelled Measured - change it in the plot's Twin tab"
+msgstr "계산할 수 없음: 토양센서가 '실측'으로 표시되지 않았습니다 - 구획의 트윈 탭에서 바꾸세요"
+
+msgid "cannot simulate: no soil sensor and prediction without a sensor is off - change it in the plot's Twin tab"
+msgstr "계산할 수 없음: 토양센서가 없고 센서 없는 예측이 꺼져 있습니다 - 구획의 트윈 탭에서 바꾸세요"
+
+msgid "not synchronized: the soil sensor has no valid recent readings"
+msgstr "동기화 안 됨: 토양센서에 최근 유효한 값이 없습니다"
+
+msgid "No sensor - reference only"
+msgstr "센서 없음 — 참고용"
+
+msgid "Set the source label of the selected to"
+msgstr "선택한 센서의 출처 표시를 한꺼번에"
+
+msgid "Forecast source"
+msgstr "예보 출처"
+
+msgid "The digital twin, the map weather and the AI read this forecast. Near days come from the hourly input, later days from the daily input."
+msgstr "디지털트윈·지도 날씨·AI 가 이 예보를 함께 읽습니다. 가까운 날은 시간별 입력, 그 뒤는 일별 입력에서 옵니다."
+
+msgid "No forecast source is set. The twin, the map weather and the AI all fall back to the map weather layer."
+msgstr "예보 출처가 지정되지 않았습니다. 트윈·지도 날씨·AI 모두 지도 날씨 레이어를 대신 씁니다."
+
+msgid "No forecast inputs to choose from."
+msgstr "고를 수 있는 예보 입력이 없습니다."
+
+msgid "Daily forecast"
+msgstr "일별 예보"
+
+msgid "Hourly forecast"
+msgstr "시간별 예보"
+
+msgid "This is the site's forecast source (Info tab). The twin, the map weather and the AI read the same forecast."
+msgstr "대지의 예보 출처(정보 탭)와 같은 설정입니다. 트윈·지도 날씨·AI 가 같은 예보를 읽습니다."
+
+msgid "High / low"
+msgstr "최고 / 최저"
+
+msgid "Rain (day)"
+msgstr "강수(하루)"
+
+msgid "Rain chance"
+msgstr "강수확률"
+
+msgid "Forecast values for the selected day"
+msgstr "선택한 날의 예보 값"
+
+msgid "Beyond the forecast range"
+msgstr "예보 제공 범위 밖"
+
+msgid "No forecast source"
+msgstr "예보 출처 없음"
+
+msgid "site forecast source"
+msgstr "대지 예보 출처"
+
+msgid "map weather layer (no site forecast source)"
+msgstr "지도 날씨 레이어(대지 예보 출처 없음)"
+
+msgid "Hourly"
+msgstr "시간별"
+
+msgid "Weather forecast"
+msgstr "날씨 예보"
+
+msgid "14 days back"
+msgstr "14일 전부터"
+
+msgid "30 days back"
+msgstr "30일 전부터"
+
+msgid "Air temperature (forecast)"
+msgstr "기온 (예보)"
+
+msgid "Forecast only"
+msgstr "앞날만"
+
+msgid "Frost line (0 °C)"
+msgstr "서리 기준 (0 °C)"
+
+msgid "Original values (not corrected)."
+msgstr "원본 값(보정 전)입니다."
+
+msgid "Outside the map time range (past) — only the cursor moves."
+msgstr "지도 시간 범위 밖(과거) — 커서만 움직입니다."
+
+msgid "Rain (forecast)"
+msgstr "비 (예보)"
+
+msgid "Rain (observed)"
+msgstr "비 (관측)"
+
+msgid "Rain · ET0"
+msgstr "비 · ET0"
+
+msgid "Risks"
+msgstr "위험"
+
+msgid "Soil water"
+msgstr "토양수분"
+
+msgid "Soil water (forecast)"
+msgstr "토양수분 (예측)"
+
+msgid "The chart library could not be loaded."
+msgstr "차트 라이브러리를 불러오지 못했습니다."
+
+msgid "The map shows this day."
+msgstr "지도가 이 날을 보여 주고 있습니다."
+
+msgid "The soil water panel is in sensor units (percent of the sensor, not the root zone)."
+msgstr "토양수분 칸은 센서 단위입니다(뿌리층이 아니라 센서 값 기준 %)."
+
+msgid "The soil water panel is the root-zone average (model state)."
+msgstr "토양수분 칸은 뿌리층 평균(모델 상태)입니다."
+
+msgid "This plot is not a twin target."
+msgstr "이 구획은 트윈 대상이 아닙니다."
+
+msgid "Water deficit"
+msgstr "물 부족"
+
+msgid "Waterlogging"
+msgstr "과습"
+
+msgid "in {n} days"
+msgstr "{n}일 뒤"
+
+msgid "{n} days ago"
+msgstr "{n}일 전"
+
+msgid "no forecast source"
+msgstr "예보 출처 없음"
+
+msgid "pinned"
+msgstr "고정"
+
+msgid "previewing"
+msgstr "미리보기"
+
+msgid "sensor %"
+msgstr "센서 %"
+
+msgid "Dots: sensor. Line and band: forecast median and the 10th to 90th percentile range. Dashed bars: forecast rain."
+msgstr "점은 센서 실측, 선과 띠는 예측 중앙값과 하위 10~상위 90 백분위 범위, 점선 막대는 예보 비입니다."
+
+msgid "Days of forecast rain for the twin"
+msgstr "트윈이 쓰는 예보 비 일수"
+
+msgid "Same list and setting as the site's forecast source (Info tab): hourly and daily forecasts, in priority order. Near days come from the hourly input, later days from the daily input. The twin, the map weather and the AI read the same forecast."
+msgstr "대지의 예보 출처(정보 탭)와 같은 목록·같은 설정입니다. 시간별·일별 예보를 우선순위대로 고르며, 가까운 날은 시간별 입력, 그 뒤는 일별 입력에서 옵니다. 트윈·지도 날씨·AI 가 같은 예보를 읽습니다."
+
+msgid "Move up"
+msgstr "위로"
+
+msgid "Move down"
+msgstr "아래로"
+
+msgid "No matching forecast inputs."
+msgstr "맞는 예보 입력이 없습니다."
+
+msgid "More results — type to narrow down"
+msgstr "결과가 더 있습니다 — 입력해 좁히세요"
+
+msgid "No forecast source is chosen."
+msgstr "지정한 예보가 없습니다."
+
+msgid "Apply nearest hourly + daily"
+msgstr "가까운 시간별 + 일별 추천 적용"
+
+msgid "Add forecast"
+msgstr "예보 추가"
+
+msgid "Search forecast inputs by name"
+msgstr "예보 입력 이름으로 검색"
+
+msgid "Forecast inputs"
+msgstr "예보 입력"
+
+msgid "Set manually"
+msgstr "직접 지정"
+
+msgid "Inherited"
+msgstr "물려받음"
+
+msgid "Not chosen yet"
+msgstr "아직 고르지 않음"
+
+msgid "Nothing found to inherit"
+msgstr "물려받을 것이 없음"
+
+msgid "Follow inheritance"
+msgstr "상속 따르기"
+
+msgid "Shown on the map"
+msgstr "지도에 칠해짐"
+
+msgid "Sources and plots"
+msgstr "쓰는 출처와 구획"
+
+msgid "Sources in use"
+msgstr "트윈이 쓰는 출처"
+
+msgid "Choose the forecast source in the site window (Forecast source)."
+msgstr "예보 출처는 대지 창의 '예보 출처'에서 정합니다."
+
+msgid "No forecast source is chosen for this site."
+msgstr "이 대지에는 예보 출처가 없습니다."
+
+msgid "To use a different sensor for a plot, set it in that plot's Twin tab."
+msgstr "구획마다 다른 센서를 쓰려면 그 구획의 트윈 탭에서 직접 지정하세요."
+
+msgid "Sensors and sources are inherited from the shapes. Set one manually only when this plot needs a different one."
+msgstr "센서와 출처는 도형에서 물려받습니다. 이 구획에 다른 것이 필요할 때만 직접 지정하세요."
+
+msgid "The model runs from the planting date on rain and weather alone. It is not synchronized or verified, so the spread is wide; the map marks these plots \"No observation - reference only\". Turn off to skip such plots."
+msgstr "심은 날부터 비와 날씨만으로 모델을 돌립니다. 동기화·검증이 없어 예측 폭이 넓고, 지도에는 '관측 없음 - 참고용'으로 표시됩니다. 끄면 이런 구획은 건너뜁니다."
+
+msgid "Show details"
+msgstr "세부 보기"
+
+msgid "Hide details"
+msgstr "세부 접기"
+
+msgid "Experimental feature for development use. Predictions are for reference and never used for control."
+msgstr "실험 기능으로 개발용입니다. 예측은 참고용이며 제어에 쓰이지 않습니다."
+
+msgid "Site is off"
+msgstr "대지가 꺼져 있음"
+
+msgid "Not planted"
+msgstr "아직 안 심음"
+
+msgid "Sensor not marked as measured"
+msgstr "센서가 실측으로 표시되지 않음"
+
+msgid "Synchronized with the sensor"
+msgstr "센서와 맞춰져 있음"
+
+msgid "Sensor available to set"
+msgstr "지정할 센서가 있음"
+
+msgid "Without observation"
+msgstr "관측 없이 예측"
+
+msgid "Not computed"
+msgstr "계산하지 않음"
+
+msgid "Show numbers"
+msgstr "수치 보기"
+
+msgid "Hide numbers"
+msgstr "수치 접기"
+
+msgid "Choose channels that record what the device actually did (opening or running, in percent)."
+msgstr "장치가 실제로 한 일(개도·가동, 퍼센트)을 기록하는 채널을 고르세요."
+
+msgid "The map is locked, so the view did not move to the selected item."
+msgstr "지도가 잠겨 있어 선택한 대상으로 화면을 옮기지 않았습니다."
+
+#: aot/tools/screen_follow.py
+msgid "AI is looking this up…"
+msgstr "AI가 조회하는 중…"
+
+msgid "Air flow"
+msgstr "풍량"
+
+msgid "CO2 injector"
+msgstr "CO2 주입기"
+
+msgid "CO2 removal"
+msgstr "CO2 제거"
+
+msgid "CO2 scrubber"
+msgstr "CO2 제거기"
+
+msgid "CO2 supply"
+msgstr "CO2 공급량"
+
+msgid "Command log, estimated"
+msgstr "명령 기록 (추정)"
+
+msgid "Curtain transmittance"
+msgstr "커튼 투과율"
+
+msgid "Dehumidifier"
+msgstr "제습기"
+
+msgid "Device states are set by hand (below), so the states found by location are not used."
+msgstr "장치 상태를 직접 지정해 두어(아래), 위치로 찾은 상태는 쓰지 않습니다."
+
+msgid "Devices and effect channels"
+msgstr "장치와 효과 채널"
+
+msgid "Drip irrigation"
+msgstr "점적 관수"
+
+msgid "Effect not reflected"
+msgstr "효과 미반영"
+
+msgid "Follow device locations"
+msgstr "장치 위치 따르기"
+
+msgid "Frost fan"
+msgstr "방상팬"
+
+msgid "Frost sprinkler"
+msgstr "서리 살수"
+
+msgid "Heat loss saved"
+msgstr "열손실 절감"
+
+msgid "Heat output"
+msgstr "열 출력"
+
+msgid "Irrigation depth"
+msgstr "관수 깊이"
+
+msgid "Kind unknown"
+msgstr "종류 모름"
+
+msgid "Kind unknown - the effect is not reflected in the twin."
+msgstr "종류를 모릅니다 - 트윈에 효과가 반영되지 않습니다."
+
+msgid "Left out of the twin."
+msgstr "트윈에서 뺐습니다."
+
+msgid "Measured state"
+msgstr "실제 상태"
+
+msgid "Mist irrigation"
+msgstr "분무 관수"
+
+msgid "Mulch"
+msgstr "멀칭"
+
+msgid "No devices found for this place."
+msgstr "이 장소에서 찾은 장치가 없습니다."
+
+msgid "No state series"
+msgstr "상태 계열 없음"
+
+msgid "No state series was found - the device is left out of the twin run."
+msgstr "상태 계열을 찾지 못했습니다 - 이 장치는 트윈 실행에서 빠집니다."
+
+msgid "Not applied to the field twin yet."
+msgstr "노지 트윈에는 아직 적용되지 않습니다."
+
+msgid "Opening area"
+msgstr "개구부 면적"
+
+msgid "Outside facilities"
+msgstr "시설 밖(노지)"
+
+msgid "Partly reflected"
+msgstr "일부 반영"
+
+msgid "Reflected"
+msgstr "반영"
+
+msgid "Reflected in the twin."
+msgstr "트윈에 반영됩니다."
+
+msgid "Running log"
+msgstr "가동 이력"
+
+msgid "Set device states by hand"
+msgstr "장치 상태 직접 지정"
+
+msgid "Shade net"
+msgstr "차광망"
+
+msgid "Shade transmittance"
+msgstr "차광막 투과율"
+
+msgid "Spray flow"
+msgstr "분무 유량"
+
+msgid "Sprinkler irrigation"
+msgstr "살수 관수"
+
+msgid "Supplemental light"
+msgstr "보광"
+
+msgid "The devices of this facility could not be read."
+msgstr "이 시설의 장치를 읽지 못했습니다."
+
+msgid "Tunnel cover"
+msgstr "터널 피복"
+
+msgid "Use in the twin"
+msgstr "트윈에 사용"
+
+msgid "Window opening"
+msgstr "창 개폐"
+
+msgid "air movement at the leaves"
+msgstr "잎 둘레 공기 움직임"
+
+msgid "air temperature near the ground"
+msgstr "지표 근처 기온"
+
+msgid "default, estimated"
+msgstr "기본값, 추정"
+
+msgid "dehumidification"
+msgstr "제습"
+
+msgid "device setting"
+msgstr "장치 설정"
+
+msgid "facility drawing"
+msgstr "시설 도면"
+
+msgid "heat from lamps"
+msgstr "조명 발열"
+
+msgid "humidity near the ground"
+msgstr "지표 근처 습도"
+
+msgid "latent heat of freezing"
+msgstr "어는 잠열"
+
+msgid "leaf wetting"
+msgstr "잎 젖음"
+
+msgid "light for photosynthesis"
+msgstr "광합성용 빛"
+
+msgid "night minimum temperature"
+msgstr "야간 최저기온"
+
+msgid "no rule to combine devices"
+msgstr "장치를 합치는 규칙 없음"
+
+msgid "not modeled"
+msgstr "모델에 없음"
+
+msgid "not reflected"
+msgstr "미반영"
+
+msgid "not used for synchronization"
+msgstr "동기화에는 쓰지 않음"
+
+msgid "rain interception"
+msgstr "비 차단"
+
+msgid "set by user"
+msgstr "사용자 지정"
+
+msgid "soil evaporation"
+msgstr "토양 증발"
+
+msgid "soil temperature"
+msgstr "지온"
+
+msgid "surface temperature"
+msgstr "표면 온도"
+
+msgid "unknown kind of device"
+msgstr "알 수 없는 장치 종류"
+
+msgid "wetted area"
+msgstr "젖은 면적"
+
+msgid "Devices in this site"
+msgstr "이 대지의 장치"
+
+msgid "Not an observation — excluded from synchronization"
+msgstr "관측이 아님 — 동기화에서 제외"
+
+msgid "forecast"
+msgstr "예보"
+
+msgid "model value"
+msgstr "모델값"
+
+msgid "simulator"
+msgstr "시뮬레이터"
+
+msgid "Rain is not an observation"
+msgstr "비가 관측이 아님"
+
+msgid "Sensor is not an observation"
+msgstr "센서가 관측이 아님"
+
+msgid "The rain source is not an observation — excluded from synchronization, so the twin has no rain to run on."
+msgstr "비 출처가 관측이 아니라 동기화에서 제외돼, 트윈이 돌릴 비 계열이 없습니다."
+
+msgid "The soil sensor is not an observation — excluded from synchronization. The plot runs without observation (reference only)."
+msgstr "토양 센서가 관측이 아니라 동기화에서 제외됩니다. 이 구획은 관측 없이 돕니다(참고용)."
+
+msgid "Forecast tuned to this site"
+msgstr "현장에 맞춘 예보"
+
+msgid "Always on"
+msgstr "항상 켬"
+
+msgid "Adjusted"
+msgstr "보정됨"
+
+msgid "Unadjusted"
+msgstr "원본"
+
+msgid "Unadjusted · comparing"
+msgstr "원본 · 비교 중"
+
+msgid "Unadjusted · no sensor to compare"
+msgstr "원본 · 견줄 센서 없음"
+
+msgid "Unadjusted · no forecast source"
+msgstr "원본 · 예보 출처 없음"
+
+msgid "Unadjusted · off"
+msgstr "원본 · 끔"
+
+msgid "Unadjusted · not checked yet"
+msgstr "원본 · 아직 안 살펴봤어요"
+
+msgid "Adjustment is off. The original forecast is used."
+msgstr "보정을 껐어요. 원본 예보를 써요."
+
+msgid "Using the forecast adjusted to your own weather station: {names}."
+msgstr "이 대지 기상원 관측에 맞춰 고친 예보를 쓰고 있어요: {names}."
+
+msgid "Using the original forecast. It switches to the adjusted one by itself once about two weeks of comparison with your weather station show it is clearly better."
+msgstr "지금은 원본 예보를 써요. 기상원 관측과 2주쯤 견줘 보고 확실히 나아지면 저절로 바뀌어요."
+
+msgid "{name} forecast is now adjusted"
+msgstr "{name} 예보를 현장에 맞춰 고치기 시작했어요"
+
+msgid "{name} forecast is back to the original"
+msgstr "{name} 예보를 원본으로 되돌렸어요"
+
+msgid "The adjustment changed {n} time(s) since you last looked."
+msgstr "마지막으로 본 뒤 보정이 {n}번 바뀌었어요."
+
+msgid "Got it"
+msgstr "확인했어요"
+
+msgid "Forecast adjustment details"
+msgstr "예보 보정 자세히"
+
+msgid "Average error {a} → {b} {unit}"
+msgstr "평균 오차 {a} → {b} {unit}"
+
+msgid "The weather station is one spot and the forecast is an area average, so they can differ a little (distance, height, shelter)."
+msgstr "기상원은 한 곳이고 예보는 넓은 칸의 평균이라 거리·높이·가림에 따라 조금 다를 수 있어요."
+
+msgid "Experimental · for reference"
+msgstr "실험 기능 · 참고용"
+
+msgid "Daily high"
+msgstr "하루 최고"
+
+msgid "Daily low"
+msgstr "하루 최저"
+
+msgid "The latest forecast is out of date."
+msgstr "최근 예상이 오래되어 지금은 쓸 수 없어요."
+
+msgid "The twin is not matched to the sensors yet."
+msgstr "아직 센서 값과 맞추지 못했어요."
+
+msgid "This plot cannot be calculated with its current setup."
+msgstr "지금 설정으로는 이 구획을 계산할 수 없어요."
+
+msgid "The twin run failed."
+msgstr "계산하는 중에 문제가 생겼어요."
+
+msgid "The latest forecast is incomplete."
+msgstr "최근 예상이 덜 만들어졌어요."
+
+msgid "No forecast has been made for this plot yet."
+msgstr "이 구획의 예상이 아직 없어요."
+
+msgid "There is no forecast for this period."
+msgstr "이 기간의 예상이 없어요."
+
+msgid "No forecast is available."
+msgstr "볼 수 있는 예상이 없어요."
+
+msgid "A forecast cannot be made right now"
+msgstr "지금은 앞날 예상을 만들 수 없어요"
+
+msgid "Soil water looks fine for the next week"
+msgstr "앞으로 일주일은 흙 속 물이 알맞아 보여요"
+
+msgid "Frost may come on the night of {d}"
+msgstr "{d} 밤에 서리가 올 수 있어요"
+
+msgid "Frost may come around {d}"
+msgstr "{d}쯤 서리가 내릴 수도 있어요"
+
+msgid "Water looks likely to run short around {d}"
+msgstr "{d}쯤 물이 모자랄 것 같아요"
+
+msgid "Water may run short around {d}"
+msgstr "{d}쯤 물이 모자랄 수도 있어요"
+
+msgid "The ground may get too wet around {d}"
+msgstr "{d}쯤 땅이 너무 젖을 수 있어요"
+
+msgid "The ground could get wet around {d}"
+msgstr "{d}쯤 땅이 젖을 수도 있어요"
+
+msgid "There is no sensor to check against, so it may differ from reality."
+msgstr "센서로 확인할 수 없어 실제와 다를 수 있어요."
+
+msgid "Off lately"
+msgstr "요즘 잘 안 맞아요"
+
+msgid "Recent forecasts differed from the sensor. Treat this as a guide."
+msgstr "최근 예상이 센서 값과 많이 달랐어요. 참고만 해 주세요."
+
+msgid "Partly assumed"
+msgstr "일부는 짐작한 값이에요"
+
+msgid "Some forecast inputs were missing and were filled in."
+msgstr "빠진 예보 값을 짐작으로 채웠어요."
+
+msgid "Matching well"
+msgstr "잘 맞아요"
+
+msgid "Yesterday's forecast was close to the sensor."
+msgstr "어제 예상은 센서 값과 거의 같았어요."
+
+msgid "Short of water"
+msgstr "물이 모자라요"
+
+msgid "Getting dry"
+msgstr "조금 말랐어요"
+
+msgid "Moist"
+msgstr "촉촉해요"
+
+msgid "Soaked"
+msgstr "흠뻑 젖었어요"
+
+msgid "This plot has no soil sensor, so the soil water is only a calculation."
+msgstr "이 구획에는 흙 센서가 없어 계산만으로 짐작한 값이에요."
+
+msgid "The low may drop to {t} °C on {d}."
+msgstr "{d} 밤 최저 기온이 {t} °C까지 내려갈 것 같아요."
+
+msgid "The soil is slowly drying."
+msgstr "비가 없어 흙이 조금씩 마르고 있어요."
+
+msgid "The soil is getting wetter."
+msgstr "흙이 점점 촉촉해지고 있어요."
+
+msgid "The soil water is holding steady."
+msgstr "흙 속 물은 비슷하게 유지돼요."
+
+msgid "About {mm} mm of rain is expected on {d}."
+msgstr "{d}에 비가 {mm} mm 올 예정이에요."
+
+msgid "Only a little rain is expected in the next 7 days."
+msgstr "앞으로 7일 동안 비는 조금만 올 예정이에요."
+
+msgid "No rain is expected in the next 7 days."
+msgstr "앞으로 7일 동안 비 소식은 없어요."
+
+msgid "Soil (forecast) {v}"
+msgstr "흙 예상 {v}"
+
+msgid "Soil {v}"
+msgstr "흙 {v}"
+
+msgid "Rain {mm} mm"
+msgstr "비 {mm} mm"
+
+msgid "No rain"
+msgstr "비 없었음"
+
+msgid "Rain forecast {mm} mm"
+msgstr "비 {mm} mm 예보"
+
+msgid "No rain forecast"
+msgstr "비 예보 없음"
+
+msgid "Temperature {lo}–{hi} °C"
+msgstr "기온 {lo}~{hi} °C"
+
+msgid "Below {n}"
+msgstr "{n} 아래"
+
+msgid "Short of water below {n}"
+msgstr "물이 모자라요 · {n} 아래"
+
+msgid "Plenty after rain {n}"
+msgstr "비 온 뒤 충분 {n}"
+
+msgid "Next 7 days: {mm} mm"
+msgstr "다음 7일 예보 {mm} mm"
+
+msgid "Frost below 0 °C"
+msgstr "0 °C 아래면 서리"
+
+msgid "Soil water and rain chart"
+msgstr "흙 속 물과 비 그래프"
+
+msgid "Set up this plot first"
+msgstr "먼저 이 구획을 설정해 주세요"
+
+msgid "Choose the soil sensor and the rain source in Settings."
+msgstr "설정에서 흙 센서와 비 자료를 골라 주세요."
+
+msgid "Adjusted to the field"
+msgstr "현장에 맞춘 예보"
+
+msgid "2 weeks"
+msgstr "2주"
+
+msgid "A month"
+msgstr "한 달"
+
+msgid "Ahead only"
+msgstr "앞으로만"
+
+msgid "Show temperature too"
+msgstr "기온도 같이 보기"
+
+msgid "Is the forecast reliable?"
+msgstr "예상은 믿을 만한가요"
+
+msgid "Back to graph"
+msgstr "‹ 그래프로"
+
+msgid "today"
+msgstr "오늘"
+
+
+msgid "Data Retention (days)"
+msgstr "데이터 보관 (일)"
+
+msgid "How long to keep forecast and Digital Twin records. Sensor readings are never deleted."
+msgstr "예보와 디지털트윈 기록을 남겨 두는 기간입니다. 센서 측정값은 지우지 않습니다."
+
+msgid "Data retention must be between %(lo)s and %(hi)s days."
+msgstr "데이터 보관은 %(lo)s일에서 %(hi)s일 사이여야 합니다."
+
+msgid "Storage is running low (%(gb).1f GB left). A shorter retention frees space."
+msgstr "저장 공간이 부족합니다(%(gb).1f GB 남음). 보관 기간을 줄이면 공간이 생깁니다."
+
+msgid "A lot of forecast and twin data has piled up. A shorter retention reduces it."
+msgstr "예보와 디지털트윈 데이터가 많이 쌓였습니다. 보관 기간을 줄이면 줄어듭니다."
+
+msgid "Records of %(n)s deleted forecast input(s) stay until the retention ends."
+msgstr "지운 예보 입력 %(n)s개의 기록은 보관 기간이 끝날 때까지 남아 있습니다."
+
+msgid "Last checked %(when)s. All good."
+msgstr "마지막 점검 %(when)s. 이상 없습니다."
+
+msgid "The Digital Twin results for this plot are kept until the retention ends. Erase them now too?"
+msgstr "이 구획의 디지털트윈 결과는 보관 기간이 끝날 때까지 남아 있습니다. 지금 함께 지울까요?"
+
+msgid "3 °C hotter"
+msgstr "3 °C 더 더우면"
+
+msgid "Amount (mm)"
+msgstr "양 (mm)"
+
+msgid "Applies to the next 7 days of the forecast."
+msgstr "앞으로 7일 예상에 적용돼요."
+
+msgid "Bars: dark = recorded, light = estimated from run time, outline = command only, dotted outline = assumed, hatched = planned."
+msgstr "막대: 진한 것은 실제 기록, 옅은 것은 가동 시간으로 짐작한 값, 윤곽은 명령만 내린 것, 점선 윤곽은 가정, 빗금은 앞으로의 계획이에요."
+
+msgid "Base forecast"
+msgstr "기본 예상"
+
+msgid "By {d} the soil water is about the same as the base forecast."
+msgstr "{d}쯤 흙 속 물이 기본 예상과 비슷해요."
+
+msgid "By {d} the soil water is about {v} higher than the base forecast."
+msgstr "{d}쯤 흙 속 물이 기본 예상보다 {v} 더 많아요."
+
+msgid "By {d} the soil water is about {v} lower than the base forecast."
+msgstr "{d}쯤 흙 속 물이 기본 예상보다 {v} 더 적어요."
+
+msgid "CO2 feeding"
+msgstr "이산화탄소 주입"
+
+msgid "Calculate again"
+msgstr "다시 계산"
+
+msgid "Calculating..."
+msgstr "계산하는 중..."
+
+msgid "Choose a day and an hour."
+msgstr "날짜와 시각을 골라 주세요."
+
+msgid "Choose what to try."
+msgstr "무엇을 해 볼지 골라 주세요."
+
+msgid "Could not save. Try again."
+msgstr "저장하지 못했어요. 다시 해 주세요."
+
+msgid "Delete for sure?"
+msgstr "정말 지울까요?"
+
+msgid "Effect not included"
+msgstr "효과 미반영"
+
+msgid "Enter the amount between 1 and 100 mm."
+msgstr "양은 1~100 mm 사이로 적어 주세요."
+
+msgid "Enter the hours between 1 and 12."
+msgstr "시간은 1~12 사이로 적어 주세요."
+
+msgid "Fitted to the sensor"
+msgstr "센서에 맞춰 본 값"
+
+msgid "Grow light"
+msgstr "보광등"
+
+msgid "If so: soil {v}"
+msgstr "그렇게 하면 흙 {v}"
+
+msgid "Included"
+msgstr "반영됨"
+
+msgid "Keep"
+msgstr "남겨 두기"
+
+msgid "Kept"
+msgstr "남겨 둠"
+
+msgid "No what-if yet. Try one below."
+msgstr "아직 만든 가정이 없어요. 아래에서 해 보세요."
+
+msgid "Other devices"
+msgstr "그 밖의 장치"
+
+msgid "Out of date: the base forecast has changed."
+msgstr "낡았어요: 기본 예상이 새로 나왔어요."
+
+msgid "Over how many hours"
+msgstr "몇 시간에 걸쳐"
+
+msgid "Partly included"
+msgstr "일부 반영"
+
+msgid "Sending..."
+msgstr "보내는 중..."
+
+msgid "Show each device"
+msgstr "장치별로 보기"
+
+msgid "Show the past fitted to the sensor"
+msgstr "센서에 맞춰 본 지난 값 보기"
+
+msgid "The calculation failed."
+msgstr "계산하지 못했어요."
+
+msgid "The result has expired. Calculate again."
+msgstr "결과가 사라졌어요. 다시 계산해 주세요."
+
+msgid "Try it"
+msgstr "해 보기"
+
+msgid "Twice the rain"
+msgstr "비가 두 배로 오면"
+
+msgid "Waiting to be calculated..."
+msgstr "계산을 기다리는 중..."
+
+msgid "Water {mm} mm on {d}"
+msgstr "{d} 물 {mm} mm"
+
+msgid "What do you want to try?"
+msgstr "무엇을 해 볼까요?"
+
+msgid "What if..."
+msgstr "만약에..."
+
+msgid "You can keep up to {n} what-ifs. Delete an old one first."
+msgstr "가정은 {n}개까지 둘 수 있어요. 오래된 것을 먼저 지워 주세요."
+
+msgid "{n} devices are not counted in the forecast yet."
+msgstr "장치 {n}개는 아직 예상에 반영되지 않았어요."
+
+msgid "{n} devices are only partly counted in the forecast."
+msgstr "장치 {n}개는 예상에 일부만 반영됐어요."
+
+msgid "{what} (if so) {v}"
+msgstr "{what} (그렇게 하면) {v}"
+
+msgid "{what} (plan) {v}"
+msgstr "{what} (계획) {v}"
+
+msgid "If it does not rain"
+msgstr "비가 오지 않으면"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s forecast"
+msgstr "%(place)s 예보"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s weather now"
+msgstr "%(place)s 지금 날씨"
+
+#: tools/domain/server_card.py
+msgid "Weather now"
+msgstr "지금 날씨"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s weather, %(period)s"
+msgstr "%(place)s 날씨 · %(period)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Weather, %(period)s"
+msgstr "날씨 · %(period)s"
+
+#: tools/domain/server_card.py
+msgid "yesterday"
+msgstr "어제"
+
+#: tools/domain/server_card.py
+msgid "this week"
+msgstr "이번 주"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "last %(span)s"
+msgstr "최근 %(span)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(name)s total %(value)s"
+msgstr "%(name)s 합계 %(value)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(place)s summary"
+msgstr "%(place)s 현황"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(start)s → %(end)s, model forecast"
+msgstr "%(start)s → %(end)s, 모델 예보"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "from %(start)s, model forecast"
+msgstr "%(start)s부터, 모델 예보"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(name)s %(low)s–%(high)s%(unit)s (max %(at)s)"
+msgstr "%(name)s %(low)s–%(high)s%(unit)s (최고 %(at)s)"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "%(name)s total %(value)s%(unit)s"
+msgstr "%(name)s 합계 %(value)s%(unit)s"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid ", from %(at)s"
+msgstr ", %(at)s부터"
+
+#: tools/domain/server_card.py
+msgid "Air"
+msgstr "공기"
+
+#: tools/domain/server_card.py
+msgid "Soil"
+msgstr "흙"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Alerts: %(n)s"
+msgstr "알림 %(n)s건"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Silent sensors: %(n)s"
+msgstr "소식 없는 센서 %(n)s개"
+
+#: tools/domain/server_card.py
+#, python-format
+msgid "Plots: %(n)s"
+msgstr "구획 %(n)s개"
+
+#: tools/domain/server_card.py
+msgid "Chance of rain"
+msgstr "비 올 확률"
+
+msgid "Turned on"
+msgstr "켜짐"
+
+msgid "Environment control"
+msgstr "환경제어"
+
+msgid "An environment control function is linked."
+msgstr "환경제어 함수와 연결돼 있습니다."
+
+msgid "No environment control function is linked."
+msgstr "연결된 환경제어 함수가 없습니다."
+
+msgid "Unknown device"
+msgstr "알 수 없는 장치"
+
+msgid "Show on the graph"
+msgstr "그래프에 보이기"
+
+msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr "지도를 표시할 수 없습니다. 브라우저의 그래픽 가속(WebGL)이 꺼져 있거나 사용할 수 있는 지도 화면이 모두 쓰였을 수 있습니다. 다른 지도 창을 닫거나 페이지를 새로 고쳐 보세요."
+
+msgid "Well"
+msgstr "관정"
+
+msgid "Tap water"
+msgstr "상수도"
+
+msgid "Max flow"
+msgstr "허용 유량"
+
+msgid "Rated flow"
+msgstr "정격 유량"
+
+msgid "Head"
+msgstr "양정"
+
+msgid "Base height"
+msgstr "바닥 높이"
+
+msgid "Pressure loss"
+msgstr "압력 손실"
+
+msgid "Pipe diameter"
+msgstr "관경"
+
+msgid "Leave empty if unknown."
+msgstr "모르면 비워 두세요."
+
+msgid "Equipment is hidden on the map, so this part will not show. Turn on \"Show on map\" in the equipment settings."
+msgstr "설비 도형이 지도에서 숨겨져 있어 이 부품이 보이지 않습니다. 장비 설정의 \"지도에서 보기\"를 켜세요."
+
+msgid "Disconnected circuit"
+msgstr "끊긴 회로"
+
+msgid "Circuit without a water source"
+msgstr "수원 없는 회로"
+
+msgid "Device area does not match pipes"
+msgstr "담당 구역과 배관 불일치"
+
+msgid "Emitters without flow"
+msgstr "유량 없는 노즐"
+
+msgid "Part not on a pipe"
+msgstr "배관에 안 붙은 부품"
+
+msgid "Part with several devices nearby"
+msgstr "장치가 여럿 가까운 부품"
+
+msgid "Looped circuit"
+msgstr "고리 회로"
+
+msgid "Water Circuit Check"
+msgstr "물 회로 점검"
+
+msgid "No circuit issues."
+msgstr "회로 문제가 없습니다."
+
+msgid "Based on the saved design."
+msgstr "저장된 설계 기준입니다."
+
+msgid "Branch pipes joined"
+msgstr "연결된 지관"
+
+msgid "Emitters on a pipe"
+msgstr "배관에 붙은 노즐"
+
+msgid "Water volumes are limited by what the supply could deliver: %(delivered)s L, against %(design)s L by nozzle design alone."
+msgstr "물량은 공급 능력을 반영한 값입니다. 전달 %(delivered)s L, 노즐 설계값 %(design)s L."
+
+msgid "Demand was above the pump's rated flow for about %(min)s min, so the open valves shared what the pump could give."
+msgstr "약 %(min)s분 동안 수요가 펌프 정격을 넘어, 열린 밸브들이 펌프가 낼 수 있는 물을 나눠 썼습니다."
+
+msgid "Demand was above what the water source allows for about %(min)s min, so the open valves shared what the source could give."
+msgstr "약 %(min)s분 동안 수요가 수원 허용량을 넘어, 열린 밸브들이 수원이 낼 수 있는 물을 나눠 썼습니다."
+
+msgid "A valve was open while its pump was off for about %(min)s min. No water is counted for that time."
+msgstr "약 %(min)s분 동안 펌프가 꺼진 채 밸브가 열려 있었습니다. 그 시간의 물량은 0으로 계산했습니다."
+
+msgid "The pump ran with no valve open for about %(min)s min."
+msgstr "약 %(min)s분 동안 열린 밸브 없이 펌프가 돌았습니다."
+
+msgid "The tank ran out at %(when)s. After that, water is limited to what flows into the tank."
+msgstr "탱크가 %(when)s에 바닥났습니다. 그 뒤의 물량은 탱크로 들어오는 양까지만 계산했습니다."
+
+msgid "How much this line can supply is not known — the pump has no rated flow, or there is no pump — so volumes are not limited by it."
+msgstr "이 회로의 공급 능력을 모릅니다. 펌프 정격이 비어 있거나 펌프가 없어 공급 한계를 걸지 않았습니다."
+
+msgid "The pump on this line is not tied to an output, so whether it was running is not known. It is counted as running whenever a valve is open."
+msgstr "이 회로의 펌프가 출력 장치에 연결되지 않아 작동 여부를 모릅니다. 밸브가 열린 동안 돌았다고 계산했습니다."
+
+msgid "The tank on this line has no water level reading, so the tank balance is left out. It is not assumed to be full."
+msgstr "이 회로의 탱크에 수위 측정이 없어 탱크 수지를 뺐습니다. 가득 찼다고 가정하지 않습니다."
+
+msgid "A pump sits before the tank on this line. The flow limit is counted as if the pump drew from the tank, so volumes may be lower than what was delivered."
+msgstr "이 회로는 탱크 앞에 펌프가 있습니다. 펌프가 탱크에서 물을 뽑는다고 보고 계산해 실제 전달량보다 적게 나올 수 있습니다."
+
+msgid "A drip line on this circuit has no emitter spacing or flow set, so it is left out of the demand."
+msgstr "이 회로의 점적 줄에 점적기 간격이나 유량이 없어 수요에서 뺐습니다."
+
+msgid "Run records for this water line could not be read, so volumes are not limited by the supply."
+msgstr "이 회로의 작동 기록을 읽지 못해 공급 한계를 걸지 않았습니다."
+
+msgid "Design"
+msgstr "설계값"
+
+msgid "Supply limited"
+msgstr "공급 한계"
+
+msgid "Water depth"
+msgstr "관수 깊이"
+
+msgid "A supply limit is applied: the pump or water source could not deliver the full design flow."
+msgstr "공급 한계를 반영했습니다. 펌프 또는 수원이 노즐 설계 유량을 모두 낼 수 없었습니다."
+
+msgid "Not entered - not counted"
+msgstr "미입력 — 계산에 쓰지 않음"
+
+msgid "Entered"
+msgstr "입력한 값"
+
+msgid "Linked device"
+msgstr "연결된 장치"
+
+msgid "Shown after the design is saved."
+msgstr "설계를 저장하면 표시됩니다."
+
+msgid "Linked by position: a device marker within 5 m of the part."
+msgstr "위치로 연결: 부품에서 5 m 안에 있는 장치 마커입니다."
+
+msgid "If this output has no run records, delivered water counts as 0 L."
+msgstr "이 Output 에 작동 기록이 없으면 전달 물량은 0 L 로 계산됩니다."
+
+msgid "Several device markers are within 5 m, so none is linked. Move the part or the markers apart."
+msgstr "5 m 안에 장치 마커가 여럿이라 연결하지 않았습니다. 부품이나 마커를 떼어 놓으세요."
+
+msgid "No device marker within 5 m."
+msgstr "5 m 안에 장치 마커가 없습니다."
+
+msgid "No pump in this circuit"
+msgstr "이 회로에 펌프가 없음"
+
+msgid "Pump rating not entered"
+msgstr "펌프 정격 미입력"
+
+msgid "No emitter flow in this circuit"
+msgstr "이 회로에 노즐 유량이 없음"
+
+msgid "No tank in this circuit"
+msgstr "이 회로에 탱크가 없음"
+
+msgid "Tank capacity not entered"
+msgstr "탱크 용량 미입력"
+
+msgid "Demand exceeds the pump"
+msgstr "수요가 펌프 능력을 넘음"
+
+msgid "Water source"
+msgstr "수원"
+
+msgid "Pump / demand"
+msgstr "펌프 / 수요"
+
+msgid "Tank lasts"
+msgstr "탱크 지속"
+
+msgid "Tank time assumes a full tank and no refill."
+msgstr "탱크 시간은 가득 찬 탱크에서 보충 없이 쓰는 경우입니다."
+
+msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
+msgstr "물량은 각 밸브가 맡는 영역 안에 지도에 그린 스프링클러의 유량과 그 밸브가 돈 시간으로 추정한 값이며, 유량계로 잰 값이 아닙니다. 이 구획과 겹치는 부분만 세므로 몫을 지어내지 않습니다."
+
+msgid "Forecast Model"
+msgstr "예보 모델"
+
+msgid "Hide AI Messages"
+msgstr "AI 메시지 숨기기"
+
+msgid "Light Rain Threshold (mm/h)"
+msgstr "약한 비 기준 (mm/h)"
+
+msgid "Precipitation below this value is drawn as no rain. The value itself is not changed."
+msgstr "이 값보다 적은 강수는 비가 없는 것으로 그립니다. 값 자체는 바뀌지 않습니다."
+
+msgid "Store Forecast Issues"
+msgstr "예보 발표본 저장"
+
+msgid "Window (hours)"
+msgstr "구간 (시간)"
+
+msgid "Write Hourly Forecast File"
+msgstr "시간별 예보 파일 쓰기"

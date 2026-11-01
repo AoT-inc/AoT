@@ -29,7 +29,7 @@ from flask_babel import lazy_gettext
 from aot.databases.models import Conversion
 from aot.databases.models import CustomController
 from aot.functions.base_function import AbstractFunction
-from aot.inputs.sensorutils import calculate_vapor_pressure_deficit
+from aot.functions.utils.env_control.psychro import leaf_vpd
 from aot.inputs.sensorutils import convert_from_x_to_y_unit
 from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
@@ -296,9 +296,15 @@ class CustomModule(AbstractFunction):
                 # Default offset: -1.5 => (if air temperature is 25C, leaf temperature is assumed to be 23.5C)
                 leaf_temp_c = temp_c + self.leaf_temp_offset
 
-            # 4) Calculate VPD
+            # 4) Calculate VPD — leaf-to-air: svp(leaf) − (RH/100)·svp(air).
+            #    The air's vapour pressure comes from the AIR temperature; applying
+            #    air RH to the leaf's saturation pressure (the old
+            #    calculate_vapor_pressure_deficit(leaf_temp_c, hum_percent)) overstated
+            #    VPD whenever the leaf was cooler than the air (25 °C, 70 %, leaf
+            #    -1.5 °C: 0.87 instead of 0.68 kPa). Canonical formula:
+            #    env_control/psychro.leaf_vpd (kPa) — stored in Pa as before.
             try:
-                vpd_pa = calculate_vapor_pressure_deficit(leaf_temp_c, hum_percent)
+                vpd_pa = leaf_vpd(leaf_temp_c, temp_c, hum_percent) * 1000.0
             except TypeError as err:
                 self.logger.error("Error while calculating VPD: {msg}".format(msg=err))
 

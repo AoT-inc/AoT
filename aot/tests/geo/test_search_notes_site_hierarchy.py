@@ -109,5 +109,95 @@ class TestSearchNotesSiteHierarchy(unittest.TestCase):
         self.assertIn('marker-v142', ids)
 
 
+class TestFacilityNoteIdentity(unittest.TestCase):
+    """시설은 정체성이 둘이다(GeoFacility.unique_id / 그 도형 GeoShape.unique_id).
+    웹은 노트를 시설 id 에, 예전 MCP 는 도형 id 에 붙여 같은 시설의 노트가
+    둘로 갈라졌다(육묘장3, 2026-10). 읽기는 두 id 모두를, 쓰기는 시설 id 로."""
+
+    FAC = 'fac-uid-1'
+    SHP = 'shape-uid-1'
+
+    def setUp(self):
+        from aot.databases.models import GeoFacility
+        self.app = _make_app()
+        self.app.config['LOGIN_DISABLED'] = True
+        self.app.secret_key = 'test'
+        from flask_login import LoginManager
+        lm = LoginManager(self.app)
+        lm.user_loader(lambda _uid: None)
+        from aot.aot_flask.geo import shape_index
+        shape_index.invalidate()  # 프로세스 캐시(30s)가 앞 테스트의 도형을 들고 있다
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+        GeoMap(unique_id='map-1', name='Test Map', category='design').save()
+        GeoShape(unique_id=self.SHP, geo_id='map-1', type='facility',
+                 feature=_feature('육묘장3', 'Polygon',
+                                  [[[0, 0], [0, 10], [10, 10], [10, 0], [0, 0]]])).save()
+        GeoFacility(unique_id=self.FAC, shape_uuid=self.SHP, geo_id='map-1',
+                    name='육묘장3').save()
+        Notes(name='웹 노트', note='w', target_id=self.FAC,
+              target_type='GeoFacility', category='general').save()
+        Notes(name='옛 MCP 노트', note='m', target_id=self.SHP,
+              target_type='facility', category='general').save()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+        from aot.aot_flask.geo import shape_index
+        shape_index.invalidate()
+
+    def _mcp_names(self, **kw):
+        r = AoTDataToolService.search_notes_tool(limit=10, **kw)
+        return {x['name'] for x in r.get('results', [])}
+
+    def test_mcp_read_by_either_id_sees_both(self):
+        both = {'웹 노트', '옛 MCP 노트'}
+        self.assertEqual(self._mcp_names(target_id=self.FAC), both)
+        self.assertEqual(self._mcp_names(target_id=self.SHP), both)
+        self.assertEqual(self._mcp_names(target_name='육묘장3'), both)
+
+    def test_web_read_by_either_id_sees_both(self):
+        from aot.aot_flask import routes_notes_api as api
+        fn = getattr(api.api_notes_target_get, '__wrapped__',
+                     api.api_notes_target_get)
+        both = {'웹 노트', '옛 MCP 노트'}
+        for tid in (self.FAC, self.SHP):
+            with self.app.test_request_context('/?descendants=1'):
+                resp = fn(tid)
+                data = resp[0].get_json() if isinstance(resp, tuple) else resp.get_json()
+            rows = data if isinstance(data, list) else (
+                data.get('notes') or data.get('results') or [])
+            self.assertEqual({x['note'] for x in rows}, {'w', 'm'}, tid)
+
+    def test_mcp_write_attaches_to_facility_id(self):
+        for kw in ({'target_name': '육묘장3'}, {'target_id': self.SHP},
+                   {'target_id': self.FAC}):
+            r = AoTDataToolService.create_note(name='n', note='x', **kw)
+            self.assertIn('note_id', r, r)
+            n = Notes.query.filter_by(unique_id=r['note_id']).first()
+            self.assertEqual(n.target_id, self.FAC, kw)
+            self.assertEqual(n.target_type, 'GeoFacility', kw)
+
+    def test_web_create_normalizes_shape_id_to_facility(self):
+        from aot.aot_flask import routes_notes_api as api
+        fn = getattr(api.api_notes_create, '__wrapped__', api.api_notes_create)
+        from unittest import mock
+        for tid, tt in ((self.SHP, 'facility'), (self.FAC, 'GeoFacility')):
+            with mock.patch.object(api.utils_general, 'user_has_permission',
+                                   return_value=True), \
+                    self.app.test_request_context(
+                    '/', method='POST',
+                    json={'note': 'z', 'target_id': tid, 'target_type': tt,
+                          'gps_lat': 1, 'gps_lng': 1}):
+                fn()
+        rows = Notes.query.filter_by(note='z').all()
+        self.assertEqual(len(rows), 2)
+        for n in rows:
+            self.assertEqual((n.target_id, n.target_type),
+                             (self.FAC, 'GeoFacility'))
+
+
 if __name__ == '__main__':
     unittest.main()

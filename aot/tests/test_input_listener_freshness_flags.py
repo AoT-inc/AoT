@@ -51,6 +51,7 @@ _PURE_LISTENER_MODULES = [
     'mqtt_paho.py',
     'mqtt_paho_json.py',
     'chirpstack_rak3172_valve_hb.py',
+    'matter_node.py',
 ]
 
 # listener 스레드로 돌지만, 다른 모듈과의 일관성을 위해 표준 period 필드도

@@ -349,6 +349,12 @@ MODE_HUMIDIFY     = 'humidify'
 MODE_DEHUMIDIFY   = 'dehumidify'
 MODE_CO2_ENRICH   = 'co2_enrich'
 MODE_CONSERVATION = 'conservation'
+# 극한 고온 보호(`heat_protect`, 2026-10-09) — `situation._decide_modes` 가 모드 목록
+# **맨 앞**에 둔다. 단계 1 은 MODE_HEAT_PROTECT, 단계 2(하드 상한 `temp_max` 초과)는
+# MODE_EMERGENCY 다. 문자열 'emergency' 는 예전부터 모드 코드 99(`log_channels.MODE_CODES`)·
+# 화면 라벨·건강 점검이 읽던 이름이라 그대로 쓴다. (`_classify_emergency` 의 "긴급" 판정은
+# 별개 — 모드가 아니라 개구부 구동주기 우회다.)
+MODE_HEAT_PROTECT = 'heat_protect'
 MODE_EMERGENCY    = 'emergency'
 # P5-2: Control Authority 모드 확장
 MODE_DEGRADED     = 'degraded'    # 일부 변수 NATURAL — best-effort

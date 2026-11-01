@@ -88,6 +88,10 @@ Page\: `管理 → システム管理 → 一般設定`
 <td>外部MCPサーバーを有効化</td>
 <td>すでに動作しているMCPサーバーに対する、外部MCPクライアント(例: Claude Desktop)からのリクエストを許可または拒否します。すぐに反映されます。サーバーが待ち受けるアドレスとポートはここでは設定しません。Dockerでは<code>aot_mcp</code>サービスの<code>ports:</code>を編集して<code>docker compose up -d</code>を再実行し、直接インストールでは<code>aotmcp</code>のsystemdサービスを編集して再起動します。</td>
 </tr>
+<tr>
+<td>Matterを使用(実験的)</td>
+<td>既定はオフです。オンにすると設定メニューに<a href="../Matter/">Matter</a>が表示され、ほかのスマートホームアプリですでに設定されたデバイスをAoTに追加できます。直接インストールでMatterに必要なパッケージがない場合は、先にパッケージ管理画面へ案内します。Matterサーバー自体はホストで別に起動します。Matterデバイスが残っている間はオフにできません。</td>
+</tr>
 </tbody>
 </table>
 

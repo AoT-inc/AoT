@@ -8,7 +8,7 @@ CHANNELS = {
     1: {'name': 'Transport', 'options': {'layer': 'transport'}},
     2: {'name': 'Landscape', 'options': {'layer': 'landscape'}},
     3: {'name': 'Outdoors', 'options': {'layer': 'outdoors'}},
-    4: {'name': 'Transport Dark', 'options': {'layer': 'transport-dark'}},
+    4: {'name': 'Transport Dark', 'options': {'layer': 'transport-dark', 'ambient_theme': 'dark'}},
     5: {'name': 'Spinal Map', 'options': {'layer': 'spinal-map'}},
     6: {'name': 'Pioneer', 'options': {'layer': 'pioneer'}},
     7: {'name': 'Mobile Atlas', 'options': {'layer': 'mobile-atlas'}},
@@ -41,6 +41,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'base',
+    'ambient_role': 'base',
     'custom_options': [
         {
             'id': 'api_key',

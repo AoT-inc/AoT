@@ -162,24 +162,6 @@ Detected Anomalies:
         return body
 
     @staticmethod
-    def send_webui_toast(
-        user_id: str,
-        message: str,
-        level: str = 'info',
-        duration: int = 5000
-    ) -> Dict[str, Any]:
-        """Retired no-op. Kept so existing callers don't break.
-
-        The WebUI toast used a persistent SSE stream (/api/alerts/stream) that
-        held a gthread worker thread per browser tab and exhausted the worker
-        pool (blank widgets / app-wide stalls). That endpoint and its frontend
-        consumer were removed on 2026-07-19; in-app toasts are no longer pushed.
-        Deliver alerts via Conditional Functions + the Send Email action instead.
-        """
-        logger.debug("[WebUI Toast] retired no-op (%s): %s", level, message)
-        return {'status': 'disabled'}
-
-    @staticmethod
     def send_sms(
         phone_number: str,
         message: str

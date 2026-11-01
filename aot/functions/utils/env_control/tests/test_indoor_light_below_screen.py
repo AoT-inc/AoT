@@ -107,8 +107,10 @@ class TestEveryConsumerReadsBelowScreen:
     def test_추정에_피복_투과율이_들어간다(self):
         src = self._src('functions', 'custom_functions',
                         'env_coordinator_impl', '_cycle_mixin.py')
-        # 세 곳이다 — 실내 추정 · 맑은날 폴백 · "막을 걷었을 때" 추정.
-        assert src.count('cover_tau=self._facility_cover_transmittance()') == 3
+        # 다섯 곳이다 — 실내 추정 · 맑은날 폴백 · "막을 걷었을 때" 추정 ·
+        # "막을 다 쳤을 때" 추정(극한 고온 보호의 차광 판정, 2026-10-09) ·
+        # 스크린 판단의 DLI 예상(`_evaluate_screens`, 2026-10-09).
+        assert src.count('cover_tau=self._facility_cover_transmittance()') == 5
 
 
 if __name__ == '__main__':

@@ -15,11 +15,22 @@ AoT 는 MapLibre GL JS 를 **반입(vendoring)** 해서 쓴다. 이 문서는 �
 버전을 가로채면 404 만 서빙하게 된다).
 
 ```
-static/vendor/maplibre-gl-4.1.2/   ← 지금
-static/vendor/maplibre-gl-5.6.0/   ← 떨어뜨려 놓으면 이쪽이 쓰인다
+static/vendor/maplibre-gl-5.23.0/  ← 지금(가장 높은 것)
+static/vendor/maplibre-gl-4.1.2/   ← 되돌리기용으로 남겨 둔다
 ```
 
-**5 로 올리는 절차는 디렉터리 하나를 더 놓는 것이 전부다.** 지우면 4 로 돌아온다.
+**버전은 디렉터리 하나로 바뀐다.** 5.23.0 디렉터리를 지우고(또는 옮기고) 앱을 재시작하면
+4.1.2 로 돌아온다. 그래서 4.1.2 는 지우지 않는다 — 약 1MB 이고 라이선스가 같다.
+
+**롤백 절차** — 서버 파일만으로 끝난다(번들 재빌드 불필요, 5 에서 고친 코드는 4 에서도 동작한다):
+
+```bash
+mv aot/aot_flask/static/vendor/maplibre-gl-5.23.0 /tmp/   # 또는 git revert
+# 서버 재시작(aotflask). 버전은 프로세스가 뜰 때 한 번 정해진다.
+```
+
+`maplibre_local_serving` 이 꺼진 설치는 CDN(`unpkg.com/maplibre-gl@<버전>`)에서 받는다.
+같은 디렉터리 이름에서 버전을 읽으므로 롤백은 똑같다.
 
 ### 왜 이렇게 했나
 
@@ -58,9 +69,14 @@ if maplibre.supports_terrain(): ...
 
 | | MapLibre 4 | MapLibre 5 |
 |---|---|---|
-| `enable_3d_terrain` 옵션 | 설정 화면에 **안 나온다** | 나온다 |
-| 저장된 값이 켜져 있으면 | 지도가 **무시한다** | 적용된다 |
-| 저장된 값 자체 | **그대로 남는다** | 되살아난다 |
+| `enable_3d_terrain` 옵션 | 설정 화면에 **안 나온다** | **안 나온다**(DEM 이 정해질 때까지) |
+| 저장된 값이 켜져 있으면 | 지도가 **무시한다** | 지도가 **무시한다** |
+| 저장된 값 자체 | **그대로 남는다** | **그대로 남는다** |
+
+판정은 두 단계다. `engine_supports_terrain()` 은 엔진 버전(5 이상)이고,
+`supports_terrain()` 은 거기에 `TERRAIN_DEM_READY` 를 더한 최종 답이다. DEM 이 정해지기
+전에는 `TERRAIN_DEM_READY = False` 라 5 에서도 꺼진다(서버 `aot/utils/maplibre.py`,
+브라우저 `AoTMapLibreCaps`, 두 곳을 함께 본다 — `test_maplibre_version.py` 가 일치를 지킨다).
 
 옵션을 지우는 대신 감추기만 하는 이유: 값을 지우면 5 를 반입한 뒤 사용자가
 다시 켜야 한다. 저장 경로 둘(`custom_options_return_json`,
@@ -83,7 +99,7 @@ if maplibre.supports_terrain(): ...
 
 ---
 
-## 4. ⚠ 5 를 반입하기 전에 반드시 할 것 — DEM 소스 교체
+## 4. ⚠ 지형을 5 에서 켜기 전에 반드시 할 것 — DEM 소스 교체
 
 지금 코드가 가리키는 DEM 은 **쓸 수 없는 것**이다.
 
@@ -106,9 +122,9 @@ https://demotiles.maplibre.org/terrain-tiles/tiles.json
 
 AoT 는 한국 전용이 아니다(22개 언어). 알프스 밖 **모든** 설치가 같은 상태다.
 
-그러므로 5 를 반입해 `supports_terrain()` 이 True 를 돌려주기 시작하는 순간,
-이 옵션은 "동작하지 않는 스위치" 가 된다. **DEM 을 먼저 정하고 나서** 올려야
-한다. 후보를 고를 때 함께 볼 것:
+그러므로 `TERRAIN_DEM_READY` 를 True 로 바꾸는 순간 이 옵션은 "동작하지 않는
+스위치" 가 된다. **DEM 을 먼저 정하고 나서** 켜야 한다. (5.23.0 은 이미 반입됐고
+지형 옵션은 꺼 둔 상태다.) 후보를 고를 때 함께 볼 것:
 
 - 전 지구 커버리지 (국내·일본·동남아 포함)
 - 라이선스와 저작권 표시 의무
@@ -134,3 +150,28 @@ AoT 는 한국 전용이 아니다(22개 언어). 알프스 밖 **모든** 설�
 | `geo/aot-vector-layer-manager.js` | `addTerrain()` 직접 호출 |
 
 (`setTerrain(null)` 은 끄는 쪽이라 게이트가 없다.)
+
+---
+
+## 6. 이음매 — 버전을 올릴 때 고칠 곳
+
+엔진 교체용 추상 계층이 아니라 **고칠 곳을 줄이는 얇은 정리**다. 정본은
+`geo/aot-maplibre-seam.js`(`window.AoTMapSeam`)이고 `map-shim` 번들의 **맨 앞**에서 실린다.
+
+| 함수 | 하는 일 | 대신하는 직접 사용 |
+|---|---|---|
+| `createMap(options, {onError})` | 지도 생성의 유일한 자리. 실패(WebGL 없음·컨텍스트 소진·컨테이너 없음)하면 `null` 을 돌려주고 컨테이너에 안내문과 `data-map-error` 를 남긴다. 예외는 던지지 않는다 | `new maplibregl.Map` |
+| `styleLayers` · `styleLayerIds` | 스타일의 레이어 객체/id | `style._layers` |
+| `layerOrder` | 그리기 순서 | `getLayersOrder()` / `style._order` |
+| `tileSources` | 타일 소스 `[{id, source}]` | `tileManagers`(5) / `sourceCaches`(4) |
+| `hasControl` | 컨트롤이 붙어 있는가 (5 는 배열, 4 는 Set) | `_controls` |
+| `cloneTransform` · `transformSize` | 카메라 변환 복제·캔버스 크기 | `map.transform` |
+
+`createMap` 은 옵션을 **그대로** 넘긴다 — 열세 곳의 옵션 차이(`pitch`, `antialias`,
+`preserveDrawingBuffer`, `interactive` 등)는 의도된 것이라 합치지 않았다. 호출한 쪽은
+`null` 을 보고 자기 흐름을 끊는다(`try` 안이면 던지고, 아니면 `return`).
+
+`aot/scripts/check_maplibre_seam.py` 가 이음매 파일 밖의 직접 사용을 막는다
+(허용 명부 없음, pre-commit 훅과 `test_maplibre_seam.py` 가 돈다). 새 내부 필드가
+필요하면 호출부에서 읽지 말고 이음매에 함수를 추가한다. `addLayer` 등 공개 레이어 API 는
+감싸지 않는다.

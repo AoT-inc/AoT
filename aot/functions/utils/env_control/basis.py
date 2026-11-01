@@ -31,9 +31,9 @@ VPD 를 1차 목표로 직접 좇으면 고온·저온에서 틀린다.
 
 from __future__ import annotations
 
-import math
 from typing import Optional, Tuple
 
+from . import psychro
 from .goal import build_env_target
 from .types import EnvTarget, TargetVar
 
@@ -50,7 +50,7 @@ VPD_LIMIT_PRI  = 1.0
 
 
 def _svp(T: float) -> float:
-    return 0.6108 * math.exp(17.27 * T / (T + 237.3))
+    return psychro.svp(T)
 
 
 def temperature_basis(vpd_target: Optional[float], stage_T: Optional[float],

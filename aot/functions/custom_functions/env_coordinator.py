@@ -262,6 +262,11 @@ class CustomModule(
         # VPD
         self.priority_vpd            = None
         self.control_basis           = None
+        # VPD 목표의 기준(공기/잎) — 판정은 `env_control/leaf_vpd.py`. select_measurement 는
+        # <id>_device_id / <id>_measurement_id 로 풀려 들어온다.
+        self.vpd_target_basis                  = None
+        self.leaf_temp_signal_device_id        = None
+        self.leaf_temp_signal_measurement_id   = None
         self.tolerance_vpd           = None
 
         # Light
@@ -281,11 +286,26 @@ class CustomModule(
         self.temp_max     = None
         self.temp_min     = None
 
+        # 극한 고온(폭염) 보호 — 판정·정책은 `env_control/heat_protect.py`. 문턱은
+        # 작물마다 달라 옵션이다(기본 30 °C, 실내 평균 기준). 래치는 재시작을 넘는다(`cycle_memory`).
+        self.heat_protect_enabled        = None
+        self.heat_protect_threshold      = None
+        self.heat_protect_release_margin = None
+        self.heat_protect_min_hold_min   = None
+        self._heat_state    = None   # HeatProtectState (lazy, `_heat_state_obj`)
+        self._heat_decision = None   # 이번 사이클의 HeatProtectDecision
+
         # Humidity (constraints)
         self.humid_max     = None
         self.humid_min     = None
         # 관수 겸용 분무기를 환경 제어에서 빼는 스위치 (기본 True = 종전 동작).
         self.use_wetting_fog_for_humidity = None
+        # 해 질 녘 습윤형 분무 제한(`wet_fog_dusk`, 근거 53) — 육묘 모드를 포함해 서는 스위치, 기본 켜짐.
+        self.wetting_fog_dusk_stop = None
+        # 극한 고온·건조의 짧은 펄스 분무(`pulse_fog`, 근거 57) — 일소 잠금 속에서 펄스 하나를 허용하는 스위치, 기본 켜짐.
+        self.extreme_pulse_fog = None
+        # 밤 이슬 순환팬(`night_dew`, 근거 59) — 기본 꺼짐(폐루프에서 효과가 확인되지 않았다, 2026-10-12).
+        self.night_dew_fan = None
 
         # Nursery (seedling protection) — 2026-07-31 aot-005 일소 사건 대응
         self.nursery_mode           = None
@@ -330,6 +350,19 @@ class CustomModule(
         self.hvac_interlock_signal_device_id             = None
         self.hvac_interlock_signal_measurement_id        = None
         self.hvac_interlock_on_value                     = None
+
+        # 차광막을 열부하·증산 조절에 쓸지(광 상태가 허락할 때) — 판단은 `env_control/screen_policy.py`.
+        self.shade_heat_assist                           = None
+        # 밤 결로에 보온커튼을 조금 열지(부분 개도가 되는 커튼만) — 같은 모듈.
+        self.curtain_humidity_gap                        = None
+
+        # 분무용 물 공급 — 판정은 `env_control/water_supply.py`. select_measurement 는
+        # <id>_device_id / <id>_measurement_id 로 풀려 들어온다.
+        self.water_supply_check                          = None
+        self.water_supply_signal_device_id               = None
+        self.water_supply_signal_measurement_id          = None
+        self.water_supply_threshold                      = None
+        self.water_supply_direction                      = None
 
         # Diagnostics — gates per-cycle INFO/DEBUG noise
         #
@@ -397,6 +430,94 @@ class CustomModule(
                 FUNCTION_INFORMATION['custom_options'], custom_function)
             self.try_initialize()
 
+    # 서리 단계의 기억은 사전 게이트(`SafetyPreGate.frost_state`)가 쥔다 — 판정이 거기서 일어난다.
+    # `cycle_memory` 는 코디네이터 속성 이름(`_frost_state`)으로 저장·복원하므로 그 이름을 게이트로
+    # 이어 준다(게이트가 아직 없으면 None — 저장은 건너뛰고, 복원은 게이트 생성 뒤에 일어난다).
+    @property
+    def _frost_state(self):
+        gate = getattr(self, '_pre_gate', None)
+        return getattr(gate, 'frost_state', None)
+
+    @_frost_state.setter
+    def _frost_state(self, value) -> None:
+        gate = getattr(self, '_pre_gate', None)
+        if gate is not None and value is not None:
+            gate.frost_state = value
+
+    # 강풍 단계·풀림 평균 창도 같다(`SafetyPreGate.wind_state`) — 재시작이 2단계를 잊고 첫 사이클에
+    # 1단계로 열거나, 20 분 평균 창을 처음부터 다시 세지 않게.
+    @property
+    def _wind_state(self):
+        gate = getattr(self, '_pre_gate', None)
+        return getattr(gate, 'wind_state', None)
+
+    @_wind_state.setter
+    def _wind_state(self, value) -> None:
+        gate = getattr(self, '_pre_gate', None)
+        if gate is not None and value is not None:
+            gate.wind_state = value
+
+    # 강우·풍속의 마지막 실측도 같다(`SafetyPreGate.weather_memory`) — 재시작이 끊긴 센서를 '원래 없던 센서'
+    # 로 만들어 "더 열지 않음" 천장(EXT_EXP)을 잃지 않게(김제 2026-10-12 22:14, `WeatherMemory`).
+    @property
+    def _weather_memory(self):
+        gate = getattr(self, '_pre_gate', None)
+        return getattr(gate, 'weather_memory', None)
+
+    @_weather_memory.setter
+    def _weather_memory(self, value) -> None:
+        gate = getattr(self, '_pre_gate', None)
+        if gate is None or value is None:
+            return
+        # 망가진 저장값은 버린다 — 숫자가 아닌 값이 천장 판정에 들어가지 않게.
+        clean = {}
+        for k, v in (getattr(value, 'seen', None) or {}).items():
+            try:
+                f = float(v)
+            except (TypeError, ValueError):
+                continue
+            if f == f and f not in (float('inf'), float('-inf')):
+                clean[str(k)] = f
+        value.seen = clean
+        if value.rain_origin not in ('model', 'measured'):
+            value.rain_origin = 'measured'
+        gate.weather_memory = value
+
+    # 강우 단계 유지(`SafetyPreGate._rain_hold` = (단계, 만료 시각)) — 예보가 0.9/1.0 을 오갈 때 천창이 사이클마다
+    # 오가지 않게 붙드는 시한이라, 재시작이 지우면 유지 중이던 제한이 풀린 채 출발한다. 만료 시각은 벽시계
+    # (`time.time()`)라 재시작 너머로 뜻이 맞다(`cycle_memory`).
+    @property
+    def _rain_hold(self):
+        gate = getattr(self, '_pre_gate', None)
+        return getattr(gate, '_rain_hold', None)
+
+    @_rain_hold.setter
+    def _rain_hold(self, value) -> None:
+        gate = getattr(self, '_pre_gate', None)
+        if gate is not None and value is not None:
+            gate._rain_hold = (int(value[0]), float(value[1]))
+
+    # 사전 게이트의 bool 래치 — 한파 비상은 들어갈 때 문턱, 나올 때 `cold_release_margin` 만큼 물러난 값이라
+    # 재시작이 지우면 그 띠 안에서 전면 폐쇄가 한 사이클 풀린다. 육묘 일소 분무 잠금(`nursery_locked`)도 같은 이력 띠
+    # (250 켬 · 150 끔)라 재시작이 지우면 띠 안에서 습윤 분무가 풀린다(`cycle_memory`). 게이트가 없으면 None.
+    _GATE_LATCH_ATTRS = {'cold_latched': '_cold_latched', 'nursery_locked': '_nursery_locked'}
+
+    @property
+    def _gate_latches(self):
+        gate = getattr(self, '_pre_gate', None)
+        if gate is None:
+            return None
+        return {k: bool(getattr(gate, a, False)) for k, a in self._GATE_LATCH_ATTRS.items()}
+
+    @_gate_latches.setter
+    def _gate_latches(self, value) -> None:
+        gate = getattr(self, '_pre_gate', None)
+        if gate is None or not isinstance(value, dict):
+            return
+        for k, a in self._GATE_LATCH_ATTRS.items():
+            if k in value:
+                setattr(gate, a, bool(value[k]))
+
     # ─────────────────────────────────────────────────────────────────────────
     # @manual ai/env-control#pre-gate-checked-before-l1l3, ai/env-control#settings-hvac
     def initialize(self) -> None:
@@ -417,7 +538,8 @@ class CustomModule(
         cfg = PreGateConfig(
             wind_threshold=self.gate_wind_threshold or 12.0,
             rain_threshold=0.5,
-            # 폭염·한파 외부 문턱은 넘기지 않는다 — 정본은 PreGateConfig 기본값.
+            # 한파 외부 문턱은 넘기지 않는다 — 정본은 PreGateConfig 기본값.
+            # (폭염 게이트는 없다 — 극한 고온 보호 `heat_protect` 가 옵션 문턱으로 맡는다.)
             nursery_mode=bool(self.nursery_mode),
             nursery_solar_lockout=_lockout,
             nursery_solar_release=_release,

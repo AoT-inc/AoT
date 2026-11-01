@@ -26,15 +26,16 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 **이름으로, 여러 대상 한 번에.** 조회 도구는 id 가 필요하던 자리에 이름을 받습니다 — 장치(`get_output_state`·`get_device_measurements`·`get_sensor_detail`·`get_sensor_reading`), 구역·부지(`get_zone_sensor_summary`·`list_plots`), 재배 중인 구획(`get_plot`: 이름·작물·품종). 이름이 여럿에 걸리면 고르지 않고 후보를 돌려줍니다. `device_ids`·`loc_ids`·`plot_ids`·`target_names`·`zone_ids` 는 한 번에 최대 10개 대상을 받습니다. 쓰기 도구는 권한·승인 단계보다 먼저 빠진 인자와 오타로 보이는 인자를 알려 주고(`reason_code: invalid_arguments`, 맞는 이름 목록 포함), 그 밖의 모르는 인자는 무시하고 `_ignored_arguments` 로 알려 줍니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-arguments).
 
-**도구 묶음.** MCP 에서는 API 키마다 자기 묶음의 도구만 목록에 나옵니다: **운영**(항상 켜짐 — 조회·제어·일정·기록·구획 단계 사건)에 그 키에 체크한 **설정 모듈**을 더합니다: `plots`(구획·작기 프로그램 설계), `map`(주소·거리·배치), `automation`(자동화 작성), `devices`(장치 정의), `dashboard`(화면), `library`(보관 문서·공지 수정·라이브러리 소스), `admin`(시스템 상태·AI 설정). 모듈을 전부 체크하면 예전 **운영 + 설정** 묶음과 같습니다. 서랍도 같은 묶음을 따릅니다. 꺼진 모듈의 도구를 부르면 `reason_code: tool_profile`(와 `tool_module: <모듈>`)로 거절되고, 사용자 편집 권한이 있는 관리자가 `설정 > 사용자`에서 그 모듈을 켭니다. `set_output_state`·`list_available_devices` 는 API 키의 목록에 나오지 않습니다(`operate_device`·`get_device_list`·`search_devices` 를 쓰세요). 앱 안의 AI 비서와 내장 AI 자신의 서비스 계정 키는 묶음의 제한을 받지 않습니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-profiles).
+**도구 묶음.** MCP 에서는 API 키마다 자기 묶음의 도구만 목록에 나옵니다: **운영**(항상 켜짐 — 조회·제어·일정·기록·구획 단계 사건)에 그 키에 체크한 **설정 모듈**을 더합니다: `plots`(구획·작기 프로그램 설계), `map`(주소·거리·배치), `automation`(자동화 작성), `devices`(장치 정의), `dashboard`(화면), `library`(보관 문서·공지 수정·라이브러리 소스), `admin`(시스템 상태·AI 설정). 화면 보기·바꾸기(`get_screen`·`screen_action`)는 운영에 있습니다 — 조회한 장소·구획·장치의 창을 그 화면에도 열며, 기기마다 "AI 화면 조작 허용" 을 켠 화면에서만 동작합니다. 모듈을 전부 체크하면 예전 **운영 + 설정** 묶음과 같습니다. 서랍도 같은 묶음을 따릅니다. 꺼진 모듈의 도구를 부르면 `reason_code: tool_profile`(와 `tool_module: <모듈>`)로 거절되고, 사용자 편집 권한이 있는 관리자가 `설정 > 사용자`에서 그 모듈을 켭니다. `set_output_state`·`list_available_devices` 는 API 키의 목록에 나오지 않습니다(`operate_device`·`get_device_list`·`search_devices` 를 쓰세요). 앱 안의 AI 비서와 내장 AI 자신의 서비스 계정 키는 묶음의 제한을 받지 않습니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-profiles).
 
-### 1.1 상시 노출 도구 (27)
+### 1.1 상시 노출 도구 (29)
 
 | 분류 | 도구 | 설명 | 승인 |
 |------|------|------|------|
 | 시작점 | `get_system_brief` | 시스템 한눈 요약 — 여기서 시작 | 불필요 |
 | 해소 | `resolve_target` | 이름→엔티티 해석, 컨테이너(하위 구역 보유) 여부. 같은 이름이 서로 다른 곳·장치 여럿에 있으면 짐작하지 않고 후보를 돌려줌 — 그 하나만 가리키는 이름이 있으면 함께, 없으면 넘길 `target_id` | 불필요 |
 | 공간 | `get_spatial_tree` | 사이트 > 구역 > 장치 계층 | 불필요 |
+| 공간 | `get_place_overview` | 장소 하나(없으면 농장 전체)의 현황 — 센서 값·환경 제어·구획 단계·날씨·알림을 한 번에 | 불필요 |
 | 공간 | `get_map_equipment` | 지도에 놓인 설비·장치 | 불필요 |
 | 장치 | `get_device_list` / `search_devices` | 전체 목록 / 이름·유형·측정종류 검색 | 불필요 |
 | 장치 | `get_device_measurements` | 장치의 측정 채널 목록 | 불필요 |
@@ -54,8 +55,9 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 | 정의 | `list_device_types` | 유효한 장치·함수 유형 목록 | 불필요 |
 | 시스템 | `list_ai_agents` | 등록된 AI 에이전트 | 불필요 |
 | 승인 | `list_pending_confirmations` | 대기 중인 승인 건 | 불필요 |
+| 화면 | `get_screen` | 사용자가 지금 어느 기기로 어느 AoT 웹 화면을 보는지(웹 요청에서 짐작) — "이 화면"·"지금 보는 것" 이라고 하면 먼저 부름. 화면을 바꾸는 도구(screen_action, 서랍 system)도 운영 묶음에 있음 — 가벼움은 use_tool 로 부름 | 불필요 |
 
-### 1.2 서랍 8개 (101)
+### 1.2 서랍 8개 (102)
 
 | 서랍 | 내용 | 도구 |
 |------|------|------|
@@ -66,7 +68,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 | `record` | 노트·공지·지식·조언 | `list_notices`, `get_note_attachment`, `search_archives`, `get_archived_document`, `knowledge_shelve`, `list_advice`, `submit_advice`, `list_lookup_sources`, `query_data_source`, `query_reference_table`, `list_library_source_types`, `smartfarmkorea_lookup`, `create_notice`\*, `modify_notice`\*, `delete_notice`\*, `archive_note`\*, `restore_note_from_archive`\*, `delete_archive`\*, `set_document_tier`\*, `configure_library_source`\* |
 | `space` | 지도·구역·시설·구획 | `list_geo_maps`, `get_crop_status`, `get_device_location`, `get_map_equipment_detail`, `get_facility_capacity`, `get_address`, `distance_between`, `nearest`, `get_plot_history`, `list_plot_journals`, `get_plot_journal`, `list_programs`, `get_program`, `propose_plot_split`, 구획 원장 쓰기 18종\*(`create_plot`, `modify_plot`, `end_plot`, `copy_plot`, `delete_plot`, `apply_plot_split`, `confirm_plot_stage`, `reschedule_plot_stage`, `add_plot_stage`, `remove_plot_stage`, `undo_plot_stage`, `set_plot_stage_guidance`, `apply_plot_resources`, `save_plot_schedule_as_program`, `create_plot_journal`, `delete_program`, `set_device_location`, `delete_geo_shape`), `create_program`, `modify_program` |
 | `definition` | 장치 정의 CRUD | `get_device_type_options`, `list_gis_inputs`, `create_input`\*, `modify_input`\*, `delete_input`\*, `create_output`\*, `modify_output`\*, `delete_output`\*, `modify_gis_input`\*, `delete_gis_input`\*, `activate_gis_input`\*, `create_gis_input` |
-| `system` | AI 설정·상태·진단·화면 | `get_local_time`, `get_system_update_status`, `get_storage_tier_status`, `analyze_system_failure`, `list_ai_entries`, `list_dashboards`, `list_tabs`, `list_widget_types`, `get_widget`, 위젯·탭·에이전트 쓰기 8종\*, `create_ai_agent` |
+| `system` | AI 설정·상태·진단·화면 | `get_local_time`, `get_system_update_status`, `get_storage_tier_status`, `analyze_system_failure`, `list_ai_entries`, `list_dashboards`, `list_tabs`, `list_widget_types`, `get_widget`, 위젯·탭·에이전트 쓰기 8종\*, `create_ai_agent`, `screen_action`(사용자 화면 바꾸기 — 기기에서 "AI 화면 조작 허용" 을 켠 화면만, 오래 조용한 화면은 확인) |
 
 \* 표시 = 승인 필요. 그 외 쓰기 도구는 §3의 "설정만 바꾸는 쓰기"라 승인 없이 즉시 저장됩니다.
 

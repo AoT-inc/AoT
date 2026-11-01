@@ -1,4 +1,5 @@
 # coding=utf-8
+import logging
 import time
 from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg, gettext as _
@@ -27,6 +28,7 @@ INPUT_INFORMATION = {
     'options_enabled': ['custom_options'],
     'options_disabled': ['period', 'measurements_delay'],
     'layer_role': 'overlay',
+    'ambient_role': 'weather.precip',
     'legend': 'dynamic',
     'custom_options': [
         {
@@ -66,6 +68,38 @@ INPUT_INFORMATION = {
     }
 }
 
+logger = logging.getLogger(__name__)
+
+# ── 시간 축 ──────────────────────────────────────────────────────────────────
+# 프레임 목록(과거 레이더 + 짧은 예측)은 이 모듈이 업스트림 메타에서 직접 받는다. 지도 위젯 시간 슬라이더는
+# 표준 메서드(get_time_range / get_time_steps / get_time_params)로만 묻고 이 주소를 모른다.
+_META_URL = 'https://api.rainviewer.com/public/weather-maps.json'
+_META_TTL_S = 120.0          # 프레임 목록 캐시(슬라이더를 끌 때마다 업스트림을 부르지 않는다)
+_META_RETRY_S = 30.0         # 실패 뒤 다시 시도하기까지
+_FRAME_MAX_GAP_S = 900.0     # 시각이 가장 가까운 프레임에서 이만큼 넘게 떨어지면 그 시각의 프레임은 없다
+_META = {'at': 0.0, 'frames': []}
+
+
+def _fetch_frames():
+    """업스트림 메타 → [{'time': epoch초, 'ts': URL 자리 값, 'nowcast': bool}] (시각순). 실패하면 None."""
+    import requests
+    resp = requests.get(_META_URL, timeout=(2, 4))
+    resp.raise_for_status()
+    radar = (resp.json() or {}).get('radar') or {}
+    frames = []
+    for kind in ('past', 'nowcast'):
+        for it in radar.get(kind) or []:
+            try:
+                tm = float(it.get('time'))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            path = str(it.get('path') or '')
+            ts = path.rstrip('/').rsplit('/', 1)[-1] if path else ''
+            frames.append({'time': tm, 'ts': ts or str(int(tm)), 'nowcast': kind == 'nowcast'})
+    frames.sort(key=lambda f: f['time'])
+    return frames
+
+
 class InputModule(AbstractGisInput):
     """
     GIS overlay provider for RainViewer radar data.
@@ -99,9 +133,45 @@ class InputModule(AbstractGisInput):
         # The frontend will need to inject {ts}
         return base.replace('{color_scheme}', color).replace('{smoothing}', smooth)
 
-    def get_time_params(self, timestamp=None):
-        # Hook for time-based logic, similar to legacy or future implementation
-        return {}
+    def _frames(self):
+        """프레임 목록(2분 캐시). 받지 못하면 마지막으로 받은 목록, 그것도 없으면 []."""
+        now = time.time()
+        if _META['frames'] and now - _META['at'] < _META_TTL_S:
+            return _META['frames']
+        if not _META['frames'] and now - _META['at'] < _META_RETRY_S:
+            return []
+        try:
+            frames = _fetch_frames()
+            _META.update(at=now, frames=frames or [])
+        except Exception as exc:                               # noqa: BLE001
+            logger.debug('[RainViewer] 프레임 목록 실패: %s', type(exc).__name__)
+            # 목록이 있으면 낡은 것을 잠시 더 쓰고, 없으면 잠시 쉰다 — 어느 쪽이든 RETRY 뒤에 다시 시도한다.
+            _META['at'] = now - _META_TTL_S + _META_RETRY_S if _META['frames'] else now
+        return _META['frames']
+
+    # ── 시간 축 표준 메서드 ──
+    def get_time_range(self):
+        frames = self._frames()
+        if not frames:
+            return None
+        return {'start': frames[0]['time'], 'end': frames[-1]['time']}
+
+    def get_time_steps(self):
+        return [f['time'] for f in self._frames()] or None
+
+    def get_time_params(self, t):
+        """시각 ``t`` 에 가장 가까운 레이더 프레임의 ``{ts}`` — 프레임에서 15분 넘게 떨어지면 None."""
+        try:
+            t = float(t)
+        except (TypeError, ValueError):
+            return None
+        best = None
+        for f in self._frames():
+            if best is None or abs(f['time'] - t) < abs(best['time'] - t):
+                best = f
+        if best is None or abs(best['time'] - t) > _FRAME_MAX_GAP_S:
+            return None
+        return {'ts': best['ts']}
 
     def get_leaflet_options(self):
         options = super(InputModule, self).get_leaflet_options()

@@ -130,6 +130,14 @@ class Input(CRUDMixin, db.Model):
     # AI integration (TASK_36)
     is_ai_enabled = db.Column(db.Boolean, default=True)
 
+    # 장치 상태(사람이 정한 운영 상태). ok / repair(수리 중) / removed(철거됨) /
+    # maintenance(점검 중). is_activated(켬/끔)와 별개다 — 켜 둔 채 측정부가
+    # 고장난 센서를 '정지'가 아니라 '알려진 상태'로 다루기 위함이다.
+    # NULL 은 ok 로 읽는다(`device_resolver.device_status`).
+    device_status = db.Column(db.String(16), default='ok')
+    device_status_note = db.Column(db.Text, default=None)       # 짧은 사유
+    device_status_since = db.Column(db.DateTime, default=None)  # 시작 시각(UTC)
+
     def is_active(self):
         """
         :return: Whether the sensor is currently activated

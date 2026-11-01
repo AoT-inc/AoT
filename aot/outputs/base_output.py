@@ -10,6 +10,7 @@ NotImplementedErrors
 """
 from datetime import datetime, timezone, timedelta
 from aot.utils.time_utils import utc_now
+from aot.utils.timekit import resolve_tz, system_tz, to_tz
 
 import logging
 import threading
@@ -506,6 +507,24 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
             return True, str(out_ret[1])
         return False, ''
 
+    def _local_stamp(self, dt=None):
+        """명령 결과 문구에 넣는 시각: **장치 위치 현지 시각**, 초 단위, 오프셋 포함.
+
+        예: ``2026-10-29T13:09:41+09:00``. 켜기·끄기가 같은 형식을 쓰도록 이
+        한 곳에서만 만든다(전엔 켜기는 UTC 마이크로초, 끄기는 서버 프로세스
+        현지 시각이라 서로 달랐다). 시간대는 기존 해석 체인(`timekit.resolve_tz`:
+        장치 저장값 -> 소속 도형 상속 -> 좌표 -> 농장 기본 시간대 -> UTC)을
+        그대로 따른다. 해석 중 어떤 오류가 나도 명령 결과 문구가 막히면 안
+        되므로 농장 기본 시간대로 물러난다. naive 입력은 UTC 로 본다.
+        """
+        if dt is None:
+            dt = utc_now()
+        try:
+            tz, _source = resolve_tz(getattr(self, 'output', None))
+        except Exception:
+            tz = system_tz()
+        return to_tz(dt, tz).replace(microsecond=0).isoformat()
+
     def output_on_off(self,
                       state,
                       output_channel=0,
@@ -630,13 +649,24 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
 
             # Output type: volt, set amount
             if output_type == 'value' and self.output_type in self.output_types['value']:
-                self.output_switch(
+                out_ret = self.output_switch(
                     'on',
                     output_type='value',
                     amount=amount,
                     output_channel=output_channel,
                     additional_options=additional_options)
                 self._command_dispatched[output_channel] = True
+
+                # Same opt-in (code, msg) contract as the pwm and on_off paths.
+                # The value path used to drop the return value, so a module
+                # whose command failed could only raise — which skipped the
+                # command audit and triggers in controller_output.
+                failed, fail_msg = self._switch_failed(out_ret)
+                if failed:
+                    self.logger.error(
+                        f"Output {self.unique_id} CH{output_channel} ({self.output_name}) "
+                        f"failed to set value: {fail_msg}")
+                    return 1, fail_msg
                 self._ensure_started_marked(output_channel)
 
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} " \
@@ -872,7 +902,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                         return 1, fail_msg
 
                     msg = f"Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
-                          f"ON at {self.output_time_turned_on[output_channel]}. Output returned: {ret_value}"
+                          f"ON at {self._local_stamp(self.output_time_turned_on[output_channel])}. Output returned: {ret_value}"
                     self.logger.debug(msg)
                     self._ensure_started_marked(output_channel)
 
@@ -893,7 +923,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                     f"failed to turn off: {fail_msg}")
                 return 1, fail_msg
 
-            timestamp = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+            timestamp = self._local_stamp(utc_now())
             msg = f"Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
                   f"OFF at {timestamp}. Output returned: {ret_value}"
             self.logger.debug(msg)
