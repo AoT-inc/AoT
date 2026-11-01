@@ -1,0 +1,126 @@
+{
+  "step-1-backup-create.png": [
+    {
+      "name": "create-backup-button",
+      "x": 82.78,
+      "y": 25.56,
+      "w": 5.31,
+      "h": 4.63
+    },
+    {
+      "name": "saved-backups-heading",
+      "x": 11.91,
+      "y": 33.89,
+      "w": 76.17,
+      "h": 3.75
+    }
+  ],
+  "step-1-backup-create.sq.png": [
+    {
+      "name": "create-backup-button",
+      "x": 88.83,
+      "y": 27.64,
+      "w": 9.44,
+      "h": 4.63
+    },
+    {
+      "name": "saved-backups-heading",
+      "x": 1.74,
+      "y": 35.97,
+      "w": 96.53,
+      "h": 3.75
+    }
+  ],
+  "step-1b-export-measurements.png": [
+    {
+      "name": "csv-export-section",
+      "x": 11.43,
+      "y": 21.8,
+      "w": 76.17,
+      "h": 3.75
+    },
+    {
+      "name": "csv-export-button",
+      "x": 77.44,
+      "y": 53.31,
+      "w": 10.16,
+      "h": 4.63
+    },
+    {
+      "name": "influxdb-export-button",
+      "x": 79.09,
+      "y": 74.83,
+      "w": 8.51,
+      "h": 4.63
+    }
+  ],
+  "step-1b-export-measurements.sq.png": [
+    {
+      "name": "csv-export-section",
+      "x": 1.74,
+      "y": 21.8,
+      "w": 94.79,
+      "h": 3.75
+    },
+    {
+      "name": "csv-export-button",
+      "x": 78.47,
+      "y": 53.31,
+      "w": 18.06,
+      "h": 4.63
+    },
+    {
+      "name": "influxdb-export-button",
+      "x": 81.41,
+      "y": 74.83,
+      "w": 15.12,
+      "h": 4.63
+    }
+  ],
+  "step-2-auto-update-time.png": [
+    {
+      "name": "auto-update-checkbox",
+      "x": 12.96,
+      "y": 40.0,
+      "w": 0.85,
+      "h": 1.5
+    },
+    {
+      "name": "update-time-field",
+      "x": 18.95,
+      "y": 43.89,
+      "w": 8.15,
+      "h": 4.05
+    },
+    {
+      "name": "installed-latest-version",
+      "x": 11.91,
+      "y": 20.83,
+      "w": 76.17,
+      "h": 6.76
+    }
+  ],
+  "step-2-auto-update-time.sq.png": [
+    {
+      "name": "auto-update-checkbox",
+      "x": 3.59,
+      "y": 40.0,
+      "w": 1.5,
+      "h": 1.5
+    },
+    {
+      "name": "update-time-field",
+      "x": 14.25,
+      "y": 43.89,
+      "w": 14.49,
+      "h": 4.05
+    },
+    {
+      "name": "installed-latest-version",
+      "x": 1.74,
+      "y": 20.83,
+      "w": 94.79,
+      "h": 6.76
+    }
+  ]
+}

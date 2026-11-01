@@ -1,0 +1,178 @@
+{
+  "step-2-user-api-key-section.png": [
+    {
+      "name": "user-edit-title",
+      "x": 69.27,
+      "y": 1.78,
+      "w": 27.6,
+      "h": 2.92
+    },
+    {
+      "name": "api-key-section",
+      "x": 67.19,
+      "y": 59.91,
+      "w": 31.77,
+      "h": 29.28
+    },
+    {
+      "name": "issued-keys",
+      "x": 68.23,
+      "y": 61.76,
+      "w": 6.51,
+      "h": 2.11
+    },
+    {
+      "name": "api-key-scope",
+      "x": 87.5,
+      "y": 72.18,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-tool-profile",
+      "x": 87.5,
+      "y": 77.48,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-name-input",
+      "x": 87.5,
+      "y": 82.78,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-generate-button",
+      "x": 94.01,
+      "y": 82.78,
+      "w": 3.91,
+      "h": 3.7
+    }
+  ],
+  "step-2-user-api-key-section.sq.png": [
+    {
+      "name": "user-edit-title",
+      "x": 45.37,
+      "y": 1.78,
+      "w": 49.07,
+      "h": 2.92
+    },
+    {
+      "name": "api-key-section",
+      "x": 41.67,
+      "y": 59.91,
+      "w": 56.48,
+      "h": 29.28
+    },
+    {
+      "name": "issued-keys",
+      "x": 43.52,
+      "y": 61.76,
+      "w": 11.57,
+      "h": 2.11
+    },
+    {
+      "name": "api-key-scope",
+      "x": 77.78,
+      "y": 72.18,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-tool-profile",
+      "x": 77.78,
+      "y": 77.48,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-name-input",
+      "x": 77.78,
+      "y": 82.78,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-generate-button",
+      "x": 89.35,
+      "y": 82.78,
+      "w": 6.94,
+      "h": 3.7
+    }
+  ],
+  "step-1-ai-service-mcp-toggle.png": [
+    {
+      "name": "ai-service-title",
+      "x": 30.79,
+      "y": 6.93,
+      "w": 54.04,
+      "h": 3.75
+    },
+    {
+      "name": "ai-service-card",
+      "x": 30.79,
+      "y": 26.19,
+      "w": 54.04,
+      "h": 27.87
+    },
+    {
+      "name": "mcp-server-toggle-row",
+      "x": 31.84,
+      "y": 38.44,
+      "w": 51.95,
+      "h": 13.77
+    },
+    {
+      "name": "mcp-server-label",
+      "x": 31.84,
+      "y": 40.28,
+      "w": 9.1,
+      "h": 1.62
+    },
+    {
+      "name": "mcp-server-toggle",
+      "x": 79.88,
+      "y": 39.48,
+      "w": 3.91,
+      "h": 3.24
+    }
+  ],
+  "step-1-ai-service-mcp-toggle.sq.png": [
+    {
+      "name": "ai-service-title",
+      "x": 29.51,
+      "y": 6.93,
+      "w": 68.75,
+      "h": 3.75
+    },
+    {
+      "name": "ai-service-card",
+      "x": 29.51,
+      "y": 26.19,
+      "w": 68.75,
+      "h": 29.95
+    },
+    {
+      "name": "mcp-server-toggle-row",
+      "x": 31.37,
+      "y": 38.44,
+      "w": 65.05,
+      "h": 15.86
+    },
+    {
+      "name": "mcp-server-label",
+      "x": 31.37,
+      "y": 40.28,
+      "w": 16.17,
+      "h": 1.62
+    },
+    {
+      "name": "mcp-server-toggle",
+      "x": 89.47,
+      "y": 39.48,
+      "w": 6.94,
+      "h": 3.24
+    }
+  ]
+}

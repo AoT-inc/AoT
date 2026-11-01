@@ -1,0 +1,554 @@
+{
+  "step-1-output-add-list.png": [
+    {
+      "name": "output-type-select",
+      "x": 11.91,
+      "y": 17.94,
+      "w": 14.32,
+      "h": 4.63
+    },
+    {
+      "name": "virtual-single-channel-option",
+      "x": 11.43,
+      "y": 32.29,
+      "w": 18.65,
+      "h": 3.24
+    },
+    {
+      "name": "output-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-1-output-add-list.sq.png": [
+    {
+      "name": "output-type-select",
+      "x": 1.74,
+      "y": 18.06,
+      "w": 25.46,
+      "h": 4.63
+    },
+    {
+      "name": "virtual-single-channel-option",
+      "x": 1.74,
+      "y": 32.29,
+      "w": 33.15,
+      "h": 3.24
+    },
+    {
+      "name": "output-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-2-gpio-output-list.png": [
+    {
+      "name": "output-search-field",
+      "x": 11.95,
+      "y": 24.54,
+      "w": 28.97,
+      "h": 4.05
+    },
+    {
+      "name": "gpio-onoff-option",
+      "x": 11.43,
+      "y": 58.22,
+      "w": 30.01,
+      "h": 3.24
+    }
+  ],
+  "step-2-gpio-output-list.sq.png": [
+    {
+      "name": "output-search-field",
+      "x": 2.66,
+      "y": 24.54,
+      "w": 51.51,
+      "h": 4.05
+    },
+    {
+      "name": "gpio-onoff-option",
+      "x": 1.74,
+      "y": 58.22,
+      "w": 53.36,
+      "h": 3.24
+    }
+  ],
+  "step-3-output-on-off.png": [
+    {
+      "name": "output-on-button",
+      "x": 42.85,
+      "y": 33.33,
+      "w": 22.1,
+      "h": 3.7
+    },
+    {
+      "name": "output-off-button",
+      "x": 65.21,
+      "y": 33.33,
+      "w": 22.1,
+      "h": 3.7
+    },
+    {
+      "name": "output-settings-button",
+      "x": 84.96,
+      "y": 27.31,
+      "w": 2.6,
+      "h": 5.44
+    }
+  ],
+  "step-3-output-on-off.sq.png": [
+    {
+      "name": "output-on-button",
+      "x": 41.18,
+      "y": 33.33,
+      "w": 27.62,
+      "h": 3.7
+    },
+    {
+      "name": "output-off-button",
+      "x": 69.26,
+      "y": 33.33,
+      "w": 27.62,
+      "h": 3.7
+    },
+    {
+      "name": "output-settings-button",
+      "x": 92.71,
+      "y": 27.31,
+      "w": 4.63,
+      "h": 5.44
+    }
+  ],
+  "step-3b-output-duration-send.png": [
+    {
+      "name": "duration-field",
+      "x": 87.5,
+      "y": 83.69,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "duration-send-button",
+      "x": 94.01,
+      "y": 83.69,
+      "w": 3.91,
+      "h": 3.7
+    }
+  ],
+  "step-3b-output-duration-send.sq.png": [
+    {
+      "name": "duration-field",
+      "x": 77.78,
+      "y": 83.69,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "duration-send-button",
+      "x": 89.35,
+      "y": 83.69,
+      "w": 6.94,
+      "h": 3.7
+    }
+  ],
+  "step-5-startup-shutdown-state.png": [
+    {
+      "name": "startup-state-select",
+      "x": 87.5,
+      "y": 67.78,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "shutdown-state-select",
+      "x": 87.5,
+      "y": 73.08,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-5-startup-shutdown-state.sq.png": [
+    {
+      "name": "startup-state-select",
+      "x": 77.78,
+      "y": 67.78,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "shutdown-state-select",
+      "x": 77.78,
+      "y": 73.08,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-4-actuator-paired-option.png": [
+    {
+      "name": "output-type-select",
+      "x": 11.91,
+      "y": 17.94,
+      "w": 14.32,
+      "h": 4.63
+    },
+    {
+      "name": "output-search-field",
+      "x": 11.95,
+      "y": 24.54,
+      "w": 14.11,
+      "h": 4.05
+    },
+    {
+      "name": "actuator-paired-option",
+      "x": 11.43,
+      "y": 29.05,
+      "w": 15.15,
+      "h": 3.24
+    },
+    {
+      "name": "output-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-4-actuator-paired-option.sq.png": [
+    {
+      "name": "output-type-select",
+      "x": 1.74,
+      "y": 18.06,
+      "w": 25.46,
+      "h": 4.63
+    },
+    {
+      "name": "output-search-field",
+      "x": 2.66,
+      "y": 24.54,
+      "w": 25.08,
+      "h": 4.05
+    },
+    {
+      "name": "actuator-paired-option",
+      "x": 1.74,
+      "y": 29.05,
+      "w": 26.94,
+      "h": 3.24
+    },
+    {
+      "name": "output-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-4b-actuator-paired-settings.png": [
+    {
+      "name": "actuator-kind-select",
+      "x": 87.5,
+      "y": 37.22,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "output-open-select",
+      "x": 87.5,
+      "y": 42.52,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "output-close-select",
+      "x": 87.5,
+      "y": 47.82,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "travel-time-open-field",
+      "x": 91.67,
+      "y": 53.12,
+      "w": 6.25,
+      "h": 3.7
+    }
+  ],
+  "step-4b-actuator-paired-settings.sq.png": [
+    {
+      "name": "actuator-kind-select",
+      "x": 77.78,
+      "y": 37.22,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "output-open-select",
+      "x": 77.78,
+      "y": 42.52,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "output-close-select",
+      "x": 77.78,
+      "y": 47.82,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "travel-time-open-field",
+      "x": 85.19,
+      "y": 53.12,
+      "w": 11.11,
+      "h": 3.7
+    }
+  ],
+  "step-4d-reverse-pause.png": [
+    {
+      "name": "reverse-pause-field",
+      "x": 91.67,
+      "y": 68.21,
+      "w": 6.25,
+      "h": 3.7
+    }
+  ],
+  "step-4d-reverse-pause.sq.png": [
+    {
+      "name": "reverse-pause-field",
+      "x": 85.19,
+      "y": 68.21,
+      "w": 11.11,
+      "h": 3.7
+    }
+  ],
+  "step-6-calibration-direction.png": [
+    {
+      "name": "calibration-direction-select",
+      "x": 86.52,
+      "y": 58.52,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "calibration-start-run-button",
+      "x": 93.38,
+      "y": 78.31,
+      "w": 3.56,
+      "h": 3.7
+    },
+    {
+      "name": "calibration-stop-run-button",
+      "x": 93.38,
+      "y": 83.6,
+      "w": 3.56,
+      "h": 3.7
+    }
+  ],
+  "step-6-calibration-direction.sq.png": [
+    {
+      "name": "calibration-direction-select",
+      "x": 76.04,
+      "y": 58.52,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "calibration-start-run-button",
+      "x": 88.23,
+      "y": 78.31,
+      "w": 6.33,
+      "h": 3.7
+    },
+    {
+      "name": "calibration-stop-run-button",
+      "x": 88.23,
+      "y": 83.6,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-4c-paired-output-card.png": [
+    {
+      "name": "paired-close-button",
+      "x": 42.85,
+      "y": 93.06,
+      "w": 14.64,
+      "h": 3.7
+    },
+    {
+      "name": "paired-stop-button",
+      "x": 57.76,
+      "y": 93.06,
+      "w": 14.64,
+      "h": 3.7
+    },
+    {
+      "name": "paired-open-button",
+      "x": 72.66,
+      "y": 93.06,
+      "w": 14.64,
+      "h": 3.7
+    },
+    {
+      "name": "paired-position-percent",
+      "x": 15.25,
+      "y": 93.52,
+      "w": 2.21,
+      "h": 2.78
+    }
+  ],
+  "step-4c-paired-output-card.sq.png": [
+    {
+      "name": "paired-close-button",
+      "x": 41.18,
+      "y": 93.06,
+      "w": 18.26,
+      "h": 3.7
+    },
+    {
+      "name": "paired-stop-button",
+      "x": 59.9,
+      "y": 93.06,
+      "w": 18.26,
+      "h": 3.7
+    },
+    {
+      "name": "paired-open-button",
+      "x": 78.62,
+      "y": 93.06,
+      "w": 18.26,
+      "h": 3.7
+    },
+    {
+      "name": "paired-position-percent",
+      "x": 7.67,
+      "y": 93.52,
+      "w": 3.94,
+      "h": 2.78
+    }
+  ],
+  "step-8-settings-device-menu.png": [
+    {
+      "name": "settings-menu",
+      "x": 9.93,
+      "y": 0.32,
+      "w": 3.24,
+      "h": 5.38
+    },
+    {
+      "name": "device-menu-item",
+      "x": 9.93,
+      "y": 25.01,
+      "w": 11.72,
+      "h": 4.13
+    },
+    {
+      "name": "output-menu-item",
+      "x": 9.93,
+      "y": 33.28,
+      "w": 11.72,
+      "h": 4.13
+    }
+  ],
+  "step-8-settings-device-menu.sq.png": [
+    {
+      "name": "settings-menu",
+      "x": 17.65,
+      "y": 0.32,
+      "w": 5.76,
+      "h": 5.38
+    },
+    {
+      "name": "device-menu-item",
+      "x": 17.65,
+      "y": 25.01,
+      "w": 20.83,
+      "h": 4.13
+    },
+    {
+      "name": "output-menu-item",
+      "x": 17.65,
+      "y": 33.28,
+      "w": 20.83,
+      "h": 4.13
+    }
+  ],
+  "step-7-facility-slot-output.png": [
+    {
+      "name": "side-vent-group-chip",
+      "x": 67.25,
+      "y": 43.0,
+      "w": 5.06,
+      "h": 3.7
+    },
+    {
+      "name": "slot-output-select",
+      "x": 75.59,
+      "y": 74.43,
+      "w": 20.83,
+      "h": 3.24
+    },
+    {
+      "name": "two-linked-note",
+      "x": 67.77,
+      "y": 78.32,
+      "w": 6.71,
+      "h": 1.39
+    },
+    {
+      "name": "facility-save-button",
+      "x": 92.67,
+      "y": 94.33,
+      "w": 5.31,
+      "h": 4.63
+    }
+  ],
+  "step-7-facility-slot-output.sq.png": [
+    {
+      "name": "side-vent-group-chip",
+      "x": 60.85,
+      "y": 43.0,
+      "w": 9.0,
+      "h": 3.7
+    },
+    {
+      "name": "slot-output-select",
+      "x": 65.39,
+      "y": 78.6,
+      "w": 28.24,
+      "h": 3.24
+    },
+    {
+      "name": "two-linked-note",
+      "x": 51.5,
+      "y": 82.49,
+      "w": 11.94,
+      "h": 1.39
+    },
+    {
+      "name": "facility-save-button",
+      "x": 86.97,
+      "y": 94.33,
+      "w": 9.44,
+      "h": 4.63
+    }
+  ]
+}

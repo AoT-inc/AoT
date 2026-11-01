@@ -1,0 +1,442 @@
+{
+  "step-1-help-menu.png": [
+    {
+      "name": "help-menu-button",
+      "x": 89.18,
+      "y": 0.32,
+      "w": 4.34,
+      "h": 5.38
+    },
+    {
+      "name": "help-menu",
+      "x": 81.8,
+      "y": 5.58,
+      "w": 11.72,
+      "h": 41.03
+    },
+    {
+      "name": "help-current-page",
+      "x": 81.8,
+      "y": 6.51,
+      "w": 11.72,
+      "h": 4.13
+    },
+    {
+      "name": "online-manual-item",
+      "x": 81.8,
+      "y": 10.64,
+      "w": 11.72,
+      "h": 4.13
+    },
+    {
+      "name": "user-guide-item",
+      "x": 81.8,
+      "y": 14.78,
+      "w": 11.72,
+      "h": 4.13
+    },
+    {
+      "name": "api-info-item",
+      "x": 81.8,
+      "y": 18.91,
+      "w": 11.72,
+      "h": 4.13
+    },
+    {
+      "name": "api-docs-item",
+      "x": 81.8,
+      "y": 23.05,
+      "w": 11.72,
+      "h": 4.13
+    },
+    {
+      "name": "github-item",
+      "x": 81.8,
+      "y": 27.18,
+      "w": 11.72,
+      "h": 4.13
+    }
+  ],
+  "step-1-help-menu.sq.png": [
+    {
+      "name": "help-menu-button",
+      "x": 80.77,
+      "y": 0.32,
+      "w": 7.71,
+      "h": 5.38
+    },
+    {
+      "name": "help-menu",
+      "x": 67.64,
+      "y": 5.58,
+      "w": 20.83,
+      "h": 41.03
+    },
+    {
+      "name": "help-current-page",
+      "x": 67.64,
+      "y": 6.51,
+      "w": 20.83,
+      "h": 4.13
+    },
+    {
+      "name": "online-manual-item",
+      "x": 67.64,
+      "y": 10.64,
+      "w": 20.83,
+      "h": 4.13
+    },
+    {
+      "name": "user-guide-item",
+      "x": 67.64,
+      "y": 14.78,
+      "w": 20.83,
+      "h": 4.13
+    },
+    {
+      "name": "api-info-item",
+      "x": 67.64,
+      "y": 18.91,
+      "w": 20.83,
+      "h": 4.13
+    },
+    {
+      "name": "api-docs-item",
+      "x": 67.64,
+      "y": 23.05,
+      "w": 20.83,
+      "h": 4.13
+    },
+    {
+      "name": "github-item",
+      "x": 67.64,
+      "y": 27.18,
+      "w": 20.83,
+      "h": 4.13
+    }
+  ],
+  "step-3-log-view-download.png": [
+    {
+      "name": "page-title",
+      "x": 12.96,
+      "y": 14.12,
+      "w": 6.36,
+      "h": 3.33
+    },
+    {
+      "name": "log-source-select",
+      "x": 12.96,
+      "y": 23.01,
+      "w": 26.92,
+      "h": 4.63
+    },
+    {
+      "name": "log-level-select",
+      "x": 40.4,
+      "y": 23.01,
+      "w": 7.16,
+      "h": 4.63
+    },
+    {
+      "name": "log-lines-select",
+      "x": 63.18,
+      "y": 23.01,
+      "w": 5.05,
+      "h": 4.63
+    },
+    {
+      "name": "log-download-button",
+      "x": 79.1,
+      "y": 23.01,
+      "w": 5.12,
+      "h": 4.63
+    },
+    {
+      "name": "log-refresh-button",
+      "x": 73.46,
+      "y": 23.01,
+      "w": 5.12,
+      "h": 4.63
+    },
+    {
+      "name": "log-pane",
+      "x": 11.91,
+      "y": 31.71,
+      "w": 76.17,
+      "h": 60
+    }
+  ],
+  "step-3-log-view-download.sq.png": [
+    {
+      "name": "page-title",
+      "x": 3.59,
+      "y": 14.12,
+      "w": 11.31,
+      "h": 3.33
+    },
+    {
+      "name": "log-source-select",
+      "x": 3.59,
+      "y": 23.01,
+      "w": 47.86,
+      "h": 4.63
+    },
+    {
+      "name": "log-level-select",
+      "x": 52.37,
+      "y": 23.01,
+      "w": 12.73,
+      "h": 4.63
+    },
+    {
+      "name": "log-lines-select",
+      "x": 3.59,
+      "y": 31.34,
+      "w": 8.97,
+      "h": 4.63
+    },
+    {
+      "name": "log-download-button",
+      "x": 31.88,
+      "y": 31.34,
+      "w": 9.1,
+      "h": 4.63
+    },
+    {
+      "name": "log-refresh-button",
+      "x": 21.86,
+      "y": 31.34,
+      "w": 9.1,
+      "h": 4.63
+    },
+    {
+      "name": "log-pane",
+      "x": 1.74,
+      "y": 40.04,
+      "w": 96.53,
+      "h": 59.96
+    }
+  ],
+  "step-4-system-info-version.png": [
+    {
+      "name": "page-title",
+      "x": 12.96,
+      "y": 14.12,
+      "w": 7.98,
+      "h": 3.33
+    },
+    {
+      "name": "system-info-card",
+      "x": 11.91,
+      "y": 20.23,
+      "w": 76.17,
+      "h": 47.96
+    },
+    {
+      "name": "aot-version",
+      "x": 13.22,
+      "y": 22.78,
+      "w": 9.11,
+      "h": 1.85
+    },
+    {
+      "name": "daemon-status",
+      "x": 13.22,
+      "y": 46.11,
+      "w": 8.24,
+      "h": 1.85
+    }
+  ],
+  "step-4-system-info-version.sq.png": [
+    {
+      "name": "page-title",
+      "x": 3.59,
+      "y": 14.12,
+      "w": 14.19,
+      "h": 3.33
+    },
+    {
+      "name": "system-info-card",
+      "x": 1.74,
+      "y": 20.23,
+      "w": 96.53,
+      "h": 47.96
+    },
+    {
+      "name": "aot-version",
+      "x": 4.05,
+      "y": 22.78,
+      "w": 16.2,
+      "h": 1.85
+    },
+    {
+      "name": "daemon-status",
+      "x": 4.05,
+      "y": 46.11,
+      "w": 14.64,
+      "h": 1.85
+    }
+  ],
+  "step-5-api-docs.png": [
+    {
+      "name": "api-title",
+      "x": 3.78,
+      "y": 5.79,
+      "w": 10.89,
+      "h": 5.03
+    },
+    {
+      "name": "authorize-button",
+      "x": 85.94,
+      "y": 28.18,
+      "w": 9.64,
+      "h": 4.28
+    },
+    {
+      "name": "api-section-list",
+      "x": 3.78,
+      "y": 38.25,
+      "w": 92.45,
+      "h": 61.75
+    },
+    {
+      "name": "swagger-json-link",
+      "x": 3.78,
+      "y": 12.85,
+      "w": 5.68,
+      "h": 1.68
+    }
+  ],
+  "step-5-api-docs.sq.png": [
+    {
+      "name": "api-title",
+      "x": 2.31,
+      "y": 5.79,
+      "w": 19.37,
+      "h": 5.03
+    },
+    {
+      "name": "authorize-button",
+      "x": 79.39,
+      "y": 28.18,
+      "w": 17.13,
+      "h": 4.28
+    },
+    {
+      "name": "api-section-list",
+      "x": 2.31,
+      "y": 38.25,
+      "w": 95.37,
+      "h": 61.75
+    },
+    {
+      "name": "swagger-json-link",
+      "x": 2.31,
+      "y": 12.85,
+      "w": 10.1,
+      "h": 1.68
+    }
+  ],
+  "step-5b-user-api-key.png": [
+    {
+      "name": "user-edit-title",
+      "x": 69.27,
+      "y": 1.78,
+      "w": 27.6,
+      "h": 2.92
+    },
+    {
+      "name": "api-key-section",
+      "x": 67.19,
+      "y": 59.91,
+      "w": 31.77,
+      "h": 29.28
+    },
+    {
+      "name": "issued-keys",
+      "x": 68.23,
+      "y": 61.76,
+      "w": 6.51,
+      "h": 2.11
+    },
+    {
+      "name": "api-key-scope",
+      "x": 87.5,
+      "y": 72.18,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-tool-profile",
+      "x": 87.5,
+      "y": 77.48,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-name-input",
+      "x": 87.5,
+      "y": 82.78,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-generate-button",
+      "x": 94.01,
+      "y": 82.78,
+      "w": 3.91,
+      "h": 3.7
+    }
+  ],
+  "step-5b-user-api-key.sq.png": [
+    {
+      "name": "user-edit-title",
+      "x": 45.37,
+      "y": 1.78,
+      "w": 49.07,
+      "h": 2.92
+    },
+    {
+      "name": "api-key-section",
+      "x": 41.67,
+      "y": 59.91,
+      "w": 56.48,
+      "h": 29.28
+    },
+    {
+      "name": "issued-keys",
+      "x": 43.52,
+      "y": 61.76,
+      "w": 11.57,
+      "h": 2.11
+    },
+    {
+      "name": "api-key-scope",
+      "x": 77.78,
+      "y": 72.18,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-tool-profile",
+      "x": 77.78,
+      "y": 77.48,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-name-input",
+      "x": 77.78,
+      "y": 82.78,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "api-key-generate-button",
+      "x": 89.35,
+      "y": 82.78,
+      "w": 6.94,
+      "h": 3.7
+    }
+  ]
+}

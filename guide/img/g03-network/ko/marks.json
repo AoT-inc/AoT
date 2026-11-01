@@ -1,0 +1,80 @@
+{
+  "step-4-internet-test-settings.png": [
+    {
+      "name": "internet-test-ip-field",
+      "x": 72.88,
+      "y": 48.12,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "internet-test-port-field",
+      "x": 77.05,
+      "y": 53.8,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "upgrade-check-toggle",
+      "x": 79.39,
+      "y": 65.14,
+      "w": 3.91,
+      "h": 3.24
+    }
+  ],
+  "step-4-internet-test-settings.sq.png": [
+    {
+      "name": "internet-test-ip-field",
+      "x": 76.16,
+      "y": 48.12,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "internet-test-port-field",
+      "x": 83.56,
+      "y": 53.8,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "upgrade-check-toggle",
+      "x": 87.73,
+      "y": 65.14,
+      "w": 6.94,
+      "h": 3.24
+    }
+  ],
+  "check-upgrade-page.png": [
+    {
+      "name": "installed-latest-version",
+      "x": 11.91,
+      "y": 20.83,
+      "w": 76.17,
+      "h": 6.76
+    },
+    {
+      "name": "upgrade-status-notice",
+      "x": 11.91,
+      "y": 29.44,
+      "w": 76.17,
+      "h": 6.3
+    }
+  ],
+  "check-upgrade-page.sq.png": [
+    {
+      "name": "installed-latest-version",
+      "x": 1.74,
+      "y": 20.83,
+      "w": 94.79,
+      "h": 6.76
+    },
+    {
+      "name": "upgrade-status-notice",
+      "x": 1.74,
+      "y": 29.44,
+      "w": 94.79,
+      "h": 6.3
+    }
+  ]
+}

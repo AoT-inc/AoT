@@ -1,0 +1,347 @@
+{
+  "step-1-logo-function-status.png": [
+    {
+      "name": "logo-status",
+      "x": 1.24,
+      "y": 1.16,
+      "w": 2.21,
+      "h": 3.47
+    },
+    {
+      "name": "function-status-widget",
+      "x": 0,
+      "y": 10.42,
+      "w": 29.17,
+      "h": 28.94
+    }
+  ],
+  "step-1-logo-function-status.sq.png": [
+    {
+      "name": "logo-status",
+      "x": 2.2,
+      "y": 1.16,
+      "w": 3.94,
+      "h": 3.47
+    },
+    {
+      "name": "function-status-widget",
+      "x": 0,
+      "y": 10.42,
+      "w": 29.17,
+      "h": 28.94
+    }
+  ],
+  "step-2-live-no-data.png": [
+    {
+      "name": "live-test-input-card",
+      "x": 11.91,
+      "y": 20.23,
+      "w": 76.17,
+      "h": 9.54
+    },
+    {
+      "name": "no-data-message",
+      "x": 75.47,
+      "y": 25.64,
+      "w": 11.31,
+      "h": 1.62
+    }
+  ],
+  "step-2-live-no-data.sq.png": [
+    {
+      "name": "live-test-input-card",
+      "x": 1.74,
+      "y": 20.23,
+      "w": 96.53,
+      "h": 9.54
+    },
+    {
+      "name": "no-data-message",
+      "x": 75.83,
+      "y": 25.64,
+      "w": 20.12,
+      "h": 1.62
+    }
+  ],
+  "step-2b-input-card-no-value.png": [
+    {
+      "name": "input-card",
+      "x": 11.91,
+      "y": 27.31,
+      "w": 76.17,
+      "h": 6.02
+    },
+    {
+      "name": "input-no-value",
+      "x": 39.75,
+      "y": 29.04,
+      "w": 2.1,
+      "h": 2.11
+    }
+  ],
+  "step-2b-input-card-no-value.sq.png": [
+    {
+      "name": "input-card",
+      "x": 1.74,
+      "y": 27.31,
+      "w": 96.53,
+      "h": 6.02
+    },
+    {
+      "name": "input-no-value",
+      "x": 37.6,
+      "y": 29.04,
+      "w": 3.74,
+      "h": 2.11
+    }
+  ],
+  "step-2c-log-daemon-warning.png": [
+    {
+      "name": "log-source-select",
+      "x": 12.96,
+      "y": 23.01,
+      "w": 26.92,
+      "h": 4.63
+    },
+    {
+      "name": "log-level-select",
+      "x": 40.4,
+      "y": 23.01,
+      "w": 7.16,
+      "h": 4.63
+    },
+    {
+      "name": "log-search-field",
+      "x": 48.08,
+      "y": 23.01,
+      "w": 14.58,
+      "h": 4.63
+    }
+  ],
+  "step-2c-log-daemon-warning.sq.png": [
+    {
+      "name": "log-source-select",
+      "x": 3.59,
+      "y": 23.01,
+      "w": 47.86,
+      "h": 4.63
+    },
+    {
+      "name": "log-level-select",
+      "x": 52.37,
+      "y": 23.01,
+      "w": 12.73,
+      "h": 4.63
+    },
+    {
+      "name": "log-search-field",
+      "x": 66.03,
+      "y": 23.01,
+      "w": 25.93,
+      "h": 4.63
+    }
+  ],
+  "step-4b-log-daemon-error.png": [
+    {
+      "name": "log-source-select",
+      "x": 12.96,
+      "y": 23.01,
+      "w": 26.92,
+      "h": 4.63
+    },
+    {
+      "name": "log-level-select",
+      "x": 40.4,
+      "y": 23.01,
+      "w": 7.16,
+      "h": 4.63
+    }
+  ],
+  "step-4b-log-daemon-error.sq.png": [
+    {
+      "name": "log-source-select",
+      "x": 3.59,
+      "y": 23.01,
+      "w": 47.86,
+      "h": 4.63
+    },
+    {
+      "name": "log-level-select",
+      "x": 52.37,
+      "y": 23.01,
+      "w": 12.73,
+      "h": 4.63
+    }
+  ],
+  "step-4-function-list-status.png": [
+    {
+      "name": "function-status-label",
+      "x": 39.75,
+      "y": 33.33,
+      "w": 20.51,
+      "h": 3.7
+    },
+    {
+      "name": "function-activate-button",
+      "x": 60.77,
+      "y": 33.33,
+      "w": 23.93,
+      "h": 3.7
+    }
+  ],
+  "step-4-function-list-status.sq.png": [
+    {
+      "name": "function-status-label",
+      "x": 37.6,
+      "y": 33.33,
+      "w": 24.79,
+      "h": 3.7
+    },
+    {
+      "name": "function-activate-button",
+      "x": 63.32,
+      "y": 33.33,
+      "w": 28.92,
+      "h": 3.7
+    }
+  ],
+  "step-4c-env-status-header.png": [
+    {
+      "name": "env-current-row",
+      "x": 68.23,
+      "y": 45.55,
+      "w": 29.69,
+      "h": 8.26
+    },
+    {
+      "name": "env-adjustable-row",
+      "x": 68.23,
+      "y": 53.81,
+      "w": 29.69,
+      "h": 8.15
+    }
+  ],
+  "step-4c-env-status-header.sq.png": [
+    {
+      "name": "env-current-row",
+      "x": 43.52,
+      "y": 45.55,
+      "w": 52.78,
+      "h": 8.26
+    },
+    {
+      "name": "env-adjustable-row",
+      "x": 43.52,
+      "y": 53.81,
+      "w": 52.78,
+      "h": 8.15
+    }
+  ],
+  "step-5-system-info-disk.png": [
+    {
+      "name": "daemon-status",
+      "x": 17.6,
+      "y": 8.49,
+      "w": 3.37,
+      "h": 1.85
+    },
+    {
+      "name": "disk-usage-section",
+      "x": 11.43,
+      "y": 72.65,
+      "w": 76.17,
+      "h": 23.19
+    }
+  ],
+  "step-5-system-info-disk.sq.png": [
+    {
+      "name": "daemon-status",
+      "x": 12.71,
+      "y": 8.49,
+      "w": 5.99,
+      "h": 1.85
+    },
+    {
+      "name": "disk-usage-section",
+      "x": 1.74,
+      "y": 72.65,
+      "w": 94.79,
+      "h": 23.19
+    }
+  ],
+  "step-5b-audit-log.png": [
+    {
+      "name": "audit-filter-button",
+      "x": 52.57,
+      "y": 25.35,
+      "w": 3.56,
+      "h": 3.7
+    },
+    {
+      "name": "audit-log-header",
+      "x": 12.73,
+      "y": 32.81,
+      "w": 73.57,
+      "h": 4.2
+    }
+  ],
+  "step-5b-audit-log.sq.png": [
+    {
+      "name": "audit-filter-button",
+      "x": 74.88,
+      "y": 25.35,
+      "w": 6.33,
+      "h": 3.7
+    }
+  ],
+  "step-5c-upgrade-version.png": [
+    {
+      "name": "installed-latest-version",
+      "x": 11.91,
+      "y": 20.83,
+      "w": 76.17,
+      "h": 6.76
+    }
+  ],
+  "step-5c-upgrade-version.sq.png": [
+    {
+      "name": "installed-latest-version",
+      "x": 1.74,
+      "y": 20.83,
+      "w": 94.79,
+      "h": 6.76
+    }
+  ],
+  "step-5d-backup-list.png": [
+    {
+      "name": "create-backup-button",
+      "x": 82.78,
+      "y": 25.56,
+      "w": 5.31,
+      "h": 4.63
+    },
+    {
+      "name": "saved-backups-heading",
+      "x": 11.91,
+      "y": 33.89,
+      "w": 76.17,
+      "h": 3.75
+    }
+  ],
+  "step-5d-backup-list.sq.png": [
+    {
+      "name": "create-backup-button",
+      "x": 88.83,
+      "y": 27.64,
+      "w": 9.44,
+      "h": 4.63
+    },
+    {
+      "name": "saved-backups-heading",
+      "x": 1.74,
+      "y": 35.97,
+      "w": 96.53,
+      "h": 3.75
+    }
+  ]
+}

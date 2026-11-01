@@ -1,0 +1,1389 @@
+{
+  "step-1-dashboard-tabs.png": [
+    {
+      "name": "dashboard-add-tab-button",
+      "x": 0.0,
+      "y": 5.79,
+      "w": 2.53,
+      "h": 4.63
+    },
+    {
+      "name": "dashboard-tab",
+      "x": 2.54,
+      "y": 5.79,
+      "w": 94.92,
+      "h": 4.63
+    },
+    {
+      "name": "dashboard-settings-button",
+      "x": 97.4,
+      "y": 5.79,
+      "w": 2.6,
+      "h": 4.63
+    }
+  ],
+  "step-1-dashboard-tabs.sq.png": [
+    {
+      "name": "dashboard-add-tab-button",
+      "x": 0.0,
+      "y": 5.79,
+      "w": 4.51,
+      "h": 4.63
+    },
+    {
+      "name": "dashboard-tab",
+      "x": 4.51,
+      "y": 5.79,
+      "w": 90.97,
+      "h": 4.63
+    },
+    {
+      "name": "dashboard-settings-button",
+      "x": 95.37,
+      "y": 5.79,
+      "w": 4.63,
+      "h": 4.63
+    }
+  ],
+  "step-1b-dashboard-settings.png": [
+    {
+      "name": "dashboard-name-field",
+      "x": 57.03,
+      "y": 33.12,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "dashboard-lock-button",
+      "x": 60.42,
+      "y": 78.39,
+      "w": 3.65,
+      "h": 4.63
+    },
+    {
+      "name": "dashboard-save-button",
+      "x": 64.84,
+      "y": 78.39,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-1b-dashboard-settings.sq.png": [
+    {
+      "name": "dashboard-name-field",
+      "x": 62.5,
+      "y": 33.12,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "dashboard-lock-button",
+      "x": 68.52,
+      "y": 78.39,
+      "w": 6.48,
+      "h": 4.63
+    },
+    {
+      "name": "dashboard-save-button",
+      "x": 76.39,
+      "y": 78.39,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-2-widget-add-list.png": [
+    {
+      "name": "widget-add-select",
+      "x": 1.04,
+      "y": 43.06,
+      "w": 14.32,
+      "h": 3.7
+    },
+    {
+      "name": "gauge-widget-option",
+      "x": 1.04,
+      "y": 57.87,
+      "w": 14.32,
+      "h": 3.24
+    }
+  ],
+  "step-2-widget-add-list.sq.png": [
+    {
+      "name": "widget-add-select",
+      "x": 1.85,
+      "y": 43.06,
+      "w": 25.46,
+      "h": 3.7
+    },
+    {
+      "name": "gauge-widget-option",
+      "x": 1.85,
+      "y": 57.87,
+      "w": 25.46,
+      "h": 3.24
+    }
+  ],
+  "step-2b-widget-options.png": [
+    {
+      "name": "widget-name-field",
+      "x": 57.58,
+      "y": 5.79,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "widget-measurement-select",
+      "x": 57.58,
+      "y": 31.43,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "widget-max-age-field",
+      "x": 61.75,
+      "y": 36.73,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "widget-add-submit",
+      "x": 63.73,
+      "y": 93.05,
+      "w": 5.31,
+      "h": 3.7
+    }
+  ],
+  "step-2b-widget-options.sq.png": [
+    {
+      "name": "widget-name-field",
+      "x": 63.48,
+      "y": 22.51,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "widget-measurement-select",
+      "x": 63.48,
+      "y": 48.16,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "widget-max-age-field",
+      "x": 70.89,
+      "y": 53.46,
+      "w": 11.11,
+      "h": 3.7
+    }
+  ],
+  "step-2c-widget-move-resize.png": [
+    {
+      "name": "widget-drag-handle",
+      "x": 1.4,
+      "y": 12.79,
+      "w": 1.37,
+      "h": 3.15
+    },
+    {
+      "name": "widget-resize-corner",
+      "x": 26.56,
+      "y": 34.72,
+      "w": 1.95,
+      "h": 3.47
+    },
+    {
+      "name": "widget-settings-button",
+      "x": 25.98,
+      "y": 12.91,
+      "w": 2.47,
+      "h": 2.78
+    }
+  ],
+  "step-2c-widget-move-resize.sq.png": [
+    {
+      "name": "widget-drag-handle",
+      "x": 2.49,
+      "y": 12.79,
+      "w": 2.43,
+      "h": 3.15
+    },
+    {
+      "name": "widget-resize-corner",
+      "x": 24.54,
+      "y": 34.72,
+      "w": 3.47,
+      "h": 3.47
+    },
+    {
+      "name": "widget-settings-button",
+      "x": 23.5,
+      "y": 12.91,
+      "w": 4.4,
+      "h": 2.78
+    }
+  ],
+  "step-3-function-status-widget-settings.png": [
+    {
+      "name": "widget-name-field",
+      "x": 87.5,
+      "y": 24.74,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "widget-function-select",
+      "x": 87.5,
+      "y": 39.72,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "widget-revert-button",
+      "x": 80.56,
+      "y": 94.33,
+      "w": 5.12,
+      "h": 4.63
+    }
+  ],
+  "step-3-function-status-widget-settings.sq.png": [
+    {
+      "name": "widget-name-field",
+      "x": 77.78,
+      "y": 24.74,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "widget-function-select",
+      "x": 77.78,
+      "y": 39.72,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "widget-revert-button",
+      "x": 65.44,
+      "y": 94.33,
+      "w": 9.1,
+      "h": 4.63
+    }
+  ],
+  "step-4-map-widget-options.png": [
+    {
+      "name": "widget-add-select",
+      "x": 1.04,
+      "y": 8.1,
+      "w": 14.32,
+      "h": 3.7
+    },
+    {
+      "name": "widget-name-field",
+      "x": 31.51,
+      "y": 15.51,
+      "w": 36.98,
+      "h": 4.56
+    },
+    {
+      "name": "map-section",
+      "x": 30.47,
+      "y": 45.97,
+      "w": 39.06,
+      "h": 3.75
+    },
+    {
+      "name": "map-select",
+      "x": 31.51,
+      "y": 61.99,
+      "w": 36.98,
+      "h": 5.3
+    },
+    {
+      "name": "label-display-toggle",
+      "x": 31.51,
+      "y": 67.29,
+      "w": 36.98,
+      "h": 4.84
+    },
+    {
+      "name": "data-interval-section",
+      "x": 30.47,
+      "y": 90.32,
+      "w": 39.06,
+      "h": 3.75
+    },
+    {
+      "name": "device-filter-section",
+      "x": 30.47,
+      "y": 97.03,
+      "w": 39.06,
+      "h": 2.97
+    }
+  ],
+  "step-4-map-widget-options.sq.png": [
+    {
+      "name": "widget-add-select",
+      "x": 1.85,
+      "y": 8.1,
+      "w": 25.46,
+      "h": 3.7
+    },
+    {
+      "name": "widget-name-field",
+      "x": 17.13,
+      "y": 15.51,
+      "w": 65.74,
+      "h": 4.56
+    },
+    {
+      "name": "map-section",
+      "x": 15.28,
+      "y": 45.97,
+      "w": 69.44,
+      "h": 3.75
+    },
+    {
+      "name": "map-select",
+      "x": 17.13,
+      "y": 61.99,
+      "w": 65.74,
+      "h": 5.3
+    },
+    {
+      "name": "label-display-toggle",
+      "x": 17.13,
+      "y": 67.29,
+      "w": 65.74,
+      "h": 4.84
+    },
+    {
+      "name": "data-interval-section",
+      "x": 15.28,
+      "y": 90.32,
+      "w": 69.44,
+      "h": 3.75
+    },
+    {
+      "name": "device-filter-section",
+      "x": 15.28,
+      "y": 97.03,
+      "w": 69.44,
+      "h": 2.97
+    }
+  ],
+  "step-4b-map-widget-shapes.png": [
+    {
+      "name": "data-interval-section",
+      "x": 30.47,
+      "y": 9.94,
+      "w": 39.06,
+      "h": 3.75
+    },
+    {
+      "name": "device-filter-section",
+      "x": 30.47,
+      "y": 16.65,
+      "w": 39.06,
+      "h": 3.75
+    },
+    {
+      "name": "label-style-section",
+      "x": 30.47,
+      "y": 30.07,
+      "w": 39.06,
+      "h": 3.75
+    },
+    {
+      "name": "shapes-section",
+      "x": 30.47,
+      "y": 36.78,
+      "w": 39.06,
+      "h": 3.75
+    },
+    {
+      "name": "shapes-options",
+      "x": 30.47,
+      "y": 41.92,
+      "w": 39.06,
+      "h": 41.62
+    },
+    {
+      "name": "site-shape-toggle",
+      "x": 31.51,
+      "y": 43.77,
+      "w": 36.98,
+      "h": 4.44
+    },
+    {
+      "name": "plot-shape-toggle",
+      "x": 31.51,
+      "y": 53.06,
+      "w": 36.98,
+      "h": 4.84
+    },
+    {
+      "name": "widget-add-submit",
+      "x": 64.22,
+      "y": 93.03,
+      "w": 5.31,
+      "h": 3.7
+    }
+  ],
+  "step-4b-map-widget-shapes.sq.png": [
+    {
+      "name": "data-interval-section",
+      "x": 15.28,
+      "y": 9.94,
+      "w": 69.44,
+      "h": 3.75
+    },
+    {
+      "name": "device-filter-section",
+      "x": 15.28,
+      "y": 16.65,
+      "w": 69.44,
+      "h": 3.75
+    },
+    {
+      "name": "label-style-section",
+      "x": 15.28,
+      "y": 30.07,
+      "w": 69.44,
+      "h": 3.75
+    },
+    {
+      "name": "shapes-section",
+      "x": 15.28,
+      "y": 36.78,
+      "w": 69.44,
+      "h": 3.75
+    },
+    {
+      "name": "shapes-options",
+      "x": 15.28,
+      "y": 41.92,
+      "w": 69.44,
+      "h": 41.62
+    },
+    {
+      "name": "site-shape-toggle",
+      "x": 17.13,
+      "y": 43.77,
+      "w": 65.74,
+      "h": 4.44
+    },
+    {
+      "name": "plot-shape-toggle",
+      "x": 17.13,
+      "y": 53.06,
+      "w": 65.74,
+      "h": 4.84
+    },
+    {
+      "name": "widget-add-submit",
+      "x": 75.28,
+      "y": 93.03,
+      "w": 9.44,
+      "h": 3.7
+    }
+  ],
+  "step-5-map-widget-toolbar.png": [
+    {
+      "name": "zoom-buttons",
+      "x": 1.37,
+      "y": 17.38,
+      "w": 1.89,
+      "h": 10.07
+    },
+    {
+      "name": "fullscreen-button",
+      "x": 1.37,
+      "y": 28.96,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "address-search-button",
+      "x": 1.37,
+      "y": 32.31,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "my-location-button",
+      "x": 1.37,
+      "y": 35.67,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "site-list-button",
+      "x": 1.37,
+      "y": 43.89,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "layers-button",
+      "x": 96.74,
+      "y": 21.67,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "distance-measure-button",
+      "x": 96.74,
+      "y": 25.02,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "note-add-button",
+      "x": 96.74,
+      "y": 28.38,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "label-toggle-buttons",
+      "x": 96.74,
+      "y": 33.24,
+      "w": 1.89,
+      "h": 13.43
+    },
+    {
+      "name": "map-lock-button",
+      "x": 93.52,
+      "y": 12.44,
+      "w": 1.56,
+      "h": 2.78
+    },
+    {
+      "name": "hide-controls-button",
+      "x": 95.25,
+      "y": 12.44,
+      "w": 1.56,
+      "h": 2.78
+    }
+  ],
+  "step-5-map-widget-toolbar.sq.png": [
+    {
+      "name": "zoom-buttons",
+      "x": 2.43,
+      "y": 17.38,
+      "w": 3.36,
+      "h": 10.07
+    },
+    {
+      "name": "fullscreen-button",
+      "x": 2.43,
+      "y": 28.96,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "address-search-button",
+      "x": 2.43,
+      "y": 32.31,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "my-location-button",
+      "x": 2.43,
+      "y": 35.67,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "site-list-button",
+      "x": 2.43,
+      "y": 43.89,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "layers-button",
+      "x": 94.21,
+      "y": 21.67,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "distance-measure-button",
+      "x": 94.21,
+      "y": 25.02,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "note-add-button",
+      "x": 94.21,
+      "y": 28.38,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "label-toggle-buttons",
+      "x": 94.21,
+      "y": 33.24,
+      "w": 3.36,
+      "h": 13.43
+    },
+    {
+      "name": "map-lock-button",
+      "x": 88.48,
+      "y": 12.44,
+      "w": 2.78,
+      "h": 2.78
+    },
+    {
+      "name": "hide-controls-button",
+      "x": 91.55,
+      "y": 12.44,
+      "w": 2.78,
+      "h": 2.78
+    }
+  ],
+  "step-5b-site-list-panel.png": [
+    {
+      "name": "site-list-button",
+      "x": 1.37,
+      "y": 43.89,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "site-list-panel",
+      "x": 65.6,
+      "y": 17.15,
+      "w": 33.16,
+      "h": 69.19
+    },
+    {
+      "name": "site-row",
+      "x": 66.71,
+      "y": 23.29,
+      "w": 30.94,
+      "h": 4.48
+    },
+    {
+      "name": "zone-rows",
+      "x": 67.65,
+      "y": 28.41,
+      "w": 30.01,
+      "h": 8.65
+    },
+    {
+      "name": "zone-drag-handle",
+      "x": 68.29,
+      "y": 29.78,
+      "w": 0.72,
+      "h": 1.27
+    },
+    {
+      "name": "panel-close-button",
+      "x": 95.64,
+      "y": 18.43,
+      "w": 2.08,
+      "h": 3.7
+    }
+  ],
+  "step-5b-site-list-panel.sq.png": [
+    {
+      "name": "site-list-button",
+      "x": 2.43,
+      "y": 43.89,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "site-list-panel",
+      "x": 60.76,
+      "y": 17.15,
+      "w": 37.04,
+      "h": 69.19
+    },
+    {
+      "name": "site-row",
+      "x": 62.73,
+      "y": 23.29,
+      "w": 33.1,
+      "h": 4.48
+    },
+    {
+      "name": "zone-rows",
+      "x": 64.4,
+      "y": 28.41,
+      "w": 31.44,
+      "h": 8.65
+    },
+    {
+      "name": "zone-drag-handle",
+      "x": 65.53,
+      "y": 29.78,
+      "w": 1.27,
+      "h": 1.27
+    },
+    {
+      "name": "panel-close-button",
+      "x": 92.25,
+      "y": 18.43,
+      "w": 3.7,
+      "h": 3.7
+    }
+  ],
+  "step-5c-zone-window.png": [
+    {
+      "name": "window",
+      "x": 65.6,
+      "y": 17.15,
+      "w": 33.16,
+      "h": 69.19
+    },
+    {
+      "name": "up-button",
+      "x": 66.65,
+      "y": 18.54,
+      "w": 2.08,
+      "h": 3.7
+    },
+    {
+      "name": "window-close-button",
+      "x": 95.64,
+      "y": 18.66,
+      "w": 2.08,
+      "h": 3.7
+    },
+    {
+      "name": "status-tab",
+      "x": 66.65,
+      "y": 23.52,
+      "w": 4.17,
+      "h": 5.02
+    },
+    {
+      "name": "env-control-tab",
+      "x": 71.08,
+      "y": 23.52,
+      "w": 6.64,
+      "h": 5.02
+    },
+    {
+      "name": "overview-tab",
+      "x": 77.98,
+      "y": 23.52,
+      "w": 4.17,
+      "h": 5.02
+    }
+  ],
+  "step-5c-zone-window.sq.png": [
+    {
+      "name": "window",
+      "x": 60.76,
+      "y": 17.15,
+      "w": 37.04,
+      "h": 69.19
+    },
+    {
+      "name": "up-button",
+      "x": 62.62,
+      "y": 18.54,
+      "w": 3.7,
+      "h": 3.7
+    },
+    {
+      "name": "window-close-button",
+      "x": 92.25,
+      "y": 18.66,
+      "w": 3.7,
+      "h": 3.7
+    },
+    {
+      "name": "status-tab",
+      "x": 62.62,
+      "y": 23.52,
+      "w": 7.42,
+      "h": 5.02
+    },
+    {
+      "name": "env-control-tab",
+      "x": 70.5,
+      "y": 23.52,
+      "w": 11.81,
+      "h": 5.02
+    },
+    {
+      "name": "overview-tab",
+      "x": 82.77,
+      "y": 23.52,
+      "w": 7.42,
+      "h": 5.02
+    }
+  ],
+  "step-5d-site-window.png": [
+    {
+      "name": "window",
+      "x": 65.6,
+      "y": 17.15,
+      "w": 33.16,
+      "h": 69.19
+    },
+    {
+      "name": "up-button",
+      "x": 66.65,
+      "y": 18.54,
+      "w": 2.08,
+      "h": 3.7
+    },
+    {
+      "name": "window-close-button",
+      "x": 95.64,
+      "y": 18.66,
+      "w": 2.08,
+      "h": 3.7
+    },
+    {
+      "name": "status-tab",
+      "x": 66.65,
+      "y": 23.52,
+      "w": 4.17,
+      "h": 5.02
+    },
+    {
+      "name": "env-control-tab",
+      "x": 71.08,
+      "y": 23.52,
+      "w": 6.64,
+      "h": 5.02
+    },
+    {
+      "name": "overview-tab",
+      "x": 77.98,
+      "y": 23.52,
+      "w": 4.17,
+      "h": 5.02
+    }
+  ],
+  "step-5d-site-window.sq.png": [
+    {
+      "name": "window",
+      "x": 60.76,
+      "y": 17.15,
+      "w": 37.04,
+      "h": 69.19
+    },
+    {
+      "name": "up-button",
+      "x": 62.62,
+      "y": 18.54,
+      "w": 3.7,
+      "h": 3.7
+    },
+    {
+      "name": "window-close-button",
+      "x": 92.25,
+      "y": 18.66,
+      "w": 3.7,
+      "h": 3.7
+    },
+    {
+      "name": "status-tab",
+      "x": 62.62,
+      "y": 23.52,
+      "w": 7.42,
+      "h": 5.02
+    },
+    {
+      "name": "env-control-tab",
+      "x": 70.5,
+      "y": 23.52,
+      "w": 11.81,
+      "h": 5.02
+    },
+    {
+      "name": "overview-tab",
+      "x": 82.77,
+      "y": 23.52,
+      "w": 7.42,
+      "h": 5.02
+    }
+  ],
+  "step-5e-facility-window.png": [
+    {
+      "name": "facility-chip",
+      "x": 30.69,
+      "y": 16.69,
+      "w": 4.9,
+      "h": 2.2
+    },
+    {
+      "name": "window",
+      "x": 65.6,
+      "y": 17.15,
+      "w": 33.16,
+      "h": 69.19
+    },
+    {
+      "name": "window-title",
+      "x": 69.12,
+      "y": 19.13,
+      "w": 26.26,
+      "h": 2.53
+    },
+    {
+      "name": "up-button",
+      "x": 66.65,
+      "y": 18.54,
+      "w": 2.08,
+      "h": 3.7
+    },
+    {
+      "name": "window-close-button",
+      "x": 95.64,
+      "y": 18.66,
+      "w": 2.08,
+      "h": 3.7
+    },
+    {
+      "name": "status-tab",
+      "x": 66.65,
+      "y": 23.52,
+      "w": 4.17,
+      "h": 5.02
+    },
+    {
+      "name": "env-control-tab",
+      "x": 71.08,
+      "y": 23.52,
+      "w": 6.64,
+      "h": 5.02
+    },
+    {
+      "name": "overview-tab",
+      "x": 77.98,
+      "y": 23.52,
+      "w": 4.17,
+      "h": 5.02
+    },
+    {
+      "name": "bay-capacity-button",
+      "x": 92.1,
+      "y": 40.14,
+      "w": 4.58,
+      "h": 3.7
+    },
+    {
+      "name": "plot-add-button",
+      "x": 91.22,
+      "y": 45.23,
+      "w": 5.46,
+      "h": 3.7
+    }
+  ],
+  "step-5e-facility-window.sq.png": [
+    {
+      "name": "facility-chip",
+      "x": 15.67,
+      "y": 16.69,
+      "w": 8.7,
+      "h": 2.2
+    },
+    {
+      "name": "window",
+      "x": 60.76,
+      "y": 17.15,
+      "w": 37.04,
+      "h": 69.19
+    },
+    {
+      "name": "window-title",
+      "x": 67.01,
+      "y": 19.13,
+      "w": 24.77,
+      "h": 2.53
+    },
+    {
+      "name": "up-button",
+      "x": 62.62,
+      "y": 18.54,
+      "w": 3.7,
+      "h": 3.7
+    },
+    {
+      "name": "window-close-button",
+      "x": 92.25,
+      "y": 18.66,
+      "w": 3.7,
+      "h": 3.7
+    },
+    {
+      "name": "status-tab",
+      "x": 62.62,
+      "y": 23.52,
+      "w": 7.42,
+      "h": 5.02
+    },
+    {
+      "name": "env-control-tab",
+      "x": 70.5,
+      "y": 23.52,
+      "w": 11.81,
+      "h": 5.02
+    },
+    {
+      "name": "overview-tab",
+      "x": 82.77,
+      "y": 23.52,
+      "w": 7.42,
+      "h": 5.02
+    },
+    {
+      "name": "bay-capacity-button",
+      "x": 85.96,
+      "y": 40.14,
+      "w": 8.13,
+      "h": 3.7
+    },
+    {
+      "name": "plot-add-button",
+      "x": 84.39,
+      "y": 45.23,
+      "w": 9.71,
+      "h": 3.7
+    }
+  ],
+  "step-5g-layers-panel.png": [
+    {
+      "name": "layers-button",
+      "x": 96.74,
+      "y": 21.67,
+      "w": 1.89,
+      "h": 3.36
+    },
+    {
+      "name": "layers-panel",
+      "x": 84.31,
+      "y": 25.6,
+      "w": 14.32,
+      "h": 60.51
+    },
+    {
+      "name": "base-map-heading",
+      "x": 84.96,
+      "y": 26.76,
+      "w": 12.04,
+      "h": 2.66
+    },
+    {
+      "name": "base-map-streets-option",
+      "x": 84.96,
+      "y": 29.88,
+      "w": 12.04,
+      "h": 3.4
+    },
+    {
+      "name": "shapes-heading",
+      "x": 84.96,
+      "y": 42.85,
+      "w": 12.04,
+      "h": 2.66
+    },
+    {
+      "name": "labels-heading",
+      "x": 84.96,
+      "y": 76.22,
+      "w": 12.04,
+      "h": 2.66
+    }
+  ],
+  "step-5g-layers-panel.sq.png": [
+    {
+      "name": "layers-button",
+      "x": 94.21,
+      "y": 21.67,
+      "w": 3.36,
+      "h": 3.36
+    },
+    {
+      "name": "layers-panel",
+      "x": 72.11,
+      "y": 25.6,
+      "w": 25.46,
+      "h": 60.51
+    },
+    {
+      "name": "base-map-heading",
+      "x": 73.26,
+      "y": 26.76,
+      "w": 21.41,
+      "h": 2.66
+    },
+    {
+      "name": "base-map-streets-option",
+      "x": 73.26,
+      "y": 29.88,
+      "w": 21.41,
+      "h": 3.4
+    },
+    {
+      "name": "shapes-heading",
+      "x": 73.26,
+      "y": 42.85,
+      "w": 21.41,
+      "h": 2.66
+    },
+    {
+      "name": "labels-heading",
+      "x": 73.26,
+      "y": 76.22,
+      "w": 21.41,
+      "h": 2.66
+    }
+  ],
+  "step-5f-output-control-window.png": [
+    {
+      "name": "output-marker",
+      "x": 46.59,
+      "y": 49.98,
+      "w": 6.69,
+      "h": 3.09
+    },
+    {
+      "name": "window",
+      "x": 65.6,
+      "y": 17.15,
+      "w": 33.16,
+      "h": 69.19
+    },
+    {
+      "name": "control-section",
+      "x": 66.65,
+      "y": 23.52,
+      "w": 31.08,
+      "h": 3.06
+    },
+    {
+      "name": "close-button",
+      "x": 85.76,
+      "y": 28.9,
+      "w": 3.47,
+      "h": 3.7
+    },
+    {
+      "name": "stop-button",
+      "x": 89.49,
+      "y": 28.9,
+      "w": 3.47,
+      "h": 3.7
+    },
+    {
+      "name": "open-button",
+      "x": 93.21,
+      "y": 28.9,
+      "w": 3.47,
+      "h": 3.7
+    },
+    {
+      "name": "history-section",
+      "x": 66.65,
+      "y": 40.51,
+      "w": 31.08,
+      "h": 3.06
+    },
+    {
+      "name": "history-chart",
+      "x": 66.65,
+      "y": 44.04,
+      "w": 31.08,
+      "h": 18.29
+    },
+    {
+      "name": "notes-section",
+      "x": 66.65,
+      "y": 64.18,
+      "w": 31.08,
+      "h": 3.06
+    },
+    {
+      "name": "window-close-button",
+      "x": 95.64,
+      "y": 18.66,
+      "w": 2.08,
+      "h": 3.7
+    }
+  ],
+  "step-5f-output-control-window.sq.png": [
+    {
+      "name": "output-marker",
+      "x": 43.93,
+      "y": 49.98,
+      "w": 11.9,
+      "h": 3.09
+    },
+    {
+      "name": "window",
+      "x": 60.76,
+      "y": 17.15,
+      "w": 37.04,
+      "h": 69.19
+    },
+    {
+      "name": "control-section",
+      "x": 62.62,
+      "y": 23.52,
+      "w": 33.33,
+      "h": 3.06
+    },
+    {
+      "name": "close-button",
+      "x": 74.69,
+      "y": 28.9,
+      "w": 6.16,
+      "h": 3.7
+    },
+    {
+      "name": "stop-button",
+      "x": 81.31,
+      "y": 28.9,
+      "w": 6.16,
+      "h": 3.7
+    },
+    {
+      "name": "open-button",
+      "x": 87.94,
+      "y": 28.9,
+      "w": 6.16,
+      "h": 3.7
+    },
+    {
+      "name": "history-section",
+      "x": 62.62,
+      "y": 40.51,
+      "w": 33.33,
+      "h": 3.06
+    },
+    {
+      "name": "history-chart",
+      "x": 62.62,
+      "y": 44.04,
+      "w": 33.33,
+      "h": 18.29
+    },
+    {
+      "name": "notes-section",
+      "x": 62.62,
+      "y": 64.18,
+      "w": 33.33,
+      "h": 3.06
+    },
+    {
+      "name": "window-close-button",
+      "x": 92.25,
+      "y": 18.66,
+      "w": 3.7,
+      "h": 3.7
+    }
+  ],
+  "step-5h-output-schedule-dialog.png": [
+    {
+      "name": "start-time-wheel",
+      "x": 32.04,
+      "y": 19.9,
+      "w": 17.57,
+      "h": 20.83
+    },
+    {
+      "name": "run-time-wheel",
+      "x": 50.39,
+      "y": 19.9,
+      "w": 17.57,
+      "h": 20.83
+    },
+    {
+      "name": "schedule-preview",
+      "x": 32.04,
+      "y": 44.94,
+      "w": 35.92,
+      "h": 2.92
+    },
+    {
+      "name": "schedule-status",
+      "x": 32.04,
+      "y": 50.26,
+      "w": 35.92,
+      "h": 12.58
+    },
+    {
+      "name": "turn-off-now-button",
+      "x": 32.04,
+      "y": 59.14,
+      "w": 35.92,
+      "h": 3.7
+    },
+    {
+      "name": "cancel-button",
+      "x": 58.84,
+      "y": 82.94,
+      "w": 3.65,
+      "h": 4.63
+    },
+    {
+      "name": "save-button",
+      "x": 63.27,
+      "y": 82.94,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-5h-output-schedule-dialog.sq.png": [
+    {
+      "name": "start-time-wheel",
+      "x": 32.18,
+      "y": 19.9,
+      "w": 17.13,
+      "h": 20.83
+    },
+    {
+      "name": "run-time-wheel",
+      "x": 50.69,
+      "y": 19.9,
+      "w": 17.13,
+      "h": 20.83
+    },
+    {
+      "name": "schedule-preview",
+      "x": 32.18,
+      "y": 44.94,
+      "w": 35.65,
+      "h": 2.92
+    },
+    {
+      "name": "schedule-status",
+      "x": 32.18,
+      "y": 50.26,
+      "w": 35.65,
+      "h": 12.58
+    },
+    {
+      "name": "turn-off-now-button",
+      "x": 32.18,
+      "y": 59.14,
+      "w": 35.65,
+      "h": 3.7
+    },
+    {
+      "name": "cancel-button",
+      "x": 51.62,
+      "y": 82.94,
+      "w": 6.48,
+      "h": 4.63
+    },
+    {
+      "name": "save-button",
+      "x": 59.49,
+      "y": 82.94,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ]
+}

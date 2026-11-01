@@ -1,0 +1,526 @@
+{
+  "step-1-function-add-list.png": [
+    {
+      "name": "function-type-select",
+      "x": 11.91,
+      "y": 17.94,
+      "w": 14.32,
+      "h": 4.63
+    },
+    {
+      "name": "sequence-option",
+      "x": 11.91,
+      "y": 41.32,
+      "w": 21.89,
+      "h": 3.24
+    },
+    {
+      "name": "function-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-1-function-add-list.sq.png": [
+    {
+      "name": "function-type-select",
+      "x": 1.74,
+      "y": 18.06,
+      "w": 25.46,
+      "h": 4.63
+    },
+    {
+      "name": "sequence-option",
+      "x": 1.74,
+      "y": 41.44,
+      "w": 38.91,
+      "h": 3.24
+    },
+    {
+      "name": "function-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-3-env-coordinator-option.png": [
+    {
+      "name": "function-search-field",
+      "x": 12.43,
+      "y": 24.54,
+      "w": 13.28,
+      "h": 4.05
+    },
+    {
+      "name": "env-coordinator-option",
+      "x": 11.91,
+      "y": 29.05,
+      "w": 14.32,
+      "h": 3.24
+    },
+    {
+      "name": "function-add-button",
+      "x": 27.02,
+      "y": 18.06,
+      "w": 3.56,
+      "h": 4.63
+    }
+  ],
+  "step-3-env-coordinator-option.sq.png": [
+    {
+      "name": "function-search-field",
+      "x": 2.66,
+      "y": 24.54,
+      "w": 23.61,
+      "h": 4.05
+    },
+    {
+      "name": "env-coordinator-option",
+      "x": 1.74,
+      "y": 29.05,
+      "w": 25.46,
+      "h": 3.24
+    },
+    {
+      "name": "function-add-button",
+      "x": 28.59,
+      "y": 17.94,
+      "w": 6.33,
+      "h": 4.63
+    }
+  ],
+  "step-2-sequence-name.png": [
+    {
+      "name": "function-name-field",
+      "x": 87.5,
+      "y": 47.78,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-2-sequence-name.sq.png": [
+    {
+      "name": "function-name-field",
+      "x": 77.78,
+      "y": 47.78,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-2b-sequence-action-row.png": [
+    {
+      "name": "action-type-select",
+      "x": 87.5,
+      "y": 67.64,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "action-add-button",
+      "x": 94.01,
+      "y": 67.64,
+      "w": 3.91,
+      "h": 3.7
+    },
+    {
+      "name": "action-output-select",
+      "x": 67.9,
+      "y": 82.41,
+      "w": 15.62,
+      "h": 3.24
+    },
+    {
+      "name": "action-state-select",
+      "x": 84.05,
+      "y": 82.41,
+      "w": 4.16,
+      "h": 3.24
+    }
+  ],
+  "step-2b-sequence-action-row.sq.png": [
+    {
+      "name": "action-type-select",
+      "x": 77.78,
+      "y": 67.64,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "action-add-button",
+      "x": 89.35,
+      "y": 67.64,
+      "w": 6.94,
+      "h": 3.7
+    },
+    {
+      "name": "action-output-select",
+      "x": 42.94,
+      "y": 82.41,
+      "w": 27.78,
+      "h": 3.24
+    },
+    {
+      "name": "action-state-select",
+      "x": 71.64,
+      "y": 82.41,
+      "w": 7.39,
+      "h": 3.24
+    }
+  ],
+  "step-2c-sequence-action-mode.png": [
+    {
+      "name": "action-row-save-button",
+      "x": 94.68,
+      "y": 77.2,
+      "w": 3.56,
+      "h": 3.7
+    },
+    {
+      "name": "sequence-mode-select",
+      "x": 67.9,
+      "y": 87.62,
+      "w": 5.21,
+      "h": 3.01
+    },
+    {
+      "name": "action-duration-field",
+      "x": 73.5,
+      "y": 87.62,
+      "w": 9.64,
+      "h": 3.01
+    },
+    {
+      "name": "action-group-field",
+      "x": 89.13,
+      "y": 87.62,
+      "w": 9.11,
+      "h": 3.01
+    }
+  ],
+  "step-2c-sequence-action-mode.sq.png": [
+    {
+      "name": "action-row-save-button",
+      "x": 90.54,
+      "y": 77.2,
+      "w": 6.33,
+      "h": 3.7
+    },
+    {
+      "name": "sequence-mode-select",
+      "x": 42.94,
+      "y": 87.62,
+      "w": 9.26,
+      "h": 3.01
+    },
+    {
+      "name": "action-duration-field",
+      "x": 52.89,
+      "y": 87.62,
+      "w": 17.13,
+      "h": 3.01
+    },
+    {
+      "name": "action-group-field",
+      "x": 80.67,
+      "y": 87.62,
+      "w": 16.2,
+      "h": 3.01
+    }
+  ],
+  "step-2d-sequence-time.png": [
+    {
+      "name": "start-time-field",
+      "x": 87.5,
+      "y": 37.19,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "end-time-field",
+      "x": 87.5,
+      "y": 42.49,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "period-field",
+      "x": 87.5,
+      "y": 47.8,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 95.31,
+      "y": 94.33,
+      "w": 3.65,
+      "h": 4.63
+    }
+  ],
+  "step-2d-sequence-time.sq.png": [
+    {
+      "name": "start-time-field",
+      "x": 77.78,
+      "y": 37.19,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "end-time-field",
+      "x": 77.78,
+      "y": 42.49,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "period-field",
+      "x": 77.78,
+      "y": 47.8,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "save-button",
+      "x": 91.67,
+      "y": 94.33,
+      "w": 6.48,
+      "h": 4.63
+    }
+  ],
+  "step-4-run-all-actions-warning.png": [
+    {
+      "name": "run-all-actions-button",
+      "x": 90.86,
+      "y": 47.82,
+      "w": 7.06,
+      "h": 3.7
+    }
+  ],
+  "step-4-run-all-actions-warning.sq.png": [
+    {
+      "name": "run-all-actions-button",
+      "x": 83.75,
+      "y": 47.82,
+      "w": 12.54,
+      "h": 3.7
+    }
+  ],
+  "step-3b-env-facility-ranges.png": [
+    {
+      "name": "linked-facility-select",
+      "x": 87.5,
+      "y": 10.65,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "bay-scope-select",
+      "x": 87.5,
+      "y": 15.95,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "temperature-range",
+      "x": 68.23,
+      "y": 64.72,
+      "w": 29.69,
+      "h": 15.54
+    },
+    {
+      "name": "humidity-range",
+      "x": 68.23,
+      "y": 82.97,
+      "w": 29.69,
+      "h": 15.54
+    }
+  ],
+  "step-3b-env-facility-ranges.sq.png": [
+    {
+      "name": "linked-facility-select",
+      "x": 77.78,
+      "y": 10.65,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "bay-scope-select",
+      "x": 77.78,
+      "y": 15.95,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "temperature-range",
+      "x": 43.52,
+      "y": 64.72,
+      "w": 52.78,
+      "h": 15.54
+    },
+    {
+      "name": "humidity-range",
+      "x": 43.52,
+      "y": 82.97,
+      "w": 52.78,
+      "h": 15.54
+    }
+  ],
+  "check-env-current-status.png": [
+    {
+      "name": "env-current-row",
+      "x": 68.23,
+      "y": 45.6,
+      "w": 29.69,
+      "h": 8.26
+    },
+    {
+      "name": "env-adjustable-row",
+      "x": 68.23,
+      "y": 53.87,
+      "w": 29.69,
+      "h": 8.15
+    },
+    {
+      "name": "auto-control-devices-section",
+      "x": 67.19,
+      "y": 66.09,
+      "w": 31.77,
+      "h": 3.75
+    }
+  ],
+  "check-env-current-status.sq.png": [
+    {
+      "name": "env-current-row",
+      "x": 43.52,
+      "y": 45.6,
+      "w": 52.78,
+      "h": 8.26
+    },
+    {
+      "name": "env-adjustable-row",
+      "x": 43.52,
+      "y": 53.87,
+      "w": 52.78,
+      "h": 8.15
+    },
+    {
+      "name": "auto-control-devices-section",
+      "x": 41.67,
+      "y": 66.09,
+      "w": 56.48,
+      "h": 3.75
+    }
+  ],
+  "step-3c-control-basis.png": [
+    {
+      "name": "control-basis-select",
+      "x": 87.5,
+      "y": 47.82,
+      "w": 10.42,
+      "h": 3.7
+    }
+  ],
+  "step-3c-control-basis.sq.png": [
+    {
+      "name": "control-basis-select",
+      "x": 77.78,
+      "y": 47.82,
+      "w": 18.52,
+      "h": 3.7
+    }
+  ],
+  "step-3d-auto-control-devices.png": [
+    {
+      "name": "auto-control-devices-section",
+      "x": 67.19,
+      "y": 8.33,
+      "w": 31.77,
+      "h": 3.75
+    },
+    {
+      "name": "device-auto-toggle",
+      "x": 94.01,
+      "y": 21.2,
+      "w": 3.91,
+      "h": 3.24
+    }
+  ],
+  "step-3d-auto-control-devices.sq.png": [
+    {
+      "name": "auto-control-devices-section",
+      "x": 41.67,
+      "y": 8.33,
+      "w": 56.48,
+      "h": 3.75
+    },
+    {
+      "name": "device-auto-toggle",
+      "x": 89.35,
+      "y": 21.2,
+      "w": 6.94,
+      "h": 3.24
+    }
+  ],
+  "step-5-system-log.png": [
+    {
+      "name": "log-source-select",
+      "x": 12.96,
+      "y": 23.01,
+      "w": 26.92,
+      "h": 4.63
+    },
+    {
+      "name": "log-search-field",
+      "x": 48.08,
+      "y": 23.01,
+      "w": 14.58,
+      "h": 4.63
+    },
+    {
+      "name": "log-refresh-button",
+      "x": 73.46,
+      "y": 23.01,
+      "w": 5.12,
+      "h": 4.63
+    }
+  ],
+  "step-5-system-log.sq.png": [
+    {
+      "name": "log-source-select",
+      "x": 3.59,
+      "y": 23.01,
+      "w": 47.86,
+      "h": 4.63
+    },
+    {
+      "name": "log-search-field",
+      "x": 66.03,
+      "y": 23.01,
+      "w": 25.93,
+      "h": 4.63
+    },
+    {
+      "name": "log-refresh-button",
+      "x": 21.86,
+      "y": 31.34,
+      "w": 9.1,
+      "h": 4.63
+    }
+  ]
+}

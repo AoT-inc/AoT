@@ -1,0 +1,306 @@
+{
+  "step-1-general-settings.png": [
+    {
+      "name": "system-timezone-field",
+      "x": 72.88,
+      "y": 41.83,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "language-select",
+      "x": 72.88,
+      "y": 24.81,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "landing-page-select",
+      "x": 72.88,
+      "y": 30.49,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "general-save-button",
+      "x": 79.39,
+      "y": 8.56,
+      "w": 3.91,
+      "h": 4.63
+    }
+  ],
+  "step-1-general-settings.sq.png": [
+    {
+      "name": "system-timezone-field",
+      "x": 76.16,
+      "y": 41.83,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "language-select",
+      "x": 76.16,
+      "y": 24.81,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "landing-page-select",
+      "x": 76.16,
+      "y": 30.49,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "general-save-button",
+      "x": 87.73,
+      "y": 8.56,
+      "w": 6.94,
+      "h": 4.63
+    }
+  ],
+  "step-2-users-list.png": [
+    {
+      "name": "user-add-button",
+      "x": 77.21,
+      "y": 21.88,
+      "w": 6.09,
+      "h": 4.63
+    },
+    {
+      "name": "internal-ai-account",
+      "x": 33.82,
+      "y": 28.82,
+      "w": 23.37,
+      "h": 4.4
+    },
+    {
+      "name": "users-tab",
+      "x": 30.31,
+      "y": 15.97,
+      "w": 4.81,
+      "h": 4.51
+    },
+    {
+      "name": "roles-tab",
+      "x": 35.11,
+      "y": 15.97,
+      "w": 3.9,
+      "h": 4.51
+    }
+  ],
+  "step-2-users-list.sq.png": [
+    {
+      "name": "user-add-button",
+      "x": 83.86,
+      "y": 21.99,
+      "w": 10.82,
+      "h": 4.63
+    },
+    {
+      "name": "internal-ai-account",
+      "x": 35.76,
+      "y": 28.82,
+      "w": 27.03,
+      "h": 4.4
+    },
+    {
+      "name": "users-tab",
+      "x": 29.51,
+      "y": 15.97,
+      "w": 8.55,
+      "h": 4.51
+    },
+    {
+      "name": "roles-tab",
+      "x": 38.06,
+      "y": 15.97,
+      "w": 6.93,
+      "h": 4.51
+    }
+  ],
+  "step-2b-add-user-dialog.png": [
+    {
+      "name": "user-login-field",
+      "x": 86.52,
+      "y": 16.8,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "user-password-field",
+      "x": 86.52,
+      "y": 32.71,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "user-role-select",
+      "x": 86.52,
+      "y": 48.61,
+      "w": 10.42,
+      "h": 3.7
+    },
+    {
+      "name": "user-add-submit",
+      "x": 91.9,
+      "y": 94.33,
+      "w": 6.09,
+      "h": 4.63
+    }
+  ],
+  "step-2b-add-user-dialog.sq.png": [
+    {
+      "name": "user-login-field",
+      "x": 76.04,
+      "y": 16.8,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "user-password-field",
+      "x": 76.04,
+      "y": 32.71,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "user-role-select",
+      "x": 76.04,
+      "y": 48.61,
+      "w": 18.52,
+      "h": 3.7
+    },
+    {
+      "name": "user-add-submit",
+      "x": 85.59,
+      "y": 94.33,
+      "w": 10.82,
+      "h": 4.63
+    }
+  ],
+  "step-2c-roles-list.png": [
+    {
+      "name": "roles-tab",
+      "x": 35.11,
+      "y": 15.97,
+      "w": 3.9,
+      "h": 4.51
+    },
+    {
+      "name": "role-admin-row",
+      "x": 30.44,
+      "y": 28.24,
+      "w": 54.04,
+      "h": 5.56
+    },
+    {
+      "name": "role-monitor-row",
+      "x": 30.44,
+      "y": 40.28,
+      "w": 54.04,
+      "h": 5.56
+    }
+  ],
+  "step-2c-roles-list.sq.png": [
+    {
+      "name": "roles-tab",
+      "x": 38.06,
+      "y": 15.97,
+      "w": 6.93,
+      "h": 4.51
+    },
+    {
+      "name": "role-admin-row",
+      "x": 29.75,
+      "y": 28.24,
+      "w": 67.01,
+      "h": 5.56
+    },
+    {
+      "name": "role-monitor-row",
+      "x": 29.75,
+      "y": 40.28,
+      "w": 67.01,
+      "h": 5.56
+    }
+  ],
+  "step-3-groups-tab.png": [
+    {
+      "name": "groups-tab",
+      "x": 39.01,
+      "y": 15.97,
+      "w": 3.9,
+      "h": 4.51
+    },
+    {
+      "name": "group-add-button",
+      "x": 77.99,
+      "y": 29.17,
+      "w": 5.31,
+      "h": 4.63
+    }
+  ],
+  "step-3-groups-tab.sq.png": [
+    {
+      "name": "groups-tab",
+      "x": 44.99,
+      "y": 15.97,
+      "w": 6.93,
+      "h": 4.51
+    },
+    {
+      "name": "group-add-button",
+      "x": 85.24,
+      "y": 29.17,
+      "w": 9.44,
+      "h": 4.63
+    }
+  ],
+  "step-5-user-api-key.png": [
+    {
+      "name": "user-api-key-section",
+      "x": 66.21,
+      "y": 55.79,
+      "w": 31.77,
+      "h": 3.75
+    },
+    {
+      "name": "api-key-name-field",
+      "x": 86.52,
+      "y": 82.78,
+      "w": 6.25,
+      "h": 3.7
+    },
+    {
+      "name": "generate-api-key-button",
+      "x": 93.03,
+      "y": 82.78,
+      "w": 3.91,
+      "h": 3.7
+    }
+  ],
+  "step-5-user-api-key.sq.png": [
+    {
+      "name": "user-api-key-section",
+      "x": 39.93,
+      "y": 55.79,
+      "w": 56.48,
+      "h": 3.75
+    },
+    {
+      "name": "api-key-name-field",
+      "x": 76.04,
+      "y": 82.78,
+      "w": 11.11,
+      "h": 3.7
+    },
+    {
+      "name": "generate-api-key-button",
+      "x": 87.62,
+      "y": 82.78,
+      "w": 6.94,
+      "h": 3.7
+    }
+  ]
+}
