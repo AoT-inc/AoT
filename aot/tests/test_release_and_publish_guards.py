@@ -142,3 +142,66 @@ def test_tree_check_blocks_gitea_ci_files(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     ok, reason = push_safety.check_tree_contents(sha)
     assert ok is False and '.gitea/workflows/e2e.yml' in reason
+
+
+def test_public_tests_do_not_import_excluded_test_modules():
+    """공개 트리에 남는 시험이, 공개에서 빠지는 `aot.tests` 모듈을 가져오면 안 된다.
+
+    생성기(gen_exclude.py)의 import 추적이 `from aot.tests.geo.test_x import y`·
+    `import a, b` 를 놓쳐, 빠지는 모듈을 쓰는 시험이 공개 트리에 남아 수집 단계에서 죽은
+    적이 있다(v26.11.2 발행 점검). 목록(exclude.txt)을 신뢰하지 않고 구문 트리로 다시 센다.
+    """
+    import ast
+
+    import pytest
+    if not os.path.exists(os.path.join(REPO, 'aot/scripts/publish/exclude.txt')):
+        pytest.skip('공개 트리에는 제외 목록이 없다 — 비공개 저장소에서만 의미가 있는 시험')
+    with open(os.path.join(REPO, 'aot/scripts/publish/exclude.txt'), encoding='utf-8') as fh:
+        excluded = {l.strip() for l in fh if l.strip() and not l.lstrip().startswith('#')}
+    tracked = subprocess.run(['git', 'ls-files', 'aot/tests'], cwd=REPO, capture_output=True,
+                             text=True, check=True).stdout.split()
+    tracked_set = set(tracked)
+
+    def as_paths(module, names):
+        """`aot.tests.a.b` 에 이름 c 를 가져오면 a/b.py 와 a/b/c.py 둘 다 후보다."""
+        base = module.replace('.', '/')
+        out = {base + '.py', base + '/__init__.py'}
+        out.update(f'{base}/{n}.py' for n in names)
+        return out
+
+    offenders = []
+    for path in tracked:
+        if not path.endswith('.py') or path in excluded:
+            continue
+        try:
+            tree = ast.parse(open(os.path.join(REPO, path), encoding='utf-8').read())
+        except (OSError, SyntaxError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith('aot.tests'):
+                cands = as_paths(node.module, [a.name for a in node.names])
+            elif isinstance(node, ast.Import):
+                cands = set()
+                for a in node.names:
+                    if a.name.startswith('aot.tests'):
+                        cands |= as_paths(a.name, [])
+            else:
+                continue
+            for c in cands:
+                if c in tracked_set and c in excluded:
+                    offenders.append(f'{path} → {c}')
+    assert not offenders, '공개 트리에 남는 시험이 빠지는 모듈을 가져옵니다:\n' + '\n'.join(sorted(set(offenders)))
+
+
+def test_public_e2e_seed_is_not_excluded():
+    """공개 e2e.yml 의 '픽스처 시드' 단계가 부르는 seed.py 는 제외 목록에 없어야 한다.
+
+    독스트링의 JS 파일 이름 언급(probes)에 걸려 빠진 적이 있고, 그러면 공개 E2E 가
+    `No module named aot.tests.e2e.seed` 로 계속 실패한다.
+    """
+    import pytest
+    if not os.path.exists(os.path.join(REPO, 'aot/scripts/publish/exclude.txt')):
+        pytest.skip('공개 트리에는 제외 목록이 없다 — 비공개 저장소에서만 의미가 있는 시험')
+    with open(os.path.join(REPO, 'aot/scripts/publish/exclude.txt'), encoding='utf-8') as fh:
+        lines = {ln.strip() for ln in fh}
+    assert 'aot/tests/e2e/seed.py' not in lines

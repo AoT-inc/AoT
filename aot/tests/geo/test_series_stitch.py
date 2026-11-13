@@ -52,6 +52,9 @@ class _Base(unittest.TestCase):
         self.app = _make_app()
         self.ctx = self.app.app_context()
         self.ctx.push()
+        # 앞 시험이 세션을 비우지 않고 끝났어도 그 객체가 이 시험의 같은 기본키 행으로
+        # 새어 들어오지 않게 한다(병렬 CI 에서 간헐적으로 다른 UUID 가 나온 사례의 방어).
+        db.session.remove()
         db.create_all()
         raw = db.engine.raw_connection()
         try:
@@ -124,7 +127,16 @@ class TestSegments(_Base):
         """같은 자리를 맡은 온습도계 둘은 모델이 달라도 온도는 온도다."""
         self._swap()
         segs = S.slot_segments(NEW, self.m_new)
-        self.assertEqual(segs[0]['measurement_id'], self.m_old)
+        # 간헐 실패(CI 병렬, 2026-11-12) 때 원인이 남도록 구간·측정값 행을 메시지에 싣는다.
+        detail = {
+            'segs': [(x['device_id'], x['measurement_id']) for x in segs],
+            'old': self.m_old, 'new': self.m_new,
+            'rows': [(m.device_id, m.unique_id)
+                     for m in DeviceMeasurements.query.all()],
+            'history': [(b.device_id, b.valid_from, b.valid_to, b.id)
+                        for b in B.history('shape', ZONE)],
+        }
+        self.assertEqual(segs[0]['measurement_id'], self.m_old, detail)
         self.assertTrue(segs[0]['has_data'])
 
     def test_a_segment_without_a_counterpart_is_reported_not_dropped(self):
