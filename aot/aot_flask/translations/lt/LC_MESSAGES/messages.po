@@ -32379,3 +32379,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Horizontalus / nuožulnus"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} vamzdžių apskaičiuota horizontaliai"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Horizontalus"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Vamzdžių ilgis (visas plotas)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Vamzdžio ilgis"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Skaičiuojamas reljefas. Nuožulnus ilgis atsiras pabaigus."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Kai kurios atkarpos apskaičiuotos pagal horizontalų ilgį. Reljefas jų nepadengia."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Apskaičiuota {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Langelis {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Ilgiai pateikti tvarka horizontalus / nuožulnus."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Nuolydis {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Apskaičiuota pagal horizontalų ilgį"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Debitas {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Nuostolis {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Horizontalus {h} m, nuožulnus {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Horizontalus {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Atkarpa {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Atkarpos ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Horizontalus {h} m / Nuožulnus {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Skaičiuojamas reljefas - rodomas tik horizontalus ilgis."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Ilgiai žemėlapyje yra horizontalūs."
+
+msgid "Terrain input"
+msgstr "Reljefo įvestis"
+
+msgid "Compare another terrain"
+msgstr "Palyginti su kitu reljefu"
+
+msgid "Could not compare. Try again."
+msgstr "Nepavyko palyginti. Bandykite dar kartą."
+
+msgid "Changed sections ({n})"
+msgstr "Besikeičiantys ruožai ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Atsisiunčiamas reljefas „{name}“. Palyginimas atsiras pabaigus."
+
+msgid "Calculation level"
+msgstr "Skaičiavimo lygis"
+
+msgid "Switch to this terrain"
+msgstr "Perjungti į šį reljefą"
+
+msgid "That terrain input is gone."
+msgstr "Ši reljefo įvestis nebeegzistuoja."
+
+msgid "Weakest nozzle flow"
+msgstr "Silpniausio purkštuko debitas"
+
+msgid "Revert to {name}"
+msgstr "Grįžti prie „{name}“"
+
+msgid "Slant length total"
+msgstr "Pasvirusio ilgio suma"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Ši reljefo įvestis neturi plytelių adreso. Patikrinkite nustatymus."
+
+msgid "Downloading took too long. Try again."
+msgstr "Atsisiuntimas užtruko per ilgai. Bandykite dar kartą."
+
+msgid "Terrain changed and recalculated"
+msgstr "Reljefas pakeistas ir perskaičiuota"
+
+msgid "Compare with"
+msgstr "Lyginti su"
+
+msgid "No terrain was on"
+msgstr "Reljefas nebuvo įjungtas"
+
+msgid "Undo change"
+msgstr "Atšaukti pakeitimą"
+
+msgid "Try again"
+msgstr "Bandyti dar kartą"
+
+msgid "This map has no pipes to compare."
+msgstr "Šiame žemėlapyje nėra vamzdžių palyginimui."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Reljefo nedengiami vamzdžiai"
+
+msgid "No terrain is on."
+msgstr "Reljefas neįjungtas."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Nepavyko pakeisti reljefo. Bandykite dar kartą."

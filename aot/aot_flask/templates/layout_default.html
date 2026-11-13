@@ -41,6 +41,7 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover">
   {# 화면 배율 — 사용자 설정(계정 모달), 기본 모바일 115% · 컴퓨터 100%. 반드시 viewport 메타 바로 뒤. #}
   {% include '_screen_zoom.html' %}
+  {% include '_lite_mode.html' %}
 
   <!-- 지도 베이스맵(MapTiler) 조기 연결: 지도 위젯의 style.json→sprite→glyphs→tiles
        의존 체인은 외부 호스트 왕복이 끝나야 첫 타일을 그린다(그 전엔 빈 캔버스).
@@ -132,6 +133,8 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
   <link href="{{ url_for('static', filename='css/components/aot-action-row.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-toggle.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='css/components/aot-3way.css') }}" rel="stylesheet">
+  {#- PTZ 컨트롤러(카메라 방향·줌·프리셋) — 카메라 페이지와 대시보드 카메라 위젯이 함께 쓴다 -#}
+  <link href="{{ url_for('static', filename='css/components/aot-ptz.css') }}" rel="stylesheet">
   {#- 눈금 입력(select_scale)이 `AoTViz` 골격을 그대로 쓴다 — 설정 화면에서도
       필요하다. 예전에는 지도 위젯·구획 화면만 실었다. -#}
   <link href="{{ url_for('static', filename='css/components/aot-dataviz.css') }}" rel="stylesheet">
@@ -476,6 +479,35 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
         } else {
         }
     };
+
+    /**
+     * [카메라 인증 실패 알림]
+     * 카메라가 로그인을 거절해 서버가 자동 재접속을 멈추면(로그인 잠금 방지) 전역 토스트로 한 번 알린다.
+     * 같은 (카메라, 시각) 는 탭을 새로 열어도 다시 알리지 않는다. 설정을 저장해 풀었다가 또 거절되면 시각이
+     * 바뀌므로 다시 알린다. 서버 목록: routes_general.camera_auth_alerts.
+     */
+    (function () {
+        var KEY = 'aot-camera-auth-alerted';
+        var seen = {};
+        try { seen = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (e) { seen = {}; }
+        function poll() {
+            if (document.hidden) return;
+            fetch('/camera_auth_alerts', {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+                .then(function (r) { return r.ok ? r.json() : {alerts: []}; })
+                .then(function (data) {
+                    (data.alerts || []).forEach(function (a) {
+                        var k = a.id + ':' + a.since;
+                        if (seen[k]) return;
+                        seen[k] = 1;
+                        try { sessionStorage.setItem(KEY, JSON.stringify(seen)); } catch (e) {}
+                        window.showToast(a.message, 'error');
+                    });
+                })
+                .catch(function () {});
+        }
+        setTimeout(poll, 3000);
+        setInterval(poll, 20000);
+    })();
 
     /**
      * [Standardized Tooltip Initialization]
@@ -1134,6 +1166,21 @@ IMPORTANT: This is the SOURCE TEMPLATE file.
                   </select>
                 </div>
               </div>
+              {#- 26.11.2: 파이 시험 전이라 계정 모달에서 숨긴다. 켜려면 아래 조건을 true 로 바꾼다(저장 쪽은 칸이 없으면 값을 그대로 둔다). -#}
+              {% if false %}
+              <div class="aot-modal-option-row">
+                {#- 경량 모드(자원 조절 R6) — 적용은 _lite_mode.html. 설명은 위 칸들처럼 라벨에 둔다. -#}
+                {% set lite_mode_tooltip = _("Makes the screen lighter on slow devices and connections: refreshes less often, turns off motion effects, and shows camera snapshots instead of live video.") %}
+                <div class="aot-modal-option-label" title="{{ lite_mode_tooltip }}">{{ _('Lightweight Mode') }}</div>
+                <div class="aot-modal-option-control">
+                  <select class="form-control aot-modern-select" id="ui_lite_mode" name="ui_lite_mode">
+                    <option value=""{% if current_user.ui_lite_mode not in ('phone', 'always') %} selected{% endif %}>{{ _('Off') }}</option>
+                    <option value="phone"{% if current_user.ui_lite_mode == 'phone' %} selected{% endif %}>{{ _('Phones and tablets only') }}</option>
+                    <option value="always"{% if current_user.ui_lite_mode == 'always' %} selected{% endif %}>{{ _('Always') }}</option>
+                  </select>
+                </div>
+              </div>
+              {% endif %}
             </div>
           </form>
 

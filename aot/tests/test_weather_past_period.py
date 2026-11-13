@@ -188,9 +188,11 @@ class _Env:
             patch('aot.tools.data_tools.measurement.read_influxdb_list', self.reader),
             patch('aot.tools.data_tools.measurement.return_measurement_info',
                   side_effect=lambda m, c: (m.channel, m.unit, m.measurement)),
-            patch('aot.tools.data_tools.measurement.now_utc', return_value=NOW),
-            patch('aot.utils.device_tz.resolve_location_tz', return_value=KST),
-            patch('aot.utils.device_tz.location_iso',
+            patch('aot.tools.data_tools.measurement.utc_now', return_value=NOW),
+            patch('aot.utils.timekit.tz_of', return_value=KST),
+            patch('aot.utils.timekit.iso_at',
+                  side_effect=lambda v, _i, cache=None: datetime.fromtimestamp(v, KST).isoformat()),
+            patch('aot.tools.data_tools.measurement.iso_at',
                   side_effect=lambda v, _i, cache=None: datetime.fromtimestamp(v, KST).isoformat()),
         ]
 
@@ -400,7 +402,7 @@ class FourQuestions(unittest.TestCase):
     def _read(self, text):
         from aot.tools.domain import dispatch
         o = next(x for x in OPS if (x.tool, x.op) == ('weather', 'now'))
-        with patch.object(dispatch, '_today', return_value=self.TODAY):
+        with patch.object(dispatch, 'today_at', return_value=self.TODAY):
             got = dispatch._period_args(o, 'get_weather', text)
         return got['time_range'], got[dispatch.META_KEY]['period']['read']
 
@@ -432,7 +434,7 @@ class FourQuestions(unittest.TestCase):
     def test_a_future_period_is_refused(self):
         from aot.tools.domain import dispatch
         o = next(x for x in OPS if (x.tool, x.op) == ('weather', 'now'))
-        with patch.object(dispatch, '_today', return_value=self.TODAY):
+        with patch.object(dispatch, 'today_at', return_value=self.TODAY):
             self.assertIsInstance(dispatch._period_args(o, 'get_weather', 'tomorrow'), list)
 
 

@@ -19,6 +19,7 @@ each parameter carries:
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
+from aot.utils.timekit import naive_utc as _tk_naive_utc, utc_now as _tk_utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class ContextMetadataBuilder:
         metadata = {
             "per_parameter": {},
             "metadata_version": "1.0",
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": _tk_naive_utc(_tk_utc_now()).isoformat() + "Z",
         }
 
         # Extract and enrich context values from domain module
@@ -103,7 +104,7 @@ class ContextMetadataBuilder:
         # Extract metadata from Notes with context_state field (Phase 1 schema)
         try:
             from aot.databases.models import Notes
-            from aot.utils.time_utils import utc_now
+            from aot.utils.timekit import utc_now
             from flask_login import current_user
 
             notes = Notes.query.filter_by(

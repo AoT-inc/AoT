@@ -1,0 +1,119 @@
+{#- PTZ 컨트롤러 — 전역 부품 하나를 두 크기로 그린다(docs/design/ui-guide.md 「PTZ 컨트롤러」).
+    CSS: static/css/components/aot-ptz.css · JS: static/js/common/aot-ptz.js (app-shell 번들)
+
+    ptz_controller(uid, variant, features)
+      variant  'full'    설정 측 전체판 — 방향·줌·프리셋(편집 포함)·주야·수동 경보
+               'overlay' 위젯 측 간결판 — 방향·줌·프리셋 이동만, 영상 위에 겹친다
+      features None 이면 줄을 전부 그리고 JS(AoTPtz.applyFeatures)가 능력에 맞춰 숨긴다(카메라 페이지).
+               목록이면 그 능력의 줄만 그린다(위젯 — 서버가 이미 골랐다).
+
+    권한 판정은 호출하는 쪽이 한다. 조작 권한이 없으면 이 매크로를 부르지 않는다.
+-#}
+{% macro ptz_controller(uid, variant='full', features=None) -%}
+{%- set full = variant == 'full' -%}
+{%- set mk = features is none -%}
+{%- set f_pt = mk or 'ptz.pan_tilt' in features -%}
+{%- set f_zoom = mk or 'ptz.zoom' in features -%}
+{%- set f_preset = mk or 'ptz.preset' in features -%}
+{%- set texts = {
+  'accepted': _('The camera accepted the command'),
+  'refused': _('Not allowed'),
+  'failed': _('The camera did not accept the command'),
+  'unsupported': _('This camera does not support that'),
+  'unverified': _("The camera's reply could not be confirmed"),
+  'unreachable': _('Could not reach the camera'),
+  'confirmSave': _('Save the current position as preset %(n)s? The position saved there now will be replaced.', n='{n}'),
+  'confirmRemove': _('Delete preset %(n)s?', n='{n}'),
+  'confirmAlarm': _('The camera will sound its alarm and flash its light. Continue?'),
+  'pickPreset': _('Choose a number, then save the current position or delete it.'),
+  'edit': _('Edit'),
+  'done': _('Done')
+} -%}
+<div class="aot-ptz{% if not full %} aot-ptz--overlay{% endif %}" data-ptz-uid="{{ uid }}"
+     data-ptz-texts='{{ texts|tojson }}'{% if features is none %} hidden{% endif %}>
+  {% if f_pt or f_zoom %}
+  <div class="aot-ptz-main">
+    {% if f_pt %}
+    <div class="aot-ptz-pad" role="group" aria-label="{{ _('Pan and tilt') }}"{% if mk %} data-ptz-feature="ptz.pan_tilt"{% endif %}>
+      <button type="button" class="aot-ptz-dir aot-ptz-up" data-ptz-hold="0,1,0"
+              aria-label="{{ _('Move up') }}" data-aot-tip="{{ _('Move up') }}"></button>
+      <button type="button" class="aot-ptz-dir aot-ptz-right" data-ptz-hold="1,0,0"
+              aria-label="{{ _('Move right') }}" data-aot-tip="{{ _('Move right') }}"></button>
+      <button type="button" class="aot-ptz-dir aot-ptz-down" data-ptz-hold="0,-1,0"
+              aria-label="{{ _('Move down') }}" data-aot-tip="{{ _('Move down') }}"></button>
+      <button type="button" class="aot-ptz-dir aot-ptz-left" data-ptz-hold="-1,0,0"
+              aria-label="{{ _('Move left') }}" data-aot-tip="{{ _('Move left') }}"></button>
+      <span class="aot-ptz-hub" aria-hidden="true"></span>
+    </div>
+    {% endif %}
+    {% if f_zoom %}
+    <div class="aot-ptz-zoom" role="group" aria-label="{{ _('Zoom') }}"{% if mk %} data-ptz-feature="ptz.zoom"{% endif %}>
+      <button type="button" class="aot-ptz-key aot-ptz-zoom-in" data-ptz-hold="0,0,1"
+              aria-label="{{ _('Zoom in') }}" data-aot-tip="{{ _('Zoom in') }}"></button>
+      {% if full %}<span class="aot-ptz-zoom-label" aria-hidden="true">{{ _('Camera zoom') }}</span>{% endif %}
+      <button type="button" class="aot-ptz-key aot-ptz-zoom-out" data-ptz-hold="0,0,-1"
+              aria-label="{{ _('Zoom out') }}" data-aot-tip="{{ _('Zoom out') }}"></button>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if full %}
+  <div class="aot-option-tip"{% if mk %} data-ptz-feature="ptz.pan_tilt"{% endif %}>{{ _('Hold to move. It stops when you let go.') }}</div>
+  {% endif %}
+
+  {% if f_preset %}
+  {% set chips %}
+    <div class="aot-ptz-presets" role="group" aria-label="{{ _('Presets') }}">
+      {% for n in range(1, 9) %}
+      <button type="button" class="aot-ptz-chip" data-ptz-preset="{{ n }}"
+              aria-label="{{ _('Go to preset %(n)s', n=n) }}">{{ n }}</button>
+      {% endfor %}
+    </div>
+  {% endset %}
+  {% if full %}
+  <div{% if mk %} data-ptz-feature="ptz.preset"{% endif %}>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Presets') }}</label>
+      <div class="aot-modal-option-control aot-action-group">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-btn-sm" data-ptz-edit>{{ _('Edit') }}</button>
+      </div>
+    </div>
+    {{ chips }}
+    <div class="aot-option-tip" data-ptz-edit-tip hidden>{{ _('Choose a number, then save the current position or delete it.') }}</div>
+    <div class="aot-modal-option-row" data-ptz-edit-row hidden>
+      <span class="aot-modal-option-label" data-ptz-picked></span>
+      <div class="aot-modal-option-control aot-action-group">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-danger" data-ptz-remove disabled>{{ _('Delete') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" data-ptz-save disabled>{{ _('Save current position') }}</button>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  {{ chips }}
+  {% endif %}
+  {% endif %}
+
+  {% if full %}
+  <div class="aot-modal-option-row"{% if mk %} data-ptz-feature="day_night"{% endif %}>
+    <label class="aot-modal-option-label">{{ _('Day/Night mode') }}</label>
+    <div class="aot-modal-option-control">
+      <div class="aot-ptz-seg" role="radiogroup" aria-label="{{ _('Day/Night mode') }}">
+        <button type="button" class="aot-ptz-seg-opt" role="radio" aria-checked="false" data-ptz-mode="auto">{{ _('Auto mode') }}</button>
+        <button type="button" class="aot-ptz-seg-opt" role="radio" aria-checked="false" data-ptz-mode="day">{{ _('Day mode') }}</button>
+        <button type="button" class="aot-ptz-seg-opt" role="radio" aria-checked="false" data-ptz-mode="night">{{ _('Night mode') }}</button>
+      </div>
+    </div>
+  </div>
+  <div class="aot-modal-option-row"{% if mk %} data-ptz-feature="alarm.manual"{% endif %}>
+    <label class="aot-modal-option-label">{{ _('Manual alarm') }}</label>
+    <div class="aot-modal-option-control aot-action-group">
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" data-ptz-alarm="off">{{ _('Turn off') }}</button>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-danger" data-ptz-alarm="on">{{ _('Sound') }}</button>
+    </div>
+  </div>
+  <div class="aot-option-tip" data-ptz-result aria-live="polite"></div>
+  {% else %}
+  {% endif %}
+</div>
+{%- endmacro %}

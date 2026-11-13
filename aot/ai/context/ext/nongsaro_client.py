@@ -18,6 +18,7 @@ from typing import Optional
 import requests
 
 from aot.ai.context.ext_translation_table import translate_kr
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +174,7 @@ class NongsaroClient:
             from aot.databases.utils import session_scope
             from aot.config import AOT_DB_PATH
 
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=_TTL_HOURS)
+            cutoff = utc_now() - timedelta(hours=_TTL_HOURS)
             with session_scope(AOT_DB_PATH) as session:
                 row = (
                     session.query(ExtNongsaroGuides)
@@ -267,7 +268,7 @@ class NongsaroClient:
                 "EXT-KR-02 cropDetail: no text content found for crop_seq=%r", crop_seq)
             return []
 
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         return [{
             'crop_type':  crop_en,
             'guide_type': 'cultivation',
@@ -322,7 +323,7 @@ class NongsaroClient:
             logger.error("EXT-KR-02 farmWorkList unexpected response structure: %s", exc)
             return []
 
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         rows: list[dict] = []
         for item in items:
             crop_kr = item.get('cropNm', '')
@@ -403,7 +404,7 @@ class NongsaroClient:
             from aot.databases.utils import session_scope
             from aot.config import AOT_DB_PATH
 
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=_TTL_HOURS)
+            cutoff = utc_now() - timedelta(hours=_TTL_HOURS)
             with session_scope(AOT_DB_PATH) as session:
                 rows = (
                     session.query(ExtNongsaroGuides)

@@ -34,9 +34,11 @@ device_id` 는 사망 컬럼, GB-6), 같은 사실을 두 곳에 두면 한쪽�
 import json
 from datetime import datetime
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
+from aot.databases.geo_marker_kinds import MARKER_TYPES  # noqa: F401
+from aot.utils.timekit import naive_utc, utc_now
 
 
 class GeoMarkerPosition(CRUDMixin, db.Model):
@@ -67,8 +69,7 @@ class GeoMarkerPosition(CRUDMixin, db.Model):
                 'lat={s.lat}, {s.valid_from}~{s.valid_to})>'.format(s=self))
 
 
-#: 좌표 이력을 남기는 도형 종류 — `device_membership._MARKER_TYPES` 와 같다.
-MARKER_TYPES = ('aot_device', 'device')
+# 좌표 이력을 남기는 도형 종류 — `MARKER_TYPES`(geo_marker_kinds)를 쓴다.
 
 _PENDING = '_aot_marker_position_pending'
 _listeners_registered = False
@@ -210,7 +211,7 @@ def _register_marker_position_listeners():
         if not pending:
             return
         conn = session.connection()
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         for shape_uuid, before in pending.items():
             _reconcile(conn, shape_uuid, before,
                        _current_state(conn, shape_uuid), now)
@@ -239,7 +240,7 @@ def _register_marker_position_listeners():
         if not before:
             return result
         conn = session.connection()
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         for shape_uuid, prev in before.items():
             after = None if state.is_delete else _current_state(conn, shape_uuid)
             if prev is None and after is None:

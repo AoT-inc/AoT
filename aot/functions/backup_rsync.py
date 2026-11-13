@@ -25,6 +25,8 @@ import os
 import socket
 import time
 
+from aot.utils.timekit import FARM, to_tz, utc_now
+
 from flask_babel import lazy_gettext
 
 from aot.config import (ALEMBIC_VERSION, AOT_VERSION, PATH_CAMERAS,
@@ -315,7 +317,7 @@ class CustomModule(AbstractFunction):
         filename = 'AoT_{mver}_Settings_{aver}_{host}_{dt}.zip'.format(
             mver=AOT_VERSION, aver=ALEMBIC_VERSION,
             host=socket.gethostname().replace(' ', ''),
-            dt=datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+            dt=to_tz(utc_now(), FARM).strftime("%Y-%m-%d_%H-%M-%S"))
         path_save = os.path.join(PATH_SETTINGS_BACKUP, filename)
         assure_path_exists(PATH_SETTINGS_BACKUP)
         if os.path.exists(path_save):
@@ -358,7 +360,7 @@ class CustomModule(AbstractFunction):
         filename = 'AoT_{mv}_Influxdb_{iv}_{host}_{dt}.zip'.format(
             mv=AOT_VERSION, iv=influxd_version,
             host=socket.gethostname().replace(' ', ''),
-            dt=datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+            dt=to_tz(utc_now(), FARM).strftime("%Y-%m-%d_%H-%M-%S"))
         path_save = os.path.join(PATH_MEASUREMENTS_BACKUP, filename)
         assure_path_exists(PATH_MEASUREMENTS_BACKUP)
 

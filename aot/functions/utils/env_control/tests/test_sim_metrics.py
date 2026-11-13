@@ -64,7 +64,7 @@ def test_accumulators_exclude_warmup():
 
 def test_leaf_vpd_kpi_uses_the_set_target_and_the_mass_temperature():
     """잎 VPD 지표 — 엽온은 시설 열질량 Tm, 목표는 사람이 정한 숫자(`vpd_set`, 옮기기 전)."""
-    from aot.functions.utils.env_control import psychro
+    from aot.utils import psychro
     n = 60
     tr = _trace([25.0] * n)
     tr['fine']['RH'] = [70.0] * n

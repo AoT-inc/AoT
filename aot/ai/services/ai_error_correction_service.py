@@ -6,7 +6,7 @@ from datetime import timedelta # Keep timedelta as it's used for calculations
 
 from aot.databases.models.ai_error_feedback import AIErrorFeedback
 from aot.databases.models import AIHistory, AIGlobalDecisions, AIDomainGlossary
-from aot.utils.time_utils import utc_now # Import utc_now for timezone-aware datetime
+from aot.utils.timekit import utc_now # Import utc_now for timezone-aware datetime
 # @ANCHOR: DECOUPLED_VIA_AI_CALLER_INTERFACE (IMP-011)
 # AIAgentService top-level import removed (was unused). Per SBS-002_V2.
 

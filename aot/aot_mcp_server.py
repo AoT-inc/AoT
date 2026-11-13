@@ -38,7 +38,6 @@ import json
 import logging
 import argparse
 import socket
-from logging.handlers import RotatingFileHandler
 
 # ── Path bootstrap ─────────────────────────────────────────────────────────────
 # Ensure /opt/AoT is on sys.path so AoT modules can be imported regardless
@@ -88,6 +87,23 @@ from aot.tools.tool_execution import (  # noqa: E402
 
 #: initialize 응답의 능력 선언 — 도구와 읽기 전용 자료(resources). subscribe·listChanged 는 없다.
 _CAPABILITIES = {"tools": {}, "resources": {}}
+
+
+def _session_head(content, name, arguments, session_key, role):
+    """MCP 세션 단위 응답 머리(설계 F-16 ②·④) — 세션 첫 응답의 핵심 규칙, 같은 세션의 규칙 위반 교정 한 줄.
+
+    전송층에서만 싣는다 — 인앱 AI 는 지침을 받으므로 지나지 않고, 실행층에 MCP 가정을 넣지 않는다. 규칙과 교정은
+    도메인 표면의 이름(weather 의 at·focus)을 쓰므로 옛 표면에서는 싣지 않는다. 실패해도 응답은 그대로 나간다."""
+    try:
+        from aot.tools.tool_execution import domain_surface_enabled
+        if not domain_surface_enabled():
+            return content
+        from aot.tools.domain import session_rules
+        return session_rules.annotate(content, name, arguments, session_key,
+                                      getattr(role, 'user_id', None))
+    except Exception:                                       # noqa: BLE001
+        logger.debug("[AoTMCP] session head skipped", exc_info=True)
+        return content
 
 
 class StdioMCPServer:
@@ -302,6 +318,7 @@ class StdioMCPServer:
                                         session_key=self._session_key,
                                         tool_profile=self._tool_profile,
                                         resource_links=_resource_links_ok(self._protocol))
+                content = _session_head(content, tool_name, arguments, self._session_key, self._role)
                 self._send({
                     "jsonrpc": "2.0",
                     "id": msg_id,
@@ -364,6 +381,50 @@ _SUPPORTED_PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18")
 
 #: resources/* 로 처리하는 메서드(읽기 전용 AI 카드 자료). 그 밖의 resources/* 는 "없는 메서드".
 _RESOURCE_METHODS = ("resources/list", "resources/read", "resources/templates/list")
+
+#: 2026-07-28 부터는 initialize 가 없다 — 요청마다 `_meta` 에 규격 버전을 싣고, 클라이언트는
+#: `server/discover` 로 먼저 묻는다(현대 방식). 이 버전들은 http 에서만 받는다. 구 방식(initialize)
+#: 연결은 위 _SUPPORTED_PROTOCOLS 로 그대로 협상한다 — 한 주소에서 두 방식을 같이 받는다(dual-era).
+#: discover 에 "없는 메서드" 로 답하면 2026-07-28 클라이언트가 이 서버를 못 쓰는 것으로 볼 수 있다
+#: (2026-11-08 claude.ai 음성 모드에서 이 서버만 도구 목록에서 빠짐 — 같은 계정의 SDK 2.x 서버는 보임).
+_MODERN_PROTOCOLS = ("2026-07-28",)
+_META_VERSION = "io.modelcontextprotocol/protocolVersion"
+_META_CLIENT = "io.modelcontextprotocol/clientInfo"
+_META_SERVER = "io.modelcontextprotocol/serverInfo"
+#: 현대 방식에서 결과를 캐시해도 되는 목록 결과 — ttlMs·cacheScope 가 필수다(0·private = 캐시 안 함).
+_CACHEABLE_METHODS = ("server/discover", "tools/list", "resources/list", "resources/templates/list")
+#: 현대 방식의 오류 코드 → HTTP 상태. 그 밖의 오류는 200 으로 둔다(구 방식과 같다).
+_MODERN_ERROR_STATUS = {-32022: 400, -32020: 400, -32601: 404}
+
+
+def _modern_version(msg, header):
+    """이 요청이 현대 방식(2026-07-28~)이면 요청한 버전, 아니면 None.
+
+    `_meta` 의 버전이 정본이고, 없으면 `MCP-Protocol-Version` 헤더가 현대 버전일 때만 현대로
+    본다(구 방식 클라이언트도 2025-06-18 부터 헤더를 싣는다). initialize 는 언제나 구 방식이다.
+    """
+    if not isinstance(msg, dict) or msg.get("method") == "initialize":
+        return None
+    params = msg.get("params")
+    meta = params.get("_meta") if isinstance(params, dict) else None
+    asked = meta.get(_META_VERSION) if isinstance(meta, dict) else None
+    if isinstance(asked, str) and asked.strip():
+        return asked.strip()[:32]
+    return header if header in _MODERN_PROTOCOLS else None
+
+
+def _client_name(msg):
+    """기록용 클라이언트 이름 — initialize 의 clientInfo 또는 현대 요청의 `_meta` clientInfo."""
+    params = msg.get("params") if isinstance(msg, dict) else None
+    if not isinstance(params, dict):
+        return None
+    info = params.get("clientInfo")
+    if not isinstance(info, dict):
+        meta = params.get("_meta")
+        info = meta.get(_META_CLIENT) if isinstance(meta, dict) else None
+    if not isinstance(info, dict):
+        return None
+    return "%s/%s" % (str(info.get("name") or "?")[:64], str(info.get("version") or "")[:40])
 
 
 def _resource_links_ok(version):
@@ -442,6 +503,22 @@ def _run_http_server(app, port=5700):
         return {"jsonrpc": "2.0", "id": msg_id,
                 "error": {"code": code, "message": message}}
 
+    def _log_request(messages, protocol, status, eras, error=None):
+        """POST /mcp 한 건을 한 줄로 남긴다 — 메서드·규격·클라이언트·상태. 토큰·인자는 남기지 않는다.
+
+        initialize·tools/call 만 남기던 때는 tools/list·401·server/discover 가 안 보여서,
+        클라이언트가 어디서 멈췄는지(2026-11-08 음성 모드) 가릴 수 없었다."""
+        dicts = [m for m in messages if isinstance(m, dict)]
+        methods = [str(m.get("method"))[:40] for m in dicts]
+        names = [str((m.get("params") or {}).get("name") or "")[:40] for m in dicts
+                 if m.get("method") == "tools/call" and isinstance(m.get("params"), dict)]
+        client = next((c for c in (_client_name(m) for m in dicts) if c), "-")
+        era = next((e for e in (eras or []) if e), None)
+        logger.info("[AoTMCP] http %s%s proto=%s%s client=%s -> %s%s",
+                    ",".join(methods) or "-", (" " + ",".join(names)) if names else "",
+                    protocol or "-", (" modern=" + era) if era else "", client, status,
+                    (" err=%s" % (error,)) if error else "")
+
     def _unauthorized(err):
         """401 — 중앙 인증을 켰으면 인가 서버를 찾는 길(RFC 9728)을 헤더로 알린다."""
         resp = jsonify(err)
@@ -465,7 +542,39 @@ def _run_http_server(app, port=5700):
         return jsonify(mcp_central.protected_resource_metadata(cfg))
 
     def _handle_rpc(msg, agent_id, role, session_key=None, blocked=None,
-                    protocol=None):
+                    protocol=None, modern=None):
+        """현대 방식(modern=요청 버전)이면 버전을 확인하고 server/discover 에 답한 뒤, 결과에
+        2026-07-28 필수 필드(resultType·목록의 ttlMs/cacheScope)를 채운다. 나머지는 구 방식과 같다."""
+        if not modern:
+            return _handle_rpc_core(msg, agent_id, role, session_key, blocked, protocol)
+        msg_id = msg.get("id") if isinstance(msg, dict) else None
+        if modern not in _MODERN_PROTOCOLS:
+            err = _rpc_error(msg_id, -32022, "Unsupported protocol version")
+            err["error"]["data"] = {"supported": list(_MODERN_PROTOCOLS), "requested": modern}
+            return err
+        method = msg.get("method", "")
+        if method == "server/discover":
+            profile = mcp_auth.tool_profile_of(role)
+            resp = {"jsonrpc": "2.0", "id": msg_id, "result": {
+                "supportedVersions": list(_MODERN_PROTOCOLS),
+                "capabilities": dict(_CAPABILITIES),
+                "instructions": (blocked + "\n\n" if blocked else "") + _server_instructions(profile, role),
+                "_meta": {_META_SERVER: {"name": SERVER_NAME, "version": SERVER_VERSION,
+                                         "host": SERVER_HOST}},
+            }}
+        else:
+            resp = _handle_rpc_core(msg, agent_id, role, session_key, blocked,
+                                    protocol or modern)
+        result = (resp or {}).get("result")
+        if isinstance(result, dict) and method != "ping":
+            result.setdefault("resultType", "complete")
+            if method in _CACHEABLE_METHODS:
+                result.setdefault("ttlMs", 0)
+                result.setdefault("cacheScope", "private")
+        return resp
+
+    def _handle_rpc_core(msg, agent_id, role, session_key=None, blocked=None,
+                         protocol=None):
         """One JSON-RPC message → response dict, or None for a notification.
 
         Routes to the same _get_all_tools/_execute_tool the stdio transport and
@@ -545,6 +654,7 @@ def _run_http_server(app, port=5700):
                                         session_key=session_key,
                                         tool_profile=profile,
                                         resource_links=_resource_links_ok(protocol))
+                content = _session_head(content, name, params.get("arguments") or {}, session_key, role)
                 return {"jsonrpc": "2.0", "id": msg_id,
                         "result": {"content": content}}
             except Exception as exc:
@@ -567,14 +677,18 @@ def _run_http_server(app, port=5700):
         with app.app_context():
             ok, agent_id, role, err = mcp_auth.authenticate_http(request.headers, declared)
         role = mcp_auth.narrow_profile(role, request.args.get("tools"))
+        payload = request.get_json(silent=True)
+        protocol = (request.headers.get("MCP-Protocol-Version") or "").strip()[:32] or None
+        messages = payload if isinstance(payload, list) else [payload]
         blocked = None
         if not ok:
             if (err or {}).get("error") != mcp_auth.ERROR_NOT_LINKED:
+                _log_request(messages, protocol, 401, [], (err or {}).get("error"))
                 return _unauthorized(err)
             blocked = err["message"]
 
-        payload = request.get_json(silent=True)
         if payload is None:
+            _log_request([], protocol, 400, [], "parse")
             return jsonify(_rpc_error(None, -32700, "Parse error")), 400
 
         # 우리가 initialize 에서 준 세션 번호를 클라이언트가 되돌려 보낸다.
@@ -582,19 +696,27 @@ def _run_http_server(app, port=5700):
         # 비정상이면 버린다 — 임의 길이의 헤더를 해시 입력으로 받지 않는다.
         session_key = _session_header(request.headers)
         batch = isinstance(payload, list)
-        messages = payload if batch else [payload]
-        protocol = (request.headers.get("MCP-Protocol-Version") or "").strip()[:32] or None
+        eras = [_modern_version(m, protocol) for m in messages]
         responses = [r for r in (_handle_rpc(m, agent_id, role, session_key, blocked,
-                                             protocol)
-                                 for m in messages)
+                                             protocol, modern)
+                                 for m, modern in zip(messages, eras))
                      if r is not None]
 
         # 알림만 담긴 요청에는 본문 없이 202 로 답한다(스펙 요구사항).
         if not responses:
+            _log_request(messages, protocol, 202, eras)
             return Response(status=202)
 
         body = responses if batch else responses[0]
         resp = jsonify(body)
+        # 현대 방식은 규격 오류를 HTTP 상태로도 알린다(버전 불일치 400, 없는 메서드 404).
+        # 구 방식은 지금처럼 200 + JSON-RPC 오류다 — 구 클라이언트의 동작을 바꾸지 않는다.
+        if not batch and eras[0]:
+            code = ((body or {}).get("error") or {}).get("code")
+            resp.status_code = _MODERN_ERROR_STATUS.get(code, 200)
+        _log_request(messages, protocol, resp.status_code, eras,
+                     [((r or {}).get("error") or {}).get("code") for r in responses
+                      if (r or {}).get("error")])
         # 세션 식별자. 인증은 요청마다 헤더로 하므로 서버가 세션 상태를 들고
         # 있지는 않지만, 클라이언트가 기대하는 값이라 initialize 응답에 실어준다.
         if any((m or {}).get("method") == "initialize" for m in messages):
@@ -767,7 +889,9 @@ def main():
     # 세 컨테이너가 같은 호스트 디렉터리를 공유하므로 여기 쓰면 /logview 가 읽는다.
     try:
         from aot.config import MCP_LOG_FILE
-        file_handler = RotatingFileHandler(
+        from aot.utils.logging_setup import SharedRotatingFileHandler
+        # mcp 컨테이너와 웹 워커가 띄우는 stdio MCP 가 같은 파일을 쓸 수 있다.
+        file_handler = SharedRotatingFileHandler(
             MCP_LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=3,
             encoding='utf-8')
         file_handler.setLevel(file_level)
@@ -830,7 +954,7 @@ def main():
         # AI·슬라이더의 예보 조회가 첫 호출에 계산(0.7~1.1초)을 기다리지 않게 대지 예보 계열을 미리 채운다.
         # 이 프로세스의 캐시는 웹 워커와 따로다. stdio 모드는 앱이 띄우는 부속 프로세스라 하지 않는다.
         try:
-            from aot.aot_flask.geo.forecast_series import start_prewarm
+            from aot.space.forecast_series import start_prewarm
             start_prewarm(app)
         except Exception as e:  # never block server startup
             logger.warning(f"[AoTMCP] forecast series prewarm scheduling failed: {e}")

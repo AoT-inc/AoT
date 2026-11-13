@@ -111,8 +111,8 @@ Displays two measurement values and timestamps.
 
 ### Modern Camera
 
-- Libraries: aot.camera
-- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [python-onvif-zeep>=0.2.12](https://pypi.org/project/python-onvif-zeep>=0.2.12)
+- Libraries: aot.camera_drivers
+- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [onvif-zeep>=0.2.12](https://pypi.org/project/onvif-zeep>=0.2.12)
 
 Advanced camera widget with auto-dependency installation and profile support.
 

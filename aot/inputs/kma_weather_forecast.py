@@ -49,7 +49,7 @@ from flask_babel import lazy_gettext
 from aot.inputs.base_input import AbstractInput
 from aot.config import KMA_PATH, PATH_JSON
 from aot.utils.constraints_pass import constraints_pass_positive_value
-from aot.utils.device_tz import get_device_tz
+from aot.utils.timekit import tz_of, wall_to_utc
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +253,7 @@ class InputModule(AbstractInput):
         # KMA interprets base_date/base_time in KST; use the device's
         # location-derived timezone so requests are correct on any host.
         self.current_base_date = datetime.datetime.now(
-            get_device_tz(input_dev)).strftime("%Y%m%d")
+            tz_of(input_dev)).strftime("%Y%m%d")
         super().__init__(input_dev, testing=testing, name=__name__)
  
         if not testing:
@@ -373,9 +373,8 @@ class InputModule(AbstractInput):
         """
         if not os.path.isdir(KMA_PATH):
             return
-        # Host-local time on purpose: compared against file mtimes from
-        # os.path.getmtime via fromtimestamp (both host-local, consistent).
-        now = datetime.datetime.now()
+        # 파일 mtime(epoch) 과 epoch 끼리 비교한다 — 시간대와 무관하다.
+        now = time.time()
         try:
             for filename in os.listdir(KMA_PATH):
                 # Skip announcement files
@@ -383,8 +382,7 @@ class InputModule(AbstractInput):
                     continue
                 file_path = os.path.join(KMA_PATH, filename)
                 if os.path.isfile(file_path):
-                    file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
-                    if (now - file_mtime).days > days:
+                    if (now - os.path.getmtime(file_path)) // 86400 > days:
                         os.remove(file_path)
                         self.logger.info(f"Removed old file: {file_path}")
         except Exception as e:
@@ -498,7 +496,7 @@ class InputModule(AbstractInput):
             # pub_dt is compared against KST forecast timestamps, so the
             # fallback must also be device-local (KST), not host time.
             pub_dt = datetime.datetime.now(
-                get_device_tz(self.input_dev)).replace(tzinfo=None)
+                tz_of(self.input_dev)).replace(tzinfo=None)
         return pub_dt
 
     def _calculate_target_and_store_times(self, pub_dt, now):
@@ -655,7 +653,7 @@ class InputModule(AbstractInput):
     def generate_forecast_json(self, forecast_hours=None):
         # 1. Determine `now` in the device's local timezone (KST), since all
         # forecast timestamps (fcstDate/fcstTime) from KMA are in KST.
-        device_tz = get_device_tz(self.input_dev)
+        device_tz = tz_of(self.input_dev)
         now = datetime.datetime.now(device_tz).replace(tzinfo=None)
         now_rounded = now.replace(minute=0, second=0, microsecond=0)
 
@@ -846,7 +844,7 @@ class InputModule(AbstractInput):
 
         # KMA interprets base_date/base_time in KST; compute `now` in the
         # device's location-derived timezone so requests are correct on any host.
-        device_tz = get_device_tz(self.input_dev)
+        device_tz = tz_of(self.input_dev)
         now = datetime.datetime.now(device_tz).replace(tzinfo=None)
         base_date, base_time = self.get_valid_base_time(now)
         self.logger.info(f"Trying base_date {base_date} and base_time {base_time}")
@@ -873,7 +871,7 @@ class InputModule(AbstractInput):
         target_timestamp = target_dt.strftime("%Y%m%d%H%M")
 
         # store_dt is naive device-local (KST); convert to tz-aware UTC for storage.
-        store_dt = device_tz.localize(store_dt).astimezone(datetime.timezone.utc)
+        store_dt = wall_to_utc(store_dt, device_tz)
 
         if not self._extract_and_set_measurements(all_items, target_dt, store_dt):
             return

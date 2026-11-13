@@ -189,15 +189,15 @@ class ActionModule(AbstractFunctionAction):
                 with session_scope(AOT_DB_PATH) as session:
                     fn = session.query(Function).filter(
                         Function.unique_id == target_id).first()
-                    if fn and fn.latitude is not None:
-                        gps_lat = fn.latitude
-                        gps_lng = fn.longitude
+                    # [L2] 위치는 배치(locate)에서 — 행 컬럼을 읽지 않는다.
+                    from aot.utils.timekit import resolve_coords
+                    if fn:
+                        gps_lat, gps_lng, _s = resolve_coords(fn)
                     if gps_lat is None:
                         cc = session.query(CustomController).filter(
                             CustomController.unique_id == target_id).first()
-                        if cc and cc.latitude is not None:
-                            gps_lat = cc.latitude
-                            gps_lng = cc.longitude
+                        if cc:
+                            gps_lat, gps_lng, _s = resolve_coords(cc)
             except Exception:
                 pass
 

@@ -1,4 +1,4 @@
-/* aot-dataviz.css — 공용 데이터 시각화 프리미티브 (밴드 바 · 불릿 · 기간 바)
+/* aot-dataviz.css — 공용 데이터 시각화 프리미티브 (밴드 바 · 불릿 · 기간 바 · 다이얼)
  *
  * 하나의 골격을 세 가지로 쓴다. 마크업이 같으므로 세 곳의 톤이 갈리지 않는다:
  *
@@ -61,10 +61,19 @@
  * 읽힌다 — 실제로 그렇게 만들었다가 되돌렸다(불릿만 진한 회색 막대 + 달성 시
  * 밝은 초록, 트랙 높이 10/14/12px).
  *
- * **원을 쓰지 않는다.** 원은 슬라이더 핸들의 모양이라 읽기만 하는 값에 쓰면
- * 만질 수 있는 것처럼 보인다 — 현재값을 채운 원으로, 목표를 속 빈 원으로
- * 그렸다가 둘 다 되돌렸다. 이 규칙은 지금도 유효하다(.aot-viz-step 의 조작
- * 손잡이가 실제로 원이다).
+ * **점(원)을 마커로 쓰지 않는다.** 원은 슬라이더 핸들의 모양이라, 바 위에서
+ * 읽기만 하는 값에 쓰면 만질 수 있는 것처럼 보인다 — 현재값을 채운 원으로,
+ * 목표를 속 빈 원으로 그렸다가 둘 다 되돌렸다. 이 규칙은 지금도 유효하다
+ * (.aot-viz-step 의 조작 손잡이가 실제로 원이다). 바의 마커는 세로 선이다.
+ *
+ * **다이얼(.aot-viz--dial)은 이 규칙의 예외가 아니라 같은 규칙의 다른 축이다**
+ * (2026-11-06 신설). 게이지는 값 하나 + 범위를 호(arc)로 답하는 읽기 전용
+ * 계기다 — AI가 조회한 값을 표·긴 글 대신 카드 한 장으로 얹으려고 들였다.
+ * 호를 허용하되 **점(핸들)은 여전히 쓰지 않는다**: 지금 값은 채운 꼭지가
+ * 아니라 **방사형 선 하나**이고(바의 세로 선 마커를 호 위로 옮긴 것), 색 셋
+ * (트랙·구간·마커)도 바와 똑같다. 그래서 호를 더해도 "만질 수 있는 값" 처럼
+ * 보이지 않고, 같은 카드에 바와 다이얼이 서도 톤이 갈리지 않는다. 바늘·드래그
+ * 꼭지를 달면 이 예외가 깨지므로 두지 않는다.
  *
  * 마커는 현재와 목표가 **같은 세로 선**이다. 근거는 "한 줄에 둘이 함께 서는
  * 경우가 없다" 였다(밴드 바·기간 바는 현재 하나, 불릿은 목표 하나).
@@ -593,6 +602,22 @@
 }
 .aot-viz.is-stale .aot-viz-spark { opacity: 0.5; }
 
+/* ── 공용 푸터(최소·최대 + 가운데 덧말) ───────────────────────────────────────
+   게이지(축 양 끝)와 스파크(관측 범위)가 **같은 자리·같은 크기**로 참고값을
+   적는다. 왼쪽=최소, 오른쪽=최대, 가운데=선택 덧말(기간 등). 작은 보조 글자. */
+.aot-viz-ends {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aot-space-2);
+  margin-top: var(--aot-space-1);
+  color: var(--aot-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75em;
+  line-height: 1.2;
+}
+.aot-viz-ends-mid { color: var(--aot-color-text-secondary); }
+
 /* ── 추세 띠 ─────────────────────────────────────────────────────────────
    기간에 걸친 값의 범위(min~max)·평균·목표를 한 줄로. 스파크와 같은 자리
    (높이)를 쓴다 — 나란히 놓여도 리듬이 갈리지 않는다.
@@ -623,7 +648,8 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.aot-viz-trend-band {
+.aot-viz-trend-band,
+.aot-viz-spark-band {
   /* 면(구간)이라 불릿의 채운 막대·밴드 바의 적정 구간과 같은 진하기를
      그대로 쓰면 밑에 있는 범위 띠·평균 선을 덮어 버린다 — 옅혀서 뒤에
      있는 것이 계속 보이게 한다(zone-c1 이 이미 쓰는 18% 와 같은 값). */
@@ -889,6 +915,72 @@
    ⚠ 라이트에서 흰 배경 위 1.97:1 이다(다크는 #e09509 로 6.7:1). 이 자리는
    색만으로 뜻을 전하지 않는다 — 벗어났다는 사실은 마커 위치가 이미 말하고
    숫자 자체도 그대로 보이므로, 색을 못 읽어도 잃는 정보가 없다. */
+/* ── 다이얼(게이지) ───────────────────────────────────────────────────────
+   밴드 바를 호(arc)로 돌린 것이다. 색 셋도 역할도 그대로다:
+     트랙 호   전체 범위  — 중립(--aot-viz-track-bg, = 바의 트랙과 같은 식)
+     적정 호   "여기다"    — 구간(--aot-viz-zone, band_3)
+     눈금선    "지금 값"   — 마커(--aot-viz-mark → brand_secondary). 선이다, 점 아님.
+   굵기는 viewBox 단위라 카드 크기에 비례해 호가 두꺼워진다(바의 고정 px 와
+   다른 이유: 바는 줄마다 리듬을 맞춰야 하지만, 다이얼은 한 장이 독립이다). */
+.aot-viz--dial { text-align: center; }
+.aot-viz-dial-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 160px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+}
+.aot-viz-dial {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.aot-viz-dial-track,
+.aot-viz-dial-ok {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+.aot-viz-dial-track { stroke: var(--aot-viz-track-bg); }
+.aot-viz-dial-ok    { stroke: var(--aot-viz-zone); }
+/* 지금 값 — 방사형 선 하나. 점(핸들)을 쓰지 않는 규칙은 호에서도 같다. */
+.aot-viz-dial-mark {
+  stroke: var(--aot-viz-mark, var(--aot-color-brand-secondary));
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+/* 가운데 값 — 게이지의 요점. 자기 크기를 '주장' 하지 않도록 em(상대)로 둔다
+   (파일 머리의 글꼴 크기 주석과 같은 이유). */
+.aot-viz-dial-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.aot-viz-dial-value {
+  font-weight: 700;
+  font-size: 1.2em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--aot-color-text-primary);
+}
+.aot-viz-dial-value small {
+  font-size: 0.7em;
+  font-weight: 600;
+  color: var(--aot-color-text-secondary);
+}
+/* 양 끝(최소·최대)은 스파크와 같은 공용 푸터 .aot-viz-ends 를 쓴다(위 스파크 절). */
+/* 제목(라벨)은 공용 .aot-viz-head 를 쓴다 — 밴드·불릿·스파크와 같은 자리(위 왼쪽)라
+   한 카드에 섞여도 어긋나지 않는다. 다이얼 전용 바닥 라벨은 두지 않는다. */
+/* 상태 — 바와 같은 어휘(값 밖=경고색, 값 없음=보조색, 오래됨=흐리게). */
+.aot-viz--dial.is-out   .aot-viz-dial-value { color: var(--aot-color-warning); }
+.aot-viz--dial.is-empty .aot-viz-dial-value { color: var(--aot-color-text-secondary); }
+.aot-viz--dial.is-empty .aot-viz-dial-track { opacity: 0.5; }
+.aot-viz.is-stale .aot-viz-dial { opacity: 0.5; }
+
 .aot-viz.is-out .aot-viz-value { color: var(--aot-color-warning); }
 
 /* 값이 오래됨 — 앱 전역의 stale 표기와 같은 어휘를 쓴다(숨기지 않고 흐리게). */

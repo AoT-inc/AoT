@@ -143,13 +143,25 @@ The following tool buttons appear in a corner of the map:
 | :--- | :--- |
 | +/− | Zoom in / out |
 | Fullscreen | Display the widget in fullscreen |
-| Search | Search an address and fly to it |
-| My Location | Move to your browser's GPS position |
+| Search | Opens the **Location sheet** with the address box focused (see [Location Sheet](#location-sheet) below). |
+| My Location | Opens the **Location sheet** and measures your position with the browser's GPS. |
 | Reset | Return to the originally saved position and zoom |
 | Site List | Pick a registered site or zone and jump straight to it |
 | Copyright (ⓘ) | Shows the attribution for the currently displayed base/overlay maps. Opens automatically when the map first loads or when you switch the base/overlay, and collapses when you interact with the map (drag, zoom, touch). |
 
 Separately, the widget's title bar has **Lock Map** (locks panning/zooming) and **Hide Controls** (hides the tool buttons) icons. These are toggled directly from the title bar, not from the settings form.
+
+### Location Sheet { #location-sheet }
+
+The **Search** and **My Location** buttons open one **Location sheet** instead of a separate search box over the map. The sheet is a docked panel that does not cover the map, and brings address search, map center, mark-on-map, favorites and recent spots into one place. Closing the sheet also clears the marker it put on the map.
+
+- **Search Address**: the top card. Type an address and search (or press Enter) to get a result list; choosing a result flies the map there and makes it the "chosen spot". The star at the right of a result row adds it straight to favorites. Pasting a latitude/longitude pair skips the search and gives that spot as the result.
+- **Chosen spot**: you can also set the spot with **My location** (device GPS), **Map center** (the center of the widget's visible area), or **Mark on the map** (the next place you click on the map, as the prompt says). Below the chosen spot you see its address, plus the zone it belongs to and nearby devices. If the GPS accuracy is poor a **Low accuracy** warning appears — marking the spot on the map is more reliable then.
+- **Buttons**: all are text-free **icon pills**. Hover for the name in a tooltip; on touch screens, long-press. The chosen-spot card has **Add to favorites** and **Add note here** (when the notes feature is on).
+- **Favorites**: choose one to fly there. **Edit** at the right unfolds rename, move up/down, **Only me / Share with all** (only the person who saved it can change this) and **Remove**. Saving and editing favorites requires the settings-edit permission.
+- **Recent**: remembers up to 5 spots chosen through search, in this browser only (spots that are already favorites are left out).
+- When screen link (letting the AI see your screen) is allowed, the chosen spot carries an **AI can see this location** badge.
+
 
 ---
 
@@ -255,7 +267,6 @@ Toggles, by type, whether the polygons you drew in the design tool are shown as 
 
 | Option | Description |
 | :--- | :--- |
-| Enable 3D Terrain | Turns on elevation-based 3D terrain (hillshade) rendering. The row appears only when the map engine shipped with your installation can render terrain; the version shipped today cannot, so it is hidden here and a value saved earlier has no effect. |
 | Facility Render Mode | How 3D facility (building) models are drawn: **Default (transparent)** / **Solid (opaque)** / **Wireframe** / **Performance (mobile)** (minimizes load). |
 | Vector Style URL | A custom MapLibre style JSON, if you need one. Leave empty to use the GIS input setting. |
 
@@ -332,7 +343,7 @@ The digital twin computes the state of things to come from your sensor readings 
 ### Turning it on, and where settings live { #twin-enable }
 
 1. Turn the feature itself on under **Settings → General → Digital Twin (Experimental)** (off by default). A confirmation about the experimental status appears. Only with this switch on does the **Twin** tab appear in the map windows.
-2. The twin runs as a **separate service** (`aot_twin`) from the main program, so it has to be installed and running on its own. On a low-spec device the service stops itself and the switch is locked.
+2. The twin runs as a **separate service** (`aot_twin`) from the main program. The service is part of the standard installation and waits idle; the switch is what starts it. Under the switch, a status shows Locked, Off, Starting, Running or Not responding — after you turn it on, Starting lasts up to a minute and the page updates by itself. On a small device (Raspberry Pi Zero/1/2/3, or less than 3.5 GB of memory) the service stops itself and the switch is locked.
 3. Overall settings — service status, run times, turning on every site at once — are on the screen opened with **Open** next to **Digital Twin Settings** in **Settings → General**.
 4. Per-site, per-plot, and per-facility details are set in the **Twin** tab of the map window. **The source of truth for these settings is the `twin_config` table**; the twin service reads it to run. After you save, the service picks the change up within an hour, or at its next run.
 

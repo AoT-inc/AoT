@@ -21,11 +21,12 @@ from aot.databases.models import (PID, Actions, Camera, Conditional,
                                      User, GeoMap, GeoShape)
 from aot.services.tab_service import TabService
 from aot.aot_flask.extensions import db
+from aot.aot_flask.utils.utils_trace import trace_modal
+from aot.aot_flask.utils.utils_lazy import Lazy, val
 from aot.aot_flask.forms import forms_action, forms_input
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import utils_action, utils_general, utils_input
-from aot.aot_flask.geo.device_membership import map_for_device
-from aot.aot_flask.utils.utils_map_config import ensure_map_config
+from aot.space.device_membership import map_for_device
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.utils.actions import parse_action_information
 from aot.utils.device_blueprint import member_device_map, parent_device_names
@@ -239,6 +240,7 @@ def save_input_layout():
 
 @blueprint.route('/input', methods=('GET', 'POST'))
 @flask_login.login_required
+@trace_modal('input')
 def page_input():
     """Display Data page options."""
     input_type = request.args.get('input_type', None)
@@ -292,16 +294,30 @@ def page_input():
             each_action = Actions.query.filter(
                 Actions.unique_id == action_id).first()
 
-    action = Actions.query.all()
-    function = CustomController.query.all()
-    input_channel = InputChannel.query.all()
-    method = Method.query.all()
-    measurement = Measurement.query.all()
+    # 설정 모달 조각(options)은 이 장치 하나와 템플릿이 실제로 쓰는 값만 만든다.
+    # 나머지 전체 목록·선택지는 템플릿이 처음 쓸 때 계산한다(Lazy).
+    is_opt = input_type == 'options'
+
+    def defer(fn):
+        return Lazy(fn) if is_opt else fn()
+
+    if is_opt:
+        # 템플릿은 `each_action.function_id == each_input.unique_id` 만 쓴다.
+        action = Actions.query.filter(
+            Actions.function_id == each_input.unique_id).all()
+        input_channel = InputChannel.query.filter(
+            InputChannel.input_id == each_input.unique_id).all()
+    else:
+        action = Actions.query.all()
+        input_channel = InputChannel.query.all()
+    function = defer(lambda: CustomController.query.all())
+    method = defer(lambda: Method.query.all())
+    measurement = defer(lambda: Measurement.query.all())
     misc = Misc.query.first()
-    output = Output.query.all()
-    output_channel = OutputChannel.query.all()
-    pid = PID.query.all()
-    user = User.query.all()
+    output = defer(lambda: Output.query.all())
+    output_channel = defer(lambda: OutputChannel.query.all())
+    pid = defer(lambda: PID.query.all())
+    user = defer(lambda: User.query.all())
     unit = Unit.query.all()
 
     display_order_input = csv_to_list_of_str(DisplayOrder.query.first().inputs)
@@ -321,7 +337,8 @@ def page_input():
 
     # Generate custom options for ALL inputs (not just filtered by tab)
     # This is needed because templates may reference inputs from other tabs
-    all_inputs = Input.query.all()
+    # options 는 템플릿이 이 장치의 값만 인덱싱하므로 이 장치만 파싱한다.
+    all_inputs = [each_input] if is_opt else Input.query.all()
     custom_options_values_inputs = parse_custom_option_values(
         all_inputs, dict_controller=dict_inputs)
     custom_options_values_input_channels = parse_custom_option_values_input_channels_json(
@@ -358,16 +375,25 @@ def page_input():
     # measurements by device here (one query for every card) instead of each
     # card in input_entry.html running its own DeviceMeasurements query
     # (N+1 — was adding a per-card DB round trip to the page's TTFB).
-    dict_measure_units = {}
-    dict_input_measurements_enabled = {}
-    for each_measurement in DeviceMeasurements.query.all():
-        conversion = Conversion.query.filter(
-            Conversion.unique_id == each_measurement.conversion_id).first()
-        _, m_unit, _ = return_measurement_info(each_measurement, conversion)
-        dict_measure_units[each_measurement.unique_id] = m_unit
-        if each_measurement.is_enabled:
-            dict_input_measurements_enabled.setdefault(
-                each_measurement.device_id, []).append(each_measurement)
+    def _measure_units_and_enabled():
+        units, enabled = {}, {}
+        for each_measurement in DeviceMeasurements.query.all():
+            conversion = Conversion.query.filter(
+                Conversion.unique_id == each_measurement.conversion_id).first()
+            _, m_unit, _ = return_measurement_info(each_measurement, conversion)
+            units[each_measurement.unique_id] = m_unit
+            if each_measurement.is_enabled:
+                enabled.setdefault(
+                    each_measurement.device_id, []).append(each_measurement)
+        return units, enabled
+
+    if is_opt:
+        # options 템플릿은 두 값을 쓰지 않는다(측정 503개 × 변환 조회). 쓰일 때만 한 번 계산.
+        _mu = Lazy(_measure_units_and_enabled)
+        dict_measure_units = Lazy(lambda: _mu.value[0])
+        dict_input_measurements_enabled = Lazy(lambda: _mu.value[1])
+    else:
+        dict_measure_units, dict_input_measurements_enabled = _measure_units_and_enabled()
 
     # Generate Action dropdown for use with Inputs
     choices_actions = []
@@ -376,42 +402,49 @@ def page_input():
         choices_actions.append((name, dict_actions[name]['name']))
 
     # Generate choices for dropdowns (Cross-tab enabled)
-    all_inputs = Input.query.all()
-    all_outputs = Output.query.all()
-    all_functions = CustomController.query.all()
+    all_inputs = defer(lambda: Input.query.all())
+    all_outputs = defer(lambda: Output.query.all())
+    all_functions = defer(lambda: CustomController.query.all())
     # select_device 커스텀 옵션이 있는 액션마다 gridstack_action_base.html /
     # Custom_Options.html 이 반복 실행하던 6테이블 전체스캔(N+1)을 없애기 위해
     # 여기서 한 번만 조회해 컨텍스트로 넘긴다.
-    all_pids = PID.query.all()
-    all_triggers = Trigger.query.all()
-    all_cameras = Camera.query.all()
+    all_pids = defer(lambda: PID.query.all())
+    all_triggers = defer(lambda: Trigger.query.all())
+    all_cameras = defer(lambda: Camera.query.all())
 
-    choices_function = utils_general.choices_functions(
-        all_functions, dict_units, dict_measurements)
-    choices_input = utils_general.choices_inputs(
-        all_inputs, dict_units, dict_measurements)
-    choices_method = utils_general.choices_methods(method)
-    choices_output = utils_general.choices_outputs(
-        all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements)
-    choices_output_channels = utils_general.choices_outputs_channels(
-        output, output_channel, dict_outputs)
-    choices_output_channels_measurements = utils_general.choices_outputs_channels_measurements(
-        output, OutputChannel, dict_outputs, dict_units, dict_measurements)
-    choices_pid = utils_general.choices_pids(
-        pid, dict_units, dict_measurements)
-    choices_pid_devices = utils_general.choices_pids_devices(pid)
+    choices_function = defer(lambda: utils_general.choices_functions(
+        val(all_functions), dict_units, dict_measurements))
+    choices_input = defer(lambda: utils_general.choices_inputs(
+        val(all_inputs), dict_units, dict_measurements))
+    choices_method = defer(lambda: utils_general.choices_methods(val(method)))
+    choices_output = defer(lambda: utils_general.choices_outputs(
+        val(all_outputs), OutputChannel, dict_outputs, dict_units, dict_measurements))
+    choices_output_channels = defer(lambda: utils_general.choices_outputs_channels(
+        val(output), val(output_channel), dict_outputs))
+    choices_output_channels_measurements = defer(
+        lambda: utils_general.choices_outputs_channels_measurements(
+            val(output), OutputChannel, dict_outputs, dict_units, dict_measurements))
+    choices_pid = defer(lambda: utils_general.choices_pids(
+        val(pid), dict_units, dict_measurements))
+    choices_pid_devices = defer(lambda: utils_general.choices_pids_devices(val(pid)))
     choices_unit = utils_general.choices_units(unit)
-    choices_measurement = utils_general.choices_measurements(measurement)
-    choices_measurements_units = utils_general.choices_measurements_units(measurement, unit)
+    choices_measurement = defer(
+        lambda: utils_general.choices_measurements(val(measurement)))
+    choices_measurements_units = defer(
+        lambda: utils_general.choices_measurements_units(val(measurement), unit))
 
     # Create dict of Input names for ALL inputs (not just filtered by tab)
     # This is needed because templates may reference inputs from other tabs
-    names_input = {}
-    for each_element in all_inputs:
-        names_input[each_element.unique_id] = '[{id:02d}] ({uid}) {name}'.format(
-            id=each_element.id,
-            uid=each_element.unique_id.split('-')[0],
-            name=each_element.name)
+    def _names_input():
+        names = {}
+        for each_element in val(all_inputs):
+            names[each_element.unique_id] = '[{id:02d}] ({uid}) {name}'.format(
+                id=each_element.id,
+                uid=each_element.unique_id.split('-')[0],
+                name=each_element.name)
+        return names
+
+    names_input = defer(_names_input)
 
     # Create list of file names from the input_options directory
     # Used in generating the correct options for each input controller
@@ -610,10 +643,9 @@ def page_input():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
-            # 사망 컬럼이다(device_membership 이 정본).
-            map_config_id = map_for_device(each_input.unique_id,
-                                            prefer=each_input.map_config_id) or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — 장치 행의
+            # map_config_id 컬럼은 읽지 않는다(device_membership 이 정본).
+            map_config_id = map_for_device(each_input.unique_id) or ''
             if map_config_id:
                 map_overlays = _load_map_overlays(map_config_id)
 

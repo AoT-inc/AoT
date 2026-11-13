@@ -329,6 +329,27 @@ def get_pwm_invert_signal(output_uuid, channel=0):
     return bool(get_output_channel_custom_option(output_uuid, channel, 'pwm_invert_signal', False))
 
 
+def pwm_logical_state(state, invert):
+    """데몬이 돌려준 PWM 실시간 상태를 **요청 듀티 기준**으로 되돌린다.
+
+    반전 채널은 물리 듀티가 100 - 요청값이다(`get_pwm_invert_signal` 참조).
+    숫자 상태는 100 - |x| 로 뒤집는다. 문제는 `base_output.output_state` 가
+    물리 듀티 0 을 숫자가 아니라 문자열 ``'off'`` 로 내려 주는 점이다 — 반전
+    채널에서 이것은 "꺼짐" 이 아니라 **요청 100%** 다. 숫자만 뒤집으면 100% 로
+    켜 둔 채널이 "0%" 로 보이고 가동 경과도 0 이 된다(2026-11-11 점검 R5).
+    ``'pending'``·``'fault'``·None 은 듀티가 아니므로 그대로 둔다.
+    """
+    if not invert:
+        return state
+    if isinstance(state, bool):
+        return state
+    if isinstance(state, (int, float)):
+        return 100.0 - abs(state)
+    if state == 'off':
+        return 100.0
+    return state
+
+
 def output_types():
     return {
         'on_off': outputs_on_off(),

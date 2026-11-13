@@ -14,6 +14,8 @@ Usage:
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+from aot.databases.geo_marker_kinds import MARKER_TYPE
+from aot.utils.timekit import utc_now
 
 
 CURRENT_VERSION = 2
@@ -85,7 +87,7 @@ class MapSchemaMigration:
 
             # Rule 3: Normalize 'device' → 'aot_device'
             if aot_type == 'device':
-                props['aot_type'] = 'aot_device'
+                props['aot_type'] = MARKER_TYPE
                 if props.get('device_id') and not props.get('unique_id'):
                     props['unique_id'] = props['device_id']
                 renamed_device += 1
@@ -129,7 +131,7 @@ class MapSchemaMigration:
 
         metadata = dict(json_data.get('metadata') or {})
         metadata['migrated_from_version'] = 1
-        metadata['migrated_at'] = datetime.now(timezone.utc).isoformat()
+        metadata['migrated_at'] = utc_now().isoformat()
 
         converted = dict(json_data)
         converted['features'] = result

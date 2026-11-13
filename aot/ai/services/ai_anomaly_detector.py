@@ -157,13 +157,13 @@ class AIAnomalyDetector:
             
             current_metrics = current_data.get('metrics', {})
             
-            from aot.utils.time_utils import get_local_now, to_local
-            current_time = get_local_now()
+            from aot.utils.timekit import to_tz, FARM, utc_now
+            current_time = to_tz(utc_now(), FARM)
             # previous_summary.timestamp is stored naive-UTC (SQLite column) — must
             # go through the SAME local conversion as current_time, or the two
             # "Timestamp" fields in this prompt look like the same clock while
             # actually being ~9h apart (KST), misleading "unusual timing" analysis.
-            previous_time = to_local(previous_summary.timestamp)
+            previous_time = to_tz(previous_summary.timestamp, FARM)
 
             prompt = f"""
 Analyze the following system metrics for anomalies or concerning patterns:

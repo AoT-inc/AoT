@@ -12,11 +12,11 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/api/geo/init_design` | 가장 최근에 갱신된 지도를 불러옵니다 — 사용자별이 아니라 모두가 같은 지도로 들어옵니다. 지도가 하나도 없으면 설정된 기본 위치·줌으로 `Design Map 1`을 만듭니다. 전체 상태를 반환합니다. |
-| GET | `/api/geo/designs` | 모든 지도를 `{unique_id, name, latitude, longitude, zoom}` 형태로 나열합니다. 중심좌표와 줌은 각 지도에 저장된 카메라에서 가져오며, 저장된 카메라가 아예 없는 지도만 `[37.5665, 126.9780]` / 줌 13으로 떨어집니다. |
+| GET | `/api/geo/init_design` | 가장 최근에 갱신된 지도를 불러옵니다 — 사용자별이 아니라 모두가 같은 지도로 들어옵니다. 지도가 하나도 없으면 설정된 기본 위치·줌으로 `Design Map 1`을 만들고, 기본값이 설정돼 있지 않으면 세계 전도(`[0, 0]`, 줌 2)로 만듭니다. 전체 상태를 반환합니다. |
+| GET | `/api/geo/designs` | 모든 지도를 `{unique_id, name, latitude, longitude, zoom}` 형태로 나열합니다. 중심좌표와 줌은 각 지도에 저장된 카메라에서 가져오며, 저장된 카메라가 아예 없는 지도만 세계 전도 `[0, 0]` / 줌 2로 떨어집니다. |
 | GET | `/api/geo/designs/list` | 지도 선택기가 쓰는, 위와 거의 동일한 두 번째 목록입니다. 응답 형태도 값도 위와 같습니다. |
 | GET | `/api/geo/designs/<map_uuid>` | 지도 하나의 전체 상태: `{ok, uuid, name, state}`. 없으면 404. |
-| POST | `/api/geo/designs` | 지도를 생성(`map_uuid` 생략)하거나 이름·상태를 수정합니다. 본문: `{map_uuid?, name, state}` — `state`는 기존 상태에 **병합**되며 통째로 교체되지 않습니다. 이미 없어진 `map_uuid`를 보내면 오류가 아니라 그 id로 새로 만듭니다. 생성 시에는 본문의 `center`/`zoom`을 쓰지 않고, 설정된 기본 시작 위치에서 새 지도를 엽니다. 응답: `{ok, uuid, name}`. |
+| POST | `/api/geo/designs` | 지도를 생성(`map_uuid` 생략)하거나 이름·상태를 수정합니다. 본문: `{map_uuid?, name, state}` — `state`는 기존 상태에 **병합**되며 통째로 교체되지 않습니다. 이미 없어진 `map_uuid`를 보내면 오류가 아니라 그 id로 새로 만듭니다. 생성 시에는 본문의 `center`/`zoom`을 쓰지 않고, 설정된 기본 시작 위치(설정이 없으면 세계 전도)에서 새 지도를 엽니다. 응답: `{ok, uuid, name}`. |
 | DELETE | `/api/geo/designs/<map_uuid>` | 지도와 그 위의 모든 것(시설 설정값 → 시설 → 도형 → 지도 행 순)을 삭제합니다. 이 지도 밖에서 아직 참조하는 대상이 있으면 `409 {blocked: true}`를 반환합니다. |
 | POST | `/api/geo/maps/<map_uuid>/restore-original` | 마이그레이션 이전 스냅샷(`original_data`)을 갖고 있는 지도 위 도형을 전부 그 스냅샷 상태로 되돌립니다. 응답: `{ok, map_uuid, restored, skipped}`. 마이그레이션 추적 컬럼이 아직 없으면(`alembic upgrade head` 필요) 400. |
 
@@ -29,7 +29,7 @@
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/geo/overlays/list?map_uuid=&target_type=&parent_id=&device_id=` | 아래와 같은, 지도 하나의 `FeatureCollection` 입니다 — 다만 여기서는 걸러내는 인자 이름이 `type` 이 아니라 `target_type` 입니다. `map_uuid` 가 없으면 빈 컬렉션이 옵니다. |
-| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 한 지도의 피처를 GeoJSON `FeatureCollection`으로 반환합니다. `type`은 예전 명칭도 함께 매칭합니다(`equipment` ⇒ `equipment_collection`, `aot_device` ⇒ `device`). 각 피처에는 서버가 `db_id`, `shape_uuid`(도형 자신의 식별자 — 클라이언트가 만든 `node_id`와는 다른 값), 해석된 `device_id`/`device_type`, `parent_id`, (`type=facility`인 경우) 3D 메타데이터를 채워 넣습니다. 묶여 저장된 설비는 나갈 때 다시 개별 피처로 풀립니다. `type`을 지정하지 않거나 `site`·`zone`으로 조회하면 응답에 `collapsed_zones`도 함께 담깁니다 — 반환된 구역 중 자기 부지와 겹쳐(윤곽이 거의 같고, 이름도 자기 것이 없고, 담긴 데이터도 없어) 별도 레이어로 그리는 대신 부지에 접어 넣어야 할 구역의 uuid 목록입니다. |
+| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 한 지도의 피처를 GeoJSON `FeatureCollection`으로 반환합니다. `type`은 예전 명칭도 함께 매칭합니다(`equipment` ⇒ `equipment_collection`, `aot_device` ⇒ `device`). 각 피처에는 서버가 `db_id`, `shape_uuid`(도형 자신의 식별자 — 클라이언트가 만든 `node_id`와는 다른 값), 해석된 `device_id`/`device_type`, `parent_id`, (`type=facility`인 경우) 3D 메타데이터를 채워 넣습니다. 묶여 저장된 설비는 나갈 때 다시 개별 피처로 풀립니다. `type`을 지정하지 않거나 `site`·`zone`으로 조회하면 응답에 `collapsed_zones`도 함께 담깁니다 — 반환된 구역 중 자기 부지와 겹쳐(윤곽이 거의 같고, 이름도 자기 것이 없고, 담긴 데이터도 없어) 별도 레이어로 그리는 대신 부지에 접어 넣어야 할 구역의 uuid 목록입니다. 응답에는 `ETag`가 붙으며, 이를 `If-None-Match`로 되돌려 보내면 지도가 바뀌지 않은 경우 본문 없는 `304 Not Modified`로 답하므로 큰 지도를 거듭 읽어도 재검증 비용만 듭니다. |
 | POST | `/api/geo/overlays` | 한 `map_uuid` + `type`에 대한 일괄 저장/교체입니다. 이 페이지에서 가장 까다로운 엔드포인트라 아래 **상세**에 따로 설명했습니다. |
 | POST | `/api/geo/overlays/delta` | 전체 피처 대신 바뀐 것만 보냅니다 — 큰 지도에 유리합니다. 본문: `{map_uuid, upserts: [...], deletes: [node_id_또는_db_id, ...]}`. 설비 upsert 는 묶음 행에 합쳐지고, 임시 스프링클러 점 마커는 이 경로에서도 걸러집니다. 이 경로도 `edit_settings`와 지도 스코프를 요구합니다. |
 | GET | `/api/geo/sites` | `site` 타입 도형 전체를 GeoJSON으로. `?map_uuid=` 선택적. |
@@ -46,6 +46,7 @@
 - 같은 설비 묶음 안에서, 스프링클러 커버리지 도형에는 한 겹의 안전장치가 더 있습니다 — 들어온 본문에 커버리지가 하나도 없는데 기존 묶음에는 있으면, `deletes`에 명시적으로 이름이 오르지 않은 커버리지 도형은 지워지는 대신 그대로 넘어갑니다.
 - 임시로 뜨는 스프링클러 점 마커는 저장하지 않고 걸러냅니다 — 그런 마커만 담긴 본문은 빈 본문으로 취급됩니다.
 - 기하 규칙은 무엇이든 쓰기 전에 검사하며, 잘못된 피처가 하나라도 있으면 저장 전체가 기하 오류로 중단됩니다(설비는 이 검사에서 제외).
+- 시설에 **평면 그리기**로 만든 3D 구조 모형이 저장돼 있으면, 그 시설의 `facility` 피처는 기존에 저장된 기하를 그대로 유지합니다 — 이름 등 다른 속성은 이 저장에서 바뀔 수 있지만 여기서 옮기거나 모양을 바꿀 수는 없습니다. 그 도형은 평면과 `geometry_3d`에서 유도되므로, 이 엔드포인트로 옮기면 3D 모형과 장치 배치는 옛 자리를 그대로 가리키게 되고 다음 시설 저장이 도형을 되돌립니다. 이런 시설을 옮기려면 시설 편집 화면을 씁니다.
 - `aot_type`, `device_id`, `channel_id`는 저장되는 JSON에서 제거됩니다 — 조회 시 파생되는 값이라 그대로 왕복 저장되리라 기대하면 안 됩니다.
 - 응답: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}` (설비 일괄 저장 경로는 `stats.mode: 'bulk_bundle'` 형태이며, 위 스프링클러 커버리지 안전장치가 작동했을 때는 `kept_coverage`도 함께 돌려줍니다).
 
@@ -56,6 +57,14 @@
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | POST | `/api/geo/search` | 검색 제공자로 설정된 GIS 입력 모듈을 통한 지오코딩/주소 검색. 본문: `{query, type: 'address' (기본값), layer_id?}`. `layer_id`로 특정 `GeoLayer`를 고를 수 있고, 없으면 지도의 `search_provider` 설정을 쓰다가 최종적으로 `gis_osm`으로 폴백합니다. 응답: `{ok, results}` (형태는 제공자마다 다름). |
+| GET | `/api/geo/address?lat=&lng=` | 같은 GIS 입력 조회 문을 거친 역지오코딩(좌표 → 주소). 응답: `{ok: true, address, type, provider}`, 답할 공급자가 없으면 `{ok: false, code, message}`. 외부 지오코더의 첫 호출이 몇 초 걸릴 수 있어 성공한 답은 같은 자리(약 1m)마다 한 시간 담아 둡니다. 위치 시트가 고른 자리의 주소를 보일 때 부릅니다. |
+| GET | `/api/geo/favorites` | 위치 시트의 즐겨찾기 중 호출한 사람에게 보이는 것 — 공유된 것과 본인이 담은 것. 응답: `{ok, favorites}`. |
+| POST | `/api/geo/favorites` | `edit_settings` 필요. 본문: `{name, lat, lng, address, shared}` (`shared` 기본값 true). 같은 자리(약 1m)는 두 번 담기지 않습니다. 응답: `{ok, created, favorite}`. |
+| PATCH | `/api/geo/favorites/<id>` | `edit_settings` 필요. 본문: `{name?, shared?}`. `shared` 는 담은 사람만 바꿀 수 있습니다. |
+| DELETE | `/api/geo/favorites/<id>` | `edit_settings` 필요. 즐겨찾기를 뺍니다. |
+| POST | `/api/geo/favorites/<id>/move` | `edit_settings` 필요. 본문: `{direction}` (`up` or `down`). 목록에서 한 칸 옮기고 새 `favorites` 를 돌려줍니다. |
+
+위치 시트(지도 위젯·디자인 화면)는 결과 목록에 `/api/geo/search`, 주소에 `/api/geo/address`, 즐겨찾기에 `/api/geo/favorites` 를 씁니다. 옛 지도 검색창 전용 엔드포인트는 따로 없습니다. 검색과 역조회는 하나의 조회 문을 거치므로, 해당 능력을 선언한 GIS 입력은 이 경로를 고치지 않고도 쓰입니다.
 
 ---
 
@@ -87,7 +96,7 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST | `/api/geo/device/location` | 장치의 지도 위 위치를 설정/이동합니다. 다른 지도 편집 쓰기와 마찬가지로 `edit_settings`가 필요합니다. 본문: `{unique_id, type, lat, lng, map_uuid?, channel_id?}` — `type`은 `input\|output\|pid\|trigger\|conditional\|device\|function\|custom\|generic_function` 중 하나이고, `channel_id` 대신 `unique_id`에 `::<channel>` 접미사를 붙여도 됩니다. 장치 자체의 좌표는 채널 `0`일 때만 기록되며, 다른 채널로 부르면 그 채널의 마커만 움직이고 장치 좌표는 건드리지 않습니다. `map_uuid`가 있으면 해당 지도에 마커도 배치/갱신하고 소속 구역을 파생시킵니다. 성공 시 데몬에 해당 장치의 설정 재적용을 최선노력으로 요청합니다(위치가 바뀌며 타임존이 달라졌을 때 즉시 반영되도록). 그런 장치가 없으면 `404`, 장치나 `map_uuid`가 가리키는 지도가 호출자에게 부여된 범위 밖이면 `403`. 응답: `{ok, message, overlay_id}`. |
+| POST | `/api/geo/device/location` | 장치의 마커를 지도 위에 배치·이동·해제합니다 — 장치 위치를 쓰는 단일 게이트웨이이며, 장치 자체의 좌표 컬럼에는 절대 쓰지 않습니다. 그래서 장치의 위치는 항상 그 장치의 마커를 찾아 파생된 값입니다. 다른 지도 편집 쓰기와 마찬가지로 `edit_settings`가 필요합니다. 본문: `{unique_id, type, lat, lng, map_uuid?, channel_id?}` — `type`은 `input\|output\|pid\|trigger\|conditional\|device\|function\|custom\|generic_function` 중 하나이고, `channel_id` 대신 `unique_id`에 `::<channel>` 접미사를 붙여도 됩니다. `map_uuid`를 생략했는데 좌표가 있으면 지도를 추론합니다 — 그 장치가 이미 배치된 지도, 아니면(아직 어디에도 배치되지 않았고 시스템에 지도가 딱 하나뿐이면) 그 지도를 씁니다. 지도가 여러 개인데 기존 배치가 없으면 추측하지 않고 `400`("Select a map to place this device on.")으로 거부합니다. 지도가 정해지면 그 장치의 마커를 배치(갱신)하고 소속 구역을 파생시킵니다. 성공 시 데몬에 해당 장치의 설정 재적용을 최선노력으로 요청합니다(위치가 바뀌며 타임존이 달라졌을 때 즉시 반영되도록). 그런 장치가 없으면 `404`, 장치나 `map_uuid`가 가리키는 지도가 호출자에게 부여된 범위 밖이면 `403`. 응답: `{ok, message, overlay_id}`. |
 | GET | `/api/geo/devices?map_uuid=&device_ids=&include_all=` | 지도에 배치 가능한 장치 목록. 응답: `{ok, devices, all_measurements_map}`. 조건부(304) 응답을 지원합니다. |
 | GET | `/api/geo/inputs` | 센서 피팅 바인딩 화면용 채널 단위 평면 목록(`DeviceMeasurements`) — 활성화된 입력만 나오고, 항목마다 장치·채널과 환산된 단위가 붙은 라벨을 함께 담습니다. |
 | GET | `/api/geo/outputs` | 액추에이터 피팅 바인딩 화면용 `Output` 평면 목록. 출력마다 종류와 인터페이스가 함께 실립니다. |
@@ -130,11 +139,13 @@
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/geo/facility/list?geo_id=<map_uuid>` | 모든 시설, 지도 하나로 범위를 좁힐 수 있습니다. 각 항목에 `rep_key`와 외곽 도형이 포함됩니다. |
+| GET | `/api/geo/facility/choices` | 시설 편집기의 센서 연결 선택지: `choices_input`·`choices_function`·`meas_id_slug`·`input_devices`·`function_devices`(장치와 그 채널). |
 | GET | `/api/geo/facility/<facility_uuid>` | 시설 전체 데이터: 외피, 장치 바인딩, 3D 형상·표시 옵션, 베이, 마지막으로 계산된 용량. |
-| POST | `/api/geo/facility` | 생성 또는 수정(본체·외피 스펙·베이를 하나의 트랜잭션으로 원자적 처리). 본문: `facility_uuid?`(생성 시 생략), `geo_id`(필수), `outer_geometry`(GeoJSON 지오메트리, 생성 시 필수), `name`, `preset`, `structure`, `bay_count`, `geometry_3d: {span_width_m, length_m, eave_height_m, ridge_height_m, spacing_m, roof_type}`, `envelope`(피복 층과 측창·천창·커튼 설정), `actuators`, `fittings`, `bays`, `notes`. |
+| POST | `/api/geo/facility` | 생성 또는 수정(본체·외피 스펙·베이를 하나의 트랜잭션으로 원자적 처리). 본문: `facility_uuid?`(생성 시 생략), `geo_id`(필수), `outer_geometry`(GeoJSON 지오메트리, 생성 시 필수), `name`, `preset`, `structure`, `bay_count`, `geometry_3d: {span_width_m, length_m, eave_height_m, ridge_height_m, spacing_m, roof_type}`, `envelope`(피복 층과 측창·천창·커튼 설정), `actuators`, `fittings`, `bays`, `notes`. `?include=facility,integration`(또는 본문 `include`)를 붙이면 저장된 기록을 같은 응답으로 돌려받습니다. `facility` 는 `GET /api/geo/facility/<facility_uuid>` 본문, `integration` 은 `…/integration` 본문과 같습니다. 붙이지 않으면 응답은 그대로입니다. |
+| PATCH | `/api/geo/facility/<facility_uuid>` | 저장된 시설의 한 묶음만 저장하고 나머지는 저장된 그대로 둡니다. 본문: `{section, data}`. `section` 은 `fittings`(`fittings`·`actuators`·`view_options`, 목록만 보내면 `fittings`), `envelope`(외피 객체), `spec`(`name`·`preset`·`structure`·`bay_count`·`geometry_3d`·`notes`·`layout`·`bays`), `position`(`geo_id`·`outer_geometry`·`site_shape_uuid`·`geometry_3d`), `connections`(`weather_bindings`·`groups`·`view_options`) 중 하나입니다. `geometry_3d`·`view_options` 는 저장된 값 위에 합치고, 나머지 필드는 바꿉니다. 묶음 밖의 필드는 거절합니다(`400`). 저장 경로와 응답은 위 POST 와 같습니다(`include` 포함). |
 | POST | `/api/geo/facility/<facility_uuid>/clone` | 시설을 복제하며 장치 바인딩은 초기화합니다(복제본은 원본의 배선을 물려받지 않습니다). 복제본은 원본 위가 아니라 옆에 놓입니다. |
 | DELETE | `/api/geo/facility/<facility_uuid>` | 본문/쿼리: `confirm_name`이 현재 시설명과 일치해야 합니다. 외곽 도형과 베이 도형도 함께 지워집니다. |
-| POST | `/api/geo/facility/compute` | 저장 없이 주어진 스펙에 대한 공학 계산 미리보기(면적/체적/난방·냉방 부하/환기량). 본문은 저장과 같은 모양 — `geometry_3d`, `envelope`, `bay_count`, `structure`, 있으면 `outer_geometry`/`fittings`/`actuators`. 수치는 1차 산정 참고치(±5~10%)이며 면책 문구가 함께 옵니다. 계산 모듈이 없으면 `501`. |
+| POST | `/api/geo/facility/compute` | 저장 없이 주어진 스펙에 대한 공학 계산 미리보기(면적/체적/난방·냉방 부하/환기량). 본문은 저장과 같은 모양 — `geometry_3d`, `envelope`, `bay_count`, `structure`, 있으면 `outer_geometry`/`fittings`/`actuators`. 수치는 1차 산정 참고치(±5~10%)이며 면책 문구가 함께 옵니다. 계산 모듈이 없으면 `501`. 시설 모형이 있으면 응답에 모형 값이 더해집니다. 본문에 `layout` 이 없으면 `layout_draft`(지금 폼을 읽은 모형 또는 저장된 모형), 있으면 `layout_errors`(`{code, path, message}`)와 유효할 때 `layout_compiled`, `layout_zones`, `outer_geometry`, `center`, `location_changes` 입니다. 아무것도 쓰지 않습니다. |
 | GET | `/api/geo/facility/<facility_uuid>/integration` | 통합 센서/액추에이터 바인딩 뷰 — 환경 코디네이터 자신이 읽는 것과 같은 데이터이며, 외피·환기 개구부·계산된 용량이 함께 옵니다. |
 | GET | `/api/geo/facility/<facility_uuid>/wind?speed=&dir=&pct=` | 자연환기 풍압 시뮬레이션. `speed`=풍속 m/s(기본 3.0), `dir`=기상 풍향 0~359°(기본 0), `pct`=개구율 0~100(기본 100). 유효 환기횟수(ACH), 유입·유출량, 개구부별 유량, 액추에이터별 풍향 가중치를 반환합니다. |
 | POST | `/api/geo/facility/<facility_uuid>/apply` | 시설에 묶인 액추에이터에 명령을 보냅니다. 본문: `{horizon, commands: [{kind, action, pct?}, ...]}`, `action`은 `off`/`on`/`set` 중 하나. `horizon`(`now`/`1h`/`6h`)은 예약이 아닙니다 — 명령은 즉시 나가고, 이 값은 시뮬레이션 구간만 정합니다. `set`은 그 출력이 실제로 지원하는 방식(아날로그 값, PWM, 시간 지정 on/off)으로 바뀌며, 묶인 출력이 없는 `kind`는 요청 전체를 실패시키지 않고 `failed`에 담깁니다. VEE(가상 실행 엔진) 기능 플래그가 켜져 있으면 먼저 어드바이저리 사전 시뮬레이션을 돌리며, 실제 명령 전달은 어느 경우든 데몬을 통합니다. |
@@ -195,10 +206,10 @@
 | POST | `/api/aot/facility/<facility_uuid>/hidden_rows` | 위 구역 버전과 같은 형태를, 시설에 대해. `edit_settings` 필요. |
 | POST | `/api/aot/facility/<facility_uuid>/actuator_order` | 본문: `{order: [slot_key, ...]}`. `edit_settings` 필요. |
 | GET | `/api/aot/facility/<facility_uuid>/bays` | 베이 스코프 선택용 `{ok, bays: [{id, name}]}`. |
-| POST | `/api/aot/facility/<facility_uuid>/bay_capacity` | 본문: `{bay_id, unit, total}`(`total<=0`이면 해제). `edit_settings`가 아니라 **의도적으로** `edit_plots`(작기 운영자 권한)를 요구합니다. |
+| POST | `/api/aot/facility/<facility_uuid>/bay_capacity` | 본문: `{bay_id, unit, total}`(`total<=0`이면 해제). `bay_id`는 기존 베이 id 뿐 아니라 시설에 저장된 평면의 구역 id 도 받습니다 — 어느 쪽이든 총량은 그 구역에 함께 저장되어 이후 나누거나 합칠 때 그대로 따라갑니다. `edit_settings`가 아니라 **의도적으로** `edit_plots`(작기 운영자 권한)를 요구합니다. |
 | GET | `/api/aot/facility/<facility_uuid>/calibration_status` | 연결된 코디네이터의 액추에이터별 제어 루프 캘리브레이션 상태와 커미셔닝 상태, 그리고 모델 정확도 점검(온도·습도 오차)이 통과했으면 그 결과까지. |
 | GET | `/api/aot/coordinator/<function_uuid>/overview` | 환경 코디네이터 설정 페이지 머리말: 어느 시설을 제어하는지, 그 시설의 활성 구획과 프로그램, 이 시설에 실제로 있는 액추에이터 종류(없는 장비를 설정하고 있다는 것을 화면이 말할 수 있게), (같은 시설에 비활성 중복 코디네이터가 있으면) `other_coordinator` 경고. |
-| GET | `/api/aot/coordinator/<function_uuid>/actuators` | 이 코디네이터가 제어할 수 있는 액추에이터, 현재 비활성화된 것(`disabled_actuators` 옵션), 그리고 더 이상 실재 장치로 해석되지 않는 낡은 비활성화 항목. 코디네이터가 한 구역으로 범위가 잡혀 있으면 그 구역의 장치만 나옵니다. |
+| GET | `/api/aot/coordinator/<function_uuid>/actuators` | 이 코디네이터가 제어할 수 있는 액추에이터, 현재 비활성화된 것(`disabled_actuators` 옵션), 그리고 더 이상 실재 장치로 해석되지 않는 낡은 비활성화 항목. 여러 층짜리 시설의 위층 장치는 이 목록에서 빠집니다 — 코디네이터는 그 장치를 움직이지 않습니다. 코디네이터가 한 구역으로 범위가 잡혀 있으면 그 구역의 장치만 나옵니다. |
 
 ---
 
@@ -232,7 +243,7 @@
 |---|---|---|
 | GET | `/api/geo/plots?map_uuid=&on=&include_ended=&include_planned=&facility_uuid=` | 구획 목록. 기본은 한 지도의 활성 구획만; `include_ended`/`include_planned`로 범위를 넓힙니다. `map_uuid`를 생략하면 지도 전체를 아우르는 "운영" 뷰가 됩니다. |
 | GET | `/api/geo/plot/<plot_uuid>` | 구획 하나의 상세(대기 중인 단계 전환이 있으면 먼저 자동 승인). `can_edit`, `can_design`, 그 구획 자체의 다가오는 장치 일정을 포함합니다. |
-| GET | `/api/geo/plot/<plot_uuid>/contents` | "[환경·제어]" 모달 인벤토리 — 장치를 구획 안(plot), 구획까지 닿는 관수(irrigation), 장치 종류별 최근접 대체(nearest)로 분류합니다. 자체 폴리곤이 없는 시설 기반 구획은 베이 스코프 변형을 씁니다. 30초 캐시. |
+| GET | `/api/geo/plot/<plot_uuid>/contents` | "[환경·제어]" 모달 인벤토리 — 장치를 구획 안(plot), 구획까지 닿는 관수(irrigation), 장치 종류별 최근접 대체(nearest)로 분류합니다. 자체 폴리곤이 없는 시설 기반 구획은 베이 스코프 변형을 쓰며, 구획이 위층 구역에 속하면(환경제어 대상이 아님) `control_upper_floor`도 함께 담깁니다. 30초 캐시. |
 | GET | `/api/geo/plot/<plot_uuid>/resource_usage?days=` | "[현황]" 카드용 관수 작동시간/용량. `days` 1~30. |
 | GET | `/api/geo/plot/<plot_uuid>/env_series` / `/env_week?days=&end=&stage=&unit=` | 구획 자신의 타임존 기준 환경 추이 시계열. `stage=<key>`를 주면 `days`/`end` 대신 그 단계의 기간을 씁니다. |
 | GET | `/api/geo/plot/<plot_uuid>/sensors` | 이 구획이 현재 참조하는 장치들(저장값이 아니라 파생값). |
@@ -292,7 +303,7 @@
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | POST | `/api/geo/output/<output_uuid>/state` | 데몬을 통해 출력을 켜고 끕니다. 본문: `{state, channel, duration}`. `edit_controllers` + 장치 스코프 필요. |
-| POST | `/api/geo/output_states` | 구역 팝업용 배치 raw on/off 상태 조회. 본문: `{ids: [...]}`. 읽기 전용 — 로그인만 필요, 추가 권한 없음. |
+| POST | `/api/geo/output_states` | 지도 위젯과 구역 팝업용 배치 raw on/off 상태 조회. 본문: `{ids: [...]}`. 읽기 전용 — 로그인만 필요, 추가 권한 없음. 이전 ETag를 `If-None-Match`로 보내면 상태가 그대로일 때 본문 없는 `304`를 돌려줍니다. |
 | POST | `/api/geo/output_runtimes` | 더 무거운 배치 조회(경과시간, 마지막 작동시간, 다음 예약) — 폴링용이 아니라 모달을 열 때만 씁니다. 본문: `{items: [{id, channel}, ...]}` (최대 60개). |
 | GET | `/api/geo/output/<output_uuid>/history?hours=` | 듀티사이클/on-off 이력 시계열. `hours` 1~168, 기본 24. |
 | POST | `/api/geo/function/<kind>/<func_uuid>/activate` | `kind`는 `custom`\|`conditional`\|`pid`\|`trigger`\|`function`. 본문: `{active: bool}`. `edit_controllers` 필요. |
@@ -351,8 +362,8 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/api/geo/settings` | 전역 GIS 설정: `saved_state`, `geo_layers`(활성화된 레이어만), `search_inputs`, `search_provider`. 설정 편집 권한이 필요합니다 — `saved_state`에 지도 제공자 API 키가 평문으로 실리므로, 권한이 없으면 권한 오류가 납니다. |
-| POST | `/api/geo/settings` | 전역 설정 갱신 — 검색 제공자, 지도 라이브러리를 로컬에서 서빙할지 CDN에서 받을지, 기본 중심 좌표와 줌, 줌/컬링 임계값, 렌더링 스위치, `theme_*` 키(색상 + 라벨·표시 토글, 패널 배경). 설정 편집 권한이 필요합니다. 쓰기는 (한 번에 하나씩) 직렬화돼 갱신 유실 경쟁을 막습니다. |
+| GET | `/api/geo/settings` | 전역 GIS 설정: `saved_state`, `geo_layers`(활성화된 레이어만), `search_inputs`, `search_provider`, `terrain_available`. 설정 편집 권한이 필요합니다 — `saved_state`에 지도 제공자 API 키가 평문으로 실리므로, 권한이 없으면 권한 오류가 납니다. |
+| POST | `/api/geo/settings` | 전역 설정 갱신 — 검색 제공자, 지도 라이브러리를 로컬에서 서빙할지 CDN에서 받을지, 기본 중심 좌표와 줌, 줌/컬링 임계값, 렌더링 스위치, `theme_*` 키(색상 + 라벨·표시 토글, 패널 배경). 설정 편집 권한이 필요합니다. 쓰기는 (한 번에 하나씩) 직렬화돼 갱신 유실 경쟁을 막습니다. 3D 지형은 더 이상 이 전역 설정에 속하지 않습니다 — 지도 자체의 컨트롤에서 지도별로 켜고 끄며, 그 상태는 브라우저에 저장됩니다. |
 | GET | `/api/geo/settings/length_unit` | `{length_unit, supported: ["mm","cm","m","in","ft"]}`. |
 | PUT | `/api/geo/settings/length_unit` | 본문: `{length_unit}`. 캐시된 클라이언트 측 지도 설정을 TTL을 기다리지 않고 즉시 무효화합니다. |
 
@@ -373,6 +384,19 @@
 공급 부품이 없는 회로에는 상류 경로가 없습니다. 응답은 항목을 알리기만 하고 데이터를 바꾸지 않습니다. 노즐이 어느 출력의 몫인지는 지금처럼 담당 구역이 정합니다.
 
 `GET /api/geo/water_net/paths?map_uuid=<uuid>` (오버레이처럼 로그인만 필요)는 출력마다 그 물이 지나는 배관·부품 id 를 `outputs` 로 돌려줍니다(공급이 있는 회로만). 지도 위젯이 한 번 읽어 두고, 켜진 출력의 경로를 같은 설비 색으로 굵게 그립니다.
+
+### 지형 모델 바꾸기
+
+같은 데이터로 지도의 지형(DEM)도 바꿀 수 있습니다: 실제로 바꾸기 전에 다른 지형 모델로 계산하면 각 회로의 압력·유량이 어떻게 달라지는지 미리 보고, 바꾸거나 되돌릴 수 있습니다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/geo/water_net/terrain_switch?map_uuid=<uuid>` | 지금 계산에 쓰이는 DEM(`current`), 바꿀 수 있는 다른 DEM 입력들(`candidates`, 각각 `{id, name}`), 아직 유효한 마지막 바꾸기 기록(`switched: {from, to, at}`, 없으면 `null`)을 돌려줍니다. 키는 싣지 않습니다. `edit_settings`와 그 지도의 그룹 스코프가 필요합니다. |
+| POST | `/api/geo/water_net/terrain_switch/preview` | 본문: `{map_uuid, candidate_id, restart?}`. `candidate_id`로 바꿨을 때를 미리보기로 시작하거나 그 상태를 확인합니다 — 아무것도 저장하거나 바꾸지 않습니다. 같은 요청을 되풀이해 상태를 봅니다: 계산 중이면 `state`가 `warming`, 끝나면 `ready`(각 회로의 압력 단계·압력 범위·최소 유량 비율을 이전·이후로 담은 `result`와 가장 많이 바뀐 배관 구간), 실패면 `failed`, 지도에 배관이 없으면 `empty`. 이 후보의 지난 미리보기 이후 결과를 바꿀 수 있는 입력(예: 배관 지름)을 고쳤을 때만 `restart: true`를 보냅니다 — 아니면 되풀이 요청은 아직 유효한 결과를 그대로 돌려줍니다. `edit_settings`와 그 지도의 그룹 스코프가 필요하며, `candidate_id`가 없으면 `400`. |
+| POST | `/api/geo/water_net/terrain_switch/activate` | 본문: `{map_uuid, candidate_id}`. `candidate_id`를 활성 DEM으로 켜고 다른 DEM 입력은 모두 끄며, 되돌릴 수 있도록 이전에 켜져 있던 것을 기억해 둡니다. `edit_controllers`와 그 지도의 그룹 스코프가 필요하며, `candidate_id`가 없으면 `400`, 후보가 없거나 이미 활성 상태면 `409`. |
+| POST | `/api/geo/water_net/terrain_switch/revert` | 본문: `{map_uuid}`. 마지막 활성화를 되돌려, 그 전에 켜져 있던 DEM 입력들을 다시 켭니다. `edit_controllers`와 그 지도의 그룹 스코프가 필요하며, 되돌릴 것이 없으면 `409`. |
+
+네 가지 모두 `map_uuid`가 필요합니다(없으면 `400`).
 
 ## 지도 정렬 { #map-ordering }
 

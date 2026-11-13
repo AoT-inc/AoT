@@ -167,9 +167,6 @@ _TEMPLATES = [
      ['{crop} 재배 매뉴얼에서 관수 주기 부분 찾아줘',
       '{crop} 병해충 관련 자료 있으면 찾아줘'],
      ['knowledge_search']),
-    ('drw_rec_archive', 'record', '기록', ('site',),
-     ['{site} 관련해서 예전에 보관해둔 문서 찾아줘', '보관함에 있는 문서 검색해줘'],
-     ['search_archives']),
 
     # system — AI 설정·시스템 상태·진단·매뉴얼
     ('drw_sys_brief', 'system', '진단', (),

@@ -13,7 +13,7 @@ gettext 카탈로그는 소스에 박힌 문구만 덮는다. 사용자가 직�
 from datetime import datetime
 
 from aot.databases import CRUDMixin
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 # status 값

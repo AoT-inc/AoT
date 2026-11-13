@@ -19,7 +19,6 @@ Phase 0 에서 이 테스트가 하는 일은 하나 — **더 나빠지는 것�
 """
 import unittest
 
-import pytest
 
 from aot.scripts.measure_ai_tool_cost import _tok, measure_manifest
 
@@ -55,7 +54,7 @@ from aot.scripts.measure_ai_tool_cost import _tok, measure_manifest
 #
 # ⚠ **서랍 배정으로는 이 숫자가 내려가지 않는다.** 여기서 재는 것은 등급을 끈
 # (기본값) 매니페스트라 도구가 전부 실린다 — 배정은 등급을 켰을 때 값을 한다.
-# 그 값이 얼마인지는 아래 `TIERED_MANIFEST_TOKEN_CEILING` 이 보인다.
+# (등급 매니페스트는 2026-11-08 에 걷어냈다.)
 #
 # ── 2026-08-21 재기준선 ────────────────────────────────────────────────────
 #
@@ -248,7 +247,11 @@ from aot.scripts.measure_ai_tool_cost import _tok, measure_manifest
 #      파라미터가 표면에 없으면 그 고리가 여전히 닫히지 않는다.
 #
 # 여유는 예전과 같이 좁게 둔다.
-AGENT_MANIFEST_TOKEN_CEILING = 32_200
+# 2026-11-08(아키텍처 개선 5단계): 인앱 AI 의 도구는 도메인 명부 하나다. 옛 도구 112개 매니페스트
+# (31,524토큰)를 걷어내 여기 남는 것은 제어 흐름 항목 셋(read_manual·get_detailed_manifest·ask_user,
+# 659토큰)뿐이다. 도메인 명부의 크기는 도메인 표면 검사(test_mcp_tool_surface 등)가 잰다.
+# 상한을 좁게 다시 잡는다 — 여기에 옛 도구 매니페스트가 돌아오면 바로 보인다.
+AGENT_MANIFEST_TOKEN_CEILING = 800
 # 2026-08-25: query_reference_table 에 columns 파라미터가 붙어 23,554 가 됐다.
 # 23,600 으로 올린다 — 이 파라미터는 **고정비를 내고 가변비를 줄인다**:
 # ECOCROP 한 행이 41컬럼 1,152자라 5행이면 ~2,200토큰인데, 요약 컬럼으로
@@ -366,7 +369,8 @@ MCP_CATALOG_TOKEN_CEILING = 43_500
 # 올리지 않았다: 그것이 필요해질 때는 이미 record 서랍이 열려 있다.
 # 2026-08-24(2): main 병합 후 3,708. main 단독은 3,544(19항목), 내 쪽에서
 # knowledge_search 가 core 로 올라와 20항목이 됐다. 3,750 으로 올린다.
-TIERED_MANIFEST_TOKEN_CEILING = 7_600
+# 2026-11-08(아키텍처 개선 5단계): 인앱 등급 매니페스트(AOT_AI_TOOL_TIERING)는 옛 도구 매니페스트와
+# 함께 걷어냈다 — 위 기록은 이력이다.
 
 # 도구 하나가 이보다 크면 설명이 아니라 문서다. 2026-08-15 에는 가장 큰 것이
 # get_plot 3,164자였고 그 정도를 상한선으로 봤다.
@@ -387,23 +391,15 @@ SINGLE_TOOL_CHAR_CEILING = 3_400
 # 보류하기로 했다(사용자 결정). 그동안 이 두 검사가 빨간불이면 단위 스위트
 # 워크플로 전체가 빨간불이 되어, 정작 새로 들어온 회귀를 가린다.
 #
-# 그래서 `xfail(strict=True)` 로 **예상된 실패**임을 적어 둔다. 숨기는 것이
-# 아니다 — 예산 안으로 되돌아오면 XPASS 로 **실패**하므로, 그때 이 표시를
-# 걷으라는 신호가 온다. 결정이 서면 상한을 재기준선으로 잡고 이 블록을 지운다.
+# 2026-11-04: 냉동 보관 도구 6개를 지워 인앱 매니페스트가 31,524 로 상한(32,200) 안에
+# 들어왔다(상한 인상 없음). 그래서 xfail 표시는 걷었다.
 # ---------------------------------------------------------------------------
-_BUDGET_DECISION_PENDING = (
-    '토큰 예산 초과를 어떻게 처리할지 보류 중(2026-09-17). '
-    '상한 인상·문구 축소·도구 정리 중 무엇을 할지 정해지면 이 표시를 걷는다.'
-)
-
-
 class TestToolSurfaceBudget(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.manifest = measure_manifest()
 
-    @pytest.mark.xfail(strict=True, reason=_BUDGET_DECISION_PENDING)
     def test_agent_manifest_within_budget(self):
         block = self.manifest['agent_manifest']
         self.assertLessEqual(
@@ -422,39 +418,6 @@ class TestToolSurfaceBudget(unittest.TestCase):
             block['tokens'], MCP_CATALOG_TOKEN_CEILING,
             'MCP 카탈로그가 예산을 넘었다 (%d토큰 > %d, 도구 %d개)'
             % (block['tokens'], MCP_CATALOG_TOKEN_CEILING, block['count']))
-
-    def test_tiered_manifest_stays_small(self):
-        """등급을 켰을 때의 고정비 — **서랍 배정이 실제로 값을 하는가.**
-
-        위 두 상한은 도구를 더하면 반드시 오르므로 "무엇을 core 에 둘까" 를
-        판단하게 만들지 못한다. 이 검사가 그 일을 한다: core 에 도구를 하나 더
-        얹으면 여기서 보인다.
-        """
-        import json
-        import os
-
-        from aot.tools import tool_registry as registry
-
-        old = os.environ.get('AOT_AI_TOOL_TIERING')
-        os.environ['AOT_AI_TOOL_TIERING'] = '1'
-        try:
-            # `tiering_enabled()` 는 매번 환경변수를 읽으므로 reload 가 필요 없다.
-            entries = registry.manifest_system_tools()
-        finally:
-            if old is None:
-                os.environ.pop('AOT_AI_TOOL_TIERING', None)
-            else:
-                os.environ['AOT_AI_TOOL_TIERING'] = old
-
-        # 위 두 상한과 **같은 자로** 잰다. 여기만 문자수/4 로 세던 탓에 이
-        # 숫자가 실제의 절반으로 보였다(2026-08-25 재기준선 주석 참조).
-        _, tokens = _tok(json.dumps(entries, ensure_ascii=False, default=str))
-        self.assertLessEqual(
-            tokens, TIERED_MANIFEST_TOKEN_CEILING,
-            '등급을 켠 매니페스트가 예산을 넘었다 (%d토큰 > %d, 도구 %d개). '
-            'core 로 승격한 도구가 있다면 무엇을 대신 내릴지 함께 정할 것 — '
-            'docs/design/ai-tool-architecture.md §노출 등급과 서랍'
-            % (tokens, TIERED_MANIFEST_TOKEN_CEILING, len(entries)))
 
     def test_no_single_tool_is_a_document(self):
         """한 도구가 지나치게 크면 그 자체로 다른 모든 질문에 세금이 된다."""
@@ -507,16 +470,6 @@ class TestToolSurfaceBudget(unittest.TestCase):
             self.assertIn(essential, registry.core_tools(),
                           '%s 은 상시 노출이어야 한다' % essential)
 
-    def test_tiering_is_off_by_default(self):
-        """배포만으로 동작이 바뀌면 안 된다. 켜는 것이 명시적 결정이어야 한다."""
-        import os
-
-        from aot.tools import tool_registry as registry
-
-        self.assertNotIn('AOT_AI_TOOL_TIERING', os.environ,
-                         '테스트 환경에 스위치가 켜져 있으면 아래 판정이 무의미하다')
-        self.assertFalse(registry.tiering_enabled())
-
     def test_every_tool_stays_reachable_when_tiering_is_on(self):
         """등급을 켜도 **도달 불가능한 도구가 생기면 안 된다.**
 
@@ -534,14 +487,6 @@ class TestToolSurfaceBudget(unittest.TestCase):
         manifested = {t.name for t in registry.TOOLS if t.manifest}
         lost = sorted(manifested - core - in_drawers)
         self.assertEqual(lost, [], '등급을 켜면 닿을 수 없어지는 도구: %s' % lost)
-
-    def test_unknown_drawer_returns_the_list_not_an_error(self):
-        """이름을 틀렸을 때 '없다' 로 끝나면 LLM 이 포기한다."""
-        from aot.tools.aot_data_tool_service import AoTDataToolService
-
-        result = AoTDataToolService.open_drawer('없는이름')
-        self.assertTrue(result.get('drawers'),
-                        '모르는 서랍 이름에 목록을 함께 줘야 다시 고를 수 있다')
 
     def test_measurement_is_reproducible(self):
         """계측 자체가 흔들리면 예산도 의미가 없다."""

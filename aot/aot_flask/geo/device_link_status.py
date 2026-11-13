@@ -287,7 +287,7 @@ def _meta_channels(unique_id: str) -> Dict[str, dict]:
     key 판정은 라벨·그래프와 **같은** 함수(channel_label_meta)를 쓴다. 여기서
     별도 판정을 하면 같은 채널이 배지에선 배터리인데 그래프에선 아닌 상태가 된다.
     """
-    from aot.aot_flask.geo.facility_sensors import (META_CHANNEL_KEYS,
+    from aot.space.facility_sensors import (META_CHANNEL_KEYS,
                                                     channel_meta_for_dm)
     from aot.databases.models.measurement import DeviceMeasurements
 
@@ -471,7 +471,7 @@ def _prefetch_channels(specs, max_age: int) -> Dict[tuple, tuple]:
     return out
 
 
-def _iso(ts) -> Optional[str]:
+def _ts_text(ts) -> Optional[str]:
     if ts is None:
         return None
     if hasattr(ts, 'isoformat'):
@@ -524,7 +524,7 @@ def read_link_status(unique_id: str, max_age: int = LINK_MAX_AGE_S,
                 'unit':    ch.get('unit') or '',
                 'type':    ch.get('battery_type') or '',
                 'stale':   stale,
-                'ts':      _iso(ts),
+                'ts':      _ts_text(ts),
             }
 
     rssi = snr = None
@@ -550,7 +550,7 @@ def read_link_status(unique_id: str, max_age: int = LINK_MAX_AGE_S,
             'rssi':  rssi,
             'snr':   snr,
             'stale': link_stale,
-            'ts':    _iso(link_ts),
+            'ts':    _ts_text(link_ts),
         }
     elif comm_fault:
         # 근거 채널은 없지만 데몬이 두절이라 말하는 경우 — 0막대로 그 사실을 알린다.

@@ -12,7 +12,8 @@ import threading
 import uuid
 import pytz
 from datetime import datetime, timezone, timedelta
-from aot.utils.time_utils import utc_now, get_local_now, to_local
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import to_tz, FARM
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -432,7 +433,7 @@ def _weather_summary_job():
                 return
 
             # 3. Compose summary note
-            summary_lines = [f"[Weather Summary] Generated: {get_local_now().strftime('%Y-%m-%d %H:%M')}"]
+            summary_lines = [f"[Weather Summary] Generated: {to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M')}"]
             for r in readings:
                 summary_lines.append(f"  - {r['device']}: {r['data']}")
             summary_text = '\n'.join(summary_lines)
@@ -528,7 +529,7 @@ def _realtime_alert_check_job() -> None:
             from aot.config.mcp_config import REALTIME_ALERT_REPEAT_HOURS
 
             scope_key = 'system:None'
-            now = datetime.now(timezone.utc)
+            now = utc_now()
             signature = tuple(sorted(
                 (v.get('type', ''), v.get('level', '')) for v in violations
             ))
@@ -1131,7 +1132,7 @@ class AISchedulerService:
             from aot.tools.mcp_safety_gate import required_write_permission
             perm = required_write_permission(tool)
             role = Role.query.filter(Role.id == user.role_id).first()
-            if role is None or not role_row_allows(role, perm):
+            if role is None or (perm and not role_row_allows(role, perm)):
                 return 'Insufficient permission: %s' % perm
 
             from aot.aot_flask.access import scope
@@ -1260,6 +1261,8 @@ class AISchedulerService:
         """
         global _flask_app
         _flask_app = app
+        from aot.databases.app_holder import set_app
+        set_app(app)
 
         # 신호 핸들러는 **모든 프로세스**가 단다 — 요청을 처리하는 쪽에도 필요하다.
         from aot.utils.signals import trigger_fired, conditional_fired
@@ -1524,7 +1527,7 @@ class AISchedulerService:
             from datetime import datetime, timezone
             job = _scheduler.get_job('ai_scheduler_context_broadcast')
             if job:
-                job.modify(next_run_time=datetime.now(timezone.utc))
+                job.modify(next_run_time=utc_now())
                 logger.info("[ContextBroadcast] Triggered immediately via anomaly event (OI-02).")
                 return True
             logger.warning("[ContextBroadcast] trigger_context_broadcast_now: job not found.")
@@ -1737,17 +1740,20 @@ class AISchedulerService:
                 _name = getattr(meta, 'anchor_tz', None)
                 if _name:
                     try:
-                        anchor_tz = pytz.timezone(_name)
+                        from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+                        _atz, _src = resolve_tz(_name)
+                        # 저장된 이름이 유효한 IANA 일 때만 쓴다 — 아니면 대상 장치 시계로 내려간다
+                        anchor_tz = _atz if _src == SOURCE_EXPLICIT else None
                     except Exception:
                         anchor_tz = None
                 if anchor_tz is None:
                     try:
-                        from aot.utils.device_tz import resolve_location_tz
+                        from aot.utils.timekit import tz_of
                         _tid = meta.target_id
                         if meta.action_type == 'mcp_tool_call':
                             _args = (json.loads(meta.params_json) if meta.params_json else {}).get('arguments') or {}
                             _tid = _args.get('device_id') or _tid
-                        anchor_tz = resolve_location_tz(_tid)  # pytz; falls back to system tz
+                        anchor_tz = tz_of(_tid)  # pytz; falls back to system tz
                     except Exception:
                         anchor_tz = None
                 if anchor_tz is not None:

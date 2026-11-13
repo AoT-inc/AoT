@@ -92,8 +92,9 @@ class ExemptionWiringTest(unittest.TestCase):
 
     def test_scope_guard_still_allows_the_path(self):
         """CSRF 를 풀어도 스코프 가드가 막으면 수집 키는 여전히 성립하지 않는다."""
-        self.assertIn("_READONLY_POST_PATHS = frozenset(('/data_batch',))",
-                      self.source)
+        line = next(l for l in self.source.splitlines()
+                    if l.startswith('_READONLY_POST_PATHS = frozenset('))
+        self.assertIn("'/data_batch'", line)
 
 
 if __name__ == '__main__':

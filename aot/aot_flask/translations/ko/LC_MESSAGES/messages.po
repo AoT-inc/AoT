@@ -14119,10 +14119,24 @@ msgid "Add Address"
 msgstr "주소 추가"
 
 #: aot_flask/templates/pages/geo/geo_design.html:824
-msgid ""
-"Enter addresses in the first column of the CSV file. To merge adjacent "
-"parcels, check Merge Adjacent Parcels."
-msgstr "CSV 파일의 첫 번째 열에 주소를 입력하세요. 인접한 필지를 합치려면 [인접 필지 통합]을 체크하세요."
+msgid "To merge adjacent parcels, check Merge Adjacent Parcels."
+msgstr "인접한 필지를 합치려면 [인접 필지 통합]을 체크하세요."
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "CSV Format"
+msgstr "CSV 형식 안내"
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "One address per row, in the first column. Only the first column is read, comma-separated, UTF-8 (in Excel, save as \"CSV UTF-8\"). There is no header row: a header would be looked up as an address and listed as a failure."
+msgstr "행마다 주소 하나를 첫 번째 열에 적습니다. 첫 번째 열만 읽으며, 쉼표 구분·UTF-8 입니다(엑셀은 \"CSV UTF-8\"로 저장). 헤더 행은 없습니다. 헤더를 넣으면 주소로 조회되어 실패 목록에 나옵니다."
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "Use the lot-number (jibun) address. Parcels are matched by lot number, so road-name addresses can fail when the point falls on the road. Korean addresses only."
+msgstr "지번 주소를 쓰세요. 필지는 지번으로 찾기 때문에 도로명 주소는 좌표가 도로 위에 떨어지면 실패할 수 있습니다. 한국 주소만 가능합니다."
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "Move the address column of the Google Maps / My Maps export to the first column. Google returns road-name addresses, so some rows may fail; check the failure list. Addresses outside Korea cannot be read."
+msgstr "Google 지도 / 내 지도에서 내보낸 파일의 주소 열을 첫 번째 열로 옮기세요. Google 은 도로명 주소를 주므로 일부 행이 실패할 수 있으니 실패 목록을 확인하세요. 한국 밖 주소는 읽지 못합니다."
 
 #: aot_flask/templates/pages/geo/geo_design.html:828
 msgid "Choose CSV File"
@@ -14300,7 +14314,7 @@ msgstr "PNG 내보내기"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:110
 msgid "Export Spec"
-msgstr "Spec 내보내기"
+msgstr "사양 파일 내보내기"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:111
 msgid "Export GLB"
@@ -14308,7 +14322,7 @@ msgstr "GLB 내보내기"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:114
 msgid "Import Spec"
-msgstr "Spec 불러오기"
+msgstr "사양 파일 불러오기"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:115
 msgid "Import GLB"
@@ -15002,9 +15016,7 @@ msgid ""
 "Grouping actuators of the same kind lets the coordinator command only the"
 " leader and automatically copy the same command to followers according to"
 " the mode."
-msgstr ""
-"같은 종류의 액추에이터를 그룹으로 묶으면 coordinator가 리더 하나에만 명령을 내리고 팔로워들에게 모드에 따라 자동으로 같은"
-" 명령을 복사합니다."
+msgstr "같은 종류의 액추에이터를 그룹으로 묶으면 코디네이터가 리더 하나에만 명령을 내리고 팔로워들에게 모드에 따라 자동으로 같은 명령을 복사합니다."
 
 #: aot_flask/templates/pages/geo/geo_facility.html:963
 msgid "Leader"
@@ -15675,11 +15687,11 @@ msgstr "로드 실패: "
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1314
 msgid "— No outputs (add at Setup → Output) —"
-msgstr "— 등록된 Output 없음 (Setup → Output 페이지에서 추가) —"
+msgstr "— 등록된 출력 없음 (설정 → 출력에서 추가) —"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1315
 msgid "— No devices (add at Setup → Input/Function) —"
-msgstr "— 등록된 디바이스 없음 (Setup → Input/Function 페이지에서 추가) —"
+msgstr "— 등록된 장치 없음 (설정 → 입력·함수에서 추가) —"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1316
 msgid "— Unlinked —"
@@ -36215,7 +36227,6 @@ msgstr "사용할 수 없음"
 msgid "valid until"
 msgstr "유효기한"
 
-
 msgid "No plot has a measured soil water sensor yet and prediction without a sensor is off — nothing is computed."
 msgstr "아직 실측 토양수분 센서가 있는 구획이 없고 센서 없는 예측도 꺼져 있습니다 — 계산하는 것이 없습니다."
 
@@ -37036,7 +37047,6 @@ msgstr "‹ 그래프로"
 msgid "today"
 msgstr "오늘"
 
-
 msgid "Data Retention (days)"
 msgstr "데이터 보관 (일)"
 
@@ -37337,6 +37347,12 @@ msgstr "양정"
 msgid "Base height"
 msgstr "바닥 높이"
 
+msgid "Reservoir"
+msgstr "저수지"
+
+msgid "Surface height"
+msgstr "수면 높이"
+
 msgid "Pressure loss"
 msgstr "압력 손실"
 
@@ -37421,6 +37437,42 @@ msgstr "이 회로의 점적 줄에 점적기 간격이나 유량이 없어 수�
 msgid "Run records for this water line could not be read, so volumes are not limited by the supply."
 msgstr "이 회로의 작동 기록을 읽지 못해 공급 한계를 걸지 않았습니다."
 
+msgid "3D Terrain"
+msgstr "3D 지형"
+
+msgid "(show map widgets over the elevation input)"
+msgstr "(고도 입력으로 지도 위젯을 입체로 표시)"
+
+msgid "Elevation Encoding"
+msgstr "고도 인코딩"
+
+msgid "Tile URL"
+msgstr "타일 URL"
+
+msgid "Tile Size"
+msgstr "타일 크기"
+
+msgid "Maximum Zoom"
+msgstr "최대 줌"
+
+msgid "Plain text shown on the map"
+msgstr "지도에 표시할 일반 텍스트"
+
+msgid "XYZ tile URL with {z}, {x}, {y}, or a TileJSON URL"
+msgstr "{z}, {x}, {y} 가 든 XYZ 타일 URL 또는 TileJSON URL"
+
+msgid "Elevation tiles for 3D terrain. No API key. Check the provider terms before use; the operator is responsible for them. Attribution for each data source is listed on the provider site."
+msgstr "3D 지형용 고도 타일입니다. API 키가 없습니다. 사용 전에 제공자 약관을 확인하세요. 약관 준수는 운영자 책임입니다. 자료별 출처는 제공자 사이트에 있습니다."
+
+msgid "Elevation tiles for 3D terrain from the AWS Open Data registry. No API key. The data has not been updated since 2017. The operator is responsible for the provider terms."
+msgstr "AWS Open Data 의 3D 지형용 고도 타일입니다. API 키가 없습니다. 자료는 2017년 이후 갱신되지 않았습니다. 약관 준수는 운영자 책임입니다."
+
+msgid "Elevation tiles for 3D terrain from MapTiler. Uses the MapTiler key and counts against its usage. The operator is responsible for the provider terms."
+msgstr "MapTiler 의 3D 지형용 고도 타일입니다. MapTiler 키를 쓰고 사용량에 포함됩니다. 약관 준수는 운영자 책임입니다."
+
+msgid "Elevation tiles for 3D terrain from a tile server you choose, such as your own copy. The operator is responsible for the data license and attribution."
+msgstr "직접 고른 타일 서버(자체 사본 등)의 3D 지형용 고도 타일입니다. 자료 라이선스와 표기는 운영자 책임입니다."
+
 msgid "Design"
 msgstr "설계값"
 
@@ -37490,6 +37542,22 @@ msgstr "탱크 시간은 가득 찬 탱크에서 보충 없이 쓰는 경우입�
 msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
 msgstr "물량은 각 밸브가 맡는 영역 안에 지도에 그린 스프링클러의 유량과 그 밸브가 돈 시간으로 추정한 값이며, 유량계로 잰 값이 아닙니다. 이 구획과 겹치는 부분만 세므로 몫을 지어내지 않습니다."
 
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "Water supply limit - already counted in the water the twin receives."
+msgstr "공급 한계 — 트윈이 받는 물에 이미 들어 있습니다."
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "lowered to the water supply limit"
+msgstr "공급 한계로 낮춘 값"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "Water supply limit"
+msgstr "공급 한계"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "Tank level inputs you can bind as the water supply signal"
+msgstr "물 공급 신호로 묶을 수 있는 탱크 수위 입력"
+
 msgid "Forecast Model"
 msgstr "예보 모델"
 
@@ -37510,3 +37578,1604 @@ msgstr "구간 (시간)"
 
 msgid "Write Hourly Forecast File"
 msgstr "시간별 예보 파일 쓰기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw plan"
+msgstr "평면 그리기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Could not open the plan. Try again."
+msgstr "평면을 열지 못했습니다. 다시 시도하세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floors or plan shape"
+msgstr "층이나 평면 모양"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Use this to add floors or to change the shape, such as an L shape."
+msgstr "층을 나누거나 ㄱ자처럼 모양을 바꿀 때 씁니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Change this in the plan."
+msgstr "평면 그리기에서 바꿉니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Close plan"
+msgstr "평면 닫기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floors"
+msgstr "층"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor in view"
+msgstr "보고 있는 층"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Add floor above"
+msgstr "위층 추가"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n}F"
+msgstr "{n}층"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{name} is empty"
+msgstr "{name}이 비어 있습니다"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Start the same as the floor below, or draw it yourself."
+msgstr "아래층과 같게 시작하거나 직접 그립니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw it"
+msgstr "직접 그리기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Copy floor below"
+msgstr "아래층 복사"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Drawing"
+msgstr "그리기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw outline"
+msgstr "외형 그리기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Split zone"
+msgstr "구역 나누기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor opening"
+msgstr "바닥 구멍"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor area"
+msgstr "바닥 면적"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Outline of this zone"
+msgstr "이 구역의 외형"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Select outline"
+msgstr "외형 고르기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Outline"
+msgstr "외형"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Width (m)"
+msgstr "가로 (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Depth (m)"
+msgstr "세로 (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Merge the zones to change the size."
+msgstr "크기를 바꾸려면 구역을 합치세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Only a rectangular shape can have a curved or gable roof."
+msgstr "곡면·박공 지붕은 직사각형 외형에만 둘 수 있습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Roof height (m)"
+msgstr "지붕 높이 (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Cover"
+msgstr "덮개"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this outline"
+msgstr "이 외형 지우기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Wall"
+msgstr "벽"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Open gap"
+msgstr "트임"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Become one zone"
+msgstr "한 구역으로 만듭니다"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this opening"
+msgstr "이 구멍 지우기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor height (m)"
+msgstr "층고 (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this floor"
+msgstr "이 층 지우기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the first corner"
+msgstr "첫 모서리를 누르세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the opposite corner"
+msgstr "맞은편 모서리를 누르세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the first point"
+msgstr "첫 점을 누르세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the next point. Press the first point to close"
+msgstr "다음 점을 누르세요. 첫 점을 다시 누르면 닫힙니다"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press one wall of the zone to split"
+msgstr "나눌 구역의 벽 한쪽을 누르세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the opposite wall"
+msgstr "맞은편 벽을 누르세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the first corner of the opening"
+msgstr "구멍의 첫 모서리를 누르세요"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw by points"
+msgstr "점으로 그리기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw by two corners"
+msgstr "두 모서리로 그리기"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Zone {n}"
+msgstr "구역 {n}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n} zones. Change them in the plan."
+msgstr "구역 {n}개, 평면 그리기에서 바꿉니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The roof moved up. The floor below now has a flat roof."
+msgstr "지붕을 위층으로 옮겼습니다. 아래층은 평지붕이 되었습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n} devices change zone. Their positions stay the same. Save anyway?"
+msgstr "구역이 바뀌는 장치 {n}개, 위치는 그대로입니다. 저장할까요?"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n} devices change zone. Their positions stay the same."
+msgstr "구역이 바뀌는 장치 {n}개, 위치는 그대로입니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Empty floors were left out: {list}"
+msgstr "비어 있는 층은 뺐습니다: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The plan cannot be saved:"
+msgstr "평면을 저장할 수 없습니다:"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This spot is outside {name}. Choose a spot on that floor."
+msgstr "이 자리는 {name} 바닥 밖입니다. 그 층 바닥을 고르세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This spot is over a floor opening. Choose another spot."
+msgstr "이 자리는 바닥 구멍입니다. 다른 자리를 고르세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This change is not possible here."
+msgstr "여기서는 할 수 없는 변경입니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This overlaps another shape on the same floor."
+msgstr "같은 층의 다른 외형과 겹칩니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Too small. Each side needs at least 0.5 m."
+msgstr "너무 작습니다. 변마다 0.5 m 이상이어야 합니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The outline crosses itself."
+msgstr "외곽선이 스스로 교차합니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Curved and gable roofs need a rectangular shape, so this one stays flat."
+msgstr "곡면·박공 지붕은 직사각형 외형에만 둘 수 있어 평지붕으로 둡니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Merge the zones first, then change the width and depth."
+msgstr "구역을 먼저 합친 뒤 가로·세로를 바꾸세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the two walls of the zone to split."
+msgstr "나눌 구역의 양쪽 벽을 누르세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This zone spans several buildings and cannot be split."
+msgstr "여러 동에 걸친 구역이라 나눌 수 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This line would make three or more pieces. Split near the end instead."
+msgstr "이 선은 세 조각 이상으로 나뉩니다. 끝쪽에서 나누세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A piece would be too small."
+msgstr "나눈 조각이 너무 작습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Only zones inside the same shape can be merged."
+msgstr "같은 외형 안의 구역만 합칠 수 있습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "These zones cannot be merged into one outline."
+msgstr "이 구역들은 한 외곽으로 합칠 수 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The ground floor cannot have a floor opening."
+msgstr "1층 바닥에는 구멍을 둘 수 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A floor opening has to sit on this floor."
+msgstr "바닥 구멍은 이 층 바닥 위에 있어야 합니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This overlaps another floor opening."
+msgstr "다른 바닥 구멍과 겹칩니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A shape below reaches this floor, so it cannot be deleted."
+msgstr "아래층 외형이 이 층까지 이어져 지울 수 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The floor below has nothing to copy."
+msgstr "아래층에 복사할 것이 없습니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Enter a number above zero."
+msgstr "0 보다 큰 수를 입력하세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw at least one shape."
+msgstr "외형을 하나 이상 그리세요."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor, volume, glazing and envelope come from the plan, and the zones add up to the floor above. Heating, cooling and vent open are reference values from the stored dimensions, and control keeps its existing zones."
+msgstr "바닥·체적·투광·외피는 평면에서 나온 값이고, 구역을 합치면 위의 바닥 면적과 같습니다. 난방·냉방·환기 면적은 저장된 치수 기준의 참고값이고, 제어는 기존 구역을 그대로 씁니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Same as envelope"
+msgstr "외피 설정과 같음"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A name is too long or is not text."
+msgstr "이름이 너무 길거나 글자가 아닙니다."
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Environment control does not cover these zones yet: {list}"
+msgstr "환경 제어가 아직 맡지 않는 구역입니다: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Upper-floor devices stay out of environment control: {list}"
+msgstr "위층 장치는 환경 제어에 쓰지 않습니다: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "These devices are outside the saved zones, so a zone coordinator does not use them: {list}"
+msgstr "저장된 구역 밖 장치라 구역 코디네이터가 쓰지 않습니다: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Environment control does not cover the zone of these plots: {list}"
+msgstr "이 구획의 구역은 환경 제어가 맡지 않습니다: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "not in environment control"
+msgstr "환경 제어 없음"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Upper-floor plots are not under environment control"
+msgstr "위층 구획은 환경제어 대상이 아닙니다"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Diameter"
+msgstr "관경"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Sort"
+msgstr "정렬"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Pipe diameters"
+msgstr "배관 관경"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Applied to the main pipe you draw. Leave empty to add it later."
+msgstr "그릴 주 배관에 넣을 값입니다. 비워 두면 나중에 넣습니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "{n} pipes without diameter"
+msgstr "관경이 빈 배관 {n}개"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Empty only"
+msgstr "빈 것만"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Longest first"
+msgstr "긴 것부터"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Empty first"
+msgstr "빈 것부터"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Pipe check not loaded yet - showing pipes with no diameter entered."
+msgstr "배관 점검을 아직 읽지 못했습니다. 관경이 입력되지 않은 배관을 보여 줍니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select all empty"
+msgstr "빈 것 모두 선택"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select connected pipes"
+msgstr "이어진 배관 선택"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Pick one pipe in the list or on the map first, then press Select connected pipes."
+msgstr "먼저 목록이나 지도에서 배관을 하나 고른 뒤 '이어진 배관 선택'을 누르세요."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Apply to {n} selected"
+msgstr "선택한 {n}개에 적용"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Used in the pressure calculation."
+msgstr "압력 계산에 쓰이는 값입니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Check the pipes to apply to first."
+msgstr "적용할 배관을 먼저 체크하세요."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Enter a number of 1 or more (mm). Leave empty if unknown."
+msgstr "1 이상의 숫자(mm)를 넣으세요. 모르면 비워 두세요."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "No pipes to show."
+msgstr "보여 줄 배관이 없습니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select {name}"
+msgstr "{name} 선택"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Diameter of {name}"
+msgstr "{name} 관경"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "{n} more pipes - narrow the list with the filter."
+msgstr "배관 {n}개가 더 있습니다. 보기 조건으로 좁혀 주세요."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select one pipe first."
+msgstr "먼저 배관을 하나 선택하세요."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "{n} connected pipes selected ({len} m). Uncheck any that do not belong."
+msgstr "이어진 배관 {n}개({len} m)를 선택했습니다. 잘못 잡힌 것은 체크를 풀어 주세요."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Applied a diameter of {mm} mm to {n} pipes."
+msgstr "배관 {n}개에 관경 {mm} mm를 적용했습니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Bulk apply"
+msgstr "일괄 적용"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Find on map"
+msgstr "지도에서 찾기"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "No pipes are missing a diameter. Switch to All to see every pipe."
+msgstr "관경이 비어 있는 배관이 없습니다. '모두'로 바꾸면 전체를 볼 수 있습니다."
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "No pipes drawn yet. Draw a main pipe first."
+msgstr "아직 그린 배관이 없습니다. 주 배관을 먼저 그려 주세요."
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Locked"
+msgstr "잠김"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Switched off"
+msgstr "꺼짐"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Starting"
+msgstr "시작 중"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Not responding"
+msgstr "응답 없음"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "The service picks up the switch within a minute. This page updates by itself."
+msgstr "서비스가 1분 안에 스위치를 확인합니다. 이 화면은 스스로 바뀝니다."
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "The Digital Twin service is not answering. If AoT was installed before the service became part of the default setup, an administrator needs to run this once:"
+msgstr "디지털트윈 서비스가 응답하지 않습니다. 서비스가 기본 구성에 들어가기 전에 설치한 AoT라면 관리자가 아래 명령을 한 번 실행해야 합니다:"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program; it waits ready and starts working within a minute after you turn this on."
+msgstr "예보와 센서 값으로 토양 수분 같은 값을 예측하는 디지털트윈 서비스를 실행합니다. 이 서비스는 본체와 따로 돌며 대기하고 있다가, 켜면 1분 안에 일을 시작합니다."
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Run times, forecast inputs and the site table are on the Digital Twin settings page."
+msgstr "실행 시각, 예보 입력, 대지 표는 디지털트윈 설정 페이지에 있습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pressure (all nozzles open)"
+msgstr "압력 (노즐이 모두 열렸을 때)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated"
+msgstr "계산됨"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Partly calculated"
+msgstr "일부만 계산됨"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Could not calculate"
+msgstr "계산하지 못했습니다"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "No pipe diameters are entered. Enter pipe diameters."
+msgstr "배관 관경이 없어 계산할 수 없습니다. 관경을 입력해 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "No water reaches this circuit. Check that the source and pipes are connected."
+msgstr "이 회로에 물이 공급되지 않습니다. 수원과 배관이 이어졌는지 확인해 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "This circuit has no pump. Place a pump part on the pipe."
+msgstr "이 회로에 펌프가 없습니다. 펌프 부품을 배관에 놓아 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "More than one pump; not calculated. Keep one pump per circuit."
+msgstr "펌프가 둘 이상이라 계산하지 않습니다. 한 회로에 펌프 하나만 두세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pump rated flow or head is missing. Enter it on the pump part."
+msgstr "펌프의 정격 유량·양정이 없습니다. 펌프 부품에서 입력해 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Nozzle flow is missing. Enter it in the zone sprinkler settings."
+msgstr "노즐 유량이 없습니다. 구역 살수 설정에서 입력해 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Nozzle pressure is missing. Enter pressure (bar) in the zone sprinkler settings."
+msgstr "노즐 압력이 없습니다. 구역 살수 설정의 압력(bar)을 입력해 주세요."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "The pipes form a loop; not calculated."
+msgstr "배관이 고리 모양이라 계산하지 않습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "There are no nozzles to open in this area."
+msgstr "이 구역에 열 수 있는 노즐이 없습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Could not calculate for another reason."
+msgstr "다른 이유로 계산하지 못했습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "and {n} more"
+msgstr "외 {n}가지"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Nozzle pressure"
+msgstr "노즐 압력"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "head {m} m"
+msgstr "양정 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "May drop once diameters are entered."
+msgstr "관경을 입력하면 줄어들 수 있습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Weakest nozzle"
+msgstr "가장 불리한 노즐"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{pct} of design flow"
+msgstr "설계 유량의 {pct}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Enter diameters"
+msgstr "관경 입력"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "The water source falls short: {source} L/min for {need} L/min needed."
+msgstr "수원이 모자랍니다. {source} L/min 로 {need} L/min 이 필요합니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipes without a diameter ({n}; {m} m, {pct} of the total) were calculated as lossless. Actual pressure may differ."
+msgstr "관경이 없는 배관 {n}곳({m} m, 전체의 {pct})은 손실 없이 계산했습니다. 실제 압력은 다를 수 있습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Moved to the weakest nozzle."
+msgstr "가장 불리한 노즐로 이동했습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "That nozzle is not on the map."
+msgstr "그 노즐이 지도에 없습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Circuit {n}"
+msgstr "회로 {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "The pump does not reach any nozzle here. Check where the pump sits on the pipe."
+msgstr "펌프에서 물이 닿는 노즐이 없습니다. 펌프가 배관의 어디에 놓였는지 확인해 주세요."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "This address (http) cannot use location. Open it over https, or tap the map to mark the spot."
+msgstr "이 주소(http)에서는 위치를 쓸 수 없습니다. https 로 접속하거나 지도에서 직접 찍으세요."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "This browser does not support location."
+msgstr "이 브라우저는 위치를 지원하지 않습니다."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Location is blocked. Allow it in the browser settings, or tap the map to mark the spot."
+msgstr "위치가 차단되어 있습니다. 브라우저 설정에서 허용하거나 지도에서 직접 찍으세요."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Could not determine the location. Move to an open area and try again."
+msgstr "위치를 알 수 없습니다. 하늘이 트인 곳에서 다시 시도하세요."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Locating timed out. Try again."
+msgstr "위치 확인 시간이 초과되었습니다. 다시 시도하세요."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Current location"
+msgstr "현재 위치"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Locating…"
+msgstr "위치 확인 중…"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Low accuracy"
+msgstr "오차 큼"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "The position is rough. Marking the spot on the map is more reliable."
+msgstr "위치가 대략적입니다. 지도에서 직접 찍는 쪽이 더 정확합니다."
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "AI can see this location"
+msgstr "AI 가 이 위치를 볼 수 있음"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Mark on the map"
+msgstr "지도에서 직접 찍기"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Add note here"
+msgstr "여기에 노트"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Locate again"
+msgstr "다시 잡기"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Location turned off after 10 minutes."
+msgstr "10분이 지나 위치를 껐습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "수평 / 경사"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "배관 {n}개는 수평 길이로 계산"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "수평"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "배관 길이 (전체 구역)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "배관 길이"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "지형을 계산하는 중입니다. 끝나면 경사 길이가 표시됩니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "일부 구간은 수평 길이로 계산했습니다. 지형이 그 구간을 포함하지 않습니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "{date} 계산"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "셀 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "길이는 수평 / 경사 순서입니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "경사율 {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "수평 길이로 계산"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "유량 {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "손실 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "수평 {h} m, 경사 {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "수평 {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "구간 {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "구간 ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "수평 {h} m / 경사 {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "지형을 계산하는 중 - 수평 길이만 표시합니다."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "지도의 길이는 수평 길이입니다."
+
+msgid "Choose a spot below"
+msgstr "아래에서 자리를 고르세요"
+
+msgid "Map center"
+msgstr "지도 중심"
+
+msgid "Picked on the map"
+msgstr "지도에서 고른 곳"
+
+msgid "Looking up the address…"
+msgstr "주소를 찾는 중…"
+
+msgid "Address unavailable"
+msgstr "주소를 찾지 못했습니다"
+
+msgid "My location"
+msgstr "내 위치"
+
+msgid "Tap the map to choose the spot."
+msgstr "지도에서 자리를 눌러 고르세요."
+
+msgid "Use Map Center"
+msgstr "지도 중심으로 시작"
+
+msgid "Searching…"
+msgstr "검색 중…"
+
+msgid "No results."
+msgstr "결과가 없습니다."
+
+msgid "In favorites"
+msgstr "즐겨찾기에 있음"
+
+msgid "Add to favorites"
+msgstr "즐겨찾기에 담기"
+
+msgid "Chosen spot"
+msgstr "고른 자리"
+
+msgid "Favorites"
+msgstr "즐겨찾기"
+
+msgid "Added to favorites."
+msgstr "즐겨찾기에 담았습니다."
+
+msgid "Removed from favorites."
+msgstr "즐겨찾기에서 뺐습니다."
+
+msgid "Could not save the favorite."
+msgstr "즐겨찾기를 저장하지 못했습니다."
+
+msgid "Could not load favorites."
+msgstr "즐겨찾기를 불러오지 못했습니다."
+
+msgid "No favorites yet."
+msgstr "아직 즐겨찾기가 없습니다."
+
+msgid "Only me"
+msgstr "나만 보기"
+
+msgid "Share with all"
+msgstr "모두와 공유"
+
+msgid "Only you can see this favorite."
+msgstr "이 즐겨찾기는 나만 볼 수 있습니다."
+
+msgid "Inside"
+msgstr "안쪽"
+
+msgid "Near the edge of"
+msgstr "경계 근처"
+
+msgid "Nearby devices"
+msgstr "가까운 장치"
+
+msgid "Recent"
+msgstr "최근"
+
+msgid "Terrain input"
+msgstr "지형 입력"
+
+msgid "Compare another terrain"
+msgstr "다른 지형 비교"
+
+msgid "Could not compare. Try again."
+msgstr "비교하지 못했습니다. 다시 시도하세요."
+
+msgid "Changed sections ({n})"
+msgstr "바뀌는 구간 ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "{name} 지형을 받는 중입니다. 끝나면 비교가 나타납니다."
+
+msgid "Calculation level"
+msgstr "계산 수준"
+
+msgid "Switch to this terrain"
+msgstr "이 지형으로 바꾸기"
+
+msgid "That terrain input is gone."
+msgstr "그 지형 입력이 없어졌습니다."
+
+msgid "Weakest nozzle flow"
+msgstr "가장 약한 노즐 유량"
+
+msgid "Revert to {name}"
+msgstr "{name}(으)로 되돌리기"
+
+msgid "Slant length total"
+msgstr "경사 길이 합"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "이 지형 입력에 타일 주소가 없습니다. 설정을 확인하세요."
+
+msgid "Downloading took too long. Try again."
+msgstr "받는 데 너무 오래 걸렸습니다. 다시 시도하세요."
+
+msgid "Terrain changed and recalculated"
+msgstr "지형이 바뀌어 다시 계산됨"
+
+msgid "Compare with"
+msgstr "비교할 지형"
+
+msgid "No terrain was on"
+msgstr "켜진 지형 없음"
+
+msgid "Undo change"
+msgstr "변경 취소"
+
+msgid "Try again"
+msgstr "다시 시도"
+
+msgid "This map has no pipes to compare."
+msgstr "이 지도에는 비교할 배관이 없습니다."
+
+msgid "Pipes the terrain does not cover"
+msgstr "지형이 덮지 못한 배관"
+
+msgid "No terrain is on."
+msgstr "켜진 지형이 없습니다."
+
+msgid "Could not change the terrain. Try again."
+msgstr "지형을 바꾸지 못했습니다. 다시 시도하세요."
+
+msgid "Insufficient permission: view_camera"
+msgstr "권한이 부족합니다: view_camera"
+
+msgid "Insufficient permission: edit_controllers"
+msgstr "권한이 부족합니다: edit_controllers"
+
+msgid "Not checked"
+msgstr "확인 안 됨"
+
+msgid "Authentication failed"
+msgstr "인증 실패"
+
+msgid "The camera has locked login"
+msgstr "카메라가 로그인을 잠갔습니다"
+
+msgid "OpenAPI is off"
+msgstr "OpenAPI 꺼짐"
+
+msgid "The camera certificate has changed"
+msgstr "카메라 인증서가 바뀌었습니다"
+
+msgid "Check the password, then save it again or press Reconnect. It will try only once."
+msgstr "비밀번호를 확인한 뒤 다시 저장하거나 [다시 연결] 을 누르세요. 한 번만 시도합니다."
+
+msgid "The camera has locked login. Restart the camera or wait until the lock is released."
+msgstr "카메라가 로그인을 잠갔습니다. 카메라를 다시 켜거나 잠금이 풀릴 때까지 기다리세요."
+
+msgid "Credentials were not sent. Check the new fingerprint below."
+msgstr "자격 증명은 보내지 않았습니다. 아래 새 지문을 확인하세요."
+
+msgid "Automatic retries are never made after an authentication failure."
+msgstr "인증에 실패하면 자동으로 다시 시도하지 않습니다."
+
+msgid "Pan/Tilt"
+msgstr "좌우·상하 회전"
+
+msgid "Presets"
+msgstr "프리셋"
+
+msgid "Day/Night mode"
+msgstr "주야 모드"
+
+msgid "Manual alarm"
+msgstr "수동 경보"
+
+msgid "SD card"
+msgstr "SD 카드"
+
+msgid "Event push"
+msgstr "이벤트 알림"
+
+msgid "No features read yet"
+msgstr "아직 읽은 기능이 없습니다"
+
+msgid "Connection check failed"
+msgstr "연결 확인에 실패했습니다"
+
+msgid "If no tab is chosen, everyone with permission can operate this camera."
+msgstr "탭을 비워 두면 조작 권한이 있는 모든 사람이 이 카메라를 움직일 수 있습니다."
+
+msgid "Reconnect"
+msgstr "다시 연결"
+
+msgid "Previous fingerprint"
+msgstr "이전 지문"
+
+msgid "New fingerprint"
+msgstr "새 지문"
+
+msgid "Trust new certificate"
+msgstr "새 인증서 믿기"
+
+msgid "This is normal if the camera was reset or its firmware changed. If neither happened, do not press this."
+msgstr "카메라를 초기화했거나 펌웨어를 바꿨다면 정상입니다. 그런 적이 없으면 누르지 마세요."
+
+msgid "OpenAPI"
+msgstr "OpenAPI"
+
+msgid "To use features such as PTZ and events, turn on OpenAPI in the camera web page under Settings > Network Settings and apply. Video works without it."
+msgstr "PTZ·이벤트 같은 기능을 쓰려면 카메라 웹 화면의 설정 → 네트워크 설정에서 OpenAPI 를 켜고 적용하세요. 켜지 않아도 영상은 볼 수 있습니다."
+
+msgid "Live quality"
+msgstr "라이브 화질"
+
+msgid "Main (2560x1440)"
+msgstr "주 화질 (2560x1440)"
+
+msgid "Sub"
+msgstr "부 화질"
+
+msgid "MJPEG (640x360)"
+msgstr "MJPEG (640x360)"
+
+msgid "The main stream puts a heavy load on the server."
+msgstr "주 화질은 서버 부담이 큽니다."
+
+msgid "Features"
+msgstr "기능"
+
+msgid "Supported features"
+msgstr "지원 기능"
+
+msgid "Reload features"
+msgstr "기능 다시 읽기"
+
+msgid "Camera control"
+msgstr "카메라 제어"
+
+msgid "Move"
+msgstr "이동"
+
+msgid "Zoom out"
+msgstr "축소"
+
+msgid "Zoom in"
+msgstr "확대"
+
+msgid "The camera moves only while a button is held. It stops by itself about 2 seconds after the signal is lost."
+msgstr "버튼을 누르고 있는 동안만 움직입니다. 신호가 끊기면 약 2초 뒤 스스로 멈춥니다."
+
+msgid "Go to"
+msgstr "이동"
+
+msgid "Save position"
+msgstr "현재 위치 저장"
+
+msgid "Save the current position as this preset? The existing position will be overwritten."
+msgstr "현재 위치를 이 프리셋으로 저장할까요? 기존 위치는 덮어써집니다."
+
+msgid "Delete this preset?"
+msgstr "이 프리셋을 지울까요?"
+
+msgid "The number of presets may differ from the camera app (up to 300). Only 1 to 8 can be used here."
+msgstr "카메라 앱의 프리셋(최대 300개)과 개수가 다를 수 있습니다. 여기서는 1~8번만 쓸 수 있습니다."
+
+msgid "The camera will sound its alarm and flash its light. Continue?"
+msgstr "카메라에서 경보음이 울리고 불빛이 켜집니다. 계속할까요?"
+
+msgid "Sound alarm"
+msgstr "경보 울리기"
+
+msgid "Stop alarm"
+msgstr "경보 끄기"
+
+msgid "The camera accepted the command"
+msgstr "카메라가 명령을 받았습니다"
+
+msgid "The camera did not accept the command"
+msgstr "카메라가 명령을 받지 않았습니다"
+
+msgid "This camera does not support that"
+msgstr "이 카메라는 지원하지 않는 기능입니다"
+
+msgid "The camera's reply could not be confirmed"
+msgstr "카메라의 응답을 확인할 수 없습니다"
+
+msgid "Could not reach the camera"
+msgstr "카메라에 연결할 수 없습니다"
+
+msgid "Move left"
+msgstr "왼쪽으로"
+
+msgid "Move right"
+msgstr "오른쪽으로"
+
+msgid "Auto mode"
+msgstr "자동"
+
+msgid "Day mode"
+msgstr "주간"
+
+msgid "Night mode"
+msgstr "야간"
+
+msgid "Preset actions"
+msgstr "프리셋 동작"
+
+msgid "Events"
+msgstr "이벤트"
+
+msgid "Receive events"
+msgstr "이벤트 받기"
+
+msgid "Subscription"
+msgstr "구독"
+
+msgid "Read the features first to choose event kinds."
+msgstr "기능을 먼저 읽어 와야 이벤트 종류를 고를 수 있습니다."
+
+msgid "Recent events"
+msgstr "최근 이벤트"
+
+msgid "Use as trigger"
+msgstr "트리거로 쓰기"
+
+msgid "Create an action from this camera's events"
+msgstr "이 카메라의 이벤트로 동작 만들기"
+
+msgid "Opens the Function page. Add a Trigger: Camera Event there; this camera is selected for you."
+msgstr "Function 화면이 열립니다. 거기서 트리거: 카메라 이벤트를 추가하면 이 카메라가 미리 선택됩니다."
+
+msgid "Connecting"
+msgstr "연결 중"
+
+msgid "Reconnecting"
+msgstr "다시 연결 중"
+
+msgid "Stopped: authentication"
+msgstr "중단됨: 인증"
+
+msgid "Waiting: camera has too many clients"
+msgstr "대기 중: 카메라의 접속 수 초과"
+
+msgid "Fix the connection above, then press Reconnect. Events are not retried automatically after an authentication failure."
+msgstr "위의 연결을 바로잡은 뒤 [다시 연결]을 누르세요. 인증 실패 뒤에는 이벤트를 자동으로 다시 받지 않습니다."
+
+#, python-format
+msgid "No events were received for %(n)s minutes."
+msgstr "%(n)s분 동안 이벤트를 받지 못했습니다."
+
+#, python-format
+msgid "The camera clock does not match (%(n)s seconds apart)."
+msgstr "카메라 시계가 맞지 않습니다(%(n)s초 차이)."
+
+msgid "Too many events: some were recorded but not run."
+msgstr "이벤트가 너무 많아 일부는 기록만 하고 실행하지 않았습니다."
+
+msgid "Trigger run requested"
+msgstr "트리거 실행 요청됨"
+
+msgid "Trigger run failed"
+msgstr "트리거 실행 실패"
+
+msgid "Skipped (re-fire interval)"
+msgstr "건너뜀(재발화 간격)"
+
+msgid "Skipped (too many)"
+msgstr "건너뜀(과다)"
+
+msgid "No events yet"
+msgstr "아직 이벤트가 없습니다"
+
+msgid "Notifications for this detection are off on the camera, so it cannot be received."
+msgstr "카메라에서 이 감지의 알림이 꺼져 있어 받지 못합니다."
+
+msgid "Turn on notifications"
+msgstr "알림 켜기"
+
+msgid "Turn this detection on in the camera web page first."
+msgstr "카메라 웹 화면에서 이 감지를 먼저 켜세요."
+
+msgid "Notifications are on"
+msgstr "알림이 켜졌습니다"
+
+msgid "Could not confirm that notifications are on"
+msgstr "알림이 켜졌는지 확인하지 못했습니다"
+
+msgid "Could not save"
+msgstr "저장하지 못했습니다"
+
+msgid "Events are off"
+msgstr "이벤트 꺼짐"
+
+msgid "This camera is not receiving events. Turn on event subscription in the camera settings."
+msgstr "이 카메라는 이벤트를 받고 있지 않습니다. 카메라 설정에서 이벤트 받기를 켜세요."
+
+msgid "Event kinds"
+msgstr "이벤트 종류"
+
+msgid "Select event kinds"
+msgstr "이벤트 종류 선택"
+
+msgid "Kinds the camera does not support are never received."
+msgstr "카메라가 지원하지 않는 종류는 받을 수 없습니다."
+
+msgid "Minimum re-fire interval (sec)"
+msgstr "최소 재발화 간격(초)"
+
+msgid "Runs at the time the server receives the event. Events missed while the subscription was down are not run."
+msgstr "서버가 이벤트를 받은 시각에 실행합니다. 구독이 끊긴 동안의 이벤트는 실행되지 않습니다."
+
+msgid "Camera must be set"
+msgstr "카메라를 선택해야 합니다"
+
+msgid "Select at least one event kind"
+msgstr "이벤트 종류를 하나 이상 선택해야 합니다"
+
+msgid "Unsupported event kind"
+msgstr "지원하지 않는 이벤트 종류입니다"
+
+msgid "Minimum re-fire interval must be 0 or more seconds"
+msgstr "최소 재발화 간격은 0초 이상이어야 합니다"
+
+msgid "Select a camera and at least one event kind before activating."
+msgstr "켜기 전에 카메라와 이벤트 종류를 하나 이상 선택하세요."
+
+msgid "Camera Event"
+msgstr "카메라 이벤트"
+
+msgid "A Camera Event Trigger runs its Actions when a camera reports one of the selected event kinds (motion, line crossing, and so on). It runs at the time the server receives the event; events missed while the subscription was down are not replayed."
+msgstr "카메라 이벤트 트리거는 카메라가 선택한 종류의 이벤트(움직임, 선 통과 등)를 보내면 그 Action 을 실행합니다. 서버가 이벤트를 받은 시각에 실행하며, 구독이 끊긴 동안의 이벤트는 다시 실행하지 않습니다."
+
+msgid "Find cameras"
+msgstr "카메라 찾기"
+
+msgid "Subnet to search"
+msgstr "검색할 서브넷"
+
+msgid "Searches only the subnet above (a /24 or narrower private range). No password is sent."
+msgstr "위 서브넷(/24 이하의 사설 대역)만 검색합니다. 비밀번호는 보내지 않습니다."
+
+msgid "Address changed?"
+msgstr "주소가 바뀌었나요?"
+
+msgid "Change address"
+msgstr "주소 바꾸기"
+
+msgid "This is only a guess: the camera cannot be confirmed before it is signed in. After the address is changed, press Check Connection and compare the model shown with your camera."
+msgstr "추측일 뿐입니다. 로그인하기 전에는 같은 카메라인지 확인할 수 없습니다. 주소를 바꾼 뒤 연결 확인을 누르고 표시된 모델이 내 카메라와 같은지 비교하세요."
+
+msgid "No camera was found."
+msgstr "카메라를 찾지 못했습니다."
+
+msgid "TP-Link VIGI (OpenAPI on)"
+msgstr "TP-Link VIGI (OpenAPI 켜짐)"
+
+msgid "RTSP device - may be a VIGI (OpenAPI may be off)"
+msgstr "RTSP 장치 — VIGI 인지 모름 (OpenAPI 가 꺼져 있을 수 있음)"
+
+msgid "If this is a VIGI, turn on OpenAPI in the camera web page under Settings > Network Settings, then search again."
+msgstr "VIGI 라면 카메라 웹 화면의 설정 → 네트워크 설정에서 OpenAPI 를 켜고 다시 검색하세요."
+
+msgid "Already added"
+msgstr "이미 추가됨"
+
+msgid "The search stopped at the time limit. Some addresses were not checked."
+msgstr "시간 상한에 도달해 검색을 멈췄습니다. 확인하지 못한 주소가 있습니다."
+
+msgid "The search could not be started."
+msgstr "검색을 시작하지 못했습니다."
+
+msgid "The camera at %(old)s did not answer, and a VIGI answered at %(new)s."
+msgstr "%(old)s 의 카메라가 응답하지 않고, %(new)s 에서 VIGI 가 응답했습니다."
+
+msgid "Change the address to %(new)s? The password is sent only when you press Check Connection."
+msgstr "주소를 %(new)s 로 바꿀까요? 비밀번호는 연결 확인을 누를 때만 보냅니다."
+
+msgid "The address was changed. Press Check Connection."
+msgstr "주소를 바꿨습니다. 연결 확인을 누르세요."
+
+msgid "Enter a subnet such as 192.168.0.0/24."
+msgstr "192.168.0.0/24 같은 서브넷을 입력하세요."
+
+msgid "Only private network addresses (10.x, 172.16-31.x, 192.168.x) can be searched."
+msgstr "사설망 주소(10.x, 172.16-31.x, 192.168.x)만 검색할 수 있습니다."
+
+msgid "The range is too wide. Enter a range of /24 or narrower."
+msgstr "범위가 너무 넓습니다. /24 이하의 범위를 입력하세요."
+
+msgid "A search is already running."
+msgstr "이미 검색이 진행 중입니다."
+
+msgid "This subnet was searched just now. Try again in %(n)s seconds."
+msgstr "방금 이 서브넷을 검색했습니다. %(n)s 초 뒤에 다시 시도하세요."
+
+msgid "This address is no longer suggested. Search again."
+msgstr "이 주소는 더 이상 제안되지 않습니다. 다시 검색하세요."
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Pan and tilt"
+msgstr "상하좌우 이동"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Hold to move. It stops when you let go."
+msgstr "누르고 있는 동안 움직이고, 떼면 멈춥니다."
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Go to preset %(n)s"
+msgstr "프리셋 %(n)s(으)로 이동"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Save current position"
+msgstr "현재 위치 저장"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Choose a number, then save the current position or delete it."
+msgstr "번호를 고른 뒤 현재 위치를 저장하거나 지우세요."
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Save the current position as preset %(n)s? The position saved there now will be replaced."
+msgstr "현재 위치를 프리셋 %(n)s에 저장할까요? 지금 저장된 위치는 바뀝니다."
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Delete preset %(n)s?"
+msgstr "프리셋 %(n)s을(를) 지울까요?"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Sound"
+msgstr "울리기"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Show camera controls"
+msgstr "카메라 조작부 표시"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Show direction, zoom and preset controls over the video when the camera supports them and you are allowed to operate it."
+msgstr "카메라가 지원하고 조작 권한이 있을 때 영상 위에 방향·줌·프리셋 조작부를 보입니다."
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Camera zoom"
+msgstr "줌"
+
+msgid "Use this address"
+msgstr "이 주소 사용"
+
+msgid "Parcel lookup can only find addresses that VWorld can resolve. Edit the address and try again."
+msgstr "필지 조회는 VWorld 가 풀 수 있는 주소만 찾을 수 있습니다. 주소를 고쳐서 다시 시도하세요."
+
+
+msgid "Placement"
+msgstr "배치"
+
+msgid "Placed on map"
+msgstr "지도에 배치됨"
+
+msgid "Site-based (not placed yet)"
+msgstr "대지 기준 (아직 배치 전)"
+
+msgid "Not placed"
+msgstr "배치 안 됨"
+
+msgid "Click the map to place this device."
+msgstr "지도를 눌러 이 장치를 배치하세요."
+
+
+msgid "Select a map to place this device on."
+msgstr "이 장치를 놓을 지도를 선택하세요."
+
+
+msgid "Authentication failed - not retrying automatically"
+msgstr "인증 실패 — 자동으로 다시 시도하지 않습니다"
+
+msgid "Closed"
+msgstr "닫힘"
+
+#, python-format
+msgid "Saved %(time)s"
+msgstr "저장됨 %(time)s"
+
+msgid "Auto-save failed. Your changes are kept — use Save to try again."
+msgstr "자동 저장하지 못했습니다. 바뀐 내용은 그대로 있으니 저장 버튼으로 다시 시도하세요."
+
+msgid "Back to map"
+msgstr "지도로"
+
+msgid "There are unsaved changes. Leave without saving?"
+msgstr "저장하지 않은 변경이 있습니다. 저장하지 않고 나갈까요?"
+
+msgid "Open selected facility design"
+msgstr "고른 시설 설계 열기"
+
+msgid "New facility on this map"
+msgstr "이 지도에 새 시설"
+
+msgid "Design a new facility on this map. The map and site carry over."
+msgstr "이 지도에 새 시설을 설계합니다. 지도와 대지가 그대로 넘어갑니다."
+
+msgid "Opened"
+msgstr "열림"
+
+msgid "Facility tools"
+msgstr "시설 도구"
+
+msgid "Stage view"
+msgstr "화면"
+
+msgid "Auto-generate…"
+msgstr "자동 생성…"
+
+msgid "Default isometric"
+msgstr "기본 등축"
+
+msgid "Top (plan, north up)"
+msgstr "위(평면, 북쪽이 위)"
+
+msgid "South side"
+msgstr "남쪽(정면)"
+
+msgid "West side"
+msgstr "서쪽"
+
+msgid "East side"
+msgstr "동쪽"
+
+msgid "Southwest isometric"
+msgstr "남서 등축"
+
+msgid "Southeast isometric"
+msgstr "남동 등축"
+
+msgid "Northwest isometric"
+msgstr "북서 등축"
+
+msgid "Northeast isometric"
+msgstr "북동 등축"
+
+msgid "Projection"
+msgstr "투영"
+
+msgid "Perspective"
+msgstr "투시"
+
+msgid "Isometric"
+msgstr "등축"
+
+msgid "Display filter"
+msgstr "표시 필터"
+
+msgid "Add a layer from the Irrigation menu above the model first. These fill the active layer."
+msgstr "모형 위 \"관수\" 메뉴에서 먼저 레이어를 추가하세요. 아래 값은 지금 고른 레이어를 채웁니다."
+
+msgid "Placing %s"
+msgstr "%s 배치 중"
+
+msgid "click a face"
+msgstr "면을 클릭"
+
+msgid "click a position"
+msgstr "놓을 자리를 클릭"
+
+msgid "click to add points · Enter to finish"
+msgstr "클릭해 점 추가 · Enter 로 끝"
+
+msgid "click two pipes"
+msgstr "배관 두 개를 클릭"
+
+msgid "Keeps placing · Esc to finish"
+msgstr "계속 배치 중 · Esc 로 끝"
+
+msgid "Selected"
+msgstr "선택"
+
+msgid "Unconnected spots"
+msgstr "연결 안 된 자리"
+
+msgid "ONVIF Camera"
+msgstr "ONVIF 카메라"
+
+msgid "ONVIF (Profile S) network camera (SOAP + RTSP)"
+msgstr "ONVIF(Profile S) 네트워크 카메라 (SOAP + RTSP)"
+
+msgid "Save the settings first, then press Check Connection. Live video starts only after the connection is checked."
+msgstr "먼저 설정을 저장한 뒤 '연결 확인'을 누르세요. 연결을 확인해야 실시간 영상이 시작됩니다."
+
+msgid "Main (largest picture)"
+msgstr "주 스트림 (가장 큰 화면)"
+
+msgid "Where it stands"
+msgstr "어디에"
+
+msgid "What it is"
+msgstr "무엇을"
+
+msgid "Connect & check"
+msgstr "연결·점검"
+
+msgid "Back to facility"
+msgstr "시설로"
+
+msgid "Save the facility first to connect weather and groups, see the integration summary and run a device check."
+msgstr "시설을 먼저 저장해야 날씨·그룹을 연결하고 통합 요약을 보며 장치 점검을 할 수 있습니다."
+
+msgid "Record what is in each zone on the Plots page."
+msgstr "구역마다 무엇이 있는지는 구획 페이지에서 적습니다."
+
+msgid "Open Plots"
+msgstr "구획 열기"
+
+msgid "Selected component"
+msgstr "고른 구성요소"
+
+#, python-format
+msgid "%(name)s done"
+msgstr "%(name)s 완료"
+
+#, python-format
+msgid "%(name)s to do"
+msgstr "%(name)s 남음"
+
+#, python-format
+msgid "%(name)s after saving"
+msgstr "%(name)s 저장한 뒤"
+
+#, python-format
+msgid "Components %(n)s"
+msgstr "구성요소 %(n)s"
+
+#, python-format
+msgid "Not connected %(n)s"
+msgstr "연결 안 됨 %(n)s"
+
+msgid "Component"
+msgstr "구성요소"
+
+msgid "No input"
+msgstr "입력 없음"
+
+msgid "No device"
+msgstr "장치 없음"
+
+msgid "Opening method"
+msgstr "개폐 방식"
+
+msgid "Hinged (swings open)"
+msgstr "여닫이(힌지)"
+
+msgid "Sliding"
+msgstr "미닫이"
+
+msgid "Roll-up"
+msgstr "권취(말아 올림)"
+
+msgid "Lift (moves up)"
+msgstr "들창(위로 들림)"
+
+msgid "Mist nozzle"
+msgstr "분무 노즐"
+
+# ── 시설 설계 S5 문구 정리(구성요소 한 이름·지우기/다시 그리기 대상 명시) ──
+msgid "Clear placement"
+msgstr "배치 지우기"
+
+msgid "Add components from what is drawn on the map"
+msgstr "지도에 그려 둔 것을 구성요소로 가져옵니다"
+
+msgid "From the map…"
+msgstr "지도에서 가져오기…"
+
+msgid "Rebuild 3D model"
+msgstr "3D 모형 다시 그리기"
+
+msgid "A device was removed here but the component stayed. Select a row to open it and pick a device."
+msgstr "여기 있던 장치가 사라졌지만 구성요소는 남아 있습니다. 행을 누르면 그 구성요소를 열어 장치를 고를 수 있습니다."
+
+msgid "Clear pipes"
+msgstr "배관 지우기"
+
+msgid "Clear irrigation devices"
+msgstr "관수 장치 지우기"
+
+msgid "No weather services connected — use Add Connection below"
+msgstr "연결된 기상 서비스가 없습니다 — 아래 연결 추가를 누르세요"
+
+msgid "Reload summary"
+msgstr "요약 다시 불러오기"
+
+msgid "No component selected — add one from the toolbar above the model, or select one in 3D or in the component list."
+msgstr "선택된 구성요소가 없습니다 — 모형 위 도구 막대로 추가하거나 3D·구성요소 목록에서 고르세요."
+
+msgid "Actuator that operates this component (one can drive several components)"
+msgstr "이 구성요소를 작동시킬 액추에이터 (1개로 여러 구성요소 구동 가능)"
+
+msgid "No linked actuators or sensors. Place components and save to show them here."
+msgstr "연동된 액추에이터·센서가 없습니다. 구성요소를 배치하고 저장하면 여기에 나타납니다."
+
+msgid "Add components from the map"
+msgstr "지도에서 구성요소 가져오기"
+
+msgid "Nothing on this map to add."
+msgstr "이 지도에는 가져올 것이 없습니다."
+
+msgid "Select what is drawn on the current map to add it as a component."
+msgstr "현재 지도에 그려 둔 것을 골라 구성요소로 추가합니다."
+
+msgid "No components added yet."
+msgstr "아직 추가된 구성요소가 없습니다."
+
+# ── 시설 설계 S5 표시 필터 상태 글자 ──
+msgid "Shown"
+msgstr "보임"
+
+msgid "Hidden"
+msgstr "숨김"
+
+msgid "Viewing"
+msgstr "보는 층"
+
+# ── 시설 설계 S6 폰 축소 ──
+msgid "Placement and plan editing are on a wider screen."
+msgstr "배치와 평면 수정은 넓은 화면에서 합니다."
+
+msgid "%(done)s/%(total)s steps"
+msgstr "%(done)s/%(total)s 단계"
+
+# ── 자원 조절 R6 경량 모드 ──
+msgid "Lightweight Mode"
+msgstr "경량 모드"
+
+msgid "Phones and tablets only"
+msgstr "폰·태블릿에서만"
+
+msgid "Makes the screen lighter on slow devices and connections: refreshes less often, turns off motion effects, and shows camera snapshots instead of live video."
+msgstr "느린 기기나 회선에서 화면을 가볍게 합니다. 새로 고치는 간격을 늘리고, 움직이는 효과를 끄고, 카메라는 실시간 영상 대신 사진으로 보여 줍니다."
+
+#: aot/aot_flask/static/js/common/aot-ai-caption.js
+msgid "Move to top"
+msgstr "맨 위로"
+
+#: aot/aot_flask/static/js/common/aot-ai-caption.js
+msgid "Moved to the top."
+msgstr "맨 위로 옮겼습니다."
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Card text size"
+msgstr "카드 글자 크기"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Small text"
+msgstr "작게"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Normal text"
+msgstr "보통"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Large text"
+msgstr "크게"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Extra large text"
+msgstr "아주 크게"
+
+#: aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "PID: %(state)s"
+msgstr "PID: %(state)s"
+
+#: aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Control variable: %(total)s = %(p)s (P), %(i)s (I), %(d)s (D)"
+msgstr "제어 변수: %(total)s = %(p)s (P), %(i)s (I), %(d)s (D)"

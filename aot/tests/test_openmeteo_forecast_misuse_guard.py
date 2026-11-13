@@ -23,9 +23,9 @@ from aot.aot_flask.extensions import db
 from aot.databases.models import DeviceMeasurements, GeoFacility, Input
 
 # 앱 컨텍스트 밖에서 먼저 import — 번역 문자열을 평가하는 모듈이 딸려 온다.
-from aot.aot_flask.geo import device_binding as _device_binding  # noqa: F401
-from aot.aot_flask.geo import facility_integration as FI
-from aot.aot_flask.geo.facility_io import FacilityManager
+from aot.space import device_binding as _device_binding  # noqa: F401
+from aot.space import facility_integration as FI
+from aot.space.facility_io import FacilityManager
 from aot.functions import ext_context_collector as ECC
 from aot.inputs import open_meteo_hourly_forecast as HF
 import aot.utils.inputs as UI
@@ -289,13 +289,13 @@ class TestSaveRejected(_DB):
 
     def test_기존_입력_구마모토_일사는_통과(self):
         """`OPEN_METEO_FORECAST` 일사 센서 — 가드 검사를 지나 다음 단계로 간다."""
-        from aot.aot_flask.geo import facility_io as FIO
+        from aot.space import facility_io as FIO
         self.assertIsNone(FIO._forecast_inputs_in_sensor_fittings(
             [_sensor('S2', OM_IN, channels=[{'measurement_id': 'om-m2'}]),
              _sensor('S3', KMA_IN)]))
 
     def test_예보_바인딩은_막지_않는다(self):
-        from aot.aot_flask.geo import facility_io as FIO
+        from aot.space import facility_io as FIO
         self.assertIsNone(FIO._forecast_inputs_in_sensor_fittings(
             [{'id': 'A1', 'kind': 'opening', 'input_id': FC_IN}]))
         # weather_bindings 는 설비가 아니다 — 같은 장치를 예보 칸에 묶는 것은 허용.

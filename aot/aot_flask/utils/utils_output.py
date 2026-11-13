@@ -35,13 +35,8 @@ from aot.aot_flask.utils.utils_general import sanitize_nullish_sequence
 from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.outputs import parse_output_information
-from aot.aot_flask.utils.utils_map_config import (
-    ensure_map_config,
-    clone_map_config,
-)
 from aot.utils.system_pi import is_int
-from aot.utils.device_tz import apply_system_tz_fallback
-from aot.utils.device_tz import default_device_coords
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 _DROP = object()
@@ -187,15 +182,7 @@ def output_add(form_add, request_form, tab_id=None):
             max_pos = db.session.query(db.func.max(Output.position_y)).scalar()
             new_output.position_y = (max_pos or 0) + 1
 
-            # Default map location from Misc
-            try:
-                misc = Misc.query.first()
-                if misc:
-                    new_output.latitude, new_output.longitude = default_device_coords(misc)
-                    apply_system_tz_fallback(new_output, misc.timezone)
-            except Exception:
-                pass
-
+            # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
             #
             # Set default values for new input being added
             #
@@ -472,19 +459,7 @@ def output_mod(form_output, request_form):
 
         if form_output.location.data:
             mod_output.location = form_output.location.data
-        lat_val = form_output.latitude.data
-        lng_val = form_output.longitude.data
-        if lat_val not in [None, ''] and lng_val not in [None, '']:
-            mod_output.latitude = float(lat_val)
-            mod_output.longitude = float(lng_val)
-            mod_output.location_updated_utc = datetime.utcnow()
-        elif (lat_val in [None, '']) and (lng_val in [None, '']):
-            # Leave existing coords untouched to avoid unintended clearing
-            pass
-        else:
-            messages["warning"].append(gettext("Latitude and longitude must be entered together."))
-        if form_output.location_source.data:
-            mod_output.location_source = form_output.location_source.data
+        # [L2] 위치(위도·경도·출처)는 옵션 폼에서 저장하지 않는다 — 배치(지도)가 정본.
         if ('marker_icon' in request_form) and hasattr(form_output, 'marker_icon') and form_output.marker_icon.data not in [None, '', 'None', 'null']:
             mod_output.marker_icon = form_output.marker_icon.data
         if ('marker_color' in request_form) and hasattr(form_output, 'marker_color') and form_output.marker_color.data not in [None, '', 'None', 'null']:
@@ -704,7 +679,6 @@ def output_del(form_output):
             return messages
 
     try:
-        map_config_id = target_output.map_config_id if target_output else None
 
         device_measurements = DeviceMeasurements.query.filter(
             DeviceMeasurements.device_id == output_id).all()
@@ -718,7 +692,7 @@ def output_del(form_output):
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
         # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
         # 이 게이트웨이를 지나간다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(output_id)
         deleted_output = delete_entry_with_id(
             Output,

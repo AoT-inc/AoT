@@ -10,6 +10,7 @@ from aot.inputs.base_input import AbstractInput
 from aot.databases.utils import session_scope
 from aot.config import AOT_DB_PATH
 from aot.databases.models import InputChannel, DeviceMeasurements
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger("aot.inputs.satellite_analysis")
 
@@ -79,83 +80,6 @@ def discover_analysis_modules():
 # Run discovery at module load time
 discover_analysis_modules()
 
-
-def discover_and_query_for_ai(active_layers, lat, lng):
-    """
-    Dynamic AI context enrichment for map widgets.
-    Parallelized in Phase 17 to prevent 30s+ blocks.
-    """
-    import importlib
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    from flask import current_app
-
-    if not active_layers or lat is None or lng is None:
-        return []
-
-    # v14.1: Capture app object in main thread — current_app is not available in worker threads
-    app = current_app._get_current_object()
-
-    results = []
-
-    def fetch_module_reading(module_name, display_name):
-        # Filter layers that match this module
-        matched_layer = None
-        display_lower = display_name.lower()
-        for layer_name in active_layers:
-            if display_lower in str(layer_name).lower():
-                matched_layer = layer_name
-                break
-
-        if not matched_layer:
-            return None
-
-        try:
-            # v14.1: Use captured app object instead of current_app (thread-safe)
-            with app.app_context():
-                with app.test_request_context(): # For babel _()
-                    mod = importlib.import_module(f"aot.inputs_gis.{module_name}")
-                    if not hasattr(mod, 'InputModule'):
-                        return None
-                    
-                    instance = mod.InputModule(None, testing=True)
-                    # Inject keys
-                    try:
-                        from aot.databases.models import GeoSetting
-                        settings = GeoSetting.query.first()
-                        if settings and settings.keys:
-                            instance.global_api_keys = json.loads(settings.keys) or {}
-                    except: pass
-
-                    readings = instance.get_ai_reading(lat, lng)
-                    if not readings:
-                        return None
-                    
-                    batch = []
-                    for r in readings:
-                        batch.append({
-                            "layer": matched_layer,
-                            "property_detail": r.get('label', ''),
-                            "value": r.get('value'),
-                            "unit": r.get('unit', '')
-                        })
-                    return batch
-        except Exception as e:
-            logger.warning(f"[AI Enrichment] Thread failed for module {module_name}: {e}")
-            return None
-
-    # Parallel Execution (Max 5 GIS sources, 10s timeout per module)
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_mod = {executor.submit(fetch_module_reading, m[0], m[1]): m[0] for m in ANALYSIS_MODULES}
-        for future in as_completed(future_to_mod):
-            try:
-                data = future.result(timeout=10) # 10 second limit per module
-                if data:
-                    results.extend(data)
-            except Exception as e:
-                mod_name = future_to_mod[future]
-                logger.error(f"[AI Enrichment] Module {mod_name} timed out or failed: {e}")
-    
-    return results
 
 # ------------------------------------------------------------------------------
 # Input Information
@@ -299,7 +223,7 @@ def execute_at_modification(
     """
     logger.info(f" [Satellite Sync] Hook called for Input {mod_input.unique_id}")
     import os
-    from aot.aot_flask.extensions import db
+    from aot.databases.sqla import db
     from aot.utils.modules import load_module_from_file
     from aot.config import PATH_INPUTS_GIS
     from aot.config_devices_units import add_measurement_unit
@@ -549,15 +473,15 @@ class InputModule(AbstractInput):
                     'measurement': meas_key_norm,
                     'unit': norm['unit'],
                     'value': data[raw_id],
-                    'timestamp_utc': datetime.utcnow()
+                    'timestamp_utc': naive_utc(utc_now())
                 }
 
         return measurements
 
     def _fetch_with_adjust(self):
         """Fetches data, optionally performing a spiral search for valid data."""
-        lat = self.input_dev.latitude
-        lng = self.input_dev.longitude
+        from aot.utils.timekit import resolve_coords
+        lat, lng, _src = resolve_coords(self.input_dev)   # [L2] 배치 우선
         
         if lat is None or lng is None:
             self.logger.warning(f" [Satellite Sync] Device location missing. Searching fallback for Input {self.input_dev.unique_id}")
@@ -566,7 +490,7 @@ class InputModule(AbstractInput):
             # 경유보다 직접적이다. "이 장치의 도형"은 geo_binding 이 답한다;
             # GeoShape.device_id 는 사망 선고된 컬럼이라 직접 조회하지 않는다.
             try:
-                from aot.aot_flask.geo.device_binding import shapes_for_device
+                from aot.space.device_binding import shapes_for_device
                 for marker in shapes_for_device(self.input_dev.unique_id):
                     geom = (marker.feature or {}).get('geometry') or {}
                     coords = geom.get('coordinates')
@@ -583,7 +507,7 @@ class InputModule(AbstractInput):
             _dev_map = None
             if lat is None or lng is None:
                 try:
-                    from aot.aot_flask.geo.device_membership import map_for_device
+                    from aot.space.device_membership import map_for_device
                     _dev_map = map_for_device(self.input_dev.unique_id)
                 except Exception:
                     _dev_map = None

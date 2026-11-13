@@ -22,7 +22,7 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding as B
+from aot.space import device_binding as B
 from aot.databases.geo_integrity_ddl import apply_binding
 from aot.databases.models import GeoBinding, Output
 
@@ -274,8 +274,8 @@ class TestMarkerPathRecordsBinding(unittest.TestCase):
         self.assertIsNotNone(row, 'place_device 가 바인딩을 남기지 않았다')
         self.assertEqual(row.device_id, DEV_A)
         self.assertEqual(row.device_kind, 'output')
-        self.assertEqual(row.device_id, marker.device_id,
-                         '두 저장처가 갈렸다 — 이중 저장 기간의 드리프트')
+        # L4: 정본은 바인딩 하나다(컬럼은 p7_06 에서 사라졌다).
+        self.assertFalse(hasattr(marker, 'device_id'))
 
     def test_moving_the_marker_does_not_churn_history(self):
         from aot.aot_flask.geo.device_placement import place_device
@@ -301,8 +301,11 @@ class TestMarkerPathRecordsBinding(unittest.TestCase):
         from aot.aot_flask.geo.device_placement import place_device
         marker = place_device('dev-not-in-any-table', 'm1', 35.8, 126.9,
                               commit=True)
-        self.assertIsNotNone(marker, '바인딩 실패가 배치를 막으면 안 된다')
+        # L4: 바인딩이 마커의 정체다 — 바인딩을 만들 수 없으면 마커도 만들지 않는다.
+        self.assertIsNone(marker)
         self.assertEqual(GeoBinding.query.count(), 0)
+        from aot.databases.models import GeoShape
+        self.assertEqual(GeoShape.query.count(), 0)
 
 
 class TestShapesForDevice(_Base):
@@ -322,8 +325,7 @@ class TestShapesForDevice(_Base):
 
     def _shape(self, stype='aot_device', device_id=DEV_A, channel='0'):
         from aot.databases.models import GeoShape
-        s = GeoShape(geo_id='m1', type=stype, device_id=device_id,
-                     channel_id=channel, feature={})
+        s = GeoShape(geo_id='m1', type=stype, channel_id=channel, feature={})
         s.save()
         return s
 
@@ -337,11 +339,6 @@ class TestShapesForDevice(_Base):
                          '바인딩이 있는데 레거시까지 섞어 돌려줬다 — 그러면 '
                          '전환이 어디까지 됐는지 아무도 말할 수 없다')
         self.assertNotIn(stray.unique_id, got)
-
-    def test_falls_back_to_the_legacy_column(self):
-        legacy = self._shape()
-        got = [s.unique_id for s in B.shapes_for_device(DEV_A)]
-        self.assertEqual(got, [legacy.unique_id])
 
     def test_role_filter_separates_marker_from_area(self):
         marker = self._shape(stype='aot_device')
@@ -357,14 +354,6 @@ class TestShapesForDevice(_Base):
                           B.shapes_for_device(DEV_A, role='area')],
                          [area.unique_id])
 
-    def test_role_filter_works_on_the_legacy_path_too(self):
-        """폴백 경로에서도 종류를 가려야 한다 — 마커를 찾는데 구역이 나오면 안 된다."""
-        marker = self._shape(stype='aot_device')
-        self._shape(stype='device')
-        self.assertEqual([s.unique_id for s in
-                          B.shapes_for_device(DEV_A, role='marker')],
-                         [marker.unique_id])
-
     def test_unknown_device_returns_empty(self):
         self.assertEqual(B.shapes_for_device('dev-nope'), [])
         self.assertEqual(B.shapes_for_device(None), [])
@@ -376,8 +365,8 @@ class TestShapesForDevice(_Base):
 
         bulk = B.shapes_for_devices([DEV_A, DEV_B])
         self.assertEqual([s.unique_id for s in bulk[DEV_A]], [a.unique_id])
-        self.assertEqual([s.unique_id for s in bulk[DEV_B]], [b.unique_id],
-                         '바인딩 없는 장치는 레거시로 채워야 한다')
+        self.assertNotIn(DEV_B, bulk, '바인딩 없는 장치는 비어 있다')
+        self.assertIsNotNone(b.unique_id)
 
     def test_bulk_does_not_mix_sources_per_device(self):
         """장치별로 정본이 갈린다 — 바인딩 있는 쪽에 레거시가 섞이면 안 된다."""
@@ -397,7 +386,7 @@ class TestMarkerMutationGateways(_Base):
         from aot.databases.models import GeoMap, GeoShape
         GeoMap(unique_id='m1', name='변경 게이트웨이', category='design').save()
         self.marker = GeoShape(
-            geo_id='m1', type='aot_device', device_id=DEV_A, channel_id='0',
+            geo_id='m1', type='aot_device', channel_id='0',
             feature={'type': 'Feature',
                      'geometry': {'type': 'Point', 'coordinates': [126.9, 35.8]},
                      'properties': {'name': '옛 이름'}})
@@ -410,7 +399,7 @@ class TestMarkerMutationGateways(_Base):
         from aot.aot_flask.geo.device_placement import move_device_markers
         from aot.databases.models import GeoShape
         second = GeoShape(
-            geo_id='m1', type='aot_device', device_id=DEV_A, channel_id='2',
+            geo_id='m1', type='aot_device', channel_id='2',
             feature={'type': 'Feature',
                      'geometry': {'type': 'Point', 'coordinates': [126.9, 35.8]},
                      'properties': {}})
@@ -499,8 +488,7 @@ class TestOverlaySaveRecordsBinding(_Base):
         self.assertIsNotNone(row, '도형 저장이 바인딩을 남기지 않았다')
         self.assertEqual(row.device_id, DEV_A)
         self.assertEqual(row.device_kind, 'output')
-        self.assertEqual(shape.device_id, DEV_A,
-                         '두 저장처가 갈렸다 — binding-drift 가 운다')
+        self.assertFalse(hasattr(shape, 'device_id'), 'L4: 컬럼은 사라졌다 — 정본은 바인딩')
 
     def test_resaving_the_same_shape_does_not_churn_history(self):
         """지도를 저장할 때마다 전체가 올라온다 — 매번 교체 이력이 쌓이면 안 된다."""

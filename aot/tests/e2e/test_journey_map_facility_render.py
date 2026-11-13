@@ -108,3 +108,60 @@ def test_the_facility_3d_model_is_drawn(map_page):
     assert changed >= MIN_CHANGED_PIXELS, (
         f'시설 3D 가 화면에 그려지지 않았습니다(달라진 픽셀 {changed}개). '
         '5 에서는 투영 행렬이 틀리면 모델이 화면 밖에 놓입니다')
+
+
+# 고도 400 m 평지 terrarium 타일(R·G·B = 129·144·0). 외부망 없이 시험 안에서 돌려준다.
+DEM_METERS = 400
+_DEM_TILE = io.BytesIO()
+Image.new('RGB', (256, 256), (129, 144, 0)).save(_DEM_TILE, 'PNG')
+_ENABLE_DEM = """() => {
+    const m = [...window.__aotMaps].find(m => m.getStyle && m.getCanvas);
+    window.AOT_GEO_CONFIG.terrain = {
+        id: 'e2e-dem', type: 'raster-dem', url: location.origin + '/e2e-dem/{z}/{x}/{y}.png',
+        attribution: 'e2e', terrain: {encoding: 'terrarium', tileSize: 256, maxzoom: 12}};
+    window.AoTMapSeam.enableTerrain(m);
+}"""
+
+
+def test_without_a_dem_input_the_map_stays_2d(map_page):
+    """DEM 입력이 없으면 지형을 켜는 호출도 아무 일도 하지 않는다."""
+    state = map_page.evaluate("""() => {
+        const m = [...window.__aotMaps].find(m => m.getStyle && m.getCanvas);
+        window.AoTMapSeam.enableTerrain(m);
+        return {input: window.AOT_GEO_CONFIG.terrain || null,
+                terrain: m.getTerrain() || null,
+                dem: Object.values(m.getStyle().sources).filter(s => s.type === 'raster-dem').length};
+    }""")
+    assert state == {'input': None, 'terrain': None, 'dem': 0}
+
+
+def test_the_facility_model_sits_on_the_terrain(map_page):
+    """고도가 있는 지형에서도 시설 모델이 그려지고, 경사면이 고도를 따른다."""
+    map_page.route('**/e2e-dem/**', lambda r: r.fulfill(
+        status=200, content_type='image/png', body=_DEM_TILE.getvalue()))
+    map_page.evaluate(_ENABLE_DEM)
+    # 경사면은 화면 안 시설만 계산한다. 시드의 다른 시설은 화면 밖에 있어 0 으로 남는다.
+    map_page.wait_for_function("""(want) => {
+        const m = [...window.__aotMaps].find(m => m.getStyle && m.getCanvas);
+        return window.AoTFacilityMap3D.terrainFits(m).some(f => Math.abs(f.c - want) < 1);
+    }""", arg=DEM_METERS, timeout=30000)
+
+    map_page.evaluate("""(id) => {
+        const m = [...window.__aotMaps].find(m => m.getStyle && m.getCanvas);
+        const impl = m.style._layers[id].implementation;
+        window.__facRender = impl.render;
+        impl.render = function () {};
+        m.triggerRepaint();
+    }""", LAYER_ID)
+    map_page.wait_for_timeout(2500)
+    without = _center_shot(map_page)
+    map_page.evaluate("""(id) => {
+        const m = [...window.__aotMaps].find(m => m.getStyle && m.getCanvas);
+        m.style._layers[id].implementation.render = window.__facRender;
+        m.triggerRepaint();
+    }""", LAYER_ID)
+    map_page.wait_for_timeout(2500)
+    with_3d = _center_shot(map_page)
+    diff = ImageChops.difference(without, with_3d).convert('L')
+    changed = diff.point(lambda v: 255 if v > 24 else 0).histogram()[255]
+    assert changed >= MIN_CHANGED_PIXELS, f'지형 위 시설 3D 가 보이지 않습니다(달라진 픽셀 {changed}개)'

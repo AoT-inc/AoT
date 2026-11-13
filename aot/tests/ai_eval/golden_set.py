@@ -160,7 +160,7 @@ GOLDEN_SET = [
     # one valve (밸브1..밸브4) — confirmed then via the zone maps of the day and
     # AoTDataToolService.search_devices(), run directly against a sandboxed copy
     # (never the live DB). Membership is now decided by
-    # aot.aot_flask.geo.device_membership (PlaceIndex · place_members). Replace with your
+    # aot.space.device_membership (PlaceIndex · place_members). Replace with your
     # own facility's real names if these devices don't exist in your target DB.
     {
         'id': 'dc_recent_01', 'category': 'deterministic_control',

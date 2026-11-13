@@ -28,6 +28,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Optional
 
+from aot.utils.kma_clock import KMA_TZ_NAME
+
 logger = logging.getLogger(__name__)
 
 # 예보 파일 캐시 — **경로별** {경로: (읽은 시각, 내용)}. 예전에는 하나뿐이라 두 번째
@@ -38,6 +40,8 @@ _FORECAST_CACHE_TTL: float = 900.0   # 15분 캐시
 # 시설 시간열 파일(Open-Meteo `forecast_<uuid>.json`)은 수신(`fetched_epoch`) 뒤 이 시간이
 # 지나면 쓰지 않는다(환경제어 E3). 입력 주기 1800 s 기준 세 번 연속 실패한 셈이다.
 FACILITY_FILE_MAX_AGE_S: float = 7200.0
+# 수신 시각이 지금보다 이만큼(10분) 넘게 앞서면 시계 이상으로 보고 쓰지 않는다.
+FACILITY_FILE_MAX_FUTURE_S: float = 600.0
 
 # 시설 시간열 파일 경로에서 강수확률로 환기를 억제하려면 창 안 시간당 강수 최대가
 # 이 값 이상이어야 한다(환경제어 E2). 강수 값이 없으면 확률만으로 억제하지 않는다.
@@ -116,7 +120,7 @@ def load_fresh_facility_forecast(forecast_path: Optional[str],
         return None
     now = time.time() if now_epoch is None else float(now_epoch)
     age = now - fetched
-    if age > FACILITY_FILE_MAX_AGE_S or age < -600.0:
+    if age > FACILITY_FILE_MAX_AGE_S or age < -FACILITY_FILE_MAX_FUTURE_S:
         return None
     return data
 
@@ -127,11 +131,13 @@ def forecast_epoch(stamp, tz=None) -> Optional[float]:
     if not stamp:
         return None
     try:
-        import pytz
         from datetime import datetime
+        from aot.utils.timekit import resolve_tz, wall_to_utc, SOURCE_EXPLICIT
         naive = datetime.strptime(str(stamp), '%Y%m%d%H%M')
-        zone = pytz.timezone(str(tz) if tz else 'Asia/Seoul')
-        return zone.localize(naive).timestamp()
+        zone, src = resolve_tz(str(tz) if tz else KMA_TZ_NAME)
+        if src != SOURCE_EXPLICIT:
+            return None                     # 모르는 이름은 읽을 수 없는 것
+        return wall_to_utc(naive, zone).timestamp()
     except Exception:
         return None
 

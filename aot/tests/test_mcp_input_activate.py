@@ -34,9 +34,9 @@ class RegistryTest(unittest.TestCase):
         from aot.tools import tool_registry as R
         from aot.tools.domain.registry import find_op
         from aot.tools.domain.registry_data import OPS
-        o = find_op(OPS, 'configure', 'input_activate')
-        self.assertEqual({'input': 'activate_input'}, o.inner)
-        self.assertEqual(('target', 'active'), o.required)
+        o = find_op(OPS, 'configure', 'activate')        # input_activate·gis_input_activate 는 activate 로 합쳐졌다(재설계 PR 3)
+        self.assertEqual({'input': 'activate_input', 'gis_layer': 'activate_gis_input'}, o.inner)
+        self.assertEqual(('target', 'state'), o.required)      # 2026-11-03 재설계 PR 2: active → state(on|off)
         self.assertIn('activate_input', R.approval_required_tools())
         self.assertIn('activate_input', R.write_tools())
 
@@ -59,23 +59,16 @@ class RegistryTest(unittest.TestCase):
             ents[prof] = surface.entries(OPS, lambda n, p=prof: R.tool_in_profile(n, p),
                                          set(R.approval_required_tools()))
         ops_cfg = next(e for e in ents[R.TOOL_PROFILE_OPERATIONS] if e['name'] == 'configure')
-        self.assertNotIn('input_activate', ops_cfg['description'])
+        self.assertNotIn('activate —', ops_cfg['description'])
         full_cfg = next(e for e in ents[R.TOOL_PROFILE_CONFIGURATION] if e['name'] == 'configure')
-        self.assertIn('input_activate', full_cfg['inputSchema']['properties']['op']['enum'])
-        self.assertIn('active', full_cfg['inputSchema']['properties'])
-        self.assertIn('input_activate', full_cfg['description'])
-
-    def test_active_names_the_ops_that_take_it(self):
-        from aot.tools.domain.registry_data import OPS
-        for o in OPS:
-            if o.tool == 'configure' and 'active' in o.extra_args:
-                self.assertIn('input_activate', o.extra_args['active'])
-                self.assertIn('gis_input_activate', o.extra_args['active'])
+        self.assertIn('activate', full_cfg['inputSchema']['properties']['op']['enum'])
+        self.assertIn('state', full_cfg['inputSchema']['properties'])
+        self.assertIn('activate —', full_cfg['description'])
 
     def test_input_edit_points_to_the_switch(self):
         from aot.tools.domain.registry import find_op
         from aot.tools.domain.registry_data import OPS
-        self.assertIn('input_activate', find_op(OPS, 'configure', 'input_edit').use)
+        self.assertIn('activate', find_op(OPS, 'configure', 'edit').use)
 
 
 class PlanTest(unittest.TestCase):
@@ -92,7 +85,7 @@ class PlanTest(unittest.TestCase):
         self.assertEqual('refuse', v[0])
         body = json.loads(v[1][0]['text'])
         self.assertEqual('missing_argument', body['reason_code'])
-        self.assertIn('active', body['message'])
+        self.assertIn('state', body['message'])
 
     def test_input_edit_with_active_says_which_op_takes_it(self):
         v = _plan('configure', {'op': 'input_edit', 'target': 'x', 'active': False})
@@ -100,8 +93,8 @@ class PlanTest(unittest.TestCase):
         body = json.loads(v[1][0]['text'])
         self.assertEqual('unknown_argument', body['reason_code'])
         self.assertIn('does not take active', body['message'])
-        self.assertIn('configure.input_activate', body['message'])
-        self.assertIn('configure.gis_input_activate', body['message'])
+        self.assertIn('configure.activate', body['message'])
+        self.assertNotIn('sequence_create', body['message'])         # 같은 `state` 이름이어도 뜻이 다른 op 는 안내하지 않는다
 
     def test_no_hint_when_no_other_op_takes_the_argument(self):
         v = _plan('configure', {'op': 'input_edit', 'target': 'x', 'bogus': 1})
@@ -548,4 +541,4 @@ class InputSwitchFlowTest(_AppFixture):
         out = self._call('configure', {'op': 'input_edit', 'target': self.inp_id,
                                        'active': False})
         self.assertEqual('unknown_argument', out.get('reason_code'), out)
-        self.assertIn('configure.input_activate', out['message'])
+        self.assertIn('configure.activate', out['message'])

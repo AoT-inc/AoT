@@ -33,15 +33,23 @@ def plan_output_command(state, output_type, value, duration):
     refuse before sending.
     """
     types, is_position = _output_module_traits(output_type)
-    level = None if value is None else float(value)
+    level, err = _parse_level(value)
+    if err:
+        return {'error': err}
 
     if state == 'set_value':
-        amount = level if level is not None else duration
-        if 'value' in types:
-            return {'state': 'on', 'output_type': 'value', 'amount': amount}
-        if 'pwm' in types:
-            return {'state': 'on', 'output_type': 'pwm', 'amount': amount}
-        return {'error': f"This output ({output_type}) takes no value; use on/off."}
+        if level is None and duration:
+            level = float(duration)     # 옛 호출: 값을 duration 자리에 실어 보냈다
+        if 'value' not in types and 'pwm' not in types:
+            return {'error': f"This output ({output_type}) takes no value; use on/off."}
+        if level is None:
+            return {'error': "set_value needs value: the number to set "
+                             "(PWM duty or position: 0-100 %)."}
+        form = 'value' if 'value' in types else 'pwm'
+        err = _range_refusal(level, form, is_position)
+        if err:
+            return {'error': err}
+        return {'state': 'on', 'output_type': form, 'amount': level}
 
     if state in ('off', 'close'):
         if state == 'close' and is_position:
@@ -55,10 +63,51 @@ def plan_output_command(state, output_type, value, duration):
     if 'on_off' in types or not types:
         return {'state': 'on', 'output_type': 'sec', 'amount': duration}
     if 'pwm' in types:
-        return {'state': 'on', 'output_type': 'pwm',
-                'amount': level if level is not None and level > 0 else 100.0}
+        if level is not None and level > 0:
+            err = _range_refusal(level, 'pwm', False)
+            if err:
+                return {'error': err}
+            return {'state': 'on', 'output_type': 'pwm', 'amount': level}
+        return {'state': 'on', 'output_type': 'pwm', 'amount': 100.0}
     return {'error': f"This output ({output_type}) is set by value; "
                      f"use state='set_value' with value."}
+
+
+def _parse_level(value):
+    """value -> (float or None, None) or (None, error). '40', 40, '40%' are all 40."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None, None
+    raw = value.strip().rstrip('%').strip() if isinstance(value, str) else value
+    try:
+        level = float(raw)
+    except (TypeError, ValueError):
+        return None, f"value must be a number, got {value!r}."
+    if level != level or level in (float('inf'), float('-inf')):
+        return None, f"value must be a finite number, got {value!r}."
+    return level, None
+
+
+def _range_refusal(level, form, is_position):
+    """Why this level cannot go out, or None.
+
+    A PWM module and a position output take 0-100 %. Outside that the module
+    returns without switching and the daemon still answers success
+    (pwm_python.output_switch: `100 >= amount >= 0` else return) — refuse here
+    instead of reporting a change that never happened. Other value outputs
+    (setpoints, MQTT values) carry their own units, so they are not bounded.
+    """
+    if (form == 'pwm' or is_position) and not 0 <= level <= 100:
+        what = 'position' if is_position else 'PWM duty'
+        return f"value {level:g} is out of range: {what} is 0-100 %."
+    return None
+
+
+def value_range(output_type):
+    """'0-100 %' when this Output's set_value is a PWM duty or a position, else None."""
+    types, is_position = _output_module_traits(output_type)
+    if is_position or ('pwm' in types and 'value' not in types):
+        return '0-100 %'
+    return None
 
 
 def parse_run_seconds(duration_seconds=None, duration_minutes=None):

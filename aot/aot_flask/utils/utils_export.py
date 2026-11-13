@@ -16,7 +16,8 @@ from packaging.version import parse
 from werkzeug.utils import secure_filename
 
 from aot.utils.service_control import reload_frontend, restart_daemon
-from aot.utils.time_utils import utc_now, to_local
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import to_tz, FARM
 from aot.config import (ALEMBIC_VERSION, DATABASE_NAME, DOCKER_CONTAINER, IMPORT_LOG_FILE,
                               INSTALL_DIRECTORY, AOT_VERSION,
                               PATH_ACTIONS_CUSTOM, PATH_FUNCTIONS_CUSTOM,
@@ -62,9 +63,11 @@ def export_measurements(form):
         start_time_str, end_time_str = form.date_range.data.split(' - ')
         # 칸의 기본값은 시스템 시각으로 채운다(routes_page.page_export) — 같은
         # 시계로 해석한다.
-        from aot.utils.timekit import picker_wall_to_epoch
-        start_seconds = picker_wall_to_epoch(start_time_str)
-        end_seconds = picker_wall_to_epoch(end_time_str)
+        from aot.utils.timekit import FARM, wall_to_utc
+        start_seconds = int(wall_to_utc(
+            datetime.datetime.strptime(start_time_str.strip(), '%m/%d/%Y %H:%M'), FARM).timestamp())
+        end_seconds = int(wall_to_utc(
+            datetime.datetime.strptime(end_time_str.strip(), '%m/%d/%Y %H:%M'), FARM).timestamp())
 
         # Parse measurement data
         measurement_parts = form.measurement.data.split(',')
@@ -113,7 +116,7 @@ def export_settings():
                     'AoT_{mver}_Settings_{aver}_{host}_{dt}.zip'.format(
                         mver=AOT_VERSION, aver=ALEMBIC_VERSION,
                         host=socket.gethostname().replace(' ', ''),
-                        dt=to_local(utc_now()).strftime("%Y-%m-%d_%H-%M-%S"))
+                        dt=to_tz(utc_now(), FARM).strftime("%Y-%m-%d_%H-%M-%S"))
             )
         else:
             error.append(data)
@@ -145,7 +148,7 @@ def export_influxdb():
                     'AoT_{mv}_Influxdb_{iv}_{host}_{dt}.zip'.format(
                         mv=AOT_VERSION, iv=influxdb_info['influxdb_version'],
                         host=socket.gethostname().replace(' ', ''),
-                        dt=to_local(utc_now()).strftime("%Y-%m-%d_%H-%M-%S"))
+                        dt=to_tz(utc_now(), FARM).strftime("%Y-%m-%d_%H-%M-%S"))
                 )
             else:
                 error.append(data)
@@ -170,12 +173,12 @@ def thread_import_settings(tmp_folder):
         _, _, _ = cmd_output(cmd, user="root")
 
         # Upgrade database
-        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Database Upgrade\n")
+        append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Database Upgrade\n")
         cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper upgrade_database | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
         # Update dependencies (may take time)
-        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Updating dependencies (please wait)...\n")
+        append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Updating dependencies (please wait)...\n")
         cmd = f"{INSTALL_DIRECTORY}/aot/scripts/aot_wrapper update_dependencies | ( while IFS= read -r line; do echo \"[$(date +'%Y-%m-%d %H:%M:%S')] $line\"; done ) >> {IMPORT_LOG_FILE} 2>&1"
         _, _, _ = cmd_output(cmd, user="root")
 
@@ -187,7 +190,7 @@ def thread_import_settings(tmp_folder):
         _, _, _ = cmd_output(cmd, user="root")
 
         # Restart backend daemon
-        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restarting backend")
+        append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restarting backend")
         restart_daemon(logger=logger)
 
         # Cleanup tmp directory
@@ -195,14 +198,14 @@ def thread_import_settings(tmp_folder):
             shutil.rmtree(tmp_folder)
 
         # Reload frontend
-        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Reloading frontend")
+        append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Reloading frontend")
         # Small delay so this import thread finishes logging before the
         # web server goes down for the reload.
         reload_frontend(delay_sec=3, logger=logger)
     except:
         logger.exception("Exception occurred in thread_import_settings()")
 
-    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Import settings completed")
+    append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Import settings completed")
     logger.info("Import settings finished.")
 
 
@@ -218,7 +221,7 @@ def import_settings(form):
 
     try:
         logger.info("Starting settings import.")
-        append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Settings import started")
+        append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Settings import started")
         correct_format = 'AoT_AOTVERSION_Settings_DBVERSION_HOST_DATETIME.zip'
         upload_folder = os.path.join(INSTALL_DIRECTORY, 'upload')
         tmp_folder = os.path.join(upload_folder, 'aot_db_tmp')
@@ -261,13 +264,13 @@ def import_settings(form):
 
         if not error:
             logger.info("Saving file to import")
-            append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Saving file to import")
+            append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Saving file to import")
             # Save file to upload directory
             filename = secure_filename(form.settings_import_file.data.filename)
             full_path = os.path.join(tmp_folder, filename)
             assure_path_exists(upload_folder)
             assure_path_exists(tmp_folder)
-            append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Saving {filename} to {tmp_folder}")
+            append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Saving {filename} to {tmp_folder}")
             form.settings_import_file.data.save(os.path.join(tmp_folder, filename))
 
             # Inspect zip content
@@ -280,12 +283,12 @@ def import_settings(form):
 
         if not error:
             logger.info("Extracting imported file")
-            append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Extracting imported file")
+            append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Extracting imported file")
             # Extract zip
             try:
                 assure_path_exists(tmp_folder)
                 zip_ref = zipfile.ZipFile(full_path, 'r')
-                append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Extracting {full_path} to {tmp_folder}")
+                append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Extracting {full_path} to {tmp_folder}")
                 zip_ref.extractall(tmp_folder)
                 zip_ref.close()
             except Exception as err:
@@ -293,7 +296,7 @@ def import_settings(form):
 
         if not error:
             logger.info("Stopping daemon and copying files")
-            append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Stopping daemon and copying files")
+            append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Stopping daemon and copying files")
             try:
                 if DOCKER_CONTAINER:
                     subprocess.Popen('docker stop aot_daemon 2>&1', shell=True)
@@ -304,14 +307,14 @@ def import_settings(form):
 
                 # Rename current database and replace with imported one
                 imported_database = os.path.join(tmp_folder, DATABASE_NAME)
-                backup_name = f"{SQL_DATABASE_AOT}.backup_{to_local(utc_now()).strftime('%Y-%m-%d_%H-%M-%S')}"
+                backup_name = f"{SQL_DATABASE_AOT}.backup_{to_tz(utc_now(), FARM).strftime('%Y-%m-%d_%H-%M-%S')}"
                 full_path_backup = os.path.join(DATABASE_PATH, backup_name)
 
                 append_to_log(IMPORT_LOG_FILE,
-                              f"\n\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Renaming {SQL_DATABASE_AOT} to {full_path_backup}")
+                              f"\n\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Renaming {SQL_DATABASE_AOT} to {full_path_backup}")
                 os.rename(SQL_DATABASE_AOT, full_path_backup)  # Current database backup
                 append_to_log(IMPORT_LOG_FILE,
-                              f"\n\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Moving {imported_database} to {SQL_DATABASE_AOT}")
+                              f"\n\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Moving {imported_database} to {SQL_DATABASE_AOT}")
                 shutil.move(imported_database, SQL_DATABASE_AOT)  # Replace with imported database
 
                 delete_directories = [
@@ -327,7 +330,7 @@ def import_settings(form):
 
                 # Delete custom items and generated code
                 for each_dir in delete_directories:
-                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Deleting directory: {each_dir}")
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Deleting directory: {each_dir}")
                     if not os.path.exists(each_dir):
                         continue
                     for folder_name, sub_folders, filenames in os.walk(each_dir):
@@ -353,7 +356,7 @@ def import_settings(form):
 
                 # Restore custom items from zip
                 for each_dir in restore_directories:
-                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {each_dir[1]} directory: {each_dir[0]}")
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {each_dir[1]} directory: {each_dir[0]}")
                     extract_dir = os.path.join(tmp_folder, each_dir[1])
                     if not os.path.exists(extract_dir):
                         continue
@@ -361,11 +364,11 @@ def import_settings(form):
                         for filename in filenames:
                             file_path = os.path.join(folder_name, filename)
                             new_path = os.path.join(each_dir[0], filename)
-                            append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {new_path}")
+                            append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {new_path}")
                             try:
                                 shutil.move(file_path, new_path)
                             except:
-                                append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: Failed to restore {filename}")
+                                append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: Failed to restore {filename}")
                                 logger.exception("Exception during file move")
 
                 # User-uploaded files (notes/notice attachments, facility &
@@ -379,10 +382,10 @@ def import_settings(form):
                 for target_dir, zip_subfolder in UPLOAD_DIRECTORIES:
                     extract_dir = os.path.join(tmp_folder, zip_subfolder)
                     if not os.path.isdir(extract_dir):
-                        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Zip has no {zip_subfolder} folder, leaving existing {target_dir} untouched")
+                        append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Zip has no {zip_subfolder} folder, leaving existing {target_dir} untouched")
                         continue
 
-                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Deleting directory: {target_dir}")
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Deleting directory: {target_dir}")
                     if os.path.exists(target_dir):
                         for folder_name, sub_folders, filenames in os.walk(target_dir):
                             for filename in filenames:
@@ -392,18 +395,18 @@ def import_settings(form):
                                 except:
                                     pass
 
-                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {zip_subfolder} directory: {target_dir}")
+                    append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {zip_subfolder} directory: {target_dir}")
                     for folder_name, sub_folders, filenames in os.walk(extract_dir):
                         for filename in filenames:
                             file_path = os.path.join(folder_name, filename)
                             rel_path = os.path.relpath(file_path, extract_dir)
                             new_path = os.path.join(target_dir, rel_path)
                             os.makedirs(os.path.dirname(new_path), exist_ok=True)
-                            append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {new_path}")
+                            append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Restoring {new_path}")
                             try:
                                 shutil.move(file_path, new_path)
                             except:
-                                append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: Failed to restore {filename}")
+                                append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: Failed to restore {filename}")
                                 logger.exception("Exception during file move")
 
                 logger.info("Finishing import")
@@ -422,8 +425,8 @@ def import_settings(form):
         error.append(gettext("Exception occurred: %(err)s", err=err))
 
     if error:
-        append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Failed to complete settings import. Errors:")
+        append_to_log(IMPORT_LOG_FILE, f"\n\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Failed to complete settings import. Errors:")
     for each_err in error:
-        append_to_log(IMPORT_LOG_FILE, f"\n[{to_local(utc_now()).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: {each_err}")
+        append_to_log(IMPORT_LOG_FILE, f"\n[{to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H:%M:%S %Z')}] Error: {each_err}")
 
     flash_success_errors(error, action, url_for('routes_page.page_export'))

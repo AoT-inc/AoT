@@ -13,6 +13,7 @@
 
 라이브 DB 를 쓰지 않는다(임시 sqlite).
 """
+from aot.utils.timekit import FARM, today_at
 import os
 import tempfile
 import unittest
@@ -61,7 +62,7 @@ class DomainTargetResolveTest(unittest.TestCase):
         shape('site-y', 'map-y', 'site', '영양', _square(0.5, 0.5, 0.05))
         db.session.add(GeoPlot(
             unique_id='pl-4', geo_id='map-g', subject='콩', name='콩 4구',
-            started_on=date.today(),
+            started_on=today_at(FARM),
             feature={'type': 'Feature', 'properties': {},
                      'geometry': _square(0.002, 0.002, 0.001)}))
         # '김제' 가 이름에 든 기상 장치 둘 — 부분일치일 뿐이다.
@@ -89,7 +90,7 @@ class DomainTargetResolveTest(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
 
     def _ok(self, ref):
@@ -171,7 +172,7 @@ class DomainTargetResolveTest(unittest.TestCase):
 
     def test_changed_target_is_detected_before_running(self):
         from aot.aot_flask.extensions import db
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.databases.models import GeoShape
         from aot.tools.domain import targets
         snap = targets.snapshot(self._ok('3-1'))

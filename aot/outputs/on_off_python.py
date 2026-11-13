@@ -6,7 +6,6 @@ import importlib.util
 import os
 import textwrap
 
-from flask import current_app
 from flask_babel import lazy_gettext
 from markupsafe import Markup
 
@@ -15,6 +14,7 @@ from aot.config import PATH_PYTHON_CODE_USER
 from aot.databases.models import OutputChannel
 from aot.outputs.base_output import AbstractOutput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.module_hooks import web_app_testing
 from aot.utils.system_pi import assure_path_exists
 from aot.utils.system_pi import cmd_output
 from aot.utils.system_pi import set_user_grp
@@ -91,7 +91,7 @@ def execute_at_modification(
     messages["page_refresh"] = True
     pylint_message = None
 
-    if current_app.config['TESTING']:
+    if web_app_testing():
         return (messages,
                 mod_output,
                 custom_options_dict_postsave,

@@ -62,10 +62,10 @@ class Tool:
                  NOT in write_tools(): read-only keys and advice-only mode may
                  still submit; only roles that cannot use the AI at all
                  (`use_ai_chat` off — Guest/Kiosk by default) are refused.
-    manifest   : the VERBATIM manifest dict emitted into get_action_manifest()'s
-                 system_tools list, or None to omit the tool from the LLM manifest.
-                 Stored verbatim so the derived manifest is byte-identical to the
-                 original hand-written entries.
+    manifest   : 인앱 AI 의 제어 흐름 항목(read_manual·get_detailed_manifest·ask_user)
+                 만 갖는다 — get_action_manifest() 의 system_tools 로 그대로 나간다.
+                 도구는 도메인 명부로만 노출한다(26-11 5단계) — 다른 도구에 다시
+                 달지 말 것.
     노출 등급(domain·base_tier·never_demote)은 이 선언이 아니라 아래
     `_TIER_ASSIGNMENT` 표가 갖는다. 주기적으로 사람이 다시 보는 판단이라
     한눈에 보이는 표가 검토 단위이기 때문이다 — 그 절의 주석 참조.
@@ -188,11 +188,8 @@ class Tool:
 # ---------------------------------------------------------------------------
 # Tool declarations.
 #
-# ORDER MATTERS for one reason only: the derived system_tools manifest is emitted
-# in this list's order, and it is kept identical to the original hand-written order
-# so the LLM-facing prompt is unchanged. The manifest-bearing tools therefore come
-# first, in their original sequence; dispatch-only and validation-only tools follow
-# (tool_map is a dict and the approval sets are frozensets — order-independent).
+# 순서는 의미가 없다(tool_map 은 dict, 승인 집합은 frozenset). 옛 system_tools
+# 매니페스트가 이 순서로 나가던 시절의 묶음 주석(WITH/WITHOUT a manifest)은 이력이다.
 # ---------------------------------------------------------------------------
 TOOLS: List[Tool] = [
     # --- special action-type tools (manifest entries, not virtual_tool_call) -----
@@ -224,40 +221,9 @@ TOOLS: List[Tool] = [
     }),
 
     # --- physical / scheduling tools ---------------------------------------------
-    Tool('add_schedule', handler='add_schedule_tool', physical=True, config_only=True, manifest={
-        "action_type": "add_schedule",
-        "description": "Register a human work schedule or memo. Use for manual tasks such as weeding, inspection, or cleaning. Saves immediately (no approval) — it only records a reminder for a person; it does not move any equipment.",
-        # Corrected 2026-07-08: add_schedule_tool proposes a SchedulerJobMeta
-        # job (source_type='human'), NOT a Notes row — verified against the
-        # actual implementation. Use create_note for a plain memo/journal entry.
-        "usage_hint": "For a DATED work task/event (weeding, spraying, harvest, inspection) use this — it registers a human work item. Params: {date, content, worker, time, tags, target_name, target_id?}. PASS target_name (a zone/facility/device name like '온실', '3-1', '1포장 1-1') whenever the user names a place, so the schedule links to that real location (map + location search). If the name is not found the tool returns available_targets; if it names several places it returns candidates — call ask_user to pick, then retry with the chosen candidate's use_name (or pass its target_id as target_id when it has no use_name). Omit target_name only for a farm-wide event with no specific place. This is a GIS-based system: target_name resolves to exactly ONE entity and never auto-expands to its children. Before writing, if the request could apply per sub-unit ('각 구역별', 'each zone') call resolve_target(target_name) first — read-only, no approval — to see whether the name is a container with 'children'; if so, use add_schedule_batch to write all of them in one call instead of one add_schedule call per child. For an undated memo/note, use create_note instead.",
-    }),
-    Tool('add_schedule_batch', handler='add_schedule_batch_tool', physical=True, config_only=True, manifest={
-        "action_type": "add_schedule_batch",
-        "description": "Register MULTIPLE per-entity work schedules in ONE call — use instead of N separate add_schedule calls whenever a request applies per sub-unit ('각 구역별로', 'each zone'). Saves immediately (no approval, like add_schedule). Prefer this over N separate calls anyway: it rejects a duplicate target_name up front, and given window_start/window_end it runs a single capacity check across all entries that per-call add_schedule cannot see.",
-        "usage_hint": "params.arguments: {date, entries: [{target_name, time, content?, worker?}, ...], content?, worker?, tags?, window_start?, window_end?, duration_minutes?}. Call resolve_target on the container name FIRST to get the exact child names for `entries`. `content`/`worker` are shared defaults for entries that omit their own. Give BOTH window_start and window_end to get a server-side capacity check (entries.length * duration_minutes vs. available minutes) — if it doesn't fit, the call is rejected up front with the exact numbers instead of you having to compute it; the request then needs more than one date, so split entries across multiple calls (one per date) or ask the user how to compress/parallelize. Duplicate target_name within one batch is rejected.",
-    }),
-    Tool('schedule_device_control', handler='schedule_device_control_tool', physical=True, manifest={
-        "action_type": "schedule_device_control",
-        "description": "Reserve a ONE-OFF device operation (valve/pump/sprinkler) at a single specific future time — e.g. 'open valve 1 for 30 min this Saturday 15:00'. Requires approval. This is ONLY for irregular, one-time reservations; recurring or condition-based control belongs to a Function (create_function), NOT here.",
-        "usage_hint": (
-            "params: {device_id, scheduled_time (ISO8601) OR delay_seconds OR solar_event, state, duration_minutes}. "
-            "For a time expressed relative to the sun ('내일 일몰 30분 전', 'at sunrise'), pass "
-            "solar_event ('sunrise'|'sunset'|'solar_noon'|'civil_dawn'|'civil_dusk') with "
-            "solar_offset_minutes (negative = before) and solar_date_offset_days — do NOT compute "
-            "the sunset clock time yourself and pass it as scheduled_time: it changes with the "
-            "season and the device's location, so a hand-computed value will be wrong.\n"
-            "DECISION RULE — the scheduler holds one-off events; regular automation belongs to Functions:\n"
-            "- RECURRING ('every day 6am', '매일/매주 관수') → use create_function "
-            "(trigger_timer_daily_time_point / trigger_timer_daily_time_span / trigger_timer_duration) INSTEAD, NOT this.\n"
-            "- CONDITIONAL ('when humidity < 40%', '습도 낮으면 가동') → use create_function "
-            "(conditional_conditional) INSTEAD.\n"
-            "- IMMEDIATE ('run for 5 min now', '지금 1분간') → use operate_device, NOT this.\n"
-            "- Only a single specific future time with NO repetition and NO condition belongs here.\n"
-            "If you cannot tell whether the user wants a one-time reservation or a repeating/conditional "
-            "automation, call ask_user to confirm BEFORE choosing."
-        ),
-    }),
+    Tool('add_schedule', handler='add_schedule_tool', physical=True, config_only=True),
+    Tool('add_schedule_batch', handler='add_schedule_batch_tool', physical=True, config_only=True),
+    Tool('schedule_device_control', handler='schedule_device_control_tool', physical=True),
 
     # --- Schedule CRUD (@ANCHOR: SCHEDULE_CRUD_TOOLS) ----------------------------
     # Completes the scheduler as a farm-operations ledger: add_schedule (create)
@@ -266,222 +232,61 @@ TOOLS: List[Tool] = [
     # from / write to SchedulerJobMeta (the ledger of record — A안). edit/delete are
     # `mutating` → the SSOT routes them through the human approval gate in EVERY
     # path (dispatch, planner, agent-loop) automatically; search is read-only.
-    Tool('search_schedule', handler='search_schedule_tool', manifest={
-        "tool_name": "search_schedule",
-        "action_type": "virtual_tool_call",
-        "description": "Lists farm schedules/events (work tasks, inspections, harvests, one-off device reservations) from the scheduler ledger. Read-only. Use this to answer 'what's coming up?' and to obtain the job_id needed before edit_schedule / delete_schedule (search→act, like search_notes).",
-        "usage_hint": "params.arguments: {query (optional keyword over content/reasoning), target_name (optional — only schedules attached to a location/device), include_past (optional bool, default false = upcoming only), include_archived (optional bool, default false), limit (optional, default 20)}. Returns each schedule's job_id, when, content, kind, state, and editable/deletable flags.",
-    }),
-    Tool('edit_schedule', handler='edit_schedule_tool', mutating=True, manifest={
-        "tool_name": "edit_schedule",
-        "action_type": "virtual_tool_call",
-        "description": "Edits an existing schedule's time, duration, content, or worker. Requires human approval. If the schedule is an already-registered device reservation, its trigger is rescheduled too. First call search_schedule to get the job_id.",
-        "usage_hint": "params.arguments: {job_id (required — from search_schedule), date (optional YYYY-MM-DD, keeps existing date if omitted), time (optional HH:MM, keeps existing time if omitted), duration_minutes (optional — new duration in minutes, replaces the existing one), content (optional new text), worker (optional new assignee), target_name (optional — re-link to a different zone/facility/device by name; an unknown name returns available_targets, a name shared by several places returns candidates → ask_user then retry with the chosen use_name), target_id (optional — re-link by unique_id instead)}.",
-    }),
-    Tool('delete_schedule', handler='delete_schedule_tool', mutating=True, manifest={
-        "tool_name": "delete_schedule",
-        "action_type": "virtual_tool_call",
-        "description": "Cancels/deletes a schedule. Requires human approval. Soft-deletes (archived, reversible) and removes any registered device trigger so it no longer fires. First call search_schedule to get the job_id.",
-        "usage_hint": "params.arguments: {job_id (required — from search_schedule), reason (optional cancellation reason)}.",
-    }),
+    Tool('search_schedule', handler='search_schedule_tool'),
+    Tool('edit_schedule', handler='edit_schedule_tool', mutating=True),
+    Tool('delete_schedule', handler='delete_schedule_tool', mutating=True),
 
     # --- virtual_tool_call tools WITH a manifest entry (original order) -----------
-    Tool('search_devices', handler='search_devices', manifest={
-        "tool_name": "search_devices",
-        "action_type": "virtual_tool_call",
-        "description": "Search for Input/Output/Camera/Zone/complex-Device entries by name or type keyword, and/or by the measurement a device actually records. When the results contain a complex device (e.g. a PLC — one physical unit split across separate Input and Output entries), the reply carries a '_reading' note saying how to treat it. Follow it.",
-        "usage_hint": "params.arguments: {query?: '<keyword>', measurement_type?: '<e.g. volumetric_water_content>'} — at least one. measurement_type finds every device that really records it regardless of its name; give both to intersect (e.g. query='1포장' + measurement_type='temperature'). It matches the STORED name, not the everyday word — soil moisture is 'volumetric_water_content' ('moisture' returns nothing), rain is 'precipitation'/'rain'. On 0 results check the real names with get_device_measurements. Returns matching devices.",
-    }),
+    Tool('search_devices', handler='search_devices'),
     # 구역 단위 집계. Function 을 만들지 않는다 — 대상·기간이 질문마다 달라
     # 고정 계산기로는 답할 수 없고, influx.py 의 무상태 헬퍼를 조합해 계산만
     # 하고 남기지 않는다. 읽기 전용이므로 승인 대상이 아니다.
-    Tool('get_zone_sensor_summary', handler='get_zone_sensor_summary', manifest={
-        "tool_name": "get_zone_sensor_summary",
-        "action_type": "virtual_tool_call",
-        "description": ("Latest reading plus period min/max/avg for the sensors of "
-                        "MANY zones in one call — use instead of looping "
-                        "get_sensor_detail per zone. Read-only."),
-        "usage_hint": ("params.arguments: {zone_ids?: [uuid,...], measurement_type?, "
-                       "time_range?: '24h'|'7d'} — omit zone_ids for every zone; "
-                       "not zone_names."),
-    }),
-    # 서랍을 여는 유일한 수단. manifest 는 None 이다 — 등급이 켜졌을 때만
-    # _drawer_index_manifest() 가 서랍 목록과 함께 싣는다(꺼져 있으면 서랍
-    # 자체가 없으므로 이 도구도 보일 이유가 없다).
-    Tool('open_drawer', handler='open_drawer'),
-    Tool('get_device_measurements', handler='get_device_measurements', manifest={
-        "tool_name": "get_device_measurements",
-        "action_type": "virtual_tool_call",
-        "description": "Returns all measurement channels (measurement_id, channel, measurement, unit) for a given device_id.",
-        "usage_hint": "Call with params.arguments.device_id='<id>'. Use to resolve measurement IDs for create_function params.",
-    }),
+    Tool('get_zone_sensor_summary', handler='get_zone_sensor_summary'),
+    Tool('get_device_measurements', handler='get_device_measurements'),
     # 장치 하나를 파악하는 데 드는 왕복을 하나로 접는다 (2026-09-21). 지금까지는
     # search_devices(무엇인지) → get_device_measurements(무엇을 재는지) →
     # get_device_location(어디인지) → get_device_freshness(살아있는지) 를 따로
     # 불러야 했다 — MCP 는 호출마다 고정비가 크다. 읽기 전용.
-    Tool('get_device_detail', handler='get_device_detail', manifest={
-        "tool_name": "get_device_detail",
-        "action_type": "virtual_tool_call",
-        "description": "One device's full picture in one call. Replaces chaining search_devices + get_device_measurements + get_device_location. Read-only.",
-        "usage_hint": "params.arguments: {device_id} (unique_id or name). Ambiguous name → needs_disambiguation + candidates.",
-    }),
+    Tool('get_device_detail', handler='get_device_detail'),
     # --- 적응형 문서 스토리지 (읽기 전용) ---------------------------------------
     # 티어 값은 "옮기겠다는 의도"이고 cold_documents 행이 "실제로 옮겨진 실물"이다.
     # 둘이 아직 연결돼 있지 않아서(이동이 placeholder), 도구 설명에 그 구분을 박아
     # 둔다 — AI 가 tier=3 을 보고 "아카이브됨" 이라고 사용자에게 말하면 안 된다.
-    Tool('get_storage_tier_status', handler='get_storage_tier_status', manifest={
-        "tool_name": "get_storage_tier_status",
-        "action_type": "virtual_tool_call",
-        "description": "Reports the adaptive document storage state: whether tiering is enabled, how many documents sit in each tier (1=hot, 2=warm, 3=cold), and how many are ACTUALLY archived. A tier value records an intent to move; only a row in the archive means the content was really moved. When both are present in the reply, trust the archive count.",
-        "usage_hint": "Takes no arguments. Call this before answering anything about storage tiers, archiving, or where a document's content lives. Relay any 'warning' or 'note' field to the user rather than dropping it.",
-    }),
-    Tool('search_archives', handler='search_archives', manifest={
-        "tool_name": "search_archives",
-        "action_type": "virtual_tool_call",
-        "description": "Searches ARCHIVED documents by their stored metadata. Only returns documents whose content was really moved to the archive — a document marked tier 3 that was never moved will NOT appear here.",
-        "usage_hint": "Call with params.arguments.query='<keyword>' (optional), limit, offset. An empty result is a normal state, not an error.",
-    }),
-    Tool('get_archived_document', handler='get_archived_document', manifest={
-        "tool_name": "get_archived_document",
-        "action_type": "virtual_tool_call",
-        "description": "Retrieves one archived document. Returns metadata only by default; pass include_content=true to decompress and return the full text. Reading an archive updates its last-accessed time, which feeds future tier decisions.",
-        "usage_hint": "Call with params.arguments.document_id='<id>' and optional include_content=true. Use search_archives first if you only have a keyword.",
-    }),
+    Tool('get_storage_tier_status', handler='get_storage_tier_status'),
 
     # --- 적응형 문서 스토리지 (쓰기 — 전부 승인 게이트) ------------------------
-    Tool('archive_note', handler='archive_note', mutating=True, manifest={
-        "tool_name": "archive_note",
-        "action_type": "virtual_tool_call",
-        "description": "Archives a note: writes a compressed COPY into cold storage and marks the note tier 3. Requires human approval. The original note text is NOT deleted — archiving never removes content; only the retention policy does.",
-        "usage_hint": "Call with params.arguments.note_id='<id>' and optional retention_policy ('default'|'1year'|'3year'|'7year'|'permanent'). Fails if the note is already archived.",
-    }),
-    Tool('restore_note_from_archive', handler='restore_note_from_archive', mutating=True, manifest={
-        "tool_name": "restore_note_from_archive",
-        "action_type": "virtual_tool_call",
-        "description": "Reads a note back out of cold storage and moves it to a warmer tier. Requires human approval. If the archive exists but the original note is gone, the archived text is returned with status 'orphan_archive' instead of being silently recreated.",
-        "usage_hint": "Call with params.arguments.note_id='<id>' and optional target_tier (1=hot, 2=warm; default 2).",
-    }),
-    Tool('set_document_tier', handler='set_document_tier', mutating=True, manifest={
-        "tool_name": "set_document_tier",
-        "action_type": "virtual_tool_call",
-        "description": "Changes only a note's tier value (1=hot, 2=warm, 3=cold). Requires human approval. This moves NO data — it records an intent. To actually place content in the archive use archive_note.",
-        "usage_hint": "Call with params.arguments.note_id='<id>' and tier=1|2|3.",
-    }),
-    Tool('delete_archive', handler='delete_archive', mutating=True, manifest={
-        "tool_name": "delete_archive",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes the archived COPY of a document (file + index rows). Requires human approval. The original note is untouched, so its tier may still read 3 afterwards. This is irreversible — the compressed copy is removed from disk.",
-        "usage_hint": "Call with params.arguments.document_id='<id>' and an optional reason. Confirm with the user that they mean the archived copy, not the note itself.",
-    }),
 
-    Tool('create_function', handler='create_function_tool', mutating=True, manifest={
-        "tool_name": "create_function",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a new automation function/controller. Requires human approval. This — NOT schedule_device_control — is the right home for RECURRING device control (daily/weekly watering → trigger_timer_daily_time_point / trigger_timer_daily_time_span / trigger_timer_duration) and CONDITION-BASED control (when humidity < X → conditional_conditional). function_type MUST be one of: conditional_conditional, pid_pid, trigger_edge, trigger_output, trigger_output_pwm, trigger_run_pwm_method, trigger_sequence, trigger_sunrise_sunset, trigger_timer_daily_time_point, trigger_timer_daily_time_span, trigger_timer_duration, function_actions. For SEQUENTIAL control of several devices (e.g. a valve sequence), use 'trigger_sequence'.",
-        "usage_hint": "params.arguments accepts ONLY {function_type, name, params}. Do NOT pass 'devices' or any other top-level key — there is no device-list parameter. The function is created first; its device steps/order are configured afterward. params is a dict of custom_option overrides (e.g. select_measurement fields as 'device_id,meas_id').",
-    }),
-    Tool('modify_function_options', handler='modify_function_options', mutating=True, config_only=True, manifest={
-        "tool_name": "modify_function_options",
-        "action_type": "virtual_tool_call",
-        "description": "Updates custom_options of an existing function and reloads it in the daemon. Applies immediately — no approval needed; activating the function is separately approved.",
-        "usage_hint": "params.arguments: {function_id, params: {<option_id>: <value>}}",
-    }),
+    Tool('create_function', handler='create_function_tool', mutating=True),
+    Tool('modify_function_options', handler='modify_function_options', mutating=True, config_only=True),
     # A sequence's schedule lives in Trigger columns/timer_schedule, not in
     # custom_options, so modify_function_options cannot reach it (it now says
     # so instead of silently no-op'ing). This is the way in.
-    Tool('modify_sequence_schedule', handler='modify_sequence_schedule', mutating=True, config_only=True, manifest={
-        "tool_name": "modify_sequence_schedule",
-        "action_type": "virtual_tool_call",
-        "description": "Changes WHEN a trigger_sequence runs — daily window, cycle period, and which weekdays. Use this (not modify_function_options) for any sequence timing change. Keeps the running cycle instead of restarting it. Applies immediately — no approval needed, because a sequence only runs once it is activated and activation is separately approved.",
-        "usage_hint": "params.arguments: {function_id, start:'HH:MM', end:'HH:MM', period_seconds, weekdays:[0-6, 0=Mon], day:0-6}. Call get_function_detail first to see the current schedule. Omit 'day' to change every enabled day; pass it to change one weekday only. This does NOT change the step order or per-step durations.",
-    }),
+    Tool('modify_sequence_schedule', handler='modify_sequence_schedule', mutating=True, config_only=True),
     # One call = one weekday's whole plan. The per-step tool below still exists
     # for touch-ups, but laying out a day through it costs ~20 gated calls, and
     # that friction is what pushed a caller into making a redundant sequence.
-    Tool('configure_sequence_day', handler='configure_sequence_day', mutating=True, config_only=True, manifest={
-        "tool_name": "configure_sequence_day",
-        "action_type": "virtual_tool_call",
-        "description": "Sets ONE weekday's entire run plan on an existing sequence in a single call: which devices run, in what order, for how long, and which run together. Prefer this over repeated modify_sequence_step. Applies immediately — no approval needed, because a sequence only runs once it is activated and activation is separately approved.",
-        "usage_hint": "params.arguments: {function_id, day:0-6 (0=Mon), start:'HH:MM', slots:[{devices:['v321','v322'], minutes:40}, {devices:['v331'], minutes:60}]}. Slots run in the order given; devices inside one slot run SIMULTANEOUSLY. Steps not listed are turned off for that weekday only. end/period_seconds are optional — by default the window just fits one pass and it runs once. A different weekday needs another call with the same function_id; NEVER create a second sequence for that.",
-    }),
+    Tool('configure_sequence_day', handler='configure_sequence_day', mutating=True, config_only=True),
     # create_sequence_function only lays down uniform steps; this shapes them
     # (groups = simultaneous, per-step duration, total-step margins).
-    Tool('modify_sequence_step', handler='modify_sequence_step', mutating=True, config_only=True, manifest={
-        "tool_name": "modify_sequence_step",
-        "action_type": "virtual_tool_call",
-        "description": "Configures ONE step of a trigger_sequence: run order, device group (steps sharing a group run SIMULTANEOUSLY), duration, single/total mode, total-step lead/lag margins, enabled, label — globally, or for ONE weekday via 'day'. Applies immediately — no approval needed, because a sequence only runs once it is activated and activation is separately approved.",
-        "usage_hint": "params.arguments: {action_id, group_name, duration_seconds, mode:'single'|'total', enabled, display_name, lead_seconds, lag_seconds, order, day}. Get action_id from get_function_detail steps[].action_id. 'order' sets the run order (lower runs first). Pass 'day' (0=Mon..6=Sun) to override enabled/group_name/duration_seconds for that weekday only — that is how ONE sequence covers different valves on different days; do NOT create a second sequence for that. A group shares ONE duration — setting it on any member sets all. A 'total' step cannot be grouped; lead/lag apply only to it.",
-    }),
-    Tool('create_sequence_function', handler='create_sequence_function', mutating=True, config_only=True, manifest={
-        "tool_name": "create_sequence_function",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a trigger_sequence AND fills its steps — one ordered output action per device — so it is configured, not empty. Use for 'valve sequence' / sequential device control. Created inactive and applies immediately — no approval needed; activate_function still needs approval.",
-        "usage_hint": "params.arguments: {name, device_ids: ['<output_id>', ...] (ordered), state: 'on'|'off', step_duration (sec, optional), pause_seconds (optional)}",
-    }),
-    Tool('delete_function', handler='delete_function', mutating=True, manifest={
-        "tool_name": "delete_function",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes a function/controller by unique_id. Requires human approval.",
-        "usage_hint": "params.arguments: {function_id: '<unique_id>'}",
-    }),
-    Tool('list_device_types', handler='list_device_types', manifest={
-        "tool_name": "list_device_types",
-        "action_type": "virtual_tool_call",
-        "description": "Lists the valid TYPES available for creating an Input/Output/Function. Read-only. ALWAYS call this before create_input/create_output/create_function so the type is real — never invent a type.",
-        "usage_hint": "params.arguments: {kind: 'input'|'output'|'function'}. Returns {types:[{type, name}]}.",
-    }),
+    Tool('modify_sequence_step', handler='modify_sequence_step', mutating=True, config_only=True),
+    Tool('create_sequence_function', handler='create_sequence_function', mutating=True, config_only=True),
+    Tool('delete_function', handler='delete_function', mutating=True),
+    Tool('list_device_types', handler='list_device_types'),
     # @ANCHOR: AGENT_LOOP_GET_TOOL_DETAIL (Phase 1) — the catalog every tool is
     # listed in shows only a name + one-line description to keep prompts lean.
     # Call this for the full argument schema of a specific tool before calling
     # it, if the one-line description isn't enough to know what to pass.
-    Tool('get_tool_detail', handler='get_tool_detail_tool', manifest={
-        "tool_name": "get_tool_detail",
-        "action_type": "virtual_tool_call",
-        "description": "Returns the full description and argument schema for ONE tool by name. Read-only. Use when the catalog's one-line summary isn't enough to know what arguments a tool needs.",
-        "usage_hint": "params.arguments: {tool_name: '<name from the catalog>'}",
-    }),
-    Tool('get_device_type_options', handler='get_device_type_options', manifest={
-        "tool_name": "get_device_type_options",
-        "action_type": "virtual_tool_call",
-        "description": "Returns the configurable option schema (id/type/name/default) for a given device type. Read-only. Use to learn which option ids to pass to modify_input/modify_output.",
-        "usage_hint": "params.arguments: {kind: 'input'|'output'|'function', device_type: '<type>'}",
-    }),
-    Tool('create_input', handler='create_input', mutating=True, manifest={
-        "tool_name": "create_input",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a new Input (sensor / data source). Requires human approval. Create-then-configure: this makes the device with its type; fill options afterward with modify_input.",
-        "usage_hint": "params.arguments: {input_type (from list_device_types kind=input), name, interface (optional), params (optional dict of option overrides)}. Do NOT invent other top-level keys.",
-    }),
-    Tool('modify_input', handler='modify_input', mutating=True, manifest={
-        "tool_name": "modify_input",
-        "action_type": "virtual_tool_call",
-        "description": "Updates an Input's name and/or options and reloads it. Requires human approval.",
-        "usage_hint": "params.arguments: {input_id, name (optional), params: {<option_id>: <value>}}",
-    }),
-    Tool('delete_input', handler='delete_input', mutating=True, manifest={
-        "tool_name": "delete_input",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes an Input by unique_id. Requires human approval.",
-        "usage_hint": "params.arguments: {input_id: '<unique_id>'}",
-    }),
-    Tool('create_output', handler='create_output', mutating=True, manifest={
-        "tool_name": "create_output",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a new Output (actuator / relay / valve). Requires human approval. Create-then-configure: makes the device with its type; fill options afterward with modify_output.",
-        "usage_hint": "params.arguments: {output_type (from list_device_types kind=output), name, interface (optional), params (optional dict)}. Do NOT invent other top-level keys.",
-    }),
-    Tool('modify_output', handler='modify_output', mutating=True, manifest={
-        "tool_name": "modify_output",
-        "action_type": "virtual_tool_call",
-        "description": "Updates an Output's name and/or options and reloads it. Requires human approval.",
-        "usage_hint": "params.arguments: {output_id, name (optional), params: {<option_id>: <value>}}",
-    }),
-    Tool('delete_output', handler='delete_output', mutating=True, manifest={
-        "tool_name": "delete_output",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes an Output by unique_id. Requires human approval.",
-        "usage_hint": "params.arguments: {output_id: '<unique_id>'}",
-    }),
+    # 서랍 기구 두 개 — 실행은 MCP 실행층(tool_execution._open_drawer·_get_tool_detail)이
+    # 한다. 인앱 처리기는 없다(인앱 AI 는 도메인 명부만 본다).
+    Tool('get_tool_detail', handler=None),
+    Tool('open_drawer', handler=None),
+    Tool('get_device_type_options', handler='get_device_type_options'),
+    Tool('create_input', handler='create_input', mutating=True),
+    Tool('modify_input', handler='modify_input', mutating=True),
+    Tool('delete_input', handler='delete_input', mutating=True),
+    Tool('create_output', handler='create_output', mutating=True),
+    Tool('modify_output', handler='modify_output', mutating=True),
+    Tool('delete_output', handler='delete_output', mutating=True),
     # --- 식생 구획(작기) — docs/design/geo-vegetation-plot.md -------------
     # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제다. 시설은 구획 프로그램 /
     # facility_registry 로 알 수 있었지만 노지는 알 방법이 없어, AI 가 노지
@@ -490,468 +295,65 @@ TOOLS: List[Tool] = [
     # 쓰기 3종은 전부 승인 대상이다. config_only 로 면제하지 말 것 —
     # end/delete 는 되돌릴 수단이 없고(그 자리의 이력이 사라진다),
     # create 는 사람이 밭에서 확인해야 하는 사실을 기록하는 행위다.
-    Tool('list_plots', handler='list_plots', manifest={
-        "tool_name": "list_plots",
-        "action_type": "virtual_tool_call",
-        "description": ("Lists vegetation plots (crop planted where). "
-                        "Filter: zone_id (site/zone incl. sub-zones) or map_id. "
-                        "Growing only unless include_ended=true. 10 per call, "
-                        "growing first; if 'truncated', page with offset. "
-                        "with_sensors=true adds sensors. Follow '_reading'. "
-                        "Read-only."),
-        "usage_hint": ("params.arguments: {zone_id?, map_id?, include_ended?, "
-                       "on?: 'YYYY-MM-DD', with_sensors?, limit?, offset?}"),
-    }),
-    Tool('get_plot', handler='get_plot', manifest={
-        "tool_name": "get_plot",
-        "action_type": "virtual_tool_call",
-        "description": ("One plot in detail: crop, variety, period, area, size "
-                        "(width x length), which sensors it reads (own plot or "
-                        "falls back to its zone), which irrigation valves overlap "
-                        "it, and its current programme stage. Give both spacings "
-                        "to get row and plant counts. 'target_check' pairs this "
-                        "stage's targets with the readings, now and over the last "
-                        "14 days. The reply carries a "
-                        "'_reading' list — the rules for reading THIS result. "
-                        "Follow it; it is instruction, not commentary. Read-only."),
-        "usage_hint": ("params.arguments: {plot_id, plant_spacing_cm, "
-                       "row_spacing_cm? (flat only), bed_pitch_cm? + "
-                       "rows_per_bed? (bed layout), edge_margin_cm?} — "
-                       "bed_pitch_cm and rows_per_bed go together"),
-    }),
-    Tool('get_plot_history', handler='get_plot_history', manifest={
-        "tool_name": "get_plot_history",
-        "action_type": "virtual_tool_call",
-        "description": ("What was planted on this spot before — the basis for crop "
-                        "rotation and soil-borne disease judgement. Read-only."),
-        "usage_hint": "params.arguments: {plot_id} or {zone_id}",
-    }),
-    Tool('list_plot_journals', handler='list_plot_journals', manifest={
-        "tool_name": "list_plot_journals",
-        "action_type": "virtual_tool_call",
-        "description": ("Saved journals (title, period, status) for a plot/zone/site. "
-                        "journal_id is an internal handle for get_plot_journal — do "
-                        "not show it; use title/period instead. Read-only."),
-        "usage_hint": ("params.arguments: {target_type?: plot|zone|site, "
-                       "target_id?, limit?} — omit the target for all journals"),
-    }),
-    Tool('get_plot_journal', handler='get_plot_journal', manifest={
-        "tool_name": "get_plot_journal",
-        "action_type": "virtual_tool_call",
-        "description": ("One saved journal — the snapshot from generation time. "
-                        "For a long period pass granularity so the measurements "
-                        "survive the response limit. status may be pending/"
-                        "running/error; only 'done' has data. Read-only."),
-        "usage_hint": ("params.arguments: {journal_id, granularity?: day|week|"
-                       "month|all, date_from?, date_to?}"),
-    }),
+    Tool('list_plots', handler='list_plots'),
+    Tool('get_plot', handler='get_plot'),
+    Tool('get_plot_history', handler='get_plot_history'),
+    Tool('list_plot_journals', handler='list_plot_journals'),
+    Tool('get_plot_journal', handler='get_plot_journal'),
     # 생성은 InfluxDB 를 크게 읽는다(채널 수 × 기간) — 승인 대상이다.
     # 물리 작동은 없으므로 `physical` 은 아니다.
-    Tool('create_plot_journal', handler='create_plot_journal', mutating=True,
-         manifest={
-        "tool_name": "create_plot_journal",
-        "action_type": "virtual_tool_call",
-        "description": ("Builds a journal — a snapshot of what was grown, "
-                        "measured and controlled over a period. Runs in the "
-                        "background; poll get_plot_journal for status 'done'. "
-                        "Requires human approval."),
-        "usage_hint": ("params.arguments: {target_type: plot|zone|site, "
-                       "target_id, start: YYYY-MM-DD, end: YYYY-MM-DD, "
-                       "granularity?: day|week|month}"),
-    }),
-    Tool('list_programs', handler='list_programs', manifest={
-        "tool_name": "list_programs",
-        "action_type": "virtual_tool_call",
-        "description": ("Management programmes — a subject's stages with their "
-                        "lengths. kind is vegetation | livestock | facility | other; "
-                        "Attach one to a plot and the stage, remaining days and "
-                        "expected harvest date follow from it. Check here before "
-                        "creating a new one. Read-only."),
-        "usage_hint": "params.arguments: {kind?, subject?, tab_id?}",
-    }),
-    Tool('get_program', handler='get_program', manifest={
-        "tool_name": "get_program",
-        "action_type": "virtual_tool_call",
-        "description": ("One growing programme with its full stage list. A stage may "
-                        "carry 'guidance' — free text written for that stage. "
-                        "Read-only."),
-        "usage_hint": "params.arguments: {program_id}",
-    }),
-    Tool('create_program', handler='create_program', mutating=True, config_only=True, manifest={
-        "tool_name": "create_program",
-        "action_type": "virtual_tool_call",
-        "description": ("Creates a growing programme (subject -> stages with lengths). "
-                        "'subject' is whatever the programme manages — a crop, a tree "
-                        "species, a turf type, a herd, a structure; AoT is not "
-                        "farm-only, so set 'kind' to match (default vegetation). "
-                        "resource_defs declares WHAT the subject needs (roles), never "
-                        "which function does it — that is a fact about a place, so the "
-                        "site resolves it and one programme serves several "
-                        "greenhouses. Made this way it is used for display and advice "
-                        "but NOT for control until a person marks it as checked — "
-                        "that check is the gate, and only a person can give it."),
-        "usage_hint": ("params.arguments: {name, subject, source_note, "
-                       "stages: [{key, name, days, targets?, guidance?}], kind?, "
-                       "variety?, notes?, target_defs?: [{key, label, unit, "
-                       "measurement}], base_temp_c?, "
-                       "resource_defs?: [{role: irrigation|fertigation|"
-                       "other}], tab_id?}. "
-                       "days is that stage's LENGTH, not cumulative; only the "
-                       "last may be blank (= until the end). source_note is "
-                       "required. 'guidance' is the half no sensor can do — what "
-                       "to LOOK at and what to DO BY HAND in that stage. Fill "
-                       "it: it is what a beginner opens the programme for. "
-                       "'targets' keys must exist in target_defs (vegetation "
-                       "already has temp_day/temp_night/rh/co2/dli/vpd). "
-                       "RECIPE: 1) list_programs — does it exist already? "
-                       "2) knowledge_search the subject for stage-by-stage "
-                       "practice. 3) Map what you find onto YOUR stage keys — "
-                       "sources split stages their own way, so state the "
-                       "mapping in source_note; never bend a day count to make "
-                       "a source fit. 4) Cite in source_note. Leave a field "
-                       "blank rather than guessing — a blank is normal, a "
-                       "plausible wrong number is not."),
-    }),
-    Tool('modify_program', handler='modify_program', mutating=True, config_only=True, manifest={
-        "tool_name": "modify_program",
-        "action_type": "virtual_tool_call",
-        "description": ("Edits a growing programme's name / variety / stages / notes, "
-                        "or moves it to a different tab (tab_id) on the Programs page. "
-                        "A tab_id-only call is allowed even for built-in/external "
-                        "programmes (moving a tab is organisation, not content); any "
-                        "other field on a built-in/external programme is refused — "
-                        "it must be copied first (a person does that on the "
-                        "Vegetation page). Writing stages or targets sends the "
-                        "programme back for a person to check before it drives "
-                        "control again — say so rather than working around it."),
-        "usage_hint": ("params.arguments: {program_id, name?, variety?, "
-                       "stages?: [{key, name, days, targets?, guidance?}], "
-                       "target_defs?, base_temp_c?, "
-                       "resource_defs?, kind?, notes?, source_note?, tab_id?}. "
-                       "This is how an empty programme a person made in the UI "
-                       "gets filled in — same stage shape and same RECIPE as "
-                       "create_program, and get_program first to see what is "
-                       "already there. Send only the fields you are changing; "
-                       "'stages' replaces the whole list. Writing stages, "
-                       "target items or base_temp_c sends the programme back "
-                       "for a person to check before it drives control again — "
-                       "that is expected, say so rather than working around it."),
-    }),
-    Tool('delete_program', handler='delete_program', mutating=True, manifest={
-        "tool_name": "delete_program",
-        "action_type": "virtual_tool_call",
-        "description": ("Deletes a growing programme outright — for mistakes only. "
-                        "Refused if any plot still uses it; unassign the plot's "
-                        "programme first (modify_plot with program_uuid: null), or "
-                        "just leave an unused programme in place — it costs nothing "
-                        "to keep. Requires human approval."),
-        "usage_hint": "params.arguments: {program_id}",
-    }),
-    Tool('list_tabs', handler='list_tabs', manifest={
-        "tool_name": "list_tabs",
-        "action_type": "virtual_tool_call",
-        "description": ("Tabs group cards on a page into folders — the same "
-                        "mechanism across the Dashboard, Input, Output, Function "
-                        "and Programs pages. Read-only."),
-        "usage_hint": "params.arguments: {page_type: dashboard|input|output|function|program}",
-    }),
+    Tool('create_plot_journal', handler='create_plot_journal', mutating=True),
+    Tool('list_programs', handler='list_programs'),
+    Tool('get_program', handler='get_program'),
+    Tool('create_program', handler='create_program', mutating=True, config_only=True),
+    Tool('modify_program', handler='modify_program', mutating=True, config_only=True),
+    Tool('delete_program', handler='delete_program', mutating=True),
+    Tool('list_tabs', handler='list_tabs'),
     # ── 대시보드 위젯 ────────────────────────────────────────────────────────
     # 위젯은 사람이 보는 화면이라, 여기서 하는 일은 전부 사용자의 대시보드를
     # 바꾼다. 물리 장치를 움직이지 않는다는 이유로 config_only(승인 면제)에
     # 넣지 말 것 — 면제의 근거는 "아무것도 움직이지 않는다" 인데, 위젯은
     # 사람이 지금 보고 있는 화면을 즉시 바꾼다.
-    Tool('list_dashboards', handler='list_dashboards', manifest={
-        "tool_name": "list_dashboards",
-        "action_type": "virtual_tool_call",
-        "description": ("Dashboard tabs and the widgets on each — what the user "
-                        "actually sees. Read-only."),
-        "usage_hint": ("params.arguments: {tab_id?, with_options?}. Widget settings "
-                       "are omitted unless with_options is true; use get_widget for "
-                       "one widget in detail."),
-    }),
-    Tool('list_widget_types', handler='list_widget_types', manifest={
-        "tool_name": "list_widget_types",
-        "action_type": "virtual_tool_call",
-        "description": ("Widget types installed on this system, and the option "
-                        "schema of one of them. Read-only."),
-        "usage_hint": ("params.arguments: {widget_type?}. Call with no argument for "
-                       "the list, then again with a type to get its options before "
-                       "create_widget — every type takes different options."),
-    }),
-    Tool('get_widget', handler='get_widget', manifest={
-        "tool_name": "get_widget",
-        "action_type": "virtual_tool_call",
-        "description": "One widget in detail, including its settings. Read-only.",
-        "usage_hint": "params.arguments: {widget_id}",
-    }),
-    Tool('create_widget', handler='create_widget', mutating=True, manifest={
-        "tool_name": "create_widget",
-        "action_type": "virtual_tool_call",
-        "description": ("Adds a widget to a dashboard tab. Requires human approval."),
-        "usage_hint": ("params.arguments: {tab_id, widget_type, name?, options?, "
-                       "width?, height?}. Get tab_id from list_dashboards and the "
-                       "option schema from list_widget_types first — an option name "
-                       "that is not in that schema is rejected rather than ignored."),
-    }),
-    Tool('modify_widget', handler='modify_widget', mutating=True, manifest={
-        "tool_name": "modify_widget",
-        "action_type": "virtual_tool_call",
-        "description": ("Changes a widget's name, size, position, tab or settings. "
-                        "Only what you pass is changed. Requires human approval."),
-        "usage_hint": ("params.arguments: {widget_id, name?, options?, width?, "
-                       "height?, position_x?, position_y?, tab_id?}. options are "
-                       "merged into the existing settings, not replaced."),
-    }),
-    Tool('delete_widget', handler='delete_widget', mutating=True, manifest={
-        "tool_name": "delete_widget",
-        "action_type": "virtual_tool_call",
-        "description": ("Removes a widget from the dashboard. Requires human "
-                        "approval."),
-        "usage_hint": "params.arguments: {widget_id}",
-    }),
+    Tool('list_dashboards', handler='list_dashboards'),
+    Tool('list_widget_types', handler='list_widget_types'),
+    Tool('get_widget', handler='get_widget'),
+    Tool('create_widget', handler='create_widget', mutating=True),
+    Tool('modify_widget', handler='modify_widget', mutating=True),
+    Tool('delete_widget', handler='delete_widget', mutating=True),
 
-    Tool('create_tab', handler='create_tab', mutating=True, manifest={
-        "tool_name": "create_tab",
-        "action_type": "virtual_tool_call",
-        "description": ("Creates a new tab on a page. Name is auto-generated if "
-                        "omitted. Requires human approval."),
-        "usage_hint": ("params.arguments: {page_type: dashboard|input|output|"
-                       "function|program, name?}"),
-    }),
-    Tool('modify_tab', handler='modify_tab', mutating=True, manifest={
-        "tool_name": "modify_tab",
-        "action_type": "virtual_tool_call",
-        "description": "Renames a tab. Requires human approval.",
-        "usage_hint": "params.arguments: {tab_id, name}",
-    }),
-    Tool('delete_tab', handler='delete_tab', mutating=True, manifest={
-        "tool_name": "delete_tab",
-        "action_type": "virtual_tool_call",
-        "description": ("Deletes a tab. On Input/Output/Function pages this also "
-                        "deletes the cards inside it (same as the UI) — check "
-                        "list_tabs and move anything worth keeping first. On "
-                        "Programs, cards are never deleted this way; they move "
-                        "to the page's default tab instead, because a programme "
-                        "may still be in use by a plot elsewhere. The last "
-                        "remaining tab on a page cannot be deleted. Requires "
-                        "human approval."),
-        "usage_hint": "params.arguments: {tab_id}",
-    }),
-    Tool('create_plot', handler='create_plot', mutating=True, manifest={
-        "tool_name": "create_plot",
-        "action_type": "virtual_tool_call",
-        "description": ("Creates a vegetation plot. Inside a greenhouse pass "
-                        "facility_id (+bay_id) and no geometry — a facility plot's "
-                        "location IS the bay. Outdoors pass zone_id (whole zone) or "
-                        "a GeoJSON polygon; the owning zone is derived server-side. "
-                        "Requires human approval."),
-        "usage_hint": ("params.arguments: {map_id, subject, kind?, program_id?, started_on: 'YYYY-MM-DD', "
-                       "facility_id? + bay_id? | zone_id? | geometry: <GeoJSON Polygon>, "
-                       "program_id?, variety?, name?, expected_end_on?, color?}"),
-    }),
-    Tool('modify_plot', handler='modify_plot', mutating=True, manifest={
-        "tool_name": "modify_plot",
-        "action_type": "virtual_tool_call",
-        "description": ("Edits a plot's crop / variety / name / period / colour, and "
-                        "for a facility plot the bay it sits in. Geometry is not "
-                        "editable here. Requires human approval."),
-        "usage_hint": ("params.arguments: {plot_id, subject?, kind?, program_uuid?, variety?, name?, "
-                       "started_on?, expected_end_on?, color?, bay_id?, "
-                       "program_uuid?, auto_advance?}"),
-    }),
-    Tool('propose_plot_split', handler='propose_plot_split', manifest={
-        "tool_name": "propose_plot_split",
-        "action_type": "virtual_tool_call",
-        "description": ("Works out how a zone/site would divide into plots. "
-                        "Direction defaults by mode: strip_width_cm (beds) follows "
-                        "the longest side, parts alone follows the shortest side "
-                        "(squarer pieces) — override with orientation. Computes "
-                        "only — creates nothing. Read-only."),
-        "usage_hint": ("params.arguments: {zone_id, parts? | strip_width_cm? | "
-                       "widths_cm?, edge_margin_m?, orientation?, angle_deg?}"),
-    }),
-    Tool('apply_plot_split', handler='apply_plot_split', mutating=True, manifest={
-        "tool_name": "apply_plot_split",
-        "action_type": "virtual_tool_call",
-        "description": ("Creates one plot per piece of a split, recomputed from "
-                        "the same arguments. Requires human approval."),
-        "usage_hint": ("params.arguments: {zone_id, subject, started_on, "
-                       "parts? | strip_width_cm? | widths_cm?, edge_margin_m?, "
-                       "orientation?, angle_deg?, name?}"),
-    }),
-    Tool('copy_plot', handler='copy_plot', mutating=True, manifest={
-        "tool_name": "copy_plot",
-        "action_type": "virtual_tool_call",
-        "description": ("Re-uses a past plot's outline for a new plot — "
-                        "'same spot as last year'. No coordinates needed. "
-                        "Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id, subject?, started_on?}",
-    }),
-    Tool('end_plot', handler='end_plot', mutating=True, manifest={
-        "tool_name": "end_plot",
-        "action_type": "virtual_tool_call",
-        "description": ("Ends a plot (harvested/failed/removed). The row is KEPT as "
-                        "history — it only leaves the map. Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id, ended_on?, reason?: harvested|failed|replaced|removed}",
-    }),
-    Tool('confirm_plot_stage', handler='confirm_plot_stage', mutating=True,
-         manifest={
-        "tool_name": "confirm_plot_stage",
-        "action_type": "virtual_tool_call",
-        "description": ("Confirms that a plot moved into a new stage. This MOVES "
-                        "THE ANCHOR — the remaining stages are recomputed from the "
-                        "date given, so do not invent one: use get_plot's "
-                        "stage_proposal.started_on (derived from the data) unless "
-                        "the grower states a different day. If stage_proposal is "
-                        "null there is nothing to confirm. Requires human approval."),
-        "usage_hint": ("params.arguments: {plot_id, stage_key (from "
-                       "stage_proposal.stage_key), started_on?: 'YYYY-MM-DD'}"),
-    }),
+    Tool('create_tab', handler='create_tab', mutating=True),
+    Tool('modify_tab', handler='modify_tab', mutating=True),
+    Tool('delete_tab', handler='delete_tab', mutating=True),
+    Tool('create_plot', handler='create_plot', mutating=True),
+    Tool('modify_plot', handler='modify_plot', mutating=True),
+    Tool('propose_plot_split', handler='propose_plot_split'),
+    Tool('apply_plot_split', handler='apply_plot_split', mutating=True),
+    Tool('copy_plot', handler='copy_plot', mutating=True),
+    Tool('end_plot', handler='end_plot', mutating=True),
+    Tool('confirm_plot_stage', handler='confirm_plot_stage', mutating=True),
     Tool('reschedule_plot_stage', handler='reschedule_plot_stage',
-         mutating=True, manifest={
-        "tool_name": "reschedule_plot_stage",
-        "action_type": "virtual_tool_call",
-        "description": ("Moves a stage boundary for THIS plot — 'transplanting "
-                        "slipped a week'. The programme is a reference only and "
-                        "is never changed. Boundaries after the one you move "
-                        "shift with it; pin the next one too if it must stay. "
-                        "Only boundaries still ahead can be moved — a change "
-                        "that already happened is confirm_plot_stage. Read "
-                        "get_plot's stage_schedule first. Requires human "
-                        "approval."),
-        "usage_hint": ("params.arguments: {plot_id, stage_key (from "
-                       "stage_schedule), days?: 20 | shift_days?: +7|-3 | "
-                       "started_on?: 'YYYY-MM-DD'} — exactly one of the three. "
-                       "days sets how long THAT stage lasts (same wording as "
-                       "the programme); shift_days moves its start boundary."),
-    }),
+         mutating=True),
     Tool('set_plot_stage_guidance', handler='set_plot_stage_guidance',
-         mutating=True, manifest={
-        "tool_name": "set_plot_stage_guidance",
-        "action_type": "virtual_tool_call",
-        "description": ("Writes what to do in one stage OF THIS PLOT. The "
-                        "programme's guidance is general advice for the crop; "
-                        "this is 'here, at this time, do X'. Catalogue "
-                        "programmes usually ship with none, so write it even "
-                        "when the stage shows nothing. An empty string clears "
-                        "it and the programme's own text shows again. The "
-                        "programme is NOT touched — use modify_program for "
-                        "that. Requires human approval."),
-        "usage_hint": ("params.arguments: {plot_id, stage_key (from "
-                       "stage_schedule), guidance}"),
-    }),
-    Tool('add_plot_stage', handler='add_plot_stage', mutating=True, manifest={
-        "tool_name": "add_plot_stage",
-        "action_type": "virtual_tool_call",
-        "description": ("Adds a stage to THIS PLOT only — e.g. a top-dressing "
-                        "step the standard programme has no room for. 'after' "
-                        "names the stage it follows (empty string = first, "
-                        "omitted = last). The key is generated. The programme "
-                        "is NOT touched. Requires human approval."),
-        "usage_hint": ("params.arguments: {plot_id, name, days, after?, "
-                       "guidance?}"),
-    }),
-    Tool('remove_plot_stage', handler='remove_plot_stage', mutating=True,
-         manifest={
-        "tool_name": "remove_plot_stage",
-        "action_type": "virtual_tool_call",
-        "description": ("Drops a stage from THIS PLOT only — e.g. a crop that "
-                        "goes straight to transplanting with no seedling "
-                        "stage. Stages already passed are refused: the ledger "
-                        "points at them and removing one loses the answer to "
-                        "what was done then. Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id, stage_key}",
-    }),
+         mutating=True),
+    Tool('add_plot_stage', handler='add_plot_stage', mutating=True),
+    Tool('remove_plot_stage', handler='remove_plot_stage', mutating=True),
     Tool('save_plot_schedule_as_program',
-         handler='save_plot_schedule_as_program', mutating=True, manifest={
-        "tool_name": "save_plot_schedule_as_program",
-        "action_type": "virtual_tool_call",
-        "description": ("Registers THIS PLOT's schedule as a reusable "
-                        "programme — the stages it actually follows, with the "
-                        "lengths as edited and the plot's own guidance. Targets "
-                        "are copied, but the reply shows what the plot actually "
-                        "measured against each. The plot is "
-                        "NOT moved onto the new programme: registering is a "
-                        "copy, and changing a running season's interpretation "
-                        "would silently change what it was grown for. Requires "
-                        "human approval."),
-        "usage_hint": ("params.arguments: {plot_id, name?, adopt_targets? "
-                       "(take the measured values as the new targets)}"),
-    }),
-    Tool('undo_plot_stage', handler='undo_plot_stage', mutating=True, manifest={
-        "tool_name": "undo_plot_stage",
-        "action_type": "virtual_tool_call",
-        "description": ("Undoes the most recently confirmed stage change. The row "
-                        "is KEPT (marked undone); the previous confirmation becomes "
-                        "the anchor again and later stages are recomputed. Only the "
-                        "last one can be undone. Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id}",
-    }),
+         handler='save_plot_schedule_as_program', mutating=True),
+    Tool('undo_plot_stage', handler='undo_plot_stage', mutating=True),
     Tool('apply_plot_resources', handler='apply_plot_resources', mutating=True,
-         physical=True, manifest={
-        "tool_name": "apply_plot_resources",
-        "action_type": "virtual_tool_call",
-        "description": ("Starts the irrigation/fertigation Functions that the "
-                        "current stage needs, as resolved FROM THE SITE (the "
-                        "programme declares roles, not functions). This makes water "
-                        "flow — it is a physical action. Nothing is ever switched "
-                        "off. Read get_plot's stage.resources first, and check the "
-                        "reply: 'failed' (did not start), 'unresolved' (no device "
-                        "for that role here — placement is a human job), "
-                        "'ambiguous' (several candidates, so nothing was picked). "
-                        "Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id}",
-    }),
-    Tool('delete_plot', handler='delete_plot', mutating=True, manifest={
-        "tool_name": "delete_plot",
-        "action_type": "virtual_tool_call",
-        "description": ("Deletes a plot record outright — for mistakes only. A harvested "
-                        "crop should use end_plot so its history survives. "
-                        "Requires human approval."),
-        "usage_hint": "params.arguments: {plot_id}",
-    }),
-    Tool('list_geo_maps', handler='list_geo_maps', manifest={
-        "tool_name": "list_geo_maps",
-        "action_type": "virtual_tool_call",
-        "description": "Lists maps and the sites on each (map_id, name, sites). Read-only.",
-        "usage_hint": "params.arguments: {}",
-    }),
+         physical=True),
+    Tool('delete_plot', handler='delete_plot', mutating=True),
     # --- GIS Input CRUD (@ANCHOR: GIS_INPUT_CRUD_TOOLS, 2026-07-26) ---------------
     # GIS layers (VWorld/Google/OpenWeather/OSM/... providers overlaid on the map)
     # are GeoLayer rows, but their TYPE registry is the same parse_input_information()
     # as regular sensor Inputs — list_device_types(kind='input')/
     # get_device_type_options(kind='input', ...) already cover 'gis_*' types, so no
     # separate type-lookup tools are added here, just the CRUD that was missing.
-    Tool('list_gis_inputs', handler='list_gis_inputs', manifest={
-        "tool_name": "list_gis_inputs",
-        "action_type": "virtual_tool_call",
-        "description": "Lists registered GIS Inputs (map layers/providers — VWorld, Google, OpenWeather, etc). Read-only.",
-        "usage_hint": "params.arguments: {}",
-    }),
-    Tool('create_gis_input', handler='create_gis_input', mutating=True, config_only=True, manifest={
-        "tool_name": "create_gis_input",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a new GIS Input (map layer/provider, e.g. gis_vworld, gis_openweather). layer_type must be a 'gis_*' entry from list_device_types(kind='input'). Always created DEACTIVATED — call activate_gis_input once configured. Saves immediately (no approval); activate_gis_input still requires approval.",
-        "usage_hint": "params.arguments: {layer_type (a 'gis_*' type from list_device_types(kind='input')), name (optional), params (optional dict, e.g. {'api_key': '...'})}",
-    }),
-    Tool('modify_gis_input', handler='modify_gis_input', mutating=True, manifest={
-        "tool_name": "modify_gis_input",
-        "action_type": "virtual_tool_call",
-        "description": "Updates a GIS Input's name and/or options (e.g. api_key). Requires human approval.",
-        "usage_hint": "params.arguments: {layer_id, name (optional), params: {<option_id>: <value>}}",
-    }),
-    Tool('activate_gis_input', handler='activate_gis_input', mutating=True, manifest={
-        "tool_name": "activate_gis_input",
-        "action_type": "virtual_tool_call",
-        "description": "Activates or deactivates a GIS Input. New GIS Inputs are created deactivated. Requires human approval.",
-        "usage_hint": "params.arguments: {layer_id, active (bool, default true)}",
-    }),
-    Tool('delete_gis_input', handler='delete_gis_input', mutating=True, manifest={
-        "tool_name": "delete_gis_input",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes a GIS Input by unique_id. Requires human approval.",
-        "usage_hint": "params.arguments: {layer_id}",
-    }),
+    Tool('list_gis_inputs', handler='list_gis_inputs'),
+    Tool('create_gis_input', handler='create_gis_input', mutating=True, config_only=True),
+    Tool('modify_gis_input', handler='modify_gis_input', mutating=True),
+    Tool('activate_gis_input', handler='activate_gis_input', mutating=True),
+    Tool('delete_gis_input', handler='delete_gis_input', mutating=True),
     # --- Facility performance/capacity (@ANCHOR: FACILITY_CAPACITY_TOOL, 2026-07-22)
     # geo/design computes engineering capacity for each facility (heating/cooling
     # kW, volume/area, ventilation) plus an irrigation BOM (pipe/emitter/flow) via
@@ -959,95 +361,39 @@ TOOLS: List[Tool] = [
     # None of it reached the AI before this — neither context nor a tool exposed
     # it, so "is the cooling enough / 관수 유량은?" was unanswerable. Read-only;
     # values are on-demand reference estimates (±5-10%), not persisted nameplates.
-    Tool('get_facility_capacity', handler='get_facility_capacity_tool', manifest={
-        "tool_name": "get_facility_capacity",
-        "action_type": "virtual_tool_call",
-        "description": "Returns the performance/capacity data geo/design computes for a facility (greenhouse/structure) drawn on the map: reference heating/cooling capacity (kW), floor/volume/glazing area, ventilation (ACH, vent-opening m²), an irrigation summary (pipe/emitter counts, flow L/min), and how many control devices are bound. Read-only — on-demand engineering reference estimates (±5-10%). Use for sizing / what-if questions ('is cooling enough?', '관수 유량은?', '난방 용량').",
-        "usage_hint": "params.arguments: {facility_name (optional — a facility name like '육묘장'; omit to return ALL facilities)}. Returns per-facility capacity{heating_kw,cooling_kw,volume_m3,floor_m2,glazing_m2,ach_total,vent_open_m2}, irrigation{total_length_m,emitters,flow_lpm,layers[]}, bound_actuators. If the name isn't found it returns available_facilities.",
-    }),
+    Tool('get_facility_capacity', handler='get_facility_capacity_tool'),
     # --- Map-drawn equipment (@ANCHOR: MAP_EQUIPMENT_TOOL, 2026-07-22) -----------
     # Equipment placed in geo/design (irrigation valves, sprinklers/drip, fans,
     # heaters, window/curtain motors) is stored inside equipment_collection
     # GeoShapes' feature.features[] and was invisible to the AI — build_tree only
     # aggregates a category count and never descends into the collection. This
     # exposes each item's sub_type + specs + which site/zone it sits in.
-    Tool('get_map_equipment', handler='get_map_equipment_tool', manifest={
-        "tool_name": "get_map_equipment",
-        "action_type": "virtual_tool_call",
-        "description": "Returns the geo/design map-drawn equipment and its irrigation design summary per site/zone. Distinct from control devices (Outputs). IMPORTANT — distinguish the two irrigation METHODS precisely, never merge them into one 'emitter' number: `sprinklers`/스프링클러 (individual sprinkler heads, each with a spray radius+flow) vs `drip_emitters`/점적 (drip emitters counted along drip pipes = length ÷ interval). `method` says sprinkler|drip|mixed. Discrete devices (irrigation valves, fans, heaters/coolers, window/curtain motors) are listed with specs (flow_lph, pressure_kpa, capacity_kw, airflow_cmh, power_w). Read-only. Use whenever asked what 설비/관수장치 is installed/drawn or for 유량/스프링클러/점적/배관. (For a greenhouse's COMPUTED heating/cooling design capacity use get_facility_capacity.)",
-        "usage_hint": "params.arguments: {area_name (optional — a site/zone name like '1-1'; omit for whole map)}. Returns equipment[{name,sub_type,location,specs{}}] and irrigation[{area, method, sprinklers, sprinkler_flow_lph, drip_emitters, drip_flow_lph, total_flow_lph, total_flow_lpm, main_pipes, main_pipe_length_m, branch_pipes, branch_pipe_length_m}]. Report 스프링클러 and 점적 SEPARATELY. Attribution uses ownership link (parent_node_id), matching the design panel. OVERVIEW tier; for positions/spacing use get_map_equipment_detail.",
-    }),
-    Tool('get_map_equipment_detail', handler='get_map_equipment_detail_tool', manifest={
-        "tool_name": "get_map_equipment_detail",
-        "action_type": "virtual_tool_call",
-        "description": "The GEOMETRY-level detail behind get_map_equipment's summary for ONE area — individual SPRINKLER head positions (lat/lng) with radius+flow, the computed sprinkler spacing (nearest-neighbour interval), DRIP detail per drip-pipe (interval + emitter count), and each pipe's length + start/end coordinates. Keeps 스프링클러 and 점적 separate. Read-only. Call this ONLY when the user asks something the summary can't answer — exact position, spacing/간격, radius, or an individual pipe. For counts/총유량/총길이 the get_map_equipment summary is enough.",
-        "usage_hint": "params.arguments: {area_name (required — a site/zone name like '1-1')}. Returns sprinkler_count, sprinkler_spacing_m, sprinklers[{lat,lng,radius_m,flow_lph}] (capped at 60), drip_pipes[{pipe,interval_m,drip_emitters,flow_lph_each}], drip_emitter_total, pipes[{name,sub_type,length_m,start,end}].",
-    }),
-    Tool('get_device_location', handler='get_device_location', manifest={
-        "tool_name": "get_device_location",
-        "action_type": "virtual_tool_call",
-        "description": "Reads a device's current map location (lat/lng). Read-only.",
-        "usage_hint": "params.arguments: {device_id}",
-    }),
+    Tool('get_map_equipment', handler='get_map_equipment_tool'),
+    Tool('get_map_equipment_detail', handler='get_map_equipment_detail_tool'),
     # --- 지도 거리 (@ANCHOR: GEO_DISTANCE_TOOLS, 2026-08-14) ------------------
     # LLM 은 좌표 산술을 조용히 틀린다. 거리는 서버가 세고 LLM 은 받는다.
     # uuid 만 받는 이유는 aot/utils/geo_distance.py docstring 참조 — 이름을
     # 받으면 작물명이 구획이 아니라 소속 zone 으로 해석되어 조용히 틀린다.
-    Tool('distance_between', handler='distance_between', manifest={
-        "tool_name": "distance_between",
-        "action_type": "virtual_tool_call",
-        "description": ("Distance in metres between two map entities, by name "
-                        "or unique_id. Ambiguous names are returned as "
-                        "candidates, never guessed. Read-only."),
-        "usage_hint": "params.arguments: {target_a, target_b}",
-    }),
-    Tool('nearest', handler='nearest', manifest={
-        "tool_name": "nearest",
-        "action_type": "virtual_tool_call",
-        "description": ("Sorts candidate entities by distance from a reference "
-                        "entity, by name or unique_id. Read-only."),
-        "usage_hint": "params.arguments: {reference, candidates: [name|unique_id, ...]}",
-    }),
-    Tool('set_device_location', handler='set_device_location', mutating=True, manifest={
-        "tool_name": "set_device_location",
-        "action_type": "virtual_tool_call",
-        "description": "Places or moves a device (Input/Output) on the map by setting its latitude/longitude. This is the GIS create/edit for a device placement. Requires human approval.",
-        "usage_hint": "params.arguments: {device_id, lat, lng, map_id (optional)}",
-    }),
-    Tool('delete_geo_shape', handler='delete_geo_shape', mutating=True, manifest={
-        "tool_name": "delete_geo_shape",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes a SINGLE geo shape (zone/area/marker) by unique_id. Requires human approval.",
-        "usage_hint": "params.arguments: {shape_id}",
-    }),
-    # --- 공간-장치 바인딩 (Phase D, docs/design/geo-device-binding.md) ---------
-    # rebind_device 는 config_only 로 면제하지 말 것. 설정 편집처럼 보이지만
-    # 결과는 "이 구역에 물을 주는 기계가 바뀐다" 이다 — 승인 없이 실행되면
-    # 사람이 모르는 사이에 다른 밸브가 열린다.
-    Tool('list_unbound_slots', handler='list_unbound_slots', manifest={
-        "tool_name": "list_unbound_slots",
-        "action_type": "virtual_tool_call",
-        "description": "Lists spatial slots (map zones, markers, facility fittings) that currently have NO device bound — what a device deletion or a swap left behind. The shape survives a device deletion on purpose, so these are real places waiting for a device, not errors. Read-only.",
-        "usage_hint": "params.arguments: {map_id (optional), facility_id (optional), kinds (optional — comma-separated: shape,fitting,actuator,sensor_role,weather; omit for all)}. Returns slots[{spatial_kind, spatial_id, role, name, last_device, ...}].",
-    }),
-    Tool('rebind_device', handler='rebind_device', mutating=True, manifest={
-        "tool_name": "rebind_device",
-        "action_type": "virtual_tool_call",
-        "description": "Moves every MAP slot held by one device (zones, markers) over to a different device, keeping the history of who held each slot. Use when hardware was physically replaced by a DIFFERENT device. Requires human approval — it changes which physical machine a zone commands. NOTE: if the same model was swapped in, updating the existing device's connection settings (DevEUI/address) is the better path and needs no rebinding at all. Facility fittings and sensor roles are refused here on purpose — the facility editor owns those, and a binding written here is erased by the next facility save.",
-        "usage_hint": "params.arguments: {old_device_id, new_device_id}. Returns moved[], unassigned[] (channels the new device does not have — left as unassigned slots), refused[] (facility slots), warnings[]. Refuses with conflict=true if the new device already has a marker on the same map.",
-    }),
+    Tool('nearest', handler='nearest'),
+    Tool('set_device_location', handler='set_device_location', mutating=True),
+    Tool('set_pipe_diameters', handler='set_pipe_diameters', mutating=True),
+    Tool('delete_geo_shape', handler='delete_geo_shape', mutating=True),
     # --- Reverse geocoding (@ANCHOR: REVERSE_GEOCODE_TOOL, 2026-07-25) -----------
-    # get_device_location / get_local_time only ever returned coordinates; there
+    # get_local_time (and the retired get_device_location) only returned coordinates; there
     # was no way to ask "what's the address there". VWorld's getAddress API was
     # already used internally (parcel_from_address's PNU pipeline) but never
     # exposed as a standalone lookup. Read-only; requires a registered VWorld
     # GIS Input (Map > GIS Inputs) with an API Key, else returns a clear error.
-    Tool('get_address', handler='get_address', manifest={
-        "tool_name": "get_address",
-        "action_type": "virtual_tool_call",
-        "description": "Reverse-geocodes a location into a human-readable street/parcel address via the registered VWorld GIS Input. Accepts a zone/site/facility/device name (resolved to its centroid/coordinates the same way get_local_time does), a unique_id, or explicit lat/lng. Read-only. Requires a VWorld API Key configured under Map > GIS Inputs; if none is set, returns a clear error rather than silently falling back to coordinates only.",
-        "usage_hint": "params.arguments: {target_name (optional, e.g. '3포장'), target_id (optional, instead of target_name), lat/lng (optional, instead of target_name/target_id)}. Returns {address, type: 'road'|'parcel', lat, lng, location}.",
-    }),
+    Tool('get_address', handler='get_address'),
+    # --- Forward geocoding (address -> coordinates) -------------------------------
+    # get_address answers "what's the address here"; this is the other direction.
+    # Both ask a GIS Input's geocoding API; this one goes through the single lookup
+    # gate (aot_flask/geo/geo_lookup.py) so no caller picks a provider or reads a key itself.
+    # manifest 없음 — 인앱 프롬프트(서랍 이름 목록)에 싣지 않는다(activate_input 과 같다). 등급 매니페스트의
+    # 토큰 예산을 올리지 않으려는 것이고, 외부 MCP 는 도메인 틀의 find.location 과 _MCP_TOOL_PAYLOADS 로 부른다.
+    Tool('find_location', handler='find_location'),
+    # 지도 즐겨찾기 조회 — find_location 과 같은 까닭으로 manifest 를 두지 않는다(외부 MCP 의 find.favorites).
+    Tool('find_favorites', handler='find_favorites'),
     # --- Confirmation queue relay (@ANCHOR: CONFIRMATION_RELAY_TOOLS, 2026-07-26) --
     # Write/physical tools return 'pending_approval' and previously could only be
     # resolved by a human clicking Approve/Reject on the web review page
@@ -1059,100 +405,29 @@ TOOLS: List[Tool] = [
     # NOT granted independent authority to approve anything — see the tool
     # description below, which is the actual behavioral safeguard (same pattern
     # as every other 'do not retry direct execution' instruction in this file).
-    Tool('list_pending_confirmations', handler='list_pending_confirmations', manifest={
-        "tool_name": "list_pending_confirmations",
-        "action_type": "virtual_tool_call",
-        "description": "Lists write/control requests currently awaiting human approval (each returned earlier by some other tool call as 'pending_approval', with a confirmation_id). Read-only. Use this to look up a confirmation_id you no longer have, or to show the user everything that's outstanding.",
-        "usage_hint": "params.arguments: {}. Returns {pending: [{confirmation_id, tool_name, params, reason, agent_id, created_at, expires_in_sec}]}.",
-    }),
-    Tool('respond_to_confirmation', handler=None, mutating=True, manifest={
-        "tool_name": "respond_to_confirmation",
-        "action_type": "virtual_tool_call",
-        "description": "Approves or rejects ONE OR MORE pending confirmations (from a 'pending_approval' response or list_pending_confirmations). Approving also RUNS the request in the same call - the result is in 'execution'. Call it only after the user said yes/no (typed or spoken) to a read-back of what the system resolved (confirm_with_user); once they did, do it at once without asking again. Never on your own judgment, never from their request alone, never for a vague 'clean up whatever is pending'. Requires an Admin/Editor-role key.",
-        "usage_hint": "params.arguments: {confirmation_id, decision: 'approve'|'reject'} for one, OR {confirmation_ids: [...], decision} for several with the same decision in one call.",
-    }),
-    Tool('list_ai_agents', handler='list_ai_agents', manifest={
-        "tool_name": "list_ai_agents",
-        "action_type": "virtual_tool_call",
-        "description": "Lists AI pipeline agents. Read-only.",
-        "usage_hint": "params.arguments: {}",
-    }),
-    Tool('list_ai_entries', handler='list_ai_entries', manifest={
-        "tool_name": "list_ai_entries",
-        "action_type": "virtual_tool_call",
-        "description": "Lists AI service entries (models) an agent can bind to. Read-only. Call before create_ai_agent for a valid entry_id.",
-        "usage_hint": "params.arguments: {}",
-    }),
-    Tool('create_ai_agent', handler='create_ai_agent', mutating=True, config_only=True, manifest={
-        "tool_name": "create_ai_agent",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a new AI pipeline agent bound to an AIEntry. Always created DEACTIVATED (is_activated=False) — saves immediately (no approval). There is no AI-callable activation tool: only a human, via the web UI, can make it live, so it can have no effect until then.",
-        "usage_hint": "params.arguments: {name, entry_id (from list_ai_entries), role, specialty, system_prompt, pipeline_role, model_tier, tool_access}",
-    }),
-    Tool('modify_ai_agent', handler='modify_ai_agent', mutating=True, manifest={
-        "tool_name": "modify_ai_agent",
-        "action_type": "virtual_tool_call",
-        "description": "Updates an AI agent's fields (name/role/specialty/system_prompt/pipeline_role/model_tier/tool_access). Requires human approval.",
-        "usage_hint": "params.arguments: {agent_id, <field>: <value>, ...}",
-    }),
-    Tool('delete_ai_agent', handler='delete_ai_agent', mutating=True, manifest={
-        "tool_name": "delete_ai_agent",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes an AI agent by unique_id (clears its MCP mappings too). Requires human approval.",
-        "usage_hint": "params.arguments: {agent_id}",
-    }),
-    Tool('get_function_list', handler='get_function_list', manifest={
-        "tool_name": "get_function_list",
-        "action_type": "virtual_tool_call",
-        "description": "Lists all functions (Conditional/Trigger/PID/CustomController). Optional filters: function_type, active_only.",
-        "usage_hint": "Call to check if a function already exists before creating a new one.",
-    }),
-    Tool('activate_function', handler='activate_function_tool', mutating=True, manifest={
-        "tool_name": "activate_function",
-        "action_type": "virtual_tool_call",
-        "description": "Activates an existing function by function_id. Requires human approval. Refuses a trigger_sequence with no steps.",
-        "usage_hint": "params.arguments: {function_id: '<unique_id>'}",
-    }),
-    Tool('deactivate_function', handler='deactivate_function_tool', mutating=True, manifest={
-        "tool_name": "deactivate_function",
-        "action_type": "virtual_tool_call",
-        "description": "Deactivates an existing function by function_id. Requires human approval.",
-        "usage_hint": "params.arguments: {function_id: '<unique_id>'}",
-    }),
+    Tool('list_pending_confirmations', handler='list_pending_confirmations'),
+    Tool('respond_to_confirmation', handler=None, mutating=True),
+    Tool('list_ai_agents', handler='list_ai_agents'),
+    Tool('list_ai_entries', handler='list_ai_entries'),
+    Tool('create_ai_agent', handler='create_ai_agent', mutating=True, config_only=True),
+    Tool('modify_ai_agent', handler='modify_ai_agent', mutating=True),
+    Tool('delete_ai_agent', handler='delete_ai_agent', mutating=True),
+    Tool('get_function_list', handler='get_function_list'),
+    Tool('activate_function', handler='activate_function_tool', mutating=True),
+    Tool('deactivate_function', handler='deactivate_function_tool', mutating=True),
 
     # --- Notice board CRUD (@ANCHOR: NOTICE_CRUD_TOOLS, 2026-07-08) ---------------
     # Wraps the same web-route utility functions the notice board UI uses
     # (aot/aot_flask/utils/utils_notice.py notice_add/notice_mod/notice_del) via
     # the shared _FakeForm shim — the exact pattern used for Input/Output CRUD.
     # Attachments and polls are UI-only (the AI can create/edit plain title+body
-    # posts; not currently supported here). modify/delete are permission-gated by
-    # utils_notice.can_manage_post() on the ACTUAL calling user's session (admin,
-    # or the post's own author) — this is enforced by the web layer itself, not
-    # bypassed by going through the AI.
-    Tool('list_notices', handler='list_notices', manifest={
-        "tool_name": "list_notices",
-        "action_type": "virtual_tool_call",
-        "description": "Lists notice board posts (title, pinned, date). Read-only.",
-        "usage_hint": "params.arguments: {limit (optional, default 10)}. Call before create_notice to check for an existing post on the same topic.",
-    }),
-    Tool('create_notice', handler='create_notice', mutating=True, manifest={
-        "tool_name": "create_notice",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a notice board post (title + body). Requires human approval.",
-        "usage_hint": "params.arguments: {title, body, pinned (optional bool, admin-only)}. Attachments/polls are not supported here — use the web UI for those.",
-    }),
-    Tool('modify_notice', handler='modify_notice', mutating=True, manifest={
-        "tool_name": "modify_notice",
-        "action_type": "virtual_tool_call",
-        "description": "Updates an existing notice post's title/body/pinned state. Requires human approval AND permission (admin, or the post's own author).",
-        "usage_hint": "params.arguments: {notice_id, title (optional), body (optional), pinned (optional bool)}",
-    }),
-    Tool('delete_notice', handler='delete_notice', mutating=True, manifest={
-        "tool_name": "delete_notice",
-        "action_type": "virtual_tool_call",
-        "description": "Deletes a notice post by unique_id. Requires human approval AND permission (admin, or the post's own author).",
-        "usage_hint": "params.arguments: {notice_id}",
-    }),
+    # posts; not currently supported here). modify/delete are gated by
+    # utils_notice.may_manage_post() (admin, or the author holding edit_settings),
+    # judged on the user bound for the call (write_scope) — MCP has no web session.
+    Tool('list_notices', handler='list_notices'),
+    Tool('create_notice', handler='create_notice', mutating=True),
+    Tool('modify_notice', handler='modify_notice', mutating=True),
+    Tool('delete_notice', handler='delete_notice', mutating=True),
 
     # --- Notes create (@ANCHOR: NOTE_CREATE_TOOL, 2026-07-08) ----------------------
     # A plain, undated memo/journal entry — distinct from add_schedule (a DATED
@@ -1168,12 +443,7 @@ TOOLS: List[Tool] = [
     # record_write (2026-09-23): still no approval, but it IS a write — role
     # (edit_settings, as on the web), read-only key, group scope and advice-only
     # mode apply. See _RECORD_WRITE.
-    Tool('create_note', handler='create_note', record_write=True, manifest={
-        "tool_name": "create_note",
-        "action_type": "virtual_tool_call",
-        "description": "Creates a memo/note and SAVES it immediately (no approval). In AoT there is NO 'note widget' — every device, land/facility, and zone/shape has its OWN notes, viewed per-entity. A note is only visible on an entity when it is attached to it. So when the user asks to note something 'at 1포장 1-1' or 'on 밸브1', ALWAYS pass target_name with that location/entity name — the tool resolves it to the entity and attaches the note. Do NOT just say you will create it; emit this tool call.",
-        "usage_hint": "params.arguments: {note (content, required), name (optional short title), target_name (location/entity name to attach to, e.g. '1포장 1-1' — STRONGLY preferred so the note is visible), tags (optional), category (optional, default 'general'). Advanced: target_id/target_type instead of target_name if the unique_id is already known. If target_name can't be resolved the tool returns available_targets — retry with an exact name. This is a GIS-based system: target_name resolves to exactly ONE entity and never auto-expands to its children, and this tool saves IMMEDIATELY with no approval step to catch a wrong hierarchy level afterward. If the request could apply per sub-unit ('각 구역별', 'each zone'), call resolve_target(target_name) FIRST — read-only, no approval — and if it returns 'children', call this tool once per child.",
-    }),
+    Tool('create_note', handler='create_note', record_write=True),
 
     # --- Notes modify/archive (G6, 2026-10-13) ---------------------------------
     # 노트 이름·본문·태그 수정과 보관(is_archived)·복원. 완전 삭제는 웹에만 둔다.
@@ -1183,6 +453,13 @@ TOOLS: List[Tool] = [
     # 바꾸기 전 값은 감사 로그(before_json)에 남는다. manifest=None — 인앱 프롬프트
     # 고정비 0, MCP 에서는 서랍(record)에 두고 search_notes 설명이 가리킨다.
     Tool('modify_note', handler='modify_note', record_write=True),
+
+    # --- Notes delete (재설계 PR 5, 2026-11-03) ----------------------------------
+    # 사용자 결정: AI 가 엉뚱한 곳·원치 않는 내용으로 쓴 노트를 바로 지울 수 있되 **사용자 승인 뒤에만** 실행한다
+    # (승인 문구가 제목·붙은 곳·첫 줄을 되읽는다 — mcp_safety_gate.read_back_text). 숨기기(modify_note archive)와
+    # 달리 되돌릴 수 없고 본문은 감사 로그에만 남는다. 역할은 웹과 같은 edit_settings(gate.required_write_permission).
+    # manifest=None — 인앱 프롬프트 고정비 0.
+    Tool('delete_note', handler='delete_note', mutating=True),
 
     # --- 대상 별칭 (MCP 점검 2026-10-28) ------------------------------------------
     # 사용자가 대상을 부르는 다른 이름(aot/tools/domain/aliases.py). 기록 쓰기 — 장치·설정을
@@ -1207,24 +484,14 @@ TOOLS: List[Tool] = [
     # human confirms it or it corroborates against a real source (P5, not built
     # yet) — a low-risk, reversible write, not a state-changing entity mutation.
     # record_write (2026-09-23): not approval-gated, but a write — see _RECORD_WRITE.
-    Tool('knowledge_shelve', handler='knowledge_shelve', record_write=True, manifest={
-        "tool_name": "knowledge_shelve",
-        "action_type": "virtual_tool_call",
-        "description": "Saves a piece of knowledge into this system's knowledge library so a later query can retrieve it (the write counterpart to knowledge_search). Shelve what you derived, observed, were told, **or researched yourself** — a summary of material you looked up outside this system is exactly what this is for. ALWAYS saved as unconfirmed/ai_curated — you MUST tell the user it's an unconfirmed note you're keeping, not present it as fact. Only shelve something genuinely reusable (a pattern, an answer worth remembering) — not routine chit-chat.",
-        "usage_hint": "params.arguments: {content (the knowledge text, required), tags (comma-separated scope tags — crop/livestock/structure/topic, REQUIRED — an untagged note would surface for every query), heading (short title that MUST carry the subject's name AS THE USER SAYS IT — search weighs the heading 3x; when the content came from a lookup table, keep that table's own name too, e.g. '땅콩(Arachis hypogaea) 재배 기준'), attribution (the source title/URL you got this from — omit only if there is none), entity_ref (optional AoT entity unique_id this is about), source_url (the http(s) address you got this from — without it a reviewer cannot check the note), source_ref (when the content came from a lookup here, pass the 'source_ref' that query returned — it marks the note as checkable), content_kind ('prose' default or 'structured'), ttl_hours (optional — set for time-sensitive info like a pest sighting so it expires; omit for a durable observation). RECIPE for 'research X and set it up': knowledge_search -> research -> shelve the summary WITH attribution -> then build on it (create_program etc.), citing it in source_note. Skip the shelve and the next question researches it all over again.",
-    }),
+    Tool('knowledge_shelve', handler='knowledge_shelve', record_write=True),
 
     # --- System update / version status (read-only, 2026-07-18) ------------------
     # Wires the AI to AoTRelease().github_upgrade_exists() (same check as the
     # admin/upgrade page) so "is there a system update?" is answerable. Before
     # this, no tool exposed version/update info and the AI could only give a
     # generic "cannot check for updates" reply. Read-only — not approval-gated.
-    Tool('get_system_update_status', handler='get_system_update_status', manifest={
-        "tool_name": "get_system_update_status",
-        "action_type": "virtual_tool_call",
-        "description": "Checks whether an AoT software/system update is available by comparing the installed version against the latest GitHub release. Read-only. Use whenever the user asks about system updates, new versions, or the currently installed software version.",
-        "usage_hint": "params.arguments: {}. Returns {current_version, latest_version, update_available, message}.",
-    }),
+    Tool('get_system_update_status', handler='get_system_update_status'),
 
     # --- Diagnostic: analyze system failure (@ANCHOR: ANALYZE_SYSTEM_FAILURE_RECONNECT,
     # Phase 2, docs/design/ai-agent-loop.md) — the implementation already existed
@@ -1232,12 +499,7 @@ TOOLS: List[Tool] = [
     # here with handler=None: dispatchable if somehow called, but invisible in the
     # manifest, so the LLM never knew it existed. Read-only (audits AITask failure
     # logs + MCP bridge status) — not approval-gated.
-    Tool('analyze_system_failure', handler='analyze_system_failure_tool', manifest={
-        "tool_name": "analyze_system_failure",
-        "action_type": "virtual_tool_call",
-        "description": "Diagnoses why a device/system action failed by auditing recent AITask failure logs and MCP bridge server status. Read-only.",
-        "usage_hint": "params.arguments: {device_id (optional), tool_name (optional, e.g. 'operate_device'), lookback_minutes (optional, default 60)}. Use when the user reports a control/device failure or asks why something isn't working.",
-    }),
+    Tool('analyze_system_failure', handler='analyze_system_failure_tool'),
 
     # --- Knowledge search (@ANCHOR: KNOWLEDGE_SEARCH_TOOL, Phase 2) -------------
     # Read half of docs/design/ai-library-redesign.md §4 — knowledge_shelve (write)
@@ -1245,47 +507,22 @@ TOOLS: List[Tool] = [
     # branch invoked via a prompt instruction (base_ai.py _build_prompt), never in
     # the tool catalog itself, so the agent loop (which offers tools, not prompt-
     # injected instructions) never surfaced it. Read-only.
-    Tool('knowledge_search', handler='knowledge_search_tool', manifest={
-        "tool_name": "knowledge_search",
-        "action_type": "virtual_tool_call",
-        "description": "Searches the AI knowledge LIBRARY (system manuals + domain knowledge synced from external sources — crops, pests, environment guides) by free-text query. Read-only. Broader than read_manual (no filename/section needed). NOT for per-entity notes/memos a user recorded on a specific device or zone — those are the Notes model; use search_notes(target_name=...) for anything the user 'wrote down / recorded / noted' about a named device or zone.",
-        "usage_hint": "params.arguments: {query (free text, required), top_k (optional, default 3), tags (optional comma-separated scope filter)}.",
-    }),
+    Tool('knowledge_search', handler='knowledge_search_tool'),
 
     # --- 참조표 (@ANCHOR: REFERENCE_TABLE_TOOLS, 2026-08-24) --------------------
     # 표를 지식 항목으로 적재하지 않고 등록만 해 두고 물어볼 때 조회한다
     # (reference_table_service 모듈 주석). 도구가 둘인 이유는 등록된 표가
     # 설치마다 달라 **정적인 도구 설명에 담을 수 없기** 때문이다. 둘 다 읽기 전용.
-    Tool('list_lookup_sources', handler='list_lookup_sources', manifest={
-        "tool_name": "list_lookup_sources",
-        "action_type": "virtual_tool_call",
-        "description": "Lists everything this system can LOOK THINGS UP IN: reference tables the operator registered (crop requirements, spec sheets) and connected data APIs (measured farm data). Read-only. These are queried on demand, so they are NOT in knowledge_search results — when a question asks for a per-item value or for external measured data and knowledge_search found nothing, check here before answering from your own memory.",
-        "usage_hint": "params.arguments: {}. Returns sources[] each with kind. kind='table' -> query_reference_table (look a row up by name; see name_language/aliases). kind='api' -> query_data_source (run one operation with its params).",
-    }),
-    Tool('query_data_source', handler='query_data_source', manifest={
-        "tool_name": "query_data_source",
-        "action_type": "virtual_tool_call",
-        "description": "Runs one operation against a connected data API right now, instead of relying on what was synced earlier. Read-only. Use it to answer 'what did other farms measure', 'what does this season look like' — questions the stored digest cannot cover because it holds one fixed selection. Always report 'total_available' honestly: a truncated result is not the complete set.",
-        "usage_hint": "params.arguments: {source_id (from list_lookup_sources), operation (one of that source's operations), params (object with that operation's parameters), limit (default 5, max 25), columns (comma-separated, or '*')}. Codes like userId/facilityId/croppingSerlNo are not things a person knows — resolve them with smartfarmkorea_lookup first.",
-    }),
-    Tool('query_reference_table', handler='query_reference_table', manifest={
-        "tool_name": "query_reference_table",
-        "action_type": "virtual_tool_call",
-        "description": "Looks a row up in a registered reference table by name. Read-only. Names are matched in the table's own language (see name_language/aliases). Returns matching rows plus the table's attribution and caveat — quote the caveat when it changes what the numbers mean (e.g. a suitability range is not a greenhouse setpoint). If nothing matches, say so; do not fill the gap from memory.",
-        "usage_hint": "params.arguments: {table_id (from list_lookup_sources; omit only when exactly one table exists), query (the name to look up — species, part, variety), limit (default 5), columns (comma-separated; omit for the table's summary columns, '*' for all)}. Use the name the TABLE is keyed by (see name_language/aliases).",
-    }),
+    Tool('list_lookup_sources', handler='list_lookup_sources'),
+    Tool('query_data_source', handler='query_data_source'),
+    Tool('query_reference_table', handler='query_reference_table'),
 
     # --- Knowledge-library catalog (@ANCHOR: LIBRARY_CATALOG_TOOL, 2026-07-19) ---
     # Without this the AI could only describe SmartFarmKorea (whose setup recipe
     # is injected into the tools below) and answered "what knowledge libraries
     # can I add?" with SmartFarmKorea alone. Read-only enumerator of the full
     # LIBRARY_PRESETS catalog so the AI recommends every source type.
-    Tool('list_library_source_types', handler='list_library_source_types_tool', manifest={
-        "tool_name": "list_library_source_types",
-        "action_type": "virtual_tool_call",
-        "description": "Lists EVERY knowledge-library source type the operator can add — the pre-built external public-data APIs (RDA SmartFarm 권장설정값, 농사로 재배가이드, 병해충경보 NCPMS, SmartFarmKorea 시설/노지/축산 실측데이터) AND the custom types (document upload, web page scrape, generic REST API, internal DB query). Read-only. Call this whenever the user asks what data/knowledge sources they can add or asks for a recommendation — then present the FULL range, never just SmartFarmKorea.",
-        "usage_hint": "params.arguments: {}. Returns {system_presets:[{key,label,description,url}], custom_types:[{key,label,description,source_type}]}. Use it to answer 'what knowledge libraries can I add?' comprehensively; recommend based on what the user manages (crop/livestock/facility/their own docs).",
-    }),
+    Tool('list_library_source_types', handler='list_library_source_types_tool'),
 
     # --- SmartFarmKorea AI-driven setup (@ANCHOR: SMARTFARMKOREA_AI_TOOLS,
     # Phase 2, docs/design/ai-library-redesign.md) — expose Phase 1's discovery
@@ -1295,18 +532,7 @@ TOOLS: List[Tool] = [
     # the relational drill-down without the user ever typing a code. lookup is
     # read-only; configure mutates (creates a source + fetches external data) →
     # approval-gated.
-    Tool('smartfarmkorea_lookup', handler='smartfarmkorea_lookup_tool', manifest={
-        "tool_name": "smartfarmkorea_lookup",
-        "action_type": "virtual_tool_call",
-        "description": "Discover SmartFarmKorea farms or cropping seasons so you can fill in a library source's IDs WITHOUT the user typing any codes. Read-only. Steps 1-2 of registering SmartFarmKorea data for 시설원예 (smartfarmkorea) / 노지 (smartfarmkorea_outdoor). 축산 (smartfarmkorea_livestock) has NO discovery — it needs only a date range, so skip this for it.",
-        "usage_hint": "params.arguments: {dataset (preset_key: smartfarmkorea | smartfarmkorea_outdoor), api_key (the user's service key), mode ('farms' or 'seasons'), user_id (REQUIRED for mode='seasons'), query (filter by region/id — there can be 2,000+ farms), crop (filter by crop NAME: 딸기/토마토/오이/참외/방울토마토/고추/감귤/만감류/블루베리 — ALWAYS pass this when the user named a crop, so a 딸기 request never returns a 토마토 farm), limit (default 20)}. Each returned farm/season carries its crop name in `crop` and in the label. RECIPE: 1) mode='farms' with crop=<user's crop> and query=<region> → their farm's userId+facilityId+itemCode. 2) mode='seasons' with that user_id → the season's croppingSerlNo. Then configure_library_source.",
-    }),
-    Tool('configure_library_source', handler='configure_library_source_tool', mutating=True, manifest={
-        "tool_name": "configure_library_source",
-        "action_type": "virtual_tool_call",
-        "description": "Create or update a SmartFarmKorea library source and (by default) activate + sync it so its measured farm data enters the AI knowledge layer. Requires human approval (registers a source and fetches external data). Handles all three datasets: smartfarmkorea (시설원예), smartfarmkorea_outdoor (노지), smartfarmkorea_livestock (축산).",
-        "usage_hint": "params.arguments: {preset_key (required), api_key (required), operations (list of EXACT operation keys — NOT generic words like 'growth'/'환경'; a wrong key returns valid_operations to retry with. 시설 growth keys are crop-specific: growth_strawberry(딸기)/growth_mum(국화)/growth_melon(참외)/growth_other; 노지: growth_radish(무)/growth_cabbage(배추)/growth_garlic(마늘)/growth_onion(양파)/growth_blueberry(블루베리); shared: identity/cropping/env), plus the params each operation needs. For 시설/노지 cropping/growth/env ops: userId, facilityId, croppingSerlNo, itemCode — RESOLVE THESE VIA smartfarmkorea_lookup, never ask the user for a code — and measDate/startDate/endDate (ask the user, YYYY-MM-DD). For 축산: only startDate/endDate (YYYYMMDD, no dashes). Optional: source_id (update instead of create), activate (default true), sync (default true), farm_label/season_label. NOTE: only register a farm whose crop (itemCode) matches what the user asked for — the lookup label shows the crop code. RECIPE: smartfarmkorea_lookup first, then this.",
-    }),
+    Tool('configure_library_source', handler='configure_library_source_tool', mutating=True),
 
     # --- Local time per location (@ANCHOR: GET_LOCAL_TIME_TOOL, 2026-07-20) ------
     # Every map shape/device carries coordinates, and aot/utils/device_tz.py
@@ -1316,12 +542,7 @@ TOOLS: List[Tool] = [
     # check a SPECIFIC location's actual local time before describing or
     # planning around it, instead of assuming a single global timezone always
     # applies. Read-only — not approval-gated.
-    Tool('get_local_time', handler='get_local_time_tool', manifest={
-        "tool_name": "get_local_time",
-        "action_type": "virtual_tool_call",
-        "description": "Returns the current local wall-clock time and IANA timezone for a specific location (zone/site/facility/device) or the farm-wide default, together with that location's sun times for today (sunrise, sunset, solar noon, civil twilight, day length, whether it is currently daytime, and how many minutes remain until the next sunrise/sunset). Every location resolves its own timezone and sun times from its coordinates. Read-only.",
-        "usage_hint": "params.arguments: {target_name (optional — a zone/site/facility/device name, e.g. '3-1', '온실'; omit for the farm-wide default timezone)}. Call this before describing or planning around a specific location/time (e.g. 'is it night there now?', 'should this run today or tomorrow given the local time?') instead of assuming the same timezone applies everywhere. Because farm work follows the solar day rather than the clock — irrigation, misting, shading and venting all do — use the returned 'sun' block instead of assuming fixed hours: check sun.is_daytime and sun.next_event before advising on anything time-sensitive, and prefer phrasing tied to sunrise/sunset over fixed clock hours. sun is null when the location has no resolvable coordinates.",
-    }),
+    Tool('get_local_time', handler='get_local_time_tool'),
 
     # --- virtual_tool_call tools WITHOUT a manifest entry (dispatch only) ---------
     # Read tools intentionally omitted from the slim LLM manifest; operate_device is
@@ -1342,19 +563,9 @@ TOOLS: List[Tool] = [
     # 그 기기의 "AI 조작 허용" 과 짐작한 화면에 대한 사용자 확인(서버가 강제 —
     # data_tools.system). 키 단위 모듈은 2026-10-10 에 없앴다(운영에 배정).
     Tool('screen_action', handler='screen_action'),
-    Tool('resolve_target', handler='resolve_target_tool', manifest={
-        "tool_name": "resolve_target",
-        "action_type": "virtual_tool_call",
-        "description": "Read-only, NO approval needed. Resolve a place/device name to its exact entity BEFORE calling a write tool that takes target_name (add_schedule, create_note, create_notice, ...). Call this first whenever the request could apply per-sub-unit ('each zone', '구역별', 'per section'). The reply gives target_type, any 'children', and a 'note' saying exactly what a write to this target would and would not touch — follow it.",
-        "usage_hint": "params.arguments: {target_name: '<place/device name>'}. Returns {status, target_id, target_type, resolved_name, children, note}. A CROP name also resolves ('콩밭', '상추 재배지' → the zone that crop currently grows in) — growers name plots by what is in them, so pass the user's own words rather than translating them to a map name first. If status is 'needs_disambiguation', show available_targets AND crop_targets to the user via ask_user and retry with the exact name (a crop growing in several zones is deliberately not guessed).",
-    }),
+    Tool('resolve_target', handler='resolve_target_tool'),
     Tool('get_device_list', handler='get_device_list_tool'),
-    Tool('search_notes', handler='search_notes_tool', manifest={
-        "tool_name": "search_notes",
-        "action_type": "virtual_tool_call",
-        "description": "Reads FULL/older notes for one entity, or free-text searches notes. Read-only — NO approval needed. NOTE: a per-entity digest (each entity's INITIAL note + a few RECENT notes + total count) is ALREADY pre-injected in context under system_state.note_digests — use that to answer broad questions like '각 장치의 노트 확인' or 'which devices have notes' WITHOUT any tool call. Call this tool only to DRILL DOWN: read the full text or older notes of a SPECIFIC entity (pass target_name with that zone/device name — notes bind by target_id so keyword search alone misses them), or free-text keyword search (query). When target_name resolves to a SITE (포장), results automatically include every descendant zone's notes too (a site rarely has its own notes; per-zone notes like crop info live on the zones) — each result's target_name tells you which zone it came from, so attribute info per-zone rather than treating results as one undifferentiated pile.",
-        "usage_hint": "params.arguments: {target_name (location/entity to read notes for, e.g. '3-1', '1포장 1-1', '밸브1'), query (optional keyword), category (optional), limit (optional, default 10)}. Returns note contents (up to 2000 chars each) for summarization.",
-    }),
+    Tool('search_notes', handler='search_notes_tool'),
     # search_notes 의 읽기 짝. 파일명까지만 주는 그 도구에서 실제 픽셀로 내려가는
     # 유일한 경로다. manifest=None 이라 인앱 프롬프트 고정비는 0 이고, 발견은
     # search_notes 응답의 조건부 _reading 이 담당한다(첨부가 있을 때만 안내).
@@ -1362,7 +573,6 @@ TOOLS: List[Tool] = [
     Tool('get_energy_report', handler='get_energy_report'),
     Tool('operate_device', handler='operate_device_tool', physical=True),
     Tool('get_weather', handler='get_weather_tool'),
-    Tool('get_active_functions_summary', handler='get_active_functions_summary'),
     Tool('get_function_detail', handler='get_function_detail'),
     Tool('get_cumulative_status', handler='get_cumulative_status'),
 
@@ -1465,8 +675,6 @@ _TIER_ASSIGNMENT = {
     'get_device_detail':         ('device', 'core', False),
     'get_device_list':           ('device', 'core', False),
     'list_available_devices':    ('device', 'core', False),
-    'list_unbound_slots':        ('device', 'drawer', False),
-    'rebind_device':             ('device', 'drawer', False),
     # --- 측정 ---------------------------------------------------------------
     'get_sensor_detail':         ('measurement', 'core', False),
     'get_sensor_reading':        ('measurement', 'core', False),
@@ -1481,7 +689,6 @@ _TIER_ASSIGNMENT = {
     'get_function_list':         ('function', 'core', False),
     'get_function_detail':       ('function', 'drawer', False),
     'get_function_doc':          ('function', 'drawer', False),
-    'get_active_functions_summary': ('function', 'core', False),
     'activate_function':         ('function', 'core', False),
     'deactivate_function':       ('function', 'core', False),
     'create_function':           ('function', 'drawer', False),
@@ -1508,14 +715,9 @@ _TIER_ASSIGNMENT = {
     'get_note_attachment':       ('record', 'drawer', False),
     'note':                      ('record', 'drawer', False),
     'modify_note':               ('record', 'drawer', False),
+    'delete_note':               ('record', 'drawer', False),
     'add_target_alias':          ('record', 'drawer', False),
     'delete_target_alias':       ('record', 'drawer', False),
-    'archive_note':              ('record', 'drawer', False),
-    'restore_note_from_archive': ('record', 'drawer', False),
-    'search_archives':           ('record', 'drawer', False),
-    'get_archived_document':     ('record', 'drawer', False),
-    'delete_archive':            ('record', 'drawer', False),
-    'set_document_tier':         ('record', 'drawer', False),
     # 읽기 동사만 core 다(2026-08-24 실측으로 결정, C5).
     #
     # 두 동사는 **필요해지는 시점이 다르다.** `knowledge_search` 는 답하기
@@ -1543,7 +745,6 @@ _TIER_ASSIGNMENT = {
     'submit_advice':             ('record', 'drawer', False),
     'configure_library_source':  ('record', 'drawer', False),
     'list_library_source_types': ('record', 'drawer', False),
-    'smartfarmkorea_lookup':     ('record', 'drawer', False),
     # --- 공간 ---------------------------------------------------------------
     'list_plots':            ('space', 'core', False),
     'list_programs':        ('space', 'drawer', False),
@@ -1585,15 +786,15 @@ _TIER_ASSIGNMENT = {
     # 화면마다 ai_control 을 알려 준다 — 상시 노출 상한(35)을 넘기지 않는다.
     'screen_action':             ('system', 'drawer', False),
     'get_crop_status':           ('space', 'drawer', False),
-    'list_geo_maps':             ('space', 'drawer', False),
     'delete_geo_shape':          ('space', 'drawer', False),
-    'get_device_location':       ('space', 'drawer', False),
+    'set_pipe_diameters':        ('space', 'drawer', False),
     'set_device_location':       ('space', 'drawer', False),
     'get_map_equipment':         ('space', 'core', False),
     'get_map_equipment_detail':  ('space', 'drawer', False),
     'get_facility_capacity':     ('space', 'drawer', False),
     'get_address':               ('space', 'drawer', False),
-    'distance_between':          ('space', 'drawer', False),
+    'find_location':             ('space', 'drawer', False),
+    'find_favorites':            ('space', 'drawer', False),
     'nearest':                   ('space', 'drawer', False),
     # --- 장치 정의 ----------------------------------------------------------
     'create_input':              ('definition', 'drawer', False),
@@ -1769,11 +970,11 @@ TOOL_MODULES = ('plots', 'map', 'automation', 'devices', 'dashboard',
 #: 주입으로 오인했다). 분야로만 말한다. 짧게: 꺼진 모듈마다 한 줄씩 나간다.
 TOOL_MODULE_SUMMARIES = {
     'plots': 'plots, stages, splits, programs (assign to unassigned plots)',
-    'map': 'addresses, distances, placement, shapes',
+    'map': 'placement, shapes, pipe diameters',
     'automation': 'create/delete automations, sequence day plans',
     'devices': 'device and GIS input definitions',
     'dashboard': 'dashboards, widgets, tabs',
-    'library': 'archives, notice edits, library sources',
+    'library': 'library sources',
     'admin': 'update/storage status, AI agents',
 }
 #: 묶음 값에서 운영과 모듈을 잇는 기호. 쉼표가 아닌 이유: 거절 메시지 등에
@@ -1799,15 +1000,10 @@ _MCP_PROFILE = {
     'get_device_detail':         _OPS,
     'get_control_state':         _OPS,
     'get_device_list':           _OPS,
-    # 카탈로그(tools/list)에는 없지만 use_tool 로 실행되는 도구 — 표에 없으면
-    # 설정으로 쳐지는 안전장치에 기대지 않고 명시한다(test_mcp_tool_profiles).
-    'list_unbound_slots':        _OPS,
-    # 슬롯 재배선은 장치 정의를 고치는 일이다(devices) — 운영 키는 빈 슬롯을
-    # 보기만 한다(list_unbound_slots).
-    'rebind_device':             _M_DEV,
-    # operate_device 와 같은 일을 하는 네이티브 도구. 인앱 AI 에는 남는다.
+    # operate_device 와 같은 일을 하는 네이티브 도구. 인앱 AI 에는 남고, 외부 키는 도메인 operation
+    # (control.output_timed)으로만 닿는다(DOMAIN_ROUTED_TOOLS).
     'set_output_state':          _PROFILE_RETIRED,
-    # get_device_list·search_devices 와 겹치는 네이티브 도구.
+    # get_device_list·search_devices 와 겹치는 네이티브 도구. 외부 키는 find.controllable 로만 닿는다.
     'list_available_devices':    _PROFILE_RETIRED,
     # --- 측정 ---------------------------------------------------------------
     'get_sensor_detail':         _OPS,
@@ -1822,7 +1018,6 @@ _MCP_PROFILE = {
     # --- 함수 ---------------------------------------------------------------
     'get_function_detail':       _OPS,
     'get_function_list':         _OPS,
-    'get_active_functions_summary': _OPS,
     'activate_function':         _OPS,
     'deactivate_function':       _OPS,
     # 제어기 옵션·시퀀스 운전 시간 조정("관수 5분 늘려")은 현장의 일상이다.
@@ -1851,6 +1046,7 @@ _MCP_PROFILE = {
     'search_notes':              _OPS,
     'create_note':               _OPS,
     'modify_note':               _OPS,
+    'delete_note':               _OPS,
     'add_target_alias':          _OPS,
     'delete_target_alias':       _OPS,
     'get_note_attachment':       _OPS,
@@ -1863,23 +1059,16 @@ _MCP_PROFILE = {
     # 거부 응답이 "대신 조언으로 남겨라" 고 안내하므로 운영 키에 있어야 한다.
     'submit_advice':             _OPS,
     'list_advice':               _OPS,
-    # search_notes 응답이 보관 문서 검색을 가리킨다.
-    'search_archives':           _OPS,
-    # 보관 문서·공지 수정/삭제·라이브러리 소스·지식 보관은 library 하나다 —
+    # 공지 수정/삭제·라이브러리 소스·지식 보관은 library 하나다 —
     # 모두 "쌓인 문서를 정리하는 일" 이고, 설명·응답이 서로를 가리킨다
-    # (set_document_tier → archive_note, configure_library_source ↔
-    # smartfarmkorea_lookup). 공지 **작성**(create_notice)과 조회는 현장
+    # (configure_library_source ↔ smartfarmkorea_lookup). 공지 **작성**(create_notice)과 조회는 현장
     # 일상이라 운영에 남는다.
-    'get_archived_document':     _M_LIB,
-    'archive_note':              _M_LIB,
-    'restore_note_from_archive': _M_LIB,
-    'set_document_tier':         _M_LIB,
-    'delete_archive':            _M_LIB,
-    'modify_notice':             _M_LIB,
-    'delete_notice':             _M_LIB,
+    # 공지 작성(create_notice)에 이어 고치기·지우기도 운영이다(2026-11-03 재설계 PR 4) —
+    # 방금 쓴 공지를 바로 바로잡을 수 있어야 한다. 승인 규칙은 안쪽 도구 그대로.
+    'modify_notice':             _OPS,
+    'delete_notice':             _OPS,
     'knowledge_shelve':          _M_LIB,
     'list_library_source_types': _M_LIB,
-    'smartfarmkorea_lookup':     _M_LIB,
     'configure_library_source':  _M_LIB,
     # --- 공간 ---------------------------------------------------------------
     'list_plots':                _OPS,
@@ -1897,8 +1086,6 @@ _MCP_PROFILE = {
     # 못 받는다. 키 단위 허락은 없앴고, 기기별 "AI 화면 조작 허용" 과 확인
     # 토큰(data_tools.system)은 그대로다. 가벼움도 운영과 같이 닿는다.
     'screen_action':             _OPS,
-    'list_geo_maps':             _OPS,
-    'get_device_location':       _OPS,
     'get_crop_status':           _OPS,
     'get_facility_capacity':     _OPS,
     'get_plot_history':          _OPS,
@@ -1931,15 +1118,18 @@ _MCP_PROFILE = {
     'create_program':            _M_PLOTS,
     'modify_program':            _M_PLOTS,
     'delete_program':            _M_PLOTS,
-    # 지도·위치(map) — 주소·거리·가까운 것 찾기는 장치 배치(set_device_location)
-    # 와 도형 정리를 할 때 쓰는 도구라 한 모듈로 둔다(nearest 설명이
-    # distance_between 을 가리킨다). 위치 **조회**(get_device_location·
-    # get_map_equipment)는 운영이다.
-    'get_address':               _M_MAP,
-    'distance_between':          _M_MAP,
-    'nearest':                   _M_MAP,
+    # 지도·위치(map) — 장치 배치(set_device_location)와 도형 정리는 설정이다.
+    # 위치 **조회**는 운영이다: get_device_location·get_map_equipment, 그리고
+    # 주소·거리·가까운 것 찾기(2026-11-03 재설계 PR 4 — "가장 가까운 구획" 같은
+    # 일상 질문이 설정 키에서만 되던 것을 올렸다). get_address 는 VWorld 키(GIS 입력)가
+    # 있어야 한다 - 없는 설치에서는 오류로 그 사실을 말한다.
+    'get_address':               _OPS,
+    'find_location':             _OPS,
+    'find_favorites':            _OPS,
+    'nearest':                   _OPS,
     'set_device_location':       _M_MAP,
     'delete_geo_shape':          _M_MAP,
+    'set_pipe_diameters':        _M_MAP,
     # --- 장치 정의 ----------------------------------------------------------
     # 장치 정의(devices) — 입출력·GIS 입력의 종류 조회와 CRUD. 종류 조회
     # (list_device_types)는 kind=function 도 받지만 create_function 이 종류를
@@ -2146,15 +1336,25 @@ def is_retired_from_mcp(name):
     return _MCP_PROFILE.get(name) == _PROFILE_RETIRED
 
 
+#: 옛 tools/list 에는 없고(퇴역) 도메인 틀의 operation 으로만 닿는 네이티브 도구 — find.controllable ·
+#: control.output_timed (2026-11-03 사용자 결정으로 되살림). 직접 이름으로 부르면 예전처럼 묶음 밖 거절이다.
+DOMAIN_ROUTED_TOOLS = frozenset({'list_available_devices', 'set_output_state'})
+
+
 # @manual ai/overview#tool-profiles
-def tool_in_profile(name, profile):
+def tool_in_profile(name, profile, via_domain=False):
     """묶음 `profile` 인 호출자에게 이 도구를 보여 주는가.
+
+    via_domain: 도메인 틀의 operation 이 안쪽 도구로 부르는 길이다 — 퇴역이지만 operation 으로만 닿는
+    도구(DOMAIN_ROUTED_TOOLS)는 묶음이 있는 키에게 이 길로는 열린다.
 
     profile 이 None 이면 제한이 없다(인앱 AI). 서랍 기구는 묶음과 무관하게
     참이다 — 서랍 스위치가 따로 정한다. 표에 없는 이름은 **모듈을 전부 켠
     묶음에만** 보인다(새 도구가 배정 없이 들어와도 운영·일부 모듈 키의 표면이
     조용히 커지지 않게 — 어느 모듈 것인지 모르므로 좁은 쪽으로 친다)."""
     if profile is None:
+        return True
+    if via_domain and name in DOMAIN_ROUTED_TOOLS:
         return True
     value = _MCP_PROFILE.get(name)
     if value == _PROFILE_DRAWER:
@@ -2167,7 +1367,25 @@ def tool_in_profile(name, profile):
 #: 도메인 틀의 operation 으로만 부르는 안쪽 도구 — 옛 tools/list 에 싣지 않는다(실행·게이트·
 #: 감사는 다른 도구와 같다). 도메인 틀이 생긴 뒤 들어온 기능이라 옛 목록에 이름을 늘릴 까닭이 없다
 #: (대상 별칭, 2026-10-28: record.alias_add · remove.alias_delete).
-DOMAIN_ONLY_TOOLS = frozenset({'add_target_alias', 'delete_target_alias', 'activate_input'})
+DOMAIN_ONLY_TOOLS = frozenset({'add_target_alias', 'delete_target_alias', 'activate_input', 'find_location', 'find_favorites'})
+
+
+#: 도메인 표면에서 **운영으로 올린** 도구 → 옛 표면이 두던 모듈(2026-11-03 재설계 PR 4). 위치 조회(주소·거리·가까운 것)와
+#: 공지 고치기·지우기는 일상 질문이라 `_MCP_PROFILE` 에서 운영으로 올렸다. 그런데 옛 표면의 운영 목록은 크기 상한(기준선의
+#: 115%)에 거의 닿아 있어 다섯을 더하면 넘는다 — 상한은 올리지 않는다. 그래서 옛 `tools/list` 는 이 도구를 **원래 모듈을
+#: 켠 묶음에서만** 싣는다(옛 설정 묶음은 예전 그대로). 실행·권한은 운영 도구와 같아 호출 자체는 어느 묶음에서든 된다.
+DOMAIN_PROMOTED_TOOLS = {
+    'nearest': _M_MAP, 'get_address': _M_MAP,
+    'modify_notice': _M_LIB, 'delete_notice': _M_LIB,
+    # 노트 지우기(재설계 PR 5)도 같다 — 옛 표면의 운영 목록 크기 상한 때문에 옛 목록에는 도서관 모듈을 켠 묶음에서만 싣는다.
+    'delete_note': _M_LIB,
+}
+
+
+def legacy_hidden_tools(profile):
+    """옛 `tools/list` 에서 이 묶음에 싣지 않을 승격 도구 — 원래 모듈이 꺼진 묶음에서만."""
+    modules = profile_modules(profile)
+    return frozenset(n for n, m in DOMAIN_PROMOTED_TOOLS.items() if m not in modules)
 
 
 # ---------------------------------------------------------------------------
@@ -2274,9 +1492,6 @@ MCP_FACADES: Dict[str, Dict[str, Any]] = {
     },
     # 공지 쓰기 — 셋 다 승인 필요. 운영 키에는 create_notice 하나만 보여 원래
     # 도구 그대로 나가고(_facade_entry), 서재 모듈을 켠 키가 셋을 한 줄로 받는다.
-    # 보관 쓰기 3종(archive_note·restore_note_from_archive·delete_archive)은
-    # 묶어도 812 → 507(0.62)이라 묶지 않았다(2026-10-10 실측) — 인자가 셋 다
-    # 달라 줄어드는 것이 설명뿐이다.
     'notice': {
         'description': "Notice-board posts. Pick `operation`:",
         'tail': ("Requires human approval; modify and delete also need admin or "
@@ -2896,82 +2111,6 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         }
     },
     {
-        "tool_name": "search_archives",
-        "description": (
-            "Searches archived documents by stored metadata. A document only "
-            "marked tier 3 but never moved does not appear; an empty result is "
-            "normal. Read-only."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Keyword. Omit to list all."},
-                "limit": {"type": "integer", "description": "1-200. Default 50."},
-                "offset": {"type": "integer", "description": "Default 0."},
-            },
-        },
-    },
-    {
-        "tool_name": "get_archived_document",
-        "description": "Retrieves one archived document. Returns metadata only by default; pass include_content=true to decompress and return the full text. Reading an archive updates its last-accessed time, which feeds future tier decisions.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "document_id": {"type": "string", "description": "unique_id of the archived document."},
-                "include_content": {"type": "boolean", "description": "Decompress and return full text. Default: false (metadata only)."}
-            },
-            "required": ["document_id"]
-        }
-    },
-    {
-        "tool_name": "archive_note",
-        "description": "Archives a note: writes a compressed COPY into cold storage and marks the note tier 3. Requires human approval. The original note text is NOT deleted — archiving never removes content; only the retention policy does.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "note_id": {"type": "string", "description": "unique_id of the note to archive."},
-                "retention_policy": {"type": "string", "description": "One of: default, 1year, 3year, 7year, permanent. Default: 'default' (3 years)."}
-            },
-            "required": ["note_id"]
-        }
-    },
-    {
-        "tool_name": "restore_note_from_archive",
-        "description": "Reads a note back out of cold storage and moves it to a warmer tier. Requires human approval. If the archive exists but the original note is gone, returns status 'orphan_archive' with the archived text rather than silently recreating it.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "note_id": {"type": "string", "description": "unique_id of the archived note."},
-                "target_tier": {"type": "integer", "description": "Tier to restore into: 1 (hot) or 2 (warm). Default: 2"}
-            },
-            "required": ["note_id"]
-        }
-    },
-    {
-        "tool_name": "set_document_tier",
-        "description": "Changes only a note's tier value (1=hot, 2=warm, 3=cold). Requires human approval. This moves NO data — it records an intent. Use archive_note to actually place content in the archive.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "note_id": {"type": "string", "description": "unique_id of the note."},
-                "tier": {"type": "integer", "description": "1 (hot), 2 (warm) or 3 (cold)."}
-            },
-            "required": ["note_id", "tier"]
-        }
-    },
-    {
-        "tool_name": "delete_archive",
-        "description": "Deletes the archived COPY of a document (file + index rows). Requires human approval. Irreversible. The original note is untouched, so its tier may still read 3 afterwards.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "document_id": {"type": "string", "description": "unique_id of the archived document."},
-                "reason": {"type": "string", "description": "Why it is being deleted (recorded in the audit log)."}
-            },
-            "required": ["document_id"]
-        }
-    },
-    {
         "tool_name": "get_sensor_detail",
         "description": (
             "Sensor history with min/max/avg for a device or a zone. For many "
@@ -3104,10 +2243,9 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     {
         "tool_name": "get_zone_sensor_summary",
         "description": (
-            "Latest value and period statistics for the sensors of MANY zones in "
-            "one call — for any question across zones or the farm ('which plots "
-            "are dry'). Narrow with measurement_type. Follow the reply's "
-            "`_reading`. Read-only."
+            "Latest values (detail=true adds period min/max/avg) for the sensors "
+            "of MANY zones in one call — for questions across zones ('which plots "
+            "are dry'). Follow the reply's `_reading`. Read-only."
         ),
         "input_schema": {
             "type": "object",
@@ -3169,7 +2307,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "device_id": {"type": "string", "description": "Output unique_id or name."},
                 "state": {"type": "string", "enum": ["on", "off", "set_value"], "description": "Target state."},
-                "value": {"type": "number", "description": "Number for set_value (PWM/setpoint)."},
+                "value": {"type": "number", "description": "For set_value: PWM duty/position 0-100 %, or setpoint."},
             },
             "required": ["device_id", "state"],
         },
@@ -3273,15 +2411,16 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     {
         "tool_name": "schedule_device_control",
         "description": (
-            "Schedules an output (valve, pump, sprinkler) to switch at a set "
-            "time. PHYSICAL — registered after approval. Requires human approval."
+            "Schedules an output (valve, pump, PWM) to switch or set_value at a "
+            "set time. PHYSICAL — registered after approval. Requires human approval."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "device_id": {"type": "string", "description": "Output unique_id or name."},
                 "scheduled_time": {"type": "string", "description": "ISO 8601 with offset, e.g. '2026-02-27T09:00:00+09:00'."},
-                "state": {"type": "string", "enum": ["on", "off"], "description": "Target state."},
+                "state": {"type": "string", "enum": ["on", "off", "set_value"], "description": "Target state."},
+                "value": {"type": "number", "description": "For set_value (PWM/position %)."},
                 "duration_minutes": {"type": "number", "description": "Default 5."},
             },
             "required": ["device_id", "scheduled_time", "state"],
@@ -3332,7 +2471,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     {
         "tool_name": "create_note",
         "description": (
-            "Saves a note now (undated memo; dated work is add_schedule), no "
+            "Saves a note now (undated memo; dated work is schedule_add), no "
             "approval. It shows only on the entity it is attached to, so give "
             "target_name. Call the tool — do not just say you will."
         ),
@@ -3352,10 +2491,25 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         },
     },
     {
+        "tool_name": "delete_note",
+        "description": (
+            "Permanently deletes one note and its attached files. Always needs "
+            "human approval. To only hide a note use modify_note(archive=true)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "note_id": {"type": "string", "description": "From search_notes or the create/edit response."},
+            },
+            "required": ["note_id"],
+        },
+    },
+    {
         "tool_name": "modify_note",
         "description": (
-            "Edits a note or archives it (archive=false restores); never "
-            "deletes. Someone else's note needs human approval."
+            "Edits a note, moves it to another place, or archives it "
+            "(archive=false restores); never deletes. Someone else's note "
+            "needs human approval."
         ),
         "input_schema": {
             "type": "object",
@@ -3542,6 +2696,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "function_type": {"type": "string", "description": "e.g. pid, conditional, trigger."},
                 "active_only": {"type": "boolean", "description": "Active only."},
+                "query": {"type": "string", "description": "Part of the name."},
                 "limit": {"type": "integer"},
             },
         },
@@ -3738,17 +2893,6 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         },
     },
     {
-        "tool_name": "get_active_functions_summary",
-        "description": (
-            "What is running automatically right now (active Functions). "
-            "Read-only."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-        },
-    },
-    {
         "tool_name": "get_device_measurements",
         "description": "Measurement channels and units a device actually reports. Read-only.",
         "input_schema": {
@@ -3762,10 +2906,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     {
         "tool_name": "get_device_detail",
         "description": (
-            "One device's whole picture in one call: kind, map location, "
-            "channels, controlled outputs, connection fields (secrets only as "
-            "set/unset), bound place, approval needs. Use it instead of chaining "
-            "lookups. Missing parts come as null with a '*_note'. Read-only."
+            "One device's whole picture in one call: kind, location, channels, "
+            "outputs, bound place, approval needs. Settings and connection values "
+            "only via fields (options, connection, all). Replaces chained lookups. "
+            "Missing parts are null with a '*_note'. Read-only."
         ),
         "input_schema": {
             "type": "object",
@@ -3789,14 +2933,6 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "target_name": {"type": "string", "description": "Zone, facility or device name."},
                 "target_id": {"type": "string", "description": "Or its unique_id."},
             },
-        },
-    },
-    {
-        "tool_name": "list_geo_maps",
-        "description": "Registered maps (farms) with id, name and centre. Read-only.",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
         },
     },
     {
@@ -3825,7 +2961,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
             "properties": {
                 "layer_id": {"type": "string", "description": "From list_gis_inputs."},
                 "name": {"type": "string", "description": "Optional."},
-                "params": {"type": "object", "description": "{key: value}; keys are get_device_detail options[].key."}
+                "params": {"type": "object", "description": "{key: value}; keys: get_device_detail fields=[options]."}
             },
             "required": ["layer_id"]
         }
@@ -3852,40 +2988,10 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         }
     },
     {
-        "tool_name": "get_device_location",
-        "description": "A device's map position (latitude/longitude). Read-only.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "device_id": {"type": "string", "description": "Device unique_id."},
-            },
-            "required": ["device_id"],
-        },
-    },
-    {
-        "tool_name": "distance_between",
-        "description": (
-            "Distance in metres between two things on the map, by name (the "
-            "user's own words — '3-1', '관리사무소', a crop) or unique_id. Never work "
-            "it out from coordinates yourself. Centre to centre, so touching "
-            "plots still read tens of metres apart — pass that caveat on. An "
-            "ambiguous name returns candidates: ask which, do not pick. "
-            "Read-only."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "target_a": {"type": "string", "description": "Name or unique_id of the first entity (zone/site/facility, vegetation plot, or device)."},
-                "target_b": {"type": "string", "description": "Name or unique_id of the second entity."},
-            },
-            "required": ["target_a", "target_b"],
-        },
-    },
-    {
         "tool_name": "nearest",
         "description": (
             "Ranks things by distance from one reference ('which plots are "
-            "closest to the office') in ONE call — do not loop distance_between. "
+            "closest to the office') in ONE call. "
             "Names or unique_ids. Relay both 'unresolved' and 'ambiguous' — a "
             "shorter list otherwise reads as 'further away'. Centre to centre. "
             "Read-only."
@@ -3893,7 +2999,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "reference": {"type": "string", "description": "Name or unique_id of the thing to measure from (e.g. the office)."},
+                "reference": {"type": "string", "description": "Name or unique_id to measure from."},
                 "candidates": {"type": "array", "items": {"type": "string"}, "description": "Names or unique_ids to rank, closest first. Max 200."},
             },
             "required": ["reference", "candidates"],
@@ -3901,7 +3007,7 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "set_device_location",
-        "description": "Places or moves a device (Input/Output) on the map by setting its latitude/longitude. This is the GIS create/edit for a device placement. Requires human approval.",
+        "description": "Places or moves a device (Input/Output) on the map by latitude/longitude. Requires human approval.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -3911,6 +3017,20 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
                 "map_id": {"type": "string", "description": "Optional map unique_id to bind the device to."}
             },
             "required": ["device_id", "lat", "lng"]
+        }
+    },
+    {
+        "tool_name": "set_pipe_diameters",
+        "description": "Sets main/branch pipe diameters (mm) of a site/zone; drip lines skipped. Requires human approval.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "area_name": {"type": "string"},
+                "main_mm": {"type": "number"},
+                "branch_mm": {"type": "number"},
+                "only_empty": {"type": "boolean", "description": "Default true; false overwrites."}
+            },
+            "required": ["area_name"]
         }
     },
     {
@@ -3937,7 +3057,8 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         "description": "Lists the valid TYPES for creating an Input/Output/Function. Read-only. Call before creating — never invent a type.",
         "input_schema": {
             "type": "object",
-            "properties": {"kind": {"type": "string", "enum": ["input", "output", "function"]}},
+            "properties": {"kind": {"type": "string", "enum": ["input", "output", "function"]},
+                           "query": {"type": "string", "description": "Part of the type or name."}},
             "required": ["kind"]
         }
     },
@@ -4206,69 +3327,70 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
         "input_schema": {"type": "object", "properties": {}}
     },
     {
-        "tool_name": "smartfarmkorea_lookup",
-        "description": "Discover SmartFarmKorea farms or cropping seasons so you can fill in a library source's IDs WITHOUT the user typing any codes. Read-only. Steps 1-2 of registering SmartFarmKorea data for 시설원예 (smartfarmkorea) / 노지 (smartfarmkorea_outdoor). 축산 (smartfarmkorea_livestock) has NO discovery — it needs only a date range, so skip this for it. RECIPE: 1) mode='farms' with crop=<user's crop> and query=<region> → userId+facilityId+itemCode. 2) mode='seasons' with that user_id → croppingSerlNo. Then configure_library_source.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "dataset": {"type": "string", "enum": ["smartfarmkorea", "smartfarmkorea_outdoor"]},
-                "api_key": {"type": "string", "description": "The user's SmartFarmKorea service key."},
-                "mode": {"type": "string", "enum": ["farms", "seasons"]},
-                "user_id": {"type": "string", "description": "REQUIRED for mode='seasons'."},
-                "query": {"type": "string", "description": "Filter by region/id — there can be 2,000+ farms."},
-                "crop": {"type": "string", "description": "Filter by crop NAME (딸기/토마토/오이/참외/방울토마토/고추/감귤/만감류/블루베리) — ALWAYS pass when the user named a crop."},
-                "limit": {"type": "integer", "description": "Default 20."}
-            },
-            "required": ["dataset", "api_key", "mode"]
-        }
-    },
-    {
         "tool_name": "configure_library_source",
-        "description": "Create or update a SmartFarmKorea library source and (by default) activate + sync it so its measured farm data enters the AI knowledge layer. Requires human approval (registers a source and fetches external data). Handles all three datasets: smartfarmkorea (시설원예), smartfarmkorea_outdoor (노지), smartfarmkorea_livestock (축산). RECIPE: smartfarmkorea_lookup first, then this. Only register a farm whose crop (itemCode) matches what the user asked for.",
+        "description": "Create or update a SmartFarmKorea library source and (by default) activate + sync it so its measured farm data enters the AI knowledge layer. Requires human approval (registers a source and fetches external data). Handles all three datasets: smartfarmkorea (시설원예), smartfarmkorea_outdoor (노지), smartfarmkorea_livestock (축산). RECIPE: look up the farm first (records.data_source), then this. Only register a farm whose crop (itemCode) matches what the user asked for.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "preset_key": {"type": "string", "enum": ["smartfarmkorea", "smartfarmkorea_outdoor", "smartfarmkorea_livestock"]},
-                "api_key": {"type": "string"},
                 "operations": {"type": "array", "items": {"type": "string"}, "description": "EXACT operation keys, per-dataset (identity/cropping/env shared) — a wrong key is refused with the valid list, so a good first guess is fine."},
-                "userId": {"type": "string"}, "facilityId": {"type": "string"},
-                "croppingSerlNo": {"type": "string"}, "itemCode": {"type": "string"},
-                "measDate": {"type": "string"}, "startDate": {"type": "string"}, "endDate": {"type": "string"},
+                "params": {"type": "object", "description": "Values the chosen operations need (userId, facilityId, croppingSerlNo, itemCode, measDate, startDate, endDate …)."},
                 "source_id": {"type": "string", "description": "Optional — update instead of create."},
                 "activate": {"type": "boolean", "description": "Default true."},
                 "sync": {"type": "boolean", "description": "Default true."},
                 "farm_label": {"type": "string"}, "season_label": {"type": "string"}
             },
-            "required": ["preset_key", "api_key", "operations"]
+            "required": ["operations"]
         },
         "detail": {"input_schema": {
             "type": "object",
             "properties": {
                 "preset_key": {"type": "string", "enum": ["smartfarmkorea", "smartfarmkorea_outdoor", "smartfarmkorea_livestock"]},
-                "api_key": {"type": "string"},
                 "operations": {"type": "array", "items": {"type": "string"}, "description": "EXACT operation keys (not generic words) — a wrong key returns valid_operations to retry with. 시설: growth_strawberry/growth_mum/growth_melon/growth_other, 노지: growth_radish/growth_cabbage/growth_garlic/growth_onion/growth_blueberry, shared: identity/cropping/env."},
-                "userId": {"type": "string"}, "facilityId": {"type": "string"},
-                "croppingSerlNo": {"type": "string"}, "itemCode": {"type": "string"},
-                "measDate": {"type": "string"}, "startDate": {"type": "string"}, "endDate": {"type": "string"},
+                "params": {"type": "object", "description": "Values the chosen operations need (userId, facilityId, croppingSerlNo, itemCode, measDate, startDate, endDate …)."},
                 "source_id": {"type": "string", "description": "Optional — update instead of create."},
                 "activate": {"type": "boolean", "description": "Default true."},
                 "sync": {"type": "boolean", "description": "Default true."},
                 "farm_label": {"type": "string"}, "season_label": {"type": "string"}
             },
-            "required": ["preset_key", "api_key", "operations"]
+            "required": ["operations"]
         }},
     },
     {
         "tool_name": "get_address",
-        "description": "Reverse-geocodes a location into a human-readable street/parcel address via the registered VWorld GIS Input. Accepts a zone/site/facility/device name, a unique_id, or explicit lat/lng. Read-only. Requires a VWorld API Key configured under Map > GIS Inputs; if none is set, returns a clear error.",
+        "description": "Reverse-geocodes a zone/site/facility/device (name or unique_id) or lat/lng into an address via a GIS Input that supports it. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "target_name": {"type": "string", "description": "Name of the zone, site, facility or device (e.g. '3포장')."},
-                "target_id": {"type": "string", "description": "unique_id of the target, instead of target_name."},
-                "lat": {"type": "number", "description": "Latitude, instead of target_name/target_id."},
-                "lng": {"type": "number", "description": "Longitude, instead of target_name/target_id."}
+                "target_name": {"type": "string", "description": "Zone, site, facility or device name."},
+                "target_id": {"type": "string", "description": "Instead of target_name."},
+                "lat": {"type": "number", "description": "Instead of a name/id."},
+                "lng": {"type": "number", "description": "Instead of a name/id."}
             }
+        }
+    },
+    {
+        "tool_name": "find_favorites",
+        "description": "Shared saved map places. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer"}
+            }
+        }
+    },
+    {
+        "tool_name": "find_location",
+        "description": "Coordinates for an address or place name via the GIS Input geocoding search. Several candidates: ask which one. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Address or place name."},
+                "provider": {"type": "string", "description": "GIS Input id/name/type."},
+                "limit": {"type": "integer"}
+            },
+            "required": ["query"]
         }
     },
     {
@@ -4330,16 +3452,16 @@ _MCP_TOOL_PAYLOADS: List[Dict[str, Any]] = [
     },
     {
         "tool_name": "get_weather_forecast",
-        "description": "Weather forecast for a place, hourly or daily (get_weather is now only). Read-only.",
+        "description": "Weather forecast for a place, hourly or daily. Read-only.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "place": {"type": "string", "description": "Site/zone/facility/device name or id. Omit: place on screen, else farm default."},
-                "start": {"type": "string", "description": "now (default), today, tomorrow, day_after [+ ' HH:MM'], or local YYYY-MM-DD[THH:MM]."},
+                "start": {"type": "string", "description": "Time the user names; map moves there. now, today, tomorrow, day_after [+ ' HH:MM'], YYYY-MM-DDTHH:MM"},
                 "hours": {"type": "integer", "description": "Default 24, max 336 (over 72: daily)."},
                 "sensor_type": {"type": "string"},
                 "detail": {"type": "boolean"},
-                "focus": {"type": "string", "enum": ["max", "min", "rain_start"], "description": "Question is about the peak, low or rain start: the map time moves there."},
+                "focus": {"type": "string", "description": "max|min|rain_start, or the hour the answer is about (HH:MM or ISO); the map moves there."},
             },
         },
     },
@@ -4654,7 +3776,7 @@ def record_write_tools() -> frozenset:
 #: routes_geo_journal)다. 새 space 쓰기 도구가 지도 편집이면 여기에 넣을 것 —
 #: 안 넣으면 작기 운영 권한만으로 열린다(test_plot_write_permission 이 목록을
 #: 고정해 새 도구가 들어오면 분류를 묻는다).
-_SPACE_NON_PLOT_WRITES = frozenset({'delete_geo_shape', 'set_device_location'})
+_SPACE_NON_PLOT_WRITES = frozenset({'delete_geo_shape', 'set_device_location', 'set_pipe_diameters'})
 
 
 def plot_write_tools() -> frozenset:
@@ -4676,6 +3798,28 @@ def map_edit_tools() -> frozenset:
     필요하다(mcp_safety_gate.required_write_permission). _SPACE_NON_PLOT_WRITES
     중 실제로 등록된 쓰기 도구만."""
     return frozenset(_SPACE_NON_PLOT_WRITES) & write_tools()
+
+
+#: 웹이 **설정 편집**(`edit_settings`)으로 여는 쓰기 — 공지(routes_notice)와
+#: 지식 출처 설정(routes_ai_library). 제어 권한(`edit_controllers`)이 아니다.
+#: 승인 여부는 이 분류와 무관하다(레지스트리의 mutating/config_only 가 정한다).
+_SETTINGS_EDIT_WRITES = frozenset({'create_notice', 'modify_notice', 'delete_notice',
+                                   'configure_library_source'})
+
+#: 자기 연결의 묶음을 바꾸는 쓰기 — 웹도 자기 키는 로그인만 요구한다
+#: (routes_mcp_auth). 필요 역할 권한이 없다(승인은 유지). 대상 키는 실행층이
+#: 인증된 연결로 덮어쓰므로 남의 키를 바꾸는 길은 MCP 에 없다.
+_SELF_SERVICE_WRITES = frozenset({'set_tool_profile'})
+
+
+def settings_edit_tools() -> frozenset:
+    """공지·지식 출처 설정 — 웹과 같은 `edit_settings` 가 필요하다."""
+    return frozenset(_SETTINGS_EDIT_WRITES) & write_tools()
+
+
+def self_service_tools() -> frozenset:
+    """필요 역할 권한이 없는 자기 연결 쓰기(로그인한 키 주인이면 된다)."""
+    return frozenset(_SELF_SERVICE_WRITES) & write_tools()
 
 
 def advisory_write_tools() -> frozenset:
@@ -4702,57 +3846,6 @@ def approval_required_tools() -> frozenset:
     physical-control / scheduling tools, MINUS the config_only ones."""
     return frozenset(t.name for t in TOOLS
                      if (t.mutating or t.physical) and not t.config_only)
-
-
-def tiering_enabled() -> bool:
-    """등급 적용 여부. **기본은 꺼짐이다.**
-
-    켜면 매니페스트가 core + 서랍 목록으로 줄고, 나머지는 `open_drawer` 로만
-    닿는다. 배포만으로 동작이 바뀌면 안 되므로 기본을 끔으로 두었다 — 켜는 것이
-    명시적 결정이어야 하고, 문제가 생기면 이 스위치 하나로 되돌아간다.
-
-    환경변수로 둔 이유: 안전 스위치는 **DB 가 이상해도 동작해야** 한다.
-    """
-    return os.environ.get('AOT_AI_TOOL_TIERING', '0') == '1'
-
-
-def _drawer_index_manifest() -> Dict[str, Any]:
-    """서랍 목록을 도구 하나로 싣는다 — 상시 노출.
-
-    서랍의 **존재와 내용**까지 숨기면 LLM 은 열 생각을 못 한다. 설명은
-    DRAWERS 에서, 도구 이름은 배정표에서 만들어 드리프트가 생기지 않게 한다.
-
-    **도구 이름까지 싣는 것이 핵심이다.** 서랍 이름과 한 줄 설명만으로는 LLM 이
-    자기가 찾는 기능이 그 안에 있는지 확신하지 못해, 열어 보는 대신 "그런 기능은
-    없다" 로 결론짓거나 손에 든 core 도구로 우회한다 — 서랍을 안 여는 실패는
-    에러가 아니라 **조용한 오답**이라 로그에도 안 남는다. 이름이 보이면 판단이
-    추측에서 조회로 바뀐다. 이름만이면 서랍 전체를 실어도 3KB 미만이라, 카탈로그
-    전량(약 56KB)에 비하면 무시할 비용이다.
-
-    `available` 은 **이 표면이 실제로 가진 도구**로 좁힌다. 여기서는 매니페스트가
-    있는 도구뿐이다(`open_drawer` 핸들러가 manifest 기준으로 돌려주므로, 그 밖의
-    이름을 광고하면 열어도 안 나온다).
-    """
-    available = {t.name for t in TOOLS if t.manifest}
-    listing = ' / '.join(
-        '%s(%s): %s' % (name, desc, ', '.join(tools))
-        for name, desc, tools in (
-            (n, d, tools_in_drawer(n, available=available))
-            for n, d in DRAWERS.items())
-        if tools)
-    return {
-        "tool_name": "open_drawer",
-        "action_type": "virtual_tool_call",
-        "description": (
-            "Opens a drawer and returns the full definitions of the tools inside. "
-            "Only a handful of everyday tools are listed up front; everything else "
-            "lives in a drawer, grouped by what it is for. The tool names in each "
-            "drawer are listed below, so check them before you conclude that "
-            "something cannot be done here or settle for a listed tool that only "
-            "roughly fits — open the drawer and use the real one. "
-            "Drawers: " + listing),
-        "usage_hint": "params.arguments: {drawer: '<drawer name from the list>'}",
-    }
 
 
 # @manual ai/overview#tool-drawers
@@ -4804,18 +3897,13 @@ def tools_in_drawer(drawer: str, available=None) -> List[str]:
 
 
 def manifest_system_tools() -> List[Dict[str, Any]]:
-    """The system_tools list for get_action_manifest — emitted in declaration
-    order, byte-identical to the original hand-written entries.
+    """인앱 AI 의 제어 흐름 항목(read_manual·get_detailed_manifest·ask_user) — 도구가
+    아니라 인앱 대화가 직접 처리하는 행동이라 도메인 명부에 없다.
 
-    등급이 켜져 있으면 core 만 싣고 서랍 목록을 더한다. 꺼져 있으면 예전과
-    **바이트 단위로 같다** — SSOT 스냅샷 검사가 그것을 고정한다."""
-    entries = [dict(t.manifest) for t in TOOLS if t.manifest]
-    if not tiering_enabled():
-        return entries
-    core = core_tools()
-    kept = [e for e in entries if e.get('tool_name') in core]
-    kept.append(_drawer_index_manifest())
-    return kept
+    인앱 AI 의 도구는 도메인 명부 하나다(`tool_execution.tools_for_agent`). 예전에는
+    여기서 옛 도구 112개의 매니페스트(약 65,000자)를 매 호출 실었다 — 같은 기능에
+    두 표면이었다(아키텍처 개선 26-11 5단계에서 걷어냄)."""
+    return [dict(t.manifest) for t in TOOLS if t.manifest]
 
 
 def virtual_tools() -> List[Dict[str, Any]]:
@@ -4842,24 +3930,7 @@ def virtual_tools() -> List[Dict[str, Any]]:
             "description": payload["description"],
             "input_schema": copy.deepcopy(payload["input_schema"]),
         })
-    if not tiering_enabled():
-        return out
-    core = core_tools()
-    kept = [e for e in out if e["tool_name"] in core]
-    index = _drawer_index_manifest()
-    kept.append({
-        "tool_name": index["tool_name"],
-        "description": index["description"],
-        "input_schema": {
-            "type": "object",
-            "properties": {"drawer": {
-                "type": "string",
-                "description": "Drawer name from the list in the description.",
-                "enum": sorted(DRAWERS)}},
-            "required": ["drawer"],
-        },
-    })
-    return kept
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -22,33 +22,30 @@
 #
 #  Contact at kylegabriel.com
 #
+import math
 import threading
 import time
 
 from aot.config import AOT_DB_PATH
 from aot.controllers.base_controller import AbstractController
-from aot.databases.models import CustomController
-from aot.databases.models import Input
 from aot.databases.models import Misc
-from aot.databases.models import Output
 from aot.databases.models import OutputChannel
-from aot.databases.models import PID
 from aot.databases.models import SMTP
 from aot.databases.models import Trigger
 from aot.databases.utils import session_scope
 from aot.aot_client import DaemonControl
-from datetime import datetime, timezone
-from aot.utils.time_utils import parse_flexible_time, utc_now
+from aot.utils.timekit import format_labeled, utc_now
 from aot.utils.actions import parse_action_information
 from aot.utils.actions import trigger_controller_actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.method import load_method_handler, parse_db_time
 from aot.utils.solar import next_sun_event_epoch
+from aot.utils.system_pi import epoch_of_last_time
 from aot.utils.system_pi import epoch_of_next_time
 from aot.utils.system_pi import time_between_range
 from aot.utils.signals import trigger_fired
 from aot.utils.execution_context import set_execution_context, clear_execution_context
-from aot.utils.device_tz import get_device_tz
+from aot.utils.timekit import tz_of
 
 
 
@@ -160,7 +157,7 @@ class TriggerController(AbstractController, threading.Thread):
                     'trigger_timer_daily_time_point',
                     'trigger_timer_duration']:
                 if self.trigger_type == 'trigger_timer_daily_time_point':
-                    self.timer_period = epoch_of_next_time(f'{self.timer_start_time}:00', tz=self.device_tz)
+                    self.timer_period = self._next_wall_epoch(self.timer_start_time)
                 elif self.trigger_type == 'trigger_timer_duration':
                     while self.running and self.timer_period < time.time():
                         self.timer_period += self.period
@@ -204,9 +201,16 @@ class TriggerController(AbstractController, threading.Thread):
     # 쪽이 훨씬 나쁘고, 시퀀스 컨트롤러는 애초에 이 멈춤 없이 돈다.
     PAUSE_ACK_TIMEOUT_S = 10.0
 
+    def seconds_until_due(self):
+        """다음 발화까지 남은 초 — 기반 루프가 점검 주기 대신 이때 깨어난다."""
+        if self.pause_loop or not self.is_activated or not self.timer_period:
+            return None
+        return self.timer_period - time.time()
+
     def refresh_settings(self):
         """Signal to pause the main loop and wait for verification, the refresh settings."""
         self.pause_loop = True
+        self.wake()     # 점검 주기만큼 자고 있으면 멈춤 확인이 그만큼 늦는다
         try:
             deadline = time.time() + self.PAUSE_ACK_TIMEOUT_S
             while not self.verify_pause_loop:
@@ -225,6 +229,7 @@ class TriggerController(AbstractController, threading.Thread):
             # 한 채 트리거가 조용히 죽었다(에러 로그 한 줄 말고는 흔적이 없다).
             self.pause_loop = False
             self.verify_pause_loop = False
+            self.wake()     # 새 설정의 다음 발화 시각으로 다시 잰다
         return "Trigger settings successfully refreshed"
 
     def initialize_variables(self):
@@ -246,7 +251,7 @@ class TriggerController(AbstractController, threading.Thread):
         self.log_level_debug = self.trigger.log_level_debug
 
         # Resolve device timezone for local-clock comparisons (HH:MM settings).
-        _tz_obj = get_device_tz(self.trigger)
+        _tz_obj = tz_of(self.trigger)
         self._facility_tz = _tz_obj
         self.device_tz = str(_tz_obj)
 
@@ -259,19 +264,22 @@ class TriggerController(AbstractController, threading.Thread):
         # Set up trigger timer (daily time point)
         if self.trigger_type == 'trigger_timer_daily_time_point':
             self.timer_start_time = self.trigger.timer_start_time
-            self.timer_period = epoch_of_next_time(f'{self.trigger.timer_start_time}:00', tz=self.device_tz)
+            self.timer_period = self._next_wall_epoch(self.timer_start_time)
 
         # Set up trigger timer (daily time span)
         elif self.trigger_type == 'trigger_timer_daily_time_span':
             self.timer_start_time = self.trigger.timer_start_time
             self.timer_end_time = self.trigger.timer_end_time
-            self.period = self.trigger.period
-            self.set_next_daily_time_span_run(now)
+            self.period = self._positive_period(self.trigger.period)
+            if self.period is not None:
+                self.set_next_daily_time_span_run(now)
 
         # Set up trigger timer (duration)
         elif self.trigger_type == 'trigger_timer_duration':
-            self.period = self.trigger.period
-            if self.trigger.timer_start_offset:
+            self.period = self._positive_period(self.trigger.period)
+            if self.period is None:
+                pass    # 발화하지 않는다(timer_period=None) — 이유는 위에서 남겼다
+            elif self.trigger.timer_start_offset:
                 self.timer_period = now + self.trigger.timer_start_offset
             else:
                 self.timer_period = now
@@ -327,21 +335,57 @@ class TriggerController(AbstractController, threading.Thread):
         return next_sun_event_epoch(
             trigger.rise_or_set,
             target_id=trigger.unique_id,
-            latitude=trigger.latitude,
-            longitude=trigger.longitude,
+            latitude=None,   # [L2] 위치는 커널이 target_id 의 배치에서 파생
+            longitude=None,
             date_offset_days=trigger.date_offset_days,
             time_offset_minutes=trigger.time_offset_minutes)
+
+    def _next_wall_epoch(self, hhmm):
+        """설정 시각(HH:MM)이 이 트리거 시계로 다음에 오는 epoch. 못 구하면 None.
+
+        None 이면 `loop()` 가 이 트리거를 다시는 발화시키지 않는다(timer_period
+        가 비어 있으므로). 예전에는 그 사실이 어디에도 남지 않아 트리거가
+        조용히 멈췄다 — 설정을 고쳐 저장하면(`refresh_settings`) 다시 계산된다.
+        """
+        epoch = epoch_of_next_time(f'{hhmm}:00', tz=self.device_tz)
+        if epoch is None:
+            self.logger.error(
+                f"시각 '{hhmm}' 을(를) 시간대 {self.device_tz} 로 읽지 못해 이 "
+                "트리거는 발화하지 않습니다. 시작 시각(HH:MM)을 고쳐 저장하십시오.")
+        return epoch
+
+    def _positive_period(self, period):
+        """주기(초)가 양수면 float 으로, 아니면 None(+오류 로그).
+
+        0·음수·빈 값이면 `timer_period += period` 를 되풀이하는 while 이 끝나지
+        않는다 — 기동 중이면 데몬의 컨트롤러 기동 자체가 멈춘다.
+        """
+        try:
+            value = float(period)
+        except (TypeError, ValueError):
+            value = None
+        if value is None or value <= 0:
+            self.logger.error(
+                f"주기 {period!r} 가 0보다 크지 않아 이 트리거는 발화하지 "
+                "않습니다. 주기(초)를 고쳐 저장하십시오.")
+            return None
+        return value
 
     def set_next_daily_time_span_run(self, now):
         if not time_between_range(self.timer_start_time, self.timer_end_time, tz=self.device_tz):
             # Set next execution at start time
-            self.timer_period = epoch_of_next_time(f'{self.trigger.timer_start_time}:00', tz=self.device_tz)
-        else:
-            # Find the next execution within the run period
-            test_time = epoch_of_next_time(f'{self.trigger.timer_start_time}:00', tz=self.device_tz) - 86400
-            while test_time < now:
-                test_time += self.period
-            self.timer_period = test_time
+            self.timer_period = self._next_wall_epoch(self.timer_start_time)
+            return
+        # 구간 안: 가장 최근 시작 시각을 기준으로 주기 격자의 다음 칸.
+        # 예전에는 `다음 시작 - 86400` 을 기준으로 삼아, DST 가 바뀌는 날(하루가
+        # 23·25시간)에는 격자가 한 시간 어긋났다.
+        anchor = epoch_of_last_time(f'{self.timer_start_time}:00', tz=self.device_tz)
+        if anchor is None:
+            self.timer_period = self._next_wall_epoch(self.timer_start_time)
+            return
+        # 격자에서 now 이상인 첫 칸(예전 `while test_time < now: += period` 와 같다)
+        steps = max(0, math.ceil((now - anchor) / self.period))
+        self.timer_period = anchor + steps * self.period
 
     def start_method(self, method_id):
         """Instruct a method to start running."""
@@ -389,14 +433,12 @@ class TriggerController(AbstractController, threading.Thread):
         if not method_start_raw:
             return 0.0
         try:
-            from datetime import datetime as _dt, timezone as _tz
-            from aot.utils.method import parse_db_time
+            from aot.utils.timekit import parse_utc
             start_dt = parse_db_time(str(method_start_raw))
             if start_dt is None:
                 return 0.0
-            if start_dt.tzinfo is None:
-                start_dt = start_dt.replace(tzinfo=_tz.utc)
-            elapsed_sec = (_dt.now(_tz.utc) - start_dt).total_seconds()
+            # naive 는 UTC 로 저장된 값이다(start_method 가 utc_now() 를 쓴다)
+            elapsed_sec = (utc_now() - parse_utc(start_dt)).total_seconds()
             return max(0.0, elapsed_sec / (7 * 86400))
         except Exception as exc:
             self.logger.warning(f'Trigger _get_weeks_elapsed: {exc}')
@@ -470,47 +512,27 @@ class TriggerController(AbstractController, threading.Thread):
         "notify me@gmail.com" is the Trigger Action to execute if the
         Trigger is True.
         """
-        now = time.time()
-        timestamp = datetime.fromtimestamp(now).strftime(
-            '%Y-%m-%d %H:%M:%S')
+        # 어느 시계의 시각인지 붙인다 — 예전에는 tz 없는 fromtimestamp 라
+        # 컨테이너 OS 시계(대개 UTC)로 찍히고 라벨도 없었다.
+        timestamp = format_labeled(utc_now(), self._facility_tz)
         message = f"{timestamp}\n[Trigger {self.unique_id} ({self.trigger_name})]"
 
         trigger = db_retrieve_table_daemon(
             Trigger, unique_id=self.unique_id, entry='first')
-
-        device_id = trigger.measurement.split(',')[0]
-
-        device = None
-
-        input_dev = db_retrieve_table_daemon(
-            Input, unique_id=device_id, entry='first')
-        if input_dev:
-            device = input_dev
-
-        function = db_retrieve_table_daemon(
-            CustomController, unique_id=device_id, entry='first')
-        if function:
-            device = CustomController
-
-        output = db_retrieve_table_daemon(
-            Output, unique_id=device_id, entry='first')
-        if output:
-            device = output
-
-        pid = db_retrieve_table_daemon(
-            PID, unique_id=device_id, entry='first')
-        if pid:
-            device = pid
-
-        if not device:
-            message += " Error: Controller not Input, Function, Output, or PID"
-            self.logger.error(message)
+        if trigger is None:
+            self.logger.error(f"{message} 트리거 설정을 읽지 못해 이번 발화를 건너뜁니다")
             return
 
-        # Calculate the sunrise/sunset times and find the next time this trigger should trigger
-        elif trigger.trigger_type == 'trigger_sunrise_sunset':
-            # Since the check time is the trigger time, we will only calculate and set the next trigger time
-            self.timer_period = self.next_sunrise_sunset_epoch(trigger)
+        # 여기까지 오는 것은 시간 기반 트리거뿐이다(`loop()` 의 check_approved).
+        # 예전에는 Mycodo 에서 물려받은 "측정 장치(Input·Function·Output·PID)
+        # 확인" 이 있었는데, 시간 트리거는 `measurement` 가 비어 있어(기본값 '')
+        # 장치를 못 찾고 **액션을 하나도 실행하지 않은 채** 오류 한 줄만 남겼다.
+        # 장치는 어디에도 쓰이지 않았으므로 확인을 없앤다.
+
+        if trigger.trigger_type == 'trigger_run_pwm_method':
+            # 주기마다의 액션은 `loop()` 가 trigger_actions_at_period 설정대로
+            # 이미 실행했다. 여기서 또 부르면 두 번 실행되고 그 설정이 무시된다.
+            return
 
         # If the code hasn't returned by now, action should be executed
         actions = parse_action_information()

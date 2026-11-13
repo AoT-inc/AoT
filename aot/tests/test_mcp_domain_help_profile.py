@@ -4,7 +4,7 @@
 - help 는 명부 전체를 설명하지만 목록은 이 키가 닿는 것만 싣는다. 못 부르는
   operation 이면 왜 못 부르는지(어느 모듈·지금 묶음)를 help 가 말한다
   (device_location_set 이 help 에만 있어 모델이 프로필을 두 번 바꿨다).
-- help(tool_name='control') 처럼 도구 이름만 와도 operation 목록을 준다.
+- help(target='control') 처럼 도구 이름만 와도 operation 목록을 준다.
 - tool_profile_set 의 help 에 지금 묶음과 묶음·모듈의 포함 관계를 싣는다.
 - tool_profile_set 응답은 켜진 모듈을 싣고, 같은 값이면 바뀐 것이 없다고 말한다.
 - 묶음 거절 문구가 이 연결 스스로 바꾸는 길(승인)도 말한다.
@@ -69,7 +69,7 @@ class ToolLevelHelpTest(unittest.TestCase):
         self.assertEqual('success', card['status'])
         self.assertIn('function_options', card['operations'])
         self.assertEqual('automation', card['off_here']['sequence_day'])
-        self.assertEqual('not offered', card['off_here']['output_timed'])
+        self.assertNotIn('output_timed', card['off_here'])      # 2026-11-03: 도메인 operation 으로 되살림(D1)
         self.assertNotIn('device_set', card['off_here'])
 
     def test_configuration_reaches_every_configure_op(self):

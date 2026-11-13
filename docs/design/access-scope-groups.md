@@ -235,6 +235,7 @@ routes_general.py:673   /past/<unique_id>/...
 routes_general.py:928   /data_batch                     ← 항목 배열로 한 번에 다량
 routes_general.py:1063  /export_data/<unique_id>/...    ← CSV 로 통째 내보내기
 routes_general.py:1240  /async/<device_id>/...
+routes_geo_device.py    POST /api/geo/output_states    ← 몸체의 출력 uuid 배열 → 현재 상태(지도 마커·구역 폴링)
 ```
 
 전부 `@login_required` 만 있다. 즉 **로그인만 되면 남의 그룹 장치의 측정값

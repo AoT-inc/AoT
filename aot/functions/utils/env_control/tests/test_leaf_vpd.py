@@ -15,8 +15,8 @@ import aot.functions.custom_functions.env_coordinator_impl._cycle_mixin as cycle
 from aot.functions.custom_functions.env_coordinator_impl._cycle_mixin import CycleMixin
 from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin import HelpersMixin
 from aot.functions.utils.env_control import leaf_vpd as LV
-from aot.functions.utils.env_control import psychro
-from aot.functions.utils.env_control import sensor_status as SS
+from aot.utils import psychro
+from aot.utils import sensor_status as SS
 from aot.functions.utils.env_control.log_channels import (
     CH_LEAF_VPD, CH_LEAF_VPD_TARGET, CH_VPD_TARGET_BASIS)
 

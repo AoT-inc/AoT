@@ -3,7 +3,7 @@ from sqlalchemy.dialects.mysql import LONGTEXT
 from datetime import datetime
 
 from aot.databases import CRUDMixin
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 class AIDomainGlossary(CRUDMixin, db.Model):
     """

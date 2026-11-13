@@ -24,6 +24,25 @@ class CommonToolsMixin:
     _FakeForm = _FakeForm
 
     @staticmethod
+    def _bounded_limit(limit, default, maximum):
+        """목록 조회의 limit — 기본 `default`, 상한 `maximum`, 1 이상. 못 읽는 값은 기본.
+
+        응답 캡(15,000토큰)은 넘으면 자른 채 보내고 모델은 다시 부른다 — 한 번에 캡 안에 들어오는 크기로
+        미리 막는다(2026-11-07 실측: search_schedule limit=500 → 53,877토큰 → 잘림 → 3번 재조회)."""
+        try:
+            n = int(limit) if limit not in (None, '') else default
+        except (TypeError, ValueError):
+            n = default
+        return max(1, min(n, maximum))
+
+    @staticmethod
+    def _offset(offset):
+        try:
+            return max(0, int(offset)) if offset not in (None, '') else 0
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
     def _page_rows(rows, limit=None, offset=None, default=None):
         """목록 한 쪽 — (그 쪽, 안내 dict 또는 None). limit·offset 은 조회 도구 전체의 같은 말.
 
@@ -57,7 +76,7 @@ class CommonToolsMixin:
         if kind not in ('site', 'zone', 'facility') or not ident:
             return {}
         try:
-            from aot.aot_flask.geo import device_binding as db_
+            from aot.space import device_binding as db_
             from aot.databases.models import GeoFacility
             sh = GeoShape.query.filter(GeoShape.unique_id == ident).first()
             if sh is None:
@@ -189,7 +208,7 @@ class CommonToolsMixin:
     @staticmethod
     def _shape_parent_lookup():
         """(부모 맵 {id: 부모 id}, {id: ShapeRec}). 캐시가 있으면 기하를 안 읽는다."""
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.utils import geo_hierarchy as gh
         recs = shape_index.all_shapes()
         by_id = {r.id: r for r in recs}
@@ -357,7 +376,7 @@ class CommonToolsMixin:
           devices — 모호할 때 지도에 없는 같은 이름 장치들 [(row, kind)].
           place   — 곳으로 묶어 답했을 때 그 곳(안쪽 같은 이름 `inner` 포함).
         """
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         NONE = (None, None, None, None, None)
         res = {'result': NONE, 'places': [], 'devices': [], 'place': None,
                'plots': [], 'ignored_terms': []}
@@ -578,7 +597,7 @@ class CommonToolsMixin:
 
         plots, devices = [], []
         try:
-            from aot.aot_flask.geo import device_membership as dm
+            from aot.space import device_membership as dm
             from aot.databases.models import GeoPlot
             idx = dm.PlaceIndex()
             seen, inside = set(), []
@@ -775,7 +794,7 @@ class CommonToolsMixin:
         if plots:
             # 구획 후보(`_narrow_leftover`) — 어디에 있는지는 장소 경로로 적는다.
             try:
-                from aot.aot_flask.geo.device_membership import PlaceIndex
+                from aot.space.device_membership import PlaceIndex
                 idx = PlaceIndex()
             except Exception:
                 idx = None
@@ -908,7 +927,7 @@ class CommonToolsMixin:
     def _target_by_id_lookup(cls, tid):
         """`_target_by_id` 의 조회부 — 판정 없이 찾기만 한다."""
         try:
-            from aot.aot_flask.geo import shape_index
+            from aot.space import shape_index
             for rec in shape_index.all_shapes():
                 if rec.unique_id == tid:
                     return (tid, rec.type if rec.type in cls._PLACE_TYPES else 'zone',
@@ -986,7 +1005,7 @@ class CommonToolsMixin:
         """
         import json as _json
         from aot.databases.models import GeoMap
-        from aot.aot_flask.geo import plot_context, device_membership
+        from aot.space import plot_context, device_membership
 
         out = []
         try:
@@ -1114,7 +1133,7 @@ class CommonToolsMixin:
         """도형 → 그 안에서 일어나는 일의 target_id 들과 내역 — 정본
         (`device_membership.place_scope_ids`)을 그대로 부른다. 화면(노트·일정
         모달)과 같은 함수여야 AI 와 화면의 답이 갈리지 않는다."""
-        from aot.aot_flask.geo.device_membership import place_scope_ids
+        from aot.space.device_membership import place_scope_ids
         return place_scope_ids(shape)
 
     @classmethod
@@ -1291,7 +1310,7 @@ class CommonToolsMixin:
         # GeoShapes whose display name matches EXACTLY → add the shape's own id
         # and the device it represents. 같은 공용 인덱스를 쓴다(위 주석 참조).
         try:
-            from aot.aot_flask.geo import shape_index
+            from aot.space import shape_index
             for shape, _name, _nl in shape_index.named_shapes():
                 if _nl == _ql:
                     if shape.unique_id:
@@ -1352,7 +1371,7 @@ class CommonToolsMixin:
         """token 이 지도 id 면 되묻는 오류 dict(그 지도의 대지 이름 포함), 아니면 None."""
         try:
             from aot.databases.models import GeoMap
-            from aot.aot_flask.geo.device_membership import place_label
+            from aot.space.device_membership import place_label
             m = GeoMap.query.filter_by(unique_id=token).first()
             if m is None:
                 return None
@@ -1400,7 +1419,7 @@ class CommonToolsMixin:
             # 작물 이름은 그 구획으로 풀린다 — 곳 인자에는 구획이 든 구역을 준다.
             try:
                 from aot.databases.models import GeoPlot
-                from aot.aot_flask.geo import plot_context
+                from aot.space import plot_context
                 pl = GeoPlot.query.filter_by(unique_id=tid).first()
                 zone = plot_context.zone_for_plot(pl) if pl is not None else None
                 if zone is not None:

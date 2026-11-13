@@ -24,6 +24,7 @@ class OldToolNamesAreRenamedTest(unittest.TestCase):
 
     def test_free_text_and_lists_carry_domain_names(self):
         from aot.tools.domain import dispatch
+        dispatch._INNER_TO_OP.clear()                 # 앞선 시험이 바꾼 명부로 채운 캐시 제거
         body = {'result': 'see get_device_detail(device_id=1), then knowledge_search',
                 'how_to_proceed': ['1. get_spatial_tree', '2. search_schedule'],
                 'name': '온습도_5'}

@@ -46,6 +46,8 @@ GROUPS: Tuple[Tuple[str, str], ...] = (
 _MAX_LPM = Rating('max_lpm', 'L/min', _('Max flow'), '1')
 _CAPACITY = Rating('capacity_l', 'L', _('Capacity'), '10')
 _BASE_H = Rating('base_height_m', 'm', _('Base height'), '0.1')
+# 저수지 수면 높이: 탱크 바닥 높이와 같은 키(`base_height_m`, 기준면에서 잰 m)를 쓰고 라벨만 다르다.
+_SURFACE_H = Rating('base_height_m', 'm', _('Surface height'), '0.1')
 _RATED = Rating('rated_lpm', 'L/min', _('Rated flow'), '1')
 _HEAD = Rating('head_m', 'm', _('Head'), '0.5')
 _POWER = Rating('power_kw', 'kW', _('Power'), '0.1')
@@ -55,6 +57,7 @@ _DIAMETER = Rating('diameter_mm', 'mm', _('Pipe diameter'), '1')
 
 PARTS: Tuple[Part, ...] = (
     Part('source_river', 'supply', _('River'), (_MAX_LPM,)),
+    Part('source_reservoir', 'supply', _('Reservoir'), (_MAX_LPM, _SURFACE_H)),
     Part('source_well', 'supply', _('Well'), (_MAX_LPM,)),
     Part('source_tap', 'supply', _('Tap water'), (_MAX_LPM,)),
     Part('tank', 'supply', _('Water tank'), (_CAPACITY, _BASE_H)),

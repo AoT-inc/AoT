@@ -1,8 +1,8 @@
 # coding=utf-8
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class GeoProgram(CRUDMixin, db.Model):
@@ -201,7 +201,7 @@ class GeoProgram(CRUDMixin, db.Model):
         JSON 이 깨진 행이 있을 수 있다. 읽는 쪽마다 "비었으면 어떻게" 를 각자
         정하면 화면과 제어가 다른 목록을 보게 된다.
         """
-        from aot.aot_flask.geo.program_io import fixed_target_defs
+        from aot.space.program_io import fixed_target_defs
 
         defs = self.target_defs
         if isinstance(defs, list) and defs:

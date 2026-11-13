@@ -68,10 +68,26 @@ def test_t_joint_connects_two_pipes():
     assert net.joined_pipes() == {'m', 'b'}
 
 
-def test_cross_joint_connects_pipes_that_only_cross():
-    net = _net([_pipe('a', (0, 5), (10, 5)), _pipe('b', (5, 0), (5, 10))])
+def test_cross_joint_connects_a_main_and_a_branch_that_only_cross():
+    net = _net([_pipe('a', (0, 5), (10, 5), sub_type='main'), _pipe('b', (5, 0), (5, 10))])
     assert len(net.components) == 1
     assert net.joined_pipes() == {'a', 'b'}
+
+
+def test_branches_are_never_joined_to_each_other():
+    cross = _net([_pipe('a', (0, 5), (10, 5)), _pipe('b', (5, 0), (5, 10))], gap_m=0.0)
+    assert cross.joined_pipes() == set()
+    tee = _net([_pipe('a', (0, 5), (10, 5)), _pipe('b', (5, 5), (5, 10))], gap_m=0.0)
+    assert 'a' not in tee.joined_pipes() or 'b' not in tee.joined_pipes()
+
+
+def test_two_mains_join_as_a_tee_but_not_as_a_cross():
+    cross = _net([_pipe('a', (0, 5), (10, 5), sub_type='main'),
+                  _pipe('b', (5, 0), (5, 10), sub_type='main')], gap_m=0.0)
+    assert cross.joined_pipes() == set()
+    tee = _net([_pipe('a', (0, 5), (10, 5), sub_type='main'),
+                _pipe('b', (5, 5), (5, 10), sub_type='main')], gap_m=0.0)
+    assert tee.joined_pipes() == {'a', 'b'}
 
 
 def test_elbow_joint_connects_pipes_end_to_end():
@@ -556,3 +572,18 @@ def test_a_map_of_nazu_size_resolves_within_a_second():
     assert len(net.emitters) == 880 and net.loose_emitters == []
     assert elapsed < 1.0, elapsed
     assert C.count_by_code(issues) == {'no-source': 1}
+
+
+def test_a_branch_that_overshoots_the_main_does_not_make_a_tiny_loop():
+    """지관 끝이 주관을 0.2 m 넘어가면 십자와 틈 잇기가 둘 다 서서 작은 고리가 생겼다."""
+    main = _pipe('m', (-10, 0), (10, 0), sub_type='main')
+    net = _net([main, _pipe('b', (0, -0.2), (0, 20))])
+    assert len(net.components) == 1
+    edges = len(net.edges)
+    nodes = len(net.adj)
+    assert edges == nodes - 1          # 고리 없음(나무)
+
+
+def test_branches_are_not_gap_joined_to_each_other():
+    net = _net([_pipe('a', (0, 0), (10, 0)), _pipe('b', (5, 0.5), (5, 9))])
+    assert len(net.components) == 2

@@ -10,7 +10,7 @@ from aot.aot_flask.extensions import db
 from aot.databases.models.ai import AIAgent
 from aot.databases.models.ai import AIHistory
 from aot.databases.models.ai_task import AITask
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 from datetime import timedelta
 
 logger = logging.getLogger(__name__)
@@ -135,8 +135,13 @@ class AIDispatchService:
         # genuinely correct mcp_tool_call (real external tool, real server_id) —
         # see its own guard (only rewrites when tool_name is a KNOWN virtual tool).
         from aot.ai.ai_routing_service import AIRoutingService as _ARS
+        from aot.ai.services.in_app_tools import is_domain_tool as _is_domain
         for a in actions:
-            if not a.get('action_type') or a.get('action_type') == 'mcp_tool_call':
+            # 도메인 도구(인앱 AI 의 도구 표면)는 action_type 이 붙어 와도 정규화한다 —
+            # 승인이 필요한 쓰기를 안쪽 도구 호출로 바꾸는 곳이 거기다.
+            _tn = (a.get('params') or {}).get('tool_name') or a.get('tool_name')
+            if (not a.get('action_type') or a.get('action_type') == 'mcp_tool_call'
+                    or _is_domain(_tn)):
                 _valid, _err = _ARS._validate_and_normalize_action(a)
                 if not _valid:
                     logger.warning(

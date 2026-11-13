@@ -20,8 +20,8 @@ model +X = 동, model +Z = 남, orientation_deg 가 늘면 +X 가 동 → 북 �
 """
 import math
 
-from aot.aot_flask.geo.facility_bays import _rect_ring
-from aot.aot_flask.geo.facility_wind import (
+from aot.space.facility_bays import _rect_ring
+from aot.space.facility_wind import (
     _side_world_normal, _world_normal_from_sn, wind_biased_opening,
 )
 
@@ -47,7 +47,7 @@ class TestOneConvention:
         """부호를 두 곳에서 정하면 갈라진다 — 그게 이 결함의 모양이었다."""
         import inspect
 
-        from aot.aot_flask.geo import facility_wind as fw
+        from aot.space import facility_wind as fw
         side = inspect.getsource(fw._side_world_normal)
         code = side.split('"""', 2)[-1]      # 독스트링은 규칙을 설명한다 — 제외
         assert '-nx' not in code, (

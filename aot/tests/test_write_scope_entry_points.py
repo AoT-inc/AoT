@@ -518,7 +518,8 @@ class TestPlotResourcesRoute(_Entry):
 
     def _apply(self, who):
         from aot.aot_flask import routes_geo_plot
-        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.aot_flask.geo import plot_io
+        from aot.space import plot_context
         fake_plot = mock.Mock()
         with mock.patch.object(plot_io, 'GeoPlot') as gp, \
                 mock.patch.object(plot_context, 'stage_of',

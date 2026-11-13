@@ -62,27 +62,6 @@ class PIDModBase(FlaskForm):
         )],
         widget=NumberInput(step='any')
     )
-    latitude = DecimalField(
-        lazy_gettext('Latitude'),
-        places=8,
-        rounding=None,
-        validators=[validators.Optional(),
-                    validators.NumberRange(min=-90, max=90)],
-        widget=NumberInput(step='any')
-    )
-    longitude = DecimalField(
-        lazy_gettext('Longitude'),
-        places=8,
-        rounding=None,
-        validators=[validators.Optional(),
-                    validators.NumberRange(min=-180, max=180)],
-        widget=NumberInput(step='any')
-    )
-    location_source = SelectField(
-        lazy_gettext('Location Source'),
-        choices=[('manual', lazy_gettext('Manual')), ('device', lazy_gettext('Device')), ('remote', lazy_gettext('Remote'))],
-        default='manual'
-    )
     band = DecimalField(
         lazy_gettext('Band (+/- setpoint)'),
         widget=NumberInput(step='any'))

@@ -14,6 +14,7 @@
 
 라이브 DB 를 쓰지 않는다(임시 sqlite).
 """
+from aot.utils.timekit import FARM, today_at
 import os
 import tempfile
 import unittest
@@ -58,9 +59,9 @@ class DomainNameResolutionTest(unittest.TestCase):
         db.session.add(GeoMap(unique_id='map-e', name='Gimje'))
         db.session.add(Dashboard(unique_id='dash-y', name='영양'))
         for uid, subject, name, start in (
-                ('pl-r', '장미', '장미원 1', date.today() - timedelta(days=30)),
-                ('pl-r2', '장미', '장미원 2', date.today() + timedelta(days=150)),
-                ('pl-b', '콩', None, date.today() - timedelta(days=10))):
+                ('pl-r', '장미', '장미원 1', today_at(FARM) - timedelta(days=30)),
+                ('pl-r2', '장미', '장미원 2', today_at(FARM) + timedelta(days=150)),
+                ('pl-b', '콩', None, today_at(FARM) - timedelta(days=10))):
             db.session.add(GeoPlot(unique_id=uid, geo_id='map-y', subject=subject,
                                    name=name, started_on=start,
                                    feature={'type': 'Feature', 'properties': {},
@@ -69,7 +70,7 @@ class DomainNameResolutionTest(unittest.TestCase):
                               graph_type='AoT_graph', tab_id='dash-y'))
 
         def shape(uid, geo, typ, name, geom, device_id=None):
-            db.session.add(GeoShape(
+            db.session.add(bound_shape(
                 unique_id=uid, geo_id=geo, type=typ, device_id=device_id,
                 feature={'type': 'Feature', 'properties': {'name': name},
                          'geometry': geom}))
@@ -110,7 +111,7 @@ class DomainNameResolutionTest(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
 
     def _resolve(self, ref):
@@ -268,3 +269,4 @@ class DomainNameResolutionTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+from aot.tests.geo._legacy_marker import bound_shape

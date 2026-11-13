@@ -36,6 +36,7 @@ from aot.utils.actions import run_input_actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
+from aot.utils.timekit import naive_utc, utc_now
 
 
 # ----------------------------- AoT metadata -----------------------------
@@ -394,7 +395,7 @@ class InputModule(AbstractInput):
         if self.latest_datetime:
             return self.latest_datetime.replace(tzinfo=datetime.timezone.utc).isoformat().replace('+00:00', 'Z')
         # If first run and no stored timestamp, go back one period to avoid flooding
-        dt = datetime.datetime.utcnow() - datetime.timedelta(seconds=int(self.period or 60))
+        dt = naive_utc(utc_now()) - datetime.timedelta(seconds=int(self.period or 60))
         return dt.replace(tzinfo=datetime.timezone.utc).isoformat().replace('+00:00', 'Z')
 
     def _headers(self) -> Dict[str, str]:
@@ -551,7 +552,7 @@ class InputModule(AbstractInput):
             measurements = {}
 
             # Timestamp
-            dt_utc = self._parse_cs_time(event.get('time')) or datetime.datetime.utcnow()
+            dt_utc = self._parse_cs_time(event.get('time')) or naive_utc(utc_now())
             if (not self.latest_datetime) or (self.latest_datetime < dt_utc):
                 self.latest_datetime = dt_utc
 
@@ -618,7 +619,7 @@ class InputModule(AbstractInput):
         """Scheduler tick: poll the REST API."""
         # First run: if no stored timestamp, pull up to one `period` in the past.
         if self.input_dev and not self.input_dev.datetime and not self.latest_datetime:
-            self.latest_datetime = datetime.datetime.utcnow() - datetime.timedelta(seconds=int(self.period or 60))
+            self.latest_datetime = naive_utc(utc_now()) - datetime.timedelta(seconds=int(self.period or 60))
 
         try:
             self.get_new_data(self.period)

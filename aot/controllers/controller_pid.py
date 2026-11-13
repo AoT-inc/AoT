@@ -47,8 +47,8 @@
 # THE SOFTWARE.
 #
 import calendar
-from datetime import datetime
-from aot.utils.time_utils import utc_now
+import math
+from aot.utils.timekit import iso_at, utc_now, wall_to_utc
 
 import threading
 import time
@@ -74,6 +74,26 @@ from aot.utils.outputs import parse_output_information
 from aot.utils.pid_controller_default import PIDControl
 from aot.utils.system_pi import get_measurement
 from aot.utils.system_pi import return_measurement_info
+
+
+# 주기 기본값·하한(초). 폼은 1~86400 만 받지만 위젯 경로·API·옛 DB 값은 0 이하나
+# 비수(非數)가 저장돼 있을 수 있다. 0 이면 격자를 앞으로 미는 `while` 이 끝나지 않는다.
+PERIOD_DEFAULT_S = 30.0
+PERIOD_MIN_S = 1.0
+
+
+def safe_period(value):
+    """저장된 주기를 격자에 쓸 수 있는 값으로 바꾼다.
+
+    0 이하·비수·None 은 기본값(30초), 0 < 값 < 1 은 하한(1초)으로 올린다.
+    """
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return PERIOD_DEFAULT_S
+    if not math.isfinite(number) or number <= 0:
+        return PERIOD_DEFAULT_S
+    return max(number, PERIOD_MIN_S)
 
 
 class PIDController(AbstractController, threading.Thread):
@@ -135,7 +155,12 @@ class PIDController(AbstractController, threading.Thread):
         self.max_measure_age = None
         self.send_lower_as_negative = None
         self.store_lower_as_negative = None
-        self.timer = 0
+        self.timer = 0     # time.monotonic() 기준 — 벽시계가 움직여도 격자는 그대로
+        self._last_run_mono = None
+        self._integrated_sample = None   # 마지막으로 적분에 더한 (시각, 값)
+        self._cycle_abort = False
+        self._cycle_setpoint = None
+        self._bad_period_logged = None
 
         # Check if a method is set for this PID
         self.method_type = None
@@ -143,11 +168,57 @@ class PIDController(AbstractController, threading.Thread):
         self.method_end_time = None
         self._facility_tz = None
 
+    def _period_s(self):
+        """격자에 쓰는 주기(초) — 항상 1초 이상의 유한한 값."""
+        return safe_period(self.period)
+
+    def _start_offset_s(self):
+        """첫 실행까지 미루는 초 — 음수·비수·무한은 0(곧바로).
+
+        비수(NaN)를 단조 시계에 더하면 `now > self.timer` 가 영영 거짓이라 PID 가
+        조용히 한 번도 돌지 않는다.
+        """
+        try:
+            offset = float(self.start_offset or 0)
+        except (TypeError, ValueError):
+            return 0.0
+        if not math.isfinite(offset) or offset < 0:
+            return 0.0
+        return offset
+
+    def seconds_until_due(self):
+        """다음 주기까지 남은 초(단조 시계) — 기반 루프가 이때 깨어난다."""
+        if not self.timer:
+            return None
+        return self.timer - time.monotonic()
+
     def loop(self):
-        if time.time() > self.timer:
-            while time.time() > self.timer:
-                self.timer = self.timer + self.period
-            self.attempt_execute(self.check_pid)
+        now = time.monotonic()
+        if now > self.timer:
+            period = self._period_s()
+            if self._bad_period_logged != self.period and period != self.period:
+                self._bad_period_logged = self.period
+                self.logger.error(
+                    f"PID 주기 {self.period!r} 는 쓸 수 없다 — {period}초로 돈다. "
+                    f"설정에서 1~86400 초 사이로 고쳐야 한다")
+            # 밀린 주기는 몰아서 실행하지 않고 격자만 따라잡는다.
+            while now > self.timer:
+                self.timer = self.timer + period
+            self.run_cycle()
+
+    def run_cycle(self):
+        """한 주기: 읽기 단계만 재시도하고, 계산·출력 단계는 한 번만 한다.
+
+        재시도(`attempt_execute`)가 계산 단계까지 감싸면 출력 단계 예외 한 번에
+        적분이 두 번 이상 쌓인다.
+        """
+        self.attempt_execute(self.read_phase)
+        try:
+            self.control_phase()
+        except Exception:
+            self.logger.exception(
+                "PID 계산·출력 단계 실패 — 같은 주기 안에서 다시 하지 않는다")
+        self._last_run_mono = time.monotonic()
 
     def run_finally(self):
         # Turn off output used in PID when the controller is deactivated
@@ -176,6 +247,10 @@ class PIDController(AbstractController, threading.Thread):
         self.is_activated = pid.is_activated
         self.is_held = pid.is_held
         self.is_paused = pid.is_paused
+        if self.is_held and self.is_paused:
+            # 옛 DB 에서 두 플래그가 같이 켜진 경우 — 둘은 배타다. 출력을 멈추는
+            # 쪽(일시정지)이 안전하다.
+            self.is_held = False
         self.setpoint_tracking_type = pid.setpoint_tracking_type
         self.setpoint_tracking_id = pid.setpoint_tracking_id
         self.setpoint_tracking_max_age = pid.setpoint_tracking_max_age
@@ -216,7 +291,7 @@ class PIDController(AbstractController, threading.Thread):
         self.max_measure_age = pid.max_measure_age
         self.send_lower_as_negative = pid.send_lower_as_negative
         self.store_lower_as_negative = pid.store_lower_as_negative
-        self.timer = time.time() + self.start_offset
+        self.timer = time.monotonic() + self._start_offset_s()
         self.setpoint = pid.setpoint
 
         # Initialize PID Controller
@@ -235,6 +310,9 @@ class PIDController(AbstractController, threading.Thread):
             self.PID_Controller.integrator_min = pid.integrator_min
             self.PID_Controller.integrator_max = pid.integrator_max
             self.PID_Controller.first_start = True
+
+        self.PID_Controller.output_min, self.PID_Controller.output_max = \
+            self._output_limits()
 
         # Cache facility timezone for DailyMultiPoint method time-of-day calculation
         self._facility_tz = self._resolve_facility_tz(pid)
@@ -255,106 +333,105 @@ class PIDController(AbstractController, threading.Thread):
         return "success"
 
     def check_pid(self):
-        """Get measurement and apply to PID controller."""
-        # If PID is active, retrieve measurement and update
-        # the control variable.
-        # A PID on hold will sustain the current output and
-        # not update the control variable.
-        if self.is_activated and (not self.is_paused or not self.is_held):
-            self.get_last_measurement_pid()
+        """한 주기를 재시도 없이 실행한다(시험·수동 호출용)."""
+        self.read_phase()
+        self.control_phase()
 
-            if self.last_measurement_success:
-                if self.setpoint_tracking_type == 'method' and self.setpoint_tracking_id != '':
-                    # Update setpoint using a method
-                    this_pid = db_retrieve_table_daemon(PID, unique_id=self.unique_id)
-                    if this_pid is None:
-                        # 설정을 못 읽은 사이클은 건너뛴다 — 옛 설정으로 계속
-                        # 제어하는 편이 엉뚱한 값으로 움직이는 것보다 낫다.
-                        self.logger.error(
-                            "PID 설정을 읽지 못해 이번 설정점 추종을 건너뛴다")
-                        return
+    def read_phase(self):
+        """읽기 단계 — 측정값과 설정점 입력만 읽는다. 재시도해도 부작용이 없다.
 
-                    now = utc_now()
+        일시정지면 아무것도 읽지 않는다. 유지(hold)는 측정값만 읽는다 —
+        계산은 멈추되 센서가 죽었는데 옛 제어 변수를 계속 내보내지 않으려는 것이다.
+        """
+        self._cycle_abort = False
+        self._cycle_setpoint = None
+        if not self.is_activated or self.is_paused:
+            return
 
+        self.get_last_measurement_pid()
+        if self.is_held or not self.last_measurement_success:
+            return
 
-                    method = load_method_handler(self.setpoint_tracking_id, self.logger,
-                                                 target_id=self.unique_id)
-                    if method.method_type == 'DailyMultiPoint':
-                        weeks_elapsed = self._get_weeks_elapsed(this_pid.method_start_time)
-                        new_setpoint, ended = method.calculate_setpoint(
-                            now, this_pid.method_start_time,
-                            weeks_elapsed=weeks_elapsed,
-                            facility_tz=self._facility_tz)
-                    else:
-                        new_setpoint, ended = method.calculate_setpoint(now, this_pid.method_start_time)
-                    self.logger.debug(f"Method {self.setpoint_tracking_id} {method} {now} {this_pid.method_start_time}")
+        if self.setpoint_tracking_type == 'method' and self.setpoint_tracking_id != '':
+            this_pid = db_retrieve_table_daemon(PID, unique_id=self.unique_id)
+            if this_pid is None:
+                # 설정을 못 읽은 사이클은 건너뛴다 — 옛 설정으로 계속
+                # 제어하는 편이 엉뚱한 값으로 움직이는 것보다 낫다.
+                self.logger.error(
+                    "PID 설정을 읽지 못해 이번 설정점 추종을 건너뛴다")
+                self._cycle_abort = True
+                return
 
-                    if ended:
-                        # point in time is out of method range
-                        with session_scope(AOT_DB_PATH) as db_session:
-                            # Overwrite this_controller with committable connection
-                            this_pid = db_session.query(PID).filter(
-                                PID.unique_id == self.unique_id).first()
+            now = utc_now()
+            method = load_method_handler(self.setpoint_tracking_id, self.logger,
+                                         target_id=self.unique_id)
+            if method.method_type == 'DailyMultiPoint':
+                weeks_elapsed = self._get_weeks_elapsed(this_pid.method_start_time)
+                new_setpoint, ended = method.calculate_setpoint(
+                    now, this_pid.method_start_time,
+                    weeks_elapsed=weeks_elapsed,
+                    facility_tz=self._facility_tz)
+            else:
+                new_setpoint, ended = method.calculate_setpoint(now, this_pid.method_start_time)
+            self.logger.debug(f"Method {self.setpoint_tracking_id} {method} {now} {this_pid.method_start_time}")
+            self._cycle_setpoint = ('method', new_setpoint, ended)
 
-                            self.logger.debug("Ended")
-                            # Duration method has ended, reset method_start_time locally and in DB
-                            this_pid.method_start_time = None
-                            this_pid.method_end_time = None
-                            this_pid.is_activated = False
-                            db_session.commit()
+        elif self.setpoint_tracking_type == 'input-math' and self.setpoint_tracking_id != '':
+            # Update setpoint using an Input
+            device_id = self.setpoint_tracking_id.split(',')[0]
+            measurement_id = self.setpoint_tracking_id.split(',')[1]
 
-                            self.is_activated = False
-                            self.stop_controller()
+            measurement = get_measurement(measurement_id)
+            if not measurement:
+                self._cycle_abort = True
+                return
 
-                            db_session.commit()
+            conversion = db_retrieve_table_daemon(
+                Conversion, unique_id=measurement.conversion_id)
+            channel, unit, measurement = return_measurement_info(
+                measurement, conversion)
 
-                    if new_setpoint is not None:
-                        self.logger.debug(f"New setpoint = {new_setpoint} {ended}")
-                        self.PID_Controller.setpoint = new_setpoint
-                    else:
-                        self.logger.debug(f"New setpoint = default {self.setpoint} {ended}")
-                        self.PID_Controller.setpoint = self.setpoint
+            last_measurement = read_influxdb_single(
+                device_id,
+                unit,
+                channel,
+                measure=measurement,
+                duration_sec=self.setpoint_tracking_max_age,
+                value='LAST')
 
-                if self.setpoint_tracking_type == 'input-math' and self.setpoint_tracking_id != '':
-                    # Update setpoint using an Input
-                    device_id = self.setpoint_tracking_id.split(',')[0]
-                    measurement_id = self.setpoint_tracking_id.split(',')[1]
+            if last_measurement[1] is not None:
+                self._cycle_setpoint = ('input', last_measurement[1], False)
+            else:
+                self.logger.debug(
+                    "Could not find measurement for Setpoint "
+                    f"Tracking. Max Age of {self.setpoint_tracking_max_age} exceeded for measuring "
+                    f"device ID {device_id} (measurement {measurement_id})")
+                self._cycle_setpoint = ('input', None, False)
 
-                    measurement = get_measurement(measurement_id)
-                    if not measurement:
-                        return False, None
+    def control_phase(self):
+        """계산·출력 단계 — 주기당 한 번만 실행한다(재시도 없음).
 
-                    conversion = db_retrieve_table_daemon(
-                        Conversion, unique_id=measurement.conversion_id)
-                    channel, unit, measurement = return_measurement_info(
-                        measurement, conversion)
+        - 일시정지: 측정·적분·출력 모두 하지 않는다(출력은 pid_pause 가 한 번 끈다).
+        - 유지: 적분과 제어 변수를 얼리고, 측정값이 신선할 때만 마지막 출력을 반복한다.
+        - 같은 측정 표본은 적분에 한 번만 더한다.
+        """
+        if self._cycle_abort or not self.is_activated or self.is_paused:
+            return
 
-                    last_measurement = read_influxdb_single(
-                        device_id,
-                        unit,
-                        channel,
-                        measure=measurement,
-                        duration_sec=self.setpoint_tracking_max_age,
-                        value='LAST')
+        if not self.is_held and self.last_measurement_success:
+            self._apply_cycle_setpoint()
 
-                    if last_measurement[1] is not None:
-                        self.PID_Controller.setpoint = last_measurement[1]
-                    else:
-                        self.logger.debug(
-                            "Could not find measurement for Setpoint "
-                            f"Tracking. Max Age of {self.setpoint_tracking_max_age} exceeded for measuring "
-                            f"device ID {device_id} (measurement {measurement_id})")
-                        self.PID_Controller.setpoint = None
+            sample = (self.last_time, self.last_measurement)
+            new_sample = sample != self._integrated_sample
+            # Calculate new control variable (output) from PID Controller
+            self.PID_Controller.update_pid_output(
+                self.last_measurement, new_sample=new_sample)
+            self._integrated_sample = sample
 
-                # Calculate new control variable (output) from PID Controller
-                self.PID_Controller.update_pid_output(self.last_measurement)
-
-                self.write_pid_values()  # Write variables to database
+            self.write_pid_values()  # Write variables to database
 
         # Is PID in a state that allows manipulation of outputs
-        if (self.is_activated and
-                self.PID_Controller.setpoint is not None and
-                (not self.is_paused or self.is_held)):
+        if self.PID_Controller.setpoint is not None:
             if not self.raise_output_id and not self.lower_output_id:
                 # Calculation-only mode: no output device configured.
                 # Write the raw control variable to channel 9 (unitless/none)
@@ -364,6 +441,68 @@ class PIDController(AbstractController, threading.Thread):
                         'none', 'unitless', 9, self.PID_Controller.control_variable)
             else:
                 self.manipulate_output()
+
+    def _apply_cycle_setpoint(self):
+        """읽기 단계에서 구한 설정점을 적용한다(방법 종료 처리는 부작용이라 여기서)."""
+        if self._cycle_setpoint is None:
+            return
+        kind, value, ended = self._cycle_setpoint
+        if kind == 'method':
+            if ended:
+                # point in time is out of method range
+                with session_scope(AOT_DB_PATH) as db_session:
+                    # Overwrite this_controller with committable connection
+                    this_pid = db_session.query(PID).filter(
+                        PID.unique_id == self.unique_id).first()
+
+                    self.logger.debug("Ended")
+                    # Duration method has ended, reset method_start_time locally and in DB
+                    this_pid.method_start_time = None
+                    this_pid.method_end_time = None
+                    this_pid.is_activated = False
+                    db_session.commit()
+
+                    self.is_activated = False
+                    self.stop_controller()
+
+                    db_session.commit()
+
+            if value is not None:
+                self.logger.debug(f"New setpoint = {value} {ended}")
+                self.PID_Controller.setpoint = value
+            else:
+                self.logger.debug(f"New setpoint = default {self.setpoint} {ended}")
+                self.PID_Controller.setpoint = self.setpoint
+        else:
+            self.PID_Controller.setpoint = value
+
+    def _output_limits(self):
+        """제어 변수의 (하한, 상한) — 조건부 적분의 근거. None 은 한계 없음.
+
+        출력 설정에서 구한다: 한쪽 방향 출력이 없으면 그쪽 제어 변수는 아무 일도
+        안 하므로 0 이 한계다. 출력이 하나도 없는 계산 전용 모드는 한계가 없다.
+        """
+        direction = self.PID_Controller.direction
+        has_raise = direction in ('raise', 'both') and bool(self.raise_output_id)
+        has_lower = direction in ('lower', 'both') and bool(self.lower_output_id)
+        if not has_raise and not has_lower:
+            return None, None
+        period = self._period_s()
+
+        def cap(output_type, max_duration):
+            if output_type == 'pwm':
+                duty = 100.0
+                if max_duration:
+                    duty = min(duty, float(max_duration))
+                return duty / 100.0 * period
+            return float(max_duration) if max_duration else None
+
+        high = cap(self.raise_output_type, self.raise_max_duration) if has_raise else 0.0
+        low = 0.0
+        if has_lower:
+            lower_cap = cap(self.lower_output_type, self.lower_max_duration)
+            low = -lower_cap if lower_cap is not None else None
+        return low, high
 
     def setup_method(self, method_id):
         """Initialize method variables to start running a method."""
@@ -418,11 +557,11 @@ class PIDController(AbstractController, threading.Thread):
         Returns None only when no timezone can be resolved anywhere.
         """
         try:
-            from aot.utils.device_tz import get_device_tz
+            from aot.utils.timekit import tz_of
             row = pid_row
             if row is None:
                 row = db_retrieve_table_daemon(PID, unique_id=self.unique_id)
-            tz = get_device_tz(row)
+            tz = tz_of(row)
             return tz if tz else None
         except Exception as exc:
             self.logger.warning(f'PID _resolve_facility_tz: {exc}')
@@ -437,7 +576,7 @@ class PIDController(AbstractController, threading.Thread):
           2. method_start_time — schedule_start_time 미설정 시 method 최초 활성화 시각 사용.
         """
         import re as _re
-        from datetime import datetime as _dt, timezone as _tz
+        from datetime import timezone as _tz
 
         # ── 1. schedule_start_time 우선 (env_coordinator 동일 로직) ──────────
         pid_row = db_retrieve_table_daemon(PID, unique_id=self.unique_id)
@@ -459,22 +598,16 @@ class PIDController(AbstractController, threading.Thread):
                     import datetime as _datetime
                     year, month, day = map(int, start_raw.split('-'))
                     local_midnight = _datetime.datetime(year, month, day, 0, 0, 0)
-                    try:
-                        start_dt = fac_tz.localize(local_midnight)
-                    except AttributeError:
-                        start_dt = local_midnight.replace(tzinfo=fac_tz)
+                    start_dt = wall_to_utc(local_midnight, fac_tz)
                 else:
                     start_dt = isoparse(start_raw)
                     if start_dt.tzinfo is None:
                         if fac_tz is not None:
-                            try:
-                                start_dt = fac_tz.localize(start_dt)
-                            except AttributeError:
-                                start_dt = start_dt.replace(tzinfo=fac_tz)
+                            start_dt = wall_to_utc(start_dt, fac_tz)
                         else:
                             start_dt = start_dt.replace(tzinfo=_tz.utc)
 
-                elapsed_sec = (_dt.now(_tz.utc) - start_dt).total_seconds()
+                elapsed_sec = (utc_now() - start_dt).total_seconds()
                 return max(0.0, elapsed_sec / (7 * 86400) + week_offset)
             except Exception as exc:
                 self.logger.warning(f'PID _get_weeks_elapsed (schedule): {exc}')
@@ -489,7 +622,7 @@ class PIDController(AbstractController, threading.Thread):
                 return 0.0
             if start_dt.tzinfo is None:
                 start_dt = start_dt.replace(tzinfo=_tz.utc)
-            elapsed_sec = (_dt.now(_tz.utc) - start_dt).total_seconds()
+            elapsed_sec = (utc_now() - start_dt).total_seconds()
             return max(0.0, elapsed_sec / (7 * 86400) + week_offset)
         except Exception as exc:
             self.logger.warning(f'PID _get_weeks_elapsed (method_start): {exc}')
@@ -575,10 +708,12 @@ class PIDController(AbstractController, threading.Thread):
                 value='LAST')
 
             if last_measurement and last_measurement[0] is not None and last_measurement[1] is not None:
-                self.last_time = last_measurement[0] / 1000
+                # read_influxdb_single 은 초 단위 epoch 를 돌려준다(예전 `/ 1000` 은
+                # 1970년 1월로 만들었다). 같은 표본인지 가르는 열쇠이기도 하다.
+                self.last_time = float(last_measurement[0])
                 self.last_measurement = last_measurement[1]
 
-                local_timestamp = str(datetime.fromtimestamp(self.last_time))
+                local_timestamp = iso_at(self.last_time, self._facility_tz)
                 self.logger.debug(f"Latest (CH{channel}, Unit: {unit}): {self.last_measurement} @ {local_timestamp}")
                 self.last_measurement_success = True
             else:
@@ -881,12 +1016,15 @@ class PIDController(AbstractController, threading.Thread):
 
         else:
             self.logger.debug("Last measurement unsuccessful. Turning outputs off.")
-            if self.PID_Controller.direction in ['raise', 'both'] and self.raise_output_id:
-                self.control.output_off(
-                    self.raise_output_id, output_channel=self.raise_output_channel)
-            if self.PID_Controller.direction in ['lower', 'both'] and self.lower_output_id:
-                self.control.output_off(
-                    self.lower_output_id, output_channel=self.lower_output_channel)
+            self._turn_outputs_off()
+
+    def _turn_outputs_off(self):
+        if self.PID_Controller.direction in ['raise', 'both'] and self.raise_output_id:
+            self.control.output_off(
+                self.raise_output_id, output_channel=self.raise_output_channel)
+        if self.PID_Controller.direction in ['lower', 'both'] and self.lower_output_id:
+            self.control.output_off(
+                self.lower_output_id, output_channel=self.lower_output_channel)
 
     def pid_parameters_str(self):
         return f"Device ID: {self.device_id}, " \
@@ -919,10 +1057,11 @@ class PIDController(AbstractController, threading.Thread):
 
     def control_var_to_duty_cycle(self, control_variable):
         # Convert control variable to duty cycle
-        if control_variable > self.period:
+        period = self._period_s()
+        if control_variable > period:
             return 100.0
         else:
-            return float((control_variable / self.period) * 100)
+            return float((control_variable / period) * 100)
 
     @staticmethod
     def return_output_channel(output_channel_id):
@@ -947,30 +1086,41 @@ class PIDController(AbstractController, threading.Thread):
         else:
             return "error"
 
-    def pid_hold(self):
-        self.is_held = True
+    def _save_run_state(self):
+        """일시정지·유지 플래그를 DB 에 맞춘다(둘은 배타다)."""
         with session_scope(AOT_DB_PATH) as db_session:
             mod_pid = db_session.query(PID).filter(
                 PID.unique_id == self.unique_id).first()
-            mod_pid.is_held = True
+            mod_pid.is_held = self.is_held
+            mod_pid.is_paused = self.is_paused
             db_session.commit()
+
+    def pid_hold(self):
+        """유지: 적분과 제어 변수를 얼리고 마지막 출력을 (측정값이 신선한 동안) 반복한다."""
+        self.is_held = True
+        self.is_paused = False
+        self._save_run_state()
         self.logger.info("PID Held")
         return "success"
 
     def pid_pause(self):
+        """일시정지: 측정·적분·출력을 모두 멈추고 출력을 끈다."""
         self.is_paused = True
-        with session_scope(AOT_DB_PATH) as db_session:
-            mod_pid = db_session.query(PID).filter(
-                PID.unique_id == self.unique_id).first()
-            mod_pid.is_paused = True
-            db_session.commit()
+        self.is_held = False
+        self._save_run_state()
+        try:
+            self._turn_outputs_off()
+        except Exception:
+            self.logger.exception("Could not turn outputs off while pausing")
         self.logger.info("PID Paused")
         return "success"
 
     def pid_resume(self):
+        """재개: 적분은 그대로 이어 쓰고(bumpless) 미분 기준점만 다시 잡는다."""
         self.is_activated = True
         self.is_held = False
         self.is_paused = False
+        self.PID_Controller.first_start = True
         with session_scope(AOT_DB_PATH) as db_session:
             mod_pid = db_session.query(PID).filter(
                 PID.unique_id == self.unique_id).first()
@@ -1069,29 +1219,42 @@ class PIDController(AbstractController, threading.Thread):
         return self.PID_Controller.Kd
 
     def function_status(self):
-        p_value = 0
-        i_value = 0
-        d_value = 0
+        """상태 사실만 낸다 — 문장은 Flask 쪽(`utils_function_status`)이 뷰어의 언어로 만든다.
 
-        if self.PID_Controller.P_value:
-            p_value = self.PID_Controller.P_value
-        if self.PID_Controller.I_value:
-            i_value = self.PID_Controller.I_value
-        if self.PID_Controller.D_value:
-            d_value = self.PID_Controller.D_value
-        total = p_value + i_value + d_value
+        조회 순간의 시각이 아니라 **마지막 실행이 언제였는지**와 다음 실행까지
+        남은 시간을 내보낸다 — 멈춘 PID 가 정상처럼 보이지 않게.
+        """
+        controller = self.PID_Controller
+        p_value = (controller.P_value or 0) if controller else 0
+        i_value = (controller.I_value or 0) if controller else 0
+        d_value = (controller.D_value or 0) if controller else 0
 
-        return_dict = {
-            'string_status': "This info is being returned from the PID Controller."
-                             f"\nCurrent time: {utc_now()}"
+        if not self.is_activated:
+            state = 'deactivated'
+        elif self.is_paused:
+            state = 'paused'
+        elif self.is_held:
+            state = 'held'
+        else:
+            state = 'running'
 
-                             f"\nControl Variable: {total:.4f} = "
-                             f"{p_value:.4f} (P), "
-                             f"{i_value:.4f} (I), "
-                             f"{d_value:.4f} (D)",
-            'error': []
+        now = time.monotonic()
+        last_run = self._last_run_mono
+        return {
+            'status_facts': {
+                'kind': 'pid',
+                'state': state,
+                'period_s': self._period_s(),
+                'last_run_age_s': (now - last_run) if last_run is not None else None,
+                'next_run_s': (max(0.0, self.timer - now)
+                               if self.is_activated else None),
+                'control_variable': {
+                    'total': p_value + i_value + d_value,
+                    'p': p_value, 'i': i_value, 'd': d_value,
+                },
+            },
+            'error': [],
         }
-        return return_dict
 
     def stop_controller(self, ended_normally=True, deactivate_pid=False):
         self.thread_shutdown_timer = timeit.default_timer()

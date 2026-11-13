@@ -22,8 +22,8 @@ def test_air_only_junk_channels_are_rejected():
     t = _hours(10)
     vwc = list(3.7 + rng.normal(0, 0.02, len(t)))
     ts = list(-95.0 + rng.normal(0, 3.0, len(t)))
-    v1 = vz.channel_verdict(t, vwc)
-    v2 = vz.channel_verdict(t, ts, value_range=vz.SOIL_T_RANGE_C)
+    v1 = vz.channel_verdict(t, vwc, tz_offset_s=TZ)
+    v2 = vz.channel_verdict(t, ts, value_range=vz.SOIL_T_RANGE_C, tz_offset_s=TZ)
     assert not v1['usable'] and v1['reasons'].get('flat', 0) == len(t)
     assert not v2['usable'] and v2['reasons'].get('range', 0) == len(t)
 
@@ -31,7 +31,7 @@ def test_air_only_junk_channels_are_rejected():
 def test_real_soil_channel_with_diurnal_wiggle_is_kept():
     t = _hours(10)
     v = [20 + 1.5 * math.sin(2 * math.pi * h / 24) for h in range(len(t))]
-    r = vz.channel_verdict(t, v)
+    r = vz.channel_verdict(t, v, tz_offset_s=TZ)
     assert r['usable'] and r['valid_frac'] == 1.0
 
 
@@ -40,7 +40,7 @@ def test_out_of_range_points_are_dropped_one_by_one():
     v = [50 + (h % 5) for h in range(len(t))]
     v[10] = 80.0          # 포화 너머(> 70 %) — 그 점만 버린다
     v[11] = -1.0
-    ok, reason = vz.screen_series(t, v)
+    ok, reason = vz.screen_series(t, v, tz_offset_s=TZ)
     assert not ok[10] and not ok[11] and reason[10] == 'range'
     assert ok.sum() == len(t) - 2
 
@@ -66,7 +66,7 @@ def test_placement_change_from_soil_temperature_range():
     days = vz.placement_changes(t, ts, tz_offset_s=TZ)
     assert days == [fz.day_number(2026, 8, 5) + 9]
     # 날마다 같은 일교차면 아무 일도 없다
-    assert vz.placement_changes(t, [25 + 3 * math.sin(h) for h in range(len(t))]) == []
+    assert vz.placement_changes(t, [25 + 3 * math.sin(h) for h in range(len(t))], tz_offset_s=TZ) == []
 
 
 def test_hargreaves_is_plausible_in_late_summer():
@@ -98,3 +98,31 @@ def test_daily_sum_counts_hours():
     s = fz.daily_sum(pts, TZ, scale=4.0)
     d0 = fz.day_number(2026, 8, 5)
     assert s[d0] == (48.0, 24) and s[d0 + 1] == (12.0, 6)
+
+
+def test_offset_at_requires_a_tz_and_follows_dst_per_point():
+    NY = 'America/New_York'
+    with pytest.raises(ValueError):
+        fz.offset_at(T0, None)
+    assert fz.offset_at(T0, 3600.0) == 3600.0
+    import datetime as dt
+    from aot.utils.timekit import wall_to_utc
+    est = wall_to_utc(dt.datetime(2027, 3, 13, 12, 0), NY).timestamp()
+    edt = wall_to_utc(dt.datetime(2027, 3, 16, 12, 0), NY).timestamp()
+    assert fz.offset_at(est, NY) == -5 * 3600.0
+    assert fz.offset_at(edt, NY) == -4 * 3600.0
+
+
+def test_daily_sum_new_york_dst_start_day_has_23_hours():
+    """뉴욕 2027-03-14(서머타임 시작) — 하루가 23 시간이다. 고정 오프셋으로는 이 날이 24 시간처럼 접힌다."""
+    import datetime as dt
+    from aot.utils.timekit import wall_to_utc
+    NY = 'America/New_York'
+    start = wall_to_utc(dt.datetime(2027, 3, 13, 12, 0), NY).timestamp()
+    pts = [(start + h * 3600.0, 1.0) for h in range(48)]
+    s = fz.daily_sum(pts, NY)
+    d = fz.day_number(2027, 3, 14)
+    assert s[d][1] == 23
+    assert s[d - 1][1] == 12
+    # 같은 점을 지금의 오프셋 하나(EST, -5h)로 접으면 03-14 밤의 시간이 03-15 로 넘어가 24 로 센다
+    assert fz.daily_sum(pts, -5 * 3600.0)[d][1] == 24

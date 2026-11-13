@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timedelta
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ def log_call(
         with session_scope(AOT_DB_PATH) as sess:
             row = MCPAuditLog(
                 unique_id=uid,
-                timestamp=datetime.utcnow(),
+                timestamp=naive_utc(utc_now()),
                 agent_id=agent_id,
                 tool_name=tool_name,
                 params_json=json.dumps(_slim_params(params) or {}, ensure_ascii=False),
@@ -170,7 +171,7 @@ def record_call(
         with session_scope(AOT_DB_PATH) as sess:
             row = MCPAuditLog(
                 unique_id=uid,
-                timestamp=datetime.utcnow(),
+                timestamp=naive_utc(utc_now()),
                 agent_id=agent_id,
                 tool_name=tool_name,
                 params_json=json.dumps(_slim_params(params) or {}, ensure_ascii=False),
@@ -303,7 +304,7 @@ def purge_old(days: int | None = None) -> int:
         if days is None or days <= 0:
             return 0
 
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = naive_utc(utc_now()) - timedelta(days=days)
         with session_scope(AOT_DB_PATH) as sess:
             n = (sess.query(MCPAuditLog)
                       .filter(MCPAuditLog.timestamp < cutoff)

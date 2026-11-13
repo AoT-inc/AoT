@@ -237,6 +237,8 @@ class TestPlotWritePermission(_SchedBase):
                          'edit_settings')
         self.assertEqual(gate.required_write_permission('set_device_location'),
                          'edit_settings')
+        self.assertEqual(gate.required_write_permission('set_pipe_diameters'),
+                         'edit_settings')
 
     def test_role_snapshot_mirrors_web_implication(self):
         self.assertTrue(mcp_auth.role_can_edit_plots(self._role('PlotOnly')))

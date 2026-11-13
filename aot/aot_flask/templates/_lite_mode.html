@@ -1,0 +1,30 @@
+{#- 경량 모드 (자원 조절 R6, 2026-11-09) ──────────────────────────────────────
+    사용자 설정(계정 모달 "경량 모드", users.ui_lite_mode)대로 <html data-aot-lite="1">
+    과 class="aot-lite" 를 붙인다. 화면 쪽이 이것을 읽어 스스로 가벼워진다:
+      · 폴링 간격 ×2            — aot-poll-visibility.js (calcDelayMult)
+      · 지도·시설 3D 움직임 효과 끔 — aot-map-ambient-fx.js, aot-facility-3d.js,
+                                    aot-facility-map-3d.js (prefers-reduced-motion 과 같은 길)
+      · 카메라 실시간 영상 대신 스냅숏 — widgets/AoT_camera.py
+    값: 'always' 항상 · 'phone' 손가락 화면(폰·태블릿 — _screen_zoom.html 과 같은 판정)에서만
+        · 그 밖(NULL·'off') 끔.
+    브라우저의 기기 신호(deviceMemory·saveData)는 iOS Safari 에 없어서, 자동 감지로는
+    아이폰·아이패드에서 아무것도 줄일 수 없다 — 사람이 고르는 이 스위치가 그 빈자리다.
+    폴링 관리자(app-early 번들)보다 **먼저** 돌아야 한다 — 그것이 로드 때 배율을 정한다. -#}
+{%- set _aot_lite = (current_user.ui_lite_mode
+                     if (current_user and current_user.is_authenticated
+                         and current_user.ui_lite_mode in ('phone', 'always'))
+                     else '') -%}
+{%- if _aot_lite %}
+<script>
+  (function () {
+    try {
+      var on = {{ (_aot_lite == 'always')|tojson }} ||
+               window.matchMedia('(pointer: coarse) and (hover: none)').matches;
+      if (!on) { return; }
+      var root = document.documentElement;
+      root.setAttribute('data-aot-lite', '1');
+      root.classList.add('aot-lite');
+    } catch (e) { /* 표시는 덤이다 — 실패해도 화면은 그대로 뜬다 */ }
+  })();
+</script>
+{%- endif %}

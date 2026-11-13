@@ -11,8 +11,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required
 
 from aot.databases.models import db, Misc, Output, OutputChannel, Input
-from aot.utils.time_utils import serialize_ts, to_local
-from aot.utils.timekit import iso_utc
+from aot.utils.timekit import iso_at, FARM, to_tz, iso_utc
 from aot.databases.models.scheduler import SchedulerJobMeta, SchedulerAuditLog
 from aot.ai.services.ai_scheduler_service import (
     AISchedulerService, JobPermissionDenied, JOB_STATE_DRAFT, JOB_STATE_PENDING,
@@ -100,8 +99,9 @@ def _enrich_job_display(job):
     anchor_source = getattr(job, 'anchor_source', None)
     if not anchor and job.target_id and job.target_id != 'none':
         try:
-            from aot.utils.device_tz import resolve_location_tz_and_source
-            _tz, anchor_source = resolve_location_tz_and_source(job.target_id)
+            from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz
+            _tz, anchor_source = resolve_tz(job.target_id)
+            anchor_source = 'system' if anchor_source in (SOURCE_SYSTEM, SOURCE_UTC) else 'device'
             anchor = str(_tz)
         except Exception:
             anchor = None
@@ -112,7 +112,7 @@ def _enrich_job_display(job):
         if anchor:
             from aot.utils.timekit import to_tz
             return to_tz(dt, anchor).strftime(pattern)
-        return to_local(dt).strftime(pattern)
+        return to_tz(dt, FARM).strftime(pattern)
 
     job.display_created_at = _fmt(job.created_at, '%m/%d %H:%M') or '-'
     job.display_schedule_time = _fmt(job.schedule_time, '%Y-%m-%d %H:%M')
@@ -197,7 +197,7 @@ def page_scheduler():
     # whether the AI is separately permitted to touch it.
     from aot.databases.models import AIAgent, PID, Function
     from aot.databases.models.geo import GeoShape
-    from aot.utils.device_tz import get_device_tz
+    from aot.utils.timekit import FARM, tz_of
 
     # Each target carries its anchor tz (device-local) so the new-task form can
     # show a live dual-clock (device time / your time / UTC). tz is read from the
@@ -206,7 +206,7 @@ def page_scheduler():
     # 말하지 않고 추정이라고 적는다(§3.2).
     from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz
 
-    def _tz_of(row):
+    def _row_tz_fields(row):
         tz, src = resolve_tz(row)
         return {'tz': str(tz), 'tz_guess': src in (SOURCE_SYSTEM, SOURCE_UTC)}
 
@@ -217,13 +217,13 @@ def page_scheduler():
             'unique_id': o.unique_id,
             'name': o.name,
             'type': o.output_type,
-            **_tz_of(o),
+            **_row_tz_fields(o),
             'channels': [{'index': ch.channel, 'name': ch.name or f'CH{ch.channel}'} for ch in channels],
         })
 
-    manual_pids = [{'unique_id': p.unique_id, 'name': p.name, **_tz_of(p)}
+    manual_pids = [{'unique_id': p.unique_id, 'name': p.name, **_row_tz_fields(p)}
                    for p in PID.query.order_by(PID.name).all()]
-    manual_functions = [{'unique_id': f.unique_id, 'name': f.name, **_tz_of(f)}
+    manual_functions = [{'unique_id': f.unique_id, 'name': f.name, **_row_tz_fields(f)}
                         for f in Function.query.order_by(Function.name).all()]
 
     manual_zones = []
@@ -233,7 +233,7 @@ def page_scheduler():
             _ztz = z.resolve_timezone()
         except Exception:
             _ztz = None
-        ztz = str(_ztz) if _ztz is not None else str(get_device_tz(None))
+        ztz = str(_ztz) if _ztz is not None else str(tz_of(FARM))
         manual_zones.append({'unique_id': z.unique_id, 'name': meta.get('name', f'Zone_{z.id}'),
                              'tz': ztz, 'tz_guess': _ztz is None})
 
@@ -342,10 +342,10 @@ def api_propose_job():
             # Date.toISOString(); reading that as a device wall clock shifted
             # it by the viewer↔device offset.
             from aot.tools.aot_data_tool_service import AoTDataToolService
-            from aot.utils.timekit import instant_or_wall_to_utc
+            from aot.utils.timekit import wall_to_utc
             _atz, _anchor_name, _anchor_src = \
                 AoTDataToolService._resolve_schedule_anchor(data.get('target_id'))
-            schedule_time = instant_or_wall_to_utc(data['schedule_time'], _atz)
+            schedule_time = wall_to_utc(data['schedule_time'], _atz)
 
         action_type = data['action_type']
         target_id = data['target_id']
@@ -668,7 +668,7 @@ def _job_target_tz_name(job):
     location); otherwise target_id is the device/shape itself. Falls back to
     the system tz (resolve_location_tz's own chain) when nothing resolves.
     """
-    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import tz_of
     tid = job.target_id
     try:
         if job.action_type == 'mcp_tool_call' and job.params_json:
@@ -677,7 +677,7 @@ def _job_target_tz_name(job):
     except Exception:
         pass
     try:
-        return str(resolve_location_tz(tid))
+        return str(tz_of(tid))
     except Exception:
         return 'UTC'
 
@@ -753,7 +753,7 @@ def _serialize_job(meta):
         'action_type': meta.action_type,
         'target_id': meta.target_id,
         'params': json.loads(meta.params_json) if meta.params_json else {},
-        'schedule_time': serialize_ts(meta.schedule_time),  # tz: UTC→user_tz for display (legacy)
+        'schedule_time': iso_at(meta.schedule_time, FARM),  # tz: UTC→user_tz for display (legacy)
         'schedule_time_local': schedule_local,  # device-local (anchor tz) ISO
         'anchor_tz': anchor,
         'anchor_source': getattr(meta, 'anchor_source', None),  # 'system' = 위치 몰라 추정

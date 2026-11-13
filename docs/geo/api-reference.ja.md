@@ -12,11 +12,11 @@
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/geo/init_design` | 最後に更新された地図を読み込みます — ユーザーごとではなく、全員が同じ地図に入ります。地図が1件もなければ、設定された既定の位置・ズームで `Design Map 1` を作成します。全体の状態を返します。 |
-| GET | `/api/geo/designs` | すべての地図を `{unique_id, name, latitude, longitude, zoom}` 形式で一覧します。中心座標とズームは各地図に保存されたカメラから取得し、保存されたカメラがまったく無い地図だけが `[37.5665, 126.9780]` / ズーム13に落ちます。 |
+| GET | `/api/geo/init_design` | 最後に更新された地図を読み込みます — ユーザーごとではなく、全員が同じ地図に入ります。地図が1件もなければ、設定された既定の位置・ズームで `Design Map 1` を作成し、既定値が設定されていなければ世界全図(`[0, 0]`、ズーム2)で作成します。全体の状態を返します。 |
+| GET | `/api/geo/designs` | すべての地図を `{unique_id, name, latitude, longitude, zoom}` 形式で一覧します。中心座標とズームは各地図に保存されたカメラから取得し、保存されたカメラがまったく無い地図だけが世界全図 `[0, 0]` / ズーム2に落ちます。 |
 | GET | `/api/geo/designs/list` | 地図セレクターが使う、ほぼ同じ内容の2つ目の一覧です。レスポンス形式も値も上と同じです。 |
 | GET | `/api/geo/designs/<map_uuid>` | 地図1件の全状態: `{ok, uuid, name, state}`。見つからなければ404。 |
-| POST | `/api/geo/designs` | 地図を作成(`map_uuid` を省略)、または名前・状態を更新します。ボディ: `{map_uuid?, name, state}` — `state` は既存の状態に**マージ**され、丸ごと置き換わるわけではありません。すでに存在しない `map_uuid` を送った場合はエラーにせず、その idで新規作成します。作成時はボディの `center`/`zoom` を使わず、設定された既定の開始ビューで新しい地図を開きます。レスポンス: `{ok, uuid, name}`。 |
+| POST | `/api/geo/designs` | 地図を作成(`map_uuid` を省略)、または名前・状態を更新します。ボディ: `{map_uuid?, name, state}` — `state` は既存の状態に**マージ**され、丸ごと置き換わるわけではありません。すでに存在しない `map_uuid` を送った場合はエラーにせず、その idで新規作成します。作成時はボディの `center`/`zoom` を使わず、設定された既定の開始ビュー(既定値が無ければ世界全図)で新しい地図を開きます。レスポンス: `{ok, uuid, name}`。 |
 | DELETE | `/api/geo/designs/<map_uuid>` | 地図とその上のすべて(施設の設定値 → 施設 → 図形 → 地図レコードの順)を削除します。この地図の外から参照されているものが残っていれば `409 {blocked: true}` を返します。 |
 | POST | `/api/geo/maps/<map_uuid>/restore-original` | マイグレーション前のスナップショット(`original_data`)を持つ図形をすべてそのスナップショットへ復元します。レスポンス: `{ok, map_uuid, restored, skipped}`。マイグレーション追跡用カラムが未適用の場合(`alembic upgrade head` が必要)は400。 |
 
@@ -29,7 +29,7 @@
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | `/api/geo/overlays/list?map_uuid=&target_type=&parent_id=&device_id=` | 下と同じ、地図1つ分の `FeatureCollection` です — ただしここでは絞り込みの引数名が `type` ではなく `target_type` です。`map_uuid` がない場合は空のコレクションが返ります。 |
-| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 1つの地図の図形をGeoJSONの `FeatureCollection` として返します。`type` は旧名称もマッチします(`equipment` ⇒ `equipment_collection`、`aot_device` ⇒ `device`)。各図形にはサーバー側で `db_id`、`shape_uuid`(図形自身の識別子 — クライアントが作る `node_id` とは別の値)、解決済みの `device_id`/`device_type`、`parent_id`、(`type=facility` の場合)3Dメタデータが付与されます。まとめて保存された機器は、返すときに再び個々の図形に展開されます。`type` を省略するか `site`・`zone` を指定した場合、レスポンスには `collapsed_zones` も含まれます — 返されたゾーンのうち、自分のサイトと重複している(輪郭がほぼ同じで、自分の名前もなく、付随データもない)ため、別レイヤーとして描く代わりにサイトに折り込んで扱うべきゾーンのuuid一覧です。 |
+| GET | `/api/geo/overlays?map_uuid=<uuid>&type=&parent_id=&device_id=` | 1つの地図の図形をGeoJSONの `FeatureCollection` として返します。`type` は旧名称もマッチします(`equipment` ⇒ `equipment_collection`、`aot_device` ⇒ `device`)。各図形にはサーバー側で `db_id`、`shape_uuid`(図形自身の識別子 — クライアントが作る `node_id` とは別の値)、解決済みの `device_id`/`device_type`、`parent_id`、(`type=facility` の場合)3Dメタデータが付与されます。まとめて保存された機器は、返すときに再び個々の図形に展開されます。`type` を省略するか `site`・`zone` を指定した場合、レスポンスには `collapsed_zones` も含まれます — 返されたゾーンのうち、自分のサイトと重複している(輪郭がほぼ同じで、自分の名前もなく、付随データもない)ため、別レイヤーとして描く代わりにサイトに折り込んで扱うべきゾーンのuuid一覧です。レスポンスには `ETag` が付き、それを `If-None-Match` に入れて送り返すと、地図に変更がなければ本文なしの `304 Not Modified` が返るため、大きな地図を繰り返し読んでも再検証のコストだけで済みます。 |
 | POST | `/api/geo/overlays` | 1つの `map_uuid` + `type` に対する一括保存/置換です。このページで最も複雑なエンドポイントなので、下の**詳細**で別途説明します。 |
 | POST | `/api/geo/overlays/delta` | 全図形の代わりに変更分だけを送ります — 大規模な地図で有利です。ボディ: `{map_uuid, upserts: [...], deletes: [node_idまたはdb_id, ...]}`。機器の upsert はまとめ行にマージされ、一時的なスプリンクラーの点マーカーはこの経路でも除外されます。こちらも `edit_settings` と地図スコープが必要です。 |
 | GET | `/api/geo/sites` | `site` タイプの図形すべてをGeoJSONで。`?map_uuid=` は任意。 |
@@ -46,6 +46,7 @@
 - 同じ機器のまとめの中で、スプリンクラーのカバレッジ図形にはもう1段の安全装置があります — 送られてきたボディにカバレッジが1つもないが既存のまとめにはある場合、`deletes` に明示的に名前が挙がっていないカバレッジ図形は削除されずそのまま引き継がれます。
 - 一時的に表示されるスプリンクラーの点マーカーは保存されずに除外されます — そのマーカーだけのボディは空として扱われます。
 - 幾何ルールは何かを書き込む前に検査され、不正な図形が1つでもあれば保存全体が幾何エラーで中断されます(機器はこの検査の対象外)。
+- その施設に**平面を描く**で作った3D構造モデルが保存されている場合、`facility` の図形は既存の保存済みジオメトリをそのまま保持します — 名前など他の属性はこの保存で変更できますが、ここから移動したり形を変えたりはできません。その図形は平面と `geometry_3d` から導かれるため、このエンドポイントで移動させると3Dモデルと機器の配置は古い位置を指したままになり、次に施設を保存すると図形は元に戻されます。そのような施設を移動するには施設エディタを使ってください。
 - `aot_type`・`device_id`・`channel_id` は保存されるJSONから取り除かれます — 読み取り時に導出される値のため、そのまま往復保存されることは期待できません。
 - レスポンス: `{ok, count, id_map: {node_id: db_id}, stats: {deleted, updated, inserted}}`(機器の一括保存経路では `stats.mode: 'bulk_bundle'` 形式で、上のスプリンクラーカバレッジの安全装置が働いたときは `kept_coverage` も併せて返します)。
 
@@ -56,6 +57,14 @@
 | メソッド | パス | 説明 |
 |---|---|---|
 | POST | `/api/geo/search` | 検索プロバイダとして設定されたGISインプットモジュール経由のジオコーディング/住所検索です。ボディ: `{query, type: 'address'(デフォルト), layer_id?}`。`layer_id` で特定の `GeoLayer` を指定でき、なければ地図の `search_provider` 設定、最終的には `gis_osm` にフォールバックします。レスポンス: `{ok, results}`(形式はプロバイダごとに異なります)。 |
+| GET | `/api/geo/address?lat=&lng=` | 同じGISインプットの照会ゲートを通る逆ジオコーディング（座標 → 住所）です。レスポンス: `{ok: true, address, type, provider}`。答えられるプロバイダがない場合は `{ok: false, code, message}`。外部ジオコーダーへの初回呼び出しは数秒かかることがあるため、成功した答えは同じ場所（約1m）ごとに1時間保持します。位置シートが選んだ場所の住所を表示するときに呼びます。 |
+| GET | `/api/geo/favorites` | 位置シートのお気に入りのうち、呼び出した人に見えるもの — 共有されたものと本人が登録したもの。レスポンス: `{ok, favorites}`。 |
+| POST | `/api/geo/favorites` | `edit_settings` が必要です。ボディ: `{name, lat, lng, address, shared}`（`shared` のデフォルトは true）。同じ場所（約1m）は2回登録されません。レスポンス: `{ok, created, favorite}`。 |
+| PATCH | `/api/geo/favorites/<id>` | `edit_settings` が必要です。ボディ: `{name?, shared?}`。`shared` を変更できるのは登録した人だけです。 |
+| DELETE | `/api/geo/favorites/<id>` | `edit_settings` が必要です。お気に入りを削除します。 |
+| POST | `/api/geo/favorites/<id>/move` | `edit_settings` が必要です。ボディ: `{direction}` (`up` or `down`)。リスト内で1つ移動し、新しい `favorites` を返します。 |
+
+位置シート（マップウィジェットとデザイン画面）は、結果リストに `/api/geo/search`、住所に `/api/geo/address`、お気に入りに `/api/geo/favorites` を使います。旧来の地図検索ボックス専用のエンドポイントはありません。検索と逆照会は1つの照会ゲートを通るため、該当する能力を宣言したGISインプットは、これらのルートを変更しなくても使われます。
 
 ---
 
@@ -87,7 +96,7 @@
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| POST | `/api/geo/device/location` | デバイスの地図上の位置を設定/移動します。他の地図編集の書き込みと同じく `edit_settings` が必要です。ボディ: `{unique_id, type, lat, lng, map_uuid?, channel_id?}` — `type` は `input\|output\|pid\|trigger\|conditional\|device\|function\|custom\|generic_function` のいずれかで、`channel_id` の代わりに `unique_id` に `::<channel>` サフィックスを付けてもかまいません。デバイス自身の座標はチャンネル `0` のときだけ書き込まれ、他のチャンネルで呼ぶとそのチャンネルのマーカーだけが動き、デバイスの座標はそのままです。`map_uuid` が指定されていれば、その地図上にもマーカーを配置/更新し、所属ゾーンを導出します。成功時はデーモンに対して該当デバイスの設定再読み込みをベストエフォートで要求します(位置変更でタイムゾーンが変わった場合に即座に反映されるように)。該当するデバイスが無ければ `404`、デバイスまたは `map_uuid` が指す地図が呼び出し元に付与された範囲外なら `403`。レスポンス: `{ok, message, overlay_id}`。 |
+| POST | `/api/geo/device/location` | デバイスのマーカーを地図上に配置・移動・解除します — デバイスの位置を書き込む唯一のゲートウェイで、デバイス自身の座標カラムには一切書き込みません。そのため、デバイスの位置は常にそのマーカーを解決して得られる値になります。他の地図編集の書き込みと同じく `edit_settings` が必要です。ボディ: `{unique_id, type, lat, lng, map_uuid?, channel_id?}` — `type` は `input\|output\|pid\|trigger\|conditional\|device\|function\|custom\|generic_function` のいずれかで、`channel_id` の代わりに `unique_id` に `::<channel>` サフィックスを付けてもかまいません。`map_uuid` を省略していて座標が指定されている場合、地図は推測されます — そのデバイスが既に配置されている地図、または(まだどこにも配置されておらずシステムに地図が1つだけの場合)その地図です。地図が複数あり既存の配置も無い場合は、推測せずに `400`(「Select a map to place this device on.」)で拒否されます。地図が決まれば、そのデバイスのマーカーを配置(更新)し、所属ゾーンを導出します。成功時はデーモンに対して該当デバイスの設定再読み込みをベストエフォートで要求します(位置変更でタイムゾーンが変わった場合に即座に反映されるように)。該当するデバイスが無ければ `404`、デバイスまたは `map_uuid` が指す地図が呼び出し元に付与された範囲外なら `403`。レスポンス: `{ok, message, overlay_id}`。 |
 | GET | `/api/geo/devices?map_uuid=&device_ids=&include_all=` | 地図に配置可能なデバイスの一覧。レスポンス: `{ok, devices, all_measurements_map}`。条件付き(304)レスポンスに対応。 |
 | GET | `/api/geo/inputs` | センサーフィッティングの割り当て画面用、チャンネル単位のフラットな一覧(`DeviceMeasurements`) — 有効化された入力のみで、各項目にデバイス・チャンネルと換算後の単位を含むラベルが入ります。 |
 | GET | `/api/geo/outputs` | アクチュエーターフィッティングの割り当て画面用の `Output` フラット一覧。出力ごとに種類とインターフェースも含まれます。 |
@@ -130,11 +139,13 @@
 | メソッド | パス | 説明 |
 |---|---|---|
 | GET | `/api/geo/facility/list?geo_id=<map_uuid>` | すべての施設。地図1つに絞り込むことも可能。各項目に `rep_key` と外周形状を含みます。 |
+| GET | `/api/geo/facility/choices` | 施設エディタのセンサー接続の選択肢: `choices_input`・`choices_function`・`meas_id_slug`・`input_devices`・`function_devices`(デバイスとそのチャンネル)。 |
 | GET | `/api/geo/facility/<facility_uuid>` | 施設の全データ: 外皮、デバイスの割り当て、3D形状・表示オプション、ベイ、最後に計算された容量。 |
-| POST | `/api/geo/facility` | 作成または更新(本体・外皮スペック・ベイをひとつのトランザクションとして原子的に処理)。ボディ: `facility_uuid?`(作成時は省略)、`geo_id`(必須)、`outer_geometry`(GeoJSONジオメトリ、作成時は必須)、`name`、`preset`、`structure`、`bay_count`、`geometry_3d: {span_width_m, length_m, eave_height_m, ridge_height_m, spacing_m, roof_type}`、`envelope`(被覆層と側窓・天窓・カーテンの設定)、`actuators`、`fittings`、`bays`、`notes`。 |
+| POST | `/api/geo/facility` | 作成または更新(本体・外皮スペック・ベイをひとつのトランザクションとして原子的に処理)。ボディ: `facility_uuid?`(作成時は省略)、`geo_id`(必須)、`outer_geometry`(GeoJSONジオメトリ、作成時は必須)、`name`、`preset`、`structure`、`bay_count`、`geometry_3d: {span_width_m, length_m, eave_height_m, ridge_height_m, spacing_m, roof_type}`、`envelope`(被覆層と側窓・天窓・カーテンの設定)、`actuators`、`fittings`、`bays`、`notes`。 `?include=facility,integration`(またはボディの `include`)を付けると、保存した記録を同じレスポンスで受け取れます。`facility` は `GET /api/geo/facility/<facility_uuid>` のボディ、`integration` は `…/integration` のボディと同じです。付けなければレスポンスは変わりません。 |
+| PATCH | `/api/geo/facility/<facility_uuid>` | 保存済み施設の1つのまとまりだけを保存し、残りは保存されたまま残します。ボディ: `{section, data}`。`section` は `fittings`(`fittings`・`actuators`・`view_options`、リストだけなら `fittings`)、`envelope`(外皮オブジェクト)、`spec`(`name`・`preset`・`structure`・`bay_count`・`geometry_3d`・`notes`・`layout`・`bays`)、`position`(`geo_id`・`outer_geometry`・`site_shape_uuid`・`geometry_3d`)、`connections`(`weather_bindings`・`groups`・`view_options`)のいずれかです。`geometry_3d`・`view_options` は保存値に重ねて合わせ、その他のフィールドは置き換えます。まとまり外のフィールドは拒否します(`400`)。保存経路とレスポンスは上の POST と同じです(`include` を含む)。 |
 | POST | `/api/geo/facility/<facility_uuid>/clone` | 施設を複製し、デバイスの割り当てはリセットします(複製先は元の配線を引き継ぎません)。複製は元の真上ではなく隣に配置されます。 |
 | DELETE | `/api/geo/facility/<facility_uuid>` | ボディ/クエリ: `confirm_name` が現在の施設名と一致している必要があります。外周形状とベイ形状も一緒に削除されます。 |
-| POST | `/api/geo/facility/compute` | 保存せずに、与えられたスペックに対する工学計算プレビュー(面積/体積/暖房・冷房負荷/換気量)を返します。ボディは保存と同じ形 — `geometry_3d`、`envelope`、`bay_count`、`structure`、あれば `outer_geometry`/`fittings`/`actuators`。数値は一次算定の参考値(±5〜10%)で、免責の注記が付きます。計算モジュールが利用できない場合は `501`。 |
+| POST | `/api/geo/facility/compute` | 保存せずに、与えられたスペックに対する工学計算プレビュー(面積/体積/暖房・冷房負荷/換気量)を返します。ボディは保存と同じ形 — `geometry_3d`、`envelope`、`bay_count`、`structure`、あれば `outer_geometry`/`fittings`/`actuators`。数値は一次算定の参考値(±5〜10%)で、免責の注記が付きます。計算モジュールが利用できない場合は `501`。 施設モデルがあれば応答にモデルの値が加わります。本文に `layout` がなければ `layout_draft`(現在のフォームを読んだモデル、または保存済みモデル)、あれば `layout_errors`(`{code, path, message}`)と、有効なときは `layout_compiled`、`layout_zones`、`outer_geometry`、`center`、`location_changes` です。何も書き込みません。 |
 | GET | `/api/geo/facility/<facility_uuid>/integration` | 統合されたセンサー/アクチュエーター割り当てビュー — 環境コーディネーター自身が読み取るものと同じデータで、外皮・換気開口部・計算された容量も併せて返します。 |
 | GET | `/api/geo/facility/<facility_uuid>/wind?speed=&dir=&pct=` | 自然換気の風圧シミュレーション。`speed`=風速 m/s(デフォルト3.0)、`dir`=気象風向 0〜359°(デフォルト0)、`pct`=開口率 0〜100(デフォルト100)。実効換気回数(ACH)、流入・流出量、開口部ごとの流量、アクチュエーターごとの風向重みを返します。 |
 | POST | `/api/geo/facility/<facility_uuid>/apply` | 施設に割り当てられたアクチュエーターへ命令を送ります。ボディ: `{horizon, commands: [{kind, action, pct?}, ...]}`、`action` は `off`/`on`/`set` のいずれか。`horizon`(`now`/`1h`/`6h`)は予約ではありません — 命令は即時に送られ、この値はシミュレーション区間だけを決めます。`set` はその出力が実際に対応する方式(アナログ値、PWM、時間指定のon/off)に変換され、割り当てのない `kind` はリクエスト全体を失敗させず `failed` に入ります。VEE(仮想実行エンジン)機能フラグが有効な場合、まずアドバイザリの事前シミュレーションを実行し、実際の命令送信はいずれの場合もデーモンを経由します。 |
@@ -195,10 +206,10 @@
 | POST | `/api/aot/facility/<facility_uuid>/hidden_rows` | 上記ゾーン版と同じ形式を施設に対して。`edit_settings` が必要。 |
 | POST | `/api/aot/facility/<facility_uuid>/actuator_order` | ボディ: `{order: [slot_key, ...]}`。`edit_settings` が必要。 |
 | GET | `/api/aot/facility/<facility_uuid>/bays` | ベイ選択用の `{ok, bays: [{id, name}]}`。 |
-| POST | `/api/aot/facility/<facility_uuid>/bay_capacity` | ボディ: `{bay_id, unit, total}`(`total<=0` で解除)。`edit_settings` ではなく、**意図的に** `edit_plots`(シーズン運用者の権限)を要求します。 |
+| POST | `/api/aot/facility/<facility_uuid>/bay_capacity` | ボディ: `{bay_id, unit, total}`(`total<=0` で解除)。`bay_id` には既存のベイidだけでなく、施設に保存された平面のゾーンidも指定できます — どちらの場合も総量はそのゾーンに保存され、以後の分割・統合にそのまま引き継がれます。`edit_settings` ではなく、**意図的に** `edit_plots`(シーズン運用者の権限)を要求します。 |
 | GET | `/api/aot/facility/<facility_uuid>/calibration_status` | 連携するコーディネーターのアクチュエーターごとの制御ループのキャリブレーション状態と試運転状態、さらにモデル精度チェック(温度・湿度の誤差)が合格していればその結果も。 |
 | GET | `/api/aot/coordinator/<function_uuid>/overview` | 環境コーディネーターの設定ページ用ヘッダー: どの施設を制御しているか、その施設の稼働中の区画とプログラム、その施設に実際にあるアクチュエーターの種類(存在しない設備を設定していることを画面が示せるように)、(同じ施設に非アクティブな重複コーディネーターがあれば)`other_coordinator` 警告。 |
-| GET | `/api/aot/coordinator/<function_uuid>/actuators` | このコーディネーターが制御できるアクチュエーター、現在無効化されているもの(`disabled_actuators` オプション)、そして無効化されたエントリのうちもはや実在するデバイスに解決できないもの。コーディネーターが1つのベイにスコープされている場合は、そのベイの機器だけが並びます。 |
+| GET | `/api/aot/coordinator/<function_uuid>/actuators` | このコーディネーターが制御できるアクチュエーター、現在無効化されているもの(`disabled_actuators` オプション)、そして無効化されたエントリのうちもはや実在するデバイスに解決できないもの。複数階の施設の上の階の機器はこの一覧から除かれます — コーディネーターはそれらを動かしません。コーディネーターが1つのベイにスコープされている場合は、そのベイの機器だけが並びます。 |
 
 ---
 
@@ -232,7 +243,7 @@
 |---|---|---|
 | GET | `/api/geo/plots?map_uuid=&on=&include_ended=&include_planned=&facility_uuid=` | 区画の一覧。デフォルトは1つの地図の稼働中の区画のみ。`include_ended`/`include_planned` で範囲を広げられます。`map_uuid` を省略すると地図をまたいだ「運用」ビューになります。 |
 | GET | `/api/geo/plot/<plot_uuid>` | 区画1件の詳細(保留中のステージ遷移があれば先に自動承認)。`can_edit`、`can_design`、その区画自身の今後のデバイススケジュールを含みます。 |
-| GET | `/api/geo/plot/<plot_uuid>/contents` | 「[環境・制御]」モーダル用の一覧 — デバイスを区画内(plot)、区画まで届く灌水(irrigation)、デバイス種別ごとの最も近いもの(nearest)として分類します。自前のポリゴンを持たない施設ベースの区画には、ベイスコープの派生版が使われます。30秒キャッシュ。 |
+| GET | `/api/geo/plot/<plot_uuid>/contents` | 「[環境・制御]」モーダル用の一覧 — デバイスを区画内(plot)、区画まで届く灌水(irrigation)、デバイス種別ごとの最も近いもの(nearest)として分類します。自前のポリゴンを持たない施設ベースの区画には、ベイスコープの派生版が使われ、区画が上階のゾーンに属する場合(環境制御の対象外)は `control_upper_floor` も含まれます。30秒キャッシュ。 |
 | GET | `/api/geo/plot/<plot_uuid>/resource_usage?days=` | 「[現況]」カード用の灌水稼働時間/水量。`days` は1〜30。 |
 | GET | `/api/geo/plot/<plot_uuid>/env_series` / `/env_week?days=&end=&stage=&unit=` | 区画自身のタイムゾーン基準の環境推移シリーズ。`stage=<key>` を指定すると `days`/`end` の代わりにそのステージの期間を使います。 |
 | GET | `/api/geo/plot/<plot_uuid>/sensors` | この区画が現在参照しているデバイス(保存値ではなく導出値)。 |
@@ -292,7 +303,7 @@
 | メソッド | パス | 説明 |
 |---|---|---|
 | POST | `/api/geo/output/<output_uuid>/state` | デーモン経由で出力をオン/オフします。ボディ: `{state, channel, duration}`。`edit_controllers` + デバイススコープが必要。 |
-| POST | `/api/geo/output_states` | ゾーンポップアップ用のバッチ処理によるon/off生状態の取得。ボディ: `{ids: [...]}`。読み取り専用 — ログインのみ必要、追加の権限は不要。 |
+| POST | `/api/geo/output_states` | 地図ウィジェットとゾーンポップアップ用のバッチ処理によるon/off生状態の取得。ボディ: `{ids: [...]}`。読み取り専用 — ログインのみ必要、追加の権限は不要。前回のETagを `If-None-Match` で送ると、状態が変わっていなければ本文なしの `304` を返します。 |
 | POST | `/api/geo/output_runtimes` | より重いバッチ取得(経過時間、前回の稼働時間、次回の予定)— ポーリング用ではなく、モーダルを開いた時だけ使います。ボディ: `{items: [{id, channel}, ...]}`(最大60件)。 |
 | GET | `/api/geo/output/<output_uuid>/history?hours=` | デューティサイクル/オンオフの履歴シリーズ。`hours` は1〜168、デフォルト24。 |
 | POST | `/api/geo/function/<kind>/<func_uuid>/activate` | `kind` は `custom`\|`conditional`\|`pid`\|`trigger`\|`function`。ボディ: `{active: bool}`。`edit_controllers` が必要。 |
@@ -351,8 +362,8 @@
 
 | メソッド | パス | 説明 |
 |---|---|---|
-| GET | `/api/geo/settings` | GISのグローバル設定: `saved_state`、`geo_layers`(有効なレイヤーのみ)、`search_inputs`、`search_provider`。設定編集権限が必要です — `saved_state` には地図プロバイダのAPIキーが平文で含まれるため、権限がなければ権限エラーになります。 |
-| POST | `/api/geo/settings` | グローバル設定の更新 — 検索プロバイダ、地図ライブラリをローカルで配信するかCDNから取得するか、既定の中心座標とズーム、ズーム/カリングのしきい値、レンダリングのトグル、`theme_*` のキー(色 + ラベル・表示のトグル、パネル背景)。設定編集権限が必要です。書き込みは(1件ずつ)直列化され、更新のロストを防ぎます。 |
+| GET | `/api/geo/settings` | GISのグローバル設定: `saved_state`、`geo_layers`(有効なレイヤーのみ)、`search_inputs`、`search_provider`, `terrain_available`。設定編集権限が必要です — `saved_state` には地図プロバイダのAPIキーが平文で含まれるため、権限がなければ権限エラーになります。 |
+| POST | `/api/geo/settings` | グローバル設定の更新 — 検索プロバイダ、地図ライブラリをローカルで配信するかCDNから取得するか、既定の中心座標とズーム、ズーム/カリングのしきい値、レンダリングのトグル、`theme_*` のキー(色 + ラベル・表示のトグル、パネル背景)。設定編集権限が必要です。書き込みは(1件ずつ)直列化され、更新のロストを防ぎます。3D地形はこのグローバル設定にはもう含まれません — 地図自身のコントロールから地図ごとに切り替え、その状態はブラウザに保存されます。 |
 | GET | `/api/geo/settings/length_unit` | `{length_unit, supported: ["mm","cm","m","in","ft"]}`。 |
 | PUT | `/api/geo/settings/length_unit` | ボディ: `{length_unit}`。TTLを待たずに、キャッシュされているクライアント側の地図設定を即座に無効化します。 |
 
@@ -373,6 +384,19 @@
 供給部品のない回路には上流経路がありません。応答は項目を知らせるだけでデータを変更しません。ノズルがどの出力のものかは、これまでどおり担当区域が決めます。
 
 `GET /api/geo/water_net/paths?map_uuid=<uuid>`(オーバーレイと同じくログインのみ)は、出力ごとにその水が通る配管・部品の id を `outputs` として返します(供給のある回路のみ)。地図ウィジェットが一度読み、稼働中の出力の経路を同じ設備色で太く描きます。
+
+### 地形モデルの切り替え
+
+同じデータを使って地図の地形(DEM)も切り替えられます: 実際に切り替える前に、別の地形モデルで計算すると各回路の圧力・流量がどう変わるかをプレビューし、切り替えたり元に戻したりできます。
+
+| メソッド | パス | 説明 |
+|---|---|---|
+| GET | `/api/geo/water_net/terrain_switch?map_uuid=<uuid>` | 現在計算に使われているDEM(`current`)、切り替え可能な他のDEM入力(`candidates`、それぞれ `{id, name}`)、まだ有効な最後の切り替え記録(`switched: {from, to, at}`、なければ `null`)を返します。キーは含みません。`edit_settings` とその地図のグループスコープが必要です。 |
+| POST | `/api/geo/water_net/terrain_switch/preview` | ボディ: `{map_uuid, candidate_id, restart?}`。`candidate_id` に切り替えた場合のプレビューを開始、またはその状態を確認します — 何も保存・変更しません。同じリクエストを繰り返して状態を見ます: 計算中は `state` が `warming`、完了すると `ready`(各回路の圧力レベル・圧力範囲・最小流量比率を前後で含む `result` と、最も変化した配管区間)、失敗なら `failed`、地図に配管がなければ `empty`。この候補の前回のプレビュー以降に結果を変えうる入力(配管の口径など)を編集した場合のみ `restart: true` を送ります — それ以外は繰り返しのリクエストはまだ有効な結果をそのまま返します。`edit_settings` とその地図のグループスコープが必要で、`candidate_id` がなければ `400`。 |
+| POST | `/api/geo/water_net/terrain_switch/activate` | ボディ: `{map_uuid, candidate_id}`。`candidate_id` を有効なDEMとして有効化し、他のDEM入力をすべて無効化します。元に戻せるよう、以前有効だったものを記録します。`edit_controllers` とその地図のグループスコープが必要で、`candidate_id` がなければ `400`、候補が存在しないか既に有効な場合は `409`。 |
+| POST | `/api/geo/water_net/terrain_switch/revert` | ボディ: `{map_uuid}`。最後の有効化を取り消し、その前に有効だったDEM入力を元に戻します。`edit_controllers` とその地図のグループスコープが必要で、元に戻すものがなければ `409`。 |
+
+4つすべてに `map_uuid` が必要です(なければ `400`)。
 
 ## 地図の並び順 { #map-ordering }
 

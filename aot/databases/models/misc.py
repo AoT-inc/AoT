@@ -4,7 +4,7 @@ import logging
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 logger = logging.getLogger("aot.misc")
 
@@ -78,8 +78,9 @@ class Misc(CRUDMixin, db.Model):
     twin_enabled = db.Column(db.Boolean, default=False)
     twin_run_times = db.Column(db.Text, default='06:10,18:10')
     twin_heartbeat = db.Column(db.JSON, nullable=True)
-    #   twin_ignore_profile  HARDWARE_PROFILE=LOW 잠금만 건너뛴다(설정 > 디지털트윈). 파이 모델·메모리 잠금은 그대로
     #   twin_auto_forecast   대지에 트윈을 켤 때 가까운 예보 입력이 없으면 새로 만든다(기본 켜짐)
+    #   twin_ignore_profile  쓰지 않는 칸 — HARDWARE_PROFILE 잠금을 없애며(2026-11) 옵션도 걷어 냈다. 되돌리기
+    #                        안전하도록 DB 열(alembic p6_92)과 이 정의는 남기고 마이그레이션은 만들지 않는다.
     twin_ignore_profile = db.Column(db.Boolean, default=False)
     twin_auto_forecast = db.Column(db.Boolean, default=True)
     # 데이터 계층(예보·트윈 데이터 관리, aot/utils/influx_layers.py): Influx 버킷을 계층별로 나눠 보존 기간을 따로 둔다.

@@ -108,6 +108,10 @@ APIのバージョンを判別するため、ベンダー固有のコンテン�
 
 `https://{RASPBERRY_PI_IP_ADDRESS}/api` にアクセスすると、お使いのAoTインストールにおける現在のAPIエンドポイントのドキュメントを確認できます。
 
+**変更(装置の位置フィールド):** 入力・出力・PID・トリガーの応答(`inputs`、`outputs`、`pid`、`settings/*` エンドポイント)から `map_config_id`、`location_source`、`location_updated_utc` を外しました。装置の位置は地図への配置の結果なので、装置レコードのこれらのフィールドではなく `/api/geo/device/location` や配置の照会を使ってください。
+
+**相談用 (区画の検索):** `POST /api/consult/parcel` に `{"address": "..."}` を送ると、`{ok, feature, pnu, area_m2, centroid:[lon,lat], address_normalized}`（WGS84 の GeoJSON Feature の区画ポリゴン）または `{ok:false, error}` を返します。`error` は `invalid_address`（400）、`not_found`（404）、`vworld_unavailable`（503）、`forbidden`（403）、`unauthorized`（401）、`rate_limited`（429）です。読み取り専用で何も保存しないため、読み取り専用 API キーでも呼べ、CSRF トークンも不要です（`/api/geo/parcel/from_address` は API キーのクライアントからは拒否されます）。VWorld GIS 入力の登録が必要で、API キーごとに 1 分あたり 30 回に制限されています（環境変数 `AOT_CONSULT_PARCEL_LIMIT`、例 `60/minute` で変更）。顧客ごとの制限は呼び出し側の役割です。
+
 最新のAPIバージョンのドキュメントはHTML形式でも公開されています: `AoT API Documentation <https://aot-inc.github.io/AoT/aot-api.html>`__
 
 ## デーモン制御オブジェクト { #daemon-control-object }

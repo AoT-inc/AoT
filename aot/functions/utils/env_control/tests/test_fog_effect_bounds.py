@@ -36,7 +36,7 @@
 import pytest
 
 from aot.functions.utils.env_control import effect_functions as ef
-from aot.functions.utils.env_control import psychro
+from aot.utils import psychro
 from aot.functions.utils.env_control.types import CmdConstraints
 
 VOL_M3 = 5463.0          # イチゴ 실측

@@ -12,7 +12,7 @@ Influx 는 없다 — fc_store 의 읽기를 대역으로 잡는다.
 import unittest
 from unittest import mock
 
-from aot.aot_flask.geo import forecast_series as fs
+from aot.space import forecast_series as fs
 from aot.twin import lineage as LG, output as O
 from aot.twin.types import ForecastSeries, Provenance, SeriesRef
 

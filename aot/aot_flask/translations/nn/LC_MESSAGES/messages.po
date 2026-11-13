@@ -32249,3 +32249,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Vassrett / skrå"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} røyr rekna vassrett"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Vassrett"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Røyrlengd (heile området)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Røyrlengd"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Terrenget blir rekna ut. Den skrå lengda kjem når det er ferdig."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Nokre seksjonar vart rekna med vassrett lengd. Terrenget dekkjer dei ikkje."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Rekna {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Celle {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Lengdene står i rekkjefølgja vassrett / skrå."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Helling {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Rekna med vassrett lengd"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Vassmengd {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Tap {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Vassrett {h} m, skrå {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Vassrett {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Seksjon {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Seksjonar ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Vassrett {h} m / Skrå {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Terrenget blir rekna ut - berre vassrett lengd blir vist."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Lengdene på kartet er vassrette."
+
+msgid "Terrain input"
+msgstr "Terrenginndata"
+
+msgid "Compare another terrain"
+msgstr "Samanlikn med anna terreng"
+
+msgid "Could not compare. Try again."
+msgstr "Kunne ikkje samanlikne. Prøv på nytt."
+
+msgid "Changed sections ({n})"
+msgstr "Endra strekningar ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Terrenget {name} blir lasta ned. Samanlikninga kjem når det er ferdig."
+
+msgid "Calculation level"
+msgstr "Berekningsnivå"
+
+msgid "Switch to this terrain"
+msgstr "Byt til dette terrenget"
+
+msgid "That terrain input is gone."
+msgstr "Den terrenginndataen finst ikkje lenger."
+
+msgid "Weakest nozzle flow"
+msgstr "Straum frå den svakaste dysa"
+
+msgid "Revert to {name}"
+msgstr "Gå tilbake til {name}"
+
+msgid "Slant length total"
+msgstr "Skrå lengd i alt"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Denne terrenginndataen har ingen flis-adresse. Sjekk innstillingane."
+
+msgid "Downloading took too long. Try again."
+msgstr "Nedlastinga tok for lang tid. Prøv på nytt."
+
+msgid "Terrain changed and recalculated"
+msgstr "Terrenget er endra og rekna om"
+
+msgid "Compare with"
+msgstr "Samanlikn med"
+
+msgid "No terrain was on"
+msgstr "Ingen terreng var på"
+
+msgid "Undo change"
+msgstr "Angre endringa"
+
+msgid "Try again"
+msgstr "Prøv på nytt"
+
+msgid "This map has no pipes to compare."
+msgstr "Dette kartet har ingen røyr å samanlikne."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Røyr terrenget ikkje dekkjer"
+
+msgid "No terrain is on."
+msgstr "Ingen terreng er på."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Kunne ikkje endre terrenget. Prøv på nytt."

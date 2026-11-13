@@ -56,6 +56,16 @@ class TestFunctionListFacility(unittest.TestCase):
         self.assertEqual(out['duplicate_names'], ['Env Coordinator'])
         self.assertIn('facility_name', out['note'])
 
+    def test_query_is_part_of_the_name_or_driver(self):
+        # 실사용 26-11-07~09: find.functions 에 query='VPD' 가 거절됐다 — 이름 조각으로 받는다.
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+        got = S.get_function_list(query='env coord')
+        self.assertEqual({'c1', 'c2'}, {r['function_id'] for r in got['functions']['custom']})
+        self.assertEqual(2, got['count'])
+        self.assertEqual(['c1', 'c2'], sorted(r['function_id'] for r in
+                                              S.get_function_list(query='ENV_COORDINATOR')['functions']['custom']))
+        self.assertEqual(0, S.get_function_list(query='없는이름')['count'])
+
 
 if __name__ == '__main__':
     unittest.main()

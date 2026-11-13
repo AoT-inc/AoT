@@ -61,6 +61,7 @@ WATCH_AREAS = [
         "GEO / 지도·시설·구획",
         (
             "aot/aot_flask/geo/",
+            "aot/space/",          # geo 에서 옮긴 공간 도메인(아키텍처 3단계·4c)
             "aot/aot_flask/routes_geo.py",
             "aot/aot_flask/routes_geo_iec.py",
             "aot/aot_flask/routes_geo_commissioning.py",

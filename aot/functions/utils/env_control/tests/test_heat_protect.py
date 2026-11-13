@@ -422,7 +422,7 @@ def test_option_ranges_cover_the_user_options():
 
 @pytest.mark.parametrize('T,RH', [(30.0, 60.0), (35.0, 40.0), (25.0, 90.0)])
 def test_wetbulb_uses_the_psychro_definition(T, RH):
-    from aot.functions.utils.env_control import psychro
+    from aot.utils import psychro
     w = psychro.humidity_ratio(psychro.vapor_pressure(T, RH))
     assert wetbulb_depression(T, RH) == pytest.approx(
         T - psychro.adiabatic_saturation_temperature(T, w))

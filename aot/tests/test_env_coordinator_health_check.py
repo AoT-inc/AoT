@@ -784,7 +784,7 @@ class TestSensorStatusSummary(unittest.TestCase):
     def setUpClass(cls):
         from collections import Counter
         from aot.functions.utils.env_control import log_channels as LC
-        from aot.functions.utils.env_control import sensor_status as SS
+        from aot.utils import sensor_status as SS
         src = _source(_SCRIPT)
         env = {'LC': LC, 'SS': SS, 'Counter': Counter,
                'STATUS_NAME': {c: n for n, c in SS.STATUS_CODES.items()},
@@ -913,8 +913,8 @@ class TestVentAzimuthCheck(unittest.TestCase):
 
     def _run(self, outdoor, shapes):
         from unittest import mock
-        import aot.aot_flask.geo.facility_integration as fi
-        import aot.aot_flask.geo.device_binding as db
+        import aot.space.facility_integration as fi
+        import aot.space.device_binding as db
         ns = _load_helpers('_check_vent_azimuth')
         integ = {'sensors_outdoor': [{'input_uuid': 'wx', 'measurement_type': m}
                                      for m in outdoor],

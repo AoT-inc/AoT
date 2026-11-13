@@ -13,7 +13,7 @@
 """
 import json
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 
 SCHEMA_VERSION = 1

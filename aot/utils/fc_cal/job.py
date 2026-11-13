@@ -5,8 +5,8 @@
 
 - **한 번에 한 대지씩**, 별도 스레드에서 돈다. 대지·변수마다 **시간 제한**(`Params.time_budget_s`, 기본 60 초 —
   넘기면 그 변수는 건너뛰고 이전 상태 유지).
-- **낮은 우선순위**: 리눅스에서는 스레드의 nice 를 올리고, 시스템 부하가 높으면(1 분 평균 부하 > 코어 수 × 0.8)
-  이번 점검을 건너뛰고 다음 시간에 다시 본다.
+- **낮은 우선순위**: 리눅스에서는 스레드의 nice 를 올리고, 자원 압박 단계가 '주의' 이상이면
+  (`utils.resource_pressure`) 이번 점검을 건너뛰고 다음 시간에 다시 본다. 연속 6 시간 미뤘으면 한 번은 돈다.
 - `HARDWARE_PROFILE=LOW`(파이)는 **축소 동작**: 창 30 일, 부트스트랩 없이 표준오차 기준(더 엄격한 문턱), 검증 시점 이틀 간격,
   이틀에 한 번.
 
@@ -25,7 +25,6 @@ logger = logging.getLogger('aot.fc_cal')
 
 DUE_HOUR = 3                    # 대지 현지 시각이 이 시 이후면 그날 점검 대상
 NICE_INCREMENT = 10
-LOAD_LIMIT_PER_CORE = 0.8
 _run_lock = threading.Lock()
 
 
@@ -59,20 +58,28 @@ def lower_priority():
     return False
 
 
-def busy():
-    """제어 루프가 바쁜가 — 1 분 평균 부하가 코어 수 × 0.8 을 넘으면 참."""
-    try:
-        return os.getloadavg()[0] > (os.cpu_count() or 1) * LOAD_LIMIT_PER_CORE
-    except (OSError, AttributeError):
-        return False
+#: 연속으로 미룰 수 있는 최대 시간(초) — 넘으면 바빠도 한 번은 돈다.
+MAX_DEFER_S = 6 * 3600
+
+
+def busy(job='fc_cal', max_defer_s=MAX_DEFER_S):
+    """이번 차례를 미룰까 — 자원 압박 단계가 '주의' 이상이면 참(`resource_pressure`).
+
+    예전에는 "1 분 평균 부하 > 코어 수 × 0.8" 을 여기서 따로 쟀다. 그 코어 수는
+    `os.cpu_count()` 라 도커의 CPU 한도를 몰랐고(호스트 코어로 나눠 늘 한가해 보임),
+    부하가 길게 이어지면 영영 미뤘다. 이제 판정은 압박 단계 하나가 하고(PSI·CPU 한도
+    대비 사용률·메모리·웹 응답, PSI 가 없으면 cgroup 인지 코어당 부하 0.8), 연속으로
+    `max_defer_s` 미뤘으면 한 번은 돈다.
+    """
+    from aot.utils import resource_pressure
+    return resource_pressure.should_defer(job, max_defer_s)
 
 
 def site_due(now, tz_name, last_run_at, low=False):
     """이 대지를 지금 점검할 차례인가 — 대지 현지 시각이 `DUE_HOUR` 이후이고, 마지막 점검이 어제 이전(저사양은 이틀 이상)."""
-    try:
-        from zoneinfo import ZoneInfo
-        tz = ZoneInfo(tz_name or 'UTC')
-    except Exception:                                       # noqa: BLE001
+    from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+    tz, _src = resolve_tz(tz_name or 'UTC')
+    if _src != SOURCE_EXPLICIT:
         tz = timezone.utc
     local = datetime.fromtimestamp(now, timezone.utc).astimezone(tz)
     if local.hour < DUE_HOUR:
@@ -100,6 +107,7 @@ def run_due(io=None, now=None, params=None, force=False, sleep_between=1.0, skip
         low = is_low_profile()
         p = params or params_for_profile(low)
         out = []
+        judged = False
         for sid in io.sites():
             try:
                 row = store.site_row(sid)
@@ -109,9 +117,13 @@ def run_due(io=None, now=None, params=None, force=False, sleep_between=1.0, skip
                     continue
                 if not force and not site_due(now, io.site_tz(sid), row.last_run_at if row else None, low):
                     continue
-                if skip_busy and busy():
-                    logger.info('[fc_cal] 시스템 부하가 높아 보정 점검을 다음 시간으로 미룸')
-                    break
+                # 바쁜지는 이번 실행의 첫 일감 앞에서 한 번만 본다. 대지마다 보면 (1) 이 점검
+                # 자신이 쓰는 CPU 로 남은 대지를 스스로 미루고 (2) 미룸 상한이 차서 한 대지를
+                # 돌린 뒤 다음 대지에서 다시 상한부터 세어, 대지 N 곳에 N×6시간이 걸린다.
+                if skip_busy and not judged:
+                    judged = True
+                    if busy():
+                        break                           # 미룬 까닭은 resource_pressure 가 남긴다
                 out.append(calibrate_site(sid, io, now=now, params=p))
             except Exception:                               # noqa: BLE001 — 한 대지의 오류가 다른 대지를 막지 않는다
                 logger.exception('[fc_cal] 대지 점검 실패: %s', sid)

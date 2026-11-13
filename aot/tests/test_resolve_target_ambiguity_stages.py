@@ -49,7 +49,7 @@ class TestAmbiguityAtEveryStage(unittest.TestCase):
             db.session.add(GeoMap(unique_id=uid, name=name))
 
         def shape(uid, geo, typ, name, geom, device_id=None):
-            db.session.add(GeoShape(unique_id=uid, geo_id=geo, type=typ, device_id=device_id,
+            db.session.add(bound_shape(unique_id=uid, geo_id=geo, type=typ, device_id=device_id,
                                     feature={'type': 'Feature', 'properties': {'name': name},
                                              'geometry': geom}))
 
@@ -109,7 +109,7 @@ class TestAmbiguityAtEveryStage(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
 
     @property
@@ -364,7 +364,7 @@ class TestAmbiguityAtEveryStage(unittest.TestCase):
     # ── get_local_time ──────────────────────────────────────────────────
     def test_local_time_answers_when_every_candidate_shares_a_timezone(self):
         import pytz
-        with mock.patch('aot.utils.device_tz.resolve_location_tz',
+        with mock.patch('aot.utils.timekit.tz_of',
                         return_value=pytz.timezone('Asia/Seoul')):
             out = self.S.get_local_time_tool(target_name='육묘장')
         self.assertEqual(out['status'], 'success', out)
@@ -376,7 +376,7 @@ class TestAmbiguityAtEveryStage(unittest.TestCase):
 
         def tz_for(tid):
             return pytz.timezone('Asia/Tokyo' if tid == 'site-b' else 'Asia/Seoul')
-        with mock.patch('aot.utils.device_tz.resolve_location_tz', side_effect=tz_for):
+        with mock.patch('aot.utils.timekit.tz_of', side_effect=tz_for):
             out = self.S.get_local_time_tool(target_name='육묘장')
         self.assertEqual(out['status'], 'needs_disambiguation', out)
         self.assertEqual(sorted(c['timezone'] for c in out['candidates']),
@@ -462,3 +462,4 @@ class TestAmbiguityAtEveryStage(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+from aot.tests.geo._legacy_marker import bound_shape

@@ -53,7 +53,7 @@ def scheduling_stubs(monkeypatch):
     output = SimpleNamespace(unique_id='dddddddd-0000-0000-0000-000000000000', name='밸브1')
     monkeypatch.setattr('aot.services.resolvers.device_resolver.resolve_output',
                         lambda *a, **k: SimpleNamespace(row=output, error=None, reason=None))
-    monkeypatch.setattr('aot.utils.device_tz.resolve_location_tz',
+    monkeypatch.setattr('aot.utils.timekit.tz_of',
                         lambda *_a, **_k: pytz.timezone('Asia/Seoul'))
 
     def _fake_propose(**kwargs):
@@ -198,7 +198,8 @@ class ControlFlowTest(_AppFixture):
         first = self._call('control', {'op': 'device_set', 'target': self.names[0],
                                        'state': 'on', 'duration_seconds': 30})
         self.assertEqual('pending_approval', first.get('status'), first)
-        self.assertIn('duration seconds 30', first['say']['ask'])        # 되읽기에 가동 시간이 든다
+        self.assertIn('30초 동안 켜기', first['say']['ask'])        # 되읽기에 가동 시간이 든다(내부 인자 이름 없이)
+        self.assertNotIn('duration', first['say']['ask'])
         self.assertEqual([], _Daemon.calls)                       # 요청은 승인이 아니다
         done = self._call('control', {'op': 'confirm', 'target': first['confirmation_id'],
                                       'decision': 'approve'})
@@ -218,12 +219,20 @@ class ControlFlowTest(_AppFixture):
         before = self._pending_count()
         for extra in ({'state': 'off', 'duration_seconds': 30},
                       {'state': 'on', 'duration_seconds': 0},
-                      {'state': 'on', 'duration_minutes': 0.001},
-                      {'state': 'on', 'duration_seconds': 30, 'duration_minutes': 1}):
+                      {'state': 'on', 'duration_minutes': 0.001}):
             got = self._call('control', dict(op='device_set', target=self.names[0], **extra))
             self.assertEqual('refused', got.get('status'), (extra, got))
             self.assertIn(got.get('reason_code'), ('bad_run_time', 'no_timed_run'), got)
             self.assertIn('checked before any permission or approval', got['message'])
+        self.assertEqual(before, self._pending_count())
+        self.assertEqual([], _Daemon.calls)
+
+    def test_two_durations_in_one_call_are_refused_not_guessed(self):
+        """길이는 `duration` 하나다(2026-11-03 재설계 PR 2) — 옛 초·분 이름을 함께 주면 둘 중 하나를 고르지 않고 거절한다."""
+        before = self._pending_count()
+        got = self._call('control', dict(op='device_set', target=self.names[0], state='on',
+                                         duration_seconds=30, duration_minutes=1))
+        self.assertEqual('unknown_argument', got.get('reason_code'), got)
         self.assertEqual(before, self._pending_count())
         self.assertEqual([], _Daemon.calls)
 
@@ -269,7 +278,7 @@ class ControlFlowTest(_AppFixture):
         self.assertEqual(3, len(first['confirmation_ids']))
         for n in self.names:                              # 서버가 푼 대상이 되읽기에 모두 들어 있다
             self.assertIn(n, first['say']['ask'])
-        self.assertIn('please approve', first['say']['ask'])
+        self.assertTrue(first['say']['ask'].endswith('맞으면 승인해 주세요.'), first['say']['ask'])
         self.assertEqual(3, self._pending_count())
         self.assertEqual([], _Daemon.calls)               # 요청은 승인이 아니다
         self.assertIn("confirmation_ids=", first['next']['after_user'])
@@ -327,3 +336,37 @@ class ControlFlowTest(_AppFixture):
                                      'target': self.names[:2],
                                      '_confirmation_id': 'x'})
         self.assertEqual('single_target_only', got.get('reason_code'), got)
+
+    # ── 값 출력(PWM): 응답은 값이지 가동 시간이 아니다 (2026-11-12) ──────────────
+
+    def test_set_value_reports_the_value_not_a_run_time(self):
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+        pwm = self._output('ctl2 인버터', otype='python_pwm')
+        got = S.operate_device_tool(device_id=pwm.unique_id, state='set_value', value=37)
+        self.assertEqual('success', got.get('status'), got)
+        self.assertEqual(37.0, got.get('value'), got)
+        self.assertNotIn('resolved_duration', got)     # "37초" 로 읽히던 칸
+        self.assertEqual({'state': 'on', 'type': 'pwm', 'amount': 37.0}, {
+            k: _Daemon.calls[-1][k] for k in ('state', 'type', 'amount')})
+
+    def test_timed_on_still_reports_its_run_time(self):
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+        got = S.operate_device_tool(device_id=self.uids[0], state='on', duration_seconds=30)
+        self.assertEqual(30.0, got.get('resolved_duration'), got)
+        self.assertNotIn('value', got)
+
+
+def test_scheduled_set_value_hands_over_the_value_not_a_run_time():
+    """값 예약(control_output set_value)은 value 를 출력값으로 넘긴다 — 가동 시간으로 넘기면 "37초 켜기" 가 된다."""
+    from aot.ai.services.ai_action_service import AIActionService
+    seen = {}
+
+    def fake(cls, device_id, state, **kw):
+        seen.update(kw, state=state)
+        return {'status': 'success'}
+
+    with mock.patch('aot.tools.aot_data_tool_service.AoTDataToolService.operate_device_tool',
+                    classmethod(fake)):
+        AIActionService.execute_action(
+            'control_output', 'out-1', {'state': 'set_value', 'value': 37.0}, _approved=True)
+    assert seen == {'state': 'set_value', 'value': 37.0}, seen

@@ -261,7 +261,7 @@
           {{form_settings_general.twin_enabled.label(class_='aot-settings-label aot-toggle-label')}}
           <div class="aot-settings-control">
             <label class="btn-toggle">
-              <input type="checkbox" class="btn-toggle-input" id="twin_enabled" name="twin_enabled" title="{{_('Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program and must be installed and running.')}}"{% if twin.enabled and twin.supported %} checked{% endif %}{% if not twin.supported %} disabled{% endif %}>
+              <input type="checkbox" class="btn-toggle-input" id="twin_enabled" name="twin_enabled" title="{{_('Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program; it waits ready and starts working within a minute after you turn this on.')}}"{% if twin.enabled and twin.supported %} checked{% endif %}{% if not twin.supported %} disabled{% endif %}>
               <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
             </label>
           </div>
@@ -270,13 +270,15 @@
           {% endif %}
         </div>
 
+        {% include "settings/_twin_state.html" %}
+
         {% if twin.enabled and twin.supported %}
         <div class="aot-settings-row" id="twin-settings-link">
           <label class="aot-settings-label">{{_('Digital Twin Settings')}}</label>
           <div class="aot-settings-control">
             <a class="btn aot-pill-btn aot-pill-btn-secondary" href="{{ url_for('routes_settings.settings_twin') }}">{{_('Open')}}</a>
           </div>
-          <div class="aot-settings-sub">{{_('Run times, low-spec option, forecast inputs and the site table are on the Digital Twin settings page.')}}</div>
+          <div class="aot-settings-sub">{{_('Run times, forecast inputs and the site table are on the Digital Twin settings page.')}}</div>
         </div>
         {% endif %}
 

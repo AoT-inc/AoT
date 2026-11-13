@@ -32,6 +32,7 @@ import math
 import threading
 import time
 from datetime import datetime, timedelta
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -320,7 +321,7 @@ def _load_rows(days, transport, max_rows):
     from aot.config import AOT_DB_PATH
     from aot.databases.utils import session_scope
 
-    since = datetime.utcnow() - timedelta(days=days)
+    since = naive_utc(utc_now()) - timedelta(days=days)
     cols = (M.timestamp, M.agent_id, M.tool_name, M.permission, M.result_summary,
             M.duration_ms, M.session_key, M.transport, M.via_drawer,
             M.response_tokens, M.response_bytes, M.truncated, M.call_state,
@@ -358,7 +359,7 @@ def compute_quality(days=7, transport=None, max_rows=DEFAULT_MAX_ROWS):
         'max_rows': max_rows,
         'bundle_gap_seconds': BUNDLE_GAP_SECONDS,
         'fallback_session_gap_seconds': FALLBACK_SESSION_GAP_SECONDS,
-        'generated_at': datetime.utcnow().isoformat() + 'Z',
+        'generated_at': naive_utc(utc_now()).isoformat() + 'Z',
     })
     with _cache_lock:
         _cache[key] = (now + CACHE_SECONDS, result)

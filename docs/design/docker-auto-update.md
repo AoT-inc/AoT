@@ -101,7 +101,7 @@ done | failed | failed_rolled_back`.
 5. **태그 교체** — `docker/.env` 에 `AOT_IMAGE_TAG` 를 쓰고
    `AOT_IMAGE_TAG_PREV` 를 남긴다. 되돌아갈 곳의 유일한 기록이라 프로세스가
    죽어도 살아남아야 한다.
-6. **재생성** — 데몬 먼저 graceful stop → `up -d aot-app aot_daemon aot_mcp`.
+6. **재생성** — 데몬 먼저 graceful stop → `up -d aot-app aot_daemon aot_mcp aot_twin`.
 7. **헬스 게이트** — `/health` 가 **목표 버전 + 목표 스키마 리비전**을 보고할
    때까지 최대 `AOT_HEALTH_TIMEOUT`(기본 300초). "200 응답"만으로는 안 된다 —
    롤백 중인 옛 컨테이너도, 마이그레이션이 실패한 새 컨테이너도 200 을 준다.

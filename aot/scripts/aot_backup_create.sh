@@ -41,6 +41,17 @@ if ! rsync -avq --exclude=cameras --exclude=env --exclude=.upgrade \
 fi
 printf "Done.\n"
 
+# rsync copied aot.db and aot.db-wal at different moments while the app was
+# writing, so that pair can be inconsistent. Replace the databases with
+# consistent copies taken through the SQLite backup API.
+printf "Taking consistent database copies..."
+if ! "${INSTALL_DIRECTORY}"/AoT/env/bin/python3 "${INSTALL_DIRECTORY}"/AoT/aot/scripts/copy_sqlite_dbs.py \
+        "${INSTALL_DIRECTORY}"/AoT/aot/databases "${TMP_DIR}"/AoT/aot/databases ; then
+    printf "Failed: Error while copying databases for the backup.\n"
+    error_found
+fi
+printf "Done.\n"
+
 printf "Moving %s/AoT to %s..." "${TMP_DIR}" "${BACKUP_DIR}"
 if ! mv "${TMP_DIR}"/AoT "${BACKUP_DIR}" ; then
     printf "Failed: Error while trying to move %s/AoT to %s.\n" "${TMP_DIR}" "${BACKUP_DIR}"

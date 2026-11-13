@@ -32558,3 +32558,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Horizontaal / schuin"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} leidingen horizontaal berekend"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Horizontaal"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Leidinglengte (hele gebied)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Leidinglengte"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Het terrein wordt berekend. De schuine lengte verschijnt na afloop."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Sommige secties zijn met de horizontale lengte berekend. Het terrein dekt ze niet."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Berekend {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Cel {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Lengtes staan in de volgorde horizontaal / schuin."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Helling {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Berekend met horizontale lengte"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Debiet {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Verlies {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Horizontaal {h} m, schuin {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Horizontaal {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Sectie {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Secties ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Horizontaal {h} m / Schuin {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Het terrein wordt berekend - alleen de horizontale lengte wordt getoond."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Lengtes op de kaart zijn horizontaal."
+
+msgid "Terrain input"
+msgstr "Terreininvoer"
+
+msgid "Compare another terrain"
+msgstr "Ander terrein vergelijken"
+
+msgid "Could not compare. Try again."
+msgstr "Vergelijken is mislukt. Probeer opnieuw."
+
+msgid "Changed sections ({n})"
+msgstr "Veranderende trajecten ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Terrein {name} wordt gedownload. De vergelijking verschijnt zodra het klaar is."
+
+msgid "Calculation level"
+msgstr "Rekenniveau"
+
+msgid "Switch to this terrain"
+msgstr "Naar dit terrein overschakelen"
+
+msgid "That terrain input is gone."
+msgstr "Die terreininvoer bestaat niet meer."
+
+msgid "Weakest nozzle flow"
+msgstr "Debiet van de zwakste spuitkop"
+
+msgid "Revert to {name}"
+msgstr "Terug naar {name}"
+
+msgid "Slant length total"
+msgstr "Totale schuine lengte"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Deze terreininvoer heeft geen tegeladres. Controleer de instellingen."
+
+msgid "Downloading took too long. Try again."
+msgstr "Downloaden duurde te lang. Probeer opnieuw."
+
+msgid "Terrain changed and recalculated"
+msgstr "Terrein gewijzigd en opnieuw berekend"
+
+msgid "Compare with"
+msgstr "Vergelijken met"
+
+msgid "No terrain was on"
+msgstr "Er stond geen terrein aan"
+
+msgid "Undo change"
+msgstr "Wijziging ongedaan maken"
+
+msgid "Try again"
+msgstr "Opnieuw proberen"
+
+msgid "This map has no pipes to compare."
+msgstr "Deze kaart heeft geen leidingen om te vergelijken."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Leidingen die het terrein niet dekt"
+
+msgid "No terrain is on."
+msgstr "Geen terrein actief."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Het terrein kon niet worden gewijzigd. Probeer opnieuw."

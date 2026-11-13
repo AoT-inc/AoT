@@ -60,10 +60,10 @@ def test_silent_devices_are_an_observation_in_scope():
             mock.patch('aot.services.resolvers.device_resolver.ai_excluded',
                        return_value=False), \
             mock.patch.object(S, '_last_seen_seconds', side_effect=last_seen), \
-            mock.patch('aot.aot_flask.geo.device_membership.PlaceIndex',
+            mock.patch('aot.space.device_membership.PlaceIndex',
                        side_effect=RuntimeError('no db')):
         allscope = S._silent_devices_in_scope('system', None)
-        with mock.patch('aot.aot_flask.geo.device_membership.place_members',
+        with mock.patch('aot.space.device_membership.place_members',
                         return_value={'a'}):
             zone = S._silent_devices_in_scope('zone', 'z1')
     assert allscope['count'] == 2

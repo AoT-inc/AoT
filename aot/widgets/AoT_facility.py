@@ -95,7 +95,7 @@ def widget_variables(widget_unique_id, widget_options):
     if facility:
         # 장치 참조는 원장 기준으로 — 레거시 컬럼을 그대로 내보내면 제어는
         # "빈 슬롯" 인데 화면은 끊긴 장치 이름을 말한다(2026-09-25).
-        from aot.aot_flask.geo.device_binding import resolved_refs
+        from aot.space.device_binding import resolved_refs
         _fittings, _actuators = resolved_refs(facility)
         facility_data = {
             'unique_id': facility.unique_id,
@@ -109,6 +109,7 @@ def widget_variables(widget_unique_id, widget_options):
             'bays': facility.bays,
             'computed': facility.computed,
             'fittings': _fittings,
+            'layout': facility.layout,    # 시설 모형(F2) — 있으면 3D 가 모형 메시로 그린다
         }
 
     all_facilities = GeoFacility.query.order_by(GeoFacility.updated_at.desc()).all()
@@ -159,7 +160,7 @@ def widget_variables(widget_unique_id, widget_options):
     double_layer = False
     if facility and facility.envelope:
         try:
-            from aot.aot_flask.geo.facility_calc import _normalize_envelope
+            from aot.space.facility_calc import _normalize_envelope
             double_layer = _normalize_envelope(facility.envelope).get('layer_count') == 2
         except Exception:
             double_layer = False
@@ -201,24 +202,15 @@ WIDGET_HEAD_HTML = """\
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-facility-widget.css') }}">
 {% set _dummy = dashboard_dict.update({"css_facility_widget": 1}) %}
 {% endif %}
-<script>
-if (!window._aotThreeLoaded) {
-  window._aotThreeLoaded = true;
-  document.write('<script src="/static/js/widgets/AoT_facility/three.min.js?v=2"><\\/script>');
-}
-</script>
-<script src="/static/js/widgets/AoT_facility/OrbitControls.js?v=1"></script>
-<script src="/static/js/widgets/AoT_facility/three-mesh-bvh.js?v=1"></script>
-<script src="/static/js/widgets/AoT_facility/GLTFLoader.js?v=1"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"></script>
-<script>
-if (!window._aotFacility3DLoaded) {
-  window._aotFacility3DLoaded = true;
-  document.write('<script src="{{ asset(\'facility-3d\') }}"><\\/script>');
-}
-</script>
+{#- 3D 스택(three.min·OrbitControls·three-mesh-bvh·GLTFLoader·facility-3d, 약 1.2MB)은 아래 위젯 번들이
+     평가될 때 비동기로 넣는다(aot-facility-widget.js _loadStack, 넣은 순서대로 실행). 예전에는 여기서
+     document.write·동기 <script> 로 넣어 파서를 멈춰 세웠고 첫 화면(LCP)이 이 다운로드·파싱을 기다렸다.
+     지도 위젯의 AoTFacility3DLoader 와 같은 URL 을 쓰고, 이미 들어간 파일은 다시 넣지 않는다.
+     gsap 은 카메라 이동 애니메이션에만 쓰고 없으면 즉시 이동으로 대신한다 — 외부 CDN 이라 async 로 둔다
+     (인터넷이 없는 현장에서 동기 로드는 연결 시도 동안 화면을 멈춘다). -#}
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"></script>
 <!-- 위젯 비가드 스크립트 9개 → 단일 번들(concat+minify, static/js/tools/bundle.mjs: aot-facility-widget).
-     three.min/aot-facility-3d 가드 로드는 위에 그대로 유지(AoT_map 위젯과 공유 가드). 소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
+     소스 수정 시 npm run build:bundles 후 위젯 재생성. -->
 <script src="{{ asset('aot-facility-widget') }}"></script>
 {% if "css_sensor_label" not in dashboard_dict %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}">

@@ -33,12 +33,6 @@ from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.conditional import save_conditional_code
 from aot.utils.actions import parse_action_information
 from aot.utils.functions import parse_function_information
-from aot.utils.device_tz import apply_system_tz_fallback
-from aot.utils.device_tz import default_device_coords
-from aot.aot_flask.utils.utils_map_config import (
-    ensure_map_config,
-    delete_map_config,
-)
 from aot.aot_flask.utils.utils_misc import determine_controller_type
 from aot.services.duplication import clone_function_entry, unique_copy_name
 from aot.databases.models.tab import Tab
@@ -225,15 +219,7 @@ status_dict = {
 }
 return status_dict'''
 
-            # Auto-assign map center coordinates from Misc
-            try:
-                misc = Misc.query.first()
-                if misc:
-                    new_func.latitude, new_func.longitude = default_device_coords(misc)
-                    apply_system_tz_fallback(new_func, misc.timezone)
-            except Exception:
-                pass
-
+            # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
             if not messages["error"]:
                 new_func.save()
                 new_function_id = new_func.unique_id
@@ -262,16 +248,7 @@ return status_dict'''
                 if _default_tab_id:
                     new_func.tab_id = _default_tab_id
 
-            # Auto-assign map center coordinates from Misc.
-            # timezone 컬럼은 device_tz_listeners before_insert 이벤트가 자동 처리.
-            # 좌표가 없는 경우(Misc.map_latitude 미설정)엔 Misc.timezone을 직접 기록.
-            try:
-                misc = Misc.query.first()
-                if misc:
-                    new_func.latitude, new_func.longitude = default_device_coords(misc)
-                    apply_system_tz_fallback(new_func, misc.timezone)
-            except Exception:
-                pass
+            # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
 
             new_func.save()
             new_function_id = new_func.unique_id
@@ -292,6 +269,7 @@ return status_dict'''
                     new_measurement.save()
 
         elif function_name in ['trigger_edge',
+                               'trigger_camera_event',
                                'trigger_output',
                                'trigger_output_pwm',
                                'trigger_timer_daily_time_point',
@@ -304,6 +282,11 @@ return status_dict'''
             new_func.name = '{}'.format(FUNCTION_INFO[function_name]['name'])
             new_func.trigger_type = function_name
             new_func.position_y = _get_next_position_y()
+
+            if function_name == 'trigger_camera_event':
+                # 최소 재발화 간격(초) 기본 60. 종류는 비어 있다 — 고르기 전에는 켤 수 없다(설계 §5.4)
+                new_func.period = 60
+                new_func.event_kinds = []
 
             if function_name == 'trigger_sequence':
                 # time_offset_minutes 는 트리거 타입마다 뜻이 다른 공유
@@ -328,15 +311,7 @@ return status_dict'''
                 if _default_tab_id:
                     new_func.tab_id = _default_tab_id
 
-            # Auto-assign map center coordinates from Misc
-            try:
-                misc = Misc.query.first()
-                if misc:
-                    new_func.latitude, new_func.longitude = default_device_coords(misc)
-                    apply_system_tz_fallback(new_func, misc.timezone)
-            except Exception:
-                pass
-
+            # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
             if not messages["error"]:
                 new_func.save()
                 new_function_id = new_func.unique_id
@@ -355,15 +330,7 @@ return status_dict'''
                 if _default_tab_id:
                     new_func.tab_id = _default_tab_id
 
-            # Auto-assign map center coordinates from Misc
-            try:
-                misc = Misc.query.first()
-                if misc:
-                    new_func.latitude, new_func.longitude = default_device_coords(misc)
-                    apply_system_tz_fallback(new_func, misc.timezone)
-            except Exception:
-                pass
-
+            # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
             if not messages["error"]:
                 new_func.save()
                 new_function_id = new_func.unique_id
@@ -388,15 +355,7 @@ return status_dict'''
                 messages["error"], dict_controllers, device=function_name, use_defaults=True)
             new_func.custom_options = custom_options
 
-            # Auto-assign map center coordinates from Misc
-            try:
-                misc = Misc.query.first()
-                if misc:
-                    new_func.latitude, new_func.longitude = default_device_coords(misc)
-                    apply_system_tz_fallback(new_func, misc.timezone)
-            except Exception:
-                pass
-
+            # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
             # [P1] 전용 지도 자동 생성 폐지 — 배치 시 지도에 속한다(원칙 2·4).
 
             new_func.unique_id = set_uuid()
@@ -512,18 +471,7 @@ def update_location_marker(function_id, request_form):
     # [P1] 좌표 저장은 '지도 배치'가 아니다 — 지도에 놓는 것은
     # /api/geo/device/location(place_device)이고, 여기서 지도를 만들 이유가
     # 없다. 자동 생성 폐지(원칙 4).
-    lat_val = request_form.get('latitude')
-    lng_val = request_form.get('longitude')
-    if lat_val not in [None, ''] and lng_val not in [None, '']:
-        try:
-            func_mod.latitude = float(lat_val)
-            func_mod.longitude = float(lng_val)
-        except Exception:
-            pass
-
-    loc_src = request_form.get('location_source')
-    if loc_src not in [None, '']:
-        func_mod.location_source = loc_src
+    # [L2] 좌표·위치 출처는 저장하지 않는다 — 배치(지도)가 정본.
 
     icon_val = request_form.get('marker_icon')
     color_val = request_form.get('marker_color')
@@ -599,19 +547,7 @@ def function_mod(form):
 
         func_mod.log_level_debug = form.log_level_debug.data
 
-        lat_val = getattr(form, 'latitude', None).data if hasattr(form, 'latitude') else request.form.get('latitude')
-        lng_val = getattr(form, 'longitude', None).data if hasattr(form, 'longitude') else request.form.get('longitude')
-        if lat_val not in [None, ''] and lng_val not in [None, '']:
-            try:
-                func_mod.latitude = float(lat_val)
-                func_mod.longitude = float(lng_val)
-            except Exception:
-                pass  # keep previous coords on parse failure
-        # if 둘 중 하나라도 비어 있으면 기존 값을 유지하여 덮어쓰지 않음
-
-        loc_src = getattr(form, 'location_source', None).data if hasattr(form, 'location_source') else request.form.get('location_source')
-        if loc_src not in [None, '']:
-            func_mod.location_source = loc_src
+        # [L2] 좌표·위치 출처는 저장하지 않는다 — 배치(지도)가 정본.
 
         icon_val = getattr(form, 'marker_icon', None).data if hasattr(form, 'marker_icon') else request.form.get('marker_icon')
         color_val = getattr(form, 'marker_color', None).data if hasattr(form, 'marker_color') else request.form.get('marker_color')
@@ -684,7 +620,7 @@ def function_del(function_id):
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
         # 정리하지 않아 고아 도형을 만들었다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(function_id)
         delete_entry_with_id(Function, function_id, flash_message=False)
 

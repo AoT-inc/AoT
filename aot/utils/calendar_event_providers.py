@@ -16,6 +16,7 @@ this registry are both designed so adding a new source later is additive
 """
 import logging
 from datetime import datetime, timezone
+from aot.utils.timekit import naive_utc, parse_utc
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def _parse_range_bound(value):
     if not value:
         return None
     try:
-        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        dt = naive_utc(parse_utc(value))
     except Exception:
         return None
     if dt.tzinfo is not None:
@@ -105,7 +106,7 @@ def provide_schedule_events(start=None, end=None, limit=500, category=None):
     """
     from aot.databases.models.scheduler import SchedulerJobMeta
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    from aot.utils.time_utils import serialize_ts
+    from aot.utils.timekit import iso_at, FARM
 
     start_dt = _parse_range_bound(start)
     end_dt = _parse_range_bound(end)
@@ -142,13 +143,13 @@ def provide_schedule_events(start=None, end=None, limit=500, category=None):
 
         end_iso = None
         if row.end_time is not None:
-            end_iso = serialize_ts(row.end_time)
+            end_iso = iso_at(row.end_time, FARM)
 
         events.append({
             'id': f"schedule-{row.unique_id}",
             'jobId': row.id,
             'title': title,
-            'start': serialize_ts(row.schedule_time),
+            'start': iso_at(row.schedule_time, FARM),
             'end': end_iso,
             'allDay': False,
             'sourceType': 'schedule',
@@ -195,7 +196,7 @@ def provide_notice_events(start=None, end=None, limit=500, category=None):
     곧 "언제부터 사람들이 보는가" 이므로 달력에서 의미 있는 지점은 그쪽이다.
     """
     from aot.databases.models.notice import NoticePost
-    from aot.utils.time_utils import serialize_ts
+    from aot.utils.timekit import iso_at, FARM
     from sqlalchemy import func
 
     # `category` 는 버킷 필터(ai|user|device|note|notice)다. 다른 버킷을
@@ -225,8 +226,8 @@ def provide_notice_events(start=None, end=None, limit=500, category=None):
             'id': 'notice-%s' % row.unique_id,
             'jobId': None,
             'title': row.title or '',
-            'start': serialize_ts(at),
-            'end': serialize_ts(row.expire_at) if row.expire_at else None,
+            'start': iso_at(at, FARM),
+            'end': iso_at(row.expire_at, FARM) if row.expire_at else None,
             # 공지는 시각보다 "그날 걸려 있다" 가 맞다 — 종일로 둔다.
             'allDay': True,
             'sourceType': 'notice',
@@ -257,7 +258,7 @@ def provide_note_events(start=None, end=None, limit=500, category=None):
     'system_generated'`)도 뺀다 — AI 요약·로그가 사람 글을 묻는다.
     """
     from aot.databases.models import Notes
-    from aot.utils.time_utils import serialize_ts
+    from aot.utils.timekit import iso_at, FARM
 
     # `category` 는 버킷 필터(ai|user|device|note|notice)다. 다른 버킷을
     # 요구하면 이 소스는 해당 없음이다 — 무시하면 "사용자 일정만" 을 골라도
@@ -289,7 +290,7 @@ def provide_note_events(start=None, end=None, limit=500, category=None):
             'id': 'note-%s' % row.unique_id,
             'jobId': None,
             'title': title[:120],
-            'start': serialize_ts(row.date_time),
+            'start': iso_at(row.date_time, FARM),
             'end': None,
             'allDay': True,
             'sourceType': 'note',
@@ -361,8 +362,8 @@ def provide_plot_stage_events(start=None, end=None, limit=500, category=None):
     from sqlalchemy import or_
 
     from aot.databases.models import GeoPlot
-    from aot.aot_flask.geo import device_membership
-    from aot.aot_flask.geo.plot_context import (
+    from aot.space import device_membership
+    from aot.space.plot_context import (
         geometry_of, program_brief, stage_schedule, stage_schedule_view,
     )
 
@@ -489,8 +490,8 @@ def plot_stage_buckets():
     from flask_babel import gettext
 
     from aot.databases.models import GeoPlot
-    from aot.aot_flask.geo import device_membership
-    from aot.aot_flask.geo.plot_context import geometry_of, _shape_name
+    from aot.space import device_membership
+    from aot.space.plot_context import geometry_of, _shape_name
 
     plots = GeoPlot.query.filter(GeoPlot.program_uuid.isnot(None)).all()
 

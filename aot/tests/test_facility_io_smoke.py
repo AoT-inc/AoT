@@ -18,25 +18,25 @@ class TestFacilityIOImport(unittest.TestCase):
     """FacilityManager class structure verification."""
 
     def test_import_facility_manager(self):
-        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.space.facility_io import FacilityManager
         self.assertTrue(callable(FacilityManager))
 
     def test_facility_manager_has_crud_methods(self):
-        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.space.facility_io import FacilityManager
         for method_name in ['list_facilities', 'get_facility',
                             'save_facility', 'delete_facility', '_to_dict']:
             self.assertTrue(hasattr(FacilityManager, method_name),
                             f"FacilityManager missing {method_name}")
 
     def test_save_signature(self):
-        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.space.facility_io import FacilityManager
         sig = inspect.signature(FacilityManager.save_facility)
         params = list(sig.parameters.keys())
         self.assertIn('data', params)
         self.assertIn('user_id', params)
 
     def test_delete_requires_confirm_name(self):
-        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.space.facility_io import FacilityManager
         sig = inspect.signature(FacilityManager.delete_facility)
         params = list(sig.parameters.keys())
         self.assertIn('confirm_name', params,
@@ -51,11 +51,11 @@ class TestGeoModuleExports(unittest.TestCase):
 
 class TestFacilityCalcModule(unittest.TestCase):
     def test_compute_capacity_exists(self):
-        from aot.aot_flask.geo.facility_calc import compute_capacity
+        from aot.space.facility_calc import compute_capacity
         self.assertTrue(callable(compute_capacity))
 
     def test_materials_roster(self):
-        from aot.aot_flask.geo.facility_calc import MATERIALS
+        from aot.space.facility_calc import MATERIALS
         # Named rather than counted: a bare length said nothing about which
         # material went missing, and adding one is a deliberate edit here.
         # Glazing (light gets through) + opaque walls, added 2026-08-12.
@@ -68,7 +68,7 @@ class TestFacilityCalcModule(unittest.TestCase):
         self.assertEqual(set(MATERIALS), expected)
 
     def test_every_material_is_well_formed(self):
-        from aot.aot_flask.geo.facility_calc import MATERIALS
+        from aot.space.facility_calc import MATERIALS
         for key, m in MATERIALS.items():
             self.assertGreater(m['u'], 0, '%s has no U-value' % key)
             self.assertGreaterEqual(m['transmittance'], 0.0, key)

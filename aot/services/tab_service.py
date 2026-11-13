@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy import and_
 from flask import current_app
 
-from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements, GeoProgram
+from aot.databases.models import Tab, Input, Output, Function, Widget, Trigger, Conditional, PID, CustomController, Camera, CameraDriver, CameraEvent, InputChannel, OutputChannel, FunctionChannel, Actions, ConditionalConditions, DeviceMeasurements, GeoProgram
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.services.duplication import (
@@ -239,7 +239,8 @@ class TabService:
         지우므로 밖으로 끊어지는 참조가 없고, 대시보드 탭의 위젯은 아무도
         가리키지 않는다.
         """
-        model = {'input': Input, 'output': Output}.get(page_type)
+        from aot.space.device_kind import models_for
+        model = models_for(('input', 'output')).get(page_type)
         if model is None:
             return None
 
@@ -364,7 +365,7 @@ class TabService:
                 # 내장·외부 판정, target_defs/resource_defs 정규화, 버전 초기화
                 # 같은 프로그램 고유 규칙이 거기 있다. 여기서 컬럼을 직접 베끼면
                 # 그 규칙을 다시 구현하게 되고 언젠가 갈린다.
-                from aot.aot_flask.geo import program_io
+                from aot.space import program_io
 
                 entries = GeoProgram.query.filter_by(tab_id=source_tab_id).all()
                 cloned = 0
@@ -520,6 +521,12 @@ class TabService:
             # 정리(find_orphaned_entries/cleanup_orphaned_entries, TABLE_MAP
             # 에 'program' 등록됨)가 기본 탭으로 재배정한다.
 
+            # 카메라는 페이지 종류와 무관하게 어느 탭에든 속할 수 있다(Camera.tab_id, 설계 §5.5).
+            # SQLite 는 FK 연쇄 삭제가 꺼져 있어 DB 에 맡기면 카메라가 없는 탭을 가리킨 채 남고,
+            # 그 순간 스코프 판정이 '미지정 = 전원 공개'가 된다(삭제가 곧 부여 해제). 앱 경로로 지운다.
+            for cam in Camera.query.filter_by(tab_id=tab_id).all():
+                TabService._delete_camera_entry(cam.unique_id)
+
             # 모든 자식 장치 삭제 성공 → 탭 삭제
             tab.delete()
             db.session.commit()
@@ -587,8 +594,6 @@ class TabService:
         if not input_dev:
             return
         
-        map_config_id = input_dev.map_config_id
-        
         # Deactivate if active
         if input_dev.is_activated:
             messages = {"success": [], "info": [], "warning": [], "error": []}
@@ -613,7 +618,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
         # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
         # 이 게이트웨이를 지나간다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(input_id)
         delete_entry_with_id(Input, input_id, flash_message=False)
 
@@ -625,6 +630,15 @@ class TabService:
         delete_python_file('input', input_id)
     
     @staticmethod
+    def _delete_camera_entry(camera_id: str):
+        """카메라 삭제: 스트림 정지 → 이벤트·드라이버 행 → 카메라 (utils_camera.camera_delete 와 같은 순서)."""
+        from aot.aot_flask.utils.utils_camera import _stop_stream
+        CameraEvent.query.filter_by(camera_id=camera_id).delete()
+        CameraDriver.query.filter_by(camera_id=camera_id).delete()
+        Camera.query.filter_by(unique_id=camera_id).delete()
+        _stop_stream(camera_id)
+
+    @staticmethod
     def _delete_output_entry(output_id: str):
         """Delete an Output entry with proper cleanup (channels, measurements, etc.)"""
         from aot.aot_flask.utils.utils_output import manipulate_output
@@ -632,8 +646,6 @@ class TabService:
         output_dev = Output.query.filter_by(unique_id=output_id).first()
         if not output_dev:
             return
-        
-        map_config_id = output_dev.map_config_id
         
         # Delete DeviceMeasurements
         measurements = DeviceMeasurements.query.filter_by(device_id=output_id).all()
@@ -649,7 +661,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
         # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
         # 이 게이트웨이를 지나간다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(output_id)
         delete_entry_with_id(Output, output_id, flash_message=False)
 
@@ -695,7 +707,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
         # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(trigger_id)
         delete_entry_with_id(Trigger, trigger_id, flash_message=False)
     
@@ -726,7 +738,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
         # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(conditional_id)
         delete_entry_with_id(Conditional, conditional_id, flash_message=False)
         
@@ -755,7 +767,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
         # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(pid_id)
         delete_entry_with_id(PID, pid_id, flash_message=False)
     
@@ -767,8 +779,6 @@ class TabService:
         controller = CustomController.query.filter_by(unique_id=controller_id).first()
         if not controller:
             return
-        
-        map_config_id = controller.map_config_id
         
         # Deactivate if active
         if controller.is_activated:
@@ -797,7 +807,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
         # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(controller_id)
         delete_entry_with_id(CustomController, controller_id, flash_message=False)
 
@@ -819,7 +829,7 @@ class TabService:
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 탭 삭제 연쇄는 예전에 Input/Output 만
         # 도형을 정리하고 나머지 5종은 아무것도 하지 않았다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(function_id)
         delete_entry_with_id(Function, function_id, flash_message=False)
 
@@ -835,14 +845,10 @@ class TabService:
         # Dashboard model's unique_id, not the Tab model. Treating widgets as
         # orphans by Tab membership reassigned them to a Tab id, breaking the
         # Dashboard->Widget link and making dashboards appear empty.
+        from aot.space.device_kind import models_for
         TABLE_MAP = {
-            'input': Input,
-            'output': Output,
-            'trigger': Trigger,
-            'conditional': Conditional,
-            'pid': PID,
-            'custom_controller': CustomController,
-            'function': Function,
+            **models_for(('input', 'output', 'trigger', 'conditional', 'pid',
+                          'custom_controller', 'function')),
             # program 은 다른 종류와 다르다 — 탭 삭제가 이 종류를 지우지
             # 않는다(delete_tab 의 page_type 분기에 'program' 이 없다).
             # 그래서 탭이 지워지면 소속 프로그램은 항상 '고아'가 되고, 이
@@ -886,14 +892,10 @@ class TabService:
             'function': 'function',
             'program': 'program',
         }
+        from aot.space.device_kind import models_for
         MODEL_MAP = {
-            'input': Input,
-            'output': Output,
-            'trigger': Trigger,
-            'conditional': Conditional,
-            'pid': PID,
-            'custom_controller': CustomController,
-            'function': Function,
+            **models_for(('input', 'output', 'trigger', 'conditional', 'pid',
+                          'custom_controller', 'function')),
             'program': GeoProgram,
         }
 

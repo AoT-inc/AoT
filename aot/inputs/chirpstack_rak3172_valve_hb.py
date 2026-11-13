@@ -38,6 +38,7 @@ from aot.utils.actions import run_input_actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.utils import random_alphanumeric
+from aot.utils.timekit import naive_utc, utc_now
 
 # ----------------------------- AoT metadata -----------------------------
 
@@ -604,7 +605,7 @@ class InputModule(AbstractInput):
     @staticmethod
     def _parse_time(iso: Optional[str]) -> datetime.datetime:
         if not iso:
-            return datetime.datetime.utcnow()
+            return naive_utc(utc_now())
         try:
             ts = iso.replace('Z', '+00:00')
             if '.' in ts:
@@ -621,7 +622,7 @@ class InputModule(AbstractInput):
             dt = datetime.datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%f%z')
             return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         except Exception:
-            return datetime.datetime.utcnow()
+            return naive_utc(utc_now())
 
     # --------------- AoT entry points ---------------
 

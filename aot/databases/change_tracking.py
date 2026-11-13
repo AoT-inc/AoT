@@ -32,33 +32,37 @@ _TRACKED_MODELS = (
 _registered = False
 
 
-def _on_change(kind):
+def _on_change(kind, on_change):
     def _handler(mapper, connection, target):
         try:
-            from aot.ai.services import system_knowledge_service as sk
             name = type(target).__name__
             when = None
             try:
-                from aot.utils.time_utils import get_local_now
-                when = get_local_now().strftime("%Y-%m-%d %H:%M")
+                from aot.utils.timekit import to_tz, FARM, utc_now
+                when = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M")
             except Exception:
                 pass
-            sk.mark_dirty(change_note=f"{name} {kind}", when_iso=when)
+            on_change(change_note=f"{name} {kind}", when_iso=when)
         except Exception as e:  # never break the user's write
             logger.debug(f"[ChangeTracking] mark_dirty on {kind} failed: {e}")
     return _handler
 
 
-def register_change_listeners():
-    """Attach after_insert/update/delete → system-knowledge invalidation on all
-    tracked config models. Idempotent; safe to call once at startup."""
+def register_change_listeners(on_change):
+    """Attach after_insert/update/delete → ``on_change(change_note=, when_iso=)`` on all
+    tracked config models. Idempotent; safe to call once at startup.
+
+    아키텍처 7c: 모델 층이 AI 서비스를 직접 import 하지 않게, 무엇을 할지는 앱 팩토리가
+    콜백으로 넘긴다. 필수 인자인 이유 — 빠뜨리면 AI 지식 갱신이 조용히 멈추므로
+    호출 쪽이 TypeError 로 바로 드러나게 한다."""
     global _registered
     if _registered:
         return
     try:
         from sqlalchemy import event
         import aot.databases.models as models
-        ins, upd, dele = _on_change("added"), _on_change("updated"), _on_change("removed")
+        ins, upd, dele = (_on_change("added", on_change), _on_change("updated", on_change),
+                          _on_change("removed", on_change))
         attached = []
         for name in _TRACKED_MODELS:
             Model = getattr(models, name, None)

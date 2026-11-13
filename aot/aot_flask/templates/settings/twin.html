@@ -25,25 +25,16 @@
       <div class="aot-settings-group-title">{{_('Service')}}</div>
       <div class="aot-settings-card">
 
-        <div class="aot-settings-row" id="twin-service-status">
-          <label class="aot-settings-label">{{_('Service Status')}}</label>
-          <div class="aot-settings-control">
-            {% if twin.running %}
-              <span class="aot-status-badge aot-status-ok">{{_('Running')}}</span>
-            {% else %}
-              <span class="aot-status-badge aot-status-fail">{{_('Twin service is not running')}}</span>
-            {% endif %}
-          </div>
+        <div id="twin-service-status">
+          {% include "settings/_twin_state.html" %}
           {% if twin.running %}
-          <div class="aot-settings-sub">
-            {{_('Last run')}}: {{ twin.last_run_at or '—' }} ·
-            {{_('Sites')}}: {{ twin.sites }} · {{_('Plots')}}: {{ twin.plots }} ·
-            {{_('Failures')}}: {{ twin.failures }}{% if twin.version %} · {{_('Version')}}: {{ twin.version }}{% endif %}
-            {% if twin.status == 'locked' %}<br>{{_('The service stopped itself because this device is too small.')}} {{ twin.service_locked_reason }}{% endif %}
-          </div>
-          {% elif twin.supported %}
-          <div class="aot-settings-sub" id="twin-install-help">
-            {{_('The Digital Twin runs as its own service. Docker: add COMPOSE_PROFILES=twin to the .env file and run docker compose up -d. Direct install: enable the aottwin.service systemd unit.')}}
+          <div class="aot-settings-row">
+            <div class="aot-settings-sub">
+              {{_('Last run')}}: {{ twin.last_run_at or '—' }} ·
+              {{_('Sites')}}: {{ twin.sites }} · {{_('Plots')}}: {{ twin.plots }} ·
+              {{_('Failures')}}: {{ twin.failures }}{% if twin.version %} · {{_('Version')}}: {{ twin.version }}{% endif %}
+              {% if twin.status == 'locked' %}<br>{{_('The service stopped itself because this device is too small.')}} {{ twin.service_locked_reason }}{% endif %}
+            </div>
           </div>
           {% endif %}
         </div>
@@ -70,17 +61,6 @@
             </label>
           </div>
           <div class="aot-settings-sub">{{_('When you turn the twin on for a site that has no forecast input nearby, a forecast input is created at the site location and chosen for the site. You can change or remove it in the input settings.')}}</div>
-        </div>
-
-        <div class="aot-settings-row">
-          {{form_twin.twin_ignore_profile.label(class_='aot-settings-label aot-toggle-label')}}
-          <div class="aot-settings-control">
-            <label class="btn-toggle">
-              <input type="checkbox" class="btn-toggle-input" id="twin_ignore_profile" name="twin_ignore_profile"{% if twin.ignore_profile %} checked{% endif %}{% if not can_edit %} disabled{% endif %}>
-              <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
-            </label>
-          </div>
-          <div class="aot-settings-sub">{{_('Development and test machines run with the LOW hardware profile, which locks the Digital Twin. Turn this on to run it anyway. Small Raspberry Pi models and devices with too little memory stay locked.')}}</div>
         </div>
 
       </div>

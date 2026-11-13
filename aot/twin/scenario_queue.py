@@ -28,6 +28,10 @@ class ScenarioQueue:
         """가장 오래 기다린 정의를 실행 중으로 바꿔 `twin_store.scenario_dict` 모양으로 돌려준다. 없으면 None."""
         raise NotImplementedError
 
+    def prepare(self, scn: Dict[str, object]) -> Dict[str, object]:
+        """돌리기 전에 서버만 아는 것을 푼다. 틀린 가정은 `ScenarioError` — 호출자가 실패로 적는다."""
+        return scn
+
     def done(self, scenario_id: str, outcome: ScenarioOutcome) -> None:
         raise NotImplementedError
 
@@ -56,6 +60,15 @@ class DbScenarioQueue(ScenarioQueue):
         with self._ctx():
             row = twin_store.claim_next_queued()
             return twin_store.scenario_dict(row) if row is not None else None
+
+    def prepare(self, scn: Dict[str, object]) -> Dict[str, object]:
+        """노지 밸브 가정을 구획 깊이로 — 물 회로는 서버에 있고 트윈은 깊이만 받는다. 정의(저장된 가정)는 그대로 둔다."""
+        tgt = scn.get("target") or {}
+        if tgt.get("kind") != "field":
+            return scn
+        with self._ctx():
+            from aot.utils.twin_effects_link import field_scenario_depths
+            return dict(scn, overrides=field_scenario_depths(str(tgt.get("id")), scn.get("overrides") or {}))
 
     def done(self, scenario_id: str, outcome: ScenarioOutcome) -> None:
         from aot.utils import twin_store

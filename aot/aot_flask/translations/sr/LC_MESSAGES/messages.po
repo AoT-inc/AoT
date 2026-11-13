@@ -32280,3 +32280,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Хоризонтално / косо"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} цеви израчунато хоризонтално"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Хоризонтално"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Дужина цеви (цела површина)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Дужина цеви"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Терен се израчунава. Коса дужина се појављује када се заврши."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Неки сегменти су израчунати хоризонталном дужином. Терен их не покрива."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Израчунато {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Ћелија {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Дужине су у редоследу хоризонтално / косо."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Нагиб {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Израчунато хоризонталном дужином"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Проток {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Губитак {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Хоризонтално {h} m, косо {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Хоризонтално {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Сегмент {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Сегменти ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Хоризонтално {h} m / Косо {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Терен се израчунава - приказана је само хоризонтална дужина."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Дужине на мапи су хоризонталне."
+
+msgid "Terrain input"
+msgstr "Улаз рељефа"
+
+msgid "Compare another terrain"
+msgstr "Упореди са другим рељефом"
+
+msgid "Could not compare. Try again."
+msgstr "Поређење није успело. Покушајте поново."
+
+msgid "Changed sections ({n})"
+msgstr "Измењене деонице ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Рељеф „{name}“ се преузима. Поређење се појављује по завршетку."
+
+msgid "Calculation level"
+msgstr "Ниво прорачуна"
+
+msgid "Switch to this terrain"
+msgstr "Пребаци на овај рељеф"
+
+msgid "That terrain input is gone."
+msgstr "Тај улаз рељефа више не постоји."
+
+msgid "Weakest nozzle flow"
+msgstr "Проток најслабије млазнице"
+
+msgid "Revert to {name}"
+msgstr "Врати на „{name}“"
+
+msgid "Slant length total"
+msgstr "Укупна коса дужина"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Овај улаз рељефа нема адресу плочица. Проверите подешавања."
+
+msgid "Downloading took too long. Try again."
+msgstr "Преузимање је трајало предуго. Покушајте поново."
+
+msgid "Terrain changed and recalculated"
+msgstr "Рељеф је промењен и поново израчунат"
+
+msgid "Compare with"
+msgstr "Упореди са"
+
+msgid "No terrain was on"
+msgstr "Рељеф није био укључен"
+
+msgid "Undo change"
+msgstr "Поништи измену"
+
+msgid "Try again"
+msgstr "Покушај поново"
+
+msgid "This map has no pipes to compare."
+msgstr "Ова мапа нема цеви за поређење."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Цеви које рељеф не покрива"
+
+msgid "No terrain is on."
+msgstr "Рељеф није укључен."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Рељеф није могао да се промени. Покушајте поново."

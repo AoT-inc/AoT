@@ -114,7 +114,7 @@ class ExclusionTest(unittest.TestCase):
 
     def test_inherited_weather_station_that_is_a_model_value_is_dropped(self):
         TC.save('site', 'site-1', True, {}, set_enabled=True)
-        with mock.patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+        with mock.patch('aot.space.device_membership.weather_device_ids',
                         return_value=(['wx-model'], 'bound')):
             ov = TC.resolved_overrides()
         s = ov['sites']['site-1']

@@ -13,7 +13,8 @@ from flask import request, jsonify, current_app, render_template
 from flask_login import current_user, login_required
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import plot_context, plot_io, plot_split
+from aot.aot_flask.geo import plot_io, plot_split
+from aot.space import plot_context
 from aot.aot_flask.utils import utils_general
 from aot.databases.models import GeoPlot, GeoShape
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
@@ -83,7 +84,7 @@ def api_programs():
 
     # 목록·상세가 같은 형태를 쓰도록 한 함수로 낸다 — 두 벌로 두면 화면이
     # 어느 쪽에서 왔는지에 따라 다른 키를 보게 된다.
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     items = [program_io.to_dict(r, with_stages=False) for r in rows]
     return jsonify({'ok': True, 'programs': items, 'count': len(items)})
 
@@ -100,7 +101,7 @@ def api_program_get(program_uuid):
         return jsonify({'ok': False, 'message': 'program not found'}), 404
     # 목록과 **같은 함수**로 낸다 — 두 벌로 두면 화면이 어느 쪽에서 왔는지에 따라
     # 다른 키를 보게 된다(실제로 `target_methods` 가 상세에서만 빠져 있었다).
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     return jsonify({'ok': True, 'program': program_io.to_dict(row)})
 
 
@@ -149,7 +150,7 @@ def api_target_measurements():
     # 종류별 고정 항목도 함께 낸다 — 화면이 **저장하지 않고** 종류를 바꿔 볼 때
     # 새 종류의 항목 목록을 스스로 세울 수 있어야 한다. 없으면 축사로 바꾼 순간
     # 식생 여섯 항목이 화면에 남아 있다가 저장할 때에야 사라진다.
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     fixed = {}
     for kind in program_io.VALID_KINDS:
         fixed[kind] = [program_io._public_target_def(dict(d, fixed=True,
@@ -293,7 +294,7 @@ def api_program_create():
     denied = _require_edit()
     if denied:
         return denied
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     data = request.get_json(silent=True) or {}
 
     # 템플릿에서 시작 — 카탈로그의 단계·목표를 그대로 복사해 **내 것**으로 만든다.
@@ -349,7 +350,7 @@ def api_program_clone(program_uuid):
     denied = _require_edit()
     if denied:
         return denied
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     result, error = program_io.clone_program(
         program_uuid, request.get_json(silent=True) or {})
     if error:
@@ -367,7 +368,7 @@ def api_program_update(program_uuid):
     denied = _require_edit()
     if denied:
         return denied
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     result, error = program_io.update_program(
         program_uuid, request.get_json(silent=True) or {})
     if error:
@@ -385,7 +386,7 @@ def api_program_delete(program_uuid):
     denied = _require_edit()
     if denied:
         return denied
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     result, error = program_io.delete_program(program_uuid)
     if error:
         status = 404 if '찾을 수 없' in error else 400
@@ -397,6 +398,13 @@ def api_program_delete(program_uuid):
 @blueprint.route('/api/geo/plots', methods=['GET'])
 @login_required
 def api_plots_list():
+    """지도의 식생 구획 목록(시계 해석은 요청 하나 동안 구획·지도마다 한 번씩 — `tz_scope`)."""
+    from aot.utils.timekit import tz_scope
+    with tz_scope():
+        return _api_plots_list_impl()
+
+
+def _api_plots_list_impl():
     """지도의 식생 구획 목록.
 
     기본은 **재배 중인 것만** 준다. 종료된 작기까지 기본으로 실으면 몇 년 지난
@@ -437,7 +445,7 @@ def api_plots_list():
     # 전체 조회(map_uuid 없음)에서는 **지도별로** 한 벌씩 만든다. 하나로 합치면
     # 다른 지도의 zone 이 이 구획을 품은 것으로 잡힌다 — 좌표가 겹치는 지도가
     # 실제로 있다(같은 농장을 두 지도로 보는 구성).
-    from aot.aot_flask.geo import device_membership
+    from aot.space import device_membership
     container_cache = {}
 
     def _containers_for(gid):
@@ -521,7 +529,7 @@ def _plot_schedule(row):
     만드는 경로가 없어 늘 비지만, 빼 두면 경로가 생겼을 때 화면만 조용히 못
     따라간다).
     """
-    from aot.aot_flask.geo import device_membership
+    from aot.space import device_membership
     from aot.aot_flask.geo.site_summary import upcoming_schedule
 
     try:
@@ -582,7 +590,7 @@ def _stage_window(row, stage_key, today):
       않는다. 빈 그래프를 그리면 "데이터가 없다"(=고장)로 읽히지만 실제로는
       **아직 안 온 것**이다.
     """
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
     try:
         sched = plot_context.stage_schedule_view(row) or []
     except Exception:
@@ -684,8 +692,7 @@ def api_plot_env_week(plot_uuid):
     from aot.aot_flask.geo import plot_journal
     from aot.aot_flask.geo.site_summary import (cached_plot_env_week,
                                                 env_week_key)
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz
+    from aot.utils.timekit import tz_of
 
     row = GeoPlot.query.filter(GeoPlot.unique_id == plot_uuid).first()
     if row is None:
@@ -697,7 +704,7 @@ def api_plot_env_week(plot_uuid):
 
     # 오늘은 **그 구획의 시간대**로 정한다 — 서버 시간으로 자르면 시차가 있는
     # 설치에서 창의 끝이 하루 어긋난다(`recent_env_trends` 와 같은 규칙).
-    today = datetime.now(as_tz(resolve_location_tz(plot_uuid))).date()
+    today = datetime.now(tz_of(plot_uuid)).date()
 
     stage_key = (request.args.get('stage') or '').strip() or None
     end = _as_day(request.args.get('end')) or today
@@ -853,7 +860,7 @@ def _plot_photosynthesis(row):
     프로그램을 쓴다 — 시설-bay 개요의 "시설 대표 구획" 과 달리, 여기는 이미
     구획 하나로 좁혀져 있으니 대표를 고를 필요가 없다.
     """
-    from aot.aot_flask.geo import plot_context as _pc
+    from aot.space import plot_context as _pc
 
     if not getattr(row, 'program_uuid', None):
         return {'gdd': None, 'dli': None}
@@ -976,6 +983,8 @@ def _build_facility_plot_contents(row):
             'facility_name': fac.get('name'),
             'bay_id': bay.get('id'),
             'bay_name': bay.get('name'),
+            # 위층 구역의 구획은 환경제어 대상이 아니다 — 화면이 안내를 보인다.
+            'control_upper_floor': bool(control.get('control_upper_floor')),
             'zone_uuid': sensors.get('zone_uuid'),
             'zone_name': sensors.get('zone_name'),
             # 그 도형이 실제로 무엇인지 — 'zone' | 'site'. 화면이 어느 창을
@@ -1009,7 +1018,7 @@ def _build_facility_plot_contents(row):
 # @manual geo/map-widget#plot
 def _build_plot_contents(plot_uuid):
     """식생 모달 인벤토리 본체. 못 찾으면 None(캐시에 남기지 않는다)."""
-    from aot.aot_flask.geo import device_membership
+    from aot.space import device_membership
     from aot.aot_flask.routes_geo_summary import _build_area_contents
 
     row = GeoPlot.query.filter_by(unique_id=plot_uuid).first()

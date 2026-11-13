@@ -21,6 +21,21 @@ from aot.utils.sequence_warnings import sequence_schedule_day_warnings
 logger = logging.getLogger(__name__)
 
 
+def _number(value):
+    """폼 문자열 → float. 비었거나 숫자가 아니면 None.
+
+    트리거 폼의 주기·시작 지연 칸은 StringField 라 값이 문자열이다. 예전에는
+    그대로 `<= 0` 과 비교해 TypeError 가 났고, '주기' 트리거는 저장되지
+    않았다(바깥 except 가 오류 문구로 바꿔 보여 줌).
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(str(value).strip())
+    except ValueError:
+        return None
+
+
 def trigger_mod(form):
     """Modify a Trigger."""
     messages = {
@@ -61,10 +76,7 @@ def trigger_mod(form):
                 trigger.tab_id = new_tab_id
                 messages["tab_id"] = new_tab_id
         trigger.log_level_debug = form.log_level_debug.data
-        trigger.latitude = form.latitude.data if form.latitude.data not in [None, ''] else trigger.latitude
-        trigger.longitude = form.longitude.data if form.longitude.data not in [None, ''] else trigger.longitude
-        if hasattr(trigger, 'location_source'):
-            trigger.location_source = form.location_source.data
+        # [L2] 위치 필드는 저장하지 않는다 — 배치(지도)가 정본.
 
         if trigger.trigger_type == 'trigger_edge':
             if not form.measurement.data or form.measurement.data == '':
@@ -72,6 +84,17 @@ def trigger_mod(form):
                     meas=form.measurement.label.text))
             trigger.measurement = form.measurement.data
             trigger.edge_detected = form.edge_detected.data
+
+        elif trigger.trigger_type == 'trigger_camera_event':
+            from aot.camera_drivers.trigger_camera_event import validate_camera_event_form
+            errs, values = validate_camera_event_form(
+                request.form.get('unique_id_1'), request.form.getlist('event_kinds'),
+                form.period.data)
+            messages["error"].extend(errs)
+            if not errs:
+                trigger.unique_id_1 = values['camera_id']
+                trigger.event_kinds = values['kinds']
+                trigger.period = values['period']
 
         elif trigger.trigger_type == 'trigger_output':
             if not form.unique_id_1.data:
@@ -92,13 +115,15 @@ def trigger_mod(form):
             if not form.output_state or form.output_state == '':
                 messages["error"].append("State must be set".format(
                     dir=form.output_state))
-            if not 0 <= form.output_duty_cycle.data <= 100:
+            # 듀티비 칸도 StringField 라 문자열이다 — 숫자로 읽고 비교한다.
+            duty_cycle = _number(form.output_duty_cycle.data)
+            if duty_cycle is None or not 0 <= duty_cycle <= 100:
                 messages["error"].append("{id} must >= 0 and <= 100".format(
                     id=form.output_duty_cycle.label.text))
             trigger.unique_id_1 = form.unique_id_1.data.split(",")[0]
             trigger.unique_id_2 = form.unique_id_1.data.split(",")[1]
             trigger.output_state = form.output_state.data
-            trigger.output_duty_cycle = form.output_duty_cycle.data
+            trigger.output_duty_cycle = duty_cycle
 
         elif trigger.trigger_type == 'trigger_run_pwm_method':
             if not form.period.data or form.period.data <= 0:
@@ -127,12 +152,7 @@ def trigger_mod(form):
             # device's map position). 좌표가 비어 있어도 막지 않는다 — 태양시 커널이
             # 소속 도형 → 농장 전역으로 상속해 계산한다(§13.3). 지도 중심이 설정되지
             # 않은 농장에서 신규 트리거를 아예 저장할 수 없던 문제.
-            if trigger.latitude is not None and not (-90 <= trigger.latitude <= 90):
-                messages["error"].append("{id} must be >= -90 and <= 90".format(
-                    id=form.latitude.label.text))
-            if trigger.longitude is not None and not (-180 <= trigger.longitude <= 180):
-                messages["error"].append("{id} must be >= -180 and <= 180".format(
-                    id=form.longitude.label.text))
+            # [L2] 좌표는 폼에서 저장하지 않는다 — 범위 검증은 배치 게이트웨이/API 가 한다.
             if form.date_offset_days.data is None:
                 messages["error"].append("{id} must be set".format(
                     id=form.date_offset_days.label.text))
@@ -156,19 +176,27 @@ def trigger_mod(form):
             if not epoch_of_next_time('{hm}:00'.format(hm=form.timer_end_time.data)):
                 messages["error"].append("{id} must be a valid HH:MM time format".format(
                     id=form.timer_end_time.label.text))
-            trigger.period = form.period.data
+            period = _number(form.period.data)
+            if period is None or period <= 0:
+                messages["error"].append("{id} must be > 0".format(
+                    id=form.period.label.text))
+            trigger.period = period
             trigger.timer_start_time = form.timer_start_time.data
             trigger.timer_end_time = form.timer_end_time.data
 
         elif trigger.trigger_type == 'trigger_timer_duration':
-            if form.period.data <= 0:
+            period = _number(form.period.data)
+            if period is None or period <= 0:
                 messages["error"].append("{id} must be > 0".format(
                     id=form.period.label.text))
-            if form.timer_start_offset.data < 0:
+            start_offset = _number(form.timer_start_offset.data)
+            if start_offset is None:
+                start_offset = 0        # 빈 칸 = 지연 없음(모델 기본값)
+            if start_offset < 0:
                 messages["error"].append("{id} must be >= 0".format(
                     id=form.timer_start_offset.label.text))
-            trigger.period = form.period.data
-            trigger.timer_start_offset = form.timer_start_offset.data
+            trigger.period = period
+            trigger.timer_start_offset = int(start_offset)
 
         elif trigger.trigger_type == 'trigger_sequence':
             logger.debug(f"DEBUG: trigger_sequence mod. Data: start={form.timer_start_time.data}, end={form.timer_end_time.data}, period={form.period.data}, dur={form.output_duration.data}, latency={form.timer_start_offset.data}, validity={form.time_offset_minutes.data}")
@@ -289,10 +317,10 @@ def trigger_mod(form):
                                     # 주기는 per_day 면 요일마다 다르다 — 레거시
                                     # 컬럼(첫 활성 요일)이 아니라 오늘 값을 JSON 에서
                                     # 계산한다(sequence_schedule.today_period).
-                                    from aot.utils.device_tz import get_device_tz
+                                    from aot.utils.timekit import tz_of
                                     opts['sequence_period'] = sequence_schedule.today_period(
                                         sequence_schedule.load(trigger),
-                                        get_device_tz(trigger), trigger.period or 3600)
+                                        tz_of(trigger), trigger.period or 3600)
                                     opts['timer_start_offset'] = (
                                         int(trigger.timer_start_offset) if trigger.timer_start_offset is not None else 0)
                                     opts['output_duration'] = (
@@ -373,7 +401,7 @@ def trigger_del(trigger_id):
             # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
             # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
             # 정리하지 않아 고아 도형을 만들었다.
-            from aot.aot_flask.geo.device_binding import end_all_for_device
+            from aot.space.device_binding import end_all_for_device
             end_all_for_device(trigger_id)
             delete_entry_with_id(
                 Trigger, trigger_id, flash_message=False)
@@ -406,6 +434,12 @@ def trigger_activate(trigger_id):
         messages["error"] = check_cond_edge(mod_trigger, messages["error"])
     elif mod_trigger.trigger_type == 'output':
         messages["error"] = check_cond_output(mod_trigger, messages["error"])
+
+    if mod_trigger.trigger_type == 'trigger_camera_event' and not (
+            isinstance(mod_trigger.event_kinds, list) and mod_trigger.event_kinds
+            and mod_trigger.unique_id_1):
+        messages["error"].append(
+            gettext("Select a camera and at least one event kind before activating."))
 
     actions = Actions.query.filter(
         Actions.function_id == trigger_id)

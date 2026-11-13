@@ -95,6 +95,14 @@
   border-bottom: 1px solid var(--aot-border-light);
 }
 .aot-plots-row:last-child { border-bottom: none; }
+/* 위층 구획 안내 — 줄 아래에 한 줄로 붙는다(공지 컴포넌트 `.aot-notice-box`). */
+.aot-plots-row:has(.aot-plots-upper-notice) { flex-wrap: wrap; }
+.aot-notice-box.aot-plots-upper-notice {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: var(--aot-space-1) var(--aot-space-2);
+  font-size: var(--aot-font-size-sm);
+}
 
 .aot-plots-main {
   flex: 1 1 auto;

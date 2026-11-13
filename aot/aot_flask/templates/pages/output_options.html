@@ -20,10 +20,8 @@
         each_output.unique_id,
         form_mod_output.latitude,
         form_mod_output.longitude,
-        form_mod_output.location_source,
         each_output.latitude,
         each_output.longitude,
-        each_output.location_source,
         'output_mod',
         'modal_config_' ~ each_output.unique_id,
         '280px',
@@ -37,8 +35,7 @@
         icon_name=form_mod_output.marker_icon.name,
         color_name=form_mod_output.marker_color.name,
         size_name=form_mod_output.marker_size.name,
-        map_config_id=(map_config_id if map_config_id is defined and map_config_id else (each_output.map_config_id or
-        '')),
+        map_config_id=(map_config_id if map_config_id is defined else ''),
         map_configs=(map_configs if map_configs is defined else []),
         map_overlays=map_overlays,
         shape_on_color=custom_options_values_outputs[each_output.unique_id].get('shape_on_color'),
@@ -181,7 +178,6 @@
         {% include 'pages/form_options/UART.html' %}
         {% include 'pages/form_options/Baud_Rate.html' %}
         {% include 'pages/form_options/Location.html' %}
-        {% include 'pages/form_options/Coordinates.html' %}
         {% include 'pages/form_options/Period.html' %}
       </div>
       {% endif %}

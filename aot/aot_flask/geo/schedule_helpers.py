@@ -8,15 +8,6 @@ from flask import current_app
 
 
 
-def _schedule_display_tz(target_id):
-    """예약 시각을 보여줄 시간대 — 장치 로컬(timezone-management.md §6)."""
-    try:
-        from aot.utils.device_tz import resolve_location_tz
-        return resolve_location_tz(target_id)
-    except Exception:
-        return None
-
-
 def _fmt_schedule_when(when_utc, tzinfo, now_local):
     """UTC datetime → 표시 문자열. 오늘 'HH:MM' · 내일 'HH:MM(+1)' · 그 외 'M/D HH:MM'."""
     from datetime import timedelta, timezone as _tz
@@ -43,7 +34,7 @@ def pending_schedules(target_id, limit=20):
     from datetime import timedelta, timezone as _tz
 
     from aot.databases.models.scheduler import SchedulerJobMeta
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
 
     try:
         now = utc_now().replace(tzinfo=None)
@@ -63,8 +54,10 @@ def pending_schedules(target_id, limit=20):
         if not rows:
             return []
 
-        tzinfo = _schedule_display_tz(target_id)
-        now_local = utc_now().astimezone(tzinfo) if tzinfo is not None else utc_now()
+        # 예약 시각을 보여줄 시간대 — 장치 로컬(timezone-management.md §6)
+        from aot.utils.timekit import tz_of
+        tzinfo = tz_of(target_id)
+        now_local = utc_now().astimezone(tzinfo)
 
         out = []
         for row in rows:

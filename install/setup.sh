@@ -326,6 +326,7 @@ ${INSTALL_CMD} web-server-connect 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} update-permissions 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} restart-daemon 2>&1 | tee -a "${LOG_LOCATION}"
 ${INSTALL_CMD} install-aotmcp 2>&1 | tee -a "${LOG_LOCATION}"
+${INSTALL_CMD} install-aottwin 2>&1 | tee -a "${LOG_LOCATION}"
 
 trap : 0
 

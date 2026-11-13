@@ -33,12 +33,13 @@ from aot.config import AOT_VERSION
 from aot.config_translations import TRANSLATIONS
 from aot.databases.models import CustomController, FunctionChannel
 from aot.functions.base_function import AbstractFunction
-from aot.aot_flask.utils.utils_general import (
-    custom_channel_options_return_json, delete_entry_with_id)
+from aot.functions.utils.place_clock import place_now_str, place_time_str
 from aot.utils.constraints_pass import (
     constraints_pass_positive_or_zero_value, constraints_pass_positive_value)
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.functions import parse_function_information
+from aot.utils.module_hooks import (
+    custom_channel_options_return_json, delete_channel_row, queue_flash)
 from aot.utils.lcd import format_measurement_line
 from aot.utils.system_pi import cmd_output
 from aot.utils.lazy_text import lazy_format
@@ -150,7 +151,9 @@ def execute_at_modification(
             page_refresh = True
             for index, each_channel in enumerate(channels.all()):
                 if index >= end_channel:
-                    delete_entry_with_id(FunctionChannel, each_channel.unique_id)
+                    _ok, category, msg = delete_channel_row(
+                        FunctionChannel, each_channel.unique_id)
+                    queue_flash(messages, category, msg)
 
     except Exception:
         messages["error"].append("execute_at_modification() Error: {}".format(traceback.print_exc()))
@@ -507,11 +510,11 @@ class CustomModule(AbstractFunction):
 
                     elif self.options_channels['line_display_type'][current_channel] == 'measurement_ts':
                         if measure_ts:
-                            # Convert UTC timestamp to local timezone
-                            lines_display[current_line] = str(datetime.datetime.fromtimestamp(measure_ts))
+                            # 컨테이너 시계가 아니라 이 Function 이 걸린 장소의 시계로
+                            lines_display[current_line] = place_time_str(measure_ts, self.unique_id)
 
                 elif self.options_channels['line_display_type'][current_channel] == 'current_time':
-                    lines_display[current_line] = time.strftime('%Y-%m-%d %H:%M:%S')
+                    lines_display[current_line] = place_now_str(self.unique_id)
 
                 elif self.options_channels['line_display_type'][current_channel] == 'text':
                     lines_display[current_line] = self.options_channels['text'][current_channel]

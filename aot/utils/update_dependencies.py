@@ -13,7 +13,8 @@ from aot.config import (CAMERA_INFO, DEPENDENCIES_GENERAL,
 from aot.databases.models import (Actions, Camera, Conditional,
                                      CustomController, Function,
                                      Input, Method, Output, Trigger, Widget)
-from aot.aot_flask.utils.utils_general import return_dependencies
+from aot.aot_flask.utils.utils_general import (
+    dependency_sections, return_dependencies)
 from aot.utils.actions import parse_action_information
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.functions import parse_function_information
@@ -113,8 +114,10 @@ if __name__ == "__main__":
     if devices:
         logger.info(f"Checking dependencies for installed devices: {devices}")
 
+        sections = dependency_sections()
         for each_device in devices:
-            device_unmet_dependencies, _, _ = return_dependencies(each_device)
+            device_unmet_dependencies, _, _ = return_dependencies(
+                each_device, sections=sections)
             for each_dep in device_unmet_dependencies:
                 if each_dep not in dependencies:
                     dependencies.append(each_dep)

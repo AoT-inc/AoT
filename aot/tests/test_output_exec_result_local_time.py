@@ -45,9 +45,18 @@ def make_output(timezone_name='Asia/Seoul'):
     inst.output_states = {CH: None}
     inst.is_setup = lambda: True
     # 장치 row 흉내 — MagicMock 은 resolve_timezone 이 있는 도형으로 오인된다.
-    inst.output = SimpleNamespace(unique_id='out-test-0000', timezone=timezone_name,
-                                  tz_source='coords', latitude=35.0, longitude=127.0)
+    # L4: 장치는 tz 컬럼이 없다 — 배치(리졸버)가 준 tz 를 placed_tz 로 흉내낸다.
+    inst.output = SimpleNamespace(unique_id='out-test-0000', placed_tz=timezone_name,
+                                  latitude=35.0, longitude=127.0)
     return inst
+
+
+@pytest.fixture(autouse=True)
+def _placement(monkeypatch):
+    from aot.utils import timekit as tk
+    monkeypatch.setattr(tk, '_locate_row', lambda row: (
+        SimpleNamespace(tz=row.placed_tz, point=None, basis='device', source='marker')
+        if getattr(row, 'placed_tz', None) else None))
 
 
 def test_stamp_is_device_local_seconds_with_offset():
@@ -71,8 +80,7 @@ def test_unknown_location_uses_farm_default_tz():
     out = make_output(timezone_name=None)
     out.output.latitude = None
     out.output.longitude = None
-    with patch('aot.utils.timekit.system_tz_name', return_value='Asia/Seoul'), \
-            patch('aot.utils.timekit._inherited_tz_for_device', return_value=None):
+    with patch('aot.utils.timekit._system_tz_name', return_value='Asia/Seoul'):
         assert out._local_stamp(UTC_INSTANT) == '2026-10-29T13:09:41+09:00'
 
 
@@ -80,15 +88,14 @@ def test_nothing_known_falls_back_to_utc():
     out = make_output(timezone_name=None)
     out.output.latitude = None
     out.output.longitude = None
-    with patch('aot.utils.timekit.system_tz_name', return_value=None), \
-            patch('aot.utils.timekit._inherited_tz_for_device', return_value=None):
+    with patch('aot.utils.timekit._system_tz_name', return_value=None):
         assert out._local_stamp(UTC_INSTANT) == '2026-10-29T04:09:41+00:00'
 
 
 def test_resolver_failure_does_not_break_the_message():
     out = make_output()
     with patch('aot.outputs.base_output.resolve_tz', side_effect=RuntimeError('detached')), \
-            patch('aot.outputs.base_output.system_tz') as sys_tz:
+            patch('aot.outputs.base_output.tz_of') as sys_tz:
         import pytz
         sys_tz.return_value = pytz.timezone('Asia/Seoul')
         assert out._local_stamp(UTC_INSTANT) == '2026-10-29T13:09:41+09:00'

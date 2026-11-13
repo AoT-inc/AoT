@@ -9,6 +9,8 @@ All Functions should inherit from this class and overwrite methods that raise
 NotImplementedErrors
 """
 import logging
+import math
+import time
 
 from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.databases.models import CustomController
@@ -40,6 +42,66 @@ class AbstractFunction(AbstractBaseController):
         if not testing:
             self.unique_id = function.unique_id
             self.initialize_measurements()
+
+    # 루프가 `while timer_loop < now: timer_loop += 주기` 로 다음 시각을 미는 모듈이
+    # 많다(≈35개). 주기가 0·음수·숫자 아님이면 이 while 이 끝나지 않아 Function
+    # 스레드가 영영 돌고(0), 문자열이면 매 틱 TypeError(숫자 아님)다. 저장 화면의
+    # 제약(양수)은 API·옛 값·시간 입력 해석 실패를 막지 못하므로 옵션을 읽은 직후
+    # 한 곳에서 고친다.
+    LOOP_PERIOD_OPTION_IDS = ('period', 'update_period')
+
+    def seconds_until_due(self):
+        """다음 `loop()` 할 일까지 남은 초. 모르면 None.
+
+        Function 컨트롤러는 이것을 보고 점검 주기(sample_rate) 대신 그 시각에
+        깨어나 `loop()` 를 부른다. 예전에는 점검 주기마다만 불러, 점검 주기를
+        15초로 둔 설치에서 60초 주기 모듈도 최대 15초씩 늦게 돌았다.
+
+        기본은 모듈들이 공통으로 쓰는 `self.timer_loop`(다음 실행 epoch)다
+        (`aot/functions/*` 의 loop 모듈 39개 전부). 다른 규칙으로 도는 모듈은 덮어쓴다.
+        """
+        due = getattr(self, 'timer_loop', None)
+        if isinstance(due, bool) or not isinstance(due, (int, float)):
+            return None
+        if not math.isfinite(due):
+            return None
+        return due - time.time()
+
+    def setup_custom_options(self, custom_options, custom_controller):
+        """옵션을 읽은 뒤 루프 주기가 쓸 수 있는 값인지 확인한다."""
+        result = super().setup_custom_options(custom_options, custom_controller)
+        try:
+            self._ensure_positive_loop_periods(custom_options)
+        except Exception:
+            self.logger.exception("루프 주기 점검 실패")
+        return result
+
+    def _ensure_positive_loop_periods(self, custom_options):
+        for each_option in custom_options or []:
+            option_id = each_option.get('id')
+            if option_id not in self.LOOP_PERIOD_OPTION_IDS:
+                continue
+            if not hasattr(self, option_id):
+                continue
+            value = getattr(self, option_id)
+            try:
+                period = float(value)
+            except (TypeError, ValueError):
+                period = None
+            if period is not None and math.isfinite(period) and period > 0:
+                if not isinstance(value, (int, float)) or isinstance(value, bool):
+                    setattr(self, option_id, period)
+                continue
+            try:
+                fallback = float(each_option.get('default_value'))
+            except (TypeError, ValueError):
+                fallback = 0.0
+            if not (math.isfinite(fallback) and fallback > 0):
+                fallback = 60.0
+            self.logger.error(
+                "'%s' 값 %r 은(는) 양의 초가 아니다 — 주기를 %s초로 대신 쓴다. "
+                "설정에서 주기를 다시 저장하라.", option_id, value, fallback)
+            setattr(self, option_id, fallback)
 
     def initialize_measurements(self):
         """Load device measurement channels from the database."""
@@ -146,25 +208,3 @@ class AbstractFunction(AbstractBaseController):
             gps_lat=gps_lat,
             gps_lng=gps_lng,
         )
-
-    def register_upcoming_action(self, action_type, params, schedule_time, reasoning=None):
-        """
-        Opt-in API for Functions to register their upcoming actions to the AIScheduler.
-        This allows the AI to see what the function plans to do.
-        """
-        try:
-            from aot.ai.services.ai_scheduler_service import AISchedulerService
-            AISchedulerService.propose_job(
-                action_type=action_type,
-                target_id=self.unique_id,
-                params=params,
-                reasoning=reasoning or f"Function {self.function.name} scheduled action",
-                schedule_time=schedule_time,
-                proposed_by='FUNCTION',
-                source_type='function',
-                approval_required=False  # Functions usually run autonomously
-            )
-            self.logger.info(f"Registered upcoming action: {action_type} at {schedule_time}")
-        except Exception as e:
-            self.logger.error(f"Failed to register upcoming action: {e}")
-

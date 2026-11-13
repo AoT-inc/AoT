@@ -180,7 +180,7 @@ class DbTest(unittest.TestCase):
                                               unit='percent', name='토양수분'))
             db.session.add(DeviceMeasurements(device_id=uid, channel=1, measurement='temperature',
                                               unit='C', name='지온'))
-            GeoShape(unique_id='mk-' + uid, geo_id='m1', type='aot_device', device_id=uid,
+            bound_shape(unique_id='mk-' + uid, geo_id='m1', type='aot_device', device_id=uid,
                      feature={'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [lng, 35.8625]},
                               'properties': {}}).save()
         db.session.add(Input(unique_id='wx-1', device='SOME_STATION', name='기상대'))
@@ -189,10 +189,15 @@ class DbTest(unittest.TestCase):
         db.session.add(DeviceMeasurements(device_id='wx-1', channel=1, measurement='temperature', unit='C',
                                           name='기온'))
         # 예보 입력 둘 — 하나는 기존 모듈, 하나는 이름 모를 새 모듈(채널 메타만 같다). 가까운 것이 먼저.
+        # 좌표는 배치(마커)로 둔다 — 장치 행에 위치 컬럼이 없다(L4 S3c).
         db.session.add(Input(unique_id='fc-far', device='OPEN_METEO_DAILY_FORECAST', name='먼 예보',
-                             latitude=37.5, longitude=127.0, is_activated=True))
+                             is_activated=True))
         db.session.add(Input(unique_id='fc-near', device='ANY_FUTURE_FORECAST', name='가까운 예보',
-                             latitude=35.87, longitude=126.89, is_activated=True))
+                             is_activated=True))
+        for uid, (flng, flat) in (('fc-far', (127.0, 37.5)), ('fc-near', (126.89, 35.87))):
+            bound_shape(unique_id='mk-' + uid, geo_id='m1', type='aot_device', device_id=uid,
+                     feature={'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [flng, flat]},
+                              'properties': {}}).save()
         db.session.commit()
         # 드라이버 판정은 첫 결과를 전역에 캐시한다. 가짜 목록의 결과가 같은 작업자의 다음 시험으로 새지 않게 한다.
         for name in ('_MODEL_DRIVERS', '_FORECAST_TIME_DRIVERS', '_DAILY_FORECAST_DRIVERS'):
@@ -202,7 +207,7 @@ class DbTest(unittest.TestCase):
         p = mock.patch('aot.utils.inputs.parse_input_information', return_value=INFO)
         p.start()
         self.addCleanup(p.stop)
-        w = mock.patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+        w = mock.patch('aot.space.device_membership.weather_device_ids',
                        side_effect=lambda sid: (['wx-1'], 'bound') if sid == 'site-1' else ([], 'none'))
         w.start()
         self.addCleanup(w.stop)
@@ -228,18 +233,18 @@ class DbTest(unittest.TestCase):
         self.assertEqual([p.site_id for p in plans], ['site-1'])
         t = plans[0].targets
         self.assertEqual([x.target_id for x in t], ['p1'])                       # p2 제외
-        self.assertEqual(set(t[0].inputs), {'rain', 'theta'})
+        self.assertEqual(set(t[0].inputs), {'rain', 'theta', 'irrigation'})
         self.assertEqual(t[0].inputs['theta'].provenance.value, 'measured')
         # 앞날 예보는 대지 예보 계열 — 고른 입력은 대지 예보 출처 지정(geo_binding)에 저장된다
         self.assertEqual(t[0].options['forecast_series'], {'site': 'site-1'})
-        from aot.aot_flask.geo import device_binding as B
+        from aot.space import device_binding as B
         self.assertEqual(B.site_forecast_ids('site-1'), ['fc-far'])
         self.assertNotIn('forecast', TC.get_row('site', 'site-1').config_dict())   # 트윈 표에는 두지 않는다
         self.assertEqual(TC.read('site', 'site-1')[1]['forecast'], {'input': 'fc-far'})
 
     def test_old_screen_resending_a_designated_forecast_keeps_the_order(self):
         """예전 트윈 탭은 저장 때마다 예보 칸을 되보냈다 — 이미 지정된 입력이면 순서(시간별 → 일별)를 흔들지 않는다."""
-        from aot.aot_flask.geo import device_binding as B
+        from aot.space import device_binding as B
         db.session.add(Input(unique_id='fc-hourly', device='ANY_HOURLY', name='시간별'))
         db.session.commit()
         B.set_site_forecast('site-1', ['fc-hourly', 'fc-far'], commit=True)
@@ -254,7 +259,7 @@ class DbTest(unittest.TestCase):
         cat = DbCatalog(LazyApp(lambda: self.app))
         plans = build_plan(cat.sites(), TC.overrides(), cat.forecast_channels)
         p1 = next(x for x in plans[0].targets if x.target_id == 'p1')
-        self.assertEqual(set(p1.inputs), {'theta'})
+        self.assertEqual(set(p1.inputs), {'theta', 'irrigation'})
 
     def test_nothing_saved_means_nothing_runs(self):
         cat = DbCatalog(LazyApp(lambda: self.app))
@@ -275,27 +280,27 @@ class DbTest(unittest.TestCase):
 
     def test_plot_suggestion_far_sensor_outside_site_is_nearest(self):
         """대지 밖(구역 대표 아님)이라도 같은 지도의 가장 가까운 토양 센서를 거리와 함께 제안한다."""
-        GeoShape(unique_id='mk-out', geo_id='m1', type='aot_device', device_id='soil-far',
+        bound_shape(unique_id='mk-out', geo_id='m1', type='aot_device', device_id='soil-far',
                  feature={'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [126.9, 35.8625]},
                           'properties': {}}).save()
         db.session.query(GeoShape).filter_by(unique_id='mk-soil-far').delete()
         db.session.commit()
-        with mock.patch('aot.aot_flask.geo.plot_context.sensors_for_plot', return_value={'from_zone': []}):
+        with mock.patch('aot.space.plot_context.sensors_for_plot', return_value={'from_zone': []}):
             s = TC.plot_suggestions('p2')
         self.assertEqual([c['unique_id'] for c in s['theta']], ['soil-near', 'soil-far'])
         self.assertEqual({c['why'] for c in s['theta']}, {'nearest'})
 
     def test_site_weather_falls_back_to_nearest_channel_on_the_map(self):
-        GeoShape(unique_id='mk-wx', geo_id='m1', type='aot_device', device_id='wx-1',
+        bound_shape(unique_id='mk-wx', geo_id='m1', type='aot_device', device_id='wx-1',
                  feature={'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [126.8812, 35.8625]},
                           'properties': {}}).save()
         site = next(x for x in TC.catalog_sites() if x.site_id == 'site-1')
-        with mock.patch('aot.aot_flask.geo.device_membership.weather_device_ids', return_value=([], 'none')):
+        with mock.patch('aot.space.device_membership.weather_device_ids', return_value=([], 'none')):
             s = TC.site_suggestions(site)
         self.assertEqual([(c['unique_id'], c['why']) for c in s['rain']], [('wx-1', 'weather_nearest')])
         self.assertEqual([c['unique_id'] for c in s['t_air']], ['wx-1'])
         self.assertIn('distance_m', s['rain'][0])
-        with mock.patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+        with mock.patch('aot.space.device_membership.weather_device_ids',
                         return_value=(['wx-1'], 'inferred')):
             s = TC.site_suggestions(site)
         self.assertEqual(s['rain'][0]['why'], 'weather_inferred')
@@ -306,10 +311,10 @@ class DbTest(unittest.TestCase):
         self.assertEqual(s['forecast'][0]['input'], 'fc-near')
         self.assertNotIn('forecast_create', s)                                   # 가까운 켜진 예보가 있다
         # 먼 입력이 대지 안 장치로 놓여 있으면 거리와 상관없이 앞에 온다
-        GeoShape(unique_id='mk-fc', geo_id='m1', type='aot_device', device_id='fc-far',
+        bound_shape(unique_id='mk-fc', geo_id='m1', type='aot_device', device_id='fc-far',
                  feature={'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [126.8812, 35.8625]},
                           'properties': {}}).save()
-        with mock.patch('aot.aot_flask.geo.device_membership.device_ids_in_area', return_value={'fc-far'}):
+        with mock.patch('aot.space.device_membership.device_ids_in_area', return_value={'fc-far'}):
             s = TC.site_suggestions(site)
         self.assertEqual((s['forecast'][0]['input'], s['forecast'][0]['why']), ('fc-far', 'forecast_inside'))
         for r in Input.query.filter(Input.unique_id.in_(['fc-far', 'fc-near'])).all():
@@ -352,11 +357,27 @@ class DbTest(unittest.TestCase):
                            return_value=msgs) as act:
             uid = TC.create_forecast_input(35.86, 126.88, '새 예보')
         row = Input.query.filter_by(unique_id=uid).one()
-        self.assertEqual((row.name, row.latitude, row.longitude), ('새 예보', 35.86, 126.88))
+        # 장치 행에는 위치 컬럼이 없다(L4 S3c) — 좌표는 배치로만 둔다.
+        self.assertFalse(hasattr(row, 'latitude'))
+        self.assertEqual(row.name, '새 예보')
         self.assertEqual(row.device, TC.forecast_module())
         self.assertEqual(act.call_args[0][1:4], ('activate', 'Input', uid))
         with self.assertRaises(TC.TwinConfigError):
             TC.create_forecast_input(95, 126.88)
+
+    def test_create_forecast_input_places_marker_when_map_given(self):
+        # map_uuid 를 주면 좌표를 지도 마커(→ 바인딩)로 둔다 — 수동 배치와 같은 경로.
+        from aot.space import device_binding
+        msgs = {'success': [], 'info': [], 'warning': [], 'error': []}
+        with mock.patch('aot.aot_flask.utils.utils_input.check_input_channels_exist', return_value=msgs), \
+                mock.patch('aot.aot_flask.utils.utils_general.controller_activate_deactivate',
+                           return_value=msgs):
+            uid = TC.create_forecast_input(35.86, 126.88, '지도 예보', map_uuid='m1')
+        markers = device_binding.marker_shapes(uid, 'm1', '0')
+        self.assertEqual(len(markers), 1)
+        lng, lat = markers[0].feature['geometry']['coordinates']
+        self.assertAlmostEqual(lat, 35.86)
+        self.assertAlmostEqual(lng, 126.88)
 
     def test_spinup_from_is_validated(self):
         TC.save('plot', 'p1', None, {'options': {'spinup_from': '2026-08-05'}})
@@ -652,3 +673,4 @@ class ApiTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+from aot.tests.geo._legacy_marker import bound_shape

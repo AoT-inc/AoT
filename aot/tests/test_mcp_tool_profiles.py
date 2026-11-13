@@ -100,6 +100,35 @@ def _name_pattern(names):
 # 1. 분류표 (앱 불필요)
 # ---------------------------------------------------------------------------
 
+class TestDomainPromotedTools(unittest.TestCase):
+    """도메인 운영으로 올린 6개(재설계 PR 4·5): 실행·권한은 운영이고, 옛 tools/list 는 원래 모듈을 켠 묶음에서만 싣는다."""
+
+    def test_they_are_operations_for_execution_and_the_domain_surface(self):
+        for name in R.DOMAIN_PROMOTED_TOOLS:
+            self.assertIn(name, R.profile_tools(OPS), name)
+
+    def test_the_old_list_shows_them_only_where_their_module_is_on(self):
+        self.assertEqual(frozenset(R.DOMAIN_PROMOTED_TOOLS), R.legacy_hidden_tools(OPS))
+        self.assertEqual(frozenset(), R.legacy_hidden_tools(CFG))
+        self.assertEqual({'modify_notice', 'delete_notice', 'delete_note'}, R.legacy_hidden_tools('operations+map'))
+        self.assertEqual({'nearest', 'get_address'}, R.legacy_hidden_tools('operations+library'))
+
+    def test_their_old_module_names_real_modules_and_tools(self):
+        for name, module in R.DOMAIN_PROMOTED_TOOLS.items():
+            self.assertIn(module, MODS, name)
+            self.assertTrue(R.is_declared_tool(name), name)
+
+    def test_the_domain_surface_lists_their_operations_for_an_operations_key(self):
+        from aot.tools.domain import surface
+        from aot.tools.domain.registry_data import OPS as DOPS
+        ents = {e['name']: e['inputSchema']['properties']['op']['enum']
+                for e in surface.entries(DOPS, lambda n: R.tool_in_profile(n, OPS), set(R.approval_required_tools()))
+                if 'op' in e['inputSchema']['properties']}
+        for tool, op in (('find', 'nearest'), ('find', 'address'), ('record', 'notice_edit'), ('remove', 'delete'),
+                         ('record', 'note'), ('remove', 'delete')):
+            self.assertIn(op, ents[tool], (tool, op))
+
+
 class TestClassificationTable(unittest.TestCase):
 
     def test_every_mcp_tool_has_exactly_one_profile(self):
@@ -135,23 +164,25 @@ class TestClassificationTable(unittest.TestCase):
         """설계 확인(2026-09-23 검증 반영)으로 정한 자리."""
         ops = R.profile_tools(OPS)
         cfg_only = R.profile_tools(CFG) - ops
-        for name in ('submit_advice', 'list_advice', 'search_archives',
+        for name in ('submit_advice', 'list_advice',
                      'modify_function_options', 'modify_sequence_schedule',
                      'confirm_plot_stage', 'reschedule_plot_stage',
                      'undo_plot_stage', 'apply_plot_resources', 'end_plot',
                      'respond_to_confirmation', 'get_local_time',
                      'operate_device', 'get_sensor_reading',
-                     'read_manual', 'list_unbound_slots',
+                     'read_manual',
                      # 프로필 벤치마크(26-09-24) lat_19 — 운영 안내문이
                      # 약속하는 "시퀀스 운전 시간" 조정.
                      'modify_sequence_step'):
             self.assertIn(name, ops, name)
+        # 위치 조회(주소·거리·가까운 것)와 공지 고치기·지우기는 도메인 운영으로 올랐다(2026-11-03 재설계 PR 4) —
+        # 옛 목록은 원래 모듈을 켠 묶음에서만 싣는다(`DOMAIN_PROMOTED_TOOLS`, 아래 시험).
+        for name in ('nearest', 'get_address', 'modify_notice', 'delete_notice'):
+            self.assertIn(name, ops, name)
         for name in ('configure_sequence_day', 'create_sequence_function',
-                     'distance_between', 'nearest',
-                     'list_programs', 'get_program', 'get_address',
+                     'list_programs', 'get_program',
                      'list_device_types', 'list_ai_agents', 'create_function',
-                     'create_input', 'create_plot', 'modify_plot',
-                     'rebind_device'):
+                     'create_input', 'create_plot', 'modify_plot'):
             self.assertIn(name, cfg_only, name)
         for name in ('set_output_state', 'list_available_devices'):
             self.assertTrue(R.is_retired_from_mcp(name), name)
@@ -212,18 +243,14 @@ class TestClassificationTable(unittest.TestCase):
             'plots': ('create_plot', 'propose_plot_split', 'add_plot_stage',
                       'save_plot_schedule_as_program', 'list_programs',
                       'get_program', 'create_program'),
-            'map': ('get_address', 'distance_between', 'nearest',
-                    'set_device_location', 'delete_geo_shape'),
+            'map': ('set_device_location', 'delete_geo_shape'),
             'automation': ('create_function', 'delete_function',
                            'create_sequence_function', 'configure_sequence_day'),
             'devices': ('list_device_types', 'get_device_type_options',
-                        'create_input', 'modify_output', 'create_gis_input',
-                        'rebind_device'),
+                        'create_input', 'modify_output', 'create_gis_input'),
             'dashboard': ('list_dashboards', 'list_widget_types', 'create_widget',
                           'create_tab'),
-            'library': ('get_archived_document', 'archive_note', 'modify_notice',
-                        'delete_notice', 'knowledge_shelve',
-                        'smartfarmkorea_lookup', 'configure_library_source'),
+            'library': ('knowledge_shelve', 'configure_library_source'),
             'admin': ('get_system_update_status', 'get_storage_tier_status',
                       'list_ai_agents', 'create_ai_agent'),
         }
@@ -1087,9 +1114,10 @@ class _AppFixture(unittest.TestCase):
         from aot.config import USER_ROLES
         from aot.databases.models import Role, User
         self.db = db
+        # 이 픽스처의 시험들은 옛 표면(안쪽 도구 목록)을 본다 — 기본이 도메인 표면으로 바뀐 뒤에도 고정.
         self._env = mock.patch.dict(os.environ, {
             'AOT_MCP_WRITE_ENABLED': '1', 'AOT_MCP_REQUIRE_AUTH': '1',
-            'AOT_MCP_TOOL_PROFILES': '1'})
+            'AOT_MCP_TOOL_PROFILES': '1', 'AOT_MCP_SURFACE': 'legacy'})
         self._env.start()
         self._wipe()
         roles = {}
@@ -1405,6 +1433,7 @@ class TestListing(_AppFixture):
         self.assertGreater(opened['count'], 0)
 
     def test_in_app_listing_is_unrestricted(self):
+        """인앱 AI 의 목록은 도메인 명부다 — 묶음 제한이 없다(설정 도구까지)."""
         from aot.tools import mcp_auth
         from aot.tools import tool_execution as te
         role = mcp_auth._role_for(mcp_auth.ensure_service_account())
@@ -1412,25 +1441,21 @@ class TestListing(_AppFixture):
                                                       tiered=False)}
         for n in ('create_function', 'set_output_state', 'list_available_devices'):
             self.assertIn(n, names)
-        with mock.patch.dict(os.environ, {'AOT_AI_BUILTIN_MCP_TIERING': '0'}):
-            agent_names = {t['name'] for t in te.tools_for_agent(self.app)}
-        self.assertIn('create_function', agent_names)
+        agent_names = {t['name'] for t in te.tools_for_agent(self.app)}
+        self.assertIn('configure', agent_names)
+        self.assertIn('control', agent_names)
 
-    def test_in_app_listing_keeps_drawers_when_mcp_default_flips(self):
-        """외부 MCP 의 서랍 기본값(끔)이 인앱 AI 의 내장 목록을 바꾸지 않는다 —
-        인앱은 AOT_AI_BUILTIN_MCP_TIERING(기본 켬)을 따른다(설계 §3.7)."""
+    def test_in_app_listing_is_domain_regardless_of_switches(self):
+        """인앱 목록은 외부 표면·서랍 스위치와 무관하게 도메인 명부다(26-11 5단계) —
+        옛 도구 이름도 서랍 기구도 없다."""
         from aot.tools import tool_execution as te
-        env = {k: v for k, v in os.environ.items()
-               if k not in ('AOT_MCP_TOOL_TIERING', 'AOT_AI_BUILTIN_MCP_TIERING')}
-        with mock.patch.dict(os.environ, env, clear=True):
-            names = {t['name'] for t in te.tools_for_agent(self.app)}
-        self.assertIn('open_drawer', names)
-        self.assertIn('use_tool', names)
-        self.assertNotIn('create_function', names, '서랍 도구가 상시 목록에 올라왔다')
-        with mock.patch.dict(os.environ, dict(env, AOT_MCP_TOOL_TIERING='1'),
-                             clear=True):
-            same = {t['name'] for t in te.tools_for_agent(self.app)}
-        self.assertEqual(names, same, '외부 MCP 스위치가 인앱 목록을 바꿨다')
+        from aot.tools.domain.registry import DOMAIN_TOOLS
+        base = {t['name'] for t in te.tools_for_agent(self.app)}
+        self.assertTrue(base <= set(DOMAIN_TOOLS), base - set(DOMAIN_TOOLS))
+        for env in ({'AOT_MCP_TOOL_TIERING': '1'}, {'AOT_MCP_SURFACE': 'legacy'}):
+            with mock.patch.dict(os.environ, env):
+                same = {t['name'] for t in te.tools_for_agent(self.app)}
+            self.assertEqual(base, same, '스위치 %s 가 인앱 목록을 바꿨다' % env)
 
     def test_external_listing_has_no_drawer_machinery_by_default(self):
         """서랍을 끈(기본) 외부 목록에는 open_drawer·get_tool_detail·use_tool 이
@@ -1779,7 +1804,8 @@ class TestModuleKeys(_AppFixture):
         every = self._listed(self._auth(self._issue(
             'Admin', 'full', R.TOOL_PROFILE_SEP.join((OPS,) + MODS))))
         # 도메인 전용 안쪽 도구(DOMAIN_ONLY_TOOLS)는 옛 목록에 싣지 않는다.
-        union = frozenset().union(*(R.module_tools(m) for m in MODS)) - R.DOMAIN_ONLY_TOOLS
+        union = (frozenset().union(*(R.module_tools(m) for m in MODS)) | frozenset(R.DOMAIN_PROMOTED_TOOLS)) \
+            - R.DOMAIN_ONLY_TOOLS
         self.assertEqual(cfg, every)
         self.assertEqual(cfg - ops, union & _catalog_names())
         # 'configuration' 키의 모듈 칸에 무엇이 남아 있어도 보지 않는다.
@@ -1794,8 +1820,8 @@ class TestModuleKeys(_AppFixture):
         names = self._listed(role)
         ops = self._listed(self._auth(self._issue('Editor', 'full', OPS)))
         self.assertTrue(ops < names)
-        self.assertEqual(names - ops, (R.module_tools('plots')
-                                       | R.module_tools('map')) & names)
+        promoted = {n for n, m in R.DOMAIN_PROMOTED_TOOLS.items() if m in ('plots', 'map')}
+        self.assertEqual(names - ops, (R.module_tools('plots') | R.module_tools('map') | promoted) & names)
         for n in ('create_plot', 'list_programs', 'nearest'):
             self.assertIn(n, names)
         for n in ('create_function', 'list_device_types', 'create_widget',

@@ -62,7 +62,8 @@ def upcoming(hours=_DEFAULT_WINDOW_H, forecast_path=None):
 
     `forecast_path` 가 없으면 기상청 `forecast.json`. 시설 시간열 파일(Open-Meteo)을
     주면 그 파일로 판정하고, 낡음 기준은 수신 시각(`fetched_epoch`) 2 h 다(제어와 같은
-    기준 — `forecast_feedforward.FACILITY_FILE_MAX_AGE_S`).
+    기준 — `forecast_feedforward.FACILITY_FILE_MAX_AGE_S`). 수신 시각이 10분 넘게 미래인
+    파일도 낡은 것으로 본다(`FACILITY_FILE_MAX_FUTURE_S`).
 
     반환:
       stale        bool   — 예보가 낡아 판정하지 않았다
@@ -75,8 +76,8 @@ def upcoming(hours=_DEFAULT_WINDOW_H, forecast_path=None):
     out = {'stale': False, 'age_hours': None, 'items': []}
     try:
         from aot.functions.utils.env_control.forecast_feedforward import (
-            FACILITY_FILE_MAX_AGE_S, _load_forecast, forecast_epoch,
-            forecast_rows_ahead)
+            FACILITY_FILE_MAX_AGE_S, FACILITY_FILE_MAX_FUTURE_S, _load_forecast,
+            forecast_epoch, forecast_rows_ahead)
         data = _load_forecast(forecast_path) or {}
     except Exception as exc:                                # noqa: BLE001
         logger.debug('[hazards] 예보 로드 실패: %s', exc)
@@ -97,6 +98,11 @@ def upcoming(hours=_DEFAULT_WINDOW_H, forecast_path=None):
         age = (time.time() - pub) / 3600.0
         out['age_hours'] = round(age, 1)
         if age > stale_h:
+            out['stale'] = True
+            return out
+        # 시설 파일은 수신 시각이 10분 넘게 미래여도 쓰지 않는다(시계 이상) —
+        # `load_fresh_facility_forecast` 와 같은 기준.
+        if forecast_path is not None and age < -FACILITY_FILE_MAX_FUTURE_S / 3600.0:
             out['stale'] = True
             return out
 

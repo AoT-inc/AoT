@@ -33,7 +33,7 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
-from . import psychro
+from aot.utils import psychro
 from .goal import build_env_target
 from .types import EnvTarget, TargetVar
 

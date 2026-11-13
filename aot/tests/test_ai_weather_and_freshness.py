@@ -90,7 +90,7 @@ class TestWeatherDeviceSelection(unittest.TestCase):
         far = _fake_input('w-map', '기상청-9포장', 'KMA_weather_500')
         with patch.object(S, '_weather_inputs',
                           return_value={'w-in': near, 'w-map': far}), \
-             patch('aot.aot_flask.geo.device_membership.place_members',
+             patch('aot.space.device_membership.place_members',
                    return_value={'w-in', 'soil-1'}), \
              patch.object(ADT_MEASUREMENT, '_devices_on_map_p2', return_value={'w-in', 'w-map'}):
             chosen, scope, others = S._pick_weather_input(_fake_shape(), '1포장')
@@ -104,7 +104,7 @@ class TestWeatherDeviceSelection(unittest.TestCase):
         b = _fake_input('kma-3', '기상청-3포장', 'KMA_weather_500')
         with patch.object(S, '_weather_inputs',
                           return_value={'kma-1': a, 'kma-3': b}), \
-             patch('aot.aot_flask.geo.device_membership.place_members',
+             patch('aot.space.device_membership.place_members',
                    return_value=set()), \
              patch.object(ADT_MEASUREMENT, '_devices_on_map_p2', return_value=set()):
             chosen, scope, others = S._pick_weather_input(_fake_shape(), '3포장')
@@ -116,11 +116,11 @@ class TestWeatherDeviceSelection(unittest.TestCase):
     def _pick_with(self, cands, coords, site_ids=(), placed=()):
         from aot.utils import device_tz
         with patch.object(S, '_weather_inputs', return_value=cands), \
-             patch('aot.aot_flask.geo.device_membership.place_members',
+             patch('aot.space.device_membership.place_members',
                    return_value=set(placed)), \
-             patch('aot.aot_flask.geo.device_membership.site_for_geometry',
+             patch('aot.space.device_membership.site_for_geometry',
                    return_value=None), \
-             patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+             patch('aot.space.device_membership.weather_device_ids',
                    return_value=(list(site_ids), 'inferred')), \
              patch.object(device_tz, 'resolve_location_coords',
                           side_effect=lambda i: coords.get(i, (None, None))):
@@ -196,7 +196,7 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
              "readings": [{"t": "2026-08-17T09:00:00+09:00", "v": 27.1, "u": "C"}]}]
         with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
              patch.object(ADT_MEASUREMENT, 'Input', inp), \
-             patch('aot.aot_flask.geo.device_membership.place_members',
+             patch('aot.space.device_membership.place_members',
                    return_value={'any-1'}), \
              patch.object(S, '_pick_weather_input',
                           return_value=(chosen, scope, others or [])), \
@@ -240,7 +240,7 @@ class TestGetWeatherToolEnvelope(unittest.TestCase):
             inp.query.filter.return_value.first.return_value = slow
             with patch.object(ADT_MEASUREMENT, 'GeoShape', geo), \
                  patch.object(ADT_MEASUREMENT, 'Input', inp), \
-                 patch('aot.aot_flask.geo.device_membership.place_members',
+                 patch('aot.space.device_membership.place_members',
                        return_value={'slow-1'}), \
                  patch.object(S, '_pick_weather_input', return_value=(None, None, [])):
                 S.get_weather_tool(zone_id='shape-1')

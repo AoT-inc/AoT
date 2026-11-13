@@ -28,26 +28,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from aot.utils.time_utils import utc_now
-
-
-def _as_utc(dt):
-    """DB 에서 나온 naive datetime 은 UTC 다. 그것을 명시해 준다.
-
-    `utc_now()` 는 aware 를 돌려주는데 이 모듈이 비교하는 값들
-    (`AIKnowledgeChunk.created_at` 등)은 `db.DateTime` 이라 naive 로 저장된다.
-    섞어서 빼면 TypeError 가 나고, `evaluate_tier()` 의 넓은 except 가 그것을
-    받아 **점수 0.0 을 정상 결과처럼 돌려준다** — 티어 재분류 잡이 매 주기
-    아무 일도 하지 않으면서 조용히 성공한다.
-
-    이 결함이 오래 보이지 않은 이유는 테스트가 `aot.utils.time_utils` 를
-    통째로 MagicMock 으로 갈아끼워 `utc_now` 를 naive 로 만들어 뒀기
-    때문이다 — 테스트 안에서만 양쪽이 naive 로 맞아 통과했다.
-    `safety_service._as_utc` 와 같은 처리다.
-    """
-    if dt is not None and dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt
+from aot.utils.timekit import parse_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -393,7 +374,7 @@ class TierDecisionEngine:
             window_start = now - timedelta(hours=promotion_window_hours)
             access_count_in_window = sum(
                 log.access_count for log in access_history
-                if _as_utc(log.timestamp) >= window_start
+                if log.timestamp is not None and parse_utc(log.timestamp) >= window_start
             )
         else:
             access_count = 0
@@ -446,10 +427,11 @@ class TierDecisionEngine:
 
         # Check burst in 1-hour window vs total timespan
         now = utc_now()
-        burst_window_start = now - timedelta(hours=1)
+        burst_window_start = now - timedelta(hours=1)  # tz-ok: 순간 비교의 창 길이
 
         accesses_in_burst_window = [log for log in access_history
-                                    if _as_utc(log.timestamp) >= burst_window_start]
+                                    if log.timestamp is not None
+                                    and parse_utc(log.timestamp) >= burst_window_start]
 
         if not accesses_in_burst_window:
             return False
@@ -461,7 +443,10 @@ class TierDecisionEngine:
             return False
 
         # Calculate total timespan
-        timestamps = [_as_utc(log.timestamp) for log in access_history]
+        timestamps = [parse_utc(log.timestamp) for log in access_history
+                      if log.timestamp is not None]
+        if not timestamps:
+            return False
         min_timestamp = min(timestamps)
         max_timestamp = max(timestamps)
         total_timespan_hours = (max_timestamp - min_timestamp).total_seconds() / 3600
@@ -683,9 +668,9 @@ class TierDecisionEngine:
     def _get_last_accessed(cls, document: Any) -> Optional[datetime]:
         """Get last accessed time from document."""
         if hasattr(document, 'last_accessed') and document.last_accessed:
-            return _as_utc(document.last_accessed)
+            return parse_utc(document.last_accessed)
         if hasattr(document, 'date_time') and document.date_time:
-            return _as_utc(document.date_time)
+            return parse_utc(document.date_time)
         return None
 
 
@@ -1022,8 +1007,7 @@ class TierMigrationService:
     # 이제 "옮겼는지" 를 bool 로 돌려주고, 호출자가 그 사실을 결과에 실어
     # 보낸다(content_moved). 거짓 성공을 남기지 않는 것이 목적이다.
     #
-    # 실제 아카이브는 AI 가 MCP 도구(archive_note)로 명시적으로 수행한다 —
-    # 자동 이동을 켜기 전에 복원 경로를 실증하기 위한 의도적인 선택이다.
+    # 실제 아카이브 이동은 AI 도구로 열어 두지 않는다(냉동 보관 도구는 2026-11-04 제거).
 
     @classmethod
     def _migrate_to_hot(cls, document: Any, content: str) -> bool:
@@ -1055,7 +1039,7 @@ class TierMigrationService:
 
             # DB 는 naive 로 저장하므로 바인딩도 naive 여야 한다 — aware 를
             # 넘기면 SQLite 가 오프셋이 붙은 문자열로 비교해 어긋난다.
-            cutoff = (utc_now() - timedelta(hours=1)).replace(tzinfo=None)
+            cutoff = (utc_now() - timedelta(hours=1)).replace(tzinfo=None)  # tz-ok: 순간 비교의 창 길이
             recent_transitions = TierDecision.query.filter(
                 TierDecision.document_id == doc_id,
                 TierDecision.timestamp >= cutoff,

@@ -2,7 +2,7 @@
 """응답 계약(data / next / say) — 설계 plans/mcp_act_say_split_design.md §2·§5-1, 사용자 결정 2026-10-29.
 
 고정하는 계약(LLM 없음, 결정론적):
-  1. 시범 op 5개(find.resolve, screen.act, overview.failure, record.note_add, weather.forecast)의 응답은
+  1. 시범 op 5개(find.resolve, screen.act, overview.failure, record.note, weather.forecast)의 응답은
      ``status`` → ``say``(있으면) → ``next``(있으면) → 나머지 data 순서다.
   2. ``say`` 는 사용자에게 전할 뜻만 담는다 — 호출 문법·도구 이름·id·단계 중계·'말하지 마라' 꼬리가 없고 짧다.
   3. ``next`` 는 기계용이다 — 할 호출·사용자 답 뒤의 호출·짧은 이유. 사용자에게 할 말("ask the user…")이 없다.
@@ -38,6 +38,10 @@ class ContractShapeMixin:
 
     def assertContract(self, body, say=None):
         keys = list(body)
+        if keys and keys[0] == 'must':
+            # 꼭 할 호출 하나(F-16 ①)는 맨 앞 — 그 뒤는 같은 계약이다.
+            self.assertIsInstance(body['must'], str)
+            keys = keys[1:]
         self.assertEqual('status', keys[0], body)
         if 'say' in body:
             self.assertEqual('say', keys[1], body)
@@ -264,10 +268,10 @@ class FailureTest(ContractShapeMixin, unittest.TestCase):
         self.assertIn('recommendation', body)
 
 
-class NoteAddTest(ContractShapeMixin, unittest.TestCase):
+class NoteWriteTest(ContractShapeMixin, unittest.TestCase):
 
     def test_general_memo_tells_no_place(self):
-        body = _shape('record', 'note_add', {
+        body = _shape('record', 'note', {
             "note_id": "n1", "name": "점검", "status": "created", "no_location": True,
             "note_hint": "Saved as a general memo with no location; it will not appear on any device.",
             "attached_links": 1})
@@ -277,10 +281,24 @@ class NoteAddTest(ContractShapeMixin, unittest.TestCase):
         self.assertNotIn('note_hint', body)
         self.assertIn('no place', body['say']['tell'])
 
-    def test_note_on_a_place_says_nothing(self):
-        body = _shape('record', 'note_add', {"note_id": "n1", "status": "created", "target_id": "z",
-                                             "attached_to": "3포장"})
-        self.assertContract(body, say=False)
+    def test_note_on_a_place_says_where_so_a_wrong_place_is_caught(self):
+        body = _shape('record', 'note', {"note_id": "n1", "status": "created", "target_id": "z",
+                                         "attached_to": "3포장"})
+        self.assertContract(body, say='tell')
+        self.assertIn('3포장', body['say']['tell'])
+
+    def test_a_written_note_hands_back_its_id_and_the_fix_calls(self):
+        body = _shape('record', 'note', {"note_id": "n1", "status": "created", "attached_to": "3포장"})
+        self.assertIn("target='n1'", body['next']['fix'])
+        self.assertIn("op='delete', kind='note'", body['next']['fix'])
+        self.assertEqual('n1', body['note_id'])
+
+    def test_a_moved_or_hidden_note_says_so(self):
+        moved = _shape('record', 'note', {"note_id": "n1", "status": "modified", "changed": ["target"],
+                                          "attached_to": "4포장"})
+        self.assertIn('Moved to 4포장', moved['say']['tell'])
+        hidden = _shape('record', 'note', {"note_id": "n1", "status": "archived", "changed": ["archive"]})
+        self.assertIn('Hidden', hidden['say']['tell'])
 
 
 class ForecastTest(ContractShapeMixin, unittest.TestCase):

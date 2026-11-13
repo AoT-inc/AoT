@@ -83,7 +83,7 @@ class TestObservationDatetime(unittest.TestCase):
     def setUp(self):
         self.inst = _bare_module()
         self.tz_patch = patch.object(
-            kma_weather_500, 'get_device_tz', return_value=__import__('pytz').timezone('Asia/Seoul'))
+            kma_weather_500, 'tz_of', return_value=__import__('pytz').timezone('Asia/Seoul'))
         self.tz_patch.start()
         self.addCleanup(self.tz_patch.stop)
 
@@ -169,7 +169,7 @@ class TestFirstRunGate(unittest.TestCase):
 
         seoul = __import__('pytz').timezone('Asia/Seoul')
         with patch.object(kma_weather_500, '_get_opt', fake_opt), \
-             patch.object(kma_weather_500, 'get_device_tz', return_value=seoul), \
+             patch.object(kma_weather_500, 'tz_of', return_value=seoul), \
              patch.object(InputModule, '_latest_stored_datetime', return_value=stored_dt), \
              patch.object(InputModule, 'get_new_data') as backfill, \
              patch.object(InputModule, 'pre_fetch_data', return_value=None):
@@ -351,7 +351,7 @@ class TestChunkPlanning(unittest.TestCase):
     def test_full_span_is_skipped_when_everything_is_stored(self):
         inst = _bare_module()
         with patch.object(InputModule, '_chunk_is_covered', return_value=True), \
-             patch.object(kma_weather_500, 'get_device_tz', return_value=self.seoul), \
+             patch.object(kma_weather_500, 'tz_of', return_value=self.seoul), \
              patch.object(InputModule, '_fetch_window') as fetch:
             inst.get_new_data(7 * 1440)
         fetch.assert_not_called()
@@ -461,7 +461,7 @@ class TestRetryQueue(unittest.TestCase):
         inst = _bare_module()
         inst._queue_failed_window('202608051200', '202608051210')
         rows = [{'pub_timestamp': '202608051205'}]
-        with patch.object(kma_weather_500, 'get_device_tz'), \
+        with patch.object(kma_weather_500, 'tz_of'), \
              patch.object(InputModule, '_fetch_window', return_value=(rows, True)), \
              patch.object(InputModule, '_write_backfill_rows') as write:
             inst.drain_backfill_retries()
@@ -471,7 +471,7 @@ class TestRetryQueue(unittest.TestCase):
     def test_still_failing_windows_stay_queued(self):
         inst = _bare_module()
         inst._queue_failed_window('202608051200', '202608051210')
-        with patch.object(kma_weather_500, 'get_device_tz'), \
+        with patch.object(kma_weather_500, 'tz_of'), \
              patch.object(InputModule, '_fetch_window', return_value=([], False)):
             inst.drain_backfill_retries()
         self.assertEqual(len(inst._backfill_retry_windows), 1)
@@ -480,7 +480,7 @@ class TestRetryQueue(unittest.TestCase):
     def test_a_window_is_abandoned_rather_than_retried_forever(self):
         inst = _bare_module()
         inst._queue_failed_window('202608051200', '202608051210')
-        with patch.object(kma_weather_500, 'get_device_tz'), \
+        with patch.object(kma_weather_500, 'tz_of'), \
              patch.object(InputModule, '_fetch_window', return_value=([], False)):
             for _ in range(kma_weather_500.BACKFILL_RETRY_ROUNDS):
                 inst.drain_backfill_retries()
@@ -491,7 +491,7 @@ class TestRetryQueue(unittest.TestCase):
         inst = _bare_module()
         for i in range(10):
             inst._queue_failed_window(f'w{i}', f'w{i}e')
-        with patch.object(kma_weather_500, 'get_device_tz'), \
+        with patch.object(kma_weather_500, 'tz_of'), \
              patch.object(InputModule, '_fetch_window',
                           return_value=([], False)) as fetch:
             inst.drain_backfill_retries()

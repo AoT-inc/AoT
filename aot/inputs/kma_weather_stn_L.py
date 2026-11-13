@@ -42,6 +42,7 @@ from flask_babel import lazy_gettext
 from aot.inputs.base_input import AbstractInput
 from aot.inputs.sensorutils import calculate_dewpoint
 from aot.utils.influx import add_measurements_influxdb
+from aot.utils.timekit import naive_utc, utc_now
 
 measurements_dict = {
     0: {'measurement': 'temperature', 'unit': 'C'},
@@ -206,7 +207,7 @@ class InputModule(AbstractInput):
             pub_dt = pub_dt.replace(microsecond=0)
         except Exception as e:
             self.logger.error(f"Publication timestamp conversion failed: {e}")
-            pub_dt = datetime.datetime.utcnow().replace(microsecond=0)
+            pub_dt = naive_utc(utc_now()).replace(microsecond=0)
 
         # Duplicate check using InfluxDB within the last 1 hour (3600 seconds)
         try:

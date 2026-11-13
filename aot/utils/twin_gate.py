@@ -9,24 +9,23 @@ DB 계약 (`misc` 행, alembic p6_90):
   twin_run_times  Text     'HH:MM,HH:MM' (현지). 기본 DEFAULT_RUN_TIMES.
   twin_heartbeat  JSON     서비스가 쓴다 (`write_heartbeat`).
       at           ISO 8601 UTC 문자열 'YYYY-MM-DDTHH:MM:SSZ' — 하트비트를 쓴 시각
-      status       'running' | 'idle'(플래그 꺼짐·대기) | 'locked'(잠금 판정으로 멈춤) | 'error'
+      status       'running' | 'idle'(플래그 꺼짐·대기) | 'locked'(잠금 판정으로 멈춤 — 쓴 뒤 정상 종료) | 'error'
       version      서비스 버전 문자열
       sites        대상 대지 수 (int)
       plots        대상 구획 수 (int)
       last_run_at  마지막 계산 회차 시각 (at 와 같은 형식, 없으면 None)
       failures     최근 회차 실패 수 (int)
       locked_reason  잠겼을 때 twin_supported() 의 reason 코드, 아니면 None
-  서비스는 TWIN_HEARTBEAT_INTERVAL_S 마다(플래그가 꺼져 있어도) 하트비트를 쓴다.
+  서비스는 TWIN_HEARTBEAT_INTERVAL_S 마다(플래그가 꺼져 있어도) 하트비트를 쓴다. 서버는 기본 구성에
+  항상 들어 있어 대기하고, 플래그가 켜지면 poll_s(60 초) 안에 일을 시작한다(깨우는 신호는 없다).
   `at` 이 TWIN_HEARTBEAT_MAX_AGE_S 보다 낡으면 화면은 "서비스가 실행 중이 아님" 으로 본다.
+  잠긴 기기의 서비스는 `locked` 를 쓰고 정상 종료(exit 0)한다 — 하트비트는 곧 낡는다.
 
-잠금 (이중 잠금: 화면·저장 경로와 서비스 시작 시 둘 다 `twin_supported()` 를 부른다):
-  - HARDWARE_PROFILE=LOW  (AOT_TWIN_IGNORE_PROFILE=1 이면 이 항목만 건너뛴다 — 아래 참고)
+잠금 (이중 잠금: 화면·저장 경로와 서비스 시작 시 둘 다 `twin_supported()` 를 부른다 — 기기 고정값이다):
   - 파이 Zero·1·2·3 (모델 문자열로 판정; 4·5 는 메모리로 가른다)
   - 기기 메모리 TWIN_MIN_MEM_GB 미만 (컨테이너 한도는 보지 않는다; 측정 불가면 잠그지 않는다 — 예: 파이가 아닌 맥 직접 실행)
-
-⚠ docker/docker-compose.yml(개발용)과 prod 기본값은 HARDWARE_PROFILE=LOW 라서, 그대로면
-  개발서버도 잠긴다. 운영자가 명시적으로 `AOT_TWIN_IGNORE_PROFILE=1` 을 주면 프로파일 항목만
-  무시한다(파이 모델·메모리 잠금은 그대로).
+  HARDWARE_PROFILE 은 보지 않는다 — 개발·배포 compose 의 기본값이 LOW 라 서버가 기본 포함된 뒤로는
+  잠금 사유가 될 수 없고, 이를 풀던 옵션(`AOT_TWIN_IGNORE_PROFILE`·`misc.twin_ignore_profile`)은 걷어 냈다.
 
 표준 라이브러리 + 지연 import 만 쓴다 — 서비스(Flask 없는 프로세스)에서도 import 된다.
 
@@ -35,8 +34,8 @@ DB 계약 (`misc` 행, alembic p6_90):
 """
 import datetime
 import logging
-import os
 import re
+from aot.utils.timekit import parse_utc, utc_now
 
 logger = logging.getLogger("aot.twin_gate")
 
@@ -44,11 +43,9 @@ logger = logging.getLogger("aot.twin_gate")
 # 4 GB 급 보드의 MemTotal 은 3.7~3.8 GB 로 보고된다(커널·GPU 예약분). 공칭 4 GB 를 통과시키려면
 # 문턱을 4.0 이 아니라 3.5 로 둬야 한다.
 TWIN_MIN_MEM_GB = 3.5
-TWIN_LOCKED_PROFILES = ('LOW',)
 # 'Raspberry Pi Zero 2 W' · 'Raspberry Pi Model B Rev 2'(1세대) · 'Raspberry Pi 2/3 Model B'.
 # 4·5 는 여기에 안 걸리고 메모리로 가른다.
 TWIN_LOW_PI_RE = re.compile(r'raspberry pi (zero|model|[123]\b)', re.IGNORECASE)
-IGNORE_PROFILE_ENV = 'AOT_TWIN_IGNORE_PROFILE'
 
 TWIN_HEARTBEAT_INTERVAL_S = 60
 TWIN_HEARTBEAT_MAX_AGE_S = 180
@@ -56,13 +53,11 @@ TWIN_HEARTBEAT_MAX_AGE_S = 180
 DEFAULT_RUN_TIMES = '06:10,18:10'
 MAX_RUN_TIMES = 12
 
-REASON_PROFILE_LOW = 'profile_low'
 REASON_PI_MODEL = 'pi_model'
 REASON_LOW_MEMORY = 'low_memory'
 
 # 로그·서비스용 영어 문구. 화면은 reason 코드를 보고 번역된 문구를 고른다.
 LOCK_MESSAGES = {
-    REASON_PROFILE_LOW: 'HARDWARE_PROFILE is LOW.',
     REASON_PI_MODEL: 'This Raspberry Pi model is too small.',
     REASON_LOW_MEMORY: 'Less than %.1f GB of memory.' % TWIN_MIN_MEM_GB,
 }
@@ -73,13 +68,7 @@ _RUN_TIME_RE = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
 # --- 잠금 ------------------------------------------------------------------
 def twin_supported():
     """이 기기에서 디지털트윈을 켤 수 있는가. `(True, '')` 또는 `(False, reason코드)`."""
-    from aot.config.mcp_config import HARDWARE_PROFILE
     from aot.utils import system_environment as env
-
-    if (str(HARDWARE_PROFILE or '').upper() in TWIN_LOCKED_PROFILES
-            and os.environ.get(IGNORE_PROFILE_ENV, '') not in ('1', 'true', 'TRUE')
-            and not ignore_profile_flag()):
-        return False, REASON_PROFILE_LOW
 
     model = env.pi_model()
     if model and TWIN_LOW_PI_RE.search(model):
@@ -125,15 +114,6 @@ def _store_heartbeat(data):
 
 
 # --- 플래그 ----------------------------------------------------------------
-def ignore_profile_flag():
-    """사용자가 설정 > 디지털트윈에서 '낮은 사양 프로파일 잠금 해제'를 켰는가(HARDWARE_PROFILE 항목만 건너뜀).
-
-    환경변수 `AOT_TWIN_IGNORE_PROFILE` 과 같은 효과의 화면 옵션이다. 파이 모델·기기 메모리 잠금은 그대로다.
-    """
-    misc = _load_misc()
-    return bool(misc is not None and getattr(misc, 'twin_ignore_profile', False))
-
-
 def auto_forecast_enabled():
     """대지에 트윈을 켤 때 가까운 예보 입력이 없으면 새로 만드는가(기본 켜짐)."""
     misc = _load_misc()
@@ -185,10 +165,6 @@ def run_times():
 
 
 # --- 하트비트 --------------------------------------------------------------
-def _utcnow():
-    return datetime.datetime.now(datetime.timezone.utc)
-
-
 def _iso(dt):
     return dt.astimezone(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -200,13 +176,7 @@ def _parse_ts(value):
     try:
         if isinstance(value, (int, float)):
             return datetime.datetime.fromtimestamp(float(value), datetime.timezone.utc)
-        text = str(value).strip()
-        if text.endswith('Z'):
-            text = text[:-1] + '+00:00'
-        dt = datetime.datetime.fromisoformat(text)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=datetime.timezone.utc)
-        return dt.astimezone(datetime.timezone.utc)
+        return parse_utc(str(value).strip())
     except (ValueError, TypeError, OverflowError, OSError):
         return None
 
@@ -232,14 +202,14 @@ def heartbeat_stale(max_age=TWIN_HEARTBEAT_MAX_AGE_S, heartbeat=None, now=None):
     at = _parse_ts(hb.get('at'))
     if at is None:
         return True
-    age = ((now or _utcnow()) - at).total_seconds()
+    age = ((now or utc_now()) - at).total_seconds()
     return age > max_age
 
 
 def write_heartbeat(status, version='', sites=0, plots=0, last_run_at=None,
                     failures=0, locked_reason=None, now=None):
     """서비스가 부르는 쓰기 도우미. `at` 은 여기서 찍는다. 성공하면 True."""
-    ts = now or _utcnow()
+    ts = now or utc_now()
     if isinstance(last_run_at, datetime.datetime):
         last_run_at = _iso(last_run_at)
     data = {

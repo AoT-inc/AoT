@@ -31497,3 +31497,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "水平 / 斜長"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} 條管線按水平長度計算"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "水平"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "管線長度（整個區域）"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "管線長度"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "正在計算地形，完成後將顯示斜長。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "部分區段按水平長度計算，地形未涵蓋這些區段。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "計算於 {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "儲存格 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "長度順序為 水平 / 斜長。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "坡度 {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "按水平長度計算"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "流量 {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "損失 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "水平 {h} m，斜長 {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "水平 {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "區段 {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "區段（{n}）"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "水平 {h} m / 斜長 {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "正在計算地形 - 僅顯示水平長度。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "地圖上的長度為水平長度。"
+
+msgid "Terrain input"
+msgstr "地形輸入"
+
+msgid "Compare another terrain"
+msgstr "比較其他地形"
+
+msgid "Could not compare. Try again."
+msgstr "無法比較，請重試。"
+
+msgid "Changed sections ({n})"
+msgstr "變化的管段（{n}）"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "正在下載地形 {name}，完成後顯示比較。"
+
+msgid "Calculation level"
+msgstr "計算層級"
+
+msgid "Switch to this terrain"
+msgstr "切換到此地形"
+
+msgid "That terrain input is gone."
+msgstr "該地形輸入已不存在。"
+
+msgid "Weakest nozzle flow"
+msgstr "最弱噴頭流量"
+
+msgid "Revert to {name}"
+msgstr "還原為 {name}"
+
+msgid "Slant length total"
+msgstr "斜長合計"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "此地形輸入沒有圖磚位址，請檢查其設定。"
+
+msgid "Downloading took too long. Try again."
+msgstr "下載耗時過長，請重試。"
+
+msgid "Terrain changed and recalculated"
+msgstr "地形已變更並重新計算"
+
+msgid "Compare with"
+msgstr "比較對象"
+
+msgid "No terrain was on"
+msgstr "之前未啟用地形"
+
+msgid "Undo change"
+msgstr "復原變更"
+
+msgid "Try again"
+msgstr "重試"
+
+msgid "This map has no pipes to compare."
+msgstr "此地圖沒有可比較的管線。"
+
+msgid "Pipes the terrain does not cover"
+msgstr "地形未涵蓋的管線"
+
+msgid "No terrain is on."
+msgstr "未啟用地形。"
+
+msgid "Could not change the terrain. Try again."
+msgstr "無法變更地形，請重試。"

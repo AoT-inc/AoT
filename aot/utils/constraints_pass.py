@@ -60,3 +60,17 @@ def constraints_pass_positive_or_zero_value(mod_dev, value):
         # Value missing/None: do not fail
         pass
     return all_passed, errors, mod_dev
+
+
+def constraints_pass_hhmm(mod_dev, value):
+    """하루 시각 `HH:MM` 텍스트 옵션 검사 — 못 읽는 값은 저장을 거부한다.
+
+    빈 값은 통과(옵션을 비워 기본값으로 돌리는 것은 정상). 파서의 정본은
+    `aot.utils.clock_hhmm.parse_hhmm` 이고, 읽는 쪽도 같은 파서를 쓴다.
+    """
+    from aot.utils.clock_hhmm import parse_hhmm
+    if value is None or str(value).strip() == '':
+        return True, [], mod_dev
+    if parse_hhmm(value) is None:
+        return False, ["Must be a time of day as HH:MM (00:00-24:00)"], mod_dev
+    return True, [], mod_dev

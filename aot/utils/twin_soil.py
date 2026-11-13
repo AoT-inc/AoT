@@ -7,6 +7,10 @@
 의 한 단어를 더한다. 이 모듈은 새 값을 만들지 않는다 — Influx 의 `env_twin_field` 에서 읽은 θ_root
 분위수와 사건 확률을 사람이 읽는 모양으로 옮길 뿐이다(원천/정제/산출 중 산출 모양만).
 
+**값 기준은 지도 모달 트윈 탭과 한 곳**이다 — `twin_read.theta_basis` 가 센서 단위(`theta_sensor`)와 뿌리층(`theta_root`) 중 하나를
+고르고(탭 `twin_chart.assemble` 과 같은 함수), `basis` 로 어느 단위인지 밝힌다. 믿을 만한가의 판정(`reference_only`·`cautions`)도
+`twin_read.trust` 하나이고 탭이 같은 값을 쓴다. 사건 확률 `p_dry`·`p_wet` 은 단위와 무관하게 **뿌리층 기준**이다.
+
 범위: 노지 구획 · 토양 수분 하나. 시설 트윈·다른 변수(Dr·Ks·지온·GDD)는 아직 안 낸다.
 """
 import logging
@@ -17,7 +21,13 @@ logger = logging.getLogger(__name__)
 #: 앞으로 며칠까지 싣는가(오늘 포함). 트윈의 신뢰 구간이 7일까지다(계약 §10.3).
 AHEAD_DAYS = 7
 
-UNIT = "% volumetric, root layer"
+UNITS = {'root': "% volumetric, root layer",
+         'sensor': "% volumetric, in the plot sensor's scale (model prediction, not a reading)"}
+UNIT = UNITS['root']
+
+#: 참고용 판정이면 AI 가 읽는 규칙 — 판정은 `twin_read.trust`(탭의 '참고용' 배지와 같은 값)다.
+REFERENCE_ONLY_READING = ("Reference only: recent twin forecasts differed a lot from the plot sensor (or there is no sensor). "
+                          "Give the numbers as a rough guide; do not state that water is sufficient or short.")
 
 _STATUS = {0: 'ok', 1: 'degraded'}
 
@@ -48,7 +58,8 @@ def soil_moisture(plot, now=None, ahead=AHEAD_DAYS):
     """구획 행 하나 → 토양 수분 예측 응답 dict. 쓸 수 없으면 status='unavailable' + 이유."""
     from aot.twin import output as O
     from aot.utils import twin_config, twin_read
-    from aot.utils.device_tz import location_iso
+    from aot.utils.timekit import tz_of
+    from aot.utils.timekit import iso_at
     from aot.utils.influx import read_twin_many
 
     now = time.time() if now is None else now
@@ -63,9 +74,9 @@ def soil_moisture(plot, now=None, ahead=AHEAD_DAYS):
     ok, why = twin_read.usable(meta, now)
     curve_rows = {}
     if ok:
-        chans = sorted(set(twin_read.CURVE_CHANNELS.values()))
+        chans = sorted(set(twin_read.CURVE_CHANNELS.values()) | set(twin_read.SOIL_EXTRA_CHANNELS.values()))
         curve_rows = read_twin_many(O.M_FLD, [pid], chans, now - 2 * 86400.0, end)
-    rec = twin_read.plots_bundle([pid], meta_rows, curve_rows, now, start, end)[0]
+    rec = twin_read.plots_bundle([pid], meta_rows, curve_rows, now, start, end, twin_read.SOIL_EXTRA_CHANNELS)[0]
     if not rec['usable']:
         extra = {}
         if rec['reason'] in ('status_2', 'status_3'):
@@ -77,28 +88,37 @@ def soil_moisture(plot, now=None, ahead=AHEAD_DAYS):
                 logger.debug("트윈 구획 설정 진단 실패", exc_info=True)
         return _unavailable(plot, rec['reason'], **extra)
 
+    m = rec['meta']
+    basis = twin_read.theta_basis(any(v is not None for v in rec['theta_sensor_p50']), twin_read.sensorless(m))
+    pre = 'theta_%s_' % basis
     cache = {}
+    tz = tz_of(pid)       # 날짜 라벨의 시간대 — 시각 라벨(`location_iso`)과 같은 구획 위치
     days = []
     for i, t in enumerate(rec['days'][:ahead + 1]):
-        row = {'date': (location_iso(t, pid, cache) or '')[:10],
-               'p10': _round(rec['theta_root_p10'][i]), 'p50': _round(rec['theta_root_p50'][i]),
-               'p90': _round(rec['theta_root_p90'][i])}
+        row = {'date': twin_read.grid_date(t, tz),
+               'p10': _round(rec[pre + 'p10'][i]), 'p50': _round(rec[pre + 'p50'][i]),
+               'p90': _round(rec[pre + 'p90'][i])}
         for key, name in (('p_water_deficit', 'p_dry'), ('p_waterlogging', 'p_wet')):
             v = (rec.get(key) or [None] * (i + 1))[i]
             if v is not None:
                 row[name] = _round(v, 2)
         days.append(row)
-    m = rec['meta']
     quality = {k: m[k] for k in ('ensemble_size', 'obs_n', 'coverage_80', 'horizon_d') if k in m}
     quality = {k: (_round(v, 2) if isinstance(v, float) else v) for k, v in quality.items()}
     out = {
-        'status': 'success', 'plot': plot.name or plot.subject, 'unit': UNIT,
+        'status': 'success', 'plot': plot.name or plot.subject, 'unit': UNITS[basis], 'basis': basis,
         'source': "twin model forecast, not a measurement",
         'twin_status': _STATUS.get(int(m.get('status', 0)), int(m.get('status', 0))),
-        'published_at': location_iso(m['t0'], pid, cache),
-        'valid_until': location_iso(m['valid_until'], pid, cache),
+        'published_at': iso_at(m['t0'], pid, cache),
+        'valid_until': iso_at(m['valid_until'], pid, cache),
         'days': days,
-        'note': "p10-p90 = model range; p_dry = chance of water stress that day, p_wet = of waterlogging.",
+        'note': "p10-p90 = model range; p_dry = chance of water stress that day, p_wet = of waterlogging "
+                "(both always root-layer, whatever the basis).",
         'quality': quality,
     }
+    tr = twin_read.trust(m, True)
+    out['reference_only'] = tr['reference_only']
+    out['cautions'] = tr['cautions']
+    if tr['reference_only']:
+        out['_reading'] = [REFERENCE_ONLY_READING]
     return out

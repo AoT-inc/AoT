@@ -438,7 +438,8 @@ class TestWriteResolverIsNotBorrowed(unittest.TestCase):
         payloads = {p['tool_name']: p
                     for p in tool_registry._MCP_TOOL_PAYLOADS
                     if 'tool_name' in p}
-        for name in ('distance_between', 'nearest'):
+        # distance_between 은 26-11 5단계에서 지웠다(find.nearest 가 맡는다).
+        for name in ('nearest',):
             self.assertIn(name, payloads, '%s 가 MCP 매니페스트에서 사라졌다' % name)
             desc = payloads[name]['description']
             # 모호할 때 고르지 말라는 지시가 설명에서 사라지면, 모델이 하나를

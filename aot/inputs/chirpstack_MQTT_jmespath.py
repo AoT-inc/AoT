@@ -33,6 +33,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
 from aot.utils.utils import random_alphanumeric
+from aot.utils.timekit import naive_utc, utc_now
 
 # ----------------------------- AoT metadata -----------------------------
 
@@ -401,7 +402,7 @@ class InputModule(AbstractInput):
 
     def _parse_time(self, iso: Optional[str]) -> datetime.datetime:
         if not iso:
-            return datetime.datetime.utcnow()
+            return naive_utc(utc_now())
         try:
             # Truncate RFC3339 ns -> us, then parse
             ts = iso.replace('Z', '+00:00')
@@ -421,7 +422,7 @@ class InputModule(AbstractInput):
             dt = datetime.datetime.strptime(ts, '%Y-%m-%dT%H:%M:%S.%f%z')
             return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
         except Exception:
-            return datetime.datetime.utcnow()
+            return naive_utc(utc_now())
 
     def _on_message(self, client, userdata, msg):
         try:

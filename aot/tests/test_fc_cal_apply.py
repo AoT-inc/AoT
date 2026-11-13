@@ -13,7 +13,7 @@ from unittest import mock
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import forecast_series as fs
+from aot.space import forecast_series as fs
 from aot.databases.models import FcCalEvent
 from aot.tests.test_forecast_series_read import H, T0, patched
 from aot.utils.fc_cal import apply as CA

@@ -18,10 +18,8 @@
         each_function.unique_id,
         form_conditional.latitude,
         form_conditional.longitude,
-        form_conditional.location_source,
         each_function.latitude,
         each_function.longitude,
-        each_function.location_source,
         'function_mod',
         'modal_config_' ~ each_function.unique_id,
         '280px',
@@ -29,7 +27,7 @@
         None,
         None,
         form_id='form_function_' ~ each_function.unique_id,
-        map_config_id=(each_function.map_config_id if each_function.map_config_id else (map_config_id if map_config_id is defined else '')),
+        map_config_id=(map_config_id if map_config_id is defined else ''),
         map_configs=(map_configs if map_configs is defined else []),
         map_overlays=map_overlays,
         save_id='mod_function_save_' ~ each_function.unique_id
@@ -155,7 +153,6 @@
         </div>
         {% set form = form_conditional %}
         {% set each_device = each_function %}
-        {% include 'pages/form_options/Coordinates.html' %}
 
         <div class="aot-modal-option-row">
             <label class="aot-modal-option-label">{{form_conditional.use_pylint.label(class_='mb-0')}}</label>

@@ -99,6 +99,19 @@ def inbox_dismiss(card_id):
     return jsonify({'ok': True, 'unread': cards.unread_count(uid)})
 
 
+@blueprint.route('/<card_id>/raise', methods=['POST'])
+@flask_login.login_required
+def inbox_raise(card_id):
+    """[맨 위로] — 예전 카드를 목록 맨 위로 끌어올린다(P7-11). 보이는 카드만(닫은 카드는 404)."""
+    denied = _guard()
+    if denied:
+        return denied
+    card = cards.raise_card(flask_login.current_user.id, card_id)
+    if card is None:
+        return _not_found()
+    return jsonify({'ok': True, 'raised_at': cards.iso_z(card.raised_at)})
+
+
 @blueprint.route('/<card_id>/pin', methods=['POST'])
 @flask_login.login_required
 def inbox_pin(card_id):
@@ -333,7 +346,7 @@ def inbox_to_note(card_id):
             return jsonify({'error': 'target_denied'}), 403
         if _note_target_denial(target_id, 'create_note'):
             return jsonify({'error': 'target_denied'}), 403
-        from aot.aot_flask.geo.device_membership import normalize_facility_note_target
+        from aot.space.device_membership import normalize_facility_note_target
         target_id, target_type = normalize_facility_note_target(target_id.strip(), None)
     else:
         target_id = None

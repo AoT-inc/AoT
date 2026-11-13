@@ -13,6 +13,7 @@ from aot.aot_flask.utils import utils_general
 from aot.utils.influx import (read_influxdb_list, read_influxdb_single,
                                  valid_date_str, write_influxdb_value)
 from aot.utils.system_pi import add_custom_units
+from aot.utils.timekit import naive_utc, parse_utc
 
 logger = logging.getLogger(__name__)
 
@@ -130,18 +131,14 @@ class MeasurementsHistorical(Resource):
         if epoch_start < 0 or epoch_end < 0:
             abort(422, custom='epoch_start and epoch_end must be >= 0')
 
-        utc_offset_timedelta = datetime.datetime.utcnow() - datetime.datetime.now()
-
         if epoch_start:
-            start = datetime.datetime.fromtimestamp(float(epoch_start))
-            start += utc_offset_timedelta
+            start = naive_utc(parse_utc(float(epoch_start)))
             start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         else:
             start_str = None
 
         if epoch_end:
-            end = datetime.datetime.fromtimestamp(float(epoch_end))
-            end += utc_offset_timedelta
+            end = naive_utc(parse_utc(float(epoch_end)))
             end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         else:
             end_str = None

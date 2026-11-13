@@ -97,7 +97,7 @@ _ALLOWED_EXACT = {
 # 목록과 무관하게 공개 트리에 있으면 안 되는 경로(비공개 저장소 전용 파일).
 PRIVATE_ONLY_PATHS = ('CLAUDE.md',)
 # 이 접두사 아래의 모든 경로(나스 Gitea 러너용 CI — 공개 저장소에는 러너가 없다).
-PRIVATE_ONLY_PREFIXES = ('.gitea/',)
+PRIVATE_ONLY_PREFIXES = ('.gitea/', '.claude/')
 
 
 def _tree_paths(sha):

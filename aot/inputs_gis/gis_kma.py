@@ -2,6 +2,8 @@
 import time
 from aot.inputs_gis.base_input_gis import AbstractGisInput
 from flask_babel import lazy_gettext as lg
+from aot.utils.kma_clock import kma_wall, kma_wall_to_utc
+from aot.utils.timekit import utc_now
 
 # 필드명/단위는 kma_weather_500.py의 sfc_nc_var.php 응답 컬럼과 일치
 CHANNELS = {
@@ -235,9 +237,9 @@ class InputModule(AbstractGisInput):
             self.logger.warning(f"[KMA GIS] API Key missing for Input {self.unique_id}")
             return None, None
 
-        now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)  # KST (naive)
+        now = kma_wall(utc_now())  # 기상청 요청 시계(KST, naive)
         if end is not None:
-            now = datetime.datetime.utcfromtimestamp(float(end)) + datetime.timedelta(hours=9)
+            now = kma_wall(float(end))
         tm2 = now.strftime('%Y%m%d%H%M')
         tm1 = (now - datetime.timedelta(minutes=window_min)).strftime('%Y%m%d%H%M')
 
@@ -294,8 +296,7 @@ class InputModule(AbstractGisInput):
             values['visibility'] = row['vs']
         at = None
         try:
-            at = (datetime.datetime.strptime(ts, '%Y%m%d%H%M') - datetime.timedelta(hours=9)
-                  ).replace(tzinfo=datetime.timezone.utc).timestamp()
+            at = kma_wall_to_utc(datetime.datetime.strptime(ts, '%Y%m%d%H%M')).timestamp()
         except (TypeError, ValueError):
             at = None
         return {'values': values, 'at': at}

@@ -215,7 +215,12 @@ def api_geo_output_states():
         if not isinstance(ch_states, dict):
             continue
         states[uid] = {str(ch): raw for ch, raw in ch_states.items()}
-    return jsonify({'ok': True, 'states': states})
+    # 지도 위젯(장치 마커·담당 구역)과 구역 팝업이 `output_update_interval`
+    # 주기로 치는 폴링이다. 상태는 폴링 사이에 그대로인 때가 대부분이라 ETag 로
+    # 304(본문 0바이트)를 돌려준다 — 데몬 RPC 비용은 그대로고 줄이는 것은 회선과
+    # 단말이다(utils_http 머리말). 클라이언트는 If-None-Match 를 직접 싣는다.
+    return utils_http.json_conditional(jsonify({'ok': True, 'states': states}),
+                                       request)
 
 
 # @manual geo/map-widget#control-right-from-the-popup, geo/map-widget#click-a-zonesite-control-from-a-device-list, geo/api-reference#output-control-map-popups

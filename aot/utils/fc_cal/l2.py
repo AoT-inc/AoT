@@ -101,9 +101,12 @@ def refresh_site(site_id, io, now=None, writer: Optional[Callable] = None, force
                 keys.append(key)
     if info.get('daily_input') and cal.variables(KIND_D):
         from datetime import datetime, timezone
-        from zoneinfo import ZoneInfo
+        from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
         try:
-            off = datetime.fromtimestamp(now, timezone.utc).astimezone(ZoneInfo(info['tz'] or 'UTC')).utcoffset()
+            _tz, _src = resolve_tz(info['tz'] or 'UTC')
+            if _src != SOURCE_EXPLICIT:
+                _tz = timezone.utc
+            off = datetime.fromtimestamp(now, timezone.utc).astimezone(_tz).utcoffset()
             off_s = off.total_seconds() if off is not None else 0.0
         except Exception:                                   # noqa: BLE001
             off_s = 0.0

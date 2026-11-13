@@ -1289,7 +1289,13 @@ class PostUrlTest(_NetBase):
     def test_error_text_never_carries_url_status_headers_body_or_ip(self):
         self.route('/a.png', b'SECRETBODY', status=500, headers={'X-Secret': 'HEADERVALUE'})
         out = self._url_post('https://%s/a.png?k=TOKEN' % HOST)
-        blob = json.dumps(out)
+        # 모든 응답에 실리는 `now`(현재 시각 `farm_local`) 는 숫자로만 이루어진 값이라 소수 초 등에
+        # 우연히 '500' 이 들어갈 수 있다(2026-11-12 CI 오탐). 새어 나감을 보는 대상이 아니므로
+        # 부분 문자열 검사에서 빼고, 대신 그 안에 시각·시간대 외의 것이 없음만 따로 확인한다.
+        rest = {k: v for k, v in out.items() if k != 'now'}
+        if 'now' in out:
+            self.assertEqual(set(out['now']), {'farm_local', 'tz'})
+        blob = json.dumps(rest)
         for leak in ('500', 'SECRETBODY', 'HEADERVALUE', 'TOKEN', PUB, HOST, '127.0.0.1'):
             self.assertNotIn(leak, blob)
         self.assertEqual((out['status'], out['error']), ('error', X.MSG_FAILED))

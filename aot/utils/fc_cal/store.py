@@ -14,6 +14,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 from .common import SCORE_CHANNELS, STATUS_CODE, USED_STATES
 from .methods import method_for
+from aot.utils.timekit import naive_utc, parse_utc, utc_now
 
 logger = logging.getLogger('aot.fc_cal')
 
@@ -54,10 +55,10 @@ def set_site_mode(site_id, mode):
     row.mode = mode
     if changed:
         row.last_run_at = None
-    row.updated_at = datetime.utcnow()
+    row.updated_at = naive_utc(utc_now())
     db.session.commit()
     try:
-        from aot.aot_flask.geo import forecast_series
+        from aot.space import forecast_series
         forecast_series.clear_cache()                      # 바뀐 방식이 슬라이더·AI·트윈에 바로 보이게
     except Exception:                                       # noqa: BLE001
         logger.debug('예보 계열 캐시 비우기 실패', exc_info=True)
@@ -112,7 +113,7 @@ def write_rev(site_id, entries: List[dict], now, l0_kind='actual') -> int:
     row = site_row(site_id, create=True)
     top = db.session.query(db.func.max(Cal.rev)).filter(Cal.site_id == site_id).scalar() or 0
     rev = int(top) + 1
-    stamp = datetime.utcfromtimestamp(now)
+    stamp = naive_utc(parse_utc(now))
     for e in entries:
         db.session.add(Cal(
             site_id=site_id, rev=rev, kind=e['kind'], var=e['var'], band=e['band'], status=e['status'],
@@ -139,7 +140,7 @@ def save_run(site_id, now, summary: dict):
     row = site_row(site_id, create=True)
     row.last_run_at = float(now)
     row.last_result = json.dumps(summary, ensure_ascii=False, default=_json_default)
-    row.updated_at = datetime.utcfromtimestamp(now)
+    row.updated_at = naive_utc(parse_utc(now))
     db.session.commit()
     return row
 
@@ -243,7 +244,7 @@ def add_events(site_id, site_name, rev, events: List[dict], now, email=True) -> 
     """알림 기록 + 로그 + (SMTP 가 있으면) 메일. `events` 는 {event, kind, var, band, detail}."""
     from aot.aot_flask.extensions import db
     _Site, _Cal, Ev = _row_model()
-    stamp = datetime.utcfromtimestamp(now)
+    stamp = naive_utc(parse_utc(now))
     for ev in events:
         ev = dict(ev, rev=rev)
         db.session.add(Ev(site_id=site_id, rev=rev, event=ev['event'], kind=ev['kind'], var=ev['var'],

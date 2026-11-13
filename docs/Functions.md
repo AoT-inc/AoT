@@ -999,7 +999,7 @@ Time rules:
 - Times are wall-clock `HH:MM` in the **device local timezone**.
 - An end time of `24:00` means "end of day" and is stored internally as 1440 minutes.
 - Midnight-crossing windows (`start >= end`) are not allowed. Each day operates only within the `00:00`–`24:00` range.
-- **Midnight continuity**: If the previous day's end is `24:00` and the next day's start is `00:00`, both days are enabled, and the days are adjacent, the daemon does not reset the cycle at midnight and continues running seamlessly.
+- **Midnight continuity**: If the previous day's end is `24:00` and the next day's start is `00:00`, both days are enabled, and the days are adjacent, the daemon does not reset the cycle at midnight and continues running seamlessly. Midnight is then not the end of the window, so a cycle that starts shortly before midnight runs to completion past it. Write an overnight window (e.g. 22:00-02:00) as `22:00`-`24:00` on the first day and `00:00`-`02:00` on the next.
 
 !!! note
     If the period (`period`) is longer than that day's operating-window length, the cycle is cut short within the window. The settings screen displays a warning in this case.

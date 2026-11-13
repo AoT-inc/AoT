@@ -26,7 +26,7 @@ from aot.aot_flask.forms import forms_authentication
 from aot.aot_flask.utils import utils_general
 from aot.utils import audit, google_oauth
 from aot.utils.audit import audit_log
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 from aot.utils.totp import verify_totp
 from aot.aot_flask.utils import credential_rules
 from aot.utils.utils import test_password, test_username
@@ -831,11 +831,12 @@ def clear_failed_logins(user):
 
 def login_log(user, group, ip, status):
     """Write to login log (timestamp in user-local timezone)."""
-    from aot.utils.time_utils import utc_now, to_local
+    from aot.utils.timekit import utc_now
+    from aot.utils.timekit import to_tz, FARM
     with open(LOGIN_LOG_FILE, 'a+') as log_file:
         log_file.write(
             '{dt:%Y-%m-%d %H:%M:%S%z}: {stat} {user} ({grp}), {ip}\n'.format(
-                dt=to_local(utc_now()), stat=status,
+                dt=to_tz(utc_now(), FARM), stat=status,
                 user=user, grp=group, ip=ip))
 
 

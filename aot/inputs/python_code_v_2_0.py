@@ -4,8 +4,6 @@ import importlib.util
 import os
 import textwrap
 
-from flask import current_app
-from flask import flash
 from markupsafe import Markup
 
 from aot.config import INSTALL_DIRECTORY
@@ -13,6 +11,7 @@ from aot.config import PATH_PYTHON_CODE_USER
 from aot.databases.models import DeviceMeasurements
 from aot.inputs.base_input import AbstractInput
 from aot.utils.database import db_retrieve_table_daemon
+from aot.utils.module_hooks import web_app_testing
 from aot.utils.inputs import parse_input_information
 from aot.utils.system_pi import assure_path_exists
 from aot.utils.system_pi import cmd_output
@@ -20,7 +19,6 @@ from aot.utils.system_pi import set_user_grp
 
 
 def generate_code(input_id, python_code):
-    error = []
     pre_statement_run = """import os
 import sys
 sys.path.append(os.path.abspath('/opt/AoT'))
@@ -48,9 +46,6 @@ class PythonInputRun:
         fw.write('{}\n'.format(input_python_code_run))
         fw.close()
     set_user_grp(file_run, 'aot', 'aot')
-
-    for each_error in error:
-        flash(each_error, 'error')
 
     return input_python_code_run, file_run
 
@@ -92,7 +87,7 @@ def execute_at_modification(
     messages["page_refresh"] = True
     pylint_message = None
 
-    if current_app.config['TESTING']:
+    if web_app_testing():
         return (messages,
                 mod_input,
                 custom_options_dict_postsave,

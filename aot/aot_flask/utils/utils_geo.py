@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import json
 import logging
 from aot.aot_flask.extensions import db
@@ -18,13 +19,9 @@ from sqlalchemy import or_
 from aot.utils.runtime import get_started_at, get_last_duration
 
 
-# Helper wrapper for instantiating Inputs without full DB object
-class MockInputDev:
-    def __init__(self, layer):
-        self.unique_id = layer.unique_id
-        self.name = layer.name
-        self.custom_options = '{}' # Initialize empty, will override
-        self.log_level_debug = False # Required by AbstractInput.setup_logger
+# Helper wrapper for instantiating Inputs without full DB object — 정본은
+# `aot/inputs_gis/layer_instance.py`(아키텍처 4c-1). 같은 클래스를 다시 내보낸다.
+from aot.inputs_gis.layer_instance import MockInputDev  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +84,11 @@ def invalidate_geo_config_cache():
     with _GEO_CACHE_LOCK:
         _GEO_CONFIG_CACHE_MAP = {}
         _GEO_CACHE_GEN += 1
+    try:                    # 활성 DEM 이 바뀌었으면 물 회로 지형 선계산을 예약한다(요청은 기다리지 않는다)
+        from aot.utils import water_terrain
+        water_terrain.on_geo_config_changed()
+    except Exception:       # noqa: BLE001
+        pass
 
 
 def invalidate_config_options_cache():
@@ -115,6 +117,14 @@ def get_misc_cached():
     # identity-map object (same session-staleness class as get_geo_config — this
     # feeds custom_theme_json/custom UI colors, which otherwise revert intermittently).
     result = Misc.query.populate_existing().first()
+    # 요청 간에 살아남는 캐시이므로 세션에서 떼어 둔다. 붙은 채로 두면 같은 요청의
+    # 뒤 commit 이 속성을 만료시키고, 다음 요청이 캐시를 읽을 때 DetachedInstanceError 가
+    # 난다(GeoSetting 기본 좌표가 없을 때 지도 위젯이 misc.map_latitude 로 내려오는 경로).
+    if result is not None:
+        try:
+            db.session.expunge(result)
+        except Exception:
+            pass
     # Only cache if no invalidation happened during the DB read (see note above).
     with _MISC_CACHE_LOCK:
         if _MISC_CACHE_GEN == gen_at_read:
@@ -200,22 +210,29 @@ def get_geo_config(with_secrets=False):
     # [New] Expose Search Provider
     config['search_provider'] = config.get('providers', {}).get('search_provider')
 
-    # Add Active Layers
-    config['layers'] = get_active_geo_layers(config.get('keys', {}))
+    # Add Active Layers — 비밀 포함 판을 **한 번만** 계산하고, 키 없는 판은 거기서 파생한다.
+    # (예전에는 (locale, with_secrets) 키 두 벌이 활성 레이어 목록을 각각 계산해 InputModule 을
+    # 두 번씩 만들었다.) 파생은 깊은 복사본에 기존 마스킹 두 단계를 그대로 적용한다 —
+    # 키가 빠지는 길은 하나(`proxy_overlay_tile_urls` → `strip_geo_config_secrets`)다.
+    config['layers'], config['terrain'] = split_terrain_layer(
+        get_active_geo_layers(config.get('keys', {})))
+    secret_config = config
 
-    if not with_secrets:
-        # 순서가 중요하다 — 키가 붙은 오버레이를 먼저 프록시 URL 로 바꾸고,
-        # 그다음 남은 키를 지운다.
-        config['layers'] = proxy_overlay_tile_urls(config.get('layers'))
-        config = strip_geo_config_secrets(config, keep=first_vector_base_keeper())
+    public_config = copy.deepcopy(secret_config)
+    # 순서가 중요하다 — 키가 붙은 오버레이를 먼저 프록시 URL 로 바꾸고,
+    # 그다음 남은 키를 지운다.
+    public_config['layers'] = proxy_overlay_tile_urls(public_config.get('layers'))
+    public_config = strip_geo_config_secrets(public_config, keep=first_vector_base_keeper())
 
     # Update cache for current locale — but only if no invalidation happened
     # while we were reading the DB. Otherwise this snapshot may be stale (a save
     # committed + cleared the cache mid-read) and must not be written back.
     with _GEO_CACHE_LOCK:
         if _GEO_CACHE_GEN == gen_at_read:
-            _GEO_CONFIG_CACHE_MAP[cache_key] = (now, config, fingerprint)
+            _GEO_CONFIG_CACHE_MAP[(current_locale, True)] = (now, secret_config, fingerprint)
+            _GEO_CONFIG_CACHE_MAP[(current_locale, False)] = (now, public_config, fingerprint)
 
+    config = secret_config if with_secrets else public_config
     return config
 
 
@@ -329,7 +346,28 @@ def strip_geo_config_secrets(config, keep=None):
     public = dict(config)
     public['keys'] = {}
     public['layers'] = mask_layer_secrets(config.get('layers'), api_keys, keep=keep)
+    if config.get('terrain'):
+        public['terrain'] = mask_layer_secrets([config['terrain']], api_keys)[0]
     return public
+
+
+def split_terrain_layer(layers):
+    """레이어 목록에서 DEM 입력을 떼어 `(나머지, 쓸 DEM)` 으로 돌려준다.
+
+    DEM 은 보이는 지도가 아니라 지형의 재료라서 레이어 패널·바탕 후보에 끼면 안 된다.
+    여럿이 켜져 있으면 레이어 페이지 순서(`position_y`, 같으면 목록 순서)의 첫 항목을 쓴다.
+    """
+    rest, dems = [], []
+    for layer in (layers or []):
+        (dems if layer.get('type') == 'raster-dem' else rest).append(layer)
+    if not dems:
+        return rest, None
+
+    def _order(layer):
+        pos = (layer.get('options') or {}).get('position_y')
+        return pos if isinstance(pos, (int, float)) and not isinstance(pos, bool) else float('inf')
+
+    return rest, min(dems, key=_order)
 
 
 def proxy_overlay_tile_urls(layers):
@@ -426,7 +464,10 @@ def resolve_layer_secrets(layer_ids):
     out = {}
     # 프록시를 거치는 오버레이는 여기서도 프록시 URL 을 준다 — 이 통로로 원본을
     # 흘리면 프록시로 바꿔 둔 의미가 없어진다.
-    resolved = proxy_overlay_tile_urls(get_geo_config(with_secrets=True).get('layers', []))
+    config = get_geo_config(with_secrets=True)
+    resolved = proxy_overlay_tile_urls(config.get('layers', []))
+    if config.get('terrain'):
+        resolved = resolved + [config['terrain']]
     for layer in resolved:
         lid = str(layer.get('id') or '')
         if lid in wanted:
@@ -440,7 +481,7 @@ def resolve_layer_secrets(layer_ids):
 # ------------------------------------------------------------------------------
 # Geo Data Helpers
 # ------------------------------------------------------------------------------
-def get_active_geo_layers(api_keys=None):
+def get_active_geo_layers(api_keys=None, layer_ids=None):
     """
     Returns a list of configured, active map layers.
     Merges:
@@ -448,6 +489,9 @@ def get_active_geo_layers(api_keys=None):
     - GeoLayer (DB): User settings (enabled, custom name/options)
     - GIS Input Definitions (Static): Default URLs, attributes
     - API Keys (GeoSetting): Global keys
+
+    ``layer_ids`` 를 주면 켜짐 여부와 무관하게 그 레이어만 같은 방식으로 풀어 돌려준다(꺼진 DEM 입력을 켜기 전에
+    미리 비교할 때 쓴다 — 물 회로 지형 바꾸기). 생략하면 켜진 레이어 전부(예전과 같다).
     """
     settings = GeoSetting.query.first()
     if not settings:
@@ -471,7 +515,10 @@ def get_active_geo_layers(api_keys=None):
     # Legacy Providers (Removed)
     
     # 2. Geo Layers (DB)
-    active_layers = GeoLayer.query.filter_by(is_activated=True).all()
+    if layer_ids is None:
+        active_layers = GeoLayer.query.filter_by(is_activated=True).all()
+    else:
+        active_layers = GeoLayer.query.filter(GeoLayer.unique_id.in_(list(layer_ids))).all() if layer_ids else []
     dict_inputs = parse_input_information()
     
     # [New] Build a complete API Key map by scanning all layers
@@ -489,6 +536,9 @@ def get_active_geo_layers(api_keys=None):
                 except:
                     pass
     
+    # 호출 하나에 한 번 — 레이어 루프 안에서 만들면 매번 비어 적중하지 않는다.
+    # 키가 `유형_레이어id` 라 레이어끼리 섞이지 않는다.
+    _module_cache = {}
     for layer in active_layers:
         layer_def = dict_inputs.get(layer.type, {})
         
@@ -526,8 +576,6 @@ def get_active_geo_layers(api_keys=None):
                     if 'default' in opt_def:
                         custom_opts[opt_id] = opt_def['default']
                         
-        # [New] Resource Cache for this execution
-        _module_cache = {}
         def _get_input_instance(l_type, l_obj, l_opts):
             cache_key = f"{l_type}_{l_obj.unique_id}"
             if cache_key in _module_cache:
@@ -577,7 +625,11 @@ def get_active_geo_layers(api_keys=None):
             layer_url = custom_opts['url']
             
         base_layer_data['url'] = layer_url
-        
+
+        # DEM 입력: raster-dem 소스 사양을 함께 싣는다(base_input_dem.py).
+        if inst and hasattr(inst, 'get_terrain_config'):
+            base_layer_data['terrain'] = inst.get_terrain_config()
+
         # Merge Leaflet Options (Technical Overrides like maxNativeZoom)
         if 'leaflet_options' in layer_def:
             l_opts_def = layer_def['leaflet_options']
@@ -589,6 +641,8 @@ def get_active_geo_layers(api_keys=None):
         # Attribution
         if 'attribution' in layer_def:
             base_layer_data['attribution'] = layer_def['attribution']
+        elif base_layer_data.get('terrain', {}).get('attribution'):
+            base_layer_data['attribution'] = base_layer_data['terrain']['attribution']
             
         # Keys
         if 'key_field' in layer_def:
@@ -1030,7 +1084,7 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
     membership = {}
     if map_uuid:
         try:
-            from aot.aot_flask.geo.device_membership import membership_for_map
+            from aot.space.device_membership import membership_for_map
             membership = {dev_id: shp.id for dev_id, shp
                           in membership_for_map(map_uuid).items()}
         except Exception as exc:
@@ -1039,13 +1093,18 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
 
     device_loc_map = {}
     if map_uuid:
+        # 바인딩이 정본이다(L4) — 도형의 현재 바인딩에서 장치·채널을 읽는다.
+        from aot.databases.models import GeoBinding
         device_shapes = db.session.query(
-            GeoShape.device_id, 
-            GeoShape.channel_id,
+            GeoBinding.device_id,
+            GeoBinding.channel_id,
             GeoShape.feature
+        ).join(
+            GeoShape, GeoShape.unique_id == GeoBinding.spatial_id
         ).filter(
             GeoShape.geo_id == map_uuid,
-            GeoShape.device_id != None
+            GeoBinding.spatial_kind == 'shape',
+            GeoBinding.valid_to.is_(None)
         ).all()
 
         for d_id, ch_id, feat in device_shapes:
@@ -1077,10 +1136,10 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
         # Common columns
         col_names = ['id', 'unique_id', 'name', 'latitude', 'longitude',
                 'marker_color', 'marker_size', 'marker_icon',
-                # map_overlay_id/map_config_id 는 사망 컬럼이지만,
+                # map_overlay_id 는 사망 컬럼이지만,
                 # 컬럼 목록에서 빼면 지연로딩이 걸려 N+1 이 된다.
-                # P5 컬럼 드롭 때 함께 제거한다.
-                'map_overlay_id', 'map_config_id', 'custom_options']
+                # (map_config_id 는 L3 에서 읽기를 걷어내 목록에서 뺐다.)
+                'map_overlay_id', 'custom_options']
 
         # Specific Status Columns
         if hasattr(model_cls, 'is_activated'): col_names.append('is_activated')
@@ -1124,7 +1183,7 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
          # 상태가 됐다(2026-08-04 실측 재현). 미배치는 미배치다.
          #
          # 스코프의 정본은 배치(overlay_ids = 이 지도에 마커가 있는 장치)다.
-         # map_config_id 는 P2~P5 에서 제거될 사망 컬럼이라 조건에서 뺀다.
+         # map_config_id 컬럼은 조건에 쓰지 않는다.
          inputs = Input.query.filter(Input.unique_id.in_(overlay_ids)).options(get_load_options(Input)).all()
          outputs = Output.query.filter(Output.unique_id.in_(overlay_ids)).options(get_load_options(Output)).all()
 
@@ -1205,9 +1264,11 @@ def collect_devices(device_ids, include_all, default_color='blue', map_uuid=None
                     lng = device_loc_map[record.unique_id]['lng']
                 else:
                     # Fallback to Global Device Config
-                    if record.latitude is not None and record.longitude is not None:
-                         lat = float(record.latitude)
-                         lng = float(record.longitude)
+                    from aot.utils.timekit import resolve_coords
+                    _la, _lo, _s = resolve_coords(record)
+                    if _la is not None and _lo is not None:
+                         lat = float(_la)
+                         lng = float(_lo)
 
                 # [Fix] Allow devices without location (Palette Mode)
                 # Frontend will handle missing lat/lng (won't render marker, but will show in list)
@@ -1384,6 +1445,9 @@ def get_available_config_options():
     available_outputs = []
     available_functions = []
     device_info_map = {}
+    # has_coords 의 정본은 배치다(locate) — 장치 행 lat/lng 컬럼을 직접 묻지 않는다.
+    # 마지막에 한 번에 locate_many 로 채운다(N+1 없음).
+    _coord_targets = []   # [(device_kind, device_id, entry_dict)]
 
     # 1. Inputs
     results_input = db.session.query(
@@ -1391,9 +1455,7 @@ def get_available_config_options():
         Input.unique_id.label('device_id'),
         DeviceMeasurements.channel,
         DeviceMeasurements.name.label('meas_name'),
-        Input.name.label('dev_name'),
-        Input.latitude,
-        Input.longitude
+        Input.name.label('dev_name')
     ).outerjoin(
         DeviceMeasurements,
         (DeviceMeasurements.device_id == Input.unique_id)
@@ -1413,9 +1475,10 @@ def get_available_config_options():
             entry = {
                 'id': d_id,
                 'name': d_name, # Just Device Name
-                'has_coords': row.latitude is not None and row.longitude is not None
+                'has_coords': False
             }
             available_inputs.append(entry)
+            _coord_targets.append(('input', d_id, entry))
             seen_input_ids.add(d_id)
             
         device_info_map[d_id] = {'name': d_name, 'type': 'input'}
@@ -1424,8 +1487,6 @@ def get_available_config_options():
     results_output = db.session.query(
         Output.unique_id,
         Output.name.label('dev_name'),
-        Output.latitude,
-        Output.longitude,
         OutputChannel.channel,
         OutputChannel.name.label('ch_name')
     ).join(
@@ -1450,22 +1511,22 @@ def get_available_config_options():
             
         comp_id = f"{d_id}::{ch}"
 
-        available_outputs.append({
+        out_entry = {
             'id': comp_id,
             'name': full_name,
-            'has_coords': row.latitude is not None and row.longitude is not None
-        })
+            'has_coords': False
+        }
+        available_outputs.append(out_entry)
+        _coord_targets.append(('output', d_id, out_entry))
         device_info_map[d_id] = {'name': d_name, 'type': 'output'}
 
     # 3. Functions
-    def process_func_channel_list(model_cls, device_type_str, target_list):
+    def process_func_channel_list(model_cls, device_type_str, target_list, device_kind):
         from sqlalchemy import literal
         
         results = db.session.query(
             model_cls.unique_id,
             model_cls.name,
-            model_cls.latitude,
-            model_cls.longitude,
             DeviceMeasurements.channel,
             DeviceMeasurements.name.label('meas_name')
         ).outerjoin(
@@ -1495,17 +1556,29 @@ def get_available_config_options():
 
             comp_id = f"{d_id}::{ch}"
 
-            target_list.append({
+            fn_entry = {
                 'id': comp_id,
                 'name': full_name,
-                'has_coords': row.latitude is not None and row.longitude is not None
-            })
+                'has_coords': False
+            }
+            target_list.append(fn_entry)
+            _coord_targets.append((device_kind, d_id, fn_entry))
             device_info_map[d_id] = {'name': d_name, 'type': 'function'}
 
-    process_func_channel_list(CustomController, 'Function', available_functions)
-    process_func_channel_list(PID, 'PID', available_functions)
-    process_func_channel_list(Conditional, 'Conditional', available_functions)
-    process_func_channel_list(Trigger, 'Trigger', available_functions)
+    process_func_channel_list(CustomController, 'Function', available_functions, 'device')
+    process_func_channel_list(PID, 'PID', available_functions, 'pid')
+    process_func_channel_list(Conditional, 'Conditional', available_functions, 'conditional')
+    process_func_channel_list(Trigger, 'Trigger', available_functions, 'trigger')
+
+    try:
+        from aot.space.device_location import locate_many
+        _placed = locate_many({(k, d) for k, d, _e in _coord_targets})
+    except Exception:
+        logger.warning("available config options: 위치 일괄 조회 실패", exc_info=True)
+        _placed = {}
+    for _k, _d, _e in _coord_targets:
+        _pl = _placed.get((_k, str(_d)))
+        _e['has_coords'] = bool(_pl is not None and _pl.point is not None)
     
     available_functions.sort(key=lambda x: x['name'])
 
@@ -1632,7 +1705,7 @@ def get_all_measurements_for_map(devices):
         from aot.utils.measurement_freshness import freshness_by_device
         period_by_device = freshness_by_device(map_device_ids)
 
-        from aot.aot_flask.geo.facility_sensors import channel_label_meta
+        from aot.space.facility_sensors import channel_label_meta
 
         for m in all_meas_query:
             d_id = m.device_id

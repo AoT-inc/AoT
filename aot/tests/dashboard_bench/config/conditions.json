@@ -1,0 +1,14 @@
+{
+  "_comment": "측정 조건 정의. 네트워크는 CDP Network.emulateNetworkConditions 값(왕복 지연 ms, Mbps). 제안서 3절의 기준값.",
+  "network": {
+    "none":     {"label": "무제한(에뮬레이션 없음)", "latency_ms": 0,   "down_mbps": 0,  "up_mbps": 0},
+    "lan":      {"label": "100M LAN",  "latency_ms": 1,   "down_mbps": 95, "up_mbps": 95},
+    "wifi":     {"label": "WiFi",      "latency_ms": 10,  "down_mbps": 50, "up_mbps": 50},
+    "lte":      {"label": "LTE",       "latency_ms": 70,  "down_mbps": 12, "up_mbps": 4},
+    "lte_slow": {"label": "저속 LTE",  "latency_ms": 150, "down_mbps": 3,  "up_mbps": 1}
+  },
+  "device": {
+    "desktop": {"width": 1440, "height": 900, "mobile": false, "device_scale_factor": 1},
+    "phone":   {"width": 390,  "height": 844, "mobile": true,  "device_scale_factor": 3}
+  }
+}

@@ -19,6 +19,7 @@ from flask import current_app
 
 from aot.databases.models import GeoFacility, GeoModelAsset
 from aot.aot_flask.extensions import db
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,7 @@ class ModelAssetManager:
                 if field in data:
                     setattr(row, field, data[field])
 
-            row.updated_at = datetime.utcnow()
+            row.updated_at = naive_utc(utc_now())
             db.session.commit()
 
             try:
@@ -250,7 +251,7 @@ class ModelAssetManager:
             facility.model_asset_uuid = asset_uuid
             facility.model_transform = transform or {'position': [0, 0, 0], 'rotation': [0, 0, 0], 'scale': [1, 1, 1]}
             facility.render_mode = 'asset'
-            facility.updated_at = datetime.utcnow()
+            facility.updated_at = naive_utc(utc_now())
             db.session.commit()
             return {'facility_uuid': facility_uuid, 'asset_uuid': asset_uuid, 'render_mode': 'asset'}, None
         except Exception as e:
@@ -270,7 +271,7 @@ class ModelAssetManager:
             facility.model_asset_uuid = None
             facility.model_transform = None
             facility.render_mode = 'parametric'
-            facility.updated_at = datetime.utcnow()
+            facility.updated_at = naive_utc(utc_now())
             db.session.commit()
             return {'facility_uuid': facility_uuid, 'render_mode': 'parametric'}, None
         except Exception as e:

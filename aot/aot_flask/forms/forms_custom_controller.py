@@ -16,24 +16,3 @@ class CustomController(FlaskForm):
     num_channels = IntegerField(lazy_gettext('Number of Channels'), widget=NumberInput())
     measurements_enabled = SelectMultipleField(lazy_gettext('Select Measurements to Enable'))
     log_level_debug = BooleanField(lazy_gettext('Enable Debug Logging'))
-    latitude = DecimalField(
-        lazy_gettext('Latitude'),
-        places=8,
-        rounding=None,
-        validators=[validators.Optional(),
-                    validators.NumberRange(min=-90, max=90)],
-        widget=NumberInput(step='any')
-    )
-    longitude = DecimalField(
-        lazy_gettext('Longitude'),
-        places=8,
-        rounding=None,
-        validators=[validators.Optional(),
-                    validators.NumberRange(min=-180, max=180)],
-        widget=NumberInput(step='any')
-    )
-    location_source = SelectField(
-        lazy_gettext('Location Source'),
-        choices=[('manual', lazy_gettext('Manual')), ('device', lazy_gettext('Device')), ('remote', lazy_gettext('Remote'))],
-        default='manual'
-    )

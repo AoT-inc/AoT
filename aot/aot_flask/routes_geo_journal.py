@@ -123,7 +123,7 @@ def geo_journal_plot_history():
     지도 기하가 아예 없는 시설(중심·치수 미입력)은 교차 판정에서 빠진다 —
     별도 조회 경로를 만들지 않고 `note` 로 그 사실만 알린다.
     """
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
     from aot.databases.models import GeoShape
 
     area_id = (request.args.get('area_id') or '').strip()
@@ -187,7 +187,7 @@ def geo_journal_hub():
                  'status': r[3], 'period_start': r[4], 'period_end': r[5],
                  'created_at': r[6]} for r in rows]
 
-    from aot.aot_flask.geo import device_membership
+    from aot.space import device_membership
 
     # 대지·구역 목록을 **농장(지도)별로** 묶는다.
     #
@@ -661,9 +661,9 @@ def geo_journal_target_info():
     # 그 대상이 있는 곳의 '오늘' — 기간 끝 기본값. 브라우저가 UTC 날짜로
     # 계산하던 동안 +9 에서 오전에 열면 어제가 들어가 오늘 자료가 빠졌다.
     try:
-        from aot.utils.device_tz import resolve_location_tz
+        from aot.utils.timekit import tz_of
         from aot.utils.timekit import utc_now
-        today = utc_now().astimezone(resolve_location_tz(target_id)).date().isoformat()
+        today = utc_now().astimezone(tz_of(target_id)).date().isoformat()
     except Exception:
         today = None
 

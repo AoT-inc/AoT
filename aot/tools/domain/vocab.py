@@ -10,6 +10,8 @@
 푼다. 쓰기의 절대 시각 확정은 안쪽 도구의 일이다(§3).
 """
 from datetime import date, datetime, timedelta
+from aot.utils.timekit import FARM, to_tz, today_at, utc_now
+
 
 #: 일상어 → 저장 이름 후보(앞의 것부터). 키는 소문자·공백 없이 비교한다.
 MEASUREMENT_WORDS = {
@@ -136,7 +138,7 @@ def period(text, today=None):
     t = str(text or '').strip().lower()
     if not t:
         return None
-    today = today or date.today()
+    today = today or today_at(FARM)
     if t in ('today', 'now', '오늘'):
         return today, today
     if t in ('yesterday', '어제'):
@@ -183,8 +185,8 @@ def period_to(form, text, today=None, now=None):
     못 읽거나 그 모양으로 나타낼 수 없으면 ValueError(이유).
     """
     t = str(text or '').strip().lower()
-    today = today or date.today()
-    now = now or datetime.now()
+    today = today or today_at(FARM)
+    now = now or to_tz(utc_now(), FARM).replace(tzinfo=None)
     if form not in PERIOD_FORMS:
         raise ValueError("unknown period form %r" % form)
     if form == 'forecast':
@@ -272,15 +274,75 @@ def _forecast_window(t, today):
     return {'start': word, 'hours': hours}, "%s to %s" % (start.isoformat(), end.isoformat())
 
 
-def in_period(value, rng):
-    """'2026-10-14T09:00:00+09:00' 같은 값이 (시작, 끝) 날짜 안인가 — 값 자체의 현지 날짜로."""
+def in_period(value, rng, where=FARM):
+    """'2026-10-14T09:00:00+09:00' 같은 값이 (시작, 끝) 날짜 안인가.
+
+    오프셋이 붙은 값은 그 값 자체의 현지 날짜로, 오프셋이 없는 값은 이미 현지 벽시계라
+    그 날짜로 본다. 'Z' 값만 순간이므로 `where`(장소 id·FARM) 시계의 날짜로 바꾼다.
+    """
     if not rng or not value:
         return False
+    text = str(value).strip().replace(' ', 'T')
     try:
-        d = datetime.fromisoformat(str(value).replace('Z', '+00:00')).date()
+        if text.endswith(('Z', 'z')):
+            d = to_tz(text, where).date()
+        else:
+            d = datetime.fromisoformat(text).date()
     except ValueError:
         try:
             d = date.fromisoformat(str(value)[:10])
         except ValueError:
             return False
     return rng[0] <= d <= rng[1]
+
+
+# ── 길이(`duration`)·켜기/끄기(`state`) — 단위는 이름이 아니라 값에 둔다(재설계 §2-1 규칙 3·6) ──────────────
+
+_DURATION_PART = r'(\d+(?:\.\d+)?)\s*(h|m|s)'
+_UNIT_SECONDS = {'h': 3600.0, 'm': 60.0, 's': 1.0}
+
+
+def duration_seconds(value):
+    """`duration` → 초(float). 숫자·숫자 문자열은 초, '90s' · '15m' · '2h' · '1h30m' 은 단위대로.
+    못 읽거나 음수면 ValueError."""
+    import re
+    if isinstance(value, bool) or value is None:
+        raise ValueError("duration not understood")
+    if isinstance(value, (int, float)):
+        total = float(value)
+    else:
+        t = str(value).strip().lower().replace(' ', '')
+        if re.fullmatch(r'\d+(?:\.\d+)?', t):
+            total = float(t)
+        elif t and re.fullmatch(r'(?:%s)+' % _DURATION_PART, t):
+            total = sum(float(n) * _UNIT_SECONDS[u] for n, u in re.findall(_DURATION_PART, t))
+        else:
+            raise ValueError("duration not understood")
+    if total < 0:
+        raise ValueError("duration is negative")
+    return total
+
+
+def duration_for(inner_arg, value):
+    """`duration` 를 안쪽 인자(이름 끝이 `_minutes` 면 분, 아니면 초)의 단위로. 정수로 떨어지면 정수."""
+    seconds = duration_seconds(value)
+    out = seconds / 60.0 if str(inner_arg).endswith('_minutes') else seconds
+    return int(out) if out == int(out) else round(out, 3)
+
+
+_ON = frozenset({'on', 'true', 'yes', '1', 'start', 'enable', 'enabled', 'activate', 'active', '켬', '켜기'})
+_OFF = frozenset({'off', 'false', 'no', '0', 'stop', 'disable', 'disabled', 'deactivate', 'inactive', '끔', '끄기'})
+
+
+def onoff(value):
+    """`state` → True(on) | False(off), 못 읽으면 None. bool·0/1·'on'/'off'/'true'/'false' 를 받는다."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    t = str(value).strip().lower()
+    if t in _ON:
+        return True
+    if t in _OFF:
+        return False
+    return None

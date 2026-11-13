@@ -63,10 +63,37 @@ _PRESET_ANSWERS = {
     'smartfarmkorea_livestock': '축산 실측 — 낙농·양돈·양계·한우. 날짜 범위만으로 조회한다.',
     'ext_openmeteo': '좌표 하나로 전세계 어디나 — 일별/시간별 예보(기온·강수·습도·VPD), '
                  '토양 깊이별 온도·수분, 기준증발산량 ET0, 그리고 과거 기후의 월별 집계. '
-                 'AoT 의 get_weather 는 자기 센서만 읽고 get_weather_forecast 는 한국 '
-                 '기상청 전용이라, **기상 센서가 없거나 한국 밖인 설치에서는 이것이 '
-                 '유일한 기상 근거다.** 토양값과 ET0 는 센서 유무와 무관하게 여기서만 나온다.',
+                 'weather.now 는 설치된 기상 센서만 읽으므로 **센서가 없는 설치에서는 이것이 '
+                 '직접 조회 근거다.** 토양값과 ET0 는 센서 유무와 무관하게 여기서만 나온다.',
 }
+
+
+#: 출처가 가진 탐색 동작 — 코드(userId 같은)를 사람이 알 수 없어 출처에게 물어 찾는다. 별도 도구나 키 인자 없이
+#: `query_data_source(source_id, operation='farms'|'seasons')` 로 부르고, 저장된 키를 쓴다.
+DISCOVERY_OPERATIONS = ('farms', 'seasons')
+
+
+def queryable_presets():
+    """조회·등록할 수 있는 프리셋(동작 표를 가진 출처 계열)."""
+    return _QUERYABLE_PRESETS
+
+
+def operations_of(preset_key):
+    """그 프리셋의 동작 표(키 → {params, optional, label_ko …})."""
+    return _operations(preset_key)
+
+
+def _discovery_ops(preset_key):
+    """이 프리셋에서 쓸 수 있는 탐색 동작(동작 표에 identity·cropping 이 있는 계열)."""
+    ops = _operations(preset_key)
+    out = []
+    if 'identity' in ops:
+        out.append({'operation': 'farms', 'label': 'Find farms (userId, facilityId, crop)',
+                    'params': [], 'optional': {'query': 'region or id text', 'crop': 'crop name'}})
+    if 'cropping' in ops:
+        out.append({'operation': 'seasons', 'label': "Find one farm's cropping seasons (croppingSerlNo)",
+                    'params': ['userId'], 'optional': {'crop': 'crop name'}})
+    return out
 
 
 def _client_for(preset_key):
@@ -80,7 +107,7 @@ def _client_for(preset_key):
 
 
 _SFK_NOTE = ('Codes like userId / facilityId / croppingSerlNo are NOT things a '
-             'person knows — resolve them with smartfarmkorea_lookup first. '
+             'person knows — resolve them with this source\'s farms / seasons operations first. '
              'Dates are YYYY-MM-DD (livestock: YYYYMMDD).')
 
 _PRESET_NOTES = {
@@ -135,7 +162,7 @@ def describe_all():
 
     모델이 이 목록만 보고 무엇을 물을 수 있는지 판단해야 하므로, **필요한
     파라미터를 숨기지 않는다.** 어떤 값은 사람이 알 수 없는 코드라
-    (userId/facilityId/croppingSerlNo) 그건 smartfarmkorea_lookup 으로 푼다는
+    (userId/facilityId/croppingSerlNo) 그건 출처의 탐색 동작(farms·seasons)으로 푼다는
     것도 함께 말한다."""
     out = []
     for src, cfg in _sources():
@@ -155,7 +182,7 @@ def describe_all():
                  'optional': dict(list((v.get('optional') or {}).items())
                                   + list((v.get('client_optional') or {}).items())) or None}
                 for k, v in sorted(ops.items())
-            ],
+            ] + _discovery_ops(preset),
             'note': _PRESET_NOTES.get(preset, ''),
         })
     return out

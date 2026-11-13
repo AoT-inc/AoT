@@ -57,7 +57,10 @@ def test_detail_lists_option_keys_and_current_values_without_secrets(app):
     # 실행층은 처리기를 test_request_context 안에서 부른다(옵션 이름이 번역 문자열이다).
     with app.test_request_context():
         inp = _input()
-        result = _svc().get_device_detail(device_id=inp.unique_id)
+        # 기본 응답에는 옵션·연결 값을 싣지 않는다(2026-11-03) — fields 로 청한다.
+        plain = _svc().get_device_detail(device_id=inp.unique_id)
+        assert 'options' not in plain and 'more' in plain
+        result = _svc().get_device_detail(device_id=inp.unique_id, fields=['options'])
         by_key = {o['key']: o for o in result['options']}
         assert by_key['period']['value'] == 3600.0
         assert 'pre_output_duration' in by_key

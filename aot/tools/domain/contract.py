@@ -20,13 +20,24 @@
 """
 import logging
 
+from aot.tools.domain.slim import DOMAIN_WORDS
+
 from aot.tools.domain.registry import (
-    DESTRUCTIVE_TOOLS, DOMAIN_TOOLS, EFFECTS, KINDS, READ_TOOLS, VOCAB)
+    DESTRUCTIVE_TOOLS, DOMAIN_TOOLS, EFFECTS, KINDS, READ_TOOLS, is_vocab)
 
 logger = logging.getLogger(__name__)
 
 #: 실행 장치(목록에 싣지 않는 위임 도구) — 명부 대상이 아니다.
 MACHINERY = frozenset({'use_tool', 'read_tool', 'open_drawer'})
+
+
+#: 도메인 표면에서 따로 부르지 않는 읽기 안쪽 도구 → 그 일을 맡은 op. 합친 op 가 다른 안쪽 도구로 같은 일을 하면
+#: 옛 도구는 "미매핑 읽기 도구" 가 된다. 인앱 AI 도 도메인 명부만 보므로(26-11 5단계) 이런 도구는 지운다 —
+#: 남은 것은 인앱 프롬프트·계획기가 아직 이름으로 부르는 것뿐이다.
+#: 여기에 적어야 미매핑 검사를 면한다 — 이유(맡은 op)가 있고, 실제 도구이며, 아직 어느 op 도 부르지 않을 때만.
+COVERED_ELSEWHERE = {
+    'get_device_list': 'find.devices (no keyword = every device)',
+}
 
 
 def catalog():
@@ -69,6 +80,45 @@ def _array_props(defn):
     return {k for k, v in props.items() if (v or {}).get('type') == 'array'}
 
 
+def _expand(ops, out, approval):
+    """검사 단위 (Op, 꼬리표) — 값으로 안쪽 도구를 고르는 op(`Op.pick_by_arg`)는 가지마다 따로 검사하고,
+    합친 op 자체에는 가지 사이의 약속(같은 효과·같은 승인 요구·이름·합집합)만 본다. 그 밖의 op 는 그대로 하나."""
+    parents = set()
+    for o in ops:
+        tag = '%s.%s' % (o.tool, o.op)
+        pk = o.pick_by_arg
+        if pk is None:
+            yield o, tag
+            continue
+        if tag in parents:
+            out.append('%s: duplicate op name' % tag)
+        parents.add(tag)
+        if not pk.branches:
+            out.append('%s: pick_by_arg without branches' % tag)
+        if pk.normalize not in ('', 'onoff'):
+            out.append('%s: unknown pick normalize %r' % (tag, pk.normalize))
+        if pk.arg not in o.args and pk.arg not in o.extra_args:
+            out.append('%s: pick argument %r is not an argument of the op' % (tag, pk.arg))
+        effects = {b.effect for b in pk.branches.values()}
+        # 가지의 효과가 다르면(지우기: 기록·설정) 목록 표시는 그중 하나로 — 가지에 없는 효과를 말하면 거짓이다.
+        if o.effect not in effects or (len(effects) > 1 and not pk.infer):
+            out.append('%s: branches differ in effect from the op (%s)' % (tag, o.effect))
+        names, mix = set(), set()
+        for value, b in pk.branches.items():
+            if (b.tool, b.op) != (o.tool, o.op) or b.pick_by_arg is not None:
+                out.append('%s[%s]: a branch is the same op without a pick of its own' % (tag, value))
+            for n in b.inner.values():
+                names.add(n)
+                mix.add(n in approval)
+        if len(mix) > 1:
+            out.append('%s: branches mix approval and no-approval inner tools' % tag)
+        for kind, n in o.inner.items():
+            if n not in names:
+                out.append('%s: kind %r points at %r which no branch uses' % (tag, kind, n))
+        for value, b in pk.branches.items():
+            yield b, '%s[%s]' % (tag, value or 'none')
+
+
 def problems(ops=None, cat=None):
     """명부 문제 목록(문자열). 빈 목록이면 계약을 지킨다."""
     from aot.tools import mcp_safety_gate as gate
@@ -85,13 +135,12 @@ def problems(ops=None, cat=None):
         return gate.classify_permission(name) == 'write'
 
     seen_ops, write_seen, read_seen = set(), {}, set()
-    for o in ops:
-        tag = '%s.%s' % (o.tool, o.op)
+    for o, tag in _expand(ops, out, approval):
         if o.tool not in DOMAIN_TOOLS:
             out.append('%s: unknown domain tool' % tag)
-        if (o.tool, o.op) in seen_ops:
+        if tag in seen_ops:
             out.append('%s: duplicate op name' % tag)
-        seen_ops.add((o.tool, o.op))
+        seen_ops.add(tag)
         if o.effect not in EFFECTS:
             out.append('%s: unknown effect %r' % (tag, o.effect))
         if len(o.use or '') > 90 or not (o.use or '').strip():
@@ -134,7 +183,7 @@ def problems(ops=None, cat=None):
         for word in o.args:
             if word in ('op', 'target'):
                 out.append('%s: args key %r is reserved' % (tag, word))
-            elif word not in VOCAB and not str(o.renamed.get(word) or '').strip():
+            elif not is_vocab(word) and not str(o.renamed.get(word) or '').strip():
                 out.append('%s: args key %r is not a shared word and has no '
                            'renamed reason' % (tag, word))
         inner_approval = set()
@@ -188,6 +237,8 @@ def problems(ops=None, cat=None):
         for n in o.inner.values():
             handler_names |= _handler_names(n)
         for word, arg in o.args.items():
+            if o.slim and word in DOMAIN_WORDS:
+                continue                    # 이 층이 처리하는 낱말(slim.py) — 안쪽 도구는 모른다
             if arg not in all_props and arg not in handler_names:
                 out.append('%s: arg %r → %r not in inner schema' % (tag, word, arg))
         for arg in o.extra_args:
@@ -220,6 +271,11 @@ def problems(ops=None, cat=None):
                     out.append('%s: forecast period needs the start argument (at)' % tag)
         elif o.period_form:
             out.append('%s: period_form without a period argument' % tag)
+        for name in o.period_pair:
+            if name not in all_props and name not in handler_names:
+                out.append('%s: period_pair %r not in inner schema' % (tag, name))
+        if o.period_pair and (o.period_field or 'period' in o.args):
+            out.append('%s: period_pair together with another period route' % tag)
         if o.expand_write:
             if o.tool in READ_TOOLS:
                 out.append('%s: expand_write on a read tool' % tag)
@@ -245,6 +301,9 @@ def problems(ops=None, cat=None):
                 out.append('unmapped write tool %r' % name)
             elif len(tags) > 1:
                 out.append('write tool %r mapped more than once: %s' % (name, sorted(tags)))
+        elif name in COVERED_ELSEWHERE:
+            if name in read_seen:
+                out.append('read tool %r is mapped again - drop it from COVERED_ELSEWHERE' % name)
         elif name not in read_seen and name != 'get_tool_detail':
             out.append('unmapped read tool %r' % name)
     return out

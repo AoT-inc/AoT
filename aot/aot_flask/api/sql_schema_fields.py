@@ -199,8 +199,8 @@ trigger_fields = api.model('Trigger Settings Fields', {
     'output_duration': fields.Float,
     'output_duty_cycle': fields.Float,
     'rise_or_set': fields.String,
-    'latitude': fields.Float,
-    'longitude': fields.Float,
+    # latitude/longitude 는 L4 S3c(p7_08)에서 사라졌다 — 일출/일몰 위치는 배치에서
+    # 해석한다(timekit.resolve_coords). zenith 는 그대로 트리거 설정 컬럼이다.
     'zenith': fields.Float,
     'date_offset_days': fields.Integer,
     'time_offset_minutes': fields.Integer,

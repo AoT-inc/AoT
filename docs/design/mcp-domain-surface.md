@@ -127,7 +127,7 @@ operation 이 받는 종류(`accepts`)와 대조한다. 정확히 맞는 장치�
 | `fields` | 더 볼 것(상세·진단) | 목록 |
 
 operation 고유 인자는 명부에 이유를 적어야만 둘 수 있다(§7 테스트). 시간대는
-실행층이 대상의 위치로 푼다(`device_tz.location_iso` — 지금 정본 그대로).
+실행층이 대상의 위치로 푼다(`timekit.iso_at` — 지금 정본 그대로).
 
 **시간은 읽기와 쓰기가 다르다.**
 - 읽기: 정해진 상대 문법(`now`·`24h`·`7d`·`today`·`yesterday`·`this_week`)을 받는다.
@@ -363,7 +363,7 @@ measure — 센서 값. op:
 | `overview` | get_place_overview · get_system_brief · get_anomalies · get_crop_status · get_control_state · get_active_functions_summary · get_facility_capacity · analyze_system_failure · get_system_update_status · get_storage_tier_status · list_pending_confirmations |
 | `measure` | get_sensor_reading · get_sensor_detail · get_device_measurements · get_zone_sensor_summary · get_device_freshness · get_energy_report · get_cumulative_status · get_output_state |
 | `weather` | get_weather · get_weather_forecast · get_local_time |
-| `find` | resolve_target · search_devices · get_device_list · get_spatial_tree · list_geo_maps · list_plots · get_map_equipment · get_device_location · nearest · distance_between · get_address · get_function_list · list_programs · list_dashboards · list_tabs · list_widget_types · list_device_types · list_ai_agents · list_gis_inputs · list_lookup_sources · list_library_source_types |
+| `find` | resolve_target · search_devices · get_device_list · get_spatial_tree · list_geo_maps · list_plots · get_map_equipment · get_device_location · nearest · distance_between · get_address · find_location · find_favorites · get_function_list · list_programs · list_dashboards · list_tabs · list_widget_types · list_device_types · list_ai_agents · list_gis_inputs · list_lookup_sources · list_library_source_types |
 | `detail` | get_device_detail · get_plot · get_plot_history · get_function_detail · get_program · get_widget · get_map_equipment_detail · get_device_type_options · propose_plot_split(미리보기) |
 | `records` | search_notes · get_note_attachment · list_notices · list_plot_journals · get_plot_journal · search_schedule · list_advice · knowledge_search · search_archives · get_archived_document · list_ai_entries · query_data_source · query_reference_table · smartfarmkorea_lookup |
 | `screen_view` | get_screen |
@@ -543,8 +543,8 @@ measure — 센서 값. op:
 스키마 밖 인자도 넣었다 — 모델마다 다르니 기대지 않는다).
 
 - 명부에 **`shown`** — 필수는 아니지만 동작에 꼭 필요한 고유 인자. 스키마에 싣는다(설명 포함).
-  화면 조작(action·page·confirm_token), 고치기의 바꿀 내용(note_edit 의 note, input/output/gis
-  edit 의 params, widget_edit 의 options …), 시간·길이(output_timed·device_schedule·sequence_*).
+  화면 조작(action·page·confirm_token), 고치기의 바꿀 내용(record.note 의 text, configure.edit 의
+  params·options …), 시간·길이(output_timed·device_schedule·sequence_*).
 - 고유 인자 이름을 전부 실으면 운영 8,357 로 상한을 넘는다 — 그래서 고른다.
 - `map_op` 설명을 "지도 조작일 때만, action 이 아니다" 로.
 - 목록 크기: 운영 7,910 · 설정 12,793(상한 8,000 · 13,000 안, 래칫을 일부러 올림).
@@ -600,7 +600,7 @@ measure — 센서 값. op:
   이름은 그대로다. `remove` 만 `destructiveHint: true`, 나머지 쓰기 도구 5개는 `destructiveHint: false`
   를 **명시**한다(빠지면 기본값이 파괴적). 읽기는 `readOnlyHint: true`. 모두 `title` 이 있다.
   `control`(장치 작동)도 파괴적이지 않음으로 둔다 — 사용자 결정 "허용하면 자동 승인" 을 따랐다.
-- 끝내기(`plot_end`)·보관(`note_archive`)·되돌리기(`stage_undo`)는 자료를 남기므로 지우기가 아니다.
+- 끝내기(`plot_end`)·보관(`note_archive`)·되돌리기(`cultivate.stage` 의 undo)는 자료를 남기므로 지우기가 아니다.
 - 계약 검사: 지우는 안쪽 도구(`delete_`·`remove_` 로 시작)는 `remove` 에만 있어야 한다. 섞이면 그
   도구의 표시가 거짓이 되므로 쓰기 operation 이 켜지지 않는다(fail-closed).
 - AoT 안의 승인(안쪽 도구의 승인 요구)은 바뀌지 않는다 — 음성으로 승인하면 AoT 가 처리한다.
@@ -759,7 +759,7 @@ claude.ai 시험 결과(같은 프롬프트, 7호출, 스키마 밖 인자 없�
 
 | op | 기본(지정 없음) | 더 받는 길(응답의 `next`) |
 |---|---|---|
-| `measure.history` | 채널마다 `columns`+`rows` 한 줄(최소·최대·평균·건수, 최근값 없음; 이름 있는 채널이 있으면 `name` 열). 구역이면 `zone_pick` 은 답한 장치 이름·`devices_in_zone`·다른 장치 이름만 | `measurement` 또는 `limit` → 예전 모양(값 목록). 구역 응답의 `zone_pick` 만 규칙 문장 없이 짧다 |
+| `measure.history` | 채널마다 `columns`+`rows` 한 줄(최소·`min_at`·최대·`max_at`·평균·건수, 값 목록 없음; 이름 있는 채널이 있으면 `name` 열). 구역이면 `zone_pick` 은 답한 장치 이름·`devices_in_zone`·다른 장치 이름만 | `measurement` 또는 `samples` → 값 목록. **최근 N 건이 아니라 기간을 N 칸으로 나눈 평균**(기본 24, 채널 셋 이상 6; 건수 ≤ N 이면 원값), `stats` 에 `min_at`·`max_at`(26-11-09: '어제 온도' 에 밤 11시대 20건만 가서 다시 조회했다). 구역 응답의 `zone_pick` 만 규칙 문장 없이 짧다 |
 | `measure.summary` 대상 없음 | 대지(+대지 밖 구역)마다 한 줄 — (위치 유형, 매질)별 대표 4종 평균·멈춘 장치 수. 빠짐없이, 값 없는 곳은 `no_environment_data` 이름 | 대상 → 곳별 예전 모양 · `measurement` → 구역별 예전 모양 |
 | `measure.channels` | 이름·단위 표, 같은 계열(`… +0d`~`+15d`)은 한 줄(`n`), id 없음 | `measurement=<낱말>` → 그 채널만 `measurement_id`·`select_value` 와 예전 모양 |
 | `measure.freshness` | 끊긴 장치(stale·no_data)만 이름. 꺼 둔·알려진 상태 장치는 개수 | `include_fresh=true` → 예전 전체. 장치를 지목해도 그 장치 줄이 있다 |
@@ -796,3 +796,43 @@ F-14 와 같은 방식이다: 안쪽 도구에 스키마 밖 처리기 인자 `b
 (`contract.problems` 의 `args`·`extra_args`·`target_arg` 모두). 도구 목록 크기는 오히려 조금 줄었다(운영 9,258 → 9,256 · 설정 14,814 → 14,812 — `use` 줄을 바뀐 뜻에 맞추며 상쇄).
 
 **남은 것(범위 밖)**: `_reading` 반복 안내문 전역 정리, `budget` 강제, `weather.forecast` 표 모양, 그 밖의 `find.*`.
+
+### F-16. 지침 의존을 서버 강제·응답 안 시점 지시로 (2026-11-10)
+
+claude.ai 는 서버 안내문을 모델에 주지 않는다 — 도구 설명과 응답 본문만 닿고, 지켜진 것은 서버 강제(F-11 의 거절+`resend`, 7/7)와
+응답 **맨 앞**에 둔 지시뿐이었다. 지침 문구(P)를 서버 강제(S)·응답 안 지시(H)로 옮긴다. 도구·인자 이름은 늘리지 않았다.
+
+1. **꼭 할 일 한 줄(H)** — `next` 열쇠(call·after_user·if_no·resend·why·fix·map_time …)는 그대로 두고, 그중 지금 반드시 이어서 할
+   호출 하나만 응답 맨 앞 `must` 로 올린다(`act_say.lead`, 틀 출구 `_run_call`). 대상: `resend`, 실패(error·refused)의 `call`,
+   승인됐는데 실행 안 된 `CONFIRM_RUN`. 사용자에게 먼저 묻는 응답(`say.ask`)·승인 대기·카드 호출·카드 권유(`optional`)·`fix`·
+   `map_time` 은 올리지 않는다 — 카드 규칙은 현행 유지. 계약 순서: `must`(있으면) → `status` → `say` → `next` → data.
+2. **세션 첫 응답 규칙(H)** — 전송층(`aot_mcp_server._session_head` → `domain.session_rules`)이 세션의 첫 도구 응답 맨 앞에
+   `rules` 4줄(말하기·UUID/키 금지·현재 시각은 `now`·사용자가 말한 시각은 weather `at`, 답의 시각은 `focus`)을 한 번 싣는다(약 160토큰,
+   응답 상한 뒤에 붙지만 호스트 한도 25,000 대비 여유 안). 세션 열쇠는 stdio=프로세스 무작위 값, HTTP=`Mcp-Session-Id`(initialize 에서
+   준 값) — 사용자와 묶는다. **열쇠가 없으면 싣지 않는다**(첫 응답을 가릴 수 없어 매번 반복하게 된다). 옛 표면에서는 싣지 않는다.
+   상태는 프로세스 메모리(12시간·2,048 세션) — 재시작하면 한 번 더 실린다.
+3. **지침 축소** — SPEAKING 의 승인 문장을 뺐다(승인 대기 응답 `APPROVAL_WHY` 가 싣고 5번이 강제). 대신 "must: do it first".
+   MAP TIME 은 at(사용자가 말한 시각)·focus(최고·최저·비 시작 또는 답이 가리키는 시각). 지침 길이: 운영 −65자, 라이트 −10자. 카드 문장 유지.
+4. **위반 교정 한 줄(H)** — 같은 세션에서 (a) 예보 뒤 10분 안에 `screen` 의 `map_control`/`time` 으로 지도 시간을 직접 옮김,
+   (b) 같은 호출(같은 인자)이 같은 `reason_code` 로 다시 거절됨 → 그 응답 맨 앞에 `correction` 한 줄. 같은 교정은 세션당 한 번.
+5. **승인 중복 차단(S)** — 게이트(`mcp_safety_gate._open_request`)가 같은 호출자·같은 도구·같은 인자(메타·`_domain_target` 제외)의 살아
+   있는 대기를 찾으면 새로 만들지 않고 그 번호를 `already_asked` 와 함께 돌려준다(시간당 상한도 쓰지 않는다). 틀은 이 세션이 이미 그
+   번호를 되읽었으면 다시 묻지 않게(`say.tell` + `ALREADY_ASKED_WHY`), 다른 대화나 세션 열쇠가 없는 연결이면 여기서 되읽게 한다.
+
+6. **예보는 focus 필수(S, 26-11-10)** — 실측(#648 반영 뒤 claude.ai): 도메인 `weather` 예보 10건 중 focus 0건, `at` 은 날짜뿐이라
+   슬라이더가 그날 00:00 으로 가 사용자에겐 안 움직임이었다. 지켜지는 방식은 서버가 거절하며 다시 보낼 호출을 주는 것뿐이어서,
+   `weather.forecast` 는 focus 가 없거나 모르는 값이면 처리기를 부르지 않고 `focus_required` + `next.resend`(같은 인자 + focus
+   자리표시, `must` 로 올라감)로 거절한다. **화면 시간 따라가기가 가능할 때만**(`screen_follow.eligible`: 외부 AI·허용 화면 있음·
+   `_show_on_screen` 이 off 아님) — 화면 없는 클라이언트·인앱 AI·평면 경로는 그대로. 구간 전체를 가리키면 `focus=range` →
+   날짜만 말한 `at` 도 00:00 이 아니라 응답 구간의 최고 기온 시각으로 옮긴다(일 단위 응답이면 까닭 한 줄).
+
+시험: `aot/tests/test_mcp_session_rules.py`. 남은 위험: claude.ai 가 대화마다 새 `Mcp-Session-Id` 를 쓰는지는 실측 전이다(재사용하면 규칙이
+첫 대화에만 실린다). 지도 시간 교정(a)의 `screen` 호출은 `next.map_time` 의 `if_answer_names_another_time` 안내를 따른 경우에도 세어진다.
+
+## 기본 표면 전환 (2026-11)
+
+`AOT_MCP_SURFACE` 를 정하지 않으면 도메인 표면이 켜진다(옛 표면은 기본 꺼짐이던 것을 뒤집음).
+옛 표면으로 되돌리려면 MCP 컨테이너(와 MCP 를 내장한 앱 프로세스)에 `AOT_MCP_SURFACE=legacy`.
+인앱 AI 는 이 스위치를 따르지 않고 늘 도메인 명부를 쓴다(`tools_for_agent`, 26-11 아키텍처 개선 5단계 — 옛 system_tools 매니페스트와 `AOT_AI_BUILTIN_MCP_TIERING` 은 걷어냄).
+옛 이름 별칭은 전환 2주 뒤에 정리한다.
+

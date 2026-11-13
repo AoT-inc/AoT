@@ -52,6 +52,15 @@ THUMB_SIDE = 320
 #: 아티팩트(HTML) 카드 상한 — 디코드 전 길이도 이 값으로 먼저 거른다.
 ARTIFACT_MAX_BYTES = 512 * 1024
 ORPHAN_AGE_S = 3600
+#: viz 카드(.viz) — AI가 조회한 값을 게이지/미니그래프로. 스펙은 작은 JSON이고 파일로
+#: 저장하지 않는다(attachment 의 spec 칸에만 든다). 임의 HTML이 아니라 숫자+짧은 문자열뿐이라
+#: 수신함이 인라인으로 그릴 수 있다(artifact 의 sandbox iframe 과 다른 길).
+VIZ_MAX_BYTES = 8 * 1024          # 스펙 원문 상한(디코드 전/후 둘 다 이 값으로 거른다)
+VIZ_MAX_POINTS = 48              # spark 점 개수 상한 — 카드·렌더 비용을 묶는다
+VIZ_LABEL_MAX = 40
+VIZ_UNIT_MAX = 12
+VIZ_VALUETEXT_MAX = 16
+VIZ_SPAN_MAX = 24               # spark 바닥 기간 라벨(예: "지난 6시간") — 선택, 짧은 글자만
 #: P5 — 카드당 첨부(파일+영상 합계)·카드 디코드 합계·본문 승격 수·영상 타일 수·한 post 의 가져오기 시간.
 CARD_MAX_ATTACH = 8
 CARD_MAX_BYTES = 20 * 1024 * 1024
@@ -95,6 +104,7 @@ _WS = re.compile(r'\s+')
 def _redirects(text):
     """html 이 meta refresh 로 스스로 이동하려 하는가(원문·엔티티 푼 글 둘 다, 공백 무시)."""
     return any(_META_REFRESH.search(_WS.sub('', t)) for t in (text, _html.unescape(text)))
+
 
 _DATA_PREFIX = re.compile(r'^\s*data:[^,]*,', re.I)
 _URL_START = re.compile(r'^\s*(?:https?:|file:|//)', re.I)
@@ -584,6 +594,91 @@ def _name_ext(name):
         return None
 
 
+def _viz_num(v):
+    """유한한 실수만 받는다(bool·NaN·Inf·문자열 거부)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    f = float(v)
+    if f != f or f in (float('inf'), float('-inf')):
+        return None
+    return f
+
+
+def _viz_str(v, limit):
+    if v is None:
+        return None
+    s = str(v).strip()
+    return s[:limit] if s else None
+
+
+def parse_viz_spec(data):
+    """.viz 첨부(JSON bytes 또는 str) → 정규화된 스펙 dict. 모양이 틀리면 FileError.
+
+    숫자만·짧은 문자열만 받는다 — 수신함(aot-ai-caption.js)이 AoTViz 로 인라인 렌더하고,
+    라벨·값 글자는 AoTViz 가 esc 처리한다. 임의 HTML 이 아니므로 sandbox 없이 그릴 수 있다.
+    점 개수(spark)에 상한을 둬 카드·렌더 비용을 묶는다."""
+    if isinstance(data, (bytes, bytearray)):
+        if len(data) > VIZ_MAX_BYTES:
+            raise FileError("viz spec is larger than %d KB." % (VIZ_MAX_BYTES // 1024))
+        try:
+            text = bytes(data).decode('utf-8-sig')
+        except UnicodeDecodeError:
+            raise FileError("viz spec must be UTF-8 JSON.")
+    else:
+        text = str(data)
+    try:
+        spec = json.loads(text)
+    except ValueError:
+        raise FileError("viz spec must be a JSON object.")
+    if not isinstance(spec, dict):
+        raise FileError("viz spec must be a JSON object.")
+    kind = spec.get('viz')
+    if kind not in ('gauge', 'spark'):
+        raise FileError('viz must be "gauge" or "spark".')
+    out = {'viz': kind}
+    for src, dst, lim in (('label', 'label', VIZ_LABEL_MAX),
+                          ('unit', 'unit', VIZ_UNIT_MAX),
+                          ('valueText', 'valueText', VIZ_VALUETEXT_MAX)):
+        s = _viz_str(spec.get(src), lim)
+        if s:
+            out[dst] = s
+    if kind == 'gauge':
+        value = _viz_num(spec.get('value'))
+        lo = _viz_num(spec.get('min'))
+        hi = _viz_num(spec.get('max'))
+        if value is None or lo is None or hi is None:
+            raise FileError("gauge needs numeric value, min, max.")
+        if lo == hi:
+            raise FileError("gauge min and max must differ.")
+        out.update(value=value, min=lo, max=hi)
+    # 적정 범위(선택) — 게이지는 녹색 호, 미니그래프는 옅은 초록 면으로 그린다.
+    for k in ('okMin', 'okMax'):
+        n = _viz_num(spec.get(k))
+        if n is not None:
+            out[k] = n
+    if kind == 'spark':
+        raw = spec.get('points')
+        if not isinstance(raw, list):
+            raise FileError("spark needs a points list.")
+        pts = [_viz_num(v) for v in raw]
+        if any(p is None for p in pts):
+            raise FileError("spark points must all be finite numbers.")
+        if len(pts) < 2:
+            raise FileError("spark needs at least 2 points.")
+        if len(pts) > VIZ_MAX_POINTS:
+            raise FileError("spark allows at most %d points." % VIZ_MAX_POINTS)
+        out['points'] = pts
+        span = _viz_str(spec.get('span'), VIZ_SPAN_MAX)   # 선택 — 바닥에 적을 기간 라벨
+        if span:
+            out['span'] = span
+    return out
+
+
+def viz_bytes(spec):
+    """정규화된 스펙 → 저장용 캐논 JSON bytes(크기 계산·attachment.spec 칸)."""
+    return json.dumps(spec, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+
+
 def prepare(attach, user, user_id):
     """attach 인자를 검사해 저장 준비물을 돌려준다.
 
@@ -620,6 +715,13 @@ def prepare(attach, user, user_id):
         if not name:
             raise FileError("attach needs a name like report.csv.")
         display, ext = split_name(name)
+        if ext == 'viz':
+            if key == 'url':
+                raise FileError("viz spec must be sent inline, not by url.")
+            spec = parse_viz_spec(data)
+            return {'name': display, 'ext': 'viz', 'mime': 'application/json',
+                    'kind': 'viz', 'data': viz_bytes(spec), 'thumb': None,
+                    'fetch': attempt, 'spec': spec}
         mime, kind, thumb = inspect_bytes(ext, data)
     except FileError:
         if attempt is not None:

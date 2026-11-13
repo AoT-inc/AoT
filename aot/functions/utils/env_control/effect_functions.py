@@ -12,7 +12,7 @@ K_* 계수는 모듈 기본값. 실제 사용 시 apply_calibration()으로 장�
 
 from typing import Optional
 
-from . import psychro as _psychro
+from aot.utils import psychro as _psychro
 from .types import VENTILATING_KINDS, EffectResult, EnvContext
 
 
@@ -650,7 +650,7 @@ def _fog_sprayed_kg(env: EnvContext, cmd_pct: float, profile) -> Optional[tuple]
 
 def _fog_psychro(env: EnvContext, cmd_pct: float, profile) -> Optional[dict]:
     """분무 한 사이클의 (dT, dRH, dVPD) — 물리로 못 구하면 None(호출부가 K 상수로)."""
-    from . import psychro as ps
+    from aot.utils import psychro as ps
     T = env.get('T_int')
     RH = env.get('RH_int')
     if T is None or RH is None:
@@ -719,7 +719,7 @@ def fogger_vpd_effect(env: EnvContext, cmd_pct: float, profile=None) -> EffectRe
     r = _fog_psychro(env, cmd_pct, profile)
     if r is None:
         return _fogger_vpd_chain(env, cmd_pct, profile)
-    from . import psychro as ps
+    from aot.utils import psychro as ps
     T = float(env.get('T_int'))
     tT = _calibrated_scale(profile, 'temperature')
     tH = _calibrated_scale(profile, 'humidity')

@@ -20,7 +20,7 @@ from aot.aot_flask.utils.utils_general import (delete_entry_with_id,
 from aot.aot_flask.utils.utils_notes import (datetime_time_to_utc,
                                                   process_note_attachment)
 from aot.utils.system_pi import assure_path_exists
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -59,15 +59,36 @@ def notice_category_list():
 
 
 # @manual Notices#replies
-def can_manage_post(post):
+def may_manage_post(post, user):
+    """공지 관리 규칙의 정본 — 웹(`can_manage_post`)과 MCP 가 같이 쓴다.
+
+    Admin 은 모든 글을, 작성자는 `edit_settings` 가 있을 때 자기 글을 관리한다.
+    `user` 는 User 행(없으면 불허)."""
+    from aot.databases.models import Role
+    if user is None:
+        return False
+    if user.role_id == 1:
+        return True
+    if post.user_id is None or post.user_id != user.id:
+        return False
+    role = Role.query.filter(Role.id == user.role_id).first()
+    return bool(role and role.edit_settings)
+
+
+def _web_user():
+    """웹 요청의 로그인 사용자 행. 없으면 None."""
+    from aot.databases.models import User
+    if not current_user.is_authenticated:
+        return None
+    return User.query.filter(User.name == current_user.name).first()
+
+
+# @manual Notices#replies
+def can_manage_post(post, actor=None):
     """Admin can manage any post. The author can manage their own post if they
-    still hold write permission."""
-    if user_is_admin():
-        return True
-    if (current_user.is_authenticated and post.user_id == current_user.id and
-            user_has_permission('edit_settings', silent=True)):
-        return True
-    return False
+    still hold write permission. `actor`(User 행)를 주면 로그인 세션 대신 그
+    사람으로 판정한다 — 세션이 없는 MCP 실행층이 넘긴다."""
+    return may_manage_post(post, actor if actor is not None else _web_user())
 
 
 #
@@ -128,7 +149,7 @@ def _replace_poll(post):
 #
 
 # @manual Notices#posts, Notices#poll
-def notice_add(form):
+def notice_add(form, actor=None):
     """Create a post. Returns (errors, post) — post is None if errors is non-empty.
     Also flashes + is consumed by the classic page route (which ignores the
     return value); the return value exists so the widget's JSON API can reuse
@@ -140,7 +161,9 @@ def notice_add(form):
 
     new_post = NoticePost()
     new_post.unique_id = set_uuid()
-    new_post.user_id = current_user.id if current_user.is_authenticated else None
+    if actor is None:
+        actor = _web_user()
+    new_post.user_id = actor.id if actor is not None else None
     new_post.title = (form.title.data or '').strip() or _("Untitled")
     new_post.body = (form.body.data or '').strip()
     new_post.category = (form.category.data or '').strip() or None
@@ -157,7 +180,7 @@ def notice_add(form):
         except Exception as msg:
             error.append(_("Error parsing expiration date/time: %(msg)s", msg=msg))
 
-    if form.pinned.data and user_is_admin():
+    if form.pinned.data and actor is not None and actor.role_id == 1:
         new_post.pinned = True
 
     if form.files.data:
@@ -182,7 +205,7 @@ def notice_add(form):
 
 
 # @manual Notices#posts, Notices#poll
-def notice_mod(form):
+def notice_mod(form, actor=None):
     """Update a post. Returns (errors, post) — see notice_add()'s docstring."""
     error = []
 
@@ -192,7 +215,9 @@ def notice_mod(form):
         flash_success_errors(error, _("Edit Notice"), url_for('routes_notice.page_notice'))
         return error, None
 
-    if not can_manage_post(post):
+    if actor is None:
+        actor = _web_user()
+    if not can_manage_post(post, actor):
         error = [_("Insufficient permission to edit this notice")]
         flash(error[0], "error")
         return error, None
@@ -220,7 +245,7 @@ def notice_mod(form):
         except Exception as msg:
             error.append(_("Error parsing expiration date/time: %(msg)s", msg=msg))
 
-    if user_is_admin():
+    if actor is not None and actor.role_id == 1:
         post.pinned = bool(form.pinned.data)
 
     deleted_files_str = request.form.get('deleted_files', '')
@@ -259,13 +284,13 @@ def notice_mod(form):
     return error, (post if not error else None)
 
 
-def notice_del(unique_id):
+def notice_del(unique_id, actor=None):
     """Delete a post. Returns errors (empty list on success)."""
     error = []
     post = NoticePost.query.filter(NoticePost.unique_id == unique_id).first()
     if not post:
         error.append(_("Notice not found"))
-    elif not can_manage_post(post):
+    elif not can_manage_post(post, actor if actor is not None else _web_user()):
         error.append(_("Insufficient permission to delete this notice"))
 
     if not error:
@@ -316,7 +341,7 @@ def notice_vote(post, option_unique_ids):
     poll = NoticePoll.query.filter_by(post_id=post.id).first()
     if not poll:
         return False, _("This notice has no poll")
-    if poll.closes_at and poll.closes_at <= utc_now():
+    if poll.closes_at and poll.closes_at <= naive_utc():
         return False, _("This poll is closed")
 
     options = NoticePollOption.query.filter_by(poll_id=poll.id).all()

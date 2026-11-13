@@ -1,8 +1,8 @@
 # coding=utf-8
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 class OrchDevice(CRUDMixin, db.Model):
     """

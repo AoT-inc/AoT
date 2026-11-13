@@ -65,10 +65,10 @@ GeoShape 는 도형의 종류를 두 곳에 들고 있다 — `type` 컬럼과
   binding-drift   레거시 저장처에는 있는데 geo_binding 에 현재 바인딩이 없는
                   연결. 두 저장처가 공존하는 Phase B 완료 전까지의 감시자다.
                   geo_binding 테이블이 없는 설치에서는 건너뛴다.
-                  구역 폴리곤(role='area')에서 **자리는 매여 있고 컬럼만 옛
-                  장치를 가리키는** 경우는 제외한다 — 그 컬럼은 교체 때 일부러
-                  두는 것이라(TestLegacyColumnStaysInStep) 세면 숫자가 영영
-                  0 이 되지 않고 진짜 드리프트가 그 잡음에 묻힌다.
+                  **자리는 매여 있고 컬럼만 옛 장치를 가리키는** 경우는 제외한다 —
+                  L4(C-4) 부터 컬럼은 읽지도 쓰지도 않아 교체 때 따라가지 않는다.
+                  세면 숫자가 영영 0 이 되지 않고 진짜 드리프트(자리에 바인딩이
+                  아예 없음 = p7_05 가 못 옮긴 연결)가 그 잡음에 묻힌다.
 
 공간 구획(docs/design/geo-plot-instance.md) 관련 9종:
 
@@ -245,33 +245,25 @@ def _binding_drift(shapes, device_ids):
         current.add((b.spatial_kind, b.spatial_id, b.role, b.device_id))
         bound_slots.add((b.spatial_kind, b.spatial_id, b.role))
 
-    roles = {'aot_device': 'marker', 'device': 'area'}
+    from aot.databases.geo_marker_kinds import MARKER_TYPE
+    roles = {MARKER_TYPE: 'marker', 'device': 'area'}
     out = []
     for s in shapes:
-        raw = (s.device_id or '').strip()
+        raw = (getattr(s, 'device_id', None) or '').strip()   # 컬럼은 p7_06 에서 사라졌다
         role = roles.get(s.type)
         if not raw or role is None:
             continue
         did = raw.split('::')[0]
         if did not in device_ids:
             continue                       # 죽은 참조 — 다른 검사 담당
-        if (role == 'area'
-                and ('shape', s.unique_id, role) in bound_slots):
+        if ('shape', s.unique_id, role) in bound_slots:
             # 자리는 매여 있고 컬럼만 옛 장치를 가리킨다 — 드리프트가 아니다.
-            # 구역 폴리곤의 레거시 컬럼은 장치를 갈아끼워도 **일부러** 두는
-            # 것이다(device_binding `_move_marker_column` 이 마커만 따라가고,
-            # test_rebind_device.TestLegacyColumnStaysInStep 가 그 결정을
-            # 못 박는다 — 컬럼은 없애는 중이라 새 쓰기를 늘리지 않는다).
-            #
-            # 그걸 드리프트로 세면 구역 장치를 한 번이라도 교체한 설치에서는
-            # 이 숫자가 영영 0 이 되지 않고, 그 상수 잡음 뒤로 **진짜** 드리프트
-            # (자리에 바인딩이 아예 없는 경우)가 묻힌다. Phase C 게이팅 신호가
-            # 정확히 그 숫자라 묻히면 안 된다(2026-09-06 실측: 4건 중 1건이
-            # 이 경우였다).
-            #
-            # 마커는 계속 본다 — 마커 컬럼은 따라가기로 돼 있으므로, 어긋나
-            # 있다면 그 동기화가 실패했다는 뜻이고 실제로 고장이다
-            # (`place_device` 가 컬럼으로 마커를 찾는다).
+            # L4(C-4) 부터 컬럼은 **아무도 쓰지도 읽지도 않는다**: 장치를 갈아끼워도
+            # (마커든 구역이든) 컬럼은 따라가지 않으므로 옛 값이 남는다. 그걸
+            # 드리프트로 세면 교체가 있었던 설치에서 숫자가 영영 0 이 되지 않고,
+            # 그 잡음 뒤로 **진짜** 드리프트(자리에 바인딩이 아예 없는 경우 =
+            # p7_05 백필이 못 옮긴 연결)가 묻힌다. 컬럼 제거 가드가 보는 숫자가
+            # 정확히 그것이다.
             continue
         if ('shape', s.unique_id, role, did) not in current:
             out.append({
@@ -312,7 +304,7 @@ def _stale_legacy_refs(device_ids):
     except Exception:
         return []
 
-    from aot.aot_flask.geo.device_binding import _FACILITY_REFS
+    from aot.space.device_binding import _FACILITY_REFS
     history = {}          # (spatial_kind, spatial_id, role) -> (유효 여부, 마지막 장치, 끝난 시각)
     for b in GeoBinding.query.filter(
             GeoBinding.spatial_kind.in_(('fitting', 'actuator'))).all():
@@ -387,14 +379,26 @@ def collect(map_uuid=None, tolerance=1e-6):
     # geo_itg_i2_marker_unique 가 막는다. 여기서는 장치 신원을 키에 더해,
     # "같은 장치가 같은 자리에 두 번" 인 경우만 중복으로 남긴다(채널 NULL/'0'
     # 비대칭으로 인덱스를 비켜 간 레거시 행이 그 경우다).
+    # 장치 신원은 바인딩에서 읽는다(L4 — 컬럼은 더 쓰지 않는다). 컬럼만 있는
+    # 옛 행은 컬럼으로 받쳐 준다.
+    bound_identity = {}
+    try:
+        for b in GeoBinding.query.filter(
+                GeoBinding.spatial_kind == 'shape',
+                GeoBinding.valid_to.is_(None)).all():
+            bound_identity.setdefault(b.spatial_id,
+                                      (b.device_id, b.channel_id or '0'))
+    except Exception:
+        bound_identity = {}
     groups = defaultdict(list)
     for s in shapes:
         if s.type in DUP_EXEMPT_TYPES:
             continue
         key = _geom_key(s, tolerance)
         if key:
-            identity = ((s.device_id, s.channel_id or '0')
-                        if getattr(s, 'device_id', None) else None)
+            identity = bound_identity.get(s.unique_id) or (
+                (s.device_id, s.channel_id or '0')
+                if getattr(s, 'device_id', None) else None)  # p7_06 이후엔 항상 None
             groups[(s.geo_id, s.type, key, identity)].append(s)
     for (geo_id, stype, _, _identity), members in groups.items():
         if len(members) > 1:
@@ -474,14 +478,22 @@ def collect(map_uuid=None, tolerance=1e-6):
                 r[0] for r in model.query.with_entities(model.unique_id).all())
         except Exception:
             continue
-    for s in shapes:
-        raw = (s.device_id or '').strip()
-        if not raw:
+    # 장치 연결의 정본은 현재 바인딩이다(L4 — 컬럼은 p7_06 에서 지웠다). 현재
+    # 바인딩이 실존하지 않는 장치를 가리키는 도형을 찾는다.
+    _by_uid = {s.unique_id: s for s in shapes}
+    try:
+        _current = GeoBinding.query.filter(
+            GeoBinding.spatial_kind == 'shape',
+            GeoBinding.valid_to.is_(None)).all()
+    except Exception:
+        _current = []
+    for b in _current:
+        s = _by_uid.get(b.spatial_id)
+        if s is None or b.device_id in device_ids:
             continue
-        if raw.split('::')[0] not in device_ids:
-            findings['orphan-device-shape'].append(
-                dict(_where(s), type=s.type, device_id=raw,
-                     channel_id=s.channel_id))
+        findings['orphan-device-shape'].append(
+            dict(_where(s), type=s.type, device_id=b.device_id,
+                 channel_id=b.channel_id))
 
     # ── 같은 id 를 쓰는 설비 ────────────────────────────────────────────
     # id 는 설비의 신원이고 읽는 쪽마다 다르게 해석한다 — 면적·유량은 행마다
@@ -575,6 +587,11 @@ def collect(map_uuid=None, tolerance=1e-6):
     # duplicate 검사는 번들 **안쪽** JSON 은 못 본다 — 여기서 따로 연다.
     _check_equipment_bundle_sprinklers(findings, shapes, map_names, tolerance)
 
+    # ── 장치 위치 드리프트 (L0, 보고만) ─────────────────────────────────
+    # 판정 본체는 check_device_location_drift 하나다. 상세·verbose 는 거기서.
+    if not map_uuid:
+        _check_device_location_drift(findings)
+
     return dict(findings), len(shapes)
 
 
@@ -633,10 +650,8 @@ def _collect_plots(findings, map_uuid, map_names):
             return _bay_cache[uuid]
         ids = set()
         try:
-            from aot.aot_flask.geo.facility_bays import (compute_bay_slices,
-                                                         spec_from_row)
-            ids = {sl['id'] for sl in
-                   compute_bay_slices(spec_from_row(facilities[uuid]))}
+            from aot.space.facility_bays import plot_bay_ids
+            ids = plot_bay_ids(facilities[uuid])
         except Exception:
             ids = set()
         _bay_cache[uuid] = ids
@@ -651,7 +666,7 @@ def _collect_plots(findings, map_uuid, map_names):
             return _cap_cache[uuid]
         caps = {}
         try:
-            from aot.aot_flask.geo.plot_context import bay_capacities
+            from aot.space.plot_context import bay_capacities
             caps = bay_capacities(facilities[uuid]) or {}
         except Exception:
             caps = {}
@@ -882,6 +897,7 @@ HEADINGS = {
     'plot-program-kind-mismatch': '구획과 프로그램의 대상 종류가 다름',
     'containment-cache-drift': '포함 캐시가 기하와 불일치 (무효화 누락 경로)',
     'equipment-sprinkler-marker': 'equipment_collection 안에 남은 스프링클러 점 마커(비정본, 저장돼선 안 됨)',
+    'device-location-drift': '장치 위치 L4 기준 위반(레거시 전용 마커·자리와 50m 초과·explicit tz 자리 없음·없는 map_config) — 보고만',
 }
 
 # 데이터가 실제로 안 보이거나 잘못 붙는 항목. 이게 있으면 화면이 이미 틀어져 있다.
@@ -909,7 +925,50 @@ SEVERE = ('type-mismatch', 'dangling-link', 'orphan-facility',
           'plot-dangling-facility', 'plot-program-kind-mismatch')
 
 
-def report(findings, shape_count, quiet=False):
+# 정보 항목: L4 전까지 드리프트가 있는 것이 정상이라 종료 코드에 영향을 주지
+# 않는다(`--strict-location` 을 주면 다른 항목처럼 센다).
+INFO_KEYS = ('device-location-drift',)
+
+
+def _check_device_location_drift(findings):
+    """check_device_location_drift 의 L4 기준 위반을 정보 항목으로 합류시킨다.
+
+    sqlite 가 아닌 DB 에서는 건너뛴다(검사기가 sqlite 파일을 직접 연다).
+    uuid 는 싣지 않는다 — 상세는 check_device_location_drift --verbose.
+    이 항목의 실패가 전체 점검을 중단시키지 않도록 오류는 항목에 기록한다.
+    """
+    try:
+        from aot.aot_flask.extensions import db  # noqa: PLC0415
+        from aot.scripts import check_device_location_drift as dld
+        path = db.engine.url.database
+        if db.engine.url.get_backend_name() != 'sqlite' or not path:
+            return
+        con = dld.open_ro(path)
+        try:
+            res = dld.analyze(con)
+        finally:
+            con.close()
+    except Exception as exc:                            # noqa: BLE001
+        findings['device-location-drift'].append(
+            {'criterion': 'check_failed', 'error': str(exc)})
+        return
+    for key, n in res['criteria'].items():
+        if n:
+            findings['device-location-drift'].append({'criterion': key, 'count': n})
+    ro = res['report_only']
+    if findings.get('device-location-drift'):
+        for key in ('default_coords_rows', 'markers_bound_elsewhere'):
+            if ro.get(key):
+                findings['device-location-drift'].append(
+                    {'criterion': key + '(보고만)', 'count': ro[key]})
+
+
+def _blocking(findings, strict_location=False):
+    return sum(len(v) for k, v in findings.items()
+               if strict_location or k not in INFO_KEYS)
+
+
+def report(findings, shape_count, quiet=False, strict_location=False):
     total = sum(len(v) for v in findings.values())
     if not total:
         print(f'OK: 도형 {shape_count}개, 문제 없음.')
@@ -932,7 +991,12 @@ def report(findings, shape_count, quiet=False):
             print(f'    ... 외 {len(items) - 40}건 (--json 으로 전체 확인)')
 
     severe = sum(len(findings.get(k, ())) for k in SEVERE)
-    print(f'\nFAIL: 도형 {shape_count}개 중 문제 {total}건'
+    blocking = _blocking(findings, strict_location)
+    if not blocking:
+        print(f'\nOK: 도형 {shape_count}개, 정보 항목만 {total}건'
+              ' (종료 코드 0 — --strict-location 으로 포함).')
+        return 0
+    print(f'\nFAIL: 도형 {shape_count}개 중 문제 {blocking}건'
           f' (표시/연결에 직접 영향 {severe}건).')
     if findings.get('type-mismatch'):
         print('  type-mismatch 는 aot_type 을 정본으로 삼아 type 을 맞추면 해소된다.')
@@ -952,6 +1016,8 @@ def main():
                     help='중복 판정 좌표 허용오차, 도 단위 (기본 1e-6 ≈ 0.1m)')
     ap.add_argument('--json', action='store_true', help='JSON 으로 출력')
     ap.add_argument('--quiet', action='store_true', help='건수 요약만')
+    ap.add_argument('--strict-location', action='store_true',
+                    help='장치 위치 드리프트(정보 항목)도 종료 코드에 포함')
     args = ap.parse_args()
 
     with app.app_context():
@@ -964,9 +1030,10 @@ def main():
     if args.json:
         print(json.dumps({'shape_count': shape_count, 'findings': findings},
                          ensure_ascii=False, indent=2))
-        return 1 if any(findings.values()) else 0
+        return 1 if _blocking(findings, args.strict_location) else 0
 
-    return report(findings, shape_count, quiet=args.quiet)
+    return report(findings, shape_count, quiet=args.quiet,
+                  strict_location=args.strict_location)
 
 
 if __name__ == '__main__':

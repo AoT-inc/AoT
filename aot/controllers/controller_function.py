@@ -63,6 +63,7 @@ class FunctionController(AbstractController, threading.Thread):
 
         self.has_loop = False
         self.has_listener = False
+        self._bad_rate_logged = False
 
     def __str__(self):
         return str(self.__class__)
@@ -74,14 +75,71 @@ class FunctionController(AbstractController, threading.Thread):
             self.running = False
             return
 
-        if self.has_loop and self.timer_loop < time.time():
-            while self.timer_loop < time.time():
-                self.timer_loop += self.sample_rate
-
+        if not self.has_loop:
+            return
+        now = time.time()
+        module_due = self._module_seconds_until_due()
+        # 점검 주기 격자(예전 그대로)와 모듈이 알려 준 할 일 시각 중 먼저 오는 쪽.
+        # 격자는 그대로 밀어 둔다 — 모듈이 시각을 모를 때 예전처럼 불리게.
+        grid_due = self.loop_is_due(now)
+        if grid_due or (module_due is not None and module_due <= 0):
             try:
                 self.run_function.loop()
             except Exception:
                 self.logger.exception("Exception while running loop()")
+
+    def _module_seconds_until_due(self):
+        """모듈이 알려 준 다음 할 일까지 남은 초. 모르면 None."""
+        fn = getattr(self.run_function, 'seconds_until_due', None)
+        if not callable(fn):
+            return None
+        try:
+            due = fn()
+            return None if due is None else float(due)
+        except Exception:
+            return None
+
+    def seconds_until_due(self):
+        """기반 루프가 점검 주기 대신 모듈의 다음 할 일 시각에 깨어나게 한다."""
+        if not self.has_loop or not self.run_function:
+            return None
+        return self._module_seconds_until_due()
+
+    def _run_then_wake(self, run_command, args_dict):
+        """모듈 명령(예: '지금 실행' 이 timer_loop 를 0 으로)을 마친 뒤 루프를 깨운다."""
+        try:
+            return run_command(args_dict)
+        finally:
+            self.wake()
+
+    def loop_is_due(self, now):
+        """이번 틱에 module.loop() 를 부를 때인가. 부를 때면 다음 시각으로 민다.
+
+        Mycodo 원형은 `while timer_loop < now: timer_loop += sample_rate` 였다.
+        sample_rate 가 0·음수·None 이면 끝나지 않아 이 스레드가 영영 돌고, RTC 없는
+        보드에서 NTP 가 시계를 수년 앞으로 맞추면 수천만 번을 돈다. 한 번의 산술로
+        민다. 시계가 한 주기 넘게 뒤로 가면(timer_loop 가 미래로 남음) 그 시각까지
+        멈춰 있지 않고 지금부터 다시 센다.
+        """
+        try:
+            rate = float(self.sample_rate)
+        except (TypeError, ValueError):
+            rate = 0.0
+        if not (0 < rate < float('inf')):
+            if not self._bad_rate_logged:
+                self._bad_rate_logged = True
+                self.logger.error(
+                    "Function 루프 주기(sample_rate) %r 이(가) 양수가 아니다 — "
+                    "1초로 대신 쓴다. 설정의 Function 컨트롤러 주기를 확인하라.",
+                    self.sample_rate)
+            rate = 1.0
+        if self.timer_loop > now + rate:
+            self.logger.warning("시스템 시계가 뒤로 갔다 — 루프 시각을 지금부터 다시 센다")
+            self.timer_loop = now - 1e-6
+        if self.timer_loop >= now:
+            return False
+        self.timer_loop += (int((now - self.timer_loop) // rate) + 1) * rate
+        return True
 
     def run_finally(self):
         """Stop the loaded function module on controller shutdown."""
@@ -166,15 +224,15 @@ class FunctionController(AbstractController, threading.Thread):
                 self.logger.error(msg)
                 return 1, msg
             if not thread or return_from_function:
-                return_val = run_command(args_dict)
+                return_val = self._run_then_wake(run_command, args_dict)
                 if return_from_function:
                     return 0, return_val
                 else:
                     return 0, f"Command sent to Function Controller. Returned: {return_val}"
             else:
                 thread_run_command = threading.Thread(
-                    target=run_command,
-                    args=(args_dict,))
+                    target=self._run_then_wake,
+                    args=(run_command, args_dict))
                 thread_run_command.start()
                 return 0, "Command sent to Function Controller and is running in the background."
         except Exception as err:
@@ -190,12 +248,12 @@ class FunctionController(AbstractController, threading.Thread):
             run_command = getattr(self.run_function, action_string)
             if thread:
                 thread_run_command = threading.Thread(
-                    target=run_command,
-                    args=(args_dict,))
+                    target=self._run_then_wake,
+                    args=(run_command, args_dict))
                 thread_run_command.start()
                 return 0, "Command sent to Function Controller and is running in the background."
             else:
-                return_val = run_command(args_dict)
+                return_val = self._run_then_wake(run_command, args_dict)
                 return 0, ["Command sent to Function Controller.", return_val]
         except:
             self.logger.exception(f"Error executing function action '{action_string}'")

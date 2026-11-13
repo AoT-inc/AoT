@@ -10,7 +10,7 @@ API 쪽으로 끌려갔다.
 """
 from unittest.mock import patch
 
-import aot.aot_flask.geo.facility_sensors as fs
+import aot.space.facility_sensors as fs
 
 
 def _s(dev, meas, mtype, priority=None):
@@ -121,5 +121,5 @@ def test_편집기가_고른_순위를_설비에_기록한다():
 def test_시설_통합이_순위를_싣는다():
     """편집기에서 고른 순위가 제어까지 가는 길 — 한 곳에서 빠지면 조용히 메인이 된다."""
     import inspect
-    from aot.aot_flask.geo import facility_integration as fi
+    from aot.space import facility_integration as fi
     assert "'sensor_priority':  sensor_priority_of(f)" in inspect.getsource(fi)

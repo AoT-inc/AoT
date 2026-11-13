@@ -21,8 +21,9 @@ from flask import Flask
 from flask_babel import Babel
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_membership as M
+from aot.space import device_membership as M
 from aot.aot_flask.utils import utils_general as U
+from aot.tests.geo._legacy_marker import bound_shape
 from aot.databases.models import (
     CustomController, DeviceMeasurements, GeoMap, GeoShape, Input, Output)
 
@@ -54,7 +55,7 @@ def _poly(uid, geo_id, coords, name):
 
 
 def _marker(uid, geo_id, device_id, lng, lat):
-    GeoShape(unique_id=uid, geo_id=geo_id, type='aot_device',
+    bound_shape(unique_id=uid, geo_id=geo_id, type='aot_device',
              device_id=device_id,
              feature={'type': 'Feature', 'properties': {},
                       'geometry': {'type': 'Point',
@@ -196,7 +197,7 @@ class TestAreaMembershipIsNotJustMarkers(_Base):
 
     def test_a_device_bound_to_a_polygon_inside_counts(self):
         """마커가 없어도 그 구역 폴리곤이 맡긴 장치는 이 구역의 것이다."""
-        from aot.aot_flask.geo import device_binding as B
+        from aot.space import device_binding as B
         inner = 'inner-zone-picker'
         GeoShape(unique_id=inner, geo_id=MAP, type='device',
                  feature={'type': 'Feature', 'properties': {},

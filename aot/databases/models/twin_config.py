@@ -21,9 +21,10 @@
 import json
 from datetime import datetime
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
+from aot.utils.timekit import naive_utc, utc_now
 
 SCOPES = ('site', 'plot')
 
@@ -51,7 +52,7 @@ class TwinConfig(CRUDMixin, db.Model):
 
     def set_config(self, d):
         self.config = json.dumps(d or {}, ensure_ascii=False, sort_keys=True)
-        self.updated_at = datetime.utcnow()
+        self.updated_at = naive_utc(utc_now())
 
     def __repr__(self):
         return "<{cls}(scope={s}, target={t}, enabled={e})>".format(

@@ -23,8 +23,8 @@ from flask import Flask
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import GeoBinding, GeoFacility
-from aot.aot_flask.geo import device_binding as B
-from aot.utils.time_utils import utc_now
+from aot.space import device_binding as B
+from aot.utils.timekit import utc_now
 
 
 FAC = 'fac-uuid-1'
@@ -259,7 +259,7 @@ class TestShapeResolution(unittest.TestCase):
     def _shape(self, uid, stype='aot_device', device_id='dev-legacy'):
         from aot.databases.models import GeoShape
         s = GeoShape(unique_id=uid, geo_id='map-1', type=stype,
-                     device_id=device_id, channel_id='0', feature={})
+                     channel_id='0', feature={})
         s.save()
         return s
 
@@ -271,10 +271,11 @@ class TestShapeResolution(unittest.TestCase):
         self.assertEqual(B.device_for_shape(s), 'dev-bound')
         self.assertEqual(B.devices_for_shapes([s]), {'sh-1': 'dev-bound'})
 
-    def test_channel_suffix_is_stripped_on_fallback(self):
-        """레거시 컬럼에는 'uuid::3' 형태가 섞여 있다(프런트 계약)."""
-        s = self._shape('sh-2', stype='device', device_id='dev-x::3')
-        self.assertEqual(B.device_for_shape(s), 'dev-x')
+    def test_unbound_shape_has_no_device(self):
+        """바인딩이 없으면 장치가 없다(레거시 컬럼 폴백은 L4 에서 사라졌다)."""
+        s = self._shape('sh-2', stype='device')
+        self.assertIsNone(B.device_for_shape(s))
+        self.assertEqual(B.devices_for_shapes([s]), {})
 
     def test_non_device_shape_types_are_ignored(self):
         """site/zone 은 장치를 매다는 자리가 아니다."""

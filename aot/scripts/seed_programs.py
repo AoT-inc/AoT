@@ -786,7 +786,7 @@ def _apply_targets(crop, stages):
     """
     try:
         from aot.scripts.crop_target_sources import SOURCES, SPECIES_TARGETS
-        from aot.aot_flask.geo.program_io import fixed_target_defs
+        from aot.space.program_io import fixed_target_defs
     except Exception:
         return None, None
 

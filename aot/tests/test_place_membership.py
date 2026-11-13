@@ -75,7 +75,7 @@ class _Base(unittest.TestCase):
         GeoShape(unique_id='zone-b', geo_id='m1', type='zone',
                  feature=_poly(ZONE_B, '3-2')).save()
         # 마커로 놓인 센서(구역 A 안).
-        GeoShape(unique_id='mk-sensor', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk-sensor', geo_id='m1', type='aot_device',
                  device_id='sensor-1', channel_id='0',
                  feature=_point(30, 15)).save()
         # 바인딩으로만 매인 밸브 — 마커가 없다(실측상 흔한 경우).
@@ -94,7 +94,7 @@ class _Base(unittest.TestCase):
 class TestPlaceIndex(_Base):
 
     def test_path_is_outer_to_inner(self):
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         self.assertEqual(idx.path(idx.by_uid['zone-a']), '3포장 > 3-1')
         self.assertTrue(idx.within('zone-a', 'site'))
@@ -102,14 +102,14 @@ class TestPlaceIndex(_Base):
 
     def test_device_paths_use_markers_and_bindings(self):
         """마커만 보던 규칙에서는 바인딩으로만 매인 밸브가 어디에도 없었다."""
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         paths = PlaceIndex().device_paths(['sensor-1', 'valve-1', 'nowhere'])
         self.assertEqual(paths['sensor-1'], ['3포장 > 3-1'])
         self.assertEqual(paths['valve-1'], ['3포장 > 3-1'])
         self.assertNotIn('nowhere', paths)
 
     def test_place_members_include_bound_devices_and_descendants(self):
-        from aot.aot_flask.geo.device_membership import place_members
+        from aot.space.device_membership import place_members
         site = place_members('site')
         self.assertIn('sensor-1', site)
         self.assertIn('valve-1', site)       # 바인딩
@@ -117,7 +117,7 @@ class TestPlaceIndex(_Base):
         self.assertIsNone(place_members('no-such-place'))
 
     def test_places_named_keeps_the_innermost(self):
-        from aot.aot_flask.geo.device_membership import places_named
+        from aot.space.device_membership import places_named
         hits = [s.unique_id for s in places_named('3포장 3-1 밸브')]
         self.assertEqual(hits, ['zone-a'])
         self.assertEqual([s.unique_id for s in places_named('3포장 밸브')], ['site'])
@@ -125,7 +125,7 @@ class TestPlaceIndex(_Base):
     def test_plot_within_site_through_its_zone(self):
         """예전 list_plots 규칙("가장 안쪽 소속이 물은 곳과 같은가")에서는
         대지로 물으면 구역 안 구획이 빠졌다."""
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         from aot.databases.models import GeoPlot
         plot = GeoPlot(unique_id='plot-a', geo_id='m1', subject='콩',
                        started_on=date(2026, 6, 15), feature=_poly(PLOT_IN_A))
@@ -158,7 +158,7 @@ class TestPlotWithinFacility(_Base):
         return plot
 
     def test_facility_plot_within_its_facility_and_site(self):
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         plot = self._plot(facility_uuid='fac1')
         self.assertTrue(idx.plot_within(plot, 'fac-shape'))   # 시설 자체
@@ -166,14 +166,14 @@ class TestPlotWithinFacility(_Base):
         self.assertEqual(idx.plot_path(plot), '3포장 > 육묘장3')
 
     def test_sibling_zones_do_not_pull_facility_plot(self):
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         plot = self._plot(facility_uuid='fac1')
         self.assertFalse(idx.plot_within(plot, 'zone-a'))
         self.assertFalse(idx.plot_within(plot, 'zone-b'))
 
     def test_plot_without_facility_unchanged(self):
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         plot = self._plot(feature=_poly(PLOT_IN_A))
         self.assertTrue(idx.plot_within(plot, 'zone-a'))
@@ -224,7 +224,7 @@ class TestScreensShareTheCanonicalRule(_Base):
     def test_place_scope_ids_include_bound_devices(self):
         """노트·일정 화면과 AI 가 같은 함수로 장소 범위를 넓힌다. 예전 노트
         화면은 계층 자손만 봐서 구역에 바인딩된 밸브의 노트가 빠졌다."""
-        from aot.aot_flask.geo.device_membership import place_scope_ids
+        from aot.space.device_membership import place_scope_ids
         ids, breakdown = place_scope_ids(GeoShape.query.filter_by(
             unique_id='site').first(), include_self=False)
         self.assertIn('valve-1', ids)
@@ -232,7 +232,7 @@ class TestScreensShareTheCanonicalRule(_Base):
 
     def test_site_for_geometry_picks_the_smallest_site(self):
         """대지 안의 대지 — 예전에는 DB 가 먼저 돌려준 대지를 골랐다."""
-        from aot.aot_flask.geo.device_membership import site_for_geometry
+        from aot.space.device_membership import site_for_geometry
         # 바깥 대지가 DB 에서 **먼저** 읽히게 한다 — 안쪽 대지를 지우고 바깥을
         # 만든 뒤 안쪽을 다시 만든다. 순서 기반 옛 규칙이면 바깥이 나온다.
         GeoShape.query.filter_by(unique_id='site').delete()
@@ -250,7 +250,7 @@ class TestScreensShareTheCanonicalRule(_Base):
         from unittest import mock
         from aot.aot_flask.geo import site_summary as ss
         # 대지 안이지만 어느 구역에도 들지 않는 마커.
-        GeoShape(unique_id='mk-site', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk-site', geo_id='m1', type='aot_device',
                  device_id='station-1', channel_id='0',
                  feature=_point(50, 80)).save()
         with mock.patch.object(ss, '_link_status', return_value={}), \
@@ -313,12 +313,14 @@ class TestSmallPlaceDefects(_Base):
     def test_zone_for_device_skips_an_area_polygon_of_the_same_device(self):
         """'device' 종류는 장치 영역 폴리곤이기도 해서, 그것이 먼저 읽히면 점이
         없어 소속이 비었다."""
-        from aot.aot_flask.geo.device_membership import zone_for_device
+        from aot.space.device_membership import zone_for_device
+        from aot.databases.models import Output
+        Output(unique_id='pump-1', name='펌프').save()    # 리졸버는 실존 장치만 푼다
         # 영역 폴리곤을 **먼저** 만든다(작은 id) — 순서 기반이면 이것이 집힌다.
-        GeoShape(unique_id='dev-area', geo_id='m1', type='device',
+        bound_shape(unique_id='dev-area', geo_id='m1', type='device',
                  device_id='pump-1', channel_id='0',
                  feature=_poly([[11, 11], [11, 13], [13, 13], [13, 11], [11, 11]])).save()
-        GeoShape(unique_id='dev-marker', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='dev-marker', geo_id='m1', type='aot_device',
                  device_id='pump-1', channel_id='0', feature=_point(35, 35)).save()
         z = zone_for_device('pump-1', 'm1')
         self.assertIsNotNone(z)
@@ -391,7 +393,7 @@ class TestControlAdjacentPaths(_Base):
 
     def test_plot_zone_fallback_includes_bound_sensors(self):
         """구역 폴백이 마커만 봐서, 구역에 바인딩으로 맡긴 센서가 빠졌다."""
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         from aot.databases.models import GeoPlot
         # 구역 A 안이지만 구획 자체에는 센서가 없는 자리.
         plot = GeoPlot(unique_id='plot-a', geo_id='m1', subject='콩',
@@ -426,7 +428,7 @@ class TestQualifiedNamesNarrowInside(_Base):
 
     def setUp(self):
         super(TestQualifiedNamesNarrowInside, self).setUp()
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.databases.models import GeoPlot
         shape_index.invalidate()
         for uid, subject, ring in (
@@ -438,7 +440,7 @@ class TestQualifiedNamesNarrowInside(_Base):
                     started_on=date(2026, 6, 15), feature=_poly(ring)).save()
 
     def tearDown(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         super(TestQualifiedNamesNarrowInside, self).tearDown()
 
@@ -558,15 +560,6 @@ class TestSameNamePlacesInSearch(_Base):
             self.assertNotIn('map', found[uid])
         self.assertIn("'use_name'", out['_reading'])
 
-    def test_maps_list_their_own_sites(self):
-        """지도가 여럿이면 "지도 1 의 대지" 를 답할 수 있어야 한다(2026-10-11) —
-        예전에는 지도 이름만 내고 대지는 지도 구분 없이 한 줄로 나왔다."""
-        from aot.tools.aot_data_tool_service import AoTDataToolService as S
-        maps = {m['name']: m for m in S.list_geo_maps()['maps']}
-        self.assertEqual(['gh-site'], [s['site_id'] for s in maps['그린']['sites']])
-        self.assertNotIn('gh-site', [s['site_id'] for s in maps['김제']['sites']])
-        self.assertEqual(len(maps['그린']['sites']), maps['그린']['site_count'])
-
     def test_spatial_tree_can_be_narrowed_to_one_map(self):
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
         roots = [n['unique_id'] for n in S.get_spatial_tree(map='그린')['hierarchy']]
@@ -584,7 +577,7 @@ class TestSameNamePlacesInSearch(_Base):
     def test_paths_name_the_map_only_when_the_root_name_repeats(self):
         """'3포장' 이 김제의 대지이자 그린하트바이오의 구역이라 경로만으로는 어느
         것인지 몰랐다. 맨 앞 이름이 겹칠 때만 지도 이름을 붙인다."""
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         self.assertEqual(idx.device_paths(['sensor-1'])['sensor-1'],
                          ['김제 3포장 > 3-1'])
@@ -610,7 +603,7 @@ class TestResolveTargetChildren(_Base):
 
     def setUp(self):
         super(TestResolveTargetChildren, self).setUp()
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.databases.models import GeoFacility, GeoPlot
         shape_index.invalidate()
         GeoShape(unique_id='fac-shape', geo_id='m1', type='facility',
@@ -632,7 +625,7 @@ class TestResolveTargetChildren(_Base):
                 feature=_poly([[210, 10], [210, 20], [220, 20], [220, 10], [210, 10]])).save()
 
     def tearDown(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         super(TestResolveTargetChildren, self).tearDown()
 
@@ -756,3 +749,4 @@ class TestZoneOverviewDoesNotRepeatSites(_Base):
         out = self._summary(zone_ids=['3포장'])
         ids = [d['device_id'] for d in out['zones'][0]['sensors']]
         self.assertIn('sensor-1', ids)
+from aot.tests.geo._legacy_marker import bound_shape

@@ -17,8 +17,8 @@ AOT_PATH="/opt/AoT"
 
 # 1. 서비스 중지 및 비활성화
 echo "#### AoT 관련 서비스 중지 및 비활성화 중..."
-systemctl stop aotflask aot aotmcp 2>/dev/null
-systemctl disable aotflask aot aotmcp 2>/dev/null
+systemctl stop aotflask aot aotmcp aottwin 2>/dev/null
+systemctl disable aotflask aot aotmcp aottwin 2>/dev/null
 
 echo "#### 관련 서비스 중지 중 (nginx, mosquitto, influxdb)..."
 systemctl stop mosquitto nginx influxdb influxdb2 2>/dev/null
@@ -29,6 +29,7 @@ echo "#### systemd 서비스 파일 삭제 중..."
 rm -f /etc/systemd/system/aotflask.service
 rm -f /etc/systemd/system/aot.service
 rm -f /etc/systemd/system/aotmcp.service
+rm -f /etc/systemd/system/aottwin.service
 rm -f /etc/systemd/system/pigpiod.service
 rm -f /etc/systemd/system/pigpiod_low.service
 rm -f /etc/systemd/system/pigpiod_high.service

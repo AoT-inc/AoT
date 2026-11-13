@@ -43,7 +43,7 @@ def _svc():
 
 
 def _index():
-    from aot.aot_flask.geo.device_membership import PlaceIndex
+    from aot.space.device_membership import PlaceIndex
     return PlaceIndex()
 
 
@@ -78,7 +78,7 @@ def _of_shape(shape, idx=None, matched='exact'):
     if kind is None:
         return None
     idx = idx or _index()
-    from aot.aot_flask.geo.device_membership import place_label
+    from aot.space.device_membership import place_label
     name = place_label(shape) or _svc()._shape_display_name(shape)
     map_name = _map_name_of(shape.geo_id)
     path = idx.path(shape)
@@ -104,7 +104,7 @@ def _of_device(row, kind, matched='exact'):
     (같은 이름의 장소가 여러 지도에 있을 때 어느 것인지 — 2026-10-14 웹 시험)."""
     path, map_name = row.name, None
     try:
-        from aot.aot_flask.geo.device_binding import shapes_for_devices
+        from aot.space.device_binding import shapes_for_devices
         shapes = (shapes_for_devices([row.unique_id]) or {}).get(row.unique_id) or []
         map_name = next((m for m in (_map_name_of(s.geo_id) for s in shapes) if m), None)
         paths = _index().device_paths([row.unique_id]).get(row.unique_id) or []
@@ -247,7 +247,7 @@ def _screen_by_path(text, accepts):
 
 
 def _exact_candidates(text, accepts=()):
-    from aot.aot_flask.geo import shape_index
+    from aot.space import shape_index
     from aot.databases.models import GeoMap, GeoPlot
     low = text.lower()
     found = _screens(text, accepts)
@@ -484,7 +484,7 @@ def _touches(q, grams, names):
 
 def _token_pool(q):
     """이름이 물음과 닿는 것들 — [(종류, 이름, 행 또는 도형)]."""
-    from aot.aot_flask.geo import shape_index
+    from aot.space import shape_index
     from aot.databases.models import (CustomController, GeoMap, GeoPlot, Input,
                                       Output)
     from aot.services.resolvers.device_resolver import ai_excluded
@@ -525,8 +525,8 @@ def _token_pool(q):
 
 def _where(pool, idx):
     """후보마다 놓인 자리 — (낱말 집합, 이름 목록). 지도 이름과 장소 경로에서."""
-    from aot.aot_flask.geo.device_binding import shapes_for_devices
-    from aot.aot_flask.geo.device_membership import PATH_SEP
+    from aot.space.device_binding import shapes_for_devices
+    from aot.space.device_membership import PATH_SEP
     map_names = {}
 
     def map_of(geo_id):
@@ -712,7 +712,7 @@ def _as_targets(cands):
 def _prefix_candidates(text):
     """마지막 단계 — 이름이 이것으로 **시작하는** 장소·지도('황산공원' → 코스 넷).
     하나면 그것, 여럿이면 고르지 않는다."""
-    from aot.aot_flask.geo import shape_index
+    from aot.space import shape_index
     from aot.databases.models import GeoMap
     low = text.lower()
     if len(low) < 2:
@@ -800,7 +800,7 @@ def _one_edit(a, b):
 def similar_names(text, accepts=(), limit=5):
     """이름 열쇠가 글자 하나만 다른 대상들 — 고르지 않는다. 세 글자 미만은 보지 않는다
     (두 글자 이름은 한 글자 차이인 것이 너무 많다). 별칭도 함께 본다."""
-    from aot.aot_flask.geo import shape_index
+    from aot.space import shape_index
     from aot.databases.models import (CustomController, GeoMap, GeoPlot, Input,
                                       Output)
     from aot.services.resolvers.device_resolver import ai_excluded
@@ -861,6 +861,21 @@ def similar_names(text, accepts=(), limit=5):
 
 # ── 후보 정렬 ───────────────────────────────────────────────────────────────
 
+def _viewed_rows(user_id, now=None):
+    """사용자가 지금 보고 있는 화면의 접속 행들 — 보는 중인 것이 있으면 그것만, 없으면 열려 있는 것(떠난 것 제외)."""
+    if not user_id:
+        return []
+    try:
+        from aot.utils import web_presence as wp
+        now = time.time() if now is None else now
+        rows = [r for r in wp.recent(user_id, now=now) if wp.state_of(r, now) != 'away']
+        viewing = [r for r in rows if wp.state_of(r, now) == 'viewing']
+        return viewing or rows
+    except Exception:                                       # noqa: BLE001
+        logger.debug('[domain] 지금 화면을 읽지 못함', exc_info=True)
+        return []
+
+
 def viewed_dashboards(user_id, now=None):
     """사용자가 지금 보고 있는 대시보드 id 들 — 보는 중인 화면이 있으면 그것, 없으면 열려 있는
     화면. 화면 기록이 없으면 빈 집합."""
@@ -879,23 +894,93 @@ def viewed_dashboards(user_id, now=None):
         return set()
 
 
+def viewed_tabs(user_id, now=None):
+    """사용자가 지금 보고 있는 입력·출력·기능 페이지의 탭 id 들(주소에 탭이 있을 때만 — 첫 탭은 모른다)."""
+    from aot.utils import web_presence as wp
+    return {r['page_ref'] for r in _viewed_rows(user_id, now)
+            if r.get('page_kind') in wp.TAB_PAGE_TYPES and r.get('page_ref')}
+
+
+def viewed_page_kinds(user_id, now=None):
+    return {r.get('page_kind') for r in _viewed_rows(user_id, now) if r.get('page_kind')}
+
+
 def rank(cands, user_id=None, now=None):
-    """같은 이름의 후보 → 사용자가 지금 보는 대시보드에 있는 것(그 대시보드, 그 위의 위젯)을
-    앞으로, 그것에 `on_screen` 을 단다. 고르지는 않는다 — 되묻는 것은 그대로다."""
+    """같은 이름의 후보 → 사용자가 지금 보는 대시보드에 있는 것(그 대시보드, 그 위의 위젯)·보는 탭을
+    앞으로, 그것에 `on_screen` 을 단다. 고르지는 않는다 — 고르는 것은 `context_pick`(읽기·화면 이동만)."""
     here = viewed_dashboards(user_id, now)
-    if not here or not cands:
+    tabs = viewed_tabs(user_id, now) if user_id else set()
+    if (not here and not tabs) or not cands:
         return cands
     wids = [c['id'] for c in cands if c.get('kind') == 'widget']
     tab_of = {}
-    if wids:
+    if wids and here:
         from aot.databases.models import Widget
         tab_of = {w.unique_id: w.tab_id
                   for w in Widget.query.filter(Widget.unique_id.in_(wids)).all()}
     for c in cands:
         if (c.get('kind') == 'dashboard' and c.get('id') in here) or \
-                (c.get('kind') == 'widget' and tab_of.get(c.get('id')) in here):
+                (c.get('kind') == 'widget' and tab_of.get(c.get('id')) in here) or \
+                (c.get('kind') == 'tab' and c.get('id') in tabs):
             c['on_screen'] = True
     return sorted(cands, key=lambda c: not c.get('on_screen'))
+
+
+# ── 맥락으로 고르기 ──────────────────────────────────────────────────────────
+# 같은 이름이 여러 곳일 때 **읽기·화면 이동**은 맥락이 하나만 가리키면 되묻지 않고 그것으로 간다(응답에
+# `picked_by` 를 싣는다 — dispatch). 우선순위: 사용자가 정한 별칭(`_resolve` 가 이미 먼저) → 지금 보는 화면
+# → 이 대화가 최근에 가리킨 대상. 맥락이 둘 이상을 가리키거나 아무것도 가리키지 않으면 고르지 않는다.
+# 되돌리기 어려운 쓰기는 이 길을 지나지 않는다(dispatch 가 정한다).
+
+#: 이 대화(사용자+session_key)가 최근 가리킨 대상 — 메모리뿐이고 재시작하면 사라진다.
+_RECENT = {}
+_RECENT_TTL_S = 600.0
+_RECENT_MAX = 12
+_RECENT_KEEP = 256
+_MAP_KINDS = ('map', 'site', 'zone', 'facility', 'plot')
+
+
+def remember(user_id, session_key, cands, now=None):
+    """이 대화가 방금 가리킨 대상(풀린 것)을 적어 둔다."""
+    if not user_id or not cands:
+        return
+    now = time.time() if now is None else now
+    key = (user_id, session_key or '')
+    rows = [(i, t) for i, t in _RECENT.get(key, []) if now - t <= _RECENT_TTL_S]
+    for c in cands:
+        if c.get('id'):
+            rows = [(i, t) for i, t in rows if i != c['id']]
+            rows.append((c['id'], now))
+    _RECENT[key] = rows[-_RECENT_MAX:]
+    if len(_RECENT) > _RECENT_KEEP:
+        for k in [k for k, v in _RECENT.items() if not v or now - v[-1][1] > _RECENT_TTL_S]:
+            _RECENT.pop(k, None)
+
+
+def recent_ids(user_id, session_key, now=None):
+    now = time.time() if now is None else now
+    return {i for i, t in _RECENT.get((user_id, session_key or ''), []) if now - t <= _RECENT_TTL_S}
+
+
+def context_pick(cands, user_id=None, session_key=None, now=None):
+    """같은 이름의 후보 중 맥락이 정확히 하나를 가리키면 (후보, 근거), 아니면 None. 근거는 'screen'|'recent'.
+    1) 지금 보는 대시보드·탭에 있는 것(`rank` 의 on_screen) 2) 지도 화면을 보는 중이면 후보 중 지도에 놓인 것
+    3) 이 대화가 최근 가리킨 대상. 앞 단계가 둘 이상을 가리키면 거기서 멈춘다(짐작하지 않는다)."""
+    if not user_id or not cands:
+        return None
+    ranked = rank(list(cands), user_id, now)
+    on = [c for c in ranked if c.get('on_screen')]
+    if on:
+        return (on[0], 'screen') if len(on) == 1 else None
+    if viewed_page_kinds(user_id, now) & {'map', 'facilities'}:
+        on_map = [c for c in cands if c.get('kind') in _MAP_KINDS]
+        if on_map:
+            return (on_map[0], 'screen') if len(on_map) == 1 else None
+    seen = recent_ids(user_id, session_key, now)
+    near = [c for c in cands if c.get('id') in seen]
+    if len(near) == 1:
+        return near[0], 'recent'
+    return None
 
 
 # ── 공개 ────────────────────────────────────────────────────────────────────

@@ -36,7 +36,7 @@ UUID_KMA = 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff'
 @pytest.fixture(autouse=True)
 def _clean():
     ff._clear_cache()
-    from aot.aot_flask.geo import facility_sensors as fs
+    from aot.space import facility_sensors as fs
     from aot.aot_flask.geo import weather_hazards as wh
     fs._DRIVER_CACHE.clear()
     wh._CACHE.clear()
@@ -159,6 +159,12 @@ class TestFreshness:
         p = _write(tmp_path / 'f.json', _om_file(NOW, {0: {'temperature_2m': 20}}, -3600))
         assert ff.load_fresh_facility_forecast(p, NOW) is None
 
+    @pytest.mark.parametrize('ago, ok', [
+        (7200.0, True), (7200.5, False), (-600.0, True), (-601.0, False)])
+    def test_신선도_경계값(self, tmp_path, ago, ok):
+        p = _write(tmp_path / 'f.json', _om_file(NOW, {0: {'temperature_2m': 20}}, ago))
+        assert (ff.load_fresh_facility_forecast(p, NOW) is not None) is ok
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 강수확률 AND 규칙 (E2)
@@ -216,7 +222,7 @@ class TestRainAndRule:
 class TestForecastFileFor:
     def test_시간별_예보_입력의_파일(self, monkeypatch, tmp_path):
         import aot.config
-        from aot.aot_flask.geo.facility_sensors import forecast_file_for
+        from aot.space.facility_sensors import forecast_file_for
         monkeypatch.setattr(aot.config, 'DATABASE_PATH', str(tmp_path))
         _drivers(monkeypatch, {UUID_A: 'OPEN_METEO_HOURLY_FORECAST',
                                UUID_KMA: 'KMA_forecast'})
@@ -224,7 +230,7 @@ class TestForecastFileFor:
         assert got == str(tmp_path / 'openmeteo' / f'forecast_{UUID_A}.json')
 
     def test_드라이버가_다르면_없다(self, monkeypatch):
-        from aot.aot_flask.geo.facility_sensors import forecast_file_for
+        from aot.space.facility_sensors import forecast_file_for
         _drivers(monkeypatch, {UUID_KMA: 'KMA_forecast',
                                UUID_B: 'OPEN_METEO_FORECAST'})     # 실시간 드라이버
         assert forecast_file_for([_binding(UUID_KMA), _binding(UUID_B)]) is None
@@ -232,7 +238,7 @@ class TestForecastFileFor:
         assert forecast_file_for(None) is None
 
     def test_sole_은_예보_입력이_그_하나뿐일_때만(self, monkeypatch):
-        from aot.aot_flask.geo.facility_sensors import forecast_file_for
+        from aot.space.facility_sensors import forecast_file_for
         _drivers(monkeypatch, {UUID_A: 'OPEN_METEO_HOURLY_FORECAST',
                                UUID_KMA: 'KMA_forecast'})
         same = [_binding(UUID_A, 'forecast_temperature', 'm1'),
@@ -243,14 +249,14 @@ class TestForecastFileFor:
         assert forecast_file_for(mixed) is not None
 
     def test_uuid_형식이_아니면_없다(self, monkeypatch):
-        from aot.aot_flask.geo.facility_sensors import forecast_file_for
+        from aot.space.facility_sensors import forecast_file_for
         bad = '../../etc/passwd'
         _drivers(monkeypatch, {bad: 'OPEN_METEO_HOURLY_FORECAST'})
         assert forecast_file_for([_binding(bad)]) is None
 
     def test_드라이버_조회가_실패하면_없다(self, monkeypatch):
         import aot.utils.inputs as ui
-        from aot.aot_flask.geo.facility_sensors import forecast_file_for
+        from aot.space.facility_sensors import forecast_file_for
         monkeypatch.setattr(ui, '_input_devices', lambda ids: None)
         assert forecast_file_for([_binding(UUID_A)]) is None
 
@@ -298,7 +304,7 @@ class TestFeedforwardPath:
 
     def test_신선한_파일이면_창_판정이고_바인딩은_읽지_않는다(self, om_setup, monkeypatch):
         om_setup(self._cold_file())
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         monkeypatch.setattr(fs, 'read_forecast_sensors',
                             lambda *a, **k: pytest.fail('바인딩 경로를 병행했다'))
         c = _coord([_binding(UUID_A)])
@@ -308,14 +314,14 @@ class TestFeedforwardPath:
 
     def test_파일이_낡으면_바인딩_단일값(self, om_setup, monkeypatch):
         om_setup(self._cold_file(fetched_ago_s=3 * 3600))
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         monkeypatch.setattr(fs, 'read_forecast_sensors',
                             lambda b, *a, **k: {'T': 21.0, 'valid_count': 1, 'total_count': 1})
         sig = _coord([_binding(UUID_A)])._forecast_feedforward_signal(22.0, 60.0)
         assert sig.valid and sig.lookahead_h == 0.0 and sig.T_bias == 0.0
 
     def test_파일이_없으면_바인딩_단일값(self, om_setup, monkeypatch):
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         monkeypatch.setattr(fs, 'read_forecast_sensors',
                             lambda b, *a, **k: {'T': 30.0, 'valid_count': 1, 'total_count': 1})
         sig = _coord([_binding(UUID_A)])._forecast_feedforward_signal(22.0, 60.0)
@@ -323,7 +329,7 @@ class TestFeedforwardPath:
 
     def test_다른_예보_입력이_섞이면_바인딩_단일값(self, om_setup, monkeypatch):
         om_setup(self._cold_file())
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         seen = []
         monkeypatch.setattr(fs, 'read_forecast_sensors',
                             lambda b, *a, **k: seen.append(b) or {'valid_count': 0})
@@ -340,7 +346,7 @@ class TestFeedforwardPath:
 
     def test_바인딩_단일값_결과는_예전_함수와_같다(self, om_setup, monkeypatch):
         """김제처럼 다른 드라이버만 묶인 시설 — PR 전 코드가 부르던 그 함수와 같은 결과."""
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         fc = {'T': 26.5, 'RH': 90.0, 'wind': 13.0, 'pop': 70.0,
               'valid_count': 4, 'total_count': 4}
         monkeypatch.setattr(fs, 'read_forecast_sensors', lambda b, *a, **k: dict(fc))
@@ -450,6 +456,18 @@ class TestHazards:
         out = wh.upcoming(24, forecast_path=p)
         assert out['stale'] and out['items'] == []
 
+    def test_시설_파일_수신시각이_10분_넘게_미래면_낡음(self, tmp_path):
+        from aot.aot_flask.geo import weather_hazards as wh
+        now = time.time()
+        rows = {h: {'temperature_2m': -3.0} for h in range(0, 10)}
+        p = _write(tmp_path / 'f.json', _om_file(now, rows, fetched_ago_s=-700.0))
+        out = wh.upcoming(24, forecast_path=p)
+        assert out['stale'] and out['items'] == []
+        wh._CACHE.clear()
+        p = _write(tmp_path / 'g.json', _om_file(now, rows, fetched_ago_s=-300.0))
+        out = wh.upcoming(24, forecast_path=p)
+        assert not out['stale'] and out['items']
+
     def test_기본은_forecast_json_그대로(self, tmp_path, monkeypatch):
         import aot.config
         from aot.aot_flask.geo import weather_hazards as wh
@@ -475,7 +493,7 @@ class TestHazards:
         assert calls == [None, '/x']
 
     def test_시설_모달은_신선한_시설_파일만(self, om_setup):
-        from aot.aot_flask.geo.facility_sensors import fresh_forecast_file_for
+        from aot.space.facility_sensors import fresh_forecast_file_for
         assert fresh_forecast_file_for([_binding(UUID_A)]) is None      # 파일 없음
         p = om_setup(_om_file(time.time(), {0: {'temperature_2m': 10.0}}))
         assert fresh_forecast_file_for([_binding(UUID_A)]) == p

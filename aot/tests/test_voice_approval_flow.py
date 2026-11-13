@@ -18,8 +18,12 @@ class SpeakingRuleIsGlobalTest(unittest.TestCase):
         from aot.tools.tool_execution import SPEAKING_RULE
         self.assertIn('narrate nothing', SPEAKING_RULE)
         self.assertIn('final result', SPEAKING_RULE)
-        self.assertIn('reading back the target', SPEAKING_RULE)
-        self.assertIn('do not ask again', SPEAKING_RULE)
+        # 2026-11-10(F-16): 승인 한 번·되읽기 규칙은 지침이 아니라 승인 대기 응답이 싣고, 같은 요청은 서버가 다시 묻지 않게 한다.
+        from aot.tools.domain.act_say import APPROVAL_WHY, ALREADY_ASKED_WHY
+        self.assertNotIn('Ask approval once', SPEAKING_RULE)
+        self.assertIn('Ask once', APPROVAL_WHY)
+        self.assertIn('read-back', APPROVAL_WHY)
+        self.assertIn('do not ask again', ALREADY_ASKED_WHY)
 
     def test_rule_flow_ack_then_silence_then_a_short_result_with_limits(self):
         """2026-10-26 응답 흐름: 시작에 몇 마디, 중간에는 말하지 않음, 끝에 결과 1~2문장 + 값의 성격·범위, 모르는 원인은 모른다고."""
@@ -30,7 +34,10 @@ class SpeakingRuleIsGlobalTest(unittest.TestCase):
         for needle in ('1-2 sentences', 'model forecast or measured', 'range', 'unknown cause: say so'):
             self.assertIn(needle, text)
         # 2026-10-29: 결과의 next(할 호출)·say(전할 뜻) 규약 — 계약 op 결과는 더는 말을 시키지 않아 '이 규칙이 이긴다' 는 뺐다.
-        self.assertIn("next: do it silently", text)
+        self.assertIn("next: make the calls the question needs", text)
+        self.assertIn("silently", text)
+        # 2026-11-10(F-16): 응답 맨 앞 must(꼭 할 호출 하나)를 먼저.
+        self.assertIn("must: do it first", text)
         self.assertIn("say: convey in the user's language", text)
 
     def test_no_profile_is_told_anything_about_the_map_slider(self):
@@ -118,7 +125,7 @@ class ReadBackTest(unittest.TestCase):
         with mock.patch.object(gate, '_resolve_device_display_name', return_value='측창'):
             text = gate.read_back_text('operate_device', {
                 'device_id': 'd1', 'state': 'on', 'duration_seconds': 30})
-        self.assertIn('duration_seconds=30', text)
+        self.assertEqual('측창 을 30초 동안 켜기', text)          # 시간은 문장 안에 — 내부 인자 이름 없이
 
     def test_pending_response_carries_the_read_back_and_forbids_request_as_approval(self):
         from aot.tools import mcp_safety_gate as gate

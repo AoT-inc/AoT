@@ -2,8 +2,9 @@
 """센서 조회가 쏟아지지 않게 — 2026-10-31 사용자 지적 "AI 센서 조회 때 모든 데이터가 쏟아진다".
 
 고정하는 계약(도메인 표면 measure.* 만 줄고, 안쪽 도구의 다른 소비자는 그대로):
-  1. measure.history — 측정 항목도 limit 도 안 정하면 채널마다 최소·최대·평균·건수 한 줄(최근값 없음).
-     정하면 예전 모양 그대로(`zone_pick` 만 규칙 문장 없이 짧다). 더 받는 길은 응답의 `next`.
+  1. measure.history — 측정 항목도 limit 도 안 정하면 채널마다 최소·최대·평균·건수와 최소·최대 시각 한 줄(값 목록 없음).
+     정하면 값 목록 — 최근 N 건이 아니라 기간 전체를 N 칸으로 나눈 평균(2026-11-09 음성 시험: '어제 온도' 에
+     밤 11시대 20건만 갔다). 통계는 예전 숫자 그대로. `zone_pick` 은 규칙 문장 없이 짧다. 더 받는 길은 응답의 `next`.
   2. measure.summary 대상 없음 — 곳마다 평균 대신 대지마다 한 줄. 대지는 빠짐없이(25곳에서 자르지 않는다).
      대상이나 측정 종류를 주면 예전 모양 그대로.
   3. measure.channels — 이름·단위 표(같은 계열은 묶음, id 없음). `measurement` 를 주면 그 채널만 id·select_value 와.
@@ -59,6 +60,7 @@ class _Base(_ClsBase):
         with mock.patch('aot.tools.data_tools.measurement.read_influxdb_list',
                         side_effect=lambda did, unit, ch, **k: self._rows(30, 20.0 + ch)), \
                 mock.patch.object(S, '_check_influxdb_available', return_value=(True, 'OK')), \
+                mock.patch('aot.tools.data_tools.measurement.utc_now', return_value=self._NOW), \
                 mock.patch('aot.utils.inputs.model_input_drivers', return_value=set()):
             return S.get_sensor_detail(**kw)
 
@@ -83,10 +85,11 @@ class TestHistoryBrief(_Base):
         self.assertIsInstance(out, dict)
         self.assertEqual('success', out['status'])
         self.assertEqual('기상대 시험', out['device_name'])
-        self.assertEqual(['measurement', 'unit', 'min', 'max', 'avg', 'count'], out['channels']['columns'])
+        self.assertEqual(['measurement', 'unit', 'min', 'min_at', 'max', 'max_at', 'avg', 'count'],
+                         out['channels']['columns'])
         self.assertEqual(['temperature', 'humidity', 'rssi'], [c['measurement'] for c in _lines(out)])
         for row in out['channels']['rows']:
-            self.assertEqual(6, len(row))
+            self.assertEqual(8, len(row))
         self.assertNotIn('readings', json.dumps(out['channels']))
         self.assertNotIn('zone_pick', out)
 
@@ -94,9 +97,10 @@ class TestHistoryBrief(_Base):
         _input('dev-fc', '예보')
         _channels('dev-fc', [('rain', 'mm', 'Rain +0d'), ('rain', 'mm', 'Rain +1d'), ('temperature', 'C', '')])
         out = self._history(loc_id='dev-fc', brief=True)
-        self.assertEqual(['measurement', 'name', 'unit', 'min', 'max', 'avg', 'count'], out['channels']['columns'])
+        self.assertEqual(['measurement', 'name', 'unit', 'min', 'min_at', 'max', 'max_at', 'avg', 'count'],
+                         out['channels']['columns'])
         self.assertEqual(['Rain +0d', 'Rain +1d', ''], [c['name'] for c in _lines(out)])
-        # 이름이 하나도 없는 장치는 열을 더하지 않는다(위 테스트의 6열).
+        # 이름이 하나도 없는 장치는 열을 더하지 않는다(위 테스트의 8열).
 
     def test_the_statistics_are_the_same_numbers_as_before(self):
         old = self._history(loc_id='dev-multi')
@@ -105,23 +109,70 @@ class TestHistoryBrief(_Base):
             self.assertEqual(o['stats'], {k: n[k] for k in ('min', 'max', 'avg', 'count')})
             self.assertEqual((o['measurement'], o['readings'][0]['u']), (n['measurement'], n['unit']))
 
+    def test_the_statistics_say_when_the_low_and_the_high_were(self):
+        # "어제 최고 온도는 몇 시" — 값 목록 없이도 답이 나와야 한다. _rows 는 시간이 갈수록 값이 준다
+        # → 가장 이른 값이 최대(02:31), 가장 늦은 값이 최소(03:00).
+        line = _lines(self._history(loc_id='dev-multi', brief=True))[0]
+        self.assertIn('T03:00', line['min_at'])
+        self.assertIn('T02:31', line['max_at'])
+        self.assertNotIn('.', line['max_at'])                         # 분까지 — 마이크로초를 싣지 않는다
     def test_the_way_to_get_more_is_in_the_answer(self):
         out = self._history(loc_id='dev-multi', brief=True)
         self.assertIn("measurement=", out['next']['call'])
-        self.assertIn("limit", out['next']['call'])
+        self.assertIn("samples=", out['next']['call'])               # 이 표면의 인자 이름(limit 아님)
+        self.assertIn("spread across the period", out['next']['call'])
 
-    def test_naming_a_measurement_gives_the_old_shape_exactly(self):
+    def test_naming_a_measurement_gives_readings_with_the_same_statistics(self):
         old = self._history(loc_id='dev-multi', sensor_type='humidity')
         new = self._history(loc_id='dev-multi', sensor_type='humidity', brief=True)
-        self.assertEqual(old, new)
         self.assertIsInstance(new, list)
-        self.assertEqual(20, len(new[0]['readings']))
+        self.assertEqual(old[0]['stats'], {k: v for k, v in new[0]['stats'].items()
+                                           if k not in ('min_at', 'max_at')})
+        self.assertIn('min_at', new[0]['stats'])
+        self.assertEqual(30, new[0]['total_readings'])
 
-    def test_a_limit_also_gives_the_old_shape(self):
-        old = self._history(loc_id='dev-multi', limit=3)
-        new = self._history(loc_id='dev-multi', limit=3, brief=True)
-        self.assertEqual(old, new)
-        self.assertEqual(3, len(new[0]['readings']))
+    def test_a_limit_spreads_that_many_points_over_the_period(self):
+        # 1시간을 6칸(10분)으로. 값은 02:31~03:00 에만 있다 → 앞 세 칸은 비어 빠지고 세 점이 남는다(끊김이 보인다).
+        new = self._history(loc_id='dev-multi', limit=6, time_range='1h', brief=True)
+        pts = new[0]['readings']
+        self.assertEqual(3, len(pts))
+        self.assertIn('3 averages of 10 min slots', new[0]['readings_shown'])
+        self.assertIn('T02:30', pts[0]['t'])
+        # 칸마다 평균 — 02:30~02:40 칸에는 02:31~02:39 의 9건이 든다.
+        raw = [v for _t, v in self._rows(30, 20.0)]
+        self.assertAlmostEqual(round(sum(raw[:9]) / 9, 2), pts[0]['v'])
+
+    def test_a_whole_day_comes_back_hour_by_hour_not_the_last_hour(self):
+        # 2026-11-09 음성 시험: '어제 온도' 에 5분 간격 287건 중 밤 22:23~23:58 의 20건만 갔다.
+        S = self._svc()
+        t0 = datetime(2026, 11, 7, 15, 0, tzinfo=timezone.utc)            # 서울 11-08 00:00
+        data = [(t0 + timedelta(minutes=5 * i), float(i // 12)) for i in range(288)]   # 시마다 값 = 그 시
+        pts, slot = S._spread_readings(data, 24, (t0, t0 + timedelta(days=1)), 'C', 'Asia/Seoul', {})
+        self.assertEqual('60 min', slot)
+        self.assertEqual(24, len(pts))
+        self.assertEqual('2026-11-08T00:00+09:00', pts[0]['t'])
+        self.assertEqual('2026-11-08T23:00+09:00', pts[-1]['t'])
+        self.assertEqual([float(h) for h in range(24)], [p['v'] for p in pts])
+
+    def test_slots_are_even_in_real_time_across_a_dst_change(self):
+        # 뉴욕 2026-11-01 은 25시간(02:00 EDT → 01:00 EST). 칸은 실제 시간으로 똑같이 나누고 표시는 그곳 오프셋.
+        S = self._svc()
+        t0 = datetime(2026, 11, 1, 4, 0, tzinfo=timezone.utc)             # 00:00 EDT
+        t1 = datetime(2026, 11, 2, 5, 0, tzinfo=timezone.utc)             # 다음 날 00:00 EST
+        data = [(t0 + timedelta(minutes=10 * i), 1.0) for i in range(150)]
+        pts, slot = S._spread_readings(data, 25, (t0, t1), 'C', 'America/New_York', {})
+        self.assertEqual('60 min', slot)
+        self.assertEqual(25, len(pts))
+        self.assertEqual('2026-11-01T00:00-04:00', pts[0]['t'])
+        self.assertEqual('2026-11-01T01:00-04:00', pts[1]['t'])
+        self.assertEqual('2026-11-01T01:00-05:00', pts[2]['t'])           # 같은 01시가 두 번 — 오프셋으로 구별
+        self.assertEqual('2026-11-01T23:00-05:00', pts[-1]['t'])
+
+    def test_few_readings_come_back_as_they_are(self):
+        # 칸 수보다 적으면 평균하지 않는다 — 원값 그대로(짧은 구간 'FROM/TO' 의 정확한 값).
+        new = self._history(loc_id='dev-multi', sensor_type='humidity', limit=50, brief=True)
+        self.assertEqual(30, len(new[0]['readings']))
+        self.assertNotIn('readings_shown', new[0])
 
     def test_other_consumers_do_not_pass_brief_and_keep_the_list(self):
         # 인앱 AI·날씨·화면 값 읽기는 brief 를 안 준다 — 기본이 꺼짐이어야 한다.
@@ -141,13 +192,15 @@ class TestHistoryBrief(_Base):
         self.assertNotIn(pick['answered_by'], pick['other_devices'])
         self.assertEqual({'answered_by', 'devices_in_zone', 'other_devices'}, set(pick))
         self.assertNotIn('selection_rule', json.dumps(out))
-        self.assertIn("measure(op='summary'", out['next']['why'])     # 한 대의 값 — 구역 전체는 요약으로
+        self.assertIn("measure(op='latest'", out['next']['why'])      # 한 대의 값 — 구역 전체는 latest 로(옛 이름 summary 아님)
 
     def test_a_zone_with_a_measurement_keeps_the_readings_and_a_short_zone_pick(self):
         old = self._history(loc_id='zone-a', sensor_type='temperature')
         new = self._history(loc_id='zone-a', sensor_type='temperature', brief=True)
-        self.assertEqual([r['readings'] for r in old], [r['readings'] for r in new])
-        self.assertEqual([r['stats'] for r in old], [r['stats'] for r in new])
+        self.assertEqual([r['stats'] for r in old],
+                         [{k: v for k, v in r['stats'].items() if k not in ('min_at', 'max_at')}
+                          for r in new])
+        self.assertEqual([r['total_readings'] for r in old], [r['total_readings'] for r in new])
         self.assertIn('selection_rule', old[0]['zone_pick'])
         self.assertNotIn('selection_rule', new[0]['zone_pick'])
         self.assertNotIn('note', new[0]['zone_pick'])
@@ -176,7 +229,9 @@ class TestHistoryBrief(_Base):
         old = _tokens(self._history(loc_id='zone-a'))
         new = _tokens(self._history(loc_id='zone-a', brief=True))
         print('history zone: %d -> %d tokens' % (old, new))
-        self.assertLess(new, old * 0.35)
+        # 0.35 → 0.4 (2026-11-09): 채널마다 최소·최대 시각(`min_at`·`max_at`)이 붙었다 — "최고 온도는 몇 시" 를
+        # 다시 조회하지 않고 답하게 하는 값이다. 2채널 구역에서 +약 50 토큰.
+        self.assertLess(new, old * 0.4)
 
     def test_the_domain_surface_turns_brief_on_for_every_target_kind(self):
         from aot.tools.domain import dispatch
@@ -224,7 +279,7 @@ class TestSummaryBrief(_Base):
         self.ages = {}
 
     def _summary(self, **kw):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
         shape_index.invalidate()
         now = datetime.now(timezone.utc)
@@ -626,7 +681,7 @@ class TestThroughTheDomainExit(_Base):
         Input.query.delete()
         DeviceMeasurements.query.delete()
         GeoShape.query.filter(GeoShape.type == 'aot_device').delete()
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         body = self._run({'op': 'summary'})
         self.assertEqual([], body['sites'])

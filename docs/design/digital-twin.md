@@ -3,7 +3,7 @@
 - 상태: **초안** (2026-10-19, P0) — 2026-10-23 시설 P1 구현(`aot/functions/utils/facility_twin`)에 맞춰 §3·§6.3·§9 를 고쳤다. 확정 전에 남은 열린 문제(§9)를 닫는다.
 - 상위 계획: `AoT_dev/plans/2026-10-19_digital_twin_plan.md` (단계 P0~P6)
 - 범위: 트윈 노드가 **무엇을 어떤 모양으로 내놓는가**. 계산 방법(UKF 세부, 앙상블 구성)은 P1·P2 문서에서 정한다. §3~§9 는 시설, **§10 은 노지(구획 단위) 보완**이다.
-- 브랜치 정책: (2026-10-21 개정) 코드는 공개 main 에 들어가는 '준비 중' 기능이다 — 설정 > 일반 토글(기본 꺼짐), 별도 서비스 `aot_twin`, 낮은 사양 기기 잠금. 이전(10-19)의 "main 병합 금지" 는 폐기.
+- 브랜치 정책: (2026-10-21 개정) 코드는 공개 main 에 들어가는 '준비 중' 기능이다 — 설정 > 일반 토글(기본 꺼짐), 별도 서비스 `aot_twin`(2026-11 부터 기본 구성에 항상 포함·대기 — digital-twin-node.md §9), 낮은 사양 기기(파이 모델·기기 메모리) 잠금. 이전(10-19)의 "main 병합 금지" 는 폐기.
 
 ## 1. 한 줄 요약
 
@@ -230,13 +230,13 @@
 | 7 | `coverage_80` | 0~1 |
 | 20 | `obs_n` — 동화에 쓴 유효 센서 수 | 개 |
 | 21 | `obs_age_s` — 가장 최근 유효 관측의 나이 | s |
-| 22 | `irrigation_known` — 0 모름(비만 입력) / 1 밸브 유량 확인 / 2 유량계 실측 | 정수 |
+| 22 | `irrigation_known` — 0 모름(비만 입력) / 1 밸브 유량 확인(구획의 `water_day`: 노즐 설계 × 가동시간 × 공급 비율의 **추정**) / 2 유량계 실측(아직 없음). 1 은 동기화 창 안에서 닫혔어야 할 날에 전부 점이 있을 때다 — 아래 §10.5 | 정수 |
 | 23 | `rain_src` — 0 없음 / 1 예보 / 2 관측소 / 3 현장 우량계 / 4 재분석(예: NASA POWER 입력) | 정수 |
 | 24 | `texture_src` — 0 기본값 / 1 SoilGrids / 2 현장 시료 | 정수 |
 | 25 | `grid_rev` | 정수 |
 | 26 | `rain_fc_days` — 신뢰 구간(오늘 … +7 일) 가운데 **예보 비가 반영된 날 수**(0 … 8). 8 이면 앞날 비가 전부 예보, 그 밖은 나머지 날을 '비 없음' 으로 메웠다(§7 degraded) | 일 |
 | 27 / 28 / 29 | `fc_issue_epoch` / `fc_cal_rev` / `obs_origin` — 시설 12·13·14 와 같은 뜻 | s / 정수 / 정수 |
-| 30 / 31 / 32 | `plan_src` / `effects_modeled` / `effects_unmodeled` — 시설 15·16·17 과 같은 뜻 | 정수 / 개 / 개 |
+| 30 / 31 / 32 | `plan_src` / `effects_modeled` / `effects_unmodeled` — 시설 15·16·17 과 같은 뜻. 다만 노지 `effects_modeled` 는 **물이 모델에 들어간 출력 수**다(관수 행은 지표 효과가 빠져 `partial` 이지만 토양 물은 들어간다 — 일부 반영이라는 사실은 장치별 `effects[].status` 가 말한다). 다른 구획에 물을 대는 출력과 공급 부품(펌프·탱크, `status=supply`)은 어느 쪽에도 세지 않는다 | 정수 / 개 / 개 |
 | 33 / 34 / 35 | 그래프 **기준선**(θ_root 와 같은 단위): `theta_fc` 포장용수량 / `theta_wp` 위조점 / `theta_thr` 물 부족 문턱(Ks 가 1 아래로 내려가기 시작하는 θ = θfc − p·(θfc − θwp), p = 작물 고갈 허용률). 발행 때 구획 흙 설정에서 계산해 싣는다 — 흙 설정이 바뀌어도 과거 발행의 선은 그 시점 값으로 남는다 | % |
 | 36 / 37 | `obs_a` / `obs_b` — 발행 때의 관측식 `θ_sensor = a·100·θ_layer + b` 계수(앙상블 평균, 센서가 있을 때만). 기준선을 센서 단위로 옮길 때 쓴다(기준선 % 값 x 를 `a·x + b` 로) | 무차원 / 센서 % |
 
@@ -247,6 +247,7 @@
 - **트윈 가능 최소 조건**: (a) 구획 안 또는 가까이(기본 30 m)에 **유효한** 토양수분 센서가 1개 이상, (b) 비 입력(관측소·예보 중 하나), (c) 좌표. 하나라도 없으면 `not_twinnable`.
 - **관측 없는 구획(센서 없이 모델만)**: 구획에 토양수분 센서가 없으면 위 (a) 대신 `options.sensorless` 가 정한다 — `"predict"`(기본)는 비·ET0·기온으로 심은 날부터 물 수지만 굴리고(동화 없음, 초기값은 토성의 포장용수량) 발행한다. 상태는 늘 `degraded`, `obs_n = 0`, `sync_rmse_theta_1d`·`coverage_80`·`obs_age_s` 는 NaN(채널 생략), `theta_sensor` 곡선(채널 90~92)은 없다 — 센서가 읽을 값이 없다. 소비자는 `obs_n = 0` 을 "관측 없음 — 참고용" 으로 구분해 보이고 동기화된 구획과 같은 말로 섞지 않는다(지도: 점선 테두리 + 범례 문구). `"off"` 면 예전처럼 `not_twinnable`. 비 입력·심은 날은 이 모드에서도 필요하다. 옛 발행(`obs_n` 이 늘 1)과 호환: 1 이상은 관측 있음.
 - `irrigation_known = 0` 이면 상태는 최대 `degraded` — 관수가 있는 구획의 물 수지에서 "들어옴"이 비어 있다는 뜻이므로 **예측 곡선에 "관수 제외" 표기**를 강제한다(§8). 노지에서 구획에 묶인 출력이 범용 `virtual_on_off_single` 이고 유량 정보가 없는 것이 지금의 기본 상태다.
+- **관수 입력**: 일 깊이는 구획의 `water_day`(`aot_hist`, 시각 = 현지 0시)를 읽는다. 대상 발견이 입력 `irrigation` 을 구획 자신으로 채우고, 읽기는 `read_series` 의 표식 단위(`water_day`, 내장은 `water_store.read_depths`, 원격은 `GET /api/twin/state/water_day/<plot_id>`)다. **점이 없는 날은 모름**(NaN, 물 수지에는 0 으로 들어가고 메모에 남는다)이고 **0 L 점은 아는 0** 이다 — 실행이 없는 날은 `mm` 칸이 없으므로 일 깊이는 `water_net.result.day_depth` 한 곳에서 푼다. 어제의 점은 다음 날 정오 뒤에 생기고(`CLOSE_GRACE_S`) 백필은 시작일이 있어, `irrigation_known` 을 '모든 날'로 재면 오전마다 깜빡이고 옛 작기는 영영 0 이다. 그래서 동기화 창(`sync_window_d`, 기본 14 일) 안에서 **닫혔어야 할 날**(말미 + 작업 여유 2 시간이 지난 날)만 잰다. 창 밖 빈 날과 아직 닫히지 않은 날은 메모로만 남는다. 실행마다 심은 날부터 다시 동화하므로 늦게 생긴 값은 다음 실행이 그대로 읽는다. 물 깊이는 관측이 아니라 입력이라 `obs_origin` 에 들어가지 않는다.
 - **센서 유효성 검사**(동화 전 필수): 채널 이름이 "토양수분"이어도 값이 물리 범위(체적수분 0~70 %)를 벗어나거나 **평탄**(24 시간 표준편차 < 0.1 %p)하면 관측으로 쓰지 않는다. 센서 장치가 토양 채널 템플릿을 공기 센서에도 달아 두는 경우가 실측되었다(김제 `온습도_N` 의 "토양수분" ≈ 3.7 %, "토양온도" ≈ −95 °C 로 고정 — 감사 문서 §9.4).
 - **센서 위치 변화**: 토양온도 일교차가 앞 7 일 중앙값의 2 배를 넘고 15 °C 이상이면 센서가 얕아졌거나 드러난 것으로 보고 보정 `a,b` 의 퍼짐을 다시 연다. 비 없는 날의 큰 하락 혁신(기본 3σ)도 같게 다루고, 비 없는 큰 상승은 **입력 누락**(관측소가 놓친 비·모르는 관수)으로 보고 층 수분의 퍼짐을 연다. 김제 A 토양_3 은 09-28 11 시에 비 없이 21 → 12 % 로 떨어지고 일교차가 6~10 → 26~40 °C 가 되었다(계획서 §9.5).
 - 센서 칸 밖 셀의 일치도는 말하지 않는다. `sync_rmse_*` 는 센서 셀 기준이며 소비자는 그렇게 표기한다.
@@ -300,6 +301,7 @@ class TwinModel(Protocol):
 
 ## 11. 변경 이력
 
+- 2026-11-01 물 회로 W4(브랜치 `claude/equip-w4`): **노지 과거 관수 연결**(E3) — 구획의 `water_day` 가 `irr_mm` 으로 들어가고 `irrigation_known=1` 을 발행한다(§10.5). 작동 시계열 `irrigation_mm`(`basis=duty_log`, 일 깊이를 현지 0시에, 최근 동기화 창만). **시나리오 밸브**: 노지 `overrides.actuators` 가 밸브 Output uuid(0~100 % 가동률, `t1` 필수)를 받는다. 서비스가 실행 전에 서버 쪽 `water_net` 으로 공급 한계를 넣어 구획 깊이 `irrigation_mm` 으로 바꾼다(`ScenarioQueue.prepare`, `water_net_link.planned_water` — 기록을 읽는 `plot_water` 와 같은 `_live_span`). 트윈은 깊이만 받고, 바뀌지 않은 밸브가 오면 실패한다. 이 구획에 물을 대지 않는 밸브·면적 모름은 `failed` + 이유. 저장된 정의는 그대로다. **시설**: 지도 공급 회로가 시설 외피에 닿으면 분무 `fog_flow_lpm` 을 정격 상한으로 낮춰 읽는다(출처 `supply`). 탱크 수위는 `water_supply_signal` 의 후보로만 보여 주고 판정은 `water_supply.py` 하나다. **목록표** `status=supply`(펌프·탱크) — 효과가 아니라 공급 제약이라 미반영으로 세지 않는다. 노지 출력의 역할은 위치로 풀린다(물을 대면 관수, 전부 점적이면 점적, 공급 부품 자리면 공급) — 그래도 모르는 범용 출력만 묻는다. 동기화 게이트의 '비 없음' 은 아는 관수도 친다(관수한 날을 센서 계단으로 오판하지 않게). 노지 참값 `field_twin/sim/field_plant.py`(Campbell·Darcy 16층, 버킷과 구조가 다름)로 물 수지와 반응 크기를 시험한다.
 - 2026-10-27 장치 효과 E2(브랜치 `claude/twin-effects-e2`): **what-if 시나리오 실행기**와 작동 시계열 쓰기·머리말 `effects_*` 채움. 서비스(`aot_twin`)가 `twin_scenario` 의 `queued` 정의를 오래된 것부터 하나씩(켜져 있을 때만, 10초 간격, 한 걸음 3건) 같은 동기화·같은 시드로 돌려 `env_twin_scn*`(태그 `scenario`)와 앞날 작동 시계열 `env_twin_act`(`basis=plan`, 시나리오 id 태그)를 쓰고 `mark_done` 이 계보·`effects[]`·`base_run`(실제로 쓴 발행)을 적는다. 가정은 예측 구간에만 닿는다: 시설 효과 채널(또는 장치 uuid) 0~100 %, 노지 `irrigation_mm`(mm·mm/h), 기상(시설 `T_ext RH_ext CO2_ext solar wind` · 노지 `precip_mm et0_mm temp_c` 하루 단위); 모르는 채널·변수·연산은 생성 때 422, `schedule`·`policy` 는 E5 전까지 422. 기본 예측은 효과 채널별 정시 평균 %(과거 상태 + 앞날 `plan`)를 `env_twin_act` 에 쓰고 머리말에 `plan_src`(0)·`effects_modeled`·`effects_unmodeled`(시설 15~17; 노지 30~32 는 노지 출력 명단을 세며 관수 모델 연결 전이라 전부 미반영)를 싣는다. `POST /api/twin/scenarios/<id>/rerun`(고정된 것은 409). 정본 `plans/2026-10-25_twin_actuator_effects_design.md` §11.8.
 - 2026-10-27 예보·트윈 데이터 관리 D7(브랜치 `claude/twin-data-d7`): **시나리오·분석 이력·작동 시계열 저장 계약**을 구현했다(정본 `plans/2026-10-25_twin_data_management_design.md` §6). 새 측정 — 시나리오 곡선 `env_twin_scn`(시설)·`env_twin_scn_field`·`env_twin_scn_field_h`(노지)는 기본 예측과 채널 배치·격자·분위수·사건이 같고 태그 `scenario`(8자 16진 id)만 더한다(`device_id` = 대상 id, `_lead`·머리말 없음); 분석 이력 `env_twin_post`(시설 정시 평균 T 0~2·RH 10~12·VPD 20~22·CO2 30~32)·`env_twin_field_post`(일 격자, θ_root 0~2·Dr 10~12·Ks 20~22·Ts1 30~32·Tmin 40~42·센서 칸 90~92)·`env_twin_field_post_h`(시 격자 기온 0~2)는 발행 시각 `t0` **앞** 시각의 사후 p10/p50/p90 만 쓰고 새 발행이 같은 시각을 덮는다; 작동 시계열 `env_twin_act`(`channel` 태그 없음, 태그 `target`·`effect`·`basis`·`scenario`·`dev`, 시설 정시 평균 % · 노지 `irrigation_mm` 시 격자 mm). 머리말 시설 15~17·노지 30~32(`plan_src`·`effects_modeled`·`effects_unmodeled`) 추가, 번호는 추가만. SQLite `twin_scenario`(정의·계보; `expires_at` = 곡선 만료, 정의는 365일)·`twin_run`(발행 색인, 머리말에서 채움, 분석 이력과 같은 기간). 읽기 `/api/twin/series/...?scenario=&post=1`·`/api/twin/runs/<id>`·`/api/twin/scenarios`·`/api/twin/actuators`, 쓰기 `POST|DELETE /api/twin/scenarios`·`POST /api/twin/scenarios/<id>/pin`, 구획 그래프 `?scenario=&post=1`. 모든 읽기 응답에 `calibrated`·`cal_rev`·`fc_issue_epoch`·`origin` 를 싣는다.
 

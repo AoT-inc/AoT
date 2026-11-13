@@ -59,7 +59,7 @@ from .log_channels import (
     GATE_BIT_FROST_WATCH, GATE_BIT_INT_EXP, GATE_BIT_RAIN, GATE_BIT_RAIN_LIGHT,
     GATE_BIT_WIND, GATE_BIT_WIND_LIGHT,
 )
-from . import psychro
+from aot.utils import psychro
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 상수 — 재배자가 판단할 값이 아니다(옵션으로 내지 않는다). 켜고 끄는 스위치만 옵션이다(`extreme_pulse_fog`).

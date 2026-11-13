@@ -87,11 +87,21 @@ class _Base(unittest.TestCase):
                       channel_id=None, feature=None, parent_id=None):
         self._raw(
             'INSERT INTO geo_shape '
-            '(unique_id, geo_id, device_id, channel_id, type, parent_id,'
+            '(unique_id, geo_id, channel_id, type, parent_id,'
             ' feature, created_at, updated_at) '
-            "VALUES (:u, :g, :d, :c, :t, :p, :f, '2026-08-03', '2026-08-03')",
-            u=uid, g=geo_id, d=device_id, c=channel_id, t=stype,
+            "VALUES (:u, :g, :c, :t, :p, :f, '2026-08-03', '2026-08-03')",
+            u=uid, g=geo_id, c=channel_id, t=stype,
             p=parent_id, f=feature or _feature())
+        # L4(p7_06): 장치 연결은 바인딩이다 — 컬럼은 사라졌다. device_id 를 주면 현재
+        # 바인딩을 함께 만든다(마커 유일성 I2b 트리거가 여기서 걸린다).
+        role = {'aot_device': 'marker', 'device': 'area'}.get(stype)
+        if device_id and role:
+            self._raw(
+                'INSERT INTO geo_binding (unique_id, spatial_kind, spatial_id,'
+                ' role, device_kind, device_id, channel_id, valid_from) '
+                "VALUES (:b, 'shape', :u, :r, 'output', :d, :c,"
+                " '2026-08-03 00:00:00')",
+                b='b-' + uid, u=uid, r=role, d=device_id, c=channel_id or '0')
 
     def _shape_id(self, uid):
         return self._raw(
@@ -104,6 +114,7 @@ class _Base(unittest.TestCase):
 
 
 class TestTier1Attacks(_Base):
+    TIERS = (apply_tier1, apply_binding)
 
     # I1 ------------------------------------------------------------------
     def test_i1_garbage_type_insert_blocked(self):
@@ -226,13 +237,11 @@ class TestTier1Attacks(_Base):
         # 도형·시설·장치 링크를 남기지 않아야 한다.
         self._build_facility('-m')
         zid = self._shape_id('fs-m')
-        Input(name='센서2', map_overlay_id=zid,
-              map_config_id='map-1').save()
+        Input(name='센서2', map_overlay_id=zid).save()
         self._raw("DELETE FROM geo_map WHERE unique_id='map-1'")
         self.assertEqual(self._count('geo_shape', "geo_id='map-1'"), 0)
         self.assertEqual(self._count('geo_facility', "geo_id='map-1'"), 0)
         self.assertEqual(self._count('input', 'map_overlay_id IS NOT NULL'), 0)
-        self.assertEqual(self._count('input', 'map_config_id IS NOT NULL'), 0)
 
 
 class TestTier2Attacks(_Base):

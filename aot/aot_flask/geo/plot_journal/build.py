@@ -37,8 +37,8 @@ def first_data_at(target_type, target_id, max_channels=12):
     rows = DeviceMeasurements.query.filter(
         DeviceMeasurements.device_id.in_(ids)).all()
 
-    from aot.utils.device_tz import resolve_location_tz
-    tz = resolve_location_tz(target_id)
+    from aot.utils.timekit import tz_of
+    tz = tz_of(target_id)
 
     earliest = None
     looked = 0

@@ -2,7 +2,9 @@
 import json
 import logging
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo.facility_sensors import channel_label_meta
+from aot.space.facility_sensors import channel_label_meta
+# 측정 키 → 이름은 공간 도메인으로 내렸다(아키텍처 4c-1) — 장치 소속 후보 목록도 같은 함수를 쓴다.
+from aot.space.measurement_names import _measurement_display_name
 from aot.aot_flask.utils import utils_geo
 from aot.utils.timekit import iso_utc
 from aot.config import (
@@ -48,33 +50,6 @@ except Exception:
     _AISummaryService = None
 
 logger = logging.getLogger(__name__)
-
-
-def _measurement_display_name(measurement_key):
-    """측정 키 → 사람이 읽는 이름. 모르는 키면 `None`(호출부가 폴백한다).
-
-    정본은 `MEASUREMENTS`(`config_devices_units.py`) 하나다 — 화면마다 자기
-    이름표를 들면 같은 값이 자리마다 다른 이름으로 보인다.
-
-    ⚠ `MEASUREMENTS` 의 이름은 `lazy_gettext` 객체다. **참/거짓으로 평가하지
-      말 것** — 그 순간 `__len__` → `str()` 이 불려 번역이 강제되고, 요청
-      컨텍스트가 없으면 거기서 예외가 난다. `is None` 으로만 본다.
-    """
-    if not measurement_key:
-        return None
-    try:
-        from aot.config_devices_units import MEASUREMENTS
-        entry = MEASUREMENTS.get(str(measurement_key))
-        if entry is None:
-            return None
-        name = entry.get('name')
-        if name is None:
-            return None
-        return str(name) or None
-    except Exception:
-        # 이름을 못 얻는 것이 지도를 못 그릴 이유는 아니다 — 호출부가
-        # 원문 키로 폴백한다.
-        return None
 
 
 # NOTE: Cross-request ORM caching of GeoMap caused DetachedInstanceError on
@@ -140,7 +115,7 @@ def _bearing_kind_of(meas, eff_unit, module_id, device_name, chan):
     판정 규칙과 한계는 ``weather_state.bearing_kind`` 주석. 방위가 아닌 대부분의 측정값은
     입력 모듈 정의를 읽지 않고 바로 빠진다(모듈 목록은 방위값이 나올 때 한 번만 읽는다).
     """
-    from aot.aot_flask.geo import weather_state as _ws
+    from aot.space import weather_state as _ws
     m = (getattr(meas, 'measurement', '') or '')
     probe = _ws.bearing_kind(m, eff_unit, '', meas.name or '', device_name or '')
     if not probe:
@@ -677,9 +652,10 @@ def generate_page_variables_logic(widget_unique_id, widget_options):
                 map_global_style['fillColor'] = state['draw-fill-color']
             if 'draw-stroke-color' in state:
                 map_global_style['color'] = state['draw-stroke-color']
-            if 'draw-fill-off-color' in state:
-                map_global_style['offColor'] = state['draw-fill-off-color']
-
+            # offColor(draw-fill-off-color)는 템플릿·JS 어디서도 읽지 않는다 —
+            # 지도별 state_json 색 병합을 끊은 뒤(위 주석) 소비처가 함께 사라진
+            # 잔재다. 장치 상태 표시는 색이 아니라 테두리·글자로 한다
+            # (docs/design/geo-device-state-visual.md).
             if 'draw-fill-off-color' in state:
                 map_global_style['offColor'] = state['draw-fill-off-color']
 

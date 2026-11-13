@@ -178,32 +178,9 @@ class InputModule(AbstractGisInput):
             'style_name': style_info.get('name', 'Streets'),
             'api_key': self.api_key,
             'language': self.get_custom_option('language', 'auto'),
-            # [GIS Vector Migration] 3D Terrain support
-            'terrain': {
-                'enabled': True,
-                'source': 'mapbox-dem',
-                'url': f'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key={self.api_key}',
-                'exaggeration': 1.5
-            }
         }
 
         return config
-
-    def get_terrain_config(self):
-        """
-        Get terrain configuration for 3D visualization.
-        Returns config for MapLibre terrain source.
-        """
-        self.api_key = self.get_custom_option('api_key') or ''
-
-        return {
-            'source_id': 'mapbox-dem',
-            'type': 'raster-dem',
-            'url': f'https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key={self.api_key}',
-            'tileSize': 256,
-            'maxzoom': 14,
-            'exaggeration': 1.5
-        }
 
     def get_ai_reading(self, bounds=None, zoom=None, feature_types=None):
         """

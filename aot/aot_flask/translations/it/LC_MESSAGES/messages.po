@@ -32678,3 +32678,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Orizzontale / inclinata"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} tubi calcolati in orizzontale"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Orizzontale"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Lunghezza tubi (intera area)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Lunghezza tubo"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Il terreno è in calcolo. La lunghezza inclinata apparirà al termine."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Alcune sezioni sono state calcolate con la lunghezza orizzontale. Il terreno non le copre."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Calcolato {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Cella {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Le lunghezze sono in ordine orizzontale / inclinata."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Pendenza {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Calcolato con lunghezza orizzontale"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Portata {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Perdita {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Orizzontale {h} m, inclinata {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Orizzontale {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Sezione {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Sezioni ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Orizzontale {h} m / Inclinata {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Il terreno è in calcolo - viene mostrata solo la lunghezza orizzontale."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Le lunghezze sulla mappa sono orizzontali."
+
+msgid "Terrain input"
+msgstr "Ingresso terreno"
+
+msgid "Compare another terrain"
+msgstr "Confronta un altro terreno"
+
+msgid "Could not compare. Try again."
+msgstr "Confronto non riuscito. Riprova."
+
+msgid "Changed sections ({n})"
+msgstr "Tratti che cambiano ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Download del terreno {name} in corso. Il confronto compare al termine."
+
+msgid "Calculation level"
+msgstr "Livello di calcolo"
+
+msgid "Switch to this terrain"
+msgstr "Passa a questo terreno"
+
+msgid "That terrain input is gone."
+msgstr "Quell'ingresso terreno non esiste più."
+
+msgid "Weakest nozzle flow"
+msgstr "Portata dell'ugello più debole"
+
+msgid "Revert to {name}"
+msgstr "Torna a {name}"
+
+msgid "Slant length total"
+msgstr "Lunghezza inclinata totale"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Questo ingresso terreno non ha un indirizzo di tessere. Controlla le impostazioni."
+
+msgid "Downloading took too long. Try again."
+msgstr "Il download ha richiesto troppo tempo. Riprova."
+
+msgid "Terrain changed and recalculated"
+msgstr "Terreno cambiato e ricalcolato"
+
+msgid "Compare with"
+msgstr "Confronta con"
+
+msgid "No terrain was on"
+msgstr "Nessun terreno era attivo"
+
+msgid "Undo change"
+msgstr "Annulla la modifica"
+
+msgid "Try again"
+msgstr "Riprova"
+
+msgid "This map has no pipes to compare."
+msgstr "Questa mappa non ha tubi da confrontare."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Tubi non coperti dal terreno"
+
+msgid "No terrain is on."
+msgstr "Nessun terreno attivo."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Impossibile cambiare il terreno. Riprova."

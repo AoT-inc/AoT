@@ -25,6 +25,7 @@ import requests
 
 from aot.ai.services.domain_context_loader import get_geo_setting_key
 from aot.ai.context.ext_translation_table import translate_kr
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ class ExtSmartfarmClient:
             from aot.databases.utils import session_scope
             from aot.config import AOT_DB_PATH
 
-            cutoff = datetime.now(timezone.utc) - timedelta(days=_TTL_DAYS)
+            cutoff = utc_now() - timedelta(days=_TTL_DAYS)
             with session_scope(AOT_DB_PATH) as session:
                 row = (
                     session.query(ExtSmartfarmSetpoints)
@@ -274,7 +275,7 @@ class ExtSmartfarmClient:
             logger.error("EXT-KR-01 unexpected response structure: %s", exc)
             return []
 
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         normalized: list[dict] = []
         for item in items:
             crop_en  = translate_kr(item.get('cropsNm', ''), 'crop')

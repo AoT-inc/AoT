@@ -11,6 +11,8 @@ import logging
 import os
 import time
 
+from aot.aot_flask.camera.net_auth import (
+    SnapshotError, build_stream_url, fetch_snapshot, redact_url)
 from aot.config import AOT_DB_PATH
 from aot.config import PATH_CAMERAS
 from aot.databases.models import Camera
@@ -21,6 +23,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import assure_path_exists
 from aot.utils.system_pi import cmd_output
 from aot.utils.system_pi import set_user_grp
+from aot.utils.timekit import FARM, to_tz, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +41,7 @@ def camera_record(record_type, unique_id, duration_sec=None, tmp_filename=None):
     """
     daemon_control = None
     settings = db_retrieve_table_daemon(Camera, unique_id=unique_id)
-    timestamp_date = datetime.datetime.now()
+    timestamp_date = to_tz(utc_now(), FARM)
     timestamp = timestamp_date.strftime('%Y-%m-%d_%H-%M-%S')
     assure_path_exists(PATH_CAMERAS)
     camera_path = assure_path_exists(
@@ -383,12 +386,7 @@ def camera_record(record_type, unique_id, duration_sec=None, tmp_filename=None):
             _url_still = settings.url_still
             _username = getattr(settings, 'auth_username', '') or ''
             _password = getattr(settings, 'auth_password', '') or ''
-            if _username:
-                _parsed = urlparse(_url_still)
-                _netloc = f"{_username}:{_password}@{_parsed.hostname}"
-                if _parsed.port:
-                    _netloc += f":{_parsed.port}"
-                _url_still = urlunparse(_parsed._replace(netloc=_netloc))
+            _url_still = build_stream_url(_url_still, _username, _password)
 
             if record_type in ['photo', 'timelapse']:
                 path_tmp = "/tmp/tmpimg.jpg"
@@ -504,6 +502,69 @@ def camera_record(record_type, unique_id, duration_sec=None, tmp_filename=None):
         except:
             logger.exception("http_address_requests")
 
+    elif settings.library == 'ip_snapshot':
+        # 가벼운 방식: HTTP 로 JPEG 한 장을 받아 그대로 저장한다(디코딩 없음).
+        # 회전·반전이 설정된 경우에만 OpenCV 로 다시 쓴다.
+        try:
+            from aot.aot_flask.camera.camera_ip_snapshot import (
+                snapshot_headers, snapshot_verify)
+            if record_type in ['photo', 'timelapse']:
+                data = fetch_snapshot(
+                    settings.url_still,
+                    getattr(settings, 'auth_username', '') or '',
+                    getattr(settings, 'auth_password', '') or '',
+                    verify=snapshot_verify(settings),
+                    headers=snapshot_headers(settings))
+                if any((settings.hflip, settings.vflip, settings.rotation)):
+                    import cv2
+                    import imutils
+                    import numpy as np
+                    img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+                    if settings.hflip and settings.vflip:
+                        img = cv2.flip(img, -1)
+                    elif settings.hflip:
+                        img = cv2.flip(img, 1)
+                    elif settings.vflip:
+                        img = cv2.flip(img, 0)
+                    if settings.rotation:
+                        img = imutils.rotate_bound(img, settings.rotation)
+                    cv2.imwrite(path_file, img)
+                else:
+                    with open(path_file, 'wb') as out:
+                        out.write(data)
+        except SnapshotError as err:
+            logger.error("ip_snapshot: %s (%s)", err, redact_url(settings.url_still))
+        except Exception:
+            logger.exception("ip_snapshot capture")
+
+    elif settings.library in ('vigi', 'onvif'):
+        # 설계 §7 제안 A: 최신 프레임 파일 → 없으면 /stream6 한 번. 래치가 걸려 있으면 시도하지 않는다.
+        try:
+            from aot.camera_drivers import runtime as vigi_runtime
+            if record_type in ['photo', 'timelapse']:
+                data = vigi_runtime.snapshot_jpeg(unique_id)
+                if any((settings.hflip, settings.vflip, settings.rotation)):
+                    import cv2
+                    import imutils
+                    import numpy as np
+                    img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+                    if settings.hflip and settings.vflip:
+                        img = cv2.flip(img, -1)
+                    elif settings.hflip:
+                        img = cv2.flip(img, 1)
+                    elif settings.vflip:
+                        img = cv2.flip(img, 0)
+                    if settings.rotation:
+                        img = imutils.rotate_bound(img, settings.rotation)
+                    cv2.imwrite(path_file, img)
+                else:
+                    with open(path_file, 'wb') as out:
+                        out.write(data)
+        except vigi_runtime.snapshot_errors() as err:
+            logger.error("camera driver snapshot: %s", err)
+        except Exception:
+            logger.exception("vigi capture")
+
     elif settings.library in ('opencv-python', 'opencv-python-headless', 'ip_camera'):
         # New-style library name: RTSP/HTTP streaming URL camera
         try:
@@ -517,13 +578,7 @@ def camera_record(record_type, unique_id, duration_sec=None, tmp_filename=None):
                 # Inject credentials into URL for RTSP/HTTP streams
                 _username = getattr(settings, 'auth_username', '') or ''
                 _password = getattr(settings, 'auth_password', '') or ''
-                if _username and '://' in stream_url:
-                    _parsed = urlparse(stream_url)
-                    if not _parsed.username:
-                        _netloc = f"{_username}:{_password}@{_parsed.hostname}"
-                        if _parsed.port:
-                            _netloc += f":{_parsed.port}"
-                        stream_url = urlunparse(_parsed._replace(netloc=_netloc))
+                stream_url = build_stream_url(stream_url, _username, _password)
 
                 if record_type in ['photo', 'timelapse']:
                     cap = cv2.VideoCapture(stream_url)
@@ -551,13 +606,7 @@ def camera_record(record_type, unique_id, duration_sec=None, tmp_filename=None):
             else:
                 _username = getattr(settings, 'auth_username', '') or ''
                 _password = getattr(settings, 'auth_password', '') or ''
-                if _username and '://' in stream_url:
-                    _parsed = urlparse(stream_url)
-                    if not _parsed.username:
-                        _netloc = f"{_username}:{_password}@{_parsed.hostname}"
-                        if _parsed.port:
-                            _netloc += f":{_parsed.port}"
-                        stream_url = urlunparse(_parsed._replace(netloc=_netloc))
+                stream_url = build_stream_url(stream_url, _username, _password)
 
                 if record_type in ['photo', 'timelapse']:
                     cap = cv2.VideoCapture(stream_url)

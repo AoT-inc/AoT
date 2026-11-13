@@ -33,10 +33,8 @@
             each_function.unique_id,
             form_function.latitude,
             form_function.longitude,
-            form_function.location_source,
             each_function.latitude,
             each_function.longitude,
-            each_function.location_source,
             'function_mod',
             'modal_config_' ~ each_function.unique_id,
             '280px',
@@ -50,7 +48,7 @@
             icon_name=_icon_name,
             color_name=_color_name,
             size_name=_size_name,
-            map_config_id=(each_function.map_config_id if each_function.map_config_id else (map_config_id if map_config_id is defined else '')),
+            map_config_id=(map_config_id if map_config_id is defined else ''),
             map_configs=(map_configs if map_configs is defined else []),
             map_overlays=map_overlays
         ) }}

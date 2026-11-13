@@ -1,7 +1,8 @@
 # coding=utf-8
 """배포형 서비스 `aot_twin` — 켜져 있을 때만 일하는 별도 프로세스 (배포 제안 §1·§2·§3·§5, S2).
 
-    시작 ─ 잠금 판정(twin_supported) ─ 잠김 → 하트비트 locked, 일하지 않음(이중 잠금, 제안 §3)
+    시작 ─ 잠금 판정(twin_supported) ─ 잠김 → 하트비트 locked 를 쓰고 일하지 않음(이중 잠금, 제안 §3)
+                       — serve() 는 바로 돌아오고, 프로세스는 직접 설치면 exit 0, Docker 면 `sleep infinity`(__main__.park_if_locked)
       │
       └─ 루프: 플래그(twin_enabled)를 `poll_s` 마다 본다
            ├─ 꺼짐 → 하트비트 disabled, 아무것도 하지 않음(데이터는 지우지 않는다)
@@ -261,7 +262,7 @@ class TwinService:
                 return False
             src, sink = self._channel(st.plan)
             cap = self._capability_for(st)
-            out = run_scenario(spec, src, sink, cap, self._clock(), scn, period_s=cap.period_s)
+            out = run_scenario(spec, src, sink, cap, self._clock(), self.scenarios.prepare(scn), period_s=cap.period_s)
         except Exception as e:                                  # noqa: BLE001
             logger.exception("트윈 시나리오 %s 실행 실패", sid)
             self.scenarios.failed(sid, "%s: %s" % (type(e).__name__, e))
@@ -337,7 +338,7 @@ class TwinService:
         ok, reason = self.gate.supported()
         if not ok:
             self.locked_reason = reason or "low_spec"
-            logger.warning("트윈: 이 기기는 잠겨 있다(%s) — 일하지 않는다. 컨테이너·서비스를 내려도 된다",
+            logger.warning("트윈: 이 기기는 잠겨 있다(%s) — 일하지 않고 종료한다(다시 시작하지 않는다)",
                            self.locked_reason)
             self._beat(HB_LOCKED, force=True)
             return False
@@ -349,9 +350,13 @@ class TwinService:
         return True
 
     def serve(self, max_steps: Optional[int] = None) -> int:
-        """상주. 잠겨 있어도 프로세스는 남아 하트비트만 드물게 쓴다 — 재시작 정책(`unless-stopped`)이
-        종료를 되살려 잠금 판정을 무한히 되풀이하지 않게."""
-        self.start()
+        """상주. 잠긴 기기는 하트비트 `locked` 를 쓴 뒤 바로 돌아온다. 잠금은 기기 고정값(파이 모델·기기 메모리)이라
+        다시 떠도 같은 결과다. 돌아온 뒤의 프로세스 처리는 `__main__.park_if_locked` 가 한다 — 직접 설치(systemd
+        `Restart=on-failure`)는 exit 0 으로 끝나 되살아나지 않고, Docker(`restart: unless-stopped`)는 종료하면
+        무한 재시작하므로 `sleep infinity` 로 바뀐다(docker `on-failure` 는 재부팅 뒤 안 돌아오므로 쓰지 않는다).
+        화면은 낡아 가는 `locked` 하트비트가 아니라 앱 쪽 `twin_supported` 로 '잠김' 을 보인다."""
+        if not self.start():
+            return 0
         steps = 0
         while not self._stop.is_set() and (max_steps is None or steps < max_steps):
             try:
@@ -395,7 +400,7 @@ class TwinService:
 def _prewarm_forecast_series(app):
     """대지 예보 계열 캐시를 미리 채운다 — 일별 사다리가 Influx 를 40번 읽는 0.7~1.1초를 실행 시각에 겪지 않게.
     켜져 있고 잠기지 않은 걸음에서만 불리므로 잠긴 기기에서는 앱을 올리지 않는다."""
-    from aot.aot_flask.geo import forecast_series
+    from aot.space import forecast_series
     return forecast_series.prewarm_if_new_window(app.get())
 
 

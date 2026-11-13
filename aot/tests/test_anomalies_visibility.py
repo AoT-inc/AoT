@@ -27,7 +27,7 @@ class TestAnomaliesVisibility(unittest.TestCase):
             'comm_offline_list': offline, 'timestamp': None})
         with patch('aot.tools.providers.get', return_value=prov), \
              patch.object(S, '_silent_devices_in_scope', return_value=None), \
-             patch('aot.aot_flask.geo.device_membership.PlaceIndex') as pi:
+             patch('aot.space.device_membership.PlaceIndex') as pi:
             pi.return_value.device_paths.return_value = {'a': ['농장/육묘장']}
             return S.get_anomalies()
 
@@ -47,7 +47,7 @@ class TestAnomaliesVisibility(unittest.TestCase):
         inp.query.all.return_value = devs
         with patch.object(M, 'Input', inp), \
              patch.object(S, '_last_seen_seconds', return_value=(None, None, None)), \
-             patch('aot.aot_flask.geo.device_membership.PlaceIndex') as pi:
+             patch('aot.space.device_membership.PlaceIndex') as pi:
             pi.return_value.device_paths.return_value = {}
             out = S.get_device_freshness()
         self.assertIn('not placed', out['no_data_devices'][0]['place_note'])

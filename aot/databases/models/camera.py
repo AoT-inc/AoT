@@ -1,7 +1,7 @@
 # coding=utf-8
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class Camera(CRUDMixin, db.Model):
@@ -19,6 +19,8 @@ class Camera(CRUDMixin, db.Model):
 
     id = db.Column(db.Integer, unique=True, primary_key=True)
     unique_id = db.Column(db.String(36), nullable=False, unique=True, default=set_uuid)
+    # 그룹 스코프의 정본(설계 §5.5). NULL = 탭 없음 = 전원 공개(기존 카메라). 탭을 지우면 카메라도 지워진다.
+    tab_id = db.Column(db.String(36), db.ForeignKey('tab.unique_id', ondelete='CASCADE'), nullable=True, index=True)
     name = db.Column(db.Text, unique=True, nullable=False)
     camera_type = db.Column(db.Text, nullable=False, default='usb')  # usb, csi, ip
     is_activated = db.Column(db.Boolean, default=False)

@@ -1,8 +1,8 @@
 # coding=utf-8
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import today_at, utc_now
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class GeoPlot(CRUDMixin, db.Model):
@@ -397,8 +397,7 @@ class GeoPlot(CRUDMixin, db.Model):
         보므로, 종료 당일의 기록이 사라지지는 않는다.
         """
         if on is None:
-            from datetime import date
-            on = date.today()
+            on = today_at(self)
         if self.started_on and self.started_on > on:
             return False        # 아직 안 심음 (계획 상태)
         return self.ended_on is None or self.ended_on > on

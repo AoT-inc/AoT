@@ -88,7 +88,7 @@ from .log_channels import (
 from . import humid_regime as HR
 from .outage_clock import OUTAGE_DEHUMID_GRACE_S
 from . import solar_vent as SV
-from . import psychro
+from aot.utils import psychro
 from . import screen_policy as SP
 from .authority import is_natural_var
 from .effect_functions import fan_ach_total

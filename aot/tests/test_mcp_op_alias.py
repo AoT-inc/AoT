@@ -34,11 +34,11 @@ class OpAliasTest(unittest.TestCase):
         self.assertEqual('unknown_op', json.loads(v[1][0]['text'])['reason_code'])
 
     def test_aliases_point_at_real_ops_and_are_not_in_the_registry(self):
-        from aot.tools.domain import dispatch
+        from aot.tools.domain import renames
         from aot.tools.domain.registry import find_op
         from aot.tools.domain.registry_data import OPS
-        for (tool, alias), real in dispatch.OP_ALIASES.items():
-            self.assertIsNotNone(find_op(OPS, tool, real), (tool, alias))
+        for (tool, alias), real in renames.OP_ALIASES.items():
+            self.assertIsNotNone(find_op(OPS, real.tool or tool, real.op), (tool, alias))
             self.assertIsNone(find_op(OPS, tool, alias), (tool, alias))
 
     def test_the_alias_costs_no_tokens_it_is_not_listed_anywhere(self):

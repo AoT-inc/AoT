@@ -264,3 +264,21 @@ def test_unusable_header_shares_t0_with_a_later_good_run_of_the_same_day():
     assert bad.status == Status.NOT_TWINNABLE and good.output.grids
     assert bad.output.t0 == good.output.t0                              # 같은 시각 → 같은 날 나중 발행이 덮어쓴다
     assert (bad.output.t0 + TZ) % 86400 == 0 and bad.output.t0 <= morning       # 구획 시간대의 오늘 00 시
+
+
+def test_daily_rain_and_temps_by_tz_name_follow_dst():
+    """tz 가 IANA 이름이면 점마다 그 시각의 오프셋으로 접는다 — 뉴욕 가을 서머타임 끝(11-07, 25 시간)."""
+    import datetime as dt
+    from aot.functions.utils.field_twin import forcing as fz
+    from aot.twin.models import field_bucket as fb
+    from aot.utils.timekit import wall_to_utc
+    NY = 'America/New_York'
+    start = wall_to_utc(dt.datetime(2027, 11, 6, 12, 0), NY).timestamp()
+    times = [start + h * 3600.0 for h in range(60)]
+    d = fz.day_number(2027, 11, 7)
+    rain = fb.daily_rain(times, [1.0] * 60, NY, 'hourly_mean_sum', 1.0)
+    assert rain[d] == 25.0                           # 11-07 은 25 시간 — 반복되는 01 시를 둘 다 센다
+    temps = fb.daily_temps(times, [10.0] * 60, NY)
+    assert d in temps and temps[d][2] == 10.0
+    # 지금의 오프셋 하나(EDT, -4h)로 접으면 11-07 이 24 시간으로 센다
+    assert fb.daily_rain(times, [1.0] * 60, -4 * 3600.0, 'hourly_mean_sum', 1.0)[d] == 24.0

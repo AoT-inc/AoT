@@ -17,14 +17,18 @@ AI 는 말만 한다. 결론 한 줄을 덧붙이는 것은 AI 의 선택 호출
 
 응답(2026-10-30 점검): 성공한 조회에는 **언제나** `card` 한 칸이 있다 — `{state: posted|already_shown|skipped, reason?, title?}`.
 `skipped` 는 까닭(`reason`)을 적고, 서버가 일부러 올리지 않은 경우(`screen_off`·`card_auto_off`·`no_screen_tool`·
-`nothing_to_show`)에는 AI 에게 카드를 만들라고 하지 않는다. 올리려다 못 했을 때(`post_failed: …`, 여러 화면 중 고르지 못함 등)만
+`nothing_to_show`·`auto_card_budget`)에는 AI 에게 카드를 만들라고 하지 않는다. 올리려다 못 했을 때(`post_failed: …`, 여러 화면 중 고르지 못함 등)만
 `next.call` 로 AI 가 올릴 길을 남긴다. 같은 카드는 두 번 오르지 않는다 — 올리는 길이 같아
 `ai_screen_cards.DUPLICATE_WINDOW` 안의 같은 제목·본문은 건너뛴다(`already_shown`).
 """
 import json
 import logging
+import threading
+import time
 
 from flask_babel import lazy_gettext as lg
+
+from aot.tools.domain import display_names
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +37,29 @@ OPS = {('overview', 'place'): 'place', ('weather', 'now'): 'now', ('weather', 'f
 MAX_LINES = 5
 _EXTERNAL = frozenset({'mcp_http', 'mcp_stdio', 'rest'})
 #: 결론 한 줄 — AI 의 선택 호출(사용자 결정 2026-10-29).
-OPTIONAL_CALL = "only to add a one-line conclusion: screen(op='card', title='%s', message='<conclusion>')"
+OPTIONAL_CALL = "only to add a one-line conclusion: screen(op='card', title='%s', text='<conclusion>')"
 #: 서버가 올리려다 못 했을 때만 — AI 가 같은 제목으로 올릴 길(여러 화면 중 고르기 등은 그 호출의 오류가 말한다).
-CALL_IF_FAILED = "screen(op='card', title='%s', message='<one-line conclusion, max 5 lines>')"
+CALL_IF_FAILED = "screen(op='card', title='%s', text='<one-line conclusion, max 5 lines>')"
+#: 서버 자동 카드(장소·날씨·값)의 사용자별 분당 상한 — 수신함 한도(`ai_screen_cards.RATE_PER_MIN`=6)의 나머지는 AI 몫이다.
+#: 26-11-08 실사용: 하루씩 나눈 이력 조회 7번이 자동 카드 7장을 올려 한도를 다 쓰고, AI 가 올리려던 요약 카드가 막혔다.
+AUTO_PER_MIN = 3
+_AUTO_LOCK = threading.Lock()
+_AUTO_SENT = {}
+
+
+def take_auto_slot(user, now=None):
+    """자동 카드 한 장을 올려도 되면 자리를 잡고 True. 동시 호출(병렬 조회)도 잠금 안에서 센다 — DB 로 세면 같은 순간의
+    호출들이 모두 빈자리를 본다."""
+    if not user:
+        return True
+    now = time.monotonic() if now is None else now
+    with _AUTO_LOCK:
+        sent = [t for t in _AUTO_SENT.get(user, ()) if now - t < 60.0]
+        ok = len(sent) < AUTO_PER_MIN
+        if ok:
+            sent.append(now)
+        _AUTO_SENT[user] = sent
+        return ok
 
 
 def post_for(app, tool, op, out, ctx, show=None):
@@ -64,6 +88,9 @@ def post_for(app, tool, op, out, ctx, show=None):
     if not card:
         return _reply(out, body, {'state': 'skipped', 'reason': 'nothing_to_show'})
     title, message = card
+    if not take_auto_slot(ctx.get('scope_user_uuid')):
+        # 일부러 올리지 않은 경우다 — AI 에게 대신 올리라고 하지 않는다(그 카드가 다시 한도를 쓴다).
+        return _reply(out, body, {'state': 'skipped', 'reason': 'auto_card_budget'})
     got = _post(app, title, message, ctx)
     state = got.get('status') if isinstance(got, dict) else None
     if state in ('posted', 'skipped'):
@@ -174,6 +201,7 @@ _LABELS = (
     ('humidity', lg('Humidity')),
     ('dew_point', lg('Dew Point')),
     ('vapour_pressure_deficit', lg('VPD')),
+    ('vapor_pressure_deficit', lg('VPD')),
     ('vpd', lg('VPD')),
     ('wind_speed', lg('Wind Speed')),
     ('speed', lg('Wind Speed')),
@@ -187,6 +215,7 @@ _LABELS = (
     ('cloud_cover', lg('Cloud cover')),
     ('sky_condition', lg('Cloud cover')),
     ('soil_moisture', lg('Soil Moisture')),
+    ('volumetric_water_content', lg('Soil Moisture')),
     ('moisture', lg('Moisture')),
     ('pressure', lg('Pressure')),
 )
@@ -461,7 +490,8 @@ def _avg_line(label, group, limit=3):
     vals = []
     for m, v in (group or {}).items():
         if isinstance(v, dict) and v.get('avg') is not None:
-            vals.append("%s %s%s" % (_measure(m), _num(v['avg']), (' ' + str(v['unit'])) if v.get('unit') else ''))
+            unit = v.get('unit_label') or display_names.names(m, v.get('unit'))[1] or v.get('unit')    # °C·% (원문 'C'·'percent' 아님)
+            vals.append("%s %s%s" % (_measure(m), _num(v['avg']), (' ' + str(unit)) if unit else ''))
         if len(vals) >= limit:
             break
     return "%s: %s" % (label, ", ".join(vals)) if vals else None

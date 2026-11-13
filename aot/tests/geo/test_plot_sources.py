@@ -19,7 +19,7 @@ from datetime import datetime
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding, plot_sources
+from aot.space import device_binding, plot_sources
 from aot.databases.geo_integrity_ddl import apply_binding
 from aot.databases.models import (
     DeviceMeasurements, GeoBinding, GeoMarkerPosition, GeoShape, Input)
@@ -213,14 +213,14 @@ class TestPositionHistoryDecidesTheTier(_Base):
         src = self._by_device(self._resolve()['indoor'])
         self.assertEqual(src[('old-timer', 'plot')]['periods'], [(T0, T3)])
 
-    def test_a_legacy_marker_without_any_binding_is_read_as_always_there(self):
+    def test_a_legacy_marker_without_any_binding_is_not_read(self):
+        """L4(C-4): 바인딩이 없는 컬럼 마커는 장치의 위치가 아니다(p7_05 가 옮긴다)."""
         self._sensor('legacy-dev')
-        shape = GeoShape(geo_id=MAP, type='aot_device', device_id='legacy-dev',
-                         feature=_point(127.002, 35.002))
+        shape = GeoShape(geo_id=MAP, type='aot_device', feature=_point(127.002, 35.002))
         db.session.add(shape)
         db.session.commit()
         src = self._by_device(self._resolve()['indoor'])
-        self.assertEqual(src[('legacy-dev', 'plot')]['periods'], [(T0, T3)])
+        self.assertNotIn(('legacy-dev', 'plot'), src)
 
 
 class TestUnrecordedPastPlacement(_Base):

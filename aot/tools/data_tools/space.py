@@ -1,4 +1,5 @@
 import logging
+from ._shims import tz_scoped
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,8 @@ from aot.databases.models import GeoShape
 from sqlalchemy import or_
 from aot.functions.utils.water_net import parts as _water_parts
 import json
+from aot.utils.timekit import iso_at, naive_utc, utc_now
+from aot.databases.geo_marker_kinds import MARKER_TYPES
 
 
 class SpaceToolsMixin:
@@ -49,7 +52,7 @@ class SpaceToolsMixin:
         return [cut(n, 1) for n in nodes]
 
     #: 공간 트리에서 장치로 치는 노드 종류 — 기본 보기에서 개수로 접는다.
-    _TREE_DEVICE_TYPES = ('aot_device', 'device')
+    _TREE_DEVICE_TYPES = MARKER_TYPES
 
     @classmethod
     def _fold_devices(cls, nodes):
@@ -306,6 +309,7 @@ class SpaceToolsMixin:
                             'co2', 'electrical_conductivity')
 
     @classmethod
+    @tz_scoped
     def get_place_overview(cls, place=None, **extra):
         """[읽기전용] 장소 하나(또는 농장 전체)의 현황 요약 — 센서·제어·구획·날씨·알림."""
         place = place or extra.get('target_name') or extra.get('zone_id') \
@@ -325,7 +329,7 @@ class SpaceToolsMixin:
             else:
                 out["place"]["geo"] = "no drawn shape on the map"
             out["_more"] = (
-                "Detail via use_tool: get_zone_sensor_summary (each sensor), "
+                "Detail: get_zone_sensor_summary (each sensor), "
                 "get_plot (one plot's schedule and targets), get_control_state "
                 "(control detail), get_device_freshness (silent sensors).")
             return out
@@ -353,7 +357,10 @@ class SpaceToolsMixin:
         total = len(sites)
         if total > cls._OVERVIEW_MAX_SITES:
             sites = cls._sites_by_content(sites)
-        rows = [cls._place_overview(s, brief=True)
+        # 제어 상태는 농장 전체를 한 번에 계산하는 읽기라 대지마다 다시 부르면 같은 계산을 대지 수만큼
+        # 한다(2026-11-07 실측: 10곳 × 0.4~1.0초). 한 번 읽어 모든 대지가 나눠 쓴다.
+        control = cls._overview_coordinators()
+        rows = [cls._place_overview(s, brief=True, coordinators=control)
                 for s in sites[:cls._OVERVIEW_MAX_SITES]]
         out = {"status": "success", "scope": "farm", "sites": rows,
                "sites_total": total}
@@ -375,7 +382,7 @@ class SpaceToolsMixin:
         대지 34개 중 앞의 10개에 '3포장' 이 없어 "농장 상태" 답에서 사라졌다).
         보통 설치(대지 1~5개)는 상한 아래라 이 계산을 하지 않는다. 같으면 만든
         순서를 지킨다(정렬은 안정적이다)."""
-        from aot.aot_flask.geo.device_membership import place_members
+        from aot.space.device_membership import place_members
 
         def weight(shape):
             try:
@@ -386,8 +393,8 @@ class SpaceToolsMixin:
         return sorted(sites, key=weight, reverse=True)
 
     @classmethod
-    def _place_overview(cls, shape, brief):
-        from aot.aot_flask.geo.device_membership import PlaceIndex, place_label
+    def _place_overview(cls, shape, brief, coordinators=None):
+        from aot.space.device_membership import PlaceIndex, place_label
         idx = PlaceIndex()
         out = {"place": {"name": place_label(shape), "kind": shape.type,
                          "path": idx.path(shape)}}
@@ -398,7 +405,7 @@ class SpaceToolsMixin:
             out["sensors"] = sensors
         if stale:
             out["stale_sensors"] = stale
-        ctl = cls._overview_control(shape, idx, brief)
+        ctl = cls._overview_control(shape, idx, brief, coordinators)
         if ctl:
             out["control"] = ctl
         plots = cls._overview_plots(shape, brief)
@@ -426,7 +433,7 @@ class SpaceToolsMixin:
             logger.debug('overview: sensor summary failed', exc_info=True)
             return {}, None
         agg, stale, outdoor_agg, soil_agg = {}, [], {}, {}
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         for zone in (z or {}).get('zones') or []:
             # 구역 요약이 정본 신선도(주기×배수·max_age_s)로 거른 센서 — 같은
             # 기준을 쓰도록 여기서도 뺀다(2시간 상수는 정보 없을 때의 상한).
@@ -517,11 +524,21 @@ class SpaceToolsMixin:
         return out, stale_out
 
     @classmethod
-    def _overview_control(cls, shape, idx, brief):
-        """이 장소 안 시설의 환경 제어 — 모드·제한 요인·구동기 개도와 근거 이름."""
+    def _overview_coordinators(cls):
+        """제어 상태의 코디네이터 목록. 못 읽으면 None (개요는 그 칸만 빠진다)."""
         try:
-            cs = cls.get_control_state().get('coordinators') or []
+            return cls.get_control_state().get('coordinators') or []
         except Exception:                                   # noqa: BLE001
+            return None
+
+    @classmethod
+    def _overview_control(cls, shape, idx, brief, coordinators=None):
+        """이 장소 안 시설의 환경 제어 — 모드·제한 요인·구동기 개도와 근거 이름.
+
+        `coordinators` 는 호출부가 이미 읽어 둔 목록(농장 개요가 대지 사이에 나눠 쓴다).
+        안 주면(None) 직접 읽는다."""
+        cs = coordinators if coordinators is not None else cls._overview_coordinators()
+        if cs is None:
             return None
         rows = []
         for c in cs:
@@ -642,7 +659,7 @@ class SpaceToolsMixin:
                     src["distance_km"] = round(
                         distance_m(here[0], here[1], lat, lng) / 1000.0, 1)
             if src["scope"] == 'site':
-                from aot.aot_flask.geo import device_membership as dm
+                from aot.space import device_membership as dm
                 site = shape if getattr(shape, 'type', None) == 'site' else None
                 if site is None:
                     feat = shape.feature if isinstance(shape.feature, dict) else {}
@@ -763,8 +780,10 @@ class SpaceToolsMixin:
                 full_tree = cls._compact_nodes(full_tree)
             out = {"hierarchy": full_tree}
             if (depth is None or depth == '') and not filter_type:
-                out["hierarchy"] = cls._attach_facility_ids(
-                    cls._qualify_repeated_names(cls._fold_devices(full_tree)))
+                roots, loose = cls._place_roots(cls._fold_devices(full_tree))
+                out["hierarchy"] = cls._attach_facility_ids(cls._qualify_repeated_names(roots))
+                if loose:
+                    out["devices_outside_any_place"] = loose
                 out["_reading"] = (
                     "Places only: every site, zone and facility at every level. "
                     "'devices' is how many devices sit directly in that place — "
@@ -824,13 +843,32 @@ class SpaceToolsMixin:
             for n in ns or []:
                 if not isinstance(n, dict):
                     continue
-                if n.get('unique_id') == want and n.get('type') not in ('aot_device', 'device'):
+                if n.get('unique_id') == want and n.get('type') not in MARKER_TYPES:
                     return n
                 hit = walk(n.get('children'))
                 if hit is not None:
                     return hit
             return None
         return walk(nodes)
+
+    @classmethod
+    def _place_roots(cls, nodes):
+        """'곳만' 보기의 맨 위 — 곳(대지·구역·시설)만 남기고, 어느 곳에도 안 든 장치는 개수로 돌린다.
+
+        곳 밖에 그린 지도 도형(참조선·이름 없는 설비 묶음 …)과 곳 밖 장치가 맨 위 줄로 끼어, 한 지도에
+        "Reference Line" 네 줄, 지도마다 "Equipment_collection 123" 이 나왔다 — 구분도 안 되고 쓸모도 없고,
+        "Places only" 라는 이 보기의 말과도 어긋났다(2026-11-09 claude.ai 점검 7번·재점검). 요약과 상세가 같은
+        규칙을 쓴다(요약의 other_top_level 이 상세의 맨 위와 맞게)."""
+        from aot.space.device_membership import PLACE_TYPES
+        kept, loose = [], 0
+        for n in nodes or []:
+            if not isinstance(n, dict):
+                continue
+            if n.get('type') in cls._TREE_DEVICE_TYPES:
+                loose += 1
+            elif n.get('type') in PLACE_TYPES:
+                kept.append(n)
+        return kept, loose
 
     @classmethod
     def _tree_brief(cls, merged):
@@ -859,11 +897,9 @@ class SpaceToolsMixin:
                 devices += d
             return places, devices + int(node.get('devices') or 0)
 
-        groups, order, loose = {}, [], 0
+        groups, order = {}, []
+        folded, loose = cls._place_roots(folded)
         for n in folded:
-            if n.get('type') in cls._TREE_DEVICE_TYPES:
-                loose += 1                                   # 어느 곳에도 안 든 장치
-                continue
             name = map_names.get(geo_of.get(n.get('unique_id'))) or '(no map)'
             if name not in groups:
                 groups[name] = []
@@ -901,9 +937,8 @@ class SpaceToolsMixin:
         out["maps"] = names
         out["_map_hint"] = (
             "This tree mixes the places of %d maps (%s) because 'map' was not "
-            "given. If the user means one map, call again with map='<name>' — "
-            "otherwise sites of other maps will be read as part of this one. "
-            "A map is not a site: it cannot be a target by itself."
+            "given. If the user means one map, call again for that map only — "
+            "otherwise sites of other maps will be read as part of this one."
             % (len(names), ", ".join(names)))
 
     @staticmethod
@@ -950,7 +985,7 @@ class SpaceToolsMixin:
         """
         try:
             from aot.databases.models import GeoFacility
-            from aot.aot_flask.geo.facility_integration import get_facility_integration
+            from aot.space.facility_integration import get_facility_integration
 
             if not facility_name:
                 facility_name = (extra.get('facility_id') or extra.get('name')
@@ -1086,7 +1121,7 @@ class SpaceToolsMixin:
         if not _aql:
             return set()
         try:
-            from aot.aot_flask.geo.device_membership import PlaceIndex, place_label
+            from aot.space.device_membership import PlaceIndex, place_label
             idx = PlaceIndex()
         except Exception:
             logger.debug('map equipment: 장소 색인 실패', exc_info=True)
@@ -1191,8 +1226,17 @@ class SpaceToolsMixin:
             except Exception:
                 return None
 
+        def _owner(props):
+            # 설계 화면(aot-geo-stats.js)과 같은 규칙: 설비가 들어 있는 구역(zone_id)이
+            # 알려진 장소면 그 구역이 소유자다. 대지가 소유자(parent_node_id)로 적힌
+            # 노즐도 구역 안에 있으면 구역 행에 센다(대지 행에서 빠져 구역 합 = 대지 합).
+            zid = props.get('zone_id')
+            if zid and zid in node2name:
+                return zid
+            return props.get('parent_node_id') or zid
+
         def _locate(props, geom, gid=None):
-            par = props.get('parent_node_id') or props.get('zone_id')
+            par = _owner(props)
             if par in node2name:
                 return node2name[par]
             return _spatial_area(geom, gid)
@@ -1200,7 +1244,7 @@ class SpaceToolsMixin:
         def _in_area(props, geom, gid=None):
             if not _aql:
                 return True
-            par = props.get('parent_node_id') or props.get('zone_id')
+            par = _owner(props)
             if par in area_node_ids:
                 return True
             if par in node2name:  # owned by a DIFFERENT named area
@@ -1248,6 +1292,14 @@ class SpaceToolsMixin:
         # 3) Classify.
         discrete = []
         agg = {}
+        _slant_cache, _terrain = {}, None
+        _dup = {}
+        for f, _gid in equip_features:
+            if isinstance(f, dict):
+                _k = cls._pipe_ref_ids(f.get('properties') or {})
+                if _k:
+                    _d = _dup.setdefault(_gid, {})
+                    _d[_k] = _d.get(_k, 0) + 1
 
         def _slot(loc):
             return agg.setdefault(loc, {
@@ -1256,7 +1308,8 @@ class SpaceToolsMixin:
                 # 점적 (drip — derived from is_drip pipes: count = length / interval)
                 "drip_emitters": 0, "drip_flow_lph": 0.0,
                 "main_pipes": 0, "main_pipe_length_m": 0.0,
-                "branch_pipes": 0, "branch_pipe_length_m": 0.0})
+                "branch_pipes": 0, "branch_pipe_length_m": 0.0,
+                "main_3d": None, "branch_3d": None, "slant_unknown": 0})
 
         for f, _gid in equip_features:
             if not isinstance(f, dict):
@@ -1286,6 +1339,15 @@ class SpaceToolsMixin:
                 else:
                     slot['branch_pipes'] += 1
                     slot['branch_pipe_length_m'] += length
+                _ref = cls._slant_ref(_slant_cache, _gid)
+                if _ref:
+                    _terrain = _terrain or cls._terrain_mark(_ref)
+                    _hit, _sl = cls._slant_of(_ref, props, _dup.get(_gid, {}))
+                    if _hit and _sl is None:
+                        slot['slant_unknown'] += 1
+                    elif _hit:
+                        _key = 'main_3d' if sub in S._EQUIP_MAIN_SUBTYPES else 'branch_3d'
+                        slot[_key] = (slot[_key] or 0.0) + _sl
                 # 점적: a drip pipe carries emitters spaced along it — the design
                 # counts them as length / interval (NOT individual features).
                 if props.get('is_drip'):
@@ -1333,8 +1395,19 @@ class SpaceToolsMixin:
                 "main_pipe_length_m": _r1(s['main_pipe_length_m']),
                 "branch_pipes": s['branch_pipes'],
                 "branch_pipe_length_m": _r1(s['branch_pipe_length_m']),
+                "length_basis": "horizontal",           # 지도 평면 길이(경사 길이 아님)
             })
-        return {"equipment": discrete, "irrigation": irrigation}
+            # 경사 길이는 있을 때만 — 기존 키는 그대로다.
+            if s['main_3d'] is not None:
+                irrigation[-1]["main_pipe_length_3d_m"] = _r1(s['main_3d'])
+            if s['branch_3d'] is not None:
+                irrigation[-1]["branch_pipe_length_3d_m"] = _r1(s['branch_3d'])
+            if s['slant_unknown'] and (s['main_3d'] is not None or s['branch_3d'] is not None):
+                irrigation[-1]["pipes_without_3d"] = s['slant_unknown']
+        out = {"equipment": discrete, "irrigation": irrigation}
+        if _terrain:
+            out["terrain"] = _terrain
+        return out
 
     @classmethod
     def get_map_equipment_tool(cls, area_name=None, brief=False, detail=False, **extra):
@@ -1378,6 +1451,8 @@ class SpaceToolsMixin:
                 "equipment": res['equipment'],
                 "irrigation": res['irrigation'],
             }
+            if res.get('terrain'):
+                out["terrain"] = res['terrain']
             _tgt = cls._exact_area_target(area_name)
             if _tgt:
                 cls._with_target(out, *_tgt, ref=area_name, exact=True)
@@ -1409,6 +1484,10 @@ class SpaceToolsMixin:
                     "main_pipes": sum(r.get('main_pipes') or 0 for r in rows),
                     "branch_pipes": sum(r.get('branch_pipes') or 0 for r in rows),
                 }
+                for _k3 in ('main_pipe_length_3d_m', 'branch_pipe_length_3d_m', 'pipes_without_3d'):
+                    _v3 = [r[_k3] for r in rows if r.get(_k3) is not None]
+                    if _v3:
+                        out["irrigation_total"][_k3] = round(sum(_v3), 1)
                 out.setdefault("_reading", []).append(
                     "Each 'irrigation' row is the equipment OWNED by that place — a "
                     "site's row holds only what is drawn directly on the site, not "
@@ -1496,7 +1575,7 @@ class SpaceToolsMixin:
         if not aql:
             return None
         try:
-            from aot.aot_flask.geo.device_membership import PlaceIndex, place_label
+            from aot.space.device_membership import PlaceIndex, place_label
             hits = [s for s in PlaceIndex().shapes
                     if s.type in ('site', 'zone') and place_label(s).lower() == aql]
         except Exception:                                   # noqa: BLE001
@@ -1569,6 +1648,77 @@ class SpaceToolsMixin:
                     pass
         return node_ids, polys
 
+    @staticmethod
+    def _slant_ref(cache, gid):
+        """지도 gid 의 경사 길이(`water_terrain.pipe_lengths_for`). 지형이 없거나 못 읽으면 None."""
+        if gid in cache:
+            return cache[gid]
+        ref = None
+        try:
+            from aot.utils import water_terrain
+            r = water_terrain.pipe_lengths_for(gid) if gid else None
+            if r and r.get('state') not in (None, 'none'):
+                ref = r
+        except Exception:                                   # noqa: BLE001
+            logger.exception('map equipment: 경사 길이 조회 실패')
+        cache[gid] = ref
+        return ref
+
+    @staticmethod
+    def _pipe_ref_ids(props):
+        """물 회로 어댑터(`_feature_id`)가 배관 이름으로 쓰는 칸. 순번 이름은 여기서 알 수 없다."""
+        v = props.get('node_id') or props.get('id') or props.get('_aot_draw_id')
+        return str(v) if v else None
+
+    @classmethod
+    def _slant_of(cls, ref, props, dup):
+        """(대응 여부, slant_m). 같은 이름이 둘 이상이면 어느 쪽인지 못 가리므로 대응하지 않는다."""
+        pid = cls._pipe_ref_ids(props)
+        if not ref or not pid or dup.get(pid, 0) > 1:
+            return False, None
+        row = (ref.get('pipes') or {}).get(pid)
+        if row is None:
+            return False, None
+        return True, row.get('slant_m')
+
+    @staticmethod
+    def _terrain_mark(ref):
+        st = ref.get('state')
+        return {"state": st} if st == 'warming' else {"state": st, "version": ref.get('version')}
+
+    @classmethod
+    def _area_owner_test(cls, shapes, area_name):
+        """area_name 의 대지·구역이 설비 피처를 소유하는지 가리는 함수 ``(props, geom) -> bool``.
+
+        소유 링크(parent_node_id/zone_id)가 이 장소나 하위 장소를 가리키면 소유, 다른 곳을
+        가리키면 아니고, 링크가 없으면 다각형 포함으로 가린다. 이름에 맞는 장소가 없으면 None.
+        설비 상세 읽기와 배관 관경 쓰기가 같은 판정을 쓴다 — 두 벌이면 읽은 것과 고친 것이 갈린다.
+        """
+        node_ids, polys = cls._area_node_ids_and_polys(shapes, area_name)
+        if node_ids or polys:
+            node_ids = set(node_ids) | cls._descendant_place_node_ids(area_name)
+        if not node_ids and not polys:
+            return None
+        try:
+            from shapely.geometry import shape as _shape
+        except Exception:
+            _shape = None
+
+        def _owned(props, geom):
+            par = props.get('parent_node_id') or props.get('zone_id')
+            if par in node_ids:
+                return True
+            if par:  # owned elsewhere
+                return False
+            if polys and _shape and geom:
+                try:
+                    g = _shape(geom); pt = g if g.geom_type == 'Point' else g.centroid
+                    return any(p.contains(pt) for p in polys)
+                except Exception:
+                    return False
+            return False
+        return _owned
+
     @classmethod
     def get_map_equipment_detail_tool(cls, area_name=None, **extra):
         """[분류 C - 지도 설비 상세(지오메트리) 읽기 도구]
@@ -1590,32 +1740,11 @@ class SpaceToolsMixin:
                 return {"error": "area_name (a site/zone name) is required for equipment detail."}
 
             shapes = GeoShape.query.all()
-            node_ids, polys = cls._area_node_ids_and_polys(shapes, area_name)
-            if node_ids or polys:
-                node_ids = set(node_ids) | cls._descendant_place_node_ids(area_name)
-            if not node_ids and not polys:
+            _owned = cls._area_owner_test(shapes, area_name)
+            if _owned is None:
                 return cls._map_area_miss(shapes, area_name) or {
                     "status": "error",
                     "error": "Area '%s' was not found." % area_name}
-
-            try:
-                from shapely.geometry import shape as _shape
-            except Exception:
-                _shape = None
-
-            def _owned(props, geom):
-                par = props.get('parent_node_id') or props.get('zone_id')
-                if par in node_ids:
-                    return True
-                if par:  # owned elsewhere
-                    return False
-                if polys and _shape and geom:
-                    try:
-                        g = _shape(geom); pt = g if g.geom_type == 'Point' else g.centroid
-                        return any(p.contains(pt) for p in polys)
-                    except Exception:
-                        return False
-                return False
 
             def _hav(lat1, lon1, lat2, lon2):
                 R = 6371000.0
@@ -1630,6 +1759,19 @@ class SpaceToolsMixin:
 
             import json as _json
             sprinklers, pipes, drip_pipes = [], [], []
+            _slant_cache, _terrain, _dup = {}, None, {}
+            for s in shapes:
+                if s.type not in ('equipment_collection', 'equipment'):
+                    continue
+                try:
+                    _c = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
+                except Exception:
+                    continue
+                for f in ((_c.get('features') if s.type == 'equipment_collection' else [_c]) or []):
+                    _k = cls._pipe_ref_ids((f or {}).get('properties') or {}) if isinstance(f, dict) else None
+                    if _k:
+                        _d = _dup.setdefault(s.geo_id, {})
+                        _d[_k] = _d.get(_k, 0) + 1
             for s in shapes:
                 if s.type not in ('equipment_collection', 'equipment'):
                     continue
@@ -1665,6 +1807,12 @@ class SpaceToolsMixin:
                                 "start": [round(cs[0][1], 7), round(cs[0][0], 7)],
                                 "end": [round(cs[-1][1], 7), round(cs[-1][0], 7)],
                             })
+                            _ref = cls._slant_ref(_slant_cache, s.geo_id)
+                            if _ref:
+                                _terrain = _terrain or cls._terrain_mark(_ref)
+                                _hit, _sl = cls._slant_of(_ref, props, _dup.get(s.geo_id, {}))
+                                if _hit and _sl is not None:
+                                    pipes[-1]["length_3d_m"] = round(_sl, 1)
                             # 점적: emitters spaced along a drip pipe (length / interval)
                             if props.get('is_drip'):
                                 dcfg = props.get('drip_config') or {}
@@ -1713,6 +1861,7 @@ class SpaceToolsMixin:
                 "drip_pipes": drip_pipes,
                 "drip_emitter_total": sum(d['drip_emitters'] for d in drip_pipes),
                 "pipes": pipes,
+                "length_basis": "horizontal",           # length_m 은 지도 평면 길이(경사 길이 아님)
             }
             # 머리가 모두 같은 규격이면 규격은 한 번만, 위치는 [lat, lng] 쌍으로 — 머리마다
             # 같은 radius·flow 를 되풀이하던 응답을 줄인다(2026-10-28 점검).
@@ -1722,6 +1871,8 @@ class SpaceToolsMixin:
                 out["sprinkler_spec"] = {"radius_m": _r, "flow_lph": _f}
                 out["sprinklers"] = [[e['lat'], e['lng']] for e in sprinklers[:MAXE]]
                 out["sprinklers_format"] = "[lat, lng] per head; every head has sprinkler_spec"
+            if _terrain:
+                out["terrain"] = _terrain
             if len(sprinklers) > MAXE:
                 out["sprinklers_truncated"] = f"showing first {MAXE} of {len(sprinklers)} sprinklers"
             if not out.get("sprinkler_total_flow_lph"):
@@ -1734,35 +1885,6 @@ class SpaceToolsMixin:
             return out
         except Exception as e:
             logger.error(f"Error in get_map_equipment_detail_tool: {e}")
-            return {"error": str(e)}
-
-    @classmethod
-    def list_geo_maps(cls, **extra):
-        """[읽기전용] 지도 목록과 지도마다 그 안의 대지(site).
-
-        지도가 여럿이면(김제·영양·…) "지도 1 의 대지" 를 물을 수 있어야 한다.
-        예전에는 지도 이름·id 만 내고, 대지는 get_spatial_tree·get_place_overview 가
-        지도 구분 없이 한 줄로 내서 어느 지도의 대지인지 답할 수 없었다(2026-10-11).
-        중심 좌표는 비어 있으면 싣지 않는다(지도마다 null 두 칸이 나갔다)."""
-        try:
-            from aot.databases.models import GeoMap
-            from aot.aot_flask.geo.device_membership import place_label
-            sites = {}
-            for s in (GeoShape.query.filter(GeoShape.type == 'site')
-                      .order_by(GeoShape.id).all()):
-                sites.setdefault(s.geo_id, []).append(
-                    {"name": place_label(s), "site_id": s.unique_id})
-            maps = []
-            for m in GeoMap.query.all():
-                row = {"map_id": m.unique_id, "name": m.name,
-                       "site_count": len(sites.get(m.unique_id, ())),
-                       "sites": sites.get(m.unique_id, [])}
-                for key, attr in (("lat", 'latitude'), ("lng", 'longitude')):
-                    if getattr(m, attr, None) is not None:
-                        row[key] = getattr(m, attr)
-                maps.append(row)
-            return {"maps": maps}
-        except Exception as e:
             return {"error": str(e)}
 
     @classmethod
@@ -1791,15 +1913,27 @@ class SpaceToolsMixin:
         refusal = ai_excluded_error(obj)
         if refusal:
             return {"error": refusal, "reason_code": AI_EXCLUDED}
+        # 위치의 정본은 리졸버 하나(device_location.locate) — 장치 컬럼을 직접 읽지 않는다.
+        lat = lng = None
+        basis = 'none'
+        try:
+            from aot.space.device_location import locate
+            pl = locate(kind, device_id)
+            if pl is not None and pl.point is not None:
+                lat, lng = pl.point
+                basis = pl.basis
+        except Exception:
+            logger.debug('get_device_location: 리졸버 실패', exc_info=True)
         out = {"device_id": device_id, "kind": kind, "name": getattr(obj, 'name', None),
-               "lat": getattr(obj, 'latitude', None), "lng": getattr(obj, 'longitude', None),
+               "lat": lat, "lng": lng,
+               # 'device' 장치 자리 | 'site' 대지 기준(장치는 아직 배치 전) | 'none'
+               "location_basis": basis,
                # [P2] 배치된 지도는 마커에서 파생한다.
-               "map_id": _map_for_device_p2(
-                   device_id, prefer=getattr(obj, 'map_config_id', None))}
+               "map_id": _map_for_device_p2(device_id)}
         # 소속 장소('3포장 > 3-1') — 좌표만으로는 어느 구역인지 알 수 없어
         # 모델이 다른 도구로 다시 물었다(2026-10-08). 정본 경로로 낸다.
         try:
-            from aot.aot_flask.geo.device_membership import annotate_places
+            from aot.space.device_membership import annotate_places
             annotate_places([out], id_key='device_id')
         except Exception:
             logger.debug('get_device_location: 장소 경로 조회 실패', exc_info=True)
@@ -1810,31 +1944,6 @@ class SpaceToolsMixin:
         """오류를 응답 dict 로. 모호할 때는 후보를 실은 dict 가 그대로 온다 —
         문구로 뭉개면 되물을 근거(후보 uuid)가 사라진다."""
         return err if isinstance(err, dict) else {"error": err}
-
-    @classmethod
-    def distance_between(cls, target_a=None, target_b=None, **extra):
-        """[읽기전용] 지도 위 두 개체 사이의 거리(m). 저장하지 않는다.
-
-        **거리를 직접 계산하지 말 것.** 좌표 산술은 조용히 틀리고, 틀린 거리는
-        그대로 배치 결정이 된다. 이 도구가 서버에서 센다.
-
-        이름(사람이 부르는 대로) 또는 unique_id 를 받는다. 이름이 여러 개에
-        걸리면 **하나를 고르지 않고** `needs_disambiguation` 과 후보 목록을
-        돌려준다 — 검정콩을 다섯 조각에 심었으면 "검정콩까지 거리" 는 답이
-        없는 질문이다. 그 후보를 사람에게 보여 되물을 것.
-        """
-        try:
-            from aot.utils import geo_distance
-            if not target_a or not target_b:
-                return {"error": "target_a and target_b are required "
-                                 "(names or unique_ids)"}
-            result, err = geo_distance.distance_between(target_a, target_b)
-            if err:
-                return cls._distance_error(err)
-            return result
-        except Exception as e:
-            logger.exception("Error in distance_between")
-            return {"error": str(e)}
 
     @classmethod
     def nearest(cls, reference=None, candidates=None, **extra):
@@ -1862,62 +1971,95 @@ class SpaceToolsMixin:
 
     @classmethod
     def set_device_location(cls, device_id=None, lat=None, lng=None, map_id=None, **extra):
-        """Place / move a device (Input or Output) on the map by writing its
-        latitude/longitude columns (the authoritative location). Optional map_id binds
-        it to a specific map. This is the GIS 'create/edit' for a device placement."""
+        """Place / move a device on a map (marker + placement binding). Works for
+        Input, Output, Function-type controllers (PID, Trigger, Conditional,
+        Custom Controller, Function). The device row's lat/lng columns are NOT
+        written: the placement (marker) is the source of truth and every
+        reader derives the position from it.
+
+        map_id picks the map. Without it the device's current map is used, else
+        the only map when exactly one exists; otherwise an error asks for map_id.
+        Response carries `location_basis` ('device' once placed) and `source`.
+        """
         if not device_id:
             return {"error": "device_id is required"}
         if lat in (None, '') or lng in (None, ''):
             return {"error": "lat and lng are required"}
-        obj, kind = cls._find_placeable_device(device_id)
+        try:
+            lat_f, lng_f = float(lat), float(lng)
+        except (TypeError, ValueError):
+            return {"error": "lat and lng must be numbers"}
+        if not (-90 <= lat_f <= 90 and -180 <= lng_f <= 180):
+            return {"error": "lat/lng out of range"}
+        from aot.space import device_binding
+        kind = device_binding.resolve_device_kind(device_id)
+        if kind is None:
+            return {"error": f"Device not found: {device_id}"}
+        obj = dict(device_binding.device_kind_models())[kind].query.filter_by(
+            unique_id=device_id).first()
         if not obj:
             return {"error": f"Device not found: {device_id}"}
         # 쓰기 시점 그룹 스코프 — 옮길 장치로 묻는다.
         from aot.aot_flask.access import write_scope
         write_scope.enforce(obj)
         try:
-            if hasattr(obj, 'latitude'):
-                obj.latitude = float(lat)
-            if hasattr(obj, 'longitude'):
-                obj.longitude = float(lng)
-            # [P2] map_config_id 는 사망 컬럼이다 — 배치(마커)가 정본이며
-            # 지도 소속은 거기서 파생된다. 저장하지 않는다.
-            if hasattr(obj, 'location_updated_utc'):
-                from datetime import datetime as _dt
-                obj.location_updated_utc = _dt.utcnow()
+            from aot.databases.models import GeoMap
+            map_uuid = map_id or _map_for_device_p2(device_id)
+            if not map_uuid:
+                maps = GeoMap.query.all()
+                if len(maps) == 1:
+                    map_uuid = maps[0].unique_id
+                elif not maps:
+                    return {"error": "No map exists; create a map first."}
+                else:
+                    return {"error": "map_id is required (several maps exist and "
+                                     "the device is not placed on any)."}
+            elif map_id and not GeoMap.query.filter_by(unique_id=map_id).first():
+                return {"error": f"Map not found: {map_id}"}
+            # 지도에 대한 스코프 — REST(/api/geo/device/location)와 같은 판정.
+            from aot.aot_flask.access import scope as _scope
+            if not _scope.can_operate('geo_map', map_uuid):
+                return {"error": _scope.deny_message()}
+            from aot.aot_flask.geo.device_placement import place_device, unplace_device
+            # 이동 의도: 다른 지도의 마커는 내리고(사유 'unbound') 이 지도에만 둔다.
+            from aot.space.device_membership import maps_for_device
+            for other in maps_for_device(device_id):
+                if other != map_uuid:
+                    unplace_device(device_id, other, 0)
+            # 지도 UI 어휘: 'function'=CustomController, 'generic_function'=Function.
+            geo_type = {'device': 'function', 'function': 'generic_function'}.get(kind, kind)
+            place_device(device_id, map_uuid, lat_f, lng_f,
+                         device_type=geo_type, name=getattr(obj, 'name', None))
             db.session.commit()
+            try:
+                from aot.space import containment_cache
+                containment_cache.invalidate()
+            except Exception:
+                pass
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}
         r = {"device_id": device_id, "kind": kind, "status": "placed",
-             "lat": float(lat), "lng": float(lng)}
+             "lat": lat_f, "lng": lng_f, "map_id": map_uuid,
+             "location_basis": "none", "source": "none"}
+        try:
+            from aot.space.device_location import locate
+            pl = locate(kind, device_id)
+            if pl is not None:
+                r["location_basis"] = pl.basis
+                r["source"] = pl.source
+        except Exception:
+            logger.debug('set_device_location: 리졸버 실패', exc_info=True)
         if extra:
             r["ignored_args"] = list(extra.keys())
         return r
 
     @classmethod
-    def _get_vworld_credentials(cls):
-        """VWorld GIS Input(GeoLayer type='gis_vworld')에 등록된 api_key/domain을
-        읽는다. 없으면 (None, None). routes_geo.py의 동명 헬퍼와 같은 저장 방식
-        (GeoLayer.options JSON)을 따르는 서비스 계층 전용 사본 — 서비스가 라우트
-        모듈에 의존하지 않도록 분리."""
-        import json as _json
-        layer = (GeoLayer.query.filter_by(type='gis_vworld', is_activated=True).first()
-                 or GeoLayer.query.filter_by(type='gis_vworld').first())
-        if not layer:
-            return None, None
-        try:
-            opts = _json.loads(layer.options) if layer.options else {}
-        except Exception:
-            opts = {}
-        return opts.get('api_key') or None, opts.get('vworld_domain', '')
-
-    @classmethod
     def get_address(cls, target_name=None, target_id=None, lat=None, lng=None, **extra):
         """
         [읽기전용] 좌표 또는 위치 이름(구역/시설/장치)을 사람이 읽는 주소로
-        변환한다 (역지오코딩). 등록·활성화된 VWorld GIS Input에 API Key가 설정된
-        경우에만 동작하며, 없으면 좌표만 돌려주는 대신 그 사실을 명확히 알린다.
+        변환한다 (역지오코딩). 위치 조회 문(`aot_flask/geo/geo_lookup.py`)이 좌표→주소를
+        지원하는 GIS Input 을 골라 부른다. 쓸 수 없으면 좌표만 돌려주고 그 이유를 알린다.
 
         위치 이름 해석은 get_local_time_tool과 동일한 경로를 쓴다:
         _resolve_note_target으로 target_id를 얻고, resolve_location_coords로
@@ -1959,30 +2101,244 @@ class SpaceToolsMixin:
                     return {"status": "error",
                             "message": f"'{resolved_name or target_id}'의 좌표를 확인할 수 없습니다."}
 
-            api_key, domain = cls._get_vworld_credentials()
-            if not api_key:
+            from aot.aot_flask.geo import geo_lookup
+            found = geo_lookup.find_address(float(lat), float(lng), provider=extra.get('provider') or None)
+            if found.get("status") != "ok":
                 # 좌표는 이미 있다 — 버리지 않고 주소 부분만 unavailable 로 알린다.
                 out = {
                     "status": "partial",
                     "lat": float(lat), "lng": float(lng),
                     "address": "unavailable",
-                    "message": ("좌표는 확인했지만 주소는 변환할 수 없습니다: VWorld GIS "
-                                 "Input이 등록되어 있지 않거나 API Key가 설정되지 않았습니다 "
-                                 "(지도 > GIS 입력에서 VWorld 등록)."),
+                    "reason": found.get("code"),
+                    "message": ("좌표는 확인했지만 주소는 변환할 수 없습니다: %s "
+                                "(지도 > GIS 입력에서 좌표→주소를 지원하는 입력을 등록하고 키를 설정하세요)."
+                                % (found.get("error") or "no provider")),
                 }
                 if resolved_name:
                     out["location"] = resolved_name
                 return out
-
-            from aot.inputs_gis.gis_vworld import InputModule as VWorldInput
-            result = VWorldInput.reverse_geocode(float(lat), float(lng), api_key, domain)
-            result["lat"], result["lng"] = float(lat), float(lng)
+            result = {"status": "ok", "address": found["address"], "type": found.get("type"),
+                      "provider": found["provider"]["type"],
+                      "lat": float(lat), "lng": float(lng)}
             if resolved_name:
                 result["location"] = resolved_name
             return result
         except Exception as e:
             logger.error(f"Error in get_address: {e}")
             return {"status": "error", "message": f"주소 변환 중 오류: {str(e)}"}
+
+    @classmethod
+    def find_location(cls, query=None, provider=None, limit=None, **extra):
+        """[읽기전용] 주소·장소 이름 → 좌표 후보 (정지오코딩). 등록된 GIS 입력의 검색 API 를
+        위치 조회 문(`aot_flask/geo/geo_lookup.py`)으로 부른다 — 공급자 선택·키 읽기는 거기서만 한다."""
+        from aot.aot_flask.geo import geo_lookup
+        kwargs = {} if limit in (None, '') else {'limit': limit}
+        return geo_lookup.find_location(query, provider=provider or None, **kwargs)
+
+    @classmethod
+    def find_favorites(cls, query=None, limit=None, **extra):
+        """[읽기전용] 지도 즐겨찾기(사용자가 시트에 담아 둔 장소) 목록. 농장 전체 공유인 것만 돌려준다 —
+        개인용은 AI 에게 보이지 않는다. query 는 이름·주소에 든 글자."""
+        from aot.aot_flask.geo import geo_favorites
+        try:
+            n = max(1, min(int(limit), 50)) if limit not in (None, '') else 20
+        except (TypeError, ValueError):
+            n = 20
+        rows = geo_favorites.search(query, limit=n, user=None)
+        return {"status": "ok", "count": len(rows),
+                "favorites": [{"name": r["name"], "address": r["address"], "lat": r["lat"], "lng": r["lng"]}
+                              for r in rows]}
+
+    # ── 배관 관경 일괄 입력 (set_pipe_diameters) ────────────────────────────
+    # 웹 설계 화면(aot-geo-pipe-diameters.js)과 같은 자리에 같은 값을 쓴다:
+    # equipment_collection 의 피처 properties.diameter_mm. 웹 저장은 묶음 통째 교체라
+    # 개정번호가 없다 — 그래서 여기서는 쓰기 직전에 행을 다시 읽어 diameter_mm 만 고친다.
+
+    @staticmethod
+    def _parse_diameter_mm(raw, name):
+        """웹 parseDiameter 와 같은 규칙: 1 이상의 유한한 수. (값|None, 오류|None)."""
+        import math as _m
+        if raw is None or (isinstance(raw, str) and not raw.strip()):
+            return None, None
+        if isinstance(raw, bool):
+            return None, "%s must be a number >= 1 (mm)" % name
+        try:
+            n = float(str(raw).strip()) if isinstance(raw, str) else float(raw)
+        except (TypeError, ValueError):
+            return None, "%s must be a number >= 1 (mm)" % name
+        if not _m.isfinite(n) or n < 1:
+            return None, "%s must be a number >= 1 (mm)" % name
+        return (int(n) if n == int(n) else n), None
+
+    @classmethod
+    def _pipe_diameter_plan(cls, area_name, main_mm, branch_mm, only_empty=True):
+        """읽기 전용 계획. (오류 응답|None, 계획 dict). 계획의 rows 는 쓰기 때 다시 읽는다."""
+        import json as _json
+        import math as _math
+        from aot.databases.models import GeoShape
+        area_name = (area_name or '').strip()
+        if not area_name:
+            return {"status": "error", "error": "area_name (a site/zone name) is required."}, None
+        mv, err = cls._parse_diameter_mm(main_mm, 'main_mm')
+        if err:
+            return {"status": "error", "error": err}, None
+        bv, err = cls._parse_diameter_mm(branch_mm, 'branch_mm')
+        if err:
+            return {"status": "error", "error": err}, None
+        if mv is None and bv is None:
+            return {"status": "error", "error": "Give main_mm and/or branch_mm."}, None
+        shapes = GeoShape.query.all()
+        # id 로 불러도 이름으로 푼다
+        for sh in shapes:
+            if sh.type in ('site', 'zone') and sh.unique_id == area_name:
+                from aot.space.device_membership import place_label
+                area_name = place_label(sh) or area_name
+                break
+        owned = cls._area_owner_test(shapes, area_name)
+        if owned is None:
+            return cls._map_area_miss(shapes, area_name) or {
+                "status": "error", "error": "Area '%s' was not found." % area_name}, None
+
+        def _len(cs):
+            tot = 0.0
+            for i in range(1, len(cs)):
+                la1, lo1, la2, lo2 = cs[i - 1][1], cs[i - 1][0], cs[i][1], cs[i][0]
+                a = (_math.sin(_math.radians(la2 - la1) / 2) ** 2 + _math.cos(_math.radians(la1))
+                     * _math.cos(_math.radians(la2)) * _math.sin(_math.radians(lo2 - lo1) / 2) ** 2)
+                tot += 2 * 6371000.0 * _math.asin(min(1.0, _math.sqrt(a)))
+            return tot
+
+        plan = {"area": area_name, "main_mm": mv, "branch_mm": bv, "only_empty": bool(only_empty),
+                "main": 0, "branch": 0, "main_m": 0.0, "branch_m": 0.0,
+                "overwrite": 0, "kept_filled": 0, "drip_excluded": 0, "rows": {}}
+        for row in shapes:
+            if row.type not in ('equipment_collection', 'equipment'):
+                continue
+            try:
+                coll = row.feature if isinstance(row.feature, dict) else _json.loads(row.feature or '{}')
+            except Exception:
+                continue
+            feats = coll.get('features') if row.type == 'equipment_collection' else [coll]
+            for idx, f in enumerate(feats or []):
+                if not isinstance(f, dict):
+                    continue
+                props = f.get('properties') or {}
+                geom = f.get('geometry') or {}
+                sub = props.get('sub_type')
+                kind = ('main' if sub in cls._EQUIP_MAIN_SUBTYPES else
+                        'branch' if sub in cls._EQUIP_BRANCH_SUBTYPES else None)
+                val = mv if kind == 'main' else bv
+                if kind is None or val is None or not owned(props, geom):
+                    continue
+                cs = geom.get('coordinates') or []
+                if len(cs) < 2:
+                    continue
+                if props.get('is_drip'):
+                    plan["drip_excluded"] += 1
+                    continue
+                cur = props.get('diameter_mm')
+                filled = cur not in (None, '')
+                if filled and only_empty:
+                    plan["kept_filled"] += 1
+                    continue
+                plan[kind] += 1
+                plan[kind + '_m'] += _len(cs)
+                if filled and cur != val:
+                    plan["overwrite"] += 1
+                plan["rows"].setdefault(row.unique_id, []).append((idx, kind))
+        return None, plan
+
+    @classmethod
+    def pipe_diameters_brief(cls, area_name=None, main_mm=None, branch_mm=None,
+                             only_empty=True, **extra):
+        """승인 되읽기 문구 — 서버가 풀어낸 영역과 건수. 실패해도 승인 흐름은 깨지 않는다."""
+        try:
+            err, p = cls._pipe_diameter_plan(area_name, main_mm, branch_mm,
+                                             cls._as_bool(only_empty, True))
+        except Exception:                                   # noqa: BLE001
+            logger.debug('pipe diameters brief failed', exc_info=True)
+            return ''
+        if err:
+            return ' (%s)' % (err.get('error') or err.get('message') or 'cannot resolve')
+        parts = []
+        if p['main_mm'] is not None:
+            parts.append('main %d pipes (%.0f m horizontal) -> %s mm' % (p['main'], p['main_m'], p['main_mm']))
+        if p['branch_mm'] is not None:
+            parts.append('branch %d pipes (%.0f m horizontal) -> %s mm' % (p['branch'], p['branch_m'], p['branch_mm']))
+        parts.append('overwrites %d existing values' % p['overwrite'])
+        if p['kept_filled']:
+            parts.append('keeps %d already set' % p['kept_filled'])
+        parts.append('skips %d drip lines' % p['drip_excluded'])
+        return " [%s: %s]" % (p['area'], '; '.join(parts))
+
+    @staticmethod
+    def _as_bool(v, default=True):
+        if v is None or v == '':
+            return default
+        if isinstance(v, str):
+            return v.strip().lower() not in ('false', '0', 'no', 'off')
+        return bool(v)
+
+    @classmethod
+    def set_pipe_diameters(cls, area_name=None, main_mm=None, branch_mm=None,
+                           only_empty=True, **extra):
+        """Set diameter_mm on the main/branch pipes of a site/zone (drip lines skipped)."""
+        import copy as _copy
+        from aot.databases.models import GeoShape
+        from aot.aot_flask.access import write_scope
+        if not area_name:
+            area_name = extra.get('name') or extra.get('target_name') or extra.get('zone_name')
+        only_empty = cls._as_bool(only_empty, True)
+        err, plan = cls._pipe_diameter_plan(area_name, main_mm, branch_mm, only_empty)
+        if err:
+            return err
+        try:
+            db.session.expire_all()           # 쓰기 직전에 다시 읽는다(웹 저장과의 간격 최소화)
+            err, plan = cls._pipe_diameter_plan(area_name, main_mm, branch_mm, only_empty)
+            if err:
+                return err
+            changed = 0
+            for uid, items in plan["rows"].items():
+                row = GeoShape.query.filter_by(unique_id=uid).first()
+                if row is None:
+                    continue
+                write_scope.enforce(row)
+                coll = _copy.deepcopy(row.feature if isinstance(row.feature, dict) else {})
+                feats = coll.get('features') if row.type == 'equipment_collection' else [coll]
+                for idx, kind in items:
+                    props = feats[idx].setdefault('properties', {})
+                    props['diameter_mm'] = plan['main_mm'] if kind == 'main' else plan['branch_mm']
+                    changed += 1
+                row.feature = coll
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            if type(e).__name__ == 'WriteScopeDenied':
+                raise
+            return {"status": "error", "error": str(e)}
+        try:
+            from aot.aot_flask.geo.geo_overlays import _drop_containment_cache
+            _drop_containment_cache()
+        except Exception:                                   # noqa: BLE001
+            pass
+        out = {"status": "success", "area": plan["area"], "pipes_set": changed,
+               "main": plan["main"], "branch": plan["branch"],
+               "overwritten": plan["overwrite"], "kept_filled": plan["kept_filled"],
+               "drip_excluded": plan["drip_excluded"]}
+        try:
+            tgt = cls._exact_area_target(plan["area"])
+            if tgt:
+                from aot.utils import water_net_link as _wnl
+                shp = GeoShape.query.filter_by(unique_id=tgt[1]).first()
+                pr = _wnl.pressure_for_area(shp.geo_id, tgt[1]) if shp else None
+                if pr:
+                    out["water"] = [
+                        {k: v for k, v in _wnl.pressure_brief(r).items()
+                         if k in ('level', 'diameter_ratio', 'missing_pipes', 'bar_min', 'bar_max')}
+                        for r in pr["circuits"]]
+        except Exception:                                   # noqa: BLE001
+            logger.debug('pipe diameters: water level readback failed', exc_info=True)
+        return out
 
     @classmethod
     def delete_geo_shape(cls, shape_id=None, **extra):
@@ -2010,6 +2366,7 @@ class SpaceToolsMixin:
         return {"shape_id": shape_id, "shape_type": stype, "status": "deleted"}
 
     @classmethod
+    @tz_scoped
     def get_crop_status(cls, facility_id=None, facility_name=None, limit=None,
                             detail=None, **extra):
         """[읽기전용] 시설별 작물과 생육단계 — 재배 조언의 전제.
@@ -2154,7 +2511,7 @@ class SpaceToolsMixin:
             farm_open_count = 0     # 시설 필터가 걸려도 농장 전체 노지 구획 수는 센다
             try:
                 from aot.databases.models import GeoMap
-                from aot.aot_flask.geo import plot_context
+                from aot.space import plot_context
                 for m in GeoMap.query.all():
                     for row in plot_context.active_plots(m.unique_id):
                         # 브리프는 어디를 팔지 고르는 지도다 — 구획 상세는
@@ -2213,8 +2570,7 @@ class SpaceToolsMixin:
                     "only that facility's plots. Open-field plots are NOT in this "
                     "response (they are not inside a facility) - this is not "
                     "'none': %d are growing elsewhere on the farm. See them with "
-                    "find.plots (target = a site or zone) or overview.crops "
-                    "without a target." % farm_open_count)
+                    "find.plots (target = a site or zone) or without a target." % farm_open_count)
                 result["open_field_plots_elsewhere"] = farm_open_count
             if open_rest:
                 result["open_field_rest"] = open_rest
@@ -2360,7 +2716,7 @@ class SpaceToolsMixin:
                         bed_pitch_cm=None, rows_per_bed=None,
                         containers=None, markers=None, with_valves=None,
                         summary=False):
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         # with_dims=False 로 못 박는다 — 아래에서 `dimensions` 키로 직접 싣기
         # 때문이다(그쪽은 with_sensors 와 무관하게 **항상** 나가야 한다).
         # 기본값에 맡기면 with_sensors=True 일 때 같은 값이 `dims` 로 한 번 더
@@ -2485,7 +2841,7 @@ class SpaceToolsMixin:
         편이 낫다(지어낸 표가 하나 더 생기는 것을 막는다).
         """
         try:
-            from aot.aot_flask.geo import program_io
+            from aot.space import program_io
             from aot.databases.models import GeoProgram
 
             want = (subject or crop or '').strip() or None
@@ -2540,7 +2896,7 @@ class SpaceToolsMixin:
     def get_program(cls, program_id=None, **extra):
         """[읽기전용] 프로그램 하나 — 단계 목록까지."""
         try:
-            from aot.aot_flask.geo import program_io
+            from aot.space import program_io
             from aot.databases.models import GeoProgram
 
             if not program_id:
@@ -2592,7 +2948,7 @@ class SpaceToolsMixin:
         만들기 전에 `list_programs` 로 같은 작물의 프로그램이 있는지 먼저 볼 것.
         """
         try:
-            from aot.aot_flask.geo import program_io
+            from aot.space import program_io
 
             if not (source_note or '').strip():
                 return {"status": "error",
@@ -2636,7 +2992,7 @@ class SpaceToolsMixin:
         있다(`program_io.update_program` 참조).
         """
         try:
-            from aot.aot_flask.geo import program_io
+            from aot.space import program_io
 
             if not program_id:
                 return {"status": "error", "message": "program_id is required"}
@@ -2683,7 +3039,7 @@ class SpaceToolsMixin:
         다시 시도한다.
         """
         try:
-            from aot.aot_flask.geo import program_io
+            from aot.space import program_io
 
             if not program_id:
                 return {"status": "error", "message": "program_id is required"}
@@ -2749,7 +3105,7 @@ class SpaceToolsMixin:
             from aot.databases.models import GeoPlot
             from aot.tools.data_tools import crop_compact as _cc
             _compact = _cc.wants_compact(detail) and not with_sensors
-            from aot.aot_flask.geo import plot_context
+            from aot.space import plot_context
 
             as_of = None
             if on:
@@ -2785,7 +3141,7 @@ class SpaceToolsMixin:
             # 지도 단위 사전 로드. 구획마다 컨테이너·마커를 다시 읽으면 구획
             # 수만큼 전량 스캔이 반복된다 — 센서를 넣기 전부터 있던 N+1 이라,
             # 여기서 캐시하지 않고 with_sensors 만 열면 오히려 더 나빠진다.
-            from aot.aot_flask.geo import device_membership as _dm
+            from aot.space import device_membership as _dm
             _containers, _markers = {}, {}
 
             def _cached(m_uuid):
@@ -2984,7 +3340,8 @@ class SpaceToolsMixin:
                      plant_spacing_cm=None, edge_margin_cm=None,
                      bed_pitch_cm=None, rows_per_bed=None,
                      recent_days=None, plot_ids=None, detail=None,
-                     fields=None, brief=False, **extra):
+                     fields=None, brief=False, device_ids=None,
+                     duration_seconds=None, duration_minutes=None, **extra):
         """[읽기전용] 구획 하나의 상세 — 작물·기간·면적·치수 + 참조 센서 출처.
 
         `brief`·`fields` 는 도구 스키마에 없는 처리기 인자다 — 도메인 표면(detail.plot)만 쓴다(2026-10-31).
@@ -3041,7 +3398,13 @@ class SpaceToolsMixin:
 
         `detail='water_delivered'`: 최근 `recent_days`(기본 7)일 동안 구획이 받은 물 — 일지·[현황]과 같은 숫자
         (`water_net_link.delivered_summary`). 닫힌 날은 저장값, 오늘은 읽을 때 계산한 값이다.
+
+        `detail='water_estimate'`: 켜기 전 사전 계산(`utils/water_estimate.py`). `device_ids`(켤 Output)를 지금부터
+        `duration_seconds`/`duration_minutes` 켜면 구획이 받을 물. 구획을 안 주면 Output 이 물을 대는 구획을 위치로 푼다.
+        읽기 전용이다 — 장치를 움직이지 않는다. 계산이 실패하면 오류로 답한다(설계값으로 내려앉지 않는다).
         """
+        if detail == 'water_estimate':
+            return cls._water_estimate(plot_id, plot_ids, device_ids, duration_seconds, duration_minutes)
         tokens, err = cls._targets_arg(plot_id, plot_ids, 'plot_id')
         if err:
             return err
@@ -3084,6 +3447,53 @@ class SpaceToolsMixin:
             return dict({"status": "success"}, **water_net_link.delivered_summary(row, days))
         except Exception as e:
             logger.exception("Error in get_plot water_delivered")
+            return {"status": "error", "message": str(e)}
+
+    @classmethod
+    def _water_estimate(cls, plot_id, plot_ids, device_ids, duration_seconds, duration_minutes):
+        """`get_plot(detail='water_estimate')` — 켜기 전 물량 사전 계산(읽기 전용)."""
+        from aot.utils import water_estimate as WE
+        try:
+            seconds = float(duration_seconds or 0) or float(duration_minutes or 0) * 60
+            if seconds <= 0:
+                return {"status": "error", "reason_code": "missing_argument",
+                        "message": "A run time is needed: duration_minutes (e.g. 10) or duration_seconds."}
+            outs, ids = [], []
+            if device_ids or not (plot_id or plot_ids):
+                tokens, err = cls._targets_arg(None, device_ids, 'device_ids')
+                if err:
+                    return err
+                for token in tokens:
+                    row, _kind, derr = cls._read_device(token, kinds=('output',))
+                    if derr:
+                        return derr
+                    outs.append(row)
+                ids = [o.unique_id for o in outs]
+            if plot_id or plot_ids:
+                tokens, err = cls._targets_arg(plot_id, plot_ids, 'plot_id')
+                if err:
+                    return err
+                pairs = []
+                for token in tokens:
+                    plot, perr = cls._read_plot(token)
+                    if perr:
+                        return perr
+                    own = ids or list(WE.watering_outputs(plot))
+                    if not ids and len(own) > 1:
+                        return {"status": "error", "plot": plot.unique_id,
+                                "message": "Several outputs water this plot; name the ones to run in device_ids.",
+                                "outputs": own[:8]}
+                    pairs.append((plot, own))
+            else:
+                pairs = WE.plots_for_outputs(ids)
+                if not pairs:
+                    return {"status": "error", "message": "No plot is watered by these outputs."}
+            results = [WE.estimate_or_error(plot, own, seconds) for plot, own in pairs]
+            return results[0] if len(results) == 1 else {"count": len(results), "results": results}
+        except WE.EstimateError as e:
+            return {"status": "error", "message": str(e)}
+        except Exception as e:
+            logger.exception("Error in get_plot water_estimate")
             return {"status": "error", "message": str(e)}
 
     @classmethod
@@ -3675,7 +4085,7 @@ class SpaceToolsMixin:
                     return None
                 return rows[-1][0], rows[-1][1]
 
-            from aot.utils.device_tz import location_iso
+            from aot.utils.timekit import iso_at
             _tzc = {}
             found = {}
             for dev, unit, channel, meas, disp_meas in picks:
@@ -3690,7 +4100,7 @@ class SpaceToolsMixin:
                 # 장치 위치 시각 ISO. 예전엔 str(UTC datetime) 이라 '…+00:00'
                 # 에 공백 구분이었고, 같은 응답의 다른 날짜(구획 현지)와 기준이
                 # 갈렸다(2026-10-09).
-                cand = {'value': value, 'at': location_iso(at, dev, _tzc),
+                cand = {'value': value, 'at': iso_at(at, dev, _tzc),
                         'sensor': names.get(dev, dev),
                         '_rank': rank.get(dev, 99)}
                 if label:
@@ -3875,7 +4285,7 @@ class SpaceToolsMixin:
         """
         try:
             from aot.databases.models import GeoPlot, GeoShape
-            from aot.aot_flask.geo import plot_context
+            from aot.space import plot_context
 
             geom, geo_id = None, map_id
             if plot_id:
@@ -3886,7 +4296,10 @@ class SpaceToolsMixin:
             elif zone_id:
                 z = GeoShape.query.filter_by(unique_id=zone_id).first()
                 if z is None:
-                    return {"error": f"zone not found: {zone_id}"}
+                    # 이름도 받는다 — get_energy_report·get_anomalies 는 받는데 여기만 id 뿐이었다(2026-11-03).
+                    z, _perr = cls._read_place(zone_id)
+                    if z is None:
+                        return _perr or {"error": f"zone not found: {zone_id}"}
                 geom, geo_id = plot_context.geometry_of(z), z.geo_id
             else:
                 return {"error": "plot_id or zone_id is required"}
@@ -3936,10 +4349,12 @@ class SpaceToolsMixin:
             except (TypeError, ValueError):
                 q = q.limit(50)
             rows = q.all()
+            _tzc = {}
             items = [{
                 "journal_id": r.unique_id,
                 "title": r.title,
-                "created_at": r.created_at.isoformat() if getattr(r, 'created_at', None) else None,
+                # DB naive UTC — 일지 대상(구획·구역·대지)의 시계로 오프셋을 붙인다(못 풀면 농장).
+                "created_at": iso_at(r.created_at, r.target_id, _tzc) if getattr(r, 'created_at', None) else None,
                 "period_start": r.period_start.isoformat() if r.period_start else None,
                 "period_end": r.period_end.isoformat() if r.period_end else None,
                 "status": r.status,
@@ -4458,7 +4873,8 @@ class SpaceToolsMixin:
         따라온다(`list_programs` 로 `kind='vegetation'` 인 것을 먼저 고른다).
         """
         try:
-            from aot.aot_flask.geo import plot_io, plot_context
+            from aot.aot_flask.geo import plot_io
+            from aot.space import plot_context
             from aot.databases.models import GeoShape
 
             if geometry and zone_id:
@@ -4834,7 +5250,7 @@ class SpaceToolsMixin:
             return started_on, None
         try:
             from aot.databases.models import GeoPlot
-            from aot.aot_flask.geo import plot_context
+            from aot.space import plot_context
             row = GeoPlot.query.filter_by(unique_id=plot_id).first()
             if row is None or not row.program_uuid:
                 return None, None

@@ -16,7 +16,7 @@ DB·InfluxDB 를 타지 않는 순수 함수만 본다(라이브 DB 대상 테�
 import pytest
 
 from aot.aot_flask.geo.device_link_status import battery_percent, link_level
-from aot.aot_flask.geo.facility_sensors import META_CHANNEL_KEYS, channel_label_meta
+from aot.space.facility_sensors import META_CHANNEL_KEYS, channel_label_meta
 
 
 # ── 배터리 환산 ──────────────────────────────────────────────────────────────

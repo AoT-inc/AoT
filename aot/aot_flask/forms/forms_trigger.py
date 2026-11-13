@@ -30,13 +30,6 @@ class Trigger(FlaskForm):
 
     # Sunrise/Sunset
     rise_or_set = StringField(lazy_gettext('Sun Event'))
-    latitude = DecimalField(lazy_gettext('Latitude (Decimal)'), widget=NumberInput(step='any'))
-    longitude = DecimalField(lazy_gettext('Longitude (Decimal)'), widget=NumberInput(step='any'))
-    location_source = SelectField(
-        lazy_gettext('Location Source'),
-        choices=[('manual', lazy_gettext('Manual')), ('device', lazy_gettext('Device')), ('remote', lazy_gettext('Remote'))],
-        default='manual'
-    )
     zenith = DecimalField(lazy_gettext('Zenith Angle'), widget=NumberInput(step='any'))
     date_offset_days = IntegerField(lazy_gettext('Date Offset (days)'), widget=NumberInput())
     time_offset_minutes = StringField(lazy_gettext('Time Offset (minutes)'))

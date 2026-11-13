@@ -62,6 +62,7 @@ def init_api(app):
     import aot.aot_flask.api.ai
     import aot.aot_flask.api.camera
     import aot.aot_flask.api.choices
+    import aot.aot_flask.api.consult
     import aot.aot_flask.api.controller
     import aot.aot_flask.api.daemon
     import aot.aot_flask.api.export_import

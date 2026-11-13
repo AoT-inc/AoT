@@ -121,6 +121,10 @@ A vendor-specific content type header must be included to determine the API vers
 
 Visit https://{RASPBERRY_PI_IP_ADDRESS}/api to view the current API endpoint documentation for your AoT installation.
 
+**Change (device location fields):** the Input, Output, PID and Trigger responses (the `inputs`, `outputs`, `pid` and `settings/*` endpoints) no longer contain `map_config_id`, `location_source` or `location_updated_utc`. A device's location is the result of where it is placed on the map, so use `/api/geo/device/location` or the placement queries instead of reading these fields from the device record.
+
+**Consulting (parcel lookup):** `POST /api/consult/parcel` with `{"address": "..."}` returns `{ok, feature, pnu, area_m2, centroid:[lon,lat], address_normalized}` (the parcel polygon as a WGS84 GeoJSON Feature) or `{ok:false, error}` where `error` is `invalid_address` (400), `not_found` (404), `vworld_unavailable` (503), `forbidden` (403), `unauthorized` (401) or `rate_limited` (429). It is read-only — nothing is stored — so a read-only API key may call it, and it needs no CSRF token (unlike `/api/geo/parcel/from_address`, which is blocked for API-key clients). It needs the VWorld GIS Input to be registered, and is limited to 30 requests per minute per API key (set `AOT_CONSULT_PARCEL_LIMIT`, e.g. `60/minute`, to change it); per-customer limits are the calling site's job.
+
 Documentation for the latest API version is also available in HTML format: `AoT API Documentation <https://aot-inc.github.io/AoT/aot-api.html>`__
 
 ## Daemon Control Object

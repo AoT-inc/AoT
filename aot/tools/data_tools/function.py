@@ -96,8 +96,92 @@ class FunctionToolsMixin:
             out[r.unique_id] = d
         return out
 
+    @staticmethod
+    def _facility_id_forms(fid):
+        """시설은 시설 id(GeoFacility.unique_id)와 도형 id(shape_uuid) 둘로 불린다 — 둘 다 모은다."""
+        forms = {fid}
+        try:
+            from aot.databases.models import GeoFacility
+            fac = GeoFacility.query.filter(
+                (GeoFacility.unique_id == fid) | (GeoFacility.shape_uuid == fid)).first()
+            if fac is not None:
+                forms.update((fac.unique_id, fac.shape_uuid))
+        except Exception:
+            pass
+        return forms
+
+    @staticmethod
+    def _possible_unused_copies(rows):
+        """꺼져 있고, 이름·종류·시설이 같은 다른 행이 있으며, 그 행이 켜져 있거나 설정이 똑같은 행의 id 모음.
+
+        표시용 후보일 뿐이다 — 지우거나 끄는 판단은 사용자 몫이고 서버는 아무것도 바꾸지 않는다."""
+        groups = {}
+        for r in rows:
+            try:
+                import json as _json
+                o = _json.loads(r.custom_options) if r.custom_options else {}
+            except (ValueError, TypeError):
+                o = {}
+            fid = o.get('geo_facility_id') if isinstance(o, dict) else None
+            key = (str(r.name or '').strip(), str(getattr(r, 'device', '') or ''), str(fid or ''))
+            groups.setdefault(key, []).append((r, r.custom_options or ''))
+        out = set()
+        for members in groups.values():
+            if len(members) < 2:
+                continue
+            for r, opts in members:
+                if getattr(r, 'is_activated', False):
+                    continue
+                others = [(x, ox) for x, ox in members if x is not r]
+                if any(getattr(x, 'is_activated', False) or ox == opts for x, ox in others):
+                    out.add(r.unique_id)
+        return out
+
     @classmethod
-    def get_function_list(cls, function_type=None, active_only=False, limit=None, offset=None):
+    def _coordinator_twin(cls, options, exclude_id=None):
+        """같은 시설·같은 구획 범위(bay_scope)에 이미 있는 다른 환경제어 함수 행, 없으면 None.
+
+        막는 데 쓰지 않는다 — 계획·모의로 한 시설에 방식이 다른 환경제어를 여럿 두고 시험하는 것은 사용자의 자유다.
+        알리는 데만 쓴다(`_coordinator_overlap`)."""
+        import json as _json
+        if not isinstance(options, dict):
+            return None
+        fid = str(options.get('geo_facility_id') or '').strip()
+        if not fid:
+            return None
+        bay = str(options.get('bay_scope') or '').strip()
+        forms = cls._facility_id_forms(fid)
+        try:
+            from aot.databases.models.controller import CustomController
+            rows = CustomController.query.filter_by(device='env_coordinator').all()
+        except Exception:
+            return None
+        for r in rows:
+            if exclude_id and r.unique_id == exclude_id:
+                continue
+            try:
+                o = _json.loads(r.custom_options) if r.custom_options else {}
+            except (ValueError, TypeError):
+                continue
+            if not isinstance(o, dict):
+                continue
+            if str(o.get('geo_facility_id') or '').strip() in forms \
+                    and str(o.get('bay_scope') or '').strip() == bay:
+                return r
+        return None
+
+    @staticmethod
+    def _coordinator_overlap(twin):
+        """응답에 덧붙이는 알림(막지 않는다). 둘 다 켜져 실제로 같은 구동기를 움직이게 될 때만 조심하라는 말이 의미가 있다."""
+        on = bool(getattr(twin, 'is_activated', False))
+        return {"overlaps": {"function_id": twin.unique_id, "name": twin.name, "is_activated": on},
+                "overlap_note": (
+                    "Another coordinator covers this facility and bay scope too (%s). Keeping several for planning or "
+                    "what-if tests is fine; only activate one at a time per facility and bay, because active ones "
+                    "drive the same actuators." % ("it is active" if on else "it is inactive"))}
+
+    @classmethod
+    def get_function_list(cls, function_type=None, active_only=False, limit=None, offset=None, query=None):
         """
         Returns all registered Function-type controllers with their name, type,
         activation state, and period. Trigger entries also carry trigger_type
@@ -109,6 +193,8 @@ class FunctionToolsMixin:
                               name such as 'env_coordinator'). Case-insensitive.
                               None returns all types.
         :param active_only:   If True, returns only is_activated=True entries.
+        :param query:         Part of the function name (or custom driver name),
+                              case-insensitive. None returns all.
         :returns:             {"functions": {type: [...]}, "count": int} — see
                               below for why this is grouped by type rather than
                               one flat list.
@@ -140,6 +226,14 @@ class FunctionToolsMixin:
             def _should_include(type_key):
                 return _type_filter is None or _type_filter == type_key
 
+            _q = str(query or '').strip().lower()
+
+            def _keep(r):
+                if active_only and not getattr(r, 'is_activated', False):
+                    return False
+                return not _q or _q in str(r.name or '').lower() \
+                    or _q in str(getattr(r, 'device', '') or '').lower()
+
             def _row(r, **extra_fields):
                 d = {"function_id": r.unique_id, "name": r.name,
                      "is_activated": bool(getattr(r, 'is_activated', False))}
@@ -154,36 +248,34 @@ class FunctionToolsMixin:
             groups = {}
 
             if _should_include('conditional'):
-                rows = [r for r in Conditional.query.all()
-                        if not active_only or getattr(r, 'is_activated', False)]
+                rows = [r for r in Conditional.query.all() if _keep(r)]
                 if rows:
                     groups['conditional'] = [_row(r) for r in rows]
 
             if _should_include('trigger'):
-                rows = [r for r in Trigger.query.all()
-                        if not active_only or getattr(r, 'is_activated', False)]
+                rows = [r for r in Trigger.query.all() if _keep(r)]
                 if rows:
                     groups['trigger'] = [
                         _row(r, trigger_type=getattr(r, 'trigger_type', None))
                         for r in rows]
 
             if _should_include('pid'):
-                rows = [r for r in PID.query.all()
-                        if not active_only or getattr(r, 'is_activated', False)]
+                rows = [r for r in PID.query.all() if _keep(r)]
                 if rows:
                     groups['pid'] = [_row(r) for r in rows]
 
             if _should_include('custom'):
-                rows = [r for r in CustomController.query.all()
-                        if not active_only or getattr(r, 'is_activated', False)]
+                rows = [r for r in CustomController.query.all() if _keep(r)]
                 if _driver:
                     rows = [r for r in rows
                             if str(getattr(r, 'device', '') or '').lower() == _driver]
                 if rows:
                     fac_names = cls._facility_names_for(rows)
+                    copies = cls._possible_unused_copies(CustomController.query.all())
                     groups['custom'] = [
                         _row(r, device=getattr(r, 'device', None),
-                             **fac_names.get(r.unique_id, {}))
+                             **fac_names.get(r.unique_id, {}),
+                             **({"inactive_sibling": True} if r.unique_id in copies else {}))
                         for r in rows]
 
             count = sum(len(v) for v in groups.values())
@@ -209,7 +301,8 @@ class FunctionToolsMixin:
                     out["did_you_mean"] = close[0]
             # 이름이 같은 함수(예: Env Coordinator 둘)는 이름으로 구분되지
             # 않는다 — 시설 표시가 구분 수단임을 말해 준다.
-            names = [f["name"] for rows in groups.values() for f in rows]
+            flat_rows = [f for rows in groups.values() for f in rows]
+            names = [f["name"] for f in flat_rows]
             dups = sorted({n for n in names if names.count(n) > 1})
             if dups:
                 out["duplicate_names"] = dups
@@ -217,6 +310,20 @@ class FunctionToolsMixin:
                     "Some functions share a name (see duplicate_names). Tell "
                     "them apart by facility_name/facility_id (environment "
                     "coordinators) or function_id — never by name alone.")
+                # 이름도 시설도 같은 쌍(예: 한 시설의 환경제어 둘, 하나만 켜짐)은 시설로도 못 가른다 — 켜짐 여부와 아이디가 구분 수단이다.
+                same = {(f["name"], f.get("facility_id")) for f in flat_rows
+                        if f.get("facility_id")
+                        and sum(1 for g in flat_rows
+                                if g["name"] == f["name"] and g.get("facility_id") == f["facility_id"]) > 1}
+                if same:
+                    out["note"] += (
+                        " Some share the same facility too (two coordinators for one facility): "
+                        "tell them apart by is_activated and function_id; ask the user before "
+                        "touching either.")
+                if any(f.get("inactive_sibling") for f in flat_rows):
+                    out["note"] += (" inactive_sibling marks an inactive function with the same name, kind and facility as another "
+                                    "(a what-if variant or a leftover copy) - a hint only; never remove or change one "
+                                    "without asking the user.")
             return out
         except Exception as e:
             logger.exception("Error in get_function_list")
@@ -235,8 +342,8 @@ class FunctionToolsMixin:
         read-only — no daemon RPC, so it answers the same from any process.
         """
         try:
-            from aot.controllers.controller_trigger_sequence import SequenceTriggerController
-            status = SequenceTriggerController.get_static_status(trig.unique_id)
+            from aot.utils.sequence_status import static_status
+            status = static_status(trig.unique_id)
         except Exception as exc:
             logger.warning(f"[_sequence_detail] step read failed: {exc}")
             return {"steps_error": str(exc)}
@@ -656,6 +763,13 @@ class FunctionToolsMixin:
             from aot.aot_flask.access import write_scope
             write_scope.enforce(list(dict.fromkeys(_scope._uuid_values(params))))
 
+        # 같은 시설·범위의 환경제어가 이미 있어도 만든다 — 계획·모의로 여럿 두는 것은 사용자의 자유다. 응답에 알리기만 한다.
+        _overlap = None
+        if function_type == 'env_coordinator' and isinstance(params, dict):
+            _twin = cls._coordinator_twin(params)
+            if _twin is not None:
+                _overlap = cls._coordinator_overlap(_twin)
+
         # Minimal form shim — function_add only reads .function_type.data
         class _FakeForm:
             class _Field:
@@ -761,6 +875,8 @@ class FunctionToolsMixin:
             result["note"] = (f"Created, but {sorted(set(unapplied))} could not be applied "
                               f"to a '{function_type}' function — set them via the function "
                               "editor / modify_function_options, then activate.")
+        if _overlap:
+            result.update(_overlap)
         return result
 
     @classmethod
@@ -835,6 +951,12 @@ class FunctionToolsMixin:
             existing = {}
 
         existing.update(params)
+        _overlap = None
+        if getattr(func, 'device', None) == 'env_coordinator' \
+                and ('geo_facility_id' in params or 'bay_scope' in params):
+            _twin = cls._coordinator_twin(existing, exclude_id=function_id)
+            if _twin is not None:
+                _overlap = cls._coordinator_overlap(_twin)
         func.custom_options = _json.dumps(existing)
         db.session.commit()
 
@@ -861,6 +983,8 @@ class FunctionToolsMixin:
         result = {"function_id": function_id, "status": "modified",
                   "changed": list(params.keys()),
                   "activated": was_activated, "reloaded": reloaded}
+        if _overlap:
+            result.update(_overlap)
         if not was_activated:
             result["note"] = ("Saved while deactivated — it stays deactivated. "
                               "Activate with activate_function (requires approval).")

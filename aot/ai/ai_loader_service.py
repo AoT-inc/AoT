@@ -17,7 +17,7 @@ import threading
 import yaml
 from datetime import timedelta
 from typing import Any, Dict, Optional
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 

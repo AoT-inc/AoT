@@ -416,7 +416,7 @@ class AppContextTest(unittest.TestCase):
                 finally:
                     state['inside'] = False
 
-        def fake_plan(tool, args, ops=None, user=None):
+        def fake_plan(tool, args, ops=None, user=None, session=None):
             state['seen'] = state['inside']
             return 'refuse', []
         with mock.patch.object(dispatch, 'plan', fake_plan):
@@ -440,6 +440,34 @@ class VocabularyRuleTest(unittest.TestCase):
             v = dispatch.plan('measure', {'op': 'latest', 'query': '3-1'}, ops=_ops())
         self.assertEqual('call', v[0], v)
         self.assertEqual(['3-1'], seen)
+
+    def _functions(self, args, resolve):
+        from aot.tools.domain import contract, dispatch
+        from aot.tools.domain.registry_data import OPS
+        contract._STATE.update(ok=True, problems=[])
+        self.addCleanup(contract._STATE.clear)
+        cat = {'get_function_list': {'inputSchema': {'type': 'object', 'properties': {
+            k: {'type': 'string'} for k in ('query', 'function_type', 'active_only', 'limit', 'offset')}}}}
+        ops = [o for o in OPS if (o.tool, o.op) == ('find', 'functions')]
+        with mock.patch('aot.tools.domain.contract.catalog', lambda: cat), \
+                mock.patch.object(dispatch.targets, 'resolve', resolve), \
+                mock.patch.object(dispatch, '_place_keys', lambda r: {'fac-3'}), \
+                mock.patch.object(dispatch, '_ancestors', lambda t: []):
+            return dispatch.plan('find', dict(args, op='functions'), ops=ops)
+
+    def test_a_place_given_as_query_filters_a_place_list(self):
+        # 실사용 26-11-07~09: find.functions 에 query='3포장' → "does not take query" 거절.
+        res = lambda ref, **kw: ('ok', {'kind': 'facility', 'id': 'f', 'name': ref, 'path': ref})
+        v = self._functions({'query': '3포장'}, res)
+        self.assertEqual(('filter', 'get_function_list'), v[:2], v)
+        self.assertNotIn('query', v[2])
+        self.assertEqual('facility_id', v[3]['place_key'])
+
+    def test_a_word_that_is_no_place_is_a_name_part(self):
+        res = lambda ref, **kw: ('none', {'error': 'Nothing named'})
+        v = self._functions({'query': 'VPD'}, res)
+        self.assertEqual(('call', 'get_function_list'), v[:2], v)
+        self.assertEqual('VPD', v[2]['query'])
 
 
 class VocabTest(unittest.TestCase):
@@ -566,7 +594,29 @@ DOMAIN_CEILING = {'operations': 10000, 'configuration': 15000}
 # claude.ai 커넥터는 서버 안내문을 모델에 주지 않아 첫 한마디가 영어로 나왔다 — 호출 전에 닿는 곳은 도구 설명뿐.
 # 2026-10-28: +117 · +114 — weather.forecast 의 `focus`(enum)와 screen 의 `screen` 을 스키마에 올렸다. 둘 다 `use`·extra_args 에만 있어 AI 가
 # 스키마에 없는 인자를 넣지 않던 것이 지도 시간이 안 옮겨진 원인 중 하나였다(10-27 대화 기록). 상한 안(상한은 올리지 않았다).
-DOMAIN_MEASURED = {'operations': 9183, 'configuration': 14756}
+# 2026-11-03 재설계 PR 1: `_show_on_screen` 을 measure·detail 스키마에 올렸다(+82 · +82, 사고가 난 읽기 두 도구) 그리고
+# 같은 PR 에서 긴 `use` 줄 11개를 줄여 상쇄 → 9,196 · 14,777(측정값; 직전 origin/main 9,202 · 14,801 — S1 점검 병합 뒤).
+# 2026-11-03 재설계 PR 2: 공통 어휘 `text title duration state offset samples` 를 VOCAB_SCHEMA 에 올리고 op 별로 흩어져 있던
+# 본문·길이 인자(note·body·content·message·advice·guidance, duration_seconds·minutes, active·enabled)를 그 한 벌로 합쳤다
+# → 9,001 · 14,478(직전 9,196 · 14,777). 옛 이름은 `renames` 별칭이 받아 스키마 토큰이 0이다.
+# 2026-11-03 재설계 PR 3: 쉬운 합치기 — summary·crops·active_functions·device_location·distance·device_list·maps·journal·
+# input_activate+gis_input_activate 를 옆 op 로(옛 이름은 별칭) → 8,772 · 14,122(직전 9,001 · 14,478).
+# 2026-11-03 재설계 PR 4: 위치 조회(find.nearest·address)와 공지 고치기·지우기(record.notice_edit·remove.notice_delete)를 도메인 운영으로
+# 올렸다 → 운영 9,011(+239, PR 3 의 −229 와 거의 상쇄해 PR 2 의 9,001 근처) · 설정 14,136(+14, address 의 VWorld 안내).
+# 2026-11-03 재설계 PR 5(노트): record.note_add·note_edit·note_tier → record.note 한 op, remove.note_delete 추가, records.notes 가 노트 id·숨긴
+# 노트를 읽음 → 설정 14,034(-102) · 운영 8,999(-12; 새 op 줄을 다른 설명 줄 다듬기로 상쇄). 옛 카탈로그는 delete_note(+176)를 효과 없는
+# set_document_tier(-236)로 상쇄해 43,296 → 43,250.
+# 2026-11-03 재설계 PR 6(안쪽 선택 훅 Op.pick_by_arg): function_on·off → function_set(state), schedule_add_batch → schedule_add(entries),
+# cultivate.stage_* 다섯 → stage(action) → 운영 8,904(-95) · 설정 13,732(-302).
+# 2026-11-03 재설계 PR 7(종류별 합치기): remove.*_delete 14 → remove.delete(kind), configure.*_edit 6 → configure.edit(kind)
+# → 운영 8,879(-25) · 설정 12,881(-851).
+# 2026-11-03 재설계 PR 8(출처 일반화): records.smartfarmkorea 삭제, configure.library_source_configure(전용 인자 15개) → configure.library_source
+# (params 한 객체, api_key 없음) → 설정 12,786(-95) · 운영 8,877(-2; data_source 줄이 늘어난 만큼 다른 설명 줄 다듬기). 옛 카탈로그 43,250 → 43,182.
+# 2026-11-03 S4: 응답 줄이기(fields·limit 낱말은 기존 것 재사용)·날짜 범위는 period·시각 창은 window_*(start/end 설명이 필수 칸에서 빠짐)
+# → 설정 12,730(-56) · 운영 8,830(-47)(measure 3건 손질로 늘어난 설명은 다른 use 줄 다듬기로 상쇄). 옛 카탈로그는 안쪽 도구를 안 건드려 그대로.
+# 2026-11-09 claude.ai 점검: 설명이 말하는 인자(weather·find 의 detail, screen.card 의 card·attach)를 스키마에 올리고
+# a|b|c 나열 인자를 enum 으로 — 같은 뜻을 되풀이하던 use 줄 꼬리(detail=true …, card=<id> …)는 뺐다 → 운영 9,025 · 설정 12,757.
+DOMAIN_MEASURED = {'operations': 9025, 'configuration': 12757}
 DOMAIN_SLACK = 1.03
 
 
@@ -576,9 +626,63 @@ def _domain_tokens(prof):
     from aot.tools.domain import surface
     from aot.tools.domain.registry_data import OPS
     p = te._effective_profile(prof)
-    ent = surface.entries(OPS, lambda n: R.tool_in_profile(n, p),
+    ent = surface.entries(OPS, lambda n: R.tool_in_profile(n, p, via_domain=True),
                           set(R.approval_required_tools()))
     return ent, te._estimate_tokens(json.dumps(te.model_view(ent), ensure_ascii=False))
+
+
+class DomainSurfaceArgsMentionedAreInSchemaTest(unittest.TestCase):
+    """설명이 `x=...` 로 부르라고 한 인자는 그 도구 스키마에 있어야 한다 — 선택 인자를 목록에서 뺀(help 로 넘긴)
+    뒤 설명에 `detail=true`·`card=<id>` 가 남아, claude.ai 가 "없는 인자를 쓰라고 한다" 고 읽었다(2026-11-09 점검 8번)."""
+
+    def test_every_arg_a_description_names_is_in_the_schema(self):
+        import re
+        for prof in DOMAIN_CEILING:
+            ent, _ = _domain_tokens(prof)
+            for e in ent:
+                props = e['inputSchema']['properties']
+                texts = [e['description']] + [v.get('description', '') for v in props.values()]
+                if e['name'] == 'help':
+                    continue
+                for t in texts:
+                    t = re.sub(r"help\(target='[^']*'\)", '', t)      # 'More args: help(...)' 는 help 의 인자
+                    for word in re.findall(r'(?<![\w.])([a-z_]+)=', t):
+                        self.assertIn(word, props, '%s/%s: 설명이 %s= 를 말하는데 스키마에 없다' % (
+                            prof, e['name'], word))
+                    for tool, arg in re.findall(r'\b([a-z_]+)\.[a-z_]+\(([a-z_]+)=', t):
+                        other = next((x for x in ent if x['name'] == tool), None)
+                        if other is not None:
+                            self.assertIn(arg, other['inputSchema']['properties'],
+                                          '%s: %s 의 %s= 는 없는 인자다' % (e['name'], tool, arg))
+
+    def test_detail_takes_a_list_so_the_header_does_not_say_one(self):
+        ent, _ = _domain_tokens('configuration')
+        d = next(e for e in ent if e['name'] == 'detail')
+        self.assertNotIn('ONE ', d['description'])
+        self.assertIn('a list for several', d['inputSchema']['properties']['target']['description'])
+
+    def test_word_lists_are_enums(self):
+        ent, _ = _domain_tokens('configuration')
+        screen = next(e for e in ent if e['name'] == 'screen')['inputSchema']['properties']
+        self.assertIn('map_control', screen['action']['enum'])
+        self.assertNotIn('not the action', json.dumps(screen))
+
+
+class HelpSpeaksThisSurfaceTest(unittest.TestCase):
+    """help 는 안쪽 도구 설명을 보여 주되, 그 안의 안쪽 인자 이름·다른 op 몫의 값은 이 표면 것으로(2026-11-09 재점검)."""
+
+    def test_inner_arg_names_in_help_are_this_surfaces_names(self):
+        from aot.tools.domain.dispatch import help_card
+        day = help_card('control.sequence_step')['other_args']['day']['description']
+        self.assertNotIn('duration_seconds', day)
+        self.assertNotIn('enabled', day)
+        self.assertIn('state', day)
+
+    def test_screen_act_action_lists_only_its_own_values(self):
+        from aot.tools.domain.dispatch import help_card
+        card = help_card('screen.act')
+        self.assertNotIn('post', card['other_args']['action']['enum'])
+        self.assertNotIn('post', card['action_target_pairs'])
 
 
 class DomainSurfaceBudgetTest(unittest.TestCase):
@@ -652,9 +756,10 @@ class FirstContactTest(unittest.TestCase):
     def test_place_crops_read_the_plots_of_that_place(self):
         from aot.tools.domain.registry import find_op
         from aot.tools.domain.registry_data import OPS
-        o = find_op(OPS, 'overview', 'crops')
+        o = find_op(OPS, 'find', 'plots')               # overview.crops 는 find.plots 로 합쳐졌다(재설계 PR 3)
         for kind in ('map', 'site', 'zone'):
             self.assertEqual('list_plots', o.inner[kind], kind)
+        self.assertEqual('get_crop_status', o.inner['facility'])
 
     def test_note_photo_filename_is_in_the_schema(self):
         from aot.tools.domain import surface

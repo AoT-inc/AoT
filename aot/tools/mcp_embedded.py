@@ -19,6 +19,7 @@ import secrets
 import time
 from datetime import datetime, timedelta
 from urllib.parse import urlsplit
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +60,6 @@ class OAuthError(Exception):
 
 
 # ── 시간·해시·무작위 ────────────────────────────────────────────────────────
-
-def _now():
-    return datetime.utcnow()
-
 
 def sha256_hex(value):
     return hashlib.sha256(value.encode('utf-8')).hexdigest()
@@ -250,7 +247,7 @@ def register_client(payload, allowlist=None):
     if OAuthClient.query.count() >= MAX_CLIENTS:
         raise OAuthError('temporarily_unavailable', 'Too many registered clients. Try again later.', 503)
     client_id = secrets.token_urlsafe(24)
-    now = _now()
+    now = naive_utc(utc_now())
     db.session.add(OAuthClient(client_id=client_id, client_name=name, redirect_uris=json.dumps(uris),
                                created_at=now))
     db.session.commit()
@@ -284,7 +281,7 @@ def prune():
     from aot.aot_flask.extensions import db
     from aot.databases.models import OAuthClient, OAuthCode, OAuthGrant
 
-    now = _now()
+    now = naive_utc(utc_now())
     OAuthCode.query.filter(OAuthCode.expires_at < now - timedelta(days=1)).delete(synchronize_session=False)
     old = now - timedelta(days=GRANT_KEEP_DAYS)
     OAuthGrant.query.filter(
@@ -364,7 +361,7 @@ def create_code(req, user, scopes):
     db.session.add(OAuthCode(
         code_hash=sha256_hex(raw), client_id=req.client.client_id, user_id=user.id, resource=req.resource,
         scope=' '.join(scopes), code_challenge=req.code_challenge, redirect_uri=req.redirect_uri,
-        expires_at=_now() + timedelta(seconds=CODE_SECONDS)))
+        expires_at=naive_utc(utc_now()) + timedelta(seconds=CODE_SECONDS)))
     db.session.commit()
     return raw
 
@@ -419,7 +416,7 @@ def exchange_code(*, issuer, public_url, client_id, code, redirect_uri, code_ver
         if row.gid:
             revoke_grant(row.gid, 'code_reuse')
         raise OAuthError('invalid_grant', 'The authorization code was already used.')
-    if row.expires_at < _now():
+    if row.expires_at < naive_utc(utc_now()):
         raise OAuthError('invalid_grant', 'The authorization code expired.')
     if redirect_uri != row.redirect_uri:
         raise OAuthError('invalid_grant', 'redirect_uri does not match the authorization request.')
@@ -436,11 +433,11 @@ def exchange_code(*, issuer, public_url, client_id, code, redirect_uri, code_ver
     grant = OAuthGrant(
         gid=secrets.token_urlsafe(16), user_id=row.user_id, client_id=client.client_id,
         client_name=client.client_name or '', resource=row.resource, scope=row.scope,
-        refresh_hash=sha256_hex(refresh_raw), refresh_expires_at=_now() + timedelta(days=REFRESH_DAYS),
-        status=OAuthGrant.ACTIVE, created_at=_now(), last_used_at=_now())
+        refresh_hash=sha256_hex(refresh_raw), refresh_expires_at=naive_utc(utc_now()) + timedelta(days=REFRESH_DAYS),
+        status=OAuthGrant.ACTIVE, created_at=naive_utc(utc_now()), last_used_at=naive_utc(utc_now()))
     db.session.add(grant)
     row.gid = grant.gid
-    client.last_used_at = _now()
+    client.last_used_at = naive_utc(utc_now())
     db.session.commit()
     return _token_response(issuer, grant, row.scope.split(), refresh_raw), grant
 
@@ -464,7 +461,7 @@ def refresh_grant(*, issuer, public_url, client_id, refresh_token, scope=None, r
     if grant.refresh_hash != digest:
         revoke_grant(grant.gid, 'refresh_reuse')
         raise OAuthError('invalid_grant', 'The refresh token was already used. The connection was closed; authorize again.')
-    if grant.refresh_expires_at < _now():
+    if grant.refresh_expires_at < naive_utc(utc_now()):
         raise OAuthError('invalid_grant', 'The refresh token expired.')
     _check_resource(resource, grant.resource)
     if grant.resource != public_url:
@@ -484,7 +481,7 @@ def refresh_grant(*, issuer, public_url, client_id, refresh_token, scope=None, r
     refresh_raw = new_secret()
     rotated = OAuthGrant.query.filter_by(id=grant.id, refresh_hash=digest, status=OAuthGrant.ACTIVE).update({
         'refresh_hash': sha256_hex(refresh_raw), 'prev_refresh_hash': digest,
-        'refresh_expires_at': _now() + timedelta(days=REFRESH_DAYS), 'last_used_at': _now()},
+        'refresh_expires_at': naive_utc(utc_now()) + timedelta(days=REFRESH_DAYS), 'last_used_at': naive_utc(utc_now())},
         synchronize_session=False)
     db.session.commit()
     if rotated != 1:
@@ -593,7 +590,7 @@ def make_verifier(issuer, resource):
                 return None
             from aot.databases.models import OAuthGrant
             grant = OAuthGrant.query.filter_by(gid=claims.gid).first()
-            if (grant is None or grant.status != OAuthGrant.ACTIVE or grant.refresh_expires_at < _now()
+            if (grant is None or grant.status != OAuthGrant.ACTIVE or grant.refresh_expires_at < naive_utc(utc_now())
                     or str(grant.user_id) != claims.sub or grant.client_id != claims.client_id
                     or grant.resource != claims.aud):
                 return None

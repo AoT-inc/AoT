@@ -22,7 +22,7 @@ Four meta-tools for working with drawers are always listed.
 
 > **Open the matching drawer before concluding something isn't possible.** Before answering "this system can't do that," or working around it with a core tool that only roughly fits, open the drawer for that purpose first. Drawer tools behave exactly like ordinary tools.
 
-**External MCP connections no longer use drawers by default:** `tools/list` returns the API key's whole tool profile (below), and the drawer tools above are not listed. Set `AOT_MCP_TOOL_TIERING=1` (or `true`/`yes`/`on`) to bring the drawer layout back (it works inside the key's profile). The in-app assistant's built-in list keeps drawers (`AOT_AI_BUILTIN_MCP_TIERING`, on by default).
+**External MCP connections no longer use drawers by default:** `tools/list` returns the API key's whole tool profile (below), and the drawer tools above are not listed. Set `AOT_MCP_TOOL_TIERING=1` (or `true`/`yes`/`on`) to bring the drawer layout back (it works inside the key's profile). The in-app assistant is not affected by these switches: it always uses the domain tools.
 
 **Names and several targets.** Read tools take names where they used to need an id — devices (`get_output_state`, `get_device_measurements`, `get_sensor_detail`, `get_sensor_reading`), zones and sites (`get_zone_sensor_summary`, `list_plots`) and growing plots (`get_plot`: name, crop or variety); a shared name returns candidates instead of a guess. `device_ids`, `loc_ids`, `plot_ids`, `target_names` and `zone_ids` take up to 10 targets in one call. Write tools report missing arguments and likely typos (`reason_code: invalid_arguments`, with the valid names) before any permission or approval step; other unknown arguments are ignored and listed in `_ignored_arguments`. Details: [AI Features Overview](ai/overview.md#tool-arguments).
 
@@ -39,13 +39,13 @@ Four meta-tools for working with drawers are always listed.
 | Space | `get_map_equipment` | Equipment/devices placed on the map | Not required |
 | Device | `get_device_list` / `search_devices` | Full list / search by name, type, or measurement kind | Not required |
 | Device | `get_device_measurements` | List of a device's measurement channels | Not required |
-| Device | `get_device_detail` | Everything about ONE device in a single call — what/where/measures/controls/communication/space/constraints, instead of chaining search_devices + get_device_measurements + get_device_location | Not required |
+| Device | `get_device_detail` | Everything about ONE device in a single call — what/where/measures/controls/communication/space/constraints, instead of chaining search_devices + get_device_measurements | Not required |
 | Device | `get_output_state` | Current state of an output (valve, pump, light). For a motor-driven vent or curtain it also gives how far open it is | Not required |
 | Measurement | `get_sensor_detail` | Sensor history (min/max/avg), including Function aggregate values | Not required |
 | Measurement | `get_zone_sensor_summary` | Latest values plus period stats for an entire zone, in one call | Not required |
 | Measurement | `get_weather` / `get_weather_forecast` | Current weather / forecast | Not required |
 | Plot | `list_plots` / `get_plot` | List of crop plots / plot detail | Not required |
-| Function | `get_function_list` / `get_active_functions_summary` | List of Functions / summary of active ones | Not required |
+| Function | `get_function_list` | List of Functions / summary of active ones | Not required |
 | Function | `activate_function` / `deactivate_function` | Turn a Function on/off | **Required** |
 | Control | `operate_device` | Immediate control of a valve, pump, light, etc. | **Required** |
 | Schedule | `search_schedule` | Look up schedules | Not required |
@@ -64,8 +64,8 @@ Four meta-tools for working with drawers are always listed.
 | `measurement` | Sensors, environment, energy | `get_anomalies`, `get_cumulative_status`, `get_device_freshness`, `get_energy_report` |
 | `function` | Functions, controllers, sequences | `get_function_detail`, `create_function`\*, `delete_function`\*, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day` |
 | `schedule` | Schedules, reservations | `schedule_device_control`\*, `edit_schedule`\*, `delete_schedule`\*, `add_schedule_batch` |
-| `record` | Notes, notices, knowledge, advice | `list_notices`, `get_note_attachment`, `search_archives`, `get_archived_document`, `knowledge_shelve`, `list_advice`, `submit_advice`, `list_lookup_sources`, `query_data_source`, `query_reference_table`, `list_library_source_types`, `smartfarmkorea_lookup`, `create_notice`\*, `modify_notice`\*, `delete_notice`\*, `archive_note`\*, `restore_note_from_archive`\*, `delete_archive`\*, `set_document_tier`\*, `configure_library_source`\* |
-| `space` | Map, zones, facilities, plots | `list_geo_maps`, `get_crop_status`, `get_device_location`, `get_map_equipment_detail`, `get_facility_capacity`, `get_address`, `distance_between`, `nearest`, `get_plot_history`, `list_plot_journals`, `get_plot_journal`, `list_programs`, `get_program`, `propose_plot_split`, 18 plot-ledger write tools\* (`create_plot`, `modify_plot`, `end_plot`, `copy_plot`, `delete_plot`, `apply_plot_split`, `confirm_plot_stage`, `reschedule_plot_stage`, `add_plot_stage`, `remove_plot_stage`, `undo_plot_stage`, `set_plot_stage_guidance`, `apply_plot_resources`, `save_plot_schedule_as_program`, `create_plot_journal`, `delete_program`, `set_device_location`, `delete_geo_shape`), `create_program`, `modify_program` |
+| `record` | Notes, notices, knowledge, advice | `list_notices`, `get_note_attachment`, `knowledge_shelve`, `list_advice`, `submit_advice`, `list_lookup_sources`, `query_data_source`, `query_reference_table`, `list_library_source_types`, `create_notice`\*, `modify_notice`\*, `delete_notice`\*, `configure_library_source`\* |
+| `space` | Map, zones, facilities, plots | `get_crop_status`, `get_map_equipment_detail`, `get_facility_capacity`, `get_address`, `find_location`, `find_favorites`, `nearest`, `get_plot_history`, `list_plot_journals`, `get_plot_journal`, `list_programs`, `get_program`, `propose_plot_split`, 18 plot-ledger write tools\* (`create_plot`, `modify_plot`, `end_plot`, `copy_plot`, `delete_plot`, `apply_plot_split`, `confirm_plot_stage`, `reschedule_plot_stage`, `add_plot_stage`, `remove_plot_stage`, `undo_plot_stage`, `set_plot_stage_guidance`, `apply_plot_resources`, `save_plot_schedule_as_program`, `create_plot_journal`, `delete_program`, `set_device_location`, `delete_geo_shape`), `create_program`, `modify_program` |
 | `definition` | Device-definition CRUD | `get_device_type_options`, `list_gis_inputs`, `create_input`\*, `modify_input`\*, `delete_input`\*, `create_output`\*, `modify_output`\*, `delete_output`\*, `modify_gis_input`\*, `delete_gis_input`\*, `activate_gis_input`\*, `create_gis_input` |
 | `system` | AI settings, status, diagnostics, screens | `get_local_time`, `get_system_update_status`, `get_storage_tier_status`, `analyze_system_failure`, `list_ai_entries`, `list_dashboards`, `list_tabs`, `list_widget_types`, `get_widget`, 8 widget/tab/agent write tools\*, `create_ai_agent` |
 
@@ -73,7 +73,7 @@ Four meta-tools for working with drawers are always listed.
 
 ### 1.3 In-App Assistant Only
 
-In addition to the above, the in-app assistant also uses `read_manual` (reads the manual by file name + section), `get_detailed_manifest`, `ask_user`, `get_sensor_reading`, `list_available_devices`, `set_output_state`, `list_unbound_slots`, `rebind_device`, and `get_function_doc` / `get_input_doc` / `get_output_doc`. When looking up the manual from the external MCP, use `knowledge_search` instead of `read_manual` — it finds the relevant section across the whole manual even when you don't know the file name.
+The in-app assistant uses the same domain tools as the external MCP, plus `read_manual` (reads the manual by file name + section), `get_detailed_manifest`, and `ask_user`. When looking up the manual from the external MCP, use `knowledge_search` instead of `read_manual` — it finds the relevant section across the whole manual even when you don't know the file name.
 
 > The single source of truth for tools is `aot/tools/tool_registry.py`. If this document and that file disagree, the file is correct.
 

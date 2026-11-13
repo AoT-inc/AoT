@@ -1,0 +1,13 @@
+{# TP-Link VIGI 카메라 조작 — 설정 측 전체판(설계 §9.3). 부품은 macros/aot_ptz.html 하나다.
+   미리보기 바로 아래에 둔다: 누르는 동안 영상이 어떻게 움직이는지 함께 보여야 한다.
+   조작 권한(역할 + 탭 스코프)이 없으면 아예 그리지 않는다. 능력이 있는 줄만 AoTPtz.applyFeatures 가 보인다. #}
+{% from 'macros/aot_ptz.html' import ptz_controller %}
+{% set uid = each_camera.unique_id %}
+{% if vigi_can_control and vigi_can_control.get(uid) %}
+<div class="aot-vigi-ptz" id="vigi_ptz_{{ uid }}" hidden>
+  <div class="aot-modal-group-title">{{ _('Camera control') }}</div>
+  <div class="aot-modal-container">
+    {{ ptz_controller(uid, 'full') }}
+  </div>
+</div>
+{% endif %}

@@ -22,7 +22,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from typing import List, Union
 
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 from aot.aot_flask.extensions import db
 
 logger = logging.getLogger(__name__)
@@ -249,7 +249,7 @@ class EKGService:
                 db.session.add(cluster)
 
         # Rate limit: count clusters created in the last hour
-        one_hour_ago = now - timedelta(hours=1)
+        one_hour_ago = now - timedelta(hours=1)  # tz-ok: 순간 비교의 창 길이
         recent_count = PatternCluster.query.filter(
             PatternCluster.created_at >= one_hour_ago
         ).count()

@@ -16,6 +16,7 @@ import logging
 from typing import Sequence
 
 from ..types import ForecastSeries, Point, Series, SeriesRef, TargetSpec, WriteResult
+from aot.utils.timekit import naive_utc, parse_utc
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,15 @@ class EmbeddedSource:
             s = Series()
             s.times, s.values = list(times), list(values)
             return s
+        from aot.functions.utils.water_net.result import M_DAY
+        if ref.unit == M_DAY:                           # 구획의 닫힌 날 물 깊이 — 값은 서버 계산이 저장한 일 합계다
+            from aot.utils.water_store import read_depths
+            s = Series()
+            try:
+                s.times, s.values = read_depths(ref.unique_id, now - window_s, now + 1.0)
+            except Exception as e:                      # noqa: BLE001 — 못 읽으면 관수 모름이다(값은 지어내지 않는다)
+                logger.warning("트윈 물 결과 읽기 실패 %s: %s", ref.unique_id, e)
+            return s
         from aot.utils.influx import read_influxdb_list
         rows = read_influxdb_list(ref.unique_id, ref.unit, ref.channel, duration_sec=int(max(1, window_s)))
         s = Series()
@@ -64,7 +74,7 @@ class EmbeddedSource:
         """대지 예보 계열 — 서버 함수 `geo.forecast_series.read` 를 앱 컨텍스트 안에서 부른다(지도 날씨·AI 와 같은 출처).
         읽기가 실패하면 쓸 수 없는 예보다(원칙 1)."""
         try:
-            from aot.aot_flask.geo import forecast_series
+            from aot.space import forecast_series
             with self._app.get().app_context():
                 data = forecast_series.read(site, t0, t1, list(variables) if variables else None)
         except Exception as e:                                          # noqa: BLE001
@@ -110,7 +120,7 @@ class EmbeddedSink:
                 self._record_runs(good)
             return res
         for p in good:
-            ts = datetime.datetime.utcfromtimestamp(p.timestamp)
+            ts = naive_utc(parse_utc(p.timestamp))
             try:
                 err = influx.write_influxdb_value(p.device_id, p.measurement, p.value, channel=p.channel,
                                                   timestamp=ts, extra_tags=dict(p.tags) or None)

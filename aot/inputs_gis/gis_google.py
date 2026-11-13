@@ -120,6 +120,24 @@ class InputModule(AbstractGisInput):
     search_capabilities = ['address', 'place']
 
 
+    reverse_capabilities = ['address']
+
+    def reverse(self, lat, lng, **kwargs):
+        self.api_key = self.get_custom_option('api_key') or ''
+        if not self.api_key:
+            return {'error': 'Google API Key Missing. Please configure it in the Input Settings.', 'code': 'no_key'}
+        try:
+            resp = requests.get("https://maps.googleapis.com/maps/api/geocode/json",
+                                params={'latlng': '%s,%s' % (lat, lng), 'key': self.api_key}, timeout=10)
+            data = resp.json()
+        except Exception as e:
+            return {'error': str(e)}
+        if data.get('status') != 'OK' or not data.get('results'):
+            return {'error': 'Google reverse geocoding: %s' % data.get('status', resp.status_code)}
+        first = data['results'][0]
+        return {'address': first.get('formatted_address', ''),
+                'type': (first.get('types') or [None])[0]}
+
     def search(self, query, search_type='address', **kwargs):
         """
         Google Maps Hybrid Search: Geocoding + Places Text Search
@@ -127,7 +145,7 @@ class InputModule(AbstractGisInput):
         self.api_key = self.get_custom_option('api_key') or ''
         
         if not self.api_key:
-            return {'error': 'Google API Key Missing. Please configure it in the Input Settings.'}
+            return {'error': 'Google API Key Missing. Please configure it in the Input Settings.', 'code': 'no_key'}
 
         limit = kwargs.get('limit', 10)
         results = []

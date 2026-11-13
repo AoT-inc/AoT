@@ -261,6 +261,64 @@
     });
   }
 
+  // 진단용: 주소에 ?modal_trace=1 을 붙이면 설정 모달을 처음 열 때 구간별 시간을 토스트·콘솔로 보여 준다.
+  function aotModalTrace($modal) {
+    if (!/[?&]modal_trace=1/.test(location.search)) return function () {};
+    var t0 = performance.now(), t1 = 0, t2 = 0, srv = null;
+    $modal.one('shown.bs.modal', function () {
+      var t3 = performance.now();
+      var msg = '설정 모달: 서버 ' + (srv === null ? '?' : srv) + 'ms / 대기·전송 ' + (t1 - t0 - (srv || 0)).toFixed(0) + 'ms / 삽입·초기화 ' + (t2 - t1).toFixed(0) +
+        'ms / 표시 ' + (t3 - t2).toFixed(0) + 'ms / 합계 ' + (t3 - t0).toFixed(0) + 'ms';
+      console.info('[modal-trace]', msg);
+      if (window.showToast) window.showToast(msg, 'info');
+    });
+    return function (phase, xhr) {
+      if (phase === 'got') {
+        t1 = performance.now();
+        var st = xhr && xhr.getResponseHeader && xhr.getResponseHeader('Server-Timing');
+        var m = st && /dur=([0-9.]+)/.exec(st);
+        srv = m ? +m[1] : null;
+      } else { t2 = performance.now(); }
+    };
+  }
+
+  // 설정 모달 조각 미리 받기: 지연 로딩(2026-09-08) 이후 카드를 처음 누를 때 서버 요청이 생겨 열림이 느려졌다.
+  // ① 버튼에 마우스를 올리거나 터치·포커스하는 순간 ② 페이지가 한가할 때 화면에 보이는 카드 순서로 받아 둔다.
+  // 받은 HTML 은 문자열로만 들고 있다가 처음 열 때 삽입한다(미리 받는 동안 DOM·스크립트는 그대로).
+  var aotOptFetch = {};
+  function aotPrefetchOptions(id) {
+    if (aotOptFetch[id]) return aotOptFetch[id];
+    if (!$('#modal_config_' + id).find('[data-aot-lazy-modal-body]').length) return null;
+    var x = $.ajax({type: "GET", url: '/input?input_type=options&input_id=' + id, dataType: 'html'});
+    x.fail(function () { delete aotOptFetch[id]; });
+    aotOptFetch[id] = x;
+    return x;
+  }
+  $(document).on('mouseover touchstart focusin', '.aot-input-settings-open', function () {
+    aotPrefetchOptions($(this).data('input-id'));
+  });
+  $(window).on('load', function () {
+    if (navigator.connection && navigator.connection.saveData) return;
+    var start = window.requestIdleCallback || function (cb) { setTimeout(cb, 1); };
+    setTimeout(function () {
+      start(function () {
+        var ids = [];
+        $('.aot-input-settings-open').each(function () {
+          var r = this.getBoundingClientRect();
+          if (r.bottom > 0 && r.top < window.innerHeight && r.width > 0) ids.push($(this).data('input-id'));
+        });
+        ids = ids.slice(0, 8);
+        (function next() {
+          var id = ids.shift();
+          if (id === undefined || document.hidden) return;
+          var x = aotPrefetchOptions(id);
+          if (!x) return next();
+          x.always(function () { setTimeout(next, 400); });
+        })();
+      });
+    }, 1500);
+  });
+
   /**
    * Open an input's settings modal, lazily fetching its body fragment on the
    * first open instead of at page load. Every card used to carry its full
@@ -280,20 +338,21 @@
       $modal.modal('show'); // Already loaded on a prior open.
       return;
     }
+    var mark = aotModalTrace($modal);
     $placeholder.html('<span class="text-muted">' + {{ _('Loading...')|tojson }} + '</span>');
-    $.ajax({
-      type: "GET",
-      url: '/input?input_type=options&input_id=' + id,
-      success: function (html) {
+    aotPrefetchOptions(id)
+      .done(function (html, _s, xhr) {
+        delete aotOptFetch[id];
+        mark('got', xhr);
         $placeholder.replaceWith(html);
         if (window.AoTModalEnhance) AoTModalEnhance.apply($('#mod_input_' + id));
+        mark('done');
         $modal.modal('show');
-      },
-      error: function () {
+      })
+      .fail(function () {
         $placeholder.html('<span class="text-danger">' + {{ _('Could not load settings') | tojson }} + '</span>');
         $modal.modal('show');
-      }
-    });
+      });
   }
   $(document).on('click', '.aot-input-settings-open', function () {
     openInputSettingsModal($(this).data('input-id'));

@@ -86,6 +86,15 @@ class GateTest(unittest.TestCase):
             got = server_card.post_for(None, tool[0], tool[1], _out(body), ctx or self._CTX, show)
         return json.loads(got[0]['text']), calls
 
+    def test_over_the_auto_budget_it_skips_without_asking_the_ai(self):
+        from aot.tools.domain import server_card
+        for _ in range(server_card.AUTO_PER_MIN):
+            server_card.take_auto_slot(self._CTX['scope_user_uuid'])
+        body, calls = self._post_for(dict(_FORECAST))
+        self.assertEqual([], calls)
+        self.assertEqual({'state': 'skipped', 'reason': 'auto_card_budget'}, body['card'])
+        self.assertNotIn('call', body.get('next') or {})
+
     def test_posts_once_and_drops_the_hint(self):
         body, calls = self._post_for(dict(_FORECAST))
         self.assertEqual(1, len(calls))

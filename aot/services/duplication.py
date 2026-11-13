@@ -231,29 +231,6 @@ def _clone_overrides(**kwargs) -> dict:
     return overrides
 
 
-def _fill_timezone_fallback(clone):
-    """좌표가 없어 `device_tz_listeners` 가 tz 를 못 채운 경우의 보정.
-
-    tz 가 비면 `get_device_tz()` 가 UTC 로 떨어져 시퀀스 창이 아홉 시간
-    어긋난다. 좌표가 있으면 리스너가 채우므로 손대지 않는다.
-    """
-    if not hasattr(clone, 'timezone'):
-        return
-    if getattr(clone, 'timezone', None) or getattr(clone, 'latitude', None):
-        return
-    try:
-        from aot.databases.models import Misc
-        misc = Misc.query.first()
-        if misc and misc.timezone:
-            # 출처는 'system' — 예전엔 'inherited' 로 적어, 도형에서 물려받은
-            # 값처럼 보였고 시스템 시간대를 바꿔도 따라가지 않았다.
-            # (docs/design/timezone-management.md §15.4)
-            from aot.utils.device_tz import apply_system_tz_fallback
-            apply_system_tz_fallback(clone, misc.timezone)
-    except Exception:
-        logger.debug("복제: timezone 폴백을 적용하지 못했습니다.", exc_info=True)
-
-
 def clone_device_entry(entry, channel_model, channel_fk: str,
                        tab_id: Optional[str] = None,
                        name: Optional[str] = None,
@@ -276,7 +253,6 @@ def clone_device_entry(entry, channel_model, channel_fk: str,
 
     if deactivate and getattr(clone, 'is_activated', False):
         clone.is_activated = False
-    _fill_timezone_fallback(clone)
     clone.save()
 
     # 측정 정의. 이것이 없으면 사본은 채널만 있고 아무것도 기록하지 않는다.
@@ -337,7 +313,6 @@ def clone_function_entry(entry,
     # 없는 모델도 있어 getattr 로 방어한다.
     if deactivate and getattr(clone, 'is_activated', False):
         clone.is_activated = False
-    _fill_timezone_fallback(clone)
 
     action_map = {}
     for action in Actions.query.filter(Actions.function_id == old_id).all():

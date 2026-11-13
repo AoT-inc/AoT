@@ -28,9 +28,10 @@
 """
 from datetime import datetime
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
+from aot.utils.timekit import naive_utc, utc_now
 
 #: 키 스코프. 값을 늘릴 수 있도록 문자열로 둔다(불리언이면 세 번째 값이 필요해질
 #: 때 컬럼을 다시 바꿔야 한다).
@@ -224,5 +225,5 @@ class UserAPIKey(CRUDMixin, db.Model):
         """이 키를 폐기한다. 이미 폐기됐으면 시각을 덮어쓰지 않는다 —
         최초 폐기 시각이 감사상 의미 있는 값이다."""
         if self.revoked_at is None:
-            self.revoked_at = datetime.utcnow()
+            self.revoked_at = naive_utc(utc_now())
         return self

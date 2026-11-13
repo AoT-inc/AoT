@@ -161,10 +161,19 @@ def _twin_feature_gate():
     return redirect(url_for('routes_settings.settings_general'))
 
 
+@blueprint.route('/settings/twin/state')
+@flask_login.login_required
+def settings_twin_state():
+    """토글 아래 상태 표시(잠김·꺼짐·시작 중·실행 중·응답 없음)가 새로 고침 없이 바뀌도록 화면이 묻는다."""
+    if not utils_general.user_has_permission('view_settings'):
+        return jsonify({'error': 'forbidden'}), 403
+    return jsonify(utils_settings.twin_panel_context()['state'])
+
+
 @blueprint.route('/settings/twin', methods=('GET', 'POST'))
 @flask_login.login_required
 def settings_twin():
-    """Digital Twin (experimental) settings: run times, low-spec option, forecast auto-create, sites."""
+    """Digital Twin (experimental) settings: run times, forecast auto-create, sites."""
     if not utils_general.user_has_permission('view_settings'):
         return redirect(url_for('routes_general.home'))
 

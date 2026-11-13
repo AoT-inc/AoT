@@ -3,8 +3,8 @@ from sqlalchemy.dialects.mysql import LONGTEXT
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
 
 
 class Input(CRUDMixin, db.Model):
@@ -57,12 +57,6 @@ class Input(CRUDMixin, db.Model):
     calibrate_sensor_measure = db.Column(db.Text, default=None)  # sensor ID and measurement (CSV)
 
     # Geo location for mapping (optional)
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.Text, default='manual')  # manual/device/remote
-    location_updated_utc = db.Column(db.DateTime, default=None)
     marker_icon = db.Column(db.Text, default=None)  # e.g., valve/motor/temp...
     marker_color = db.Column(db.Text, default=None)  # hex or named color
     marker_size = db.Column(db.Integer, default=3)  # 1~5 preset
@@ -70,7 +64,6 @@ class Input(CRUDMixin, db.Model):
     location = db.Column(db.Text, default='')  # GPIO pin or i2c address to communicate with sensor
     gpio_location = db.Column(db.Integer, default=0)  # Pin location for GPIO communication
 
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
 
     # I2C

@@ -2,7 +2,7 @@
 import logging
 
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 logger = logging.getLogger("aot.api_key")
 

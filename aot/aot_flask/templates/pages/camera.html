@@ -247,6 +247,106 @@
     }
   }
 
+  // ---- TP-Link VIGI: 연결 상태·기능 표시 (설계 §9.2) ----
+  var VIGI_TEXT = {
+    states: {
+      unverified: {{ _("Not checked")|tojson }},
+      ok: {{ _("Connected")|tojson }},
+      failed: {{ _("Authentication failed")|tojson }},
+      locked: {{ _("The camera has locked login")|tojson }},
+      openapi_off: {{ _("OpenAPI is off")|tojson }},
+      cert_changed: {{ _("The camera certificate has changed")|tojson }}
+    },
+    tips: {
+      failed: {{ _("Check the password, then save it again or press Reconnect. It will try only once.")|tojson }},
+      locked: {{ _("The camera has locked login. Restart the camera or wait until the lock is released.")|tojson }},
+      cert_changed: {{ _("Credentials were not sent. Check the new fingerprint below.")|tojson }},
+      unverified: {{ _("Automatic retries are never made after an authentication failure.")|tojson }}
+    },
+    features: {
+      'ptz.pan_tilt': {{ _("Pan/Tilt")|tojson }}, 'ptz.zoom': {{ _("Zoom")|tojson }},
+      'ptz.preset': {{ _("Presets")|tojson }}, 'day_night': {{ _("Day/Night mode")|tojson }},
+      'alarm.manual': {{ _("Manual alarm")|tojson }}, 'storage.sd': {{ _("SD card")|tojson }},
+      'events.push': {{ _("Event push")|tojson }}
+    },
+    noFeatures: {{ _("No features read yet")|tojson }},
+    failedMsg: {{ _("Connection check failed")|tojson }}
+  };
+
+  function vigiRender(uid, d) {
+    if (!d || !d.configured) { d = d || {}; }
+    var st = d.auth_state || 'unverified';
+    $('#vigi_state_' + uid).text(VIGI_TEXT.states[st] || st);
+    $('#vigi_tip_' + uid).text(VIGI_TEXT.tips[st] || '');
+    $('#vigi_btn_reconnect_' + uid).prop('hidden', !(st === 'failed' || st === 'locked' || st === 'openapi_off'));
+    $('#vigi_cert_' + uid).prop('hidden', st !== 'cert_changed');
+    $('#vigi_openapi_tip_' + uid).toggleClass('font-weight-bold', st === 'openapi_off');
+    var feats = ((d.capabilities || {}).features) || [];
+    var names = [];
+    $.each(VIGI_TEXT.features, function(k, label) { if (feats.indexOf(k) >= 0) names.push(label); });
+    $('#vigi_caps_' + uid).text(names.length ? names.join(', ') : VIGI_TEXT.noFeatures);
+    $('#vigi_btn_caps_' + uid).prop('hidden', !(st === 'ok'));
+    // 카메라 조작(PTZ·주야·경보) — 능력이 있는 줄만 보인다(없는 기능은 아예 그리지 않는다).
+    // 조작 권한이 없으면 서버가 패널을 그리지 않았으므로 여기서 찾을 것이 없다.
+    var ptzWrap = document.getElementById('vigi_ptz_' + uid);
+    if (ptzWrap && window.AoTPtz) {
+      var ptzRoot = ptzWrap.querySelector('.aot-ptz');
+      window.AoTPtz.applyFeatures(ptzRoot, st === 'ok' ? feats : []);
+      ptzWrap.hidden = ptzRoot.hidden;
+    }
+    var info = d.device_info || {};
+    $('#vigi_info_' + uid).text([info.model, info.swVer].filter(Boolean).join(' '));
+    if (typeof vigiEventsRender === 'function') { vigiEventsRender(uid, d); }
+    if (st === 'cert_changed') { vigiObserveCert(uid); }
+  }
+
+  function vigiPost(uid, op, body, done) {
+    $.ajax({
+      type: 'POST', url: '/camera/driver/' + uid + '/' + op,
+      data: body ? JSON.stringify(body) : null,
+      contentType: body ? 'application/json' : undefined,
+      success: function(r) { done(r); },
+      error: function(xhr) {
+        var m = (xhr.responseJSON && xhr.responseJSON.message) || VIGI_TEXT.failedMsg;
+        if (op !== 'cert_observe' && window.showToast) window.showToast(m, 'error');
+      }
+    });
+  }
+
+  function vigiOp(uid, op) {
+    var $btns = $('[id^=vigi_btn_][id$=_' + uid + ']').prop('disabled', true);
+    vigiPost(uid, op, null, function(r) {
+      $btns.prop('disabled', false);
+      vigiRender(uid, r.driver);
+      if (r.status !== 'success' && window.showToast) window.showToast(VIGI_TEXT.failedMsg, 'error');
+    });
+    setTimeout(function() { $btns.prop('disabled', false); }, 65000);
+  }
+
+  function vigiObserveCert(uid) {
+    vigiPost(uid, 'cert_observe', null, function(r) {
+      var c = r.result || {};
+      $('#vigi_cert_old_' + uid).text(c.old || '-');
+      $('#vigi_cert_new_' + uid).text(c.new || '-').data('fp', c.new || '');
+    });
+  }
+
+  function vigiTrustCert(uid) {
+    var fp = $('#vigi_cert_new_' + uid).data('fp');
+    if (!fp) return;
+    vigiPost(uid, 'cert_trust', {fingerprint: fp}, function(r) { vigiRender(uid, r.driver); });
+  }
+
+  // ---- VIGI PTZ 의 누름·정지·프리셋·주야·경보는 전역 부품 aot-ptz.js 가 맡는다(app-shell 번들) ----
+
+  $(function() {
+    $('.aot-vigi[data-vigi-uid]').each(function() {
+      var uid = $(this).data('vigi-uid');
+      var init = document.getElementById('vigi_init_' + uid);
+      vigiRender(uid, init ? JSON.parse(init.textContent) : {});
+    });
+  });
+
   function cameraCaptureStart(uid, mode) {
     var urlMap = {
       'snapshot': '/camera/capture/' + uid,

@@ -80,6 +80,16 @@ class AbstractConditional:
 
             now = time.time()
             last_fired = dict_custom_options.get(_REFRACTORY_LAST_FIRED_KEY)
+            if isinstance(last_fired, bool) or not isinstance(last_fired, (int, float)):
+                last_fired = None
+            # 마지막 발동 시각이 지금보다 미래면 시계가 뒤로 밀린 것이다(NTP 보정,
+            # 부팅 직후 가짜 시계 등). 그대로 두면 시계가 따라잡을 때까지 모든
+            # 액션이 억제되므로 불응기를 끝난 것으로 본다.
+            if last_fired is not None and last_fired > now:
+                self.logger.warning(
+                    "Refractory Period: 마지막 발동 시각이 현재보다 미래라 "
+                    "(시계가 뒤로 밀림) 불응기를 해제하고 발동을 허용한다")
+                last_fired = None
             if last_fired is not None and (now - last_fired) < refractory_period:
                 allowed = False
                 self.logger.debug(

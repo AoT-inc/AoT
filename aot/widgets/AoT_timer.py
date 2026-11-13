@@ -63,7 +63,7 @@ from aot.aot_client import DaemonControl
 from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
 from aot.utils.command_origin import TYPE_TIMER
-from aot.utils.device_tz import get_device_tz
+from aot.utils.timekit import tz_of
 from aot.utils.execution_context import (clear_execution_context,
                                           set_execution_context,
                                           set_thread_default)
@@ -71,6 +71,7 @@ from flask_babel import lazy_gettext
 
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
+from aot.utils.timekit import naive_utc, parse_utc, to_tz, wall_to_utc
 
 # --- local validator: UTC offset must be within [-12.0, 14.0]
 # returns (True, None) if ok, else (False, 'error message')
@@ -422,7 +423,7 @@ def aot_timer_output_started_at(device_unique_id, channel_id):
             point_ts_epoch = int(res.get('point_ts_epoch')) if res.get('point_ts_epoch') is not None else None
             source = str(res.get('source') or 'value')
 
-        started_dt = datetime.datetime.utcfromtimestamp(int(started_ts)).replace(tzinfo=timezone('UTC'))
+        started_dt = naive_utc(parse_utc(int(started_ts))).replace(tzinfo=timezone('UTC'))
         payload = {
             "started_at_epoch": int(started_ts),
             "started_at_iso": started_dt.isoformat(),
@@ -462,7 +463,7 @@ def aot_timer_output_started_at_public(device_unique_id, channel_id):
             point_ts_epoch = int(res.get('point_ts_epoch')) if res.get('point_ts_epoch') is not None else None
             source = str(res.get('source') or 'value')
 
-        started_dt = datetime.datetime.utcfromtimestamp(int(started_ts)).replace(tzinfo=timezone('UTC'))
+        started_dt = naive_utc(parse_utc(int(started_ts))).replace(tzinfo=timezone('UTC'))
         payload = {
             "started_at_epoch": int(started_ts),
             "started_at_iso": started_dt.isoformat(),
@@ -565,6 +566,7 @@ def _cyc_state_default(device_unique_id, channel_id):
         "stopped_at_ms": None,
         "start_at": "00:00",
         "scheduled_until_ms": None,
+        "cycle_origin_ms": None,
         "message": "Inactive",
         "error": None,
         "run_id": None,
@@ -686,6 +688,21 @@ def _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, seconds):
             tick = 1.0
         if stop_event.wait(timeout=tick):
             return False
+
+
+def _cyc_newer_run_owns(device_unique_id, channel_id, run_id):
+    """디스크의 run_id 가 **다른 실행의 것**이면 True — 그 출력은 이제 새 실행의 것이다.
+
+    물러나는 실행은 출력을 끄고 나간다. 그런데 물러난 까닭이 정지가 아니라 **재시작**
+    (다른 설정으로 다시 시작)이면, 새 실행은 이미 출력을 켰을 수 있다 — 여기서 OFF 를
+    보내면 그 ON 을 끈다. 화면은 "작동 중" 인데 출력은 꺼진 채가 된다(2026-11-11 재현:
+    재시작 요청이 옛 작업 스레드와 다른 gunicorn 워커 프로세스로 가면 거의 매번).
+    재시작은 `_cyc_stop_worker(reason='restart')` 가 새 run_id 를 먼저 적고 정리 OFF 를
+    직접 보낸다 — 물러나는 쪽이 끌 일은 없다. 정지는 run_id 를 비우므로(None) False.
+    """
+    st = _cyc_state_read(device_unique_id, channel_id)
+    other = st.get('run_id') if isinstance(st, dict) else None
+    return bool(other) and other != run_id
 
 
 def _issue_output_command(daemon, device_unique_id, channel_index, state, duration_sec):
@@ -859,8 +876,16 @@ def _force_output_off(device_unique_id, channel_id):
         return False, str(exc)
 
 
-def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
+def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop', next_run_id=None):
+    """`next_run_id` 는 재시작(`reason='restart'`)일 때 곧 시작할 실행의 run_id 다.
+
+    정지는 run_id 를 비우고(None), 재시작은 **새 run_id 를 적는다.** 다른 프로세스에
+    남은 옛 작업 스레드는 둘 다 "내 것이 아니다" 로 알아채고 멈추지만, 새 run_id 를
+    보면 출력을 끄지 않는다(`_cyc_newer_run_owns`) — 그 사이 새 실행이 켠 출력을 끄지
+    않게. 정리 OFF 는 여기서 이 프로세스가 직접 보낸다.
+    """
     key = _cyc_key(device_unique_id, channel_id)
+    handover_id = next_run_id if reason == 'restart' else None
     with _CYCLE_LOCK:
         worker = _CYCLE_WORKERS.pop(key, None)
     thread = None
@@ -875,7 +900,7 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
     # this file (see _cyc_should_stop). The sooner this lands, the sooner an
     # orphaned thread on another process stops re-issuing ON commands instead
     # of racing the OFF sent below.
-    _cyc_state_update(device_unique_id, channel_id, run_id=None)
+    _cyc_state_update(device_unique_id, channel_id, run_id=handover_id)
 
     if thread and thread.is_alive():
         thread.join(timeout=2.0)
@@ -895,16 +920,45 @@ def _cyc_stop_worker(device_unique_id, channel_id, reason='user_stop'):
         message = 'User stopped' if reason == 'user_stop' else 'Initializing'
         _cyc_state_update(
             device_unique_id, channel_id,
-            active=False, phase='stopped', message=message, error=None, run_id=None,
+            active=False, phase='stopped', message=message, error=None, run_id=handover_id,
             next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
             scheduled_until_ms=None, stopped_at_ms=now_ms)
     else:
         _cyc_state_update(
             device_unique_id, channel_id,
-            active=False, phase='error', run_id=None,
+            active=False, phase='error', run_id=handover_id,
             message=lazy_gettext('OFF Failed: {}').format(err), error=str(err),
             next_transition_ms=None, phase_duration_sec=0, phase_started_ms=None,
             scheduled_until_ms=None, stopped_at_ms=now_ms)
+
+
+def _cyc_rest_left_sec(origin_ms, cycle, run_sec, rest_sec, now_ms):
+    """`cycle` 번째 주기 뒤에 쉴 시간(초) — **다음 주기가 격자 위 제자리에서 켜지도록.**
+
+    주기 k 는 `origin + (k-1) x (켜짐 + 쉼)` 에 시작한다. 켜짐은 장치가 켜졌다고 확인한
+    때부터 다 채우므로(Model A) ON·OFF 확인을 기다린 시간은 쉼에서 뺀다. 예전에는 쉼을
+    늘 통째로 쉬어서 확인 대기만큼 주기마다 늦어졌고, 원격 출력(왕복 수~수십 초)은
+    그것이 그대로 쌓였다 — 시퀀스가 2026-08-28 격자로 고친 것과 같은 표류다.
+
+    쉼보다 긴 지연은 흡수하지 못한다(0 으로 자르고 곧바로 다음 주기). 주기를 건너뛰지는
+    않는다 — 타이머는 "몇 번" 을 정한 것이라 건너뛰면 횟수가 줄어든다.
+    """
+    next_start = origin_ms + int(cycle) * (int(run_sec) + int(rest_sec)) * 1000
+    return max(0.0, min(float(rest_sec), (next_start - now_ms) / 1000.0))
+
+
+def _cyc_grid_origin(resume, now_ms, run_sec, rest_sec):
+    """이어서 도는 실행의 격자 원점. 상태에 적힌 값이 없으면(예전 상태 파일) 이어 갈
+    자리에서 거꾸로 구한다."""
+    origin = resume.get('origin_ms')
+    if isinstance(origin, int) and origin > 0:
+        return origin
+    period_ms = (int(run_sec) + int(rest_sec)) * 1000
+    cycle = max(1, int(resume.get('cycle') or 1))
+    end = now_ms + int(round(float(resume.get('remaining_sec') or 0) * 1000))
+    if resume.get('kind') == 'rest':
+        return end - cycle * period_ms
+    return end - int(run_sec) * 1000 - (cycle - 1) * period_ms
 
 
 def _cyc_worker(device_unique_id, channel_id, channel_index,
@@ -948,9 +1002,13 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
             stopped_at_ms=None,
             next_transition_ms=None, phase_started_ms=None, phase_duration_sec=0,
             scheduled_until_ms=None if resume else scheduled_until_ms, error=None,
-            run_id=run_id, start_at=str(start_at or '00:00'))
+            run_id=run_id, start_at=str(start_at or '00:00'),
+            # 지난 실행의 원점이 남아 있으면 켜기 전에 재시작됐을 때 그 원점으로 잇는다.
+            cycle_origin_ms=(resume or {}).get('origin_ms'))
         if resume:
             scheduled_until_ms = None   # 이어서 도는 실행에는 예약 대기가 없다
+        scheduled_start_ms = (scheduled_until_ms if isinstance(scheduled_until_ms, int)
+                              and scheduled_until_ms > now_ms else None)
 
         # ---- Scheduled start: wait until the target wall-clock time ----
         if isinstance(scheduled_until_ms, int) and scheduled_until_ms > now_ms:
@@ -960,7 +1018,8 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 phase_started_ms=now_ms, phase_duration_sec=wait_total,
                 next_transition_ms=scheduled_until_ms)
             if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, wait_total):
-                if stop_event.is_set():
+                if stop_event.is_set() and not _cyc_newer_run_owns(
+                        device_unique_id, channel_id, run_id):
                     _cyc_state_update(
                         device_unique_id, channel_id, active=False, phase='stopped',
                         message='User stopped', next_transition_ms=None, phase_duration_sec=0,
@@ -975,6 +1034,17 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
         #      scheduled wait above is excluded from total operation time. ----
         if not (resume and resume.get('started_at_ms')):
             _cyc_state_update(device_unique_id, channel_id, started_at_ms=int(time.time() * 1000))
+
+        # ---- 주기 격자의 원점(`_cyc_rest_left_sec`). 예약 시작이면 예약 시각 그 자체 —
+        #      깨어나는 데 걸린 틱(최대 1초)이 격자에 섞이지 않게. ----
+        op_now_ms = int(time.time() * 1000)
+        if resume:
+            origin_ms = _cyc_grid_origin(resume, op_now_ms, run_sec, rest_sec)
+        elif scheduled_start_ms is not None and 0 <= op_now_ms - scheduled_start_ms < 5000:
+            origin_ms = scheduled_start_ms
+        else:
+            origin_ms = op_now_ms
+        _cyc_state_update(device_unique_id, channel_id, cycle_origin_ms=origin_ms)
 
         # ---- Infinite hold (simple mode, run_sec <= 0): ON until stopped ----
         if run_sec <= 0:
@@ -1006,8 +1076,10 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     message='Offline (no response)', phase_started_ms=None,
                     phase_duration_sec=0, next_transition_ms=None, active=True)
             _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, None)  # hold until stopped
-            _issue_output_off(daemon, device_unique_id, channel_index, why='hold end')
-            if stop_event.is_set():
+            if not _cyc_newer_run_owns(device_unique_id, channel_id, run_id):
+                _issue_output_off(daemon, device_unique_id, channel_index, why='hold end')
+            if stop_event.is_set() and not _cyc_newer_run_owns(
+                    device_unique_id, channel_id, run_id):
                 _cyc_state_update(
                     device_unique_id, channel_id, active=False, phase='stopped',
                     message='User stopped', next_transition_ms=None, phase_duration_sec=0,
@@ -1108,12 +1180,18 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 return
             now_ms = int(time.time() * 1000)
             if rest_sec > 0:
+                # 쉼은 다음 주기의 격자점까지다 — 확인 대기만큼 짧아진다.
+                rest_left = _cyc_rest_left_sec(origin_ms, cycle, run_sec, rest_sec, now_ms)
+                if rest_left <= 0:
+                    logger.warning(
+                        "AoT_timer: %s::%s 주기 %s 의 켜짐·끄기 확인이 쉼(%ss)보다 오래 걸려 "
+                        "다음 주기가 늦게 시작합니다", device_unique_id, channel_id, cycle, rest_sec)
                 _cyc_state_update(
                     device_unique_id, channel_id, completed_cycles=cycle,
                     message=f'{cycle}/{total_cycles}, Resting', phase='resting',
-                    phase_started_ms=now_ms, phase_duration_sec=rest_sec,
-                    next_transition_ms=now_ms + rest_sec * 1000)
-                if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, rest_sec):
+                    phase_started_ms=now_ms, phase_duration_sec=int(round(rest_left)),
+                    next_transition_ms=now_ms + int(round(rest_left * 1000)))
+                if not _cyc_sleep(device_unique_id, channel_id, run_id, stop_event, rest_left):
                     if not stop_event.is_set():
                         superseded = True
                     break
@@ -1123,7 +1201,8 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                     message=f'{cycle}/{total_cycles}, Completed', phase='waiting',
                     phase_started_ms=None, phase_duration_sec=0, next_transition_ms=None)
 
-        if superseded:
+        if superseded or _cyc_newer_run_owns(device_unique_id, channel_id, run_id):
+            # 다른 실행이 상태 파일의 주인이다 — 마무리 요약으로 덮지 않는다.
             pass
         elif stop_event.is_set():
             _cyc_state_update(
@@ -1137,7 +1216,12 @@ def _cyc_worker(device_unique_id, channel_id, channel_index,
                 completed_cycles=total_cycles, next_transition_ms=None, phase_duration_sec=0,
                 phase_started_ms=None, run_id=None, stopped_at_ms=int(time.time() * 1000))
     finally:
-        _issue_output_off(daemon, device_unique_id, channel_index, why='worker finally')
+        # 새 실행이 이어받았으면 그 실행의 출력이다 — 끄지 않는다(`_cyc_newer_run_owns`).
+        if _cyc_newer_run_owns(device_unique_id, channel_id, run_id):
+            logger.info("AoT_timer: %s::%s 새 실행이 이어받아 마무리 OFF 를 보내지 않습니다",
+                        device_unique_id, channel_id)
+        else:
+            _issue_output_off(daemon, device_unique_id, channel_index, why='worker finally')
         with _CYCLE_LOCK:
             existing = _CYCLE_WORKERS.get(key)
             if existing and existing.get('thread') is threading.current_thread():
@@ -1154,16 +1238,19 @@ def _cyc_start_worker(device_unique_id, channel_id, channel_index,
     # 재시작 뒤 **이어서 도는** 실행은 정리 OFF 를 건너뛴다. 이 프로세스에는 멈출
     # 스레드가 없고, 켜짐 구간 한가운데라면 출력은 켜져 있어야 한다 — 정리 OFF 를
     # 보내면 밸브를 괜히 껐다 켠다.
-    if not resume:
-        set_execution_context(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
-        try:
-            _cyc_stop_worker(device_unique_id, channel_id, reason='restart')
-        finally:
-            clear_execution_context()
     # run_id identifies THIS run on disk (see _cyc_should_stop) so a thread
     # left running in another gunicorn worker process — one that never sees
     # this process's stop_event — can still tell it has been superseded.
+    # 정리(재시작) 전에 만든다 — 정리가 이 값을 먼저 적어야 옛 스레드가 새 실행의
+    # 출력을 끄지 않는다(`_cyc_newer_run_owns`).
     run_id = uuid.uuid4().hex
+    if not resume:
+        set_execution_context(TYPE_TIMER, f"{device_unique_id}:{channel_id}")
+        try:
+            _cyc_stop_worker(device_unique_id, channel_id, reason='restart',
+                             next_run_id=run_id)
+        finally:
+            clear_execution_context()
     stop_event = threading.Event()
     thread = threading.Thread(
         target=_cyc_worker,
@@ -1339,6 +1426,7 @@ def _cyc_recover_live_run(st, now_ms):
     if ch_index is None:
         return
     point['started_at_ms'] = st.get('started_at_ms')
+    point['origin_ms'] = st.get('cycle_origin_ms')
     logger.info("AoT_timer: resuming %s::%s after restart at cycle %s (%s, %.0fs left)",
                 dev, ch, point['cycle'], point['kind'], point.get('remaining_sec') or 0)
     _cyc_start_worker(
@@ -1347,6 +1435,34 @@ def _cyc_recover_live_run(st, now_ms):
         int(st.get('target_cycles') or 1), st.get('mode', 'cycle'), None,
         st.get('start_at', '00:00'),
         resume=None if point['kind'] == 'hold' else point)
+
+
+#: 예약 시각이 이만큼 지나도 'scheduled' 로 남아 있으면 그 예약을 기다리던 스레드는 없다.
+#: 살아 있는 스레드는 예약 시각 1초 안에 단계를 바꾼다(`_cyc_sleep` 의 틱).
+_CYC_MISSED_GRACE_MS = 60 * 1000
+
+
+def _cyc_mark_missed_schedule(st, sched, now_ms):
+    """웹 앱이 꺼져 있는 동안 예약 시각이 지나간 실행을 **놓쳤다고 적는다.**
+
+    예전에는 건너뛰기만 해서 상태가 "Scheduled(남은 0초)" 로 굳고, 출력은 켜지지
+    않았는데 화면은 아직 기다리는 것처럼 보였다(2026-11-11 재현). 늦게라도 켜지는
+    않는다 — 예약한 시각이 아닌 때 켜는 것은 사용자가 정한 것이 아니다.
+    """
+    dev = st.get('device_unique_id')
+    ch = st.get('channel_id')
+    if not st.get('active') or now_ms - sched < _CYC_MISSED_GRACE_MS:
+        return
+    if not _cyc_try_claim_recovery(dev, ch):
+        return
+    logger.warning(
+        "AoT_timer: %s::%s 예약 시작 시각(%s)에 웹 앱이 돌고 있지 않아 실행하지 못했습니다",
+        dev, ch, st.get('start_at'))
+    _cyc_state_update(
+        dev, ch, active=False, phase='error',
+        message='Scheduled start missed', error='Scheduled start missed',
+        run_id=None, scheduled_until_ms=None, next_transition_ms=None,
+        phase_duration_sec=0, phase_started_ms=None, stopped_at_ms=now_ms)
 
 
 def recover_scheduled_workers():
@@ -1392,11 +1508,14 @@ def recover_scheduled_workers():
             if not isinstance(st, dict) or st.get('phase') != 'scheduled':
                 continue
             sched = st.get('scheduled_until_ms')
-            if not (isinstance(sched, int) and sched > now_ms):
+            if not isinstance(sched, int):
                 continue
             dev = st.get('device_unique_id')
             ch = st.get('channel_id')
             if not dev or ch in (None, ''):
+                continue
+            if sched <= now_ms:
+                _cyc_mark_missed_schedule(st, sched, now_ms)
                 continue
             key = _cyc_key(dev, ch)
             with _CYCLE_LOCK:
@@ -1448,7 +1567,7 @@ def _cyc_device_tz(device_unique_id):
     except Exception:
         out = None
     try:
-        return get_device_tz(out)
+        return tz_of(out)
     except Exception:
         return timezone('UTC')
 
@@ -1472,10 +1591,7 @@ def _cyc_compute_scheduled_ms(start_at, device_unique_id):
 
     def _localize(naive):
         # pytz needs localize() for correct (DST-aware) offsets; fall back for zoneinfo.
-        try:
-            return tz.localize(naive)
-        except (AttributeError, ValueError):
-            return naive.replace(tzinfo=tz)
+        return to_tz(wall_to_utc(naive, tz), tz)
 
     naive_target = now_local.replace(tzinfo=None).replace(hour=hh, minute=mm, second=0, microsecond=0)
     target = _localize(naive_target)

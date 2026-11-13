@@ -41,6 +41,7 @@ import requests
 from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
+from aot.utils.timekit import utc_now
 
 # Measurements
 measurements_dict = {
@@ -296,7 +297,7 @@ class InputModule(AbstractInput):
             window = 20
         window = max(window, 3)
 
-        today = datetime.now(timezone.utc).date()
+        today = utc_now().date()
         params = {
             'parameters': ','.join(sorted(wanted)),
             'community': 'AG',

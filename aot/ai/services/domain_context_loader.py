@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from aot.config.mcp_config import CONTEXT_LAYER_ROOT
+from aot.utils.timekit import utc_now
 
 # ---------------------------------------------------------------------------
 # @ANCHOR: DOMAIN_CONTEXT_LOADER
@@ -228,7 +229,7 @@ class DomainContextLoader:
         result = dict(module)
         config = module.get('config', {})
         state_value = cls._calculate_state_value(config)
-        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+        timestamp = utc_now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
         operational_state: dict = {
             'value':     state_value,

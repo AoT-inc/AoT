@@ -27,6 +27,7 @@ from the violation. "기억이 규칙이 된다."
 import json
 import logging
 from datetime import datetime, timezone
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -248,6 +249,6 @@ class RuleProposalGenerator:
         db.session.flush()
         proposal.status = 'auto_approved' if auto else 'approved'
         proposal.resulting_rule_id = rule.unique_id
-        proposal.reviewed_at = datetime.now(timezone.utc)
+        proposal.reviewed_at = utc_now()
         logger.info(f"[RuleService] {'Auto-approved' if auto else 'Approved'} proposal {proposal.pattern_key} → active rule {rule.unique_id}")
         return rule.unique_id

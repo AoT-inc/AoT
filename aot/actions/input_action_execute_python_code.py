@@ -4,7 +4,6 @@ import importlib.util
 import os
 import textwrap
 
-from flask import flash
 from flask_babel import lazy_gettext
 
 from aot.actions.base_action import AbstractFunctionAction
@@ -21,7 +20,6 @@ def generate_code(input_id, python_code):
     @stability stable
     @dependency PATH_PYTHON_CODE_USER
     """
-    error = []
     pre_statement_run = """import os
 import sys
 sys.path.append(os.path.abspath('{install_dir}'))
@@ -51,9 +49,6 @@ class PythonActionRun:
         fw.write('{}\n'.format(action_python_code_run))
         fw.close()
     set_user_grp(file_run, 'aot', 'aot')
-
-    for each_error in error:
-        flash(each_error, 'error')
 
     return action_python_code_run, file_run
 

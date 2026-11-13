@@ -188,23 +188,19 @@ class ListTest(_ResBase):
         self.assertNotIn('Expired', blob)
         self.assertNotIn('Theirs', blob)
 
-    def test_pages_of_20_cards_with_a_cursor(self):
+    def test_lists_only_the_latest_20_cards_without_a_next_page(self):
+        # 2026-11-07: 클라이언트가 연결마다 목록을 끝까지 넘겨 받아 연결 준비가 9초 걸렸다 — 한 쪽만 준다.
         cards = [self._text_card('c%02d' % i) for i in range(25)]
         result, _ = self._both('resources/list')
         self.assertEqual(len(result['resources']), 20)
         self.assertEqual(result['resources'][0]['name'], 'c24')
-        self.assertEqual(result['nextCursor'], cards[5].unique_id)    # 마지막 카드 uuid
-        page2, err = self._both('resources/list', {'cursor': result['nextCursor']})
+        self.assertNotIn('nextCursor', result)
+        # 옛 클라이언트가 cursor 를 주면 그 뒤 카드를 준다(다음 쪽 표시는 여전히 없다).
+        older, err = self._both('resources/list', {'cursor': cards[5].unique_id})
         self.assertIsNone(err)
-        self.assertEqual([r['name'] for r in page2['resources']],
+        self.assertEqual([r['name'] for r in older['resources']],
                          ['c%02d' % i for i in range(4, -1, -1)])
-        self.assertNotIn('nextCursor', page2)
-        # 정확히 20장이면 다음 쪽이 없다
-        for c in cards[:5]:
-            self.C.dismiss(self.pk, c.unique_id)
-        exact, _ = self._both('resources/list')
-        self.assertEqual(len(exact['resources']), 20)
-        self.assertNotIn('nextCursor', exact)
+        self.assertNotIn('nextCursor', older)
 
     def test_bad_cursors_are_invalid_params(self):
         mine = self._text_card()

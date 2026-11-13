@@ -80,8 +80,10 @@ class LiteListingTest(_AppFixture):
         tools = {t['name']: t for t in self._tools(self._lite_role('Admin'))}
         reads, writes = (tools['read_tool']['description'],
                          tools['use_tool']['description'])
-        # 도메인 전용 안쪽 도구(DOMAIN_ONLY_TOOLS)는 옛 목록·색인 어디에도 싣지 않는다.
-        for name in R.profile_tools(OPS) - R.LITE_LISTED - R.DOMAIN_ONLY_TOOLS:
+        # 도메인 전용 안쪽 도구(DOMAIN_ONLY_TOOLS)는 옛 목록·색인 어디에도 싣지 않는다. 도메인 운영으로 올린 도구
+        # (DOMAIN_PROMOTED_TOOLS, 재설계 PR 4)도 원래 모듈이 꺼진 옛 묶음에서는 목록·색인 어디에도 없다 — 이 키에서 못 쓰는 도구다.
+        for name in (R.profile_tools(OPS) - R.LITE_LISTED - R.DOMAIN_ONLY_TOOLS
+                     - R.legacy_hidden_tools(OPS)):
             if R.mcp_profile_of(name) != OPS:
                 continue
             if te._is_reading(name):
@@ -97,6 +99,18 @@ class LiteListingTest(_AppFixture):
         text = te._server_instructions(LITE)
         self.assertNotIn('search_schedule', text)
         self.assertIn('read_tool', text)
+
+    def test_instructions_speak_domain_names_unless_legacy(self):
+        from aot.tools import tool_execution as te
+        with mock.patch.dict(os.environ, {'AOT_MCP_SURFACE': ''}):
+            text = te._server_instructions(LITE)
+            for old in ('read_tool', 'use_tool', 'get_tool_detail',
+                        'get_place_overview', 'set_tool_profile'):
+                self.assertNotIn(old, text)
+            self.assertIn('overview', text)
+            self.assertIn('configure.tool_profile_set', text)
+        with mock.patch.dict(os.environ, {'AOT_MCP_SURFACE': 'legacy'}):
+            self.assertIn('read_tool', te._server_instructions(LITE))
 
     def test_write_index_hides_tools_the_role_cannot_use(self):
         tools = {t['name']: t for t in self._tools(self._lite_role('Monitor'))}

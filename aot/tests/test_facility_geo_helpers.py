@@ -6,7 +6,7 @@
 import math
 import pytest
 
-from aot.aot_flask.geo.facility_geo_helpers import (
+from aot.space.facility_geo_helpers import (
     edge_outward_azimuth,
     polygon_avg_outward_azimuth,
     line_outward_azimuth,

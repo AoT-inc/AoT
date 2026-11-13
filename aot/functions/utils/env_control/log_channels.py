@@ -645,7 +645,7 @@ def write_sensor_status(unique_id: str, snapshot: Optional[Dict],
     """
     if not unique_id or not snapshot:
         return
-    from aot.functions.utils.env_control import sensor_status as _ss
+    from aot.utils import sensor_status as _ss
     extra = {'facility_id': facility_id} if facility_id else None
     try:
         axes = snapshot.get('axes') or {}

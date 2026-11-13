@@ -30,6 +30,8 @@ partial block, never a broken prompt.
 import logging
 import threading
 
+from aot.utils.timekit import FARM, to_tz, utc_now
+
 logger = logging.getLogger(__name__)
 
 # Rebuild at most once/day unless invalidated by a change (requirement: ≥1x/day).
@@ -59,20 +61,6 @@ def mark_dirty(change_note=None, when_iso=None):
             _cache["last_change_at"] = when_iso
         if change_note:
             logger.debug(f"[SystemKnowledge] marked dirty: {change_note}")
-
-
-def _now():
-    """Epoch seconds. Isolated so time is easy to reason about / stub."""
-    import time
-    return time.time()
-
-
-def _now_iso():
-    try:
-        from aot.utils.time_utils import get_local_now
-        return get_local_now().strftime("%Y-%m-%d %H:%M")
-    except Exception:
-        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -184,7 +172,10 @@ def _render():
     add("Functions/Automation", _functions)
     add("Farms/Zones", _zones)
 
-    built = _now_iso()
+    try:
+        built = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        built = ""
     last_change = _cache.get("last_change_at")
     header = (
         f"[SYSTEM KNOWLEDGE — the user's ACTUAL registered system, built {built}"
@@ -207,7 +198,7 @@ def get_knowledge_text(force=False):
             fresh = (
                 _cache["text"] is not None
                 and not _cache["dirty"]
-                and (_now() - _cache["built_at"]) < _TTL_SECONDS
+                and (utc_now().timestamp() - _cache["built_at"]) < _TTL_SECONDS
             )
             if fresh and not force:
                 return _cache["text"]
@@ -215,7 +206,7 @@ def get_knowledge_text(force=False):
         text, counts = _render()
         with _lock:
             _cache["text"] = text
-            _cache["built_at"] = _now()
+            _cache["built_at"] = utc_now().timestamp()
             _cache["dirty"] = False
             _cache["counts"] = counts
         return text
@@ -247,5 +238,5 @@ def get_status():
             "dirty": _cache["dirty"],
             "last_change_at": _cache["last_change_at"],
             "counts": dict(_cache["counts"]),
-            "age_seconds": (_now() - _cache["built_at"]) if _cache["built_at"] else None,
+            "age_seconds": (utc_now().timestamp() - _cache["built_at"]) if _cache["built_at"] else None,
         }

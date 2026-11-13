@@ -57,7 +57,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.influx import read_influxdb_single
 from aot.utils.method import create_method_handler
 from aot.utils.system_pi import return_measurement_info, str_is_float
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now, wall_to_utc
 from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def _compute_weeks_elapsed(pid, facility_tz) -> float:
     from aot.utils.method import parse_db_time
 
     week_offset = float(getattr(pid, 'schedule_week_offset', 0.0) or 0.0)
-    now_utc = _dt.datetime.now(_dt.timezone.utc)
+    now_utc = utc_now()
 
     start_raw = (getattr(pid, 'schedule_start_time', None) or '').strip()
     if start_raw:
@@ -103,18 +103,12 @@ def _compute_weeks_elapsed(pid, facility_tz) -> float:
                     return 0.0
                 year, month, day = map(int, start_raw.split('-'))
                 local_midnight = _dt.datetime(year, month, day, 0, 0, 0)
-                try:
-                    start_dt = facility_tz.localize(local_midnight)
-                except AttributeError:
-                    start_dt = local_midnight.replace(tzinfo=facility_tz)
+                start_dt = wall_to_utc(local_midnight, facility_tz)
             else:
                 start_dt = isoparse(start_raw)
                 if start_dt.tzinfo is None:
                     if facility_tz is not None:
-                        try:
-                            start_dt = facility_tz.localize(start_dt)
-                        except AttributeError:
-                            start_dt = start_dt.replace(tzinfo=facility_tz)
+                        start_dt = wall_to_utc(start_dt, facility_tz)
                     else:
                         start_dt = start_dt.replace(tzinfo=_dt.timezone.utc)
             elapsed_sec = (now_utc - start_dt).total_seconds()
@@ -184,8 +178,8 @@ def last_data_pid(pid_id, input_period):
                     handler = create_method_handler(method_db, method_data, logger)
                     now = utc_now()
                     if method_db.method_type == 'DailyMultiPoint':
-                        from aot.utils.device_tz import get_device_tz
-                        facility_tz = get_device_tz(pid)
+                        from aot.utils.timekit import tz_of
+                        facility_tz = tz_of(pid)
                         weeks_elapsed = _compute_weeks_elapsed(pid, facility_tz)
                         sp, _ = handler.calculate_setpoint(
                             now, pid.method_start_time,
@@ -285,6 +279,9 @@ def pid_mod_unique_id(unique_id, state):
                 return "PID Resumed (Note: not active)"
         elif 'set_setpoint_pid' in state:
             new_sp = state.split('|')[1]
+            problem = validate_pid_params({'setpoint': new_sp})
+            if problem:
+                return f"Invalid setpoint: {problem}", 400
             pid.setpoint = float(new_sp)
             pid.save()
             if pid.is_activated:
@@ -296,6 +293,57 @@ def pid_mod_unique_id(unique_id, state):
     except Exception as ex:
         logger.error(f"Error in pid_mod_unique_id({state}): {ex}", exc_info=True)
         return f"Error: {ex}"
+
+PID_PERIOD_RANGE = (1.0, 86400.0)      # forms_pid.PIDModBase.period 와 같다
+PID_SETPOINT_RANGE = (-1000000.0, 1000000.0)
+
+
+def validate_pid_params(data, current=None):
+    """위젯 상세 설정 모달의 값을 일반 폼(`forms_pid.py`)과 같은 기준으로 검사한다.
+
+    period 가 0 이하이면 데몬 주기 격자가 끝나지 않는다 — 위젯 경로가 폼의
+    1~86400 검사를 건너뛰고 `float()` 만 하던 것이 그 구멍이다.
+    ``current`` 는 현재 PID 행(integrator 한쪽만 바뀔 때 대조용). 오류 문장
+    (없으면 None)을 돌려준다. 값은 하나도 바꾸지 않는다.
+    """
+    import math
+
+    def number(key):
+        raw = data.get(key)
+        if raw is None or raw == '':
+            return None
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"{key}: not a number")
+        if not math.isfinite(value):
+            raise ValueError(f"{key}: not finite")
+        return value
+
+    try:
+        for key in ('p', 'i', 'd'):
+            number(key)
+        setpoint = number('setpoint')
+        if setpoint is not None and not (
+                PID_SETPOINT_RANGE[0] <= setpoint <= PID_SETPOINT_RANGE[1]):
+            return f"setpoint: out of range {PID_SETPOINT_RANGE}"
+        period = number('period')
+        if period is not None and not (
+                PID_PERIOD_RANGE[0] <= period <= PID_PERIOD_RANGE[1]):
+            return f"period: must be {PID_PERIOD_RANGE[0]:g}-{PID_PERIOD_RANGE[1]:g} seconds"
+        band = number('band')
+        if band is not None and band < 0:
+            return "band: must be 0 or more"
+        imin, imax = number('integrator_min'), number('integrator_max')
+        if imin is not None or imax is not None:
+            lo = imin if imin is not None else getattr(current, 'integrator_min', None)
+            hi = imax if imax is not None else getattr(current, 'integrator_max', None)
+            if lo is not None and hi is not None and lo > hi:
+                return "integrator_min: must not exceed integrator_max"
+    except ValueError as err:
+        return str(err)
+    return None
+
 
 def pid_set_params(pid_id):
     """Apply multiple PID parameters at once from the detail settings modal.
@@ -320,6 +368,9 @@ def pid_set_params(pid_id):
         return 'PID not found', 404
     try:
         data = request.get_json(silent=True) or {}
+        problem = validate_pid_params(data, current=pid)
+        if problem:
+            return jsonify({'status': 'error', 'message': problem}), 400
         live_map = {
             'setpoint': 'setpoint',
             'p':        'kp',

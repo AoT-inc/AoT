@@ -24,11 +24,13 @@ from aot.databases.models import CustomController
 from aot.functions.base_function import AbstractFunction
 from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
-from aot.utils.device_tz import resolve_location_tz
+from aot.utils.timekit import FARM, to_tz, tz_of
 from aot.utils.timekit import utc_now
 
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import naive_utc
+from aot.utils.timekit import parse_utc
 
 try:
     import grpc  # type: ignore[import-not-found]
@@ -864,7 +866,7 @@ class CustomModule(AbstractFunction):
         except Exception:
             max_age = 4000
 
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         start = (now - timedelta(seconds=max_age)).strftime('%Y-%m-%dT%H:%M:%SZ')
         end = now.strftime('%Y-%m-%dT%H:%M:%SZ')
         # HOUR aggregation: MINUTE returns 0 for sub-minute gaps with no data
@@ -953,7 +955,7 @@ class CustomModule(AbstractFunction):
         ts_utc = None
         if last_seen:
             try:
-                ts_utc = datetime.fromisoformat(str(last_seen).replace('Z', '+00:00'))
+                ts_utc = parse_utc(str(last_seen))
             except Exception:
                 ts_utc = None
 
@@ -1604,10 +1606,10 @@ class CustomModule(AbstractFunction):
         # 시스템 tz 라 또 달랐다). timekit 체인으로 위치 tz 를 명시 해석한다.
         now_utc = utc_now()
         try:
-            now_dt = now_utc.astimezone(resolve_location_tz(self.unique_id))
+            now_dt = now_utc.astimezone(tz_of(self.unique_id))
         except Exception as e:
             self.logger.debug(f"위치 tz 해석 실패, 시스템 시각 사용: {e}")
-            now_dt = datetime.now()
+            now_dt = to_tz(now_utc, FARM)
         now_hour = now_dt.hour
         now_minute = now_dt.hour * 60 + now_dt.minute
 

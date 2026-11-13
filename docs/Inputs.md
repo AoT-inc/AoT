@@ -16,9 +16,10 @@ for the translated name of a measurement finds every sensor that reports it.
 ### Open-Meteo weather input { #open-meteo }
 
 Most built-in weather inputs need a provider account and a free API key, and
-some (KMA) only cover Korea. Open-Meteo needs neither: enter a
-Latitude/Longitude in the input's own Coordinates option and it works
-anywhere on Earth, with no key required.
+some (KMA) only cover Korea. Open-Meteo needs neither: place the input on
+the map (click the map in the input's options) and it works anywhere on
+Earth, with no key required. Until you place it, a new input uses the site
+location, which the Placement line in the options shows.
 
 It also reports something most free weather sources do not: solar radiation
 (W/m²), modeled with cloud cover taken into account. Without it, [Sunburn/Evening

@@ -3,26 +3,27 @@ timekit — AoT 통합 시간 관리 단일 진입점.
 
 설계: docs/design/timezone-management.md
 
-이 모듈은 지금까지 5개로 흩어져 있던 시간대 해석 게이트
-(get_device_tz · resolve_location_tz · get_user_tz · get_timezone_name ·
-GeoShape/GeoFacility.resolve_timezone)를 하나의 표면으로 흡수한다.
+시간대 해석·변환·직렬화의 단일 진입점이다. 공개 입구는 `PUBLIC_ENTRIES` 열 둘뿐이고
+(옛 이름은 S10 에서 모두 삭제), 가드 `aot/scripts/check_time_rules.py` 가 우회를 막는다.
 
 핵심 규약 (변하지 않음):
-  - "지금"과 저장은 항상 UTC-aware.            → utc_now(), ensure_utc()
-  - 벽시계 의도(예약)는 앵커 tz로 UTC 변환.     → wall_to_utc() / utc_to_wall()
+  - "지금"과 저장은 항상 UTC-aware.            → utc_now(), _ensure_utc()
+  - 벽시계 의도(예약)는 앵커 tz로 UTC 변환.     → wall_to_utc() / to_tz()
   - API 직렬화는 항상 UTC+offset ISO.          → iso_utc()
   - tz 해석은 단일 우선순위 체인.              → resolve_tz()
 
 Phase 1 범위: 현행 동작과 100% 동일한 부분만 통합한다(순수 리팩터).
   - resolve_tz 의 상속(부모 도형) 단계와 User.timezone 은 아직 없다
     (각각 Phase 3 / Phase 4). 지금은 explicit → coords → system → UTC 만.
-  - 기존 device_tz / tz_utils / time_utils 함수는 이 모듈로 위임(wrapper)한다.
 
 프로젝트 표준: pytz (requirements.txt). Docker 컨테이너 tz 는 항상 UTC 취급,
 os.timezone 에 의존하지 않는다.
 """
+import contextlib
+import contextvars
 import logging
 from datetime import datetime, timezone
+from datetime import tzinfo as datetime_tzinfo
 from typing import Optional, Tuple, Union
 
 import pytz
@@ -36,6 +37,7 @@ SOURCE_COORDS = "coords"        # 엔티티 좌표 → timezonefinder
 SOURCE_USER = "user"            # User.timezone                    (Phase 4)
 SOURCE_SYSTEM = "system"        # Misc.timezone 농장 전역 폴백
 SOURCE_UTC = "utc"              # 최종 폴백
+SOURCE_DEVICE = "device"        # 도형·시설·구획·지도에서 해석 (장소 id)
 
 
 # ---------------------------------------------------------------------------
@@ -46,11 +48,7 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-# 편의 별칭 (기존 코드가 now_utc 로 부르는 곳과 호환)
-now_utc = utc_now
-
-
-def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
+def _ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
     """어떤 datetime 이든 UTC-aware 로 정규화.
 
     naive datetime 은 UTC 로 가정한다(백엔드 저장 규약). None 은 그대로 통과.
@@ -65,7 +63,7 @@ def ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
 # ---------------------------------------------------------------------------
 # tz 객체 헬퍼
 # ---------------------------------------------------------------------------
-def as_tz(tz: Union[str, pytz.BaseTzInfo, None]) -> pytz.BaseTzInfo:
+def _as_tz(tz: Union[str, pytz.BaseTzInfo, None]) -> pytz.BaseTzInfo:
     """IANA 문자열 또는 tzinfo 를 pytz tzinfo 로. 실패 시 UTC."""
     if tz is None:
         return pytz.utc
@@ -77,12 +75,55 @@ def as_tz(tz: Union[str, pytz.BaseTzInfo, None]) -> pytz.BaseTzInfo:
     return tz
 
 
-def to_tz(dt: Optional[datetime], tz: Union[str, pytz.BaseTzInfo, None]) -> Optional[datetime]:
-    """UTC(또는 naive=UTC) datetime 을 대상 tz 로 변환."""
-    dt = ensure_utc(dt)
+def to_tz(value, where) -> Optional[datetime]:
+    """순간(datetime·epoch·ISO 문자열; naive=UTC) → `where` 시계의 aware datetime."""
+    if value is None:
+        return None
+    dt = _ensure_utc(value if isinstance(value, datetime) else parse_utc(value))
+    return dt.astimezone(tz_of(where))
+
+
+def naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    """DB naive 컬럼과 비교·저장할 UTC naive. aware 는 UTC 로 바꿔 tzinfo 를 뗀다."""
     if dt is None:
         return None
-    return dt.astimezone(as_tz(tz))
+    return _ensure_utc(dt).replace(tzinfo=None)
+
+
+def parse_utc(value) -> datetime:
+    """datetime·epoch·ISO 문자열(`Z`·오프셋)을 순간(UTC aware)으로. 오프셋이 없으면 UTC.
+
+    못 읽으면 `ValueError`.
+    """
+    if isinstance(value, datetime):
+        return _ensure_utc(value)
+    if isinstance(value, bool) or value is None:
+        raise ValueError(f"시각으로 읽을 수 없는 값: {value!r}")
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, timezone.utc)
+    s = str(value).strip().replace(' ', 'T')
+    if s.endswith(('Z', 'z')):
+        s = s[:-1] + '+00:00'
+    try:
+        return _ensure_utc(datetime.fromisoformat(s))
+    except ValueError:
+        raise ValueError(f"시각으로 읽을 수 없는 값: {value!r}") from None
+
+
+def iso_at(value, where, cache=None):
+    """사람·AI 가 읽는 ISO — `where` 시계의 오프셋 문자열. 못 읽으면 입력 그대로."""
+    if value is None:
+        return None
+    try:
+        dt = _ensure_utc(value if isinstance(value, datetime) else parse_utc(value))
+        return dt.astimezone(tz_of(where, cache)).isoformat()
+    except Exception:
+        return value
+
+
+def today_at(where):
+    """`where` 시계의 오늘 날짜."""
+    return utc_now().astimezone(tz_of(where)).date()
 
 
 def iso_utc(dt: Optional[datetime]) -> Optional[str]:
@@ -91,152 +132,385 @@ def iso_utc(dt: Optional[datetime]) -> Optional[str]:
     예: '2026-05-06T12:34:56+00:00'. 프론트(AoTTz)가 device/viewer tz 로
     변환하는 단일 진실 공급원. naive 는 UTC 로 가정.
     """
-    dt = ensure_utc(dt)
+    dt = _ensure_utc(dt)
     return dt.isoformat() if dt is not None else None
 
 
 # ---------------------------------------------------------------------------
 # 시스템(농장 전역) tz — Misc.timezone
 # ---------------------------------------------------------------------------
-def system_tz_name() -> Optional[str]:
-    """Misc.timezone 을 daemon/Flask 양 컨텍스트에서 안전하게 읽어 반환.
+def _system_tz_name() -> Optional[str]:
+    """Misc.timezone 의 이름. 앱 컨텍스트가 있든 없든 같은 길(`_db_row`)로 읽는다.
 
-    get_device_tz(None) 이 쓰던 폴백 순서를 그대로 보존한다:
-      1) db_retrieve_table_daemon(Misc)  — daemon·Flask 모두 동작
-      2) Flask-SQLAlchemy get_timezone_name() — 'UTC'가 아니면 채택
-    둘 다 실패하면 None(호출자가 UTC 처리).
+    못 읽거나 미설정이면 None(호출자가 UTC 처리). 예전에는 데몬 읽기가 실패하면
+    Flask 쪽 옛 입구로 한 번 더 시도했는데, 그쪽은 `Misc.query`
+    라 컨텍스트가 없으면 어차피 실패했다.
     """
-    tz_name = None
-    try:
-        from aot.utils.database import db_retrieve_table_daemon
-        from aot.databases.models.misc import Misc
-        misc = db_retrieve_table_daemon(Misc, entry='first')
-        if misc and getattr(misc, 'timezone', None):
-            tz_name = misc.timezone
-    except Exception:
-        tz_name = None
-
-    if not tz_name:
-        try:
-            from aot.utils.time_utils import get_timezone_name
-            name = get_timezone_name()
-            if name and name != 'UTC':
-                tz_name = name
-        except Exception:
-            tz_name = None
-    return tz_name
-
-
-def system_tz() -> pytz.BaseTzInfo:
-    """농장 전역 기본 tz (Misc.timezone). 최후 폴백. 실패 시 UTC."""
-    return as_tz(system_tz_name() or 'UTC')
-
-
-def current_user_tz() -> pytz.BaseTzInfo:
-    """요청 컨텍스트의 로그인 사용자 개인 tz (User.timezone) → 없으면 시스템.
-
-    개인 '표시'(뷰어 시각·개인 알림)에만 쓴다. 장치 예약 해석(장치 현지 앵커)이나
-    벽시계 해석에는 쓰지 않는다(get_user_tz=시스템 유지). 요청 밖(daemon)이거나
-    미로그인/미설정이면 시스템 tz 로 폴백해 어디서든 안전하다.
-    """
-    try:
-        from flask_login import current_user
-        if current_user is not None and getattr(current_user, 'is_authenticated', False):
-            utz = getattr(current_user, 'timezone', None)
-            if utz:
-                return as_tz(utz)
-    except Exception:
-        pass
-    return system_tz()
+    from aot.databases.models.misc import Misc
+    misc = _db_row(Misc, entry='first')
+    name = getattr(misc, 'timezone', None) if misc else None
+    return name or None
 
 
 # ---------------------------------------------------------------------------
 # 단일 해석 체인 — resolve_tz
 # ---------------------------------------------------------------------------
-def _inherited_tz_for_device(entity):
-    """장치 row 의 소속 도형에서 tz 를 상속 (device_id 로 연결된 GeoShape →
-    parent_id 체인). 도형이 없거나 해석 실패 시 None.
+class _Marker:
+    """시계 표식 — `where` 에 넣는 값. 문자열과 구별되는 단일 객체."""
+    __slots__ = ('name',)
 
-    device.timezone 캐시가 비었을 때만 호출되므로(아래 resolve_tz 참조) 읽기
-    핫패스에는 추가 쿼리가 없다 — 기존 장치는 캐시가 이미 차 있다.
-    """
-    uid = getattr(entity, 'unique_id', None)
-    if not uid:
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"timekit.{self.name}"
+
+
+FARM = _Marker('FARM')      # 장소와 무관한 시각(로그·감사·내보내기) = 농장 시계
+VIEWER = _Marker('VIEWER')  # 보는 사람의 개인 tz → 농장
+
+
+def _valid_tz_name(name) -> Optional[pytz.BaseTzInfo]:
+    """IANA 이름이면 tzinfo, 아니면 None."""
+    if isinstance(name, str) and name in pytz.all_timezones_set:
+        return pytz.timezone(name)
+    return None
+
+
+def _farm_tz() -> Tuple[pytz.BaseTzInfo, str]:
+    """농장 시계 — Misc.timezone, 못 읽거나 미설정이면 UTC."""
+    tz = _valid_tz_name(_system_tz_name())
+    if tz is not None:
+        return tz, SOURCE_SYSTEM
+    return pytz.utc, SOURCE_UTC
+
+
+def _centroid_tz(centroid) -> Optional[pytz.BaseTzInfo]:
+    if not centroid:
         return None
     try:
-        # [GB-6] "이 장치의 도형" 은 geo_binding 이 답한다 — 사망 선고된
-        # GeoShape.device_id 를 직접 조회하지 않는다(리졸버가 폴백까지 담당).
-        from aot.aot_flask.geo.device_binding import shapes_for_device
-        for shape in shapes_for_device(uid):
-            tz = shape.resolve_timezone()
-            if tz:
+        from aot.utils.device_tz import resolve_tz_from_coords
+        return _valid_tz_name(resolve_tz_from_coords(centroid[0], centroid[1]))
+    except Exception:
+        return None
+
+
+def _facility_tz(fac) -> Optional[pytz.BaseTzInfo]:
+    """시설: 명시 tz → 연결 도형 중심 좌표."""
+    tz = _valid_tz_name(getattr(fac, 'timezone', None))
+    if tz is not None:
+        return tz
+    from aot.databases.models.geo import GeoShape
+    shape = _db_row(GeoShape, unique_id=fac.shape_uuid)
+    return _centroid_tz(shape.get_centroid()) if shape is not None else None
+
+
+def _shape_tz(shape, _seen=None) -> Optional[pytz.BaseTzInfo]:
+    """도형: 저장값 → 부모 체인 → 연결 시설 → 자기 중심 좌표.
+
+    `GeoShape.resolve_timezone` 과 같은 순서이되 조회는 `_db_row` 한 길이다
+    (그쪽은 `.query` 라 앱 컨텍스트가 없으면 조용히 실패한다).
+    """
+    from aot.databases.models.geo import GeoFacility, GeoShape
+    seen = _seen if _seen is not None else set()
+    if shape is None or shape.id in seen:
+        return None
+    seen.add(shape.id)
+    tz = _valid_tz_name(getattr(shape, 'timezone', None))
+    if tz is not None:
+        return tz
+    pid = getattr(shape, 'parent_id', None)
+    if pid is not None and pid not in seen:
+        tz = _shape_tz(_db_row(GeoShape, device_id=pid), seen)
+        if tz is not None:
+            return tz
+    fac = _db_row(GeoFacility, custom_name='shape_uuid',
+                  custom_value=shape.unique_id, entry='first')
+    if fac is not None:
+        tz = _facility_tz(fac)
+        if tz is not None:
+            return tz
+    return _centroid_tz(shape.get_centroid())
+
+
+def _map_tz(geo_id) -> Optional[pytz.BaseTzInfo]:
+    """지도 자체 — 그 지도의 site → zone → 나머지 도형 순."""
+    from aot.databases.models.geo import GeoShape
+    shapes = _db_row(GeoShape, custom_name='geo_id', custom_value=geo_id,
+                     entry='all') or []
+    for shape in sorted(shapes[:50], key=lambda s: s.level_id):
+        tz = _shape_tz(shape)
+        if tz is not None:
+            return tz
+    return None
+
+
+def _scoped_containers(geo_id):
+    """`tz_scope` 안에서만 지도별 site/zone 컨테이너를 한 번 읽어 재사용한다. 밖이면 None(기존 동작).
+
+    구획마다 `load_containers` 가 지도 도형 전량을 다시 읽던 것을 막는다(구획 목록 185회).
+    scope 가 끝나면 메모도 사라지고, 읽기 전용 블록이라 도형이 바뀌어 어긋나지 않는다.
+    """
+    scoped = _SCOPE_TZ.get()
+    if scoped is None or not geo_id:
+        return None
+    key = ('__containers__', geo_id)
+    if key not in scoped:
+        from aot.space import device_membership
+        scoped[key] = device_membership.load_containers(geo_id)
+    return scoped[key]
+
+
+def _plot_tz(plot) -> Optional[pytz.BaseTzInfo]:
+    """구획: 소속 구역(설계 §8 — 운영 그룹은 한 시계) → 시설 구획은 그 시설 → 그 지도.
+
+    소속 판정(`zone_for_plot`)은 앱 컨텍스트가 없으면 `_db_row` 로 읽는다.
+    """
+    from aot.databases.models.geo import GeoFacility
+    try:
+        from aot.space import plot_context
+        container = plot_context.zone_for_plot(
+            plot, containers=_scoped_containers(getattr(plot, 'geo_id', None)))
+        if container is not None:
+            tz = _shape_tz(container)
+            if tz is not None:
                 return tz
+    except Exception as exc:
+        logger.debug("timekit: 구획 소속 구역 판정 실패: %s", exc)
+    fuid = getattr(plot, 'facility_uuid', None)
+    if fuid:
+        fac = _db_row(GeoFacility, unique_id=fuid)
+        if fac is not None:
+            tz = _facility_tz(fac)
+            if tz is not None:
+                return tz
+    return _map_tz(plot.geo_id)
+
+
+def _device_kind_of(row) -> Optional[str]:
+    """장치 행 → device_kind (`device_binding.device_kind_models` 의 어휘). 장치가 아니면 None."""
+    try:
+        from aot.space.device_binding import device_kind_models
+        for kind, model in device_kind_models():
+            if isinstance(row, model):
+                return kind
+    except Exception as exc:
+        logger.debug("timekit: device_kind 판별 실패: %s", exc)
+    return None
+
+
+def _locate_row(row):
+    """장치 행 → 리졸버 `Placement`. 장치가 아니거나 실패하면 None (소비자가 농장 폴백)."""
+    kind = _device_kind_of(row)
+    uid = getattr(row, 'unique_id', None)
+    if kind is None or not uid:
+        return None
+    try:
+        from aot.space.device_location import locate
+        return locate(kind, uid)
+    except Exception as exc:
+        logger.debug("timekit: 장치 위치 리졸버 실패: %s", exc)
+        return None
+
+
+def _device_tz(row) -> Optional[Tuple[pytz.BaseTzInfo, str]]:
+    """장치 행: 리졸버(자리에서 상속한 tz) → 자리의 좌표.
+
+    장치는 더 이상 자기 시간대를 저장하지 않는다(L4, 결정 ①: 공간 상속). 사람이
+    "이 장치만 다른 시간대"로 핀한 explicit 값은 L4 백필이 자리 도형의 timezone 으로
+    승격했으므로, 여기서는 배치에서만 해석한다.
+    """
+    pl = _locate_row(row)
+    if pl is None:
+        return None
+    tz = _valid_tz_name(pl.tz)
+    if tz is not None:
+        return tz, SOURCE_INHERITED
+    tz = _centroid_tz(pl.point)
+    if tz is not None:
+        return tz, SOURCE_COORDS
+    return None
+
+
+def _row_tz(row) -> Optional[Tuple[pytz.BaseTzInfo, str]]:
+    """행(도형·시설·구획·장치) → (tz, source). 못 풀면 None."""
+    if hasattr(row, 'parent_id') and hasattr(row, 'feature'):
+        tz = _shape_tz(row)
+        return (tz, SOURCE_DEVICE) if tz is not None else None
+    if hasattr(row, 'shape_uuid'):
+        tz = _facility_tz(row)
+        return (tz, SOURCE_DEVICE) if tz is not None else None
+    if hasattr(row, 'geo_id') and hasattr(row, 'facility_uuid'):
+        tz = _plot_tz(row)
+        return (tz, SOURCE_DEVICE) if tz is not None else None
+    return _device_tz(row)
+
+
+def _db_first(models, unique_id):
+    """모델들을 차례로 보아 `unique_id` 가 처음 있는 행 하나. 세션 하나로 훑는다.
+
+    `_db_row` 와 같은 DB 길(`session_scope(AOT_DB_PATH)`)이다. 못 찾는 id 는 모델 수만큼
+    조회하므로(실측 11번) 한 세션에 묶는다. 읽기 실패 시 `_db_row` 로 하나씩 되돌아간다.
+    """
+    try:
+        from aot.config import AOT_DB_PATH
+        from aot.utils.database import session_scope
+        with session_scope(AOT_DB_PATH) as session:
+            for model in models:
+                row = session.query(model).filter(model.unique_id == unique_id).first()
+                if row is not None:
+                    session.expunge_all()
+                    return model, row
+        return None, None
+    except Exception:
+        for model in models:
+            row = _db_row(model, unique_id=unique_id)
+            if row is not None:
+                return model, row
+        return None, None
+
+
+def _place_tz(target_id) -> Optional[Tuple[pytz.BaseTzInfo, str]]:
+    """id → (tz, source). 못 찾으면 None. 조회는 `_db_row`·`_db_first` 뿐."""
+    from aot.databases.models import (
+        PID, Conditional, CustomController, Function, GeoPlot, Input, Output, Trigger)
+    from aot.databases.models.geo import GeoFacility, GeoShape
+    model, row = _db_first(
+        (GeoShape, GeoPlot, GeoFacility, Input, Output, Function, Conditional,
+         Trigger, PID, CustomController), target_id)
+    if row is not None:
+        if model is GeoShape:
+            tz = _shape_tz(row)
+        elif model is GeoPlot:
+            tz = _plot_tz(row)
+        elif model is GeoFacility:
+            tz = _facility_tz(row)
+        else:
+            return _device_tz(row)
+        if tz is not None:
+            return tz, SOURCE_DEVICE
+    tz = _map_tz(target_id)
+    return (tz, SOURCE_DEVICE) if tz is not None else None
+
+
+# 도구 호출 하나 동안만 사는 시계 캐시(`tz_scope`). 프로세스 캐시가 아니다.
+_SCOPE_TZ = contextvars.ContextVar('_timekit_scope_tz', default=None)
+
+
+@contextlib.contextmanager
+def tz_scope():
+    """이 블록 안의 시계 해석을 한 번씩만 한다 (읽기 전용 일괄 계산용).
+
+    요청 밖(MCP·데몬)에서는 `tz_of` 가 호출마다 DB 를 다시 읽는다. 장소 하나를 요약하는
+    읽기 도구는 같은 구획·장소를 수백 번 묻는다(2026-11-07 실측: 개요 한 번에 266회,
+    DB 에서 2초). 블록이 끝나면 캐시도 사라지므로 다른 호출·프로세스와 어긋날 수 없다.
+    블록 안에서 시계를 바꾸는 쓰기를 하지 말 것. 중첩하면 바깥 캐시를 그대로 쓴다.
+    """
+    if _SCOPE_TZ.get() is not None:
+        yield
+        return
+    token = _SCOPE_TZ.set({})
+    try:
+        yield
+    finally:
+        _SCOPE_TZ.reset(token)
+
+
+def _request_cache():
+    """요청 안에서만 사는 캐시(flask.g) 또는 `tz_scope` 캐시. 둘 다 아니면 None."""
+    scoped = _SCOPE_TZ.get()
+    if scoped is not None:
+        return scoped
+    try:
+        from flask import g, has_request_context
+        if has_request_context():
+            return g.setdefault('_timekit_tz', {})
     except Exception:
         pass
     return None
 
 
-def resolve_tz(entity=None, *, user=None) -> Tuple[pytz.BaseTzInfo, str]:
-    """엔티티/사용자/시스템의 tz 를 단일 우선순위로 해석해 (tzinfo, source) 반환.
-
-    체인 (docs/design/timezone-management.md §4·§5):
-      entity 가 도형(GeoShape/GeoFacility, resolve_timezone 보유):
-        그 자체 상속-aware 해석기(저장값→부모→facility→centroid)를 사용.
-      entity 가 장치 row:
-        1. entity.timezone (물질화 캐시 — 명시/상속/좌표)  → 캐시의 tz_source
-        2. 소속 도형 상속(device_id→GeoShape→부모체인)       → inherited
-        3. entity 좌표 → timezonefinder                      → coords
-        4. 시스템(Misc.timezone)                             → system
-      user: 현재는 시스템과 동일(User.timezone 은 Phase 4).
-      entity=None: 시스템 폴백 체인.
-    """
-    # user 분기 — User.timezone(개인 표시 선호) → 시스템 폴백
-    if entity is None and user is not None:
-        utz = getattr(user, 'timezone', None)
-        if utz:
-            return as_tz(utz), SOURCE_USER
-        name = system_tz_name()
-        if name:
-            return as_tz(name), SOURCE_SYSTEM
-        return pytz.utc, SOURCE_UTC
-
-    if entity is not None:
-        # 도형/시설: 자체 상속-aware 해석기 사용
-        resolver = getattr(entity, 'resolve_timezone', None)
-        if callable(resolver):
-            try:
-                tz = resolver()
+def _resolve(where, cache=None) -> Tuple[pytz.BaseTzInfo, str]:
+    """`where` → (tz, source). 폴백 사슬은 장소 → 농장 → UTC 하나."""
+    if isinstance(where, datetime_tzinfo):
+        return where, SOURCE_EXPLICIT
+    if where is None or where is FARM:
+        scoped = _SCOPE_TZ.get()
+        if scoped is None:
+            return _farm_tz()
+        if '__farm__' not in scoped:
+            scoped['__farm__'] = _farm_tz()
+        return scoped['__farm__']
+    if where is VIEWER:
+        try:
+            from flask_login import current_user
+            if current_user is not None and getattr(current_user, 'is_authenticated', False):
+                tz = _valid_tz_name(getattr(current_user, 'timezone', None))
                 if tz is not None:
-                    return tz, (getattr(entity, 'tz_source', None) or SOURCE_INHERITED)
-            except Exception:
-                pass
-        else:
-            # 장치 row
-            # 1. 물질화 캐시 (O(1) 핫패스)
-            tz_name = getattr(entity, 'timezone', None)
-            if tz_name:
-                return as_tz(tz_name), (getattr(entity, 'tz_source', None) or SOURCE_EXPLICIT)
-            # 2. 소속 도형 상속 (캐시 비었을 때만)
-            inh = _inherited_tz_for_device(entity)
-            if inh is not None:
-                return inh, SOURCE_INHERITED
-            # 3. 좌표 → finder
-            try:
-                from aot.utils.device_tz import resolve_tz_from_coords
-                coord_tz = resolve_tz_from_coords(
-                    getattr(entity, 'latitude', None),
-                    getattr(entity, 'longitude', None),
-                )
-            except Exception:
-                coord_tz = None
-            if coord_tz:
-                return as_tz(coord_tz), SOURCE_COORDS
+                    return tz, SOURCE_USER
+        except Exception:
+            pass
+        return _farm_tz()
+    if isinstance(where, str):
+        key = where.strip()
+        if not key or key.lower() == 'none':
+            return _farm_tz()
+        tz = _valid_tz_name(key)
+        if tz is not None:
+            return tz, SOURCE_EXPLICIT
+        if cache is None:
+            cache = _request_cache()
+        if cache is not None and key in cache:
+            return cache[key]
+        try:
+            found = _place_tz(key.split('::')[0])
+        except Exception as exc:
+            logger.debug("timekit: 장소 %s 조회 실패: %s", key, exc)
+            found = None
+        result = found if found is not None else _farm_tz()
+        if cache is not None:
+            cache[key] = result
+        return result
+    # 행(구획·시설·장치…)은 `tz_scope` 안에서만 캐시한다 — 요청 캐시는 문자열 키 전용이었다.
+    scoped, row_key = _SCOPE_TZ.get(), None
+    if scoped is not None:
+        uid = getattr(where, 'unique_id', None)
+        if uid:
+            row_key = (type(where).__name__, uid)
+            if row_key in scoped:
+                return scoped[row_key]
+    try:
+        found = _row_tz(where)
+    except Exception as exc:
+        logger.debug("timekit: 행 시계 해석 실패: %s", exc)
+        found = None
+    result = found if found is not None else _farm_tz()
+    if row_key is not None:
+        scoped[row_key] = result
+    return result
 
-    # 시스템 폴백
-    name = system_tz_name()
-    if name:
-        return as_tz(name), SOURCE_SYSTEM
-    return pytz.utc, SOURCE_UTC
+
+def resolve_tz(where=None, *, user=None) -> Tuple[pytz.BaseTzInfo, str]:
+    """`where` 가 가리키는 시계와 출처 `(tz, source)`.
+
+    where: 대상 id · 행(장치·도형·시설·구획) · tzinfo · IANA 이름 · FARM · VIEWER · None.
+    폴백은 장소 → 농장(Misc.timezone) → UTC 하나이고 `source` 가 어디로 떨어졌는지
+    말한다(`device`·`inherited`·`coords`·`explicit`·`user`·`system`·`utc`).
+    `user=` 는 옛 호출 호환 — where 가 없을 때 그 사용자의 개인 tz → 농장.
+    """
+    if where is None and user is not None:
+        tz = _valid_tz_name(getattr(user, 'timezone', None))
+        if tz is not None:
+            return tz, SOURCE_USER
+    return _resolve(where)
+
+
+def tz_of(where=None, cache=None) -> pytz.BaseTzInfo:
+    """`where` 가 가리키는 시계. 요청 안에서는 장소마다 한 번만 푼다.
+
+    `cache=` 는 요청 밖 일괄 처리용(dict 를 넘기면 거기에 쌓는다).
+    """
+    return _resolve(where, cache)[0]
 
 
 # ---------------------------------------------------------------------------
@@ -271,21 +545,32 @@ def _shape_centroid(shape) -> Optional[Tuple[float, float]]:
     return None
 
 
-def resolve_coords(entity=None, *, target_id=None) -> Tuple[Optional[float], Optional[float], str]:
+class Coords(tuple):
+    """(위도, 경도, source) 3-튜플 — 언패킹 호환. `.basis` 는 위치가 어디 기준인가
+    ('device' 장치 자리 | 'site' 대지 | 'none' 리졸버 밖 폴백/없음)."""
+
+    basis = 'none'
+
+    def __new__(cls, lat, lon, source, basis='none'):
+        self = super().__new__(cls, (lat, lon, source))
+        self.basis = basis
+        return self
+
+
+def resolve_coords(entity=None, *, target_id=None) -> Coords:
     """엔티티/위치의 (위도, 경도, source) 를 resolve_tz 와 같은 우선순위로 해석.
 
     체인:
       1. 도형(GeoShape) 자신 또는 target_id 가 가리키는 도형의 중심 → shape
-      2. 장치 row 가 소속된 도형(device_id→GeoShape→부모 체인)      → inherited
-      3. 장치 row 자신의 latitude/longitude 컬럼                     → coords
-      4. 농장 전역 폴백(Misc.map_* → 사이트 도형 중심 → 지도 기본값) → system
-      5. 해석 불가                                                   → utc(=없음)
+      2. 장치 row → `device_location.locate` (바인딩·레거시 과도기 포함) → inherited
+         (결과의 `.basis` 가 'site' 면 장치 자리가 아니라 대지 기준)
+      3. 농장 전역 폴백(Misc.map_* → 사이트 도형 중심 → 지도 기본값) → system
+      4. 해석 불가                                                   → utc(=없음)
 
     daemon·Flask 양 컨텍스트에서 동작한다(db_retrieve_table_daemon 사용).
     좌표가 없으면 (None, None, SOURCE_UTC) — 호출자가 "위치 없음"으로 처리한다.
     """
     row = entity
-    shape_is_inherited = False  # 도형을 '장치의 소속 도형'으로 찾아온 경우 표시
     if row is None and target_id and target_id != 'none':
         from aot.databases.models.geo import GeoShape
         row = _db_row(GeoShape, unique_id=target_id, entry='first')
@@ -301,44 +586,30 @@ def resolve_coords(entity=None, *, target_id=None) -> Tuple[Optional[float], Opt
                         break
             except Exception:
                 row = None
-        if row is None:
-            # 장치 테이블에 없는 id 라도 지도에 도형이 걸려 있으면 그 위치를 쓴다.
-            row = _db_row(GeoShape, custom_name='device_id', custom_value=target_id, entry='first')
-            shape_is_inherited = row is not None
 
     if row is not None:
         # 1. 도형이면 자신(→부모) 중심
         if hasattr(row, 'get_centroid'):
             centroid = _shape_centroid(row)
             if centroid:
-                return (centroid[0], centroid[1],
-                        SOURCE_INHERITED if shape_is_inherited else SOURCE_EXPLICIT)
+                return Coords(centroid[0], centroid[1], SOURCE_EXPLICIT)
 
-        # 2. 장치 row → 소속 도형 상속
-        uid = getattr(row, 'unique_id', None)
-        if uid:
-            from aot.databases.models.geo import GeoShape
-            shape = _db_row(GeoShape, custom_name='device_id', custom_value=uid, entry='first')
-            if shape is not None:
-                centroid = _shape_centroid(shape)
-                if centroid:
-                    return centroid[0], centroid[1], SOURCE_INHERITED
-
-        # 3. 장치 자신의 좌표
-        lat = getattr(row, 'latitude', None)
-        lon = getattr(row, 'longitude', None)
-        if lat is not None and lon is not None:
+        # 2. 장치 row → 리졸버 (유일한 장치 위치 판정). 좌표는 배치에서만 나온다
+        #    — 장치 행에는 위치 컬럼이 없다(L4 S3c).
+        pl = _locate_row(row)
+        if pl is not None and pl.point is not None:
             try:
-                return float(lat), float(lon), SOURCE_COORDS
+                return Coords(float(pl.point[0]), float(pl.point[1]),
+                              SOURCE_INHERITED, pl.basis)
             except (TypeError, ValueError):
                 pass
 
     # 4. 농장 전역 폴백
     lat, lon = _system_coords()
     if lat is not None and lon is not None:
-        return lat, lon, SOURCE_SYSTEM
+        return Coords(lat, lon, SOURCE_SYSTEM)
 
-    return None, None, SOURCE_UTC
+    return Coords(None, None, SOURCE_UTC)
 
 
 def _system_coords() -> Tuple[Optional[float], Optional[float]]:
@@ -401,43 +672,28 @@ def _parse_wall(wall: Union[str, datetime]) -> datetime:
     return dt.replace(tzinfo=None)
 
 
-def wall_to_utc(wall: Union[str, datetime],
-                tz: Union[str, pytz.BaseTzInfo, None]) -> datetime:
-    """벽시계(문자열/naive) + 앵커 tz → UTC-aware datetime (예약 저장용).
+def wall_to_utc(wall: Union[str, datetime], where) -> datetime:
+    """벽시계 → 순간(UTC aware). **오프셋이 붙어 있으면 그 순간**이고, 없으면 `where`
+    시계의 벽시계로 읽는다(pytz.localize — DST 정확; 간극은 표준시, 중복은 두 번째).
 
-    pytz.localize 를 사용해 DST 를 올바르게 적용한다(naive.replace(tzinfo=)로
-    붙이는 방식은 과거 offset 이 고정되는 pytz 함정이 있어 금지).
+    naive.replace(tzinfo=) 로 붙이는 방식은 과거 offset 이 고정되는 pytz 함정이 있다.
     """
-    naive = _parse_wall(wall)
-    tzinfo = as_tz(tz)
-    try:
-        local_aware = tzinfo.localize(naive)   # pytz: DST 정확
-    except AttributeError:
-        # zoneinfo 등 localize 가 없는 tzinfo 대비
-        local_aware = naive.replace(tzinfo=tzinfo)
-    return local_aware.astimezone(timezone.utc)
-
-
-def instant_or_wall_to_utc(value: Union[str, datetime],
-                           tz: Union[str, pytz.BaseTzInfo, None]) -> datetime:
-    """오프셋이 붙은 값은 **절대순간**으로, 없는 값은 tz 의 벽시계로 해석해
-    UTC-aware 로 돌려준다.
-
-    브라우저 화면(지도 예약 휠·캘린더 드래그)은 보는 사람의 시계로 시각을
-    고른다. 그것을 오프셋 없는 벽시계로 보내면 서버가 장치 시계로 다시 읽어
-    둘의 시차만큼 어긋난다 — 화면은 절대순간(`Date.toISOString()`)을 보내고
-    여기서 그대로 받는다. wall_to_utc 는 오프셋을 떼는 계약이라 따로 둔다.
-    """
-    if isinstance(value, datetime):
-        dt = value
+    if isinstance(wall, datetime):
+        dt = wall
     else:
-        s = str(value).strip().replace(' ', 'T')
+        s = str(wall).strip().replace(' ', 'T')
         if s.endswith(('Z', 'z')):
             s = s[:-1] + '+00:00'
         dt = datetime.fromisoformat(s)
     if dt.tzinfo is not None:
         return dt.astimezone(timezone.utc)
-    return wall_to_utc(dt, tz)
+    tzinfo = tz_of(where)
+    try:
+        local_aware = tzinfo.localize(dt)   # pytz: DST 정확
+    except AttributeError:
+        # zoneinfo 등 localize 가 없는 tzinfo 대비
+        local_aware = dt.replace(tzinfo=tzinfo)
+    return local_aware.astimezone(timezone.utc)
 
 
 def utc_offset_label(dt: Optional[datetime], tz: Union[str, pytz.BaseTzInfo, None]) -> str:
@@ -450,7 +706,7 @@ def utc_offset_label(dt: Optional[datetime], tz: Union[str, pytz.BaseTzInfo, Non
 
 def tz_label(tz: Union[str, pytz.BaseTzInfo, None], at: Optional[datetime] = None) -> str:
     """입력 칸 옆에 붙일 '어느 시계인지' — 'Asia/Seoul (UTC+09:00)'."""
-    tzinfo = as_tz(tz)
+    tzinfo = _as_tz(tz)
     name = getattr(tzinfo, 'zone', None) or str(tzinfo)
     return '{} ({})'.format(name, utc_offset_label(at or utc_now(), tzinfo))
 
@@ -470,24 +726,6 @@ def format_labeled(dt: Optional[datetime], tz: Union[str, pytz.BaseTzInfo, None]
     off = off[:3] + ':' + off[3:] if off else '+00:00'
     name = getattr(local.tzinfo, 'zone', None) or str(local.tzinfo)
     return '{} ({}, UTC{})'.format(local.strftime(fmt), name, off)
-
-
-def picker_wall_to_epoch(text: str, fmt: str = '%m/%d/%Y %H:%M',
-                         tz: Union[str, pytz.BaseTzInfo, None] = None) -> int:
-    """구간 선택 칸의 벽시계 문자열 → UTC epoch 초.
-
-    칸의 기본값을 채운 시계(생략 시 시스템 tz)로 해석한다. `time.mktime` 은
-    **컨테이너 OS 시계**로 읽어, 기본값을 채운 시계와 다르면 구간이 그 시차만큼
-    어긋났다(측정값 내보내기·에너지 사용량).
-    """
-    naive = datetime.strptime(str(text).strip(), fmt)
-    return int(wall_to_utc(naive, tz if tz is not None else system_tz()).timestamp())
-
-
-def utc_to_wall(dt: Optional[datetime],
-                tz: Union[str, pytz.BaseTzInfo, None]) -> Optional[datetime]:
-    """UTC(또는 naive=UTC) → 앵커 tz 의 벽시계(aware datetime, 예약 표시용)."""
-    return to_tz(dt, tz)
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +764,7 @@ def bucket_seconds_for(tz: Union[str, pytz.BaseTzInfo, None],
     기간 안에 서머타임 전환이 있으면 오프셋이 둘이 되므로 **주는 날짜를 전부**
     본다(보통 기간의 시작일과 종료일을 넘긴다).
     """
-    tzinfo = as_tz(tz)
+    tzinfo = _as_tz(tz)
     offsets = set()
     for d in dates:
         if d is None:
@@ -591,7 +829,7 @@ def bucket_local_key(rec_time: Optional[datetime], bucket_sec: int,
     if rec_time is None:
         return None
     try:
-        start = ensure_utc(rec_time) - _td(seconds=int(bucket_sec))
+        start = _ensure_utc(rec_time) - _td(seconds=int(bucket_sec))
         local_day = to_tz(start, tz).date()
     except Exception:
         return None
@@ -645,14 +883,21 @@ def buckets_expected(key, granularity: str,
     return total
 
 
-__all__ = [
-    "utc_now", "now_utc", "ensure_utc",
-    "as_tz", "to_tz", "iso_utc",
-    "system_tz", "system_tz_name", "current_user_tz",
-    "resolve_tz", "resolve_coords",
-    "wall_to_utc", "utc_to_wall",
+# 공개 입구 — 호출부가 쓰는 것은 이 열 둘뿐이다(설계: time_unification_design §2).
+PUBLIC_ENTRIES = (
+    "utc_now", "naive_utc", "parse_utc", "resolve_tz", "tz_of",
+    "to_tz", "iso_utc", "iso_at", "wall_to_utc", "today_at",
+    "FARM", "VIEWER",
+)
+
+# 입구가 아닌 보조(옛 이름은 S10 에서 삭제했다).
+HELPERS = (
+    "resolve_coords", "tz_scope",
+    "Coords",
     "bucket_seconds_for", "local_day_bounds_utc",
     "bucket_local_key", "buckets_expected",
     "SOURCE_EXPLICIT", "SOURCE_INHERITED", "SOURCE_COORDS",
-    "SOURCE_USER", "SOURCE_SYSTEM", "SOURCE_UTC",
-]
+    "SOURCE_USER", "SOURCE_SYSTEM", "SOURCE_UTC", "SOURCE_DEVICE",
+)
+
+__all__ = list(PUBLIC_ENTRIES) + list(HELPERS)

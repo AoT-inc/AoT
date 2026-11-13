@@ -68,7 +68,7 @@
     data-backdrop="false" tabindex="-1" role="dialog"
     aria-labelledby="ModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl aot-modal-dialog" role="document">
-      {# Phone-only preview toggle: a small chevron handle straddling the sheet's
+      {# Phone-only preview toggle: a small bar handle (drawn by CSS, no glyph) straddling the sheet's
          top-centre edge. Sits OUTSIDE .modal-content (a direct child of the dialog)
          so it can overlap the top edge without being clipped by the content's
          overflow, and so it never affects the header/title layout. Chevron up =
@@ -76,9 +76,7 @@
          Hidden on desktop via CSS (.aot-preview-toggle). #}
       <button type="button" class="aot-preview-toggle" data-aot-preview-toggle
         data-label-hide="{{_('Hide preview')}}" data-label-show="{{_('Show preview')}}"
-        aria-label="{{_('Hide preview')}}" title="{{_('Hide preview')}}" aria-pressed="false">
-        <i class="fas fa-chevron-up" aria-hidden="true"></i>
-      </button>
+        aria-label="{{_('Hide preview')}}" title="{{_('Hide preview')}}" aria-pressed="false"></button>
       <div class="modal-content">
         <form id="mod_widget_form_{{each_widget.unique_id}}" method="post" action="/dashboard/{{dashboard_id}}">
           {{form_base.csrf_token(id='csrf_token_' ~ each_widget.unique_id)}}
@@ -130,6 +128,9 @@
     // 위젯 템플릿이 쓰던 this 가 바뀌면 안 된다.
     var _aotReadySelf = this;
     var _aotWidgetInit = function () {
+    {%- if poll_scale_exempt_widgets and each_widget.graph_type in poll_scale_exempt_widgets %}
+    if (window.AoTPoll && AoTPoll.exemptWidget) AoTPoll.exemptWidget('{{each_widget.unique_id}}');  {# 서버 폴링 배율 제외(R4a) #}
+    {%- endif %}
     if (window.AoTPoll && AoTPoll.enterWidget) AoTPoll.enterWidget('{{each_widget.unique_id}}');
     try {
     // Widget {{each_widget.graph_type}} {{each_widget.unique_id}} widget_dashboard_js_ready_end template for {{each_widget.unique_id}} begin

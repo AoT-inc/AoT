@@ -282,7 +282,7 @@ def execute_at_modification(
         custom_options_dict_postsave,
         custom_options_channels_dict_postsave):
     """Add or remove OutputChannel records when num_channels changes."""
-    from aot.aot_flask.extensions import db
+    from aot.databases.sqla import db
 
     messages["page_refresh"] = True
 

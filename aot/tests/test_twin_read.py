@@ -29,6 +29,41 @@ def _rows(pid, t0, status=1, valid_h=36, days=8, old=True):
     return meta, curve
 
 
+class SharedRulesTest(unittest.TestCase):
+    """탭(`twin_chart`)과 MCP(`twin_soil`)가 같이 쓰는 값 기준·신뢰 판정."""
+
+    def test_basis_is_sensor_unless_sensorless_or_no_sensor_curve(self):
+        self.assertEqual('sensor', R.theta_basis(True, False))
+        self.assertEqual('root', R.theta_basis(True, True))
+        self.assertEqual('root', R.theta_basis(False, False))
+
+    def test_sensorless_means_zero_observations_and_unknown_is_not_sensorless(self):
+        self.assertTrue(R.sensorless({'obs_n': 0.0}))
+        self.assertFalse(R.sensorless({'obs_n': 2.0}))
+        self.assertFalse(R.sensorless({}))                       # 옛 발행(칸 없음)
+        self.assertFalse(R.sensorless(None))
+
+    def test_trust_thresholds_and_order(self):
+        t = R.trust({'status': 1.0, 'obs_n': 0.0, 'sync_rmse_theta_1d': 11.48, 'coverage_80': 0.14}, True)
+        self.assertEqual(['degraded', 'sensorless', 'error', 'coverage'], t['cautions'])
+        self.assertTrue(t['reference_only'])
+        self.assertEqual({'cautions': ['error'], 'reference_only': True}, R.trust({'sync_rmse_theta_1d': 3.01}, True))
+        self.assertEqual({'cautions': [], 'reference_only': False}, R.trust({'sync_rmse_theta_1d': 3.0, 'coverage_80': 0.6}, True))
+        self.assertEqual({'cautions': [], 'reference_only': False}, R.trust(None, True))
+        self.assertEqual({'cautions': ['coverage'], 'reference_only': False}, R.trust({'coverage_80': 0.1}, False))
+
+    def test_map_bundle_stays_small_and_soil_extra_adds_only_sensor_p10_p90(self):
+        meta, curve = _rows(P, 1792422000.0)
+        for name, ch in R.SOIL_EXTRA_CHANNELS.items():
+            curve[(P, ch)] = [(1792422000.0 + k * DAY, 10.0 + k) for k in range(8)]
+        args = ([P], meta, curve, 1792422000.0 + 9 * 3600, 1792422000.0 - DAY, 1792422000.0 + 8 * DAY)
+        [plain] = R.plots_bundle(*args)
+        [wide] = R.plots_bundle(*args, extra=R.SOIL_EXTRA_CHANNELS)
+        self.assertFalse(set(R.SOIL_EXTRA_CHANNELS) & set(plain))
+        self.assertEqual(set(R.SOIL_EXTRA_CHANNELS), set(wide) - set(plain))
+        self.assertEqual(wide['theta_sensor_p10'][0], 10.0)
+
+
 class PlotsBundleTest(unittest.TestCase):
     t0 = 1792422000.0
     now = t0 + 9 * 3600

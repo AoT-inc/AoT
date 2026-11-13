@@ -154,7 +154,6 @@ WIDGET_HEAD_HTML = """
      있어 재정의는 건너뛰었지만 **받고 파싱하는 값은 두 번 치렀다** — 한 대시보드에
      두 위젯이 서면 442KB 를 두 벌 받았다. 이제 URL 이 같으므로 한 벌만 받는다.
      위젯 하나만 있는 대시보드가 받는 총량은 예전과 **같다**(쪼갰을 뿐 더하지 않았다). -->
-<script src="{{ asset('widget-shared') }}"></script>
 
 <!-- 위젯 핵심 스크립트 → 단일 번들 (static/js/tools/bundle.mjs: aot-map-widget).
      순서 보존: vector-layer-manager → map-loader → stopwatch → controls → custom-controls
@@ -167,14 +166,101 @@ WIDGET_HEAD_HTML = """
 <script>window.AOT_TWIN_ENABLED = true;</script>
 {% set _dummy = dashboard_dict.update({"js_twin_flag": 1}) %}
 {% endif %}
-<script src="{{ asset('aot-map-widget') }}"></script>
+<!-- 지도 위젯 지연 로드 — 대시보드의 나머지 위젯이 먼저 뜨고 지도는 그 뒤에 시작한다.
+     번들 넷(widget-shared · aot-map-widget · widget-map-extra · widget-map-tail)은 예전에는 여기서
+     동기로 받아 DOMContentLoaded 를 막았다. 이제 위젯이 시작될 때 순서대로 받는다.
+     시작 조건: ① 페이지 load 직후, 위젯이 화면 근처일 때(잠잠해지길 기다리지 않는다 — 대시보드는 폴링이 계속
+     돌아 "잠잠" 조건이 거의 맞지 않고, 서버가 느릴수록 상한까지 밀렸다) ② 화면 밖 위젯은 보일 때까지, 단 load 뒤 20초에는
+     시작 ③ 외부가 지도를 요구할 때(AoTMapLazy.start(id) — 화면 연동 명령). 시작 사유는 performance.mark
+     `aot-map:lazy-start` 의 detail.reason 에 남는다. -->
+{% if "js_map_lazy" not in dashboard_dict %}
+<script>
+;(function (g) {
+  if (g.AoTMapLazy) return;
+  var SRC = [{{ asset('widget-shared')|tojson }}, {{ asset('aot-map-widget')|tojson }},
+             {{ asset('widget-map-extra')|tojson }}, {{ asset('widget-map-tail')|tojson }}];
+  var OFFSCREEN_CAP_MS = 20000;
+  var jobs = {}, loadedAt = null, scriptsP = null;
+
+  function has(url) {                       // 같은 번들을 다른 위젯 head 가 이미 동기로 실었으면 건너뛴다
+    var path = url.split('?')[0], s = document.getElementsByTagName('script');
+    for (var i = 0; i < s.length; i++) { if ((s[i].getAttribute('src') || '').split('?')[0] === path) return true; }
+    return false;
+  }
+  function loadScripts() {                  // 다운로드는 동시에, 실행은 순서대로(async=false 로 삽입한 스크립트의 규칙)
+    if (scriptsP) return scriptsP;
+    scriptsP = Promise.all(SRC.map(function (url) {
+      if (has(url)) return null;
+      return new Promise(function (res) {
+        var el = document.createElement('script');
+        el.src = url; el.async = false;
+        el.onload = res; el.onerror = function () { console.error('[AoT Map] failed to load ' + url); res(); };
+        document.head.appendChild(el);
+      });
+    }));
+    return scriptsP;
+  }
+  function start(id, reason) {
+    var j = jobs[id];
+    if (!j || j.started) return;
+    j.started = true;
+    try { performance.mark('aot-map:lazy-start', { detail: { widget: id, reason: reason || 'external' } }); } catch (e) { /* 기록 실패는 시작을 막지 않는다 */ }
+    if (j.io) { try { j.io.disconnect(); } catch (e) { /* 관찰자 정리 실패는 시작을 막지 않는다 */ } }
+    loadScripts().then(function () {
+      try { j.fn(); } finally { j.done(); }
+    });
+  }
+  function arm() {
+    var ids = Object.keys(jobs);
+    ids.forEach(function (id) {
+      var j = jobs[id];
+      if (j.armed) return;
+      j.armed = true;
+      var visible = !('IntersectionObserver' in g);
+      var el = document.getElementById('aot-map-' + id);
+      // IntersectionObserver 는 화면을 그리는 탭에서만 불린다(숨은 탭·그림이 멈춘 창에서는 조용하다) —
+      // 시작 판단 때는 위치를 직접 재서 보강한다.
+      function near() {
+        if (!el || !el.getBoundingClientRect) return true;
+        var r = el.getBoundingClientRect(), h = g.innerHeight || 800, w = g.innerWidth || 1280;
+        return r.bottom > -200 && r.top < h + 200 && r.right > 0 && r.left < w;
+      }
+      if (near()) { start(id, 'near'); return; }          // 화면 안: load 직후 바로
+      if (!visible && el) {
+        j.io = new IntersectionObserver(function (es) {
+          es.forEach(function (e) { if (e.isIntersecting) { start(id, 'visible'); } });
+        }, { rootMargin: '200px' });
+        j.io.observe(el);
+      }
+      setTimeout(function () { start(id, 'offscreen-cap'); }, OFFSCREEN_CAP_MS);        // 화면 밖이어도 결국 시작
+    });
+  }
+  // 외부(화면 연동·AI 문맥 등)가 아직 시작 전인 지도의 인스턴스를 id 로 읽으면 그 순간 시작시킨다 —
+  // 읽는 쪽 코드는 인스턴스가 생길 때까지 기다리는 경로(화면 연동의 waitForMapInstance)를 이미 갖고 있다.
+  var inst = g.AoTWidgetInstances || {};
+  g.AoTWidgetInstances = typeof Proxy === 'function' ? new Proxy(inst, {
+    get: function (t, k) { if (typeof k === 'string' && !(k in t) && jobs[k] && !jobs[k].started) start(k); return t[k]; }
+  }) : inst;
+  g.AoTMapLazy = {
+    // fn: 번들이 모두 실린 뒤 불리는 초기화. done: 자리표시 제거.
+    schedule: function (id, fn, done) {
+      jobs[id] = { fn: fn, done: done || function () {}, started: false, armed: false };
+      if (document.readyState === 'complete') arm();
+      else g.addEventListener('load', function () { setTimeout(arm, 0); });
+    },
+    start: start,
+    isPending: function (id) { return !!(jobs[id] && !jobs[id].started); }
+  };
+})(window);
+</script>
+{% set _dummy = dashboard_dict.update({"js_map_lazy": 1}) %}
+{% endif %}
 
 <!-- 3D Facility rendering (three.js + AoTFacility3D + AoTFacilityMap3D)
      예전에는 이 셋(831KB)을 document.write 로 무조건 끌어왔다. 지도 위젯만 올려도
      3D 시설을 한 번도 안 여는 대시보드가 831KB 를 받고 파싱했고, document.write 는
      파서까지 멈춰 세웠다. 이제 로더만 미리 두고, 지도에 3D 지오메트리를 가진 시설이
      실제로 있을 때 aot-map-widget-vector.js 가 ensure() 로 그때 받는다. -->
-<script src="{{ asset('widget-map-extra') }}"></script>
 
 <!-- GeoJSON overlay support -->
 
@@ -204,7 +290,6 @@ WIDGET_HEAD_HTML = """
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-time-wheel.css') }}">
 {% set _dummy = dashboard_dict.update({"css_time_wheel": 1}) %}
 {% endif %}
-<script src="{{ asset('widget-map-tail') }}"></script>
 
 
 <!-- Actuator group panel -->
@@ -322,19 +407,14 @@ WIDGET_BODY_HTML = """
 
 <div id="aot-map-{{each_widget.unique_id}}" class="aot-map-container" style="position: relative;">
     <div id="aot-map-{{each_widget.unique_id}}-canvas" style="width: 100%; height: 100%;"></div>
-
-    <!-- Address search overlay. The toolbar's search button toggles `.d-none` on
-         this element (aot-map-widget-vector.js: `_wire(btnSearch, ...)`), and the
-         fly-to listener matches `search-comp-<uid>` — so it is required in vector
-         mode, i.e. always. It used to sit behind an if-block on `geo_mode`
-         labelled "raster only"; that only rendered because bare `geo_mode` is
-         undefined in this template context (widget vars arrive as
-         `widget_variables.*`), and Undefined != 'vector' is true. Making that
-         condition "correct" would have deleted the overlay and silently broken
-         address search. -->
-    <div id="search-overlay-{{ each_widget.unique_id }}" class="map-search-overlay d-none">
-        <aot-map-search-fixed id="search-comp-{{ each_widget.unique_id }}" placeholder="{{ _('Enter an address.') }}"></aot-map-search-fixed>
+    {#- 지연 로드 동안의 자리표시 — 위젯 크기는 그대로, 시작되면 init 이 끝난 뒤 지운다. -#}
+    <div id="aot-map-lazy-ph-{{each_widget.unique_id}}" class="d-flex align-items-center justify-content-center text-muted"
+         style="position:absolute;inset:0;pointer-events:none;" role="status">
+        <span class="spinner-border spinner-border-sm mr-2" aria-hidden="true"></span>{{ _('Loading...') }}
     </div>
+
+    <!-- 주소 검색은 위치 시트(aot-map-here.js)로 옮겼다 — 도구줄의 검색 버튼이 그 시트를 검색칸에 초점을 둔 채 연다.
+         예전에 여기 있던 검색창(search-overlay-<uid>)과 그 위의 flyTo 리스너는 없다. -->
 
     <!-- AI Advice chip bar (top-center; populated from #aot-map-ai-advice-{{each_widget.unique_id}} by the inline script below) -->
     <div id="aot-map-advice-chips-{{each_widget.unique_id}}" class="aot-map-advice-chips" style="display:none;">
@@ -373,11 +453,24 @@ WIDGET_BODY_HTML = """
 </script>
 <script>
     ;(function() {
-        // Initialize Pure MapLibre Widget (Leaflet-free)
-        if (typeof window.initAoTMapVectorWidget === 'function') {
-            window.initAoTMapVectorWidget('{{each_widget.unique_id}}');
-        } else {
+        // Initialize Pure MapLibre Widget (Leaflet-free) — 지연 로드: 번들이 실린 뒤 불린다(head 의 AoTMapLazy).
+        var _uid = '{{each_widget.unique_id}}';
+        function _init() {
+            if (typeof window.initAoTMapVectorWidget === 'function') {
+                return window.initAoTMapVectorWidget(_uid);
+            }
             console.error('[AoT Map] Pure MapLibre Widget JS not loaded');
+        }
+        function _clearPlaceholder() {
+            var ph = document.getElementById('aot-map-lazy-ph-' + _uid);
+            if (ph) ph.remove();
+        }
+        if (window.AoTMapLazy) {
+            window.AoTMapLazy.schedule(_uid, function () {
+                Promise.resolve(_init()).then(_clearPlaceholder, _clearPlaceholder);
+            }, function () {});
+        } else {
+            _init();
         }
 
         // AI Advice chips — reads #aot-map-ai-advice-{{each_widget.unique_id}}, no bundle dependency.
@@ -1201,14 +1294,6 @@ WIDGET_INFORMATION = {
             'name': lazy_gettext('3D Map (Vector Mode)')
         },
         {
-            'id': 'enable_3d_terrain',
-            'type': 'bool',
-            'default_value': False,
-
-            'name': lazy_gettext('Enable 3D Terrain'),
-            'phrase': lazy_gettext('Enable 3D terrain rendering (Hillshade, elevation). Requires vector mode.')
-        },
-        {
             'id': 'facility_render_mode',
             'type': 'select',
             'default_value': 'default',
@@ -1291,29 +1376,3 @@ WIDGET_INFORMATION = {
 """
 }
 
-
-# ── 반입한 MapLibre 가 못 그리는 옵션은 설정 화면에 내놓지 않는다 ──────────────
-#
-# `enable_3d_terrain` 은 MapLibre 4 에서 도형 외곽선에 세로선을 그린다
-# (aot/utils/maplibre.py `supports_terrain` 주석에 실측 근거). 켜 봐야 결함만
-# 보이는 스위치를 설정 화면에 두면, 사용자는 그것을 켜 보고 지도가 깨졌다고
-# 판단한다. 그래서 5 가 반입되기 전까지는 목록에서 뺀다.
-#
-# 값을 지우지는 않는다 — 예전에 켜 둔 대시보드의 저장값은 그대로 두고,
-# 지도 쪽이 무시한다(aot-map-widget-vector.js 의 `_terrainOk`). 5 를 반입하면
-# 옵션이 다시 나타나고 저장돼 있던 값이 그대로 되살아난다.
-#
-# 이 두 항목(`collapse_start` 3d_map … `collapse_end`)에 남는 것이
-# `facility_render_mode` 뿐이어도 그룹은 유지한다 — 3D 관련 설정을 찾는 자리가
-# 버전에 따라 사라졌다 나타나면 그게 더 헷갈린다.
-# @manual geo/map-widget#3d-map-vector-mode
-def _drop_options_the_bundled_maplibre_cannot_render(info):
-    from aot.utils import maplibre as _ml
-    if _ml.supports_terrain():
-        return
-    info['custom_options'] = [
-        o for o in info['custom_options'] if o.get('id') != 'enable_3d_terrain'
-    ]
-
-
-_drop_options_the_bundled_maplibre_cannot_render(WIDGET_INFORMATION)

@@ -27737,6 +27737,7 @@ msgstr ""
 #: aot_flask/utils/utils_dashboard.py:168
 #, python-format
 msgid "%(name)s Copy"
+
 #: aot_flask/utils/credential_rules.py:14
 msgid "Usernames must be %(min)d to %(max)d characters and contain only letters and numbers. Passwords must be at least %(pw_min)d characters and must not be a commonly used password."
 msgstr ""
@@ -30701,4 +30702,501 @@ msgstr ""
 
 #: aot_flask/static/js/geo/aot-maplibre-seam.js
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain input"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Compare another terrain"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Could not compare. Try again."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Changed sections ({n})"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculation level"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Switch to this terrain"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "That terrain input is gone."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Weakest nozzle flow"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Revert to {name}"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Slant length total"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "This terrain input has no tile address. Check its settings."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Downloading took too long. Try again."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain changed and recalculated"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Compare with"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "No terrain was on"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Undo change"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Try again"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "This map has no pipes to compare."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipes the terrain does not cover"
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "No terrain is on."
+msgstr ""
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Could not change the terrain. Try again."
+msgstr ""
+
+msgid "Insufficient permission: view_camera"
+msgstr ""
+
+msgid "Insufficient permission: edit_controllers"
+msgstr ""
+
+msgid "Not checked"
+msgstr ""
+
+msgid "Authentication failed"
+msgstr ""
+
+msgid "The camera has locked login"
+msgstr ""
+
+msgid "OpenAPI is off"
+msgstr ""
+
+msgid "The camera certificate has changed"
+msgstr ""
+
+msgid "Check the password, then save it again or press Reconnect. It will try only once."
+msgstr ""
+
+msgid "The camera has locked login. Restart the camera or wait until the lock is released."
+msgstr ""
+
+msgid "Credentials were not sent. Check the new fingerprint below."
+msgstr ""
+
+msgid "Automatic retries are never made after an authentication failure."
+msgstr ""
+
+msgid "Pan/Tilt"
+msgstr ""
+
+msgid "Presets"
+msgstr ""
+
+msgid "Day/Night mode"
+msgstr ""
+
+msgid "Manual alarm"
+msgstr ""
+
+msgid "SD card"
+msgstr ""
+
+msgid "Event push"
+msgstr ""
+
+msgid "No features read yet"
+msgstr ""
+
+msgid "Connection check failed"
+msgstr ""
+
+msgid "If no tab is chosen, everyone with permission can operate this camera."
+msgstr ""
+
+msgid "Reconnect"
+msgstr ""
+
+msgid "Previous fingerprint"
+msgstr ""
+
+msgid "New fingerprint"
+msgstr ""
+
+msgid "Trust new certificate"
+msgstr ""
+
+msgid "This is normal if the camera was reset or its firmware changed. If neither happened, do not press this."
+msgstr ""
+
+msgid "OpenAPI"
+msgstr ""
+
+msgid "To use features such as PTZ and events, turn on OpenAPI in the camera web page under Settings > Network Settings and apply. Video works without it."
+msgstr ""
+
+msgid "Live quality"
+msgstr ""
+
+msgid "Main (2560x1440)"
+msgstr ""
+
+msgid "Sub"
+msgstr ""
+
+msgid "MJPEG (640x360)"
+msgstr ""
+
+msgid "The main stream puts a heavy load on the server."
+msgstr ""
+
+msgid "Features"
+msgstr ""
+
+msgid "Supported features"
+msgstr ""
+
+msgid "Reload features"
+msgstr ""
+
+msgid "Camera control"
+msgstr ""
+
+msgid "Move"
+msgstr ""
+
+msgid "Zoom out"
+msgstr ""
+
+msgid "Zoom in"
+msgstr ""
+
+msgid "The camera moves only while a button is held. It stops by itself about 2 seconds after the signal is lost."
+msgstr ""
+
+msgid "Go to"
+msgstr ""
+
+msgid "Save position"
+msgstr ""
+
+msgid "Save the current position as this preset? The existing position will be overwritten."
+msgstr ""
+
+msgid "Delete this preset?"
+msgstr ""
+
+msgid "The number of presets may differ from the camera app (up to 300). Only 1 to 8 can be used here."
+msgstr ""
+
+msgid "The camera will sound its alarm and flash its light. Continue?"
+msgstr ""
+
+msgid "Sound alarm"
+msgstr ""
+
+msgid "Stop alarm"
+msgstr ""
+
+msgid "The camera accepted the command"
+msgstr ""
+
+msgid "Not allowed"
+msgstr ""
+
+msgid "The camera did not accept the command"
+msgstr ""
+
+msgid "This camera does not support that"
+msgstr ""
+
+msgid "The camera's reply could not be confirmed"
+msgstr ""
+
+msgid "Could not reach the camera"
+msgstr ""
+
+msgid "Move left"
+msgstr ""
+
+msgid "Move up"
+msgstr ""
+
+msgid "Move down"
+msgstr ""
+
+msgid "Move right"
+msgstr ""
+
+msgid "Auto mode"
+msgstr ""
+
+msgid "Day mode"
+msgstr ""
+
+msgid "Night mode"
+msgstr ""
+
+msgid "Preset actions"
+msgstr ""
+
+msgid "Find cameras"
+msgstr ""
+
+msgid "Subnet to search"
+msgstr ""
+
+msgid "Searches only the subnet above (a /24 or narrower private range). No password is sent."
+msgstr ""
+
+msgid "Address changed?"
+msgstr ""
+
+msgid "Change address"
+msgstr ""
+
+msgid "This is only a guess: the camera cannot be confirmed before it is signed in. After the address is changed, press Check Connection and compare the model shown with your camera."
+msgstr ""
+
+msgid "Searching..."
+msgstr ""
+
+msgid "No camera was found."
+msgstr ""
+
+msgid "TP-Link VIGI (OpenAPI on)"
+msgstr ""
+
+msgid "RTSP device - may be a VIGI (OpenAPI may be off)"
+msgstr ""
+
+msgid "If this is a VIGI, turn on OpenAPI in the camera web page under Settings > Network Settings, then search again."
+msgstr ""
+
+msgid "Already added"
+msgstr ""
+
+msgid "Use this address"
+msgstr ""
+
+msgid "The search stopped at the time limit. Some addresses were not checked."
+msgstr ""
+
+msgid "The search could not be started."
+msgstr ""
+
+msgid "The camera at %(old)s did not answer, and a VIGI answered at %(new)s."
+msgstr ""
+
+msgid "Change the address to %(new)s? The password is sent only when you press Check Connection."
+msgstr ""
+
+msgid "The address was changed. Press Check Connection."
+msgstr ""
+
+msgid "Enter a subnet such as 192.168.0.0/24."
+msgstr ""
+
+msgid "Only private network addresses (10.x, 172.16-31.x, 192.168.x) can be searched."
+msgstr ""
+
+msgid "The range is too wide. Enter a range of /24 or narrower."
+msgstr ""
+
+msgid "A search is already running."
+msgstr ""
+
+msgid "This subnet was searched just now. Try again in %(n)s seconds."
+msgstr ""
+
+msgid "This address is no longer suggested. Search again."
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Pan and tilt"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Zoom"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Hold to move. It stops when you let go."
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Go to preset %(n)s"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Save current position"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Choose a number, then save the current position or delete it."
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Save the current position as preset %(n)s? The position saved there now will be replaced."
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Delete preset %(n)s?"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Turn off"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Sound"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Show camera controls"
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Show direction, zoom and preset controls over the video when the camera supports them and you are allowed to operate it."
+msgstr ""
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Camera zoom"
+msgstr ""
+
+#: aot/aot_flask/routes_general.py
+msgid "Authentication failed - not retrying automatically"
+msgstr ""
+
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Lightweight Mode"
+msgstr ""
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Phones and tablets only"
+msgstr ""
+
+#: aot/aot_flask/templates/layout_default.html
+msgid "Makes the screen lighter on slow devices and connections: refreshes less often, turns off motion effects, and shows camera snapshots instead of live video."
 msgstr ""

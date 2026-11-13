@@ -314,7 +314,7 @@ class TestMigration(unittest.TestCase):
     def test_head_and_model_column(self):
         from aot.config import ALEMBIC_VERSION
         from aot.databases.models import Misc
-        self.assertEqual(ALEMBIC_VERSION, 'p7_00_target_alias_20261028')
+        self.assertEqual(ALEMBIC_VERSION, 'p7_11_ai_card_raised_at_20261109')
         self.assertIn('data_layers', Misc.__table__.c)
         self.assertTrue(Misc.__table__.c.data_layers.nullable)
 

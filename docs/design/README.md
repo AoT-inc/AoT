@@ -26,6 +26,7 @@
 - [device-onboarding.md](device-onboarding.md) — 장치 온보딩: 목록에서 고르기를 폴백으로
 - [plc-modbus-integration.md](plc-modbus-integration.md) — PLC(Modbus TCP) 연동
 - [matter-controller.md](matter-controller.md) — Matter 컨트롤러: 기존 Matter 장치를 Multi-Admin으로 들여오기
+- [vigi-camera-module.md](vigi-camera-module.md) — TP-Link VIGI 카메라 모듈: 제조사 중립 드라이버 틀, 인증 잠금 보호, 이벤트 → 트리거 (2026-11-04 확정)
 - [lorawan_power_reliability_plan.md](lorawan_power_reliability_plan.md) — LoRaWAN 밸브 제어: 배터리 절감과 명령 신뢰성
 - [battery_optimization_report.md](battery_optimization_report.md) — 모바일 배터리 최적화 보고
 
@@ -37,6 +38,7 @@
 - [timer-counter-integration-plan.md](timer-counter-integration-plan.md) — 타이머와 on/off 카운터 통합
 - [scheduler-process-separation.md](scheduler-process-separation.md) — 스케줄러 프로세스 분리
 - [digital-twin.md](digital-twin.md) — 디지털트윈 출력 계약: 상태 벡터·48h 분위수 궤적·유효기한·`env_twin` 저장(초안)
+- [digital-twin-node.md](digital-twin-node.md) — 디지털트윈 노드(`aot_twin`): 배포형 별도 서비스, 노지 모델·예보 입력
 
 ## AI·MCP
 
@@ -44,6 +46,8 @@
 - [ai-tool-architecture.md](ai-tool-architecture.md) — AI 도구 표면: 해소·질의·표면의 분리
 - [ai-library-redesign.md](ai-library-redesign.md) — AI 라이브러리(통합 지식 저장소) 재설계
 - [mcp-embedded-oauth.md](mcp-embedded-oauth.md) — MCP 내장 인가 서버: 중앙 서버 없이 claude.ai 커넥터 연결(초안)
+- [mcp-domain-surface.md](mcp-domain-surface.md) — MCP 도메인 표면: 도구 14개·operation 명부·공통 인자·응답 계약(2026-11 기본 표면)
+- [mcp-name-dictionary-plan.md](mcp-name-dictionary-plan.md) — MCP 이름 사전·호출 기록 활용 계획(1단계 수집만)
 
 ## 시간
 

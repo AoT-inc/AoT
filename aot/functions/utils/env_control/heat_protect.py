@@ -69,7 +69,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional
 
-from . import psychro
+from aot.utils import psychro
 from .safety_gates import is_wetting_fogger
 from .screen_policy import (
     SHADE_SOLAR_OFF, SHADE_SOLAR_ON, shaded_below_light_min,

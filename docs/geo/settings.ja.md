@@ -10,8 +10,8 @@
 
 | 項目 | デフォルト | 説明 |
 |-------|---------|-------------|
-| Latitude（緯度） | 37.5665 | ソウル中心部 |
-| Longitude（経度） | 126.9780 | ソウル中心部 |
+| Latitude（緯度） | 未設定 | 位置を入力または取得するまで空 |
+| Longitude（経度） | 未設定 | 位置を入力または取得するまで空 |
 | Zoom Level（ズームレベル） | 12 | 初期ズーム（小さいほど広い範囲、大きいほど近く） |
 
 希望する位置とズームに地図を移動してから、**Current View（現在の表示）** 行の **Get Location（位置を取得）** を押すと、3つの項目が現在の地図表示の値で埋まります。
@@ -97,7 +97,7 @@ GET /api/geo/settings
 
 現在のグローバル設定をJSONとして返します。設定編集の権限が必要で、権限がない場合はリクエストが拒否されます。
 
-レスポンスは `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "search_provider": "..."}` です。`saved_state` には保存済みの設定が入り（デフォルトの初期ズームは `zoom` キーで返ります）、保存された地図プロバイダーのキーも含まれます。
+レスポンスは `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "terrain_available": false, "search_provider": "..."}` です。`saved_state` には保存済みの設定が入り（デフォルトの初期ズームは `zoom` キーで返ります）、保存された地図プロバイダーのキーも含まれます。
 
 ```http
 POST /api/geo/settings

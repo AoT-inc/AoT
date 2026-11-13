@@ -20,7 +20,7 @@ from datetime import datetime
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 # @ANCHOR: AI_KNOWLEDGE_CHUNK_MODEL

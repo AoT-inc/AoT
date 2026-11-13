@@ -5,7 +5,7 @@ from flask_babel import lazy_gettext
 from aot.config_translations import TRANSLATIONS
 from aot.databases.models import Actions
 from aot.databases.models import Output
-from aot.actions.base_action import AbstractFunctionAction
+from aot.actions.base_action import AbstractFunctionAction, coerce_seconds
 from aot.utils.constraints_pass import constraints_pass_positive_or_zero_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.execution_context import run_in_thread
@@ -114,6 +114,10 @@ class ActionModule(AbstractFunctionAction):
         except:
             duration = self.duration
 
+        # `value={"duration": "300"}` 처럼 문자열·None 이 오면 출력 쪽의
+        # `abs(amount)` 가 TypeError 를 낸다 — 초 단위 숫자로 읽어 넘긴다.
+        duration = coerce_seconds(duration, default=0.0)
+
         output = db_retrieve_table_daemon(
             Output, unique_id=output_id, entry='first')
 
@@ -129,7 +133,7 @@ class ActionModule(AbstractFunctionAction):
         dict_vars['message'] += f" Turn output {output_id} CH{channel} ({output.name}) {state}"
 
         if state == 'on' and duration:
-            dict_vars['message'] += f" for {duration} seconds"
+            dict_vars['message'] += f" for {duration:g} seconds"
         dict_vars['message'] += "."
 
         # 명령을 그냥 스레드로 넘기면 실행 컨텍스트(출처)가 따라가지 못해

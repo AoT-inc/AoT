@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 from aot.ai.context.ext_translation_table import PEST_NAME_MAP, CROP_NAME_MAP, SEVERITY_MAP
+from aot.utils.timekit import FARM, to_tz, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class PestManagementClient:
         """
         try:
             api_key    = config.get('api_key', '') or os.environ.get('NCPMS_API_KEY', '')
-            year_month = config.get('year_month', None) or datetime.now().strftime('%Y%m')
+            year_month = config.get('year_month', None) or to_tz(utc_now(), FARM).strftime('%Y%m')
 
             if not api_key:
                 # Once per process. A missing key is a static configuration
@@ -116,7 +117,7 @@ class PestManagementClient:
             from aot.databases.utils import session_scope
             from aot.config import AOT_DB_PATH
 
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=_TTL_HOURS)
+            cutoff = utc_now() - timedelta(hours=_TTL_HOURS)
             with session_scope(AOT_DB_PATH) as session:
                 row = (
                     session.query(ExtPestAlerts)
@@ -184,7 +185,7 @@ class PestManagementClient:
             logger.error("EXT-KR-03 unexpected response structure: %s", exc)
             return []
 
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         normalized: list[dict] = []
 
         for item in items:
@@ -270,7 +271,7 @@ class PestManagementClient:
         if not cls._is_cache_fresh():
             api_key = os.environ.get('NCPMS_API_KEY', '')
             if api_key:
-                year_month = datetime.now().strftime('%Y%m')
+                year_month = to_tz(utc_now(), FARM).strftime('%Y%m')
                 cls._refresh_cache(api_key, year_month)
         return cls._read_cache_by_crop(crop_type)
 
@@ -289,7 +290,7 @@ class PestManagementClient:
             from aot.databases.utils import session_scope
             from aot.config import AOT_DB_PATH
 
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=_TTL_HOURS)
+            cutoff = utc_now() - timedelta(hours=_TTL_HOURS)
             with session_scope(AOT_DB_PATH) as session:
                 rows = (
                     session.query(ExtPestAlerts)
@@ -331,7 +332,7 @@ class PestManagementClient:
             from aot.databases.utils import session_scope
             from aot.config import AOT_DB_PATH
 
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=_TTL_HOURS)
+            cutoff = utc_now() - timedelta(hours=_TTL_HOURS)
             with session_scope(AOT_DB_PATH) as session:
                 rows = (
                     session.query(ExtPestAlerts)

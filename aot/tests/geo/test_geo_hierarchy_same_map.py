@@ -90,7 +90,7 @@ class TestShapeParentStaysOnItsMap(_Base):
     def test_cached_cross_map_parent_is_discarded(self):
         """옛 판정이 캐시에 남긴 값 — site 의 부모가 other-site 라고 적혀
         있어도, 읽을 때 버리고 기하로 다시 계산해야 한다."""
-        from aot.aot_flask.geo import containment_cache as cc
+        from aot.space import containment_cache as cc
         from aot.utils.geo_hierarchy import build_geo_parent_map
         cc.store([
             (cc.KIND_SHAPE, 'other-site', None, 'm2'),
@@ -133,7 +133,7 @@ class TestPlotParentStaysOnItsMap(_Base):
         self.assertEqual(_plot_ids_inside(['other-site'], use_cache=False), [])
 
     def test_cached_cross_map_plot_parent_is_discarded(self):
-        from aot.aot_flask.geo import containment_cache as cc
+        from aot.space import containment_cache as cc
         from aot.utils.geo_hierarchy import _plot_ids_inside
         self._plot()
         cc.store([(cc.KIND_PLANTING, 'plot1', 'other-site', 'm1')])

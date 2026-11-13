@@ -20,6 +20,8 @@ from .test_facility_effects import H, W, _dev_spec
 from .test_facility_greybox import CAP, _data, _spec as fac_spec
 from .test_field_bucket import CAP as FCAP, PLOT, _spec as fld_spec, _synthetic
 
+VALVE = "11111111-2222-3333-4444-555555555555"
+
 
 class Sink:
     def __init__(self):
@@ -40,6 +42,9 @@ def test_parse_rejects_what_it_cannot_run_instead_of_ignoring():
            ({"weather": [{"var": "rain_x", "op": "add", "value": 1, "t0": 0}]}, "facility"),
            ({"weather": [{"var": "T_ext", "op": "mul", "value": 1, "t0": 0}]}, "facility"),
            ({"actuators": [{"channel": "heat", "t0": 0, "t1": 9, "value": 3}]}, "field"),
+           ({"actuators": [{"channel": VALVE, "t0": 0, "value": 50}]}, "field"),                # 밸브도 t1 필수
+           ({"actuators": [{"channel": VALVE, "t0": 0, "t1": 9, "value": 120}]}, "field"),
+           ({"actuators": [{"channel": VALVE, "t0": 0, "t1": 9, "value": 50, "unit": "mm"}]}, "field"),
            ({"actuators": [{"channel": "irrigation_mm", "t0": 0, "value": 3}]}, "field"),       # 노지는 t1 필수
            ({"weather": [{"var": "T_ext", "op": "add", "value": 1, "t0": 0}]}, "field")]
     for ov, kind in bad:
@@ -50,6 +55,30 @@ def test_parse_rejects_what_it_cannot_run_instead_of_ignoring():
                   "supply": [{"name": "water_temp_c", "value": 12}]}, "facility")
     assert p.actuators[0].key == "shade" and p.actuators[0].t1 == math.inf
     assert p.weather[0].var == "T_ext" and p.supply[0]["name"] == "water_temp_c"
+
+
+def test_valve_runs_duty_is_taken_from_the_start_of_the_span():
+    p = SC.parse({"actuators": [{"channel": VALVE, "t0": 100.0, "t1": 200.0, "value": 50},
+                                {"channel": VALVE, "t0": 300.0, "t1": 400.0, "value": 0},
+                                {"channel": "irrigation_mm", "t0": 0, "t1": 10, "value": 3}]}, "field")
+    assert SC.valve_runs(p) == {VALVE: [(100.0, 150.0)]}
+
+
+def test_depth_overrides_replaces_valves_and_keeps_the_rest():
+    ov = {"actuators": [{"channel": VALVE, "t0": 0.0, "t1": 3600.0, "value": 100},
+                        {"channel": "irrigation_mm", "t0": 0.0, "t1": 60.0, "value": 1.0}],
+          "weather": [{"var": "precip_mm", "op": "add", "value": 2, "t0": 0, "t1": 10}]}
+    out = SC.depth_overrides(ov, [(0.0, 3600.0, 4.0)], ["주의"])
+    plan = SC.parse(out, "field")
+    assert not SC.valve_runs(plan) and len(plan.weather) == 1
+    assert sum(SC.irrigation_hourly(plan).values()) == pytest.approx(5.0)
+    assert out["water"]["notes"] == ["주의"] and len(ov["actuators"]) == 2             # 정의는 그대로다
+
+
+def test_supply_rows_count_on_neither_side_of_the_header():
+    rep = SC.effects_report([{"id": "p", "kind": "pump"}, {"id": "h", "kind": "heater", "ratings": {}}], "facility")
+    assert [r["status"] for r in rep] == ["supply", "modeled"]
+    assert SC.header_counts(rep) == (1, 0)
 
 
 def test_modes_beyond_hold_and_whatif_wait_for_e5():
@@ -251,6 +280,20 @@ def field_runs():
     return base, wet, rain, run
 
 
+def test_field_scenario_with_an_unconverted_valve_fails_instead_of_dropping_it(field_runs):
+    res = field_runs[3]({"id": "f3", "overrides": {"actuators": [{"channel": VALVE, "t0": 0.0, "t1": 60.0, "value": 100}]}})
+    assert res.status == Status.ERROR and "깊이로 바뀌지" in res.reason
+
+
+def test_field_scenario_notes_from_the_water_conversion_reach_the_result(field_runs):
+    t0 = field_runs[0].output.t0
+    res = field_runs[3]({"id": "f4", "overrides": {"actuators": [
+        {"channel": "irrigation_mm", "t0": t0 + 3600.0, "t1": t0 + 7200.0, "value": 5.0, "unit": "mm"}],
+        "water": {"notes": ["공급 주의: pump-over-demand"], "caveats": ["pump-over-demand"]}}})
+    assert "pump-over-demand" in res.reason
+    assert [e["caveats"] for e in res.effects if e["channel"]] == [["pump-over-demand"]]
+
+
 def test_field_baseline_header_counts_roster_as_not_applied(field_runs):
     base = field_runs[0]
     m = base.output.meta
@@ -345,6 +388,20 @@ def test_service_runs_queued_scenarios_and_records_each_outcome():
     assert set(q.done_) == {"g1"} and q.done_["g1"].t0 == pytest.approx(t0)
     assert "트윈 대상이 아님" in q.failed_["o1"] and "E5" in q.failed_["z1"]
     assert any(p.measurement == "env_twin_scn" for p in chan.points)
+
+
+def test_service_fails_a_scenario_whose_valves_cannot_be_turned_into_depth():
+    now = (int(time.time()) // 86400) * 86400 + 6 * 3600.0
+    data, planted, _ = _synthetic(now)
+
+    class Refuses(MemQueue):
+        def prepare(self, scn):
+            raise SC.ScenarioError("이 구획에 물을 대는 밸브가 아니다: x")
+
+    q = Refuses([{"id": "s1", "target": {"kind": "field", "id": PLOT}, "overrides": {}}])
+    svc = _service_with(q, data, fld_spec(planted))[0]
+    assert svc.run_scenarios() == 1
+    assert "밸브가 아니다" in q.failed_["s1"] and not q.done_
 
 
 def test_service_leaves_scenarios_queued_while_off_or_locked():

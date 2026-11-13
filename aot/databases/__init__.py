@@ -2,9 +2,7 @@
 import secrets
 import uuid
 
-from flask import current_app
-
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class CRUDMixin(object):
@@ -58,7 +56,7 @@ def set_uuid():
 # geo_id 포함: GeoShape/GeoFacility 를 clone_model 로 복제하면 소속 지도가
 # 그대로 따라와 복제본이 원본 지도를 오염시킨다(2026-08-04 확인). 이제
 # 명시하지 않으면 NOT NULL 로 즉시 죽는다 — 조용한 오염보다 낫다.
-CLONE_CROSS_REF_DENYLIST = ('map_overlay_id', 'map_config_id', 'geo_id')
+CLONE_CROSS_REF_DENYLIST = ('map_overlay_id', 'geo_id')
 
 
 def clone_model(model, **kwargs):

@@ -16,6 +16,8 @@ Phase 2b: replace with RDA API-provided stage duration data when available.
 """
 import logging
 from datetime import date, datetime
+from aot.utils.timekit import FARM, today_at
+
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -206,7 +208,7 @@ class GrowthStageResolver:
                 pd = planting_date
             else:
                 return None
-            return (date.today() - pd).days
+            return (today_at(FARM) - pd).days
         except Exception as exc:
             logger.warning("GrowthStageResolver: invalid planting_date %r: %s", planting_date, exc)
             return None

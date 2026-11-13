@@ -12,8 +12,8 @@ from flask import Flask
 
 from aot.aot_flask.extensions import db
 # 앱 컨텍스트 밖에서 먼저 import — 번역 문자열을 평가하는 모듈이 딸려 온다.
-from aot.aot_flask.geo import device_binding as _device_binding  # noqa: F401
-from aot.aot_flask.geo import facility_integration as FI
+from aot.space import device_binding as _device_binding  # noqa: F401
+from aot.space import facility_integration as FI
 from aot.functions.custom_functions.env_coordinator_impl import _profile_loader_mixin as _loader
 from aot.functions.custom_functions.env_coordinator_impl._profile_loader_mixin import ProfileLoaderMixin
 from aot.functions.utils.twin_effects import reader as R

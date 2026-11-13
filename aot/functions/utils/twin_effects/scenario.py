@@ -11,8 +11,10 @@
 
 - 장치 가정의 키는 `channel`(또는 계약의 `channel_or_device_uid`)이다. 시설은 효과 채널 이름(`vent heat cool fog co2_inj shade
   curtain`) 이거나 장치 uuid(그 장치만 움직이고 같은 채널의 다른 장치는 그대로 — 합치기는 효과 목록표의 규칙).
-  값은 시설 개도·가동률 0~100 %(`unit` 생략 또는 "%"). 노지는 `irrigation_mm` 만, `unit` 생략·`"mm"` = [t0, t1) 전체 관수 깊이,
-  `"mm/h"` = 시간당. 노지는 `t1` 이 꼭 있어야 한다(끝없는 관수는 물 수지를 만들지 못한다).
+  값은 시설 개도·가동률 0~100 %(`unit` 생략 또는 "%"). 노지는 `irrigation_mm` 이면 `unit` 생략·`"mm"` = [t0, t1) 전체 관수 깊이,
+  `"mm/h"` = 시간당. 노지는 밸브 Output uuid 도 받는다: 값은 그 구간의 가동률 %(구간 앞에서부터 켠다)이고, **서버가 물 회로로
+  공급 한계를 넣어 `irrigation_mm` 으로 바꿔 넘긴다**(`twin_effects_link.field_scenario_depths` — 트윈은 깊이만 받는다).
+  노지는 `t1` 이 꼭 있어야 한다(끝없는 관수는 물 수지를 만들지 못한다).
 - 구간은 `t0 ≤ t < t1`(UTC epoch 초), `t1` 이 null 이면 예측 끝까지. 겹치면 목록에서 뒤의 것이 이긴다. 가정은 예측 구간에만 닿는다
   (과거는 동기화에 쓴 실제 상태 그대로 — 가정으로 과거를 바꾸지 않는다).
 - 기상 가정: 시설 `T_ext RH_ext CO2_ext solar wind`(별칭 `temp_c rh_pct solar_w_m2 wind_ms`), 노지 `precip_mm et0_mm temp_c`
@@ -25,6 +27,7 @@ from __future__ import annotations
 
 import bisect
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -36,6 +39,7 @@ DAY_S = 86400.0
 OPS = ("add", "scale", "set")
 FACILITY_CHANNELS = ("heat", "cool", "vent", "fog", "co2_inj", "shade", "curtain")
 FIELD_CHANNELS = ("irrigation_mm",)
+_UUID = re.compile(r"^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")
 FACILITY_WEATHER = {"T_ext": "T_ext", "temp_c": "T_ext", "RH_ext": "RH_ext", "rh_pct": "RH_ext", "CO2_ext": "CO2_ext",
                     "solar": "solar", "solar_w_m2": "solar", "wind": "wind", "wind_ms": "wind"}
 FIELD_WEATHER = {"precip_mm": "rain", "rain_mm": "rain", "rain": "rain", "et0_mm": "et0", "et0": "et0",
@@ -111,9 +115,17 @@ def parse(overrides: Optional[Mapping], kind: str) -> Plan:
             raise ScenarioError("actuators[%d]: channel 이 없다" % i)
         unit = str(a.get("unit") or "").strip()
         val = _num(a.get("value"), "actuators[%d].value" % i)
+        if field_target and key not in FIELD_CHANNELS:
+            if not _UUID.match(key):
+                raise ScenarioError("노지 장치 가정은 irrigation_mm 또는 밸브 uuid 만 받는다: %s" % key)
+            if unit not in ("", "%"):
+                raise ScenarioError("밸브 가정의 단위는 %%: %s" % unit)
+            if not 0.0 <= val <= 100.0:
+                raise ScenarioError("가동률은 0~100 %% 여야 한다: %s" % val)
+            t0, t1 = _span(a, "actuators[%d]" % i, need_end=True)
+            plan.actuators.append(ActuatorOv(key, t0, t1, val, "%"))
+            continue
         if field_target:
-            if key not in FIELD_CHANNELS:
-                raise ScenarioError("노지 장치 가정은 irrigation_mm 만 받는다: %s" % key)
             if unit not in ("", "mm", "mm/h"):
                 raise ScenarioError("irrigation_mm 의 단위는 mm 또는 mm/h: %s" % unit)
             if val < 0:
@@ -254,6 +266,30 @@ def apply_weather_ext(plan: Plan, e: Dict[str, float], t: float) -> Dict[str, fl
 
 # ── 노지: 일 격자 가정 ──────────────────────────────────────────────────────────────
 
+def valve_runs(plan: Plan) -> Dict[str, List[Tuple[float, float]]]:
+    """밸브 가정 → {밸브: [(켠 시각, 끈 시각)]}. 가동률만큼 구간 앞에서부터 켠다. 0 % 는 실행이 없다."""
+    out: Dict[str, List[Tuple[float, float]]] = {}
+    for a in plan.actuators:
+        if a.key not in FIELD_CHANNELS:
+            runs = out.setdefault(a.key, [])
+            if a.value > 0:
+                runs.append((a.t0, a.t0 + (a.t1 - a.t0) * a.value / 100.0))
+    return out
+
+
+def depth_overrides(overrides: Mapping, depths: Sequence[Tuple[float, float, float]],
+                    notes: Sequence[str] = (), caveats: Sequence[str] = ()) -> Dict[str, object]:
+    """밸브 가정을 뺀 사본 + `depths`(켠 시각, 끈 시각, mm)의 `irrigation_mm` 가정. `notes` 는 결과 메모로, `caveats` 는 `effects[]` 로 간다."""
+    out = dict(overrides)
+    kept = [a for a in overrides.get("actuators") or ()
+            if str(a.get("channel_or_device_uid") or a.get("channel") or a.get("device") or "").strip()
+            in FIELD_CHANNELS]
+    out["actuators"] = kept + [{"channel": "irrigation_mm", "t0": x, "t1": y, "value": mm, "unit": "mm"}
+                               for x, y, mm in depths]
+    out["water"] = {"notes": list(notes), "caveats": list(caveats)}
+    return out
+
+
 def irrigation_hourly(plan: Plan) -> Dict[float, float]:
     """관수 가정 → {시 시작 epoch: 그 시간 mm}. 겹치는 가정은 합친다(관수량은 더해진다)."""
     out: Dict[float, float] = {}
@@ -386,6 +422,16 @@ def effects_report(devices: Sequence[Mapping], domain: str, assumed: Sequence[st
 
 
 def header_counts(report: Sequence[Mapping], applied: bool = True) -> Tuple[int, int]:
-    """머리말 `effects_modeled`(status=modeled 장치 수) · `effects_unmodeled`(partial·unmodeled·unknown 장치 수)."""
-    modeled = sum(1 for r in report if r["status"] == C.MODELED and applied)
-    return modeled, len(report) - modeled
+    """머리말 `effects_modeled`(status=modeled 장치 수) · `effects_unmodeled`(partial·unmodeled·unknown 장치 수).
+    공급 부품(펌프·탱크)은 효과가 아니라 공급 제약이라 어느 쪽에도 세지 않는다."""
+    live = [r for r in report if r["status"] != C.SUPPLY]
+    modeled = sum(1 for r in live if r["status"] == C.MODELED and applied)
+    return modeled, len(live) - modeled
+
+
+def field_counts(report: Sequence[Mapping], irrigation_known: bool) -> Tuple[int, int]:
+    """노지 머리말 — **물이 모델에 들어간 출력**과 그 밖. 관수 행은 지표 효과가 빠져 `partial` 이지만 토양 물은 들어간다.
+    일부만 반영이라는 사실은 장치별 `status` 가 말하고, 머리말은 연결 상태를 센다."""
+    live = [r for r in report if r["status"] != C.SUPPLY]
+    wet = sum(1 for r in live if r.get("channel") in FIELD_CHANNELS and irrigation_known)
+    return wet, len(live) - wet

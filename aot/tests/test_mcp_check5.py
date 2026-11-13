@@ -7,6 +7,7 @@
   I-5  get_control_state: 숫자 근거(27)에 이름(humid_cold)을 곁들인다.
   I-8  Open-Meteo: 429 를 받으면 한도가 풀릴 때까지 같은 호스트에 묻지 않는다.
 """
+from aot.utils.timekit import FARM, today_at
 import json
 import os
 import tempfile
@@ -57,14 +58,14 @@ def _seed(db):
     db.session.add(GeoFacility(unique_id='fac-other', name='다른온실',
                                shape_uuid='shp-other', geo_id='map-c5'))
     db.session.add(GeoPlot(unique_id='plot-open', geo_id='map-c5',
-                           subject='콩', started_on=date.today(),
+                           subject='콩', started_on=today_at(FARM),
                            feature={'type': 'Feature', 'properties': {},
                                     'geometry': _square(0, 0, 0.001)}))
     db.session.add(GeoPlot(unique_id='plot-nursery', geo_id='map-c5',
-                           subject='상추', started_on=date.today(),
+                           subject='상추', started_on=today_at(FARM),
                            facility_uuid='fac-nursery', bay_id='b1'))
     db.session.add(GeoPlot(unique_id='plot-other', geo_id='map-c5',
-                           subject='토마토', started_on=date.today(),
+                           subject='토마토', started_on=today_at(FARM),
                            facility_uuid='fac-other', bay_id='b1'))
     db.session.add(CustomController(
         unique_id='ctl-c5', name='환경제어 c5', device='env_coordinator',

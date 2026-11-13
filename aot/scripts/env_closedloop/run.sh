@@ -55,7 +55,7 @@ OUT="$(cd "$OUT" && pwd)"
 STAGE="$OUT/.harness"
 rm -rf "$STAGE"; mkdir -p "$STAGE/envsim"
 cp "$REPO"/aot/functions/utils/env_control/sim/*.py "$STAGE/envsim/"
-cp "$REPO"/aot/functions/utils/env_control/psychro.py "$STAGE/envsim/_psychro.py"
+cp "$REPO"/aot/utils/psychro.py "$STAGE/envsim/_psychro.py"
 cp "$HERE/closedloop.py" "$STAGE/"
 HARNESS_REV="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo '?')"
 echo "$HARNESS_REV" > "$STAGE/HARNESS_REV"
@@ -71,7 +71,7 @@ STORM_TABLE=0
 for a in "${SCEN[@]}"; do [ "$a" = "storm" ] && STORM_TABLE=1; done
 EXPANDED=()
 while IFS= read -r line; do [ -n "$line" ] && EXPANDED+=("$line"); done < <(
-  PYTHONPATH="$STAGE" python3 -c "
+  PYTHONPATH="$STAGE:$REPO" python3 -c "
 import sys
 import envsim.scenarios as S
 seen = []

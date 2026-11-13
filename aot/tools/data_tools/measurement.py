@@ -24,8 +24,7 @@ from aot.tools.aot_data_tool_service import _WEATHER_MEASUREMENTS
 from aot.tools.aot_data_tool_service import _WEATHER_METRIC_KEYWORDS
 from aot.tools.aot_data_tool_service import _WEATHER_SKY_KEYWORDS
 from aot.tools.aot_data_tool_service import _devices_on_map_p2
-from aot.tools.aot_data_tool_service import _local_iso
-from aot.utils.device_tz import location_iso
+from aot.utils.timekit import iso_at, FARM, parse_utc, tz_of, utc_now
 from aot.tools.aot_data_tool_service import _looks_like_uuid
 from aot.databases.models import Conversion
 from aot.databases.models import CustomController
@@ -36,10 +35,11 @@ from aot.databases.models import Input
 from aot.databases.models import Misc
 from aot.databases.models import Output
 from aot.utils.influx import read_influxdb_list
+from ._shims import tz_scoped
 from aot.utils.system_pi import return_measurement_info
 from aot.utils.tools import return_energy_usage
-from aot.utils.tz_utils import now_utc
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 from sqlalchemy import or_
 
@@ -91,8 +91,8 @@ class MeasurementToolsMixin:
                 )
                 if last and last[0] is not None and last[1] is not None:
                     # UTC → 이 장치가 놓인 곳의 시각(`location_iso` 한 곳에서).
-                    from aot.utils.device_tz import location_iso
-                    _t = location_iso(last[0], target_input.unique_id)
+                    from aot.utils.timekit import iso_at
+                    _t = iso_at(last[0], target_input.unique_id)
                     results.append({
                         "device_name": target_input.name or target_input.unique_id,
                         "device_kind": ("function" if is_function else
@@ -146,7 +146,7 @@ class MeasurementToolsMixin:
         """
         # 소속은 정본(마커 + 바인딩 + 하위 장소)으로 — 마커만 보면 구역에
         # 바인딩으로 맡긴 센서가 빠진다(2026-10-08).
-        from aot.aot_flask.geo.device_membership import place_members_split
+        from aot.space.device_membership import place_members_split
         try:
             split = place_members_split(target_zone.unique_id) or {}
         except Exception:                                   # noqa: BLE001
@@ -193,7 +193,7 @@ class MeasurementToolsMixin:
         # unplaced → outdoor. 실내 우선 규칙(위)은 그대로 먼저 본다.
         _rank = {'facility': 0, 'open_field': 0, 'unplaced': 1, 'outdoor': 2}
         try:
-            from aot.aot_flask.geo.device_membership import classify_sensors
+            from aot.space.device_membership import classify_sensors
             _pl = classify_sensors([i.unique_id for i in rows],
                                    place_uid=target_zone.unique_id)
         except Exception:                                   # noqa: BLE001
@@ -277,6 +277,7 @@ class MeasurementToolsMixin:
         return note
 
     @classmethod
+    @tz_scoped
     def get_sensor_detail(cls, loc_id=None, sensor_type=None, time_range="24h",
                           limit=None, loc_ids=None, peaks=False, brief=False, wide=False):
         """센서 이력 — 대상 하나(`loc_id`) 또는 여럿(`loc_ids`, 최대
@@ -285,9 +286,12 @@ class MeasurementToolsMixin:
 
         `brief` 는 도구 스키마에 없는 처리기 인자다 — 도메인 표면(measure.history)만
         켠다(`registry_data` 의 defaults_by_kind). 켜면 측정 항목(`sensor_type`)도
-        `limit` 도 안 준 호출은 채널마다 최소·최대·평균·건수 한 줄만 낸다(최근값 없음).
-        그 둘 중 하나라도 주면 예전 모양 그대로다(구역 응답의 `zone_pick` 만 규칙 문장 없이
-        짧다). 인앱 AI·날씨·트윈·화면 값 읽기는 이 인자를 안 주므로 응답이 바뀌지 않는다.
+        `limit` 도 안 준 호출은 채널마다 최소·최대·평균·건수와 최소·최대 시각 한 줄만 낸다(값 목록 없음).
+        그 둘 중 하나라도 주면 값 목록이지만 **최근 N 건이 아니라 기간 전체를 N 칸으로 나눈 평균**이다
+        (기본 24칸, 채널이 셋 이상이면 6칸; 건수가 N 이하면 원값 그대로). 통계에는 `min_at`·`max_at`.
+        '어제 온도' 에 밤 11시대 20건만 가 추이를 답하지 못하던 자리다(2026-11-09 음성 시험). 구역 응답의
+        `zone_pick` 은 규칙 문장 없이 짧다. 인앱 AI·날씨·트윈·화면 값 읽기는 이 인자를 안 주므로 응답이
+        바뀌지 않는다.
 
         `wide` 도 스키마에 없다 — `weather.now` 만 켠다. 'weather' 묶음에 구름·일사를 더하고, 줄마다 채널
         이름(`channel`)을, 강수량 줄에 기간 합(`stats.sum`)을 싣는다."""
@@ -549,7 +553,17 @@ class MeasurementToolsMixin:
                     else target_input.unique_id)
                 if werr:
                     return werr
+            if not window and not cls._range_ok(time_range):
+                return cls._bad_range(time_range)
             span = window['label'] if window else "the last %s" % time_range
+
+            # 기간의 양 끝(UTC) — 도메인 표면이 값을 기간 전체에 펼칠 때 칸을 나누는 기준.
+            if window:
+                _span_utc = (parse_utc(window['start_utc']), parse_utc(window['end_utc']))
+            else:
+                _t1 = utc_now()
+                _span_utc = (_t1 - timedelta(seconds=offset_sec), _t1)
+            _tzc = {}
 
             def _read_series(dev, measurements):
                 """한 장치의 측정들을 읽어 시계열 목록으로. 데이터 없으면 []."""
@@ -563,6 +577,9 @@ class MeasurementToolsMixin:
                 # 는 잘린 것과 무관하게 **전체 구간** 기준이라 줄여도 통계는
                 # 그대로 남는다.
                 _default_keep = 20 if len(measurements) <= 2 else 5
+                if brief:
+                    # 도메인 표면은 기간 전체에 고르게 펼친다 — 한 시간 간격이면 하루가 한눈에 든다.
+                    _default_keep = 24 if len(measurements) <= 2 else 6
                 for m in measurements:
                     conversion = Conversion.query.filter(Conversion.unique_id == m.conversion_id).first() if m.conversion_id else None
                     channel, unit, measurement = return_measurement_info(m, conversion)
@@ -580,6 +597,7 @@ class MeasurementToolsMixin:
 
                     if data and summarize:
                         values = [row[1] for row in data]
+                        min_at, max_at = cls._peak_times(data, values, dev.unique_id, _tzc)
                         out.append({
                             "device_name": dev.name or dev.unique_id,
                             "device_kind": ("function" if is_function else
@@ -588,7 +606,9 @@ class MeasurementToolsMixin:
                             "name": getattr(m, 'name', None) or "",
                             "unit": unit,
                             "min": round(min(values), 2),
+                            "min_at": min_at,
                             "max": round(max(values), 2),
+                            "max_at": max_at,
                             "avg": round(sum(values) / len(values), 2),
                             "count": len(values)})
                     elif data:
@@ -596,9 +616,7 @@ class MeasurementToolsMixin:
                         # device's own location time (resolved once per measurement,
                         # not per row) for the same reason as _get_last_values_fallback above.
                         # 위치를 못 풀어도 UTC 로 떨어지지 않는다(농장 시각).
-                        from aot.utils.device_tz import location_iso
-                        _tzc = {}
-                        readings = [{"t": location_iso(row[0], dev.unique_id, _tzc),
+                        readings = [{"t": iso_at(row[0], dev.unique_id, _tzc),
                                      "v": round(row[1], 2), "u": unit} for row in data]
                         values = [row[1] for row in data]
                         _keep = int(limit) if limit else _default_keep
@@ -618,7 +636,19 @@ class MeasurementToolsMixin:
                                 "count": len(values)
                             }
                         }
-                        if peaks:
+                        if brief:
+                            # 도메인 표면: 최근 N 건이 아니라 기간 전체를 N 칸으로 나눈 평균.
+                            # '어제 온도' 에 밤 11시대 20건만 가던 자리다(2026-11-09 음성 시험).
+                            if len(readings) > _keep:
+                                _row["readings"], _slot = cls._spread_readings(
+                                    data, _keep, _span_utc, unit, dev.unique_id, _tzc)
+                                _row["readings_shown"] = (
+                                    "%d averages of %s slots across the period; stats cover all "
+                                    "%d readings. samples=N sets how many." % (
+                                        len(_row["readings"]), _slot, len(readings)))
+                            _row["stats"]["min_at"], _row["stats"]["max_at"] = cls._peak_times(
+                                data, values, dev.unique_id, _tzc)
+                        elif peaks:
                             # 극값의 시각 — 날씨 요약이 "최고기온은 몇 시" 를 답하는 근거.
                             # 전체 구간 기준이고 `peaks` 를 켠 호출에만 싣는다(다른 응답 크기 그대로).
                             _row["stats"]["max_at"] = readings[values.index(max(values))]["t"]
@@ -631,7 +661,7 @@ class MeasurementToolsMixin:
                         # 통계는 전체 기준이다.
                         if window:
                             _row["period"] = window['period']
-                        if len(readings) > _keep:
+                        if len(readings) > _keep and not brief:
                             _row["readings_shown"] = (
                                 "latest %d of %d; stats cover all %d. Pass limit "
                                 "for more." % (_keep, len(readings), len(readings)))
@@ -697,7 +727,42 @@ class MeasurementToolsMixin:
             logger.exception("Error in get_sensor_detail")
             return {"error": f"Error while querying sensor data: {str(e)}"}
 
-    _HISTORY_BRIEF_COLUMNS = ("measurement", "unit", "min", "max", "avg", "count")
+    _HISTORY_BRIEF_COLUMNS = ("measurement", "unit", "min", "min_at", "max", "max_at", "avg", "count")
+
+    @staticmethod
+    def _minute_iso(dt, where, cache):
+        """사람이 읽는 시각 — 그곳 시계, 분까지(초·마이크로초는 뗀다: '2026-11-08T14:05+09:00')."""
+        return parse_utc(dt).astimezone(tz_of(where, cache)).isoformat(timespec='minutes')
+
+    @classmethod
+    def _peak_times(cls, data, values, where, cache):
+        """전체 구간에서 최솟값·최댓값이 처음 나온 시각 — "최고 온도는 몇 시" 의 근거."""
+        return (cls._minute_iso(data[values.index(min(values))][0], where, cache),
+                cls._minute_iso(data[values.index(max(values))][0], where, cache))
+
+    @classmethod
+    def _spread_readings(cls, data, n, span_utc, unit, where, cache):
+        """기간을 `n` 칸으로 똑같이 나눠 칸마다 평균 한 점(`t` = 칸 시작). 값 없는 칸은 빠진다(끊김이 보인다).
+
+        최근 N 건으로 자르면 '어제 온도' 가 밤 11시대만 남는다. 칸 길이 문장도 함께 돌려준다."""
+        t0, t1 = span_utc
+        first, last = parse_utc(data[0][0]), parse_utc(data[-1][0])
+        t0, t1 = min(t0, first), max(t1, last)
+        width = max((t1 - t0).total_seconds() / max(int(n), 1), 1.0)
+        sums = {}
+        for t, v in data:
+            k = min(int((parse_utc(t) - t0).total_seconds() // width), int(n) - 1)
+            acc = sums.setdefault(k, [0.0, 0])
+            acc[0] += v
+            acc[1] += 1
+        points = [{"t": cls._minute_iso(t0 + timedelta(seconds=k * width), where, cache),
+                   "v": round(tot / cnt, 2), "u": unit}
+                  for k, (tot, cnt) in sorted(sums.items())]
+        mins = width / 60.0
+        slot = ("%d min" % round(mins) if mins < 90 else
+                "%g h" % round(mins / 60.0, 1) if mins < 2880 else
+                "%g days" % round(mins / 1440.0, 1))
+        return points, slot
 
     @classmethod
     def _history_brief(cls, rows, device, zone_candidates, time_range, period):
@@ -708,11 +773,11 @@ class MeasurementToolsMixin:
         out = {"status": "success",
                "next": {
                    "call": ("measure(op='history', target=<same target>, "
-                            "measurement=<a measurement from channels>) gives the latest "
-                            "readings of the channels with that measurement (limit=N sets how many)"),
+                            "measurement=<a measurement from channels>) gives that channel's "
+                            "readings spread across the period, the trend (samples=N sets how many)"),
                    "why": "no measurement named: channel statistics only, no readings"
                           + ("; one device answered for the zone - "
-                             "measure(op='summary', target=<the zone>) reads every sensor of it"
+                             "measure(op='latest', target=<the zone>) reads every sensor of it"
                              if zone_candidates else "")},
                "device_name": rows[0]["device_name"],
                "device_kind": rows[0]["device_kind"]}
@@ -757,7 +822,7 @@ class MeasurementToolsMixin:
         """대지(site) 전부 + 어느 대지에도 안 든 구역. 구역은 자기 대지의 줄에 들어간다.
 
         대지 밖 구역을 빼면 그 구역의 센서가 대상 없는 요약에서 통째로 사라진다."""
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         site_uids = [s.unique_id for s in shapes if s.type == 'site']
         try:
             idx = PlaceIndex()
@@ -815,7 +880,7 @@ class MeasurementToolsMixin:
         out = {
             "status": "success",
             "next": {
-                "call": ("measure(op='summary', target=<a site name from sites>) gives that place's zones "
+                "call": ("measure(op='latest', target=<a site name from sites>) gives that place's zones "
                          "and sensors; measurement=<name> instead compares every zone on one measurement"),
                 "why": ("no target: one line per site, %d of %d sites have environment values; "
                         "measure(op='freshness') names the silent devices" % (len(lines), total))},
@@ -897,7 +962,7 @@ class MeasurementToolsMixin:
                     # 실외는 장소가 아니라 그 대지의 기준값이다 — 기상원과 시설
                     # 외기 설비가 한 그룹이 되도록 대지로 모은다.
                     try:
-                        from aot.aot_flask.geo.device_membership import (
+                        from aot.space.device_membership import (
                             weather_place_for)
                         pid = weather_place_for(pid, index=index) or pid
                     except Exception:                       # noqa: BLE001
@@ -959,6 +1024,7 @@ class MeasurementToolsMixin:
         return out, excluded, list(stale.values())
 
     @classmethod
+    @tz_scoped
     def get_zone_sensor_summary(cls, zone_ids=None, measurement_type=None,
                                 time_range="7d", detail=False, _detail=False,
                                 brief=False, **extra):
@@ -998,7 +1064,7 @@ class MeasurementToolsMixin:
         brief_sites = bool(brief) and not zone_ids and not measurement_type
         try:
             from aot.utils.influx import read_influxdb_list
-            from aot.aot_flask.geo.device_membership import (
+            from aot.space.device_membership import (
                 PlaceIndex, channel_medium, classify_sensors, place_members,
                 place_members_split)
 
@@ -1130,7 +1196,7 @@ class MeasurementToolsMixin:
             folded_away = set()     # 구역으로 다 넘어가 비게 된 대지 — '데이터 없음' 이 아니다
             if not zone_ids and not brief_sites:
                 try:
-                    from aot.aot_flask.geo.device_membership import PlaceIndex
+                    from aot.space.device_membership import PlaceIndex
                     _idx = PlaceIndex()
                     _shown = [(sh, ids) for sh, ids in per_zone if ids]
                     _trimmed = []
@@ -1209,7 +1275,7 @@ class MeasurementToolsMixin:
             # 판정은 배지·그래프와 같은 함수(channel_meta_for_dm)로 한다.
             link_omitted = 0
             if not measurement_type:
-                from aot.aot_flask.geo.facility_sensors import (
+                from aot.space.facility_sensors import (
                     META_CHANNEL_KEYS, channel_meta_for_dm)
 
             specs, by_device = [], {}
@@ -1289,7 +1355,7 @@ class MeasurementToolsMixin:
             from aot.services.resolvers.device_resolver import known_status_ids
             _status_of = known_status_ids()
 
-            from aot.utils.device_tz import location_iso
+            from aot.utils.timekit import iso_at
             _tzc = {}
             # 평균에 쓸 수 있는 값인가의 정본 기준 — 주기 × STALE_PERIOD_FACTOR
             # (하한 FRESH_MAX_AGE_S), 장치에 Input.max_age_s 가 있으면 그것이 이긴다.
@@ -1355,7 +1421,7 @@ class MeasurementToolsMixin:
                             "measurement": disp_meas, "unit": unit,
                             "last_value": round(v, 2),
                             # 예전엔 변환 없이 UTC 그대로였다(2026-10-09).
-                            "last_time": location_iso(t, did, _tzc),
+                            "last_time": iso_at(t, did, _tzc),
                             "min": round(s['min'], 2),
                             "max": round(s['max'], 2),
                             "avg": round(s['avg'], 2)})
@@ -1631,7 +1697,7 @@ class MeasurementToolsMixin:
                 _tag = (target_zone.type, target_zone.unique_id)
 
                 # 소속은 정본(마커 + 바인딩 + 하위 장소)으로(2026-10-08).
-                from aot.aot_flask.geo.device_membership import place_members
+                from aot.space.device_membership import place_members
                 _member_ids = place_members(target_zone.unique_id)
                 input_ids = ([i.unique_id for i in Input.query.filter(
                     Input.unique_id.in_(_member_ids)).all()]
@@ -1674,14 +1740,19 @@ class MeasurementToolsMixin:
             
             # 리포트 가공
             report_data = []
+            # 장치 이름 — id 만 있으면 어느 장치의 전력인지 알려면 한 번 더 불러야 한다(2026-11-03).
+            _ids = {e.device_id for e in energy_usage if e.device_id}
+            _names = {i.unique_id: i.name for i in Input.query.filter(Input.unique_id.in_(_ids)).all()} \
+                if _ids else {}
             for uid, val in stats.items():
                 target_usage = next((e for e in energy_usage if e.unique_id == uid), None)
                 if target_usage:
-                    report_data.append({
-                        "sensor_id": uid,
-                        "device_id": target_usage.device_id,
-                        "usage": val
-                    })
+                    row = {"sensor_id": uid,
+                           "device_id": target_usage.device_id,
+                           "usage": val}
+                    if _names.get(target_usage.device_id):
+                        row["device_name"] = _names[target_usage.device_id]
+                    report_data.append(row)
 
             # usage 는 지금까지의 hour·day·week·month 네 창이 한꺼번에 들어 있다 — period 는 거르지
             # 않는다(예전 문구 "analysis for monthly" 는 기간을 고른 것처럼 읽혔다, 2026-10-28 점검).
@@ -1811,7 +1882,7 @@ class MeasurementToolsMixin:
 
         in_shape = set()
         try:
-            from aot.aot_flask.geo.device_membership import place_members
+            from aot.space.device_membership import place_members
             in_shape = set(place_members(target_shape.unique_id) or set())
         except Exception:
             logger.debug("[WEATHER_TOOL] shape membership lookup failed",
@@ -1819,7 +1890,7 @@ class MeasurementToolsMixin:
 
         site_ids, site_kind = set(), None
         try:
-            from aot.aot_flask.geo import device_membership as dm
+            from aot.space import device_membership as dm
             site = target_shape if getattr(target_shape, 'type', None) == 'site' else None
             if site is None:
                 feat = target_shape.feature if isinstance(target_shape.feature, dict) else {}
@@ -2003,9 +2074,9 @@ class MeasurementToolsMixin:
         꺼져 비었으면 다음 리드로 넘어간다. 값을 고치지 않는다(보정 계층을 읽지 않는다).
         """
         from aot.tools.data_tools import weather_summary as ws
-        from aot.utils.device_tz import location_iso
+        from aot.utils.timekit import iso_at
         fmt = '%Y-%m-%dT%H:%M:%S.%fZ'
-        now = now_utc().timestamp()
+        now = utc_now().timestamp()
         start, end = cls._date_span(time_range)
         if start:
             window, werr = cls._detail_window(start, end, place_id)
@@ -2042,7 +2113,7 @@ class MeasurementToolsMixin:
                     {"device_name": dev.name or dev.unique_id, "device_kind": "input",
                      "measurement": measurement or m.measurement,
                      "channel": getattr(m, 'name', None) or "", "lead_h": lead},
-                    points, unit, lambda e: location_iso(int(e), dev.unique_id, tzc), keep or 5)
+                    points, unit, lambda e: iso_at(int(e), dev.unique_id, tzc), keep or 5)
                 if window:
                     row["period"] = window['period']
                 if kind == 'cell' and ws.is_rain_amount(measurement or m.measurement, unit):
@@ -2068,7 +2139,7 @@ class MeasurementToolsMixin:
         if werr:
             return False
         return (datetime.strptime(window['end_utc'], '%Y-%m-%dT%H:%M:%S.%fZ')
-                .replace(tzinfo=timezone.utc).timestamp() <= now_utc().timestamp())
+                .replace(tzinfo=timezone.utc).timestamp() <= utc_now().timestamp())
 
     @classmethod
     def get_weather_tool(cls, zone_name=None, zone_id=None, time_range=None,
@@ -2262,7 +2333,7 @@ class MeasurementToolsMixin:
             # 로 답했다(koat '1포장' 이 그 응답이었다).
             fallback_dev = None
             try:
-                from aot.aot_flask.geo.device_membership import place_members
+                from aot.space.device_membership import place_members
                 _ids = place_members(target_shape.unique_id) or set()
                 # 'AI 판단에 포함' 을 끈 센서는 후보가 아니다(device_resolver).
                 from aot.services.resolvers.device_resolver import ai_excluded_ids
@@ -2334,10 +2405,10 @@ class MeasurementToolsMixin:
         """
         try:
             from aot.databases.models import GeoFacility
-            from aot.aot_flask.geo.device_membership import PlaceIndex
-            from aot.aot_flask.geo.facility_integration import \
+            from aot.space.device_membership import PlaceIndex
+            from aot.space.facility_integration import \
                 get_facility_integration
-            from aot.aot_flask.geo.facility_sensors import (
+            from aot.space.facility_sensors import (
                 read_fitting_sensors, read_outdoor_sensors, sensor_priority_of)
             idx = PlaceIndex()
             facs = []
@@ -2470,6 +2541,20 @@ class MeasurementToolsMixin:
                 "label": "%s to %s" % (from_local, to_local)}, None
 
     @classmethod
+    def _range_ok(cls, text):
+        """`_parse_range` 가 뜻대로 읽는 모양인가 — 1h·24h·7d·초 수. 비어 있으면 기본 창이라 괜찮다."""
+        import re
+        t = str(text or '').strip().lower()
+        return not t or re.fullmatch(r'\d+[hd]?', t) is not None
+
+    @classmethod
+    def _bad_range(cls, text):
+        """모르는 time_range 를 24h 로 바꿔 읽지 않고 허용 모양을 알리는 오류(2026-11-03: 'yesterday' 가 조용히 24h)."""
+        return {"error": "time_range %r is not understood. Use 1h, 24h, 7d, a date 'YYYY-MM-DD' "
+                         "or 'FROM/TO' dates (both days included)." % (text,),
+                "reason_code": "bad_period"}
+
+    @classmethod
     def _parse_range(cls, range_str):
         if not range_str: return 86400
         range_str = str(range_str).lower()
@@ -2482,10 +2567,58 @@ class MeasurementToolsMixin:
         return 86400
 
     @classmethod
+    def _cumulative_function_for(cls, ident):
+        """get_cumulative_status 의 대상 — 함수 id 는 그대로, **시설 id** 면 그 시설의 환경제어 함수로 푼다.
+
+        누적 추적(DLI·GDD)은 함수 하나의 것이지만 사람은 "육묘장3 의 DLI" 처럼 시설로 묻는다 — 시설을 주었다고
+        거절하면 모델이 id 를 찾으러 다른 도구로 갔다(measure.cumulative, 2026-10-24~11-02 거절 5건).
+        돌려주는 값: 함수 id(str) 또는 후보를 담은 오류 dict. 함수도 시설도 아니면 id 그대로(기존 동작)."""
+        import json as _json
+        ident = str(ident).strip()
+        try:
+            if CustomController.query.filter_by(unique_id=ident).first() is not None:
+                return ident
+            from aot.databases.models import GeoFacility
+            fac = GeoFacility.query.filter(
+                (GeoFacility.unique_id == ident) | (GeoFacility.shape_uuid == ident)).first()
+            if fac is None:
+                return ident
+            forms = {ident, fac.unique_id, fac.shape_uuid}
+            found = []
+            for r in CustomController.query.filter_by(device='env_coordinator').all():
+                try:
+                    o = _json.loads(r.custom_options) if r.custom_options else {}
+                except (ValueError, TypeError):
+                    continue
+                if isinstance(o, dict) and str(o.get('geo_facility_id') or '').strip() in forms:
+                    found.append((r, o))
+        except Exception:                                   # noqa: BLE001
+            return ident
+        if not found:
+            return {"error": "No environment coordinator function is set for facility '%s', so there is no "
+                             "cumulative (DLI/GDD) record. Pass a function id." % (fac.name or ident)}
+        if len(found) > 1:
+            on = [r for r, _o in found if getattr(r, 'is_activated', False)]
+            if len(on) == 1:
+                return on[0].unique_id
+            return {"error": "Facility '%s' has %d environment coordinator functions; pass one function id."
+                             % (fac.name or ident, len(found)),
+                    "candidates": [{"function_id": r.unique_id, "name": r.name,
+                                    "is_activated": bool(getattr(r, 'is_activated', False)),
+                                    **({"bay_scope": o['bay_scope']} if o.get('bay_scope') else {})}
+                                   for r, o in found]}
+        return found[0][0].unique_id
+
+    @classmethod
     def get_cumulative_status(cls, function_id: str, days: int = 7, **kwargs):
         """최근 N일 DLI·GDD 누적 상태와 부채 보상 제안을 반환한다."""
         if not function_id:
             return {"error": "function_id is required"}
+
+        resolved = cls._cumulative_function_for(function_id)
+        if isinstance(resolved, dict):
+            return resolved
+        function_id = resolved
 
         from aot.functions.utils.env_control.cumulative_tracker import load_recent_state
         rows = load_recent_state(function_id, days=days)
@@ -2566,10 +2699,18 @@ class MeasurementToolsMixin:
         except Exception:                                   # noqa: BLE001
             pass
         try:
-            inp = Input.query.filter(
-                Input.device == 'OPEN_METEO_FORECAST',
-                Input.latitude.isnot(None),
-                Input.longitude.isnot(None)).first()
+            # 좌표는 장치 컬럼이 아니라 리졸버로 본다. OPEN_METEO_FORECAST·
+            # OPEN_METEO_HOURLY_FORECAST 의 custom_options(api_key/window_h/model/
+            # l0_leads/write_file)에는 조회 좌표 선언이 없다 — 별도 조회 좌표 없음,
+            # 장치 배치(자리, 없으면 대지)를 조회 지점으로 쓴다.
+            from aot.space.device_location import locate_many
+            cands = Input.query.filter(
+                Input.device == 'OPEN_METEO_FORECAST').order_by(Input.id).all()
+            located = locate_many([('input', c.unique_id) for c in cands])
+            inp = next((c for c in cands
+                        if (located.get(('input', c.unique_id)) is not None
+                            and located[('input', c.unique_id)].point is not None)),
+                       None)
             if inp is not None:
                 from aot.tools import providers
                 return {"kind": "input", "input": inp,
@@ -2608,8 +2749,8 @@ class MeasurementToolsMixin:
         now_hour = None
         if tz_name:
             try:
-                from aot.utils.timekit import as_tz, utc_now as _utc_now
-                now_hour = (_utc_now().astimezone(as_tz(tz_name))
+                from aot.utils.timekit import tz_of, utc_now as _utc_now
+                now_hour = (_utc_now().astimezone(tz_of(tz_name))
                             .replace(tzinfo=None, minute=0, second=0, microsecond=0))
             except Exception:                               # noqa: BLE001
                 now_hour = None
@@ -2642,15 +2783,20 @@ class MeasurementToolsMixin:
     @classmethod
     def _forecast_place_at(cls, kind, ident, name, basis, ref=None):
         """풀린 장소 → answered_for dict, 좌표가 없으면 None."""
-        from aot.utils.timekit import resolve_coords, SOURCE_SYSTEM, SOURCE_UTC
-        from aot.utils.device_tz import resolve_location_tz_and_source
-        lat, lon, src = resolve_coords(target_id=ident)
+        from aot.utils.timekit import resolve_coords, tz_of, SOURCE_SYSTEM, SOURCE_UTC
+        coords = resolve_coords(target_id=ident)
+        lat, lon, src = coords
         if lat is None or lon is None or src in (SOURCE_SYSTEM, SOURCE_UTC):
             return None
-        tz, _ = resolve_location_tz_and_source(ident)
-        return {"name": name, "kind": kind, "id": ident, "lat": lat, "lon": lon,
-                "tz": getattr(tz, 'zone', None) or str(tz), "basis": basis,
-                "coord_source": src}
+        tz = tz_of(ident)
+        out = {"name": name, "kind": kind, "id": ident, "lat": lat, "lon": lon,
+               "tz": getattr(tz, 'zone', None) or str(tz), "basis": basis,
+               "coord_source": src}
+        # 장치라면 좌표가 장치 자리인지 대지 기준인지 — 대지 기준 예보도 쓸모는 있다.
+        _lb = getattr(coords, 'basis', 'none')
+        if _lb in ('device', 'site'):
+            out["location_basis"] = _lb
+        return out
 
     @classmethod
     def _forecast_place(cls, place, user_id=None):
@@ -2696,14 +2842,13 @@ class MeasurementToolsMixin:
 
     @classmethod
     def _forecast_default(cls, notes):
-        from aot.utils.timekit import resolve_coords, SOURCE_UTC
-        from aot.utils.device_tz import resolve_location_tz_and_source
+        from aot.utils.timekit import FARM, resolve_coords, tz_of, SOURCE_UTC
         lat, lon, src = resolve_coords()
         if lat is None or lon is None or src == SOURCE_UTC:
             return {"status": "unavailable", "reason": "no_coords",
                     "message": "The farm location is not set, so there is no place "
                                "to forecast for. Pass place."}
-        tz, _ = resolve_location_tz_and_source(None)
+        tz = tz_of(FARM)
         near, others = None, []
         try:
             for sh in GeoShape.query.filter_by(type='site').order_by(GeoShape.id).all():
@@ -2739,8 +2884,8 @@ class MeasurementToolsMixin:
         (오프셋이 있으면 그 지역시각으로 환산). 지난 오늘 시각은 지금 칸으로 당긴다."""
         import re
         from datetime import datetime as _dt, timedelta as _td
-        from aot.utils.timekit import as_tz
-        tz = as_tz(tz_name)
+        from aot.utils.timekit import tz_of, wall_to_utc
+        tz = tz_of(tz_name)
         now_local = now_utc_dt.astimezone(tz).replace(tzinfo=None)
         now_hour = now_local.replace(minute=0, second=0, microsecond=0)
         allowed = ("Use now, today, tomorrow, day_after (optionally + ' HH:MM'), or a "
@@ -2757,14 +2902,14 @@ class MeasurementToolsMixin:
             hh = int(m.group(2) or 0)
             if hh > 23 or int(m.group(3) or 0) > 59:
                 return "Unknown time '%s'. %s" % (s, allowed)
-            st = day.replace(hour=hh)
+            # 벽시계 → 순간 → 그 장소 칸. 명시 시각 경로와 같은 정책(간극은 한 시간 뒤, 중복은 두 번째)
+            st = wall_to_utc(day.replace(hour=hh), tz_name).astimezone(tz).replace(tzinfo=None)
         else:
             try:
-                dt = _dt.fromisoformat(s.replace('Z', '+00:00').replace(' ', 'T', 1))
+                # 오프셋이 있으면 그 순간, 없으면 그 장소의 벽시계 — 어느 쪽이든 장소 현지 칸으로
+                dt = wall_to_utc(s, tz_name).astimezone(tz).replace(tzinfo=None)
             except ValueError:
                 return "Unknown start '%s'. %s" % (s, allowed)
-            if dt.tzinfo is not None:
-                dt = dt.astimezone(tz).replace(tzinfo=None)
             st = dt.replace(minute=0, second=0, microsecond=0)
         if st.date() < now_hour.date():
             return "start '%s' is in the past (local today is %s). %s" % (
@@ -2779,7 +2924,7 @@ class MeasurementToolsMixin:
                              detail=None, sensor_type=None, **extra):
         """[읽기전용] 장소별 시간·일 단위 예보 — 선제 제어 조언의 근거.
 
-        장소는 요청(place) > 화면에 열린 곳 > 농장 기본 좌표 순으로 풀린다. 장소가 대지에 속하면 그 대지의 예보
+        장소는 요청(place) > 화면(열린 지도 창, 없으면 보이는 지도가 비추는 대지) > 농장 기본 좌표 순으로 풀린다. 장소가 대지에 속하면 그 대지의 예보
         계열(지도 날씨 독·디지털트윈과 같은 출처, `geo/forecast_series`)만 쓴다. 대지가 아닌 장소(또는 대지에 예보
         출처도 지도 날씨 레이어도 없을 때)만 사용자가 등록한 Open-Meteo 출처로 좌표 조회한다. 모델 값이지 실측이 아니다.
 
@@ -3021,7 +3166,7 @@ class MeasurementToolsMixin:
         못해도 None 으로 돌려 다른 출처로 넘기지 않는다(호출한 쪽이 범위 밖을 자르고 알린다)."""
         try:
             import time as _time
-            from aot.aot_flask.geo import forecast_series as fs
+            from aot.space import forecast_series as fs
             site = fs.site_of_place(at.get("kind"), at.get("id"))
             if not site:
                 return None
@@ -3075,8 +3220,8 @@ class MeasurementToolsMixin:
     @staticmethod
     def _fc_local(epoch, tz_name):
         from datetime import datetime as _dt
-        from aot.utils.timekit import as_tz
-        return _dt.fromtimestamp(float(epoch), as_tz(tz_name)).replace(tzinfo=None).strftime('%Y-%m-%dT%H:%M')
+        from aot.utils.timekit import tz_of
+        return _dt.fromtimestamp(float(epoch), tz_of(tz_name)).replace(tzinfo=None).strftime('%Y-%m-%dT%H:%M')
 
     @staticmethod
     def _fc_dt(text):
@@ -3094,12 +3239,12 @@ class MeasurementToolsMixin:
     @staticmethod
     def _forecast_data_info(info, tz_name):
         from datetime import datetime as _dt, timezone as _tzm
-        from aot.utils.timekit import as_tz
+        from aot.utils.timekit import tz_of
         info = info or {}
         fetched = info.get("fetched_at")
         try:
             fetched = _dt.fromtimestamp(float(fetched), tz=_tzm.utc) \
-                .astimezone(as_tz(tz_name)).isoformat(timespec='minutes')
+                .astimezone(tz_of(tz_name)).isoformat(timespec='minutes')
         except (TypeError, ValueError):
             fetched = None
         return {"from": info.get("from"), "fetched_at": fetched,
@@ -3151,7 +3296,7 @@ class MeasurementToolsMixin:
                       or GeoMap.query.filter_by(name=scope_id).first())
                 if _m is None:
                     return {"error": "No map '%s' — scope_type 'farm' takes a map "
-                                     "id or name (list_geo_maps)." % scope_id}
+                                     "id or name (find.tree)." % scope_id}
                 scope_id = _m.unique_id
             if scope_type in ('zone', 'site') and scope_id:
                 # 이름도 받는다(다른 장소 인자와 같은 규칙). 모호하면 후보를 낸다.
@@ -3214,13 +3359,13 @@ class MeasurementToolsMixin:
                 # (2026-09-16). 지금 시각 자체는 응답의 `now` 가 따로 싣는다.
                 # 구역·대지 범위로 불렀으면 그 장소의 시각이다(시스템 범위는
                 # 장소가 없어 농장 시각으로 떨어진다).
-                "evaluated_at": (location_iso(summary.get('timestamp'), scope_id)
-                                 if scope_id else _local_iso(summary.get('timestamp'))),
+                "evaluated_at": (iso_at(summary.get('timestamp'), scope_id)
+                                 if scope_id else iso_at(summary.get('timestamp'), FARM)),
             }
             offline = summary.get('comm_offline_list') or []
             if offline:
                 try:
-                    from aot.aot_flask.geo.device_membership import PlaceIndex
+                    from aot.space.device_membership import PlaceIndex
                     _paths = {k: v[0] for k, v in PlaceIndex().device_paths(
                         [x.get('device_id') for x in offline]).items()}
                 except Exception:                           # noqa: BLE001
@@ -3319,17 +3464,120 @@ class MeasurementToolsMixin:
         try:
             from datetime import timezone as _tz
             seen = datetime.fromtimestamp(newest_ts, _tz.utc)
-            age = (now_utc() - seen).total_seconds()
+            age = (utc_now() - seen).total_seconds()
             # 장치 자기 위치의 시각으로 낸다. 경과초(age)는 이미 절대시간 차라
             # 영향이 없고, 바뀌는 것은 표시뿐이다 — 그런데 이 표시가 UTC 로
             # 나가면 같은 응답 묶음 안에서 센서값(장치 현지)과 기준이 갈려
             # "마지막 수신 08:39 / 현재값 14:06" 이 나란히 놓인다(9시간 어긋난
             # 것을 9시간 침묵으로 읽는다).
-            from aot.utils.device_tz import location_iso
-            seen_iso = location_iso(seen, device_id)
+            from aot.utils.timekit import iso_at
+            seen_iso = iso_at(seen, device_id)
         except Exception:
             return None, None, None
         return max(0.0, age), seen_iso, newest_label
+
+    @classmethod
+    def channel_names(cls, device_id):
+        """장치의 켜진 채널 이름(측정 이름) — 채널 번호 순, 중복 없이. DB 만 읽는다."""
+        rows = [m for m in DeviceMeasurements.query.filter(
+                DeviceMeasurements.device_id == device_id).all() if getattr(m, 'is_enabled', True)]
+        rows.sort(key=lambda m: (m.channel if m.channel is not None else 9999))
+        names = []
+        for m in rows:
+            conversion = (Conversion.query.filter(Conversion.unique_id == m.conversion_id).first()
+                          if m.conversion_id else None)
+            _channel, _unit, measurement = return_measurement_info(m, conversion)
+            name = measurement or m.measurement
+            if name and name not in names:
+                names.append(name)
+        return names
+
+    @classmethod
+    def silent_channels(cls, device_id, within_s):
+        """장치의 채널 중 `within_s` 초 안에 값이 없는 것 → [{measurement, last_seen, age_readable}].
+
+        freshness 는 처음 답하는 채널에서 멈춰 "장치가 말했다" 만 알린다 — 온도·습도는 7일째 끊겼는데 배터리만
+        들어와도 정상이다(2026-11-03 시험 #3). 분류는 그대로 두고 끊긴 채널만 곁에 적는다. 채널마다 한 번씩
+        묻기 때문에 장치 하나를 지목했을 때만 쓴다(전체 목록에서는 질의가 채널 수만큼 는다)."""
+        from aot.utils.influx import read_influxdb_single
+        from aot.utils.timekit import iso_at
+        rows = [m for m in DeviceMeasurements.query.filter(
+                DeviceMeasurements.device_id == device_id).all() if getattr(m, 'is_enabled', True)]
+        rows.sort(key=lambda m: (m.channel if m.channel is not None else 9999))
+        out, seen = [], set()
+        for m in rows:
+            conversion = (Conversion.query.filter(Conversion.unique_id == m.conversion_id).first()
+                          if m.conversion_id else None)
+            channel, unit, measurement = return_measurement_info(m, conversion)
+            name = measurement or m.measurement
+            if not name or name in seen:
+                continue
+            try:
+                last_time, _ = read_influxdb_single(
+                    device_id, unit, channel, measure=measurement,
+                    duration_sec=int(cls._FRESHNESS_SCAN_CAP_S), value='LAST')
+            except Exception:
+                logger.debug("[FRESHNESS] %s ch%s 조회 실패", device_id, channel, exc_info=True)
+                continue
+            age = None
+            if last_time:
+                age = max(0.0, utc_now().timestamp() - float(last_time))
+            if age is not None and age <= within_s:
+                seen.add(name)                          # 같은 이름의 다른 채널이 최근이면 말한 것으로 본다
+                out = [c for c in out if c['measurement'] != name]
+                continue
+            if name in seen or any(c['measurement'] == name for c in out):
+                continue
+            out.append({"measurement": name,
+                        "last_seen": iso_at(float(last_time), device_id) if last_time else None,
+                        "age_readable": cls._readable_age(age) if age is not None else None})
+        return out
+
+    @classmethod
+    def partial_silent_channels(cls, items, detail=False):
+        """정상으로 분류된 장치들 중 **일부 채널만 끊긴** 것 → {device_id: [{measurement, (last_seen, age_readable)}]}.
+
+        `items` = [(Input, 허용 침묵 초)]. 장치마다 `silent_channels` 를 부르면 질의가 채널 수만큼 늘어 목록에서는 못 쓴다 —
+        여기서는 허용 시간이 같은 장치끼리 묶어 **Flux 질의 한 묶음에 한 번**(`query_last_values_bulk_status`)으로 전 채널의
+        마지막 값을 받고, 각 채널이 그 장치의 허용 시간 안에 있는지만 본다. 묶는 이유: 질의 시간은 창 길이에 비례해(실측 15분 0.06초
+        · 1일 2초 · 3일 6초 · 30일 60초 초과) 가장 긴 허용 시간을 모두에게 쓰면 느린 센서 하나가 전부를 느리게 한다.
+        같은 이름의 다른 채널이 최근이면 말한 것으로 본다(`silent_channels` 와 같은 규칙).
+        `detail` 이면 끊긴 채널이 있는 장치에만 기존 `silent_channels` 를 불러 `last_seen`·`age_readable` 을 채운다(30일 창은
+        묶음 질의로 못 한다 — 위 이유). 질의가 실패하면 그 묶음은 싣지 않는다 — 모르는 것을 끊겼다고 하지 않는다.
+        장치의 채널이 전부 끊겼으면(정상 분류가 아닌 경우) 싣지 않는다."""
+        from aot.utils.influx import bulk_key, query_last_values_bulk_status
+        groups = {}                                         # 허용 시간 → (specs, {장치: [(이름, 키)]})
+        for d, within_s in items:
+            specs, by_dev = groups.setdefault(int(within_s), ([], {}))
+            chans = []
+            for m in sorted((m for m in DeviceMeasurements.query.filter(
+                    DeviceMeasurements.device_id == d.unique_id).all() if getattr(m, 'is_enabled', True)),
+                            key=lambda m: (m.channel if m.channel is not None else 9999)):
+                conversion = (Conversion.query.filter(Conversion.unique_id == m.conversion_id).first()
+                              if m.conversion_id else None)
+                channel, unit, measurement = return_measurement_info(m, conversion)
+                name = measurement or m.measurement
+                if not name:
+                    continue
+                specs.append((unit, d.unique_id, channel, measurement))
+                chans.append((name, bulk_key(unit, d.unique_id, channel, measurement)))
+            by_dev[d.unique_id] = chans
+        quiet, now = {}, utc_now().timestamp()
+        for within_s, (specs, by_dev) in groups.items():
+            if not specs:
+                continue
+            last, ok = query_last_values_bulk_status(
+                specs, past_sec=min(max(within_s, 1), cls._FRESHNESS_SCAN_CAP_S))
+            if not ok:
+                continue
+            for did, chans in by_dev.items():
+                alive = {n for n, k in chans if k in last and now - float(last[k][0]) <= within_s}
+                names = [n for n in dict.fromkeys(n for n, _k in chans) if n not in alive]
+                if alive and names:                          # 말한 채널이 있고 끊긴 채널도 있다 = 일부 끊김
+                    quiet[did] = (within_s, names)
+        if not detail:
+            return {did: [{"measurement": n} for n in names] for did, (_w, names) in quiet.items()}
+        return {did: cls.silent_channels(did, within_s) for did, (within_s, _n) in quiet.items()}
 
     @classmethod
     def _place_fields(cls, path):
@@ -3362,7 +3610,7 @@ class MeasurementToolsMixin:
         except Exception:                                   # noqa: BLE001
             return None
         if scope_id and scope_type in ('zone', 'site'):
-            from aot.aot_flask.geo.device_membership import place_members
+            from aot.space.device_membership import place_members
             keep = place_members(scope_id) or set()
             devices = [d for d in devices if d.unique_id in keep]
         elif scope_id and scope_type == 'facility':
@@ -3379,21 +3627,29 @@ class MeasurementToolsMixin:
         # (온도)은 25일째 조용한데 뒤 채널(신호 세기)이 살아 있는 장치를 놓친다
         # (2026-10-09 실측: 온습도_4·_1). 1) 첫 채널만 허용 시간 안에 값이 있는지
         # 묻고(싸다), 2) 없는 것만 freshness 와 같은 조회로 다시 판정한다.
-        silent = []
+        silent, fresh_items = [], []
         for d in devices:
             _period, threshold = cls._freshness_threshold(d)
             try:
                 quick, _i, _l = cls._last_seen_seconds(
                     d.unique_id, window_s=threshold, max_channels=1)
                 if quick is not None:
+                    fresh_items.append((d, threshold))
                     continue
                 age, _iso, _label = cls._last_seen_seconds(d.unique_id)
             except Exception:                               # noqa: BLE001
                 continue
             if age is None or age > threshold:
                 silent.append((d, age))
+            else:
+                fresh_items.append((d, threshold))
+        # 정상으로 센 장치 중 일부 채널만 끊긴 것의 수 — 침묵 판정(silent_level)에는 영향이 없다. 질의 한 번.
         try:
-            from aot.aot_flask.geo.device_membership import PlaceIndex
+            partial_n = len(cls.partial_silent_channels(fresh_items)) if fresh_items else 0
+        except Exception:                                   # noqa: BLE001
+            partial_n = 0
+        try:
+            from aot.space.device_membership import PlaceIndex
             paths = {k: v[0] for k, v in PlaceIndex().device_paths(
                 [d.unique_id for d in devices]).items()}
         except Exception:                                   # noqa: BLE001
@@ -3402,6 +3658,10 @@ class MeasurementToolsMixin:
         verdict = cls._silent_verdict(
             [(d.unique_id, d.name, age) for d, age in silent],
             [d.unique_id for d in devices], paths, control_ids)
+        if partial_n:
+            if verdict is None:
+                verdict = {"count": 0, "silent_level": "none"}
+            verdict["partial_silent_count"] = partial_n
         if known:
             listed = [dict(device_status_info(d), name=d.name,
                            device_id=d.unique_id)
@@ -3573,7 +3833,7 @@ class MeasurementToolsMixin:
                                     else "No inputs are registered.")}
 
             try:
-                from aot.aot_flask.geo.device_membership import PlaceIndex
+                from aot.space.device_membership import PlaceIndex
                 zone_map = {k: v[0] for k, v in PlaceIndex().device_paths(
                     [d.unique_id for d in devices]).items()}
             except Exception:
@@ -3625,6 +3885,20 @@ class MeasurementToolsMixin:
                     fresh.append(entry)
 
             stale.sort(key=lambda e: -(e["periods_late"] or 0))
+            partial = []
+            if fresh and not (device_id and len(devices) == 1):
+                # 지목하지 않은 목록: 정상 장치의 일부 채널 끊김을 따로 센다(질의 한 번). 지목하면 아래가 채널별로 본다.
+                by_id = {d.unique_id: d for d in devices}
+                try:
+                    quiet = cls.partial_silent_channels(
+                        [(by_id[e["device_id"]], e["expected_within_seconds"]) for e in fresh], detail=True)
+                except Exception:                                   # noqa: BLE001
+                    logger.debug("[FRESHNESS] partial silent scan failed", exc_info=True)
+                    quiet = {}
+                for e in fresh:
+                    if e["device_id"] in quiet:
+                        e["silent_channels"] = quiet[e["device_id"]]
+                        partial.append(e)
             result = {
                 "status": "success",
                 "checked": len(devices),
@@ -3636,7 +3910,8 @@ class MeasurementToolsMixin:
                 "counting": ("get_anomalies' silent_devices.count = stale_count + "
                              "no_data_count here; inactive_count (switched off) and "
                              "known_status (repair/maintenance/removed) are "
-                             "not included. comm_offline_devices there is a separate "
+                             "not included. partial_silent_count = devices counted in fresh_count "
+                             "that still lack a recent value on some channel (see silent_channels). comm_offline_devices there is a separate "
                              "axis (driver-reported link faults)."),
                 "caveat": ("Silence is not proof of failure. Event-driven inputs, "
                            "seasonal equipment and devices whose gateway is simply idle "
@@ -3653,12 +3928,26 @@ class MeasurementToolsMixin:
                 "known_status_count": len(known),
                 "removed_count": removed_count,
                 "fresh_count": len(fresh),
+                "partial_silent_count": len(partial),
+                "partial_silent_devices": partial,
                 "scan_window_days": int(cls._FRESHNESS_SCAN_CAP_S / 86400),
             }
             if include_fresh:
                 result["fresh_devices"] = fresh
             if device_id and len(devices) == 1:
                 result["device_id"] = devices[0].unique_id      # 풀린 대상(따라가기용)
+                # 지목한 장치는 채널별로도 본다 — 어느 채널이 끊겼는지(분류는 위 그대로, 곁에 적을 뿐이다).
+                _e = fresh[0] if fresh else None           # 끊긴 장치는 채널 전부가 늦다 — 정상으로 분류된 장치만
+                if _e is not None:
+                    _quiet = cls.silent_channels(devices[0].unique_id, _e["expected_within_seconds"])
+                    if _quiet:
+                        _e["silent_channels"] = _quiet
+                        result["partial_silent_count"] = 1
+                        result["partial_silent_devices"] = [_e]
+                        result["silent_channels"] = _quiet
+                        result["silent_channels_note"] = (
+                            "These channels have no value within the expected interval although the device "
+                            "reported on another channel, so it is not listed as stale.")
             if brief and not device_id and not include_fresh:
                 result = cls._freshness_brief(result)
             return result
@@ -3693,8 +3982,13 @@ class MeasurementToolsMixin:
             "known_status_count": result["known_status_count"],
             "removed_count": result["removed_count"],
             "fresh_count": result["fresh_count"],
+            "partial_silent_count": result["partial_silent_count"],
             "scan_window_days": result["scan_window_days"],
         }
+        if result["partial_silent_devices"]:
+            out["partial_silent_devices"] = [
+                dict(row, silent_channels=[c["measurement"] for c in r["silent_channels"]])
+                for row, r in zip(slim(result["partial_silent_devices"]), result["partial_silent_devices"])]
         return out
 
     @classmethod

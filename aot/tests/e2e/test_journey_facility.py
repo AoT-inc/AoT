@@ -17,11 +17,18 @@
 새로 열어도 같은 값인지. 삭제는 목록의 삭제 → 확인창 → 시설과 외곽 도형이
 함께 사라지는지까지 본다.
 
+화면 골격(S7, 2026-11-08)은 **무대 + 설정 모달** 두 벌이다: 무대(툴바·모형/지도)가
+가로 전체를 쓰고 페이지는 스크롤되지 않으며, 설정은 오른쪽 드로어형 모달
+`#modal_fac_step` 하나다(새 시설은 열린 채 시작, 저장된 시설은 닫힌 채 시작,
+툴바 **설정** 으로 연다). 폼은 그 안의 탭 여섯(`[data-group-toggle=…]`, 26-11-12 아코디언을
+되돌림)이고, 저장된 시설 목록은 모달 머리줄 단추(`#fac-list-toggle`)가 연다.
+
 지도 카메라는 가정하지 않는다. 배치는 "지금 보이는 지도의 가운데" 를 누르는
 것이라, 카메라가 어디에 있든 같은 검사가 된다.
 """
 import math
 import re
+from urllib.parse import urlparse
 
 import pytest
 
@@ -48,6 +55,90 @@ def test_the_facility_editor_opens_with_its_controls(page, base_url):
     _open_facility(page, base_url)
     assert page.locator('#facility-name').count(), '시설 이름 칸이 없습니다'
     assert page.locator('#btn-save-facility').count(), '시설 저장 단추가 없습니다'
+
+
+def test_the_stage_fills_the_window_and_settings_are_one_modal(page, base_url):
+    """무대 + 설정 모달 두 벌(S7) — 페이지는 스크롤되지 않고, 설정은 모달 하나다.
+
+    새 시설로 열면 모달이 열린 채 시작한다. 닫으면 무대만 남고, 툴바 **설정** 이
+    다시 연다. 열려 있는 동안에도 무대가 보여야 한다(모형을 보면서 조절) —
+    데스크톱에서 드로어가 무대를 덮지 않고 밀어낸다.
+    """
+    _open_facility(page, base_url)
+    modal = page.locator('#modal_fac_step')
+    assert 'show' in (modal.get_attribute('class') or ''), '새 시설인데 설정 모달이 닫혀 있습니다'
+
+    def frame():
+        return page.evaluate(
+            "() => ({scrollH: document.documentElement.scrollHeight, innerH: innerHeight,"
+            " stage: document.querySelector('.fac-stage').getBoundingClientRect().right,"
+            " dialog: document.querySelector('#modal_fac_step .modal-dialog').getBoundingClientRect().left})")
+    f = frame()
+    assert f['scrollH'] <= f['innerH'], (
+        f"페이지가 세로로 스크롤됩니다({f['scrollH']} > {f['innerH']}) — 무대가 창에 맞지 않습니다")
+    assert f['stage'] <= f['dialog'] + 1, (
+        f"모달이 무대를 덮습니다(무대 오른끝 {f['stage']}, 모달 왼끝 {f['dialog']})")
+
+    page.click('#modal_fac_step .fac-drawer-close')
+    page.wait_for_timeout(900)
+    assert 'show' not in (modal.get_attribute('class') or ''), '닫기를 눌렀는데 모달이 남아 있습니다'
+    assert page.locator('#fac-stage-map.active, #fac-stage-3d.active').count(), '모달을 닫았는데 무대가 없습니다'
+
+    page.click('#btn-fac-settings')
+    page.wait_for_timeout(900)
+    assert 'show' in (modal.get_attribute('class') or ''), '툴바의 설정 단추가 모달을 열지 않습니다'
+    # 탭은 모두 모달 안에서 바로 간다 — 되돌아감 없이. 한 번에 한 판만 보인다.
+    # (연결·검토 탭은 저장 전이라 잠겨 있다.) 목록 단추는 토글 — 다시 누르면 온 탭으로 돌아간다.
+    for group in ('what', 'envelope', 'parts', 'list', 'where'):
+        page.click(f'#modal_fac_step [data-group-toggle={group}]')
+        assert page.locator(f'#fac-pane-{group}:not(.d-none)').count(), f'{group} 판이 보이지 않습니다'
+        assert page.locator('#modal_fac_step .fac-tab-pane:not(.d-none)').count() == 1, (
+            f'{group} 를 눌렀는데 판이 하나만 보이지 않습니다')
+    assert page.locator('#fac-tab-connect').is_disabled(), '저장 전인데 연결 탭이 눌립니다'
+    page.click('#fac-list-toggle')
+    page.click('#fac-list-toggle')
+    assert page.locator('#fac-pane-where:not(.d-none)').count(), '목록 단추를 다시 눌렀는데 온 탭으로 돌아가지 않습니다'
+
+
+def test_the_3d_toolbar_is_one_row_with_merged_add_and_view_menus(page, base_url):
+    """3D 툴바는 한 줄이다(S8) — 드로어가 닫혀 있어도 열려 있어도.
+
+    추가 계열(열기·설비·센서·관수)은 **추가** 메뉴 하나, 방향과 원근/등각은 **보기** 메뉴
+    하나로 합쳤다. 기능은 그대로다 — 메뉴 안의 도구가 그대로 있고 투영 전환이 된다.
+    """
+    _open_facility(page, base_url)
+    page.click('#fac-stage-toggle [data-stage="3d"]')
+    page.wait_for_timeout(2500)
+
+    def rows():
+        return page.evaluate(
+            "() => [...new Set([...document.querySelectorAll('#facility-3d-tools button,"
+            " #facility-3d-tools .dropdown')].filter(e => e.offsetParent && !e.closest('.dropdown-menu'))"
+            ".map(e => Math.round(e.getBoundingClientRect().top / 10)))].length")
+
+    modal = page.locator('#modal_fac_step')
+    for want_open in (False, True):
+        is_open = 'show' in (modal.get_attribute('class') or '')
+        if is_open != want_open:
+            if want_open:
+                page.click('#btn-fac-settings')
+            else:
+                page.click('#modal_fac_step .fac-drawer-close')
+            page.wait_for_timeout(1000)
+        assert rows() == 1, f'3D 툴바가 한 줄이 아닙니다(설정 모달 {"열림" if want_open else "닫힘"})'
+
+    page.click('#modal_fac_step .fac-drawer-close') if 'show' in (modal.get_attribute('class') or '') else None
+    page.wait_for_timeout(800)
+    # 추가 메뉴 — 이전의 열기·설비·센서·관수 도구가 모두 안에 있다.
+    for sel in ('[data-tool="window"]', '[data-tool="fan"]', '[data-tool="sensor"]',
+                '[data-tool="irr_main_pipe"]', '#btn-irr-open-forms', '[data-action="catalog"]'):
+        assert page.locator(f'.fac-add-menu {sel}').count(), f'추가 메뉴에 {sel} 이 없습니다'
+    # 보기 메뉴 — 방향 9개와 투영 둘.
+    assert page.locator('#fac3d-view-items [data-view]').count() == 9
+    page.click('#fac3d-view-menu')
+    page.click('#fac3d-proj-toggle [data-proj="iso"]')
+    page.wait_for_timeout(300)
+    assert page.get_attribute('#fac3d-proj-toggle [data-proj="iso"]', 'aria-pressed') == 'true'
 
 
 def test_saving_without_placing_it_on_the_map_says_so(page, base_url):
@@ -133,13 +224,16 @@ def test_a_facility_placed_on_the_map_is_saved_and_reopens(page, admin_http,
     page.locator('button:has-text("새 시설")').first.click()
     page.wait_for_timeout(1500)
 
-    # 기본 단계 — 이름과 치수
+    # "위치" 탭(새 시설은 이 탭으로 시작) — 이름
     page.fill('#facility-name', F.FACILITY_NAME)
+
+    # "구조" 탭 — 치수
+    page.click('#fac-tab-what')
     page.fill('#length-m', str(LENGTH_M))
     page.locator('#length-m').dispatch_event('change')
 
-    # 위치 단계 — 지도를 고르고, 배치 모드에서 지도 가운데를 누른다
-    page.locator('.fac-step[data-step=position]').click()
+    # 다시 "위치" — 지도를 고르고, 배치 모드에서 지도 가운데를 누른다(지도 스테이지로 바뀐다)
+    page.click('#fac-tab-where')
     page.wait_for_timeout(1500)
     choose_option(page, 'map-selector', 'E2E Design Map')
     page.wait_for_timeout(4000)
@@ -152,7 +246,8 @@ def test_a_facility_placed_on_the_map_is_saved_and_reopens(page, admin_http,
     page.wait_for_timeout(2500)
 
     with page.expect_response(
-            lambda r: r.url.endswith('/api/geo/facility')
+            # 저장은 `?include=facility,integration` 을 붙여 응답으로 재수화한다(S2) — 경로로 본다.
+            lambda r: urlparse(r.url).path == '/api/geo/facility'
             and r.request.method == 'POST', timeout=30000) as saved:
         page.click('#btn-save-facility')
     body = saved.value.json()
@@ -164,6 +259,24 @@ def test_a_facility_placed_on_the_map_is_saved_and_reopens(page, admin_http,
     row = page.locator(f'.facility-list-item[data-uuid="{facility_uuid}"]')
     row.wait_for(state='attached', timeout=10000)
     assert F.FACILITY_NAME in row.inner_text()
+
+    # 저장된 시설의 구성요소는 모달의 "구성요소" 탭에서 더하고, 1.5초 뒤 PATCH 로 스스로 저장된다(S2·S7).
+    page.click('#fac-tab-parts')
+    with page.expect_response(
+            lambda r: r.request.method == 'PATCH'
+            and urlparse(r.url).path == f'/api/geo/facility/{facility_uuid}',
+            timeout=15000) as patched:
+        # 종류 셀렉트는 값으로 고른다(추가 단추가 select.value 만 읽는다) — 언어와 무관.
+        page.select_option('#fac-add-kind', 'sensor')
+        page.click('#btn-sensor-add')
+    assert patched.value.status == 200 and patched.value.json().get('ok'), (
+        f'구성요소 자동 저장이 HTTP {patched.value.status} 로 끝났습니다')
+    assert page.locator('#sensor-config-tbody tr.fac-tray-row').count() == 1, (
+        '더한 구성요소가 목록에 없습니다')
+    # 더하면 그 구성요소가 선택되어 모달이 선택 인스펙터로 바뀐다 — "시설로" 가 되돌린다.
+    assert page.locator('#fac-insp-selection:not(.d-none)').count(), '더한 구성요소의 인스펙터가 열리지 않았습니다'
+    page.click('#fac-insp-back')
+    assert page.locator('#fac-insp-facility:not(.d-none)').count(), '"시설로" 가 시설 설정으로 돌아가지 않습니다'
 
     # 서버 — 되읽은 외곽이 입력한 치수다
     status, got = _facility(admin_http, base_url, facility_uuid)
@@ -219,6 +332,9 @@ def test_deleting_a_facility_takes_its_outline_with_it(page, admin_http,
     _open_facility(page, base_url)
     row = page.locator(f'.facility-list-item[data-uuid="{facility_uuid}"]')
     assert row.count() == 1, '방금 만든 시설이 목록에 없습니다'
+    # 목록은 설정 모달 머리줄의 "저장된 시설" 단추가 연다(새 시설이라 모달은 열린 채 시작) — 연 뒤 지운다.
+    page.click('#fac-list-toggle')
+    row.hover()
     row.locator('.fac-item-del').click()
     page.wait_for_timeout(500)
     with page.expect_response(
@@ -238,3 +354,34 @@ def test_deleting_a_facility_takes_its_outline_with_it(page, admin_http,
     assert outlines_after == outlines_before - 1, (
         f'시설을 지웠는데 지도의 시설 외곽이 {outlines_before} → '
         f'{outlines_after} 입니다 — 외곽 도형이 남았습니다')
+
+
+def test_opening_from_a_map_arrives_with_that_map_chosen(page, base_url):
+    """지도 페이지에서 "이 지도에 새 시설" 로 넘어오면 지도가 이미 골라져 있다.
+
+    URL 의 `geo_id` 가 지도 선택을 채우고, 지도 스테이지가 떠 있으며,
+    "지도에 배치" 가 켜진 채(지도 커서가 십자) 시작한다. "지도로" 는 같은 지도의
+    /geo/design 으로 돌아간다. 한 번 고른 지도를 다시 고르게 하지 않는 것이 목적이다.
+    """
+    _open_facility(page, base_url)
+    geo_id = page.evaluate(
+        "() => { const o = [...document.querySelectorAll('#map-selector option')]"
+        ".find(o => o.textContent.trim() === 'E2E Design Map'); return o && o.value; }")
+    assert geo_id, 'E2E Design Map 이 지도 목록에 없습니다'
+
+    page.goto(f'{base_url}/geo/facility?geo_id={geo_id}',
+              wait_until='domcontentloaded')
+    page.wait_for_selector('#btn-save-facility', timeout=30000)
+    page.wait_for_timeout(SETTLE_MS)
+
+    assert page.eval_on_selector('#map-selector', 'e => e.value') == geo_id, \
+        '넘어온 지도가 선택되어 있지 않습니다'
+    assert page.locator('#fac-stage-map.active').count(), \
+        '지도 스테이지가 떠 있지 않습니다'
+    cursor = page.eval_on_selector(
+        '#facility-map-canvas canvas', 'e => e.style.cursor')
+    assert cursor == 'crosshair', '"지도에 배치" 가 켜진 채 시작하지 않았습니다'
+
+    page.click('#btn-back-to-map')
+    page.wait_for_url(re.compile(r'/geo/design\?uuid=' + re.escape(geo_id)),
+                      timeout=15000)

@@ -15,6 +15,7 @@ from aot.utils.actions import run_input_actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
+from aot.utils.timekit import naive_utc as _tk_naive_utc, utc_now as _tk_utc_now
 
 
 def constraints_pass_positive_value(mod_input, value):
@@ -243,7 +244,7 @@ class InputModule(AbstractInput):
             self.first_run = False
 
             if self.latest_datetime:
-                utc_now = datetime.datetime.utcnow()
+                utc_now = _tk_naive_utc(_tk_utc_now())
                 seconds_since_last = (utc_now - self.latest_datetime).total_seconds()
                 if seconds_since_last < seconds_seven_days:
                     seconds_download = seconds_since_last

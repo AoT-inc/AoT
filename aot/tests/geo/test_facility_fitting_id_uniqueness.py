@@ -17,7 +17,7 @@
 import pytest
 from flask import Flask
 
-from aot.aot_flask.geo.facility_io import (
+from aot.space.facility_io import (
     _dedupe_fittings, _remint_cloned_fitting_ids)
 
 

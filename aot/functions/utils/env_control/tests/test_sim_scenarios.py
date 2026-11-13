@@ -6,6 +6,7 @@ import json
 import pytest
 
 from aot.functions.utils.env_control.sim import scenarios as S
+from aot.utils.timekit import to_tz, wall_to_utc
 
 
 def _range(sc, key, h_from=0.0, h_to=None):
@@ -53,8 +54,8 @@ def test_rain_heat_has_rain_while_hot():
 
 
 def test_solar_zero_at_night_positive_at_noon():
-    noon = dt.datetime(2027, 7, 25, 12, 30, tzinfo=S.KST).timestamp()
-    night = dt.datetime(2027, 7, 25, 1, 0, tzinfo=S.KST).timestamp()
+    noon = wall_to_utc(dt.datetime(2027, 7, 25, 12, 30), S.DEFAULT_TZ).timestamp()
+    night = wall_to_utc(dt.datetime(2027, 7, 25, 1, 0), S.DEFAULT_TZ).timestamp()
     assert S.clear_sky_ghi(night) == 0.0
     assert 800.0 < S.clear_sky_ghi(noon) < 1100.0
 
@@ -69,14 +70,14 @@ def test_fault_window():
 
 def test_synthetic_scenarios_are_after_snapshot():
     # 런타임 상태 시각보다 앞이면 시계가 거꾸로 간다(2026-10-08 스냅숏).
-    snap = dt.datetime(2026, 10, 9, tzinfo=S.KST).timestamp()
+    snap = wall_to_utc(dt.datetime(2026, 10, 9), S.DEFAULT_TZ).timestamp()
     for n in S.names():
         if n != 'recorded':
             assert S.get(n).t0 > snap, n
 
 
 def test_recorded_reads_kma_series(tmp_path):
-    t0 = dt.datetime(2026, 10, 5, 23, 15, tzinfo=S.KST).timestamp()
+    t0 = wall_to_utc(dt.datetime(2026, 10, 5, 23, 15), S.DEFAULT_TZ).timestamp()
     pts = [[t0 + i * 900, 10.0 + i * 0.1] for i in range(400)]
     raw = {'series': [
         {'device_id': 'd', 'measurement_id': 'f9b6779d-x', 'role': 'outdoor', 'points': pts},
@@ -92,3 +93,15 @@ def test_recorded_reads_kma_series(tmp_path):
     assert wx(t0)['T'] == pytest.approx(10.0)
     assert wx(t0 + 450)['T'] == pytest.approx(10.05)
     assert wx(t0 + 10 * 900 + 60)['rain'] == pytest.approx(4.0)     # mm/15분 → mm/h
+
+
+def test_scenario_clock_follows_its_tz_across_dst():
+    """시나리오의 시작 벽시계와 날짜 구분은 `tz` 를 따른다 — 로컬이 +09:00 이라 KST 는 이 버그를 가린다."""
+    base = S.get(S.names()[0])
+    ny = S.Scenario(name='ny', description='', start='2027-03-14 01:30', hours=6.0, tz='America/New_York')
+    # 03-14 02:00 EST 에 서머타임이 시작된다 — 01:30 EST = 06:30Z
+    assert ny.t0 == wall_to_utc(dt.datetime(2027, 3, 14, 1, 30), 'America/New_York').timestamp()
+    assert dt.datetime.fromtimestamp(ny.t0, dt.timezone.utc).hour == 6
+    assert base.tz == S.DEFAULT_TZ
+    # 시작 6 시간 뒤는 현지 08:30 EDT(벽시계 +7h 가 아니라 +6h 경과 + 1h 점프)
+    assert to_tz(ny.t_end, 'America/New_York').strftime('%H:%M') == '08:30'

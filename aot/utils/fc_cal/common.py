@@ -119,11 +119,9 @@ class Ctx:
     def __init__(self, tz='UTC', lat=None, lon=None):
         self.tz_name = tz or 'UTC'
         self.lat, self.lon = lat, lon
-        try:
-            from zoneinfo import ZoneInfo
-            self._tz = ZoneInfo(self.tz_name)
-        except Exception:                                   # noqa: BLE001
-            self._tz = timezone.utc
+        from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+        _tz, _src = resolve_tz(self.tz_name)
+        self._tz = _tz if _src == SOURCE_EXPLICIT else timezone.utc
         self._memo = {}
 
     def local(self, t):

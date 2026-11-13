@@ -17,6 +17,7 @@ from aot.aot_flask.extensions import db
 from aot.databases.models import (
     AIContextSource, AIContextRecord, AILibrarySyncLog, AIKnowledgeChunk, AIGlobalSettings,
 )
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +208,7 @@ def sync_source(source_id):
 
         if err:
             source.last_sync_status = 'error'
-            source.last_synced_at = datetime.utcnow()
+            source.last_synced_at = naive_utc(utc_now())
             db.session.commit()
             messages["error"].append(err)
             # @ANCHOR: SYNC_LOG_WRITE_ERROR
@@ -225,7 +226,7 @@ def sync_source(source_id):
         count = _write_context_records(source, records or [])
         messages["records_written"] = count
 
-        source.last_synced_at = datetime.utcnow()
+        source.last_synced_at = naive_utc(utc_now())
         source.last_sync_status = 'ok'
         db.session.commit()
 

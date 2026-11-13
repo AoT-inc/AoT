@@ -1,0 +1,46 @@
+{# 디지털트윈 서비스 상태 한 줄(설정 > 일반 토글 아래, 설정 > 디지털트윈 '서비스'). 상태 판정은 utils_settings.twin_service_state.
+   '시작 중'·'응답 없음' 은 서비스가 플래그를 보기까지(최대 약 1분) 또는 관리자가 명령을 실행하기까지 기다리므로
+   페이지를 새로 고치지 않아도 /settings/twin/state 로 다시 물어 바꿔 보인다(탭이 숨겨진 동안은 쉰다). #}
+{% set tone = {'locked': 'aot-status-warn', 'starting': 'aot-status-running', 'running': 'aot-status-ok', 'unresponsive': 'aot-status-fail'} %}
+<div class="aot-settings-row" id="twin-state-row" data-state-url="{{ url_for('routes_settings.settings_twin_state') }}">
+  <label class="aot-settings-label">{{_('Service Status')}}</label>
+  <div class="aot-settings-control">
+    <span class="aot-status-badge {{ tone.get(twin.state.code, '') }}" id="twin-state-badge" role="status" data-state="{{ twin.state.code }}">{{ twin.state.text }}</span>
+  </div>
+  <div class="aot-settings-sub" id="twin-state-hint"{% if not twin.state.hint %} hidden{% endif %}>{{ twin.state.hint }}</div>
+  {# 명령 예시는 부연 안의 <pre>(aot-settings.css `pre.aot-settings-sub`) — 폰에서는 화면에서만 줄을 바꾸고 복사하면 한 줄이다. #}
+  <pre class="aot-settings-sub" id="twin-state-command"{% if not twin.state.command %} hidden{% endif %}>{{ twin.state.command }}</pre>
+</div>
+<script>
+  (function () {
+    var row = document.getElementById('twin-state-row');
+    var badge = document.getElementById('twin-state-badge');
+    if (!row || !badge) return;
+    var TONE = {locked: 'aot-status-warn', starting: 'aot-status-running', running: 'aot-status-ok',
+                unresponsive: 'aot-status-fail'};
+    var wait = {{ twin.state.poll_ms|tojson }};
+    function show(s) {
+      badge.className = 'aot-status-badge ' + (TONE[s.code] || '');
+      badge.textContent = s.text;
+      badge.setAttribute('data-state', s.code);
+      var hint = document.getElementById('twin-state-hint');
+      var cmd = document.getElementById('twin-state-command');
+      hint.textContent = s.hint || '';
+      cmd.textContent = s.command || '';
+      cmd.hidden = !s.command;
+      hint.hidden = !s.hint;
+    }
+    function tick() {
+      if (!wait) return;
+      setTimeout(function () {
+        if (document.hidden) { tick(); return; }
+        fetch(row.getAttribute('data-state-url'), {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (s) { if (s) { show(s); wait = s.poll_ms || 0; } })
+          .catch(function () {})
+          .then(tick);
+      }, wait);
+    }
+    tick();
+  })();
+</script>

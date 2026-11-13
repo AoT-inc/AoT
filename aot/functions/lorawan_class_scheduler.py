@@ -52,13 +52,14 @@ from aot.databases.models import CustomController, Misc
 from aot.functions.base_function import AbstractFunction
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
-from aot.utils.device_tz import resolve_location_tz
+from aot.utils.timekit import to_tz, tz_of
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.timekit import utc_now, wall_to_utc
 
 from aot.functions._lorawan_common import (
     ChirpStackClient, MODE_A, MODE_C)
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import parse_utc
 
 # Channels are created/removed DYNAMICALLY per managed device when devices are
 # assigned to this scheduler via a device's own "Class Scheduler" field (e.g. the
@@ -303,7 +304,7 @@ class CustomModule(AbstractFunction):
             return []
         server, token = self._conn()
         try:
-            from aot.aot_flask.utils.utils_chirpstack import list_chirpstack_devices
+            from aot.utils.chirpstack_grpc import list_chirpstack_devices
             full, err = list_chirpstack_devices(server, token, limit=500)
         except Exception:
             full, err = None, 'unavailable'
@@ -353,19 +354,22 @@ class CustomModule(AbstractFunction):
     def _today_time_epoch(self, hhmm):
         h, m = self._parse_hhmm(hhmm, 17, 0)
         tz = self._local_tz()
-        wall = self._local_now().replace(
-            tzinfo=None, hour=h, minute=m, second=0, microsecond=0)
+        # 24:00(=자정, 만료 시각 입력 관례)에 replace(hour=24) 는 ValueError 라 버튼이
+        # 죽었다. 자정에서 시·분을 더하는 벽시계 산술로 — 24:00 은 내일 00:00.
+        midnight = self._local_now().replace(
+            tzinfo=None, hour=0, minute=0, second=0, microsecond=0)
+        wall = midnight + timedelta(hours=h, minutes=m)
         return wall_to_utc(wall, tz).timestamp()
 
     def _local_tz(self):
         """이 스케줄러의 위치 시간대. 컨테이너 시계(TZ)에 기대지 않는다."""
         try:
-            return resolve_location_tz(self.unique_id)
+            return tz_of(self.unique_id)
         except Exception as e:
             # UTC 로 떨어지면 수동 창·만료가 시스템 시간대와 어긋난다 — 시스템 tz 로.
-            from aot.utils.timekit import system_tz
+            from aot.utils.timekit import FARM
             self.logger.debug("위치 tz 해석 실패, 시스템 시간대 사용: %s", e)
-            return system_tz()
+            return tz_of(FARM)
 
     def _local_now(self) -> datetime:
         return utc_now().astimezone(self._local_tz())
@@ -374,7 +378,12 @@ class CustomModule(AbstractFunction):
         sh, sm = self._parse_hhmm(getattr(self, 'manual_c_start', '05:00'), 5, 0)
         eh, em = self._parse_hhmm(getattr(self, 'manual_c_expire', '17:00'), 17, 0)
         cur = now.hour * 60 + now.minute
-        return (sh * 60 + sm) <= cur < (eh * 60 + em)
+        start, end = sh * 60 + sm, eh * 60 + em
+        if start <= end:
+            return start <= cur < end
+        # 시작이 끝보다 늦으면 자정을 넘는 창(22:00~06:00) — 예전엔 늘 거짓이라 수동
+        # 모드에서 영영 REST 였다. 운영시간(lorawan_mode_manager)과 같은 규칙.
+        return cur >= start or cur < end
 
     def _is_winter(self, now: datetime) -> bool:
         def md(s, dM, dD):
@@ -729,7 +738,7 @@ class CustomModule(AbstractFunction):
             ts_utc = None
             if last_seen:
                 try:
-                    ts_utc = datetime.fromisoformat(str(last_seen).replace('Z', '+00:00'))
+                    ts_utc = parse_utc(str(last_seen))
                 except Exception:
                     ts_utc = None
             base = slot * 3
@@ -788,7 +797,8 @@ class CustomModule(AbstractFunction):
             flags += ' [WINTER]'
         last_tr = g('sched_last_transition_ts', '0')
         try:
-            last_tr_s = datetime.fromtimestamp(float(last_tr)).strftime('%Y-%m-%d %H:%M') \
+            # 서버(컨테이너) 시계가 아니라 이 스케줄러가 걸린 장소의 시계로 보여 준다.
+            last_tr_s = to_tz(float(last_tr), self.unique_id).strftime('%Y-%m-%d %H:%M') \
                 if float(last_tr) else '-'
         except Exception:
             last_tr_s = '-'

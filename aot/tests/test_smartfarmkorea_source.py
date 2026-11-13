@@ -548,6 +548,18 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
+    def _source(self, preset='smartfarmkorea', key='SK', **cfg):
+        """사용자가 AI 라이브러리 화면에서 만든 출처(키 포함) — 키는 AI 인자가 아니라 여기에만 있다(2026-11-03)."""
+        config = dict({'preset_key': preset, 'operations': ['identity']}, **cfg)
+        if key:
+            config['api_key'] = key
+        src = AIContextSource(facility_id='default', source_name=preset, source_type='rest_api',
+                              parameter_name=preset + '.t', config_json=json.dumps(config),
+                              sync_interval_min=1440, is_active=True, is_enabled=False)
+        db.session.add(src)
+        db.session.commit()
+        return src
+
     @patch('aot.ai.context.ext.smartfarmkorea_client.requests.get')
     def test_lookup_tool_filters_and_caps(self, mock_get):
         from aot.tools.aot_data_tool_service import AoTDataToolService as T
@@ -556,7 +568,8 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
                  'itemCode': '080300'} for i in range(50)]
         resp = MagicMock(); resp.raise_for_status.return_value = None; resp.json.return_value = rows
         mock_get.return_value = resp
-        out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea', api_key='SK', mode='farms', query='사천', limit=5)
+        self._source()
+        out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea', mode='farms', query='사천', limit=5)
         self.assertEqual(out['total'], 50)
         self.assertEqual(out['returned'], 5)          # capped
         self.assertTrue(all('사천' in it['label'] for it in out['items']))  # filtered
@@ -581,7 +594,8 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
 
     def test_lookup_tool_livestock_has_no_discovery(self):
         from aot.tools.aot_data_tool_service import AoTDataToolService as T
-        out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea_livestock', api_key='SK', mode='farms')
+        self._source('smartfarmkorea_livestock', operations=['poultry_daily'])
+        out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea_livestock', mode='farms')
         self.assertIn('identity', out['error'])
 
     @patch('aot.ai.context.ext.smartfarmkorea_client.requests.get')
@@ -598,7 +612,8 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
         ]
         resp = MagicMock(); resp.raise_for_status.return_value = None; resp.json.return_value = rows
         mock_get.return_value = resp
-        out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea', api_key='SK', mode='farms', crop='딸기')
+        self._source()
+        out = T.smartfarmkorea_lookup_tool(dataset='smartfarmkorea', mode='farms', crop='딸기')
         self.assertEqual(out['returned'], 1)
         self.assertEqual(out['items'][0]['userId'], 'PF_A')
         self.assertEqual(out['items'][0]['crop'], '딸기')
@@ -614,13 +629,13 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
 
     def test_configure_tool_rejects_non_sfk_preset(self):
         from aot.tools.aot_data_tool_service import AoTDataToolService as T
-        out = T.configure_library_source_tool(preset_key='document', api_key='SK', operations=['x'])
+        out = T.configure_library_source_tool(preset_key='document', operations=['x'])
         self.assertIn('preset_key must be one of', out['error'])
 
     def test_configure_tool_reports_missing_params_per_operation(self):
         from aot.tools.aot_data_tool_service import AoTDataToolService as T
         out = T.configure_library_source_tool(
-            preset_key='smartfarmkorea', api_key='SK', operations=['growth_strawberry'])
+            preset_key='smartfarmkorea', operations=['growth_strawberry'])
         self.assertIn('missing required params', out['error'])
         miss = out['details'][0]['missing']
         for p in ('userId', 'croppingSerlNo', 'startDate', 'endDate'):
@@ -637,17 +652,20 @@ class TestSmartfarmkoreaAITools(unittest.TestCase):
              'croppingSeasonName': '2021년 토마토', 'itemCode': '080300'},
         ]
         mock_get.return_value = resp
+        # 키는 사용자가 화면에서 이미 넣어 둔 출처 — AI 는 source_id 와 값만 준다.
+        stored = self._source(operations=['identity'])
         out = T.configure_library_source_tool(
-            preset_key='smartfarmkorea', api_key='SK', operations=['cropping'],
-            userId='PFS_0000001', facilityId='PFS_0000001_01', itemCode='080300',
+            source_id=stored.source_id, operations=['cropping'],
+            params={'userId': 'PFS_0000001', 'facilityId': 'PFS_0000001_01', 'itemCode': '080300'},
             farm_label='경상남도 사천시 (PFS_0000001)')
-        self.assertEqual(out['status'], 'created')
+        self.assertEqual(out['status'], 'updated')
         self.assertTrue(out['activated'])
         self.assertTrue(out['synced'])
 
         src = AIContextSource.query.filter_by(source_id=out['source_id']).first()
         cfg = json.loads(src.config_json)
         self.assertEqual(cfg['userId'], 'PFS_0000001')           # resolved id persisted
+        self.assertEqual(cfg['api_key'], 'SK')                   # 저장된 키는 그대로 남는다
         self.assertEqual(cfg['_farmLabel'], '경상남도 사천시 (PFS_0000001)')  # human label persisted
         self.assertTrue(bool(src.is_enabled))                    # activated
         chunks = AIKnowledgeChunk.query.filter_by(source_id=out['source_id']).all()

@@ -38,8 +38,8 @@
 | 컨트롤 | `OrbitControls.js` (1421) | MapControls 사용 중 |
 | 충돌/스냅 | `three-mesh-bvh.js` (8410) | 정밀 hit-test 가능 |
 | 백엔드 CRUD | `aot/aot_flask/geo/facility_io.py` (`FacilityManager`) | `GeoFacility` + 외곽/베이 `GeoShape` |
-| 계산 | `aot/aot_flask/geo/facility_calc.py` (371) | 치수·면적 계산 |
-| 헬퍼 | `aot/aot_flask/geo/facility_geo_helpers.py` (202) | 좌표 변환 |
+| 계산 | `aot/space/facility_calc.py` (371) | 치수·면적 계산 |
+| 헬퍼 | `aot/space/facility_geo_helpers.py` (202) | 좌표 변환 |
 | 레지스트리 | `context_layer/facility_registry.yaml` | 시설 메타데이터 |
 
 ### 2.2 추정 결함 (Phase 1에서 사실 확인 필요)

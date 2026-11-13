@@ -21,6 +21,24 @@ from aot.databases.utils import session_scope
 from aot.aot_client import DaemonControl
 
 
+def coerce_seconds(value, default=0.0):
+    """액션 입력(설정값 또는 `value={...}` 로 넘어온 값)을 초 단위 float 로 읽는다.
+
+    설정 화면 값은 float 로 파싱되지만 `run_action("ID", value={"duration": "30"})`
+    처럼 코드가 넘기는 값은 문자열·None 일 수 있다. 그대로 `time.sleep`·산술에
+    넣으면 TypeError 로 액션 전체가 죽는다. 읽을 수 없거나 NaN/무한이면
+    `default` 를 돌려준다. 부호는 그대로 둔다(음수 지속 시간은 출력 쪽에서
+    역방향 구동을 뜻할 수 있다).
+    """
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    if number != number or number in (float('inf'), float('-inf')):
+        return default
+    return number
+
+
 class AbstractFunctionAction(AbstractBaseController):
     """Enforce required methods and instance variables for all Function Actions.
 

@@ -62,7 +62,8 @@ class TestQueryableSurface(unittest.TestCase):
         self.assertIn('cropping', ops)
         self.assertNotIn('serviceKey', ops['cropping'], 'API 키를 모델에게 요구하면 안 된다')
         self.assertIn('userId', ops['cropping'])
-        self.assertIn('smartfarmkorea_lookup', out[0]['note'])
+        self.assertIn('farms / seasons', out[0]['note'])      # 코드는 출처의 탐색 동작으로 푼다(PR 8)
+        self.assertIn('farms', {o['operation'] for o in out[0]['operations']})
 
 
 class TestQueryBoundaries(unittest.TestCase):
@@ -95,7 +96,7 @@ class TestQueryBoundaries(unittest.TestCase):
             payload, err = dsq.query('s1', 'cropping')
         self.assertIsNone(payload)
         self.assertIn('userId', err)
-        self.assertIn('smartfarmkorea_lookup', err)
+        self.assertIn('farms / seasons', err)
 
     def test_a_value_already_on_the_source_is_used_as_the_default(self):
         """소스에 농가가 지정돼 있으면 모델이 매번 다시 적을 이유가 없다."""

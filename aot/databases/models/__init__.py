@@ -34,12 +34,14 @@ from aot.config import INSTALL_DIRECTORY
 from aot.config import SQL_DATABASE_AOT
 from aot.config import USER_ROLES
 from aot.config_devices_units import UNIT_CONVERSIONS
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from .alembic_version import AlembicVersion
 from .api_key import APIKey
 from .calendar_integration import UserCalendarConnection
 from .calendar_integration import CalendarEventLink
 from .camera import Camera
+from .camera_driver import CameraDriver
+from .camera_event import CameraEvent
 from .controller import CustomController
 from .controller import FunctionChannel
 from .dashboard import Dashboard
@@ -96,9 +98,9 @@ from .twin_config import TwinConfig
 from .fc_calibration import FcCalEvent, FcCalibration, FcCalibrationSite
 from .twin_scenario import TwinRun, TwinScenario
 from .target_alias import TargetAlias
+from .geo_favorite import GeoFavorite
 # 옛 이름 — 한 릴리스 동안만 남긴다(p6_43 에서 관리 프로그램으로 넓혔다).
 GeoCropProgram = GeoProgram
-from .irrigation import IrrigationDesign
 from .output import Output
 from .output import OutputChannel
 from .pid import PID
@@ -433,10 +435,6 @@ def populate_db():
             Dashboard(id=1, name='Default').save()
         if not APIKey.query.count():
             # Optional: Add any default API keys if needed
-            pass
-
-        if not IrrigationDesign.query.count():
-            # Optional: Add default design if needed
             pass
 
         # Populate conversion tables

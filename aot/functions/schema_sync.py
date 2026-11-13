@@ -73,7 +73,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional, Callable
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases.models import CustomController, FunctionChannel
 from aot.utils.database import db_retrieve_table_daemon
 

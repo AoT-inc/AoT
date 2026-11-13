@@ -11,7 +11,26 @@
 {#- 공용 구획 폼(`common/aot-plot-form.js`)의 스타일 — 지도 위젯·/plots 와 **같은 파일**이다. -#}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aot-settings.css') }}" />
+{# 위치 시트 서랍의 카드(.aot-ov-card-title / .aot-ov-block) 정본 — 지도 위젯 모달·일지 화면과 같은 파일이다. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/widget/aot-sensor-label.css') }}" />
 <style>
+    /* 장비 드로어(배관) > 압력 블록 — 읽을 문장은 라벨(600)이 아니라 본문 굵기로 쓴다. 색·크기는 기존 모달 토큰 그대로다. */
+    .aot-geo-pressure .aot-geo-pressure-note {
+        flex: 1 1 0;
+        min-width: 0;
+        font-size: var(--aot-fs-page-body);
+        font-weight: var(--aot-fw-regular);
+        color: var(--aot-text-main);
+        line-height: 1.45; /* .aot-modal-body-text 와 같은 값 */
+        overflow-wrap: anywhere;
+    }
+    :lang(ko) .aot-geo-pressure .aot-geo-pressure-note { word-break: keep-all; }
+    /* 폰 너비: 문장 옆에 동작을 두면 문장이 좁은 열로 쪼개진다 — 문장을 한 줄 폭으로 두고 동작은 아래 오른쪽에 둔다(ui-guide §3-2 ②). */
+    @media (max-width: 575.98px) {
+        .aot-geo-pressure .aot-modal-option-row:has(> .aot-geo-pressure-note) { flex-direction: column; align-items: stretch; }
+        .aot-geo-pressure .aot-modal-option-row:has(> .aot-geo-pressure-note) > .aot-modal-option-control { align-self: flex-end; flex: 0 0 auto; }
+        .aot-geo-pressure .aot-modal-option-row > .aot-geo-pressure-note { flex: 0 0 auto; }
+    }
     /* Card Styles */
     .card {
         border: none;
@@ -127,26 +146,6 @@
         top: 10px;
     }
 
-    /* Search Overlay Positioning */
-    #search-overlay {
-        position: absolute;
-        top: 10px;
-        left: 70px;
-        /* Space for Left Tools */
-        right: 70px;
-        /* Space for Right Tools */
-        z-index: var(--aot-z-fixed-panel);
-        /* 지도 위 헤더 — leaflet 컨트롤(~1000) 위 */
-        display: flex;
-        justify-content: center;
-        pointer-events: none;
-        /* Container pass-through */
-    }
-
-    #search-overlay.d-none {
-        display: none !important;
-    }
-
 
     @media (max-width: 768px) {
 
@@ -157,17 +156,6 @@
 
         .map-tools-right {
             right: calc(2 * var(--aot-vw)) !important;
-        }
-
-        /* Adjust Search Overlay to fit between closer/further controls */
-        #search-overlay {
-            /* User Req: More space for search bar on mobile, but keep clear of controllers (40px) */
-            left: 60px !important;
-            right: 60px !important;
-            /* [Fix] V4: Use Flexbox to properly center and size the inner component */
-            display: flex;
-            justify-content: center;
-            width: auto;
         }
 
         /* User Req: Mode Panel margins 2vw relative to CONTAINER (card-body) */
@@ -545,6 +533,7 @@
                     <button class="btn btn-white" id="tool-search" title="{{ _('Search Address') }}"><i class="fas fa-search"></i></button>
                     <button class="btn btn-white" id="tool-locate" title="{{ _('My Location') }}"><i class="fas fa-crosshairs"></i></button>
                     <button class="btn btn-white" id="tool-reset" title="{{ _('Reset View') }}"><i class="fas fa-undo"></i></button>
+                    <button class="btn btn-white aot-terrain-toggle" id="tool-terrain" type="button" title="{{ _('3D Terrain') }}" hidden>3D</button>
                 </div>
             {# @manual-end #}
 
@@ -607,11 +596,6 @@
             </div>
             {# @manual-end #}
 
-            <!-- Hidden Search Overlay Component -->
-            <div id="search-overlay" class="d-none map-search-overlay">
-                <aot-map-search-fixed id="design-search"></aot-map-search-fixed>
-            </div>
-
             {# @manual geo/design-tool#screen-layout #}
             <!-- 모드별 설정 드로어 ──────────────────────────────────────────
                  하단 가로바(#nav-mode-panel)에는 **모드 탭만** 남기고, 각 모드의
@@ -647,6 +631,26 @@
                         </div>
                         <div class="modal-body" id="geo-settings-drawer-body">
                             <!-- 설정 tier 는 JS 가 넣는다 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {#- 주소 검색 버튼(#tool-search)이 여는 위치 시트 서랍. 설정 서랍과 같은 골격이라 지도를 밀어낼 뿐 가리지 않고
+                (백드롭 없음) 한 번에 하나만 열린다(common/aot-widget-drawer.js). 내용(주소 검색·지도 중심·직접 찍기·
+                즐겨찾기·최근)은 geo/aot-map-here.js 가 넣는다 — 지도 위젯과 같은 시트다. -#}
+            <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover"
+                 id="geo-location-drawer" tabindex="-1" role="dialog"
+                 data-backdrop="false" aria-hidden="true">
+                <div class="modal-dialog aot-modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ _('Search Address') }}</h5>
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="{{ _('Close') }}"><span aria-hidden="true">&times;</span></button>
+                        </div>
+                        <div class="modal-body" id="geo-location-drawer-body">
+                            <!-- 위치 시트는 JS 가 넣는다 -->
                         </div>
                     </div>
                 </div>
@@ -758,9 +762,6 @@
 <script src="{{ url_for('static', filename='js/widgets/AoT_facility/three.min.js') }}"></script>
 <script src="{{ asset('geo-design-facility3d') }}"></script>
 
-<!-- Search Components -->
-<script src="{{ asset('geo-design-search') }}"></script>
-
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Map container validation
@@ -857,9 +858,13 @@
         <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
       </div>
       <div class="modal-body">
+        {#- 위치 시트(.aot-here-sheet)와 같은 규약: 구획 제목(.aot-ov-card-title) + 카드(.aot-ov-block), 밑줄 입력,
+            줄 단위 짧은 동작은 아이콘 알약(.aot-pill-icon — 아이콘은 JS 가 data-aot-icon 으로 채운다),
+            뜻이 글로 필요한 결정(업로드·저장)은 글자 알약. 구분선은 카드 안에서만. -#}
+        <div class="aot-parcel-sheet">
 
         <!-- Tabs: address list / CSV -->
-        <ul class="nav nav-tabs mb-3" id="parcel-import-tabs">
+        <ul class="nav nav-tabs" id="parcel-import-tabs">
           <li class="nav-item">
             <a class="nav-link active" data-toggle="tab" href="#tab-single-address">{{ _('Address Input') }}</a>
           </li>
@@ -873,82 +878,121 @@
           {# @manual geo/parcel-import#address-input #}
           <!-- Address list (dynamic multi-input) -->
           <div class="tab-pane fade show active" id="tab-single-address">
-            <div class="text-muted small mb-2">
-              {{ _('Separate with commas (,) or add multiple parcels with the') }} <strong>+</strong> {{ _('button.') }}
-            </div>
-            <div id="parcel-address-list">
-              <!-- First address row (template) -->
-              <div class="parcel-addr-row input-group mb-1">
-                <input type="text" class="parcel-addr-input form-control form-control-sm"
-                  placeholder="{{ _('e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul') }}" />
-                <div class="input-group-append">
-                  <button class="btn aot-pill-btn aot-pill-btn-danger btn-parcel-addr-remove" type="button"
-                    title="{{ _('Delete') }}" style="display:none;">&times;</button>
+            <div class="aot-ov-block aot-parcel-card">
+              <div class="aot-option-tip">
+                {{ _('Separate with commas (,) or add multiple parcels with the') }} <strong>+</strong> {{ _('button.') }}
+              </div>
+              <div id="parcel-address-list" class="aot-parcel-addrs">
+                <!-- First address row (template) -->
+                <div class="parcel-addr-row aot-parcel-addr-row">
+                  <input type="text" class="parcel-addr-input aot-modern-input" autocomplete="off"
+                    aria-label="{{ _('Address Input') }}"
+                    placeholder="{{ _('e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul') }}" />
+                  <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon btn-parcel-addr-pick" type="button"
+                    data-aot-icon="pin" data-aot-tip="{{ _('Location') }}" aria-label="{{ _('Location') }}"></button>
+                  <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon btn-parcel-addr-remove" type="button"
+                    data-aot-icon="trash" data-aot-tip="{{ _('Delete') }}" aria-label="{{ _('Delete') }}"
+                    style="display:none;"></button>
                 </div>
               </div>
+              <div class="aot-action-group aot-parcel-actions">
+                <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon" id="btn-parcel-addr-add" type="button"
+                  data-aot-icon="plus" data-aot-tip="{{ _('Add Address') }}" aria-label="{{ _('Add Address') }}"></button>
+                <button class="btn aot-pill-btn aot-pill-btn-primary aot-pill-icon" id="btn-parcel-search" type="button"
+                  data-aot-icon="search" data-aot-tip="{{ _('Search') }}" aria-label="{{ _('Search') }}"></button>
+              </div>
+              <div id="parcel-search-status" class="aot-parcel-status text-muted"></div>
             </div>
-            <div class="d-flex align-items-center mt-1 mb-2">
-              <button class="btn aot-pill-btn aot-pill-btn-secondary mr-2" id="btn-parcel-addr-add" type="button">
-                <i class="fas fa-plus mr-1"></i>{{ _('Add Address') }}
-              </button>
-              <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-parcel-search" type="button">
-                <i class="fas fa-search mr-1"></i>{{ _('Search') }}
-              </button>
+            {#- 주소 줄의 [위치] 를 누르면 위치 시트(pick 모드)가 이 자리에 펼쳐진다 — 서랍을 닫지 않으니 입력 중인 줄이 그대로다.
+                시트 내용은 aot-geo-parcel-pick.js 가 채운다. -#}
+            <div id="parcel-pick-sheet" class="aot-parcel-pick" hidden>
+              <div class="aot-ov-card-title aot-ov-card-title--row">
+                <span>{{ _('Location') }}</span>
+                <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon" type="button" data-aot-pick-close
+                  data-aot-icon="close" data-aot-tip="{{ _('Close') }}" aria-label="{{ _('Close') }}"></button>
+              </div>
+              <div class="aot-parcel-pick-body"></div>
             </div>
-            <div id="parcel-search-status" class="text-muted small mb-2"></div>
           </div>
           {# @manual-end #}
 
           {# @manual geo/parcel-import#how-to-import #}
           <!-- CSV batch -->
           <div class="tab-pane fade" id="tab-csv-upload">
-            <div class="mb-2 text-muted small">
-              {{ _('Enter addresses in the first column of the CSV file. To merge adjacent parcels, check Merge Adjacent Parcels.') }}
+            {#- CSV 형식 안내 — 서버(api_geo_parcel_from_csv)가 실제로 읽는 규칙 그대로: 모든 행의 첫 열, 쉼표 구분, UTF-8, 헤더 건너뛰기 없음. -#}
+            <div class="aot-ov-card-title">{{ _('CSV Format') }}</div>
+            <div class="aot-ov-block aot-parcel-card">
+              <div class="aot-option-tip">
+                {{ _('One address per row, in the first column. Only the first column is read, comma-separated, UTF-8 (in Excel, save as "CSV UTF-8"). There is no header row: a header would be looked up as an address and listed as a failure.') }}
+              </div>
+              <div class="aot-option-tip">
+                <strong>VWorld</strong> —
+                {{ _('Use the lot-number (jibun) address. Parcels are matched by lot number, so road-name addresses can fail when the point falls on the road. Korean addresses only.') }}
+                <br><code>서울특별시 강남구 역삼동 808</code>
+              </div>
+              <div class="aot-option-tip">
+                <strong>Google Maps</strong> —
+                {{ _('Move the address column of the Google Maps / My Maps export to the first column. Google returns road-name addresses, so some rows may fail; check the failure list. Addresses outside Korea cannot be read.') }}
+                <br><code>대한민국 서울특별시 강남구 테헤란로 152</code>
+              </div>
             </div>
-            <div class="custom-file mb-2">
-              <input type="file" class="custom-file-input" id="parcel-csv-file" accept=".csv">
-              <label class="custom-file-label" for="parcel-csv-file">{{ _('Choose CSV File') }}</label>
+            <div class="aot-ov-block aot-parcel-card">
+              <div class="aot-option-tip">
+                {{ _('To merge adjacent parcels, check Merge Adjacent Parcels.') }}
+              </div>
+              <div class="aot-parcel-file">
+                <label class="btn aot-pill-btn aot-pill-btn-secondary mb-0" for="parcel-csv-file">
+                  {{ _('Choose CSV File') }}
+                  <input type="file" class="sr-only" id="parcel-csv-file" accept=".csv">
+                </label>
+                <span class="aot-parcel-filename aot-option-tip" id="parcel-csv-filename"></span>
+              </div>
+              <div class="aot-action-group aot-parcel-actions">
+                <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-parcel-csv-upload" type="button">
+                  {{ _('Upload and Process') }}
+                </button>
+              </div>
+              <div id="parcel-csv-status" class="aot-parcel-status text-muted"></div>
             </div>
-            <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-parcel-csv-upload" type="button">
-              <i class="fas fa-upload mr-1"></i>{{ _('Upload and Process') }}
-            </button>
-            <div id="parcel-csv-status" class="text-muted small mt-2"></div>
           </div>
           {# @manual-end #}
         </div>
 
         {# @manual geo/parcel-import#reviewing-and-saving #}
         <!-- Result preview -->
-        <div id="parcel-preview-area" class="mt-3" style="display:none;">
-          <hr>
-          <div class="d-flex align-items-center justify-content-between mb-2">
-            <strong id="parcel-preview-label">{{ _('Parcel Preview') }}</strong>
-            <div>
-              <label class="mr-2 mb-0">
-                <input type="checkbox" id="parcel-merge-check"> {{ _('Merge Adjacent Parcels') }}
-              </label>
-              <button class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-parcel-clear" type="button">
-                <i class="fas fa-times mr-1"></i>{{ _('Reset') }}
-              </button>
+        <div id="parcel-preview-area" style="display:none;">
+          <div class="aot-ov-card-title" id="parcel-preview-label">{{ _('Parcel Preview') }}</div>
+          <div class="aot-ov-block aot-parcel-card">
+            <div id="parcel-result-list" class="aot-parcel-rows"></div>
+            <div class="aot-modal-option-row aot-parcel-merge">
+              <label class="aot-modal-option-label" for="parcel-merge-check">{{ _('Merge Adjacent Parcels') }}</label>
+              <div class="aot-modal-option-control">
+                <label class="btn-toggle mb-0">
+                  <input type="checkbox" id="parcel-merge-check" class="btn-toggle-input">
+                  <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+                </label>
+              </div>
             </div>
           </div>
-          <div id="parcel-result-list" class="mb-2"></div>
 
           <!-- Site name (used only when saving merged; individual saves use each parcel's name) -->
-          <div class="form-group row mb-2" id="parcel-site-name-row">
-            <label class="col-sm-3 col-form-label">{{ _('Site Name') }}</label>
-            <div class="col-sm-9">
-              <input type="text" id="parcel-site-name" class="form-control form-control-sm" placeholder="{{ _('Auto-filled') }}" />
+          <div class="aot-ov-card-title">{{ _('Site Name') }}</div>
+          <div class="aot-ov-block aot-parcel-card" id="parcel-site-name-row">
+            <input type="text" id="parcel-site-name" class="aot-modern-input" autocomplete="off"
+              aria-label="{{ _('Site Name') }}" placeholder="{{ _('Auto-filled') }}" />
+            <div class="aot-action-group aot-parcel-actions aot-parcel-save">
+              <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon" id="btn-parcel-clear" type="button"
+                data-aot-icon="reset" data-aot-tip="{{ _('Reset') }}" aria-label="{{ _('Reset') }}"></button>
+              <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-parcel-save" type="button">
+                {{ _('Save as Site') }}
+              </button>
             </div>
+            <div id="parcel-save-status" class="aot-parcel-status text-muted"></div>
           </div>
-
-          <button class="btn aot-pill-btn aot-pill-btn-primary" id="btn-parcel-save" type="button">
-            <i class="fas fa-save mr-1"></i>{{ _('Save as Site') }}
-          </button>
-          <span id="parcel-save-status" class="ml-2 text-muted small"></span>
         </div>
         {# @manual-end #}
 
+        </div><!-- /.aot-parcel-sheet -->
       </div><!-- /.modal-body -->
     </div>
   </div>
@@ -964,26 +1008,48 @@
     // ── Utils ──────────────────────────────────────────────────────────────
     function showStatus(elId, msg, cls) {
         const el = document.getElementById(elId);
-        if (el) { el.textContent = msg; el.className = 'small mt-1 ' + (cls || 'text-muted'); }
+        if (el) { el.textContent = msg; el.className = 'aot-parcel-status ' + (cls || 'text-muted'); }
+    }
+
+    function _esc(v) {
+        return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+        });
+    }
+
+    // 아이콘 알약 — 이름은 aria-label + data-aot-tip(AoTTip.set), 그림은 AoTIcons. 아이콘 세트가 없으면(옛 화면)
+    // 글자 알약으로 되돌려 이름이 사라지지 않게 한다.
+    function _decorateIconButton(btn) {
+        const name = btn.getAttribute('data-aot-icon');
+        const label = btn.getAttribute('aria-label') || btn.getAttribute('data-aot-tip') || '';
+        const svg = (window.AoTIcons && name) ? window.AoTIcons.html(name) : '';
+        if (window.AoTTip) window.AoTTip.set(btn, label);
+        if (svg) { btn.innerHTML = svg; }
+        else { btn.classList.remove('aot-pill-icon'); btn.textContent = label; }
+    }
+    function _decorateIconButtons(root) {
+        root.querySelectorAll('[data-aot-icon]').forEach(_decorateIconButton);
     }
 
     function renderResultList(features, errors) {
         const el = document.getElementById('parcel-result-list');
         if (!el) return;
         let html = '';
+        const icon = n => (window.AoTIcons ? window.AoTIcons.html(n) : '');
         features.forEach((f, i) => {
             const name = (f.properties && f.properties.name) || ((window._ ? window._('Parcel') : 'Parcel') + ' ' + (i+1));
-            html += `<div class="d-flex align-items-center py-1 border-bottom">
-                <i class="fas fa-check-circle text-success mr-2"></i>
-                <span class="flex-grow-1">${name}</span>
+            html += `<div class="aot-parcel-result">
+                <span class="aot-parcel-mark aot-parcel-mark-ok">${icon('check')}</span>
+                <span class="aot-parcel-result-name">${_esc(name)}</span>
             </div>`;
         });
         (errors || []).forEach(e => {
-            html += `<div class="d-flex align-items-center py-1 border-bottom text-danger">
-                <i class="fas fa-times-circle mr-2"></i><span>${e}</span>
+            html += `<div class="aot-parcel-result aot-parcel-result-err">
+                <span class="aot-parcel-mark">${icon('close')}</span>
+                <span class="aot-parcel-result-name">${_esc(e)}</span>
             </div>`;
         });
-        el.innerHTML = html || ('<span class="text-muted">' + (window._ ? window._('No results') : 'No results') + '</span>');
+        el.innerHTML = html || ('<span class="aot-option-tip">' + (window._ ? window._('No results') : 'No results') + '</span>');
     }
 
     {# @manual geo/parcel-import#reviewing-and-saving #}
@@ -1022,14 +1088,20 @@
     function _addAddressRow(value) {
         const list = document.getElementById('parcel-address-list');
         const row = document.createElement('div');
-        row.className = 'parcel-addr-row input-group mb-1';
+        row.className = 'parcel-addr-row aot-parcel-addr-row';
+        const del = _esc(window._ ? window._('Delete') : 'Delete');
+        const loc = _esc(window._ ? window._('Location') : 'Location');
         row.innerHTML = `
-            <input type="text" class="parcel-addr-input form-control form-control-sm"
-                placeholder="${(window._ ? window._('e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul') : 'e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul')}" value="${value || ''}" />
-            <div class="input-group-append">
-                <button class="btn aot-pill-btn aot-pill-btn-danger btn-parcel-addr-remove" type="button"
-                    title="${(window._ ? window._('Delete') : 'Delete')}">&times;</button>
-            </div>`;
+            <input type="text" class="parcel-addr-input aot-modern-input" autocomplete="off"
+                aria-label="${_esc(window._ ? window._('Address Input') : 'Address Input')}"
+                placeholder="${_esc(window._ ? window._('e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul') : 'e.g. 808 Yeoksam-dong, Gangnam-gu, Seoul')}" />
+            <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon btn-parcel-addr-pick" type="button"
+                data-aot-icon="pin" data-aot-tip="${loc}" aria-label="${loc}"></button>
+            <button class="btn aot-pill-btn aot-pill-btn-secondary aot-pill-icon btn-parcel-addr-remove" type="button"
+                data-aot-icon="trash" data-aot-tip="${del}" aria-label="${del}"></button>`;
+        row.querySelector('.parcel-addr-input').value = value || '';
+        _decorateIconButtons(row);
+        _bindPick(row);
         row.querySelector('.btn-parcel-addr-remove').addEventListener('click', function() {
             row.remove();
             _updateRemoveButtons();
@@ -1043,19 +1115,54 @@
         row.querySelector('.parcel-addr-input').focus();
     }
 
+    // 주소 줄의 [위치] — 위치 시트(pick 모드)로 자리를 골라 그 줄에 주소를 채운다(aot-geo-parcel-pick.js).
+    let _pick = null;
+    function _bindPick(row) {
+        const b = row.querySelector('.btn-parcel-addr-pick');
+        if (!b) return;
+        b.addEventListener('click', function() {
+            if (_pick) _pick.toggle(row);
+        });
+    }
+
     {# @manual geo/parcel-import#address-input #}
-    /** Collect all entered addresses (split by comma + drop empty lines) */
+    /** Collect all entered addresses (split by comma + drop empty lines).
+     *  위치 시트로 채운 줄(data-picked)은 주소 하나다 — 제공자가 준 주소 안의 쉼표를 구분자로 보지 않는다. */
     function _collectAddresses() {
         const addrs = [];
         document.querySelectorAll('#parcel-address-list .parcel-addr-input').forEach(inp => {
+            if (inp.hasAttribute('data-picked')) {
+                const one = inp.value.trim();
+                if (one) addrs.push(one);
+                return;
+            }
             inp.value.split(',').map(s => s.trim()).filter(Boolean).forEach(a => addrs.push(a));
         });
         return addrs;
     }
 
+    /** 고른 주소로 조회가 실패했을 때 붙이는 안내 — 필지 조회는 VWorld 가 풀 수 있는 주소만 된다. */
+    function _pickedHint(failedAddrs) {
+        const picked = new Set();
+        document.querySelectorAll('#parcel-address-list .parcel-addr-input[data-picked]').forEach(inp => picked.add(inp.value.trim()));
+        if (!failedAddrs.some(a => picked.has(a))) return '';
+        return ' ' + (window._ ? window._('Parcel lookup can only find addresses that VWorld can resolve. Edit the address and try again.')
+            : 'Parcel lookup can only find addresses that VWorld can resolve. Edit the address and try again.');
+    }
+
     // ── Event binding ──────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
 
+        // 아이콘 알약(data-aot-icon)에 그림과 이름(툴팁)을 단다
+        const drawer = document.getElementById('modal-parcel-import');
+        if (drawer) _decorateIconButtons(drawer);
+        // 주소 줄에서 위치 시트로 자리 고르기 — 시트 번들이 없으면(옛 화면) [위치] 버튼을 감춘다
+        _pick = window.AoTGeoParcelPick ? window.AoTGeoParcelPick.init({
+            drawerId: 'modal-parcel-import', sheetId: 'parcel-pick-sheet', uid: 'geo-design-parcel',
+            getMap: function() { return window.geoDesign && window.geoDesign.map; }
+        }) : null;
+        if (!_pick && drawer) drawer.querySelectorAll('.btn-parcel-addr-pick').forEach(b => { b.style.display = 'none'; });
+        document.querySelectorAll('#parcel-address-list .parcel-addr-row').forEach(_bindPick);
         // Initialize hidden state of the first row's remove button
         _updateRemoveButtons();
         // First row Enter key
@@ -1087,7 +1194,7 @@
                     const results = await Promise.all(
                         addrs.map(addr => window.AoTParcelImport.searchAddress(addr))
                     );
-                    const features = [], errors = [];
+                    const features = [], errors = [], failedAddrs = [];
                     results.forEach((res, i) => {
                         if (res.ok) {
                             features.push(res.feature);
@@ -1095,15 +1202,17 @@
                             const errMsg = res.error || (window._ ? window._('Unknown') : 'Unknown');
                             if (res.raw_preview) console.warn('[ParcelImport] raw_preview:', res.raw_preview);
                             errors.push(`${addrs[i]}: ${errMsg}`);
+                            failedAddrs.push(addrs[i]);
                         }
                     });
                     if (features.length) {
                         showStatus('parcel-search-status',
                             `${features.length} ${(window._ ? window._('parcels found') : 'parcels found')}` + (errors.length ? `, ${errors.length} ${(window._ ? window._('failed') : 'failed')}` : ''),
                             errors.length ? 'text-warning' : 'text-success');
+                        if (errors.length) showStatus('parcel-search-status', document.getElementById('parcel-search-status').textContent + _pickedHint(failedAddrs), 'text-warning');
                         showPreviewArea(features, errors);
                     } else {
-                        showStatus('parcel-search-status', (window._ ? window._('Error') : 'Error') + ': ' + (errors[0] || (window._ ? window._('No results') : 'No results')), 'text-danger');
+                        showStatus('parcel-search-status', (window._ ? window._('Error') : 'Error') + ': ' + (errors[0] || (window._ ? window._('No results') : 'No results')) + _pickedHint(failedAddrs), 'text-danger');
                     }
                 } catch(e) {
                     showStatus('parcel-search-status', (window._ ? window._('Request failed') : 'Request failed') + ': ' + e.message, 'text-danger');
@@ -1140,8 +1249,8 @@
         const csvInput = document.getElementById('parcel-csv-file');
         if (csvInput) {
             csvInput.addEventListener('change', function() {
-                const lbl = this.nextElementSibling;
-                if (lbl) lbl.textContent = this.files[0] ? this.files[0].name : (window._ ? window._('Choose CSV File') : 'Choose CSV File');
+                const nm = document.getElementById('parcel-csv-filename');
+                if (nm) nm.textContent = this.files[0] ? this.files[0].name : '';
             });
         }
 

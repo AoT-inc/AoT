@@ -39,7 +39,7 @@ class SourcesTest(unittest.TestCase):
                 db.session.add(DeviceMeasurements(device_id=dev, channel=i, measurement=m, unit=u, name=n))
         db.session.commit()
         self.devs = ['wx-model', 'wx-mirror']
-        for target, fn in (('aot.aot_flask.geo.device_membership.weather_device_ids',
+        for target, fn in (('aot.space.device_membership.weather_device_ids',
                             lambda sid: (self.devs, 'bound')),
                            ('aot.utils.inputs.model_input_drivers', lambda: frozenset({'OPEN_METEO_WEATHER'})),
                            ('aot.utils.inputs.forecast_time_input_drivers', lambda: frozenset()),

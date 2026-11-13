@@ -8,6 +8,7 @@ from aot.databases.models import GeoMap, GeoSetting, GeoShape, GeoFacility, GeoF
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_geo
 from aot.aot_flask.geo.widget.maps import invalidate_geomap_cache
+from aot.utils.timekit import naive_utc, utc_now
 
 class GeoDesignManager:
     """
@@ -46,9 +47,12 @@ class GeoDesignManager:
                 global_conf = utils_geo.get_geo_config()
                 defaults = global_conf.get('settings', {})
                 
-                def_lat = defaults.get('default_lat', 37.5665)
-                def_lng = defaults.get('default_lng', 126.9780)
+                def_lat = defaults.get('default_lat')
+                def_lng = defaults.get('default_lng')
                 def_zoom = defaults.get('zoom', 13)
+                if def_lat is None or def_lng is None:
+                    # 시작 위치 미설정 — 세계 전도(도시 리터럴 없음).
+                    def_lat, def_lng, def_zoom = 0, 0, 2
                 
                 target_map = GeoMap()
                 target_map.name = "Design Map 1"
@@ -125,7 +129,7 @@ class GeoDesignManager:
             current_state['category'] = 'design'
                 
             geo_map.state_json = json.dumps(current_state)
-            geo_map.updated_at = datetime.utcnow()
+            geo_map.updated_at = naive_utc(utc_now())
             geo_map.save()
             invalidate_geomap_cache(geo_map.unique_id)
 
@@ -195,7 +199,7 @@ class GeoDesignManager:
             db.session.commit()
             # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
             try:
-                from aot.aot_flask.geo import containment_cache
+                from aot.space import containment_cache
                 containment_cache.invalidate()
             except Exception:
                 pass

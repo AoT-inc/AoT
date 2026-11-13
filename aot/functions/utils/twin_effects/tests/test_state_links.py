@@ -137,3 +137,19 @@ def test_effects_options_shape_matches_what_the_model_part_reads():
     d = {x["id"]: x for x in o["devices"]}
     assert d["heat"]["basis"] == "duty_log" and d["heat"]["ratings"]["rated_kW_thermal"] == 30.0
     assert d["heat0"]["ratings"] == {} and d["heat0"]["basis"] == "none"
+
+
+# ── 공급 한계 ─────────────────────────────────────────────────────────────────────
+def test_supply_limit_lowers_fog_flow_only_and_says_so():
+    full = {d.actuator_id: d for d in R.devices_from_integration(_integ()).devices}
+    got = R.devices_from_integration(_integ(), supply_lpm=0.5)
+    by = {d.actuator_id: d for d in got.devices}
+    assert full["fog"].ratings["fog_flow_lpm"] == 2.0 and by["fog"].ratings["fog_flow_lpm"] == pytest.approx(0.5)
+    assert got.sources["fog"]["fog_flow_lpm"] == "supply"
+    assert by["heat"].ratings == full["heat"].ratings and by["win-g1"].ratings == full["win-g1"].ratings
+
+
+def test_supply_above_demand_changes_nothing():
+    a = R.devices_from_integration(_integ())
+    b = R.devices_from_integration(_integ(), supply_lpm=500.0)
+    assert [d.ratings for d in a.devices] == [d.ratings for d in b.devices] and a.sources == b.sources

@@ -31,10 +31,13 @@ import threading
 import time
 
 from aot.utils import influx_layers as L
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger('aot.data_retention')
 
 CHECK_KEY = 'check'
+#: 바빠서 연속으로 미룰 수 있는 최대 시간(초).
+MAX_DEFER_S = 12 * 3600
 USER_LAYERS = (L.LAYER_FC, L.LAYER_HIST)      # 사용자가 바꾸는 '데이터 보관' 한 칸이 정하는 계층
 USER_BOUNDS = (30, 3650)                       # 일
 WARN_POINTS = 100_000_000                      # 보존 기간 동안 쌓일 점 수가 이를 넘으면 '많이 쌓임'
@@ -111,7 +114,7 @@ def delete_points(client, legacy, measurement, tags, start='1970-01-01T00:00:00Z
 
     `hist=True` 면 고정 시나리오의 `aot_hist` 사본도 지운다(시나리오를 지우거나 이력까지 지울 때만)."""
     import datetime
-    stop = stop or (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3650)).strftime(
+    stop = stop or (utc_now() + datetime.timedelta(days=3650)).strftime(
         '%Y-%m-%dT%H:%M:%SZ')
     pred = ' AND '.join(['_measurement="{}"'.format(_flux(measurement))]
                         + ['{}="{}"'.format(k, _flux(v)) for k, v in sorted(tags.items())])
@@ -352,6 +355,13 @@ def run_daily(now=None, force=False):
         cfg = (misc.data_layers if misc is not None else None) or {}
         last = (cfg.get(CHECK_KEY) or {}).get('at')
         if not force and not due(now, getattr(misc, 'timezone', None), last):
+            return None
+        # 차례가 됐어도 시스템이 바쁘면 다음 시간으로(하루 한 번이라 1시간 늦어도 무해).
+        # 연속 12시간 미뤘으면 바빠도 한 번은 돈다 — 디스크 용량 경고가 이 점검에서 나온다.
+        from aot.utils import resource_pressure
+        if force:
+            resource_pressure.clear_deferral('data_retention')    # 손으로 돌렸으면 연속 미룸도 끝
+        elif resource_pressure.should_defer('data_retention', MAX_DEFER_S):
             return None
         if cfg.get('enabled') is False or L.layout().mode != 'layered':
             result = {'at': now, 'mode': 'legacy', 'warnings': [], 'orphans': 0}

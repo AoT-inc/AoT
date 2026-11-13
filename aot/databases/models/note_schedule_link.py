@@ -20,11 +20,11 @@
 사라졌으면 그 자리에서 걷어낸다(`prune_dangling`). 고아가 남더라도 화면과
 집계에는 나타나지 않고, 다음 조회가 치운다.
 """
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class NoteScheduleLink(CRUDMixin, db.Model):

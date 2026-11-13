@@ -33,12 +33,34 @@ from aot.aot_flask.utils.utils_general import user_has_permission
 from aot.databases.models import Conditional
 from aot.databases.models import CustomController
 from aot.databases.models import PID
-from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.functions import parse_function_information
 from aot.utils.system_pi import parse_custom_option_values
 from aot.utils.lazy_text import lazy_format
 
 logger = logging.getLogger(__name__)
+
+# 갱신 주기의 하한(초). 폴링 관리자(`aot-poll-visibility.js`)는 2초 미만의 인터벌을
+# "애니메이션·시계 틱" 으로 보고 위상 정렬·합류에서 뺀다 — 서버 요청인 이 위젯이 그
+# 구간으로 내려가면 안 된다. 0.001 초를 넣으면 1ms 마다 두 요청(상태·상시)이 나갔다.
+MIN_REFRESH_SECONDS = 2.0
+
+
+def constraints_pass_refresh_seconds(mod_dev, value):
+    """`refresh_seconds` 검사: 숫자이고 `MIN_REFRESH_SECONDS` 이상.
+
+    ⚠ 이 옵션은 `type: 'text'` 라 값이 **문자열로** 들어온다. 숫자로 바꾸지 않고
+      비교하면 `TypeError` 로 검사가 통째로 건너뛰어진다(예전 `positive_value` 가
+      그랬다 — 0 이나 음수도 통과).
+    """
+    if value is None or str(value).strip() == '':
+        return True, [], mod_dev
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        return False, ["Must be a number of seconds"], mod_dev
+    if not seconds >= MIN_REFRESH_SECONDS:      # NaN 도 여기서 걸린다
+        return False, ["Must be at least {:g} seconds".format(MIN_REFRESH_SECONDS)], mod_dev
+    return True, [], mod_dev
 
 
 # Only these custom_options types can be shown as a toggle switch or a value/text
@@ -260,7 +282,7 @@ WIDGET_INFORMATION = {
             'type': 'text',
             'class': 'aot-time-input',
             'default_value': 30.0,
-            'constraints_pass': constraints_pass_positive_value,
+            'constraints_pass': constraints_pass_refresh_seconds,
             'name': lazy_format(lazy_gettext('{} ({})'), lazy_gettext("Refresh"), lazy_gettext("Seconds")),
             'phrase': lazy_gettext('The period of time between refreshing the widget')
         },
@@ -588,8 +610,8 @@ WIDGET_INFORMATION = {
 
     'widget_dashboard_js_ready_end': """
   function_status_activated('{{each_widget.unique_id}}');
-  repeat_function_status_activated('{{each_widget.unique_id}}', {{widget_options['refresh_seconds']}});
+  repeat_function_status_activated('{{each_widget.unique_id}}', {{ [widget_options['refresh_seconds']|float, 2.0]|max }});
   function_status_always('{{each_widget.unique_id}}');
-  repeat_function_status_always('{{each_widget.unique_id}}', {{widget_options['refresh_seconds']}});
+  repeat_function_status_always('{{each_widget.unique_id}}', {{ [widget_options['refresh_seconds']|float, 2.0]|max }});
 """
 }

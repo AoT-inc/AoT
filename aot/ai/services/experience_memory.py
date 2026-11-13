@@ -26,6 +26,7 @@ Flag-gated (t3_memory_loop_enabled); no-op when off.
 import json
 import logging
 from datetime import datetime, timezone
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,7 @@ def record(signal_type, pattern_key, evidence_id=None, summary=None, facility_id
             db.session.add(row)
         else:
             row.occurrence_count = (row.occurrence_count or 0) + 1
-            row.last_seen_at = datetime.now(timezone.utc)
+            row.last_seen_at = utc_now()
             if evidence_id:
                 try:
                     ev = json.loads(row.evidence_ids) if row.evidence_ids else []

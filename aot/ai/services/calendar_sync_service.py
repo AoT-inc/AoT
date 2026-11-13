@@ -40,7 +40,8 @@ from aot.databases.models import db
 from aot.databases.models.calendar_integration import UserCalendarConnection, CalendarEventLink
 from aot.databases.models.scheduler import SchedulerJobMeta, ScheduleType
 from aot.utils import google_oauth, google_calendar_api
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import naive_utc, parse_utc
 
 logger = logging.getLogger("aot.calendar_sync")
 
@@ -79,7 +80,7 @@ def _rfc3339_to_naive_utc(value):
     if not value:
         return None
     try:
-        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        dt = naive_utc(parse_utc(value))
     except Exception:
         return None
     if dt.tzinfo is not None:
@@ -160,7 +161,7 @@ def _job_event_body(job):
     (장치/상태/값/지속), PID setpoint (PID/목표값), function trigger (함수/실행),
     human/AI (장소/내용/담당)."""
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import tz_of
     from aot.utils import calendar_event_format as fmt
     import json as _j
 
@@ -208,7 +209,7 @@ def _job_event_body(job):
 
     start = job.schedule_time
     end = job.end_time or (start + timedelta(minutes=_DEFAULT_DURATION_MIN) if start else None)
-    tz = resolve_location_tz(job.target_id)
+    tz = tz_of(job.target_id)
     tz_name = str(tz) if tz is not None else 'UTC'
     return google_calendar_api.build_event_body(
         summary=summary, description=description,

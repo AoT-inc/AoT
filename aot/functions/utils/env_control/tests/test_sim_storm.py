@@ -17,6 +17,7 @@ import os
 import pytest
 
 from aot.functions.utils.env_control.sim import scenarios as S
+from aot.utils.timekit import to_tz, wall_to_utc
 from aot.functions.utils.env_control.sim import storm as W
 from aot.functions.utils.env_control.sim.metrics import STORM_COLUMNS, storm_kpis, summarize
 from aot.functions.utils.env_control.sim.plant import ActuatorSpec, Plant, PlantParams
@@ -32,7 +33,7 @@ def _hours(sc, wx):
 
 
 def _kst(t):
-    return dt.datetime.fromtimestamp(t, S.KST)
+    return to_tz(t, S.DEFAULT_TZ)
 
 
 def _trailing(vs, i, n=10):
@@ -61,7 +62,7 @@ def test_deterministic_and_after_snapshot(name):
     a = S.get(name).weather().to_dict()
     b = S.get(name).weather().to_dict()
     assert a == b
-    assert S.get(name).t0 > dt.datetime(2026, 10, 9, tzinfo=S.KST).timestamp()
+    assert S.get(name).t0 > wall_to_utc(dt.datetime(2026, 10, 9), S.DEFAULT_TZ).timestamp()
 
 
 @pytest.mark.parametrize('name', S.STORM)
@@ -610,3 +611,30 @@ def test_closedloop_harness_parses():
     # 새 시나리오 기능이 하네스에 있다
     for needle in ('outdoor_stale', '_attach_extra_sensors', 'wind_avg_s', 'rain_accum_s'):
         assert needle in src
+
+
+def test_diurnal_extrema_midnight_follows_tz_across_dst():
+    """극값 곡선의 '그날 0 시' 는 대지 시간대의 자정이다 — 뉴욕 서머타임 시작일의 자정은 EST(05:00Z)다."""
+    t0 = wall_to_utc(dt.datetime(2027, 3, 14, 12, 0), 'America/New_York').timestamp()   # EDT 정오(16:00Z)
+    f = W.diurnal_extrema(t0, [5.0, 5.0], [15.0, 15.0], tz='America/New_York')
+    midnight = wall_to_utc(dt.datetime(2027, 3, 14, 0, 0), 'America/New_York').timestamp()
+    assert midnight < t0
+    h_min = (midnight - t0) / 3600.0 + 5.5          # 자정에서 5.5 시간 경과 = 최저
+    h_max = (midnight - t0) / 3600.0 + 14.5
+    assert abs(f(h_min) - 5.0) < 1e-6
+    assert abs(f(h_max) - 15.0) < 1e-6
+    # KST 로 자정을 잡았다면 t0 가 달라 이 점이 어긋난다(9 시간 이상)
+    assert abs(f(h_min + 9.0) - 5.0) > 1.0
+
+
+def test_metrics_local_day_buckets_by_site_clock_across_dst():
+    """일광 합산의 날짜 구분은 점마다 그 시각의 대지 오프셋이다 — 뉴욕 서머타임 전환일 앞뒤가 한 날로 겹치지 않는다."""
+    from aot.functions.utils.env_control.sim import metrics as M
+    tz = 'America/New_York'
+    before = wall_to_utc(dt.datetime(2027, 3, 13, 23, 30), tz).timestamp()
+    after = wall_to_utc(dt.datetime(2027, 3, 14, 0, 30), tz).timestamp()     # EST 자정 뒤 1시간
+    late = wall_to_utc(dt.datetime(2027, 3, 14, 23, 30), tz).timestamp()     # EDT 밤
+    assert M._local_day(after, tz) == M._local_day(before, tz) + 1
+    assert M._local_day(late, tz) == M._local_day(after, tz)
+    # 고정 +9h 였다면 전환일 밤 23:30 EDT(03:30Z)는 12:30 KST 라 다른 날짜가 된다
+    assert M._local_day(late, 'Asia/Seoul') != M._local_day(late, tz)

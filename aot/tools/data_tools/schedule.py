@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 from aot.tools import providers
 from aot.aot_flask.extensions import db
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import parse_utc, utc_now, wall_to_utc
 from datetime import timedelta
 
 
@@ -100,7 +100,7 @@ class ScheduleToolsMixin:
             # 2. Anchor the wall-clock to the target's local tz, then store as UTC.
             _anchor_tz, _anchor_name, _anchor_src = \
                 cls._resolve_schedule_anchor(target_id)
-            run_at = cls._schedule_wall_to_utc(date, time, anchor_tz=_anchor_tz)
+            run_at = wall_to_utc(f"{date} {time}", _anchor_tz)
 
             # 3. Build reasoning + params
             job_name = content if not worker else f"{content} (worker: {worker})"
@@ -528,7 +528,6 @@ class ScheduleToolsMixin:
         """
         sent = False
         try:
-            from aot.utils.tz_utils import now_utc, to_utc
             from datetime import datetime, timedelta
             scheduler = providers.get('job_scheduler')
 
@@ -548,7 +547,7 @@ class ScheduleToolsMixin:
                 return {"error": f"Device not found: {device_id}", "dispatched": False}
 
             # 2. 시간 파싱 — scheduled_time 또는 delay_seconds 지원
-            now = now_utc()
+            now = utc_now()
             if solar_event is not None:
                 from aot.utils.solar import SUN_EVENTS, next_sun_event
                 if solar_event not in SUN_EVENTS:
@@ -567,23 +566,13 @@ class ScheduleToolsMixin:
             elif delay_seconds is not None:
                 scheduled_dt = now + timedelta(seconds=int(delay_seconds))
             elif scheduled_time is not None:
-                if isinstance(scheduled_time, str):
-                    try:
-                        scheduled_dt = datetime.fromisoformat(scheduled_time.replace('Z', '+00:00'))
-                    except Exception:
-                        return {"error": f"Invalid time format: {scheduled_time}. Use ISO 8601 format.", "dispatched": False}
-                else:
-                    scheduled_dt = scheduled_time
-                if scheduled_dt.tzinfo is None:
-                    # No offset given (the model doesn't always include one) —
-                    # interpret it as the TARGET DEVICE'S OWN local wall-clock
-                    # time (every device resolves its tz from coordinates, see
-                    # device_tz.py) rather than rejecting it as ambiguous. This
-                    # is what a user means by "4pm" for a specific device — not
-                    # a UTC instant, and not necessarily the farm-wide default.
-                    from aot.utils.device_tz import resolve_location_tz
-                    scheduled_dt = resolve_location_tz(output.unique_id).localize(scheduled_dt)
-                scheduled_dt = to_utc(scheduled_dt)  # normalise to UTC-aware
+                # 오프셋이 붙은 값은 그 순간이고, 없으면(모델이 늘 붙이지는 않는다)
+                # 대상 장치가 놓인 곳의 벽시계로 읽는다 — 사용자가 말한 "오후 4시" 는 UTC 도
+                # 농장 기본 시각도 아닌 그 장치의 현지 시각이다(device_tz.py).
+                try:
+                    scheduled_dt = wall_to_utc(scheduled_time, output.unique_id)
+                except Exception:
+                    return {"error": f"Invalid time format: {scheduled_time}. Use ISO 8601 format.", "dispatched": False}
                 if scheduled_dt <= now:
                     return {"error": f"Requested schedule time {scheduled_time} is in the past. Please provide a future time.", "dispatched": False}
             else:
@@ -591,21 +580,37 @@ class ScheduleToolsMixin:
 
             # 3. 가동 시간 — 초 단위로 정확히 둔다. 분을 정수로 깎으면 0.5분이 0분이 되어
             # 실행 때 타이머 없이 켜진다(2026-10-30). 숫자가 아니거나 0 이하면 등록하지 않는다.
-            from aot.outputs.command_forms import parse_run_seconds, run_time_text
-            duration_sec, _run_err = parse_run_seconds(duration_seconds, duration_minutes)
-            if _run_err:
-                return {"error": _run_err, "dispatched": False}
-            if duration_sec is None:
-                duration_sec = 5 * 60  # default
-            _run_text = run_time_text(duration_sec)
+            from aot.outputs.command_forms import (
+                parse_run_seconds, plan_output_command, run_time_text)
+            state = str(state or 'on').lower()
+            value = kwargs.get('value')
+            if state == 'set_value':
+                # 값 예약(PWM 듀티·개도) — 타이머 없이 그 값으로 둔다. 실행 시각에 같은 판정을
+                # 다시 하지만, 못 받는 출력·범위 밖 값은 등록 전에 거절한다.
+                plan = plan_output_command(state, output.output_type, value, 0)
+                if 'error' in plan:
+                    return {"error": plan['error'], "dispatched": False}
+                duration_sec, _run_text = 0, None
+                job_params = {'state': state, 'value': plan['amount']}
+                _what = f"{state} {plan['amount']:g}"
+            else:
+                duration_sec, _run_err = parse_run_seconds(duration_seconds, duration_minutes)
+                if _run_err:
+                    return {"error": _run_err, "dispatched": False}
+                if duration_sec is None:
+                    duration_sec = 5 * 60  # default
+                _run_text = run_time_text(duration_sec)
+                job_params = {'state': state, 'duration_seconds': duration_sec,
+                              'duration_minutes': round(duration_sec / 60.0, 4)}
+                _what = state
 
             # scheduled_dt is UTC-aware — display in the DEVICE'S OWN location tz
             # (every Output resolves its tz from coordinates, see device_tz.py),
             # not left as a bare UTC instant: a raw strftime here would report
             # the confirmation time up to 9h off from the device's actual wall
             # clock (KST).
-            from aot.utils.device_tz import resolve_location_tz
-            _display_dt = scheduled_dt.astimezone(resolve_location_tz(output.unique_id))
+            from aot.utils.timekit import tz_of
+            _display_dt = scheduled_dt.astimezone(tz_of(output.unique_id))
 
             # 3. SchedulerJobMeta 생성 + 자동 승인 (APScheduler 등록)
             #    proposed_by='HUMAN' + approval_required=False → propose_job() 내부에서 approve_job() 자동 호출
@@ -613,9 +618,8 @@ class ScheduleToolsMixin:
             meta = scheduler.propose_job(
                 action_type='control_output',
                 target_id=output.unique_id,
-                params={'state': state, 'duration_seconds': duration_sec,
-                        'duration_minutes': round(duration_sec / 60.0, 4)},
-                reasoning=f"User request: {output.name} {state} at {_display_dt.strftime('%H:%M')}",
+                params=job_params,
+                reasoning=f"User request: {output.name} {_what} at {_display_dt.strftime('%H:%M')}",
                 schedule_time=scheduled_dt,
                 duration_sec=duration_sec,
                 proposed_by='HUMAN',    # 사용자가 직접 지시 → 추가 승인 불필요
@@ -625,8 +629,9 @@ class ScheduleToolsMixin:
             # Persist the device-local tz anchor (already used for interpretation
             # above) so display can re-derive the device wall-clock. §6.
             try:
-                from aot.utils.device_tz import resolve_location_tz_and_source
-                _atz, _asrc = resolve_location_tz_and_source(output.unique_id)
+                from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz
+                _atz, _asrc = resolve_tz(output.unique_id)
+                _asrc = 'system' if _asrc in (SOURCE_SYSTEM, SOURCE_UTC) else 'device'
                 meta.anchor_tz = str(_atz)
                 meta.anchor_source = _asrc   # 위치 모르면 'system'(추정)
                 from aot.databases.models import db as _db
@@ -635,9 +640,10 @@ class ScheduleToolsMixin:
                 pass
 
             logger.info(f"[AI Schedule] Registered APScheduler job: {output.name} {state} at {scheduled_dt} (meta_id={meta.id if hasattr(meta, 'id') else meta})")
+            _for = f" (for {_run_text})" if _run_text else ""
             return {
                 "status": "success",
-                "message": f"Scheduled {output.name} to {state} at {_display_dt.strftime('%Y-%m-%d %H:%M:%S')} (for {_run_text})",
+                "message": f"Scheduled {output.name} to {_what} at {_display_dt.strftime('%Y-%m-%d %H:%M:%S')}{_for}",
                 "duration_seconds": duration_sec,
                 "scheduler_job_id": meta.id if hasattr(meta, 'id') else str(meta),
             }
@@ -654,33 +660,21 @@ class ScheduleToolsMixin:
         엔티티(구역/시설/장치)면 그 위치의 tz 를, 없으면(떠 있는 농장 전체 일정)
         시스템 tz 를 앵커로 쓴다. 반환: (tzinfo, tz_name, source).
         """
-        from aot.utils.timekit import system_tz
+        from aot.utils.timekit import FARM, tz_of
         if target_id and target_id != 'none':
             try:
                 # 위치를 몰라 시스템 시간대로 떨어진 대상은 출처를 'system' 으로
                 # 적는다 — 'device' 로 적으면 화면이 추정값을 장치 현지 시각이라
                 # 말한다. (§3.2: 시스템 tz 사용은 기록·라벨)
-                from aot.utils.device_tz import resolve_location_tz_and_source
-                tz, source = resolve_location_tz_and_source(target_id)
+                from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz
+                tz, source = resolve_tz(target_id)
+                source = 'system' if source in (SOURCE_SYSTEM, SOURCE_UTC) else 'device'
                 if tz is not None:
                     return tz, str(tz), source
             except Exception:
                 pass
-        tz = system_tz()
+        tz = tz_of(FARM)
         return tz, str(tz), 'system'
-
-    @classmethod
-    def _schedule_wall_to_utc(cls, date_str, time_str="09:00", anchor_tz=None):
-        """벽시계 날짜/시각(YYYY-MM-DD, HH:MM)을 앵커 tz 로 해석해 저장용
-        UTC-aware datetime 으로 변환한다.
-
-        anchor_tz(pytz tzinfo 또는 IANA 문자열)를 주면 그 시계로 해석한다 —
-        확정 정책상 장치 예약은 장치 현지 tz 가 앵커. 생략 시 시스템 tz(농장 기본)로
-        폴백해 기존 동작을 보존한다. 저장은 UTC-aware, 표시는 앵커 tz 로 되돌린다.
-        """
-        from aot.utils.timekit import wall_to_utc, system_tz
-        tz = anchor_tz if anchor_tz is not None else system_tz()
-        return wall_to_utc(f"{date_str} {time_str}", tz)
 
     @classmethod
     def _resolve_schedule_job(cls, job_id):
@@ -715,7 +709,7 @@ class ScheduleToolsMixin:
     def _schedule_summary(cls, meta):
         """SchedulerJobMeta 한 행을 AI가 읽기 쉬운 요약 dict로 직렬화."""
         import json as _json
-        from aot.utils.time_utils import serialize_ts
+        from aot.utils.timekit import iso_at, FARM
         try:
             params = _json.loads(meta.params_json) if meta.params_json else {}
         except Exception:
@@ -733,6 +727,8 @@ class ScheduleToolsMixin:
             elif params.get('duration_minutes'):
                 dur = f"{params['duration_minutes']}min"
             content = f"{str(params['state']).capitalize()}" + (f" ({dur})" if dur else "")
+            if params.get('state') == 'set_value' and params.get('value') is not None:
+                content = f"Set value {params['value']}"
         content = content or meta.reasoning or meta.action_type
 
         # Display the wall-clock in the schedule's anchor tz (device-local by
@@ -740,14 +736,14 @@ class ScheduleToolsMixin:
         anchor = getattr(meta, 'anchor_tz', None)
         if not anchor and meta.target_id and meta.target_id != 'none':
             try:
-                from aot.utils.device_tz import resolve_location_tz
-                anchor = str(resolve_location_tz(meta.target_id))
+                from aot.utils.timekit import tz_of
+                anchor = str(tz_of(meta.target_id))
             except Exception:
                 anchor = None
         if meta.schedule_time:
             from aot.utils.timekit import to_tz
             when = (to_tz(meta.schedule_time, anchor).isoformat() if anchor
-                    else serialize_ts(meta.schedule_time))
+                    else iso_at(meta.schedule_time, FARM))
         else:
             when = None
 
@@ -768,10 +764,13 @@ class ScheduleToolsMixin:
             'deletable': bool(meta.is_deletable),
         }
 
+    #: search_schedule 한 번의 최대 건수 — 행당 약 100토큰이라 60건이 응답 캡(15,000토큰) 안에 든다.
+    _SCHEDULE_MAX_LIMIT = 60
+
     @classmethod
     def search_schedule_tool(cls, query=None, target_name=None,
                              include_past=False, include_archived=False,
-                             limit=20, **extra):
+                             limit=20, offset=None, **extra):
         """
         [분류 C - 일정 조회 도구]
         농장 운영 일정(작업·이벤트·장치 예약)을 SchedulerJobMeta 원장에서 조회한다.
@@ -783,7 +782,8 @@ class ScheduleToolsMixin:
             target_name (str): 특정 위치/장치에 걸린 일정만 (이름 → unique_id 해석).
             include_past (bool): True면 지난 일정/기록도 포함(기본 False = 예정만).
             include_archived (bool): True면 취소/보관(ARCHIVED)된 것도 포함(기본 False).
-            limit (int): 최대 반환 건수(기본 20).
+            limit (int): 최대 반환 건수(기본 20, 최대 60 — 넘게 달라고 해도 60).
+            offset (int): 건너뛸 건수(이어 받기). 잘렸으면 응답의 next_offset.
         """
         try:
             from aot.databases.models.scheduler import SchedulerJobMeta
@@ -823,10 +823,11 @@ class ScheduleToolsMixin:
             else:
                 q = q.order_by(SchedulerJobMeta.schedule_time.asc())
 
-            _lim = max(1, int(limit))
+            _lim = cls._bounded_limit(limit, 20, cls._SCHEDULE_MAX_LIMIT)
+            _off = cls._offset(offset)
             # 상한보다 하나 더 읽어 "더 있는가" 를 안다 — 개수만으로는 정확히
             # 상한만큼 있어도 잘렸다고 오해하거나, 잘렸어도 모를 수 있다.
-            rows = q.limit(_lim + 1).all()
+            rows = q.offset(_off).limit(_lim + 1).all() if _off else q.limit(_lim + 1).all()
             truncated = len(rows) > _lim
             rows = rows[:_lim]
             results = [cls._schedule_summary(r) for r in rows]
@@ -852,10 +853,10 @@ class ScheduleToolsMixin:
                 out["when_tz"] = out_tz
             if truncated:
                 out["truncated"] = True
-                out["note"] = ("Only the first %d matching schedules are shown "
-                               "(most imminent first, or most recent if "
-                               "include_past). Narrow with query/target_name, "
-                               "or raise limit, for the rest." % _lim)
+                out["next_offset"] = _off + len(results)
+                out["note"] = ("%d schedules shown (most imminent first, or most recent if "
+                               "include_past); more exist — continue with offset=%d, "
+                               "or narrow with query/target_name." % (len(results), _off + len(results)))
             if scope is not None:
                 out["scope"] = scope
                 _amb = cls._ambiguous_scope_reading(scope)
@@ -939,8 +940,7 @@ class ScheduleToolsMixin:
             # 1. 시각 변경 — 앵커 tz 기준 해석. date/time 하나만 와도 기존값과 병합.
             new_dt = None
             if at:
-                from aot.utils.timekit import instant_or_wall_to_utc
-                new_dt = instant_or_wall_to_utc(at, _anchor_tz)
+                new_dt = wall_to_utc(at, _anchor_tz)
                 meta.schedule_time = new_dt
                 meta.anchor_tz = _anchor_name
                 meta.anchor_source = _anchor_src
@@ -951,7 +951,7 @@ class ScheduleToolsMixin:
                 new_time = time or (base_local.strftime("%H:%M") if base_local else "09:00")
                 if not new_date:
                     return {"error": "date is required (no existing date to keep)."}
-                new_dt = cls._schedule_wall_to_utc(new_date, new_time, anchor_tz=_anchor_tz)
+                new_dt = wall_to_utc(f"{new_date} {new_time}", _anchor_tz)
                 meta.schedule_time = new_dt
                 meta.anchor_tz = _anchor_name
                 meta.anchor_source = _anchor_src

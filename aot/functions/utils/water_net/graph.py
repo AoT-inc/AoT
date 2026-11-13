@@ -43,6 +43,8 @@ class Pipe(NamedTuple):
     sub_type: str = ''            # 'main' | 'branch'
     vertical: bool = False        # 라이저
     name: Optional[str] = None
+    diameter_mm: Optional[float] = None   # L1 압력 계산용. 비면 그 배관은 L0 로 남는다
+    material: Optional[str] = None
 
 
 class Part(NamedTuple):
@@ -80,6 +82,16 @@ def dist_xz(a, b) -> float:
 
 def line_length(pts) -> float:
     return sum(dist_xz(pts[i], pts[i + 1]) for i in range(len(pts) - 1))
+
+
+def _may_join(a, b) -> bool:
+    """이 두 배관이 기하로 서로 이어질 수 있는가.
+
+    지관끼리는 붙이지 않는다(연산이 폭발하고 없는 회로가 생긴다). 주배관끼리는 한쪽 끝이 다른 쪽
+    중간에 닿는 T 만 잇고 십자는 잇지 않는다 — 십자는 현장에서도 쓰지 않으며 그리기 화면도 점을 찍지
+    않는다. 십자는 주-지관 사이에서만 잇는다.
+    """
+    return not (a.sub_type == 'branch' and b.sub_type == 'branch')
 
 
 def _key(p):
@@ -193,6 +205,9 @@ class Network:
         self.parent_edge: Dict[tuple, int] = {}
         self.depth: Dict[tuple, int] = {}
         self.part_devices: Dict[object, dict] = {}       # adapters.link_part_devices
+        # 마디 → 그 마디를 처음 만든 실제 로컬 좌표. 마디 이름(`_key`)은 격자 반올림이라 좌표가 아니다.
+        # 표고·경사 길이(terrain)가 읽는다. 이름·동작은 바꾸지 않는다.
+        self.node_pos: Dict[tuple, Point] = {}
 
         self.components: List[list] = []      # [[node, ...], ...]
         self.component_of: Dict[tuple, int] = {}
@@ -228,6 +243,8 @@ class Network:
                 if qid == pid:
                     continue
                 qpts = self.lines[qid]
+                if not _may_join(self._pipe_ids[pid], self._pipe_ids[qid]):
+                    continue
                 # 다른 배관의 끝점이 이 배관 위에 얹힌 자리 (T·엘보)
                 for end in (qpts[0], qpts[-1]):
                     hit = project(self.lines[pid], end)
@@ -242,6 +259,8 @@ class Network:
             for j in range(i + 1, len(self.pipes)):
                 pid = self.pipes[i].id
                 qid = self.pipes[j].id
+                if self.pipes[i].sub_type == self.pipes[j].sub_type:
+                    continue          # 같은 종류끼리의 십자는 잇지 않는다(_may_join)
                 for hit in _crossings(self.lines[pid], self.lines[qid]):
                     ss = {}
                     for target in (pid, qid):
@@ -274,13 +293,13 @@ class Network:
                     merged.append(s)
             nodes = self._cut_nodes.setdefault(pid, [])
             for s in merged:
-                node = _key(_point_at(pts, s))
+                node = self._node(_point_at(pts, s))
                 nodes.append((s, node))
             for i in range(len(merged) - 1):
                 a_pt, b_pt = _point_at(pts, merged[i]), _point_at(pts, merged[i + 1])
                 if a_pt is None or b_pt is None:
                     continue
-                na, nb = _key(a_pt), _key(b_pt)
+                na, nb = self._node(a_pt), self._node(b_pt)
                 if na == nb:
                     continue
                 self._add_edge(Edge(na, nb, pid, merged[i], merged[i + 1]))
@@ -302,6 +321,12 @@ class Network:
             self._emitter_spot[em.id] = spot
             self._emitters_at.setdefault(spot[1], []).append(em)
 
+    def _node(self, p):
+        """점 → 마디 이름. 그 마디의 첫 좌표를 `node_pos` 에 남긴다."""
+        key = _key(p)
+        self.node_pos.setdefault(key, (p[0], p[1], p[2]))
+        return key
+
     def _add_edge(self, edge):
         idx = len(self.edges)
         self.edges.append(edge)
@@ -309,6 +334,13 @@ class Network:
         self.adj.setdefault(edge.b, []).append((edge.a, idx))
         if not edge.bridge:
             self._by_pipe.setdefault(edge.pipe_id, []).append(idx)
+
+    def _crosses_near(self, q, p, end) -> bool:
+        """q 가 p 와 ``end`` 에서 ``gap_m`` 안에서 십자로 만나는가(십자 연결이 이미 서는 끝)."""
+        if q.sub_type == p.sub_type:
+            return False
+        return any(math.hypot(h[0] - end[0], h[2] - end[2]) <= self.gap_m
+                   for h in _crossings(self.lines[q.id], self.lines[p.id]))
 
     def _collect_gaps(self, cuts):
         """배관 끝마다 가장 가까운 다른 배관 하나를 찾아 ``gap_m`` 안이면 잇는다.
@@ -321,13 +353,15 @@ class Network:
             for end_s, end in ((0.0, qpts[0]), (line_length(qpts), qpts[-1])):
                 best = None
                 for p in self.pipes:
-                    if p.id == q.id:
+                    if p.id == q.id or not _may_join(q, p):
                         continue
                     hit = project(self.lines[p.id], end)
                     if hit and (best is None or hit[2] < best[2]):
                         best = (p.id, hit[0], hit[2])
                 if best is None or best[2] > self.gap_m:
                     continue
+                if self._crosses_near(q, self._pipe_ids[best[0]], end):
+                    continue      # 끝이 상대를 조금 넘어가 십자로 이미 이어졌다 — 틈 잇기를 더하면 작은 고리가 생긴다
                 cuts[best[0]].add(best[1])
                 self._joins.append((q.id, end_s, best[0], best[1], best[2]))
 
@@ -364,7 +398,7 @@ class Network:
     def _node_on(self, pid, s):
         """배관 pid 의 호길이 s 자리 마디."""
         if not self.gap_m:
-            return _key(_point_at(self.lines[pid], s))
+            return self._node(_point_at(self.lines[pid], s))
         # 잘린 자리는 스냅 거리 안에서 하나로 합쳐졌으니 가장 가까운 자리를 쓴다.
         return min(self._cut_nodes[pid], key=lambda c: abs(c[0] - s))[1]
 
@@ -634,6 +668,18 @@ class Network:
             for em in self._emitters_at.get(node, ()):
                 out[em.id] = em
         return list(out.values())
+
+    def part_node(self, ref) -> Optional[tuple]:
+        """부품이 선 마디. 그래프 밖이면 None."""
+        return self._part_node.get(ref)
+
+    def emitter_spot(self, ref) -> Optional[Tuple[int, tuple]]:
+        """노즐이 얹힌 (구간 번호, 상류 쪽 마디). 못 얹었으면 None."""
+        return self._emitter_spot.get(ref)
+
+    def below(self, nodes) -> set:
+        """마디들과 그 아래(하류) 마디 전부."""
+        return self._below(nodes)
 
     def component_id(self, ref) -> Optional[int]:
         """대상이 든 덩어리 번호. 그래프 밖이면 None."""

@@ -91,7 +91,7 @@ def build_rows(read: ReadResult, state_info: Optional[Mapping[str, Mapping]] = N
             "id": uid, "name": name, "kind": kind, "kind_from": kind_from,
             "effect": row.name if kind else None, "channel": row.channel if kind else None,
             "status": _row_status(kind, domain), "unmodeled_effects": list(row.unmodeled_effects),
-            "ratings": rating_view(dev, sources) if dev is not None else [],
+            "ratings": rating_view(dev, sources, domain) if dev is not None else [],
             "basis": st.get("basis") or S.NONE, "estimated": S.estimated(st.get("basis") or S.NONE),
             "excluded": bool(o.get("exclude")), "needs_kind": not kind,
         }
@@ -135,7 +135,7 @@ def effects_options(devices: List[Device], basis_by_id: Mapping[str, str]) -> Di
 def summarize(rows: List[Dict[str, object]]) -> Dict[str, int]:
     """화면 요약 — 뺀 장치는 세지 않고 따로 센다. 반영 상태 개수와, 채널에 들어가는데 상태 계열이 없는 장치 수."""
     live = [r for r in rows if not r["excluded"]]
-    out = {"total": len(live), "modeled": 0, "partial": 0, "unmodeled": 0, "unknown": 0, "no_state": 0,
+    out = {"total": len(live), "modeled": 0, "partial": 0, "unmodeled": 0, "supply": 0, "unknown": 0, "no_state": 0,
            "estimated": 0, "excluded": len(rows) - len(live)}
     for r in live:
         out[r["status"]] += 1

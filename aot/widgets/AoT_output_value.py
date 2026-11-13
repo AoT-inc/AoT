@@ -161,6 +161,7 @@ window.AoTOutputValue = window.AoTOutputValue || (function () {
   }
 
   function onCommand(widgetId, outputId, channelId, action, val) {
+    if (!outputId || !channelId) return;   // 출력을 고르지 않은 위젯 — 빈 주소로 명령하지 않는다
     var cmd;
     if (action === 'open') cmd = outputId + '/' + channelId + '/on/value/100';
     else if (action === 'close') cmd = outputId + '/' + channelId + '/on/value/0';
@@ -229,13 +230,16 @@ window.AoTOutputValue = window.AoTOutputValue || (function () {
       parts.push(srcLabel + ' ' + Math.round(target) + '%');
     }
     if (cur !== undefined && cur !== '') {
-      parts.push(_t('Current') + ' ' + Math.round(cur) + '%');
+      parts.push(_t('Now') + ' ' + Math.round(cur) + '%');   // 'Current' 는 '전류' 번역과 공유
     }
     el.textContent = parts.length ? parts.join(' \\u00b7 ') : '\\u2014';
   }
 
   function start(widgetId, deviceId, channelId, refreshSec) {
     stop(widgetId);
+    // 출력을 고르지 않은 위젯은 폴링하지 않는다. 빈 ID 로 부르면
+    // '/outputstate_unique_id//' 같은 빈 주소가 갱신마다 404 를 낸다.
+    if (!deviceId || !channelId) return;
     var tick = function () {
       _getState(widgetId, deviceId, channelId);
       _getTarget(widgetId, deviceId, channelId);

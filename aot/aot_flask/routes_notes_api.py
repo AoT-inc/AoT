@@ -2,7 +2,8 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_babel import gettext as _
 from flask_login import login_required, current_user
 from datetime import datetime
-from aot.utils.time_utils import utc_now, api_iso
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import iso_utc
 import uuid
 from sqlalchemy import or_
 from aot.databases.models import Notes, NoteTags
@@ -41,7 +42,7 @@ def resolve_target_gps(target_type, target_id):
     if target_type == 'facility':
         try:
             from aot.databases.models import GeoFacility
-            from aot.aot_flask.geo.facility_io import _geometry_centroid
+            from aot.space.facility_io import _geometry_centroid
             facility = GeoFacility.query.filter_by(unique_id=target_id).first()
             if facility and facility.shape:
                 geom = (facility.shape.feature or {}).get('geometry')
@@ -55,7 +56,7 @@ def resolve_target_gps(target_type, target_id):
     if target_type == 'plot':
         try:
             from aot.databases.models import GeoPlot
-            from aot.aot_flask.geo import plot_context
+            from aot.space import plot_context
             from shapely.geometry import shape as _shapely_shape
             row = GeoPlot.query.filter_by(unique_id=target_id).first()
             if row is not None:
@@ -125,7 +126,7 @@ def api_notes_target_get(target_id):
         if want_desc:
             try:
                 from aot.databases.models import GeoShape
-                from aot.aot_flask.geo.device_membership import place_scope_ids
+                from aot.space.device_membership import place_scope_ids
                 sh = GeoShape.query.filter_by(unique_id=target_id).first()
                 if sh is None:
                     # 시설은 정체성이 둘이다 — 노트는 GeoFacility uuid 에
@@ -147,7 +148,7 @@ def api_notes_target_get(target_id):
 
         # 시설은 id 가 둘(시설·도형)이다 — 어느 쪽으로 열어도 둘 다 읽는다.
         try:
-            from aot.aot_flask.geo.device_membership import facility_identity_ids
+            from aot.space.device_membership import facility_identity_ids
             target_ids = facility_identity_ids(target_ids)
         except Exception:
             current_app.logger.exception('notes: 시설 id 확장 실패')
@@ -158,12 +159,12 @@ def api_notes_target_get(target_id):
                  .order_by(Notes.date_time.desc()).all())
 
         # All notes here share one target → its location tz. Emit it so the frontend
-        # can render note times in that entity's local clock (AoTTz.formatDevice),
+        # can render note times in that entity's local clock (AoTTz.formatAt),
         # consistent with how the entity's schedules display. §7
         location_tz = None
         try:
-            from aot.utils.device_tz import resolve_location_tz
-            location_tz = str(resolve_location_tz(target_id))
+            from aot.utils.timekit import tz_of
+            location_tz = str(tz_of(target_id))
         except Exception:
             location_tz = None
 
@@ -182,7 +183,7 @@ def api_notes_target_get(target_id):
             result.append({
                 'unique_id': n.unique_id,
                 'note': n.note,
-                'date_time': api_iso(n.date_time) if n.date_time else "", # UTC+offset ISO so frontend parses absolute instant correctly
+                'date_time': iso_utc(n.date_time) if n.date_time else "", # UTC+offset ISO so frontend parses absolute instant correctly
                 'date_tz': location_tz,  # note's location tz for device-local display
                 # [Fix] Return Author Name if available, else fallback to Note Name (Title)
                 'user': n.author.name if n.author else (n.name or '?'), 
@@ -258,7 +259,7 @@ def api_notes_create():
             return jsonify({'error': denied}), 403
 
         # 시설이면 도형 id 로 와도 시설 id/'GeoFacility' 로 붙인다(MCP 쓰기와 같은 규칙).
-        from aot.aot_flask.geo.device_membership import \
+        from aot.space.device_membership import \
             normalize_facility_note_target
         target_id, target_type = normalize_facility_note_target(
             target_id, target_type)
@@ -460,7 +461,7 @@ def api_notes_geo_get():
             result.append({
                 'unique_id': n.unique_id,
                 'note': n.note,
-                'date_time': api_iso(n.date_time) if n.date_time else "",
+                'date_time': iso_utc(n.date_time) if n.date_time else "",
                 # [Fix] Return Author Name
                 'user': n.author.name if n.author else (n.name or '?'),
                 'files': n.files,
@@ -595,12 +596,14 @@ def note_schedule_clock(note_id):
         return jsonify({'error': 'Note not found'}), 404
     from datetime import timedelta
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    from aot.utils.timekit import tz_label, utc_now
+    from aot.utils.timekit import parse_utc, to_tz, tz_label, utc_now
     target_id, _label, _kind = _note_schedule_target(note)
     tz, tz_name, source = AoTDataToolService._resolve_schedule_anchor(target_id)
     # 기본값: 그 시계의 다음 정시(지나간 시각이 기본으로 들어가면 안 된다).
-    nxt = (utc_now().astimezone(tz).replace(minute=0, second=0, microsecond=0)
-           + timedelta(hours=1))
+    # 현지 정시(30분 오프셋 지역은 UTC 정시와 다르다)를 순간으로 바꿔 한 시간을 더하고
+    # 그 시계로 되돌린다 — 현지 시각 객체에 바로 더하면 서머타임 전환에서 시각이 틀어진다.
+    hour_start = utc_now().astimezone(tz).replace(minute=0, second=0, microsecond=0)
+    nxt = to_tz(parse_utc(hour_start) + timedelta(hours=1), tz)  # tz-ok: 순간에 더하는 한 시간
     return jsonify({'tz': tz_name, 'source': source, 'label': tz_label(tz),
                     'default_date': nxt.strftime('%Y-%m-%d'),
                     'default_time': nxt.strftime('%H:%M')})

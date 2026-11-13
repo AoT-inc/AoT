@@ -21,7 +21,7 @@ from aot.aot_flask.extensions import csrf
 from aot.aot_flask.forms import forms_notice
 from aot.aot_flask.utils import utils_general, utils_notice
 from aot.aot_flask.utils.utils_notes import utc_to_wall, utc_to_wall_str
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger('aot.aot_flask.routes_notice')
 
@@ -297,7 +297,7 @@ def api_notice_detail(unique_id):
             'unique_id': poll.unique_id,
             'question': poll.question,
             'multi': poll.multi,
-            'closed': bool(poll.closes_at and poll.closes_at <= utc_now()),
+            'closed': bool(poll.closes_at and poll.closes_at <= naive_utc()),
             'voter_count': voter_count,
             'options': [{
                 'unique_id': r['option'].unique_id,

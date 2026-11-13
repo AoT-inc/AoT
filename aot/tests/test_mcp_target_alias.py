@@ -82,7 +82,7 @@ class TargetAliasTest(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
 
     def tearDown(self):

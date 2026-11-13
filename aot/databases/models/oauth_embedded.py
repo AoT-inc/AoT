@@ -6,7 +6,7 @@ gunicorn 워커가 여럿이라 클라이언트·코드·연결 상태는 전부
 """
 from datetime import datetime
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 
 

@@ -14,6 +14,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
 from aot.utils.utils import random_alphanumeric
+from aot.utils.timekit import naive_utc, utc_now
 
 # Measurements
 measurements_dict = {}
@@ -342,7 +343,7 @@ class InputModule(AbstractInput):
         # whether it maps to a configured channel below.
         self._comm_last_ts = time.time()
 
-        datetime_utc = datetime.datetime.utcnow()
+        datetime_utc = naive_utc(utc_now())
         measurement = {}
         channel = None
         for each_channel in self.channels_measurement:

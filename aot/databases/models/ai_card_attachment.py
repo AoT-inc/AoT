@@ -8,14 +8,16 @@
     image 의 thumb 는 `thumb_rel(path)`. 입력으로 경로를 만들지 않는다.
   - kind 'video': 파일이 없다(path NULL). url·provider·host 는 서버가 정규화해 다시 만든
     값이고, thumb 은 서버가 받아 다시 인코딩한 포스터(없을 수 있다)다.
+  - kind 'viz': 파일이 없다(path NULL). `spec` 에 정규화된 JSON(게이지/미니그래프 스펙)이
+    들고, 수신함이 AoTViz 로 인라인 렌더한다(ai_card_files.parse_viz_spec 가 검증한다).
   - position 은 카드 안 순서(0..7)이며 수신함 API 의 `?i=` 값이다.
 SQLite 는 FK 강제가 꺼져 있다 — 카드를 지울 때 이 행들은 코드가 명시적으로 지운다.
 
 @phase active
 """
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class AICardAttachment(db.Model):
@@ -35,9 +37,11 @@ class AICardAttachment(db.Model):
     #: 카드 주인 복사 — 일 한도·용량 합계를 조인 없이 센다.
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     position = db.Column(db.SmallInteger, nullable=False)
-    #: 'image' | 'file' | 'artifact' | 'video'
+    #: 'image' | 'file' | 'artifact' | 'video' | 'viz'
     kind = db.Column(db.String(16), default=None)
     path = db.Column(db.String(255), default=None)
+    #: viz 만: 정규화된 스펙 JSON(게이지/미니그래프). 파일이 아니라 이 칸에만 든다.
+    spec = db.Column(db.Text, default=None)
     thumb = db.Column(db.String(255), default=None)
     name = db.Column(db.String(120), default=None)
     mime = db.Column(db.String(64), default=None)

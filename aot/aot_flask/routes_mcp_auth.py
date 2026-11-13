@@ -229,6 +229,10 @@ def mcp_auth_link():
     if not mcp_central.can_link(cfg):
         flash(gettext("Account linking is not set up yet. Ask an administrator to finish the MCP authentication settings."), "error")
         return redirect(_BACK)
+    from aot.tools import mcp_auth
+    if not mcp_auth.role_can_use_mcp(mcp_auth._role_for(flask_login.current_user)):
+        flash(gettext("This account's role is not allowed to use AI connections. Ask an administrator."), "error")
+        return redirect(_BACK)
     code_verifier, challenge = mcp_central.new_pkce()
     state, nonce = secrets.token_urlsafe(24), secrets.token_urlsafe(16)
     session[_LINK_KEY] = {'state': state, 'verifier': code_verifier, 'nonce': nonce,

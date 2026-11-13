@@ -44,11 +44,12 @@ from aot.databases.models import (PID, Camera, Conditional,
 from aot.services.tab_service import TabService
 from sqlalchemy import or_
 from aot.aot_flask.extensions import db
+from aot.aot_flask.utils.utils_trace import trace_modal
+from aot.aot_flask.utils.utils_lazy import Lazy, val
 from aot.aot_flask.forms import forms_output
 from aot.aot_flask.routes_static import inject_variables
 from aot.aot_flask.utils import utils_general, utils_output
-from aot.aot_flask.geo.device_membership import map_for_device
-from aot.aot_flask.utils.utils_map_config import ensure_map_config
+from aot.space.device_membership import map_for_device
 from aot.utils.device_blueprint import member_device_map, parent_device_names
 from aot.utils.outputs import output_types, parse_output_information
 from aot.utils import runtime
@@ -193,6 +194,7 @@ def save_output_layout():
 
 @blueprint.route('/output', methods=('GET', 'POST'))
 @flask_login.login_required
+@trace_modal('output')
 def page_output():
     """Display Output page options."""
     output_type = request.args.get('output_type', None)
@@ -233,14 +235,20 @@ def page_output():
     if output_type in ['entry', 'options'] and output_id != '0':
         each_output = Output.query.filter(Output.unique_id == output_id).first()
 
-    camera = Camera.query.all()
-    function = CustomController.query.all()
-    input_dev = Input.query.all()
-    method = Method.query.all()
+    # 설정 모달 조각(options)은 템플릿이 처음 쓸 때 계산한다(Lazy) — 쓰지 않는 선택지·전체 조회를 만들지 않는다.
+    is_opt = output_type == 'options'
+
+    def defer(fn):
+        return Lazy(fn) if is_opt else fn()
+
+    camera = defer(lambda: Camera.query.all())
+    function = defer(lambda: CustomController.query.all())
+    input_dev = defer(lambda: Input.query.all())
+    method = defer(lambda: Method.query.all())
     misc = Misc.query.first()
     output_channel = OutputChannel
-    pid = PID.query.all()
-    user = User.query.all()
+    pid = defer(lambda: PID.query.all())
+    user = defer(lambda: User.query.all())
 
     dict_outputs = parse_output_information()
 
@@ -257,29 +265,31 @@ def page_output():
     dict_units = add_custom_units(Unit.query.all())
 
     # Generate choices for dropdowns (Cross-tab enabled)
-    all_inputs = Input.query.all()
+    all_inputs = defer(lambda: Input.query.all())
     all_outputs = Output.query.all()
-    all_functions = CustomController.query.all()
+    all_functions = defer(lambda: CustomController.query.all())
 
-    choices_function = utils_general.choices_functions(
-        all_functions, dict_units, dict_measurements)
-    choices_input = utils_general.choices_inputs(
-        all_inputs, dict_units, dict_measurements)
-    choices_input_devices = utils_general.choices_input_devices(all_inputs)
-    choices_method = utils_general.choices_methods(method)
-    choices_output = utils_general.choices_outputs(
-        all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements)
+    choices_function = defer(lambda: utils_general.choices_functions(
+        val(all_functions), dict_units, dict_measurements))
+    choices_input = defer(lambda: utils_general.choices_inputs(
+        val(all_inputs), dict_units, dict_measurements))
+    choices_input_devices = defer(
+        lambda: utils_general.choices_input_devices(val(all_inputs)))
+    choices_method = defer(lambda: utils_general.choices_methods(val(method)))
+    choices_output = defer(lambda: utils_general.choices_outputs(
+        all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements))
     # Queried once and reused below (choices, custom-options parsing, the
     # uid->channel lookup, and the per-output grouping) instead of the four
     # separate full-table scans this used to run.
     all_output_channels = output_channel.query.all()
 
-    choices_output_channels = utils_general.choices_outputs_channels(
-        all_outputs, all_output_channels, dict_outputs)
-    choices_output_channels_measurements = utils_general.choices_outputs_channels_measurements(
-        all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements)
-    choices_pid = utils_general.choices_pids(
-        pid, dict_units, dict_measurements)
+    choices_output_channels = defer(lambda: utils_general.choices_outputs_channels(
+        all_outputs, all_output_channels, dict_outputs))
+    choices_output_channels_measurements = defer(
+        lambda: utils_general.choices_outputs_channels_measurements(
+            all_outputs, OutputChannel, dict_outputs, dict_units, dict_measurements))
+    choices_pid = defer(lambda: utils_general.choices_pids(
+        val(pid), dict_units, dict_measurements))
 
     # Generate custom options for ALL outputs (not just filtered by tab)
     # This is needed because templates may reference outputs from other tabs
@@ -436,10 +446,9 @@ def page_output():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
-            # 사망 컬럼이다(device_membership 이 정본).
-            map_config_id = map_for_device(each_output.unique_id,
-                                            prefer=each_output.map_config_id) or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — 장치 행의
+            # map_config_id 컬럼은 읽지 않는다(device_membership 이 정본).
+            map_config_id = map_for_device(each_output.unique_id) or ''
             if map_config_id:
                 map_overlays = _load_map_overlays(map_config_id)
         return render_template('pages/output_entry.html',
@@ -500,10 +509,9 @@ def page_output():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
-            # 사망 컬럼이다(device_membership 이 정본).
-            map_config_id = map_for_device(each_output.unique_id,
-                                            prefer=each_output.map_config_id) or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — 장치 행의
+            # map_config_id 컬럼은 읽지 않는다(device_membership 이 정본).
+            map_config_id = map_for_device(each_output.unique_id) or ''
             if map_config_id:
                 map_overlays = _load_map_overlays(map_config_id)
             
@@ -559,6 +567,7 @@ def page_output():
 from pytz import timezone
 import datetime
 from aot.utils.runtime import resolve_channel_index, read_latest_started_at_safe
+from aot.utils.timekit import naive_utc, parse_utc
 
 @blueprint.route('/output_started_at_public/<device_unique_id>/<channel_id>', methods=['GET'])
 def start_time_public(device_unique_id, channel_id):
@@ -587,7 +596,7 @@ def start_time_public(device_unique_id, channel_id):
             point_ts_epoch = int(res.get('point_ts_epoch')) if res.get('point_ts_epoch') is not None else None
             source = str(res.get('source') or 'value')
 
-        started_dt = datetime.datetime.utcfromtimestamp(int(started_ts)).replace(tzinfo=timezone('UTC'))
+        started_dt = naive_utc(parse_utc(int(started_ts))).replace(tzinfo=timezone('UTC'))
         payload = {
             "started_at_epoch": int(started_ts),
             "started_at_iso": started_dt.isoformat(),

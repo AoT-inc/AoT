@@ -44,6 +44,15 @@ class VirtualToolResolver(BaseActionResolver):
         # Was a hand-maintained dict duplicated across 5 places; build_tool_map()
         # resolves each declared tool's handler on AoTDataToolService. Add a tool
         # by declaring it once in aot/tools/tool_registry.py.
+        # 도메인 도구(인앱 AI 의 도구 표면, 26-11 5단계)는 도구 실행층으로 — 외부
+        # MCP 와 같은 길이다. 승인이 필요한 쓰기는 정규화 단계에서 이미 안쪽 도구
+        # 호출로 바뀌어 여기 오지 않는다(ai_routing_service IN_APP_DOMAIN_TOOLS).
+        from aot.ai.services import in_app_tools
+        if in_app_tools.is_domain_tool(tool_name):
+            _n, _args = extract_tool_call(params, target_id)
+            return in_app_tools.run(tool_name, _args,
+                                    agent_unique_id=(params or {}).get('agent_unique_id'))
+
         from aot.tools.tool_registry import build_tool_map
         tool_map = build_tool_map()
         handler = tool_map.get(tool_name)

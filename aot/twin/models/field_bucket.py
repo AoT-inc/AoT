@@ -20,6 +20,7 @@
 | `t_air`  | 기온(°C). 지온·적산온도, ET0 가 없을 때 Hargreaves | ET0 계열이 없으면 예 |
 | `et0`    | 기준증발산(mm/일) — 예: NASA POWER 입력의 ET0 채널 | 아니오 |
 | `soil_t` | 같은 센서의 토양온도 — 센서 위치 변화 감지(계약 §10.5) | 아니오 |
+| `irrigation` | 구획의 일 물 깊이 mm(`water_day`, 시각 = 현지 0시). 고르는 칸이 아니라 대상 발견이 구획 자신으로 채운다 | 아니오 |
 
 options (기본값은 김제 A 들깨 1구 재현 §9.5 의 값과 같다 — 어느 것도 지역을 가정하지 않는다)
 
@@ -37,11 +38,16 @@ options (기본값은 김제 A 들깨 1구 재현 §9.5 의 값과 같다 — �
                     되읽는 기상청 입력은 scale 4). daily_last = 하루 한 값(재분석 입력).
     members, rain_log_sd, shift_gate_sigma   EnKF (기본 128 · 0.35 · 3.0 — §9.5 수치를 낸 값)
     sync_window_d   sync_rmse_theta_1d·coverage_80 를 재는 최근 일수(기본 14)
-    irrigated       관수 구획이면 true → 관수 모름(irrigation_known=0)이라 최대 degraded
-    effects         {"devices": [{"id": 출력 id, "kind": 역할|null}]} — 이 구획 대지의 노지 출력 명단(위치로 읽고 사용자가 고른 역할).
-                    기본 예측에는 아직 연결되지 않아(노지 관수 연결은 E3) 머리말 `effects_unmodeled` 로 센다.
+    irrigated       관수 구획이면 true → 관수를 모를 때(irrigation_known=0) 결과 메모에 '관수 제외' 를 남긴다. 판정에는 쓰지 않는다
+    effects         {"devices": [{"id": 출력 id, "kind": 역할|null, "plots": [물을 받는 구획]}]} — 이 구획 대지의 노지 출력 명단.
+                    역할은 위치로 풀리고(물 회로) 사용자가 덮어쓸 수 있다. `plots` 가 있는 출력은 그 구획의 것만 센다.
     scenario        {"overrides": {...}, "id": "<시나리오 id>"} — what-if 실행(`twin_effects.scenario`). 같은 동기화·같은 시드로
                     돌리고 **앞날**의 관수(`irrigation_mm`)·비·ET0·기온에만 가정을 건다(하루 단위). 머리말 `plan_src` = 2.
+
+관수(`irrigation`): `water_day` 는 **설계 × 가동시간 × 공급 비율의 추정**이다(`basis=design`, 계약 `irrigation_known` = 1 '밸브 유량 확인').
+점이 없는 날은 모름이라 `irr_mm` 을 NaN 으로 넘기고 0 을 지어내지 않는다. 어제의 점은 다음 날 정오가 지나서 생기고 백필은 시작일이 있다 —
+그래서 `irrigation_known` 은 모든 날이 아니라 **동기화 창(`sync_window_d`) 안에서 닫혔어야 할 날**로 판정한다(`closable`). 창 밖 빈 날과
+아직 닫히지 않은 날은 메모에만 남는다. 실행마다 심은 날부터 전부 다시 동화하므로, 늦게 생긴 어제 값은 다음 실행이 그대로 읽는다.
 
 센서 없는 구획(`theta` 미배선): 기본은 **관측 없이 모델만** 돌린다(`options.sensorless` = "predict", 기본). 심은 날부터
 비·ET0·기온으로 물 수지만 굴리고(동기화 없음, 초기값은 토성의 포장용수량 근방), 앙상블 띠는 사전분포에서 시작해 넓다.
@@ -67,6 +73,7 @@ import numpy as np
 from aot.functions.utils.field_twin import FieldBucketModel, FieldEnKF, FieldPrior, SensorSpec
 from aot.functions.utils.field_twin import forcing as fz, validity as vz
 from aot.functions.utils.field_twin.model import MODEL_REV
+from aot.functions.utils.water_net.result import CLOSE_GRACE_S
 
 from .. import forecast as FC, lineage as LG, output as O
 from ..expiry import valid_until_for
@@ -78,7 +85,8 @@ logger = logging.getLogger(__name__)
 HORIZON_D = 14                 # 계약 §10.3 일 격자 k = 0…14
 TRUST_D = 7
 RAIN_SRC = {"forecast": 1, "station": 2, "gauge": 3, "reanalysis": 4}    # meta rain_src (계약 §10.4)
-SYNC_WINDOW_D = 14             # sync_rmse_theta_1d · coverage_80 를 재는 최근 일수
+SYNC_WINDOW_D = 14             # sync_rmse_theta_1d · coverage_80 · irrigation_known 을 재는 최근 일수
+CLOSE_LAG_S = 2 * 3600.0       # 말미가 지난 뒤 저장 작업이 그 날을 쓰기까지의 여유(매시간 돌고 부하가 높으면 한 번 미룬다)
 
 
 def sensorless(spec: TargetSpec) -> bool:
@@ -88,8 +96,11 @@ def sensorless(spec: TargetSpec) -> bool:
 
 def _tz_offset_s(tz: str, at: float) -> float:
     try:
-        from zoneinfo import ZoneInfo
-        off = _dt.datetime.fromtimestamp(at, ZoneInfo(tz)).utcoffset()
+        from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+        zone, src = resolve_tz(tz)
+        if src != SOURCE_EXPLICIT:
+            raise ValueError(tz)
+        off = _dt.datetime.fromtimestamp(at, zone).utcoffset()
         return off.total_seconds() if off is not None else 0.0
     except Exception:
         logger.warning("트윈 노지: 시간대 %r 를 모른다 — UTC 로 본다", tz)
@@ -101,37 +112,42 @@ def _day_of(datestr: str) -> int:
     return fz.day_number(y, m, d)
 
 
-def daily_rain(times: Sequence[float], values: Sequence[float], tz: float, agg: str,
+def daily_rain(times: Sequence[float], values: Sequence[float], tz, agg: str,
                scale: float) -> Dict[int, float]:
-    """비 계열 → 현지 날짜 → mm. 묶는 법은 설정이 정한다(입력마다 기록 방식이 다르다)."""
+    """비 계열 → 현지 날짜 → mm. 묶는 법은 설정이 정한다(입력마다 기록 방식이 다르다).
+
+    `tz` 가 IANA 이름이면 점마다 그 시각의 오프셋으로 접는다(화면·보고용 — 서머타임을 넘어도 하루가 밀리지 않는다).
+    오프셋 초면 엔진의 일 격자와 같이 그 하나로 접는다."""
     if agg == "daily_last":
         out: Dict[int, float] = {}
         for t, v in zip(times, values):
             if v is not None and math.isfinite(v):
-                out[int(math.floor((t + tz) / 86400.0))] = float(v) * scale
+                out[int(math.floor((t + fz.offset_at(t, tz)) / 86400.0))] = float(v) * scale
         return out
     if agg == "daily_sum":
         return {d: s for d, (s, _n) in fz.daily_sum(zip(times, values), tz, scale).items()}
     # hourly_mean_sum: 시간마다 평균 × scale → 하루 합
-    hours: Dict[int, List[float]] = {}
+    hours: Dict[Tuple[int, float], List[float]] = {}
     for t, v in zip(times, values):
         if v is not None and math.isfinite(v):
-            hours.setdefault(int(math.floor((t + tz) / 3600.0)), []).append(float(v))
+            off = fz.offset_at(t, tz)          # 가을 서머타임 끝의 반복되는 한 시간은 오프셋이 달라 따로 센다
+            hours.setdefault((int(math.floor((t + off) / 3600.0)), off), []).append(float(v))
     out = {}
-    for h, a in hours.items():
+    for (h, _off), a in hours.items():
         d = h // 24
         out[d] = out.get(d, 0.0) + float(np.mean(a)) * scale
     return out
 
 
-def daily_temps(times, values, tz: float, min_hours: int = 18) -> Dict[int, Tuple[float, float, float]]:
+def daily_temps(times, values, tz, min_hours: int = 18) -> Dict[int, Tuple[float, float, float]]:
     """기온 계열 → 현지 날짜 → (최저, 최고, 평균). 시간 수가 모자란 날은 뺀다."""
-    hours: Dict[int, Dict[int, List[float]]] = {}
+    hours: Dict[int, Dict[Tuple[int, float], List[float]]] = {}
     for t, v in zip(times, values):
         if v is None or not math.isfinite(v) or not (-60.0 < v < 60.0):
             continue
-        h = int(math.floor((t + tz) / 3600.0))
-        hours.setdefault(h // 24, {}).setdefault(h, []).append(float(v))
+        off = fz.offset_at(t, tz)
+        h = int(math.floor((t + off) / 3600.0))
+        hours.setdefault(h // 24, {}).setdefault((h, off), []).append(float(v))
     out = {}
     for d, hs in hours.items():
         if len(hs) < min_hours:
@@ -139,6 +155,21 @@ def daily_temps(times, values, tz: float, min_hours: int = 18) -> Dict[int, Tupl
         hm = [float(np.mean(a)) for a in hs.values()]
         out[d] = (min(hm), max(hm), float(np.mean(hm)))
     return out
+
+
+def daily_depth(times, values, tz: float) -> Dict[int, float]:
+    """일 물 깊이 계열 → 현지 일 번호 → mm. 시각은 구획 현지 0시고 `tz` 는 **지금의** 오프셋 하나라, 서머타임이 다른 날의 0시는
+    ±1 h 어긋난다 — 같은 날로 접는다(`_series_forecast` 와 같은 규칙). 어제 물이 그제에 들어가면 안 된다."""
+    out: Dict[int, float] = {}
+    for t, v in zip(times, values):
+        if v is not None and math.isfinite(v):
+            out[int(math.floor((t + tz + 3600.0) / 86400.0))] = max(0.0, float(v))
+    return out
+
+
+def closable(d: int, now: float, tz: float) -> bool:
+    """날 `d` 의 `water_day` 점이 지금쯤 있어야 하는가 — 그 날이 끝나고 저장 말미와 작업 여유가 지났는가."""
+    return (d + 1) * 86400.0 - tz + CLOSE_GRACE_S + CLOSE_LAG_S <= now
 
 
 class FieldBucketTwin:
@@ -201,6 +232,8 @@ class FieldBucketTwin:
                 scn = SC.parse(o["scenario"].get("overrides"), "field")
             except SC.ScenarioError as e:
                 return unusable(spec, now, period, Status.ERROR, "시나리오 가정 오류: %s" % e)
+            if SC.valve_runs(scn):                                 # 밸브는 서버가 깊이로 바꿔 넘긴다 — 트윈은 물 회로를 모른다
+                return unusable(spec, now, period, Status.ERROR, "밸브 가정이 깊이로 바뀌지 않았다")
         tz = _tz_offset_s(str(o.get("timezone", "UTC")), now)
         plant = _day_of(o["planted_on"])
         start = _day_of(o["spinup_from"]) if o.get("spinup_from") else plant
@@ -221,6 +254,7 @@ class FieldBucketTwin:
         ta_t, ta_v = read("t_air")
         e_t, e_v = read("et0")
         st_t, st_v = read("soil_t")
+        irr_t, irr_v = read("irrigation")
 
         # 관측: 유효성 검사(계약 §10.5) → 00 시 ±2 h 평균. 키 d = 날 d 를 굴린 뒤(d+1 일 00 시)
         obs: Dict[int, float] = {}
@@ -248,6 +282,22 @@ class FieldBucketTwin:
                     doy = fz.date_of(d).timetuple().tm_yday
                     et0[d] = fz.hargreaves_et0(tn, tx, float(lat), doy)
         notes = []
+        depth = daily_depth(irr_t, irr_v, tz)
+        sync_d = int(o.get("sync_window_d", SYNC_WINDOW_D))
+        since = max(start, today - sync_d)
+        due = [d for d in range(since, today) if closable(d, now, tz)]      # 창 안에서 점이 있어야 하는 날
+        gaps = [d for d in due if d not in depth]
+        irrigation_known = bool(depth) and bool(due) and not gaps
+        if depth:
+            notes.append("관수 = 설계 추정(노즐 설계 × 가동시간 × 공급 비율)")
+            if gaps:
+                notes.append(f"관수 기록 없는 날 {len(gaps)}/{len(due)} 일(최근 {sync_d} 일) — 관수 모름")
+            older = sum(1 for d in range(start, since) if d not in depth)
+            if older:
+                notes.append(f"그 전 관수 기록 없는 날 {older} 일은 0 mm 로 봄(모름)")
+            late = [d for d in range(since, today) if d not in due and d not in depth]
+            if late:
+                notes.append(f"아직 닫히지 않은 {fz.date_of(late[0])} 부터의 관수는 빠짐")
         last_rain_day = max(rain) if rain else None
         max_lag = int(rcfg.get("max_lag_d", 2))
         if last_rain_day is None or last_rain_day < today - 1 - max_lag:
@@ -280,14 +330,14 @@ class FieldBucketTwin:
                 n_missing_et0 += 1
             w = {"rain_mm": rain.get(d, 0.0), "et0_mm": et0.get(d, et0_default),
                  "t_mean": temps[d][2] if d in temps else None, "dap": d - plant}
-            f.forecast({"irr_mm": float("nan")}, w)
+            f.forecast({"irr_mm": depth.get(d, float("nan"))}, w)
             if d in moves:
                 f.reopen_calibration("theta")
             y = obs.get(d)                                         # 센서 없으면 늘 None
             if y is None:
                 continue
             q = f.obs_quantiles("theta")
-            if d >= today - int(o.get("sync_window_d", SYNC_WINDOW_D)):
+            if d >= today - sync_d:
                 errs.append(q[1] - y)
                 cover.append(q[0] <= y <= q[2])
             f.update({"theta": y})
@@ -383,18 +433,20 @@ class FieldBucketTwin:
             "coverage_80": float(np.mean(cover)) if cover else float("nan"),
             "obs_n": 0.0 if free else 1.0,
             "obs_age_s": max(0.0, now - max(valid_t)) if valid_t else float("nan"),
-            "irrigation_known": 0.0, "rain_src": float(RAIN_SRC.get(str(rcfg.get("kind", "station")), 0)),
+            "irrigation_known": 1.0 if irrigation_known else 0.0, "rain_src": float(RAIN_SRC.get(str(rcfg.get("kind", "station")), 0)),
             "texture_src": 0.0, "grid_rev": 0.0,
             "rain_fc_days": float(fc_days),
             "plan_src": 2.0 if scn is not None else 0.0,           # 미래 입력: 0 현재 유지(관수 모름) · 2 what-if
         }
         roster = (o.get("effects") or {}).get("devices") if isinstance(o.get("effects"), Mapping) else None
+        roster = [r for r in roster or () if not r.get("plots") or spec.target_id in r["plots"]]
         report = SC.effects_report(roster, "field") if roster else []
-        if report:                                                 # 기본 예측에는 노지 관수가 아직 연결되지 않았다(E3) — 모두 미반영으로 센다
-            out.meta["effects_modeled"], out.meta["effects_unmodeled"] = 0.0, float(len(report))
+        if report:                                                 # 물이 모델에 들어간 출력과 그 밖
+            n_on, n_off = SC.field_counts(report, irrigation_known)
+            out.meta["effects_modeled"], out.meta["effects_unmodeled"] = float(n_on), float(n_off)
         if free:
             notes.append("관측 없음 — 센서 없이 모델만(동기화·검증 없음, 참고용)")
-        if irrigated:
+        if irrigated and not irrigation_known:
             notes.append("관수 모름(irrigation_known=0) — 관수 제외 예측")
         m = f.mean()
         out.meta.update(LG.forecast_meta(fc.issued_at, fc.cal_rev))
@@ -410,16 +462,30 @@ class FieldBucketTwin:
         info = {"trust_d": TRUST_D, "assimilated_days": 0 if free else today - start, "obs_days": len(obs),
                 "theta_fc": float(m["theta_fc"]), "tau_drain_d": float(m["tau_drain_d"]),
                 "placement_changes": [str(fz.date_of(d)) for d in sorted(moves)]}
+        if depth:
+            info["irrigation"] = {"basis": "design", "level": "L0", "days": len(depth), "gaps": len(gaps),
+                                  "mm": round(sum(depth.values()), 2)}
         if not free:
             info.update({"cal_a": float(m["cal_a:theta"]), "cal_b": float(m["cal_b:theta"])})
         res = RunResult(out, status, "; ".join(notes),
                         n_points=sum(len(g) for g in out.grids.values()))
         res.info = info                                            # 사람용 요약(CLI 표·기록)
         res.effects = report
+        past = [d for d in range(since, today) if d in depth]      # 작동 시계열 — 동기화에 쓴 일 깊이(현지 0시). 보존 밖은 쓰지 않는다
+        if past:
+            res.act = [SC.ActSeries("irrigation_mm", "duty_log", [d * 86400.0 - tz for d in past],
+                                    [depth[d] for d in past])]
         if scn is not None:                                        # 가정한 관수를 작동 시계열로(시 격자, 앞날만)
             hs = sorted(h for h in irr_hourly if t0 <= h < t0 + (n_pts - 1) * 86400.0)
             if hs:
-                res.act = [SC.ActSeries("irrigation_mm", "plan", hs, [irr_hourly[h] for h in hs])]
+                res.act = list(res.act) + [SC.ActSeries("irrigation_mm", "plan", hs, [irr_hourly[h] for h in hs])]
+            water = (o["scenario"].get("overrides") or {}).get("water")
+            if isinstance(water, Mapping):                         # 밸브 가정을 풀 때 나온 공급 메모 — 조용히 빼지 않는다
+                notes.extend(str(x) for x in water.get("notes") or ())
+                res.reason = "; ".join(notes)
+                for row in report:
+                    if row.get("channel") and water.get("caveats"):
+                        row["caveats"] = list(water["caveats"])
             if scn.supply:
                 notes.append("공급 조건(supply)은 아직 반영하지 않음: " + ", ".join(str(x["name"]) for x in scn.supply))
                 res.reason = "; ".join(notes)

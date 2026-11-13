@@ -3,8 +3,8 @@ from sqlalchemy.dialects.mysql import LONGTEXT
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
 
 
 class CustomController(CRUDMixin, db.Model):
@@ -36,12 +36,6 @@ class CustomController(CRUDMixin, db.Model):
 
     is_activated = db.Column(db.Boolean, default=False)
     log_level_debug = db.Column(db.Boolean, default=False)
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.String(32), default='manual')
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
 
     custom_options = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')

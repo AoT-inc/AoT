@@ -28,7 +28,7 @@ from aot.databases.models import (
     AIFeedbackEvent,
     AIContextRecord,
 )
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +236,7 @@ class AIFacilityLearningService:
 
             # Calculate days since onboarding
             days_since_onboarding = (
-                utc_now() - learning_record.learning_started_at
+                naive_utc() - learning_record.learning_started_at
             ).days
 
             # Calculate stalled status
@@ -309,7 +309,7 @@ class AIFacilityLearningService:
                 return False
 
             days_since_feedback = (
-                utc_now() - learning_record.last_feedback_at
+                naive_utc() - learning_record.last_feedback_at
             ).days
 
             if days_since_feedback > threshold_days:

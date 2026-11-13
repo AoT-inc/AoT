@@ -1,6 +1,6 @@
 # coding=utf-8
 """일지 지도 열람과 관수(스프링클러) 흐름 계산 보조."""
-from aot.aot_flask.geo import plot_context
+from aot.space import plot_context
 
 from ._shared import logger, resolve_target_row
 
@@ -119,7 +119,7 @@ def journal_map_view(journal_data):
     #     훨씬 크면 정작 주인공이 점만 하게 나온다(실측: 2,222m² 구획).
     if ttype == 'plot':
         try:
-            from aot.aot_flask.geo import device_membership
+            from aot.space import device_membership
             containers = device_membership.load_containers(row.geo_id)
             site = device_membership.site_for_geometry(
                 row.geo_id, geom, containers=containers)
@@ -146,7 +146,7 @@ def journal_map_view(journal_data):
     # ── 센서 자리 ───────────────────────────────────────────────────────
     #   이 문서의 숫자가 **어디서 나온 값인지**를 그림으로 말한다.
     try:
-        from aot.aot_flask.geo import device_membership
+        from aot.space import device_membership
         if ttype == 'plot':
             found = plot_context.sensors_for_plot(row)
             ids = list(found.get('in_plot') or [])
@@ -200,7 +200,7 @@ def _open_field_flow(plot):
     "그 밸브의 물 중 이 구획에 떨어진 몫" 이 곧 나온다 — 면적 비율로 어림할
     필요가 없다(구획 한쪽에 노즐이 몰린 배치가 흔하다).
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
     from aot.databases.models import GeoShape
 
     feature = getattr(plot, 'feature', None) or {}
@@ -272,7 +272,7 @@ def _device_area_shapes(output_id):
 
     마커(`aot_device`, 점)는 뺀다 — 위치일 뿐 담당 구역이 아니다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
     from aot.databases.models import GeoShape
 
     out = []
@@ -437,7 +437,7 @@ def irrigation_flow_for_plot(plot):
     ⚠ 이것은 **추정치다.** 노즐이 설계대로 달려 있고 막히지 않았다는 전제 위에
       서 있다 — 화면이 실측과 구분해 말해야 한다.
     """
-    from aot.aot_flask.geo import irrigation_nozzles
+    from aot.space import irrigation_nozzles
     from aot.databases.models import GeoFacility
 
     facility_uuid = getattr(plot, 'facility_uuid', None)
@@ -449,7 +449,7 @@ def irrigation_flow_for_plot(plot):
         return {}
 
     try:
-        from aot.aot_flask.geo.device_binding import resolved_refs
+        from aot.space.device_binding import resolved_refs
         by_actuator = irrigation_nozzles.nozzles_by_actuator(
             resolved_refs(facility)[0])
     except Exception:

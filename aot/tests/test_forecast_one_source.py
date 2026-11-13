@@ -11,8 +11,8 @@
 import unittest
 from unittest.mock import patch
 
-from aot.aot_flask.geo import forecast_series as fs
-from aot.aot_flask.geo import weather_state as ws
+from aot.space import forecast_series as fs
+from aot.space import weather_state as ws
 from aot.tests.test_forecast_series_read import patched
 
 H = 3600.0

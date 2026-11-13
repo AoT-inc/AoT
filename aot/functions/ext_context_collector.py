@@ -32,7 +32,7 @@ from flask_babel import lazy_gettext
 
 from aot.databases.models import CustomController
 from aot.functions.base_function import AbstractFunction
-from aot.functions.utils.env_control import psychro
+from aot.utils import psychro
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils import measurement_freshness as _freshness
 from aot.utils.database import db_retrieve_table_daemon

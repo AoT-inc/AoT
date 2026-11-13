@@ -1,4 +1,6 @@
 # coding=utf-8
+import contextlib
+import contextvars
 import datetime
 import logging
 import threading
@@ -21,6 +23,43 @@ logger = logging.getLogger("aot.influx")
 # Maximum lookback range when no time bounds are specified.
 # Covers the full retention period without an unbounded scan.
 INFLUX_FULL_HISTORY_RANGE = '-99999d'
+
+
+# 도구 호출 하나 동안만 사는 설정 캐시(`influx_scope`). 프로세스 캐시가 아니다.
+_SCOPE_MISC = contextvars.ContextVar('_influx_scope_misc', default=None)
+
+
+@contextlib.contextmanager
+def influx_scope():
+    """이 블록 안의 측정 DB 설정(`Misc`) 읽기를 한 번만 한다 (읽기 전용 일괄 조회용).
+
+    `read_influxdb_list` 한 번이 `Misc` 를 3번 읽는다(질의 만들기·`query_string`·결과 해석).
+    구역 요약처럼 채널마다 수백 번 묻는 읽기 도구는 그만큼 SQLite 를 다시 읽는다
+    (2026-11-07 실측: 204회 질의에서 읽기 약 600회). 블록이 끝나면 캐시도 사라지므로
+    다른 호출·프로세스·데몬과 어긋나지 않는다. 블록 안에서 측정 DB 설정을 바꾸지 말 것.
+    중첩하면 바깥 캐시를 그대로 쓴다. 다른 스레드는 이 캐시를 보지 못한다(읽기만 다시 한다).
+    """
+    if _SCOPE_MISC.get() is not None:
+        yield
+        return
+    token = _SCOPE_MISC.set({})
+    try:
+        yield
+    finally:
+        _SCOPE_MISC.reset(token)
+
+
+def _misc_settings():
+    """측정 DB 설정 행. `influx_scope` 안이면 첫 읽기를 재사용한다(실패한 읽기는 담지 않는다)."""
+    scoped = _SCOPE_MISC.get()
+    if scoped is None:
+        return db_retrieve_table_daemon(Misc, entry='first')
+    if 'misc' not in scoped:
+        row = db_retrieve_table_daemon(Misc, entry='first')
+        if row is None:
+            return row
+        scoped['misc'] = row
+    return scoped['misc']
 
 
 def _flux_str(value):
@@ -422,12 +461,12 @@ def add_measurements_influxdb(unique_id, measurements, use_same_timestamp=True, 
         write_db.start()
 
 
-def query_flux(unit, unique_id,
-               value=None, measure=None, channel=None, ts_str=None,
-               start_str=None, end_str=None, min_value=None, max_value=None, past_sec=None, group_sec=None,
-               limit=None, group_fn=None):
-    """Generate influxdb query string (flux edition, using influxdb_client)."""
-    settings = db_retrieve_table_daemon(Misc, entry='first')
+def _flux_query_and_conn(settings, unit, unique_id,
+                         value=None, measure=None, channel=None, ts_str=None,
+                         start_str=None, end_str=None, min_value=None, max_value=None,
+                         past_sec=None, group_sec=None, limit=None, group_fn=None,
+                         group_fns=None):
+    """(url, token, flux 질의문). 측정 DB 버전을 모르면 None. `query_flux` 와 읽기 전용 경로가 공유한다."""
     influx_host = resolve_measurement_db_host(settings.measurement_db_host)
     influx_port = INFLUXDB_PORT or settings.measurement_db_port
 
@@ -470,6 +509,26 @@ def query_flux(unit, unique_id,
         query += f' |> filter(fn: (r) => r["measure"] == "{_flux_str(measure)}")'
     if ts_str:
         query += f' |> filter(fn: (r) => r._time == {ts_str})'
+
+    # group_fns: 같은 필터·같은 창으로 **여러 통계를 한 번에**(왕복 1회). 통계마다
+    # 질의를 따로 보내던 자리(일지 min/max/mean, GDD max/min)가 채널 수 × 통계
+    # 수만큼 왕복했다. 각 레코드에 `_stat` 열(통계 이름)을 달아 합쳐 돌려준다.
+    # 기본(None)은 기존 동작 그대로이며, 둘 이상일 때만 이 경로를 탄다.
+    # 이 경로는 `limit`·`value`(LAST 등)를 쓰지 않는다 — 넘겨도 무시된다.
+    # 긴 기간(작기 전체 GDD)에는 쓰지 말 것: 맥미니 실측(26-11-10)에서 union 으로
+    # 묶은 질의가 저장소 쪽 집계 최적화를 잃어 0.8→3.8초로 느려졌다(7일 창은 이득).
+    _multi = [f for f in (group_fns or ())
+              if f in ('max', 'min', 'mean', 'median', 'sum')]
+    if group_sec and len(_multi) >= 2:
+        _multi = list(dict.fromkeys(_multi))
+        stmts = [f'data = {query}']
+        for f in _multi:
+            stmts.append(
+                f'{f}_s = data |> aggregateWindow(every: {group_sec}s, fn: {f})'
+                f' |> filter(fn: (r) => exists r._value)'
+                f' |> set(key: "_stat", value: "{f}")')
+        stmts.append('union(tables: [' + ', '.join(f'{f}_s' for f in _multi) + '])')
+        return influxdb_url, token, '\n'.join(stmts)
 
     if group_sec:
         # group_fn: 창마다 어떤 통계를 낼지. 기본(None)은 기존 동작 그대로 —
@@ -532,6 +591,25 @@ def query_flux(unit, unique_id,
             elif settings.measurement_db_version == '2':
                 query += ' |> mean()'
 
+    return influxdb_url, token, query
+
+
+def query_flux(unit, unique_id,
+               value=None, measure=None, channel=None, ts_str=None,
+               start_str=None, end_str=None, min_value=None, max_value=None, past_sec=None, group_sec=None,
+               limit=None, group_fn=None, group_fns=None):
+    """Generate influxdb query string (flux edition, using influxdb_client)."""
+    settings = _misc_settings()
+    built = _flux_query_and_conn(
+        settings, unit, unique_id,
+        value=value, measure=measure, channel=channel, ts_str=ts_str,
+        start_str=start_str, end_str=end_str, min_value=min_value, max_value=max_value,
+        past_sec=past_sec, group_sec=group_sec, limit=limit, group_fn=group_fn,
+        group_fns=group_fns)
+    if built is None:
+        return None
+    influxdb_url, token, query = built
+
     logger.debug(f"query_flux() query: '{query}'")
 
     try:
@@ -543,6 +621,94 @@ def query_flux(unit, unique_id,
         return None
 
 
+def _csv_converter(data_type, default):
+    """`FluxCsvParser._to_value` 와 같은 변환 — 칸 하나용 함수. 빈 칸은 `#default` 를 따른다."""
+    from influxdb_client.client.util.date_utils import get_date_helper
+    if data_type in ('dateTime:RFC3339', 'dateTime:RFC3339Nano'):
+        conv = get_date_helper().parse_date
+    elif data_type == 'double':
+        conv = float
+    elif data_type in ('long', 'unsignedLong', 'duration'):
+        conv = int
+    elif data_type == 'boolean':
+        conv = lambda v: v == 'true'                       # noqa: E731
+    elif data_type == 'string':
+        conv = lambda v: v                                 # noqa: E731
+    else:
+        # base64Binary 등 이 경로가 받을 일 없는 형: 기존 파서에 맡기도록 알린다.
+        raise ValueError(f'unsupported flux datatype {data_type!r}')
+    if default not in ('', None):
+        _fallback = conv(default)
+    else:
+        _fallback = None
+
+    def convert(v):
+        return conv(v) if v != '' else _fallback
+    return convert
+
+
+def _time_value_rows(csv_rows):
+    """주석 달린 Flux CSV → [(`_time`, `_value`), ...]. 표 순서·행 순서 그대로.
+
+    `influxdb_client` 의 `query()` 는 행마다 열 전부(_start·_stop·태그 포함, 시각 3개)를
+    변환해 객체를 만든다 — 구역 요약 한 번에 32만 행, 파이썬 쪽 변환이 호출 시간의 약 40%
+    였다(2026-11-07 실측). 이 읽기는 두 칸만 쓰므로 그 두 칸만 같은 규칙으로 변환한다.
+    오류 응답(`error,reference`)·열 누락은 예외 → 호출부가 기존처럼 None 으로 접는다.
+    """
+    out = []
+    types = defaults = None
+    conv_t = conv_v = None
+    ti = vi = -1
+    header_next = False
+    for csv in csv_rows:
+        if not csv:
+            continue
+        if len(csv) > 2 and csv[1] == 'error' and csv[2] == 'reference':
+            raise ValueError('flux error response')
+        tok = csv[0]
+        if tok == '#datatype':
+            types, defaults, header_next = csv, None, True
+        elif tok == '#group':
+            continue
+        elif tok == '#default':
+            defaults = csv
+        elif header_next:
+            # 열 이름 행. 열 번호는 csv 배열 그대로(0번 칸은 주석 표지).
+            header_next = False
+            ti = csv.index('_time')
+            vi = csv.index('_value')
+            d = defaults or []
+            conv_t = _csv_converter(types[ti], d[ti] if ti < len(d) else '')
+            conv_v = _csv_converter(types[vi], d[vi] if vi < len(d) else '')
+        else:
+            out.append((conv_t(csv[ti]), conv_v(csv[vi])))
+    return out
+
+
+def query_time_values(unit, unique_id, measure=None, channel=None,
+                      start_str=None, end_str=None, past_sec=None):
+    """`query_string(...)` 결과에서 (`_time`, `_value`) 만 뽑은 목록. 실패면 None.
+
+    질의문은 `query_flux` 와 같다(같은 함수가 만든다) — 서버가 하는 일도, 값도 같고
+    파이썬 쪽 변환 범위만 두 칸으로 줄었다. 측정 DB 가 influxdb 가 아니면 None.
+    """
+    settings = _misc_settings()
+    if settings.measurement_db_name != "influxdb":
+        return None
+    built = _flux_query_and_conn(
+        settings, unit, unique_id, measure=measure, channel=channel,
+        start_str=start_str, end_str=end_str, past_sec=past_sec)
+    if built is None:
+        return None
+    url, token, query = built
+    try:
+        with InfluxDBClient(url=url, token=token, org='aot', timeout=60000) as client:
+            return _time_value_rows(client.query_api().query_csv(query))
+    except Exception as err:
+        logger.error(f"query_time_values() InfluxDB query failed: {err}")
+        return None
+
+
 def _influx_connection_params():
     """(url, token, bucket, version) for the configured measurement DB.
 
@@ -550,7 +716,7 @@ def _influx_connection_params():
     values, so the resolution lives here rather than being copied a third time.
     Returns None when the version is unknown (same failure mode as query_flux).
     """
-    settings = db_retrieve_table_daemon(Misc, entry='first')
+    settings = _misc_settings()
     host = resolve_measurement_db_host(settings.measurement_db_host)
     port = INFLUXDB_PORT or settings.measurement_db_port
     url = f'http://{host}:{port}'
@@ -669,10 +835,11 @@ def bulk_key(unit, device_id, channel, measure):
 def query_string(unit, unique_id,
                  value=None, measure=None, channel=None, ts_str=None,
                  start_str=None, end_str=None, min_value=None, max_value=None,
-                 past_sec=None, group_sec=None, limit=None, group_fn=None):
+                 past_sec=None, group_sec=None, limit=None, group_fn=None,
+                 group_fns=None):
     """Generate influxdb query string."""
     ret_value = None
-    settings = db_retrieve_table_daemon(Misc, entry='first')
+    settings = _misc_settings()
 
     if settings.measurement_db_name == "influxdb":
         ret_value = query_flux(
@@ -680,7 +847,7 @@ def query_string(unit, unique_id,
             value=value, measure=measure, channel=channel, ts_str=ts_str,
             start_str=start_str, end_str=end_str, min_value=min_value, max_value=max_value,
             past_sec=past_sec, group_sec=group_sec, limit=limit,
-            group_fn=group_fn)
+            group_fn=group_fn, group_fns=group_fns)
 
     return ret_value
 
@@ -740,7 +907,7 @@ def read_influxdb_single(unique_id, unit, channel,
 
         if data:
             try:
-                settings = db_retrieve_table_daemon(Misc, entry='first')
+                settings = _misc_settings()
                 if settings.measurement_db_name == 'influxdb':
                     for table in data:
                         for row in table.records:
@@ -815,7 +982,8 @@ def read_influxdb_list(unique_id, unit, channel,
     :type datetime_obj: bool
     """
     try:
-        data = query_string(
+        # 두 칸만 변환하는 읽기(`query_time_values`) — 결과 값은 `query_string` 경로와 같다.
+        data = query_time_values(
             unit, unique_id,
             measure=measure,
             channel=channel,
@@ -823,17 +991,10 @@ def read_influxdb_list(unique_id, unit, channel,
             end_str=end_str,
             past_sec=duration_sec)
 
-        settings = db_retrieve_table_daemon(Misc, entry='first')
-        if settings.measurement_db_name == 'influxdb':
-            list_data = []
-            for table in data:
-                for row in table.records:
-                    if datetime_obj:
-                        time = row.values['_time']
-                    else:
-                        time = row.values['_time'].timestamp()
-                    list_data.append((time, row.values['_value']))
-            return list_data
+        if data is not None:
+            if datetime_obj:
+                return data
+            return [(t.timestamp(), v) for t, v in data]
     except:
         logger.debug("Could not read form influxdb.")
 

@@ -127,7 +127,7 @@ class _Fixture(unittest.TestCase):
         MCPConfirmation.query.filter(
             MCPConfirmation.tool_name.in_(
                 ['operate_device', 'set_output_state',
-                 'schedule_device_control', 'create_notice'])).delete(
+                 'schedule_device_control', 'create_tab'])).delete(
             synchronize_session=False)
         GroupGrant.query.delete(synchronize_session=False)
         UserGroupMember.query.delete(synchronize_session=False)
@@ -297,7 +297,7 @@ class TestApprovalGroupScope(_Fixture):
     # -------------------------------------------------- 6. 스코프 대상이 없는 도구는 영향 없음
 
     def test_tool_without_a_scoped_target_is_not_blocked(self):
-        row = self._confirmation('create_notice', {'title': 'x'})
+        row = self._confirmation('create_tab', {'name': 'x'})
         result = gate.approve(row.unique_id, user_id=self.bob.unique_id)
         self.assertEqual(result.get('status'), 'success')
 

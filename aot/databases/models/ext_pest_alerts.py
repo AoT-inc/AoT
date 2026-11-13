@@ -9,7 +9,8 @@ ExtPestAlerts — SQLite cache model for EXT-KR-03 data.
     ttl    : 6 hours (TTL column: fetched_at)
 """
 from datetime import datetime, timezone
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
+from aot.utils.timekit import utc_now
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +42,7 @@ class ExtPestAlerts(db.Model):
     fetched_at = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: utc_now(),
     )
 
     def __repr__(self) -> str:

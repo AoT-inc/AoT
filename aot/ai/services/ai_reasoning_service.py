@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from aot.ai.services.ai_context_service import AIContextService
 from aot.ai.services.ai_action_service import AIActionService
+from aot.utils.timekit import FARM, iso_at, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class AIReasoningService:
 
             return {
                 "status": "success",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": iso_at(utc_now(), FARM),
                 "goal": goal,
                 "current_state_summary": AIReasoningService._summarize_context(context),
                 "reasoning_insight": proposal["insight"],

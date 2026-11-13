@@ -11,7 +11,7 @@ from aot.databases.models import NoteTags
 from aot.databases.models import Notes
 from aot.aot_flask.api import api, default_responses
 from aot.aot_flask.utils import utils_general
-from aot.utils.time_utils import api_iso
+from aot.utils.timekit import iso_utc
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ class NotesByTarget(Resource):
     def get(self, target_id):
         """Get all notes associated with a specific target_id."""
         try:
-            from aot.aot_flask.geo.device_membership import facility_identity_ids
+            from aot.space.device_membership import facility_identity_ids
             notes = Notes.query.filter(
                 Notes.target_id.in_(facility_identity_ids([target_id]))
             ).order_by(Notes.date_time.desc()).all()
@@ -185,7 +185,7 @@ class NotesByTarget(Resource):
             for n in notes:
                 result.append({
                     'unique_id': n.unique_id,
-                    'date_time': api_iso(n.date_time) if n.date_time else "",
+                    'date_time': iso_utc(n.date_time) if n.date_time else "",
                     'name': n.name,
                     'note': n.note,
                     'tags': n.tags,
@@ -217,7 +217,7 @@ class NotesGeo(Resource):
                 result.append({
                     'unique_id': n.unique_id,
                     'note': n.note,
-                    'date_time': api_iso(n.date_time) if n.date_time else "",
+                    'date_time': iso_utc(n.date_time) if n.date_time else "",
                     'user': n.author.name if n.author else (n.name or '?'),
                     'files': n.files,
                     'tags': n.tags,

@@ -18,7 +18,7 @@ say.ask 는 묻고 기다린 뒤 next.after_user.
 받는다(§2-4). 승인 대기(pending_approval) 응답은 op 와 상관없이 계약을 받는다(2단계, `approval_body`) — 승인 흐름
 자체(토큰·만료·되읽기·승인 = 실행)는 그대로이고 글이 놓이는 칸만 바뀐다.
 
-모양: ``status`` → ``say`` → ``next`` → 나머지 data. say 를 맨 앞에 두는 것은 효과 때문이 아니라 응답 상한으로 목록을
+모양: (``must`` — 꼭 할 호출 하나, 있을 때만, `lead`) → ``status`` → ``say`` → ``next`` → 나머지 data. say 를 맨 앞에 두는 것은 효과 때문이 아니라 응답 상한으로 목록을
 자를 때 위쪽이 안전하고, 긴 글 가운데 묻히지 않고, 시험하기 쉬워서다(§8).
 """
 import json
@@ -30,7 +30,7 @@ PILOT = frozenset({
     ('find', 'resolve'),
     ('screen', 'act'),
     ('overview', 'failure'),
-    ('record', 'note_add'),
+    ('record', 'note'),
     ('weather', 'forecast'),
 })
 
@@ -66,6 +66,8 @@ def shape(out, tool, op):
         body = shape_body(body, tool, op)
     elif _has_card_hint(body):
         body = _drop_card_hint(body, tool, op)
+    elif _picks_of(body):
+        body = shape_picked(body)
     else:
         return out
     return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
@@ -80,8 +82,47 @@ def shape_body(body, tool, op):
     handler = _BY_OP.get((tool, op))
     if handler is not None:
         handler(body, say, nxt)
+    _picked_by_context(body, say, nxt)
     _card_hint_to_next(body, nxt, tool, op)
     _strip_tails(body)
+    return _pack(body, say, nxt)
+
+
+def _picks_of(body):
+    """같은 이름이 여럿이라 맥락으로 하나를 골랐을 때 틀이 싣는 기록(`read_as.picked`, 대기 중인 fanout 은 최상위)."""
+    for holder in (body.get('read_as'), body):
+        if isinstance(holder, dict) and holder.get('picked_by') == 'context' \
+                and isinstance(holder.get('picked'), list) and holder['picked']:
+            return holder['picked']
+    return []
+
+
+_PICK_WHY = {'screen': "it is on the screen the user is looking at", 'recent': "it is what this conversation just named"}
+
+
+def _picked_by_context(body, say, nxt):
+    """맥락으로 고른 이름 → say.tell(어떻게 이해했는지, 틀렸으면 바로잡을 수 있게) + next.after_user(틀렸을 때 바꾸는 호출).
+    고른 것이 틀렸으면 사용자가 말하는 순간 AI 가 후보 id 로 다시 부른다."""
+    picks = _picks_of(body)
+    if not picks:
+        return
+    told = []
+    for pk in picks[:2]:
+        got = pk.get('as') or {}
+        told.append("%s %s" % (got.get('kind'), got.get('name') or got.get('path')))
+    text = "'%s' fits more than one thing; I took it to be %s (%s). If you meant another, say so." % (
+        picks[0].get('asked'), "; ".join(told), _PICK_WHY.get(picks[0].get('by'), 'by context'))
+    say['tell'] = ((say['tell'] + " ") if say.get('tell') else "") + text
+    others = [o for pk in picks for o in (pk.get('others') or []) if isinstance(o, dict) and o.get('id')]
+    if others and 'after_user' not in nxt:
+        nxt['after_user'] = "if the user meant another one, call again with target=<its id>: " + "; ".join(
+            "%s (%s)" % (o.get('id'), o.get('path') or o.get('name')) for o in others[:3])
+
+
+def shape_picked(body):
+    """시범 op 가 아닌 호출의 응답에 맥락 선택의 say·next 만 얹는다(status → say → next → data)."""
+    say, nxt = {}, dict(body.pop('next')) if isinstance(body.get('next'), dict) else {}
+    _picked_by_context(body, say, nxt)
     return _pack(body, say, nxt)
 
 
@@ -248,21 +289,47 @@ def _failure(body, say, nxt):
                        "unknown, not offline.")
 
 
-def _note_add(body, say, nxt):
+def _note(body, say, nxt):
+    """record.note — 방금 쓴·고친 노트를 사용자가 바로잡을 수 있게 어디에 무엇을 했는지 말하고, 고치는 호출을 next 에 둔다."""
     body.pop('note_hint', None)
     tells = []
-    if body.get('no_location'):
-        tells.append("Saved as a general memo with no place.")
+    status = body.get('status')
+    where = body.get('attached_to')
+    if status == 'created':
+        if body.get('no_location'):
+            tells.append("Saved as a general memo with no place.")
+        elif where:
+            tells.append("Saved on %s." % where)
+    elif status in ('modified', 'archived', 'restored'):
+        changed = [c for c in (body.get('changed') or []) if c]
+        if 'target' in changed and where:
+            tells.append("Moved to %s." % where)
+        if status == 'archived':
+            tells.append("Hidden (can be shown again).")
+        elif status == 'restored':
+            tells.append("Shown again.")
+        elif changed and changed != ['target']:
+            # 안쪽 칸 이름이 아니라 바뀐 것을 말한다("Updated: note." 는 무엇이 바뀐 건지 모른다).
+            said = []
+            for c in changed:
+                c = {'note': 'text', 'body': 'text', 'content': 'text'}.get(c, c)
+                if c != 'target' and c not in said:
+                    said.append(c)
+            tells.append("Updated the %s." % " and ".join(said))
     skipped = body.get('attach_skipped')
     if skipped:
         n = len(skipped) if isinstance(skipped, (list, tuple)) else skipped
         tells.append("%s link(s) were not attached." % n)
     if tells:
         say['tell'] = " ".join(tells)
+    nid = body.get('note_id')
+    if nid and status in ('created', 'modified', 'archived', 'restored'):
+        nxt.setdefault('fix', "record(op='note', target='%s', text|title|target_name|archive) edits it; "
+                              "remove(op='delete', kind='note', target='%s') deletes it after the user approves" % (nid, nid))
 
 
 #: PR① — 카드 안내(`card_hint`)는 행동이다. 호출 한 줄로 옮긴다("말하지 마라" 꼬리는 규약 1 이 대신한다).
-CARD_CALL = "screen(op='card', title='<place> forecast', message='<one-line conclusion, max 5 lines>')"
+CARD_CALL = "screen(op='card', title='<place> forecast', text='<one-line conclusion, max 5 lines>')"
 
 
 def _forecast(body, say, nxt):
@@ -285,6 +352,24 @@ def _forecast(body, say, nxt):
 
 #: 되읽기 끝의 묻는 말 — 사용자 언어로 옮기는 것은 규약(say = 그 뜻을 사용자 언어로)이다.
 APPROVAL_ASK = "%s — if this is right, please approve."
+#: 되읽기가 한국어 문장으로 끝나면 끝맺음도 한국어 — 한 문장에 두 언어가 섞이지 않게. 영어 문장 속 한글 이름
+#: ("Turn OFF input '토양수분 A'")은 이름일 뿐이라, 마지막 글자(숫자·기호 제외)의 언어로 정한다.
+APPROVAL_ASK_KO = "%s — 맞으면 승인해 주세요."
+
+
+def _ends_korean(text):
+    for ch in reversed(str(text)):
+        if '가' <= ch <= '힣':
+            return True
+        if ch.isalpha():
+            return False
+    return False
+
+
+def ask_line(text):
+    """되읽기 본문 → 승인 요청 한 줄(본문 언어에 맞춘 끝맺음)."""
+    return (APPROVAL_ASK_KO if _ends_korean(text) else APPROVAL_ASK) % str(text).strip()
+
 #: 승인 안전 문장(옛 `_approval_next` 의 1_ask·2_answer·message 와 게이트 message 에서 옮김). 지우지 않는다.
 APPROVAL_WHY = ("Ask once, then wait. Their request alone is not approval (it may name the wrong target); only a yes "
                 "to this read-back counts - never approve for them. After the yes, send after_user at once, no second "
@@ -299,22 +384,30 @@ def _is_framed_approval(body):
     return bool(body.get('confirmation_id')) and isinstance(nxt, dict) and '2_answer' in nxt
 
 
+#: 같은 대화에서 같은 쓰기를 다시 보냈다 — 서버가 새 대기를 만들지 않고 기존 번호를 돌려준다(F-16 ⑤, `mcp_safety_gate._open_request`).
+ALREADY_ASKED_WHY = ("already asked; wait for the user - do not ask again or send the request again. "
+                     "After their yes, send after_user once.")
+
+
 def approval_body(body):
     cid = body['confirmation_id']
     old = body.pop('next')
     body.pop('message', None)
+    already = body.pop('already_asked', None)
     read_back = body.pop('confirm_with_user', None)
+    if already:
+        read_back = None                # 이 대화에서 이미 되읽었다 — 다시 묻지 않는다
     say = {'avoid': 'done'}
     if read_back:
         text = _ARG_EQ.sub(lambda m: m.group(1).replace('_', ' ') + ' ', str(read_back))
-        say['ask'] = APPROVAL_ASK % text.strip()
+        say['ask'] = ask_line(text)
     else:
         # 같은 번호로 다시 불렀는데 아직 승인 전 — 되읽기는 이미 했다.
         say['tell'] = "Still waiting for the user's approval."
     nxt = {
         'after_user': "control(op='confirm', target='%s', decision='approve')" % cid,
         'if_no': "control(op='confirm', target='%s', decision='reject')" % cid,
-        'why': APPROVAL_WHY,
+        'why': ALREADY_ASKED_WHY if already else APPROVAL_WHY,
     }
     run = str(old.get('3_run') or '')
     if run:
@@ -347,8 +440,9 @@ def batch_pending(asked, refused):
         if a.get('path') and a['path'] != a.get('name'):
             line += " (%s)" % a['path']
         lines.append(_ARG_EQ.sub(lambda m: m.group(1).replace('_', ' ') + ' ', line))
-    say = {'avoid': 'done',
-           'ask': APPROVAL_ASK % ("%d outputs: %s" % (len(asked), "; ".join(lines)))}
+    joined = "; ".join(lines)
+    head = "%d개 장치: " if _ends_korean(joined) else "%d outputs: "
+    say = {'avoid': 'done', 'ask': ask_line((head % len(asked)) + joined)}
     if refused:
         say['tell'] = "Not asked for %s: %s" % (
             ", ".join(str(r.get('name') or '?') for r in refused),
@@ -454,7 +548,7 @@ def _confirm(body, say, nxt):
 #: 서버가 카드를 맡는 조회 — `server_card.OPS` 와 같다(순환 import 를 피해 여기 적는다; 시험이 둘을 맞춰 본다).
 SERVER_CARD_OPS = frozenset({('overview', 'place'), ('weather', 'now'), ('weather', 'forecast')})
 #: 서버가 못 올린 요약 카드 — AI 가 올린다.
-SUMMARY_CARD_CALL = "screen(op='card', title='<place> summary', message='<one-line conclusion, max 5 lines>')"
+SUMMARY_CARD_CALL = "screen(op='card', title='<place> summary', text='<one-line conclusion, max 5 lines>')"
 
 
 def _hint_rows(body):
@@ -500,6 +594,56 @@ _BY_OP = {
     ('control', 'confirm'): _confirm,
     ('screen', 'act'): _screen_act,
     ('overview', 'failure'): _failure,
-    ('record', 'note_add'): _note_add,
+    ('record', 'note'): _note,
     ('weather', 'forecast'): _forecast,
 }
+
+
+# ── 꼭 할 일 한 줄(F-16 ①) ────────────────────────────────────────────────────
+#
+# claude.ai 는 서버 안내문을 모델에 주지 않는다 — 응답 본문만 닿고, 그중 **맨 앞**에 둔 것만 지켜졌다(설계 F-11·
+# `tool_execution` 카드 힌트 주석). `next` 의 열쇠는 10종 가까이(call·after_user·if_no·resend·why·fix·map_time …)라
+# 꼭 할 일과 선택이 한 칸에 섞인다. 열쇠 이름은 그대로 두고, 그중 **지금 반드시 이어서 할 호출 하나**만 응답 맨 앞
+# `must` 한 줄로 올린다. 선택(카드 권유 `optional`·카드 호출·`fix`·`map_time`)과 사용자 답을 기다리는 것(`after_user`)은
+# 올리지 않는다 — 카드 규칙은 사용자 결정으로 현행 유지다.
+
+MUST = 'must'
+#: `must` 를 받는 실패 — 이 상태에서 next.call 은 "그 호출로 고쳐라" 다(성공의 next.call 은 권유다).
+_MUST_STATUSES = frozenset({'error', 'refused'})
+
+
+def must_of(body):
+    """이 응답에서 반드시 이어서 할 호출 하나(호출 글 그대로), 없으면 None."""
+    if not isinstance(body, dict) or body.get('status') == PENDING:
+        return None
+    nxt = body.get('next')
+    if not isinstance(nxt, dict):
+        return None
+    say = body.get('say')
+    if isinstance(say, dict) and say.get('ask'):
+        return None                     # 먼저 사용자에게 묻는다 — 호출이 아니다
+    resend = nxt.get('resend')
+    if isinstance(resend, str) and resend:
+        return resend
+    call = nxt.get('call')
+    if not isinstance(call, str) or not call or "op='card'" in call:
+        return None
+    if body.get('status') in _MUST_STATUSES or call.startswith(CONFIRM_RUN.split(':')[0]):
+        return call
+    return None
+
+
+def lead(out):
+    """도메인 응답 맨 앞에 `must` 한 줄 — 꼭 할 호출이 있을 때만. next 안에서도 그 열쇠를 맨 앞으로(우선순위만)."""
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    must = must_of(body)
+    if not must:
+        return out
+    nxt = body['next']
+    key = next(k for k in ('resend', 'call') if nxt.get(k) == must)
+    body['next'] = {key: nxt[key], **{k: v for k, v in nxt.items() if k != key}}
+    body = {MUST: must, **{k: v for k, v in body.items() if k != MUST}}
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])

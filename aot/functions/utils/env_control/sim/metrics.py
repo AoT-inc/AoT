@@ -20,31 +20,38 @@ env_control/sim/metrics.py — 폐루프 추적 결과 → KPI.
 from __future__ import annotations
 
 import bisect
+import datetime as _dt
 import math
 from collections import Counter
 from typing import Dict, List, Optional
+
+try:
+    from .scenarios import DEFAULT_TZ
+except ImportError:          # compare.py 가 이 파일만 단독으로 싣는 경우 — 시나리오 기본 대지(김제)와 같은 값
+    DEFAULT_TZ = 'Asia/Seoul'  # tz-ok: 단독 적재 때의 시나리오 기본 대지 시계(scenarios.DEFAULT_TZ 와 같아야 한다)
 
 
 
 def _psychro():
     """psychro 를 늦게 읽는다 — `compare.py` 는 이 파일을 패키지 밖에서 단독으로 싣는다.
 
-    저장소 안: env_control.psychro / 하네스 컨테이너: 옆에 복사한 `_psychro.py`.
+    하네스 컨테이너: 옆에 복사한 `_psychro.py` / 저장소 안: aot.utils.psychro.
+    복사본을 먼저 본다 — 시험 대상 코드 판의 물성이 끼어들면 A/B 의 시설이 달라진다(plant.py 와 같은 순서).
     """
     try:
-        from .. import psychro as ps
+        from . import _psychro as ps      # type: ignore
         return ps
     except ImportError:
         pass
     try:
-        from . import _psychro as ps      # type: ignore
+        from aot.utils import psychro as ps
         return ps
     except ImportError:
         import importlib.util
         import os
         here = os.path.dirname(os.path.abspath(__file__))
         for cand in (os.path.join(here, '_psychro.py'),
-                     os.path.join(here, '..', 'psychro.py')):
+                     os.path.join(here, '..', '..', '..', '..', 'utils', 'psychro.py')):
             if os.path.exists(cand):
                 spec = importlib.util.spec_from_file_location('_envsim_psychro', cand)
                 mod = importlib.util.module_from_spec(spec)
@@ -56,7 +63,6 @@ HEAT_THRESHOLDS = (35.0, 40.0, 45.0, 50.0)
 PULSE_TYPES = ('sec', 'vol')
 # 전천일사 W/m² → PPFD µmol/m²/s (`cumulative_tracker` 가 쓰는 시스템 변환표와 같은 값).
 PPFD_PER_W = 2.02
-KST_OFFSET_S = 9 * 3600.0
 
 
 def _move_stats(series: List[tuple], min_step: float = 1.0) -> dict:
@@ -110,6 +116,12 @@ def _acc_delta(cycles: List[dict], acc_end: dict, t_from: float) -> dict:
     return {k: acc_end.get(k, 0.0) - base.get(k, 0.0) for k in acc_end}
 
 
+def _local_day(t: float, tz: str) -> int:
+    """순간 → 시설 현지 날짜의 에포크 일 번호(점마다 그 시각의 오프셋 — 서머타임을 넘어도 하루가 밀리지 않는다)."""
+    from aot.utils.timekit import to_tz
+    return (to_tz(t, tz).date() - _dt.date(1970, 1, 1)).days
+
+
 def _target_at(cycles: List[dict], ts: List[float], t: float) -> Optional[dict]:
     i = bisect.bisect_right(ts, t) - 1
     if i < 0:
@@ -117,13 +129,14 @@ def _target_at(cycles: List[dict], ts: List[float], t: float) -> Optional[dict]:
     return cycles[i]
 
 
-def _daily_light(cycles: List[dict], t_from: float, acc_end: dict) -> List[tuple]:
-    """시설 현지(KST) 날짜별 (받은 J/m², 스크린 없이 받았을 J/m²) — 워밍업 뒤만."""
+def _daily_light(cycles: List[dict], t_from: float, acc_end: dict,
+                 tz: str = DEFAULT_TZ) -> List[tuple]:
+    """시설 현지(`tz`) 날짜별 (받은 J/m², 스크린 없이 받았을 J/m²) — 워밍업 뒤만."""
     rows = [(c['t'], c.get('acc') or {}) for c in cycles if c['t'] >= t_from]
     rows.append((rows[-1][0] + 1.0 if rows else t_from, acc_end))
     days: Dict[int, list] = {}
     for (t0, a0), (_t1, a1) in zip(rows, rows[1:]):
-        d = int((t0 + KST_OFFSET_S) // 86400)
+        d = _local_day(t0, tz)
         acc = days.setdefault(d, [0.0, 0.0])
         acc[0] += a1.get('light_crop_J', 0.0) - a0.get('light_crop_J', 0.0)
         acc[1] += a1.get('light_open_J', 0.0) - a0.get('light_open_J', 0.0)
@@ -373,6 +386,7 @@ def summarize(trace: dict) -> dict:
     fine_pos = trace.get('fine_pos') or {}
     dispatched = trace.get('dispatched') or []
     t0 = float(meta.get('t0') or (fine.get('t') or [0])[0])
+    tz = str(meta.get('tz') or DEFAULT_TZ)
     t_from = t0 + float(meta.get('warmup_s', 3600.0))
     step_min = float(meta.get('fine_step_s', 60.0)) / 60.0
 
@@ -513,7 +527,7 @@ def summarize(trace: dict) -> dict:
                                       if ks else None)
         out[f'{kind}_reversals_per_h'] = (round(sum(v['reversals_per_h'] for v in ks), 2)
                                           if ks else None)
-    # 차광막 하루 최대 이동 수(물리 위치 기준, 1 %p 이상 바뀐 횟수를 KST 날짜별로)
+    # 차광막 하루 최대 이동 수(물리 위치 기준, 1 %p 이상 바뀐 횟수를 시설 현지 날짜별로)
     shade_day = None
     for a in meta.get('actuators') or []:
         if a.get('kind') != 'shade':
@@ -528,7 +542,7 @@ def summarize(trace: dict) -> dict:
             v = pos[i]
             m = prev is not None and abs(v - prev) > 0.05
             if m and not moving:
-                per[int((fine['t'][i] + KST_OFFSET_S) // 86400)] += 1
+                per[_local_day(fine['t'][i], tz)] += 1
             moving = m
             prev = v
         n = max(per.values()) if per else 0
@@ -536,7 +550,7 @@ def summarize(trace: dict) -> dict:
     out['shade_moves_day_max'] = shade_day
 
     # ── 빛(DLI) ─────────────────────────────────────────────────────────
-    daily = _daily_light(cycles, t_from, trace.get('acc') or {})
+    daily = _daily_light(cycles, t_from, trace.get('acc') or {}, tz)
     days_n = max(1e-9, hours / 24.0)
     crop = sum(d[0] for d in daily)
     opn = sum(d[1] for d in daily)

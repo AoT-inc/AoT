@@ -3,8 +3,8 @@
 import time
 from datetime import date, datetime, time as dtime, timedelta
 
-from aot.aot_flask.geo import plot_context
-from aot.aot_flask.geo import plot_sources
+from aot.space import plot_context
+from aot.space import plot_sources
 # 순수 단위 환산이라 geo·journal 어디에도 속하지 않아 여기서 옮겨졌다
 # (`plot_context.dli_accumulated` 도 같은 표를 본다) — 기존 이름은 그대로
 # 아래에서 이 모듈 전역에 노출한다.
@@ -180,13 +180,14 @@ VALUE_DECIMALS = 2
 # 여기서는 이름만 다시 내보낸다(이 파일을 읽는 사람이 규칙을 찾아갈 수 있게).
 
 from aot.utils.timekit import (                                    # noqa: E402
-    ensure_utc,
+    parse_utc,
     to_tz,
     bucket_local_key as bucket_key,
     bucket_seconds_for,
     buckets_expected as expected_buckets,
     local_day_bounds_utc as period_bounds_utc,
 )
+from aot.utils.timekit import naive_utc, wall_to_utc
 
 
 # @manual geo/journal#dli
@@ -252,7 +253,7 @@ def gdd_for_journal(plot, end_date, start_date=None):
       (`no-program`·`no-t-base`·커버리지 부족) — 빈칸이나 0 은 "그날 하나도
       안 쌓였다" 로 읽히는데, 못 쓰는 것과 0 은 전혀 다르다.
     """
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
     from aot.databases.models import GeoProgram
 
     out = {'usable': False, 'reason': None, 't_base': None,
@@ -277,9 +278,9 @@ def gdd_for_journal(plot, end_date, start_date=None):
     #   실제 "오늘"(구획의 tz 기준)과 문서 종료일 중 **이른 쪽**을 넘긴다 —
     #   끝난 작기(종료일이 과거)는 원래 종료일 그대로, 진행 중인 작기는
     #   실제 오늘까지만 기대하게 된다.
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz, to_tz, utc_now
-    tz = as_tz(resolve_location_tz(getattr(plot, 'unique_id', None)))
+    from aot.utils.timekit import tz_of
+    from aot.utils.timekit import to_tz, utc_now
+    tz = tz_of(getattr(plot, 'unique_id', None))
     real_today = to_tz(utc_now(), tz).date()
     gdd_on = min(end_date, real_today) if end_date else real_today
 
@@ -523,18 +524,19 @@ def _curve_profile(handler, weeks, tz, ref_date, start_dt=None):
     때문이다 — 주차 보간이 구간 안에서 선형이라, 정오 값이 곧 그날 평균이다.
     (하루 288 표본이 같은 주차를 공유하므로 핸들러 캐시도 그대로 맞는다.)
     """
+    from aot.utils.method import local_midnight
     base = datetime.combine(ref_date, dtime.min)
+    # 시작은 순간(aware)으로 넘긴다 — naive 자정은 메서드가 UTC 로 읽어 기간형
+    # 곡선이 시간대만큼(서울 9시간) 늦게 시작한다.
     if start_dt is None:
-        start_dt = base
+        start_dt = local_midnight(ref_date, tz)
+    elif getattr(start_dt, 'tzinfo', None) is None:
+        start_dt = wall_to_utc(start_dt, tz)    # naive 는 그 구획의 벽시계
     out = []
     for i in range(86400 // CURVE_SAMPLE_SEC):
         naive = base + timedelta(seconds=i * CURVE_SAMPLE_SEC
                                  + CURVE_SAMPLE_SEC // 2)
-        try:
-            aware = tz.localize(naive)
-        except AttributeError:
-            aware = naive.replace(tzinfo=tz)
-        stamp = aware.timestamp()
+        stamp = wall_to_utc(naive, tz).timestamp()
         try:
             value, ended = handler.calculate_setpoint(
                 stamp, method_start_time=start_dt,
@@ -619,8 +621,9 @@ def with_curve_deltas(journal_data):
 
 # @manual geo/journal#curve-target
 def _with_curve_deltas(journal_data):
-    from aot.utils.method import load_method_handler, local_noon, weeks_elapsed_at
-    from aot.utils.timekit import as_tz
+    from aot.utils.method import (
+        load_method_handler, local_midnight, local_noon, weeks_elapsed_at)
+    from aot.utils.timekit import tz_of
 
     data = journal_data or {}
     buckets = data.get('buckets') or []
@@ -652,7 +655,7 @@ def _with_curve_deltas(journal_data):
     if started is None:
         return journal_data
 
-    tz = as_tz((data.get('target') or {}).get('tz_name'))
+    tz = tz_of((data.get('target') or {}).get('tz_name'))
     handlers = {}
     profiles = {}
     changed = False
@@ -704,7 +707,7 @@ def _with_curve_deltas(journal_data):
             if cache_key not in profiles:
                 profiles[cache_key] = _curve_profile(
                     handler, weeks, tz, day,
-                    start_dt=datetime.combine(started, dtime.min))
+                    start_dt=local_midnight(started, tz))
             profile = profiles[cache_key]
             if profile is None:
                 new_rows.append(row)
@@ -1245,7 +1248,7 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
     ```
     조회 실패·조회 불가면 `None`(부르는 쪽이 `errors` 에 담는다).
 
-    쿼리는 **채널당 정확히 3회**이고 기간과 무관하다(min·max·mean). 날짜마다
+    쿼리는 **채널당 정확히 1회**(min·max·mean 을 한 Flux 로)이고 기간과 무관하다. 날짜마다
     한 번씩 묻는 구조로 만들면 두 달치가 180회가 된다 — `_daily_extremes` 가
     같은 이유로 창 집계를 쓴다.
 
@@ -1292,7 +1295,7 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
         if sun_fn is None or rec_time is None:
             return None
         try:
-            start = ensure_utc(rec_time) - timedelta(seconds=int(bucket_sec))
+            start = parse_utc(rec_time) - timedelta(seconds=int(bucket_sec))
             local = to_tz(start, tz)
         except Exception:
             return None
@@ -1302,43 +1305,61 @@ def daily_channel_stats(dm_row, start_str, end_str, tz,
         sunrise, sunset, _hours = found
         return 'day' if sunrise <= local < sunset else 'night'
 
-    for fn in stats:
-        try:
-            tables = query_string(
-                unit, dm_row.device_id, channel=channel,
-                # ⚠ 표시 이름이 아니라 **조회 필터**를 넘긴다 — 환산 채널은
-                #   `None`(필터 없음)이어야 값이 나온다(`_channel_info`).
-                measure=measure_filter,
-                start_str=start_str, end_str=end_str,
-                group_sec=bucket_sec, group_fn=fn)
-        except Exception as exc:
-            logger.warning('journal: 채널 조회 실패(%s ch=%s %s): %s',
-                           dm_row.device_id, channel, fn, exc)
-            return None
-        for table in (tables or []):
-            for rec in table.records:
-                try:
-                    val = float(rec.get_value())
-                except (TypeError, ValueError, AttributeError):
-                    continue
-                key = bucket_key(rec.get_time(), bucket_sec, tz, granularity)
-                if key is None:
-                    continue
-                box = acc.setdefault(key, {'min': [], 'max': [], 'mean': [],
-                                           'day': [], 'night': []})
-                box[fn].append(val)
-                # 평균만 밤낮으로 가른다 — min/max 는 그날의 극값이라
-                # 시간대를 나누면 '그날 최고' 라는 뜻이 사라진다.
-                if fn == 'mean':
-                    phase = _phase(rec.get_time())
-                    if phase:
-                        box[phase].append(val)
-                    # DLI 적분 — 시간별 평균 PPFD × 3600초 / 1e6.
-                    # **하루 평균 × 24 로 계산하지 않는다**: 기록이 없는 시간이
-                    # 있으면 그 시간까지 빛이 있었던 것으로 세게 된다.
-                    if light_factor is not None:
-                        box['mol'] = box.get('mol', 0.0) + (
-                            val * light_factor * 3600.0 / 1e6)
+    # 통계를 모두 한 번의 왕복으로 묻는다(`group_fns`). 레코드의 `_stat` 열이 어느
+    # 통계인지 말해 준다. 통계가 하나뿐이면 예전 그대로 단일 질의.
+    stat_list = [f for f in dict.fromkeys(stats)]
+    try:
+        # ⚠ 표시 이름이 아니라 **조회 필터**를 넘긴다 — 환산 채널은
+        #   `None`(필터 없음)이어야 값이 나온다(`_channel_info`).
+        multi = {'group_fns': tuple(stat_list)} if len(stat_list) >= 2 else {
+            'group_fn': stat_list[0] if stat_list else None}
+        tables = query_string(
+            unit, dm_row.device_id, channel=channel,
+            measure=measure_filter,
+            start_str=start_str, end_str=end_str,
+            group_sec=bucket_sec, **multi)
+    except Exception as exc:
+        logger.warning('journal: 채널 조회 실패(%s ch=%s %s): %s',
+                       dm_row.device_id, channel, ','.join(stat_list), exc)
+        return None
+    # 통계별로 레코드를 모아 예전과 같은 순서(stats 순서)로 접는다 — 부동소수
+    # 합의 순서가 달라져 평균이 미세하게 바뀌는 일을 막는다.
+    by_fn = {f: [] for f in stat_list}
+    for table in (tables or []):
+        for rec in table.records:
+            fn = None
+            try:
+                fn = (rec.values or {}).get('_stat')
+            except AttributeError:
+                fn = None
+            if fn is None and len(stat_list) == 1:
+                fn = stat_list[0]
+            if fn in by_fn:
+                by_fn[fn].append(rec)
+    for fn in stat_list:
+        for rec in by_fn[fn]:
+            try:
+                val = float(rec.get_value())
+            except (TypeError, ValueError, AttributeError):
+                continue
+            key = bucket_key(rec.get_time(), bucket_sec, tz, granularity)
+            if key is None:
+                continue
+            box = acc.setdefault(key, {'min': [], 'max': [], 'mean': [],
+                                       'day': [], 'night': []})
+            box[fn].append(val)
+            # 평균만 밤낮으로 가른다 — min/max 는 그날의 극값이라
+            # 시간대를 나누면 '그날 최고' 라는 뜻이 사라진다.
+            if fn == 'mean':
+                phase = _phase(rec.get_time())
+                if phase:
+                    box[phase].append(val)
+                # DLI 적분 — 시간별 평균 PPFD × 3600초 / 1e6.
+                # **하루 평균 × 24 로 계산하지 않는다**: 기록이 없는 시간이
+                # 있으면 그 시간까지 빛이 있었던 것으로 세게 된다.
+                if light_factor is not None:
+                    box['mol'] = box.get('mol', 0.0) + (
+                        val * light_factor * 3600.0 / 1e6)
 
     by_bucket = {}
     for key, box in acc.items():
@@ -1378,7 +1399,7 @@ def _source_channel_series(sources, start_str, end_str, tz, granularity,
     각 항목에 `tier`·`rank` 를 싣는다. 날짜마다 가장 좁은 출처를 고르는 일
     (`plot_sources.pick_rows`)은 `env_rows_by_bucket` 이 한다.
     """
-    from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
+    from aot.space.facility_sensors import channel_meta_for_dm
     from aot.databases.models import DeviceMeasurements, Input
     from aot.databases.models.measurement import INCLUDE_REMOVED_MEASUREMENTS
 
@@ -1622,7 +1643,7 @@ def _circular_channel_stats(dm_row, channel, unit, measurement,
     import math
 
     from aot.utils.influx import query_string
-    from aot.utils.timekit import ensure_utc, to_tz
+    from aot.utils.timekit import parse_utc, to_tz
 
     try:
         tables = query_string(
@@ -1650,7 +1671,7 @@ def _circular_channel_stats(dm_row, channel, unit, measurement,
             if key is None:
                 continue
             try:
-                local = to_tz(ensure_utc(rec_time), tz)
+                local = to_tz(parse_utc(rec_time), tz)
             except Exception:
                 continue
             box = hours.setdefault((key, local.date(), local.hour),
@@ -1758,7 +1779,7 @@ def env_channel_series(device_ids, start_str, end_str, tz,
     전 날짜를 채우던 구역 센서의 값도 여기서 나온다.
     """
     from aot.databases.models import DeviceMeasurements, Input
-    from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
+    from aot.space.facility_sensors import channel_meta_for_dm
 
     if sources is not None:
         return _source_channel_series(
@@ -2060,7 +2081,7 @@ def cover_light_factor(plot):
         return None            # 노지 — 실외 일사가 곧 작물이 받는 빛이다
     try:
         from aot.databases.models import GeoFacility
-        from aot.aot_flask.geo import facility_calc as FC
+        from aot.space import facility_calc as FC
         fac = GeoFacility.query.filter_by(unique_id=fac_uuid).first()
         if fac is None:
             return None
@@ -2414,7 +2435,7 @@ def note_scope_for_target(target_type, target_row, device_ids=None):
     """
     from shapely.geometry import shape as shapely_shape
 
-    from aot.aot_flask.geo import device_membership, plot_context
+    from aot.space import device_membership, plot_context
 
     scope = {'self_id': getattr(target_row, 'unique_id', None),
              'descendant_ids': set(), 'area_note_ids': None,
@@ -2559,15 +2580,6 @@ def _attached_device_name(note):
     return None
 
 
-def _naive_utc(dt):
-    """tz-aware 든 naive 든 → **naive UTC**. DB 비교 직전에 한 번 통과시킨다."""
-    from aot.utils.timekit import ensure_utc
-
-    if dt is None or getattr(dt, 'tzinfo', None) is None:
-        return dt
-    return ensure_utc(dt).replace(tzinfo=None)
-
-
 # @manual geo/journal#contents
 def notes_for_target(target_type, target_row, start_utc, end_utc,
                      device_ids=None, tz=None):
@@ -2593,8 +2605,8 @@ def notes_for_target(target_type, target_row, start_utc, end_utc,
     #   (실측: tzinfo=None, '2026-08-26 08:59:37.381816'), tz-aware 값을 그대로
     #   비교에 넣으면 SQLite 가 '+00:00' 이 붙은 문자열로 렌더해 **예외 없이
     #   어긋난 비교**를 한다 — 결과가 비면 "그 기간에 노트가 없었다" 로 읽힌다.
-    start_utc = _naive_utc(start_utc)
-    end_utc = _naive_utc(end_utc)
+    start_utc = naive_utc(start_utc)
+    end_utc = naive_utc(end_utc)
 
     # 구간은 반열림 [start, end) 이다. 닫으면 자정에 걸친 노트가 이틀에 다 실린다.
     rows = (Notes.query
@@ -2912,7 +2924,7 @@ def resolve_devices(target_type, target_row):
         actuators, unassigned = plot_context.actuators_for_plot(target_row)
         return sensor_ids | outdoor_ids, actuators, unassigned, None
 
-    from aot.aot_flask.geo import device_membership
+    from aot.space import device_membership
 
     area_ids = device_membership.device_ids_in_area(target_row.unique_id)
     if area_ids is None:
@@ -3010,10 +3022,9 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
 
     target_row = resolve_target_row(target_type, target_id)
 
-    from aot.utils.timekit import as_tz
-    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import tz_of
 
-    tz = as_tz(resolve_location_tz(target_id))
+    tz = tz_of(target_id)
     tz_name = str(getattr(tz, 'zone', None) or tz)
     bucket_sec = bucket_seconds_for(tz, start_date, end_date)
     s_str, e_str = period_bounds_utc(start_date, end_date, tz)
@@ -3034,7 +3045,7 @@ def build_journal_for_target(target_type, target_id, start_date, end_date,
         # 기간과 무관하므로, 위에서 고른 것과 항상 같은 결과가 나온다.
         _indoor, outdoor_ids = _plot_sensor_ids(target_row)
     else:
-        from aot.aot_flask.geo import device_membership as _dm
+        from aot.space import device_membership as _dm
         outdoor_ids = set(_dm.weather_device_ids(target_row.unique_id)[0])
     outdoor_ids = {d for d in outdoor_ids if d in set(sensor_ids)}
 
@@ -3809,14 +3820,13 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     (`_runtimePollSeconds`). 여기 결과를 그 응답에 실으면 그 주기가 그대로
     7일 조회 주기가 된다.
     """
-    from aot.utils.timekit import as_tz
-    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import tz_of
 
     if plot is None and not sensor_ids:
         return []
     # 좌표(=시간대)의 주인. 시설 카드는 구획이 없을 수도 있어 따로 받는다.
     target_id = target_id or getattr(plot, 'unique_id', None)
-    tz = as_tz(resolve_location_tz(target_id))
+    tz = tz_of(target_id)
     end = end_date or datetime.now(tz).date()
     start = end - timedelta(days=max(1, int(days or 7)) - 1)
     s_str, e_str = period_bounds_utc(start, end, tz)
@@ -3942,7 +3952,7 @@ def recent_env_trends(plot, days=7, end_date=None, sensor_ids=None,
     # 후보를 여럿 주는 이유: 매핑에 없는 채널(토양수분 등)은 지금 값 쪽 키가
     # 사람이 붙인 이름이라, measurement 이름으로는 절대 안 맞는다.
     try:
-        from aot.aot_flask.geo.facility_sensors import channel_label_meta
+        from aot.space.facility_sensors import channel_label_meta
         for s in out:
             # ⚠ 이미 정해진 것은 덮지 않는다 — 적산온도 계열은 환경 행이
             #   아니라 이 후보 산정이 화면 쪽 키('GDD')를 만들어 내지 못한다.
@@ -4238,8 +4248,7 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
       도구라, 안 볼 채널까지 InfluxDB 에 묻는 것이 그대로 부담이 된다
       (`env_channel_series` 의 `measurements` 인자가 그 자리다).
     """
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz
+    from aot.utils.timekit import tz_of
 
     if plot is None or getattr(plot, 'unique_id', None) is None:
         return None
@@ -4247,7 +4256,7 @@ def recent_target_drift(plot, days=RECENT_DRIFT_DAYS, on=None):
     # ⚠ **캐시 키에 창의 끝날을 넣는다.** `on` 이 없으면 창은 "오늘" 인데,
     #   그것을 키에 안 담으면 23:55 에 담긴 어제 창이 00:01 에도 TTL 안이라
     #   그대로 나온다 — 응답의 `from`/`to` 가 어제로 찍히고 오늘치가 빠진다.
-    tz = as_tz(resolve_location_tz(plot.unique_id))
+    tz = tz_of(plot.unique_id)
     end_date = on or datetime.now(tz).date()
     start_date = end_date - timedelta(days=max(1, int(days)) - 1)
     cache_key = (plot.unique_id, int(days), end_date.isoformat())
@@ -4403,8 +4412,7 @@ def measured_stage_targets(plot, on=None):
       값을 갖고, 여럿이면 `why='sensors-differ'` 로 비운다 — 사람이 고를
       일이지 시스템이 고를 일이 아니다.
     """
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz
+    from aot.utils.timekit import tz_of
 
     if plot is None or getattr(plot, 'unique_id', None) is None:
         return None
@@ -4415,7 +4423,7 @@ def measured_stage_targets(plot, on=None):
     started = getattr(plot, 'started_on', None)
     if started is None:
         return None
-    tz = as_tz(resolve_location_tz(plot.unique_id))
+    tz = tz_of(plot.unique_id)
     end_date = on or datetime.now(tz).date()
     ends = [_journal_date(st.get('ends_on')) for st in stages]
     last = max([d for d in ends if d is not None] or [end_date])
@@ -4625,11 +4633,8 @@ def stage_timeline_data(stages, tz_name=None, on=None):
         except (ValueError, TypeError):
             return None
 
-    try:
-        tz = pytz.timezone(tz_name) if tz_name else pytz.utc
-    except Exception:
-        tz = pytz.utc
-    today = datetime.now(tz).date()
+    from aot.utils.timekit import tz_of as _tz_of
+    today = datetime.now(_tz_of(tz_name)).date()
     # 문서가 아직 진행 중이면 기간 끝이 미래일 수 있다 — 그때는 오늘이 맞다.
     if on is not None:
         today = min(on, today)

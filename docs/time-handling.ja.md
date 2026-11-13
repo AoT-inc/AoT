@@ -65,11 +65,11 @@
   使います。
 - **レガシーコードにはnaiveな`datetime.utcnow()`が数多く残っています。** これはバグ
   ではありません — プロジェクトの規約として**naiveなdatetimeはUTCとみなす**ことに
-  なっており、`timekit.ensure_utc()`が読み取る時点で`+00:00`を付与して正規化するから
+  なっており、`timekit.parse_utc()`(DBのnaiveカラム用は`timekit.naive_utc()`)が読み取る時点で`+00:00`を付与して正規化するから
   です。
 - **SQLiteのカラムを往復させても安全**です。aware なUTC(`00:00+00:00`)をnaiveな
   `DateTime`カラムに保存すると、SQLite/SQLAlchemyはtzinfoだけを取り除き、値(UTCの
-  00:00)は保持されます。読み出すとnaiveな`00:00`になり、`ensure_utc`が再び
+  00:00)は保持されます。読み出すとnaiveな`00:00`になり、`parse_utc`が再び
   `00:00+00:00`に復元します。**SQLのフィルタ**(`schedule_time >= utc_now()`)も、
   バインド時にtzが取り除かれてnaive-UTC同士の比較になるため正確です。
 
@@ -82,21 +82,27 @@
 
 ## 5. 単一の解決役 — `aot/utils/timekit.py`
 
-タイムゾーンに関するものはすべてこのモジュールに集約されています。以前は各所に散らばって
-いたゲート(`get_device_tz`・`get_user_tz`・`get_timezone_name`・`resolve_location_tz`など)
-は、今ではこのモジュールに委譲しています。
+タイムゾーンに関するものはすべてこのモジュールに集約されています。公開の入口は下記の10個の関数と2つの
+マーカーです。以前は各所に散らばっていたゲート(`get_device_tz`・`get_user_tz`・`serialize_ts`・`tz_utils`など)
+はラッパーとして残さず**削除**しました。
 
-| 関数 | 用途 |
+| 入口 | 用途 |
 |---|---|
-| `utc_now()` / `now_utc()` | tz-awareな現在のUTC「今」 |
-| `ensure_utc(dt)` | naive→UTCとみなし、aware→UTCへ変換(正規化) |
-| `to_tz(dt, tz)` | UTC(またはnaive=UTC)→対象のtzへ |
+| `utc_now()` | tz-awareな現在のUTC「今」 |
+| `naive_utc(dt)` | DBのnaiveカラムと比較・保存するためのUTC naive値 |
+| `parse_utc(value)` | datetime・epoch・ISO文字列 → UTC-awareな瞬間(オフセットなしはUTC) |
+| `resolve_tz(where) → (tzinfo, source)` | **単一の解決チェーン**(下記)。出どころも返す |
+| `tz_of(where)` | `resolve_tz`のtzinfoのみ |
+| `to_tz(value, where)` | 瞬間 → `where`の時計のaware datetime |
 | `iso_utc(dt)` | API直列化の標準 — 常に`+00:00`のISO文字列 |
-| `resolve_tz(entity=None, *, user=None) → (tzinfo, source)` | **単一の解決チェーン**(下記) |
-| `system_tz()` / `system_tz_name()` | 農場全体の既定tz(Misc) |
-| `current_user_tz()` | リクエストしたユーザー個人のtz(なければシステム)。個人向け表示専用 |
-| `wall_to_utc(wall, tz)` | 壁時計 + アンカーtz → UTC-aware(予約の保存、DSTも正確) |
-| `utc_to_wall(dt, tz)` | UTC → アンカーtzの壁時計(予約の表示) |
+| `iso_at(value, where)` | `where`の時計のオフセット付きISO文字列(人・AI向け) |
+| `wall_to_utc(wall, where)` | `where`の時計として読んだ壁時計 → UTC-aware(予約の保存、DSTも正確) |
+| `today_at(where)` | `where`の時計での今日の日付 |
+
+`where`は場所ID・行(デバイス・図形・施設・区画・地図)・IANAのtz名・`FARM`・`VIEWER`・`None`です。
+`FARM`は農場全体の時計(Miscのtz)で、場所を持たないログ・監査・エクスポートに使います。`VIEWER`はリクエスト
+したユーザー個人のtz(なければ農場の時計)で、個人向け表示専用です。`where`を解決できなければ農場の時計、
+それも解決できないときだけUTCです。
 
 ### `resolve_tz`の優先順位チェーン
 
@@ -159,18 +165,20 @@ entity=None:
 
 | 文脈 | 時計 | 方法 |
 |---|---|---|
-| 運用(スケジューラ・デバイスログ・「いつ発火したか」) | **デバイスtz** + ラベル | フロント側の`AoTTz.formatDevice(iso, deviceTz)` |
-| 個人(ユーザー通知・「あなたが今行ったこと」) | **閲覧者/ユーザーtz** | `AoTTz.formatViewer(iso)` |
+| 運用(スケジューラ・デバイスログ・「いつ発火したか」) | **デバイスtz** + ラベル | フロント側の`AoTTz.formatAt(iso, deviceTz)` |
+| 個人(ユーザー通知・「あなたが今行ったこと」) | **閲覧者/ユーザーtz** | `AoTTz.formatAt(iso, AoTTz.viewerTz())` |
 | 複数のtzが重なるカレンダーの軸 | **閲覧者tz** | FullCalendarの`timeZone:'local'` |
 
 - サーバーAPIは**UTCのISO**(`iso_utc`)だけを返し、表示用のtzはクライアント側の
   `AoTTz`が選びます。
 - フロント側の単一ユーティリティ: `aot/aot_flask/static/js/common/aot-tz.js`
   (`window.AoTTz`)。
-  - `formatDevice(iso, tz)` — デバイスのローカル
-  - `formatViewer(iso)` — 閲覧者(個人tzを優先 → ブラウザ → システム)
-  - `wallToInstant(wall, tz)` — 壁時計をtzの時計として解釈し、絶対的な瞬間を返す(二重
+  - `formatAt(iso, tz)` — `tz`の時計で表示(tzなしは農場の時計)
+  - `parseUtc(value)` — ISO・epoch → `Date`(オフセットなしはUTC)
+  - `wallToUtc(wall, tz)` — 壁時計をtzの時計として解釈し、絶対的な瞬間を返す(二重
     時計用)
+  - `todayAt(tz)` / `placeToday(placeId)` — その時計での今日の日付。`tzOf(placeId)`はサーバーに場所のtzを問い合わせる
+  - `viewerTz()` / `farmTz()` — 閲覧者の時計 / 農場の時計
   - 閲覧者tzは`<meta name="aot-user-tz">`(User.timezone) > ブラウザtz >
     `aot-fallback-tz`(システム)の順で決まります。
 
@@ -219,15 +227,16 @@ Site (GeoShape)      → tzの権威。明示的なoverride | centroidを1回だ
 | やりたいこと | 使うもの |
 |---|---|
 | 「今」(UTC) | `timekit.utc_now()` |
-| 保存されたnaive/awareなdatetimeをUTCへ正規化 | `timekit.ensure_utc(dt)` |
+| 保存されたnaive/awareな値をUTCの瞬間へ正規化 | `timekit.parse_utc(value)`(DBのnaiveカラムは`timekit.naive_utc(dt)`) |
 | API応答に時刻を直列化 | `timekit.iso_utc(dt)` → フロント側の`AoTTz` |
-| あるエンティティのタイムゾーンを知る | `timekit.resolve_tz(entity)`(または`device_tz.get_device_tz`) |
-| 位置IDからローカルのタイムゾーンを得る | `device_tz.resolve_location_tz(target_id)` |
-| 予約の壁時計 → 保存 | `timekit.wall_to_utc(wall, anchor_tz)` |
-| 予約のUTC → 表示 | `timekit.utc_to_wall(dt, tz)` または `to_tz` |
-| 個人向け表示tz(リクエスト時) | `timekit.current_user_tz()` |
-| フロントでデバイスの時刻を表示 | `AoTTz.formatDevice(iso, deviceTz)` |
-| フロントで自分の時刻を表示 | `AoTTz.formatViewer(iso)` |
+| エンティティ・場所のタイムゾーンを知る | `timekit.tz_of(行または場所ID)`(出どころも: `timekit.resolve_tz(where)`) |
+| 農場の時計 / 閲覧者の時計 | `timekit.tz_of(FARM)` / `timekit.tz_of(VIEWER)` |
+| 予約の壁時計 → 保存 | `timekit.wall_to_utc(wall, where)` |
+| 予約のUTC → 表示 | `timekit.to_tz(dt, where)` |
+| 人・AI向けのISO(場所の時計) | `timekit.iso_at(value, where)` |
+| 場所の今日の日付 | `timekit.today_at(where)` |
+| フロントでデバイスの時刻を表示 | `AoTTz.formatAt(iso, deviceTz)` |
+| フロントで自分の時刻を表示 | `AoTTz.formatAt(iso, AoTTz.viewerTz())` |
 
 ---
 
@@ -238,13 +247,10 @@ Site (GeoShape)      → tzの権威。明示的なoverride | centroidを1回だ
 - **壁時計の解釈はアンカーtzで行う。** ユーザーのブラウザtzやシステムtzで解釈すると、
   別のtzのデバイスではずれてしまいます。予約は`wall_to_utc(wall, device_anchor)`を
   使います。
-- **`get_user_tz()`は実際にはシステムtzです。** 名前とは裏腹に個人のtzではありません
-  (壁時計の解釈・daemonとの互換性のためのものです)。個人向け表示には
-  `current_user_tz()`を使います。
-- **`serialize_ts()`はシステムtzでサーバー側に変換します。** デバイスに関する表示には
-  使わず、`iso_utc` + `AoTTz`を使ってください。(スケジューラの`_serialize_job`にある
-  `decided_at`/`executed_at`/`created_at`は監査用のメタ情報であるため、まだ
-  `serialize_ts`が残っています — 既知の軽微なギャップです。)
+- **古い入口は削除されました**(`get_user_tz`・`serialize_ts`・`get_device_tz`・`resolve_location_tz`・
+  `location_iso`・`tz_utils`など)。農場の時計は`tz_of(FARM)`、閲覧者の時計は`tz_of(VIEWER)`、`where`の
+  時計のISOは`iso_at(value, where)`を使います。デバイスに関する表示をサーバー側で農場の時計から作らず、
+  `iso_utc` + `AoTTz`を使ってください。
 - **`datetime.now()`(システムのローカル)を「UTCのnow」として使わないこと。** Docker
   上ではたまたま一致しますが、非UTCのホストではずれます。`utc_now()`を使ってください。
   (ただし、経過時間の計測やoffsetの計算を目的とした`datetime.now()`は意図的なもので、
@@ -257,7 +263,10 @@ Site (GeoShape)      → tzの権威。明示的なoverride | centroidを1回だ
 
 ## 12. 関連ファイル
 
-- バックエンドの単一の入口: `aot/utils/timekit.py`
+- バックエンドの単一の入口: `aot/utils/timekit.py`(古い`tz_utils.py`モジュールは存在しません)
+- ガード: `aot/scripts/check_time_rules.py` — 基準線は0(違反を許容しない)。構造上変えられない箇所だけを
+  `EXCEPTIONS`表に(ファイル、規則、行内の文字断片、1行の理由)として載せます。理由がない例外や、該当する違反が
+  ない死んだ例外はガードが失敗させます。1行だけの例外は行末の`# tz-ok: 理由`。pre-commitとCIで動きます。
 - 座標→tz・位置の解決: `aot/utils/device_tz.py`
 - 図形のtz/継承/境界: `aot/databases/models/geo.py`、`aot/aot_flask/geo/geo_overlays.py`
 - 座標→tzの自動物質化リスナー: `aot/databases/device_tz_listeners.py`

@@ -8,14 +8,12 @@ that require them.  The extensions themselves are configured at run
 time when the application factory in aot_flask initializes them
 and adds it's configuration to them.
 """
-from flask import app
-from flask_sqlalchemy import SQLAlchemy
-from flask_marshmallow import Marshmallow  # must be imported after SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 
-db = SQLAlchemy()
-ma = Marshmallow(app)
+# db·ma 의 정본은 aot.databases.sqla (아키텍처 4a) — 같은 객체를 다시 내보낸다.
+from aot.databases.sqla import db, ma  # noqa: E402,F401
+
 csrf = CSRFProtect()
 cache = Cache(config={
     'CACHE_TYPE': 'FileSystemCache',  # Shared across gunicorn workers

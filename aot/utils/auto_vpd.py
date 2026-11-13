@@ -124,7 +124,7 @@ def _inject(unique_id, measurements_dict):
     from aot.config import AOT_DB_PATH
     from aot.databases.models import DeviceMeasurements
     from aot.databases.utils import session_scope
-    from aot.functions.utils.env_control.psychro import leaf_vpd
+    from aot.utils.psychro import leaf_vpd
     from aot.inputs.sensorutils import convert_from_x_to_y_unit
 
     with session_scope(AOT_DB_PATH) as session:

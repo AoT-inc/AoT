@@ -13,6 +13,7 @@ import json
 import click
 from datetime import datetime, timezone
 from flask.cli import with_appcontext
+from aot.utils.timekit import utc_now
 
 
 def _has_migration_columns(db):
@@ -122,7 +123,7 @@ def migrate_maps_command(dry_run, map_uuid):
                     {
                         'feat': json.dumps(new_feat),
                         'orig': json.dumps(feat),
-                        'mig_at': datetime.now(timezone.utc).isoformat(),
+                        'mig_at': utc_now().isoformat(),
                         'mig_from': result.from_version,
                         'id': shape.id
                     }
@@ -185,7 +186,7 @@ def _migrate_equipment_bundle(shape, dry_run, prefix, has_cols, db):
                 {
                     'feat': json.dumps(result.data),
                     'orig': json.dumps(bundle),
-                    'mig_at': datetime.now(timezone.utc).isoformat(),
+                    'mig_at': utc_now().isoformat(),
                     'mig_from': result.from_version,
                     'id': shape.id
                 }

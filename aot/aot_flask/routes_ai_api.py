@@ -21,7 +21,10 @@ import json
 import logging
 import time
 from datetime import datetime
-from aot.utils.time_utils import utc_now, serialize_ts
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import iso_at, FARM
+from aot.utils.timekit import naive_utc
+from aot.utils.timekit import parse_utc
 
 logger = logging.getLogger(__name__)
 
@@ -841,7 +844,7 @@ def ai_portal_chat_history():
                 'content': h.goal if h.message_type == 'user' else h.insight,
                 'actions': _actionable(h),
                 'execution_result': h.execution_result,
-                'timestamp': serialize_ts(h.timestamp),
+                'timestamp': iso_at(h.timestamp, FARM),
                 'status': h.status
             } for h in history]
         })
@@ -875,7 +878,7 @@ def ai_portal_chat_history():
             'threads': [{
                 'thread_id': t['thread_id'],
                 'title': t['title'],
-                'timestamp': serialize_ts(t['timestamp'])
+                'timestamp': iso_at(t['timestamp'], FARM)
             } for t in sorted_threads[:50]]
         })
 
@@ -894,7 +897,7 @@ def ai_snapshot_latest():
     
     return jsonify({
         'unique_id': summary.unique_id,
-        'timestamp': serialize_ts(summary.timestamp),
+        'timestamp': iso_at(summary.timestamp, FARM),
         'summary_text': summary.summary_text,
         'scope': {'type': summary.scope_type, 'id': summary.scope_id},
         'version': summary.version,
@@ -916,7 +919,7 @@ def ai_snapshot_history():
     return jsonify({
         'history': [{
             'unique_id': s.unique_id,
-            'timestamp': serialize_ts(s.timestamp),
+            'timestamp': iso_at(s.timestamp, FARM),
             'summary_text': s.summary_text,
             'version': s.version,
             'anomaly_detected': s.anomaly_detected,
@@ -1151,7 +1154,7 @@ def ai_list_errors():
                 'status': f.status,
                 'incorrect_response': f.incorrect_response[:200],
                 'user_correction': f.user_correction,
-                'reported_at': serialize_ts(f.reported_at),
+                'reported_at': iso_at(f.reported_at, FARM),
                 'correction_applied': f.correction_applied
             }
             for f in feedbacks
@@ -1230,7 +1233,7 @@ def get_device_timeline():
             'groups': [],
             'items': [],
             'metadata': {
-                'generated_at': serialize_ts(utc_now()),
+                'generated_at': iso_at(utc_now(), FARM),
                 'hours': hours,
                 'device_count': len(devices)
             }
@@ -1259,8 +1262,8 @@ def get_device_timeline():
                     timeline_data['items'].append({
                         'id': f'schedule_{schedule.id}',
                         'group': device.unique_id,
-                        'start': serialize_ts(schedule.schedule_time),
-                        'end': serialize_ts(schedule.end_time) if schedule.end_time else None,
+                        'start': iso_at(schedule.schedule_time, FARM),
+                        'end': iso_at(schedule.end_time, FARM) if schedule.end_time else None,
                         'content': _('Scheduled'),  # 화면에 그대로 나가는 글자라 번역한다
                         'className': 'status-scheduled',
                         'type': 'range'
@@ -1304,7 +1307,7 @@ def get_proposed_jobs():
             'id': job.id,
             'action_type': job.action_type,
             'target_id': job.target_id,
-            'schedule_time': serialize_ts(job.schedule_time),
+            'schedule_time': iso_at(job.schedule_time, FARM),
             'state': job.state,
             'reasoning': job.reasoning,
             'is_editable': job.is_editable,
@@ -1402,7 +1405,7 @@ def update_scheduler_job(job_id):
         return jsonify({'error': denial}), 403
     if 'schedule_time' in data: 
         try:
-            job.schedule_time = datetime.fromisoformat(data['schedule_time'].replace('Z', '+00:00'))
+            job.schedule_time = naive_utc(parse_utc(data['schedule_time']))
         except ValueError:
             return jsonify({'error': 'Invalid date format'}), 400
             
@@ -1579,7 +1582,7 @@ def list_glossary_aliases():
                 'is_active': r.is_active,
                 'source': r.source,
                 'status': r.status,
-                'created_at': serialize_ts(r.created_at),
+                'created_at': iso_at(r.created_at, FARM),
             }
             for r in rows
         ]
@@ -1906,7 +1909,7 @@ def _review_advice(advice_id, status):
 
     row.status = status
     row.reviewed_by = getattr(flask_login.current_user, 'unique_id', None)
-    row.reviewed_at = datetime.utcnow()
+    row.reviewed_at = naive_utc(utc_now())
     row.review_note = (request.json or {}).get('note', '') if request.is_json else ''
     row.save()
     return jsonify({'status': 'success', 'advice_id': advice_id, 'new_status': status}), 200

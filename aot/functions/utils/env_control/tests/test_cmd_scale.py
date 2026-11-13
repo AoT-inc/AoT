@@ -38,7 +38,7 @@ import inspect
 
 import pytest
 
-from aot.aot_flask.geo.facility_wind import (
+from aot.space.facility_wind import (
     WIND_BIAS_FULL_MS, WIND_BIAS_MIN_MS, wind_biased_opening,
 )
 from aot.functions.utils.env_control.coordinator import finalize_command

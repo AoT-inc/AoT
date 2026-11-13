@@ -21,6 +21,7 @@ import logging
 import math
 from datetime import datetime
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +223,7 @@ def distance_m(polygon_geojson: Mapping, lng: float, lat: float) -> Optional[flo
 
 def channel_kinds(measurement: str, unit: str, name: str = '', medium: str = '') -> List[str]:
     """채널 하나가 어느 트윈 입력이 될 수 있나(후보 거르기용, 좁게). 결정은 사용자가 한다."""
-    from aot.aot_flask.geo.weather_state import classify_field_measurement
+    from aot.space.weather_state import classify_field_measurement
     m = (measurement or '').lower()
     u = (unit or '').lower()
     hay = (m + ' ' + (name or '')).lower()
@@ -352,7 +353,7 @@ def read(scope: str, target_id: str) -> Tuple[Optional[bool], Dict]:
 def site_forecast_choice(site_id: str) -> Optional[str]:
     """대지 예보 출처 지정 중 트윈 탭 예보 칸에 보일 입력 — 첫 일별 입력(트윈 일 격자의 주 출처), 없으면 첫 지정."""
     try:
-        from aot.aot_flask.geo import forecast_series as fs
+        from aot.space import forecast_series as fs
         ids = fs.designated_ids(site_id)
         _hourly, daily = fs.split_kinds(ids)
         return daily[0][0] if daily else (ids[0] if ids else None)
@@ -364,7 +365,7 @@ def site_forecast_choice(site_id: str) -> Optional[str]:
 def set_site_forecast_choice(site_id: str, input_id: Optional[str]) -> None:
     """트윈 탭 예보 칸 저장 → 대지 예보 출처 지정. 고른 입력이 같은 종류(시간별·일별)의 지정을 대신하고, 다른 종류
     지정은 그대로 둔다(예: 시간별 입력 + 트윈이 고른 일별 입력). None 이면 일별 지정만 뺀다."""
-    from aot.aot_flask.geo import device_binding, forecast_series as fs
+    from aot.space import device_binding, forecast_series as fs
     ids = fs.designated_ids(site_id)
     if input_id and input_id in ids:
         return                    # 이미 지정돼 있다 — 순서(시간별 → 일별)를 흔들지 않는다(예전 화면이 칸을 그대로 되보낼 때)
@@ -407,7 +408,7 @@ def save(scope: str, target_id: str, enabled=None, config: Optional[Mapping] = N
             merged = {k: v for k, v in merged.items() if k != 'forecast'}
         row.set_config(merged)
     else:
-        row.updated_at = datetime.utcnow()
+        row.updated_at = naive_utc(utc_now())
     db.session.commit()
     return row
 
@@ -551,7 +552,7 @@ def stored_unit(dm, conversions: Optional[Mapping] = None) -> str:
 
 def channels(device_ids: Optional[Iterable[str]] = None) -> List[Dict[str, object]]:
     """고를 수 있는 채널 전부(또는 주어진 장치만) — 트윈 입력 후보 종류(`kinds`)를 붙여서."""
-    from aot.aot_flask.geo.device_membership import channel_medium
+    from aot.space.device_membership import channel_medium
     from aot.databases.models import DeviceMeasurements
     q = DeviceMeasurements.query
     if device_ids is not None:
@@ -622,6 +623,7 @@ def forecast_inputs(lat: Optional[float] = None, lng: Optional[float] = None) ->
     어느 제공자인지는 보지 않는다. 같은 메타를 밝힌 새 입력 모듈은 코드 변경 없이 후보가 된다.
     """
     from aot.databases.models import Input
+    from aot.utils.timekit import resolve_coords
     info = _input_info()
     mods = {k for k, v in (info or {}).items()
             if any(isinstance(m, Mapping) and m.get('forecast_lead_d') is not None
@@ -631,8 +633,11 @@ def forecast_inputs(lat: Optional[float] = None, lng: Optional[float] = None) ->
     out = []
     for r in Input.query.filter(Input.device.in_(mods)).all():
         d = None
-        if lat is not None and lng is not None and r.latitude is not None and r.longitude is not None:
-            d = _haversine_km(lat, lng, r.latitude, r.longitude)
+        # 좌표는 배치에서 푼다(L4 S3c) — 장치 행에 위치 컬럼이 없다. 마커가 있으면
+        # 그 지점, 없으면 대지/농장 상속(또는 없음).
+        rlat, rlng, _src = resolve_coords(r)
+        if lat is not None and lng is not None and rlat is not None and rlng is not None:
+            d = _haversine_km(lat, lng, rlat, rlng)
         out.append({'input': r.unique_id, 'name': r.name or r.unique_id, 'module': r.device,
                     'active': bool(r.is_activated), 'distance_km': None if d is None else round(d, 1)})
     out.sort(key=lambda x: (not x['active'], x['distance_km'] is None, x['distance_km'] or 0.0, x['name']))
@@ -665,8 +670,14 @@ def forecast_module_label(module: str, info=None) -> str:
     return str(v.get('input_name_short') or v.get('input_name') or module)
 
 
-def create_forecast_input(lat: float, lng: float, name: str = '', activate: bool = True) -> str:
+def create_forecast_input(lat: float, lng: float, name: str = '', activate: bool = True,
+                          map_uuid: str = None) -> str:
     """좌표에 예보 입력을 만든다 — 지도·설정 화면에서 입력을 추가하는 것과 같은 결과(기본값·채널·활성화).
+
+    좌표는 **배치(마커)로 둔다** — 장치는 더 이상 위치 컬럼을 들지 않는다(L4 S3c).
+    `map_uuid` 를 주면 그 지도에 마커를 놓아 바인딩을 만든다(수동으로 지도에 찍는
+    것과 같은 경로). 지도를 모르면 배치 없이 만들고(리졸버가 대지/농장으로 상속),
+    사람이 나중에 설정 화면의 지도에서 찍는다.
 
     모듈은 `forecast_module()` 이 채널 메타로 고른다. 반환: 새 입력의 unique_id. 못 만들면 TwinConfigError.
     """
@@ -674,8 +685,7 @@ def create_forecast_input(lat: float, lng: float, name: str = '', activate: bool
     from aot.aot_flask.utils.utils_general import controller_activate_deactivate, custom_options_return_json
     from aot.aot_flask.utils.utils_input import check_input_channels_exist
     from aot.databases import set_uuid
-    from aot.databases.models import Input, Misc
-    from aot.utils.device_tz import apply_system_tz_fallback
+    from aot.databases.models import Input
 
     info = _input_info()
     mod = forecast_module(info)
@@ -695,10 +705,6 @@ def create_forecast_input(lat: float, lng: float, name: str = '', activate: bool
     new.name = (name or forecast_module_label(mod, info))[:64]
     max_pos = db.session.query(db.func.max(Input.position_y)).scalar()
     new.position_y = (max_pos or 0) + 1
-    new.latitude, new.longitude = lat, lng
-    misc = Misc.query.first()
-    if misc is not None:
-        apply_system_tz_fallback(new, misc.timezone)
     if spec.get('period'):
         new.period = spec['period']
     errs, opts = custom_options_return_json([], info, device=mod, use_defaults=True)
@@ -707,6 +713,17 @@ def create_forecast_input(lat: float, lng: float, name: str = '', activate: bool
     new.custom_options = opts
     new.unique_id = set_uuid()
     new.save()
+    # 좌표는 마커 배치로 둔다 — 장치 행에 위치 컬럼이 없다(L4 S3c). 지도를 알면
+    # 지금 놓고, 모르면 사람이 설정 화면 지도에서 찍는다(그때까지 대지/농장 상속).
+    if map_uuid:
+        try:
+            from aot.aot_flask.geo.device_placement import place_device
+            if place_device(new.unique_id, map_uuid, lat, lng,
+                            device_type='input', name=new.name, commit=True) is None:
+                logger.warning('트윈: 예보 입력 %s 를 지도 %s 에 배치하지 못했다',
+                               new.unique_id, map_uuid)
+        except Exception as exc:
+            logger.warning('트윈: 예보 입력 %s 마커 배치 실패: %s', new.unique_id, exc)
     msgs = check_input_channels_exist(info, mod, new.unique_id,
                                       {'success': [], 'info': [], 'warning': [], 'error': []})
     if msgs.get('error'):
@@ -741,7 +758,8 @@ def ensure_site_forecast(site_id: str, sites=None) -> Optional[str]:
                  replace=False)
         return None
     uid = create_forecast_input(create['lat'], create['lng'],
-                                '%s · %s' % ((site.name or 'Site'), create['label']))
+                                '%s · %s' % ((site.name or 'Site'), create['label']),
+                                map_uuid=_site_map_id(site_id))
     save('site', site_id, config={'forecast': {'input': uid, 'max_age_h': 36}}, replace=False)
     return uid
 
@@ -777,7 +795,7 @@ def _nearest_channels(geo_id, lat, lng, limit_m: float, max_devices: int = 25, w
 
     `weather_only` 면 기상 측정값(강수·일사 등, 지도의 기상원 추론과 같은 기준)을 내는 장치만 — 온실 안
     온습도계 같은 실내 센서를 기상대로 제안하지 않기 위해서다."""
-    from aot.aot_flask.geo.device_membership import load_markers
+    from aot.space.device_membership import load_markers
     if not geo_id or lat is None or lng is None:
         return []
     best: Dict[str, float] = {}
@@ -791,7 +809,7 @@ def _nearest_channels(geo_id, lat, lng, limit_m: float, max_devices: int = 25, w
     ids = sorted(best, key=lambda k: best[k])[:max_devices]
     rows = channels(ids)
     if weather_only:
-        from aot.aot_flask.geo.device_membership import WEATHER_MARKER_MEASUREMENTS
+        from aot.space.device_membership import WEATHER_MARKER_MEASUREMENTS
         wx = {c['unique_id'] for c in rows if c['measurement'] in WEATHER_MARKER_MEASUREMENTS}
         rows = [c for c in rows if c['unique_id'] in wx]
     out = []
@@ -847,7 +865,7 @@ def _site_weather(site) -> Tuple[Dict[str, List[Dict]], set]:
 
     if not sid.startswith('map:'):
         try:
-            from aot.aot_flask.geo.device_membership import device_ids_in_area, weather_device_ids
+            from aot.space.device_membership import device_ids_in_area, weather_device_ids
             ids, src = weather_device_ids(sid)
             why = 'weather_bound' if src == 'bound' else 'weather_inferred'
             for c in channels(ids):
@@ -924,8 +942,8 @@ def plot_suggestions(plot_id: str, radius_m: float = SENSOR_RADIUS_M,
     입력 종류마다 앞 단계에서 찾았으면 뒤 단계는 보지 않는다. 제안일 뿐 — 쓰려면 사용자가 적용한다.
 
     `markers` 는 지도 id → `load_markers` 결과 캐시(여러 구획을 연달아 볼 때 마커 조회를 한 번만)."""
-    from aot.aot_flask.geo.device_membership import load_markers
-    from aot.aot_flask.geo.plot_geometry import geometry_of
+    from aot.space.device_membership import load_markers
+    from aot.space.plot_geometry import geometry_of
     out: Dict[str, List[Dict]] = {k: [] for k in PLOT_INPUTS}
     pl = _plot_rows([plot_id]).get(plot_id)
     if pl is None:
@@ -950,7 +968,7 @@ def plot_suggestions(plot_id: str, radius_m: float = SENSOR_RADIUS_M,
         return out
     zone_ids: set = set()
     try:
-        from aot.aot_flask.geo.plot_context import sensors_for_plot
+        from aot.space.plot_context import sensors_for_plot
         zone_ids = set(sensors_for_plot(pl, markers=markers[pl.geo_id]).get('from_zone') or [])
     except Exception:
         logger.exception('트윈 제안: 구역 센서 찾기 실패 %s', plot_id)
@@ -1037,7 +1055,7 @@ def resolved_overrides(sites=None) -> Dict[str, Dict]:
         if 'effects' not in sopts:                          # 노지 출력 명단 — 머리말 effects_* 의 재료(저장하지 않는다)
             try:
                 from aot.utils.twin_effects_link import field_effects_options
-                roster = field_effects_options(s.site_id, scfg)
+                roster = field_effects_options(s.site_id, scfg, [p.unique_id for p in s.plots])
                 if roster:
                     sopts['effects'] = roster
             except Exception:
@@ -1237,7 +1255,7 @@ def site_view(site_id: str, sites=None, with_suggestions: bool = True) -> Option
 def _forecast_block(site_id: str) -> Dict[str, object]:
     """대지 예보 출처(기상원 지정 화면과 같은 목록·같은 저장) — 트윈 탭 예보 칸이 쓴다."""
     try:
-        from aot.aot_flask.geo import forecast_series
+        from aot.space import forecast_series
         return forecast_series.site_forecast_block(site_id)
     except Exception:
         logger.exception('트윈: 대지 %s 예보 출처 묶음 실패', site_id)

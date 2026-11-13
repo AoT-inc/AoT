@@ -73,11 +73,11 @@ Separate from all four, there is the **host OS clock**.
   `datetime.now(timezone.utc)`).
 - **A lot of legacy code still uses naive `datetime.utcnow()`.** This is not a bug —
   by project convention, **a naive datetime is assumed to be UTC**, and
-  `timekit.ensure_utc()` normalizes it by attaching `+00:00` at the point it's read.
+  `timekit.parse_utc()` (or `timekit.naive_utc()` for DB naive columns) normalizes it by attaching `+00:00` at the point it's read.
 - **Round-tripping through a SQLite column is also safe.** Storing an aware UTC value
   (`00:00+00:00`) into a naive `DateTime` column makes SQLite/SQLAlchemy strip only the
   tzinfo, keeping the value itself (UTC 00:00) intact. Reading it back gives a naive
-  `00:00`, which `ensure_utc` restores to `00:00+00:00`. **SQL filters**
+  `00:00`, which `parse_utc` restores to `00:00+00:00`. **SQL filters**
   (`schedule_time >= utc_now()`) are correct for the same reason — the tz is stripped
   at bind time, so the comparison ends up naive-UTC vs. naive-UTC.
 
@@ -91,21 +91,28 @@ Separate from all four, there is the **host OS clock**.
 
 ## 5. The single resolver — `aot/utils/timekit.py`
 
-Everything timezone-related converges on this module. Gates that used to be scattered
-around the codebase (`get_device_tz`, `get_user_tz`, `get_timezone_name`,
-`resolve_location_tz`, etc.) now delegate to it.
+Everything timezone-related converges on this module. The public entries are the ten
+functions below plus two markers; the old scattered gates (`get_device_tz`, `get_user_tz`,
+`serialize_ts`, `tz_utils`, etc.) were **deleted**, not kept as wrappers.
 
-| Function | Purpose |
+| Entry | Purpose |
 |---|---|
-| `utc_now()` / `now_utc()` | tz-aware current UTC "now" |
-| `ensure_utc(dt)` | Normalizes: naive assumed UTC, aware converted to UTC |
-| `to_tz(dt, tz)` | UTC (or naive=UTC) to a target tz |
+| `utc_now()` | tz-aware current UTC "now" |
+| `naive_utc(dt)` | UTC naive value for comparing with / storing in DB naive columns |
+| `parse_utc(value)` | datetime / epoch / ISO string → UTC-aware instant (no offset = UTC) |
+| `resolve_tz(where) → (tzinfo, source)` | **The single resolution chain** (below), with where it came from |
+| `tz_of(where)` | Just the tzinfo of `resolve_tz` |
+| `to_tz(value, where)` | An instant → aware datetime on the `where` clock |
 | `iso_utc(dt)` | The API serialization standard — always a `+00:00` ISO string |
-| `resolve_tz(entity=None, *, user=None) → (tzinfo, source)` | **The single resolution chain** (below) |
-| `system_tz()` / `system_tz_name()` | The farm-wide default tz (Misc) |
-| `current_user_tz()` | The requesting user's personal tz (system if unset). For personal display only |
-| `wall_to_utc(wall, tz)` | Wall-clock time + anchor tz → UTC-aware (schedule storage, DST-correct) |
-| `utc_to_wall(dt, tz)` | UTC → wall-clock time in the anchor tz (schedule display) |
+| `iso_at(value, where)` | ISO string with the `where` clock's offset (for people / AI) |
+| `wall_to_utc(wall, where)` | Wall-clock time read on the `where` clock → UTC-aware (schedule storage, DST-correct) |
+| `today_at(where)` | Today's date on the `where` clock |
+
+`where` is a place id, a row (device, shape, facility, plot, map), an IANA tz name,
+`FARM`, `VIEWER` or `None`. `FARM` is the farm-wide clock (Misc tz) — for logs, audit and
+exports that belong to no place. `VIEWER` is the requesting user's personal tz (falls back
+to the farm clock) — for personal display only. If `where` can't be resolved the farm
+clock is used, and only if that fails too, UTC.
 
 ### `resolve_tz` priority chain
 
@@ -170,18 +177,20 @@ Context determines the tz. **The server never bakes in a specific tz.**
 
 | Context | Clock | Method |
 |---|---|---|
-| Operations (scheduler, device logs, "when did it fire") | **Device tz** + label | Frontend `AoTTz.formatDevice(iso, deviceTz)` |
-| Personal (user notifications, "what you just did") | **Viewer/user tz** | `AoTTz.formatViewer(iso)` |
+| Operations (scheduler, device logs, "when did it fire") | **Device tz** + label | Frontend `AoTTz.formatAt(iso, deviceTz)` |
+| Personal (user notifications, "what you just did") | **Viewer/user tz** | `AoTTz.formatAt(iso, AoTTz.viewerTz())` |
 | A calendar axis spanning multiple tz's | **Viewer tz** | FullCalendar `timeZone:'local'` |
 
 - The server API only ever returns **UTC ISO** (`iso_utc`); the display tz is chosen
   client-side by `AoTTz`.
 - The single frontend utility is `aot/aot_flask/static/js/common/aot-tz.js`
   (`window.AoTTz`).
-  - `formatDevice(iso, tz)` — device local time
-  - `formatViewer(iso)` — viewer (personal tz first, then browser, then system)
-  - `wallToInstant(wall, tz)` — interprets a wall-clock value against a tz and returns
+  - `formatAt(iso, tz)` — display on the `tz` clock (no tz = the farm clock)
+  - `parseUtc(value)` — any ISO / epoch value → `Date` (no offset = UTC)
+  - `wallToUtc(wall, tz)` — interprets a wall-clock value against a tz and returns
     the absolute instant (used for the dual clock)
+  - `todayAt(tz)` / `placeToday(placeId)` — today's date on that clock; `tzOf(placeId)` asks the server for a place's tz
+  - `viewerTz()` / `farmTz()` — the viewer's clock / the farm clock
   - The viewer tz is resolved as `<meta name="aot-user-tz">` (User.timezone) >
     browser tz > `aot-fallback-tz` (system).
 
@@ -230,15 +239,16 @@ An operational group doesn't split just because it straddles a boundary.
 | What you want | What to use |
 |---|---|
 | "Now" (UTC) | `timekit.utc_now()` |
-| Normalize a stored naive/aware datetime to UTC | `timekit.ensure_utc(dt)` |
+| Normalize a stored naive/aware value to a UTC instant | `timekit.parse_utc(value)` (DB naive column: `timekit.naive_utc(dt)`) |
 | Serialize a timestamp for an API response | `timekit.iso_utc(dt)` → frontend `AoTTz` |
-| Find an entity's timezone | `timekit.resolve_tz(entity)` (or `device_tz.get_device_tz`) |
-| Get the local timezone from a location id | `device_tz.resolve_location_tz(target_id)` |
-| Schedule wall-clock time → storage | `timekit.wall_to_utc(wall, anchor_tz)` |
-| Schedule UTC → display | `timekit.utc_to_wall(dt, tz)` or `to_tz` |
-| Personal display tz (per request) | `timekit.current_user_tz()` |
-| Show a device's time in the frontend | `AoTTz.formatDevice(iso, deviceTz)` |
-| Show my own time in the frontend | `AoTTz.formatViewer(iso)` |
+| Find the timezone of an entity or place | `timekit.tz_of(row_or_place_id)` (with its source: `timekit.resolve_tz(where)`) |
+| Farm clock / viewer's clock | `timekit.tz_of(FARM)` / `timekit.tz_of(VIEWER)` |
+| Schedule wall-clock time → storage | `timekit.wall_to_utc(wall, where)` |
+| Schedule UTC → display | `timekit.to_tz(dt, where)` |
+| ISO string for people / AI on a place's clock | `timekit.iso_at(value, where)` |
+| Today's date at a place | `timekit.today_at(where)` |
+| Show a device's time in the frontend | `AoTTz.formatAt(iso, deviceTz)` |
+| Show my own time in the frontend | `AoTTz.formatAt(iso, AoTTz.viewerTz())` |
 
 ---
 
@@ -249,13 +259,11 @@ An operational group doesn't split just because it straddles a boundary.
 - **Interpret wall-clock values against the anchor tz.** Using the user's browser tz
   or the system tz instead breaks for devices in a different tz. Schedules use
   `wall_to_utc(wall, device_anchor)`.
-- **`get_user_tz()` is actually the system tz**, despite its name — it is not the
-  personal tz (it exists for wall-clock interpretation and daemon compatibility). Use
-  `current_user_tz()` for personal display.
-- **`serialize_ts()` converts on the server using the system tz.** Don't use it for
-  anything device-related — use `iso_utc` + `AoTTz` instead. (The scheduler's
-  `_serialize_job` still uses `serialize_ts` for its `decided_at`/`executed_at`/
-  `created_at` audit metadata — a known, minor gap.)
+- **The old entries are deleted** (`get_user_tz`, `serialize_ts`, `get_device_tz`,
+  `resolve_location_tz`, `location_iso`, `tz_utils`, …). Use `tz_of(FARM)` for the farm
+  clock, `tz_of(VIEWER)` for the viewer's clock, and `iso_at(value, where)` for an ISO
+  string on the `where` clock. Don't build a server-side display from the farm clock for
+  something that belongs to a device — use `iso_utc` + `AoTTz`.
 - **Don't treat `datetime.now()` (system local) as "UTC now."** It happens to match
   inside Docker, but drifts on a non-UTC host. Use `utc_now()` instead. (A
   `datetime.now()` used for elapsed-time measurement or offset calculation is
@@ -268,7 +276,12 @@ An operational group doesn't split just because it straddles a boundary.
 
 ## 12. Related files
 
-- Backend single entry point: `aot/utils/timekit.py`
+- Backend single entry point: `aot/utils/timekit.py` (the old `tz_utils.py` module no longer exists)
+- Guard: `aot/scripts/check_time_rules.py` — the baseline is empty (0 violations allowed).
+  Only places that structurally can't change go in its `EXCEPTIONS` table as
+  (file, rule, text fragment on the line, one-line reason); an entry without a reason, or
+  one that matches no violation (dead exception), fails the guard. A one-off line
+  exception is a trailing `# tz-ok: reason`. Runs in pre-commit and CI.
 - Coordinate-to-tz / location resolution: `aot/utils/device_tz.py`
 - Shape tz / inheritance / boundaries: `aot/databases/models/geo.py`,
   `aot/aot_flask/geo/geo_overlays.py`

@@ -181,7 +181,7 @@ def _channel_of_measurement(measurement_id: str) -> Optional[Dict[str, object]]:
 def suggestions(facility_uuid: str, site=None) -> Dict[str, List[Dict]]:
     """칸마다 제안 — ① 시설 안·밖 센서(시설 편집에서 고른 것) ② 없는 외기 칸은 대지 기상 채널.
     장치 상태(`controls`)는 시설에 묶인 장치 목록만 `actuators` 로 알린다(상태 채널은 직접 고른다)."""
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
+    from aot.space.facility_integration import get_facility_integration
     out: Dict[str, List[Dict]] = {k: [] for k in INPUT_KEYS}
     integ, err = get_facility_integration(facility_uuid)
     if err or not integ:
@@ -205,7 +205,7 @@ def suggestions(facility_uuid: str, site=None) -> Dict[str, List[Dict]]:
     sid = getattr(site, 'site_id', '') or ''
     if missing and sid and not sid.startswith('map:'):
         try:
-            from aot.aot_flask.geo.device_membership import weather_device_ids
+            from aot.space.device_membership import weather_device_ids
             ids, _src = weather_device_ids(sid)
             for c in TC.channels(ids):
                 key = SITE_WEATHER_KEY.get(c['measurement'])

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import math
 import os
 
 import sqlalchemy
@@ -18,6 +19,34 @@ from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.utils.conditional import save_conditional_code
 
 logger = logging.getLogger(__name__)
+
+
+def check_conditional_timing(period, start_offset, refractory_period=None):
+    """주기·시작 지연·불응기 입력을 검사해 오류 문장 목록을 돌려준다.
+
+    주기가 0 이하이거나 비어 있으면 데몬의 주기 계산이 제자리를 돌거나 실패해
+    조건문이 조용히 멈춘다. 숫자로 읽을 수 없는 값(폼은 Decimal)도 걸러낸다.
+    """
+    errors = []
+
+    def _num(value):
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            return None
+        return num if math.isfinite(num) else None
+
+    period_num = _num(period)
+    if period_num is None or period_num <= 0:
+        errors.append("주기(초)는 0보다 큰 숫자여야 합니다.")
+    start_num = _num(start_offset)
+    if start_num is None or start_num < 0:
+        errors.append("시작 지연(초)은 0 이상의 숫자여야 합니다.")
+    if refractory_period not in (None, ''):
+        refractory_num = _num(refractory_period)
+        if refractory_num is None or refractory_num < 0:
+            errors.append("불응기(초)는 0 이상의 숫자여야 합니다.")
+    return errors
 
 
 def conditional_mod(form):
@@ -45,6 +74,13 @@ def conditional_mod(form):
 
     cmd_status = None
     pylint_message = ""
+
+    # 시간 입력은 아무것도 바꾸기 전에 검사한다 — 주기 0 이하면 데몬이 멈춘다.
+    timing_errors = check_conditional_timing(
+        form.period.data, form.start_offset.data, form.refractory_period.data)
+    if timing_errors:
+        messages["error"].extend(timing_errors)
+        return messages
 
     try:
         if not current_app.config['TESTING']:
@@ -170,7 +206,7 @@ def conditional_del(cond_id):
             # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
             # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
             # 정리하지 않아 고아 도형을 만들었다.
-            from aot.aot_flask.geo.device_binding import end_all_for_device
+            from aot.space.device_binding import end_all_for_device
             end_all_for_device(cond_id)
             delete_entry_with_id(Conditional, cond_id, flash_message=False)
 

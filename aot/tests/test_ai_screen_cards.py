@@ -209,6 +209,37 @@ class PostTest(_Base):
         self.assertEqual(self._cards(), [])
         self.assertEqual(self._commands(), [])
 
+    def test_ambiguity_error_says_how_to_retry_and_lists_only_ai_on_screens(self):
+        # B2(2026-11-07): 화면 미지정 post 59건 실패 → 같은 호출에 screen 만 더해 재호출. 꺼진 화면을 후보로 주면
+        # 모델이 그것을 골라 또 실패한다. 오류는 켜진 화면만, 같은 호출을 다시 부르라는 말과 함께 낸다.
+        self._screen('kon1' + 'a' * 16)
+        self._screen('kon2' + 'b' * 16, ua=_WIN_CHROME)
+        self._screen('koff' + 'c' * 16, allowed=False)
+        out = self._post()
+        self.assertEqual(out['status'], 'error', out)
+        self.assertIn('Repeat the same call with `screen`', out['error'])
+        self.assertIn('kon1' + 'a' * 8, out['error'])
+        self.assertIn('kon2' + 'b' * 8, out['error'])
+        self.assertNotIn('koff', out['error'])
+        self.assertNotIn('Tell the user', out['error'])     # 사용자에게 먼저 되묻게 하지 않는다
+        # 꺼진 화면을 지정하면 그 사실과 켜진 후보를 준다.
+        bad = self._post({'screen': 'koff' + 'c' * 16, 'message': 'x'})
+        self.assertEqual(bad['status'], 'error')
+        self.assertIn('AI control is off', bad['error'])
+        self.assertIn('kon1' + 'a' * 8, bad['error'])
+        self.assertNotIn('koff', bad['error'].split('one of')[-1])
+
+    def test_navigate_outcome_tells_the_ai_not_to_reread_the_screen(self):
+        # B3(2026-11-07): "Wait, then read again" 가 get_screen 재확인을 불렀다. 이동은 끝났다고 말한다.
+        from aot.tools.aot_data_tool_service import AoTDataToolService as S
+        for action in ('navigate', 'reload'):
+            row = {'status': 'done', 'action': action, 'user_id': 'u', 'browser_key': 'k',
+                   'args': json.dumps({'describe': 'x'}), 'result': json.dumps({'message': 'ok'})}
+            out = S._screen_action_outcome(row)
+            self.assertEqual('success', out['status'])
+            self.assertIn('Do not call get_screen to confirm', out['note'])
+            self.assertNotIn('read again', out['note'])
+
     def test_hidden_screen_is_open_and_still_gets_it_but_away_does_not(self):
         self._screen('khid' + 'a' * 16, visible=False)
         out = self._post()
@@ -224,6 +255,25 @@ class PostTest(_Base):
         self.assertNotIn('confirm_token', out)
         bad = self._post({'screen': 'zzz', 'message': 'second card'})
         self.assertEqual(bad['status'], 'error')
+
+    def test_single_viewing_screen_wins_over_background_open(self):
+        # 지정이 없고 화면이 둘 이상이어도, 지금 '보는 중' 화면이 하나면 배경의
+        # '열림' 화면을 제치고 거기로 간다(읽기 경로와 같은 규칙) — 여러 기기·탭을
+        # 켜 둔 흔한 상황에서 값 조회 카드가 조용히 사라지지 않게.
+        self._screen('kvw' + 'a' * 17)                                 # 보는 중(iPhone)
+        self._screen('kop' + 'b' * 17, ua=_WIN_CHROME, visible=False)  # 열림(배경)
+        out = self._post()
+        self.assertEqual(out['status'], 'posted', out)
+        self.assertEqual(out['shown_on'], ['iPhone · Safari'])
+        self.assertEqual({c['browser_key'] for c in self._commands()},
+                         {'kvw' + 'a' * 17})
+        # 보는 중이 둘이면 여전히 되묻는다.
+        _wipe_presence()
+        self._screen('kv1' + 'a' * 17)
+        self._screen('kv2' + 'b' * 17, ua=_WIN_CHROME)
+        amb = self._post({'message': 'two viewing'})
+        self.assertEqual(amb['status'], 'error')
+        self.assertIn('Which screen should show the card', amb['error'])
 
     # 완료 기준 ③
     def test_all_off_is_refused_and_no_presence_saves_only(self):
@@ -524,7 +574,8 @@ class ServiceTest(_Base):
         item = self.C.to_item(c)
         self.assertEqual(set(item), {'id', 'title', 'message', 'source',
                                      'created_at', 'read', 'kind', 'pinned',
-                                     'note_id', 'notice_id', 'file', 'files'})  # P1·P2·P5 추가 칸
+                                     'note_id', 'notice_id', 'file', 'files',
+                                     'raised_at'})  # P1·P2·P5·P7-11 추가 칸
         self.assertTrue(item['created_at'].endswith('Z'))
         self.assertFalse(item['read'])
         self.assertEqual((item['kind'], item['pinned'], item['note_id'], item['file']),
@@ -591,7 +642,8 @@ class SyncAndApiTest(_Base):
         item = j['items'][0]
         self.assertEqual(set(item), {'id', 'title', 'message', 'source',
                                      'created_at', 'read', 'kind', 'pinned',
-                                     'note_id', 'notice_id', 'file', 'files'})
+                                     'note_id', 'notice_id', 'file', 'files',
+                                     'raised_at'})
         self.assertIs(j['can_notice'], True)       # P2 — 최상위 can_notice
         self.assertEqual((item['message'], item['source'], item['read']),
                          ('body 2', 'Bot', False))
@@ -683,6 +735,144 @@ class SyncAndApiTest(_Base):
                                 agent_id=_AGENT, role=None,
                                 scope_user_uuid=self.uid, transport='mcp_http')
         return json.loads(content[0]['text'])
+
+
+class RaiseTest(_Base):
+    """P7-11 — 예전 카드 끌어올리기: 사람의 [맨 위로](/raise)와 AI 의 다시 띄우기(post + card), 찾기(read + 글)."""
+
+    def setUp(self):
+        super().setUp()
+        from aot.utils import ai_screen_cards as C
+        self.C = C
+
+    def _mk(self, n, user=None):
+        from aot.aot_flask.extensions import db
+        out = []
+        base = self.C._now() - datetime.timedelta(hours=1)
+        for i in range(n):
+            c = self.C.create((user or self.user).id, 't%d' % i, 'body %d' % i, 'AI')
+            c.created_at = base + datetime.timedelta(minutes=i)   # 만든 순서가 시각에도 드러나게
+            out.append(c)
+        db.session.commit()
+        return out
+
+    def _titles(self, **kw):
+        return [c.title for c in self.C.list_cards(self.pk, **kw)[0]]
+
+    def test_a_raised_card_comes_first_and_paging_still_sees_every_card_once(self):
+        C = self.C
+        cards = self._mk(5)
+        self.assertEqual(self._titles(), ['t4', 't3', 't2', 't1', 't0'])
+        got = C.raise_card(self.pk, cards[1].unique_id)
+        self.assertIsNotNone(got.raised_at)
+        self.assertEqual(self._titles(), ['t1', 't4', 't3', 't2', 't0'])
+        # 쪽 나누기: 끌어올린 카드 뒤로 이어 받아도 빠지거나 겹치는 카드가 없다.
+        page1, more = C.list_cards(self.pk, limit=2)
+        self.assertTrue(more)
+        page2, _more = C.list_cards(self.pk, limit=10, before=page1[-1].unique_id)
+        self.assertEqual([c.title for c in page1 + page2], ['t1', 't4', 't3', 't2', 't0'])
+        page2, _more = C.list_cards(self.pk, limit=10, before=page1[0].unique_id)
+        self.assertEqual([c.title for c in page2], ['t4', 't3', 't2', 't0'])
+        self.assertEqual(C.to_item(got)['raised_at'], C.iso_z(got.raised_at))
+        self.assertIsNone(C.to_item(cards[0])['raised_at'])
+
+    def test_raising_extends_expiry_and_only_reopen_brings_a_dismissed_card_back(self):
+        from aot.aot_flask.extensions import db
+        C = self.C
+        cards = self._mk(2)
+        cards[0].expires_at = C._now() + datetime.timedelta(days=1)
+        db.session.commit()
+        C.raise_card(self.pk, cards[0].unique_id)
+        self.assertGreater(cards[0].expires_at, C._now() + datetime.timedelta(days=29))
+        self.assertTrue(C.dismiss(self.pk, cards[1].unique_id))
+        self.assertIsNone(C.raise_card(self.pk, cards[1].unique_id))        # 사람의 [맨 위로]는 보이는 카드만
+        self.assertIsNotNone(C.raise_card(self.pk, cards[1].unique_id, reopen=True))
+        self.assertEqual(self._titles(), ['t1', 't0'])
+        self.assertIsNone(C.raise_card(self.pk, self._mk(1, user=self.other)[0].unique_id, reopen=True))
+
+    def test_purge_keeps_a_raised_old_card_over_newer_ones(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models.ai_screen_card import AIScreenCard
+        C = self.C
+        oldest = self._mk(1)[0]
+        db.session.bulk_save_objects([AIScreenCard(
+            user_id=self.pk, expires_at=C._now() + datetime.timedelta(days=5),
+            created_at=C._now() - datetime.timedelta(minutes=30),
+            title='bulk%d' % i, body='b') for i in range(299)])
+        db.session.commit()
+        C.raise_card(self.pk, oldest.unique_id)
+        C.create(self.pk, 'newest', 'b', 'AI')
+        titles = [c.title for c in self._cards()]
+        self.assertEqual(len(titles), 300)
+        self.assertIn('t0', titles)              # 끌어올린 가장 오래된 카드는 남는다
+        self.assertIn('newest', titles)
+
+    def test_inbox_raise_api_is_mine_only_and_cookie_only(self):
+        cards = self._mk(3)
+        theirs = self._mk(1, user=self.other)[0]
+        self._login()
+        r = self.client.post('/api/v1/ai-inbox/%s/raise' % cards[0].unique_id)
+        self.assertEqual(r.status_code, 200, r.get_data(as_text=True))
+        self.assertTrue(r.get_json()['raised_at'].endswith('Z'))
+        items = self.client.get('/api/v1/ai-inbox').get_json()['items']
+        self.assertEqual([i['title'] for i in items], ['t0', 't2', 't1'])
+        self.assertEqual(self.client.post('/api/v1/ai-inbox/%s/raise' % theirs.unique_id).status_code, 404)
+        self.assertEqual(self.client.post('/api/v1/ai-inbox/%s/raise' % uuid.uuid4()).status_code, 404)
+
+    def test_ai_reshows_an_earlier_card_by_id_without_a_new_card(self):
+        key = 'kraise' + 'a' * 14
+        self._screen(key)
+        cards = self._mk(3)
+        self.C.mark_read(self.pk, cards[0].unique_id)
+        out = self._post({'message': '', 'item': cards[0].unique_id[:8]})
+        self.assertEqual(out['status'], 'raised', out)
+        self.assertEqual(out['card'], cards[0].unique_id[:8])
+        self.assertEqual(len(self._cards()), 3)                      # 새 카드가 아니다
+        self.assertEqual(self._titles()[0], 't0')
+        cmds = self._commands(key)
+        self.assertEqual(len(cmds), 1)
+        args = json.loads(cmds[0]['args'])
+        self.assertEqual((args['card'], args['title'], args['message'], args.get('raised')),
+                         (cards[0].unique_id, 't0', 'body 0', True))
+        self.assertNotIn('ignored', out)
+        # 닫은 카드도 AI 가 다시 띄우면 돌아온다(사용자가 찾아 달라고 한 카드다).
+        self.C.dismiss(self.pk, cards[1].unique_id)
+        self.assertEqual(self._post({'message': '', 'card': cards[1].unique_id})['status'], 'raised')
+        self.assertEqual(self._titles()[0], 't1')
+        # 없는 카드·남의 카드는 오류이고 아무것도 보내지 않는다.
+        theirs = self._mk(1, user=self.other)[0]
+        bad = self._post({'message': '', 'item': theirs.unique_id[:8]})
+        self.assertEqual(bad['status'], 'error')
+        self.assertEqual(len(self._commands(key)), 2)
+
+    def test_a_card_id_with_a_message_still_posts_a_new_card(self):
+        self._screen('kraise2' + 'a' * 13)
+        cards = self._mk(1)
+        out = self._post({'message': 'new text', 'item': cards[0].unique_id[:8]})
+        self.assertEqual(out['status'], 'posted', out)
+        self.assertEqual(out['ignored']['args'], ['item'])
+        self.assertEqual(len(self._cards()), 2)
+
+    def test_read_with_words_finds_cards_and_an_id_still_reads_one(self):
+        from aot.aot_flask.extensions import db
+        cards = self._mk(3)
+        cards[1].title, cards[1].body = '토마토 관수 계획', '아침 6시 20분'
+        db.session.commit()
+        found = self._post({'action': 'read', 'item': '관수 계획', 'message': None})
+        self.assertEqual(found['status'], 'ok', found)
+        self.assertEqual([c['title'] for c in found['cards']], ['토마토 관수 계획'])
+        self.assertEqual(found['query'], '관수 계획')
+        self.assertEqual(self._post({'action': 'read', 'item': '없는 말', 'message': None})['cards'], [])
+        one = self._post({'action': 'read', 'item': cards[1].unique_id[:8], 'message': None})
+        self.assertEqual(one['title'], '토마토 관수 계획')
+
+    def test_domain_screen_card_with_only_a_card_id_plans_a_raise(self):
+        from aot.tools.domain import dispatch
+        v = dispatch.plan('screen', {'op': 'card', 'card': 'abcd1234'})
+        self.assertEqual(('call', 'screen_action'), v[:2], v)
+        self.assertEqual(('post', 'abcd1234'), (v[2]['action'], v[2]['card']))
+        v = dispatch.plan('screen', {'op': 'act', 'action': 'read', 'card': '관수'})
+        self.assertEqual(('read', '관수'), (v[2]['action'], v[2]['card']), v)
 
 
 class SettingsTest(_Base):
@@ -781,10 +971,11 @@ class AutoCardTest(_Base):
         db.session.commit()
 
     def test_the_rule_is_in_the_instructions_by_default_and_follows_the_setting(self):
+        from aot.tools import tool_execution as te
         from aot.tools.tool_execution import _server_instructions
         from aot.utils import ai_screen_cards as cards
         self._set_auto(None)                                  # 옛 행(NULL)도 켬
-        self.assertIn(cards.AUTO_CARD_RULE, _server_instructions(None))
+        self.assertIn(te._legacy_card_words(cards.AUTO_CARD_RULE), _server_instructions(None))   # 옛 목록이면 action=post
         self._set_auto(True)
         self.assertIn('AI CARDS', _server_instructions(None))
         self._set_auto(False)
@@ -831,7 +1022,10 @@ class AutoCardTest(_Base):
         from aot.tools.domain.registry import find_op
         o = find_op(OPS, 'screen', 'card')
         self.assertIn('card', o.use)
-        self.assertEqual(o.required, ('message',))
+        # 2026-11-03 재설계 PR 2: message → text (옛 이름은 별칭). P7-11: card=<id> 만으로 예전 카드를 다시
+        # 띄우므로 text 는 명부 필수가 아니다 — 둘 다 없으면 안쪽(_screen_post)이 'message is required.' 로 거절한다.
+        self.assertEqual(o.required, ())
+        self.assertIn('card', o.extra_args)
         self.assertEqual(o.defaults_by_kind, {'none': {'action': 'post'}})
 
     def test_lookup_responses_carry_one_card_hint_per_conversation_window(self):
@@ -845,7 +1039,7 @@ class AutoCardTest(_Base):
             te._attach_card_hint(out, tool, key, 'u1')
             return out
         first = finish('list_plots')
-        self.assertEqual(cards.AUTO_CARD_HINT, first.get('card_hint'))
+        self.assertEqual(te._legacy_card_words(cards.AUTO_CARD_HINT), first.get('card_hint'))
         self.assertEqual(['card_hint', 'status'], list(first))                   # 맨 앞 — 끝에 두면 묻힌다(10-28)
         self.assertNotIn('card_hint', finish('list_plots'))                       # 같은 대화, 창 안
         self.assertNotIn('card_hint', finish('get_sensor_reading'))
@@ -867,7 +1061,7 @@ class AutoCardTest(_Base):
             for _ in range(3):
                 out = {'status': 'success'}
                 te._attach_card_hint(out, tool, 's-always', 'u1')
-                self.assertEqual(cards.AUTO_CARD_HINT, out.get('card_hint'), tool)
+                self.assertEqual(te._legacy_card_words(cards.AUTO_CARD_HINT), out.get('card_hint'), tool)
         for tool in ('get_system_update_status', 'get_storage_tier_status'):
             self.assertNotIn(tool, cards.card_hint_always_tools())
         self._set_auto(False)                                                       # 설정이 꺼지면 어느 쪽도 주지 않는다
@@ -876,6 +1070,7 @@ class AutoCardTest(_Base):
         self.assertNotIn('card_hint', out)
 
     def test_the_hint_reaches_a_real_tool_response_once(self):
+        from aot.tools import tool_execution as te
         from aot.tools.tool_execution import _execute_tool
         from aot.utils import ai_screen_cards as cards
         cards._card_hint_seen.clear()
@@ -886,7 +1081,7 @@ class AutoCardTest(_Base):
                                 scope_user_uuid=self.uid, transport='mcp_http', session_key='sess-hint')
             return json.loads(got[0]['text'])
         first, second = call(), call()
-        self.assertEqual(cards.AUTO_CARD_HINT, first.get('card_hint'), first)
+        self.assertEqual(te._legacy_card_words(cards.AUTO_CARD_HINT), first.get('card_hint'), first)
         self.assertNotIn('card_hint', second)
 
     def test_the_hint_is_off_when_the_auto_setting_is_off_and_names_the_card_op(self):
@@ -967,6 +1162,7 @@ class MigrationTest(unittest.TestCase):
     _P1 = 'p6_87_ai_card_files_20261019'
     _NAME = 'p6_88_ai_card_notice_20261019'
     _HEAD = 'p6_89_ai_card_attachments_20261021'
+    _RAISED = 'p7_11_ai_card_raised_at_20261109'     # 끌어올린 시각(raised_at)
 
     def _versions(self):
         here = os.path.dirname(os.path.abspath(__file__))
@@ -1022,12 +1218,15 @@ class MigrationTest(unittest.TestCase):
                 c.execute(sa.text('INSERT INTO misc (hide_tooltips) VALUES (0)'))
             base, p1 = self._load(self._BASE), self._load(self._P1)
             mod = self._load(self._NAME)
+            raised = self._load(self._RAISED)
             self._run(base, 'upgrade', engine)
             self._run(p1, 'upgrade', engine)
             self._run(mod, 'upgrade', engine)
+            self._run(raised, 'upgrade', engine)
             self._run(base, 'upgrade', engine)
             self._run(p1, 'upgrade', engine)
             self._run(mod, 'upgrade', engine)           # 재실행 안전
+            self._run(raised, 'upgrade', engine)
             insp = sa.inspect(engine)
             model_cols = {c.name: c for c in AIScreenCard.__table__.columns}
             mig_cols = {c['name']: c for c in insp.get_columns('ai_screen_cards')}
@@ -1041,6 +1240,12 @@ class MigrationTest(unittest.TestCase):
             with engine.begin() as c:
                 self.assertEqual(c.execute(sa.text(
                     'SELECT hide_ai_messages FROM misc')).scalar(), 0)
+            # p7_11 을 내리면 raised_at 만 빠진다.
+            self._run(raised, 'downgrade', engine)
+            self._run(raised, 'downgrade', engine)
+            cols = {c['name'] for c in sa.inspect(engine).get_columns('ai_screen_cards')}
+            self.assertNotIn('raised_at', cols)
+            self.assertIn('notice_id', cols)
             # p6_88 만 내리면 notice_id 만 빠지고 P1 칸은 남는다.
             self._run(mod, 'downgrade', engine)
             self._run(mod, 'downgrade', engine)

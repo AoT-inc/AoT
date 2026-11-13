@@ -277,17 +277,68 @@ def _conditional_lines(facts):
     return lines
 
 
+# ── PID ──────────────────────────────────────────────────────────────────────
+
+_PID_STATES = {
+    'running': lambda: _('Running'),
+    'paused': lambda: _('Paused'),
+    'held': lambda: _('Hold'),
+    'deactivated': lambda: _('Deactivated'),
+}
+
+
+def _pid_lines(facts):
+    builder = _PID_STATES.get(facts.get('state'))
+    state = builder() if builder else str(facts.get('state') or '')
+    lines = [_('PID: %(state)s') % {'state': state}]
+
+    period = _seconds(facts.get('period_s'))
+    if period:
+        lines.append(_('Period: %(period)s') % {'period': period})
+
+    # 조회 순간의 시각이 아니라 마지막 실행이 언제였는지를 보인다 — 멈춘 PID 가
+    # 정상처럼 보이지 않게(마지막 실행이 주기보다 한참 전이면 그대로 드러난다).
+    age = facts.get('last_run_age_s')
+    when = _ago(age) if age is not None else None
+    if when:
+        lines.append(_('Last check: %(when)s') % {'when': when})
+    else:
+        lines.append(_('Not checked yet.'))
+
+    next_run = _seconds(facts.get('next_run_s'))
+    if next_run:
+        lines.append(_('Next check in: %(time)s') % {'time': next_run})
+
+    cv = facts.get('control_variable')
+    if isinstance(cv, dict):
+        lines.append(
+            _('Control variable: %(total)s = %(p)s (P), %(i)s (I), %(d)s (D)') % {
+                'total': f"{_num_or_zero(cv.get('total')):.4f}",
+                'p': f"{_num_or_zero(cv.get('p')):.4f}",
+                'i': f"{_num_or_zero(cv.get('i')):.4f}",
+                'd': f"{_num_or_zero(cv.get('d')):.4f}"})
+    return lines
+
+
+def _num_or_zero(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 _RENDERERS = {
     'env_coordinator': lambda facts, data: _env_coordinator_lines(facts),
     'sequence': _sequence_lines,
     'conditional': lambda facts, data: _conditional_lines(facts),
+    'pid': lambda facts, data: _pid_lines(facts),
 }
 
 
 def localize(data):
     """응답에 `status_facts` 가 있으면 그것으로 `string_status` 를 쓴다.
 
-    없으면 손대지 않는다 — PID·카메라·사용자가 직접 쓴 Conditional 상태 코드는
+    없으면 손대지 않는다 — 카메라·사용자가 직접 쓴 Conditional 상태 코드는
     자기 `string_status` 를 이미 들고 오고, 그것은 이 모듈의 어휘가 아니다.
     """
     if not isinstance(data, dict):

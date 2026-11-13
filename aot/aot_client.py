@@ -68,7 +68,12 @@ def daemon_call_failed(ret):
 
 class DaemonControl:
     """Communicate with the daemon to execute commands or retrieve information."""
+    # 상한(cap) -> (RPC 시간 제한, 만료 monotonic). 프로세스(gunicorn 워커)마다 따로 있다.
+    # ⚠ 만료가 없던 시절에는 설정 화면에서 `rpyc_timeout` 을 바꿔도 이 워커는 재시작 전까지
+    #   옛 값을 썼고, 워커끼리 값이 달랐다(2026-11-11). 짧게라도 만료시키면 모든 워커가
+    #   한 TTL 안에 새 값으로 수렴한다 — 매 요청 DB 를 읽던 비용은 TTL 당 한 번으로 유지.
     _rpc_timeout_cache = {}
+    _RPC_TIMEOUT_CACHE_TTL = 60.0  # seconds
 
     # output_states_all TTL cache: (result, expires_at)
     _states_all_cache = (None, 0.0)
@@ -90,13 +95,17 @@ class DaemonControl:
         try:
             if pyro_timeout:
                 self.pyro_timeout = min(pyro_timeout, cap)
-            elif cap in DaemonControl._rpc_timeout_cache:
-                self.pyro_timeout = DaemonControl._rpc_timeout_cache[cap]
             else:
-                misc = db_retrieve_table_daemon(Misc, entry='first')
-                if misc:
-                    self.pyro_timeout = min(misc.rpyc_timeout, cap)
-                    DaemonControl._rpc_timeout_cache[cap] = self.pyro_timeout
+                cached = DaemonControl._rpc_timeout_cache.get(cap)
+                if cached is not None and time.monotonic() < cached[1]:
+                    self.pyro_timeout = cached[0]
+                else:
+                    misc = db_retrieve_table_daemon(Misc, entry='first')
+                    if misc:
+                        self.pyro_timeout = min(misc.rpyc_timeout, cap)
+                        DaemonControl._rpc_timeout_cache[cap] = (
+                            self.pyro_timeout,
+                            time.monotonic() + DaemonControl._RPC_TIMEOUT_CACHE_TTL)
         except Exception:
             logger.exception("Could not access SQL table to determine Pyro Timeout. Using 8 seconds.")
 
@@ -203,6 +212,36 @@ class DaemonControl:
     def trigger_all_actions(self, function_id, message='', debug=False):
         return self.proxy().trigger_all_actions(
             function_id, message=message, debug=debug)
+
+    #
+    # Camera driver (VIGI 등) — Open API 는 데몬만 다룬다
+    #
+
+    def camera_driver_call(self, op, camera_id, arg=None):
+        try:
+            return self.proxy(timeout=60).camera_driver_call(op, camera_id, arg)
+        except Exception as err:
+            return {'ok': False, 'state': 'daemon_unreachable', 'reason': type(err).__name__}
+
+    def camera_scan_start(self, subnet):
+        """네트워크 검색 시작(설계 §8). 반환 {'ok','scan_id'} 또는 {'ok':False,'code',...}."""
+        try:
+            return self.proxy(timeout=15).camera_scan_start(subnet)
+        except Exception as err:
+            return {'ok': False, 'code': 'daemon_unreachable', 'reason': type(err).__name__}
+
+    def camera_scan_result(self, scan_id):
+        try:
+            return self.proxy(timeout=15).camera_scan_result(scan_id)
+        except Exception as err:
+            return {'ok': False, 'code': 'daemon_unreachable', 'reason': type(err).__name__}
+
+    def camera_control_call(self, op, camera_id, arg=None):
+        """PTZ·프리셋·주야·경보 등 카메라를 움직이는 호출(스코프 판정은 호출한 뷰가 먼저 한다)."""
+        try:
+            return self.proxy(timeout=15).camera_control_call(op, camera_id, arg)
+        except Exception as err:
+            return {'ok': False, 'state': 'daemon_unreachable', 'reason': type(err).__name__}
 
     #
     # Input Controller
@@ -468,8 +507,41 @@ class DaemonControl:
     # Functions
     #
 
+    # function_status 의 **전송 실패** 캐시: function_id -> (예외 클래스, 인자, 만료 monotonic).
+    # 함수 상태 위젯은 5~30초마다 이것을 부른다. 데몬이 멈췄거나 느릴 때(타임아웃) 폴링마다
+    # RPC 를 다시 걸면 요청당 8~10초씩 웹 스레드를 붙잡는다(`output_states_all` 이 2026-08-07 에
+    # 겪은 것과 같다). 그래서 전송 실패는 짧게 기억했다가 같은 예외를 바로 돌려준다.
+    # ⚠ 함수별(id) 키다 — 한 함수의 상태 계산이 느려 시간 초과가 났다고 다른 함수의 정상
+    #   응답까지 막으면 안 된다. 데몬이 **응답한** `{'error': [...]}` 는 실패가 아니라 답이므로
+    #   캐시하지 않는다. 프로세스(워커)마다 따로 있다.
+    _function_status_fail = {}
+    _function_status_fail_lock = threading.Lock()
+    _FUNCTION_STATUS_FAIL_TTL = 4.0  # seconds
+
     def function_status(self, function_id):
-        return self.proxy().function_status(function_id)
+        with DaemonControl._function_status_fail_lock:
+            cached = DaemonControl._function_status_fail.get(function_id)
+            if cached is not None and time.monotonic() < cached[2]:
+                exc_class, exc_args, _ = cached
+                try:
+                    again = exc_class(*exc_args)
+                except TypeError:  # 인자를 받지 않는 예외 클래스
+                    again = Pyro5.errors.CommunicationError(*exc_args)
+                raise again
+        try:
+            result = self.proxy().function_status(function_id)
+        except (Pyro5.errors.TimeoutError, Pyro5.errors.CommunicationError) as err:
+            now = time.monotonic()
+            with DaemonControl._function_status_fail_lock:
+                fail = DaemonControl._function_status_fail
+                for key in [k for k, v in fail.items() if v[2] <= now]:
+                    del fail[key]
+                fail[function_id] = (
+                    err.__class__, err.args, now + DaemonControl._FUNCTION_STATUS_FAIL_TTL)
+            raise
+        with DaemonControl._function_status_fail_lock:
+            DaemonControl._function_status_fail.pop(function_id, None)
+        return result
 
     #
     # Miscellaneous

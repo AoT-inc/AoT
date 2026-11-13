@@ -67,7 +67,7 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
         db.session.add(GeoMap(unique_id='map-a', name='영양'))
 
         def shape(uid, typ, name, geom, device_id=None):
-            db.session.add(GeoShape(
+            db.session.add(bound_shape(
                 unique_id=uid, geo_id='map-a', type=typ, device_id=device_id,
                 feature={'type': 'Feature', 'properties': {'name': name},
                          'geometry': geom}))
@@ -116,7 +116,7 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         self.measure_args_seen = []
 
@@ -251,3 +251,4 @@ class TestZoneSummaryConvertedMeasurementLabel(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+from aot.tests.geo._legacy_marker import bound_shape

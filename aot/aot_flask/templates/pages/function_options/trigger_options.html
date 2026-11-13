@@ -13,10 +13,8 @@
         each_function.unique_id,
         form_trigger.latitude,
         form_trigger.longitude,
-        form_trigger.location_source,
         each_function.latitude,
         each_function.longitude,
-        each_function.location_source,
         'function_mod',
         'modal_config_' ~ each_function.unique_id,
         '280px',
@@ -77,6 +75,8 @@
         {% include 'pages/function_options/trigger_options/output_pwm.html' %}
         {% elif each_function.trigger_type == 'trigger_edge' %}
         {% include 'pages/function_options/trigger_options/edge.html' %}
+        {% elif each_function.trigger_type == 'trigger_camera_event' %}
+        {% include 'pages/function_options/trigger_options/camera_event.html' %}
         {% elif each_function.trigger_type == 'trigger_run_pwm_method' %}
         {% include 'pages/function_options/trigger_options/run_pwm_method.html' %}
         {% elif each_function.trigger_type == 'trigger_sunrise_sunset' %}

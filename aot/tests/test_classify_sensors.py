@@ -23,7 +23,7 @@ SITE2 = [[200, 0], [200, 100], [300, 100], [300, 0], [200, 0]]
 
 
 def _marker(uid, dev, x, y):
-    GeoShape(unique_id='mk-' + uid, geo_id='m1', type='aot_device',
+    bound_shape(unique_id='mk-' + uid, geo_id='m1', type='aot_device',
              device_id=dev, channel_id='0', feature=_point(x, y)).save()
 
 
@@ -74,8 +74,8 @@ class _ClsBase(_Base):
         _marker('s2', 's2-sensor', 250, 50)
 
     def _cls(self, ids, place_uid=None):
-        from aot.aot_flask.geo import shape_index
-        from aot.aot_flask.geo.device_membership import classify_sensors
+        from aot.space import shape_index
+        from aot.space.device_membership import classify_sensors
         shape_index.invalidate()       # 도형 색인은 프로세스 캐시다
         with mock.patch('aot.utils.inputs.model_input_drivers',
                         return_value=set()):
@@ -124,8 +124,8 @@ class TestClassifySensors(_ClsBase):
 
     def test_forecast_model_device_is_outdoor(self):
         from aot.databases.models import Input
-        from aot.aot_flask.geo import shape_index
-        from aot.aot_flask.geo.device_membership import classify_sensors
+        from aot.space import shape_index
+        from aot.space.device_membership import classify_sensors
         shape_index.invalidate()
         Input(unique_id='fc', name='SIM 기상대', device='OPEN_METEO').save()
         with mock.patch('aot.utils.inputs.model_input_drivers',
@@ -164,10 +164,10 @@ class TestClassifySensors(_ClsBase):
         self.assertIn('fitting_role=facility', p.conflict)
 
     def test_split_contract_is_unchanged(self):
-        from aot.aot_flask.geo.device_membership import place_members_split
+        from aot.space.device_membership import place_members_split
         _input('wx', '기상대', 'temperature', 'radiation')
         _marker('wx', 'wx', 55, 85)
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         sp = place_members_split('site')
         self.assertEqual(sp['outdoor'], {'wx'})
@@ -178,7 +178,7 @@ class TestClassifySensors(_ClsBase):
     def test_summary_items_carry_placement(self):
         from datetime import datetime, timezone
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         now = datetime.now(timezone.utc)
         with mock.patch('aot.utils.influx.read_influxdb_list',
@@ -201,7 +201,7 @@ class TestChannelMedium(unittest.TestCase):
                                channel=0, **base)
 
     def test_soil_by_name_or_measurement(self):
-        from aot.aot_flask.geo.device_membership import channel_medium
+        from aot.space.device_membership import channel_medium
         self.assertEqual(channel_medium(self._dm(name='토양 온도')), 'soil')
         self.assertEqual(channel_medium(self._dm(name='Soil temp')), 'soil')
         self.assertEqual(channel_medium(self._dm(name='地温')), 'soil')
@@ -244,3 +244,4 @@ class TestEnvIsolation(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+from aot.tests.geo._legacy_marker import bound_shape

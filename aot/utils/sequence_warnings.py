@@ -71,7 +71,8 @@ def sequence_schedule_day_warnings(trigger):
     flat = []
     for day_idx in range(7):
         try:
-            plan = SequenceTriggerController.plan_for_day(trigger.unique_id, day_idx)
+            plan = SequenceTriggerController.plan_for_day(
+                trigger.unique_id, day_idx, labels=False)
         except Exception as exc:
             logger.warning(f"[sequence_schedule_day_warnings] plan_for_day({day_idx}) failed: {exc}")
             continue

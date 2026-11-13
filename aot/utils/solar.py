@@ -31,7 +31,7 @@ from typing import Optional, Tuple
 
 import pytz
 
-from aot.utils.timekit import as_tz, ensure_utc, resolve_coords, system_tz, utc_now
+from aot.utils.timekit import FARM, parse_utc, resolve_coords, tz_of, utc_now, wall_to_utc
 
 logger = logging.getLogger(__name__)
 
@@ -124,10 +124,10 @@ def _tz_for(latitude: float, longitude: float) -> pytz.BaseTzInfo:
         from aot.utils.device_tz import resolve_tz_from_coords
         name = resolve_tz_from_coords(latitude, longitude)
         if name:
-            return as_tz(name)
+            return tz_of(name)
     except Exception:
         pass
-    return system_tz()
+    return tz_of(FARM)
 
 
 def sun_times(target_id=None, entity=None, date=None,
@@ -176,7 +176,7 @@ def _compute(lat: float, lon: float, tzinfo, date: date_cls) -> SunTimes:
                        ('solar_noon', noon), ('civil_dawn', dawn), ('civil_dusk', dusk)):
         try:
             # noon() 은 tzinfo 키워드를 받지만 극야/백야에도 항상 값이 있다.
-            values[name] = ensure_utc(func(observer, date, tzinfo=tzinfo))
+            values[name] = parse_utc(func(observer, date, tzinfo=tzinfo))
         except ValueError as exc:
             values[name] = None
             if name in ('sunrise', 'sunset') and status == STATUS_NORMAL:
@@ -211,7 +211,7 @@ def next_sun_event(kind: str, target_id=None, entity=None,
         logger.error("next_sun_event: 알 수 없는 이벤트 '%s'", kind)
         return None
 
-    now = ensure_utc(now) if now is not None else utc_now()
+    now = parse_utc(now) if now is not None else utc_now()
     lat, lon = _resolve_location(target_id, entity, latitude, longitude)
     if lat is None or lon is None:
         return None
@@ -250,7 +250,7 @@ def is_daytime(target_id=None, entity=None, at: Optional[datetime] = None,
     "일출 30분 후부터 주간", end_offset_minutes=-30 이면 "일몰 30분 전에 야간".
     백야는 항상 True, 극야는 항상 False.
     """
-    at = ensure_utc(at) if at is not None else utc_now()
+    at = parse_utc(at) if at is not None else utc_now()
     lat, lon = _resolve_location(target_id, entity, latitude, longitude)
     if lat is None or lon is None:
         return None
@@ -278,7 +278,7 @@ def sun_position(target_id=None, entity=None, at: Optional[datetime] = None,
     고도는 지평선 기준 각도(음수 = 지평선 아래), 방위각은 북=0 시계방향.
     차광·일소 게이트처럼 "해가 얼마나 높은가"가 필요한 곳에서 쓴다.
     """
-    at = ensure_utc(at) if at is not None else utc_now()
+    at = parse_utc(at) if at is not None else utc_now()
     lat, lon = _resolve_location(target_id, entity, latitude, longitude)
     if lat is None or lon is None:
         return None, None
@@ -322,8 +322,8 @@ def night_bands(start: datetime, end: datetime, target_id=None, entity=None,
     그래프 야간 음영이 쓴다. 구간 밖은 잘라내고, 극야는 그 날 전체를 밤으로,
     백야는 밤 없음으로 다룬다. 좌표를 못 구하면 빈 목록(음영 없이 그린다).
     """
-    start = ensure_utc(start)
-    end = ensure_utc(end)
+    start = parse_utc(start) if start is not None else None
+    end = parse_utc(end) if end is not None else None
     if start is None or end is None or end <= start:
         return []
 
@@ -346,13 +346,13 @@ def night_bands(start: datetime, end: datetime, target_id=None, entity=None,
 
         if times.status == STATUS_ALWAYS_NIGHT:
             if pending_sunset is None:
-                pending_sunset = ensure_utc(
-                    tzinfo.localize(datetime.combine(day, datetime.min.time())))
+                pending_sunset = wall_to_utc(
+                    datetime.combine(day, datetime.min.time()), tzinfo)
             continue
         if times.status == STATUS_ALWAYS_DAY:
             if pending_sunset is not None:
-                bands.append((pending_sunset, ensure_utc(
-                    tzinfo.localize(datetime.combine(day, datetime.min.time())))))
+                bands.append((pending_sunset, wall_to_utc(
+                    datetime.combine(day, datetime.min.time()), tzinfo)))
                 pending_sunset = None
             continue
 

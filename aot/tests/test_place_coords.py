@@ -106,7 +106,7 @@ class TestPlaceCoords(unittest.TestCase):
         with patch.object(S, 'get_weather_tool', return_value=w), \
                 patch('aot.utils.device_tz.resolve_location_coords',
                       side_effect=lambda i: coords.get(i, (None, None))), \
-                patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+                patch('aot.space.device_membership.weather_device_ids',
                       return_value=(['d1'], 'bound')):
             return S._overview_weather(shape)
 
@@ -136,15 +136,27 @@ class TestPlaceCoords(unittest.TestCase):
 
     def test_get_address_without_key_keeps_coords(self):
         s = self._svc()
-        with patch.object(s, '_get_vworld_credentials', return_value=(None, '')):
+        from aot.aot_flask.geo import geo_lookup
+        nokey = {'status': 'error', 'code': 'no_key', 'error': 'API Key Missing'}
+        with patch.object(geo_lookup, 'find_address', return_value=nokey):
             r = s.get_address(target_id='site-1')
         self.assertEqual(r['status'], 'partial')
         self.assertEqual(r['address'], 'unavailable')
+        self.assertEqual(r['reason'], 'no_key')
         self.assertAlmostEqual(r['lat'], 36.004, delta=0.01)
         self.assertIn('lng', r)
-        with patch.object(s, '_get_vworld_credentials', return_value=(None, '')):
+        with patch.object(geo_lookup, 'find_address', return_value=nokey):
             r2 = s.get_address(lat=37.5, lng=127.0)
         self.assertEqual((r2['lat'], r2['lng']), (37.5, 127.0))
+
+    def test_get_address_goes_through_gate(self):
+        s = self._svc()
+        from aot.aot_flask.geo import geo_lookup
+        ok = {'status': 'ok', 'provider': {'id': 'x', 'type': 'gis_osm'}, 'address': 'A St', 'type': 'road'}
+        with patch.object(geo_lookup, 'find_address', return_value=ok) as m:
+            r = s.get_address(lat=37.5, lng=127.0)
+        m.assert_called_once_with(37.5, 127.0, provider=None)
+        self.assertEqual((r['status'], r['address'], r['provider']), ('ok', 'A St', 'gis_osm'))
 
 
 if __name__ == '__main__':

@@ -33666,3 +33666,153 @@ msgstr "Nếu không có mưa"
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Ngang / dốc"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} ống được tính theo chiều ngang"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Ngang"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Chiều dài ống (toàn khu vực)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Chiều dài ống"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Đang tính địa hình. Chiều dài theo dốc sẽ hiện khi hoàn tất."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Một số đoạn được tính theo chiều dài ngang. Địa hình không bao phủ các đoạn đó."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Đã tính {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Ô {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Chiều dài theo thứ tự ngang / dốc."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Độ dốc {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Tính theo chiều dài ngang"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Lưu lượng {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Tổn thất {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Ngang {h} m, dốc {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Ngang {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Đoạn {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Các đoạn ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Ngang {h} m / Dốc {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Đang tính địa hình - chỉ hiển thị chiều dài ngang."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Chiều dài trên bản đồ là chiều ngang."
+
+msgid "Terrain input"
+msgstr "Dữ liệu địa hình"
+
+msgid "Compare another terrain"
+msgstr "So sánh địa hình khác"
+
+msgid "Could not compare. Try again."
+msgstr "Không so sánh được. Hãy thử lại."
+
+msgid "Changed sections ({n})"
+msgstr "Đoạn thay đổi ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Đang tải địa hình {name}. Kết quả so sánh sẽ hiện khi xong."
+
+msgid "Calculation level"
+msgstr "Mức tính toán"
+
+msgid "Switch to this terrain"
+msgstr "Chuyển sang địa hình này"
+
+msgid "That terrain input is gone."
+msgstr "Dữ liệu địa hình đó không còn nữa."
+
+msgid "Weakest nozzle flow"
+msgstr "Lưu lượng của vòi yếu nhất"
+
+msgid "Revert to {name}"
+msgstr "Quay lại {name}"
+
+msgid "Slant length total"
+msgstr "Tổng chiều dài nghiêng"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Dữ liệu địa hình này không có địa chỉ ô. Hãy kiểm tra cài đặt."
+
+msgid "Downloading took too long. Try again."
+msgstr "Tải quá lâu. Hãy thử lại."
+
+msgid "Terrain changed and recalculated"
+msgstr "Địa hình đã đổi và được tính lại"
+
+msgid "Compare with"
+msgstr "So sánh với"
+
+msgid "No terrain was on"
+msgstr "Trước đó không bật địa hình nào"
+
+msgid "Undo change"
+msgstr "Hoàn tác thay đổi"
+
+msgid "Try again"
+msgstr "Thử lại"
+
+msgid "This map has no pipes to compare."
+msgstr "Bản đồ này không có ống để so sánh."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Ống ngoài vùng phủ của địa hình"
+
+msgid "No terrain is on."
+msgstr "Không có địa hình nào đang bật."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Không đổi được địa hình. Hãy thử lại."

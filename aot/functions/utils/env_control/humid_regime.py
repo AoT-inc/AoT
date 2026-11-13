@@ -97,7 +97,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from . import psychro
+from aot.utils import psychro
 
 # 진입/이탈 문턱 — 들어가는 쪽이 낮고 나오는 쪽이 높다.
 ENTER_VPD_KPA = 0.30

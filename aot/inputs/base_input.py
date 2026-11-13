@@ -14,6 +14,7 @@ import logging
 from aot.controllers.abstract_base_controller import AbstractBaseController
 from aot.databases.models import Input
 from aot.utils.database import disabled_measurement_channels
+from aot.utils.timekit import naive_utc, utc_now
 
 
 class AbstractInput(AbstractBaseController):
@@ -36,9 +37,16 @@ class AbstractInput(AbstractBaseController):
         self.avg_max = {}
         self.avg_index = {}
         self.avg_meas = {}
-        self.latitude = getattr(input_dev, 'latitude', None)
-        self.longitude = getattr(input_dev, 'longitude', None)
-        self.location_source = getattr(input_dev, 'location_source', 'manual')
+        # [L2] 위치의 정본은 배치 — locate/resolve_coords 우선, 행 컬럼은 리졸버의
+        # 레거시 폴백 안에서만 읽힌다(배치가 없을 때 대지 기준 파생 포함).
+        self.latitude = self.longitude = None
+        try:
+            from aot.utils.timekit import resolve_coords
+            _lat, _lng, _src = resolve_coords(input_dev)
+            if _lat is not None and _lng is not None:
+                self.latitude, self.longitude = _lat, _lng
+        except Exception:
+            pass
         self.acquiring_measurement = False
         self.running = True
 
@@ -230,7 +238,7 @@ class AbstractInput(AbstractBaseController):
         if timestamp:
             self.return_dict[chan]['timestamp_utc'] = timestamp
         else:
-            self.return_dict[chan]['timestamp_utc'] = datetime.datetime.utcnow()
+            self.return_dict[chan]['timestamp_utc'] = naive_utc(utc_now())
 
     #
     # Accessory functions

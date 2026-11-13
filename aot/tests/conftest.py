@@ -39,6 +39,11 @@ os.environ.setdefault('ALEMBIC_RUNNING', '1')
 # (import 부작용을 피하려고 환경변수로 끈다. L0 를 시험하는 곳은 forecast_series.L0_READ 를 monkeypatch 로 켠다.)
 os.environ.setdefault('AOT_FC_L0_READ', '0')
 
+# 배경 작업 미루기(utils.resource_pressure.should_defer)를 기본으로 끈다 — 실제 기기 신호를
+# 읽으므로, 바쁜 CI 러너에서 보존 점검·보정 시험이 우연히 '미룸' 에 걸리지 않게.
+# 미루기를 시험하는 곳은 환경변수를 '1' 로 바꾸고 resource_pressure.current 를 바꿔 끼운다.
+os.environ.setdefault('AOT_RESOURCE_DEFER', '0')
+
 import pytest  # noqa: E402
 
 # aot.tools 는 aot.ai 를 직접 import 하지 않는다(tools-no-ai 가드) — 필요한 것은
@@ -78,6 +83,29 @@ def _cheap_gensalt(rounds=12, prefix=b'2b'):
 
 
 _bcrypt.gensalt = _cheap_gensalt
+
+
+@pytest.fixture(autouse=True)
+def _drain_water_terrain_executor():
+    """water_terrain 의 백그라운드 선계산(스레드 `water-terrain_0`)을 시험이 끝나면 비운다.
+
+    시험이 `schedule`/`on_geo_config_changed` 를 불러 놓고 기다리지 않으면 그 일이 다음 시험 도중
+    `get_geo_config` 를 불러 캐시·mock 호출 수를 흔든다(2026-11-10 NAS CI: geo 시험 3/3 실패)."""
+    yield
+    import sys
+    mod = sys.modules.get('aot.utils.water_terrain')
+    if mod is not None:
+        mod.wait_idle()
+
+
+@pytest.fixture(autouse=True)
+def _reset_auto_card_budget():
+    """서버 자동 카드의 분당 자리(`server_card._AUTO_SENT`)는 프로세스 메모리다 — 시험끼리 섞이지 않게 매번 비운다."""
+    import sys
+    mod = sys.modules.get('aot.tools.domain.server_card')
+    if mod is not None:
+        mod._AUTO_SENT.clear()
+    yield
 
 
 def pytest_configure(config):

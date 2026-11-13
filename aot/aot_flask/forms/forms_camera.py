@@ -110,7 +110,10 @@ class CameraAdd(FlaskForm):
         choices=[
             ('usb', lazy_gettext('USB Camera')),
             ('csi', lazy_gettext('Raspberry Pi CSI Camera')),
-            ('ip', lazy_gettext('IP Camera (ONVIF/RTSP)'))
+            ('ip', lazy_gettext('IP Camera (ONVIF/RTSP)')),
+            ('ip_snapshot', lazy_gettext('IP Camera - Snapshot (lightweight)')),
+            ('vigi', lazy_gettext('TP-Link VIGI')),
+            ('onvif', lazy_gettext('ONVIF Camera'))
         ],
         validators=[DataRequired()]
     )

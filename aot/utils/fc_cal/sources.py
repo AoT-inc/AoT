@@ -26,7 +26,7 @@ _SOL_NAMES = ('radiation', 'solar_radiation', 'shortwave_radiation', 'irradiance
 
 def classify_obs(measurement, unit='', name='', medium='air') -> Optional[str]:
     """현장 장치 채널 하나 → 보정 관측 변수('T'·'RH'·'WS'·'SOL'·'RAIN') 또는 None. 좁게 고른다."""
-    from aot.aot_flask.geo.weather_state import classify_field_measurement
+    from aot.space.weather_state import classify_field_measurement
     if medium == 'soil':
         return None
     m = (measurement or '').lower()
@@ -49,7 +49,7 @@ def classify_obs(measurement, unit='', name='', medium='air') -> Optional[str]:
 
 def standardize(key, value, unit, name='', driver=None):
     """측정값 → 보정 표준 단위(T °C · RH % · WS m/s · SOL W/m² · RAIN mm/h). 모르면 None."""
-    from aot.aot_flask.geo.weather_state import to_standard
+    from aot.space.weather_state import to_standard
     if value is None:
         return None
     u = (unit or '').strip().lower()
@@ -82,16 +82,16 @@ class InfluxSources:
 
     def has_forecast(self, site_id) -> bool:
         """대지에 예보 출처가 지정돼 있나(점검할 거리가 있나) — 싸게 판정한다."""
-        from aot.aot_flask.geo import forecast_series as fs
+        from aot.space import forecast_series as fs
         return bool(fs.designated_ids(site_id))
 
     def site_tz(self, site_id) -> str:
-        from aot.aot_flask.geo import forecast_series as fs
+        from aot.space import forecast_series as fs
         return fs._site_tz_name(site_id)
 
     def site_info(self, site_id) -> dict:
         """대지의 보정 맥락: 시간대·위치·예보 출처 입력(시간별·일별 각 하나)·관측 채널표."""
-        from aot.aot_flask.geo import forecast_series as fs
+        from aot.space import forecast_series as fs
         from aot.databases.models import GeoShape
         ids = fs.designated_ids(site_id)
         hourly_ids, daily = fs.split_kinds(ids)
@@ -105,8 +105,8 @@ class InfluxSources:
                 'obs': obs, 'obs_source': src}
 
     def _observation_specs(self, site_id) -> Tuple[Dict[str, dict], str]:
-        from aot.aot_flask.geo import device_membership
-        from aot.aot_flask.geo.weather_state import _effective_unit
+        from aot.space import device_membership
+        from aot.space.weather_state import _effective_unit
         from aot.databases.models import DeviceMeasurements
         from aot.utils.inputs import forecast_time_input_drivers, input_driver_of, model_input_drivers
         skip = set(forecast_time_input_drivers()) | set(model_input_drivers())
@@ -130,7 +130,7 @@ class InfluxSources:
 
     @staticmethod
     def _spec(row, key, driver):
-        from aot.aot_flask.geo.weather_state import _effective_unit
+        from aot.space.weather_state import _effective_unit
         from aot.databases.models import Conversion
         from aot.utils.system_pi import return_measurement_info
         conv = Conversion.query.filter_by(unique_id=row.conversion_id).first() if row.conversion_id else None

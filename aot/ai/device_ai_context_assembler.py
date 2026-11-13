@@ -9,6 +9,16 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 
 
+
+def _coords(row):
+    """장치 좌표 — 위치의 정본은 배치(locate); 행 컬럼을 직접 읽지 않는다."""
+    try:
+        from aot.utils.timekit import resolve_coords
+        lat, lng, _src = resolve_coords(row)
+        return lat, lng
+    except Exception:
+        return None, None
+
 class DeviceAIContextAssembler:
     """
     Assembles AI context data for different device types.
@@ -77,9 +87,8 @@ class DeviceAIContextAssembler:
                 "name": input_device.name,
                 "type": input_device.device,
                 "location": {
-                    "latitude": input_device.latitude,
-                    "longitude": input_device.longitude,
-                    "location_source": input_device.location_source
+                    "latitude": _coords(input_device)[0],
+                    "longitude": _coords(input_device)[1]
                 }
             },
             "device_metadata": {
@@ -102,9 +111,8 @@ class DeviceAIContextAssembler:
                 "name": output_device.name,
                 "type": output_device.output_type,
                 "location": {
-                    "latitude": output_device.latitude,
-                    "longitude": output_device.longitude,
-                    "location_source": output_device.location_source
+                    "latitude": _coords(output_device)[0],
+                    "longitude": _coords(output_device)[1]
                 }
             },
             "device_metadata": {
@@ -128,8 +136,7 @@ class DeviceAIContextAssembler:
                 "type": function_device.device,
                 "location": {
                     "latitude": getattr(function_device, 'latitude', None),
-                    "longitude": getattr(function_device, 'longitude', None),
-                    "location_source": getattr(function_device, 'location_source', None)
+                    "longitude": getattr(function_device, 'longitude', None)
                 }
             },
             "device_metadata": {

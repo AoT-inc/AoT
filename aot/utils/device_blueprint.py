@@ -40,7 +40,7 @@ custom_options 는 그 전에 채워지지만 save() 는 그 다음). 그래서 
 import json
 import logging
 
-from aot.aot_flask.utils.utils_general import custom_channel_options_return_json
+from aot.utils.module_hooks import custom_channel_options_return_json
 from aot.databases.models import (
     DeviceMeasurements, Input, InputChannel, Output, OutputChannel,
 )
@@ -495,7 +495,8 @@ def _member_models():
     global _MEMBER_MODELS_CACHE
     if _MEMBER_MODELS_CACHE is None:
         from aot.databases.models.controller import CustomController
-        _MEMBER_MODELS_CACHE = {'input': Input, 'output': Output, 'device': CustomController}
+        from aot.space.device_kind import models_for
+        _MEMBER_MODELS_CACHE = models_for(('input', 'output', 'device'))
     return _MEMBER_MODELS_CACHE
 
 

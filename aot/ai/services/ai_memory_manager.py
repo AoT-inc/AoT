@@ -24,6 +24,7 @@ import logging
 import threading
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ class AIMemoryManager:
             from aot.databases.models.ai_memory import AIUserSemanticMemory
             from aot.aot_flask.extensions import db
 
-            now = datetime.utcnow()
+            now = naive_utc(utc_now())
             total_written = 0
 
             for uid, records in targets.items():
@@ -256,7 +257,7 @@ class AIMemoryManager:
             record.value = new_value
             record.confidence = 1.0
             record.source = 'user_correction'
-            record.last_used_at = datetime.utcnow()
+            record.last_used_at = naive_utc(utc_now())
             record.save()
             logger.info(f"[AIMemoryManager] Corrected memory {memory_id} for user {user_id}.")
             return {'status': 'success', 'memory_id': memory_id, 'new_value': new_value}

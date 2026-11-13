@@ -106,7 +106,7 @@ def main():
 
     app, db = _app()
     with app.app_context():
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
 
         found = collect()
         if not found:

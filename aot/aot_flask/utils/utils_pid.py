@@ -76,9 +76,7 @@ def pid_mod(form_mod_pid_base,
     mod_pid.direction = form_mod_pid_base.direction.data
     mod_pid.period = form_mod_pid_base.period.data
     mod_pid.log_level_debug = form_mod_pid_base.log_level_debug.data
-    mod_pid.latitude = form_mod_pid_base.latitude.data if form_mod_pid_base.latitude.data not in [None, ''] else None
-    mod_pid.longitude = form_mod_pid_base.longitude.data if form_mod_pid_base.longitude.data not in [None, ''] else None
-    mod_pid.location_source = form_mod_pid_base.location_source.data
+    # [L2] 위치 필드는 저장하지 않는다 — 배치(지도)가 정본.
     mod_pid.start_offset = form_mod_pid_base.start_offset.data
     mod_pid.max_measure_age = form_mod_pid_base.max_measure_age.data
     mod_pid.setpoint = form_mod_pid_base.setpoint.data
@@ -371,7 +369,7 @@ def pid_del(pid_id):
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
         # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
         # 정리하지 않아 고아 도형을 만들었다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(pid_id)
         delete_entry_with_id(
             PID, pid_id, flash_message=False)

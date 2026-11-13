@@ -76,10 +76,11 @@ class _Base(unittest.TestCase):
         with app.app_context():
             db.create_all()
             admin = Role(name='Admin', edit_settings=True, view_settings=True, edit_controllers=True, edit_users=True)
-            viewer = Role(name='Monitor', view_settings=True)
-            db.session.add_all([admin, viewer])
+            viewer = Role(name='Monitor', view_settings=True, use_ai_chat=True)
+            guest = Role(name='Guest')
+            db.session.add_all([admin, viewer, guest])
             db.session.commit()
-            for name, role in (('boss', admin), ('watcher', viewer)):
+            for name, role in (('boss', admin), ('watcher', viewer), ('visitor', guest)):
                 user = User(name=name, role_id=role.id, is_enabled=True, is_approved=True)
                 user.set_password('x' * 12)
                 db.session.add(user)
@@ -88,6 +89,7 @@ class _Base(unittest.TestCase):
             db.session.commit()
             self.boss_id = User.query.filter_by(name='boss').first().id
             self.watcher_id = User.query.filter_by(name='watcher').first().id
+            self.visitor_id = User.query.filter_by(name='visitor').first().id
         self.client = app.test_client()
 
     def tearDown(self):
@@ -273,6 +275,18 @@ class TestAuthorize(_Base):
         self.assertNotIn('checked', control)
         read = html[html.index('value="aot.read"'):].split('>')[0]
         self.assertIn('checked', read)
+
+    def test_role_without_ai_chat_gets_no_consent_screen_and_no_code(self):
+        client_id = self._register()
+        visitor = self.app.test_client()
+        self._login(visitor, self.visitor_id)
+        response = visitor.get('/authorize', query_string=self._authorize_args(client_id))
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn('value="aot.read"', response.get_data(as_text=True))
+        posted = visitor.post('/authorize', data=dict(self._authorize_args(client_id),
+                                                      decision='allow', grant=['aot.read']))
+        self.assertEqual(posted.status_code, 403)
+        self.assertNotIn('Location', posted.headers)
 
     def test_bad_client_or_redirect_is_shown_not_redirected(self):
         client_id = self._register()

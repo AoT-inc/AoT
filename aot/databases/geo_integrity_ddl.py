@@ -36,7 +36,7 @@ VALID_SHAPE_TYPES = (
     'infra_blob', 'reference',
 )
 
-# map_overlay_id / map_config_id 를 가진 테이블 전부. 하나라도 빠지면 그
+# map_overlay_id 를 가진 장치 테이블 전부. 하나라도 빠지면 그
 # 테이블의 참조가 조용히 썩는다(2026-08-03: 이 목록을 안 보고 도형을 지워
 # 참조 11건이 끊겼다). "trigger"/"function" 은 SQL 예약어라 전부 인용한다.
 DEVICE_LINK_TABLES = (
@@ -73,19 +73,14 @@ for _when, _suffix in (('INSERT', 'ins'), ('UPDATE OF type', 'upd')):
     ]
 
 # I2 — 장치 위치 마커는 (지도, 장치, 채널)당 1개.
-# COALESCE 식 인덱스: channel_id 가 INSERT 경로에선 NULL, UPDATE 경로에선
-# '0' 으로 갈리는 비대칭(geo_overlays.py:379 vs :359)이 중복 마커를 만들어
-# 왔다. NULL 과 '0' 을 같은 키로 접어서 그 구멍을 봉쇄한다.
-# type='aot_device' 로 한정: 그려진 구역(type='device' 폴리곤)은 한 장치에
-# 여러 개가 정당하다(밸브 하나가 두 구역에 관수). 위치 점만 유일해야 하고,
-# S3 의 map_overlay_id 파생 전환이 정확히 이 유일성 위에 선다.
+# L4(p7_06) 이전에는 `geo_shape.device_id` 컬럼의 COALESCE 부분 유니크 인덱스였다.
+# 컬럼이 사라져 마커의 정체가 geo_binding 이 되었으므로, 같은 불변식을 바인딩에
+# 거는 트리거(`geo_itg_i2b_marker_*`, 아래 BINDING_STATEMENTS)로 옮겼다. 옛 인덱스는
+# 여기서 지우기만 한다(멱등 — 이미 없으면 무동작).
+# type='aot_device' 로 한정하는 취지는 그대로다: 그려진 구역(role='area')은 한 장치에
+# 여러 개가 정당하다(밸브 하나가 두 구역에 관수). 위치 점(role='marker')만 유일하다.
 TIER1_STATEMENTS += [
     _drop('geo_itg_i2_marker_unique', 'INDEX'),
-    """
-    CREATE UNIQUE INDEX geo_itg_i2_marker_unique
-    ON geo_shape (geo_id, device_id, COALESCE(channel_id, '0'))
-    WHERE device_id IS NOT NULL AND type = 'aot_device'
-    """,
 ]
 
 # I3 — 도형 삭제 → 시설·설정점·bay 연쇄 정리.
@@ -124,13 +119,10 @@ TIER1_STATEMENTS += [
     """.format(updates=_i4_updates),
 ]
 
-# I5 — 지도 삭제 → 도형·시설·설정점 정리 + 장치의 map_config_id/
-# map_overlay_id 해제. 도형 삭제 트리거 연쇄에 의존하지 않고 자체 완결로
+# I5 — 지도 삭제 → 도형·시설·설정점 정리 + 장치의 map_overlay_id 해제.
+# (장치의 map_config_id 해제 줄은 L3 에서 컬럼과 함께 뺐다 — alembic p7_04.)
+# 도형 삭제 트리거 연쇄에 의존하지 않고 자체 완결로
 # 처리한다(재귀 제한 회피 + geo_design.py:144 같은 무가드 경로도 커버).
-_i5_config_null = '\n'.join(
-    '        UPDATE "{t}" SET map_config_id = NULL '
-    'WHERE map_config_id = OLD.unique_id;'.format(t=t)
-    for t in DEVICE_LINK_TABLES)
 _i5_overlay_null = '\n'.join(
     '        UPDATE "{t}" SET map_overlay_id = NULL WHERE map_overlay_id IN '
     '(SELECT id FROM geo_shape WHERE geo_id = OLD.unique_id);'.format(t=t)
@@ -142,14 +134,13 @@ TIER1_STATEMENTS += [
     AFTER DELETE ON geo_map
     BEGIN
 {overlay_null}
-{config_null}
         DELETE FROM geo_facility_setpoint
          WHERE facility_uuid IN (SELECT unique_id FROM geo_facility
                                   WHERE geo_id = OLD.unique_id);
         DELETE FROM geo_facility WHERE geo_id = OLD.unique_id;
         DELETE FROM geo_shape WHERE geo_id = OLD.unique_id;
     END
-    """.format(overlay_null=_i5_overlay_null, config_null=_i5_config_null),
+    """.format(overlay_null=_i5_overlay_null),
 ]
 
 
@@ -390,6 +381,38 @@ for _when, _suffix in (('INSERT', 'ins'), ('UPDATE OF feature', 'upd')):
             SELECT RAISE(ABORT, 'GEO-GB5: feature JSON 에 device_id/channel_id 저장 금지 (geo_binding 이 정본, 읽기 시 주입)');
         END
         """.format(when=_when, suffix=_suffix),
+    ]
+
+
+# I2b — 마커는 (지도, 장치, 채널)당 1개: 바인딩 기준 재표현(L4).
+# 같은 지도의 **다른** 마커 도형에 같은 (장치, 채널)의 현재 마커 바인딩이 이미
+# 있으면 거부한다. 같은 슬롯의 교체(rebind)는 옛 행을 먼저 종료하므로 걸리지 않는다.
+_I2B_CONDITION = """
+NEW.spatial_kind = 'shape' AND NEW.role = 'marker' AND NEW.valid_to IS NULL
+AND EXISTS (
+  SELECT 1
+    FROM geo_binding b
+    JOIN geo_shape s2 ON s2.unique_id = b.spatial_id
+    JOIN geo_shape s1 ON s1.unique_id = NEW.spatial_id
+   WHERE b.spatial_kind = 'shape' AND b.role = 'marker'
+     AND b.valid_to IS NULL
+     AND b.device_id = NEW.device_id
+     AND b.channel_id = NEW.channel_id
+     AND b.spatial_id <> NEW.spatial_id
+     AND s2.geo_id = s1.geo_id
+     AND s2.type = 'aot_device')
+"""
+for _when, _suffix in (('INSERT', 'ins'), ('UPDATE', 'upd')):
+    BINDING_STATEMENTS += [
+        _drop('geo_itg_i2b_marker_%s' % _suffix),
+        """
+        CREATE TRIGGER geo_itg_i2b_marker_{suffix}
+        BEFORE {when} ON geo_binding
+        WHEN {cond}
+        BEGIN
+            SELECT RAISE(ABORT, 'GEO-I2: 같은 지도에 같은 장치·채널의 마커가 이미 있다');
+        END
+        """.format(when=_when, suffix=_suffix, cond=_I2B_CONDITION),
     ]
 
 

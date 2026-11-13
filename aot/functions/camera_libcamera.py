@@ -23,7 +23,6 @@
 #
 import os
 import time
-from datetime import datetime as dt
 
 from flask_babel import lazy_gettext
 
@@ -34,6 +33,7 @@ from aot.utils.camera_functions import get_camera_function_image_info
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import assure_path_exists, cmd_output
+from aot.utils.timekit import to_tz
 from aot.utils.lazy_text import lazy_format
 
 
@@ -515,8 +515,18 @@ class CustomModule(AbstractFunction):
         if not self.tl_active or self.timer_loop > time.time():
             return
 
+        try:
+            tl_period = float(self.tl_period_sec)
+        except (TypeError, ValueError):
+            tl_period = 0.0
+        if not tl_period > 0:
+            self.logger.error(
+                f"Timelapse period {self.tl_period_sec!r} is not positive; stopping timelapse.")
+            self.timelapse_stop()
+            return
+
         while self.timer_loop < time.time():
-            self.timer_loop += self.tl_period_sec
+            self.timer_loop += tl_period
         self.set_custom_option("timer_loop", self.timer_loop)
 
         if self.tl_pause:
@@ -535,7 +545,7 @@ class CustomModule(AbstractFunction):
         try:
             self.set_custom_options()
             now = time.time()
-            date = dt.fromtimestamp(now).strftime('%Y-%m-%d_%H-%M-%S')
+            date = self._place_time_str(now, '%Y-%m-%d_%H-%M-%S')
 
             camera_path = assure_path_exists(
                 os.path.join(PATH_CAMERAS, self.unique_id))
@@ -697,6 +707,20 @@ class CustomModule(AbstractFunction):
         if 'tl_duration_sec' not in args_dict or 'tl_period_sec' not in args_dict:
             self.logger.error("Invalid timelapse duration or period.")
             return
+        # 주기 0·음수·숫자 아님이면 loop() 의 `timer_loop += 주기` 가 끝나지 않아
+        # Function 스레드가 멈춘다. 시작 전에 막는다.
+        try:
+            tl_duration = float(args_dict['tl_duration_sec'])
+            tl_period = float(args_dict['tl_period_sec'])
+        except (TypeError, ValueError):
+            tl_duration = tl_period = 0.0
+        if not (0 < tl_duration < float('inf') and 0 < tl_period < float('inf')):
+            self.logger.error(
+                "Invalid timelapse duration or period (must be positive seconds): "
+                f"{args_dict['tl_duration_sec']!r}, {args_dict['tl_period_sec']!r}")
+            return
+        args_dict['tl_duration_sec'] = int(tl_duration) if tl_duration == int(tl_duration) else tl_duration
+        args_dict['tl_period_sec'] = int(tl_period) if tl_period == int(tl_period) else tl_period
         self.logger.debug(
             f"Timelapse started for {args_dict['tl_duration_sec']} seconds "
             f"at a period of {args_dict['tl_period_sec']} seconds.")
@@ -704,11 +728,10 @@ class CustomModule(AbstractFunction):
         self.tl_period_sec = self.set_custom_option("tl_period_sec", args_dict['tl_period_sec'])
         self.tl_capture_number = self.set_custom_option("tl_capture_number", 1)
         self.tl_start_epoch = self.set_custom_option("tl_start_epoch", now)
-        start_str = dt.fromtimestamp(
-            self.tl_start_epoch).strftime("%Y-%m-%d %H:%M:%S")
+        start_str = self._place_time_str(self.tl_start_epoch)
         self.tl_start_str = self.set_custom_option("tl_start_str", start_str)
-        end_str = dt.fromtimestamp(
-            self.tl_start_epoch + self.tl_duration_sec).strftime("%Y-%m-%d %H:%M:%S")
+        end_str = self._place_time_str(
+            self.tl_start_epoch + self.tl_duration_sec)
         self.tl_end_str = self.set_custom_option("tl_end_str", end_str)
         self.tl_pause = self.set_custom_option("tl_pause", False)
         self.tl_active = self.set_custom_option("tl_active", True)
@@ -743,6 +766,10 @@ class CustomModule(AbstractFunction):
         self.tl_active = self.set_custom_option("tl_active", False)
         return "Timelapse stopped."
 
+    def _place_time_str(self, epoch, fmt="%Y-%m-%d %H:%M:%S"):
+        """에포크 → 이 카메라가 걸린 장소의 시계로 `YYYY-MM-DD HH:MM:SS` (timekit)."""
+        return to_tz(float(epoch), self.unique_id).strftime(fmt)
+
     def function_status(self):
         now = time.time()
 
@@ -752,15 +779,22 @@ class CustomModule(AbstractFunction):
             else:
                 str_timelapse = f"Time-lapse Status: ACTIVE"
 
-            str_timelapse += f"<br>Start: {self.tl_start_str}" \
-                             f"<br>End: {self.tl_end_str}" \
+            # 시작·끝·다음 촬영은 서버(컨테이너) 시계가 아니라 카메라가 걸린 장소의 시계로
+            # 보여 준다. 저장된 `tl_start_str`/`tl_end_str` 은 파일 이름용으로 두고(바꾸면
+            # 이미 찍은 사진 이름과 어긋난다), 표시는 에포크에서 다시 만든다.
+            start_shown, end_shown = self.tl_start_str, self.tl_end_str
+            if self.tl_start_epoch:
+                start_shown = self._place_time_str(self.tl_start_epoch)
+                end_shown = self._place_time_str(self.tl_start_epoch + self.tl_duration_sec)
+
+            str_timelapse += f"<br>Start: {start_shown}" \
+                             f"<br>End: {end_shown}" \
                              f"<br>Duration (Seconds): {self.tl_duration_sec}" \
                              f"<br>Period (Seconds): {self.tl_period_sec}" \
                              f"<br>Next Capture Number: {self.tl_capture_number}"
 
             if not self.tl_pause:
-                next_capture_str = dt.fromtimestamp(
-                    self.timer_loop).strftime("%Y-%m-%d %H:%M:%S")
+                next_capture_str = self._place_time_str(self.timer_loop)
                 next_sec = ""
                 if self.timer_loop > now:
                     next_sec = f" ({self.timer_loop - now:.0f} seconds)"

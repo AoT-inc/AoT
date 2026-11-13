@@ -301,9 +301,11 @@ def calc_energy_usage(
 
     # 칸의 기본값은 시스템 시각으로 채운다(routes_page.page_energy_usage) —
     # 같은 시계로 해석한다. 예전 mktime 은 컨테이너 OS 시계로 읽었다.
-    from aot.utils.timekit import picker_wall_to_epoch
-    start_seconds = picker_wall_to_epoch(start_string)
-    end_seconds = picker_wall_to_epoch(end_string)
+    from aot.utils.timekit import FARM, wall_to_utc
+    start_seconds = int(wall_to_utc(
+        datetime.datetime.strptime(start_string.strip(), '%m/%d/%Y %H:%M'), FARM).timestamp())
+    end_seconds = int(wall_to_utc(
+        datetime.datetime.strptime(end_string.strip(), '%m/%d/%Y %H:%M'), FARM).timestamp())
 
     start_str = datetime.datetime.fromtimestamp(
         start_seconds, datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')

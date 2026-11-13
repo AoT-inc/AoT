@@ -15,8 +15,8 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
-from aot.utils.time_utils import utc_now
+from aot.databases.sqla import db
+from aot.utils.timekit import utc_now
 
 
 # ---------------------------------------------------------------------------

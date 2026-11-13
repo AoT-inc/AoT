@@ -13,7 +13,8 @@ from flask_babel import gettext
 
 from aot.config import INSTALL_DIRECTORY
 from aot.databases.models import SMTP, Role, User
-from aot.utils.time_utils import utc_now, to_local
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import to_tz, FARM
 from aot.aot_flask.extensions import db
 from aot.aot_flask.forms import forms_authentication
 from aot.utils.send_data import send_email
@@ -67,7 +68,7 @@ def forgot_password():
                     db.session.commit()
 
                 hostname = socket.gethostname()
-                now = to_local(utc_now())
+                now = to_tz(utc_now(), FARM)
 
                 if form_forgot_password.reset_method.data == 'email':
                     smtp = SMTP.query.first()

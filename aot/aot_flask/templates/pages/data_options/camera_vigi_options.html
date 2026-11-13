@@ -1,0 +1,111 @@
+{# TP-Link VIGI 설정 구획 0~4 (설계 §9.2). 상태 표시는 vigiRender()(camera.html)가 그린다. #}
+{% set uid = each_camera.unique_id %}
+{% set vs = vigi_status.get(uid, {}) if vigi_status else {} %}
+<div class="aot-vigi" data-vigi-uid="{{ uid }}">
+  <script type="application/json" id="vigi_init_{{ uid }}">{{ vs|tojson }}</script>
+
+  <div class="aot-modal-group-title">{{ _('Group') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Tab') }}</label>
+      <div class="aot-modal-option-control">
+        <select name="vigi_tab_id" class="form-control aot-modern-select">
+          <option value="" {% if not each_camera.tab_id %}selected{% endif %}>{{ _('None') }}</option>
+          {% for tab in (tabs or []) %}
+          <option value="{{ tab.unique_id }}" {% if tab.unique_id == each_camera.tab_id %}selected{% endif %}>{{ tab.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="aot-option-tip">{{ _('If no tab is chosen, everyone with permission can operate this camera.') }}</div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Connection') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('IP Address') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.ip_address(class_='form-control aot-modern-input', value=vs.get('host', ''),
+          **{'placeholder': '192.168.x.x', 'title': _('IP Address')}) }}
+      </div>
+    </div>
+    {% include 'pages/data_options/camera_vigi_find.html' %}
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Username') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.username(class_='form-control aot-modern-input', value=vs.get('username', 'admin')) }}
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Password') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.password(class_='form-control aot-modern-input', value='', autocomplete='new-password',
+          **{'placeholder': _('Saved') if vs.get('has_password') else ''}) }}
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Status') }}</label>
+      <div class="aot-modal-option-control">
+        <span class="aot-status-badge" id="vigi_state_{{ uid }}"></span>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
+                id="vigi_btn_verify_{{ uid }}" onclick="vigiOp('{{ uid }}', 'verify')">{{ _('Check Connection') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" hidden
+                id="vigi_btn_reconnect_{{ uid }}" onclick="vigiOp('{{ uid }}', 'reconnect')">{{ _('Reconnect') }}</button>
+      </div>
+    </div>
+    <div class="aot-option-tip" id="vigi_tip_{{ uid }}"></div>
+    <div id="vigi_cert_{{ uid }}" hidden>
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{ _('Previous fingerprint') }}</label>
+        <div class="aot-modal-option-control"><span id="vigi_cert_old_{{ uid }}"></span></div>
+      </div>
+      <div class="aot-modal-option-row">
+        <label class="aot-modal-option-label">{{ _('New fingerprint') }}</label>
+        <div class="aot-modal-option-control">
+          <span id="vigi_cert_new_{{ uid }}"></span>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-danger"
+                  onclick="vigiTrustCert('{{ uid }}')">{{ _('Trust new certificate') }}</button>
+        </div>
+      </div>
+      <div class="aot-option-tip">{{ _('This is normal if the camera was reset or its firmware changed. If neither happened, do not press this.') }}</div>
+    </div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('OpenAPI') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-option-tip" id="vigi_openapi_tip_{{ uid }}">{{ _('To use features such as PTZ and events, turn on OpenAPI in the camera web page under Settings > Network Settings and apply. Video works without it.') }}</div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Video') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Live quality') }}</label>
+      <div class="aot-modal-option-control">
+        <select name="vigi_live_profile" class="form-control aot-modern-select">
+          <option value="main" {% if vs.get('live_profile') == 'main' %}selected{% endif %}>{{ _('Main (2560x1440)') }}</option>
+          <option value="sub" {% if vs.get('live_profile', 'sub') == 'sub' %}selected{% endif %}>{{ _('Sub') }}</option>
+          <option value="mjpeg" {% if vs.get('live_profile') == 'mjpeg' %}selected{% endif %}>{{ _('MJPEG (640x360)') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="aot-option-tip">{{ _('The main stream puts a heavy load on the server.') }}</div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Features') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Supported features') }}</label>
+      <div class="aot-modal-option-control">
+        <span id="vigi_caps_{{ uid }}"></span>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" hidden
+                id="vigi_btn_caps_{{ uid }}" onclick="vigiOp('{{ uid }}', 'capabilities')">{{ _('Reload features') }}</button>
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Camera') }}</label>
+      <div class="aot-modal-option-control"><span id="vigi_info_{{ uid }}"></span></div>
+    </div>
+  </div>
+
+  {% include 'pages/data_options/camera_vigi_events.html' %}
+</div>

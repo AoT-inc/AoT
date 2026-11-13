@@ -30,7 +30,7 @@ def _messages():
     return {'success': [], 'info': [], 'warning': [], 'error': []}
 
 
-LOCKED = (False, 'profile_low')
+LOCKED = (False, 'low_memory')
 OK = (True, '')
 
 
@@ -134,10 +134,62 @@ class TestPanelContext(_MatterAppFixture):
         self.assertEqual((ctx['sites'], ctx['plots'], ctx['failures']), (3, 9, 1))
         self.assertEqual(ctx['last_run_at'], '2026-10-22 06:10')   # UTC 21:10 → 서울
 
+    def test_state_codes(self):
+        """토글 아래 다섯 상태 — 새 DB 칸 없이 플래그·잠금·하트비트로만 판정한다."""
+        S = lambda **kw: self._ctx(**kw)['state']['code']          # noqa: E731
+        self.assertEqual(S(heartbeat=None, flag=False), 'off')
+        self.assertEqual(S(heartbeat=self._hb(10, status='idle'), flag=False), 'off')
+        self.assertEqual(S(heartbeat=None, flag=True), 'unresponsive')           # 하트비트 없음
+        self.assertEqual(S(heartbeat=self._hb(3600), flag=True), 'unresponsive')  # 낡음
+        self.assertEqual(S(heartbeat=self._hb(10, status='idle'), flag=True), 'starting')  # 아직 플래그를 못 봄
+        self.assertEqual(S(heartbeat=self._hb(10, status='running'), flag=True), 'running')
+        self.assertEqual(S(heartbeat=self._hb(10, status='error'), flag=True), 'running')   # 실패 회차도 일하는 중
+        self.assertEqual(S(heartbeat=None, flag=True, supported=LOCKED), 'locked')
+        self.assertEqual(S(heartbeat=None, flag=False, supported=LOCKED), 'locked')
+        # 잠김은 앱의 판정만으로 한다 — 프로파일 잠금 시절에 남은 낡은 locked 하트비트는 지금 supported 인
+        # 기기를 잠김으로 보이게 하지 않는다(옛 compose 라 서비스가 안 뜨면 설치 명령 안내가 나와야 한다).
+        self.assertEqual(S(heartbeat=self._hb(3600, status='locked'), flag=True), 'unresponsive')
+        self.assertEqual(S(heartbeat=self._hb(10, status='locked'), flag=True), 'starting')   # 신선해도 잠김 아님
+        self.assertEqual(S(heartbeat=self._hb(3600, status='locked'), flag=True, supported=LOCKED), 'locked')
+
+    def test_state_texts_poll_and_install_command(self):
+        starting = self._ctx(self._hb(10, status='idle'), flag=True)['state']
+        self.assertEqual((starting['text'], starting['poll_ms'] > 0), ('Starting', True))
+        self.assertIn('within a minute', starting['hint'])
+        running = self._ctx(self._hb(10), flag=True)['state']
+        self.assertEqual((running['text'], running['poll_ms'], running['command']), ('Running', 0, ''))
+        for docker, needle in ((True, 'docker compose -f docker/docker-compose.prod.yml up -d aot_twin'),
+                               (False, 'upgrade_commands.sh install-aottwin')):
+            with mock.patch('aot.config.DOCKER_CONTAINER', docker):
+                st = self._ctx(None, flag=True)['state']
+            self.assertEqual(st['text'], 'Not responding')
+            self.assertIn(needle, st['command'])
+            self.assertEqual(st['command'].startswith('sudo '), not docker)
+
+    def test_state_endpoint_returns_the_same_dict(self):
+        from aot.aot_flask import routes_settings
+        from aot.aot_flask.utils import utils_settings
+        with self.app.test_request_context('/settings/twin/state'), \
+                mock.patch.object(routes_settings.utils_general, 'user_has_permission', return_value=True), \
+                mock.patch.object(utils_settings, 'twin_panel_context',
+                                  return_value={'state': {'code': 'starting', 'text': 'Starting'}}):
+            fn = routes_settings.settings_twin_state
+            resp = fn.__wrapped__() if hasattr(fn, '__wrapped__') else fn()
+            self.assertEqual(resp.get_json(), {'code': 'starting', 'text': 'Starting'})
+        with self.app.test_request_context('/settings/twin/state'), \
+                mock.patch.object(routes_settings.utils_general, 'user_has_permission', return_value=False):
+            fn = routes_settings.settings_twin_state
+            resp, status = (fn.__wrapped__() if hasattr(fn, '__wrapped__') else fn())
+            self.assertEqual(status, 403)
+
     def test_locked_device_reports_reason(self):
         ctx = self._ctx(None, supported=(False, 'low_memory'))
         self.assertFalse(ctx['supported'])
         self.assertIn('GB', ctx['lock_reason'])
+
+
+def _now_iso():
+    return datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
 _TWIN_TEMPLATE = os.path.join(_HERE, '..', 'aot_flask', 'templates', 'settings', 'twin.html')
@@ -154,8 +206,9 @@ def _twin_block(page='general'):
 
 
 class TestRender(_MatterAppFixture):
+    STATE = {'code': 'off', 'text': 'Off', 'hint': '', 'command': '', 'poll_ms': 0}
     BASE = {'supported': True, 'lock_reason': '', 'enabled': False, 'run_times': '06:10,18:10',
-            'ignore_profile': False, 'auto_forecast': True,
+            'auto_forecast': True, 'state': STATE,
             'running': False, 'status': None, 'version': '', 'last_run_at': '',
             'sites': 0, 'plots': 0, 'failures': 0, 'service_locked_reason': ''}
 
@@ -164,7 +217,10 @@ class TestRender(_MatterAppFixture):
     def _html(self, lang=None, page='general', retention=None, **over):
         # 컨텍스트 프로세서(로그인 필요)를 건너뛰려고 jinja_env 로 직접 그린다.
         from aot.aot_flask.forms import forms_settings
+        import jinja2
         twin = dict(self.BASE, **over)
+        # 임시 앱에는 템플릿 폴더가 없다 — 상태 줄 조각(settings/_twin_state.html)을 include 할 수 있게 연결한다.
+        self.app.jinja_env.loader = jinja2.FileSystemLoader(os.path.join(_HERE, '..', 'aot_flask', 'templates'))
         with self.app.test_request_context('/settings/general'):
             tpl = self.app.jinja_env.from_string(_twin_block(page))
             ctx = dict(twin=twin, form_settings_general=forms_settings.SettingsGeneral(),
@@ -202,19 +258,39 @@ class TestRender(_MatterAppFixture):
         self.assertNotIn('checked', tag)    # 잠긴 기기는 켜진 것으로 그리지 않는다
         self.assertIn('REASON-TEXT', html)
         self.assertIn('remote node', html)
-        self.assertNotIn('twin-install-help', html)
 
-    def test_not_running_shows_install_help(self):
-        html = self._html(page='twin')
-        self.assertIn('Twin service is not running', html)
-        self.assertIn('COMPOSE_PROFILES=twin', html)
-        self.assertIn('aottwin.service', html)
+    def _state(self, code, text, hint='', command='', poll_ms=0):
+        return {'code': code, 'text': text, 'hint': hint, 'command': command, 'poll_ms': poll_ms}
 
-    def test_running_shows_status_not_install_help(self):
+    def test_state_badge_under_the_toggle_on_both_pages(self):
+        for page in ('general', 'twin'):
+            html = self._html(page=page, enabled=True, state=self._state('running', 'Running'))
+            self.assertRegex(html, r'id="twin-state-badge"[^>]*data-state="running"[^>]*>Running<')
+            self.assertIn('aot-status-ok', html)
+            self.assertIn('id="twin-state-hint" hidden', html)          # 안내가 없으면 줄을 숨긴다
+        html = self._html(state=self._state('locked', 'Locked'))
+        self.assertIn('aot-status-warn', html)
+        self.assertNotIn('aot-status-ok', html.split('id="twin-state-row"')[1].split('<script>')[0])
+
+    def test_starting_says_so_and_polls(self):
+        html = self._html(enabled=True, state=self._state(
+            'starting', 'Starting', hint='picks up the switch within a minute', poll_ms=5000))
+        self.assertIn('aot-status-running', html)
+        self.assertIn('picks up the switch within a minute', html)
+        self.assertIn('var wait = 5000;', html)
+        self.assertIn('/settings/twin/state', html)
+
+    def test_unresponsive_shows_the_command(self):
+        cmd = 'docker compose -f docker/docker-compose.prod.yml up -d aot_twin'
+        html = self._html(page='twin', enabled=True, state=self._state(
+            'unresponsive', 'Not responding', hint='run this once:', command=cmd, poll_ms=20000))
+        self.assertIn('aot-status-fail', html)
+        self.assertRegex(html, r'<pre class="aot-settings-sub" id="twin-state-command">' + re.escape(cmd) + '</pre>')
+        self.assertNotIn('COMPOSE_PROFILES', html)
+
+    def test_running_shows_run_details(self):
         html = self._html(page='twin', running=True, status='running', sites=3, plots=9, failures=2,
                           last_run_at='2026-10-22 06:10', version='0.2', enabled=True)
-        self.assertNotIn('twin-install-help', html)
-        self.assertNotIn('Twin service is not running', html)
         for needle in ('2026-10-22 06:10', 'Sites: 3', 'Plots: 9', 'Failures: 2'):
             self.assertIn(needle, html)
 
@@ -235,8 +311,15 @@ class TestRender(_MatterAppFixture):
         self.assertIn('데이터 보관 (일)', html)                                # 설정 > 일반 '데이터 보관' 칸
         self.assertIn('센서 측정값은 지우지 않습니다', html)
         page = self._html(lang='ko', page='twin')
-        self.assertIn('트윈 서비스가 실행 중이 아님', page)
-        self.assertIn('낮은 사양 프로파일에서도 허용', page)                    # 새 옵션 이름
+        self.assertIn('서비스 상태', page)
+        self.assertNotIn('낮은 사양 프로파일에서도 허용', page)                  # 옵션을 걷어 냈다
+        from aot.aot_flask.utils import utils_settings
+        from flask_babel import force_locale
+        with self.app.test_request_context('/'), force_locale('ko'):
+            texts = [utils_settings.twin_state_info(s, f, hb)['text'] for s, f, hb in (
+                (False, False, {}), (True, False, {}), (True, True, {'status': 'idle', 'at': _now_iso()}),
+                (True, True, {'status': 'running', 'at': _now_iso()}), (True, True, None))]
+        self.assertEqual(texts, ['잠김', '꺼짐', '시작 중', '실행 중', '응답 없음'])
         self.assertIn('예보 입력 자동 만들기', page)
 
 
@@ -296,13 +379,12 @@ def test_migration_defaults_and_idempotent(tmp_path):
 
 
 class TestTwinPage(_MatterAppFixture):
-    """settings/twin — 저장(실행 시각·두 옵션), 낮은 사양 잠금 해제, 메뉴 노출."""
+    """settings/twin — 저장(실행 시각·옵션), 메뉴 노출."""
 
-    def _form(self, run_times='06:10,18:10', ignore=False, auto=True):
+    def _form(self, run_times='06:10,18:10', auto=True):
         return types.SimpleNamespace(
             validate=lambda: True, errors={},
             twin_run_times=types.SimpleNamespace(data=run_times),
-            twin_ignore_profile=types.SimpleNamespace(data=ignore),
             twin_auto_forecast=types.SimpleNamespace(data=auto))
 
     def test_options_saved_and_audited(self):
@@ -310,41 +392,30 @@ class TestTwinPage(_MatterAppFixture):
         from aot.databases.models import Misc
         with self.app.test_request_context('/settings/twin', method='POST'), \
                 mock.patch.object(utils_settings, 'invalidate_misc_cache'):
-            msgs = utils_settings.settings_twin_mod(self._form('18:10, 7:05', ignore=True, auto=False))
+            msgs = utils_settings.settings_twin_mod(self._form('18:10, 7:05', auto=False))
             misc = Misc.query.first()
             self.assertEqual(msgs['error'], [])
-            self.assertEqual((misc.twin_run_times, misc.twin_ignore_profile, misc.twin_auto_forecast),
-                             ('07:05,18:10', True, False))
+            self.assertEqual((misc.twin_run_times, misc.twin_auto_forecast), ('07:05,18:10', False))
             ctx = utils_settings.twin_panel_context()
-            self.assertEqual((ctx['ignore_profile'], ctx['auto_forecast']), (True, False))
+            self.assertEqual(ctx['auto_forecast'], False)
+            self.assertNotIn('ignore_profile', ctx)
 
     def test_bad_run_times_save_nothing(self):
         from aot.aot_flask.utils import utils_settings
         from aot.databases.models import Misc
         with self.app.test_request_context('/settings/twin', method='POST'):
             before = Misc.query.first().twin_run_times
-            msgs = utils_settings.settings_twin_mod(self._form('25:00', ignore=True))
+            msgs = utils_settings.settings_twin_mod(self._form('25:00', auto=False))
             self.assertEqual(len(msgs['error']), 1)
             misc = Misc.query.first()
             self.assertEqual(misc.twin_run_times, before)
-            self.assertFalse(bool(misc.twin_ignore_profile))                     # 오류면 옵션도 저장 안 함
+            self.assertTrue(misc.twin_auto_forecast is None or misc.twin_auto_forecast)   # 오류면 옵션도 저장 안 함
 
-    def test_ignore_profile_flag_skips_only_the_profile_lock(self):
-        from aot.databases.models import Misc
-        from aot.utils import twin_gate
-        with self.app.test_request_context('/'), \
-                mock.patch('aot.config.mcp_config.HARDWARE_PROFILE', 'LOW'), \
-                mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop(twin_gate.IGNORE_PROFILE_ENV, None)
-            misc = Misc.query.first()
-            misc.twin_ignore_profile = False
-            self.assertEqual(twin_gate.twin_supported(), (False, twin_gate.REASON_PROFILE_LOW))
-            misc.twin_ignore_profile = True
-            with mock.patch('aot.utils.system_environment.pi_model', return_value='Raspberry Pi 3 Model B'):
-                self.assertEqual(twin_gate.twin_supported(), (False, twin_gate.REASON_PI_MODEL))   # 파이 잠금은 그대로
-            with mock.patch('aot.utils.system_environment.pi_model', return_value=None), \
-                    mock.patch('aot.utils.system_environment.mem_total_gb', return_value=8.0):
-                self.assertEqual(twin_gate.twin_supported(), (True, ''))
+    def test_profile_option_is_gone_from_form_and_page(self):
+        from aot.aot_flask.forms import forms_settings
+        with self.app.test_request_context('/settings/twin'):
+            self.assertFalse(hasattr(forms_settings.SettingsTwin(), 'twin_ignore_profile'))
+        self.assertNotIn('twin_ignore_profile', open(_TWIN_TEMPLATE, encoding='utf-8').read())
 
     def test_page_is_gated_by_the_general_flag_and_listed_in_the_menu(self):
         src = open(os.path.join(_HERE, '..', 'aot_flask', 'templates', 'layout-settings.html'),

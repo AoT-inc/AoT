@@ -1,0 +1,273 @@
+/* PTZ 컨트롤러 — 카메라 방향·줌·프리셋 (docs/design/ui-guide.md §4-8 「PTZ 컨트롤러」)
+ *
+ * 한 벌로 두 크기를 그린다.
+ *   .aot-ptz              설정 측 전체판 — 방향 패드 + 줌 + 프리셋 + (주야·경보는 같은 파일의 줄)
+ *   .aot-ptz--overlay     위젯 측 간결판 — 영상 위에 반투명으로 겹친다(2026-11-04 사용자 승인)
+ *
+ * 모양 표시(삼각형·더하기·빼기)는 이 컨트롤러에 한해 사용자가 허락한 것이다(§4-12 예외).
+ * 이모지·아이콘 글꼴·이미지를 쓰지 않고 CSS 도형으로만 그린다. 색은 버튼 토큰만 읽는다:
+ *   평소 = 보조 버튼 면, 누르는 동안 = 활성 버튼 면. 누르는 부분이 그 면의 모양으로 보인다.
+ */
+
+.aot-ptz {
+  /* 크기는 이 두 값만 바꾼다. 터치 화면에서는 rem 이 115% 로 커지므로 표적도 같이 커진다(§3-1). */
+  --aot-ptz-pad: 10rem;
+  --aot-ptz-key: 2.75rem;
+  --aot-ptz-face: var(--aot-btn-bg-secondary);
+  --aot-ptz-face-on: var(--aot-btn-bg-active);
+  --aot-ptz-ink: var(--aot-btn-color-secondary);
+  --aot-ptz-ink-on: var(--aot-btn-color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--aot-space-3);
+}
+
+/* 방향 패드 + 줌 한 덩어리 — 설정 측에서는 가운데에 놓는다 */
+.aot-ptz-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--aot-space-5);
+}
+
+/* ---- 방향 패드: 고리를 X 로 넷으로 나눈 모양. 가운데는 비어 있다(누르는 곳이 아님) ---- */
+.aot-ptz-pad {
+  position: relative;
+  width: var(--aot-ptz-pad);
+  height: var(--aot-ptz-pad);
+  flex: 0 0 auto;
+  border-radius: 50%;
+  touch-action: none;
+}
+
+.aot-ptz-dir {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--aot-ptz-face);
+  color: var(--aot-ptz-ink);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  /* 가운데 구멍 — 가운데 원 안쪽은 칠하지 않는다 */
+  -webkit-mask: radial-gradient(circle, transparent 0 calc(var(--aot-ptz-pad) * 0.19),
+                var(--aot-ptz-face-on) calc(var(--aot-ptz-pad) * 0.19 + 0.5px));
+  mask: radial-gradient(circle, transparent 0 calc(var(--aot-ptz-pad) * 0.19),
+        var(--aot-ptz-face-on) calc(var(--aot-ptz-pad) * 0.19 + 0.5px));
+}
+/* 각 조각은 가운데에서 바깥으로 벌어지는 삼각형 — clip-path 라 누를 수 있는 곳도 그 모양뿐이다.
+   조각끼리는 바깥쪽으로 조금 밀어 틈을 낸다(선을 긋지 않는다). */
+.aot-ptz-up    { clip-path: polygon(50% 50%, 0 0, 100% 0);       transform: translateY(-2px); }
+.aot-ptz-down  { clip-path: polygon(50% 50%, 100% 100%, 0 100%); transform: translateY(2px); }
+.aot-ptz-left  { clip-path: polygon(50% 50%, 0 100%, 0 0);       transform: translateX(-2px); }
+.aot-ptz-right { clip-path: polygon(50% 50%, 100% 0, 100% 100%); transform: translateX(2px); }
+
+/* 방향 표시 — 조각 한가운데의 작은 삼각형. 가리키는 쪽이 곧 움직이는 쪽이다 */
+.aot-ptz-dir::before {
+  content: "";
+  position: absolute;
+  width: calc(var(--aot-ptz-pad) * 0.12);
+  height: calc(var(--aot-ptz-pad) * 0.1);
+  background: currentColor;
+  left: 50%;
+  top: 50%;
+}
+.aot-ptz-up::before    { clip-path: polygon(50% 0, 100% 100%, 0 100%);
+                         transform: translate(-50%, calc(-50% - var(--aot-ptz-pad) * 0.345)); }
+.aot-ptz-down::before  { clip-path: polygon(0 0, 100% 0, 50% 100%);
+                         transform: translate(-50%, calc(-50% + var(--aot-ptz-pad) * 0.345)); }
+.aot-ptz-left::before  { width: calc(var(--aot-ptz-pad) * 0.1); height: calc(var(--aot-ptz-pad) * 0.12);
+                         clip-path: polygon(0 50%, 100% 0, 100% 100%);
+                         transform: translate(calc(-50% - var(--aot-ptz-pad) * 0.345), -50%); }
+.aot-ptz-right::before { width: calc(var(--aot-ptz-pad) * 0.1); height: calc(var(--aot-ptz-pad) * 0.12);
+                         clip-path: polygon(0 0, 100% 50%, 0 100%);
+                         transform: translate(calc(-50% + var(--aot-ptz-pad) * 0.345), -50%); }
+
+/* 가운데 원 — 누르는 곳이 아님을 비워 둔 모양으로 말한다. 손가락이 가운데에 닿아도 아무 방향도 시작하지 않게 받아만 둔다 */
+.aot-ptz-hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--aot-ptz-pad) * 0.38);
+  height: calc(var(--aot-ptz-pad) * 0.38);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  touch-action: none;
+}
+
+/* ---- 줌: 더하기(위) · 빼기(아래) ---- */
+.aot-ptz-zoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--aot-space-3);
+}
+.aot-ptz-zoom-label {
+  font-size: var(--aot-fs-caption);
+  color: var(--aot-color-text-secondary);
+}
+
+.aot-ptz-key,
+.aot-ptz-chip {
+  position: relative;
+  width: var(--aot-ptz-key);
+  height: var(--aot-ptz-key);
+  min-width: var(--aot-ptz-key);
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--aot-ptz-face);
+  color: var(--aot-ptz-ink);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 더하기·빼기 — 가로 막대 하나(빼기), 세로 막대를 더하면 더하기 */
+.aot-ptz-key::before,
+.aot-ptz-zoom-in::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40%;
+  height: 0.125rem;
+  background: currentColor;
+  border-radius: var(--aot-radius-xs);
+  transform: translate(-50%, -50%);
+}
+.aot-ptz-zoom-in::after { width: 0.125rem; height: 40%; }
+
+/* ---- 누르는 동안 / 호버 / 포커스 ---- */
+.aot-ptz-dir.is-pressed,
+.aot-ptz-key.is-pressed,
+.aot-ptz-chip.is-selected {
+  background: var(--aot-ptz-face-on);
+  color: var(--aot-ptz-ink-on);
+}
+@media (hover: hover) {
+  .aot-ptz-dir:hover:not(.is-pressed),
+  .aot-ptz-key:hover:not(.is-pressed),
+  .aot-ptz-chip:hover:not(.is-selected) { opacity: 0.82; }
+}
+.aot-ptz-key:focus,
+.aot-ptz-chip:focus,
+.aot-ptz-dir:focus { outline: none; }
+.aot-ptz-key:focus-visible,
+.aot-ptz-chip:focus-visible {
+  outline: var(--aot-focus-outline);
+  outline-offset: 2px;
+}
+/* 조각은 clip-path 때문에 자기 링이 잘린다 — 패드 전체에 두른다 */
+.aot-ptz-pad:has(.aot-ptz-dir:focus-visible) {
+  outline: var(--aot-focus-outline);
+  outline-offset: 2px;
+}
+.aot-ptz-dir:disabled, .aot-ptz-key:disabled, .aot-ptz-chip:disabled { cursor: default; opacity: 0.55; }
+
+/* ---- 프리셋 번호 칩 한 줄 ---- */
+.aot-ptz-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aot-space-2);
+}
+.aot-ptz-chip {
+  font-size: var(--aot-fs-label);
+  font-weight: var(--aot-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--aot-ptz-key);
+  text-align: center;
+}
+
+/* ---- 세 칸 전환(주야) — 컨트롤 면 위에 고른 칸만 활성 면 ---- */
+.aot-ptz-seg {
+  display: inline-flex;
+  padding: var(--aot-space-1);
+  gap: var(--aot-space-1);
+  border-radius: var(--aot-btn-pill-radius);
+  background: var(--aot-surface-control);
+}
+.aot-ptz-seg-opt {
+  min-height: calc(var(--aot-ptz-key) - var(--aot-space-2));
+  padding: 0 var(--aot-space-3);
+  border: none;
+  border-radius: var(--aot-btn-pill-radius);
+  background: transparent;
+  color: var(--aot-color-text-primary);
+  font-size: var(--aot-fs-control);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.aot-ptz-seg-opt[aria-checked="true"] {
+  background: var(--aot-btn-bg-active);
+  color: var(--aot-btn-color-primary);
+}
+.aot-ptz-seg-opt:focus { outline: none; }
+.aot-ptz-seg-opt:focus-visible { outline: var(--aot-focus-outline); outline-offset: 1px; }
+@media (hover: hover) {
+  .aot-ptz-seg-opt:hover:not([aria-checked="true"]) { opacity: 0.82; }
+}
+
+/* 좁은 화면: 세 칸이 라벨을 덮지 않게 칸 안쪽 여백을 줄인다(라벨은 두 줄로 접힌다) */
+@media (max-width: 575.98px) {
+  .aot-ptz-seg { min-width: 0; }
+  .aot-ptz-seg-opt { padding: 0 var(--aot-space-2); }
+}
+
+/* 겹침이 앉는 영상 판 — 카메라 위젯 본문이 이 클래스를 단다(모던·기존 카메라 위젯 둘 다) */
+.aot-ptz-stage { position: relative; height: 100%; container-type: inline-size; }
+
+/* =====================================================================
+   위젯 측 간결판 — 영상 위에 겹친다
+   ===================================================================== */
+.aot-ptz--overlay {
+  /* 영상을 덜 가리도록 한 단 작게. 터치 화면에서는 rem 이 115% 라 칩도 손가락 크기(약 41px)가 된다 */
+  --aot-ptz-pad: 6.5rem;
+  --aot-ptz-key: 2.25rem;
+  /* 반투명은 이 겹침에만 쓴다(§3-3 투명도 예외 — 2026-11-04 사용자 승인).
+     평소 면만 옅게, 누르는 동안의 면과 글자는 불투명이다. */
+  --aot-ptz-face: color-mix(in srgb, var(--aot-btn-bg-secondary) 80%, transparent);
+  /* 영상 전체에 깔리고(누름은 통과) 모서리 둘에 나눠 앉는다: 프리셋은 오른쪽 위, 패드·줌은 왼쪽 아래.
+     왼쪽 위는 위젯의 상태 글자(LIVE 등) 자리라 비워 둔다. */
+  position: absolute;
+  inset: var(--aot-space-3);
+  z-index: var(--aot-z-raised);
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+}
+.aot-ptz--overlay > * { pointer-events: auto; }
+.aot-ptz-stage.is-ptz-shown .aot-ptz--overlay,
+.aot-ptz--overlay:has(:focus-visible) {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease, visibility 0s;
+}
+.aot-ptz--overlay .aot-ptz-main { gap: var(--aot-space-3); align-items: flex-end; align-self: flex-start; }
+.aot-ptz--overlay .aot-ptz-presets {
+  order: -1;
+  align-self: flex-end;
+  justify-content: flex-end;
+  /* 넷씩 두 줄 — 영상을 덜 가린다 */
+  max-width: calc(var(--aot-ptz-key) * 4 + var(--aot-space-2) * 3);
+}
+
+/* 좁은 위젯(반폭 타일 등): 패드·칩을 줄여 영상을 덜 가리고 판 밖으로 나가지 않게 한다 */
+@container (max-width: 240px) {
+  .aot-ptz--overlay { --aot-ptz-pad: 4.5rem; --aot-ptz-key: 1.9rem; inset: var(--aot-space-2); }
+}
+
+/* 능력이 없는 줄·편집 줄은 hidden 으로 숨긴다 — 위의 display 규칙보다 뒤에 두어 이긴다 */
+.aot-ptz[hidden],
+.aot-ptz [hidden] { display: none; }

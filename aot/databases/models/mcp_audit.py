@@ -9,7 +9,8 @@ mcp_confirmation: 쓰기 도구 사용자 승인 큐 (pending/approved/rejected/
 from datetime import datetime
 
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
+from aot.utils.timekit import naive_utc, utc_now
 
 
 class MCPAuditLog(CRUDMixin, db.Model):
@@ -125,7 +126,7 @@ class MCPConfirmation(CRUDMixin, db.Model):
     modified_params_json = db.Column(db.Text, default=None)
 
     def is_expired(self) -> bool:
-        return datetime.utcnow() > self.expires_at
+        return naive_utc(utc_now()) > self.expires_at
 
     def __repr__(self):
         return (f'<MCPConfirmation tool={self.tool_name} '

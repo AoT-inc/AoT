@@ -35,6 +35,7 @@ import logging
 import os
 import uuid
 from collections import namedtuple
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -79,14 +80,16 @@ SERVICE_ACCOUNT_PROVIDER = 'system'
 # 'unrestricted'(tool_registry.TOOL_PROFILE_UNRESTRICTED) — 인앱 물리 제어가
 # 그 키로 stdio 하위 프로세스를 거치므로, 인앱과 같이 제한이 없다.
 # 권한 판단에는 쓰지 않는다 — 표면(무엇을 보여 주는가)이다.
+# grants (2026-11-04): 읽기 판정표(mcp_safety_gate.READ_PERMISSION)가 쓰는 웹 권한
+# 이름 중 이 역할이 가진 것의 집합(웹과 같은 함의 규칙). None = 옛 스냅샷 = 막지 않는다.
 # key_id — 이 연결이 쓴 API 키 행(user_api_key.unique_id). link_id — 인가 서버
 # (OAuth)로 들어온 연결의 계정 연결 행(mcp_external_account.id). 묶음을 바꾸는
 # 도구(set_tool_profile)가 "부른 연결의 것" 만 고치려면 둘 중 하나가 필요하다.
 RoleInfo = namedtuple('RoleInfo', ['name', 'can_write', 'user_id',
                                    'can_edit_settings', 'can_use_ai_chat',
                                    'can_edit_plots', 'tool_profile', 'key_id',
-                                   'link_id'],
-                      defaults=(None, None, None, None, None, None))
+                                   'link_id', 'read_only', 'grants'],
+                      defaults=(None, None, None, None, None, None, False, None))
 
 
 def role_row_allows(row, permission) -> bool:
@@ -259,6 +262,28 @@ def role_can_edit_plots(role) -> bool:
     return bool(flag)
 
 
+#: AI 를 쓸 수 없는 역할에 MCP 가 내는 거절 — 목록·호출·동의 화면이 같은 문장을 쓴다.
+AI_USE_REFUSAL = ("This account's role is not allowed to use AI connections "
+                  "(it lacks the AI chat permission, same as the web AI chat). "
+                  "Ask an administrator. Nothing was changed.")
+
+
+def role_can_use_mcp(role) -> bool:
+    """MCP·AI 연결을 쓸 자격 — 웹 AI 채팅과 같은 `use_ai_chat`(제어 권한이 함의,
+    기본 표에서 Guest·Kiosk 는 없다). role 이 없거나 옛 스냅샷이면 허용(role_can_advise 와 같다)."""
+    return role_can_advise(role)
+
+
+def role_can_read(role, permission) -> bool:
+    """읽기 판정표의 권한(`view_logs` 등)을 이 연결의 역할이 갖는가. 규칙은
+    `role_row_allows` 와 같고, 스냅샷(RoleInfo)은 만들 때 계산한 집합을 본다."""
+    if role is None or permission is None:
+        return True
+    if hasattr(role, 'grants'):
+        return role.grants is None or permission in role.grants
+    return role_row_allows(role, permission)
+
+
 def role_can_advise(role) -> bool:
     """조언 원장(submit_advice)에 의견을 낼 자격.
 
@@ -398,11 +423,15 @@ def _role_for(user, key_row=None):
         can_write = False
         can_edit_settings = False
         can_edit_plots = False
+    from aot.tools.mcp_safety_gate import READ_PERMISSION_NAMES
+    grants = frozenset(p for p in READ_PERMISSION_NAMES if role_row_allows(row, p))
     return RoleInfo(name=row.name, can_write=can_write,
-                     user_id=user.unique_id,
+                     user_id=user.unique_id, grants=grants,
                      can_edit_settings=can_edit_settings,
                      can_use_ai_chat=can_use_ai_chat,
-                     can_edit_plots=can_edit_plots)
+                     can_edit_plots=can_edit_plots,
+                     read_only=bool(key_row is not None
+                                    and getattr(key_row, 'is_readonly', False)))
 
 
 def authenticate_http(headers, declared_agent_id=None):
@@ -586,7 +615,7 @@ def backfill_key_tool_profiles(now=None):
 
     config_only = sorted(profile_tools(TOOL_PROFILE_CONFIGURATION)
                          - profile_tools(TOOL_PROFILE_OPERATIONS))
-    since = (now or datetime.utcnow()) - timedelta(days=PROFILE_BACKFILL_DAYS)
+    since = (now or naive_utc(utc_now())) - timedelta(days=PROFILE_BACKFILL_DAYS)
     agent_ids = {
         aid for (aid,) in db.session.query(MCPAuditLog.agent_id)
         .filter(MCPAuditLog.timestamp >= since)

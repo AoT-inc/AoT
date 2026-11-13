@@ -11,7 +11,7 @@ import sqlite3
 
 import pytest
 
-from aot.functions.utils.env_control import psychro as ps
+from aot.utils import psychro as ps
 from aot.functions.utils.env_control.sim.plant import (
     ActuatorSpec, Plant, PlantParams, facility_from_db)
 

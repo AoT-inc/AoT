@@ -32280,3 +32280,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "แนวราบ / ตามความลาด"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "คำนวณท่อ {n} เส้นตามแนวราบ"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "แนวราบ"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "ความยาวท่อ (ทั้งพื้นที่)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "ความยาวท่อ"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "กำลังคำนวณภูมิประเทศ ความยาวตามความลาดจะแสดงเมื่อเสร็จ"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "บางส่วนคำนวณด้วยความยาวแนวราบ ภูมิประเทศไม่ครอบคลุมส่วนเหล่านั้น"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "คำนวณเมื่อ {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "เซลล์ {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "ความยาวเรียงตามลำดับ แนวราบ / ตามความลาด"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "ความลาดชัน {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "คำนวณด้วยความยาวแนวราบ"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "อัตราการไหล {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "การสูญเสีย {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "แนวราบ {h} m, ตามความลาด {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "แนวราบ {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "ส่วนที่ {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "ส่วน ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "แนวราบ {h} m / ตามความลาด {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "กำลังคำนวณภูมิประเทศ - แสดงเฉพาะความยาวแนวราบ"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "ความยาวบนแผนที่เป็นแนวราบ"
+
+msgid "Terrain input"
+msgstr "อินพุตภูมิประเทศ"
+
+msgid "Compare another terrain"
+msgstr "เปรียบเทียบภูมิประเทศอื่น"
+
+msgid "Could not compare. Try again."
+msgstr "เปรียบเทียบไม่สำเร็จ ลองอีกครั้ง"
+
+msgid "Changed sections ({n})"
+msgstr "ช่วงท่อที่เปลี่ยน ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "กำลังดาวน์โหลดภูมิประเทศ {name} เมื่อเสร็จจะแสดงการเปรียบเทียบ"
+
+msgid "Calculation level"
+msgstr "ระดับการคำนวณ"
+
+msgid "Switch to this terrain"
+msgstr "เปลี่ยนเป็นภูมิประเทศนี้"
+
+msgid "That terrain input is gone."
+msgstr "อินพุตภูมิประเทศนั้นไม่มีแล้ว"
+
+msgid "Weakest nozzle flow"
+msgstr "อัตราไหลของหัวฉีดที่อ่อนที่สุด"
+
+msgid "Revert to {name}"
+msgstr "กลับไปใช้ {name}"
+
+msgid "Slant length total"
+msgstr "ความยาวเอียงรวม"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "อินพุตภูมิประเทศนี้ไม่มีที่อยู่ไทล์ ตรวจสอบการตั้งค่า"
+
+msgid "Downloading took too long. Try again."
+msgstr "ดาวน์โหลดใช้เวลานานเกินไป ลองอีกครั้ง"
+
+msgid "Terrain changed and recalculated"
+msgstr "เปลี่ยนภูมิประเทศและคำนวณใหม่แล้ว"
+
+msgid "Compare with"
+msgstr "เปรียบเทียบกับ"
+
+msgid "No terrain was on"
+msgstr "ไม่มีภูมิประเทศที่เปิดอยู่"
+
+msgid "Undo change"
+msgstr "เลิกทำการเปลี่ยน"
+
+msgid "Try again"
+msgstr "ลองอีกครั้ง"
+
+msgid "This map has no pipes to compare."
+msgstr "แผนที่นี้ไม่มีท่อให้เปรียบเทียบ"
+
+msgid "Pipes the terrain does not cover"
+msgstr "ท่อที่ภูมิประเทศไม่ครอบคลุม"
+
+msgid "No terrain is on."
+msgstr "ไม่มีภูมิประเทศที่เปิดอยู่"
+
+msgid "Could not change the terrain. Try again."
+msgstr "เปลี่ยนภูมิประเทศไม่สำเร็จ ลองอีกครั้ง"

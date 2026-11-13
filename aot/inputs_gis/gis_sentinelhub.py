@@ -43,6 +43,7 @@ from flask_babel import gettext as _
 from flask_babel import lazy_gettext as lg
 
 from aot.inputs_gis.base_input_gis import AbstractGisInput
+from aot.utils.timekit import utc_now
 
 # CDSE(Copernicus Data Space Ecosystem) 엔드포인트. 상용 Sentinel Hub
 # (services.sentinel-hub.com)와 자료·스크립트는 같고 호스트와 계정만 다르다.
@@ -383,7 +384,7 @@ def time_range(days):
         days = int(days)
     except (TypeError, ValueError):
         days = 30
-    today = _dt.datetime.now(_dt.timezone.utc).date()
+    today = utc_now().date()
     start = today - _dt.timedelta(days=max(days, 1))
     end = today + _dt.timedelta(days=1)  # 오늘 관측분까지 포함
     fmt = '%Y-%m-%dT00:00:00Z'

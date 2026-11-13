@@ -3,8 +3,8 @@ from sqlalchemy.dialects.mysql import LONGTEXT
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
 
 
 class Function(CRUDMixin, db.Model):
@@ -34,15 +34,9 @@ class Function(CRUDMixin, db.Model):
     name = db.Column(db.Text, default='Function Name')
     position_y = db.Column(db.Integer, default=0)
     log_level_debug = db.Column(db.Boolean, default=False)
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.String(32), default='manual')
     marker_icon = db.Column(db.Text, default=None)
     marker_color = db.Column(db.Text, default=None)
     marker_size = db.Column(db.Integer, default=3)
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
 
 
@@ -69,12 +63,6 @@ class Conditional(CRUDMixin, db.Model):
     log_level_debug = db.Column(db.Boolean, default=False)
     
     # Geo Location
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.String(32), default='manual')
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
 
     conditional_statement = db.Column(db.Text().with_variant(LONGTEXT, "mysql", "mariadb"), default='')
@@ -171,12 +159,6 @@ class Trigger(CRUDMixin, db.Model):
 
     # Sunrise/sunset
     rise_or_set = db.Column(db.Text, default='sunrise')
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.String(32), default='manual')
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
     date_offset_days = db.Column(db.Integer, default=0)
     time_offset_minutes = db.Column(db.Integer, default=0)
@@ -203,6 +185,8 @@ class Trigger(CRUDMixin, db.Model):
     trigger_actions_at_start = db.Column(db.Boolean, default=True)
 
     # Edge
+    # trigger_camera_event 에서만 쓴다: 받을 이벤트 종류(중립 어휘) 목록. 설계 §5.4
+    event_kinds = db.Column(db.JSON, nullable=True)
     measurement = db.Column(db.Text, default='')
     edge_detected = db.Column(db.Text, default='')
 

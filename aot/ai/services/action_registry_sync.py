@@ -13,7 +13,7 @@ Law 3 compliance: sync is read-only from hardware perspective.
 Ref: SBS-002_V2_STRATEGY (pluggable_resolver.auto_sync_trigger, REF-004)
 """
 import logging
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 from typing import List
 
 logger = logging.getLogger(__name__)

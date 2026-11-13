@@ -21,15 +21,18 @@ import datetime as dt
 import json
 import sys
 
-KST = dt.timezone(dt.timedelta(hours=9))
+# 시나리오 대지의 시계. 트레이스 meta['tz'](없던 옛 트레이스는 기본 대지=김제)를 main 이 채운다.
+_TZ = ['Asia/Seoul']  # tz-ok: meta['tz'] 가 없는 옛 트레이스의 기본 대지(김제) 시계
 
 
 def _ts(s):
-    return dt.datetime.strptime(s, '%Y-%m-%d %H:%M').replace(tzinfo=KST).timestamp()
+    from aot.utils.timekit import wall_to_utc
+    return wall_to_utc(dt.datetime.strptime(s, '%Y-%m-%d %H:%M'), _TZ[0]).timestamp()
 
 
 def _hhmm(t):
-    return dt.datetime.fromtimestamp(t, KST).strftime('%d %H:%M')
+    from aot.utils.timekit import to_tz
+    return to_tz(t, _TZ[0]).strftime('%d %H:%M')
 
 
 def _short(a):
@@ -124,7 +127,7 @@ def render(tr, trb, t_from, t_to, every, out):
     names = [_short(a) for a in acts]
     cyc = [c for c in tr['cycles'] if t_from <= c['t'] <= t_to]
     cb = {c['t']: c for c in (trb['cycles'] if trb else [])}
-    head = ('시각(KST)  | 외기 T  RH  풍속(돌풍) 비mm/h 일사 | 제어기가 본 풍·15분비(예보) | 실내 T  RH | 게이트/비상 | '
+    head = ('시각(현지)  | 외기 T  RH  풍속(돌풍) 비mm/h 일사 | 제어기가 본 풍·15분비(예보) | 실내 T  RH | 게이트/비상 | '
             + ' '.join(names))
     if trb:
         head += ' || B: 게이트 ' + ' '.join(names)
@@ -181,6 +184,7 @@ def main():
     ap.add_argument('--md', action='store_true')
     a = ap.parse_args()
     tr = _load(a.trace)
+    _TZ[0] = str((tr.get('meta') or {}).get('tz') or _TZ[0])
     trb = _load(a.b) if a.b else None
     meta = tr['meta']
     out = sys.stdout

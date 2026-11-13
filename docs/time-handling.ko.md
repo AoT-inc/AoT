@@ -62,11 +62,11 @@
 
 - **신규 코드는 tz-aware UTC**(`timekit.utc_now()` = `datetime.now(timezone.utc)`)를 쓴다.
 - **레거시 코드에는 naive `datetime.utcnow()`가 다수 남아 있다.** 이는 버그가 아니다 —
-  프로젝트 규약상 **naive datetime은 UTC로 간주**하며, `timekit.ensure_utc()`가 읽는 시점에
+  프로젝트 규약상 **naive datetime은 UTC로 간주**하며, `timekit.parse_utc()`(DB naive 컬럼용은 `timekit.naive_utc()`)가 읽는 시점에
   `+00:00`을 붙여 정규화하기 때문이다.
 - **SQLite 컬럼 왕복도 안전**하다: aware UTC(`00:00+00:00`)를 naive `DateTime` 컬럼에 저장하면
   SQLite/SQLAlchemy가 tzinfo만 벗기고 값(UTC 00:00)은 보존한다. 읽으면 naive `00:00`이 되고
-  `ensure_utc`가 다시 `00:00+00:00`으로 복원한다. **SQL 필터**(`schedule_time >= utc_now()`)도
+  `parse_utc`가 다시 `00:00+00:00`으로 복원한다. **SQL 필터**(`schedule_time >= utc_now()`)도
   bind 시 tz가 벗겨져 naive-UTC끼리 비교되므로 정확하다.
 
 > **함정:** naive로 저장되는 컬럼에는 **반드시 UTC-aware(또는 UTC naive) 값만** 넣어야 한다.
@@ -77,21 +77,25 @@
 
 ## 5. 단일 해석기 — `aot/utils/timekit.py`
 
-시간대 관련 모든 것은 이 모듈로 모인다. 기존에 흩어져 있던 게이트
-(`get_device_tz`·`get_user_tz`·`get_timezone_name`·`resolve_location_tz` 등)는 이제 이 모듈로
-위임한다.
+시간대 관련 모든 것은 이 모듈로 모인다. 공개 입구는 아래 열 함수와 표식 둘이다. 기존에 흩어져 있던
+게이트(`get_device_tz`·`get_user_tz`·`serialize_ts`·`tz_utils` 등)는 래퍼로 남기지 않고 **삭제**했다.
 
-| 함수 | 용도 |
+| 입구 | 용도 |
 |---|---|
-| `utc_now()` / `now_utc()` | tz-aware 현재 UTC "지금" |
-| `ensure_utc(dt)` | naive→UTC 가정, aware→UTC 변환 (정규화) |
-| `to_tz(dt, tz)` | UTC(또는 naive=UTC) → 대상 tz |
+| `utc_now()` | tz-aware 현재 UTC "지금" |
+| `naive_utc(dt)` | DB naive 컬럼과 비교·저장할 UTC naive 값 |
+| `parse_utc(value)` | datetime·epoch·ISO 문자열 → UTC-aware 순간 (오프셋 없으면 UTC) |
+| `resolve_tz(where) → (tzinfo, source)` | **단일 해석 체인**(아래). 출처까지 돌려준다 |
+| `tz_of(where)` | `resolve_tz` 의 tzinfo 만 |
+| `to_tz(value, where)` | 순간 → `where` 시계의 aware datetime |
 | `iso_utc(dt)` | API 직렬화 표준 — 항상 `+00:00` ISO 문자열 |
-| `resolve_tz(entity=None, *, user=None) → (tzinfo, source)` | **단일 해석 체인**(아래) |
-| `system_tz()` / `system_tz_name()` | 농장 전역 기본 tz (Misc) |
-| `current_user_tz()` | 요청 사용자 개인 tz (없으면 시스템). 개인 표시 전용 |
-| `wall_to_utc(wall, tz)` | 벽시계 + 앵커 tz → UTC-aware (예약 저장, DST 정확) |
-| `utc_to_wall(dt, tz)` | UTC → 앵커 tz 벽시계 (예약 표시) |
+| `iso_at(value, where)` | `where` 시계의 오프셋을 단 ISO 문자열 (사람·AI 용) |
+| `wall_to_utc(wall, where)` | `where` 시계로 읽은 벽시계 → UTC-aware (예약 저장, DST 정확) |
+| `today_at(where)` | `where` 시계의 오늘 날짜 |
+
+`where` 는 장소 id·행(장치·도형·시설·구획·지도)·IANA tz 이름·`FARM`·`VIEWER`·`None` 이다.
+`FARM` 은 농장 전역 시계(Misc tz)로, 장소가 없는 로그·감사·내보내기에 쓴다. `VIEWER` 는 요청 사용자
+개인 tz(없으면 농장 시계)로, 개인 표시 전용이다. `where` 를 못 풀면 농장 시계이고, 그것도 못 풀 때만 UTC 다.
 
 ### `resolve_tz` 우선순위 체인
 
@@ -151,15 +155,17 @@ entity=None:
 
 | 문맥 | 시계 | 방법 |
 |---|---|---|
-| 운영(스케줄러·장치 로그·"언제 발화") | **장치 tz** + 라벨 | 프론트 `AoTTz.formatDevice(iso, deviceTz)` |
-| 개인(사용자 알림·"네가 방금 한 일") | **뷰어/사용자 tz** | `AoTTz.formatViewer(iso)` |
+| 운영(스케줄러·장치 로그·"언제 발화") | **장치 tz** + 라벨 | 프론트 `AoTTz.formatAt(iso, deviceTz)` |
+| 개인(사용자 알림·"네가 방금 한 일") | **뷰어/사용자 tz** | `AoTTz.formatAt(iso, AoTTz.viewerTz())` |
 | 여러 tz를 겹치는 달력 축 | **뷰어 tz** | FullCalendar `timeZone:'local'` |
 
 - 서버 API는 **UTC ISO**(`iso_utc`)만 내려주고, 표시 tz는 클라이언트 `AoTTz`가 고른다.
 - 프론트 단일 유틸: `aot/aot_flask/static/js/common/aot-tz.js`(`window.AoTTz`).
-  - `formatDevice(iso, tz)` — 장치 현지
-  - `formatViewer(iso)` — 뷰어(개인 tz 우선 → 브라우저 → 시스템)
-  - `wallToInstant(wall, tz)` — 벽시계를 tz 시계로 해석해 절대순간 반환(이중시계용)
+  - `formatAt(iso, tz)` — `tz` 시계로 표시 (tz 없으면 농장 시계)
+  - `parseUtc(value)` — ISO·epoch → `Date` (오프셋 없으면 UTC)
+  - `wallToUtc(wall, tz)` — 벽시계를 tz 시계로 해석해 절대순간 반환(이중시계용)
+  - `todayAt(tz)` / `placeToday(placeId)` — 그 시계의 오늘 날짜, `tzOf(placeId)` 는 서버에 장소 tz 를 묻는다
+  - `viewerTz()` / `farmTz()` — 뷰어 시계 / 농장 시계
   - 뷰어 tz는 `<meta name="aot-user-tz">`(User.timezone) > 브라우저 tz > `aot-fallback-tz`(시스템).
 
 ---
@@ -200,15 +206,16 @@ Site (GeoShape)      → tz 권위. 명시 override | centroid 1회 해석 → �
 | 하고 싶은 것 | 쓸 것 |
 |---|---|
 | "지금" (UTC) | `timekit.utc_now()` |
-| 저장된 naive/aware datetime을 UTC로 정규화 | `timekit.ensure_utc(dt)` |
+| 저장된 naive/aware 값을 UTC 순간으로 정규화 | `timekit.parse_utc(value)` (DB naive 컬럼은 `timekit.naive_utc(dt)`) |
 | API 응답에 시각 직렬화 | `timekit.iso_utc(dt)` → 프론트 `AoTTz` |
-| 어떤 엔티티의 시간대 알기 | `timekit.resolve_tz(entity)` (또는 `device_tz.get_device_tz`) |
-| 위치 id로 현지 시간대 | `device_tz.resolve_location_tz(target_id)` |
-| 예약 벽시계 → 저장 | `timekit.wall_to_utc(wall, anchor_tz)` |
-| 예약 UTC → 표시 | `timekit.utc_to_wall(dt, tz)` 또는 `to_tz` |
-| 개인 표시 tz (요청) | `timekit.current_user_tz()` |
-| 프론트에서 장치 시각 표시 | `AoTTz.formatDevice(iso, deviceTz)` |
-| 프론트에서 내 시각 표시 | `AoTTz.formatViewer(iso)` |
+| 엔티티·장소의 시간대 알기 | `timekit.tz_of(행_또는_장소_id)` (출처까지: `timekit.resolve_tz(where)`) |
+| 농장 시계 / 보는 사람 시계 | `timekit.tz_of(FARM)` / `timekit.tz_of(VIEWER)` |
+| 예약 벽시계 → 저장 | `timekit.wall_to_utc(wall, where)` |
+| 예약 UTC → 표시 | `timekit.to_tz(dt, where)` |
+| 사람·AI 용 ISO (장소 시계) | `timekit.iso_at(value, where)` |
+| 장소의 오늘 날짜 | `timekit.today_at(where)` |
+| 프론트에서 장치 시각 표시 | `AoTTz.formatAt(iso, deviceTz)` |
+| 프론트에서 내 시각 표시 | `AoTTz.formatAt(iso, AoTTz.viewerTz())` |
 
 ---
 
@@ -217,11 +224,9 @@ Site (GeoShape)      → tz 권위. 명시 override | centroid 1회 해석 → �
 - **naive 컬럼에는 UTC 값만.** 비-UTC aware를 넣으면 tzinfo가 벗겨지며 오인된다(§4).
 - **벽시계 해석은 앵커 tz로.** 사용자 브라우저 tz나 시스템 tz로 해석하면 다른 tz 장치에서 어긋난다.
   예약은 `wall_to_utc(wall, device_anchor)`.
-- **`get_user_tz()`는 실제로 시스템 tz다.** 이름과 달리 개인 tz가 아니다(벽시계 해석·daemon 호환용).
-  개인 표시는 `current_user_tz()`.
-- **`serialize_ts()`는 시스템 tz로 서버 변환한다.** 장치 관련 표시에는 쓰지 말고 `iso_utc` + `AoTTz`.
-  (스케줄러 `_serialize_job`의 `decided_at`/`executed_at`/`created_at`은 감사 메타라 아직 `serialize_ts`
-  잔존 — 알려진 경미한 갭.)
+- **옛 입구는 삭제됐다**(`get_user_tz`·`serialize_ts`·`get_device_tz`·`resolve_location_tz`·`location_iso`·`tz_utils` 등).
+  농장 시계는 `tz_of(FARM)`, 보는 사람 시계는 `tz_of(VIEWER)`, `where` 시계의 ISO 는 `iso_at(value, where)` 를 쓴다.
+  장치 관련 표시를 서버에서 농장 시계로 만들지 말고 `iso_utc` + `AoTTz` 를 쓴다.
 - **`datetime.now()`(시스템 로컬)를 "UTC now"로 쓰지 말 것.** Docker에선 우연히 같지만 non-UTC
   호스트에서 어긋난다. `utc_now()`를 쓴다. (단, 경과시간 측정·offset 계산 목적의 `datetime.now()`는
   의도적이며 그대로 둔다.)
@@ -232,7 +237,10 @@ Site (GeoShape)      → tz 권위. 명시 override | centroid 1회 해석 → �
 
 ## 12. 관련 파일
 
-- 백엔드 단일 진입점: `aot/utils/timekit.py`
+- 백엔드 단일 진입점: `aot/utils/timekit.py` (옛 `tz_utils.py` 모듈은 없다)
+- 가드: `aot/scripts/check_time_rules.py` — 기준선은 0(위반 허용 없음). 구조상 못 바꾸는 곳만
+  `EXCEPTIONS` 표에 (파일, 규칙, 줄 안의 글자 조각, 한 줄 사유)로 올린다. 사유가 없거나 맞는 위반이 없는
+  죽은 예외는 가드가 실패시킨다. 한 줄 예외는 줄 끝 `# tz-ok: 이유`. pre-commit 과 CI 에서 돈다.
 - 좌표→tz·위치 해석: `aot/utils/device_tz.py`
 - 도형 tz/상속/경계: `aot/databases/models/geo.py`, `aot/aot_flask/geo/geo_overlays.py`
 - 좌표→tz 자동 물질화 리스너: `aot/databases/device_tz_listeners.py`

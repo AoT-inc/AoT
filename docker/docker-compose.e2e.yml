@@ -81,6 +81,23 @@ services:
           memory: 512M
     restart: "no"
 
+  # 합성 고도 타일 서버 — 물 회로 '지형 바꾸기' 여정이 쓴다(시드가 gis_dem_custom 입력 둘을 이 주소로 심는다).
+  # 후보 DEM 의 타일은 브라우저가 아니라 **앱 서버가** 받으므로, 앱 컨테이너가 닿는 곳에 진짜 HTTP 서버가 있어야 한다.
+  # 앱을 재시작해도 죽지 않게 앱과 별개 서비스로 둔다. 포트는 호스트로 내보내지 않는다.
+  dem-tiles:
+    image: aot_ai
+    command: python -m aot.tests.e2e.dem_server
+    volumes:
+      - ../:/app
+    environment:
+      - PYTHONPATH=/app
+      - AOT_E2E_DEM_PORT=8099
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: "no"
+
   # 데몬은 L3(제어 폐루프)에서만 필요하다. 평소에는 뜨지 않게 프로필 뒤에 둔다 —
   # 도커 VM 메모리가 빠듯하고, L0~L2 는 데몬 없이도 전부 판정된다.
   #   docker compose -f docker/docker-compose.e2e.yml --profile control up -d

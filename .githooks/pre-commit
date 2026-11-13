@@ -117,6 +117,22 @@ if [ -z "$AOT_SKIP_GEO_WRITE_CHECK" ]; then
     fi
 fi
 
+# ── 장치 종류 어휘·마커 종류 리터럴 ───────────────────────────────────────
+# 종류→모델 dict 와 'aot_device' 는 정본(device_kind / geo_marker_kinds)이
+# 하나다. 인라인으로 다시 쓰면 한쪽만 늘어나 조용히 갈린다.
+# 우회: AOT_SKIP_DEVICE_KIND_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_DEVICE_KIND_CHECK" ]; then
+    DK_CHECK="$ROOT/aot/scripts/check_device_kind_literals.py"
+    if [ -f "$DK_CHECK" ] && git diff --cached --name-only | grep -q '\.py$'; then
+        if ! python3 "$DK_CHECK"; then
+            echo
+            echo "커밋 중단: 장치 종류→모델 dict·'aot_device' 는 정본 모듈을 쓰세요."
+            echo "  (의도한 커밋이라면 AOT_SKIP_DEVICE_KIND_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
 # ── Alembic 체인 ↔ ALEMBIC_VERSION 일치 ───────────────────────────────────
 # 업그레이드는 'head' 가 아니라 이 상수를 목표로 돈다. 새 마이그레이션을
 # 넣고 상수를 안 올리면 그 마이그레이션은 영원히 실행되지 않으면서 앱은
@@ -210,6 +226,25 @@ if [ -z "$AOT_SKIP_REVERT_CHECK" ]; then
             echo "커밋 중단: 최근 커밋이 넣은 줄이 통째로 사라집니다."
             echo "  되돌리려는 것이 맞으면 그대로 진행하세요."
             echo "  (의도한 커밋이라면 AOT_SKIP_REVERT_CHECK=1 git commit ...)"
+            exit 1
+        fi
+    fi
+fi
+
+# ── 시간 규칙 가드 ───────────────────────────────────────────────────────
+# 시간대·날짜를 코드에 박거나 옛 시간 입구(serialize_ts·to_local·utcnow 등)를
+# 새로 쓰는 커밋을 막는다. 실패 메시지가 줄 번호와 "무엇으로 바꿀지" 를 직접
+# 말한다 — 하위 세션은 설계서를 읽지 않고 이 메시지로만 교정받는다.
+# 이미 있던 위반은 aot/tests/time_rules_baseline.json 에 묶여 있고 늘면 실패한다.
+# 우회: AOT_SKIP_TIME_CHECK=1 git commit ...
+if [ -z "$AOT_SKIP_TIME_CHECK" ]; then
+    TIME_CHECK="$ROOT/aot/scripts/check_time_rules.py"
+    if [ -f "$TIME_CHECK" ]; then
+        if ! python3 "$TIME_CHECK" --staged; then
+            echo
+            echo "커밋 중단: 위 줄을 '→' 가 가리키는 timekit 입구로 바꾸세요."
+            echo "  (시간대와 무관한 정당한 예외면 그 줄에 '# tz-ok: 이유')"
+            echo "  (의도한 커밋이라면 AOT_SKIP_TIME_CHECK=1 git commit ...)"
             exit 1
         fi
     fi

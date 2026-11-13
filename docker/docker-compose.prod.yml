@@ -99,6 +99,11 @@ services:
       - AOT_LOCAL_DIR=/app/aot_local
       - INFLUXDB_HOST=influxdb
       - INFLUXDB_PORT=8086
+      # 이 컨테이너에는 nginx 가 없으므로 `/mcp`·`/.well-known/oauth-protected-resource` 를
+      # 웹 앱이 직접 aot_mcp 로 넘긴다(aot/aot_flask/mcp_forward.py) — 직접 설치의 nginx 와
+      # 같은 동작이라, 공개 주소 하나로 웹과 MCP 가 같이 닿는다. 인증·켜짐 여부는 MCP 서버가
+      # 그대로 판정한다. 웹 포트로 MCP 를 내지 않으려면 .env 에 `AOT_MCP_UPSTREAM=` (빈 값).
+      - AOT_MCP_UPSTREAM=${AOT_MCP_UPSTREAM-http://aot_mcp:5700}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -112,6 +117,8 @@ services:
     # SIGTERM 후 Shutdown State 전송 + 감사 flush 가 끝날 시간을 준다.
     # 기본 10초면 절차가 SIGKILL 로 잘린다 (docker-compose.yml 주석 참고).
     stop_grace_period: 180s
+    # 시스템 메모리 고갈 때 데몬을 희생 순서 뒤로 민다 (docker-compose.yml 주석 참고).
+    oom_score_adj: -500
     volumes:
       # Same named volume as aot-app: daemon and UI must open the SAME aot.db.
       - aot_data:/app/aot_local
@@ -141,11 +148,18 @@ services:
       - influxdb
     restart: always
 
-  # 디지털트윈 (실험 · '준비 중' 기능) — 기본 꺼짐(COMPOSE_PROFILES=twin). docker-compose.yml 의 같은
-  # 서비스 주석 참고. 이미지는 aot_daemon 과 같고 호스트 소스를 덮지 않는다(aot_mcp 와 같은 이유).
+  # 디지털트윈 (실험 · '준비 중' 기능) — 기본 스택에 항상 들어 있고 대기한다. 설정 > 일반의 토글이 실제
+  # 구동 스위치다(꺼져 있으면 flask 앱을 올리지 않고 플래그만 가끔 본다 — 꺼진 상태 약 94 MiB).
+  # 일반 사용자는 설정 화면만 볼 수 있어 서버를 따로 띄울 방법이 없기 때문이다(앱에 Docker 소켓을 주지
+  # 않는다 — docker-compose.updater.yml). 낮은 사양 기기(파이 모델·기기 메모리)는 시작할 때 하트비트
+  # `locked` 를 쓰고 `sleep infinity` 로 바뀌어 대기한다(aot/twin/__main__.py park_if_locked) —
+  # `unless-stopped` 는 종료를 되살리므로 종료하지 않는다.
+  # ⚠ 재시작 정책을 `on-failure` 로 바꾸지 말 것: Docker 문서대로 on-failure 는 "데몬이 재시작하면
+  # 컨테이너를 다시 띄우지 않는다" — 정전·재부팅 뒤 모든 설치에서 트윈이 돌아오지 못한다.
+  # docker-compose.yml 의 같은 서비스 주석 참고. 이미지는 aot_daemon 과 같고 호스트 소스를 덮지 않는다
+  # (aot_mcp 와 같은 이유).
   aot_twin:
     image: ${AOT_IMAGE_REPO:-ghcr.io/aot-inc/aot}:${AOT_IMAGE_TAG:-latest}
-    profiles: ["twin"]
     command: python -m aot.twin
     volumes:
       - aot_data:/app/aot_local

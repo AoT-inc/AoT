@@ -1530,3 +1530,73 @@ p.aot-ai-viewer__vtitle {
     to { transform: none; }
   }
 }
+
+/* ── viz(게이지/미니그래프) 인라인 카드 ────────────────────────────────────
+   AoTViz(aot-dataviz.css)가 그린 정적 SVG/CSS 를 카드 본문 아래 인라인으로 놓는다.
+   여러 지표면 나란히 두고 좁으면 접힌다. 다이얼은 자기 max-width(160px)를 지키고,
+   스파크라인은 칸 폭을 채운다. */
+.aot-ai-viz {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aot-space-4);
+  margin-top: var(--aot-space-3);
+}
+.aot-ai-viz__cell {
+  flex: 1 1 150px;
+  min-width: 140px;
+  max-width: 220px;
+  /* 제 배경 타일 — AI 카드가 지도 위에 반투명하게 떠도 게이지·선이 또렷하게
+     읽히도록 불투명 면을 깐다(사용자 요청 2026-11-06). 면은 테마 인지 카드 토큰이라
+     라이트=밝은 면·다크=어두운 면이 되고, AoTViz 가 그 위에서 색을 맞춘다. */
+  background: var(--aot-surface-card);
+  border-radius: var(--aot-radius-md);
+  padding: var(--aot-space-4);
+}
+/* 값 타일은 게이지든 미니그래프든 **같은 골격**으로 선다 — 머리줄(라벨+현재값) ·
+   그래픽(같은 높이) · 공용 푸터(최소/최대)이 세 줄이 두 타일에서 같은 자리·같은
+   크기에 온다. 그래서 나란히 놓여도 높이·값 위치·참고값이 어긋나지 않는다. 이
+   골격은 .aot-ai-viz 안에서만 — 지도 팝업의 얇은 인라인 리듬은 그대로 둔다. */
+.aot-ai-viz__cell { display: flex; flex-direction: column; }
+.aot-ai-viz .aot-viz {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+/* 그래픽은 머리줄과 푸터 사이에서 **같은 높이 띠**를 차지한다. 아래 여백은
+   고정(최소 간격)이고, 푸터의 margin-top:auto 가 남는 공간을 먹어 푸터를 타일
+   바닥에 붙인다 — 머리줄이 한 줄 더 길어진 타일이 있어도 최소/최대 줄의 높이가
+   서로 맞는다. */
+.aot-ai-viz .aot-viz-dial-wrap,
+.aot-ai-viz .aot-viz--spark .aot-viz-spark {
+  height: 104px;
+  margin-bottom: var(--aot-space-3);
+}
+/* 게이지 머리줄도 스파크처럼 왼쪽 정렬, 호는 띠 안에서 가로 가운데. */
+.aot-ai-viz .aot-viz--dial { text-align: left; }
+.aot-ai-viz .aot-viz-dial-wrap {
+  width: 104px;
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* 공용 푸터는 타일 바닥에 고정 — 두 타일의 최소/최대 줄이 같은 높이에 온다. */
+.aot-ai-viz .aot-viz-ends { margin-top: auto; }
+
+/* ── 카드 글자 크기 (P7-11, 'AI 설정' 모달) ─────────────────────────────────────
+   <html data-aot-ai-text="sm|lg|xl"> 일 때(보통은 속성 없음) 카드 글(자막·수신함 항목·뷰어)의 **글자 역할
+   토큰만** 배율로 다시 정한다. 값은 사다리 토큰 × 배율이다(리터럴 rem 을 새로 적지 않는다). 버튼·칩·배지·타일
+   (--aot-fs-control)은 그대로 둔다 — 눌리는 크기와 행동 줄의 정렬이 글자 크기를 따라 흔들리지 않게. */
+:root[data-aot-ai-text="sm"] { --aot-ai-text-scale: 0.875; }
+:root[data-aot-ai-text="lg"] { --aot-ai-text-scale: 1.15; }
+:root[data-aot-ai-text="xl"] { --aot-ai-text-scale: 1.3; }
+:root[data-aot-ai-text] .aot-ai-caption,
+:root[data-aot-ai-text] .aot-ai-inbox__item,
+:root[data-aot-ai-text] .aot-ai-viewer {
+  --aot-fs-section-title:   calc(var(--aot-font-size-lg) * var(--aot-ai-text-scale));
+  --aot-fs-container-title: calc(var(--aot-font-size-base) * var(--aot-ai-text-scale));
+  --aot-fs-page-body:       calc(var(--aot-font-size-sm) * var(--aot-ai-text-scale));
+  --aot-fs-body:            calc(var(--aot-font-size-sm) * var(--aot-ai-text-scale));
+  --aot-fs-desc:            calc(var(--aot-font-size-xs) * var(--aot-ai-text-scale));
+  --aot-fs-caption:         calc(var(--aot-font-size-xs) * var(--aot-ai-text-scale));
+  font-size: var(--aot-fs-page-body);
+}

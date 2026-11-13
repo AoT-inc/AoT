@@ -101,7 +101,11 @@ _KNOWLEDGE_SHELVE_TOOL_ADDITIONS = {'knowledge_shelve'}
 # record_write — in NEITHER static approval set because approval is decided per
 # call (mcp_safety_gate.CONDITIONAL_APPROVAL_TOOLS): own / user-requested AI
 # notes go through, someone else's or author-unknown notes queue for approval.
-_NOTE_MODIFY_TOOL_ADDITIONS = {'modify_note'}
+_NOTE_MODIFY_TOOL_ADDITIONS = {'modify_note', 'delete_note'}
+
+# delete_note (2026-11-03, 재설계 PR 5): 노트 지우기 — 고치기와 달리 **늘** 승인 대기(mutating)이고 역할은 웹과 같은
+# edit_settings(mcp_safety_gate.NOTE_DELETE_TOOLS). 승인 집합 스냅샷에 더한다.
+_NOTE_DELETE_MUTATING_ADDITIONS = {'delete_note'}
 
 # 대상 별칭(2026-10-28, MCP 점검 E): 사용자가 대상을 부르는 다른 이름. record_write —
 # 장치·설정을 바꾸지 않고 지우면 되돌아가므로 어느 승인 집합에도 없다.
@@ -264,7 +268,10 @@ _FACILITY_MAP_TOOL_ADDITIONS = {
 
 # Reverse geocoding (2026-07-25, @ANCHOR: REVERSE_GEOCODE_TOOL): exposes the
 # existing VWorld getAddress pipeline as a standalone lookup. Read-only.
-_REVERSE_GEOCODE_TOOL_ADDITIONS = {'get_address'}
+# find_location (2026-11-03): the other direction (address -> coordinates), through
+# the GIS Input lookup gate (aot_flask/geo/geo_lookup.py). Read-only, domain-only
+# (find.location), no approval.
+_REVERSE_GEOCODE_TOOL_ADDITIONS = {'get_address', 'find_location', 'find_favorites'}
 
 # GIS Input CRUD + scheduling batch + target resolution (2026-07-26, 6a0788a
 # "외부 MCP 서버 사람 승인 게이트 + GIS 입력 CRUD + add_schedule_batch"):
@@ -319,23 +326,18 @@ _SYSTEM_BRIEF_TOOL_ADDITIONS = {'get_system_brief'}
 # 도구 get_output_state 추가"). Read-only.
 _OUTPUT_STATE_TOOL_ADDITIONS = {'get_output_state'}
 
-# Adaptive document storage — read half (2026-08-04, 9c68ef2 "문서 스토리지
-# 티어를 AI가 조회할 수 있게 (2/3)"). All three read tiering/archive state;
-# read-only, tool_map + registry only.
-_ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS = {
-    'get_storage_tier_status', 'search_archives', 'get_archived_document',
-}
-
-# Adaptive document storage — write half (2026-08-04, 8968d30 "스토리지 쓰기
-# 도구 4종"). All four mutate archive/tier state → approval-gated.
-_ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS = {
-    'archive_note', 'restore_note_from_archive', 'set_document_tier', 'delete_archive',
-}
+# Adaptive document storage — read half (2026-08-04). 냉동 보관 도구(조회 2·쓰기 4)는
+# 2026-11-04 사용자 결정으로 지웠고 상태 조회 하나만 남았다.
+_ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS = {'get_storage_tier_status'}
+_ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS = set()
 
 # 공간-장치 바인딩 (2026-08-08, Phase D). list_unbound_slots 는 읽기;
 # rebind_device 는 "이 구역에 물을 주는 기계"를 바꾸므로 승인 필수이며
 # config_only 면제 대상이 절대 아니다(설계 문서 Phase D).
 _GEO_BINDING_TOOL_ADDITIONS = {'list_unbound_slots', 'rebind_device'}
+
+# 배관 관경 일괄 입력(2026-11-03) — 지도 편집 쓰기, 승인 필수(config_only 아님).
+_PIPE_DIAMETER_TOOL_ADDITIONS = {'set_pipe_diameters'}
 
 # 식생 구획(작기) — docs/design/geo-vegetation-plot.md (2026-08-13).
 # "어디에 무엇이 심겨 있는가" 는 재배 조언의 전제인데, 시설(crop_preset /
@@ -527,7 +529,21 @@ _ORIG_APPROVAL_REQUIRED_TOOLS = _ORIG_VIRTUAL_APPROVAL_TOOLS | {
 }
 
 
+#: 아키텍처 개선 26-11 5단계(2026-11-08) — 인앱 AI 가 도메인 명부만 보게 되면서 어느 operation 도
+#: 부르지 않는 옛 도구를 지웠다(맡은 op: find.tree·detail.device·find.nearest·records.data_source·
+#: find.functions, 슬롯 재배선은 지도 화면). 위 추가 집합은 이력이라 그대로 두고 여기서 뺀다.
+_STEP5_REMOVED_TOOLS = {
+    'list_geo_maps', 'get_device_location', 'distance_between', 'list_unbound_slots',
+    'rebind_device', 'smartfarmkorea_lookup', 'get_active_functions_summary',
+}
+#: 같은 단계에서 인앱 처리기를 잃은 도구 — 이름은 남고(MCP 서랍 기구) 실행은 MCP 실행층이 한다.
+_STEP5_HANDLERLESS_TOOLS = {'open_drawer', 'get_tool_detail'}
+
+
 def _check(name, expected, actual):
+    expected = set(expected) - _STEP5_REMOVED_TOOLS
+    if name == "tool_map keys":
+        expected -= _STEP5_HANDLERLESS_TOOLS
     if expected != actual:
         missing = expected - actual
         extra = actual - expected
@@ -573,7 +589,7 @@ def _check_dispatch_map(R):
            | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-           | _GEO_BINDING_TOOL_ADDITIONS
+           | _GEO_BINDING_TOOL_ADDITIONS | _PIPE_DIAMETER_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
            | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
            | _LOOKUP_SOURCE_READ_TOOL_ADDITIONS
@@ -606,7 +622,7 @@ def _check_declarations(R):
            | _ADVISORY_READ_TOOL_ADDITIONS | _ADVICE_LEDGER_TOOL_ADDITIONS
            | _SYSTEM_BRIEF_TOOL_ADDITIONS | _OUTPUT_STATE_TOOL_ADDITIONS
            | _ADAPTIVE_STORAGE_READ_TOOL_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-           | _GEO_BINDING_TOOL_ADDITIONS
+           | _GEO_BINDING_TOOL_ADDITIONS | _PIPE_DIAMETER_TOOL_ADDITIONS
            | _PLANTING_READ_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
            | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
            | _LOOKUP_SOURCE_READ_TOOL_ADDITIONS
@@ -625,11 +641,11 @@ def _check_declarations(R):
     # 4. dispatch approval set — original PLUS the mutating post-Phase-1 additions,
     #    MINUS the config_only exemptions.
     _check("_VIRTUAL_APPROVAL_TOOLS",
-           (_ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
+           (_ORIG_VIRTUAL_APPROVAL_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _NOTE_DELETE_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS | _INPUT_ACTIVATE_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-            | _GEO_BINDING_MUTATING_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
+            | _GEO_BINDING_MUTATING_ADDITIONS | _PIPE_DIAMETER_TOOL_ADDITIONS | _PLANTING_WRITE_TOOL_ADDITIONS
             | _PLOT_STAGE_TOOL_ADDITIONS | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS
             | _TAB_WRITE_TOOL_ADDITIONS | _TAB_DELETE_TOOL_ADDITIONS
@@ -642,11 +658,11 @@ def _check_declarations(R):
     #    one new `physical` (not `mutating`) scheduling tool, add_schedule_batch,
     #    MINUS the config_only exemptions.
     _check("_APPROVAL_REQUIRED_TOOLS",
-           (_ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
+           (_ORIG_APPROVAL_REQUIRED_TOOLS | _POST_PHASE1_MUTATING_ADDITIONS | _NOTE_DELETE_MUTATING_ADDITIONS | _SFK_AI_MUTATING_ADDITIONS
             | _SEQUENCE_SCHEDULE_TOOL_ADDITIONS
             | _SCHEDULE_CRUD_MUTATING_ADDITIONS | _GIS_INPUT_CRUD_MUTATING_ADDITIONS | _INPUT_ACTIVATE_ADDITIONS
             | _CONFIRMATION_RELAY_MUTATING_ADDITIONS | _ADAPTIVE_STORAGE_WRITE_TOOL_ADDITIONS
-            | _GEO_BINDING_MUTATING_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
+            | _GEO_BINDING_MUTATING_ADDITIONS | _PIPE_DIAMETER_TOOL_ADDITIONS | _SCHEDULE_BATCH_PHYSICAL_ADDITIONS
             | _PLANTING_WRITE_TOOL_ADDITIONS | _PLOT_STAGE_TOOL_ADDITIONS
             | _PLOT_STAGE_EDIT_TOOL_ADDITIONS
             | _CROP_PROGRAM_WRITE_TOOL_ADDITIONS | _CROP_PROGRAM_DELETE_TOOL_ADDITIONS

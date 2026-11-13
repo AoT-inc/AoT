@@ -20,7 +20,7 @@ from aot.functions.utils.env_control.coordinator import (
     coordinate, ActuatorCommand, CoordinatorState,
 )
 from aot.functions.utils.env_control import log_channels as _LC
-from aot.functions.utils.env_control import sensor_status as _sensor_status
+from aot.utils import sensor_status as _sensor_status
 from aot.functions.utils.env_control.dispatch_adapters import snap_screen_commands
 from aot.functions.utils.env_control.data_hygiene import DataHygieneChecker
 from aot.functions.utils.env_control.greybox.params import GreyboxParams
@@ -1444,7 +1444,7 @@ class CycleMixin:
         _od_cache: dict = {}
         if _outdoor_sr:
             try:
-                from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors
+                from aot.space.facility_sensors import read_outdoor_sensors
                 # 멈춘 센서 추적기(실외 T·RH) — 시각·창 종류를 사이클 첫 읽기 앞에서 정한다.
                 _frozen = _sensor_status.begin_frozen_cycle(self)
                 # 마지막 신선한 실측 강우 — 끊긴 강우계의 "비 옴" 을 예보가 덮지 않게
@@ -2752,7 +2752,7 @@ class CycleMixin:
         _wind_dir = internal.get('wind_dir', external.get('wind_dir'))
         if not _vos or _wind_dir is None:
             return
-        from aot.aot_flask.geo.facility_wind import wind_biased_opening
+        from aot.space.facility_wind import wind_biased_opening
         _speed = internal.get('wind', external.get('wind'))
         _bias = wind_biased_opening(
             _vos, float(_wind_dir),
@@ -2868,7 +2868,7 @@ class CycleMixin:
         wind_thr = self.gate_wind_threshold or 12.0
         if bindings:
             try:
-                from aot.aot_flask.geo.facility_sensors import fresh_forecast_file_for
+                from aot.space.facility_sensors import fresh_forecast_file_for
                 path = fresh_forecast_file_for(bindings, sole=True)
             except Exception:
                 path = None
@@ -2881,7 +2881,7 @@ class CycleMixin:
                     return sig
             # facility weather_bindings 경로 — 서비스 무관 범용 경로
             try:
-                from aot.aot_flask.geo.facility_sensors import read_forecast_sensors
+                from aot.space.facility_sensors import read_forecast_sensors
                 fc_data = read_forecast_sensors(bindings)
             except Exception:
                 fc_data = {}
@@ -3609,7 +3609,7 @@ class CycleMixin:
         # 않고 이 스냅샷을 읽게 한다(저사양 호스트 스레드 풀 포화 방지).
         # 부가 정보이므로 실패해도 PI 상태 저장을 막지 않는다.
         try:
-            from aot.aot_flask.geo.facility_sensors import build_sensor_snapshot
+            from aot.space.facility_sensors import build_sensor_snapshot
             snap = build_sensor_snapshot(
                 getattr(self, '_sensors_resolved', None) or [],
                 getattr(self, '_sensors_resolved_outdoor', None) or [],
@@ -3653,7 +3653,7 @@ class CycleMixin:
         T, RH = ind.get('temp_c'), ind.get('humidity_pct')
         ind['leaf_temp_c'] = round(float(res.leaf_temp), 2)
         if T is not None and RH is not None:
-            from aot.functions.utils.env_control import psychro as _ps
+            from aot.utils import psychro as _ps
             ind['vpd_leaf_kpa'] = round(_ps.leaf_vpd(float(res.leaf_temp), float(T),
                                                      float(RH)), 3)
 
@@ -4615,7 +4615,7 @@ class CycleMixin:
                 _load_forecast, load_fresh_facility_forecast)
             bindings = getattr(self, '_sensors_forecast', [])
             if bindings:
-                from aot.aot_flask.geo.facility_sensors import forecast_file_for
+                from aot.space.facility_sensors import forecast_file_for
                 fac = load_fresh_facility_forecast(forecast_file_for(bindings), now)
                 curve = kma_curve(fac, now) if fac else None
                 if curve:
@@ -4624,8 +4624,9 @@ class CycleMixin:
             fac_tz = self._get_facility_tz()
             if not data or fac_tz is None:
                 return None
+            from aot.utils.kma_clock import KMA_TZ_NAME
             fac_name = getattr(fac_tz, 'zone', None) or str(fac_tz)
-            if fac_name != str(data.get('tz') or 'Asia/Seoul'):
+            if fac_name != str(data.get('tz') or KMA_TZ_NAME):
                 return None
             return kma_curve(data, now)
         except Exception:

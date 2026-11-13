@@ -1,0 +1,12 @@
+{
+  "_comment": "제공 여부 판단 기준(제안서 6절). 숫자는 결정 사항이라 코드가 아니라 여기서 고친다. warn 은 통과선을 넘었지만 불통선 안인 구간. 값이 null 이면 그 구간은 쓰지 않는다(통과 아니면 바로 불통).",
+  "metrics": {
+    "lcp_ms":               {"label": "LCP",                  "unit": "ms",   "pass": 2500,  "warn": 4000,  "scope": "client"},
+    "tbt_ms":               {"label": "TBT",                  "unit": "ms",   "pass": 200,   "warn": 600,   "scope": "client"},
+    "main_cpu_avg_pct":     {"label": "켜 둔 메인 스레드 평균", "unit": "%",    "pass": 5,     "warn": 15,    "scope": "client"},
+    "poll_mb_per_hour":     {"label": "시간당 폴링 전송량",     "unit": "MB",   "pass": 10,    "warn": 30,    "scope": "line", "when_net": ["lte", "lte_slow"]},
+    "server_cpu_avg_pct":   {"label": "서버 CPU 평균",         "unit": "%",    "pass": 50,    "warn": 80,    "scope": "server"},
+    "server_p95_ms":        {"label": "응답 p95",              "unit": "ms",   "pass": 500,   "warn": 1500,  "scope": "server"},
+    "server_throttled":     {"label": "파이 스로틀 비트",       "unit": "",     "pass": 0,     "warn": null,  "scope": "server"}
+  }
+}

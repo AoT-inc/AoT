@@ -26,7 +26,7 @@ bridges the id shapes of the two generators. That matcher is the load-bearing
 part: if the editor renames an id family, matching silently fails and the double
 count comes back with no error anywhere. Hence this test.
 """
-from aot.aot_flask.geo.facility_calc import compute_capacity, _canon_env_vent_id
+from aot.space.facility_calc import compute_capacity, _canon_env_vent_id
 
 
 def _facility(fittings):

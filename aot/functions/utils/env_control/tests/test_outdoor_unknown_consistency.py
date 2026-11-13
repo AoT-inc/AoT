@@ -143,7 +143,7 @@ class _Coordinator:
 @pytest.fixture
 def outdoor(monkeypatch):
     """`outdoor.set(source, **values)` — 값이 None 이면 그 센서가 끊긴 것."""
-    import aot.aot_flask.geo.facility_sensors as fs
+    import aot.space.facility_sensors as fs
 
     monkeypatch.setattr(ecc, 'write_influxdb_value', lambda *a, **k: None)
     monkeypatch.setattr(ecc._freshness, 'freshness_by_device', lambda ids: {})

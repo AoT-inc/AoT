@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import sqlite3
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +286,7 @@ class WarmStorageService:
 
             if row:
                 # Update last accessed time
-                now = datetime.utcnow().isoformat()
+                now = naive_utc(utc_now()).isoformat()
                 cursor.execute(
                     "UPDATE warm_documents SET last_accessed = ?, access_count = access_count + 1 WHERE doc_id = ?",
                     (now, doc_id)
@@ -312,7 +313,7 @@ class WarmStorageService:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            now = datetime.utcnow().isoformat()
+            now = naive_utc(utc_now()).isoformat()
 
             # Calculate token count from content if not provided
             token_count = document.token_count or len(document.content) // 4
@@ -537,7 +538,7 @@ class WarmStorageService:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            now = datetime.utcnow().isoformat()
+            now = naive_utc(utc_now()).isoformat()
 
             cursor.execute("""
                 INSERT OR REPLACE INTO section_summaries
@@ -692,7 +693,7 @@ class WarmStorageService:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            now = datetime.utcnow().isoformat()
+            now = naive_utc(utc_now()).isoformat()
 
             # Get current tier
             cursor.execute("SELECT tier_level FROM warm_documents WHERE doc_id = ?", (doc_id,))
@@ -815,7 +816,7 @@ class WarmStorageService:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
-            cutoff = (datetime.utcnow() - timedelta(hours=window_hours)).isoformat()
+            cutoff = (naive_utc(utc_now()) - timedelta(hours=window_hours)).isoformat()
 
             cursor.execute("""
                 SELECT * FROM warm_documents
@@ -970,7 +971,7 @@ try:
         async def set(self, doc_id: str, document: Document) -> None:
             """Async set operation."""
             async with aiosqlite.connect(self.db_path) as db:
-                now = datetime.utcnow().isoformat()
+                now = naive_utc(utc_now()).isoformat()
                 await db.execute("""
                     INSERT OR REPLACE INTO warm_documents
                     (doc_id, title, content, tags, tier_level, token_count, char_count,

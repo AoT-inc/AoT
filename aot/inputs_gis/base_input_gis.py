@@ -38,21 +38,6 @@ class AbstractGisInput(AbstractInput):
         # 4. Global API Keys (Injected by parent context if applicable)
         self.global_api_keys = {}
 
-    def _device_local_now(self):
-        """이 GIS 입력의 위치 기준 현재 로컬 datetime (tz-aware).
-
-        위성 타일 '오늘/어제' 날짜를 시설 로컬 날짜로 고르기 위함 — UTC 기준이면
-        KST 등에서 하루 어긋날 수 있다(audit P4, timezone-management.md §11).
-        해석 실패 시 UTC now 로 폴백.
-        """
-        try:
-            from aot.utils.device_tz import resolve_location_tz
-            from aot.utils.timekit import to_tz, utc_now
-            return to_tz(utc_now(), resolve_location_tz(self.unique_id))
-        except Exception:
-            import datetime as _dt
-            return _dt.datetime.now(_dt.timezone.utc)
-
     def get_custom_option(self, option, default_return=None):
         """
         Extends default option retrieval with global API key fallback.
@@ -402,5 +387,28 @@ class AbstractGisInput(AbstractInput):
                       'meta': { ...raw data... }
                   }
             Or None if not supported/failed.
+
+            Failure: return ``{'error': message}``; add ``'code': 'no_key'`` when the API key is
+            missing (any other short code is passed through). The lookup gate
+            (``aot_flask/geo/geo_lookup.py``) reads this — the map search box and the MCP
+            ``find.location`` both go through it, so a provider that declares ``'address'`` in
+            ``search_capabilities`` and implements this is usable there with no other change.
+        """
+        return None
+
+    # 5. Reverse geocoding (coordinates -> address)
+    reverse_capabilities = []  # e.g. ['address'] - declare it and implement reverse()
+
+    def reverse(self, lat, lng, **kwargs):
+        """
+        Coordinates -> a human-readable address with this provider's reverse-geocoding API.
+
+        Returns:
+            ``{'address': 'Full Address', 'type': optional kind (e.g. 'road'|'parcel')}``,
+            ``{'error': message}`` on failure (add ``'code': 'no_key'`` when the API key is missing),
+            or None if not supported.
+
+        Declare ``reverse_capabilities = ['address']`` and implement this and the lookup gate
+        (``aot_flask/geo/geo_lookup.py``) offers it to ``get_address`` / ``find.address`` with no other change.
         """
         return None

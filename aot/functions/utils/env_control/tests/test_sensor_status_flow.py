@@ -12,12 +12,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import aot.aot_flask.geo.facility_sensors as fs
+import aot.space.facility_sensors as fs
 from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin import (
     HelpersMixin,
 )
 from aot.functions.utils.env_control import coordinator as C
-from aot.functions.utils.env_control import sensor_status as SS
+from aot.utils import sensor_status as SS
 from aot.functions.utils.env_control import situation as S
 from aot.functions.utils.env_control.authority import derive_authority
 from aot.functions.utils.env_control.effect_functions import build_effect_model

@@ -12,6 +12,7 @@ import signal
 import socket
 import subprocess
 import time
+from aot.utils.timekit import FARM, to_tz, utc_now
 from collections import OrderedDict
 from threading import Timer
 from uuid import UUID
@@ -503,16 +504,8 @@ def time_between_range(start_time, end_time, tz=None):
         if end_hour >= 24: end_hour = 23; end_min = 59
 
         # Resolve "now" in the device's local timezone when available.
-        if tz:
-            try:
-                import pytz
-                local_tz = pytz.timezone(str(tz))
-                now_time = datetime.datetime.now(local_tz).time().replace(second=0, microsecond=0)
-            except Exception:
-                now_time = datetime.datetime.now().time().replace(second=0, microsecond=0)
-        else:
-            now_time = datetime.datetime.now().time()
-            now_time = now_time.replace(second=0, microsecond=0)
+        # tz 이름이 없거나 못 풀면 농장 시각(timekit 폴백 사슬).
+        now_time = to_tz(utc_now(), str(tz) if tz else FARM).time().replace(second=0, microsecond=0)
 
         if ((start_hour < end_hour) or
                 (start_hour == end_hour and start_min < end_min)):
@@ -528,7 +521,30 @@ def time_between_range(start_time, end_time, tz=None):
     return 0  # No now not within range
 
 
-def epoch_of_next_time(time_str, tz=None):
+def _wall_time_today(time_str, tz, now):
+    """(오늘 그 벽시각의 naive 값, 시간대, 지금 UTC). 못 읽으면 None.
+
+    "오늘" 은 `tz` 시계의 오늘이다. tz 가 없으면 농장 시계 — 컨테이너 OS
+    시계(time.ctime/mktime)로 읽지 않는다.
+    """
+    from aot.utils.timekit import utc_now, resolve_tz, SOURCE_EXPLICIT
+    local_tz, _src = resolve_tz(str(tz) if tz else FARM)
+    if tz and _src != SOURCE_EXPLICIT:
+        return None                 # 모르는 이름 — 예전처럼 읽지 못한 것으로 본다
+    now_utc = now if now is not None else utc_now()
+    now_local = to_tz(now_utc, local_tz)
+    parts = time_str.split(':')
+    h, m, s = int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0
+    # Build the target as a NAIVE wall-clock, then localize via wall_to_utc
+    # so the correct offset for that date is applied. A pytz aware
+    # .replace(hour=...) keeps "now"'s fixed offset and drifts by 1h
+    # across a DST boundary (audit P2, timezone-management.md §11).
+    naive_target = now_local.replace(tzinfo=None, hour=h, minute=m,
+                                     second=s, microsecond=0)
+    return naive_target, local_tz, now_utc
+
+
+def epoch_of_next_time(time_str, tz=None, now=None):
     """
     Take time string (HH:MM:SS) and return the epoch of the time in the future.
 
@@ -536,34 +552,44 @@ def epoch_of_next_time(time_str, tz=None):
                time is interpreted as a wall-clock time in that timezone,
                not in UTC / system-local time.  This ensures a user who
                sets "08:00" gets 08:00 in their local timezone.
+    :param now: 기준 시각(UTC aware). 없으면 지금. 시험에서 시계를 고정할 때 쓴다.
+    :return: epoch 초. 시각·시간대를 읽지 못하면 None.
+
+    DST 로 그 벽시각이 없는 날(봄 02:30)은 표준시로 읽혀 한 시간 뒤(03:30)에,
+    두 번 있는 날(가을 01:30)은 두 번째에 **한 번** 온다 — `wall_to_utc` 규약.
     """
     try:
-        if tz:
-            import pytz
-            from aot.utils.timekit import wall_to_utc, utc_now
-            local_tz = pytz.timezone(str(tz))
-            now_local = datetime.datetime.now(local_tz)
-            parts = time_str.split(':')
-            h, m, s = int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0
-            # Build the target as a NAIVE wall-clock, then localize via wall_to_utc
-            # so the correct offset for that date is applied. A pytz aware
-            # .replace(hour=...) keeps "now"'s fixed offset and drifts by 1h
-            # across a DST boundary (audit P2, timezone-management.md §11).
-            naive_target = now_local.replace(tzinfo=None, hour=h, minute=m,
-                                             second=s, microsecond=0)
-            target = wall_to_utc(naive_target, local_tz)
-            if target <= utc_now():
-                target = wall_to_utc(naive_target + datetime.timedelta(days=1), local_tz)
-            return target.timestamp()
-        else:
-            current_epoch = time.time()
-            time_parts = time.ctime().split()  # split full time string
-            time_parts[3] = time_str  # replace the time component
-            new_time = time.mktime(time.strptime(' '.join(time_parts)))  # convert to epoch
-            if new_time < current_epoch:  # Add a day if in the past
-                new_time += 86400
-            return new_time
-    except:
+        from aot.utils.timekit import wall_to_utc
+        parsed = _wall_time_today(time_str, tz, now)
+        if parsed is None:
+            return None
+        naive_target, local_tz, now_utc = parsed
+        target = wall_to_utc(naive_target, local_tz)
+        if target <= now_utc:
+            target = wall_to_utc(naive_target + datetime.timedelta(days=1), local_tz)
+        return target.timestamp()
+    except Exception:
+        return None
+
+
+def epoch_of_last_time(time_str, tz=None, now=None):
+    """그 벽시각이 **가장 최근에** 온 순간(지금 이하)의 epoch. 못 읽으면 None.
+
+    `epoch_of_next_time(...) - 86400` 으로 구하면 DST 가 바뀌는 날 하루가
+    23·25시간이라 한 시간 어긋난다. 날짜를 하루 빼고 그 날의 오프셋으로 다시
+    읽는다.
+    """
+    try:
+        from aot.utils.timekit import wall_to_utc
+        parsed = _wall_time_today(time_str, tz, now)
+        if parsed is None:
+            return None
+        naive_target, local_tz, now_utc = parsed
+        target = wall_to_utc(naive_target, local_tz)
+        if target > now_utc:
+            target = wall_to_utc(naive_target - datetime.timedelta(days=1), local_tz)
+        return target.timestamp()
+    except Exception:
         return None
 
 

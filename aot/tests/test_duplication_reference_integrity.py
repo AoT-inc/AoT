@@ -199,7 +199,6 @@ def _make_sequence(tab_id, name="시퀀스", step_names=("v11", "v12")):
     trig.trigger_type = 'trigger_sequence'
     trig.is_activated = True
     trig.map_overlay_id = 4242          # 원본이 놓인 지도 도형
-    trig.map_config_id = 'shared-design-map'
     db.session.add(trig)
     db.session.commit()
 
@@ -297,7 +296,6 @@ class TestDuplicateFunctionTab:
             copy = Trigger.query.filter(
                 Trigger.tab_id == new_tab.unique_id).one()
             assert copy.map_overlay_id is None
-            assert copy.map_config_id is None
             db.session.remove()
 
     def test_copy_is_renamed_and_deactivated(self, app):

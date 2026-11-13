@@ -64,8 +64,7 @@ from aot.aot_flask.utils import (utils_action, utils_conditional,
                                        utils_function, utils_function_status,
                                        utils_general, utils_http, utils_pid,
                                        utils_trigger)
-from aot.aot_flask.geo.device_membership import map_for_device
-from aot.aot_flask.utils.utils_map_config import ensure_map_config
+from aot.space.device_membership import map_for_device
 from aot.aot_flask.utils.utils_general import generate_form_action_list
 from aot.aot_flask.utils.utils_misc import determine_controller_type
 from aot.utils.actions import parse_action_information
@@ -79,7 +78,7 @@ from aot.utils.weekly_schedule import (
 )
 from aot.utils.inputs import parse_input_information
 from aot.utils.outputs import output_types, parse_output_information
-from aot.utils.device_tz import resolve_location_tz
+from aot.utils.timekit import tz_of
 from aot.utils.solar import is_daytime, next_sun_event, sun_times
 from aot.utils.system_pi import (
     add_custom_measurements, add_custom_units, csv_to_list_of_str,
@@ -113,7 +112,7 @@ def inject_sun_helpers():
             times = sun_times(target_id=target_id)
             if times is None:
                 return None
-            location_tz = resolve_location_tz(target_id)
+            location_tz = tz_of(target_id)
 
             def _fmt(dt):
                 return dt.astimezone(location_tz).strftime("%Y-%m-%d %H:%M") if dt else '—'
@@ -393,7 +392,7 @@ def page_function_submit():
                     messages["error"].append("Unknown function directive")
 
     # Force screen refresh if location/marker fields are included
-    marker_keys = ['latitude', 'longitude', 'location_source', 'marker_icon', 'marker_color', 'marker_size']
+    marker_keys = ['latitude', 'longitude', 'marker_icon', 'marker_color', 'marker_size']
     if any(k in request.form for k in marker_keys):
         page_refresh = True
 
@@ -550,6 +549,13 @@ def api_get_namespace_rev(controller_id, ns):
 @flask_login.login_required
 def page_function():
     """Display Function page options."""
+    # 카메라 설정의 "트리거로 쓰기" 링크 — 카메라 이벤트 트리거 설정 줄이 이 카메라를 미리 고른다
+    _pre = request.args.get('prefill_camera')
+    if _pre:
+        from aot.databases.models import Camera as _Cam
+        from flask import session as _sess
+        if _Cam.query.filter(_Cam.unique_id == _pre, _Cam.library == 'vigi').first():
+            _sess['camera_event_prefill'] = _pre
     function_type = request.args.get('function_type', None)
     function_id = request.args.get('function_id', None)
     action_id = request.args.get('action_id', None)
@@ -874,14 +880,14 @@ def page_function():
             if not current_app.config['TESTING']:
                 try:
                     # 태양시 커널이 UTC 로 돌려주므로, 표시는 그 위치의 현지 tz 로 변환한다.
-                    location_tz = resolve_location_tz(each_trigger.unique_id)
+                    location_tz = tz_of(each_trigger.unique_id)
 
                     def _next(kind, date_offset=0, time_offset=0):
                         event = next_sun_event(
                             kind,
                             target_id=each_trigger.unique_id,
-                            latitude=each_trigger.latitude,
-                            longitude=each_trigger.longitude,
+                            latitude=None,   # [L2] 위치는 커널이 target_id 의 배치에서 파생
+                            longitude=None,
                             date_offset_days=date_offset,
                             time_offset_minutes=time_offset)
                         if event is None:
@@ -1037,10 +1043,9 @@ def page_function():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
-            # 사망 컬럼이다(device_membership 이 정본).
-            map_config_uuid = map_for_device(each_function.unique_id,
-                                  prefer=each_function.map_config_id) or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — 장치 행의
+            # map_config_id 컬럼은 읽지 않는다(device_membership 이 정본).
+            map_config_uuid = map_for_device(each_function.unique_id) or ''
             if map_config_uuid:
                 map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_entry,
@@ -1146,10 +1151,9 @@ def page_function():
             # [P1] GET 은 지도를 만들지도 저장하지도 않는다. 읽기 요청이
             # DB 를 바꾸던 경로가 빈 지도 91% 의 원인이었다(원칙 4).
             # 배치된 지도가 있으면 그 지도를 읽고, 없으면 빈 상태로 둔다.
-            # [P2] 배치된 지도는 마커에서 파생한다 — map_config_id 는
-            # 사망 컬럼이다(device_membership 이 정본).
-            map_config_uuid = map_for_device(each_function.unique_id,
-                                  prefer=each_function.map_config_id) or ''
+            # [P2] 배치된 지도는 마커에서 파생한다 — 장치 행의
+            # map_config_id 컬럼은 읽지 않는다(device_membership 이 정본).
+            map_config_uuid = map_for_device(each_function.unique_id) or ''
             if map_config_uuid:
                 map_overlays = _load_map_overlays_from_db(map_config_uuid)
         return render_template(function_page_options,
@@ -1463,9 +1467,19 @@ def function_status_activated(unique_id):
         data = control.function_status(unique_id)
 
         # Fallback for Sequence Trigger if daemon is off, unreachable, OR returns no steps
-        if not data or 'error' in data or not data.get('steps'):
-            from aot.controllers.controller_trigger_sequence import SequenceTriggerController
-            fallback_data = SequenceTriggerController.get_static_status(unique_id)
+        #
+        # ⚠ **시퀀스일 때만** 정적 상태를 조회한다. 예전 조건은 `'error' in data` 였는데
+        #   모든 컨트롤러의 정상 응답이 `'error': []` 키를 달고 있어(Conditional·PID·
+        #   env_coordinator) 항상 참이었다 — 시퀀스가 아닌 함수 위젯도 폴링(5~30초)마다
+        #   Trigger 조회를 한 번씩 더 했다. 비어 있는 `error` 는 오류가 아니다.
+        daemon_failed = (not data) or (isinstance(data, dict) and bool(data.get('error')))
+        sequence_without_steps = (
+            isinstance(data, dict)
+            and (data.get('status_facts') or {}).get('kind') == 'sequence'
+            and not data.get('steps'))
+        if daemon_failed or sequence_without_steps:
+            from aot.utils.sequence_status import static_status
+            fallback_data = static_status(unique_id)
             if fallback_data and 'error' not in fallback_data:
                 # If we have data (e.g. from daemon but empty steps), merge to keep status info
                 if data and 'error' not in data:

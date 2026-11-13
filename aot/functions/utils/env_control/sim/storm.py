@@ -37,7 +37,8 @@ import math
 import random
 from typing import Callable, Dict, List, Sequence, Tuple
 
-from .scenarios import KST, WeatherSeries, clear_sky_ghi, cloud_factor
+from aot.utils.timekit import to_tz, wall_to_utc
+from .scenarios import DEFAULT_TZ, WeatherSeries, clear_sky_ghi, cloud_factor
 
 GRID_S = 60.0
 STORM_KEYS = ('T', 'RH', 'solar', 'wind', 'wind_dir', 'rain', 'co2', 'cloud', 'pressure',
@@ -105,13 +106,15 @@ class _Ar1:
 
 
 def diurnal_extrema(t0: float, tmins: Sequence[float], tmaxs: Sequence[float],
-                    h_min: float = 5.5, h_max: float = 14.5) -> Callable[[float], float]:
+                    h_min: float = 5.5, h_max: float = 14.5,
+                    tz: str = DEFAULT_TZ) -> Callable[[float], float]:
     """날마다 (최저 h_min, 최고 h_max) 극값 사이를 코사인으로 잇는 기온 함수 f(h since t0).
 
     `scenarios._diurnal_frac` 은 날짜가 바뀌는 자정에 계수가 뛴다. 이쪽은 극값을 시간순으로 놓고
     이어서 연속이다. 날짜 목록이 모자라면 마지막 값.
     """
-    d0 = _dt.datetime.fromtimestamp(t0, KST).replace(hour=0, minute=0, second=0, microsecond=0)
+    l0 = to_tz(t0, tz)
+    d0 = wall_to_utc(l0.replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0), tz)
     base_h = (d0.timestamp() - t0) / 3600.0       # 시작 시각 기준 그날 0 시 [h] (<= 0)
     pts = []
     n_days = max(len(tmins), len(tmaxs)) + 3
@@ -388,8 +391,8 @@ def build_forecast_rain(sc) -> WeatherSeries:
     f_w = diurnal_extrema(t0, [0.9, 0.9], [2.8, 2.8], h_min=3.0, h_max=14.0)
 
     def point(h, t, st):
-        lh = _dt.datetime.fromtimestamp(t, KST)
-        day = (lh.date() - _dt.datetime.fromtimestamp(t0, KST).date()).days
+        lh = to_tz(t, sc.tz)
+        day = (lh.date() - to_tz(t0, sc.tz).date()).days
         fc = _FC_RAIN_BY_HOUR.get(lh.hour, 0.0) if day == 0 else 0.0
         aft = 0.2 if 12 <= lh.hour < 17 else 0.05           # 낮 적운 — 해는 거의 그대로
         return {'T': f_T(h), 'Td': f_Td(h), 'wind_mean': f_w(h),

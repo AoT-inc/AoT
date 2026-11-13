@@ -45,10 +45,11 @@ from collections import defaultdict
 
 from aot.start_flask_ui import app
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo.device_binding import (device_kind_models,
+from aot.databases.geo_marker_kinds import MARKER_TYPE
+from aot.space.device_binding import (device_kind_models,
                                                SINGLE_OCCUPANCY_KINDS)
 from aot.databases.models import GeoBinding, GeoFacility, GeoShape
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 
 # device_kind ↔ 모델. geo_integrity_ddl.DEVICE_LINK_TABLES 와 같은 7종이며
@@ -59,7 +60,7 @@ DEVICE_KIND_MODELS = device_kind_models()
 
 # geo_shape.type → role. 'device' 는 장치가 담당하는 구역 폴리곤이다
 # (밸브 하나가 두 구역에 관수할 수 있어 장치당 여러 개가 정당하다).
-SHAPE_TYPE_ROLES = {'aot_device': 'marker', 'device': 'area'}
+SHAPE_TYPE_ROLES = {MARKER_TYPE: 'marker', 'device': 'area'}
 
 
 def _json(blob):
@@ -142,25 +143,8 @@ def collect():
     """5원을 훑어 만들 바인딩 목록을 돌려준다. 읽기 전용."""
     col = _Collector(_device_index())
 
-    # ① geo_shape.device_id -------------------------------------------------
-    shapes = GeoShape.query.filter(
-        GeoShape.device_id.isnot(None),
-        GeoShape.device_id != '').all()
-    for s in shapes:
-        role = SHAPE_TYPE_ROLES.get(s.type)
-        if role is None:
-            # 장치를 가리키는데 마커도 구역도 아닌 종류 — 조용히 버리지 않고
-            # 보고한다. 어휘가 늘었는데 이 표를 안 고친 경우다.
-            col.dead.append({
-                'source': 'shape', 'spatial_id': s.unique_id,
-                'role': None, 'device_id': s.device_id,
-                'where': 'type=%s (role 매핑 없음)' % s.type,
-            })
-            col.stats['unmapped_shape_type'] += 1
-            continue
-        col.add('shape', s.unique_id, role, s.device_id,
-                channel_id=s.channel_id or '0',
-                where='geo_shape.id=%s' % s.id)
+    # ① geo_shape.device_id — 컬럼은 p7_06(L4)에서 사라졌다. 마커·구역의 레거시 연결은
+    #    p7_05 가 컬럼이 있던 시점에 옮겼다. 이 스크립트는 시설 원천(②~⑤)만 맡는다.
 
     # ②③④⑤ geo_facility ---------------------------------------------------
     for fac in GeoFacility.query.all():

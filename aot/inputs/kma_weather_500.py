@@ -134,7 +134,8 @@ def _to_float_or_none(s):
 from aot.inputs.base_input import AbstractInput
 from aot.inputs.sensorutils import calculate_dewpoint
 from aot.utils.constraints_pass import constraints_pass_positive_value
-from aot.utils.device_tz import get_device_tz
+from aot.utils.timekit import tz_of, wall_to_utc
+from aot.utils.timekit import naive_utc as _tk_naive_utc, parse_utc as _tk_parse_utc, utc_now as _tk_utc_now
 
 # Helper: read option from either custom_options or custom_channel_options
 def _get_opt(inst, key, default=None):
@@ -323,8 +324,10 @@ class InputModule(AbstractInput):
             self.period = 300
         # Use device location from input settings (single source of truth)
         try:
-            self.lon = float(self.input_dev.longitude) if self.input_dev.longitude is not None else None
-            self.lat = float(self.input_dev.latitude) if self.input_dev.latitude is not None else None
+            from aot.utils.timekit import resolve_coords   # [L2] 배치 우선
+            _la, _lo, _s = resolve_coords(self.input_dev)
+            self.lon = float(_lo) if _lo is not None else None
+            self.lat = float(_la) if _la is not None else None
         except Exception:
             self.lon = None
             self.lat = None
@@ -373,7 +376,7 @@ class InputModule(AbstractInput):
                     # count on a channel that actually holds data, or a chunk
                     # would read as empty and be re-requested every restart.
                     self._probe_channel = (channel, unit, measure)
-                    return datetime.datetime.utcfromtimestamp(float(last_time))
+                    return _tk_naive_utc(_tk_parse_utc(float(last_time)))
             except Exception:
                 self.logger.exception(
                     f"Reading the newest stored measurement failed (channel {channel})")
@@ -414,10 +417,10 @@ class InputModule(AbstractInput):
         try:
             if not pub_timestamp or len(str(pub_timestamp)) != 12:
                 return None
-            device_tz = get_device_tz(self.input_dev)
+            device_tz = tz_of(self.input_dev)
             ts_local = datetime.datetime.strptime(str(pub_timestamp), "%Y%m%d%H%M")
-            ts = device_tz.localize(ts_local).astimezone(timezone.utc).replace(tzinfo=None)
-            utc_now = datetime.datetime.utcnow()
+            ts = _tk_naive_utc(wall_to_utc(ts_local, device_tz))
+            utc_now = _tk_naive_utc(_tk_utc_now())
             if ts > utc_now + datetime.timedelta(minutes=2):
                 self.logger.warning(
                     f"Observation ts in future after TZ adjust ({ts} > now). Clamping.")
@@ -452,13 +455,13 @@ class InputModule(AbstractInput):
             return False
         channel, unit, measure = self._probe_channel
         try:
-            start_utc = device_tz.localize(start_local).astimezone(timezone.utc)
-            end_utc = device_tz.localize(end_local).astimezone(timezone.utc)
+            start_utc = wall_to_utc(start_local, device_tz)
+            end_utc = wall_to_utc(end_local, device_tz)
             expected = max(1, int((end_local - start_local).total_seconds() // 300))
             stored = read_influxdb_list(
                 self.unique_id, unit, channel, measure=measure,
-                start_str=start_utc.strftime('%Y-%m-%dT%H:%M:%SZ'),
-                end_str=end_utc.strftime('%Y-%m-%dT%H:%M:%SZ'))
+                start_str=start_utc.strftime('%Y-%m-%dT%H:%M:%SZ'),  # tz-ok: UTC 를 Z 로 InfluxDB 에 넘긴다(표시 아님)
+                end_str=end_utc.strftime('%Y-%m-%dT%H:%M:%SZ'))  # tz-ok: UTC 를 Z 로 InfluxDB 에 넘긴다(표시 아님)
             count = len(stored) if stored else 0
             ratio = count / float(expected)
             if ratio >= BACKFILL_COVERAGE_RATIO:
@@ -597,7 +600,7 @@ class InputModule(AbstractInput):
         """
         if not self._backfill_retry_windows:
             return
-        device_tz = get_device_tz(self.input_dev)
+        device_tz = tz_of(self.input_dev)
         for _ in range(min(BACKFILL_RETRIES_PER_CYCLE, len(self._backfill_retry_windows))):
             pending = self._backfill_retry_windows.pop(0)
             pending['rounds'] += 1
@@ -639,7 +642,7 @@ class InputModule(AbstractInput):
 
         # KMA interprets tm1/tm2 in the station's local time. Use the device's
         # location-derived timezone so the window is correct on any host.
-        device_tz = get_device_tz(self.input_dev)
+        device_tz = tz_of(self.input_dev)
         now = datetime.datetime.now(device_tz).replace(tzinfo=None)
         if minutes < 5:
             self.logger.info("Backfill window <5 minutes; skipping.")
@@ -700,9 +703,9 @@ class InputModule(AbstractInput):
             # Build timestamp, convert KMA local (device timezone) to UTC
             try:
                 ts_local = datetime.datetime.strptime(row['pub_timestamp'], "%Y%m%d%H%M")
-                ts = device_tz.localize(ts_local).astimezone(timezone.utc)  # store as UTC, tz-aware
+                ts = wall_to_utc(ts_local, device_tz)  # store as UTC, tz-aware
                 # Guard: if computed UTC is in the future by >2 minutes, clamp to now-2min
-                utc_now = datetime.datetime.now(timezone.utc)
+                utc_now = _tk_utc_now()
                 if ts > utc_now + datetime.timedelta(minutes=2):
                     self.logger.warning(f"Backfill ts in future after TZ adjust ({ts} > now). Clamping.")
                     ts = utc_now - datetime.timedelta(minutes=2)
@@ -710,7 +713,7 @@ class InputModule(AbstractInput):
                 continue
 
             if qc_enable:
-                now_ts = datetime.datetime.now()
+                now_ts = _tk_utc_now()
                 for k in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
                     if not _in_bounds(k, row[k]):
                         if self._last_good and self._last_good_ts and (now_ts - self._last_good_ts).total_seconds() <= qc_hold_seconds:
@@ -807,7 +810,7 @@ class InputModule(AbstractInput):
                 val = row.get(key)
                 if val is not None:
                     self._last_good[key] = val
-            self._last_good_ts = datetime.datetime.now()
+            self._last_good_ts = _tk_utc_now()
 
         # Aggregated QC summary for backfill (single line per cycle)
         try:
@@ -914,8 +917,10 @@ class InputModule(AbstractInput):
         # Read values from custom options (now uses _get_opt)
         self.api_key = _get_opt(self, 'api_key', '')
         try:
-            self.lon = float(self.input_dev.longitude) if self.input_dev.longitude is not None else None
-            self.lat = float(self.input_dev.latitude) if self.input_dev.latitude is not None else None
+            from aot.utils.timekit import resolve_coords   # [L2] 배치 우선
+            _la, _lo, _s = resolve_coords(self.input_dev)
+            self.lon = float(_lo) if _lo is not None else None
+            self.lat = float(_la) if _la is not None else None
         except Exception:
             self.lon = None
             self.lat = None
@@ -970,7 +975,7 @@ class InputModule(AbstractInput):
             do_backfill = True
             seconds_download = week_sec
             try:
-                utc_now = datetime.datetime.utcnow()
+                utc_now = _tk_naive_utc(_tk_utc_now())
                 # Bounded to just past the decision window: anything older than
                 # this cannot make the gate skip, and an unbounded last() would
                 # scan the whole retention on every daemon start.
@@ -1030,7 +1035,7 @@ class InputModule(AbstractInput):
             # Request window: data from 5 minutes ago up to now.
             # KMA interprets tm1/tm2 in the station's local time; use the
             # device's location-derived timezone (correct on any host).
-            now = datetime.datetime.now(get_device_tz(self.input_dev)).replace(tzinfo=None)
+            now = datetime.datetime.now(tz_of(self.input_dev)).replace(tzinfo=None)
             tm1_dt = now - datetime.timedelta(minutes=5)
             tm1 = tm1_dt.strftime("%Y%m%d%H%M")
             tm2 = now.strftime("%Y%m%d%H%M")
@@ -1071,7 +1076,7 @@ class InputModule(AbstractInput):
 
         # --- QC: guard against impossible zeros or out-of-range spikes ---
         if qc_enable:
-            now_ts = datetime.datetime.now()
+            now_ts = _tk_utc_now()
             for k in ('ta','hm','wd_10m','ws_10m','pa','rn_ox','rn_15m','vs','sd_tot'):
                 if not _in_bounds(k, data[k]):
                     if self._last_good and self._last_good_ts and (now_ts - self._last_good_ts).total_seconds() <= qc_hold_seconds:
@@ -1123,7 +1128,7 @@ class InputModule(AbstractInput):
             val = data.get(key)
             if val is not None:
                 self._last_good[key] = val
-        self._last_good_ts = datetime.datetime.now()
+        self._last_good_ts = _tk_utc_now()
 
         # Aggregated QC summary for live cycle (single line per cycle)
         try:

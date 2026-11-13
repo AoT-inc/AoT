@@ -77,7 +77,7 @@ def distance_m(lat1, lng1, lat2, lng2):
 
 def _plot_point(row):
     """GeoPlot → (lat, lng) 또는 None. 면적 중심, 오목이면 대표점."""
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
 
     poly = plot_context._shapely(plot_context.geometry_of(row))
     if poly is None or poly.is_empty:
@@ -114,7 +114,7 @@ def _point_from_shape(shape):
     centroid = shape.get_centroid()
     if not centroid:
         return None
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
 
     _tt = shape.type if shape.type in (
         'zone', 'site', 'facility', 'facility_bay', 'equipment') else 'zone'
@@ -219,7 +219,7 @@ _MAX_AMBIGUOUS_LISTED = 10
 def _named_shapes():
     """이름이 있는 GeoShape 전부 → [(shape, name_lower)]."""
     from aot.databases.models.geo import GeoShape
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
 
     out = []
     for shape in GeoShape.query.all():
@@ -236,7 +236,7 @@ def _active_plot_rows():
     (`_resolve_target_by_subject` 과 같은 규율).
     """
     from aot.databases.models import GeoMap
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
 
     rows = []
     try:
@@ -393,8 +393,9 @@ BASIS = ('Straight-line distance between the entities\' centre points, NOT the '
          'tens of metres apart by this measure.')
 
 
-_NOT_FOUND = ('could not locate %r — pass its name as the grower says it, or a '
-              'unique_id from list_plots / get_spatial_tree / search_devices')
+_NOT_FOUND = ('could not locate %r — it may not be placed on the map (a device with no location has no '
+              'distance). Pass its name as the grower says it, or a unique_id from list_plots / '
+              'get_spatial_tree / search_devices, which show where it is placed')
 
 
 def distance_between(a_query, b_query):
@@ -473,3 +474,132 @@ def _brief(point):
     return {'target_id': point['target_id'],
             'target_type': point['target_type'],
             'resolved_name': point['resolved_name']}
+
+
+# ---------------------------------------------------------------------------
+# 현재 위치 둘레 — "여기"가 어느 구획·무엇 곁인지를 서버가 풀어 준다
+# ---------------------------------------------------------------------------
+# 설계: plans/2026-11-03_map_here_design.md §P2. 사용자의 기기 위치(좌표+오차)를
+# 받아 **이름과 거리만** 돌려준다 — 좌표는 응답에 싣지 않고, LLM 에게 산술을
+# 시키지도 않는다(이 모듈이 막으려던 바로 그 일).
+#
+# 오차 규칙(정확한 척하지 않는다):
+# - 도형 경계까지의 거리가 오차보다 작으면 그 안/밖을 단정할 수 없다 → `edge`.
+# - 장치까지 거리가 오차 이하면 숫자 대신 "<=오차" — 그 장치가 맞다는 뜻이 아니다.
+# - 오차가 50 m 를 넘으면 소속을 말하지 않는다(`coarse`).
+
+HERE_COARSE_M = 50.0     # 잠정값 — 온실 안·금속 지붕 아래 실측이 아직 없다
+HERE_NEAR_M = 200.0      # 이보다 먼 장치는 '근처'로 부르지 않는다
+_HERE_MAX = 3            # 목록마다 최대 개수(응답 토큰)
+
+HERE_BASIS = ("Approximate: edge = a boundary lies within accuracy_m, so not certainly inside; "
+              "'<=N' = within accuracy. Don't pick one when edge/'<=' appear; ask.")
+
+
+def _project(lat0, lng0):
+    """(lng, lat) → 기준점을 원점으로 한 평면 미터. `distance_m` 과 같은 평면 근사."""
+    m_lng = _M_PER_DEG_LAT * math.cos(math.radians(lat0))
+
+    def f(x, y, z=None):
+        return ((x - lng0) * m_lng, (y - lat0) * _M_PER_DEG_LAT)
+    return f
+
+
+def _raw_bounds(node, acc=None):
+    """GeoJSON coordinates(어느 깊이든) → [서, 남, 동, 북]. 도형을 shapely 로 읽기 전에 거르는 값."""
+    acc = acc or [180.0, 90.0, -180.0, -90.0]
+    if node and isinstance(node[0], (int, float)):
+        acc[0], acc[1] = min(acc[0], node[0]), min(acc[1], node[1])
+        acc[2], acc[3] = max(acc[2], node[0]), max(acc[3], node[1])
+    else:
+        for n in node or []:
+            _raw_bounds(n, acc)
+    return acc
+
+
+def _here_polygons(lat, lng, accuracy_m, map_uuid):
+    """기준점 둘레(오차 + 여유) 안에 걸리는 도형·구획 → [(이름, 평면 다각형, 면적, 종류)].
+
+    큰 지도에서 느려지지 않게, shapely 로 읽기 전에 좌표 상자로 먼저 거른다.
+    """
+    from shapely.ops import transform
+    from aot.databases.models.geo import GeoShape
+    from aot.space import plot_context
+
+    to_m = _project(lat, lng)
+    pad = accuracy_m + 5.0
+    d_lat = pad / _M_PER_DEG_LAT
+    d_lng = pad / (_M_PER_DEG_LAT * max(math.cos(math.radians(lat)), 1e-6))
+
+    def take(name, geom, kind, out):
+        if not geom or geom.get('type') not in ('Polygon', 'MultiPolygon'):
+            return
+        w, s, e, n = _raw_bounds(geom.get('coordinates'))
+        if e < lng - d_lng or w > lng + d_lng or n < lat - d_lat or s > lat + d_lat:
+            return                                   # 오차 둘레 밖이면 읽지 않는다
+        g = plot_context._shapely(geom)
+        if g is None or g.is_empty:
+            return
+        poly = transform(to_m, g if g.is_valid else g.buffer(0))
+        if poly.area > 0:
+            out.append((name, poly, poly.area, kind))
+
+    out = []
+    q = GeoShape.query.filter(GeoShape.type.in_(('site', 'zone')))
+    if map_uuid:
+        q = q.filter(GeoShape.geo_id == map_uuid)
+    for shape in q.all():
+        name = plot_context._shape_name(shape)
+        feat = shape.feature if isinstance(shape.feature, dict) else {}
+        if name and str(name).strip():
+            take(str(name).strip(), feat.get('geometry'), 'shape', out)
+    rows = plot_context.active_plots(map_uuid) if map_uuid else _active_plot_rows()
+    for row in rows:
+        try:
+            take(_plot_label(row), plot_context.geometry_of(row), 'plot', out)
+        except Exception as exc:
+            logger.debug('geo_distance: 구획 기하 건너뜀: %s', exc)
+    return out
+
+
+def around_point(lat, lng, accuracy_m, map_uuid=None):
+    """(lat, lng, 오차 m) → {'accuracy_m', 'inside', 'edge', 'near', ['coarse'], 'basis'}.
+
+    좌표는 돌려주지 않는다. `map_uuid` 를 주면 그 지도의 도형·구획만 본다(기기가 보는 지도).
+    """
+    from shapely.geometry import Point
+
+    lat, lng = float(lat), float(lng)
+    acc = max(1.0, min(float(accuracy_m), 10000.0))
+    res = {'accuracy_m': int(round(acc)), 'inside': [], 'edge': [], 'near': [], 'basis': HERE_BASIS}
+    if acc > HERE_COARSE_M:
+        res['coarse'] = True
+    else:
+        origin = Point(0.0, 0.0)
+        chain, plots, edge = [], [], []
+        for name, poly, area, kind in _here_polygons(lat, lng, acc, map_uuid):
+            if poly.boundary.distance(origin) < acc:
+                edge.append((name, area))
+            elif poly.contains(origin):
+                (chain if kind == 'shape' else plots).append((name, area))
+        chain.sort(key=lambda x: -x[1])               # 큰 것(대지) → 작은 것(구역)
+        if chain:
+            res['inside'].append(' > '.join(n for n, _a in chain))
+        res['inside'].extend(n for n, _a in sorted(plots, key=lambda x: x[1]))
+        res['inside'] = res['inside'][:_HERE_MAX]
+        res['edge'] = [n for n, _a in sorted(edge, key=lambda x: x[1])][:_HERE_MAX]
+    near = []
+    named = _named_devices()
+    # 장치 위치는 리졸버(일괄)로 — 행의 latitude/longitude 를 직접 읽지 않는다.
+    from aot.space.device_location import locate_many
+    located = locate_many([(_tt, row.unique_id) for row, _tt, _l in named])
+    for row, _tt, _lname in named:
+        pl = located.get((_tt, row.unique_id))
+        if pl is None or pl.point is None or pl.basis != 'device':
+            continue          # 대지 폴백은 "이 장치가 여기 있다" 가 아니다
+        d = distance_m(lat, lng, pl.point[0], pl.point[1])
+        if d <= HERE_NEAR_M:
+            near.append((d, (row.name or '').strip()))
+    for d, name in sorted(near)[:_HERE_MAX]:
+        res['near'].append({'name': name, 'm': ('<=%d' % round(acc)) if d <= acc else int(round(d))})
+    return res

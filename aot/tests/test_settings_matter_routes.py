@@ -873,9 +873,15 @@ class TestTemplateRendersInRealApp(unittest.TestCase):
         with cls.app.app_context():
             # 설정 페이지 렌더는 전역 컨텍스트 프로세서를 타고, 그쪽이 Misc 를
             # 무조건 읽는다. 실제 설치에는 항상 있는 행이다.
-            if Misc.query.first() is None:
-                db.session.add(Misc())
-            Misc.query.first().matter_enabled = True
+            misc = Misc.query.first()
+            cls._misc_created = misc is None
+            if misc is None:
+                misc = Misc()
+                db.session.add(misc)
+                cls._misc_matter_enabled = None
+            else:
+                cls._misc_matter_enabled = misc.matter_enabled
+            misc.matter_enabled = True
             role = Role()
             role.name = 'matter_page_admin'
             role.view_settings = True
@@ -893,6 +899,33 @@ class TestTemplateRendersInRealApp(unittest.TestCase):
             db.session.add(user)
             db.session.commit()
             cls._login_id = user.get_id()
+
+    @classmethod
+    def tearDownClass(cls):
+        """만든 역할·사용자를 지우고 Misc 를 되돌린다.
+
+        이 DB 는 conftest 가 세션 내내 공유하는 임시 DB 다. 조작 권한이 있는
+        사용자를 남겨 두면 뒤에 도는 시험이 그 사람을 "실제 사용자" 로 센다 —
+        `test_scope_groups` 의 `grant_impact` 시험 4건이 전체 묶음에서만
+        `matter_page_admin` 을 "잃는 사람" 으로 세어 깨졌다.
+        """
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import Misc, Role, User
+
+        with cls.app.app_context():
+            db.session.rollback()
+            User.query.filter(User.name == 'matter_page_admin').delete(
+                synchronize_session=False)
+            Role.query.filter(Role.name == 'matter_page_admin').delete(
+                synchronize_session=False)
+            misc = Misc.query.first()
+            if misc is not None:
+                if cls._misc_created:
+                    db.session.delete(misc)
+                else:
+                    misc.matter_enabled = cls._misc_matter_enabled
+            db.session.commit()
+            db.session.remove()
 
     def _get(self, status, nodes, bluetooth=BLE_ON):
         client = self.app.test_client()

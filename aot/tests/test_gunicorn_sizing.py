@@ -29,6 +29,32 @@ class TestWorkerSizingIsMemoryAware(unittest.TestCase):
         self.assertEqual(
             se.recommended_workers(_env(platform=se.PLATFORM_RASPBERRY_PI)), 1)
 
+    def test_docker_on_raspberry_pi_stays_single(self):
+        """도커는 /proc/device-tree 를 가려 파이 위 컨테이너가 일반 PC 규칙(워커 2~4개)을
+        따랐다 — 기기 모델(host_pi_model)이 파이면 파이 규칙."""
+        env = dict(_env(platform=se.PLATFORM_DOCKER, cores=4, mem=3.0),
+                   host_pi_model='Raspberry Pi 4 Model B Rev 1.4')
+        self.assertEqual(se.recommended_workers(env), 1)
+        self.assertLessEqual(se.recommended_threads(env), se.THREADS_MAX_LOW_RESOURCE)
+        # 파이가 아닌 도커는 예전 그대로
+        self.assertGreater(se.recommended_workers(_env(platform=se.PLATFORM_DOCKER, cores=4, mem=8.0)), 1)
+
+    def test_host_pi_model_reads_cpuinfo(self):
+        import tempfile
+        from unittest import mock
+        with tempfile.NamedTemporaryFile('w', delete=False) as f:
+            f.write('processor\t: 0\nBogoMIPS\t: 108.00\n\nHardware\t: BCM2835\n'
+                    'Model\t\t: Raspberry Pi 4 Model B Rev 1.4\n')
+        try:
+            with mock.patch.object(se, 'pi_model', return_value=None):
+                self.assertEqual(se.host_pi_model(f.name), 'Raspberry Pi 4 Model B Rev 1.4')
+            with open(f.name, 'w') as g:
+                g.write('model name\t: Intel(R) Core(TM) i7\n')
+            with mock.patch.object(se, 'pi_model', return_value=None):
+                self.assertIsNone(se.host_pi_model(f.name))
+        finally:
+            os.unlink(f.name)
+
     def test_low_memory_stays_single(self):
         self.assertEqual(
             se.recommended_workers(_env(mem=se.LOW_MEMORY_GB - 0.1)), 1)

@@ -19,56 +19,56 @@ def _binding(role='indoor_temp', device_id='dev-1', measurement_id='dm-1',
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestValidateSensorBinding:
-    from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+    from aot.space.facility_sensors import validate_sensor_binding
 
     def test_valid(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding())
         assert ok
         assert reason == 'ok'
 
     def test_missing_role(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(role=''))
         assert not ok
         assert 'role' in reason
 
     def test_missing_device_id(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(device_id=''))
         assert not ok
         assert 'device_id' in reason
 
     def test_missing_measurement_id(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(measurement_id=''))
         assert not ok
         assert 'measurement_id' in reason
 
     def test_unknown_role(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(role='unknown_role'))
         assert not ok
         assert 'unknown role' in reason
 
     def test_weight_zero(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(weight=0))
         assert not ok
         assert 'weight' in reason
 
     def test_weight_negative(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(weight=-1))
         assert not ok
 
     def test_weight_non_numeric(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, reason = validate_sensor_binding(_binding(weight='heavy'))
         assert not ok
 
     def test_weight_optional(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         b = _binding()
         del b['weight']
         ok, _ = validate_sensor_binding(b)
@@ -80,26 +80,26 @@ class TestValidateSensorBinding:
         'outdoor_wind', 'outdoor_wind_dir', 'outdoor_solar',
     ])
     def test_all_known_roles(self, role):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_binding
+        from aot.space.facility_sensors import validate_sensor_binding
         ok, _ = validate_sensor_binding(_binding(role=role))
         assert ok
 
 
 class TestValidateSensorBindings:
     def test_empty_list(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_bindings
+        from aot.space.facility_sensors import validate_sensor_bindings
         ok, errors = validate_sensor_bindings([])
         assert ok
         assert errors == []
 
     def test_not_a_list(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_bindings
+        from aot.space.facility_sensors import validate_sensor_bindings
         ok, errors = validate_sensor_bindings({'role': 'indoor_temp'})
         assert not ok
         assert errors
 
     def test_mixed_valid_invalid(self):
-        from aot.aot_flask.geo.facility_sensors import validate_sensor_bindings
+        from aot.space.facility_sensors import validate_sensor_bindings
         bindings = [_binding(), _binding(role='')]
         ok, errors = validate_sensor_bindings(bindings)
         assert not ok
@@ -116,13 +116,13 @@ class TestReadFacilitySensors:
 
     def _run(self, bindings, measurement_map, max_age=300):
         """measurement_map: {(device_id, measurement_id): (ts, value)}"""
-        from aot.aot_flask.geo.facility_sensors import read_facility_sensors
+        from aot.space.facility_sensors import read_facility_sensors
 
         def fake_get_last(device_id, measurement_id, max_age=None):
             key = (device_id, measurement_id)
             return measurement_map.get(key, [None, None])
 
-        with patch('aot.aot_flask.geo.facility_sensors.get_last_measurement',
+        with patch('aot.space.facility_sensors.get_last_measurement',
                    side_effect=fake_get_last):
             return read_facility_sensors(bindings, max_age=max_age)
 
@@ -162,8 +162,8 @@ class TestReadFacilitySensors:
                 return [None, None]   # stale — outside max_age
             return [900.0, 21.0]      # unlimited — data exists but old
 
-        from aot.aot_flask.geo.facility_sensors import read_facility_sensors
-        with patch('aot.aot_flask.geo.facility_sensors.get_last_measurement',
+        from aot.space.facility_sensors import read_facility_sensors
+        with patch('aot.space.facility_sensors.get_last_measurement',
                    side_effect=fake_get_last):
             result = read_facility_sensors(bindings, max_age=60)
 
@@ -261,8 +261,8 @@ class TestReadFacilitySensors:
 
     def test_query_exception_handled(self):
         bindings = [_binding(role='indoor_temp', device_id='d1', measurement_id='m1')]
-        from aot.aot_flask.geo.facility_sensors import read_facility_sensors
-        with patch('aot.aot_flask.geo.facility_sensors.get_last_measurement',
+        from aot.space.facility_sensors import read_facility_sensors
+        with patch('aot.space.facility_sensors.get_last_measurement',
                    side_effect=RuntimeError('influx down')):
             result = read_facility_sensors(bindings)
         assert result['indoor']['temp_c'] is None
@@ -290,21 +290,21 @@ class TestReadFacilitySensors:
 
 class TestRejectSpatialOutliers:
     def test_too_few_for_rejection(self):
-        from aot.aot_flask.geo.facility_sensors import _reject_spatial_outliers
+        from aot.space.facility_sensors import _reject_spatial_outliers
         # 2개면 어느 쪽이 outlier 인지 판단 불가 — 둘 다 유지
         kept, rej = _reject_spatial_outliers([(0, 20.0), (1, 40.0)])
         assert len(kept) == 2
         assert rej == []
 
     def test_all_equal_no_rejection(self):
-        from aot.aot_flask.geo.facility_sensors import _reject_spatial_outliers
+        from aot.space.facility_sensors import _reject_spatial_outliers
         # MAD = 0 — reject 불필요
         kept, rej = _reject_spatial_outliers([(0, 25.0), (1, 25.0), (2, 25.0), (3, 25.0)])
         assert len(kept) == 4
         assert rej == []
 
     def test_single_outlier_rejected(self):
-        from aot.aot_flask.geo.facility_sensors import _reject_spatial_outliers
+        from aot.space.facility_sensors import _reject_spatial_outliers
         # 4 모서리 중 1개가 크게 튐 — 그 센서만 제외
         kept, rej = _reject_spatial_outliers([
             (0, 25.0), (1, 25.2), (2, 24.8), (3, 45.0),
@@ -314,7 +314,7 @@ class TestRejectSpatialOutliers:
         assert rej == [3]
 
     def test_majority_outlier_keeps_all(self):
-        from aot.aot_flask.geo.facility_sensors import _reject_spatial_outliers
+        from aot.space.facility_sensors import _reject_spatial_outliers
         # 2-2 양분 — 어느 쪽이 정상인지 통계로 판단 불가, 전부 유지
         kept, rej = _reject_spatial_outliers([
             (0, 25.0), (1, 25.0), (2, 60.0), (3, 60.0),
@@ -323,7 +323,7 @@ class TestRejectSpatialOutliers:
         assert rej == []
 
     def test_minority_outlier_rejected_in_5(self):
-        from aot.aot_flask.geo.facility_sensors import _reject_spatial_outliers
+        from aot.space.facility_sensors import _reject_spatial_outliers
         # 5개 중 2개가 튐 — 3개 다수 의견을 신뢰하고 2개 reject
         kept, rej = _reject_spatial_outliers([
             (0, 25.0), (1, 25.0), (2, 25.0), (3, 60.0), (4, 60.0),
@@ -333,7 +333,7 @@ class TestRejectSpatialOutliers:
         assert sorted(rej) == [3, 4]
 
     def test_normal_variation_not_rejected(self):
-        from aot.aot_flask.geo.facility_sensors import _reject_spatial_outliers
+        from aot.space.facility_sensors import _reject_spatial_outliers
         # 등가 환경 잡음 수준 (±0.5°C) — 아무도 reject 되면 안 됨
         kept, rej = _reject_spatial_outliers([
             (0, 24.9), (1, 25.1), (2, 25.0), (3, 25.2),
@@ -359,7 +359,7 @@ class TestComputeSpatialInternal:
 
     def _run_with_values(self, sensors, value_map):
         """value_map: {input_uuid: {key: value}}"""
-        from aot.aot_flask.geo import facility_sensors as fs
+        from aot.space import facility_sensors as fs
 
         def fake_read(input_uuid, mtype, max_age, measurement_id=None):
             return value_map.get(input_uuid, {})
@@ -435,7 +435,7 @@ class TestPeriodAwareMaxAge:
 
     def test_max_age_for_matrix(self):
         """_max_age_for 가 유일한 판정 지점이다."""
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
 
         # 표시 경로(None): 하한 DEFAULT_MAX_AGE_S 에서 시작해 주기×배수로 넓힌다
@@ -456,7 +456,7 @@ class TestPeriodAwareMaxAge:
         이 파일의 다른 fake 들은 max_age 를 무시하므로 임계값 자체를 검증하지 못한다.
         """
         import time
-        from aot.aot_flask.geo import facility_sensors as fs
+        from aot.space import facility_sensors as fs
         ts = time.time() - age_s
 
         def fake_get_last(device_id, measurement_id, max_age=None):
@@ -498,7 +498,7 @@ class TestPeriodAwareMaxAge:
     def test_falls_back_to_floor_without_db(self):
         """주기 조회가 실패(DB·앱 컨텍스트 없음)해도 죽지 않고 하한으로 판정한다."""
         import time
-        from aot.aot_flask.geo import facility_sensors as fs
+        from aot.space import facility_sensors as fs
         ts = time.time() - 400
 
         def fake_get_last(device_id, measurement_id, max_age=None):
@@ -519,7 +519,7 @@ class TestPeriodAwareMaxAge:
         모듈 전역(get_last_measurement)이 아니다.
         """
         import time
-        from aot.aot_flask.geo import facility_sensors as fs
+        from aot.space import facility_sensors as fs
         ts = time.time() - 500
         sensors = [{'fitting_id': 'f1', 'name': 'F1', 'input_uuid': 'dev-1',
                     'measurement_id': 'dm-1', 'measurement_type': 'temperature'}]
@@ -551,18 +551,18 @@ class TestDeviceLevelMaxAge:
     """
 
     def test_장치값이_호출자값을_이긴다(self):
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
         # 제어가 120초를 들고 와도, 그 장치가 3600 이라고 적어 두었으면 3600.
         assert _max_age_for(120, 60.0, 3600) == 3600
 
     def test_장치값이_주기파생을_이긴다(self):
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
         assert _max_age_for(None, 86400.0, 900) == 900
 
     def test_장치값이_없으면_종전대로(self):
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
         assert _max_age_for(120, 60.0, None) == 120
         assert _max_age_for(None, 300.0, None) == 300 * STALE_PERIOD_FACTOR
@@ -570,13 +570,13 @@ class TestDeviceLevelMaxAge:
 
     def test_0_이나_빈값은_미설정으로_본다(self):
         """0 을 '즉시 만료' 로 읽으면 모든 값이 버려진다 — 미설정으로 다룬다."""
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
         assert _max_age_for(120, 60.0, 0) == 120
         assert _max_age_for(120, 60.0, '') == 120
 
     def test_이상한_값은_무시하고_다음_순위로(self):
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
         assert _max_age_for(120, 60.0, 'abc') == 120
 
@@ -586,9 +586,9 @@ class TestDeviceLevelMaxAge:
         `_freshness_by_device` 가 컬럼 조회에 실패하면 주기만으로 재시도하고,
         그것도 안 되면 빈 dict 를 준다(호출자는 기본값으로 떨어진다).
         """
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         assert fs._freshness_by_device([]) == {}
         assert fs._freshness_by_device(None) == {}
         # DB 가 없는 환경에서도 예외를 올리지 않는다
@@ -596,9 +596,9 @@ class TestDeviceLevelMaxAge:
 
     def test_옛_헬퍼가_여전히_주기만_돌려준다(self):
         """`_period_by_device` 는 호환용 껍데기로 남아 있다."""
-        from aot.aot_flask.geo.facility_sensors import (
+        from aot.space.facility_sensors import (
             _max_age_for, DEFAULT_MAX_AGE_S, STALE_PERIOD_FACTOR)
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         with patch.object(fs, '_freshness_by_device',
                           return_value={'a': (60.0, 900), 'b': (None, 300)}):
             assert fs._period_by_device(['a', 'b']) == {'a': 60.0}

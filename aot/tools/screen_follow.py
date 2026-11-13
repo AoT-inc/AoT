@@ -73,6 +73,7 @@ import logging
 import re
 import threading
 import time
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,6 @@ FOLLOW_TOOLS = {
     'get_energy_report':       (('zone_id',), None),
     'get_map_equipment_detail': (('area_name',), None),
     'get_device_measurements': (('device_id',), 'device'),
-    'get_device_location':     (('device_id',), 'device'),
     'get_device_freshness':    (('device_id',), 'device'),
     'analyze_system_failure':  (('device_id',), 'device'),
 }
@@ -174,6 +174,21 @@ def _parse_show(value):
     if low in _SHOW_AUTO:
         return 'auto', None
     return 'screen', text
+
+
+_SHOW_ON = frozenset({'on', 'yes', 'true', '1', '켬', '켜기'})
+
+
+def show_is_explicit_on(value):
+    """호출이 따라가기를 **명시해서** 켰는가 — True·'on'·화면 id. None·'auto'·'default'(= 기기 설정에 맡김)와 끔은 아니다.
+
+    계산뿐인 조회는 기본으로 화면을 안 움직이는데(`domain.dispatch.NO_FOLLOW_OPS`), 이렇게 명시하면 움직인다."""
+    if value is True:
+        return True
+    if value is None or value is False:
+        return False
+    how, _screen = _parse_show(value)
+    return how == 'screen' or str(value).strip().lower() in _SHOW_ON
 
 
 def follow(tool_name, arguments, result, user_id, tool_profile, transport,
@@ -345,7 +360,7 @@ def _shows_inside(last, args):
     place, kind = args.get('id'), args.get('kind')
     if kind not in ('site', 'zone', 'facility'):
         return False
-    from aot.aot_flask.geo import device_membership as dm
+    from aot.space import device_membership as dm
     lkind, lid = last.get('kind'), str(last.get('id') or '')
     if lkind in ('site', 'zone', 'facility'):
         return dm.PlaceIndex().within(lid, place)
@@ -431,7 +446,7 @@ def _given_target(tool_name, result):
 
 def _all_names():
     """이웃 이름 판정용 — 지도 도형·자라는 구획·장치의 이름 [(이름, 종류)]."""
-    from aot.aot_flask.geo import shape_index
+    from aot.space import shape_index
     from aot.databases.models import GeoPlot, Input, Output
     out = [(r.name, r.type) for r in shape_index.all_shapes()
            if r.name and r.type != 'equipment']
@@ -444,7 +459,7 @@ def _all_names():
 
 def _qualifiers():
     """이름 앞에 붙는 장소·지도 이름(정규화) — '김제 1포장', '3포장 3-1' 의 앞부분."""
-    from aot.aot_flask.geo import shape_index
+    from aot.space import shape_index
     from aot.databases.models import GeoMap
     names = {_norm(r.name) for r in shape_index.all_shapes()
              if r.name and r.type in ('site', 'zone', 'facility')}
@@ -692,9 +707,10 @@ _UNKNOWN_TIME = frozenset({'not moved: ' + _SEVERAL, 'not moved: another forecas
 _CHANGING = 'the screen was changing dashboards in this call, so the time was not set'
 
 
-#: 힌트 끝의 말하지 말라는 꼬리표 — 공통 SILENT_NOTE("Internal note: …")는 AI 가 힌트를 '지킬 규칙'이 아니라 '읽고 넘길 참고 문구'로
-#: 취급하게 했다(2026-10-27 AI 자기 설명). 이 힌트는 해야 할 일을 시키므로 명령형으로 쓰고, 말하지 말라는 것은 행동에만 건다.
-_HINT_TAIL = " Do not tell the user about this or the call; reply only in the user's language."
+#: 힌트 끝 꼬리 — 공통 SILENT_NOTE("Internal note: …")는 AI 가 힌트를 '지킬 규칙'이 아니라 '읽고 넘길 참고 문구'로
+#: 취급하게 했다(2026-10-27 AI 자기 설명). 이 힌트는 해야 할 일을 시키므로 명령형으로 쓴다. 꼬리는 사용자에게 숨기라는 지시가 아니라
+#: 이미 화면에 보이는 것이라는 사실만 말한다(2026-11-04: 서버 응답이 모델에게 사용자에게 말하지 말라고 시키지 않는다).
+_HINT_TAIL = " The map already shows this to the user, so there is no need to explain it or this call; reply in the user's language."
 
 
 def time_hint_for(user_id, moved, domain=False):
@@ -782,6 +798,29 @@ def _result_period(result):
     return inner.get('period') or {}, tz_name
 
 
+def _asked_moment(raw, tz_name):
+    """질문(`at`·`start`)이 시각까지 말한 경우 그 순간(UTC aware), 아니면 None.
+
+    `today|tomorrow|day_after HH:MM`(장소 달력) 또는 `YYYY-MM-DD[T ]HH:MM`(오프셋 있으면 그 순간, 없으면 장소 벽시계)."""
+    import datetime as _dt
+    import re
+    from aot.utils.timekit import today_at, wall_to_utc
+    s = str(raw or '').strip()
+    m = re.match(r'^(today|tomorrow|day_after)\s+(\d{1,2}):(\d{2})$', s.lower())
+    try:
+        if m:
+            hh, mm = int(m.group(2)), int(m.group(3))
+            if hh > 23 or mm > 59:
+                return None
+            day = today_at(tz_name) + _dt.timedelta(days={'today': 0, 'tomorrow': 1, 'day_after': 2}[m.group(1)])
+            return wall_to_utc(_dt.datetime(day.year, day.month, day.day, hh, mm), tz_name)
+        if re.match(r'^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}', s):
+            return wall_to_utc(s.replace(' ', 'T', 1), tz_name)
+    except ValueError:
+        return None
+    return None
+
+
 def _time_target(arguments, result):
     """(옮길 시각, 사람이 읽는 글) 또는 None.
 
@@ -794,26 +833,131 @@ def _time_target(arguments, result):
         return None
     # 도메인 날씨는 시작 시각을 `at` 으로 준다(안쪽 `start`). 이름을 몰라 'now' 로 읽으면 "점심(12:00)" 을 물어도 슬라이더가 지금에 머문다
     # (2026-10-30 점검: at=15:00 인데 `sent to now`).
-    kind = str(arguments.get('start') or arguments.get('at') or arguments.get('period') or '').strip().lower()
+    raw = str(arguments.get('start') or arguments.get('at') or arguments.get('period') or '').strip()
+    kind = raw.lower()
     if kind in _NOW_WORDS:
         return 'now', 'now'
     period, tz_name = _result_period(result)
     if not period.get('start') or not tz_name:
         return None
-    from zoneinfo import ZoneInfo
-    at = _dt.datetime.fromisoformat(str(period['start'])).replace(tzinfo=ZoneInfo(str(tz_name)))
-    delta_h = (at - _dt.datetime.now(_dt.timezone.utc)).total_seconds() / 3600.0
+    from aot.utils.timekit import to_tz, wall_to_utc
+    at = wall_to_utc(_dt.datetime.fromisoformat(str(period['start'])).replace(tzinfo=None), str(tz_name))
+    # 예보는 시작을 시간 칸(정시)으로 내린다 — 사용자가 분까지 말했으면(15:30) 슬라이더는 그 시각이다. 서버가 과거를 지금 칸으로 당긴
+    # 경우(asked < 칸 시작)와 칸을 벗어난 값은 응답 구간 시작을 따른다.
+    asked = _asked_moment(raw, str(tz_name))
+    explicit = asked is not None and 0 <= (asked - at).total_seconds() < 3600
+    minute_named = explicit and asked > at          # 정시 그대로(15:00)는 칸 이름이다 — 분까지 말한 것만 지금 칸 규칙을 넘는다
+    if explicit:
+        at = asked
+    delta_h = (at - utc_now()).total_seconds() / 3600.0
     # 지금이 속한 시간 칸(시작 ≤ 지금 < 시작+1h)은 '지금' 이다 — 칸 시작(몇십 분 전)으로 되돌리지 않는다.
-    if -1.0 < delta_h <= 0:
+    # 단 사용자가 시각을 명시했으면(at=15:30, 지금 15:45) 그 시각이다 — 아래 범위(-2h) 안이면 옮긴다.
+    if -1.0 < delta_h <= 0 and not minute_named:
         return 'now', 'now'
     if not _TIME_RANGE_H[0] <= delta_h <= _TIME_RANGE_H[1]:
         return None
+    at = to_tz(at, str(tz_name))          # 보내는 값·라벨은 그 장소 시계(오프셋 붙은 지역 시각)
     return at.isoformat(), '%s (%s)' % (at.strftime('%Y-%m-%d %H:%M'), tz_name)
 
 
 #: 답이 가리키는 순간 — AI 가 조회 때 `focus` 로 알려 주면 서버가 응답에서 그 시각을 골라 슬라이더를 옮긴다(2026-10-27).
 #: 결과를 읽고 난 뒤 화면 호출을 하나 더 하라는 안내(지침·도구 설명·힌트)는 AI 가 따르지 않았다 — 조회 인자를 채우는 일은 한다.
 FOCUS_VALUES = frozenset({'max', 'min', 'rain_start'})
+
+
+def _focus_clock(raw):
+    """focus 가 시각이면 ('hm', (시, 분)) 또는 ('iso', 문자열), 아니면 None — `HH:MM` · `YYYY-MM-DD[T ]HH:MM[오프셋]`."""
+    import re
+    s = str(raw or '').strip()
+    m = re.match(r'^(\d{1,2}):(\d{2})$', s)
+    if m:
+        return ('hm', (int(m.group(1)), int(m.group(2)))) if int(m.group(1)) <= 23 and int(m.group(2)) <= 59 else None
+    if re.match(r'^\d{4}-\d{2}-\d{2}[T ]\d{1,2}:\d{2}', s):
+        return 'iso', s.replace(' ', 'T', 1)
+    return None
+
+
+def is_focus(arguments):
+    """조회가 `focus` 로 답이 가리키는 순간을 알렸는가(max·min·rain_start 또는 시각)."""
+    raw = str((arguments or {}).get('focus') or '').strip()
+    return raw.lower() in FOCUS_VALUES or _focus_clock(raw) is not None
+
+
+def is_range_focus(arguments):
+    """`focus='range'` — 답이 한 순간이 아니라 읽은 구간 전체를 가리킨다(서버는 구간의 최고 기온 시각을 대표로 옮긴다)."""
+    return str((arguments or {}).get('focus') or '').strip().lower() == 'range'
+
+
+def focus_valid(arguments):
+    """예보 조회의 `focus` 가 유효한가 — max·min·rain_start·시각·range."""
+    return is_focus(arguments) or is_range_focus(arguments)
+
+
+def focus_required_here(user_id, tool_profile, transport, show=None):
+    """이 호출에서 도메인 예보가 `focus` 를 **꼭** 받아야 하는가 — 화면 시간 따라가기가 실제로 가능할 때만.
+
+    외부 AI · 키 주인 있음 · 화면 조작이 이 묶음에 있음 · `_show_on_screen` 이 off 가 아님 · "AI 화면 조작 허용" 을 켠 화면이 있음
+    (`eligible`). 화면이 없는 클라이언트(Claude Code 등)는 False — 거절하지 않고 지금처럼 처리한다."""
+    return eligible(user_id, tool_profile, transport, show)
+
+
+def _range_target(arguments, result):
+    """focus='range' 의 슬라이더 자리 → ((ISO, 글) 또는 None, 까닭 또는 None).
+
+    질문이 시각을 말했거나(at 에 HH:MM) 지금(now·비움)이면 `_time_target` 과 같다. 날짜만 말했거나(today·tomorrow·YYYY-MM-DD …, at 이든 period 든)
+    구간이면 구간 시작(00:00)이 아니라 **응답 구간 안의 최고 기온 시각**이다 — 일 단위 응답이면 까닭 한 줄."""
+    a = arguments or {}
+    raw = str(a.get('start') or a.get('at') or a.get('period') or '').strip()
+    low = raw.lower()
+    if low in _NOW_WORDS and low != 'today':
+        return _time_target(a, result), None
+    period, tz_name = _result_period(result)
+    if tz_name and _asked_moment(raw, str(tz_name)) is not None:
+        return _time_target(a, result), None
+    if period.get('daily'):                       # 일 단위 응답엔 시각이 없다 — 구간 시작(기존 규칙)
+        return _time_target(a, result), None
+    return _focus_pick({'focus': 'max'}, result)
+
+
+def _clock_at(clock, inner, period, tz_name, focus):
+    """시각 focus → (순간 UTC aware, None) 또는 (None, 까닭). 응답의 시간 행(없으면 구간) 안이어야 한다."""
+    import datetime as _dt
+    from aot.utils.timekit import parse_utc, to_tz, wall_to_utc
+    rows = inner.get('forecasts')
+    times = [r.get('time') for r in rows if isinstance(r, dict) and r.get('time')] if isinstance(rows, list) else []
+    lo_s, hi_s = (times[0], times[-1]) if times else (period.get('start'), period.get('end'))
+    try:
+        lo = wall_to_utc(_dt.datetime.fromisoformat(str(lo_s)).replace(tzinfo=None), str(tz_name))
+        if times or hi_s:
+            hi = wall_to_utc(_dt.datetime.fromisoformat(str(hi_s)).replace(tzinfo=None), str(tz_name))
+        else:                                       # 끝이 없으면 읽은 시간 수(period.hours)만큼
+            hi = lo + _dt.timedelta(hours=float(period.get('hours') or 24))
+        if times:
+            hi += _dt.timedelta(hours=1)           # 마지막 행은 그 시간 칸 전체를 뜻한다
+        kind, val = clock
+        if kind == 'hm':
+            wall = to_tz(lo, str(tz_name)).replace(tzinfo=None).replace(hour=val[0], minute=val[1])
+            at = wall_to_utc(wall, str(tz_name))
+            if at < lo:
+                at = wall_to_utc(wall + _dt.timedelta(days=1), str(tz_name))      # 구간 첫 시각보다 이르면 다음 날 그 시각
+        else:
+            at = wall_to_utc(val, str(tz_name))
+    except ValueError:
+        return None, '%s: the hour could not be read' % focus
+    if not lo <= at <= hi:
+        end = to_tz(hi, str(tz_name)).strftime('%m-%d %H:%M')
+        return None, '%s: outside the hours read (to %s)' % (focus, end)
+    return at, None
+
+
+def _focus_finish(at, tz_name, focus):
+    """순간 → (ISO, 글) 또는 범위 밖 까닭. 보내는 값·라벨·메시지는 그 장소 시계."""
+    from aot.utils.timekit import to_tz
+    delta_h = (at - utc_now()).total_seconds() / 3600.0
+    at = to_tz(at, str(tz_name))
+    if not _TIME_RANGE_H[0] <= delta_h <= _TIME_RANGE_H[1]:
+        return None, '%s: %s is outside the map time range (-2 h to +7 days)' % (focus, at.strftime('%m-%d %H:%M'))
+    return (at.isoformat(), '%s (%s)' % (at.strftime('%Y-%m-%d %H:%M'), tz_name)), None
 
 
 def _focus_inner(result):
@@ -843,15 +987,22 @@ def _focus_pick(arguments, result):
 
     까닭은 AI 가 읽으므로 짧고 사실만 적는다. focus 를 주지 않았거나 모르는 값이면 (None, None)."""
     import datetime as _dt
-    focus = str((arguments or {}).get('focus') or '').strip().lower()
-    if focus not in FOCUS_VALUES or not isinstance(result, dict):
+    raw = str((arguments or {}).get('focus') or '').strip()
+    focus = raw.lower()
+    clock = None if focus in FOCUS_VALUES else _focus_clock(raw)
+    if (focus not in FOCUS_VALUES and clock is None) or not isinstance(result, dict):
         return None, None
     period, tz_name = _result_period(result)
     inner = _focus_inner(result)
+    if clock is not None:
+        focus = raw
     if not tz_name:
         return None, '%s: the answer has no time zone' % focus
     if period.get('daily'):
         return None, '%s: the answer is daily rows (no hours); ask 72 h or less for an hour' % focus
+    if clock is not None:
+        at, why = _clock_at(clock, inner, period, tz_name, focus)
+        return (None, why) if at is None else _focus_finish(at, tz_name, focus)
     local = None
     forecasts = inner.get('forecasts')
     summary = inner.get('summary')
@@ -887,15 +1038,12 @@ def _focus_pick(arguments, result):
             return None, ('rain_start: none in the hourly rows (to %s); the first rain is on %s in daily rows, '
                           'hour unknown' % (end[5:] if end else '?', day))
         return None, 'rain_start: no rain in the hours read (to %s)' % (end[5:] if end else '?')
-    from zoneinfo import ZoneInfo
+    from aot.utils.timekit import wall_to_utc
     try:
-        at = _dt.datetime.fromisoformat(str(local)).replace(tzinfo=ZoneInfo(str(tz_name)))
+        at = wall_to_utc(_dt.datetime.fromisoformat(str(local)).replace(tzinfo=None), str(tz_name))
     except ValueError:
         return None, '%s: the hour could not be read' % focus
-    delta_h = (at - _dt.datetime.now(_dt.timezone.utc)).total_seconds() / 3600.0
-    if not _TIME_RANGE_H[0] <= delta_h <= _TIME_RANGE_H[1]:
-        return None, '%s: %s is outside the map time range (-2 h to +7 days)' % (focus, at.strftime('%m-%d %H:%M'))
-    return (at.isoformat(), '%s (%s)' % (at.strftime('%Y-%m-%d %H:%M'), tz_name)), None
+    return _focus_finish(at, tz_name, focus)
 
 
 def _focus_target(arguments, result):
@@ -918,12 +1066,16 @@ def _follow_time(tool_name, arguments, result, user_id, tool_profile, transport,
     if answer_time not in (None, ''):
         iso = text = str(answer_time).strip()[:40]
     else:
-        asked = str((arguments or {}).get('focus') or '').strip().lower() in FOCUS_VALUES
+        asked = is_focus(arguments)
         # AI 가 가리킨 순간(focus)을 응답에서 못 찾았으면(비가 안 옴·일 단위 …) 시작 시각으로 대신 옮기지 않는다 — 엉뚱한 시각을 보이느니 그대로 둔다.
         if asked:
             when, why = _focus_pick(arguments, result)
             if when is None:
                 return {'slider': 'not moved: ' + why} if why else None      # 까닭은 응답에도 한 줄(`time_next_for`)
+        elif is_range_focus(arguments):
+            when, why = _range_target(arguments, result)
+            if when is None and why:
+                return {'slider': 'not moved: ' + why}
         else:
             when = _time_target(arguments, result)
         if when is None:

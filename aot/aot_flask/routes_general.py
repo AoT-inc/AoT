@@ -1,6 +1,8 @@
 # coding=utf-8
 import csv
 import datetime
+
+from aot.utils.timekit import utc_now as _tk_utc_now
 import json
 import logging
 import os
@@ -35,12 +37,13 @@ from aot.utils.database import db_retrieve_table
 from aot.utils.influx import (bulk_key, influx_to_list, influxdb_get_count_points,
                                  influxdb_get_first_point, query_last_values_bulk,
                                  query_string)
-from aot.utils.outputs import get_pwm_invert_signal
+from aot.utils.outputs import get_pwm_invert_signal, pwm_logical_state
 from aot.utils.service_control import reload_frontend, restart_daemon
 from aot.utils.system_pi import (assure_path_exists, is_int,
                                     return_measurement_info, str_is_float)
 from aot.utils.influx import read_influxdb_list
 from pytz import timezone
+from aot.utils.timekit import naive_utc as _tk_naive_utc, parse_utc as _tk_parse_utc, utc_now as _tk_utc_now
 
 blueprint = Blueprint('routes_general',
                       __name__,
@@ -312,7 +315,7 @@ def _output_success_message(output_dev, output_id, output_channel, state,
 
     드라이버가 돌려주는 영문 진단 문구(내부 반환값 포함)는 로그용이라 쓰지 않는다.
     """
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
     from aot.utils.timekit import resolve_tz
 
     try:
@@ -587,6 +590,29 @@ def video_feed(unique_id):
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+@blueprint.route('/camera_auth_alerts')
+@flask_login.login_required
+def camera_auth_alerts():
+    """인증 실패로 자동 재접속을 멈춘 카메라 목록(전역 토스트용).
+
+    화면은 주기적으로 이 목록을 보고, 처음 보는 (카메라, 시각) 마다 한 번 알린다.
+    카메라를 볼 권한이 없으면 빈 목록이다.
+    """
+    if not utils_general.user_has_permission('view_camera', silent=True):
+        return jsonify({'alerts': []})
+    from aot.aot_flask.camera.net_auth import latched_cameras
+    latched = latched_cameras()
+    if not latched:
+        return jsonify({'alerts': []})
+    names = {c.unique_id: c.name for c in
+             Camera.query.filter(Camera.unique_id.in_(list(latched))).all()}
+    message = gettext('Authentication failed - not retrying automatically')
+    return jsonify({'alerts': [
+        {'id': uid, 'since': int(ts), 'name': names[uid],
+         'message': f'{names[uid]}: {message}'}
+        for uid, ts in latched.items() if uid in names]})
+
+
 @blueprint.route('/outputstate')
 @flask_login.login_required
 def gpio_state():
@@ -620,9 +646,11 @@ def gpio_state_unique_id(unique_id, channel_id):
     # 돌려주므로, 사용자에게 보여줄 때는 되돌려야 요청한 값과 일치한다.
     # (측정 로그 값은 별개 옵션 pwm_invert_stored_signal 로 저장 시점에 이미
     # 보정돼 있어 여기서는 건드리지 않는다.)
-    if isinstance(state, (int, float)) and not isinstance(state, bool):
-        if get_pwm_invert_signal(unique_id, chan_idx):
-            state = 100.0 - abs(state)
+    # 물리 듀티 0 은 숫자가 아니라 'off' 로 내려온다 — 반전 채널에서는 그것이
+    # 요청 100% 다(pwm_logical_state 참조). 숫자만 뒤집으면 100% 로 켠 채널이
+    # "0%" 로 보였다. 'on'·'pending'·'fault' 같은 문자열은 듀티가 아니라 건너뛴다.
+    if state == 'off' or (isinstance(state, (int, float)) and not isinstance(state, bool)):
+        state = pwm_logical_state(state, get_pwm_invert_signal(unique_id, chan_idx))
 
     return jsonify(state)
 
@@ -727,8 +755,8 @@ def widget_execute(unique_id):
 @flask_login.login_required
 def get_time():
     """Return the current time."""
-    from aot.utils.time_utils import get_local_now
-    return jsonify(get_local_now().strftime('%m/%d %H:%M'))
+    from aot.utils.timekit import to_tz, FARM, utc_now
+    return jsonify(to_tz(utc_now(), FARM).strftime('%m/%d %H:%M'))
 
 
 @blueprint.route('/health')
@@ -860,7 +888,7 @@ def past_data(unique_id, measure_type, measurement_id, past_seconds):
     if past_sec_int <= 0:
         return '', 204
 
-    start_seconds = datetime.datetime.utcnow().timestamp() - past_sec_int
+    start_seconds = _tk_utc_now().timestamp() - past_sec_int
     return async_data(unique_id, measure_type, measurement_id, str(start_seconds), '0')
 
 
@@ -1026,7 +1054,7 @@ def _past_payload(unique_id, measure_type, measurement_id, past_seconds):
         return None
     if past_sec_int <= 0:
         return None
-    start_seconds = datetime.datetime.utcnow().timestamp() - past_sec_int
+    start_seconds = _tk_utc_now().timestamp() - past_sec_int
     resp = async_data(
         unique_id, measure_type, measurement_id, str(start_seconds), '0')
     # async_data returns jsonify(...) on success, ('', 204) on no data, or a
@@ -1072,12 +1100,30 @@ def _resolve_past_job(unique_id, measure_type, measurement_id, past_seconds,
     channel, unit, measurement = return_measurement_info(measure, conversion)
 
     # `/past/<…>/<sec>` 과 같은 창: 지금부터 과거 sec 초.
-    end = datetime.datetime.utcnow()
-    start = datetime.datetime.utcfromtimestamp(end.timestamp() - past_sec_int)
+    end = _tk_naive_utc(_tk_utc_now())
+    start = _tk_naive_utc(_tk_parse_utc(end.timestamp() - past_sec_int))
     end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
     start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
     return (unit, unique_id, measurement, channel, db_name,
             start_str, end_str, end_str, end)
+
+
+#: 압박 단계 → past 항목 동시 조회 수 (자원 조절 R4b). 바쁠 때 묶음을 **거절하지 않고**
+#: 천천히 처리한다 — 거절하면 화면이 항목마다 낱개 GET 으로 되물어(aot-data-batch.js 의
+#: directFallback) 부하가 오히려 는다. 한 묶음이 Influx 조회 8개를 한꺼번에 일으키던 것을
+#: 과부하에서는 2개로 줄여, 같은 서버의 데몬 쓰기·다른 요청과 덜 다툰다.
+_PAST_WORKERS_BY_STAGE = {0: _BATCH_MAX_WORKERS, 1: 4, 2: 2}
+
+
+def _past_workers():
+    try:
+        from aot.utils import resource_pressure
+        snap = resource_pressure.peek()
+        if snap is not None:
+            return _PAST_WORKERS_BY_STAGE.get(snap.get('stage'), _BATCH_MAX_WORKERS)
+    except Exception:
+        pass
+    return _BATCH_MAX_WORKERS
 
 
 def _run_past_jobs(past_jobs, results):
@@ -1095,7 +1141,7 @@ def _run_past_jobs(past_jobs, results):
         idx, args = past_jobs[0]
         results[idx] = _series_points(*args)
         return
-    max_workers = min(_BATCH_MAX_WORKERS, len(past_jobs))
+    max_workers = min(_past_workers(), len(past_jobs))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_idx = {executor.submit(_series_points, *args): idx
                          for idx, args in past_jobs}
@@ -1273,7 +1319,7 @@ def export_data(unique_id, measurement_id, start_seconds, end_seconds):
         device_measurement, conversion)
 
     # Use timezone-aware conversion for export strings (UTC for InfluxDB)
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
     
     # start_seconds is expected to be a Unix timestamp (float)
     # timestamps are inherently UTC. 
@@ -1363,15 +1409,15 @@ def _query_count_and_first_point(unit, device_id, measurement, channel, db_name,
 
 def _stitch_range(segments, start_seconds, end_seconds):
     """접합 조회의 시간 범위. '0' 은 "제한 없음"이라 이력이 대신 답한다."""
-    now = datetime.datetime.utcnow()
+    now = _tk_naive_utc(_tk_utc_now())
     if start_seconds != '0':
-        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
+        start = _tk_naive_utc(_tk_parse_utc(float(start_seconds)))
     else:
         # 가장 이른 구간의 시작. 이력이 시작되기 전에는 이 자리가 없었다.
         firsts = [s['valid_from'] for s in segments if s['valid_from']]
         start = min(firsts) if firsts else now - datetime.timedelta(days=365)
     end = (now if end_seconds == '0'
-           else datetime.datetime.utcfromtimestamp(float(end_seconds)))
+           else _tk_naive_utc(_tk_parse_utc(float(end_seconds))))
     return start, end
 
 
@@ -1437,11 +1483,11 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
         notes_list = []
         tag = NoteTags.query.filter(NoteTags.unique_id == device_id).first()
 
-        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
+        start = _tk_naive_utc(_tk_parse_utc(float(start_seconds)))
         if end_seconds == '0':
-            end = datetime.datetime.utcnow()
+            end = _tk_naive_utc(_tk_utc_now())
         else:
-            end = datetime.datetime.utcfromtimestamp(float(end_seconds))
+            end = _tk_naive_utc(_tk_parse_utc(float(end_seconds)))
 
         notes = Notes.query.filter(
             and_(Notes.date_time >= start, Notes.date_time <= end)).all()
@@ -1453,7 +1499,7 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
         allowed_notes = None
         if area:
             try:
-                from aot.aot_flask.geo import device_membership
+                from aot.space import device_membership
                 allowed_notes = device_membership.note_ids_in_area(area)
             except Exception as err:
                 logger.error("[graph-async] 노트 구역 필터 실패: %s", err)
@@ -1503,18 +1549,18 @@ def async_data(device_id, device_type, measurement_id, start_seconds, end_second
     # 범위를 넣으면 응답이 통째로 비어 버린다(리팩터 중 실제로 그렇게 깨뜨렸다:
     # /async/…/0/0 이 662점 → 204). 그래서 두 창을 따로 넘긴다.
     if start_seconds == '0' and end_seconds == '0':
-        end = datetime.datetime.utcnow()
+        end = _tk_naive_utc(_tk_utc_now())
         count_start_str, count_end_str = None, None
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
     elif start_seconds != '0' and end_seconds == '0':
-        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
-        end = datetime.datetime.utcnow()
+        start = _tk_naive_utc(_tk_parse_utc(float(start_seconds)))
+        end = _tk_naive_utc(_tk_utc_now())
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         count_start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         count_end_str = end_str
     else:
-        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
-        end = datetime.datetime.utcfromtimestamp(float(end_seconds))
+        start = _tk_naive_utc(_tk_parse_utc(float(start_seconds)))
+        end = _tk_naive_utc(_tk_parse_utc(float(end_seconds)))
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         count_start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
         count_end_str = end_str
@@ -1603,9 +1649,9 @@ def async_usage_data(device_id, unit, channel, start_seconds, end_seconds):
     # Set the time frame to the past year if start/end not specified
     if start_seconds == '0' and end_seconds == '0':
         # Get how many points there are in the past year
-        end = datetime.datetime.utcnow()
+        end = _tk_naive_utc(_tk_utc_now())
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        start = datetime.datetime.utcfromtimestamp(float(end.timestamp() - 60 * 60 * 24 * 365))
+        start = _tk_naive_utc(_tk_parse_utc(float(end.timestamp() - 60 * 60 * 24 * 365)))
         start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         data = query_string(
@@ -1635,9 +1681,9 @@ def async_usage_data(device_id, unit, channel, start_seconds, end_seconds):
 
     # Set the time frame to the past start epoch to now
     elif start_seconds != '0' and end_seconds == '0':
-        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
+        start = _tk_naive_utc(_tk_parse_utc(float(start_seconds)))
         start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        end = datetime.datetime.utcnow()
+        end = _tk_naive_utc(_tk_utc_now())
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         data = query_string(
@@ -1667,9 +1713,9 @@ def async_usage_data(device_id, unit, channel, start_seconds, end_seconds):
         if settings.measurement_db_name == 'influxdb':
             first_point = influxdb_get_first_point(data)
     else:
-        start = datetime.datetime.utcfromtimestamp(float(start_seconds))
+        start = _tk_naive_utc(_tk_parse_utc(float(start_seconds)))
         start_str = start.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        end = datetime.datetime.utcfromtimestamp(float(end_seconds))
+        end = _tk_naive_utc(_tk_parse_utc(float(end_seconds)))
         end_str = end.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         data = query_string(
@@ -1929,7 +1975,7 @@ def output_started_at_public(device_unique_id, channel_id):
         if elapsed_sec is None:
             elapsed_sec = max(0, now_epoch - int(started_ts))
 
-        started_dt = datetime.datetime.utcfromtimestamp(int(started_ts)).replace(tzinfo=timezone('UTC'))
+        started_dt = _tk_naive_utc(_tk_parse_utc(int(started_ts))).replace(tzinfo=timezone('UTC'))
         payload = {
             "started_at_epoch": int(started_ts),
             "started_at_iso": started_dt.isoformat(),
@@ -2130,7 +2176,7 @@ def sun_bands():
     from datetime import datetime as _dt
     from datetime import timezone as _tzinfo
 
-    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import tz_of
     from aot.utils.solar import night_bands
 
     try:
@@ -2152,5 +2198,5 @@ def sun_bands():
     return jsonify({
         'bands': [[int(lo.timestamp() * 1000), int(hi.timestamp() * 1000)]
                   for lo, hi in bands],
-        'tz': str(resolve_location_tz(target_id)),
+        'tz': str(tz_of(target_id)),
     })

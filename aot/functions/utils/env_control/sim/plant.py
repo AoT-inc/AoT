@@ -73,10 +73,12 @@ import sqlite3
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
-try:                                  # 저장소 안: env_control.psychro
-    from .. import psychro as ps
-except ImportError:                   # 하네스 컨테이너: 같은 판을 옆에 복사해 둔다
+# 하네스 복사본을 먼저 본다 — 컨테이너의 PYTHONPATH 에는 시험 대상 코드(-c)가 올라와 있어서,
+# aot.utils 를 먼저 찾으면 시험 대상 판의 물성을 쓰게 되고 A/B 의 시설이 달라진다.
+try:                                  # 하네스 컨테이너: 같은 판을 옆에 복사해 둔다
     from . import _psychro as ps      # type: ignore
+except ImportError:                   # 저장소 안: aot.utils.psychro
+    from aot.utils import psychro as ps
 
 P_KPA = ps.P_STD_KPA
 CP_DA = 1006.0            # J/(kg·K)

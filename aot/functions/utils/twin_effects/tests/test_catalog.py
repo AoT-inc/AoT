@@ -42,6 +42,15 @@ def test_status_derivation():
     assert C.row_for("frost_fan", C.FIELD).status == C.UNMODELED
 
 
+def test_pump_and_tank_are_supply_not_unmodeled():
+    for domain in (C.FACILITY, C.FIELD):
+        for kind in ("pump", "tank"):
+            r = C.row_for(kind, domain)
+            assert r.status == C.SUPPLY and r.channel is None and not r.unmodeled_effects
+    s = C.summarize(["pump", "heater"])
+    assert s["supply"] == 1 and s["unmodeled"] == 0 and s["unmodeled_kinds"] == []
+
+
 def test_field_air_effects_listed_with_slot():
     r = C.row_for("irrigation_sprinkler", C.FIELD)
     assert "air_RH_near_surface" in r.unmodeled_effects and "air_T_near_surface" in r.unmodeled_effects

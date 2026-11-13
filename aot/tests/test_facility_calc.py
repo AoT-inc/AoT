@@ -10,7 +10,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)))
 
-from aot.aot_flask.geo.facility_calc import (
+from aot.space.facility_calc import (
     compute_capacity,
     effective_u,
     effective_transmittance,

@@ -167,7 +167,7 @@ def _schedule_payload(target_id):
       plot  구획에 **닿는** 장치만(구획 안 + 겹치는 장치 영역) — 최하위라
                 자손이 없고, 별도 경로(`_plot_schedule`)가 맡는다.
     """
-    from aot.aot_flask.geo import device_membership
+    from aot.space import device_membership
     from aot.aot_flask.geo.site_summary import upcoming_schedule
     from aot.utils.geo_hierarchy import descendant_target_ids
 
@@ -297,7 +297,8 @@ def _create_human_schedule(target_id, kind, label, date_str, time_str,
 
     anchor_tz, anchor_name, anchor_src = _T._resolve_schedule_anchor(target_id)
     try:
-        run_at = _T._schedule_wall_to_utc(date_str, time_str, anchor_tz=anchor_tz)
+        from aot.utils.timekit import wall_to_utc
+        run_at = wall_to_utc(f"{date_str} {time_str}", anchor_tz)
     except Exception as exc:
         return jsonify({'ok': False,
                         'message': '날짜/시각 형식이 올바르지 않습니다 (%s)' % exc}), 400
@@ -451,7 +452,7 @@ def api_geo_local_time():
     from aot.utils.device_tz import resolve_tz_from_coords
     from aot.utils.solar import (EVENT_SUNRISE, EVENT_SUNSET, STATUS_UNKNOWN,
                                  sun_times)
-    from aot.utils.timekit import as_tz, system_tz, utc_now
+    from aot.utils.timekit import FARM, tz_of, utc_now
 
     try:
         lat = round(float(request.args.get('lat')), _LOCAL_TIME_COORD_ROUND)
@@ -462,7 +463,7 @@ def api_geo_local_time():
         return jsonify({'error': 'lat/lng out of range'}), 400
 
     tz_name = resolve_tz_from_coords(lat, lng)
-    tzinfo = as_tz(tz_name) if tz_name else system_tz()
+    tzinfo = tz_of(tz_name) if tz_name else tz_of(FARM)
     now = utc_now()
     local_now = now.astimezone(tzinfo)
     offset = local_now.utcoffset()
@@ -531,7 +532,7 @@ def api_geo_weather_state():
     출처(등록된 gis-input · 대지에 지정한 기상대)와 응답 모양은 ``geo/weather_state.py`` 의 독스트링 참고.
     출처가 없으면 ``items`` 가 비고, 외부 호출이 실패해도 태양 위치와 있는 값으로 응답한다.
     """
-    from aot.aot_flask.geo import weather_state
+    from aot.space import weather_state
     from aot.utils.timekit import resolve_coords
 
     site = (request.args.get('site') or '').strip() or None
@@ -576,7 +577,7 @@ def api_geo_sun_event():
     """
     from aot.utils.device_tz import resolve_tz_from_coords
     from aot.utils.solar import STATUS_UNKNOWN, sun_times
-    from aot.utils.timekit import as_tz, resolve_coords, system_tz, utc_now
+    from aot.utils.timekit import FARM, resolve_coords, tz_of, utc_now
 
     target_id = request.args.get('target_id')
     if not target_id:
@@ -587,7 +588,7 @@ def api_geo_sun_event():
         return jsonify({'ok': False, 'status': STATUS_UNKNOWN, 'error': 'no_location'})
 
     tz_name = resolve_tz_from_coords(lat, lon)
-    tzinfo = as_tz(tz_name) if tz_name else system_tz()
+    tzinfo = tz_of(tz_name) if tz_name else tz_of(FARM)
     local_date = utc_now().astimezone(tzinfo).date()
     times = sun_times(latitude=lat, longitude=lon, date=local_date)
     if times is None:

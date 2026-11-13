@@ -62,8 +62,7 @@ class _Base(unittest.TestCase):
         self.ctx.push()
         self._clean()
         db.session.add(GeoMap(unique_id=self.MAP, name='M', category='design'))
-        db.session.add(Input(unique_id=self.DEV, name='S1',
-                             latitude=1.0, longitude=2.0))
+        db.session.add(Input(unique_id=self.DEV, name='S1'))
         db.session.commit()
 
     def tearDown(self):
@@ -96,9 +95,15 @@ class TestDeviceLocationGate(_Base):
                 '/api/geo/device/location', method='POST', json=body):
             return view(GeoDeviceLocation())
 
-    def _lat(self):
-        return Input.query.populate_existing().filter_by(
-            unique_id=self.DEV).first().latitude
+    def _point(self):
+        """장치의 현재 배치 지점 (lat, lng) — 마커가 없으면 None. 위치의 정본은
+        배치(마커+바인딩)다(L4 S3c: 장치 행에 좌표 컬럼이 없다)."""
+        from aot.space import device_binding
+        mk = device_binding.marker_shapes(self.DEV, self.MAP, '0')
+        if not mk:
+            return None
+        lng, lat = mk[0].feature['geometry']['coordinates']
+        return (lat, lng)
 
     def test_without_edit_settings_is_403_and_nothing_moves(self):
         with self._perm(False):
@@ -106,7 +111,7 @@ class TestDeviceLocationGate(_Base):
                 self._post({'unique_id': self.DEV, 'type': 'input',
                             'lat': 9.0, 'lng': 9.0})
         self.assertEqual(cm.exception.code, 403)
-        self.assertEqual(self._lat(), 1.0)
+        self.assertIsNone(self._point())
 
     def test_device_outside_scope_is_403_and_nothing_moves(self):
         from aot.aot_flask.access import scope
@@ -117,7 +122,7 @@ class TestDeviceLocationGate(_Base):
                                  'lat': 9.0, 'lng': 9.0})
         self.assertEqual(_status(result), 403)
         dev_gate.assert_called_with(self.DEV)
-        self.assertEqual(self._lat(), 1.0)
+        self.assertIsNone(self._point())
 
     def test_map_outside_scope_is_403_and_no_marker(self):
         from aot.aot_flask.access import scope
@@ -134,7 +139,7 @@ class TestDeviceLocationGate(_Base):
         self.assertEqual(_status(result), 403)
         map_gate.assert_called_with('geo_map', self.MAP)
         place.assert_not_called()
-        self.assertEqual(self._lat(), 1.0)
+        self.assertIsNone(self._point())
 
     def test_allowed_saves(self):
         from aot.aot_flask.access import scope
@@ -146,7 +151,8 @@ class TestDeviceLocationGate(_Base):
                                  'lat': 9.0, 'lng': 8.0})
         self.assertEqual(_status(result), 200)
         self.assertTrue(result['ok'])
-        self.assertEqual(self._lat(), 9.0)
+        # 위치의 정본은 배치 — 허용되면 단일 지도에 마커가 생긴다(L4 S3c).
+        self.assertEqual(self._point(), (9.0, 8.0))
 
 
 # --------------------------------------------------------------- 1. parcel / gg_parks
@@ -249,7 +255,7 @@ class TestRestoreOriginalKeeps400(_Base):
 class TestBindingArgsChannelSuffix(unittest.TestCase):
     def _args(self, data):
         from aot.aot_flask.api import geo as api_geo
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         app = Flask(__name__)
         with app.app_context(), \
                 mock.patch.object(device_binding, 'resolve_device_kind',

@@ -74,6 +74,28 @@ def test_lock_failure_also_returns_none_for_single(monkeypatch):
     assert result is None
 
 
+def test_missing_column_returns_at_once_without_lock_misdiagnosis(monkeypatch, caplog):
+    """열이 없다 = 이 프로세스의 모델이 DB 보다 낡았다(마이그레이션 뒤 재시작 안 함).
+
+    재시도해도 열은 생기지 않는다. 5번 "database is locked" 로 돌며 원인을
+    가리지 말고, 곧바로 빈 결과와 "재시작하라" 는 ERROR 하나만 남겨야 한다.
+    """
+    from sqlite3 import OperationalError
+    sleeps = []
+    monkeypatch.setattr(dbmod.time, 'sleep', lambda *a: sleeps.append(a))
+    exc = OperationalError('no such column: output.latitude')
+    with caplog.at_level('ERROR', logger='aot.database'), \
+            patch.object(dbmod, 'session_scope', _Boom(exc)):
+        single = dbmod.db_retrieve_table_daemon(object, unique_id='abc')
+        many = dbmod.db_retrieve_table_daemon(object, entry='all')
+    assert single is None
+    assert many == []
+    assert sleeps == []
+    text = caplog.text
+    assert 'locked' not in text
+    assert 'output.latitude' in text and 'Restart' in text
+
+
 def test_failure_never_raises():
     """호출부는 이 함수가 예외를 던지지 않는다는 전제로 쓰여 있다."""
     with patch.object(dbmod, 'session_scope', _Boom(RuntimeError('boom'))):

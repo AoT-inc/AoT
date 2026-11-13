@@ -125,8 +125,8 @@ class NotificationService:
         scope_name = scope_info.get('scope_name', 'System')
         # 받는 사람의 시간대를 모르므로 시스템 시계로 적고 라벨을 붙인다.
         # datetime.now() 는 컨테이너 OS 시계라 라벨 없이 UTC 로 나갔다.
-        from aot.utils.timekit import format_labeled, system_tz, utc_now
-        timestamp = format_labeled(utc_now(), system_tz())
+        from aot.utils.timekit import FARM, format_labeled, tz_of, utc_now
+        timestamp = format_labeled(utc_now(), tz_of(FARM))
         
         body = f"""
 AoT System Anomaly Alert

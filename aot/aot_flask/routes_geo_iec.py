@@ -16,6 +16,7 @@ from aot.aot_flask.access import scope
 from aot.aot_flask.utils import utils_general
 from aot.aot_flask.extensions import db
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ def api_facility_iec_status(facility_uuid):
         from aot.databases.models.controller import CustomController
         from aot.databases.models.function import FunctionRuntimeState
         from aot.aot_client import DaemonControl
-        from aot.aot_flask.geo.facility_sensors import compute_spatial_internal as _csi
+        from aot.space.facility_sensors import compute_spatial_internal as _csi
     except ImportError as exc:
         return jsonify({'ok': False, 'message': 'Import error: {}'.format(exc)}), 500
 
@@ -132,7 +133,7 @@ def api_facility_iec_status(facility_uuid):
     # ── Sensor health (fittings 신경로) ──────────────────────────────────────
     indoor = {}
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration as _gfi_h
+        from aot.space.facility_integration import get_facility_integration as _gfi_h
         integ_h, _ = _gfi_h(facility_uuid)
         sensors_resolved = (integ_h.get('sensors_resolved') or []) if integ_h else []
         sr = _csi(sensors_resolved)
@@ -211,7 +212,7 @@ def api_facility_iec_status(facility_uuid):
     total_count = 0
     active_count = 0
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration as _gfi
+        from aot.space.facility_integration import get_facility_integration as _gfi
         all_states_s = DaemonControl().output_states_all() or {}
         integ_s, _ = _gfi(facility_uuid)
         acts_resolved = (integ_s.get('actuators_resolved') or []) if integ_s else []
@@ -393,7 +394,7 @@ def api_facility_setpoints(facility_uuid):
     sp.source   = 'manual'
     sp.operator = current_user.name if current_user.is_authenticated else None
     from datetime import datetime
-    sp.updated_at = datetime.utcnow()
+    sp.updated_at = naive_utc(utc_now())
 
     try:
         db.session.commit()
@@ -494,8 +495,8 @@ def api_facility_control(facility_uuid):
     import json as _json
     from aot.databases.models import GeoFacility
     from aot.aot_client import DaemonControl, daemon_call_failed
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
-    from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors, compute_spatial_internal
+    from aot.space.facility_integration import get_facility_integration
+    from aot.space.facility_sensors import read_outdoor_sensors, compute_spatial_internal
     from aot.functions.utils.env_control.safety_gates import (
         SafetyPreGate, PreGateConfig,
     )
@@ -833,7 +834,7 @@ def api_facility_estop(facility_uuid):
     # ⚠ 원장 기준이어야 한다. 레거시 목록을 그대로 쓰면 원장이 **다른 시설로
     #   넘긴** 장치까지 이 시설의 안전 상태 명령을 받는다 — 한 시설을 멈추려다
     #   남의 시설 창을 닫는다(2026-09-25, 측창 좌/우 사례).
-    from aot.aot_flask.geo.device_binding import resolved_refs
+    from aot.space.device_binding import resolved_refs
     actuators_raw = resolved_refs(facility)[1] or {}
 
     def _iter_actuators(raw):
@@ -952,51 +953,9 @@ def _parse_disabled_actuators(raw):
     return parse_disabled_actuators(raw)
 
 
-def _function_facility_uuid(fn):
-    """이 env_coordinator 가 붙은 시설 uuid → str|None.
-
-    ⚠ **키가 둘이다.** `select_device` 옵션이 저장 시 `_device_id` 접미사를
-      붙이므로 신규는 `geo_facility_id_device_id` 이고, 예전 값은
-      `geo_facility_id` 다. 둘을 읽는 자리가 여럿이면 갈라지고, 갈라지면
-      "붙었는데 안 붙은 것으로 보이는" 시설이 생긴다 — 읽는 곳은 여기 하나다.
-    """
-    import json as _json
-    try:
-        opts = _json.loads(fn.custom_options or '{}') or {}
-    except (TypeError, ValueError):
-        return None
-    return (opts.get('geo_facility_id_device_id')
-            or opts.get('geo_facility_id') or None)
-
-
-def _function_belongs_to_facility(fn, facility_uuid):
-    """fn(env_coordinator CustomController) 이 facility_uuid 에 연결된 것인지 확인.
-
-    판정 기준은 `_function_facility_uuid` 하나다 — status/env_summary 공용.
-    """
-    return _function_facility_uuid(fn) == facility_uuid
-
-
-def _find_facility_env_coordinator(facility_uuid):
-    """facility 에 연결된 env_coordinator CustomController 를 역추적한다.
-
-    복수면 활성 우선.
-    """
-    from aot.databases.models.controller import CustomController
-
-    matched = []
-    try:
-        funcs = CustomController.query.filter_by(device='env_coordinator').all()
-        matched = [f for f in funcs if _function_belongs_to_facility(f, facility_uuid)]
-    except Exception as exc:
-        logger.warning('[env_coordinator lookup] %s', exc)
-        return None
-    if not matched:
-        return None
-    for f in matched:
-        if f.is_activated:
-            return f
-    return matched[0]
+from aot.space.coordinator_link import (  # noqa: F401 — 옛 이름으로 쓰는 곳이 있다
+    _find_facility_env_coordinator, _function_belongs_to_facility,
+    _function_facility_uuid)
 
 
 # @manual geo/api-reference#facility-runtime-control-apiaotfacility-apiaotcoordinator
@@ -1072,7 +1031,7 @@ def api_facility_actuator_history(facility_uuid):
     """
     import time as _time
     from aot.databases.models import GeoFacility
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
+    from aot.space.facility_integration import get_facility_integration
     from aot.utils.influx import query_string, influx_to_list
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
@@ -1283,7 +1242,7 @@ def _facility_dims(facility):
     volume    = None
     estimated = False
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.space.facility_integration import get_facility_integration
         integ, _ierr = get_facility_integration(facility.unique_id)
         if integ:
             v = (integ.get('capacity_meta') or {}).get('volume_m3')
@@ -1397,7 +1356,7 @@ def api_facility_env_week(facility_uuid):
     두 화면이 다르게 세게 된다. 목표·피복은 시설의 대표 구획에서 온다
     (`_build_facility_overview` 가 이미 같은 구획을 고른다).
     """
-    from aot.aot_flask.geo import plot_context as _pc
+    from aot.space import plot_context as _pc
     from aot.aot_flask.geo import plot_journal
     from aot.aot_flask.geo.site_summary import (cached_facility_env_week,
                                                  env_week_key)
@@ -1449,9 +1408,8 @@ def api_facility_env_week(facility_uuid):
     # `target_id` 로 같은 판단을 하므로(거기 `tz`), 서버 시간으로 자르면 시차가
     # 있는 설치에서 여기 적는 날과 실제 버킷이 하루 어긋난다.
     from datetime import datetime as _dt, timedelta as _td
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz
-    end = _dt.now(as_tz(resolve_location_tz(facility_uuid))).date()
+    from aot.utils.timekit import tz_of
+    end = _dt.now(tz_of(facility_uuid)).date()
     start = end - _td(days=days - 1)
     return jsonify({'ok': True, 'days': days, 'series': series,
                     'window': {'start': start.isoformat(),
@@ -1527,7 +1485,7 @@ def _build_facility_overview(facility_uuid):
             # 시설에 묶인 Open-Meteo 시간별 예보 파일 — 신선(2 h)할 때만. 아니면 기상청
             # forecast.json(기존). 제어(MPC·피드포워드)가 쓰는 것과 같은 파일이다.
             try:
-                from aot.aot_flask.geo.facility_sensors import fresh_forecast_file_for
+                from aot.space.facility_sensors import fresh_forecast_file_for
                 hazard_path = fresh_forecast_file_for(row.weather_bindings)
             except Exception:                               # noqa: BLE001
                 hazard_path = None
@@ -1555,7 +1513,7 @@ def _build_facility_overview(facility_uuid):
     # 관수 함수가 근거다. 근거가 없으면 None 이고 화면은 아무 말도 안 한다.
     _plot = None
     try:
-        from aot.aot_flask.geo import plot_context as _pc
+        from aot.space import plot_context as _pc
         _rows = _pc.plots_in_facility(facility_uuid)
         _plot = _rows[0] if _rows else None
     except Exception:                                       # noqa: BLE001
@@ -1584,7 +1542,7 @@ def _build_facility_overview(facility_uuid):
             _program = GeoProgram.query.filter_by(
                 unique_id=_plot.program_uuid).first()
             if _program is not None:
-                from aot.aot_flask.geo import plot_context as _pc2
+                from aot.space import plot_context as _pc2
                 _gdd = _pc2.gdd_accumulated(_plot, _program)
                 _dli = _pc2.dli_accumulated(_plot, _program)
         except Exception:                                   # noqa: BLE001
@@ -1868,7 +1826,7 @@ def api_coordinator_overview(function_uuid):
     #   보이므로, 아직 한 번도 안 돈 코디네이터에서는 전부 없다고 말한다.
     actuator_kinds = []
     try:
-        from aot.aot_flask.geo.facility_integration import (
+        from aot.space.facility_integration import (
             get_facility_integration as _gfi_kinds)
         _integ, _err = _gfi_kinds(facility_uuid)
         if not _err and isinstance(_integ, dict):
@@ -1912,7 +1870,7 @@ def api_coordinator_actuators(function_uuid):
     `bay_scope` 가 걸려 있으면 그 구역의 장치만 낸다 — 화면에 안 보이는 장치를
     끄고 켤 수 있으면 "껐는데 도는" 것과 구분이 안 된다.
     """
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
+    from aot.space.facility_integration import get_facility_integration
     from aot.databases.models.controller import CustomController
 
     fn = CustomController.query.filter_by(unique_id=function_uuid).first()
@@ -1937,7 +1895,9 @@ def api_coordinator_actuators(function_uuid):
 
     actuators = []
     seen = set()
-    for act in data.get('actuators_resolved') or []:
+    # 코디네이터가 읽는 것과 같은 목록이어야 한다 — 시설 모형의 위층 장치는 빠진 값이다.
+    control = data.get('control_view') or data
+    for act in control.get('actuators_resolved') or []:
         uid = (act.get('output_uuid') or '').strip()
         if not uid or uid in seen:
             continue

@@ -288,7 +288,7 @@ def _paired_outside_facility_scope(candidate_ids, facility_uuid, my_geo_id) -> s
     ids = {c for c in (candidate_ids or []) if c}
     if not ids or not facility_uuid:
         return set()
-    from aot.aot_flask.geo.device_binding import shapes_for_devices
+    from aot.space.device_binding import shapes_for_devices
     from aot.databases.models import GeoBinding
 
     mine, elsewhere = set(), set()
@@ -379,6 +379,7 @@ class ProfileLoaderMixin:
         self._excluded_actuators       = []
         # bay_scope 로 제외된 액추에이터 — 섹션 2(자동 발견)가 재등록하지 않도록 차단
         bay_excluded_ids: set = set()
+        level_excluded_ids: set = set()
         n_manual_new = 0
         n_manual_merged = 0
 
@@ -389,25 +390,16 @@ class ProfileLoaderMixin:
         facility_uuid = self.geo_facility_id_device_id or ''
         integ = None  # 섹션 4(그룹 파싱) 에서도 재사용
         if facility_uuid:
-            from aot.aot_flask.geo.facility_integration import get_facility_integration
-            from aot.aot_flask.geo.facility_geo_helpers import shape_azimuth_area
+            from aot.space.facility_integration import get_facility_integration
+            from aot.space.facility_geo_helpers import shape_azimuth_area
 
             try:
                 # get_facility_integration 은 Flask-SQLAlchemy Model.query 를 사용한다.
                 # 데몬 스레드에서는 앱 컨텍스트가 없을 수 있으므로 기존 앱 참조로 컨텍스트를 열어 호출한다.
-                from flask import has_app_context
-                if has_app_context():
-                    integ, integ_err = get_facility_integration(facility_uuid, bypass_cache=True)
-                else:
-                    try:
-                        from aot.ai.services.ai_scheduler_service import _flask_app as _svc_app
-                    except Exception:
-                        _svc_app = None
-                    if _svc_app:
-                        with _svc_app.app_context():
-                            integ, integ_err = get_facility_integration(facility_uuid, bypass_cache=True)
-                    else:
-                        integ, integ_err = None, 'Flask app context unavailable in daemon'
+                from aot.databases.app_holder import run_in_app
+                integ, integ_err = run_in_app(
+                    lambda: get_facility_integration(facility_uuid, bypass_cache=True),
+                    default=(None, 'Flask app context unavailable in daemon'))
             except Exception as _e:
                 integ, integ_err = None, str(_e)
 
@@ -418,6 +410,18 @@ class ProfileLoaderMixin:
                 integ = None
 
             if integ:
+                # ── 시설 모형의 위층 장치 ─────────────────────────────────────
+                # `control_view` 는 서버가 위층 장치를 뺀 값이다. 층을 모르는 옛 구역 제어에
+                # 2층 센서가 섞이지 않게 한다. 모형이 없는 시설은 이 칸이 없어 아무것도 바뀌지
+                # 않는다. integ 는 공유 dict 이므로 덮어쓰지 않고 새 dict 를 만든다.
+                _control = integ.get('control_view') or {}
+                if _control:
+                    integ = dict(integ, **_control)
+                    level_excluded_ids = set(_control.get('excluded_actuators') or [])
+                    self.logger.info(
+                        '_reload_profiles: 위층 장치 %d개는 제어에서 뺍니다',
+                        len(level_excluded_ids))
+
                 # ── Bay(구역) scope 검증 ──────────────────────────────────────
                 # bay_scope 설정 시 해당 bay 귀속 센서/액추에이터만 사용한다.
                 # integ 는 TTL 캐시 공유 dict 이므로 변형하지 않고 로컬 필터링.
@@ -668,7 +672,7 @@ class ProfileLoaderMixin:
                 shape_lookup: dict = {}
                 try:
                     if output_uuids_all:
-                        from aot.aot_flask.geo.device_binding import (
+                        from aot.space.device_binding import (
                             shapes_for_devices)
                         for dev, rows in shapes_for_devices(
                                 output_uuids_all).items():
@@ -843,7 +847,7 @@ class ProfileLoaderMixin:
         # actuator_paired(전용 릴레이) + actuator_paired_bus(공유 버스) 양쪽 모두.
         n_paired = 0
         try:
-            from aot.aot_flask.geo.facility_geo_helpers import shape_azimuth_area
+            from aot.space.facility_geo_helpers import shape_azimuth_area
             from aot.outputs.paired_actuator_common import (
                 KIND_TO_PROFILE_KIND, PAIRED_ACTUATOR_OUTPUT_TYPES)
             paired_outputs = Output.query.filter(
@@ -874,7 +878,7 @@ class ProfileLoaderMixin:
         if paired_outputs:
             try:
                 from aot.databases.models import CustomController
-                from aot.aot_flask.geo.facility_integration import get_facility_integration
+                from aot.space.facility_integration import get_facility_integration
                 cand_ids = {o.unique_id for o in paired_outputs}
                 mine = getattr(self, 'unique_id', None)
                 sibling_facilities: set = set()
@@ -929,7 +933,7 @@ class ProfileLoaderMixin:
         # 그대로 자동 등록된다.
         if paired_outputs:
             try:
-                from aot.aot_flask.geo.device_binding import shapes_for_devices
+                from aot.space.device_binding import shapes_for_devices
                 from aot.databases.models import GeoFacility
                 my_facility = (GeoFacility.query.filter_by(
                     unique_id=facility_uuid).first() if facility_uuid else None)
@@ -987,7 +991,7 @@ class ProfileLoaderMixin:
             if out_uuid in by_id:
                 continue
             # bay_scope 로 제외된 시설 액추에이터의 자동 재등록 방지
-            if out_uuid in bay_excluded_ids:
+            if out_uuid in bay_excluded_ids or out_uuid in level_excluded_ids:
                 continue
             if out_uuid in foreign_paired_ids:
                 continue
@@ -1032,7 +1036,7 @@ class ProfileLoaderMixin:
             if azimuth_deg is None or area_m2 is None:
                 try:
                     # [GB-6] 사망 컬럼 직접 조회 금지 — 리졸버 경유.
-                    from aot.aot_flask.geo.device_binding import (
+                    from aot.space.device_binding import (
                         shapes_for_device)
                     rows = shapes_for_device(out_uuid)
                     shape = rows[0] if rows else None
@@ -1289,6 +1293,11 @@ class ProfileLoaderMixin:
                 self.logger.exception(
                     '_reload_profiles: 그룹 파싱 실패 — 그룹 없이 계속')
 
+        # 위층 장치가 든 그룹은 쓰지 않는다 — 리더 명령이 뺀 장치로 확장되지 않게 한다.
+        if level_excluded_ids and groups:
+            groups = [g for g in groups
+                      if not ({g.leader_id, *g.member_ids} & level_excluded_ids)]
+
         # bay_scope 시 구성원 전원이 bay 안에 있는 그룹만 유지 — 리더 명령이
         # group_expander 를 통해 bay 밖 팔로워로 확장되는 것을 차단한다.
         if getattr(self, '_bay_scope_active', None) and groups:
@@ -1427,7 +1436,7 @@ class ProfileLoaderMixin:
                 self._last_shared_actuators = []
                 return
             from aot.databases.models import CustomController, Output
-            from aot.aot_flask.geo.facility_integration import get_facility_integration
+            from aot.space.facility_integration import get_facility_integration
             shared: dict = {}
             rows = db_retrieve_table_daemon(CustomController)
             for row in (rows.all() if hasattr(rows, 'all') else rows):

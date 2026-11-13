@@ -10,6 +10,7 @@ from aot.databases.models import GeoMap, GeoSetting, GeoLayer, GeoShape, Input
 from aot.aot_flask.extensions import db
 from aot.utils.inputs import parse_input_information
 from aot.aot_flask.utils import utils_geo
+from aot.utils import maplibre
 from aot.functions.utils.water_net import parts as water_parts
 from aot.aot_flask.access import scope
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
@@ -51,9 +52,10 @@ def api_geo_designs_list():
             result.append({
                 'unique_id': m.unique_id,
                 'name': m.name,
-                'latitude': lat if lat is not None else 37.5665,
-                'longitude': lng if lng is not None else 126.9780,
-                'zoom': zoom if zoom is not None else 13
+                # 시작 위치가 없으면 세계 전도(0,0 줌 2) — 도시 리터럴 없음.
+                'latitude': lat if lat is not None else 0,
+                'longitude': lng if lng is not None else 0,
+                'zoom': zoom if zoom is not None else (13 if lat is not None else 2)
             })
         return jsonify(result)
     except Exception as e:
@@ -129,8 +131,8 @@ def api_geo_settings():
                     pass
 
             float_fields = {
-                'default_lat': 37.5665,
-                'default_lng': 126.9780,
+                'default_lat': None,
+                'default_lng': None,
                 'default_zoom': 12.0
             }
             for field, default in float_fields.items():
@@ -232,7 +234,8 @@ def api_geo_settings():
         'saved_state': saved_state,
         'geo_layers': layers_data,
         'search_inputs': search_inputs,
-        'search_provider': current_search_provider
+        'search_provider': current_search_provider,
+        'terrain_available': maplibre.supports_terrain(utils_geo.get_geo_config().get('terrain'))
     })
 
 
@@ -654,6 +657,86 @@ def api_geo_water_net():
 
     from aot.utils import water_net_link
     return jsonify({'ok': True, **water_net_link.report_for_map(map_uuid)})
+
+
+def _terrain_switch_guard(map_uuid, write=False):
+    """지형 바꾸기 API 공통 검사. 통과하면 None, 아니면 (응답, 코드). 쓰기(활성화·되돌리기)는 입력 편집 권한이 필요하다."""
+    if not map_uuid:
+        return jsonify({'ok': False, 'message': 'map_uuid required'}), 400
+    if not utils_general.user_has_permission('edit_controllers' if write else 'edit_settings', silent=True):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+    if not scope.can_operate('geo_map', map_uuid):
+        return jsonify({'ok': False, 'message': scope.deny_message()}), 403
+    if not GeoMap.query.filter_by(unique_id=map_uuid).first():
+        return jsonify({'ok': False, 'message': 'map not found'}), 404
+    return None
+
+
+# @manual geo/api-reference#water-network
+@blueprint.route('/api/geo/water_net/terrain_switch', methods=['GET'])
+@login_required
+def api_geo_water_net_terrain_switch():
+    """지형(DEM) 바꾸기 상태 — 지금 DEM·바꿀 수 있는 DEM·되돌릴 수 있는 기록. 키는 싣지 않는다."""
+    map_uuid = (request.args.get('map_uuid') or '').strip()
+    denied = _terrain_switch_guard(map_uuid)
+    if denied:
+        return denied
+    from aot.utils import water_terrain_switch
+    return jsonify({'ok': True, **water_terrain_switch.state()})
+
+
+# @manual geo/api-reference#water-network
+@blueprint.route('/api/geo/water_net/terrain_switch/preview', methods=['POST'])
+@login_required
+def api_geo_water_net_terrain_switch_preview():
+    """다른 DEM 으로 계산하면 달라지는 것 — 시작하거나 지금 상태를 돌려준다. 아무것도 저장·변경하지 않는다.
+
+    타일은 백그라운드가 받는다. 계산 중이면 ``state='warming'`` 이고, 같은 요청을 되풀이해 끝났는지 본다.
+    ``restart`` 는 새 후보를 고를 때만 보낸다(관경 등 입력이 바뀌었을 수 있으니 처음부터 다시).
+    """
+    data = request.get_json(silent=True) or {}
+    map_uuid = str(data.get('map_uuid') or '').strip()
+    denied = _terrain_switch_guard(map_uuid)
+    if denied:
+        return denied
+    candidate = str(data.get('candidate_id') or '').strip()
+    if not candidate:
+        return jsonify({'ok': False, 'message': 'candidate_id required'}), 400
+    from aot.utils import water_terrain_switch
+    return jsonify({'ok': True, **water_terrain_switch.start_preview(map_uuid, candidate, bool(data.get('restart')))})
+
+
+# @manual geo/api-reference#water-network
+@blueprint.route('/api/geo/water_net/terrain_switch/activate', methods=['POST'])
+@login_required
+def api_geo_water_net_terrain_switch_activate():
+    """후보 DEM 만 켠다(다른 DEM 입력은 끈다). 되돌리기 기록을 남긴다."""
+    data = request.get_json(silent=True) or {}
+    map_uuid = str(data.get('map_uuid') or '').strip()
+    denied = _terrain_switch_guard(map_uuid, write=True)
+    if denied:
+        return denied
+    candidate = str(data.get('candidate_id') or '').strip()
+    if not candidate:
+        return jsonify({'ok': False, 'message': 'candidate_id required'}), 400
+    from aot.utils import water_terrain_switch
+    got = water_terrain_switch.activate(candidate)
+    return jsonify(got), (200 if got.get('ok') else 409)
+
+
+# @manual geo/api-reference#water-network
+@blueprint.route('/api/geo/water_net/terrain_switch/revert', methods=['POST'])
+@login_required
+def api_geo_water_net_terrain_switch_revert():
+    """마지막으로 바꾼 DEM 을 되돌린다(그때 켜져 있던 DEM 입력을 그대로 복원)."""
+    data = request.get_json(silent=True) or {}
+    map_uuid = str(data.get('map_uuid') or '').strip()
+    denied = _terrain_switch_guard(map_uuid, write=True)
+    if denied:
+        return denied
+    from aot.utils import water_terrain_switch
+    got = water_terrain_switch.revert()
+    return jsonify(got), (200 if got.get('ok') else 409)
 
 
 # @manual geo/api-reference#water-network

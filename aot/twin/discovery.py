@@ -21,7 +21,7 @@
 - 값은 (`"*"` →) 대지 → 구획 순으로 덮어쓴다(대지 → 구획 상속). 입력 값이 null 이면 "이 구획에서는 없음".
 - 개발용으로 같은 모양의 JSON 을 `--overrides`·`$AOT_TWIN_OVERRIDES` 로 **명시했을 때만** DB 설정 위에 겹친다
   (기본 경로는 없다 — 화면에서 고른 것이 정본).
-- **자동으로 채우는 것**: 구획 목록(대지 안의 지금 재배 중인 노지 식생 구획 — 지도와 같은 `active_plots`, 시설 구획·끝난·아직 안 심은 작기 제외), `planted_on`(구획
+- **자동으로 채우는 것**: 관수 입력 `irrigation`(구획 자신의 `water_day`), 구획 목록(대지 안의 지금 재배 중인 노지 식생 구획 — 지도와 같은 `active_plots`, 시설 구획·끝난·아직 안 심은 작기 제외), `planted_on`(구획
   시작일), `timezone`(대지 시간대), `lat`(구획 대표점), `forecast_series`(`{"site": 대지}` — 앞날 예보는 대지에 지정한
   예보 출처의 계열, 지도 날씨·AI 와 같은 출처. 출처 지정은 기상원 지정·트윈 탭이 같은 행에 쓴다). 자동 값도 사람이 고른 값이 이긴다.
 - **도형 상속으로 채우는 것**(2026-10-26): 비·기온·ET0 = 대지 기상대, 토양수분·지온 = 구획 안/가까운/구역 센서 — 지도·환경제어와
@@ -40,10 +40,12 @@ import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Mapping, Optional, Sequence
 
+from aot.functions.utils.water_net.result import DAY_FIELDS, M_DAY
+
 from . import forecast as FC
 from . import obs_basis as OB
 from .settings import SettingsError, _series
-from .types import TargetKind, TargetSpec
+from .types import SeriesRef, TargetKind, TargetSpec
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +217,8 @@ def _target(p: PlotInfo, tz: str, cfg: Mapping, ladders: Dict[str, tuple],
     if "forecast" in options:
         FC.parse(options)                                          # 모양 검사 — 틀리면 이 구획만 빠진다
     inputs = {k: _series(v) for k, v in (cfg.get("inputs") or {}).items() if v}
+    # 관수 = 이 구획의 닫힌 날 물 결과. 고르는 칸이 아니다 — 구획이 정하고, 점이 없는 날은 모름이다(`models/field_bucket`).
+    inputs.setdefault("irrigation", SeriesRef(p.unique_id, M_DAY, DAY_FIELDS.index("mm")))
     exc = _excluded(cfg, inputs, f"구획 {p.name or p.unique_id}", notes)
     if exc:
         options["excluded_inputs"] = exc
@@ -230,7 +234,7 @@ def _tz_name(tz) -> Optional[str]:
 def coordinator_uid_of(facility_uuid: str) -> str:
     """시설에 연결된 환경제어 함수(코디네이터)의 unique_id, 없으면 "" — 시설 화면·`env_summary` 와 같은 판정."""
     try:
-        from aot.aot_flask.routes_geo_iec import _find_facility_env_coordinator
+        from aot.space.coordinator_link import _find_facility_env_coordinator
         fn = _find_facility_env_coordinator(facility_uuid)
         return str(fn.unique_id) if fn is not None else ""
     except Exception:
@@ -258,9 +262,9 @@ class DbCatalog:
     def _sites(self) -> List[SiteInfo]:
         from shapely.geometry import shape as shapely_shape
 
-        from aot.aot_flask.geo.device_membership import load_containers, site_for_geometry
-        from aot.aot_flask.geo.plot_context import _shape_name, active_plots
-        from aot.aot_flask.geo.plot_geometry import geometry_of
+        from aot.space.device_membership import load_containers, site_for_geometry
+        from aot.space.plot_context import _shape_name, active_plots
+        from aot.space.plot_geometry import geometry_of
         from aot.databases.models import GeoFacility, GeoMap, GeoShape
         from aot.utils.geo_hierarchy import containment_point
         from aot.utils.timekit import resolve_tz

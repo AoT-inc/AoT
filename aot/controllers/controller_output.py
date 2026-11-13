@@ -21,7 +21,7 @@
 #  Contact at kylegabriel.com
 #
 from datetime import datetime
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 import threading
 import time
@@ -142,6 +142,34 @@ class OutputController(AbstractController, threading.Thread):
                         target=self._auto_off,
                         args=(output_id, each_channel))
                     turn_output_off.start()
+
+    def seconds_until_due(self):
+        """가장 먼저 꺼야 할 출력까지 남은 초 — 기반 루프가 이때 깨어난다.
+
+        예전에는 루프가 점검 주기(sample_rate)마다만 돌아, 점검 주기를 15초로
+        둔 설치에서 '5초 켜짐' 이 약 15초 켜져 있었다(2026-11-12 맥북 실측).
+        끌 시각은 `loop()` 과 같은 조건으로 고른다.
+        """
+        soonest = None
+        now = utc_now()
+        mono = time.monotonic()
+        for output_id, obj in list(self.output.items()):
+            try:
+                if not obj.output_setup:
+                    continue
+                for ch in self.output_unique_id.get(output_id, []):
+                    until = obj.output_on_until.get(ch) if hasattr(obj.output_on_until, 'get') else None
+                    if (until is None or not obj.output_on_duration.get(ch)
+                            or obj.output_off_triggered.get(ch)):
+                        continue
+                    left = (until - now).total_seconds()
+                    retry_at = self._auto_off_retry_at.get((output_id, ch))
+                    if retry_at:
+                        left = max(left, retry_at - mono)
+                    soonest = left if soonest is None else min(soonest, left)
+            except Exception:
+                continue    # 한 출력의 이상한 상태가 나머지의 정시 OFF 를 막지 않게
+        return soonest
 
     def _auto_off(self, output_id, output_channel):
         """시간이 다 된 출력을 끈다 — **제어 게이트를 통해서.**
@@ -287,6 +315,8 @@ class OutputController(AbstractController, threading.Thread):
                                 (each_output.unique_id, saved_startup))
 
                         output_obj.try_initialize()
+                        # 시작 듀티를 드라이버가 직접 걸었다면 그 순간이 작동의 시작이다.
+                        output_obj.adopt_running_pwm()
                         # 기동 상태 전송은 게이트를 안 지난다 — 여기서만 남는다.
                         self._audit_lifecycle(
                             each_output.unique_id, 'state_startup', 'daemon_startup')
@@ -399,6 +429,14 @@ class OutputController(AbstractController, threading.Thread):
             self.dict_outputs = parse_output_information()
 
             output = db_retrieve_table_daemon(Output, unique_id=output_id)
+            if output is None:
+                # 조회 실패(None)를 그대로 쓰면 "'NoneType' object has no
+                # attribute 'output_type'" 로만 남아 원인이 안 보인다. 실제
+                # 원인은 바로 위 db_retrieve_table_daemon 이 ERROR 로 남긴다.
+                msg = (f"{output_id}: could not load this output from the "
+                       f"database (see the preceding aot.database error)")
+                self.logger.error(msg)
+                return 1, msg
 
             self.output_type[output_id] = output.output_type
             self.output_unique_id[output_id] = {}
@@ -596,6 +634,13 @@ class OutputController(AbstractController, threading.Thread):
         failed = bool(ret[0]) if isinstance(ret, (tuple, list)) and ret else False
         self._audit_command(output_id, state, output_channel, output_type, amount,
                             origin, result='failure' if failed else 'success')
+        if not failed and state in ('on', 1, True):
+            # 새 '켜짐 N초' 가 생겼을 수 있다 — 자고 있는 루프를 깨워 끌 시각을
+            # 다시 재게 한다(점검 주기를 다 기다리면 그만큼 오래 켜진다).
+            # 이 메서드만 떼어 쓰는 곳(시험의 게이트 흉내 등)에는 루프가 없다.
+            wake = getattr(self, 'wake', None)
+            if wake is not None:
+                wake()
         return ret
 
     def _paired_leg_relations_cached(self):

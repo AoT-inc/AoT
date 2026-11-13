@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from aot.databases import CRUDMixin
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.utils.crypto import (SEALED_EMPTY, SEALED_LEGACY, SEALED_UNREADABLE,
                               open_sealed, seal_secret)
 

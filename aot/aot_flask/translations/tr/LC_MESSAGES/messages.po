@@ -32334,3 +32334,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Yatay / eğimli"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} boru yatay hesaplandı"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Yatay"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Boru uzunluğu (tüm alan)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Boru uzunluğu"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Arazi hesaplanıyor. Eğimli uzunluk bitince görünür."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Bazı bölümler yatay uzunlukla hesaplandı. Arazi bunları kapsamıyor."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Hesaplandı {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Hücre {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Uzunluklar yatay / eğimli sırasındadır."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Eğim {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Yatay uzunlukla hesaplandı"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Akış {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Kayıp {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Yatay {h} m, eğimli {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Yatay {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Bölüm {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Bölümler ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Yatay {h} m / Eğimli {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Arazi hesaplanıyor - yalnızca yatay uzunluk gösteriliyor."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Haritadaki uzunluklar yataydır."
+
+msgid "Terrain input"
+msgstr "Arazi girişi"
+
+msgid "Compare another terrain"
+msgstr "Başka bir araziyle karşılaştır"
+
+msgid "Could not compare. Try again."
+msgstr "Karşılaştırılamadı. Tekrar deneyin."
+
+msgid "Changed sections ({n})"
+msgstr "Değişen kesimler ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "{name} arazisi indiriliyor. Karşılaştırma bitince görünür."
+
+msgid "Calculation level"
+msgstr "Hesap düzeyi"
+
+msgid "Switch to this terrain"
+msgstr "Bu araziye geç"
+
+msgid "That terrain input is gone."
+msgstr "Bu arazi girişi artık yok."
+
+msgid "Weakest nozzle flow"
+msgstr "En zayıf nozulun debisi"
+
+msgid "Revert to {name}"
+msgstr "{name} değerine geri dön"
+
+msgid "Slant length total"
+msgstr "Toplam eğik uzunluk"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Bu arazi girişinin karo adresi yok. Ayarlarını kontrol edin."
+
+msgid "Downloading took too long. Try again."
+msgstr "İndirme çok uzun sürdü. Tekrar deneyin."
+
+msgid "Terrain changed and recalculated"
+msgstr "Arazi değişti ve yeniden hesaplandı"
+
+msgid "Compare with"
+msgstr "Şununla karşılaştır"
+
+msgid "No terrain was on"
+msgstr "Açık arazi yoktu"
+
+msgid "Undo change"
+msgstr "Değişikliği geri al"
+
+msgid "Try again"
+msgstr "Tekrar dene"
+
+msgid "This map has no pipes to compare."
+msgstr "Bu haritada karşılaştırılacak boru yok."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Arazinin kapsamadığı borular"
+
+msgid "No terrain is on."
+msgstr "Açık arazi yok."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Arazi değiştirilemedi. Tekrar deneyin."

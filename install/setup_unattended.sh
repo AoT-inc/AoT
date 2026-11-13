@@ -238,6 +238,7 @@ if [[ "${INSTALL_TARGET}" != "docker" ]]; then
     ${INSTALL_CMD} update-permissions 2>&1 | tee -a "${LOG_LOCATION}"
     ${INSTALL_CMD} restart-daemon 2>&1 | tee -a "${LOG_LOCATION}"
     ${INSTALL_CMD} install-aotmcp 2>&1 | tee -a "${LOG_LOCATION}"
+    ${INSTALL_CMD} install-aottwin 2>&1 | tee -a "${LOG_LOCATION}"
 else
     printf "#### [docker] systemd 서비스 등록 생략 (컨테이너 엔트리포인트가 직접 실행)\n" | tee -a "${LOG_LOCATION}"
     ${INSTALL_CMD} update-permissions 2>&1 | tee -a "${LOG_LOCATION}"

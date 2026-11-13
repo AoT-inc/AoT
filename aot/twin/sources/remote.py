@@ -114,11 +114,15 @@ class RemoteSource:
 
     def read_series(self, ref: SeriesRef, window_s: float, now: float) -> Series:
         from aot.functions.utils.twin_effects.state import DUTY_UNIT
+        from aot.functions.utils.water_net.result import M_DAY
         past = max(1, int(window_s))
         if ref.unit == DUTY_UNIT:
             # 가동 이력은 서버가 계단으로 바꿔 준다(측정 API 는 이 표식을 모른다)
             path = "/api/twin/state/duty_log/{}/{}?past={}".format(
                 urllib.parse.quote(ref.unique_id, safe=""), int(ref.channel), past)
+        elif ref.unit == M_DAY:
+            # 구획의 일 깊이도 서버가 풀어 준다(측정 API 는 계층 측정을 모른다)
+            path = "/api/twin/state/water_day/{}?past={}".format(urllib.parse.quote(ref.unique_id, safe=""), past)
         elif ref.unit.startswith("env_twin"):
             # 트윈 결과는 트윈 읽기 API 로(측정 API 는 env_twin* 를 422 로 막고 미래 시각을 못 읽는다).
             # 끝은 지평(+14 일)까지 — 곡선은 미래 시각에 있다.

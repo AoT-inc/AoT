@@ -38,6 +38,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ META_KEYS = frozenset({'_reason', '_agent_id', '_confirmation_id', '_title'})
 # 않는다("operate_device" 같은 내부 식별자를 일반 사용자가 볼 이유가 없다) —
 # LLM 이 _title 을 안 보내는 경우의 서버 쪽 최종 폴백이 이 표다.
 _TOOL_ACTION_LABELS = {
+    'set_pipe_diameters': '배관 관경 일괄 입력',
     'operate_device': '장치 제어',
     'set_output_state': '장치 상태 변경',
     'schedule_device_control': '장치 제어 예약',
@@ -58,12 +60,23 @@ _TOOL_ACTION_LABELS = {
     'create_notice': '공지 작성',
     'modify_notice': '공지 수정',
     'modify_note': '노트 수정·보관',
+    'delete_note': '노트 삭제',
     'delete_notice': '공지 삭제',
     'edit_schedule': '일정 수정',
     'delete_schedule': '일정 삭제',
     'create_function': '함수 생성',
     'delete_function': '함수 삭제',
     'create_sequence_function': '시퀀스 함수 생성',
+    # 삭제 도구 — 대상 이름·영향은 delete_readback 이 되읽는다. 여기는 그 조회가 없을 때의 최종 폴백.
+    'delete_input': '입력 삭제',
+    'delete_output': '출력 삭제',
+    'delete_plot': '구획 삭제',
+    'delete_program': '프로그램 삭제',
+    'delete_widget': '위젯 삭제',
+    'delete_tab': '탭 삭제',
+    'delete_ai_agent': 'AI 에이전트 삭제',
+    'delete_geo_shape': '지도 도형 삭제',
+    'delete_gis_input': 'GIS 입력 삭제',
 }
 
 
@@ -83,6 +96,43 @@ def _resolve_device_display_name(device_id):
     return None
 
 
+_BATCHIM_DIGITS = frozenset('013678')                 # 영·일·삼·육·칠·팔 — 받침이 있다
+_BATCHIM_LATIN = frozenset('lmnrLMNR')                # 엘·엠·엔·알 — 받침이 있다
+
+
+def _eul(name):
+    """이름 뒤에 붙는 목적격 조사 '을' / '를' — 한글·숫자·영문 글자의 읽는 소리 기준. 모르는 글자(기호)는 '을(를)'."""
+    ch = (name or '').strip()[-1:]
+    if not ch:
+        return '을(를)'
+    if '가' <= ch <= '힣':
+        return '을' if (ord(ch) - 0xAC00) % 28 else '를'
+    if ch.isdigit():
+        return '을' if ch in _BATCHIM_DIGITS else '를'
+    if ch.isascii() and ch.isalpha():
+        return '을' if ch in _BATCHIM_LATIN else '를'
+    return '을(를)'
+
+
+def _duration_label(params):
+    """켜는 시간(초) → '30초' · '2분' · '1시간 30분'. 없거나 읽을 수 없으면 None."""
+    for key in ('duration_seconds', 'duration'):
+        v = (params or {}).get(key)
+        if isinstance(v, bool) or v in (None, ''):
+            continue
+        try:
+            secs = int(float(v))
+        except (TypeError, ValueError):
+            continue
+        if secs <= 0:
+            continue
+        h, rest = divmod(secs, 3600)
+        m, sec = divmod(rest, 60)
+        parts = [('%d시간' % h) if h else '', ('%d분' % m) if m else '', ('%d초' % sec) if sec else '']
+        return ' '.join(p for p in parts if p)
+    return None
+
+
 def synthesize_title(tool_name, params):
     """LLM 이 _title 을 안 보냈을 때 서버가 대신 만드는 제목.
 
@@ -99,6 +149,15 @@ def synthesize_title(tool_name, params):
         return existing_title.strip()
 
     label = _TOOL_ACTION_LABELS.get(tool_name, tool_name)
+    if tool_name == 'delete_note' and params.get('note_id'):
+        # 대기 목록에서 어느 노트인지 알아보게 — 되읽기와 같은 노트 제목(못 찾으면 기본 제목).
+        try:
+            from aot.tools.aot_data_tool_service import AoTDataToolService
+            brief = AoTDataToolService.note_brief(params['note_id'])
+        except Exception:
+            brief = None
+        if brief:
+            return "%s: '%s'" % (label, brief.get('title') or '제목 없음')
     if tool_name == 'activate_input' and params.get('input_id'):
         from aot.tools.data_tools.definition import DefinitionToolsMixin
         name = _resolve_device_display_name(params['input_id']) or params['input_id']
@@ -117,7 +176,8 @@ def synthesize_title(tool_name, params):
         # 구분이 안 되는 걸 확인).
         if tool_name == 'schedule_device_control':
             return f"{name} {verb} 예약"
-        return f"{name} {verb}"
+        secs = _duration_label(params) if state == 'on' else None
+        return f"{name} {verb} · {secs}" if secs else f"{name} {verb}"
     if device_id:
         name = _resolve_device_display_name(device_id) or device_id
         return f"{name} {label}"
@@ -137,6 +197,40 @@ def _input_activation_text(args):
         return None
 
 
+def _note_delete_readback(note_id):
+    """노트 삭제의 되읽기 — 어느 노트인지(제목·붙은 곳·첫 줄·첨부 수)를 서버가 id 에서 찾아 말한다.
+    못 찾으면 그렇다고 말한다(지워질 것이 없다)."""
+    try:
+        from aot.tools.aot_data_tool_service import AoTDataToolService
+        brief = AoTDataToolService.note_brief(note_id)
+    except Exception:
+        logger.exception('[MCPGate] 노트 되읽기 실패 (기본 문구로)')
+        brief = None
+    if brief is None:
+        return '노트 삭제 — 해당 노트를 찾지 못했습니다'
+    text = "노트 삭제: '%s'" % (brief.get('title') or '제목 없음')
+    text += " · 붙은 곳 %s" % (brief.get('place') or '없음(일반 메모)')
+    if brief.get('first_line'):
+        text += " · 첫 줄 '%s'" % brief['first_line']
+    if brief.get('files'):
+        text += " · 첨부 %d개도 함께 지워집니다" % brief['files']
+    if brief.get('hidden'):
+        text += " · (숨겨 둔 노트)"
+    return text + " · 되돌릴 수 없습니다"
+
+
+def _timed_sentence(tool_name, args):
+    """시간을 정해 켜는 요청의 되읽기 한 문장 — 'TEST-SEL-1 을 30초 동안 켜기'. 아니면 None."""
+    if tool_name not in ('operate_device', 'set_output_state') or args.get('state') != 'on' \
+            or not args.get('device_id'):
+        return None
+    secs = _duration_label(args)
+    if not secs:
+        return None
+    name = _resolve_device_display_name(args['device_id']) or args['device_id']
+    return "%s %s %s 동안 켜기" % (name, _eul(name), secs)
+
+
 def read_back_text(tool_name, arguments):
     """사용자에게 되읽어 줄 한 줄 — 서버가 풀어 낸 대상과 동작.
 
@@ -149,12 +243,28 @@ def read_back_text(tool_name, arguments):
         text = _input_activation_text(args)
         if text:
             return text
+    if tool_name == 'delete_note':
+        return _note_delete_readback(args.get('note_id'))
+    from aot.tools import delete_readback
+    if tool_name in delete_readback.TOOLS:
+        return delete_readback.readback(tool_name, args)
     text = synthesize_title(tool_name, args)
+    timed = _timed_sentence(tool_name, args)
+    if timed:
+        text = timed
     extra = [f"{k}={v}" for k, v in args.items()
              if k not in ('device_id', 'state', 'title') and v not in (None, '')
+             and not (timed and k in ('duration_seconds', 'duration'))
              and isinstance(v, (str, int, float, bool))]
     if extra and tool_name in PHYSICAL_TOOLS:
         text += " (" + ", ".join(extra[:6]) + ")"
+    if tool_name == 'set_pipe_diameters':
+        from aot.tools.aot_data_tool_service import AoTDataToolService
+        text += AoTDataToolService.pipe_diameters_brief(**args)
+    if tool_name in ('operate_device', 'set_output_state'):
+        # 물 회로의 밸브를 켜면 예상 물량·mm·탱크·경고를 더한다(읽기 전용 사전 계산). 알리기만 하고 승인 흐름은 그대로다.
+        from aot.utils import water_estimate
+        text += water_estimate.approval_note(tool_name, args)
     return text
 
 
@@ -315,6 +425,10 @@ _ADVISORY_WRITE_FALLBACK = frozenset({'submit_advice'})
 #: 대기다. 역할·읽기 전용 키·그룹 스코프는 다른 기록 쓰기와 같다.
 CONDITIONAL_APPROVAL_TOOLS = frozenset({'modify_note'})
 
+#: 노트 지우기 — 늘 승인 대기이면서 필요한 역할은 웹 노트 지우기와 같은 `edit_settings` 다(기록 쓰기 표에 넣으면 승인이
+#: 면제되고, 기본 표에 두면 `edit_controllers` 가 된다). 읽기 전용 키·역할 없는 키의 도구 숨기기도 이 표를 본다.
+NOTE_DELETE_TOOLS = frozenset({'delete_note'})
+
 _approval_state = threading.local()
 
 
@@ -387,14 +501,40 @@ def required_write_permission(tool_name) -> str:
       - 작기 운영(구획·프로그램 등)      → `edit_plots`    (웹 구획 화면)
       - 그 밖의 쓰기(제어·설정 편집)    → `edit_controllers`
 
+      - 자기 연결 쓰기(set_tool_profile) → '' (권한 없음, 승인은 유지)
+
     외부 MCP 게이트·인앱 요청자 판정·채팅 제안 승인이 모두 이 표를 쓴다."""
     if tool_name in record_write_tools():
         return 'edit_settings'
-    if tool_name in map_edit_tools():
+    if (tool_name in map_edit_tools() or tool_name in NOTE_DELETE_TOOLS
+            or tool_name in settings_edit_tools()):
         return 'edit_settings'
+    if tool_name in self_service_tools():
+        return ''                              # 필요 권한 없음 — 로그인한 키 주인이면 된다
     if tool_name in plot_write_tools():
         return 'edit_plots'
     return 'edit_controllers'
+
+
+def settings_edit_tools() -> frozenset:
+    """공지·지식 출처 설정 — 웹과 같은 `edit_settings`. 못 읽으면 고정 이름."""
+    try:
+        from aot.tools.tool_registry import settings_edit_tools as _reg
+        return frozenset(_reg())
+    except Exception:
+        logger.exception('[MCPGate] tool_registry 로드 실패 — 설정 편집 폴백 목록')
+        return frozenset({'create_notice', 'modify_notice', 'delete_notice',
+                          'configure_library_source'})
+
+
+def self_service_tools() -> frozenset:
+    """필요 역할 권한이 없는 자기 연결 쓰기. 못 읽으면 고정 이름."""
+    try:
+        from aot.tools.tool_registry import self_service_tools as _reg
+        return frozenset(_reg())
+    except Exception:
+        logger.exception('[MCPGate] tool_registry 로드 실패 — 자기 연결 폴백 목록')
+        return frozenset({'set_tool_profile'})
 
 
 def map_edit_tools() -> frozenset:
@@ -407,7 +547,7 @@ def map_edit_tools() -> frozenset:
         return frozenset(_reg_map())
     except Exception:
         logger.exception('[MCPGate] tool_registry 로드 실패 — 지도 편집 폴백 목록')
-        return frozenset({'delete_geo_shape', 'set_device_location'})
+        return frozenset({'delete_geo_shape', 'set_device_location', 'set_pipe_diameters'})
 
 
 # @manual ai/overview#safety-approval-model
@@ -421,6 +561,8 @@ def role_allows_tool(role, tool_name) -> bool:
     perm = required_write_permission(tool_name)
     if role is None:
         return False
+    if not perm:                             # 자기 연결 쓰기 — 인증된 호출자면 된다
+        return True
     if hasattr(role, 'can_write'):           # RoleInfo 스냅샷
         if perm == 'edit_settings':
             return mcp_auth.role_can_record(role)
@@ -441,6 +583,15 @@ def role_can_decide_any(role) -> bool:
                 or mcp_auth.role_can_record(role))
     return (mcp_auth.role_row_allows(role, 'edit_controllers')
             or mcp_auth.role_row_allows(role, 'edit_plots'))
+
+
+def role_can_decide_own_service(role) -> bool:
+    """필요 권한이 없는 자기 서비스 항목(`self_service_tools`, 예: set_tool_profile)을
+    **자기 키로 낸 요청**에 한해 결정할 수 있는 역할인가 — 읽기 전용 키·역할 없음·AI 를 못
+    쓰는 역할은 아니다. 남의 항목은 `role_can_decide_any` 규칙 그대로다."""
+    from aot.tools import mcp_auth
+    return (role is not None and not getattr(role, 'read_only', False)
+            and mcp_auth.role_can_use_mcp(role))
 
 
 def advisory_write_tools() -> frozenset:
@@ -530,6 +681,43 @@ def _canonical_params(arguments: dict) -> str:
     return json.dumps(strip_meta(arguments), ensure_ascii=False, sort_keys=True)
 
 
+def _snapshot_ids(arguments):
+    """인자에 실린 도메인 스냅샷이 가리키는 대상 id 들(정렬) — 없으면 빈 튜플."""
+    snap = (arguments or {}).get('_domain_target')
+    items = snap if isinstance(snap, list) else [snap]
+    return tuple(sorted(str(i['id']) for i in items if isinstance(i, dict) and i.get('id')))
+
+
+def _open_request(tool_name, arguments, agent_id):
+    """같은 호출자(agent_id)·같은 도구·같은 인자(메타·스냅샷 제외)로 아직 살아 있는 승인 대기 행, 없으면 None.
+
+    스냅샷(`_domain_target`)의 값은 비교에서 뺀다 — 같은 대상이라도 해석 시각의 상태가 실려 값이 달라질 수 있다.
+    다만 해석된 대상 id 는 비교한다 — 같은 이름이 그사이 다른 장치로 풀렸으면 새 대기를 만든다.
+    못 읽으면 None(새 대기를 만든다 — 막는 쪽이 아니라 겹침을 줄이는 장치다)."""
+    try:
+        from aot.databases.models import MCPConfirmation
+        want = json.dumps(handler_args(arguments), ensure_ascii=False, sort_keys=True)
+        want_ids = _snapshot_ids(arguments)
+        rows = (MCPConfirmation.query
+                .filter(MCPConfirmation.tool_name == tool_name,
+                        MCPConfirmation.agent_id == agent_id,
+                        MCPConfirmation.status == 'pending',
+                        MCPConfirmation.expires_at > naive_utc(utc_now()))
+                .order_by(MCPConfirmation.id.desc()).limit(20).all())
+        for row in rows:
+            try:
+                row_args = json.loads(row.params_json or '{}')
+                got = json.dumps(handler_args(row_args), ensure_ascii=False, sort_keys=True)
+                got_ids = _snapshot_ids(row_args)
+            except (TypeError, ValueError):
+                continue
+            if got == want and got_ids == want_ids:
+                return row
+    except Exception:
+        logger.debug('[MCPGate] 같은 요청 대기 조회 실패 (새 대기로 진행)', exc_info=True)
+    return None
+
+
 def _check_rate_limit_in_process(agent_id: str, tool_name: str, limit: int) -> None:
     """DB 를 못 읽을 때의 폴백 — 이 프로세스에서 센 횟수만 본다."""
     now = time.time()
@@ -565,7 +753,7 @@ def _check_rate_limit(agent_id: str, tool_name: str) -> None:
 
     try:
         from aot.databases.models import MCPConfirmation
-        since = datetime.utcnow() - timedelta(seconds=_RATE_WINDOW_SEC)
+        since = naive_utc(utc_now()) - timedelta(seconds=_RATE_WINDOW_SEC)
         used = (MCPConfirmation.query
                 .filter(MCPConfirmation.agent_id == agent_id)
                 .filter(MCPConfirmation.tool_name == tool_name)
@@ -581,6 +769,11 @@ def _check_rate_limit(agent_id: str, tool_name: str) -> None:
     if used >= limit:
         raise RateLimitExceeded(
             f"Rate limit exceeded for '{tool_name}': {limit} calls/hour (agent={agent_id}).")
+
+
+def _delete_readback_tools():
+    from aot.tools import delete_readback
+    return delete_readback.TOOLS
 
 
 def _build_human_briefing(tool_name, arguments):
@@ -632,6 +825,12 @@ def _build_human_briefing(tool_name, arguments):
             lines.append(f"Schedule: {args.get('date', '?')} {args.get('time', '?')} - {args.get('content', '')}")
         elif tool_name == 'activate_input':
             text = _input_activation_text(args)
+            if text:
+                lines.append(text)
+        elif tool_name in _delete_readback_tools():
+            # 사람이 승인 화면(reason)에서 대상 이름과 함께 지워지는 것의 수를 본다 —
+            # 탭 삭제가 안의 함수·위젯을 함께 지우는 것처럼. 되읽기 한 줄과 같은 글이다.
+            text = read_back_text(tool_name, args)
             if text:
                 lines.append(text)
         elif tool_name == 'modify_note':
@@ -691,6 +890,32 @@ WRITE_DISABLED_SCOPE = (
     "do not suggest that.")
 
 
+#: 웹 화면의 권한 문턱을 따르는 **읽기 도구** → 필요 권한(쓰기의 `required_write_permission`
+#: 과 같은 방식의 표, 2026-11-04). 화면이 `login_required` 만 거는 데이터(입력·출력·
+#: 함수·대시보드·노트·공지)는 여기 없다 = 막지 않는다. 목록 숨기기(`_hidden_tools`)와
+#: 호출 거절(`role_refusal`)이 이 표 하나를 본다. 권한 이름의 함의 규칙은 `role_row_allows`.
+READ_PERMISSION = {
+    'analyze_system_failure': 'view_logs',        # 웹 /logview
+    'get_system_update_status': 'edit_settings',  # 웹 /admin/upgrade
+    'get_storage_tier_status': 'view_stats',      # 웹 /info
+    'list_ai_agents': 'edit_controllers',         # 웹 /ai/agent
+    'list_ai_entries': 'edit_controllers',        # 웹 /ai/agent (등록 항목)
+}
+READ_PERMISSION_NAMES = frozenset(READ_PERMISSION.values())
+
+
+def required_read_permission(tool_name):
+    """이 읽기 도구에 필요한 역할 권한 이름, 웹 화면이 막지 않는 읽기는 None."""
+    return READ_PERMISSION.get(tool_name)
+
+
+def read_restricted_tools(role) -> frozenset:
+    """이 역할이 읽을 수 없는 읽기 도구 — 목록에서 숨길 것."""
+    from aot.tools import mcp_auth
+    return frozenset(t for t, perm in READ_PERMISSION.items()
+                     if not mcp_auth.role_can_read(role, perm))
+
+
 # @manual ai/overview#safety-approval-model
 def role_refusal(tool_name, role):
     """게이트가 **역할·조언 전용 모드**로 거절할 때의 본문. 아니면 None.
@@ -699,8 +924,18 @@ def role_refusal(tool_name, role):
     쓰고, 인자 사전 검증(tool_execution._pre_gate_validation)이 "인자를 고쳐도
     어차피 거절된다" 를 같은 메시지에 싣는 데 쓴다 — 고쳐 다시 부르는 헛걸음을
     막는다."""
+    from aot.tools import mcp_auth
     from aot.tools.mcp_auth import (role_can_advise, role_can_edit_plots,
                                     role_can_record, role_can_write)
+
+    # AI 를 쓸 수 없는 역할(use_ai_chat 없음)은 MCP 를 쓰지 못한다 — 웹 AI 채팅과 같다.
+    if not mcp_auth.role_can_use_mcp(role):
+        return {
+            "status": "refused",
+            "reason_code": "insufficient_role",
+            "message": mcp_auth.AI_USE_REFUSAL,
+            "tool_name": tool_name,
+        }
 
     # 조언 제출 — 쓰기 거부 안내가 권하는 통로라 읽기 전용 키와 조언 전용
     # 모드에도 열려 있다. AI 자체를 쓸 수 없는 역할(use_ai_chat 없음)만 막는다.
@@ -717,6 +952,16 @@ def role_refusal(tool_name, role):
         return None
 
     if classify_permission(tool_name) == 'read':
+        perm = required_read_permission(tool_name)
+        if perm and not mcp_auth.role_can_read(role, perm):
+            return {
+                "status": "refused",
+                "reason_code": "insufficient_role",
+                "message": ("Your MCP key's role lacks the '%s' permission this "
+                            "data needs (same as the web page). Do not retry."
+                            % perm),
+                "tool_name": tool_name,
+            }
         return None
 
     # 기록 쓰기(노트·지식) — 승인은 없지만 쓰기다. 역할 기준은 웹과 같은
@@ -750,7 +995,44 @@ def role_refusal(tool_name, role):
     # edit_plots(설정 편집이 함의). 제어 권한을 요구하면 웹과 갈라진다: 작기만
     # 맡은 사람은 막히고, 제어만 가진 사람은 웹에서 못 하는 구획 편집을 AI 로
     # 하게 된다. 역할만 다르고 나머지(조언 전용 모드·승인)는 다른 쓰기와 같다.
-    if tool_name in map_edit_tools():
+    if tool_name in NOTE_DELETE_TOOLS:
+        # 노트 지우기 — 웹 노트 지우기와 같은 설정 편집 권한(승인은 따로 늘 필요하다).
+        if not role_can_record(role):
+            return {
+                "status": "refused",
+                "reason_code": "insufficient_role",
+                "message": ("Your MCP key's role cannot delete notes — that needs "
+                            "the same settings-edit permission as the web notes "
+                            "page (read-only keys never have it). Do not retry; "
+                            "hiding a note (record.note archive) needs it too."),
+                "tool_name": tool_name,
+            }
+    elif tool_name in self_service_tools():
+        # 자기 연결의 도구 묶음 — 웹도 자기 키는 로그인만 요구한다. 역할 권한은
+        # 없다(승인·조언 전용 모드는 아래에서 다른 쓰기와 같게 본다).
+        if role is None or getattr(role, 'read_only', False):
+            return {
+                "status": "refused",
+                "reason_code": "insufficient_role",
+                "message": ("This connection is read-only or has no signed-in "
+                            "key role, so it cannot change its own tool list. "
+                            "Do not retry."),
+                "tool_name": tool_name,
+            }
+    elif tool_name in settings_edit_tools():
+        # 공지·지식 출처 설정 — 웹과 같은 설정 편집 권한.
+        if not role_can_record(role):
+            return {
+                "status": "refused",
+                "reason_code": "insufficient_role",
+                "message": ("Your MCP key's role cannot change notices or the "
+                            "knowledge-source settings — that needs the same "
+                            "settings-edit permission as the web pages "
+                            "(read-only keys never have it). Do not retry; state "
+                            "what should be done and why as advice instead."),
+                "tool_name": tool_name,
+            }
+    elif tool_name in map_edit_tools():
         # 지도 편집(도형 삭제·장치 배치) — 웹 지도 편집과 같은 설정 편집 권한.
         if not role_can_record(role):
             return {
@@ -779,10 +1061,9 @@ def role_refusal(tool_name, role):
         return {
             "status": "refused",
             "reason_code": "insufficient_role",
-            "message": ("Your MCP key's role does not have write access — only "
-                        "Admin/Editor role keys can run mutating or physical-control "
-                        "tools. Do not retry; state what should be done and why as "
-                        "advice instead."),
+            "message": ("Your MCP key's role lacks the control permission needed to "
+                        "run mutating or physical-control tools. Do not retry; "
+                        "state what should be done and why as advice instead."),
             "tool_name": tool_name,
         }
 
@@ -798,6 +1079,18 @@ def role_refusal(tool_name, role):
         }
 
     return None
+
+
+def identity_refusal(tool_name, role):
+    """`role_refusal` 중 **누구인가** 로 갈리는 거절만(조언 전용 모드 `write_disabled` 는 제외).
+
+    인자·모호성·그룹 스코프 검사보다 앞에 둘 때 쓴다 — 권한 없는 호출자에게 후보 이름 목록이나
+    다른 사유가 먼저 나가지 않게. 서버 모드는 호출자와 무관하므로 기존 순서(인자 오류에
+    "어차피 거절된다" 를 덧붙임)를 그대로 둔다."""
+    refused = role_refusal(tool_name, role)
+    if refused is not None and refused.get('reason_code') == 'write_disabled':
+        return None
+    return refused
 
 
 # @manual ai/overview#safety-approval-model
@@ -866,7 +1159,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
 
         if decision is True:
             row = MCPConfirmation(
-                expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
+                expires_at=naive_utc(utc_now()) + timedelta(seconds=_CONFIRM_TTL_SEC),
                 tool_name=tool_name,
                 title=(arguments or {}).get('_title') or synthesize_title(tool_name, arguments),
                 params_json=_canonical_params(arguments),
@@ -880,7 +1173,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
             return None  # 통과 — 호출자가 바로 실행 진행
         elif decision is False:
             row = MCPConfirmation(
-                expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
+                expires_at=naive_utc(utc_now()) + timedelta(seconds=_CONFIRM_TTL_SEC),
                 tool_name=tool_name,
                 title=(arguments or {}).get('_title') or synthesize_title(tool_name, arguments),
                 params_json=_canonical_params(arguments),
@@ -1027,6 +1320,28 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
         except Exception:
             logger.exception('[MCPGate] add_schedule_batch 사전검증 실패 (검증 없이 진행)')
 
+    # 같은 도구·같은 인자의 승인 대기가 아직 살아 있으면 새로 만들지 않고 그 번호를 돌려준다(F-16 ⑤). AI 가 사용자의
+    # 답을 기다리지 않고 같은 쓰기를 다시 보내면 대기가 쌓이고 승인을 또 묻는다(2026-10-14·11-09 시험). 시간당 상한도
+    # 쓰지 않는다 — 새 요청이 아니다.
+    _open = _open_request(tool_name, arguments, agent_id)
+    if _open is not None:
+        logger.info("[MCPGate] 같은 요청의 승인 대기 재사용 tool=%s agent=%s confirmation=%s",
+                    tool_name, agent_id, _open.unique_id)
+        return {
+            "status": "pending_approval",
+            "reason_code": "awaiting_user",
+            "already_asked": True,
+            "confirmation_id": _open.unique_id,
+            "tool_name": tool_name,
+            "expires_in_sec": max(0, int((_open.expires_at - naive_utc(utc_now())).total_seconds())),
+            "execute_within_sec": _APPROVED_TTL_SEC,
+            "confirm_with_user": read_back_text(tool_name, arguments),
+            "message": ("Already asked: this same request is waiting for the user's approval (same "
+                        "confirmation_id). Wait for the user; do not ask again or send it again. After "
+                        "their yes, call respond_to_confirmation once. Internal note: never quote, "
+                        "translate or narrate this or your own actions."),
+        }
+
     try:
         _check_rate_limit(agent_id, tool_name)
     except RateLimitExceeded as exc:
@@ -1052,7 +1367,7 @@ def gate(tool_name, arguments, agent_id='unknown', role=None, reason='', elicit_
         full_reason = (full_reason + '\n\n' + briefing).strip() if full_reason else briefing
 
     row = MCPConfirmation(
-        expires_at=datetime.utcnow() + timedelta(seconds=_CONFIRM_TTL_SEC),
+        expires_at=naive_utc(utc_now()) + timedelta(seconds=_CONFIRM_TTL_SEC),
         tool_name=tool_name,
         title=(arguments or {}).get('_title') or synthesize_title(tool_name, arguments),
         params_json=_canonical_params(arguments),
@@ -1164,7 +1479,7 @@ def list_pending(limit=50, viewer=None):
             "reason": r.reason,
             "agent_id": r.agent_id,
             "created_at": r.created_at.isoformat() if r.created_at else None,
-            "expires_in_sec": max(0, int((r.expires_at - datetime.utcnow()).total_seconds())),
+            "expires_in_sec": max(0, int((r.expires_at - naive_utc(utc_now())).total_seconds())),
         })
         if viewer is not None:
             out[-1]["can_decide"] = role_allows_tool(viewer, r.tool_name)
@@ -1437,7 +1752,7 @@ def _decide(confirmation_id, status, user_id=None, modified_params=None,
         # 승인 시점부터 실행 유효시간을 새로 센다 — 남은 판단 시간이 얼마였든
         # 승인 후 실행 창은 항상 같은 길이다. 같은 컬럼을 재사용해 승인 이후
         # 만료 판정(gate() 2단계의 row.is_expired())이 그대로 동작한다.
-        values['expires_at'] = datetime.utcnow() + timedelta(seconds=_APPROVED_TTL_SEC)
+        values['expires_at'] = naive_utc(utc_now()) + timedelta(seconds=_APPROVED_TTL_SEC)
         if modified_json is not None:
             values['modified_params_json'] = modified_json
     # 조건부 갱신으로 선점한다 — 위에서 읽은 상태는 그 사이 다른 요청이 바꿨을
@@ -1974,9 +2289,9 @@ def _return_to_pending(row, confirmation_id, result):
     """
     result = dict(result, status="error", reason_code="group_scope_denied")
     denied_approver = row.user_id
-    deadline = (row.created_at or datetime.utcnow()) + timedelta(
+    deadline = (row.created_at or naive_utc(utc_now())) + timedelta(
         seconds=_CONFIRM_TTL_SEC)
-    expired = datetime.utcnow() >= deadline
+    expired = naive_utc(utc_now()) >= deadline
     row.status = 'expired' if expired else 'pending'
     row.user_id = None
     row.modified_params_json = None

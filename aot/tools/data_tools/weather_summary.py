@@ -266,6 +266,12 @@ def summarize_forecast(result, tokens=None):
     period = result.get('period') or {}
     if not isinstance(rows, list) or not rows or period.get('daily'):
         return result                           # 일 단위(긴 기간)는 이미 요약이다
+    # 조회는 끝 시각 행까지 싣는다(24h = 25행). 달력 하루 단위 요청(자정 시작, 24 의 배수)에서
+    # 다음 날 00시 행이 요약에 섞이면 그날 강수·극값이 어긋난다(2026-11-03) — 요약에서만 뺀다.
+    end = str(period.get('end') or '')
+    if (str(period.get('start') or '').endswith('T00:00') and not (period.get('hours') or 0) % 24
+            and len(rows) > 1 and str(rows[-1].get('time') or '') == end):
+        rows = rows[:-1]
     keys = [k for k in rows[0] if k not in _NON_VALUE_KEYS]
     missing = []
     if tokens:
@@ -278,6 +284,9 @@ def summarize_forecast(result, tokens=None):
     res = {k: v for k, v in result.items() if k not in _FORECAST_DROP and k != 'forecasts'}
     res['summary'] = summary
     res['summary_rows'] = len(rows)
+    if period.get('truncated') and rows[0].get('time') and rows[-1].get('time'):
+        # 시간별 예보가 요청한 하루를 다 못 채웠다 — 요약이 덮는 시각을 알린다(일별 값은 하루 전체).
+        res['covers'] = '%s to %s' % (_short_time(rows[0]['time']), _short_time(rows[-1]['time']))
     res['summary_note'] = ("Hourly rows folded to min/max/avg with the time of each extreme "
                            "(rain also sums); pass detail=true or measurement=... for the hourly rows.")
     if missing:
@@ -311,8 +320,8 @@ def sun_day(st):
     의 좌표 계산이다. 예보 출처를 쓰지 않으므로 어느 예보를 고르든 일출·일몰은 같다.
     극야·백야는 시각 대신 status 를 싣는다.
     """
-    import pytz
-    tz = pytz.timezone(st.tz_name)
+    from aot.utils.timekit import tz_of
+    tz = tz_of(st.tz_name)
 
     def hhmm(dt):
         return dt.astimezone(tz).strftime('%H:%M') if dt else None

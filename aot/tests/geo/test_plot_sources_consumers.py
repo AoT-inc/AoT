@@ -11,7 +11,8 @@ InfluxDB 는 없다. 조회 함수를 대역으로 잡고 "어느 장치에게 �
 """
 from datetime import date, datetime, timedelta
 
-from aot.aot_flask.geo import plot_accumulation, plot_context, plot_journal, plot_sources
+from aot.aot_flask.geo import plot_journal
+from aot.space import plot_accumulation, plot_context, plot_sources
 from aot.aot_flask.geo.plot_journal import calc as _pj_calc
 from aot.databases.models import DeviceMeasurements, Input
 from aot.tests.geo.test_plot_sources import T1, T2, _Base, _Plot
@@ -55,13 +56,13 @@ class _Flow(_Base):
         self._place('phys-b', 127.001, 35.001, since=T2)
 
         # 시간대가 기계 설정에 따라 달라지면 날짜 경계가 흔들린다 — UTC 로 고정.
-        import aot.utils.device_tz as device_tz
-        self._orig_tz = device_tz.resolve_location_tz
-        device_tz.resolve_location_tz = lambda *_a, **_k: 'UTC'
+        import aot.utils.timekit as timekit
+        self._orig_tz = timekit.tz_of
+        timekit.tz_of = lambda *_a, **_k: __import__('pytz').utc
 
     def tearDown(self):
-        import aot.utils.device_tz as device_tz
-        device_tz.resolve_location_tz = self._orig_tz
+        import aot.utils.timekit as timekit
+        timekit.tz_of = self._orig_tz
         super().tearDown()
 
 

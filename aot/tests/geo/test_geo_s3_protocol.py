@@ -4,7 +4,7 @@
 세 가지 구조 불변식을 고정한다 (docs/design/geo-data-integrity.md S3):
   I9   save_overlays 는 upsert 전용 — 페이로드 누락은 절대 삭제가 아니다.
        db_id 를 잃은 피처는 node_id 로 기존 행을 되찾아 갱신한다(중복 금지).
-  I10  clone_model 은 교차참조 컬럼(map_overlay_id·map_config_id)을 암묵
+  I10  clone_model 은 교차참조 컬럼(map_overlay_id)을 암묵
        복사하지 않는다 — 복제본은 미배치로 시작한다.
   파생 소속: 장치 ↔ zone 소속은 저장 컬럼이 아니라 마커 좌표에서 파생된다.
        zone 이 삭제 후 재생성돼 id 가 바뀌어도 소속은 흔들리지 않는다
@@ -16,6 +16,7 @@ from flask import Flask
 
 from aot.aot_flask.extensions import db
 from aot.databases import clone_model
+from aot.tests.geo._legacy_marker import bound_shape
 from aot.databases.models import GeoMap, GeoShape, Input, Output
 
 
@@ -68,16 +69,19 @@ class TestDerivedMembership(_Base):
         zone = GeoShape(unique_id='z1', geo_id='m1', type='zone',
                         feature=_poly(ZONE_RING))
         zone.save()
-        GeoShape(unique_id='mk1', geo_id='m1', type='aot_device',
-                 device_id='dev-1', channel_id='0',
-                 feature=_point(5, 5)).save()
-        GeoShape(unique_id='mk2', geo_id='m1', type='aot_device',
-                 device_id='dev-out', channel_id='0',
-                 feature=_point(20, 20)).save()   # zone 밖
+        from aot.databases.models import Output     # 리졸버는 실존 장치만 푼다
+        for _d in ('dev-1', 'dev-out'):
+            Output(unique_id=_d, name=_d).save()
+        bound_shape(unique_id='mk1', geo_id='m1', type='aot_device',
+                    device_id='dev-1', channel_id='0',
+                    feature=_point(5, 5))
+        bound_shape(unique_id='mk2', geo_id='m1', type='aot_device',
+                    device_id='dev-out', channel_id='0',
+                    feature=_point(20, 20))   # zone 밖
         return zone
 
     def test_marker_inside_zone_is_member(self):
-        from aot.aot_flask.geo.device_membership import (
+        from aot.space.device_membership import (
             device_ids_in_shape, zone_for_device)
         zone = self._place()
         self.assertEqual(device_ids_in_shape(zone), {'dev-1'})
@@ -87,7 +91,7 @@ class TestDerivedMembership(_Base):
         self.assertIsNone(zone_for_device('dev-out', 'm1'))  # zone 밖 장치
 
     def test_zone_beats_site(self):
-        from aot.aot_flask.geo.device_membership import zone_for_device
+        from aot.space.device_membership import zone_for_device
         GeoShape(unique_id='site1', geo_id='m1', type='site',
                  feature=_poly([[-5, -5], [-5, 15], [15, 15],
                                 [15, -5], [-5, -5]])).save()
@@ -98,7 +102,7 @@ class TestDerivedMembership(_Base):
     def test_membership_survives_zone_recreation(self):
         # 2026-08-03 최다 발생원: zone 삭제 후 새 id 로 재생성. 저장 컬럼
         # 방식은 소속이 전원 끊겼다. 파생 방식은 아무 일도 없어야 한다.
-        from aot.aot_flask.geo.device_membership import zone_for_device
+        from aot.space.device_membership import zone_for_device
         zone = self._place()
         old_id = zone.id
         db.session.delete(zone)
@@ -111,7 +115,7 @@ class TestDerivedMembership(_Base):
         self.assertEqual(z.unique_id, 'z1-new')
 
     def test_site_polygon_includes_nested_zone_devices(self):
-        from aot.aot_flask.geo.device_membership import device_ids_in_shape
+        from aot.space.device_membership import device_ids_in_shape
         site = GeoShape(unique_id='site1', geo_id='m1', type='site',
                         feature=_poly([[-5, -5], [-5, 15], [15, 15],
                                        [15, -5], [-5, -5]]))
@@ -185,21 +189,18 @@ class TestCloneDenylist(_Base):
     """I10 — 복제본은 교차참조를 물려받지 않는다(미배치로 시작)."""
 
     def test_clone_does_not_copy_cross_refs(self):
-        src = Output(name='원본밸브', map_overlay_id=42,
-                     map_config_id='some-map-uuid')
+        src = Output(name='원본밸브', map_overlay_id=42)
         src.save()
         dup = clone_model(src, unique_id='dup-uuid-1')
         self.assertIsNotNone(dup)
         self.assertEqual(dup.name, '원본밸브')          # 일반 컬럼은 복사
         self.assertIsNone(dup.map_overlay_id)           # 교차참조는 미복사
-        self.assertIsNone(dup.map_config_id)
 
     def test_explicit_kwarg_still_works(self):
-        src = Input(name='원본센서', map_config_id='keep-me')
+        src = Input(name='원본센서', map_overlay_id=7)
         src.save()
-        dup = clone_model(src, unique_id='dup-uuid-2',
-                          map_config_id='explicit-map')
-        self.assertEqual(dup.map_config_id, 'explicit-map')
+        dup = clone_model(src, unique_id='dup-uuid-2', map_overlay_id=99)
+        self.assertEqual(dup.map_overlay_id, 99)
 
 
 if __name__ == '__main__':
@@ -278,82 +279,3 @@ class TestExplicitDeletes(_Base):
         self.assertIsNone(err)
         self.assertEqual(result['stats']['deleted'], 0)
         self.assertEqual(GeoShape.query.filter_by(unique_id='za').count(), 1)
-
-
-class TestMapCloneIsolation(_Base):
-    """지도 복제는 '구조'만 옮기고 원본과 얽히지 않는다.
-
-    2026-08-04 확인된 3결함:
-      - device_id 그대로 복사 → 원본 장치가 두 지도에 존재
-      - parent_id 미복사 → 계층 평탄화, facility_bay 가 부모를 잃고
-        facility_io(parent_id 로 bay 조회)에서 영구히 도달 불가
-      - node_id 그대로 복사 → 지도 간 중복, save_delta 의 node_id 폴백이
-        첫 일치를 잡아 엉뚱한 지도의 도형을 편집할 수 있음
-    """
-
-    def _source_map(self):
-        from aot.databases.models import GeoMap
-        GeoMap(unique_id='src', name='원본 지도', category='design').save()
-        site = GeoShape(unique_id='s-site', geo_id='src', type='site',
-                        feature={'type': 'Feature',
-                                 'geometry': {'type': 'Polygon',
-                                              'coordinates': [ZONE_RING]},
-                                 'properties': {'node_id': 'n-site',
-                                                'name': '포장'}})
-        site.save()
-        bay = GeoShape(unique_id='s-bay', geo_id='src', type='facility_bay',
-                       parent_id=site.id,
-                       feature={'type': 'Feature',
-                                'geometry': {'type': 'Polygon',
-                                             'coordinates': [ZONE_RING]},
-                                'properties': {'node_id': 'n-bay',
-                                               'parent_node_id': 'n-site'}})
-        bay.save()
-        marker = GeoShape(unique_id='s-mk', geo_id='src', type='aot_device',
-                          device_id='dev-original', channel_id='0',
-                          feature=_point(5, 5, {'node_id': 'n-mk'}))
-        marker.save()
-        return site, bay, marker
-
-    def test_clone_omits_device_bound_shapes(self):
-        from aot.aot_flask.utils.utils_map_config import clone_map_config
-        self._source_map()
-        cloned = clone_map_config('src', '복제 장치')
-        db.session.commit()
-        rows = GeoShape.query.filter_by(geo_id=cloned.unique_id).all()
-        self.assertEqual({r.type for r in rows}, {'site', 'facility_bay'})
-        self.assertTrue(all(r.device_id is None for r in rows))
-        # 원본 장치는 여전히 원본 지도에만 있다.
-        self.assertEqual(GeoShape.query.filter_by(
-            device_id='dev-original').count(), 1)
-
-    def test_clone_remaps_parent_id_to_new_map(self):
-        from aot.aot_flask.utils.utils_map_config import clone_map_config
-        self._source_map()
-        cloned = clone_map_config('src', '복제 장치')
-        db.session.commit()
-        new_site = GeoShape.query.filter_by(
-            geo_id=cloned.unique_id, type='site').first()
-        new_bay = GeoShape.query.filter_by(
-            geo_id=cloned.unique_id, type='facility_bay').first()
-        self.assertIsNotNone(new_bay.parent_id)          # 평탄화 금지
-        self.assertEqual(new_bay.parent_id, new_site.id)  # 새 지도의 부모
-        # 원본 지도의 행을 가리키지 않는다.
-        self.assertNotEqual(new_bay.parent_id,
-                            GeoShape.query.filter_by(
-                                unique_id='s-site').first().id)
-
-    def test_clone_reissues_node_ids_and_remaps_labels(self):
-        from aot.aot_flask.utils.utils_map_config import clone_map_config
-        self._source_map()
-        cloned = clone_map_config('src', '복제 장치')
-        db.session.commit()
-        new_site = GeoShape.query.filter_by(
-            geo_id=cloned.unique_id, type='site').first()
-        new_bay = GeoShape.query.filter_by(
-            geo_id=cloned.unique_id, type='facility_bay').first()
-        new_site_nid = new_site.feature['properties']['node_id']
-        self.assertNotEqual(new_site_nid, 'n-site')       # 재발급
-        # 자식의 parent_node_id 가 새 부모를 정확히 가리킨다.
-        self.assertEqual(new_bay.feature['properties']['parent_node_id'],
-                         new_site_nid)

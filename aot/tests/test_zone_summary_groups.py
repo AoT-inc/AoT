@@ -34,7 +34,7 @@ class _GroupsBase(_ClsBase):
     ages = {}
 
     def _summary(self, models=(), **kw):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
         shape_index.invalidate()
         now = datetime.now(timezone.utc)
@@ -227,7 +227,7 @@ class TestGimjeThird(_GroupsBase):
 
     def test_unknown_group_helper_excludes_unplaced(self):
         from aot.tools.data_tools.measurement import MeasurementToolsMixin as M
-        from aot.aot_flask.geo.device_membership import Placement
+        from aot.space.device_membership import Placement
         rd = [{'device_id': 'u', 'device_name': '미배치', 'location': 'indoor',
                'channels': [{'channel': 0, 'measurement': 'temperature',
                              'unit': 'C', 'last_value': 30.0,
@@ -389,7 +389,7 @@ class TestConsumers(unittest.TestCase):
 class TestPickOrder(_ClsBase):
 
     def test_placed_before_outdoor_keeps_indoor_first(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
         _input('wx', '가-기상대', 'temperature', 'radiation')
         _marker('wx', 'wx', 55, 85)

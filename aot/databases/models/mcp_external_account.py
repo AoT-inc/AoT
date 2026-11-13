@@ -8,7 +8,7 @@
 """
 from datetime import datetime
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 
 

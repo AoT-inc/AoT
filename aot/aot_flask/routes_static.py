@@ -197,7 +197,7 @@ def _is_battery_channel(dm) -> bool:
     조용히 어긋난다(전압 채널 중 무엇이 배터리인지는 이름을 봐야 안다).
     """
     try:
-        from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
+        from aot.space.facility_sensors import channel_meta_for_dm
         return channel_meta_for_dm(dm).get('key') == 'battery'
     except Exception:
         return False

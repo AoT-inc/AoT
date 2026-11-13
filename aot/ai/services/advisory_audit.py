@@ -42,6 +42,7 @@ import threading
 import time
 from collections import deque
 from datetime import datetime, timezone
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -280,7 +281,7 @@ class AdvisoryAudit:
                 'violations': violations,
                 'role': item.get('role'),
                 'intent': item.get('intent'),
-                'checked_at': datetime.now(timezone.utc).isoformat(),
+                'checked_at': utc_now().isoformat(),
                 'layer': 'deterministic',
             }
             entry.metadata_json = json.dumps(meta, ensure_ascii=False)

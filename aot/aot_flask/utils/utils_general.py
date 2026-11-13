@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import shutil
+import time
 from collections import OrderedDict
 from datetime import datetime
 from werkzeug.datastructures import MultiDict
@@ -21,7 +22,7 @@ from aot.config import (CAMERA_INFO, DEPENDENCIES_GENERAL, FUNCTION_INFO,
                            METHOD_INFO, PATH_CAMERAS)
 from aot.config_devices_units import MEASUREMENTS, UNITS
 from aot.config_translations import TRANSLATIONS
-from aot.databases.models import (PID, APIKey, Camera, Conditional, Conversion,
+from aot.databases.models import (PID, Camera, Conditional, Conversion,
                                      CustomController, Dashboard,
                                      DeviceMeasurements, Input, Output, Role,
                                      Trigger, User, Widget)
@@ -31,6 +32,10 @@ from aot.utils.actions import parse_action_information
 from aot.utils.functions import device_module_names
 from aot.utils.functions import parse_function_information
 from aot.utils.inputs import parse_input_information
+# 모듈 훅 공통 처리는 aot/utils/module_hooks.py 가 정본 — 기존 호출자를 위해 이름을 다시 낸다.
+from aot.utils.module_hooks import (  # noqa: F401
+    custom_channel_options_return_json, normalize_nullish_value,
+    normalize_option_value)
 from aot.utils.outputs import parse_output_information
 from aot.utils.system_pi import (add_custom_measurements, add_custom_units,
                                     assure_path_exists, dpkg_package_exists,
@@ -39,7 +44,6 @@ from aot.utils.system_pi import (add_custom_measurements, add_custom_units,
 from aot.utils.widgets import parse_widget_information
 
 logger = logging.getLogger(__name__)
-_NULLISH_STRINGS = {'', 'none', 'null'}  # 'false' removed - it's a valid boolean value
 
 
 #: 내장 인가 서버(/authorize)가 로그인 전에 맡겨 두는 복귀 주소의 세션 열쇠
@@ -183,18 +187,6 @@ def is_hex_color_light(hex_color, threshold=0.5):
     return luminance > threshold
 
 
-def normalize_nullish_value(value, empty_value=''):
-    """Normalize placeholder/nullish values to a consistent empty representation."""
-    if value is None:
-        return empty_value
-    if isinstance(value, str):
-        stripped = value.strip()
-        if stripped.lower() in _NULLISH_STRINGS:
-            return empty_value
-        return stripped
-    return value
-
-
 def sanitize_nullish_sequence(seq):
     """Return list stripped of nullish placeholders."""
     if not seq:
@@ -230,22 +222,6 @@ def sanitize_form(form):
 # Backward compatibility alias
 normalize_request_form_payload = sanitize_form
 
-
-def normalize_option_value(val, empty_value=None):
-    """Normalize custom option payloads by stripping nullish placeholders."""
-    if isinstance(val, list):
-        return [v for v in (normalize_option_value(v, empty_value) for v in val) if v not in [None, '']]
-    if isinstance(val, dict):
-        cleaned = {}
-        for k, v in val.items():
-            norm_key = normalize_nullish_value(k, '')
-            norm_val = normalize_option_value(v, empty_value)
-            cleaned[norm_key] = norm_val
-        return cleaned
-    normalized = normalize_nullish_value(val, '')
-    if normalized == '':
-        return empty_value
-    return normalized
 
 #
 # Custom options
@@ -684,228 +660,6 @@ def custom_options_return_json(
                         dict_options_return[each_option['id']] = []
                     else:
                         dict_options_return[each_option['id']] = None
-                elif each_option['type'] == "select_multi_measurement":
-                    dict_options_return[each_option['id']] = ""
-                else:
-                    dict_options_return[each_option['id']] = None
-
-    return error, json.dumps(dict_options_return)
-
-
-def custom_channel_options_return_json(
-        error,
-        dict_options,
-        request_form,
-        device_id,
-        channel,
-        mod_dev=None,
-        device=None,
-        use_defaults=False,
-        custom_options=None):
-    # Custom channel_options — seed with presave values so null form fields don't erase DB data
-    if isinstance(custom_options, dict):
-        dict_options_return = copy.deepcopy(custom_options)
-    else:
-        dict_options_return = {}
-
-    # TODO: name same name in next major release
-    if mod_dev is None:
-        pass
-    elif hasattr(mod_dev, 'graph_type'):
-        device = mod_dev.graph_type
-    elif hasattr(mod_dev, 'device'):
-        device = mod_dev.device
-    elif hasattr(mod_dev, 'output_type'):
-        device = mod_dev.output_type
-    else:
-        logger.error("custom_channel_options_return_json: Unknown device; returning empty {}")
-        return error, json.dumps({})
-
-    if device not in dict_options:
-        logger.error("custom_channel_options_return_json: device %s not found in dict_options; returning empty {}", device)
-        return error, json.dumps({})
-
-    if 'custom_channel_options' in dict_options[device]:
-        for each_option in dict_options[device]['custom_channel_options']:
-            if 'id' not in each_option:
-                continue
-
-            null_value = True
-
-            if request_form:
-                for key in request_form.keys():
-                    key_str = "{}_{}_{}".format(device_id, channel, each_option['id'])
-                    if key_str == key:
-                        # logger.error("key_str: {}".format(key_str))
-                        # logger.error("val: {}".format(request_form.get(key)))
-                        constraints_pass = True
-                        constraints_errors = []
-                        value = None
-
-                        if each_option['type'] in ('float', 'select_scale'):
-                            raw_val = request_form.get(key)
-                            if str_is_float(raw_val):
-                                if 'constraints_pass' in each_option:
-                                    (constraints_pass,
-                                     constraints_errors,
-                                     mod_dev) = each_option['constraints_pass'](
-                                        mod_dev, float(raw_val))
-                                if constraints_pass:
-                                    value = float(raw_val)
-                            elif raw_val in (None, '', 'None', 'null'):
-                                value = each_option.get('default_value', None)
-                            else:
-                                error.append(
-                                    "{name} must represent a float/decimal value "
-                                    "(submitted '{value}')".format(
-                                        name=each_option['name'],
-                                        value=raw_val))
-
-                        elif each_option['type'] == 'integer':
-                            raw_val = request_form.get(key)
-                            if is_int(raw_val):
-                                if 'constraints_pass' in each_option:
-                                    (constraints_pass,
-                                     constraints_errors,
-                                     mod_dev) = each_option['constraints_pass'](
-                                        mod_dev, int(raw_val))
-                                if constraints_pass:
-                                    value = int(raw_val)
-                            elif 'required' in each_option and not each_option['required']:
-                                value = None
-                            else:
-                                error.append(
-                                    "{name} must represent an integer value "
-                                    "(submitted '{value}')".format(
-                                        name=each_option['name'],
-                                        value=raw_val))
-
-                        elif each_option['type'] in ['select', 'select_custom_choices']:
-                            raw_val = request_form.get(key)
-                            if 'constraints_pass' in each_option:
-                                (constraints_pass,
-                                 constraints_errors,
-                                 mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, normalize_option_value(raw_val))
-                            if constraints_pass:
-                                value = normalize_option_value(raw_val)
-                                if is_int(raw_val):
-                                    value = int(raw_val)
-                                elif str_is_float(raw_val):
-                                    value = float(raw_val)
-
-                        elif each_option['type'] in [
-                                'multiline_text',
-                                'text',
-                                'select_measurement',
-                                'select_channel',
-                                'select_measurement_channel',
-                                'select_type_measurement',
-                                'select_type_unit',
-                                'select_device']:
-                            raw_val = request_form.get(key)
-                            if 'constraints_pass' in each_option:
-                                (constraints_pass,
-                                 constraints_errors,
-                                 mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, normalize_option_value(raw_val))
-                            if constraints_pass:
-                                value = normalize_option_value(raw_val)
-
-                        elif each_option['type'] in ['select_multi_measurement', 'channel_selector']:
-                            raw_val = request_form.get(key)
-                            if 'constraints_pass' in each_option:
-                                (constraints_pass,
-                                 constraints_errors,
-                                 mod_dev) = each_option['constraints_pass'](
-                                    mod_dev, normalize_option_value(raw_val))
-                            if constraints_pass:
-                                value = normalize_option_value(request_form.getlist(key), empty_value=[])
-
-                        elif each_option['type'] == 'bool':
-                            value = bool(normalize_option_value(request_form.get(key), False))
-
-                        for each_error in constraints_errors:
-                            error.append(
-                                "Error: {name}: {error}".format(
-                                    name=each_option['name'],
-                                    error=each_error))
-
-                        if value is not None:
-                            null_value = False
-                            dict_options_return[each_option['id']] = value
-
-                            # [Auto-Save API Key/Token]
-                            auth_keywords = ['api_key', 'token', 'secret', 'access_key', 'auth_key', 'client_id', 'client_secret']
-                            is_auth_field = any(kw in each_option['id'].lower() for kw in auth_keywords)
-
-                            if is_auth_field and isinstance(value, str) and len(value) > 5:
-                                try:
-                                    device_info = dict_options.get(device, {})
-                                    
-                                    # [Metadata Extraction]
-                                    provider = (device_info.get('input_manufacturer') or 
-                                                device_info.get('output_manufacturer') or 
-                                                device_info.get('function_manufacturer') or 
-                                                device)
-                                    
-                                    display_name = (device_info.get('input_name') or 
-                                                   device_info.get('output_name') or 
-                                                   device_info.get('function_name') or 
-                                                   device)
-                                    
-                                    url_list = []
-                                    for url_key in ['url_additional', 'url_manufacturer', 'url_datasheet', 'url_product_purchase']:
-                                        urls = device_info.get(url_key, [])
-                                        if isinstance(urls, list):
-                                            url_list.extend([u for u in urls if u])
-                                        elif urls:
-                                            url_list.append(urls)
-                                    
-                                    url_list = list(dict.fromkeys(url_list))
-                                    primary_url = url_list[0] if url_list else None
-                                    
-                                    existing = APIKey.query.filter(APIKey.key == value).first()
-                                    if not existing:
-                                        new_api_key = APIKey()
-                                        new_api_key.name = f"{display_name} {each_option['name']} (Auto-saved)"
-                                        new_api_key.provider = provider
-                                        new_api_key.key = value
-                                        new_api_key.tag = each_option['id']
-                                        new_api_key.url = primary_url
-                                        
-                                        desc = f"Automatically saved from {display_name} ({device}) channel {channel} configuration."
-                                        if len(url_list) > 1:
-                                            desc += "\nRelated URLs:\n" + "\n".join(url_list)
-                                        new_api_key.description = desc
-                                        
-                                        new_api_key.save()
-                                        logger.info(f"Auth field '{each_option['id']}' for {provider} auto-saved from channel {channel} with metadata.")
-                                except Exception as e:
-                                    logger.error(f"Failed to auto-save auth field from channel with metadata: {e}")
-
-            if (request_form and
-                    each_option['type'] == 'bool' and
-                    "{}_{}_{}".format(device_id, channel, each_option['id']) not in request_form.keys() and
-                    not use_defaults):
-                dict_options_return[each_option['id']] = False
-
-            elif null_value:
-                if each_option['id'] in dict_options_return:
-                    pass  # presave value already in dict — do not overwrite with module default
-                elif use_defaults and 'default_value' in each_option:
-                    # If a select type has cast_value set, cast the value as that type
-                    if (each_option['type'] in ['select', 'select_custom_choices'] and
-                            'cast_value' in each_option and
-                            each_option['default_value'] is not None):
-                        if each_option['cast_value'] == 'integer':
-                            dict_options_return[each_option['id']] = int(each_option['default_value'])
-                        elif each_option['cast_value'] == 'float':
-                            dict_options_return[each_option['id']] = float(each_option['default_value'])
-                        elif each_option['cast_value'] == 'bool':
-                            dict_options_return[each_option['id']] = bool(each_option['default_value'])
-                    else:
-                        dict_options_return[each_option['id']] = each_option['default_value']
                 elif each_option['type'] == "select_multi_measurement":
                     dict_options_return[each_option['id']] = ""
                 else:
@@ -2189,14 +1943,14 @@ def test_sql():
                      "{n}개의 항목...".format(n=num_entries))
         before_count = PID.query.count()
         run_times = []
-        a = datetime.now()
+        a = time.monotonic()
         for x in range(1, num_entries + 1):
             db.session.add(PID())
             if x % factor_info == 0:
                 db.session.commit()
                 after_count = PID.query.count()
-                b = datetime.now()
-                run_times.append(float((b - a).total_seconds()))
+                b = time.monotonic()
+                run_times.append(float(b - a))
                 logger.error("실행 시간: {time:.2f} 초, "
                              "새 항목: {new}, "
                              "전체 항목: {tot}".format(
@@ -2204,7 +1958,7 @@ def test_sql():
                                 new=after_count - before_count,
                                 tot=PID.query.count()))
                 before_count = PID.query.count()
-                a = datetime.now()
+                a = time.monotonic()
         avg_run_time = sum(run_times) / float(len(run_times))
         logger.error("완료. 전체: {tot}개. "
                      "평균 실행 시간: {avg:.2f} 초, "
@@ -2367,12 +2121,12 @@ def get_camera_image_info():
             latest_img_tl_ts, latest_img_tl_size, latest_img_tl, time_lapse_imgs)
 
 
-def return_dependencies(device_type):
-    unmet_deps = []
-    met_deps = False
-    dep_message = ''
-
-    list_dependencies = [
+def dependency_sections():
+    """`return_dependencies()` 가 훑는 정의 묶음. 파싱이 비싸서(parse_*_information
+    다섯 개가 모듈 파일을 전부 읽는다) 장치 여러 개를 연달아 판정하는 호출자는
+    한 번만 만들어 `return_dependencies(..., sections=)` 로 넘긴다. 전역 캐시가
+    아니라 호출자가 쥐는 값이라 요청/시험 사이로 새지 않는다."""
+    return [
         parse_function_information(),
         parse_action_information(),
         parse_input_information(),
@@ -2383,6 +2137,14 @@ def return_dependencies(device_type):
         METHOD_INFO,
         DEPENDENCIES_GENERAL
     ]
+
+
+def return_dependencies(device_type, sections=None):
+    unmet_deps = []
+    met_deps = False
+    dep_message = ''
+
+    list_dependencies = sections if sections is not None else dependency_sections()
 
     for each_section in list_dependencies:
         if device_type in each_section:
@@ -2743,11 +2505,11 @@ def utc_to_local_time(utc_dt):
     라벨이 없으면 다른 시간대의 사람이 자기 시각으로 읽는다. 입력 칸을 채우는
     값에는 쓰지 말 것 — 라벨 때문에 다시 파싱되지 않는다(utils_notes.utc_to_wall_str).
     """
-    from aot.utils.timekit import current_user_tz, to_tz, utc_offset_label
+    from aot.utils.timekit import VIEWER, to_tz, tz_of, utc_offset_label
     try:
         if not utc_dt:
             return ""
-        tz = current_user_tz()
+        tz = tz_of(VIEWER)
         local_dt = to_tz(utc_dt, tz)
         return '{} ({})'.format(local_dt.strftime("%Y-%m-%d %H:%M:%S"),
                                 utc_offset_label(utc_dt, tz))

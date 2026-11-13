@@ -2,7 +2,8 @@
 import logging
 import json
 from datetime import datetime, timedelta
-from aot.utils.time_utils import get_local_now, utc_now, to_local, serialize_ts
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import iso_at, FARM, to_tz
 from typing import Optional, Dict, Any, List
 from sqlalchemy import desc
 
@@ -142,12 +143,12 @@ class AISummaryService:
         facility = None
         if scope_type == 'farm' and scope_id:
             # [P2] 지도 소속은 배치에서 파생한다.
-            from aot.aot_flask.geo.device_membership import devices_on_map
+            from aot.space.device_membership import devices_on_map
             query = query.filter(Input.unique_id.in_(devices_on_map(scope_id)))
         elif scope_type == 'device_group' and scope_id:
             # [S3] 소속은 저장 컬럼이 아니라 마커 좌표에서 파생한다.
             from aot.databases.models import GeoShape
-            from aot.aot_flask.geo.device_membership import device_ids_in_shape
+            from aot.space.device_membership import device_ids_in_shape
             _zone = GeoShape.query.filter_by(id=int(scope_id)).first()
             _member_ids = device_ids_in_shape(_zone) if _zone else set()
             query = query.filter(Input.unique_id.in_(_member_ids))
@@ -156,7 +157,7 @@ class AISummaryService:
             # MCP 스키마는 scope_type='zone' 을 허용하고 있었다(2026-10-08).
             # 소속은 정본(마커 + 바인딩 + 하위 장소). 못 찾은 장소는 0건이다 —
             # 시스템 전체로 물러서지 않는다(아래 facility 분기와 같은 판단).
-            from aot.aot_flask.geo.device_membership import place_members
+            from aot.space.device_membership import place_members
             query = query.filter(Input.unique_id.in_(place_members(scope_id) or set()))
         elif scope_type == 'device' and scope_id:
             query = query.filter(Input.unique_id == scope_id)
@@ -177,7 +178,7 @@ class AISummaryService:
                     if s.get('device_id'):
                         device_ids.add(s['device_id'])
                 # 원장 기준 — 끊긴 연결의 장치를 이 시설 몫으로 세지 않는다.
-                from aot.aot_flask.geo.device_binding import resolved_refs
+                from aot.space.device_binding import resolved_refs
                 for f in resolved_refs(facility)[0]:
                     if f.get('input_id'):
                         device_ids.add(f['input_id'])
@@ -447,7 +448,7 @@ class AISummaryService:
             
             # Context is minimal for snapshots to save tokens
             ai_context = {
-                "current_time": get_local_now().strftime("%Y-%m-%d %H:%M:%S"),
+                "current_time": to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M:%S"),
                 "scope_info": {"type": scope_type, "id": scope_id}
             }
             
@@ -544,10 +545,10 @@ class AISummaryService:
         prompt = f"""
         당신은 AoT 시스템 분석 전문가입니다. 아래 두 시점의 시스템 스냅샷을 비교하여 주요 변화와 트렌드를 분석하세요.
 
-        [스냅샷 1 ({to_local(s1.timestamp)})]:
+        [스냅샷 1 ({to_tz(s1.timestamp, FARM)})]:
         {s1.summary_text}
 
-        [스냅샷 2 ({to_local(s2.timestamp)})]:
+        [스냅샷 2 ({to_tz(s2.timestamp, FARM)})]:
         {s2.summary_text}
         
         [지시사항]:
@@ -567,8 +568,8 @@ class AISummaryService:
             result = engine.run_reasoning({}, prompt)
             return {
                 "comparison": result.get('insight', '비교 결과 생성 실패'),
-                "s1": {"id": s1.unique_id, "timestamp": serialize_ts(s1.timestamp)},
-                "s2": {"id": s2.unique_id, "timestamp": serialize_ts(s2.timestamp)}
+                "s1": {"id": s1.unique_id, "timestamp": iso_at(s1.timestamp, FARM)},
+                "s2": {"id": s2.unique_id, "timestamp": iso_at(s2.timestamp, FARM)}
             }
         except Exception as e:
             logger.error(f"Comparison error: {e}")
@@ -599,7 +600,7 @@ class AISummaryService:
 
         # s.timestamp is naive-UTC — localize so the trend prompt's dated history
         # isn't silently 9h off from what a KST reader/analyst would expect.
-        history_texts = [f"[{to_local(s.timestamp)}]: {s.summary_text}" for s in history]
+        history_texts = [f"[{to_tz(s.timestamp, FARM)}]: {s.summary_text}" for s in history]
         history_combined = "\n\n".join(history_texts)
 
         prompt = f"""

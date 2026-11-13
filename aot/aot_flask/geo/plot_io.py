@@ -13,10 +13,11 @@ import logging
 from datetime import date, timedelta, datetime
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import plot_context
+from aot.space import plot_context
 # 종류 어휘는 프로그램 쪽이 정본이다 — 두 벌을 두면 한쪽만 늘어난다.
-from aot.aot_flask.geo.program_io import VALID_KINDS
+from aot.space.program_io import VALID_KINDS
 from aot.databases.models import GeoPlot
+from aot.utils.timekit import today_at
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ def _invalidate_caches():
     # 포함 관계 캐시도 함께 버린다 — 구획을 옮기면 소속 구역이 바뀌는데,
     # 이 캐시는 TTL 안전망이 있어도 그때까지 낡은 소속을 답한다.
     try:
-        from aot.aot_flask.geo import containment_cache
+        from aot.space import containment_cache
         containment_cache.invalidate()
     except Exception as exc:
         logger.warning('[Plot] 포함 캐시 무효화 실패: %s', exc)
@@ -215,7 +216,8 @@ def _resolve_parent(map_uuid, facility_uuid, bay_id):
     따로 노는 것으로 보인다. 에러는 나지 않는다(`check_geo_integrity` 의
     `plot-unknown-bay` 만이 본다).
     """
-    from aot.aot_flask.geo.facility_bays import compute_bay_slices, spec_from_row
+    from aot.space.facility_bays import (compute_bay_slices, layout_zone_ids,
+                                                 plot_bay_ids, spec_from_row)
     from aot.databases.models import GeoFacility
 
     fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
@@ -226,6 +228,18 @@ def _resolve_parent(map_uuid, facility_uuid, bay_id):
                             '(시설 지도=%s, 구획 지도=%s)' % (fac.geo_id, map_uuid))
 
     bay_id = (bay_id or '').strip() or None
+
+    # 시설 모형(`layout`, F3)이 있으면 구획의 구역은 그 공간이다. 옛 치수의 동 수로 판단하면
+    # 층·구역을 나눈 시설이 단동으로 읽혀 고른 구역이 지워진다.
+    zones = layout_zone_ids(fac)
+    if len(zones) == 1:
+        return fac.unique_id, zones[0], None
+    if zones:
+        valid = plot_bay_ids(fac)
+        if bay_id and bay_id not in valid:
+            return None, None, ("구역 '%s' 가 시설에 없습니다 (있는 구역: %s)"
+                                % (bay_id, ', '.join(zones)))
+        return fac.unique_id, bay_id, None
 
     try:
         bay_count = int(fac.bay_count or 1)
@@ -567,7 +581,7 @@ def end_plot(unique_id, ended_on=None, reason='harvested'):
     parsed, err = _parse_date(ended_on, 'ended_on')
     if err:
         return None, err
-    parsed = parsed or date.today()
+    parsed = parsed or today_at(row)
 
     if row.started_on and parsed < row.started_on:
         return None, '종료일이 파종일보다 빠릅니다 (%s < %s)' % (
@@ -660,7 +674,7 @@ def copy_plot(unique_id, started_on=None, subject=None,
         'subject': subject or src.subject,
         'name': src.name,
         'color': src.color,
-        'started_on': started_on or date.today().isoformat(),
+        'started_on': started_on or today_at(src).isoformat(),
         'source_kind': 'copied',
         'source_ref': src.unique_id,
     }
@@ -701,7 +715,7 @@ def succeed_plot(unique_id, ended_on=None, reason='harvested',
     parsed_end, err = _parse_date(ended_on, 'ended_on')
     if err:
         return None, err
-    parsed_end = parsed_end or date.today()
+    parsed_end = parsed_end or today_at(src)
 
     if not started_on:
         started_on = (parsed_end + timedelta(days=1)).isoformat()
@@ -775,7 +789,7 @@ def accept_stage(plot_uuid, stage_key=None, stage_index=None, started_on=None,
         if derr:
             return None, derr
     else:
-        started = _date.today()
+        started = today_at(row)
     if started is None:
         return None, '전환일이 필요합니다'
     if row.started_on and started < row.started_on:
@@ -821,7 +835,7 @@ def undo_stage(plot_uuid, decided_by=None):
     추적할 수 없다.
     """
     from aot.databases.models import GeoPlotStageEvent
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
 
     anchor = plot_context.stage_anchor(
         GeoPlot.query.filter_by(unique_id=plot_uuid).first())
@@ -962,7 +976,7 @@ def set_stage_plan(plot_uuid, plan, set_by=None):
     (`shift_stage`). 상대값을 저장하면 앞 단계가 밀릴 때 그 7일이 어느 날이었는지
     조용히 달라진다.
     """
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
 
     if not isinstance(plan, dict) or not plan:
         return None, '고칠 경계가 없습니다'
@@ -1283,7 +1297,7 @@ def set_stage_target(plot_uuid, stage_key=None, target_key=None,
         # 범위는 프로그램에 저장할 때와 **같은 검사**를 거친다. 예전에는 숫자
         # 변환만 해서 999°C 같은 값이 그대로 제어 입력이 됐다 — 구획 값이
         # 프로그램 값보다 우선하므로 여기가 느슨하면 프로그램 검사가 무의미하다.
-        from aot.aot_flask.geo.program_io import _clean_targets
+        from aot.space.program_io import _clean_targets
         cleaned, verr = _clean_targets({target_key: value}, defs)
         if verr:
             return None, verr
@@ -1534,7 +1548,7 @@ def save_as_program(plot_uuid, name=None, set_by=None, adopt_targets=False):
     길렀나" 의 답이 조용히 달라진다. 새 프로그램을 이 구획에도 쓰려면 [설정]
     에서 고르는 것이 사람의 결정이다.
     """
-    from aot.aot_flask.geo import program_io
+    from aot.space import program_io
     from aot.databases.models import GeoProgram
 
     row, prog, stages, first, err = _plan_context(plot_uuid)

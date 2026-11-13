@@ -39,6 +39,8 @@ INPUT_CPU = 'E2E CPU Input'
 OUTPUT_MULTI = 'E2E Virtual Multi'      # 채널 3개
 OUTPUT_NOCHANNEL = 'E2E No Channel'     # 채널 0개 — 유형 D 회귀 재현용
 OUTPUT_PWM = 'E2E PWM'
+# 설비 작동 상태 검사 전용 — 팬을 따로 켜고 꺼도 다른 검사가 쓰는 출력에 닿지 않는다.
+OUTPUT_STATE_FAN = 'E2E State Fan'
 
 FUNCTION_CONDITIONAL = 'E2E Conditional'
 
@@ -73,9 +75,26 @@ DASHBOARD = 'E2E Dashboard'
 
 # 지도 위젯 렌더 검사 — 시설이 놓인 지도를 보여 주는 대시보드.
 MAP_DASHBOARD = 'E2E Map Dashboard'
+TWO_MAP_DASHBOARD = 'E2E Two Map Dashboard'
+RASTER_DASHBOARD = 'E2E Raster Base Dashboard'
+RASTER_BASE_A = 'E2E Raster Base A'
+RASTER_BASE_B = 'E2E Raster Base B'
 MAP_FACILITY = 'E2E Map Facility'
+# 시설 위젯(3D 모형) 검사 — 설비 작동 상태 표시(J-state)가 쓴다.
+FACILITY_DASHBOARD = 'E2E Facility Widget Dashboard'
+FACILITY_STATE_NAME = 'E2E State Facility'
+# 레이아웃형 시설(layout) 외피 개구 검사 — 자유 평면 벽·박공·평지붕의 창 구멍.
+FACILITY_LAYOUT_NAME = 'E2E Layout Facility'
+MAP_STATE_DASHBOARD = 'E2E Map State Dashboard'
 # 시설·지도 중심(시드의 부지·구역 옆). 카메라가 시설 위에 있어야 3D 가 화면에 들어온다.
 MAP_FACILITY_CENTER = (127.0025, 37.0005)
+# 시설 밖 출력 마커(팬)와 그 담당 구역 — 지도 장치 상태 검사(J-state 지도 장치)가 쓴다.
+# 시드 시설(중심)과 상태 검사 시설(동쪽 0.0002) 둘 다와 겹치지 않게 서쪽에 둔다.
+MAP_DEVICE_MARKER = (127.0021, 37.0005)
+DEVICE_AREA_NAME = 'E2E Fan Area'
+# 라벨 마스터(show_labels)를 끈 지도 — 장치가 점 마커로 그려지는 화면. 위젯 옵션 서버 기본은
+# show_labels=True 이고 show_device_labels 는 그 값을 따르므로, 점 마커를 보려면 마스터를 꺼야 한다.
+MAP_DOT_DASHBOARD = 'E2E Map Dot Dashboard'
 
 # 공지 — 작성한 것이 대시보드 위젯까지 가는지 보는 데 쓴다.
 # 시설 — 만들고 다시 열어 확인하는 데 쓴다.
@@ -114,6 +133,13 @@ NOTICE_BODY = 'E2E 공지 본문 — 종단 검사가 만든 글입니다.'
 # 지도 도형 — 부지 하나와 그 안의 구역 하나.
 GEO_SITE = 'E2E Site'
 GEO_ZONE = 'E2E Zone'
+
+# 물 회로 지형(DEM) 바꾸기 — 합성 고도 타일 서버(`dem_server.py`, 컴포즈 서비스 dem-tiles)에서 받는 두 입력.
+# 지금 쓰는 DEM 은 완만한 경사, 비교 후보는 가파른 경사다.
+DEM_GENTLE = 'E2E DEM Gentle'
+DEM_STEEP = 'E2E DEM Steep'
+DEM_TILE_BASE = 'http://dem-tiles:8099'
+DEM_MAX_ZOOM = 14
 
 # 구획 — 일지·목표 화면이 고르는 대상.
 GEO_PLOT = 'E2E Plot'

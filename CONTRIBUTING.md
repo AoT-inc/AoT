@@ -38,6 +38,8 @@ They check, among other things, that a new alembic migration also bumps `ALEMBIC
 
 They also block new violations of the package dependency directions in `ARCHITECTURE.md` §4 (existing violations are frozen in `aot/scripts/import_layers_baseline.txt`, not re-litigated on every commit). CI repeats this check too.
 
+They also block new violations of the time rules in `ARCHITECTURE.md` §6 (existing ones are frozen in `aot/tests/time_rules_baseline.json`); the failure message names the line and what to use instead.
+
 If a commit changes code linked to a manual section (see *Linking code to the manual* below), the pre-commit hook lists the affected sections but does not block the commit. If the `claude` CLI is installed, the post-commit hook then drafts updates to those sections in English, Korean and Japanese in the background. It leaves the drafts uncommitted so you can review them. A report is written to `.local/manual_sync/last-run.md`. Set `AOT_SKIP_MANUAL_AUTODRAFT=1` to turn this off.
 
 ## Conventions

@@ -13,6 +13,7 @@ from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_geo
 from aot.aot_flask.access import scope
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
+from aot.utils.timekit import naive_utc, utc_now
 
 
 
@@ -21,19 +22,15 @@ from aot.aot_flask.routes_geo import blueprint  # noqa: E402
 # Facility Routes (PRD/DESIGN-GEO-FACILITY-001)
 # ============================================================
 
-@blueprint.route('/geo/facility')
-@login_required
-def page_facility():
-    """Facility Design page — register building-level facility specs."""
-    if not utils_general.user_has_permission('edit_settings'):
-        return redirect(url_for('routes_general.home'))
+def facility_binding_choices():
+    """센서 바인딩 선택지 — 시설 설계 페이지(Jinja 주입)와 `GET /api/geo/facility/choices` 가 같이 쓴다.
 
-    from aot.databases.models import GeoFacility, Measurement, Unit
+    페이지에 박아 넣기만 하면 페이지를 연 채 입력을 추가했을 때 옛 목록이 남는다. 같은 계산을
+    API 로도 내서 클라이언트가 다시 받을 수 있게 한다.
+    반환: {choices_input, choices_function, meas_id_slug, input_devices, function_devices}
+    """
+    from aot.databases.models import Measurement, Unit
     from aot.aot_flask.utils.utils_general import add_custom_measurements, add_custom_units
-
-    # [P3] 모든 지도가 동등하다 — category 분기 폐기.
-    design_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
-    facilities = GeoFacility.query.order_by(GeoFacility.updated_at.desc()).all()
 
     # Input channel choices — system-standard pattern (same as PID/Function/Conditional pages).
     # Value format: '{input_id},{measurement_id}'
@@ -138,17 +135,40 @@ def page_facility():
         key=lambda d: func_order.get(d['input_id'], 9999)
     )
 
+    return {
+        'choices_input': choices_input,
+        'choices_function': choices_function,
+        'meas_id_slug': meas_id_slug,
+        'input_devices': input_devices,
+        'function_devices': function_devices,
+    }
+
+
+@blueprint.route('/geo/facility')
+@login_required
+def page_facility():
+    """Facility Design page — register building-level facility specs."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return redirect(url_for('routes_general.home'))
+
+    from aot.databases.models import GeoFacility
+
+    # [P3] 모든 지도가 동등하다 — category 분기 폐기.
+    design_maps = GeoMap.query.order_by(GeoMap.updated_at.desc()).all()
+    facilities = GeoFacility.query.order_by(GeoFacility.updated_at.desc()).all()
+    choices = facility_binding_choices()
+
     return render_template(
         'pages/geo/geo_facility.html',
         active_page='geo_facility',
         map_configs=design_maps,
         facilities=facilities,
         geo_config=utils_geo.get_geo_config(),
-        choices_input=choices_input,
-        choices_function=choices_function,
-        meas_id_slug=meas_id_slug,
-        input_devices=input_devices,
-        function_devices=function_devices,
+        choices_input=choices['choices_input'],
+        choices_function=choices['choices_function'],
+        meas_id_slug=choices['meas_id_slug'],
+        input_devices=choices['input_devices'],
+        function_devices=choices['function_devices'],
     )
 
 
@@ -194,7 +214,7 @@ def api_facility_integration(facility_uuid):
     the same logic is reusable by the env_coordinator profile loader (B2) without
     going through HTTP.
     """
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
+    from aot.space.facility_integration import get_facility_integration
 
     try:
         result, error = get_facility_integration(facility_uuid)
@@ -228,8 +248,8 @@ def api_facility_wind(facility_uuid):
       wind_bias{actuator_id: weight},
       method, inputs }
     """
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
-    from aot.aot_flask.geo.facility_wind import compute_natural_ventilation, wind_biased_opening
+    from aot.space.facility_integration import get_facility_integration
+    from aot.space.facility_wind import compute_natural_ventilation, wind_biased_opening
 
     try:
         wind_speed  = float(request.args.get('speed', 3.0))
@@ -280,7 +300,7 @@ def api_facility_compute():
 
     data = request.get_json() or {}
     try:
-        from aot.aot_flask.geo.facility_calc import compute_capacity
+        from aot.space.facility_calc import compute_capacity
     except ImportError:
         return jsonify({
             'ok': False,
@@ -289,10 +309,24 @@ def api_facility_compute():
 
     try:
         result = compute_capacity(data)
-        return jsonify({'ok': True, 'computed': result})
     except Exception as e:
         current_app.logger.error(f"facility/compute error: {e}")
         return jsonify({'ok': False, 'message': str(e)}), 500
+    payload = {'ok': True, 'computed': result}
+    # 시설 모형(F3) 미리보기. 실패해도 용량 미리보기는 그대로 돌려준다(`layout_failed` 만 남긴다).
+    try:
+        from aot.space.facility_io import layout_preview
+        from aot.databases.models import GeoFacility
+        row = None
+        if data.get('facility_uuid'):
+            row = GeoFacility.query.filter_by(unique_id=data['facility_uuid']).first()
+        payload.update(layout_preview(
+            data, row.layout if row else None,
+            row.bays if row and isinstance(row.bays, list) else None))
+    except Exception as e:
+        current_app.logger.warning(f"facility/compute layout preview error: {e}")
+        payload['layout_failed'] = True
+    return jsonify(payload)
 
 
 # @manual geo/api-reference#facilities
@@ -308,24 +342,114 @@ def api_facility_get(facility_uuid):
     return jsonify({'ok': True, 'facility': result})
 
 
+_INCLUDE_PARTS = ('facility', 'integration')
+
+
+def _include_parts(body=None):
+    """`?include=facility,integration` 또는 본문 `include`(문자열·목록) → 실을 부분 집합.
+
+    저장 응답에 저장된 시설과 통합 요약을 함께 실어, 화면이 저장 직후 같은 것을 다시
+    GET 하지 않게 한다. 모르는 이름은 무시한다(기존 호출자는 아무것도 보내지 않는다).
+    """
+    raw = []
+    q = request.args.get('include')
+    if q:
+        raw.extend(q.split(','))
+    b = (body or {}).get('include') if isinstance(body, dict) else None
+    if isinstance(b, str):
+        raw.extend(b.split(','))
+    elif isinstance(b, (list, tuple)):
+        raw.extend(str(x) for x in b)
+    return {x.strip() for x in raw if x and x.strip() in _INCLUDE_PARTS}
+
+
+def _with_includes(result, facility_uuid, parts):
+    """저장 응답 `result` 에 `parts` 를 얹는다. 실패한 부분은 빠지고 저장 결과는 그대로다 —
+    저장은 이미 끝났으므로 덧붙이는 조회 하나가 실패해도 저장 실패로 보이면 안 된다."""
+    if not parts or not facility_uuid:
+        return result
+    if 'facility' in parts:
+        from aot.aot_flask.geo import FacilityManager
+        fac, err = FacilityManager.get_facility(facility_uuid)
+        if fac is not None and not err:
+            result['facility'] = fac      # = GET /api/geo/facility/<uuid> 의 'facility'
+    if 'integration' in parts:
+        try:
+            from aot.space.facility_integration import get_facility_integration
+            integ, err = get_facility_integration(facility_uuid)
+            if integ is not None and not err:
+                result['integration'] = {'ok': True, **integ}   # = GET …/integration 본문
+        except Exception:
+            current_app.logger.warning('[facility/save] integration include failed',
+                                       exc_info=True)
+    return result
+
+
 # @manual geo/api-reference#facilities
 @blueprint.route('/api/geo/facility', methods=['POST'])
 @login_required
 def api_facility_save():
-    """Create or update a facility (atomic outer + spec + bays)."""
+    """Create or update a facility (atomic outer + spec + bays).
+
+    `?include=facility,integration`(또는 본문 `include`)를 주면 응답에 저장된 시설
+    (`facility`, GET 과 같은 본문)과 통합 요약(`integration`)을 함께 싣는다.
+    """
     if not utils_general.user_has_permission('edit_settings'):
         return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
 
     from aot.aot_flask.geo import FacilityManager
-    from aot.aot_flask.geo.facility_integration import invalidate_facility_integration_cache
+    from aot.space.facility_integration import invalidate_facility_integration_cache
     data = request.get_json() or {}
+    parts = _include_parts(data)
+    data.pop('include', None)
     result, error = FacilityManager.save_facility(data, user_id=current_user.id)
     if error:
         status = 404 if 'not found' in error.lower() else 400
         return jsonify({'ok': False, 'message': error}), status
     # Evict TTL cache so next poll gets fresh structure.
-    invalidate_facility_integration_cache(result.get('unique_id') or data.get('unique_id'))
-    return jsonify(result)
+    uuid = result.get('facility_uuid') or data.get('unique_id')
+    invalidate_facility_integration_cache(uuid)
+    return jsonify(_with_includes(result, uuid, parts))
+
+
+# @manual geo/api-reference#facilities
+@blueprint.route('/api/geo/facility/<facility_uuid>', methods=['PATCH'])
+@login_required
+def api_facility_save_section(facility_uuid):
+    """저장된 시설의 한 묶음만 저장한다.
+
+    본문 `{section: 'fittings'|'envelope'|'spec'|'position'|'connections', data: …}`.
+    저장은 `POST /api/geo/facility` 와 같은 경로(`save_facility`)를 타고, 응답 꼴도 같다
+    (`include` 지원).
+    """
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+
+    from aot.aot_flask.geo import FacilityManager
+    from aot.space.facility_integration import invalidate_facility_integration_cache
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict) or not body.get('section'):
+        return jsonify({'ok': False, 'message': 'Missing section'}), 400
+    if 'data' not in body:
+        return jsonify({'ok': False, 'message': 'Missing data'}), 400
+    parts = _include_parts(body)
+    result, error = FacilityManager.save_section(
+        facility_uuid, body['section'], body['data'], user_id=current_user.id)
+    if error:
+        status = 404 if 'not found' in error.lower() else 400
+        return jsonify({'ok': False, 'message': error}), status
+    invalidate_facility_integration_cache(facility_uuid)
+    return jsonify(_with_includes(result, facility_uuid, parts))
+
+
+# @manual geo/api-reference#facilities
+@blueprint.route('/api/geo/facility/choices', methods=['GET'])
+@login_required
+def api_facility_choices():
+    """센서 바인딩 선택지(입력·함수 장치와 채널) — 설계 페이지가 페이지를 연 채 다시 받는다."""
+    if not utils_general.user_has_permission('edit_settings'):
+        return jsonify({'ok': False, 'message': 'Permission Denied'}), 403
+    return jsonify({'ok': True, **facility_binding_choices()})
 
 
 # @manual geo/api-reference#facilities
@@ -408,6 +532,13 @@ _SENSOR_SNAP_CACHE = {}         # facility_uuid -> {'snap': dict, 'ts': float}
 _SENSOR_SNAP_INFLIGHT = set()   # facility_uuids with a refresh running
 _SENSOR_SNAP_LOCK = threading.Lock()
 _SENSOR_SNAP_TTL = 20.0         # seconds a cached snapshot stays "fresh"
+# 이 나이를 넘은 항목은 **낡은 값을 그대로 내지 않고** 요청 안에서 새로 만든다.
+# 캐시는 프로세스(워커)마다 따로라서, 오래 요청을 못 받은 워커가 10분 전 스냅샷을 즉시
+# 돌려주면 같은 시설의 글자가 새 값↔옛 값으로 왔다 갔다 한다(2026-11-11 점검). 90초 =
+# 기본 라벨 폴링(60초)이 워커 하나에 연달아 닿는 경우까지는 즉시 응답을 지키되, 그
+# 이상은 정확성을 우선한다(스냅샷의 `valid` 플래그도 만든 시점 기준이라 오래될수록 거짓이 된다).
+_SENSOR_SNAP_MAX_AGE = 90.0
+_SENSOR_SNAP_BUILD_LOCKS = {}   # facility_uuid -> Lock (동기 재생성 직렬화)
 _EMPTY_SENSOR_SNAP = {
     'indoor': None, 'outdoor': None,
     # degraded=False: a cold cache means "sensors still loading", not
@@ -418,20 +549,37 @@ _EMPTY_SENSOR_SNAP = {
 }
 
 
+def _sensor_snap_build_lock(facility_uuid):
+    with _SENSOR_SNAP_LOCK:
+        lock = _SENSOR_SNAP_BUILD_LOCKS.get(facility_uuid)
+        if lock is None:
+            lock = _SENSOR_SNAP_BUILD_LOCKS[facility_uuid] = threading.Lock()
+        return lock
+
+
 def _get_or_refresh_sensor_snapshot(facility_uuid, sensors_resolved, sensors_outdoor):
     """Return a cached sensor snapshot immediately; refresh in the background.
 
-    Never blocks the request on the live InfluxDB computation. Cold cache → an
-    empty/degraded snapshot now + a background build; warm cache → the cached
-    (possibly stale) snapshot now + a background refresh once past the TTL.
+    Never blocks the request on the live InfluxDB computation **unless the cached
+    entry is older than ``_SENSOR_SNAP_MAX_AGE``** — then the entry is rebuilt in
+    this request (one build per facility, concurrent callers wait for it) instead
+    of serving a value that is minutes old. Cold cache → an empty/degraded
+    snapshot now + a background build; fresh cache → the cached snapshot;
+    TTL < age <= MAX_AGE → the cached (possibly stale) snapshot now + a
+    background refresh.
     """
     now = time.time()
     with _SENSOR_SNAP_LOCK:
         entry = _SENSOR_SNAP_CACHE.get(facility_uuid)
-        fresh = bool(entry) and (now - entry['ts']) < _SENSOR_SNAP_TTL
-        need_refresh = (not fresh) and (facility_uuid not in _SENSOR_SNAP_INFLIGHT)
+        age = (now - entry['ts']) if entry else None
+        too_old = entry is not None and age > _SENSOR_SNAP_MAX_AGE
+        fresh = bool(entry) and age < _SENSOR_SNAP_TTL
+        need_refresh = (not fresh) and (not too_old) and (facility_uuid not in _SENSOR_SNAP_INFLIGHT)
         if need_refresh:
             _SENSOR_SNAP_INFLIGHT.add(facility_uuid)
+
+    if too_old:
+        return _rebuild_sensor_snapshot_sync(facility_uuid, sensors_resolved, sensors_outdoor)
 
     if need_refresh:
         app = current_app._get_current_object()
@@ -439,7 +587,7 @@ def _get_or_refresh_sensor_snapshot(facility_uuid, sensors_resolved, sensors_out
         def _bg_build():
             snap = None
             try:
-                from aot.aot_flask.geo.facility_sensors import build_sensor_snapshot as _bss
+                from aot.space.facility_sensors import build_sensor_snapshot as _bss
                 with app.app_context():
                     snap = _bss(sensors_resolved, sensors_outdoor)
             except Exception:
@@ -459,6 +607,31 @@ def _get_or_refresh_sensor_snapshot(facility_uuid, sensors_resolved, sensors_out
     return entry['snap'] if entry else _EMPTY_SENSOR_SNAP
 
 
+def _rebuild_sensor_snapshot_sync(facility_uuid, sensors_resolved, sensors_outdoor):
+    """너무 낡은 캐시 항목을 이 요청 안에서 새로 만든다. 실패하면 빈 스냅샷(옛 값 금지)."""
+    with _sensor_snap_build_lock(facility_uuid):
+        with _SENSOR_SNAP_LOCK:
+            entry = _SENSOR_SNAP_CACHE.get(facility_uuid)
+        # 기다리는 사이 다른 요청이 이미 새로 만들었으면 그것을 쓴다.
+        if entry and (time.time() - entry['ts']) <= _SENSOR_SNAP_MAX_AGE:
+            return entry['snap']
+        snap = None
+        try:
+            from aot.space.facility_sensors import build_sensor_snapshot as _bss
+            snap = _bss(sensors_resolved, sensors_outdoor)
+        except Exception:
+            current_app.logger.warning(
+                '[Facility] 센서 스냅샷 동기 재생성 실패(%s) — 빈 값으로 응답', facility_uuid,
+                exc_info=True)
+        with _SENSOR_SNAP_LOCK:
+            if isinstance(snap, dict):
+                _SENSOR_SNAP_CACHE[facility_uuid] = {'snap': snap, 'ts': time.time()}
+            else:
+                # 낡은 항목은 버린다 — 다음 요청이 "콜드" 로 시작해 백그라운드 재생성을 건다.
+                _SENSOR_SNAP_CACHE.pop(facility_uuid, None)
+        return snap if isinstance(snap, dict) else _EMPTY_SENSOR_SNAP
+
+
 def _facility_plots_block(facility_uuid):
     """시설에서 자라는 구획 요약 — 실패해도 런타임 응답을 막지 않는다.
 
@@ -467,7 +640,7 @@ def _facility_plots_block(facility_uuid):
     그 차이는 로그로 남긴다).
     """
     try:
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         from aot.databases.models import GeoFacility
         # **화면 목록이라 계획까지 낸다.** 몫(베드)을 함께 세야 "5베드 남음"
         # 이 거짓말이 되지 않는다 — 9월에 2베드를 쓰기로 해 둔 것을 빼고 세면
@@ -478,8 +651,15 @@ def _facility_plots_block(facility_uuid):
         # 폴링 응답 하나에 N+1 이 된다.
         fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
         caps = plot_context.bay_capacities(fac) if fac is not None else {}
-        return [plot_context.plot_brief_for_control(r, capacities=caps)
-                for r in rows]
+        from aot.space.facility_bays import upper_zone_ids
+        upper = upper_zone_ids(fac) if fac is not None else set()
+        out = []
+        for r in rows:
+            brief = plot_context.plot_brief_for_control(r, capacities=caps)
+            # 위층 구역의 구획은 환경제어 대상이 아니다 — 화면이 그렇게 말한다.
+            brief['control_upper_floor'] = bool(r.bay_id and r.bay_id in upper)
+            out.append(brief)
+        return out
     except Exception as exc:
         current_app.logger.warning(
             '[Facility] 구획 요약 실패(%s) — 런타임은 계속: %s',
@@ -490,7 +670,7 @@ def _facility_plots_block(facility_uuid):
 def _facility_bay_capacities(facility_uuid):
     """구역 총량 — 실패해도 런타임 응답을 막지 않는다(구획 요약과 같은 규칙)."""
     try:
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         from aot.databases.models import GeoFacility
         fac = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
         return plot_context.bay_capacities(fac) if fac is not None else {}
@@ -518,8 +698,8 @@ def api_facility_runtime(facility_uuid):
     import time as _time
     from aot.databases.models import GeoFacility, Output, OutputChannel
     from aot.aot_client import DaemonControl
-    from aot.aot_flask.geo.facility_sensors import read_facility_sensors, compute_spatial_internal, read_fitting_sensors, build_sensor_snapshot
-    from aot.aot_flask.geo.facility_integration import get_facility_integration
+    from aot.space.facility_sensors import read_facility_sensors, compute_spatial_internal, read_fitting_sensors, build_sensor_snapshot
+    from aot.space.facility_integration import get_facility_integration
     from aot.utils.outputs import parse_output_information, get_pwm_invert_signal
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
@@ -828,7 +1008,7 @@ def api_facility_actuator_order(facility_uuid):
     vo['actuator_order'] = clean
     facility.view_options = vo
     flag_modified(facility, 'view_options')   # force-detect JSON column change
-    facility.updated_at = datetime.utcnow()
+    facility.updated_at = naive_utc(utc_now())
 
     try:
         db.session.commit()
@@ -854,11 +1034,11 @@ def api_facility_bays(facility_uuid):
       바꿔도 이미 저장된 코디네이터가 계속 같은 구역을 가리킨다.
     """
     from aot.databases.models import GeoFacility
-    from aot.aot_flask.geo.facility_bays import compute_bay_slices
+    from aot.space.facility_bays import compute_bay_slices
     # ⚠ `spec_from_row` 가 이 용도의 정본이다 — 구역 유효성 검사
     #   (`facility_io` 의 bay_id 검증)가 쓰는 것과 **같은 입력**이어야 화면의
     #   선택지와 서버의 판정이 갈리지 않는다.
-    from aot.aot_flask.geo.facility_bays import spec_from_row
+    from aot.space.facility_bays import spec_from_row
 
     facility = GeoFacility.query.filter_by(unique_id=facility_uuid).first()
     if not facility:
@@ -892,7 +1072,7 @@ def api_facility_bay_capacity(facility_uuid):
     """
     from sqlalchemy.orm.attributes import flag_modified
     from aot.databases.models import GeoFacility
-    from aot.aot_flask.geo.plot_context import _CAPACITY_UNITS
+    from aot.space.plot_context import _CAPACITY_UNITS
 
     # 총량은 시설의 사실이지만 **작기마다 달라지는 운영 값**이다(같은 온실을
     # 이번 작기에는 8베드로 쓸 수 있다). 그래서 설계 권한이 아니라 작기 운영
@@ -934,18 +1114,38 @@ def api_facility_bay_capacity(facility_uuid):
         if isinstance(b, dict) and b.get('id') == bay_id:
             target = b
             break
+    layout = facility.layout if isinstance(facility.layout, dict) else None
+    if target is None and layout:
+        # 시설 모형(F3)의 구역은 `bays` 에 없다. 총량은 공간 항목에 적는다 — `bays` 를 늘리면
+        # 제어가 읽는 구역이 달라진다. 암묵 공간은 먼저 항목을 만든다.
+        from aot.space.facility_bays import layout_zone_ids
+        if bay_id in layout_zone_ids(facility):
+            # `spaces` 가 null 인 모형도 유효하다(`validate_layout`). setdefault 는 그 null 을 돌려준다.
+            spaces = layout['spaces'] = layout.get('spaces') or []
+            target = next((s for s in spaces if isinstance(s, dict) and s.get('id') == bay_id), None)
+            if target is None:
+                block_id = bay_id[len('space_'):]
+                target = {'id': bay_id, 'block_id': block_id}
+                spaces.append(target)
+
     if target is None:
         return jsonify({'ok': False,
                         'message': "구역 '%s' 가 시설에 없습니다" % bay_id}), 400
 
-    if total is None:
-        target.pop('capacity', None)
-    else:
-        target['capacity'] = {'unit': unit, 'total': total}
+    # 옛 구역 id 를 잇는 공간은 두 자리에 값이 있다. 읽을 때는 공간 쪽이 이긴다(`bay_capacities`).
+    twins = [s for s in ((layout or {}).get('spaces') or [])
+             if isinstance(s, dict) and s.get('id') == bay_id and s is not target]
+    for item in [target] + twins:
+        if total is None:
+            item.pop('capacity', None)
+        else:
+            item['capacity'] = {'unit': unit, 'total': total}
 
     facility.bays = bays
     flag_modified(facility, 'bays')     # JSON 컬럼 변경 감지
-    facility.updated_at = datetime.utcnow()
+    if layout:
+        flag_modified(facility, 'layout')
+    facility.updated_at = naive_utc(utc_now())
     try:
         db.session.commit()
     except Exception as e:
@@ -1186,7 +1386,7 @@ def api_facility_apply(facility_uuid):
 
     # ── actuators → device_uuid index by kind ──────────────────────────────
     # 원장 기준 — 끊긴 연결의 장치에 명령을 보내지 않는다(2026-09-25).
-    from aot.aot_flask.geo.device_binding import resolved_refs
+    from aot.space.device_binding import resolved_refs
     actuators_raw = resolved_refs(facility)[1] or {}
     kind_to_uuids: dict = {}
 

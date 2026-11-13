@@ -699,3 +699,12 @@ class TestApi(_MatterAppFixture):
         err = S.StoreError('scenario not found for this plot', 404)
         with self.app.app_context(), mock.patch('aot.utils.twin_chart.plot_chart', side_effect=err):
             assert self._abort_code(api.TwinChartPlot, 'get', PLOT, query='scenario=zz')[0] == 404
+
+
+def test_supply_status_and_water_caveats_survive_the_effects_check():
+    from aot.utils import twin_store
+    rows = twin_store.validate_effects([{'kind': 'pump', 'channel': None, 'status': 'supply', 'source': 'measured'},
+                                        {'kind': 'irrigation_drip', 'channel': 'irrigation_mm', 'status': 'partial',
+                                         'source': 'estimated', 'caveats': ['pump-over-demand']}])
+    assert rows[0]['status'] == 'supply' and 'caveats' not in rows[0]
+    assert rows[1]['caveats'] == ['pump-over-demand']

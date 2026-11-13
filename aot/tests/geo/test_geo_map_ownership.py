@@ -22,6 +22,7 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
+from aot.tests.geo._legacy_marker import bound_shape
 from aot.databases.models import GeoMap, GeoShape, Input
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
@@ -30,7 +31,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(
 # 지도를 만드는 팩토리들. P1 이후 호출자가 있으면 안 된다.
 FACTORIES = {'ensure_map_config', 'create_map_config', 'clone_map_config'}
 
-# 팩토리 정의 파일 자체는 예외(내부 호출·정의가 남아 있다 — P5 에서 제거).
+# 팩토리 모듈은 L3 에서 삭제했다 — 존재하지 않아야 한다.
 FACTORY_MODULE = 'aot/aot_flask/utils/utils_map_config.py'
 
 
@@ -81,38 +82,22 @@ class TestNoAutomaticMapCreation(unittest.TestCase):
         self.assertNotIn('map_cfg_committed', src,
                          'GET 요청이 지도를 생성·커밋하던 루프가 남아 있습니다.')
 
-    def test_device_delete_guard_covers_all_seven_models(self):
-        """_map_still_referenced 가 map_config_id 를 가진 7개 모델을 전부 본다.
-
-        목록 누락은 이 도메인의 반복 실패 유형이다 — 과거 Function 이 빠져
-        있어, Function 이 참조 중인 지도를 다른 장치 삭제가 지울 수 있었다.
-        """
-        from aot.aot_flask.utils import utils_map_config as mod
-        src = open(mod.__file__.replace('.pyc', '.py'),
-                   encoding='utf-8').read()
-        tree = ast.parse(src)
-        fn = next(n for n in ast.walk(tree)
-                  if isinstance(n, ast.FunctionDef)
-                  and n.name == '_map_still_referenced')
-        names = {x.id for x in ast.walk(fn) if isinstance(x, ast.Name)}
-        for model in ('Input', 'Output', 'PID', 'Trigger', 'Conditional',
-                      'CustomController', 'Function'):
-            self.assertIn(model, names,
-                          '%s 가 삭제 가드에서 빠졌습니다.' % model)
-
-    def test_factories_are_marked_dead(self):
-        """폐지된 팩토리는 사망 표시를 유지한다 — 무심코 되살리지 않도록."""
-        src = open(os.path.join(ROOT, FACTORY_MODULE), encoding='utf-8').read()
-        tree = ast.parse(src)
-        for name in FACTORIES:
-            fn = next((n for n in ast.walk(tree)
-                       if isinstance(n, ast.FunctionDef) and n.name == name),
-                      None)
-            self.assertIsNotNone(fn, '%s 가 사라졌습니다.' % name)
-            doc = ast.get_docstring(fn) or ''
-            self.assertIn('사망', doc,
-                          '%s 의 사망 표시가 없습니다 — 되살아날 위험.' % name)
-
+    def test_factory_module_is_gone(self):
+        """L3: 지도 팩토리(`ensure/create/clone_map_config`)와 장치 쪽 삭제 가드는
+        호출자 0 이라 모듈째 지웠다. 되살리지 않는다 — 지도는 사용자가 만들고
+        삭제는 geo/design 의 `delete_design_map` 하나다."""
+        self.assertFalse(os.path.exists(os.path.join(ROOT, FACTORY_MODULE)),
+                         '지도 팩토리 모듈이 되살아났습니다.')
+        names = set()
+        for path in _iter_py():
+            try:
+                tree = ast.parse(open(path, encoding='utf-8').read())
+            except Exception:
+                continue
+            names |= {n.name for n in ast.walk(tree)
+                      if isinstance(n, ast.FunctionDef)}
+        self.assertEqual(names & (FACTORIES | {'_map_still_referenced',
+                                               'delete_map_config'}), set())
 
 
 class TestUnplacedDevicesAreNowhere(unittest.TestCase):
@@ -163,7 +148,7 @@ class TestUnplacedDevicesAreNowhere(unittest.TestCase):
         GeoMap(unique_id='m2', name='지도2', category='design').save()
         dev = Input(name='배치센서')
         dev.save()
-        GeoShape(unique_id='mk', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk', geo_id='m1', type='aot_device',
                  device_id=dev.unique_id, channel_id='0',
                  feature={'type': 'Feature',
                           'geometry': {'type': 'Point',
@@ -208,29 +193,32 @@ class TestMapMembershipIsDerived(unittest.TestCase):
         self.ctx.pop()
 
     def _place(self, dev_uuid, map_uuid, shape_uid):
-        GeoShape(unique_id=shape_uid, geo_id=map_uuid, type='aot_device',
+        bound_shape(unique_id=shape_uid, geo_id=map_uuid, type='aot_device',
                  device_id=dev_uuid, channel_id='0',
                  feature={'type': 'Feature',
                           'geometry': {'type': 'Point',
                                        'coordinates': [1.0, 1.0]},
                           'properties': {}}).save()
 
-    def test_derived_map_ignores_stale_column(self):
-        from aot.aot_flask.geo.device_membership import map_for_device
-        dev = Input(name='센서', map_config_id='mB')   # 컬럼은 B 를 가리킴
+    def test_derived_map_follows_placement(self):
+        from aot.space.device_membership import map_for_device
+        dev = Input(name='센서')
         dev.save()
         self._place(dev.unique_id, 'mA', 'mk1')        # 실제 배치는 A
-        self.assertEqual(map_for_device(dev.unique_id), 'mA',
-                         '파생이 낡은 컬럼값을 따라갔습니다.')
+        self.assertEqual(map_for_device(dev.unique_id), 'mA')
+
+    def test_map_config_id_column_is_gone(self):
+        # L3(p7_04): 지도 소속을 담던 장치 컬럼은 사라졌다 — 되살리지 말 것.
+        self.assertNotIn('map_config_id', Input.__table__.columns)
 
     def test_unplaced_device_has_no_map(self):
-        from aot.aot_flask.geo.device_membership import map_for_device
-        dev = Input(name='미배치', map_config_id='mA')  # 컬럼만 있고 배치 없음
+        from aot.space.device_membership import map_for_device
+        dev = Input(name='미배치')                     # 배치 없음
         dev.save()
         self.assertIsNone(map_for_device(dev.unique_id))
 
     def test_devices_on_map_matches_placement(self):
-        from aot.aot_flask.geo.device_membership import devices_on_map
+        from aot.space.device_membership import devices_on_map
         a = Input(name='A장치'); a.save()
         b = Input(name='B장치'); b.save()
         self._place(a.unique_id, 'mA', 'mk-a')
@@ -239,7 +227,7 @@ class TestMapMembershipIsDerived(unittest.TestCase):
         self.assertEqual(devices_on_map('mB'), {b.unique_id})
 
     def test_multi_map_placement_is_deterministic(self):
-        from aot.aot_flask.geo.device_membership import (
+        from aot.space.device_membership import (
             map_for_device, maps_for_device)
         dev = Input(name='양쪽배치'); dev.save()
         self._place(dev.unique_id, 'mA', 'mk-1')
@@ -248,25 +236,13 @@ class TestMapMembershipIsDerived(unittest.TestCase):
         # 단일 값이 필요한 자리에서는 결정적으로 첫 배치를 고른다.
         self.assertEqual(map_for_device(dev.unique_id), 'mA')
         self.assertEqual(map_for_device(dev.unique_id), 'mA')
-    def test_prefer_hint_avoids_stale_copy_map(self):
-        """전환기 힌트: 여러 지도에 배치된 경우 기존 컬럼값을 존중한다.
 
-        koat 실측에서 28건이 미사용 복사본 지도(먼저 생성됨)로 잡혔다.
-        단순 "첫 배치" 규칙은 사용자가 실제로 쓰는 지도를 놓친다.
-        """
-        from aot.aot_flask.geo.device_membership import map_for_device
-        dev = Input(name='다중배치'); dev.save()
-        self._place(dev.unique_id, 'mA', 'mk-old')   # 먼저 생성된 사본
-        self._place(dev.unique_id, 'mB', 'mk-real')  # 실제 쓰는 지도
-        self.assertEqual(map_for_device(dev.unique_id), 'mA')          # 힌트 없음
-        self.assertEqual(map_for_device(dev.unique_id, prefer='mB'), 'mB')
-
-    def test_prefer_hint_is_ignored_when_not_placed(self):
-        """정본은 배치다 — 배치에 없는 힌트는 무시한다."""
-        from aot.aot_flask.geo.device_membership import map_for_device
-        dev = Input(name='한곳배치'); dev.save()
-        self._place(dev.unique_id, 'mA', 'mk-1')
-        self.assertEqual(map_for_device(dev.unique_id, prefer='mB'), 'mA')
+    def test_prefer_argument_is_gone(self):
+        """L3: 컬럼 힌트(`prefer`)는 제거했다 — 대표 지도는 첫 배치 하나."""
+        import inspect
+        from aot.space.device_membership import map_for_device
+        self.assertEqual(list(inspect.signature(map_for_device).parameters),
+                         ['device_unique_id'])
 
 
 class TestParcelImportDoesNotDuplicate(unittest.TestCase):

@@ -446,7 +446,7 @@ class TestResponseCap(unittest.TestCase):
         부류가 가장 크다.
         """
         payload = {'document': '가' * 30000, 'title': 'manual'}
-        cap = self.server._cap_result(payload, 'get_archived_document', max_tokens=1000)
+        cap = self.server._cap_result(payload, 'get_note_attachment', max_tokens=1000)
         text = json.dumps(cap, ensure_ascii=False)
         self.assertLessEqual(self.server._estimate_tokens(text), 1000)
         self.assertIsInstance(json.loads(text), dict)
@@ -469,9 +469,8 @@ class TestResponseCap(unittest.TestCase):
                          '크기는 API 키의 도구 묶음이 정한다. _tiering_enabled (4) 참조')
         with mock.patch.dict(os.environ, {'AOT_MCP_TOOL_TIERING': '1'}):
             self.assertTrue(self.server._tiering_enabled(), '다시 켜는 스위치')
-        # 인앱 AI 의 내장 MCP 목록은 따로 고정된다 — 기본 켬(예전 동작).
-        self.assertNotIn('AOT_AI_BUILTIN_MCP_TIERING', os.environ)
-        self.assertTrue(self.server._builtin_tiering_enabled())
+        # 인앱 AI 는 서랍 스위치를 따로 갖지 않는다 — 늘 도메인 명부(26-11 5단계).
+        self.assertFalse(hasattr(self.server, '_builtin_tiering_enabled'))
         self.assertGreater(self.server._MAX_RESPONSE_TOKENS, 0)
 
 
@@ -844,7 +843,7 @@ class _LatestHarness:
         from types import SimpleNamespace
         from unittest import mock
         from aot.databases import models
-        from aot.utils import device_tz, influx, system_pi
+        from aot.utils import timekit, influx, system_pi
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
 
         devs = {d.device_id for d in self.dms}
@@ -868,7 +867,7 @@ class _LatestHarness:
             mock.patch.object(models, 'Conversion', self._model(convs, 'unique_id')),
             mock.patch.object(influx, 'query_last_values_bulk_status', bulk),
             mock.patch.object(influx, 'read_influxdb_list', single),
-            mock.patch.object(device_tz, 'location_iso',
+            mock.patch.object(timekit, 'iso_at',
                               lambda at, dev, cache=None: at.isoformat()),
             mock.patch.object(S, '_module_channel_name',
                               classmethod(lambda cls, *_a: '')),

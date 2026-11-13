@@ -111,8 +111,8 @@ Shows scheduled events (from the Scheduler) on a calendar, split by category (AI
 
 ### モダンカメラ
 
-- Libraries: aot.camera
-- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [python-onvif-zeep>=0.2.12](https://pypi.org/project/python-onvif-zeep>=0.2.12)
+- Libraries: aot.camera_drivers
+- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [onvif-zeep>=0.2.12](https://pypi.org/project/onvif-zeep>=0.2.12)
 
 依存関係の自動インストールとプロファイルに対応した高度なカメラウィジェットです。
 

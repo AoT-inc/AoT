@@ -51,6 +51,7 @@ if HERE not in sys.path:
 from envsim import metrics as M      # noqa: E402
 from envsim import plant as P        # noqa: E402
 from envsim import scenarios as S    # noqa: E402
+from aot.utils.timekit import naive_utc, parse_utc
 
 
 class Clock:
@@ -82,7 +83,7 @@ class _FakeDatetime(_dt.datetime, metaclass=_FakeDatetimeMeta):
 
     @classmethod
     def utcnow(cls):
-        return _dt.datetime.utcfromtimestamp(Clock.now or _real_time())
+        return naive_utc(parse_utc(Clock.now or _real_time()))
 
 
 # 측정 이름(DeviceMeasurements.measurement) → 시설/외기 키
@@ -170,7 +171,7 @@ def _attach_extra_sensors(db_file, facility, extras):
 
 
 def _iso(ts: float) -> str:
-    return _dt.datetime.utcfromtimestamp(ts).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    return naive_utc(parse_utc(ts)).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
 def main():
@@ -220,7 +221,7 @@ def main():
     method_mod.datetime = _dt_shim
 
     import aot.utils.influx as influx_mod
-    import aot.aot_flask.geo.facility_sensors as fs_mod
+    import aot.space.facility_sensors as fs_mod
     influx_mod.write_influxdb_value = lambda *a, **k: None
     influx_mod.add_measurements_influxdb = lambda *a, **k: None
     influx_mod.add_measurements_influxdb_flux = lambda *a, **k: None
@@ -234,7 +235,7 @@ def main():
         from aot.databases.models.measurement import DeviceMeasurements
         from aot.databases.utils import session_scope
         from aot.functions.custom_functions.env_coordinator import CustomModule
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.space.facility_integration import get_facility_integration
 
         func = CustomController.query.filter(
             CustomController.unique_id.like(coord_prefix + '%')).first()
@@ -690,7 +691,7 @@ def main():
         except Exception:
             dli_target = None
         meta = {
-            'scenario': sc.name, 'variant': variant, 'coord': COORD, 'facility': facility,
+            'scenario': sc.name, 'tz': sc.tz, 'variant': variant, 'coord': COORD, 'facility': facility,
             'dli_target': dli_target,
             'code_rev': os.environ.get('SIM_CODE_REV', ''), 't0': sc.t0, 't_end': sc.t_end,
             'warmup_s': warmup_s, 'period': period, 'plant_dt': plant_dt,

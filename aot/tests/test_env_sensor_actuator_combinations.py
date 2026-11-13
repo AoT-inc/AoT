@@ -25,7 +25,7 @@ _LOADER = os.path.join(
     _ROOT, 'aot', 'functions', 'custom_functions', 'env_coordinator_impl',
     '_profile_loader_mixin.py')
 _INTEGRATION = os.path.join(
-    _ROOT, 'aot', 'aot_flask', 'geo', 'facility_integration.py')
+    _ROOT, 'aot', 'space', 'facility_integration.py')
 
 
 def _source(path):
@@ -69,7 +69,7 @@ def _check(payload, opts=None, ext_collector=False):
     ns = _load_from_script('_check_combinations', '_axes_of_kind',
                            '_AXIS_MTYPE', '_AXIS_LABEL')
     ns['_has_ext_collector'] = lambda: ext_collector
-    name = 'aot.aot_flask.geo.facility_integration'
+    name = 'aot.space.facility_integration'
     saved = sys.modules.get(name)
     module = types.ModuleType(name)
     module.get_facility_integration = _FakeIntegration(payload).get_facility_integration

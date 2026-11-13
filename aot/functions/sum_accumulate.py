@@ -26,6 +26,7 @@
 import math
 import time
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 
 from flask_babel import lazy_gettext
@@ -38,7 +39,7 @@ from aot.functions.base_function import AbstractFunction
 from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
-from aot.utils.device_tz import get_device_tz
+from aot.utils.timekit import tz_of, wall_to_utc
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.influx import read_influxdb_list
 from aot.utils.influx import read_influxdb_single
@@ -191,6 +192,7 @@ class CustomModule(AbstractFunction):
         # Persisted runtime cursors (restored in initialize())
         self.last_sum_time = None          # interval mode: end of last window
         self.last_processed_instant = None  # point mode: last snapshot epoch
+        self._grid_tz = None               # point mode: tz of the snapshot grid
 
         custom_function = db_retrieve_table_daemon(
             CustomController, unique_id=self.unique_id)
@@ -226,10 +228,10 @@ class CustomModule(AbstractFunction):
             try:
                 device = db_retrieve_table_daemon(model, unique_id=device_id)
                 if device:
-                    return get_device_tz(device)
+                    return tz_of(device)
             except Exception:
                 pass
-        return get_device_tz(self.function)
+        return tz_of(self.function)
 
     @staticmethod
     def _rfc3339(epoch):
@@ -292,8 +294,9 @@ class CustomModule(AbstractFunction):
             else now - self.period
         window_end = now
 
-        while self.timer_loop < now:
-            self.timer_loop += self.period
+        # execute_now 가 timer_loop 를 0 으로 둔다 — 더하기 반복은 주기가 짧으면 수억 번
+        # 돈다. 한 번의 산술로 now 뒤로 민다.
+        self.timer_loop += (int((now - self.timer_loop) // self.period) + 1) * self.period
 
         source = self._source_info()
         if not source:
@@ -340,12 +343,39 @@ class CustomModule(AbstractFunction):
         # Anchor in the device's timezone (from device.timezone or its coords),
         # localized DST-correctly, then converted back to an epoch.
         tz = self._source_tz()
+        self._grid_tz = tz
         local_naive = datetime.fromtimestamp(now, tz=tz).replace(
             tzinfo=None, hour=hh, minute=mm, second=0, microsecond=0)
-        anchor_epoch = tz.localize(local_naive).timestamp()
+        anchor_epoch = wall_to_utc(local_naive, tz).timestamp()
 
-        k = math.floor((now - anchor_epoch) / interval_sec)
-        return anchor_epoch + k * interval_sec, interval_sec
+        if self._is_whole_days(interval_sec):
+            # 오늘 기준시각이 지났으면 그것, 아니면 한 간격 앞. 에폭 차를 간격으로 나누면
+            # 25시간인 날(가을)에 k 가 1 이 되고 23시간인 날(봄)에 경계가 밀린다.
+            k = 0 if now >= anchor_epoch else -1
+        else:
+            k = math.floor((now - anchor_epoch) / interval_sec)
+        return self._shift_instant(anchor_epoch, k, interval_sec), interval_sec
+
+    @staticmethod
+    def _is_whole_days(interval_sec):
+        return interval_sec >= 86400 and abs(
+            interval_sec / 86400.0 - round(interval_sec / 86400.0)) < 1e-9
+
+    def _shift_instant(self, instant, steps, interval_sec):
+        """`instant` 에서 간격 `steps` 개만큼 떨어진 순간.
+
+        간격이 하루의 배수면 장소 시계의 날짜로 센다 — 에폭에 86400 을 더하고 빼면
+        DST 날을 지날 때 스냅샷이 한 시간 밀려(00:00 → 23:00/01:00) 엉뚱한 시각에
+        기록하고 그 시각의 값을 읽는다. 하루 미만 간격은 균일한 경과 시간 격자다.
+        """
+        if not steps:
+            return instant
+        if not self._is_whole_days(interval_sec):
+            return instant + steps * interval_sec
+        tz = getattr(self, '_grid_tz', None) or self._source_tz()
+        days = int(round(interval_sec / 86400.0)) * steps
+        local_naive = datetime.fromtimestamp(instant, tz=tz).replace(tzinfo=None)
+        return wall_to_utc(local_naive + timedelta(days=days), tz).timestamp()
 
     def _read_point_value(self, device_id, unit, channel, measurement,
                           instant, interval_sec):
@@ -353,7 +383,7 @@ class CustomModule(AbstractFunction):
         res = read_influxdb_single(
             device_id, unit, channel,
             measure=measurement,
-            start_str=self._rfc3339(instant - interval_sec),
+            start_str=self._rfc3339(self._shift_instant(instant, -1, interval_sec)),
             end_str=self._rfc3339(instant),
             value='LAST')
         return res[1] if res and res[1] is not None else None
@@ -367,7 +397,7 @@ class CustomModule(AbstractFunction):
         for i in range(int(self.point_count)):
             value = self._read_point_value(
                 device_id, unit, channel, measurement,
-                instant - i * interval_sec, interval_sec)
+                self._shift_instant(instant, -i, interval_sec), interval_sec)
             if value is not None:
                 total += value
                 found += 1
@@ -408,8 +438,10 @@ class CustomModule(AbstractFunction):
                     "Outage back-fill capped: {} snapshots missed, processing "
                     "the most recent {}".format(n_missed, self.MAX_BACKFILL))
                 first_k = n_missed - self.MAX_BACKFILL + 1
+            # 현재 격자에서 거꾸로 센다 — 마지막 처리 시각에서 더해 가면 DST 전에 저장된
+            # 시각이 한 시간 어긋나 있을 때 그 어긋남이 그대로 이어진다.
             instants = [
-                self.last_processed_instant + k * interval_sec
+                self._shift_instant(current_instant, k - n_missed, interval_sec)
                 for k in range(first_k, n_missed + 1)
             ]
 

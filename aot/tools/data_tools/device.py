@@ -97,8 +97,13 @@ class DeviceToolsMixin:
     @classmethod
     def search_devices(cls, query=None, measurement_type=None, limit=None, offset=None):
         """이름·측정으로 장치 찾기. limit·offset 은 결과 목록을 쪽으로 나눈다(조회 도구 공통)."""
+        # 상한: 한 번에 100건 — 검색 결과는 기본으로도 한 쪽(40)만 준다(2026-11-07: 19,774토큰 → 캡에 잘림).
+        limit = cls._bounded_limit(limit, cls._DEVICE_LIST_PAGE, 100)
+        if not query and not measurement_type:
+            # 검색어가 없으면 전체 목록이다 — 도메인의 find.devices 가 get_device_list 를 겸한다(재설계 PR 3).
+            return cls.get_device_list_tool(limit=limit, offset=offset)
         out = cls._search_devices_all(query=query, measurement_type=measurement_type)
-        if isinstance(out, dict) and isinstance(out.get('results'), list) and (limit or offset):
+        if isinstance(out, dict) and isinstance(out.get('results'), list):
             page, info = cls._page_rows(out['results'], limit, offset)
             out = dict(out, results=page, count=len(page))
             if info:
@@ -160,7 +165,7 @@ class DeviceToolsMixin:
                     results.append({"id": item.unique_id, "name": item.name,
                                     "type": "function", "device": item.device})
                 results = cls._without_ai_excluded(results)
-                from aot.aot_flask.geo.device_membership import annotate_places
+                from aot.space.device_membership import annotate_places
                 annotate_places(results)
                 results = cls._annotate_device_membership(results)
                 out = {"results": results, "count": len(results)}
@@ -315,7 +320,7 @@ class DeviceToolsMixin:
                             # (장치 영역 폴리곤·마커)은 장소가 아니라고 표기한다.
                             # 예전에는 모두 type='zone' 에 진짜 종류를 'device'
                             # 칸에 실어, 대지가 "zone" 으로 읽혔다(2026-10-08).
-                            from aot.aot_flask.geo.device_membership import PLACE_TYPES as _PT
+                            from aot.space.device_membership import PLACE_TYPES as _PT
                             results.append({
                                 "id": item.unique_id,
                                 "geo_id": item.geo_id,
@@ -332,7 +337,7 @@ class DeviceToolsMixin:
             # `zone_scoped_query` 는 호출자에게 알린다(_zone_scope_note): 장소로
             # 좁힌 장치 검색은 "그곳에 있는 모든 것" 이 아니다 — 구획(작물)은
             # 품종명으로 등록돼 여기 나오지 않는다.
-            from aot.aot_flask.geo import device_membership as _dm
+            from aot.space import device_membership as _dm
             _places = _dm.PlaceIndex()
             _scoped = _dm.places_named(query, index=_places)
             # 이름이 같은 장소가 여럿이면 섞지 않는다 — 두 곳의 장치를 한 목록에
@@ -406,6 +411,10 @@ class DeviceToolsMixin:
             results = cls._without_ai_excluded(results)
             results = cls._annotate_device_membership(results)
             out = {"results": results, "count": len(results)}
+            if not results:
+                out["message"] = (
+                    "No device or place name contains '%s'. Names are often Korean, so try the word the grower "
+                    "uses, search by measurement_type, or browse with get_spatial_tree." % (query or ""))
             notes = []
             note = cls._complex_device_note(results)
             if note:
@@ -442,8 +451,11 @@ class DeviceToolsMixin:
         dup = {k: rows for k, rows in groups.items() if len(rows) > 1}
         if not dup:
             return out
-        models = {'input': Input, 'output': Output, 'device': CustomController,
-                  'function': CustomController, 'camera': Camera}
+        # 도구 어휘: 'function'=CustomController(지도 어휘와 같다), 'camera' 는 이 자리만.
+        from aot.space.device_kind import models_for
+        models = {**models_for(('input', 'output', 'device', 'function'),
+                               vocabulary='geo'),
+                  'camera': Camera}
         for rows in dup.values():
             pairs = []
             for r in rows:
@@ -614,7 +626,34 @@ class DeviceToolsMixin:
         message = ai_control_refusal(device_id)
         if message:
             return {"error": message, "reason_code": AI_EXCLUDED}
-        return cls._run_time_refusal(device_id, extra)
+        return cls._run_time_refusal(device_id, extra) or cls._value_refusal(device_id, extra)
+
+    @classmethod
+    def _value_refusal(cls, device_id, extra):
+        """set_value(또는 값을 실은 켜기)를 이 출력이 못 받으면 오류, 아니면 None.
+
+        승인 앞에서 막는다 — 켜고 끄기만 되는 출력에 값을 주거나 PWM 에 0-100 % 밖의 값을 주면
+        실행 때 어차피 거절된다(PWM 모듈은 범위 밖 값을 받으면 아무것도 안 하고 성공을 돌려줬다)."""
+        state = str(extra.get('state') or '').lower()
+        value = extra.get('value')
+        if state != 'set_value' and value is None:
+            return None
+        if state not in ('set_value', 'on'):
+            return None
+        scheduled = any(extra.get(k) is not None
+                        for k in ('scheduled_time', 'delay_seconds', 'solar_event'))
+        try:
+            from aot.services.resolvers.device_resolver import resolve_output
+            row = resolve_output(device_id, allow_partial=scheduled, ai=True).row
+        except Exception:                                   # noqa: BLE001
+            row = None
+        if row is None:
+            return None                                     # 대상 오류는 실행층이 알린다
+        from aot.outputs.command_forms import plan_output_command
+        plan = plan_output_command(state, row.output_type, value, 0)
+        if 'error' in plan:
+            return {"error": plan['error'], "reason_code": "bad_value"}
+        return None
 
     @classmethod
     def _run_time_refusal(cls, device_id, extra):
@@ -692,7 +731,11 @@ class DeviceToolsMixin:
                 return {"error": run_err, "dispatched": False}
             val = kwargs.get('value')
             # 우선순위: duration_seconds/duration_minutes > value > 0
-            duration = float(run_sec) if run_sec is not None else float(val or 0)
+            # value 가 '40%' 같은 글이면 여기서 죽지 않고 plan_output_command 가 읽거나 거절한다.
+            try:
+                duration = float(run_sec) if run_sec is not None else float(val or 0)
+            except (TypeError, ValueError):
+                duration = 0.0
 
             # 4. @ANCHOR: OPERATE_DEVICE_CHANNEL_INJECTION (TASK_17)
             # Resolve physical output_channel from OutputChannel table before daemon call.
@@ -760,7 +803,14 @@ class DeviceToolsMixin:
                         "dispatched": True}
             
             logger.info(f"[operate_device_tool] OK: device={resolved_uid}({target.name}), state={state}, duration={duration}s")
-            return {"status": "success", "execution_result": out_msg, "resolved_duration": duration}
+            out = {"status": "success", "execution_result": out_msg}
+            if plan['output_type'] == 'sec':
+                out["resolved_duration"] = duration
+            else:
+                # PWM 듀티·개도·값 — 가동 시간이 아니다. 예전엔 값이 duration 자리로 흘러
+                # `resolved_duration: 37.0` 이 실려 "37초" 로 읽힐 수 있었다(2026-11-12).
+                out["value"] = plan['amount']
+            return out
         except Exception as e:
             logger.error(f"Error in operate_device_tool: {e}")
             return {"error": f"Error while controlling device: {str(e)}",
@@ -953,6 +1003,14 @@ class DeviceToolsMixin:
         row = CustomController.query.filter_by(unique_id=token).first()
         if row is not None:
             return row, cls._kind_of_controller(row), None
+        # 지도 도형 id — resolve_target 후보의 target_id 는 장치가 아니라 그 장치 표식 도형이다. 도형이 가리키는
+        # 장치로 읽는다(2026-11-03: 센서 조회에 그 id 를 넣으면 Device not found).
+        shape = GeoShape.query.filter_by(unique_id=token).first()
+        if shape is not None:
+            from aot.space.device_binding import device_for_shape
+            dev = device_for_shape(shape)
+            if dev and dev != token:
+                return cls._resolve_device_target(dev)
 
         # 1) 이름 정확일치 — 세 테이블을 한꺼번에 모은다. AI 에서 뺀 장치는
         #    후보가 아니다 — 같은 이름의 다른 장치와 겹쳐 되묻게 하지도 않는다.
@@ -1008,7 +1066,7 @@ class DeviceToolsMixin:
         - 단서가 똑같은 후보끼리는 종류·모듈을 덧붙여 가른다.
         """
         try:
-            from aot.aot_flask.geo.device_membership import PlaceIndex
+            from aot.space.device_membership import PlaceIndex
             zmap = {d: ps[0] for d, ps in PlaceIndex().device_paths(
                 [r.unique_id for r, _k in rows_kinds]).items()}
         except Exception:
@@ -1025,7 +1083,7 @@ class DeviceToolsMixin:
             tabs = {}
         placed = {}
         try:
-            from aot.aot_flask.geo import device_binding
+            from aot.space import device_binding
             from aot.databases.models import GeoMap
             by_dev = device_binding.shapes_for_devices(
                 [r.unique_id for r, _k in rows_kinds])
@@ -1144,7 +1202,7 @@ class DeviceToolsMixin:
                 shape = GeoShape.query.filter_by(unique_id=spatial_id).first()
                 if not shape:
                     return None, None
-                from aot.aot_flask.geo import plot_context
+                from aot.space import plot_context
                 name = plot_context._shape_name(shape) or shape.geo_id
                 return name, shape.type
             if spatial_kind in ('fitting', 'actuator', 'sensor_role', 'weather'):
@@ -1161,7 +1219,7 @@ class DeviceToolsMixin:
     def _geo_bindings_for(cls, device_id):
         """이 장치가 현재 매여 있는 공간 목록, 또는 (빈 목록, 이유)."""
         try:
-            from aot.aot_flask.geo import device_binding
+            from aot.space import device_binding
             rows = device_binding.bindings_for_device(device_id)
         except Exception:
             logger.warning("get_device_detail: GeoBinding 조회 실패 (%s)",
@@ -1347,6 +1405,13 @@ class DeviceToolsMixin:
             }
             if kind == 'input':
                 what["device_status"] = status_info or {"status": "ok"}
+            if kind == 'output':
+                # 이 출력이 받는 명령 — 없으면 AI 가 PWM·개폐 출력도 켜고 끄기만 된다고 여겼다(2026-11-12).
+                from aot.outputs.command_forms import output_capabilities, value_range
+                what["controls"] = output_capabilities(module_type)
+                rng = value_range(module_type)
+                if rng:
+                    what["value_range"] = rng
             if kind in ('input', 'output'):
                 what.update(_sim_fields(kind, module_type, row.name))
 
@@ -1452,59 +1517,19 @@ class DeviceToolsMixin:
                     except Exception:
                         logger.debug("get_device_detail: 최근 수신 조회 실패", exc_info=True)
                 return cls._detail_summary(out, fields)
+            # 기본 응답에는 설정 옵션·연결 값(호스트·사용자명·클라이언트 ID·포트)을 싣지 않는다 —
+            # 장치 하나가 수백 토큰이고 민감하다(2026-11-03). 청하면(fields) 나온다.
+            if "options" in out or (out.get("communication") or {}).get("fields"):
+                out.pop("options", None)
+                if out.get("communication"):
+                    out["communication"] = {k: v for k, v in out["communication"].items()
+                                            if k != "fields"}
+                out["more"] = ("fields=[options, connection] adds the settings and connection "
+                               "values (secrets only as set/unset)")
             return out
         except Exception as e:
             logger.exception("Error in get_device_detail")
             return {"error": str(e)}
-
-    @classmethod
-    def list_unbound_slots(cls, map_id=None, facility_id=None, kinds=None, **extra):
-        """Slots with no device bound — what a deletion or a swap left behind.
-        Read-only."""
-        from aot.aot_flask.geo import device_binding
-
-        if isinstance(kinds, str):
-            kinds = [k.strip() for k in kinds.split(',') if k.strip()]
-        try:
-            slots = device_binding.unbound_slots(
-                facility_uuid=facility_id or None,
-                map_uuid=map_id or None,
-                kinds=tuple(kinds) if kinds else None)
-        except Exception as e:
-            return {"error": str(e)}
-        return {"slots": slots, "count": len(slots)}
-
-    @classmethod
-    def rebind_device(cls, old_device_id=None, new_device_id=None, **extra):
-        """Move every map slot held by one device over to another device.
-        Requires human approval — this changes WHICH physical machine a zone
-        or marker commands."""
-        from aot.aot_flask.geo import device_binding
-
-        if not old_device_id or not new_device_id:
-            return {"error": "old_device_id and new_device_id are required"}
-        # 쓰기 시점 그룹 스코프 — 옮기는 쪽과 받는 쪽 장치 둘 다(채널 꼬리
-        # '::채널' 은 떼고 장치로 묻는다).
-        from aot.aot_flask.access import write_scope
-        for _dev in (old_device_id, new_device_id):
-            if isinstance(_dev, str):
-                write_scope.enforce(_dev.split('::', 1)[0].strip())
-        try:
-            result = device_binding.rebind_device(
-                old_device_id, new_device_id, commit=True)
-        except device_binding.BindingConflict as e:
-            db.session.rollback()
-            return {"error": str(e), "conflict": True}
-        except (device_binding.BindingError,
-                device_binding.BindingNotFound) as e:
-            db.session.rollback()
-            return {"error": str(e)}
-        except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}
-
-        result["status"] = "rebound" if result["moved"] else "nothing_moved"
-        return result
 
     @classmethod
     def get_control_state(cls, facility_name=None, facility_id=None,
@@ -1594,7 +1619,7 @@ class DeviceToolsMixin:
                 _plants = []
                 if fid and not lean:
                     try:
-                        from aot.aot_flask.geo import plot_context as _pc
+                        from aot.space import plot_context as _pc
                         _plants = [
                             cls._plot_ctl_brief(_pc.plot_brief_for_control(r), detail)
                             for r in _pc.plots_in_facility(fid, bay_id=_bay)]
@@ -1673,9 +1698,8 @@ class DeviceToolsMixin:
                         # 숫자를 읽지 못한다. 시설(없으면 함수)의 위치 시각으로.
                         if isinstance(summary, dict) and isinstance(
                                 summary.get('ts'), (int, float)):
-                            from aot.utils.device_tz import location_iso
-                            summary = dict(summary, ts=location_iso(
-                                summary['ts'], fid or c.unique_id))
+                            from aot.utils.timekit import iso_at
+                            summary = dict(summary, ts=iso_at(summary['ts'], fid or c.unique_id))
                         entry["latest_cycle_summary"] = summary
                     except (ValueError, TypeError):
                         entry["latest_cycle_summary_error"] = "Failed to parse summary_json"
@@ -1938,9 +1962,8 @@ class DeviceToolsMixin:
                     started = _read_latest_started_at(device_id, ch, lookback_sec=7 * 86400)
                     if started:
                         # 이 출력이 놓인 곳의 시각(예전엔 농장 시각).
-                        from aot.utils.device_tz import location_iso
-                        entry["started_at"] = location_iso(
-                            started["selected_epoch"], device_id)
+                        from aot.utils.timekit import iso_at
+                        entry["started_at"] = iso_at(started["selected_epoch"], device_id)
                 except Exception:
                     pass
                 channels_out[str(ch)] = entry
@@ -2026,8 +2049,8 @@ class DeviceToolsMixin:
                 output.unique_id, 'percent', 0, measure='duty_cycle',
                 duration_sec=30 * 86400, value='LAST')
             if ts is not None:
-                from aot.utils.device_tz import location_iso
-                pos["last_moved_at"] = location_iso(ts, output.unique_id)
+                from aot.utils.timekit import iso_at
+                pos["last_moved_at"] = iso_at(ts, output.unique_id)
                 if _num(val) is not None:
                     pos["value_logged_then"] = round(float(val), 1)
         except Exception:

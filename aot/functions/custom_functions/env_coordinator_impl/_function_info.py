@@ -7,7 +7,7 @@ env_coordinator.py 에서 `from ._function_info import *` 로 임포트.
 
 from flask_babel import lazy_gettext
 
-from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.constraints_pass import constraints_pass_hhmm, constraints_pass_positive_value
 from aot.functions.utils.env_control.heat_protect import HP_OPTION_RANGES
 
 
@@ -349,6 +349,7 @@ FUNCTION_INFORMATION = {
         'advanced_only': True,
             'depends_on': 'night_vent_park',
             'type': 'text',
+            'constraints_pass': constraints_pass_hhmm,
             'default_value': '18:00',
             'required': False,
             'name': lazy_gettext('Night Start (HH:MM)'),
@@ -361,6 +362,7 @@ FUNCTION_INFORMATION = {
         'advanced_only': True,
             'depends_on': 'night_vent_park',
             'type': 'text',
+            'constraints_pass': constraints_pass_hhmm,
             'default_value': '06:00',
             'required': False,
             'name': lazy_gettext('Night End (HH:MM)'),
@@ -511,6 +513,7 @@ FUNCTION_INFORMATION = {
             'id': 'time_start',
             'depends_on': 'time_enable',
             'type': 'text',
+            'constraints_pass': constraints_pass_hhmm,
             'default_value': '06:00',
             'required': False,
             'name': lazy_gettext('Start Time (HH:MM)'),
@@ -522,6 +525,7 @@ FUNCTION_INFORMATION = {
             'id': 'time_end',
             'depends_on': 'time_enable',
             'type': 'text',
+            'constraints_pass': constraints_pass_hhmm,
             'default_value': '20:00',
             'required': False,
             'name': lazy_gettext('End Time (HH:MM)'),

@@ -9,7 +9,7 @@ import json
 from datetime import date as _date
 
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class FunctionCumulativeState(CRUDMixin, db.Model):
@@ -110,18 +110,6 @@ class FunctionCropPreset(CRUDMixin, db.Model):
 
     notes    = db.Column(db.Text, default='')
     created_at = db.Column(db.DateTime, default=None)
-
-    def to_crop_params(self):
-        """photosynthesis.CropParams 로 변환."""
-        from aot.functions.utils.env_control.photosynthesis import CropParams
-        return CropParams(
-            A_max=self.A_max, K_L=self.K_L, K_C=self.K_C,
-            T_opt=self.T_opt, T_sigma=self.T_sigma,
-            VPD_half=self.VPD_half, T_base=self.T_base,
-            dli_target=self.dli_target or 0.0, gdd_daily=self.gdd_daily or 0.0,
-            vpd_target=self.vpd_target or 0.0, co2_target=self.co2_target or 0.0,
-            temp_min=self.temp_min or 0.0, temp_max=self.temp_max or 0.0,
-        )
 
     def __repr__(self):
         return f'<FunctionCropPreset {self.crop_key!r} A_max={self.A_max}>'

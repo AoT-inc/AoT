@@ -371,6 +371,18 @@ body.aot-map-fullscreen-active .grid-stack-item {
   justify-content: center;
 }
 
+/* 장치 마커 작동 상태 — 색이 아니라 테두리(두께·점선)와 글자가 말한다
+   (docs/design/geo-device-state-visual.md). 색은 종전 그대로 인라인(장치 테마색)이고
+   여기서는 두께·선 모양만 정한다. 새 색 없음. 켜짐 = 굵게, 모름 = 점선, 꺼짐 = 기본. */
+.aot-device-label-wrapper .marker-pill {
+  border-width: 2px;
+  border-style: solid;
+}
+.aot-device-label-wrapper.aot-dev-state-on .marker-pill { border-width: 3px; }
+.aot-device-label-wrapper.aot-dev-state-unknown .marker-pill { border-style: dashed; }
+.map-marker-dot.aot-dev-state-on { border-width: 4px; }
+.map-marker-dot.aot-dev-state-unknown { border-style: dashed; }
+
 :root {
   --aot-surface: transparent;
 
@@ -545,6 +557,14 @@ body.aot-map-fullscreen-active .grid-stack-item {
 
 .tool-group .btn:last-child {
   border-bottom: none;
+}
+
+/* 3D 지형 단추: 글자 "3D", 켜지면 시설 3D 도구와 같은 주 버튼 색 */
+.tool-group .btn.aot-terrain-toggle { font-weight: 600; }
+.tool-group .btn.aot-terrain-toggle[hidden] { display: none; }
+.tool-group .btn.aot-terrain-toggle.active {
+  background-color: var(--aot-btn-bg-primary);
+  color: var(--aot-btn-color-primary);
 }
 
 /* Native MapLibre compass container injected into .tool-group */
@@ -2528,3 +2548,106 @@ body.aot-map-fullscreen-active .grid-stack-item {
 .aot-map-container[data-aot-panel="side"][data-aot-panel-phone] .aot-legend-chip {
     display: none !important;
 }
+
+/* ── 위치 시트(aot-map-here.js) ── 도킹 패널 안의 내용. 색·글자·간격은 토큰만 쓴다(ui-guide §4-5~4-9). */
+.aot-here-sheet {
+  display: flex; flex-direction: column; padding-top: var(--aot-space-2);
+  /* 스크롤 주체는 시트다 — 모달 본체는 overflow:hidden 이라 카드가 늘면(즐겨찾기·검색 결과) 아래가 잘린다.
+     다른 모달의 `.aot-bay-popup-pane` 과 같은 방식(머리글은 고정, 내용만 굴러가고 막대는 숨긴다). */
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
+  /* 마지막 카드가 창 밑변에 붙지 않게 — 다른 모달의 pane 과 같은 바닥 여백(aot-sensor-label.css `.aot-bay-popup-pane`). */
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+/* iOS 는 16px 미만 입력칸에 초점이 가면 화면을 확대한다. 확대된 화면은 닫기(×)가 밖으로 밀려 누를 수 없고, 위젯이
+   전체화면이라 되돌릴 방법도 없다. 이 크기는 사다리가 아니라 **동작**이다(aot-modal-modern.css 의 모달 입력칸 규칙과 같은 이유) —
+   손가락 화면 신호(pointer: coarse + hover: none — 폰을 눕혀도 안 뒤집힌다, aot-base.css)에서 시트 안 입력칸을 1rem(16px)으로 둔다.
+   특이도(0,2,1)로 `.aot-modern-input` 을 이기므로 !important 가 필요 없다. */
+@media (pointer: coarse) and (hover: none) {
+  .aot-here-sheet input.aot-modern-input { font-size: var(--aot-font-size-base); }
+}
+/* 카드(.aot-ov-block) 안 — 칸 사이는 12px, 맨 위·맨 아래는 카드 안여백 하나뿐이다(.aot-ov-block 이 양 끝 여백을 내려놓는다). */
+.aot-here-sheet::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.aot-here-card { display: flex; flex-direction: column; gap: var(--aot-space-3); }
+/* 검색줄 — 입력칸은 줄어들 수 있지만 10rem 아래로는 안 줄고, 버튼 문구가 길어 모자라면 버튼이 아랫줄 오른쪽으로 간다(ui-guide §4-6). */
+.aot-here-searchrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--aot-space-3); }
+.aot-here-searchrow .aot-here-q { flex: 1 1 10rem; min-width: 0; }
+.aot-here-searchrow .aot-here-go { margin-left: auto; }
+.aot-here-results[hidden], .aot-here-spot[hidden], .aot-here-recentblock[hidden],
+.aot-here-around[hidden], .aot-here-actions[hidden] { display: none; }
+/* 검색 결과 — 입력줄 아래에 선 하나로 나뉜다(구분선은 컨테이너 안에서만, ui-guide §2-2). */
+.aot-here-results { display: flex; flex-direction: column; border-top: 1px solid var(--aot-border-neutral); }
+.aot-here-results > :last-child { padding-bottom: 0; }
+/* 목록 카드(검색 결과·즐겨찾기·최근) — 줄은 선으로 나뉘고 위아래 12px. 양 끝은 카드 안여백만. */
+.aot-here-rows > * { padding: var(--aot-space-3) 0; }
+.aot-here-rows > * + * { border-top: 1px solid var(--aot-border-neutral); }
+.aot-here-favs, .aot-here-recent { gap: 0; }
+/* 한 줄 = 왼쪽 이름·주소, 오른쪽 결정 하나. 좁아지면 이름이 양보한다 — 이름이 8rem 아래로 줄기 전에
+   결정 버튼이 아랫줄로 내려가 오른쪽에 선다(ui-guide §4-6). 선은 줄 사이에만 긋는다(.aot-here-rows). */
+.aot-here-item { flex-wrap: wrap; gap: var(--aot-space-3); border-bottom: 0; min-height: 0; }
+.aot-here-item-main { flex: 1 1 8rem; min-width: 0; display: flex; flex-direction: column; gap: var(--aot-space-1); cursor: pointer; }
+/* 기본 라벨은 "컨트롤 160px 을 뺀 폭" 으로 상한이 걸려 있어 이름이 불필요하게 접힌다 — 여기 컨트롤은 알약 하나다. */
+.aot-here-item-main .aot-modal-option-label { max-width: none; min-width: 0; white-space: normal; }   /* 공용 라벨의 한 줄 말줄임을 푼다 — 주소·긴 번역이 잘리지 않고 줄을 바꾼다 */
+.aot-here-item-main .aot-modal-option-label, .aot-here-item-main .aot-option-tip { overflow-wrap: anywhere; }
+.aot-here-item .btn { flex: 0 0 auto; margin-left: auto; }
+.aot-here-favitem { display: flex; flex-direction: column; gap: var(--aot-space-3); }
+.aot-here-edit { display: flex; flex-direction: column; gap: var(--aot-space-3); }
+.aot-here-editline { display: flex; align-items: flex-end; gap: var(--aot-space-3); }
+.aot-here-editline .aot-here-rename { flex: 1 1 auto; min-width: 0; }
+.aot-action-group.aot-here-editacts { flex-wrap: wrap; gap: var(--aot-space-3); }
+/* 고른 자리 — 자리를 정하는 길(왼쪽 정렬) / 읽을 내용 / 그 자리에서 할 일(오른쪽 끝, 확정이 맨 끝). */
+.aot-action-group.aot-here-picks { flex-wrap: wrap; gap: var(--aot-space-3); }
+.aot-here-spot { display: flex; flex-direction: column; gap: var(--aot-space-1);
+  border-top: 1px solid var(--aot-border-neutral); padding-top: var(--aot-space-3); }
+.aot-here-acc-val { font-size: var(--aot-font-size-base); font-weight: 600; color: var(--aot-text-main); overflow-wrap: anywhere; }
+.aot-here-warn { font-size: var(--aot-fs-desc, var(--aot-font-size-xs)); color: var(--aot-text-secondary); }
+.aot-here-ai { font-size: var(--aot-fs-desc, var(--aot-font-size-xs)); }
+.aot-action-group.aot-here-actions { flex-wrap: wrap; gap: var(--aot-space-3); justify-content: flex-end; }
+.aot-here-actions .btn[hidden] { display: none; }
+
+/* ── 대지 가져오기 서랍(geo/design '주소로 대지 가져오기') ── 위치 시트(.aot-here-*)와 같은 규약: 카드·밑줄 입력·아이콘 알약.
+   색·글자·간격은 토큰만. 스크롤 주체는 시트다(모달 본체는 overflow:hidden). */
+.aot-parcel-sheet {
+  display: flex; flex-direction: column; padding-top: var(--aot-space-2);
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+.aot-parcel-sheet::-webkit-scrollbar { width: 0; height: 0; display: none; }
+/* 손가락 화면에서 입력칸 16px — iOS 가 확대하지 않게(.aot-here-sheet 와 같은 이유·같은 신호). */
+@media (pointer: coarse) and (hover: none) {
+  .aot-parcel-sheet input.aot-modern-input { font-size: var(--aot-font-size-base); }
+}
+.aot-parcel-card { display: flex; flex-direction: column; gap: var(--aot-space-3); }
+/* 주소 줄 — 입력칸은 줄어들 수 있고(min-width 0), 빼기 버튼은 아이콘이라 폭이 문구를 따르지 않는다. */
+.aot-parcel-addrs { display: flex; flex-direction: column; gap: var(--aot-space-3); }
+.aot-parcel-addr-row { display: flex; align-items: flex-end; gap: var(--aot-space-3); }
+.aot-parcel-addr-row .parcel-addr-input { flex: 1 1 auto; min-width: 0; }
+/* 동작 줄 — 확정이 오른쪽 끝, 문구가 길면 다음 줄 오른쪽으로(ui-guide §4-6). 최소폭은 .aot-action-group 규칙. */
+/* 주소 줄에서 자리 고르기 — 시트(.aot-here-sheet, pick 모드)가 주소 카드 아래에 접혀 펼쳐진다. 서랍은 그대로 열려 있다.
+   시트의 스크롤·바닥 여백은 이 서랍(.aot-parcel-sheet)이 이미 맡으니 시트 쪽은 풀어 둔다. 채울 줄은 왼쪽 선과 눌린 [위치] 로 보인다. */
+.aot-parcel-pick { display: flex; flex-direction: column; gap: var(--aot-space-2); margin-top: var(--aot-space-4); }
+.aot-parcel-pick[hidden] { display: none; }
+.aot-parcel-pick .aot-here-sheet { overflow: visible; padding-bottom: 0; flex: 0 0 auto; }
+.btn-parcel-addr-pick.is-on { box-shadow: inset 0 0 0 2px var(--aot-color-info); color: var(--aot-color-info); }
+.aot-parcel-addr-row.is-picking { box-shadow: inset 2px 0 0 var(--aot-color-info); padding-left: var(--aot-space-3); }
+.aot-action-group.aot-parcel-actions { flex-wrap: wrap; gap: var(--aot-space-3); justify-content: flex-end; }
+.aot-action-group.aot-parcel-save > #btn-parcel-clear { margin-right: auto; }
+.aot-parcel-status { font-size: var(--aot-fs-desc, var(--aot-font-size-xs)); overflow-wrap: anywhere; }
+.aot-parcel-status:empty { display: none; }
+/* CSV 파일 고르기 — 글자 알약(라벨) + 고른 파일 이름. 이름이 길면 줄을 바꾼다. */
+.aot-parcel-file { display: flex; flex-wrap: wrap; align-items: center; gap: var(--aot-space-3); }
+/* .aot-option-tip 은 flex:0 0 auto 라 긴 파일 이름이 카드 밖으로 나간다 — 줄어들 수 있게 되돌린다. */
+.aot-parcel-filename { flex: 0 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.aot-parcel-filename:empty { display: none; }
+/* 결과 목록 — 줄은 선으로 나뉘고(구분선은 카드 안에서만), 양 끝은 카드 안여백만. */
+.aot-parcel-rows { display: flex; flex-direction: column; }
+.aot-parcel-result { display: flex; align-items: flex-start; gap: var(--aot-space-3); padding: var(--aot-space-3) 0; }
+.aot-parcel-result:first-child { padding-top: 0; }
+.aot-parcel-result + .aot-parcel-result { border-top: 1px solid var(--aot-border-neutral); }
+.aot-parcel-result:last-child { padding-bottom: 0; }
+.aot-parcel-mark { display: inline-flex; flex: 0 0 auto; color: var(--aot-color-danger); }
+.aot-parcel-mark-ok { color: var(--aot-color-success); }
+.aot-parcel-result-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; color: var(--aot-text-main); }
+.aot-parcel-result-err .aot-parcel-result-name { color: var(--aot-color-danger); }
+/* 병합 줄 — 결과 목록 아래 선 하나로 나뉜다. 라벨은 공용 한 줄 말줄임을 풀어 긴 번역이 줄을 바꾼다. */
+.aot-parcel-merge { border-top: 1px solid var(--aot-border-neutral); border-bottom: 0; padding-top: var(--aot-space-3); }
+.aot-parcel-merge .aot-modal-option-label { max-width: none; min-width: 0; white-space: normal; overflow-wrap: anywhere; }

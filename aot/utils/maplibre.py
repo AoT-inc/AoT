@@ -35,9 +35,6 @@ _FALLBACK = '4.1.2'
 
 _cache = {}
 
-# DEM 소스가 정해질 때까지 False. 정본 판단은 `supports_terrain` 주석에 있다.
-TERRAIN_DEM_READY = False
-
 
 def _scan():
     found = []
@@ -77,7 +74,7 @@ def vendor_dir():
     return 'maplibre-gl-' + bundled_version()
 
 
-def supports_terrain():
+def supports_terrain(terrain_layer=None):
     """3D 지형(`setTerrain`)을 켜도 되는가.
 
     **4 에서는 안 된다.** 4.1.2 로 실측한 결과(2026-09-06, 김제 지도):
@@ -87,18 +84,17 @@ def supports_terrain():
     고도 데이터를 제대로 넣어도(전 지구 DEM) 그대로였으므로 데이터가 아니라
     4 의 line+terrain 렌더 결함이다.
 
-    5 는 엔진으로는 지형을 그릴 수 있지만(`engine_supports_terrain`), **DEM
-    소스가 정해지기 전까지는 5 에서도 끈다** (`TERRAIN_DEM_READY`). 지금 코드가
-    가리키는 `demotiles.maplibre.org/terrain-tiles` 는 이름이 `jaxa_terrainrgb_
-    N047E011` 인 알프스 한 구역짜리 데모 데이터다 — 국내 좌표는 z2 부터 전부
-    404 이고 고도가 어디서나 0 이다. 즉 지형을 켜도 아무 일이 일어나지 않으면서
-    저작권 표시만 붙는다. 그래서 옵션은 설정 화면에 나오지 않고, 저장된 값이
-    켜져 있어도 지도는 지형을 켜지 않는다.
+    5 는 엔진으로는 지형을 그릴 수 있지만(`engine_supports_terrain`), 고도 자료가
+    있어야 한다. 활성 DEM 입력(`aot/inputs_gis/gis_dem_*`)이 없으면 켜도 고도가
+    어디서나 0 이라 아무 일도 일어나지 않는다. 그래서 옵션은 설정 화면에 나오지
+    않고, 저장된 값이 켜져 있어도 지도는 지형을 켜지 않는다.
 
-    DEM 을 정했으면 `TERRAIN_DEM_READY` 를 True 로 바꾼다(JS 의
-    `AoTMapLibreCaps` 도 같이).
+    브라우저 쪽 판정은 `AoTMapLibreCaps.supportsTerrain` 이고 `AOT_GEO_CONFIG.terrain`
+    으로 같은 사실을 본다.
+
+    @param terrain_layer `get_geo_config()['terrain']` — 활성 DEM 입력, 없으면 None
     """
-    return TERRAIN_DEM_READY and engine_supports_terrain()
+    return bool(terrain_layer) and engine_supports_terrain()
 
 
 def engine_supports_terrain():

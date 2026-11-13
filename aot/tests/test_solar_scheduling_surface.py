@@ -93,7 +93,7 @@ def scheduling_stubs(monkeypatch):
     # 도구는 함수 안에서 import 하므로 모듈 속성 자체를 갈아끼운다.
     monkeypatch.setattr('aot.databases.models.Output',
                         SimpleNamespace(query=_Query(), unique_id=None, name=None))
-    monkeypatch.setattr('aot.utils.device_tz.resolve_location_tz',
+    monkeypatch.setattr('aot.utils.timekit.tz_of',
                         lambda *_a, **_k: pytz.timezone('Asia/Seoul'))
 
     target = datetime(2026, 7, 31, 10, 7, tzinfo=pytz.utc)

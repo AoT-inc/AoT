@@ -8,8 +8,8 @@ from flask import Flask
 from aot.aot_flask.extensions import db
 from aot.databases.models import DeviceMeasurements, GeoFacility, Output
 # 앱 컨텍스트 밖에서 먼저 import — 번역 문자열을 평가하는 모듈이 딸려 온다.
-from aot.aot_flask.geo import device_binding as _device_binding  # noqa: F401
-from aot.aot_flask.geo import facility_integration as FI
+from aot.space import device_binding as _device_binding  # noqa: F401
+from aot.space import facility_integration as FI
 from aot.functions.utils.twin_effects import links as L
 from aot.utils import twin_effects_link as EL
 from aot.utils.twin_config import TwinConfigError
@@ -90,6 +90,20 @@ class TestFacilityRows(_DB):
         _v, r = self.rows({'effects': {'devices': {MYSTERY: {'kind': 'cooler'}}}})
         self.assertEqual((r[MYSTERY]['channel'], r[MYSTERY]['kind_from']), ('cool', 'override'))
 
+    def test_공급_한계가_분무_유량과_화면에_같이_간다(self):
+        from aot.functions.utils.twin_effects import reader
+        supply = {'lpm': 40.0, 'sources': ['관정'], 'tank_signals': [{'device_id': 'lvl', 'name': '수위'}]}
+        with mock.patch.object(EL, '_facility_supply', lambda fid: supply), \
+             mock.patch.object(EL.R, 'devices_from_integration', wraps=reader.devices_from_integration) as spy:
+            v = EL.facility_effects(FAC)
+        self.assertEqual(spy.call_args.args[2], 40.0)
+        self.assertEqual(v['supply'], supply)
+
+    def test_공급을_못_읽어도_장치는_읽힌다(self):
+        with mock.patch('aot.utils.water_net_link.facility_supply', side_effect=RuntimeError('x')), \
+             self.assertLogs('aot.utils.twin_effects_link', 'ERROR'):
+            self.assertIsNone(EL.facility_effects(FAC)['supply'])
+
     def test_읽을_수_없는_시설은_오류로_알린다(self):
         with mock.patch.object(FI, 'get_facility_integration', lambda *a, **k: (None, 'nope')):
             v = EL.facility_effects(FAC, {})
@@ -154,6 +168,75 @@ class TestFieldRoster(unittest.TestCase):
             self.assertIsNone(EL.field_effects_options('site-A', {}))
 
 
+class TestWaterRoles(unittest.TestCase):
+    ROLES = {'v1': {'kind': 'irrigation_drip', 'plots': ['p1'], 'flow_lpm': 30.0, 'area_m2': 100.0},
+             'pump': {'kind': 'pump', 'plots': []}}
+
+    def _options(self, cfg=None):
+        outs = {k: {'name': k, 'output_type': 'x'} for k in ('v1', 'pump', 'x1')}
+        with mock.patch.object(EL, '_field_outputs', lambda sid: outs), \
+             mock.patch.object(EL, '_water_roles', lambda ids: self.ROLES):
+            return EL.field_effects_options('site-1', cfg, ['p1'])['devices']
+
+    def test_위치로_풀린_역할은_묻지_않고_물_받는_구획을_싣는다(self):
+        by = {d['id']: d for d in self._options()}
+        self.assertEqual(by['v1'], {'id': 'v1', 'kind': 'irrigation_drip', 'plots': ['p1']})
+        self.assertEqual(by['pump'], {'id': 'pump', 'kind': 'pump'})
+        self.assertEqual(by['x1'], {'id': 'x1', 'kind': None})
+
+    def test_사용자가_고른_역할이_이긴다(self):
+        by = {d['id']: d for d in self._options({'effects': {'devices': {'v1': {'kind': 'irrigation_mist'}}}})}
+        self.assertEqual(by['v1']['kind'], 'irrigation_mist')
+
+    def test_역할을_못_읽어도_명단은_나간다(self):
+        outs = {'v1': {'name': 'v1', 'output_type': 'x'}}
+        with mock.patch.object(EL, '_field_outputs', lambda sid: outs), \
+             mock.patch.object(EL, '_water_roles', side_effect=RuntimeError('x')), \
+             self.assertLogs('aot.utils.twin_effects_link', 'ERROR'):
+            self.assertEqual(EL.field_effects_options('s', None, ['p1']), {'devices': [{'id': 'v1', 'kind': None}]})
+
+
+class TestFieldScenario(unittest.TestCase):
+    VALVE = '11111111-2222-3333-4444-555555555555'
+
+    def _depths(self, flows, area=100.0, runs=None, caveats=()):
+        from aot.utils import water_net_link as W
+        water = W.PlotWater(flows)
+        water.area_m2 = area
+        if runs is not None:
+            water.result = {'runs': runs, 'caveats': list(caveats),
+                            'totals': {'litres': sum(r['litres'] for r in runs),
+                                       'design_litres': sum(r['design_litres'] for r in runs)}}
+        ov = {'actuators': [{'channel': self.VALVE, 't0': 0.0, 't1': 3600.0, 'value': 100}]}
+        plot = mock.Mock()
+        with mock.patch('aot.databases.models.GeoPlot') as gp, \
+             mock.patch('aot.utils.water_net_link.planned_water', return_value=water), \
+             mock.patch('aot.utils.timekit.tz_of', return_value='UTC'):
+            gp.query.filter_by.return_value.first.return_value = plot
+            return EL.field_scenario_depths('p1', ov)
+
+    def test_밸브가_공급_한계를_넣은_깊이로_바뀐다(self):
+        out = self._depths({self.VALVE: {'lph': 3600.0}}, runs=[
+            {'t0': 0.0, 't1': 3600.0, 'litres': 1500.0, 'design_litres': 3600.0}], caveats=['pump-over-demand'])
+        self.assertEqual(out['actuators'], [{'channel': 'irrigation_mm', 't0': 0.0, 't1': 3600.0, 'value': 15.0, 'unit': 'mm'}])
+        self.assertIn('전달 15.00 mm (설계 36.00 mm', out['water']['notes'][0])
+        self.assertIn('pump-over-demand', out['water']['notes'][1])
+
+    def test_이_구획의_밸브가_아니면_실패한다(self):
+        from aot.functions.utils.twin_effects.scenario import ScenarioError
+        with self.assertRaises(ScenarioError):
+            self._depths({})
+
+    def test_면적을_모르면_실패한다(self):
+        from aot.functions.utils.twin_effects.scenario import ScenarioError
+        with self.assertRaises(ScenarioError):
+            self._depths({self.VALVE: {'lph': 3600.0}}, area=None)
+
+    def test_밸브_가정이_없으면_그대로다(self):
+        ov = {'actuators': [{'channel': 'irrigation_mm', 't0': 0.0, 't1': 60.0, 'value': 1.0}]}
+        self.assertIs(EL.field_scenario_depths('p1', ov), ov)
+
+
 class TestValidate(unittest.TestCase):
     def test_검사(self):
         self.assertEqual(EL.validate_overrides({'devices': {'a': {'kind': 'heater'}}}),
@@ -184,10 +267,29 @@ class TestSite(_DB):
         f = {r['id']: r for r in g['field']['rows']}
         self.assertTrue(f['v1']['needs_kind'] and f['v1']['channel'] is None)      # 범용 출력 — 역할을 묻는다
         self.assertEqual((f['v2']['channel'], f['v2']['basis']), ('irrigation_mm', 'duty_log'))
-        self.assertFalse(f['v2']['applied'])                                        # 노지 연결은 다음 단계 — 알린다
+        self.assertFalse(f['v2']['applied'])                                        # 물 근거가 없는 출력은 모델에 안 들어간다 — 알린다
         self.assertEqual(g['field']['kinds'], L.selectable_kinds('field'))
         self.assertNotIn(HEAT, [r['id'] for r in g['field']['rows']])
         self.assertEqual(v['summary']['total'], g['facility']['summary']['total'] + g['field']['summary']['total'])
+
+    def test_위치로_풀린_노지_출력은_역할을_묻지_않고_적용으로_보인다(self):
+        from types import SimpleNamespace
+        for uid in ('v1', 'pump'):
+            Output(unique_id=uid, name=uid, output_type='virtual_on_off_single').save()
+        DeviceMeasurements(device_id='v1', device_type='output', channel=0, unit='s', measurement='duration_time').save()
+        outs = {'v1': {'name': 'v1', 'output_type': 'x'}, 'pump': {'name': 'pump', 'output_type': 'x'}}
+        roles = {'v1': {'kind': 'irrigation_sprinkler', 'plots': ['p1'], 'flow_lpm': 30.0, 'area_m2': 100.0},
+                 'pump': {'kind': 'pump', 'plots': []}}
+        site = SimpleNamespace(site_id='site-1', facilities=[], plots=[SimpleNamespace(unique_id='p1')])
+        with mock.patch.object(EL, '_field_outputs', lambda sid: outs), mock.patch.object(EL, '_water_roles', lambda ids: roles):
+            v = EL.site_effects(site, {})
+        g = v['groups'][0]
+        f = {r['id']: r for r in g['rows']}
+        self.assertEqual((f['v1']['channel'], f['v1']['kind_from'], f['v1']['needs_kind']), ('irrigation_mm', 'location', False))
+        self.assertTrue(f['v1']['applied'] and f['pump']['applied'])
+        self.assertEqual(f['v1']['plots'], ['p1'])
+        self.assertEqual({r['key']: r['value'] for r in f['v1']['ratings']}, {'flow_lpm': 30.0, 'area_m2': 100.0})
+        self.assertEqual((f['pump']['status'], g['summary']['supply'], g['summary']['unknown']), ('supply', 1, 0))
 
     def test_장치가_없는_시설은_묶음을_만들지_않는다(self):
         from types import SimpleNamespace

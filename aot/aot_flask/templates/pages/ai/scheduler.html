@@ -730,8 +730,8 @@ function updateTaskDualClock() {
     if (!val) { el.classList.add('d-none'); el.innerHTML = ''; return; }
     // 대상이 없으면 서버는 시스템 시계로 해석한다(_resolve_schedule_anchor) —
     // 미리보기도 같은 시계로 읽어야 보여준 순간과 저장된 순간이 같다.
-    var anchorTz = dtz || AoTTz.fallbackTz();
-    var inst = AoTTz.wallToInstant(val, anchorTz);
+    var anchorTz = dtz || AoTTz.farmTz();
+    var inst = AoTTz.wallToUtc(val, anchorTz);
     if (!inst) { el.classList.add('d-none'); return; }
     var vtz = AoTTz.viewerTz();
     var lines = [];
@@ -740,10 +740,10 @@ function updateTaskDualClock() {
         var dlabel = _selectedTargetTzGuess()
             ? {{ _('Location not set — estimated with the system time zone')|tojson }}
             : {{ _("Device-local")|tojson }};
-        lines.push(dlabel + ': <b>' + AoTTz.formatDevice(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
+        lines.push(dlabel + ': <b>' + AoTTz.formatAt(inst, dtz, { fmt: 'datetimeShort' }) + '</b> (' + dtz + ')');
     }
     if (!dtz || dtz !== vtz) {
-        lines.push({{ _("Your time")|tojson }} + ': ' + AoTTz.formatViewer(inst, { fmt: 'datetimeShort' }) + ' (' + vtz + ')');
+        lines.push({{ _("Your time")|tojson }} + ': ' + AoTTz.formatAt(inst, vtz, { fmt: 'datetimeShort' }) + ' (' + vtz + ')');
     }
     lines.push('UTC: ' + inst.toISOString().slice(0, 16).replace('T', ' '));
     el.innerHTML = lines.join('<br>');
@@ -921,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var props = info.event.extendedProps;
             var tip = '';
             if (window.AoTTz && props.tz) {
-                tip = AoTTz.formatDevice(info.event.start, props.tz, { fmt: 'datetime' }) + ' (' + props.tz + ')';
+                tip = AoTTz.formatAt(info.event.start, props.tz, { fmt: 'datetime' }) + ' (' + props.tz + ')';
             }
             if (props.reasoning) {
                 tip += (tip ? '\n' : '') + props.reasoning.substring(0, 100);

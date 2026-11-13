@@ -1,15 +1,33 @@
 # coding=utf-8
 import datetime
 import logging
-import time
 from math import sin, radians
+
+from aot.utils.timekit import parse_utc
 
 from aot.databases.models import Method
 from aot.databases.models import MethodData
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.system_pi import get_sec
+from aot.utils.timekit import tz_of
+from aot.utils.timekit import naive_utc, parse_utc, to_tz, utc_now, wall_to_utc
 
 logger = logging.getLogger(__name__)
+
+
+def _start_utc(value):
+    """저장된 메서드 시작 시각 → UTC aware 순간. 못 읽으면 None.
+
+    DB 열은 Text 라 오프셋 있는 값(`... +00:00`, 지금 코드가 쓰는 형식)과 오프셋 없는
+    옛 값이 섞여 있다. 오프셋이 없으면 UTC 로 읽는다(저장 규약). 예전에는
+    `fromisoformat` 결과를 그대로 aware `now` 와 빼서, 옛 값에서 TypeError 였다.
+    """
+    if value is None or value == '':
+        return None
+    try:
+        return parse_utc(value)
+    except (ValueError, TypeError, OverflowError):
+        return None
 
 
 def parse_db_time(time_string, default=None):
@@ -58,19 +76,14 @@ def weeks_elapsed_at(started_on, when=None, tz=None):
         return None
 
     if isinstance(tz, str):
-        try:
-            import pytz as _pytz
-            tz = _pytz.timezone(tz)
-        except Exception:
-            tz = None
+        from aot.utils.timekit import resolve_tz as _resolve_tz, SOURCE_EXPLICIT as _EXPL
+        _t, _src = _resolve_tz(tz)
+        tz = _t if _src == _EXPL else None
 
     def _localize(naive):
         if tz is None:
             return naive.replace(tzinfo=datetime.timezone.utc)
-        try:
-            return tz.localize(naive)
-        except AttributeError:
-            return naive.replace(tzinfo=tz)
+        return to_tz(wall_to_utc(naive, tz), tz)
 
     # ── 시작 시각 ────────────────────────────────────────────────────────
     start_dt = started_on
@@ -98,7 +111,7 @@ def weeks_elapsed_at(started_on, when=None, tz=None):
 
     # ── 기준 시각 ────────────────────────────────────────────────────────
     if when is None:
-        when = datetime.datetime.now(datetime.timezone.utc)
+        when = utc_now()
     elif when.tzinfo is None:
         when = _localize(when)
 
@@ -114,10 +127,20 @@ def local_noon(day, tz=None):
     naive = datetime.datetime.combine(day, datetime.time(12, 0, 0))
     if tz is None:
         return naive.replace(tzinfo=datetime.timezone.utc)
-    try:
-        return tz.localize(naive)
-    except AttributeError:
-        return naive.replace(tzinfo=tz)
+    return to_tz(wall_to_utc(naive, tz), tz)
+
+
+def local_midnight(day, tz=None):
+    """`day`(date) 의 현지 자정 → tz-aware datetime. tz 가 없으면 UTC 자정.
+
+    구획 화면이 재배 시작일을 곡선의 `method_start_time` 으로 넘길 때 쓴다.
+    naive 자정을 넘기면 메서드가 그것을 UTC 로 읽어(저장 규약) 기간형 곡선이
+    시간대만큼 늦게 시작한다 — 서울이면 9시간.
+    """
+    naive = datetime.datetime.combine(day, datetime.time.min)
+    if tz is None:
+        return naive.replace(tzinfo=datetime.timezone.utc)
+    return to_tz(wall_to_utc(naive, tz), tz)
 
 
 class AbstractMethod(object):
@@ -152,15 +175,6 @@ class AbstractMethod(object):
         self.method_data_first = self.method_data.filter(MethodData.output_id.is_(None)).first()
         self.method_data_repeat = self.method_data.filter(MethodData.duration_sec == 0).first()
 
-    def local_tz(self):
-        """이 메서드를 돌리는 주체가 있는 곳의 tz. 해석 실패 시 농장 전역."""
-        try:
-            from aot.utils.device_tz import resolve_location_tz
-            return resolve_location_tz(self.target_id)
-        except Exception:
-            import pytz
-            return pytz.utc
-
     def to_local_wallclock(self, now):
         """`now` 를 **그 위치의 벽시계** naive datetime 으로 정규화.
 
@@ -175,7 +189,7 @@ class AbstractMethod(object):
         if isinstance(now, (int, float)):
             now = datetime.datetime.fromtimestamp(now, tz=datetime.timezone.utc)
         if getattr(now, 'tzinfo', None) is not None:
-            return now.astimezone(self.local_tz()).replace(tzinfo=None)
+            return now.astimezone(tz_of(self.target_id)).replace(tzinfo=None)
         return now
 
     def _solar_clock(self, event, offset_min):
@@ -184,7 +198,7 @@ class AbstractMethod(object):
             from aot.utils.solar import SUN_EVENTS, sun_times
             if event not in SUN_EVENTS:
                 return None
-            tz = self.local_tz()
+            tz = tz_of(self.target_id)
             times = sun_times(target_id=self.target_id)
             if times is None:
                 return None
@@ -270,6 +284,16 @@ class DateMethod(AbstractMethod):
             local_now = self.to_local_wallclock(now)
             now = datetime.datetime.strptime(
                 str(local_now.strftime('%H:%M:%S')), '%H:%M:%S')
+        else:
+            # 날짜 구간의 양 끝은 위치의 벽시계 문자열이다. 순간(UTC)으로 바꿔 순간끼리
+            # 비교한다 — 컨트롤러가 넘기는 aware `now` 와 naive 문자열을 그대로
+            # 비교하면 TypeError 였고(Date 메서드가 PID·트리거에서 아예 안 돌았다),
+            # 벽시계끼리 비교하면 DST 전환일에 경과 비율이 한 시간 틀어진다.
+            tz = tz_of(self.target_id)
+            if isinstance(now, datetime.datetime) and now.tzinfo is None:
+                now = wall_to_utc(now, tz)      # naive 는 이미 벽시계(위 docstring 규약)
+            else:
+                now = parse_utc(now)
 
         for each_method in self.method_data_all:
             if self.ignore_date():
@@ -278,8 +302,13 @@ class DateMethod(AbstractMethod):
                 if start_time is None or end_time is None:
                     continue
             else:
-                start_time = datetime.datetime.strptime(each_method.time_start, '%Y-%m-%d %H:%M:%S')
-                end_time = datetime.datetime.strptime(each_method.time_end, '%Y-%m-%d %H:%M:%S')
+                try:
+                    start_time = wall_to_utc(datetime.datetime.strptime(
+                        each_method.time_start, '%Y-%m-%d %H:%M:%S'), tz)
+                    end_time = wall_to_utc(datetime.datetime.strptime(
+                        each_method.time_end, '%Y-%m-%d %H:%M:%S'), tz)
+                except (TypeError, ValueError):
+                    continue
 
             if start_time < now < end_time:
                 setpoint_start = each_method.setpoint_start
@@ -300,9 +329,11 @@ class DateMethod(AbstractMethod):
 
                 if self.logger:
                     if self.ignore_date():
+                        # 이 분기의 start/end 는 resolve_daily_bound 의 naive 벽시계다
+                        # (wall_to_utc 는 날짜 구간 분기에서만 묶인다).
                         self.logger.debug("[Method] Start: {start} End: {end}".format(
-                            start=start_time.strftime('%H:%M:%S'),
-                            end=end_time.strftime('%H:%M:%S')))
+                            start=start_time.strftime('%H:%M:%S'),  # tz-ok: 날짜 무시 분기 — 벽시계 값
+                            end=end_time.strftime('%H:%M:%S')))  # tz-ok: 날짜 무시 분기 — 벽시계 값
                     else:
                         self.logger.debug("[Method] Start: {start} End: {end}".format(
                             start=start_time, end=end_time))
@@ -330,17 +361,13 @@ class DateMethod(AbstractMethod):
             end_time = datetime.datetime.strptime(
                 each_method.time_end, '%Y-%m-%d %H:%M:%S')
 
-            is_dst = time.daylight and time.localtime().tm_isdst > 0
-            utc_offset_ms = (time.altzone if is_dst else time.timezone)
-            result.append(
-                [(int(start_time.strftime("%s")) - utc_offset_ms) * 1000,
-                 each_method.setpoint_start])
-            result.append(
-                [(int(end_time.strftime("%s")) - utc_offset_ms) * 1000,
-                 setpoint_end])
-            result.append(
-                [(int(start_time.strftime("%s")) - utc_offset_ms) * 1000,
-                 None])
+            # 벽시계 문자열을 UTC 로 읽은 에폭(ms) — 축에 같은 벽시계가 그대로 찍힌다.
+            # (예전에는 컨테이너 OS 시계로 `%s` 를 풀고 그 오프셋을 다시 빼서 같은 값을 만들었다.)
+            start_ms = int(parse_utc(start_time).timestamp()) * 1000
+            end_ms = int(parse_utc(end_time).timestamp()) * 1000
+            result.append([start_ms, each_method.setpoint_start])
+            result.append([end_ms, setpoint_end])
+            result.append([start_ms, None])
 
         return result
 
@@ -473,10 +500,21 @@ class DurationMethod(AbstractMethod):
     def calculate_setpoint(self, now, method_start_time=None):
         # Calculate the duration in the method based on self.method_start_time
 
-        start_time = parse_db_time(method_start_time, datetime.datetime.min)
+        # 시작·지금 모두 UTC 순간으로 맞춰 뺀다(간격은 벽시계와 무관 — DST 에도 그대로).
+        start_time = _start_utc(method_start_time)
+        if start_time is None:
+            if self.logger:
+                self.logger.warning(
+                    "[Method] Duration 메서드 시작 시각 %r 를 읽을 수 없다 — 이번엔 기본 설정점을 쓴다",
+                    method_start_time)
+            return None, False
+        now = parse_utc(now)
 
         duration_in_seconds = self.cycle_duration()
-        seconds_from_start = (now - start_time).total_seconds()
+        # 시계가 거꾸로 갔거나 시작 시각이 미래로 저장돼도 음수 경과를 쓰지 않는다.
+        # 음수면 어느 줄에도 걸리지 않아 맨 끝 `return previous_total_sec` 로 떨어지고,
+        # 그러면 **전체 길이(초)가 설정점으로** 나갔다.
+        seconds_from_start = max(0.0, (now - start_time).total_seconds())
 
         if seconds_from_start >= duration_in_seconds:
             repeat_duration = self.repeat_duration()
@@ -486,6 +524,9 @@ class DurationMethod(AbstractMethod):
             if 0 < repeat_duration <= seconds_from_start:
                 # ended after configured repeat time
                 return None, True
+            elif duration_in_seconds <= 0:
+                # 줄이 없거나 길이가 0 — 나눌 주기가 없다(예전엔 ZeroDivisionError)
+                return None, False
             else:
                 # still repeated
                 seconds_from_start = seconds_from_start % duration_in_seconds
@@ -513,7 +554,7 @@ class DurationMethod(AbstractMethod):
                     self.logger.debug(
                         "[Method] {sec_method:.1f}s/{sec_cycle:.1f}s/{sec_row:.1f}s "
                         "since start of method/cycle/row".format(
-                            sec_method=(now - start_time).total_seconds(),
+                            sec_method=max(0.0, (now - start_time).total_seconds()),
                             sec_cycle=seconds_from_start,
                             sec_row=row_since_start_sec))
                     self.logger.debug(
@@ -540,7 +581,8 @@ class DurationMethod(AbstractMethod):
         return None
 
     def determine_end_time(self, method_start_time):
-        method_start_time = parse_db_time(method_start_time, datetime.datetime.min)
+        # 시작 시각을 못 읽으면 지금부터 센다 — 옛 `datetime.min` 은 끝 시각을 서기 1년으로 만들었다.
+        method_start_time = _start_utc(method_start_time) or utc_now()
         repeat_duration = self.repeat_duration()
 
         if repeat_duration is None:
@@ -712,7 +754,7 @@ class DailyMultiPointMethod(AbstractMethod):
         """
         if isinstance(now, (int, float)):
             now_ts = now
-            now_dt_utc = datetime.datetime.utcfromtimestamp(now)
+            now_dt_utc = naive_utc(parse_utc(now))
         elif hasattr(now, 'tzinfo') and now.tzinfo is not None:
             now_ts = now.timestamp()
             now_dt_utc = now.replace(tzinfo=None) - now.utcoffset()
@@ -748,10 +790,11 @@ class DailyMultiPointMethod(AbstractMethod):
         if facility_tz is not None and now_ts is not None:
             tz = facility_tz
             if isinstance(tz, str):
-                try:
-                    import pytz as _pytz
-                    tz = _pytz.timezone(tz)
-                except Exception:
+                from aot.utils.timekit import resolve_tz as _resolve_tz, SOURCE_EXPLICIT as _EXPL
+                _t, _src = _resolve_tz(tz)
+                if _src == _EXPL:
+                    tz = _t
+                else:
                     tz = None
                     if self.logger:
                         self.logger.warning(

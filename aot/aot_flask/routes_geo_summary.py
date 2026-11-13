@@ -78,7 +78,7 @@ def _build_area_contents(device_ids, scope_of=None, env=None):
     키 자체가 안 붙어 기존 응답 모양이 그대로 유지된다).
     """
     from aot.databases.models import OutputChannel
-    from aot.aot_flask.geo.facility_sensors import channel_meta_for_dm
+    from aot.space.facility_sensors import channel_meta_for_dm
 
     device_ids = device_ids or set()
 
@@ -240,7 +240,7 @@ def _build_zone_contents(zone_uuid):
     # 컬럼은 복제·zone 재생성·도형 삭제로 끊기거나 남의 지도를 가리켰고
     # (2026-08-03 사고), 합집합은 그 낡은 값으로 엉뚱한 장치까지 끌어왔다.
     # 이제 마커 좌표에서 실시간 파생하는 단일 리졸버만 쓴다 —
-    # aot/aot_flask/geo/device_membership.py 가 유일한 정본이다.
+    # aot/space/device_membership.py 가 유일한 정본이다.
     # device_ids_in_area 는 4겹으로 본다: 마커 · 바인딩 · **그릇** · 참조.
     # 예전에는 마커만 보는 device_ids_in_shape 를 썼는데, 그러면
     #  - 복합장치(그릇)가 구역에 놓여 있어도 그 안의 Input/Output 이 빠지고
@@ -249,7 +249,7 @@ def _build_zone_contents(zone_uuid):
     # 게다가 같은 구역을 두고 지도 라벨·필지 요약(site_summary)은 4겹으로,
     # 이 모달만 1겹으로 세어 **같은 구역의 센서 수가 화면마다 달랐다.**
     # 그래프 구역 필터도 같은 이유로 이미 이쪽으로 옮겼다(b72bc47).
-    from aot.aot_flask.geo.device_membership import device_ids_in_area
+    from aot.space.device_membership import device_ids_in_area
     geo_device_ids = device_ids_in_area(zone.unique_id) or set()
 
     inv = _build_area_contents(geo_device_ids)
@@ -258,7 +258,7 @@ def _build_zone_contents(zone_uuid):
     # 밸브도 그 안의 여러 작물에 물을 주므로, 한쪽에만 경고가 있으면
     # "구역에서 켜면 안전하다" 는 잘못된 대비가 생긴다(설계 §5-2).
     try:
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         _cover = plot_context.plots_by_valve_device(zone.geo_id)
         for _out in inv['outputs']:
             names = plot_context.covered_subject_names(
@@ -273,7 +273,7 @@ def _build_zone_contents(zone_uuid):
     # 배분 계산(미배정 = **합집합**으로 빼기)은 zone_allocation 이 정본이다.
     allocation = None
     try:
-        from aot.aot_flask.geo import plot_context as _pc
+        from aot.space import plot_context as _pc
         allocation = _pc.zone_allocation(zone)
     except Exception:
         current_app.logger.exception("zone contents: 식생 배분 계산 실패")
@@ -307,7 +307,7 @@ def _build_zone_contents(zone_uuid):
     # 선언한 함수만 근거다. 영역에 묶인 범용 on/off 를 관수라고 부르지 않는다.
     _irr = None
     try:
-        from aot.aot_flask.geo import plot_context as _pc
+        from aot.space import plot_context as _pc
         for _p in _pc.active_plots(zone.geo_id):
             _irr = irrigation_status.last_irrigation(None, _p)
             if _irr:
@@ -370,7 +370,7 @@ def api_geo_site_contents(site_uuid):
     자기 설비를 그대로 센다.
     """
     from aot.databases.models import GeoShape as _GS
-    from aot.aot_flask.geo.device_membership import screen_members
+    from aot.space.device_membership import screen_members
 
     site = _GS.query.filter_by(unique_id=site_uuid).first()
     if not site:
@@ -382,7 +382,7 @@ def api_geo_site_contents(site_uuid):
     # "켜면 무엇이 함께 젖는가" — 구역 모달과 같은 경고를 단다. 한쪽에만 있으면
     # "필지에서 켜면 안전하다" 는 잘못된 대비가 생긴다.
     try:
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         _cover = plot_context.plots_by_valve_device(site.geo_id)
         for _out in inv['outputs']:
             names = plot_context.covered_subject_names(
@@ -456,14 +456,14 @@ def api_geo_site_weather(site_uuid):
     지정이 있으면 지정이 이긴다. 지우면 추론으로 되돌아간다 — 비활성이 아니라
     **지정 전 상태**다.
     """
-    from aot.aot_flask.geo import device_binding, device_membership
+    from aot.space import device_binding, device_membership
     from aot.databases.models import GeoShape
 
     shape = GeoShape.query.filter_by(unique_id=site_uuid).first()
     if shape is None:
         return jsonify({'ok': False, 'error': 'site not found'}), 404
 
-    from aot.aot_flask.geo import forecast_series
+    from aot.space import forecast_series
 
     def _forecast_block():
         # 대지의 예보 출처 — 디지털트윈·지도 날씨·AI 가 함께 읽는 한 저장소(트윈 탭 예보 칸도 같은 행)

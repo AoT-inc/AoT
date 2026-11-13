@@ -17,7 +17,7 @@ test_facility_to_control.py — facility 센서 → Integrated Environment Contr
 
 from unittest.mock import MagicMock, patch
 
-import aot.aot_flask.geo.facility_sensors as fs
+import aot.space.facility_sensors as fs
 from aot.functions.custom_functions.env_coordinator_impl._helpers_mixin import HelpersMixin
 
 

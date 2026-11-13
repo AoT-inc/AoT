@@ -19,7 +19,8 @@ import logging
 
 from aot.databases.models import AuditLog
 from aot.aot_flask.extensions import db
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import naive_utc
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +215,7 @@ def purge_old_mcp_logs(retention_days=None):
         # 두 테이블 모두 naive UTC(datetime.utcnow)로 기록되므로 cutoff 도
         # naive UTC 로 맞춘다. utc_now() 의 aware 값을 그대로 비교에 넣으면
         # 백엔드에 따라 tz 오프셋 처리 방식이 달라진다.
-        cutoff = datetime.utcnow() - timedelta(days=retention_days)
+        cutoff = naive_utc(utc_now()) - timedelta(days=retention_days)
 
         logs = MCPAuditLog.query.filter(MCPAuditLog.timestamp < cutoff).delete()
         confirms = MCPConfirmation.query.filter(

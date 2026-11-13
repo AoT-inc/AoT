@@ -13,6 +13,7 @@
 `GET /api/twin/runs/<target_id>` 발행 색인 · `GET|POST /api/twin/scenarios` · `GET|DELETE /api/twin/scenarios/<id>` ·
 `POST /api/twin/scenarios/<id>/pin|rerun` · `GET /api/twin/actuators?...` — 시나리오·작동 시계열(`utils/twin_store.py`).
 `GET /api/twin/state/duty_log/<device_id>/<channel>?past=` — 출력 가동 이력을 켜짐/꺼짐 계단으로(원격 통로의 상태 계열 읽기).
+`GET /api/twin/state/water_day/<plot_id>?past=` — 구획의 닫힌 날 물 깊이 mm(원격 통로의 관수 입력).
 `GET /api/twin/plots` — 지도 예측 제공자(twin.field)의 구획 묶음.
 `GET /api/twin/chart/plot/<id>?back=&ahead=` — 지도 모달 '트윈' 탭 [그래프] 의 구획 묶음(예측·실측 점·비·기온·사건, `utils/twin_chart.py`).
 `GET /api/twin/forecast_series?site=&start=&end=&variables=` — 대지에 지정한 예보 입력의 시간별 시계열(지도 슬라이더·AI
@@ -158,6 +159,30 @@ class TwinDutyLog(Resource):
         return {'measurements': [{'time': t, 'value': v} for t, v in zip(times, values)]}, 200
 
 
+@ns_twin.route('/state/water_day/<string:plot_id>')
+@ns_twin.doc(security='apikey', responses=default_responses,
+             params={'past': 'seconds back from now (default 14 days)'})
+class TwinWaterDay(Resource):
+    """구획의 닫힌 날 물 깊이(mm, 시각 = 현지 0시) — 원격 트윈 통로의 관수 입력. 점이 없는 날은 없다(모름)."""
+
+    @accept('application/vnd.aot.v1+json')
+    @flask_login.login_required
+    def get(self, plot_id):
+        """Closed-day irrigation depth of a plot for the twin (experimental)."""
+        if not twin_config.ui_enabled(_misc()):
+            abort(404)
+        if not utils_general.user_has_permission('view_settings', silent=True):
+            abort(403)
+        try:
+            past = float(request.args.get('past', 14 * 86400.0))
+        except ValueError:
+            abort(422, 'past must be seconds')
+        from aot.utils import water_store
+        now = time.time()
+        times, values = water_store.read_depths(plot_id, now - past, now + 1.0)
+        return {'measurements': [{'time': t, 'value': v} for t, v in zip(times, values)]}, 200
+
+
 def _field_plot_ids(requested):
     """노지 구획(시설 밖, 끝나지 않은 작기). requested 가 있으면 그 가운데서만."""
     from aot.databases.models import GeoPlot
@@ -293,7 +318,7 @@ class TwinForecastSeries(Resource):
         if t0 is not None and t1 is not None and (t1 < t0 or t1 - t0 > SERIES_MAX_SPAN_S):
             abort(422, 'window must be 0..{} s'.format(int(SERIES_MAX_SPAN_S)))
         names = [v for v in (request.args.get('variables') or '').split(',') if v] or None
-        from aot.aot_flask.geo import forecast_series
+        from aot.space import forecast_series
         try:
             return forecast_series.read(site, t0, t1, names), 200
         except ValueError as e:

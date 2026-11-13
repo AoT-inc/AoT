@@ -22,12 +22,13 @@ _UTC_NOON = datetime(2026, 10, 8, 12, 0, tzinfo=timezone.utc)
 
 
 class TestLocationIso(unittest.TestCase):
+    """도구가 시각을 내는 유일한 자리 `timekit.iso_at` — 장소 시계를 `_place_tz` 로 가짜 지정."""
 
     def _iso(self, value, target='dev-1', **kw):
-        from aot.utils import device_tz
-        with mock.patch.object(device_tz, 'resolve_location_tz',
-                               return_value=_NY) as m:
-            return device_tz.location_iso(value, target, **kw), m
+        from aot.utils import timekit
+        with mock.patch.object(timekit, '_place_tz',
+                               return_value=(_NY, 'device')) as m:
+            return timekit.iso_at(value, target, **kw), m
 
     def test_utc_becomes_the_place_time(self):
         out, _ = self._iso(_UTC_NOON)
@@ -44,21 +45,21 @@ class TestLocationIso(unittest.TestCase):
 
     def test_an_unresolvable_place_falls_back_to_farm_time_not_utc(self):
         """예전에는 위치를 못 풀면 except 에서 UTC 를 그대로 냈다."""
-        from aot.utils import device_tz, time_utils
-        with mock.patch.object(device_tz, 'resolve_location_tz',
+        from aot.utils import timekit
+        with mock.patch.object(timekit, '_place_tz',
                                side_effect=RuntimeError('boom')), \
-                mock.patch.object(time_utils, 'get_timezone_name',
+                mock.patch.object(timekit, '_system_tz_name',
                                   return_value='Asia/Seoul'):
-            out = device_tz.location_iso(_UTC_NOON, 'dev-1')
+            out = timekit.iso_at(_UTC_NOON, 'dev-1', {})
         self.assertEqual(out, '2026-10-08T21:00:00+09:00')
 
     def test_one_lookup_per_target_with_a_cache(self):
         cache = {}
-        from aot.utils import device_tz
-        with mock.patch.object(device_tz, 'resolve_location_tz',
-                               return_value=_NY) as m:
+        from aot.utils import timekit
+        with mock.patch.object(timekit, '_place_tz',
+                               return_value=(_NY, 'device')) as m:
             for _ in range(5):
-                device_tz.location_iso(_UTC_NOON, 'dev-1', cache)
+                timekit.iso_at(_UTC_NOON, 'dev-1', cache)
         self.assertEqual(m.call_count, 1)
 
     def test_nothing_in_nothing_out(self):
@@ -69,7 +70,7 @@ class TestLocationIso(unittest.TestCase):
 
 class TestToolsRouteThroughOnePlace(unittest.TestCase):
     """도구가 시간대를 직접 풀면 변환을 빠뜨리거나 실패 시 UTC 로 떨어지는 자리가
-    다시 생긴다. 측정·장치 시각을 내는 파일은 `location_iso` 만 쓴다."""
+    다시 생긴다. 측정·장치 시각을 내는 파일은 `iso_at` 만 쓴다."""
 
     _FILES = ('tools/data_tools/measurement.py',
               'tools/data_tools/device.py',
@@ -82,19 +83,19 @@ class TestToolsRouteThroughOnePlace(unittest.TestCase):
                     if isinstance(n, ast.Name) and n.id == 'resolve_location_tz']
             used += [n.lineno for n in ast.walk(tree)
                      if isinstance(n, ast.alias) and n.name == 'resolve_location_tz']
-            self.assertEqual(used, [], '%s: location_iso 를 쓸 것 (%s)' % (rel, used))
+            self.assertEqual(used, [], '%s: iso_at 을 쓸 것 (%s)' % (rel, used))
 
-    def test_known_leaks_go_through_location_iso(self):
+    def test_known_leaks_go_through_iso_at(self):
         src = {rel: open(os.path.join(_ROOT, rel), encoding='utf-8').read()
                for rel in self._FILES}
         # 구역 센서 요약 · 구획 목표 대조 · 제어 주기 · 출력 동작 시각
-        self.assertIn('"last_time": location_iso(t, did, _tzc)',
+        self.assertIn('"last_time": iso_at(t, did, _tzc)',
                       src['tools/data_tools/measurement.py'])
-        self.assertIn("'at': location_iso(at, dev, _tzc)",
+        self.assertIn("'at': iso_at(at, dev, _tzc)",
                       src['tools/data_tools/space.py'])
         dev = src['tools/data_tools/device.py']
-        self.assertIn("ts=location_iso(", dev)
-        self.assertIn('pos["last_moved_at"] = location_iso(', dev)
+        self.assertIn("ts=iso_at(", dev)
+        self.assertIn('pos["last_moved_at"] = iso_at(', dev)
         self.assertNotIn('serialize_ts(', dev)
 
 

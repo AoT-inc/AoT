@@ -20,8 +20,8 @@
 #
 #  Contact at kylegabriel.com
 #
-import datetime
 import importlib.util
+import math
 import os
 import threading
 import time
@@ -37,7 +37,7 @@ from aot.utils.conditional import save_conditional_code
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.signals import conditional_fired
 from aot.utils.execution_context import set_execution_context, clear_execution_context
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import format_labeled, tz_of, utc_now
 
 
 class ConditionalController(AbstractController, threading.Thread):
@@ -86,12 +86,16 @@ class ConditionalController(AbstractController, threading.Thread):
                 time.sleep(0.1)
 
         self.time_conditional = time.time()
+        self._rebase_if_clock_stepped_back(self.time_conditional)
         # Check if the conditional period has elapsed
         if (self.is_activated and self.timer_period and
                 self.timer_period < self.time_conditional):
 
-            while self.timer_period < self.time_conditional:
-                self.timer_period += self.period
+            # 놓친 주기를 한꺼번에 건너뛴다 — 주기 격자는 유지하되 반복문 없이
+            # 한 번에 계산한다(주기가 아주 작거나 시계가 크게 앞서 뛰어도 멈추지 않는다).
+            missed = math.floor(
+                (self.time_conditional - self.timer_period) / self.period) + 1
+            self.timer_period += missed * self.period
 
             set_execution_context(source_type='conditional', source_id=self.unique_id)
             try:
@@ -114,6 +118,22 @@ class ConditionalController(AbstractController, threading.Thread):
                     next_run=self.timer_period
                 )
 
+
+    def _rebase_if_clock_stepped_back(self, now):
+        """시계가 뒤로 밀렸으면(NTP 보정 등) 다음 실행 시각을 지금 기준으로 다시 잡는다.
+
+        다음 실행 시각은 epoch 라, 시계가 N시간 뒤로 밀리면 그만큼 아무것도
+        실행되지 않는다. 정상이라면 남은 시간은 주기(첫 실행은 시작 지연)를 넘지
+        않으므로, 넘으면 시계가 밀린 것으로 보고 한 주기 뒤로 다시 잡는다.
+        """
+        if not self.timer_period or not self.period:
+            return
+        limit = max(self.period, getattr(self, "start_offset", None) or 0)
+        if self.timer_period - now > limit:
+            self.logger.warning(
+                "시계가 뒤로 밀린 것으로 보여 다음 실행 시각을 다시 잡습니다 "
+                f"(남은 {self.timer_period - now:.0f}초 > 한도 {limit:.0f}초)")
+            self.timer_period = now + self.period
 
     def initialize_variables(self):
         """Define all settings."""
@@ -144,7 +164,27 @@ class ConditionalController(AbstractController, threading.Thread):
 
         now = utc_now().timestamp()
 
-        self.timer_period = now + self.start_offset
+        # 주기가 0·음수·빈 값이면 `timer_period += period` 가 제자리이거나
+        # 계산이 안 된다. 조용히 멈추지 말고 원인을 남기고 실행하지 않는다.
+        try:
+            self.period = float(self.period)
+        except (TypeError, ValueError):
+            self.period = None
+        if self.period is None or not math.isfinite(self.period) or self.period <= 0:
+            self.logger.error(
+                f"Conditional {self.unique_id}: 주기({cond.period!r})가 0보다 큰 "
+                f"숫자가 아니라 주기 실행을 하지 않습니다. 설정에서 주기를 고치세요")
+            self.period = None
+            self.timer_period = None
+        else:
+            try:
+                offset = float(self.start_offset or 0)
+            except (TypeError, ValueError):
+                offset = 0.0
+            if not math.isfinite(offset) or offset < 0:
+                offset = 0.0
+            self.start_offset = offset
+            self.timer_period = now + offset
 
         self.file_run = f'{PATH_PYTHON_CODE_USER}/conditional_{self.unique_id}.py'
 
@@ -179,9 +219,16 @@ class ConditionalController(AbstractController, threading.Thread):
         self.ready.set()
         self.running = True
 
+    def seconds_until_due(self):
+        """다음 판정까지 남은 초 — 기반 루프가 점검 주기 대신 이때 깨어난다."""
+        if self.pause_loop or not self.is_activated or not self.timer_period:
+            return None
+        return self.timer_period - time.time()
+
     def refresh_settings(self):
         """Signal to pause the main loop and wait for verification, the refresh settings."""
         self.pause_loop = True
+        self.wake()     # 점검 주기만큼 자고 있으면 멈춤 확인이 그만큼 늦는다
         while not self.verify_pause_loop:
             time.sleep(0.1)
 
@@ -190,6 +237,7 @@ class ConditionalController(AbstractController, threading.Thread):
 
         self.pause_loop = False
         self.verify_pause_loop = False
+        self.wake()     # 새 설정의 다음 판정 시각으로 다시 잰다
         return "Conditional settings successfully refreshed"
 
     def check_conditionals(self):
@@ -213,8 +261,15 @@ class ConditionalController(AbstractController, threading.Thread):
                 "Conditional 설정을 읽지 못해 이번 판정을 건너뛴다")
             return
 
-        timestamp = datetime.datetime.fromtimestamp(
-            self.time_conditional).strftime('%Y-%m-%d %H:%M:%S')
+        # 어느 시계의 시각인지 붙인다 — 예전에는 tz 없는 fromtimestamp 라
+        # 컨테이너 OS 시계(대개 UTC)로 찍히고 라벨도 없었다. 장소 시간대는
+        # 매번 풀어 지도 배치·시설 시간대 변경이 재시작 없이 반영되게 한다.
+        try:
+            where_tz = tz_of(cond)
+        except Exception:
+            self.logger.exception("Conditional 장소 시간대를 풀지 못해 UTC 로 표시한다")
+            where_tz = None
+        timestamp = format_labeled(utc_now(), where_tz)
         message = f"{timestamp}\n[Name: {cond.name}]"
 
         if self.message_include_code:

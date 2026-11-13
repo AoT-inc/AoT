@@ -38,6 +38,7 @@ from datetime import datetime, timedelta
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import AIContextSource, AIKnowledgeChunk
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ def _quota_remaining():
     regardless of is_enabled/context_state — a retired note still counts
     against the quota, since the write itself is what's bounded, not its
     surviving usefulness."""
-    since = datetime.utcnow() - timedelta(hours=24)
+    since = naive_utc(utc_now()) - timedelta(hours=24)
     count = AIKnowledgeChunk.query.filter(
         AIKnowledgeChunk.provenance == 'ai_curated',
         AIKnowledgeChunk.created_at >= since,

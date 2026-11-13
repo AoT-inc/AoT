@@ -204,9 +204,9 @@ class TestNotPerformedVocabulary(unittest.TestCase):
         for status, want in gate.NOT_PERFORMED_STATUSES.items():
             with self.subTest(status=status):
                 self.assertEqual(gate.call_state(
-                    None, {'status': status}, tool_name='archive_note'), want)
+                    None, {'status': status}, tool_name='modify_note'), want)
                 out = gate.annotate_write_outcome(
-                    'archive_note', want, {'status': status})
+                    'modify_note', want, {'status': status})
                 self.assertIs(out['performed'], False)
 
     def test_shelve_validation_and_quota_are_failures_not_refusals(self):
@@ -224,7 +224,7 @@ class TestNotPerformedVocabulary(unittest.TestCase):
 
     def test_reads_keep_their_not_found_answer(self):
         self.assertEqual(gate.call_state(
-            None, {'status': 'not_found'}, tool_name='get_archived_document'),
+            None, {'status': 'not_found'}, tool_name='get_note_attachment'),
             'executed')
         self.assertEqual(gate.call_state(None, {'status': 'refused'}),
                          'executed')   # 도구 이름이 없으면 예전 판정 그대로
@@ -460,17 +460,16 @@ class TestExecutionLayerOutcomes(_Fixture):
         self.assertEqual(body['call_state'], 'failed', body)
         self.assertIs(body['performed'], False, body)
 
-    def test_archive_not_found_is_not_performed_and_ledgered(self):
+    def test_note_not_found_is_not_performed_and_ledgered(self):
         args = {'note_id': _uuid()}
-        cid = self._approved_cid('archive_note', args)
-        body = self._call('archive_note', dict(args, _confirmation_id=cid),
+        cid = self._approved_cid('delete_note', args)
+        body = self._call('delete_note', dict(args, _confirmation_id=cid),
                           self._role('Editor'))
-        self.assertEqual(body['status'], 'not_found', body)
+        self.assertIn('not found', body['error'].lower(), body)
         self.assertEqual(body['call_state'], 'failed')
         self.assertIs(body['performed'], False)
         row = self._last_audit()
         self.assertEqual(row.call_state, 'failed')
-        self.assertEqual(row.result_summary, 'not_found')
 
     def test_confirmation_answer_refused_for_role(self):
         body = self._call('respond_to_confirmation',

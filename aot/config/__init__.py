@@ -18,8 +18,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
-ALEMBIC_VERSION = 'p7_00_target_alias_20261028'
-AOT_VERSION = '26.11.1'
+ALEMBIC_VERSION = 'p7_11_ai_card_raised_at_20261109'
+AOT_VERSION = '26.11.2'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
@@ -362,7 +362,7 @@ CAMERA_INFO = {
         'dependencies_module': [
             ('pip-pypi', 'imutils', 'imutils==0.5.4'),
             ('apt', 'libgl1', 'libgl1'),
-            ('pip-pypi', 'cv2', 'opencv-python==4.6.0.66')
+            ('pip-pypi', 'cv2', 'opencv-python-headless==4.9.0.80')
         ],
         'capable_image': True,
         'capable_stream': True
@@ -386,7 +386,7 @@ CAMERA_INFO = {
         'dependencies_module': [
             ('pip-pypi', 'imutils', 'imutils==0.5.4'),
             ('apt', 'libgl1', 'libgl1'),
-            ('pip-pypi', 'cv2', 'opencv-python>=4.8.0')
+            ('pip-pypi', 'cv2', 'opencv-python-headless==4.9.0.80')
         ],
         'capable_image': True,
         'capable_stream': True
@@ -396,10 +396,18 @@ CAMERA_INFO = {
         'dependencies_module': [
             ('pip-pypi', 'imutils', 'imutils==0.5.4'),
             ('apt', 'libgl1', 'libgl1'),
-            ('pip-pypi', 'cv2', 'opencv-python>=4.8.0')
+            ('pip-pypi', 'cv2', 'opencv-python-headless==4.9.0.80')
         ],
         'capable_image': True,
         'capable_stream': False
+    },
+    'ip_snapshot': {
+        'name': 'IP Camera - Snapshot (lightweight)',
+        'dependencies_module': [
+            ('pip-pypi', 'requests', 'requests')
+        ],
+        'capable_image': True,
+        'capable_stream': True
     },
     'stream_direct': {
         'name': 'Direct Stream (Client-side HLS/Direct)',
@@ -588,6 +596,7 @@ _LABEL_DAILY_TIME_SPAN = lg('Daily Time Span')
 _LABEL_RUN_PWM_METHOD = lg('Run PWM Method')
 _LABEL_SUNRISE_SUNSET = lg('Sunrise/Sunset')
 _LABEL_SEQUENCE = lg('Sequence')
+_LABEL_CAMERA_EVENT = lg('Camera Event')
 
 FUNCTION_INFO = {
     'function_actions': {
@@ -648,6 +657,15 @@ FUNCTION_INFO = {
         # 정식 의존성(astral, requirements.txt)이다.
         'dependencies_module': []
     },
+    'trigger_camera_event': {
+        'name': lazy_join(T['trigger']['title'], ': ', _LABEL_CAMERA_EVENT),
+        'message': lg(
+            'A Camera Event Trigger runs its Actions when a camera reports one of the '
+            'selected event kinds (motion, line crossing, and so on). It runs at the time '
+            'the server receives the event; events missed while the subscription was '
+            'down are not replayed.'),
+        'dependencies_module': []
+    },
     'trigger_sequence': {
         'name': lazy_join(T['trigger']['title'], ': ', _LABEL_SEQUENCE),
         'message': lg(
@@ -666,6 +684,7 @@ FUNCTIONS = [
     ('conditional_conditional', FUNCTION_INFO['conditional_conditional']['name']),
     ('pid_pid', FUNCTION_INFO['pid_pid']['name']),
     ('trigger_edge', FUNCTION_INFO['trigger_edge']['name']),
+    ('trigger_camera_event', FUNCTION_INFO['trigger_camera_event']['name']),
     ('trigger_output', FUNCTION_INFO['trigger_output']['name']),
     ('trigger_output_pwm', FUNCTION_INFO['trigger_output_pwm']['name']),
     ('trigger_timer_daily_time_point', FUNCTION_INFO['trigger_timer_daily_time_point']['name']),

@@ -89,8 +89,19 @@ node_modules/
 # (2026-09-06 실제로 두 개가 커밋에 딸려 들어갔다).
 node_modules
 
-# --- Claude Code 로컬 설정 (전체 무시) ---
-.claude/
+# --- Claude Code: 개인 설정은 무시, 팀 공유 지침만 추적 ---
+!/.claude/
+.claude/*
+!.claude/rules/
+!.claude/agents/
+!.claude/reference/
+.claude/rules/*
+!.claude/rules/*.md
+.claude/agents/*
+!.claude/agents/*.md
+.claude/reference/*
+!.claude/reference/desktop-mcp-token-guide.md
+!.claude/reference/ops-archive.md
 
 # --- CI 워크플로 ---
 # .github/workflows/ 는 GitHub Actions(공개 저장소 CI)용으로 추적한다.

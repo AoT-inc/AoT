@@ -13,7 +13,6 @@ tears down the connection.
 """
 import logging
 import secrets
-from datetime import datetime, timezone
 
 import flask_login
 from flask import (Blueprint, flash, jsonify, redirect, render_template, request,
@@ -24,6 +23,7 @@ from flask_login import login_required
 from aot.databases.models import db, Misc, UserCalendarConnection
 from aot.aot_flask.utils import utils_general
 from aot.utils import google_oauth
+from aot.utils.timekit import naive_utc, parse_utc
 
 logger = logging.getLogger('aot.aot_flask.integrations')
 
@@ -33,12 +33,6 @@ blueprint = Blueprint('routes_integrations',
                       template_folder='../templates')
 
 _OAUTH_STATE_KEY = 'google_oauth_state'
-
-
-def _epoch_to_naive_utc(epoch):
-    """google_oauth returns absolute epoch seconds; SchedulerJobMeta-style
-    columns store naive-UTC datetimes (project convention)."""
-    return datetime.fromtimestamp(epoch, tz=timezone.utc).replace(tzinfo=None)
 
 
 @blueprint.route('/settings/integrations', methods=['GET'])
@@ -215,7 +209,7 @@ def oauth_google_callback():
 
     connection.set_refresh_token(tokens['refresh_token'])
     connection.set_access_token(tokens.get('access_token'))
-    connection.token_expiry = _epoch_to_naive_utc(tokens['expires_at'])
+    connection.token_expiry = naive_utc(parse_utc(tokens['expires_at']))
     connection.scope = tokens.get('scope')
     connection.account_email = email
     connection.is_active = True

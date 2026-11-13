@@ -45,6 +45,7 @@ import requests
 from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
+from aot.utils.timekit import utc_now
 
 # Measurements
 measurements_dict = {
@@ -314,7 +315,7 @@ class InputModule(AbstractInput):
             return
 
         hourly = (payload or {}).get('hourly') or {}
-        now_utc = datetime.now(timezone.utc)
+        now_utc = utc_now()
         idx = self._pick_row(hourly.get('time'), now_utc)
         if idx is None:
             self.logger.error('현재 시각에 해당하는 행이 없다')

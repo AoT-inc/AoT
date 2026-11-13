@@ -40,6 +40,7 @@ from aot.utils.actions import run_input_actions
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
+from aot.utils.timekit import FARM, naive_utc, to_tz, utc_now
 
 measurements_dict = {}
 
@@ -269,7 +270,7 @@ class InputModule(AbstractInput):
             if path in self._paths:
                 # Stamp on receipt: a contact that opens and closes within
                 # one wake keeps both transitions at their own times.
-                self._changes.put(('attr', path, value, datetime.datetime.utcnow()))
+                self._changes.put(('attr', path, value, naive_utc(utc_now())))
                 self._wake.set()
         elif event == 'node_event':
             # A button gesture. Only Switch events are used; the button's
@@ -281,7 +282,7 @@ class InputModule(AbstractInput):
                                                   matter_clusters.SWITCH, 1)
             if path in self._paths:
                 self._changes.put(('button', path, (data.get('event_id'), data.get('data')),
-                                   datetime.datetime.utcnow()))
+                                   naive_utc(utc_now())))
                 self._wake.set()
         elif event == 'connected':
             # Back after a server outage: fresh snapshot.
@@ -380,7 +381,7 @@ class InputModule(AbstractInput):
             return
         # Stamped when the read is sent: a change the device reports while
         # the read is in flight is newer and must stay the latest point.
-        sent_at = datetime.datetime.utcnow()
+        sent_at = naive_utc(utc_now())
         try:
             values = self.client.send_command('read_attribute', {
                 'node_id': int(self.node_id), 'attribute_path': paths},
@@ -421,7 +422,7 @@ class InputModule(AbstractInput):
         sample), a boolean channel that flipped also fires edge Triggers."""
         from aot.devices import matter_clusters
 
-        now = timestamp or datetime.datetime.utcnow()
+        now = timestamp or naive_utc(utc_now())
         measurement = {}
         flipped = []
         for channel, raw in raw_by_channel.items():
@@ -479,7 +480,7 @@ class InputModule(AbstractInput):
         for trigger in triggers:
             if trigger.edge_detected not in ('both', direction):
                 continue
-            stamp = datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+            stamp = to_tz(utc_now(), FARM).strftime('%Y-%m-%d %H-%M-%S')
             message = (f"{stamp}\n[Trigger {trigger.id} ({trigger.name})] "
                        f"Input {self.unique_id} ({self.input_dev.name}) "
                        f"{direction} edge: {what}")

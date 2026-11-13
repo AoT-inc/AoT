@@ -21,7 +21,7 @@ NOW = datetime.datetime(2026, 10, 21, 12, 0, 0, tzinfo=UTC)
 
 def _supported(profile='MEDIUM', model=None, mem=16.0, env=None):
     patches = [
-        mock.patch('aot.config.mcp_config.HARDWARE_PROFILE', profile),
+        mock.patch('aot.config.mcp_config.HARDWARE_PROFILE', profile),   # 판정에 쓰이지 않는다(아래 시험)
         mock.patch('aot.utils.system_environment.pi_model', return_value=model),
         mock.patch('aot.utils.system_environment.mem_total_gb', return_value=mem),
         mock.patch.dict(os.environ, env or {}, clear=False),
@@ -39,18 +39,18 @@ class TwinSupportedTest(unittest.TestCase):
     def test_ok(self):
         self.assertEqual(_supported(), (True, ''))
 
-    def test_profile_low_locks(self):
-        self.assertEqual(_supported(profile='LOW'), (False, tg.REASON_PROFILE_LOW))
-        self.assertEqual(_supported(profile='low'), (False, tg.REASON_PROFILE_LOW))
+    def test_hardware_profile_is_not_a_lock(self):
+        """서버가 기본 구성에 들어간 뒤로 compose 기본값 LOW 는 잠금 사유가 아니다. 잠금은 기기 고정값(파이 모델·메모리)뿐."""
+        self.assertEqual(_supported(profile='LOW'), (True, ''))
+        self.assertEqual(_supported(profile='low'), (True, ''))
+        self.assertEqual(_supported(profile='LOW', mem=2.0), (False, tg.REASON_LOW_MEMORY))
+        self.assertEqual(_supported(profile='LOW', model='Raspberry Pi 3 Model B Rev 1.2'),
+                         (False, tg.REASON_PI_MODEL))
 
-    def test_ignore_profile_env_skips_only_profile(self):
-        env = {tg.IGNORE_PROFILE_ENV: '1'}
-        self.assertEqual(_supported(profile='LOW', env=env), (True, ''))
-        self.assertEqual(_supported(profile='LOW', mem=2.0, env=env),
-                         (False, tg.REASON_LOW_MEMORY))
-        self.assertEqual(
-            _supported(profile='LOW', model='Raspberry Pi 3 Model B Rev 1.2', env=env),
-            (False, tg.REASON_PI_MODEL))
+    def test_profile_option_is_gone(self):
+        for name in ('REASON_PROFILE_LOW', 'TWIN_LOCKED_PROFILES', 'IGNORE_PROFILE_ENV', 'ignore_profile_flag'):
+            self.assertFalse(hasattr(tg, name), name)
+        self.assertNotIn('profile_low', tg.LOCK_MESSAGES)
 
     def test_memory_threshold(self):
         self.assertEqual(_supported(mem=2.0), (False, tg.REASON_LOW_MEMORY))
@@ -112,7 +112,7 @@ class TwinEnabledTest(unittest.TestCase):
 
     def test_on_but_locked_is_off(self):
         with mock.patch.object(tg, '_load_misc', return_value=_misc(twin_enabled=True)), \
-                mock.patch.object(tg, 'twin_supported', return_value=(False, 'profile_low')):
+                mock.patch.object(tg, 'twin_supported', return_value=(False, tg.REASON_LOW_MEMORY)):
             self.assertTrue(tg.twin_flag())
             self.assertFalse(tg.twin_enabled())
 

@@ -131,6 +131,7 @@ docker compose -f docker/docker-compose.e2e.yml restart aot_daemon
 | `test_journey_map_shapes.py` | 저장된 도형이 지도에 남아 있다(전량 유실 감시) |
 | `test_journey_map_draw.py` | 지도에 **그린** 도형이 저장되고, 하나를 지우면 **그 하나만** 지워진다 |
 | `test_journey_map_view.py` | 전체화면을 오가도 지도가 사라지지 않는다 |
+| `test_journey_terrain_switch.py` | 물 회로 지형(DEM) 비교→바꾸기→되돌리기. 장비 드로어 안에서 이전→이후 숫자(경사 길이는 계산으로 검산)·바뀌는 구간이 나오고, 되돌리면 원래 DEM 이 켜지며, 지도가 가려지지 않고 폰 폭에서 넘치지 않는다. 후보 타일은 컴포즈 `dem-tiles` 서비스(`dem_server.py`, 합성 고도 타일)가 준다 — 서버가 받으므로 브라우저 가로채기로는 못 대신한다 |
 | `test_journey_output.py` | 출력 카드에 누를 것이 남아 있다 |
 | `test_journey_journal.py` | 일지를 만들면 완성되고, 주소로 다시 열린다 |
 | `test_journey_modal_save.py` | 설정 모달에서 고친 값이 새로고침 뒤에도 그대로다 |

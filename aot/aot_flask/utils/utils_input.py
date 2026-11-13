@@ -38,13 +38,8 @@ from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.aot_flask.utils.utils_general import return_dependencies
 from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.inputs import parse_input_information
-from aot.utils.device_tz import apply_system_tz_fallback
-from aot.utils.device_tz import default_device_coords
 from aot.utils.system_pi import parse_custom_option_values
-from aot.aot_flask.utils.utils_map_config import (
-    ensure_map_config,
-    clone_map_config,
-)
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -127,15 +122,7 @@ def input_add(form_add, tab_id=None):
         else:
             new_input.name = 'Name'
 
-        # Default map location from Misc
-        try:
-            misc = Misc.query.first()
-            if misc:
-                new_input.latitude, new_input.longitude = default_device_coords(misc)
-                apply_system_tz_fallback(new_input, misc.timezone)
-        except Exception:
-            pass
-
+        # 좌표·시간대는 복사하지 않는다 — 리졸버가 배치(대지)에서 파생(L2·L4).
         #
         # Set default values for new input being added
         #
@@ -426,7 +413,7 @@ def apply_device_status(mod_input, form_mod):
     if since is not None:
         mod_input.device_status_since = since
     elif changed or mod_input.device_status_since is None:
-        mod_input.device_status_since = datetime.utcnow()
+        mod_input.device_status_since = naive_utc(utc_now())
 
 
 def input_mod(form_mod, request_form):
@@ -522,33 +509,7 @@ def input_mod(form_mod, request_form):
         if form_mod.location.data:
             mod_input.location = form_mod.location.data
 
-        lat_val = form_mod.latitude.data
-        if lat_val in [None, '']:
-            raw_lats = request_form.getlist('latitude')
-            for val in raw_lats:
-                if val and val not in ['None', '']:
-                    lat_val = val
-                    break
-
-        lng_val = form_mod.longitude.data
-        if lng_val in [None, '']:
-            raw_lngs = request_form.getlist('longitude')
-            for val in raw_lngs:
-                if val and val not in ['None', '']:
-                    lng_val = val
-                    break
-            
-        if lat_val not in [None, ''] and lng_val not in [None, '']:
-            mod_input.latitude = float(lat_val)
-            mod_input.longitude = float(lng_val)
-            mod_input.location_updated_utc = datetime.utcnow()
-        elif (lat_val in [None, '']) and (lng_val in [None, '']):
-            # Leave existing coords untouched to avoid unintended clearing
-            pass
-        else:
-            messages["warning"].append(gettext("Latitude and longitude must be entered together."))
-        if form_mod.location_source.data:
-            mod_input.location_source = form_mod.location_source.data
+        # [L2] 위치(위도·경도·출처)는 옵션 폼에서 저장하지 않는다 — 배치(지도)가 정본.
         if ('marker_icon' in request_form) and hasattr(form_mod, 'marker_icon') and form_mod.marker_icon.data not in [None, '', 'None', 'null']:
             mod_input.marker_icon = form_mod.marker_icon.data
         if ('marker_color' in request_form) and hasattr(form_mod, 'marker_color') and form_mod.marker_color.data not in [None, '', 'None', 'null']:
@@ -881,7 +842,6 @@ def input_del(input_id):
             return messages
 
     try:
-        map_config_id = input_dev.map_config_id if input_dev else None
 
         if input_dev.is_activated:
             # messages = input_deactivate_associated_controllers(
@@ -914,7 +874,7 @@ def input_del(input_id):
         # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정
         # 슬롯으로 남는다(위치 마커만 예외). 삭제 경로 17곳이 전부
         # 이 게이트웨이를 지나간다.
-        from aot.aot_flask.geo.device_binding import end_all_for_device
+        from aot.space.device_binding import end_all_for_device
         end_all_for_device(input_id)
         delete_entry_with_id(Input, input_id, flash_message=False)
         # [P3] 원칙 1 — 지도는 장치의 소유물이 아니다. 장치를 지워도 지도는

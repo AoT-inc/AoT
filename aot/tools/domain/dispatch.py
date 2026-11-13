@@ -14,9 +14,12 @@
 처리기에는 넘어가지 않는다(`tool_execution._dispatch_virtual_tool` 이 뺀다).
 """
 import json
+from dataclasses import replace
 import logging
+import re
 
-from aot.tools.domain import act_say, contract, server_card, targets
+from aot.tools.domain import act_say, contract, renames, server_card, server_viz, session_rules, slim, targets
+from aot.utils.timekit import FARM, today_at
 from aot.tools.domain.registry import (
     ID_ONLY_KINDS, PLACE_KINDS, READ_TOOLS, WRITE_TOOLS, find_op)
 
@@ -41,18 +44,55 @@ def _ops():
     return OPS
 
 
-#: 숨은 별칭 — 목록·스키마·help 에 싣지 않는 op 이름이라 토큰이 늘지 않는다. 모델이 자주 짐작하는 말을 정식 op 로 받는다
-#: (2026-10-30 체험: measure.now → unknown_op). 정식 이름만 명부(`OPS`)에 있다 — 시험이 별칭이 실제 op 를 가리키는지 본다.
-OP_ALIASES = {('measure', 'now'): 'latest'}
+#: 숨은 별칭(op·인자 이름·고정 인자)은 `renames` 표에 있다 — 목록·스키마·help 에는 새 이름만 실려 토큰이 늘지 않는다.
+#: 정식 이름만 명부(`OPS`)에 있고, 시험이 별칭이 실제 op/인자를 가리키는지 본다.
+def canonical(tool, op):
+    return renames.canonical(tool, op)
 
 
-def canonical_op(tool, op):
-    return OP_ALIASES.get((tool, op), op)
+#: 계산뿐인 조회 — 특정 대상을 읽어 보여 주는 것이 아니라 대상을 재료로 계산·해석만 한다(2026-11-03 사용자 결정).
+#: 기본으로 사용자 화면을 따라가지 않는다. 호출이 `_show_on_screen` 을 **명시**('on'·화면 id)하면 따른다 — 양방향.
+#: 나머지 읽기(detail.*·measure.latest 의 대상 지정 …)는 지금처럼 기본으로 따라가고 'off' 로 끈다.
+NO_FOLLOW_OPS = frozenset({
+    ('find', 'nearest'), ('find', 'distance'), ('find', 'address'),
+    ('find', 'resolve'), ('find', 'aliases'),
+})
+
+
+def effective_show(tool, op, show):
+    """이 호출의 화면 따라가기 값 — 계산뿐인 op 는 명시한 'on'·화면 id 가 아니면 'off'."""
+    if (tool, op) not in NO_FOLLOW_OPS:
+        return show
+    from aot.tools import screen_follow
+    return show if screen_follow.show_is_explicit_on(show) else 'off'
 
 
 def _error(message, **extra):
     body = dict({"status": "error", "message": message}, **extra)
     return [{"type": "text", "text": json.dumps(body, ensure_ascii=False)}]
+
+
+def _kind_lookup(accepts):
+    """이 operation 이 받는 대상 종류를 찾는 길 한 줄 — "takes function, not a facility" 다음에 무엇을 부를지."""
+    ways = {'function': "find(op='functions')", 'plot': "find(op='plots')",
+            'device': "find(op='devices', query=<word>)", 'input': "find(op='devices', query=<word>)",
+            'output': "find(op='devices', query=<word>)", 'zone': "find(op='tree')", 'site': "find(op='tree')",
+            'facility': "find(op='tree')", 'map': "find(op='maps')"}
+    found = [ways[k] for k in accepts if k in ways]
+    return ("%s finds the %s" % (found[0], accepts[0])) if found else "find(op='resolve', target=<name>)"
+
+
+def _where_to_look(kinds):
+    """없는 대상을 찾을 길 한 줄(`unknown_target` 의 `next.call`) — 받는 종류마다 찾는 호출, 모르는 종류면 resolve."""
+    ways = []
+    for k in kinds:
+        w = _kind_lookup([k])
+        if w.startswith('find(op=') and ' finds ' in w:
+            w = w.split(' finds ')[0]
+            if w not in ways:
+                ways.append(w)
+    head = " or ".join(ways[:2]) if ways else "find(op='resolve', target=<name>)"
+    return head + " finds it; call again with its path or id"
 
 
 def _cue(c):
@@ -100,7 +140,7 @@ def _children_of(target):
         rows = GeoShape.query.filter(GeoShape.geo_id == target['id'],
                                      GeoShape.type == 'site').all()
     elif target['kind'] in ('site', 'zone'):
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         rows = [s for s in idx.shapes if s.type in ('zone', 'facility')
                 and s.unique_id != target['id']
@@ -142,15 +182,6 @@ def _verified_name(target):
     return None
 
 
-def _today():
-    try:
-        from aot.utils.time_utils import get_local_now
-        return get_local_now().date()
-    except Exception:                                       # noqa: BLE001
-        import datetime as _dt
-        return _dt.date.today()
-
-
 def _arg_is_list(inner, arg):
     if not arg:
         return False
@@ -162,7 +193,7 @@ def _arg_is_list(inner, arg):
 
 def _descendants(target):
     """그릇 아래의 장소 전부(대지·구역·시설) — 읽기 펼치기가 깊이를 고른다."""
-    from aot.aot_flask.geo.device_membership import PlaceIndex
+    from aot.space.device_membership import PlaceIndex
     from aot.databases.models import GeoShape
     idx = PlaceIndex()
     if target['kind'] == 'map':
@@ -187,7 +218,7 @@ _PLACE_SHAPE_KINDS = ('site', 'zone', 'facility')
 
 def _ancestors(target):
     """작은 것(시설·구획·장치) → 감싸는 장소, 가까운 것부터(§2-3 '올려 답한다')."""
-    from aot.aot_flask.geo.device_membership import PlaceIndex, maps_for_device, zone_for_device
+    from aot.space.device_membership import PlaceIndex, maps_for_device, zone_for_device
     from aot.databases.models import GeoFacility, GeoPlot, GeoShape
     idx = PlaceIndex()
     shapes = []
@@ -231,7 +262,7 @@ def _ancestors(target):
 
 def _device_ids_in(target):
     """장소(지도·대지·구역·시설·구획) 안의 장치 id — 지금 소속 판정 그대로."""
-    from aot.aot_flask.geo.device_membership import device_ids_in_area
+    from aot.space.device_membership import device_ids_in_area
     ids = []
     if target['kind'] == 'map':
         places = [c for c in _descendants(target) if c['kind'] == 'site']
@@ -250,7 +281,7 @@ def _device_ids_in(target):
 
 def _plots_in(target):
     """장소 안의 재배 중 구획 — 지금 소속 판정(PlaceIndex.plot_within·시설 지정) 그대로."""
-    from aot.aot_flask.geo.device_membership import PlaceIndex
+    from aot.space.device_membership import PlaceIndex
     from aot.databases.models import GeoFacility, GeoPlot
     idx = PlaceIndex()
     rows = GeoPlot.query.filter(GeoPlot.ended_on.is_(None)).all()
@@ -290,15 +321,39 @@ def _device_targets(ids, kinds):
     return out
 
 
-def plan(tool, arguments, ops=None, user=None):
+def plan(tool, arguments, ops=None, user=None, session=None):
     """도메인 호출 → ('call', inner, inner_args) | ('refuse', 본문 블록).
 
     실행과 분리해 두어 테스트가 "게이트 앞에서 거절되는가" 를 실행 없이 본다.
-    user: 부른 사용자 uuid — 같은 이름 후보를 그가 지금 보는 대시보드 순으로 늘어놓는다.
+    user: 부른 사용자 uuid — 같은 이름 후보를 그가 지금 보는 화면으로 늘어놓고, 읽기·화면 이동은 맥락이 하나만 가리키면
+    그것으로 간다. session: 대화 열쇠 — 이 대화가 최근 가리킨 대상(맥락 근거의 하나).
     """
+    notes = {}
+    verdict = _plan(tool, arguments, ops, user, session, notes)
+    if verdict[0] == 'refuse':
+        return verdict
+    if notes.get('seen'):
+        targets.remember(user, session, notes['seen'])
+    if notes.get('picks'):
+        picked = {"picked_by": "context", "picked": notes['picks']}
+        if verdict[0] == 'call':
+            verdict[2].setdefault(META_KEY, {}).update(picked)
+        elif verdict[0] == 'fanout':
+            verdict[3].update(picked)
+        elif verdict[0] == 'filter':
+            verdict[3].update(picked)
+    return verdict
+
+
+def _context_pickable(tool, o):
+    """맥락으로 하나를 고를 수 있는 호출 — 읽기, 그리고 화면만 바꾸는 화면 조작. 물리 제어·기록·삭제·설정은 늘 되묻는다."""
+    return tool in READ_TOOLS or (tool == 'screen' and o.effect == 'screen')
+
+
+def _plan(tool, arguments, ops, user, session, notes):
     ops = ops if ops is not None else _ops()
-    arguments = dict(arguments or {})
-    op_name = canonical_op(tool, arguments.pop('op', None))
+    tool, arguments, _renamed = renames.resolve_call(tool, arguments, ops)
+    op_name = arguments.pop('op', None)
     o = find_op(ops, tool, op_name)
     if o is None:
         names = sorted(x.op for x in ops if x.tool == tool)
@@ -312,9 +367,29 @@ def plan(tool, arguments, ops=None, user=None):
     missing = _missing_required(o, arguments)
     if missing:
         return 'refuse', _error(
-            "%s.%s needs %s — nothing was run. help(tool_name='%s.%s') lists the "
+            "%s.%s needs %s — nothing was run. help(target='%s.%s') lists the "
             "arguments." % (tool, o.op, ", ".join(missing), tool, o.op),
             reason_code='missing_argument')
+    if o.period_pair and 'period' in arguments:
+        pair = _pair_range(arguments.pop('period'))
+        if isinstance(pair, list):
+            return 'refuse', pair
+        arguments['_pair'] = pair                 # `_inner_args` 가 안쪽 두 칸으로 푼다(밑줄 인자는 거절 대상이 아니다)
+    infer_kinds = None
+    if o.pick_by_arg is not None:
+        # 같은 종류 안에서 인자 값이 안쪽 도구를 고른다(재설계 PR 6) — 고른 가지 Op 가 이 호출의 명부다.
+        merged = o
+        o, refused = _pick_branch(o, arguments)
+        if refused is None and merged.pick_by_arg.infer and o.inner == merged.inner:
+            infer_kinds = [k for k in o.inner if k != 'none']        # 종류를 안 말했다 — 대상에서 알아낸다
+        if refused is not None:
+            return 'refuse', refused
+        missing = _missing_required(o, arguments)
+        if missing:
+            return 'refuse', _error(
+                "%s.%s needs %s — nothing was run. help(target='%s.%s') lists the "
+                "arguments." % (tool, o.op, ", ".join(missing), tool, o.op),
+                reason_code='missing_argument')
 
     # 공통 어휘 규칙(§3): 대상을 받는데 검색어 인자가 없는 operation 에 이름이
     # `query` 로 오면 그것이 대상이다 — 모델은 "찾는다" 고 생각하면 query 에 넣는다
@@ -322,15 +397,27 @@ def plan(tool, arguments, ops=None, user=None):
     if ('target' not in arguments and 'query' in arguments and 'query' not in o.args
             and any(k != 'none' for k in o.inner)):
         arguments['target'] = arguments.pop('query')
+    # 장소로 거르는 목록(`place_filter`)이 이름 조각 `query` 도 받을 때 — query 가 장소 하나로 풀리면 그것이 대상이다
+    # (실사용 26-11-07~09: find.functions 에 query='3포장'·'육묘장3'). 장소로 안 풀리면 이름 조각으로 둔다(query='VPD').
+    if ('target' not in arguments and o.place_filter and 'query' in o.args
+            and isinstance(arguments.get('query'), str) and arguments['query'].strip()):
+        st, _got = targets.resolve(arguments['query'], only=set(PLACE_KINDS_ALL))
+        if st == 'ok':
+            arguments['target'] = arguments.pop('query')
     if o.period_field and 'period' in arguments:
         from aot.tools.domain import vocab
-        rng = vocab.period(arguments.pop('period'), today=_today())
+        rng = vocab.period(arguments.pop('period'), today=today_at(FARM))
         if rng is None:
             return 'refuse', _error("period not understood — use today, tomorrow, "
                                     "this_week, YYYY-MM-DD or FROM/TO.",
                                     reason_code='bad_period')
-        if 'include_past' in o.extra_args:
+        # 기간은 안쪽 도구가 SQL limit 로 자른 **뒤에** 거른다 — 최근 만든 20건만 읽고 그 안에서
+        # 날짜를 고르면 내일 일정이 있어도 0건이 된다(2026-11-03). 기간을 줬을 땐 넉넉히 읽고
+        # (`_PERIOD_SCAN`), 거른 뒤 사용자의 limit 로 자른다(`_filter_period`).
+        if 'include_past' in o.extra_args and rng[0] < today_at(FARM):
             arguments['include_past'] = True
+        if 'limit' in o.args:
+            arguments['limit'] = _PERIOD_SCAN
     # 안쪽 도구의 대상 칸 이름(`dashboard`·`tab`·`item`·`device_id` …)으로 대상을 넘겨도
     # 받는다 — 그 칸이 받는 종류로만 좁혀서. 안쪽 도구의 안내문은 그 이름을 쓰므로("use
     # dashboard=<name>"), 안 받으면 안내와 입력이 서로 모순된다(2026-10-14 웹 시험).
@@ -441,11 +528,33 @@ def plan(tool, arguments, ops=None, user=None):
                 state, got = 'ok', boards[0]
                 why = "'%s' is a dashboard and also a tab (%s) — went to the dashboard" % (
                     ref, ", ".join(c.get('path') or c.get('name') or '?' for c in rest[:3]))
+        if state == 'ambiguous' and only is None and (tool, o.op) == ('screen', 'act') \
+                and arguments.get('action') in (None, 'navigate') \
+                and {c.get('kind') for c in got} <= _NAV_KINDS:
+            # action 을 안 말한 화면 이동도 같은 규칙이다 — 위 이동 규칙은 action=navigate 로 좁혀진 호출만 지났다
+            # ('김제' = 대시보드 + 입력·출력·함수 탭 4개로 되물었다, 2026-11-07 실측 #6). 지도·대지가 같은 이름이면
+            # 후보에 그것이 들어 있어 이 길이 아니다(되묻는다).
+            boards = [c for c in got if c.get('kind') == 'dashboard']
+            rest = [c for c in got if c.get('kind') != 'dashboard']
+            if len(boards) == 1 and rest:
+                state, got = 'ok', boards[0]
+                why = "'%s' is a dashboard and also a tab (%s) — went to the dashboard" % (
+                    ref, ", ".join(c.get('path') or c.get('name') or '?' for c in rest[:3]))
+        if state == 'ambiguous' and _context_pickable(tool, o):
+            pick = targets.context_pick(got, user, session)
+            if pick is not None:
+                chosen, by = pick
+                rest = [c for c in got if c.get('id') != chosen.get('id')]
+                state, got = 'ok', chosen
+                notes.setdefault('picks', []).append({
+                    "asked": str(ref), "as": _candidates([chosen])[0], "by": by,
+                    "others": _candidates(rest)[:4]})
+                notes['picked_ids'] = notes.get('picked_ids', set()) | {chosen.get('id')}
         if state == 'ambiguous':
             got = targets.rank(got, user)
             return 'refuse', _error(
                 "'%s' names %d different things (%s) — nothing was picked. Ask which "
-                "one the user means and pass its id.%s" % (
+                "one the user means (name it by path, never show ids), then pass that candidate's id as target.%s" % (
                     ref, len(got), _kinds_said(got), _ambiguous_note(got)),
                 status="needs_disambiguation", reason_code='ambiguous_target',
                 candidates=_candidates(got))
@@ -464,9 +573,23 @@ def plan(tool, arguments, ops=None, user=None):
                 msg += " " + extra['next']['why']
             if got.get('similar'):
                 extra['similar'] = _candidates(got['similar'])
+            elif 'next' not in extra and tool in READ_TOOLS:
+                # 이름을 못 찾았을 때 다음 걸음 — 같은 말을 되풀이해 부르지 않게(2026-11-03 점검).
+                extra['next'] = {"call": "find(op='tree') lists the places; find(op='devices', query=<word>) the devices"}
             extra.setdefault('reason_code', 'unknown_target')
+            if infer_kinds and _looks_like_id(ref):
+                # 종류를 안 말한 id 는 어느 종류인지 모른다 — 말하게 한다(지우기·고치기의 `kind`).
+                extra.setdefault('next', {"call": "say what the id is: kind=%s" % "|".join(infer_kinds)})
+                msg += " If it is an id, say what kind it is (kind=...)."
+            if 'next' not in extra and not got.get('similar'):
+                # 쓰기·화면 조작도 같다 — 46/76건이 screen.act 였고 오류 뒤 모델은 탐색 도구로 돌아갔다(2026-11-07 실측 #2).
+                # 받는 종류에 맞는 찾는 길 한 줄. 비슷한 이름을 되묻는 안내가 있으면 그쪽이 먼저다.
+                extra['next'] = {"call": _where_to_look(
+                    sorted(narrow) if narrow else [k for k in o.inner if k != 'none'])}
             return 'refuse', _error(msg, **extra)
         resolved.append(got)
+        if got.get('id') not in notes.get('picked_ids', ()):
+            notes.setdefault('seen', []).append(got)
 
     if not resolved:
         if 'none' not in o.inner:
@@ -586,6 +709,18 @@ def plan(tool, arguments, ops=None, user=None):
                         meta0["not_shown"] = [p['name'] for p in plots[len(shown):]][:20]
                     return 'fanout', o.inner['plot'], calls, meta0
             # (3) 대상 없이 도는 목록 operation 에 장소가 오면 — 결과를 그 장소의 장치로 거른다.
+            if 'none' in o.inner and kind in PLACE_KINDS_ALL and o.place_filter:
+                # 행이 장소에 묶인 칸(예: 함수의 facility_id)으로 거른다. 쪽 나누기는 거른 뒤에 해야 하므로 안쪽 limit·offset 은 떼어
+                # 두었다가 `_filter_place_rows` 가 적용한다.
+                keep = _place_keys(resolved)
+                page = {k: arguments[k] for k in ('limit', 'offset') if k in arguments}
+                args = _inner_args(o, {k: v for k, v in arguments.items() if k not in page},
+                                   o.inner['none'], None, [], False)
+                if isinstance(args, list):
+                    return 'refuse', args
+                meta0["filtered_to"] = "functions tied to %s" % ", ".join(t['name'] for t in resolved)
+                return 'filter', o.inner['none'], args, dict(
+                    meta0, place_key=o.place_filter, place_ids=sorted(keep), page=page)
             if 'none' in o.inner and kind in PLACE_KINDS_ALL:
                 ids = set()
                 for t in resolved:
@@ -601,7 +736,8 @@ def plan(tool, arguments, ops=None, user=None):
                 if got is not None:
                     return got
             return 'refuse', _error("%s.%s takes %s, not a %s." % (
-                tool, o.op, " or ".join(accepts) or "no target", kind), **body)
+                tool, o.op, " or ".join(accepts) or "no target", kind),
+                **dict({"next": {"call": _kind_lookup(accepts)}} if accepts else {}, **body))
 
     inner = o.inner[kind]
     ta = o.target_arg.get(kind) if resolved else None
@@ -623,6 +759,24 @@ def plan(tool, arguments, ops=None, user=None):
                 a.update(passthru)
                 calls.append((t, a))
             return 'fanwrite', inner, calls, {"targets": _candidates(uniq)}
+        resolved = uniq
+    if not writing and len(resolved) > 1 and not _arg_is_list(inner, ta):
+        # 읽기 목록 — 안쪽 도구가 대상 하나만 받으면 대상마다 따로 부른다. 그대로 넘기면 첫 건만 읽히고 나머지는
+        # 아무 표시 없이 빠졌다(2026-11-03 실측: overview.place 에 두 곳 → 첫 곳만).
+        seen, uniq = set(), []
+        for t in resolved:
+            if t['id'] not in seen:
+                seen.add(t['id'])
+                uniq.append(t)
+        if len(uniq) > 1:
+            calls = []
+            for t in uniq:
+                a = _inner_args(o, dict(arguments), inner, ta, [t], False)
+                if isinstance(a, list):
+                    return 'refuse', a
+                a.update(passthru)
+                calls.append((t, a))
+            return 'fanout', inner, calls, {"per_target": True}
         resolved = uniq
     inner_args = _inner_args(o, arguments, inner, ta, resolved, writing)
     if isinstance(inner_args, list):
@@ -820,22 +974,64 @@ def _target_slots(o):
 _CALLER_META = ('_confirmation_id', '_reason', '_title')
 
 
+def _inner_prop_type(inner, arg):
+    from aot.tools.domain.contract import catalog
+    prop = ((catalog().get(inner) or {}).get('inputSchema') or {}).get('properties', {}).get(arg) or {}
+    return prop.get('type')
+
+
+def _convert_word(o, word, inner, arg, value):
+    """공통 어휘의 값을 안쪽 인자의 모양으로 — `duration` 은 안쪽 단위(초·분)로, `state` 는 안쪽이 불리언이면 불리언으로.
+    못 읽으면 거절 본문(list)."""
+    from aot.tools.domain import vocab
+    if word == 'duration':
+        try:
+            return vocab.duration_for(arg, value)
+        except ValueError:
+            return _error("duration not understood: use seconds as a number, or 90s, 15m, 2h - nothing was run.",
+                          reason_code='bad_duration')
+    if _inner_prop_type(inner, arg) != 'boolean':
+        return value
+    got = vocab.onoff(value)
+    if got is None:
+        return _error("state must be on or off - nothing was run.", reason_code='bad_state')
+    return got
+
+
 def _inner_args(o, arguments, inner, ta, resolved, writing):
     """공통 어휘·고유 인자·해석된 대상 → 안쪽 인자. 모르는 인자는 거절 본문(list)."""
     arguments = dict(arguments)
     inner_args = {}
+    pair = arguments.pop('_pair', None)
+    listing = pair and inner == 'list_plot_journals'
+    if pair and o.period_pair and not listing:
+        inner_args.update({k: v for k, v in zip(o.period_pair, pair) if v})
     if 'period' in arguments and o.period_form:
         got = _period_args(o, inner, arguments.pop('period'))
         if isinstance(got, list):
             return got
         inner_args.update(got)
     for word, arg in o.args.items():
+        if o.slim and word in slim.DOMAIN_WORDS:
+            if word in arguments:           # 도메인 층이 처리 — 안쪽 도구로 넘기지 않는다
+                inner_args.setdefault(META_KEY, {}).setdefault('slim', {})[word] = arguments.pop(word)
+            continue
         if word in arguments:
             value = arguments.pop(word)
             if word == 'measurement':
                 from aot.tools.domain import vocab
                 value = vocab.measurement(value)
+            elif word in ('duration', 'state'):
+                value = _convert_word(o, word, inner, arg, value)
+                if isinstance(value, list):
+                    return value
             inner_args[arg] = value
+    if listing:
+        # 일지 목록은 date_from/date_to 를 받지 않는다(그 둘은 일지 **한 건**을 접어 여는 인자) — 안쪽에 넘기면 조용히 무시돼
+        # 기간 밖의 일지까지 나온다(2026-11-03 라운드 3). 넉넉히 읽고(안쪽 상한 200) 도메인에서 기간이 겹치는 일지만 남긴다.
+        asked = inner_args.get('limit')
+        inner_args['limit'] = _JOURNAL_SCAN
+        inner_args.setdefault(META_KEY, {})['journal_range'] = {'range': pair, 'limit': asked}
     for arg in o.extra_args:
         if arg in arguments:
             value = arguments.pop(arg)
@@ -884,29 +1080,81 @@ def _inner_args(o, arguments, inner, ta, resolved, writing):
         return _error("screen.act does not post cards. Use op=card with title and message "
                       "— nothing was run.", reason_code='use_card')
     leftover = sorted(k for k in arguments if not str(k).startswith('_'))
+    if leftover and not writing:
+        # 쪽 나누기 어휘(limit·offset)는 모든 op 가 받는 줄 알고 붙는다(스키마가 op 합집합 한 벌 — 실측 거절 상위 1·7위).
+        # 읽기에서는 거절 대신 무시하고 실행한 뒤 응답(`read_as.ignored`)에 알린다. 쓰기는 지금처럼 거절한다.
+        paging = [k for k in leftover if k in _PAGING_WORDS]
+        if paging:
+            inner_args.setdefault(META_KEY, {})['ignored'] = paging
+            leftover = [k for k in leftover if k not in _PAGING_WORDS]
+    if leftover and (o.tool, o.op) == ('measure', 'soil_forecast'):
+        # 이 예측은 기간 인자가 없다(트윈이 발행한 날 전체) — 거절만 하면 막다른 길이다(2026-11-03 라운드 3).
+        return _error(
+            "measure.soil_forecast does not take %s. It takes: op, target, plot_ids - and returns every day the twin "
+            "published; pick the days you need from `days`." % ", ".join(leftover),
+            reason_code='unknown_argument',
+            next={"call": "measure.soil_forecast(target=<plot>) without %s; or measure.latest(target=<plot>, "
+                          "measurement='soil moisture') for now, weather.forecast(target=<plot>, measurement='rain')"
+                          % ", ".join(leftover)})
     if leftover:
         return _error(
             "%s.%s does not take %s. %sIt takes: %s." % (
-                o.tool, o.op, ", ".join(leftover), _taken_elsewhere(o, leftover),
+                o.tool, o.op, ", ".join(leftover),
+                _same_meaning(o, leftover) + _taken_elsewhere(o, leftover),
                 # 대상을 받지 않는 operation 에 'target' 을 적으면 이름을 거기 넣으라는 말이 된다
                 # (2026-10-28 점검: find.functions 가 target 을 받는다고 안내하고 거절했다).
-                ", ".join(['op'] + (['target'] if any(k != 'none' for k in o.inner) else [])
+                ", ".join(['op'] + (['target'] if (any(k != 'none' for k in o.inner) or o.place_filter) else [])
                           + sorted(set(o.args) | set(o.extra_args)))),
-            reason_code='unknown_argument')
+            reason_code='unknown_argument',
+            next={"call": "help(target='%s.%s') lists what it takes" % (o.tool, o.op)})
     return inner_args
 
 
+#: 읽기 op 가 모르면 무시하는 쪽 나누기 어휘 — 이 op 는 한 번에 전부 돌려주거나 다른 방식으로 자른다.
+_PAGING_WORDS = frozenset({'limit', 'offset'})
+
+#: 거절된 인자 → 뜻이 같은 말들(받는 인자 이름 기준). 그 op 가 받으면 "대신 X" 로 알려 준다.
+_SAME_MEANING = {
+    'duration_minutes': ('duration',), 'duration_seconds': ('duration',), 'duration_hours': ('duration',),
+    'minutes': ('duration',), 'seconds': ('duration',), 'run_time': ('duration',),
+    'period': ('period', 'date_from', 'window_start', 'at', 'duration'),
+    'since': ('period', 'date_from', 'window_start'), 'range': ('period',), 'time_range': ('period',),
+    'search': ('query',), 'keyword': ('query',), 'q': ('query',),
+    'kind': ('subject_kind',),
+    'active': ('state', 'only_active'), 'enabled': ('state',), 'active_only': ('only_active',),
+    'count': ('limit',), 'max': ('limit',), 'top': ('limit',),
+}
+
+
+def _same_meaning(o, leftover):
+    """받지 않는 인자와 뜻이 같은, 이 op 가 실제로 받는 인자 — "k: use X instead." (없으면 빈 글)."""
+    takes = set(o.args) | set(o.extra_args)
+    if any(x != 'none' for x in o.inner) or o.place_filter:
+        takes.add('target')
+    parts = []
+    for k in leftover:
+        homes = [w for w in _SAME_MEANING.get(k, ()) if w in takes and w != k]
+        if not homes and k.startswith('duration'):
+            homes = sorted(w for w in takes if w.startswith('duration'))
+        if homes:
+            parts.append("%s: use %s instead." % (k, " or ".join(homes[:2])))
+    return " ".join(parts) + " " if parts else ""
+
+
 def _taken_elsewhere(o, leftover):
-    """받지 않는 인자를 받는 다른 operation — "use configure.input_activate" 안내(없거나 너무 많으면 빈 글).
+    """받지 않는 인자를 받는 다른 operation — "use configure.activate" 안내(없거나 너무 많으면 빈 글).
 
     스키마의 인자 목록은 도구 하나에 있는 모든 operation 것을 합친 한 벌이라, 목록에 보인 인자를 모든 operation 이
     받는 줄 안다(2026-10-30: input_edit 에 active)."""
     parts = []
     for k in leftover:
+        # 옛 이름이면 새 이름으로 찾는다 — 별칭은 그 이름을 받는 op 에서만 풀리므로 다른 op 에 넣으면 여기로 온다.
+        al = renames.ARG_ALIASES.get(k)
         homes = [x.op for x in _ops() if x.tool == o.tool and x.op != o.op
-                 and (k in x.extra_args or k in x.args)]
+                 and (k in x.extra_args or k in x.args or (al is not None and al.new in x.args))]
         if 0 < len(homes) <= 3:
-            parts.append("%s: use %s." % (k, " or ".join("%s.%s" % (o.tool, h) for h in homes)))
+            parts.append("%s: use %s%s." % (k, " or ".join("%s.%s" % (o.tool, h) for h in homes),
+                                            " (as %s)" % al.new if al else ""))
     return " ".join(parts) + " " if parts else ""
 
 
@@ -936,6 +1184,39 @@ def _decode_text_values(inner, inner_args):
             inner_args[arg] = [p.strip() for p in text.split(',') if p.strip()]
 
 
+def _pick_branch(o, arguments):
+    """`Op.pick_by_arg` — 인자 값으로 가지 Op 를 고른다 → (가지 Op, None) | (None, 거절 본문).
+
+    고른 인자는 가지가 안쪽에 안 넘기는 것이면(`consume`) 인자에서 뗀다. 값이 가지에 없으면 받는 값을 말한다."""
+    from aot.tools.domain import vocab
+    pk = o.pick_by_arg
+    raw = arguments.get(pk.arg)
+    if raw in (None, '', [], {}):
+        key = ''
+    elif pk.normalize == 'onoff':
+        got = vocab.onoff(raw)
+        key = None if got is None else ('on' if got else 'off')
+    else:
+        key = str(raw).strip().lower()
+    if key in pk.synonyms:
+        key = pk.synonyms[key]
+    if key is not None and key not in pk.branches and '*' in pk.branches and key != '':
+        key = '*'
+    if key == '' and '' not in pk.branches and pk.infer:
+        # 값을 안 말했다 — 합친 op 자신(모든 종류의 합집합)이 가지다: 대상에서 종류를 알아낸다.
+        return replace(o, pick_by_arg=None), None
+    branch = pk.branches.get(key) if key is not None else None
+    if branch is None:
+        allowed = sorted(k for k in pk.branches if k not in ('', '*'))
+        return None, _error(
+            "%s.%s: %s=%r is not one of %s — nothing was run. help(target='%s.%s') lists what each takes." % (
+                o.tool, o.op, pk.arg, raw, ", ".join(allowed) or '(none)', o.tool, o.op),
+            reason_code='bad_%s' % pk.arg)
+    if pk.consume:
+        arguments.pop(pk.arg, None)
+    return branch, None
+
+
 def _missing_required(o, arguments):
     """명부 `required` 중 비어 온 고유 인자(대상 제외) — help 가 필수로 알리는 것과 같다.
 
@@ -944,6 +1225,61 @@ def _missing_required(o, arguments):
     params·reason 이 빈 요청이 남았다)."""
     return [r for r in o.required
             if r != 'target' and arguments.get(r) in (None, '', [], {})]
+
+
+#: 일지 목록을 기간으로 거르기 전에 안쪽에서 읽는 수 — 안쪽 도구의 상한(200).
+_JOURNAL_SCAN = 200
+
+
+def _filter_journal_period(out, rng, limit):
+    """일지 목록에서 기간이 `rng`(시작, 끝; 한쪽은 None 가능)와 **겹치는** 일지만 남긴 뒤 limit(없으면 안쪽 기본 50)로 자른다.
+    기간이 없는 일지는 겹침을 알 수  없어 뺀다."""
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    rows = body.get('journals') if isinstance(body, dict) else None
+    if not isinstance(rows, list):
+        return out
+    start, end = rng
+
+    def _hit(r):
+        a, b = str(r.get('period_start') or '')[:10], str(r.get('period_end') or '')[:10]
+        if not a or not b:
+            return False
+        return (end is None or a <= end) and (start is None or b >= start)
+
+    kept = [r for r in rows if isinstance(r, dict) and _hit(r)]
+    try:
+        cap = max(1, int(limit)) if limit not in (None, '') else 50
+    except (TypeError, ValueError):
+        cap = 50
+    total = len(kept)
+    body['journals'] = kept[:cap]
+    body['count'] = len(body['journals'])
+    body['period'] = {"from": start, "to": end}
+    if total > cap:
+        body.update(truncated=True, total=total, note="Only the first %d journals overlapping this period are shown "
+                                                      "(newest first); raise limit for more." % cap)
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
+def _pair_range(text):
+    """`period`(날짜 범위) → ('YYYY-MM-DD' | None, 'YYYY-MM-DD' | None) 또는 거절 본문(list).
+    'FROM/' 은 끝 없이, '/TO' 는 시작 없이 — 안쪽 두 칸 중 하나만 채운다."""
+    from aot.tools.domain import vocab
+    t = str(text or '').strip()
+    if '/' in t:
+        a, _, b = t.partition('/')
+        if not a.strip() or not b.strip():
+            half = vocab.period(a.strip() or b.strip(), today=today_at(FARM))
+            if half is not None:
+                return (half[0].isoformat(), None) if a.strip() else (None, half[1].isoformat())
+    rng = vocab.period(t, today=today_at(FARM))
+    if rng is None:
+        return _error("period %r not understood — use today, yesterday, this_week, 7d, YYYY-MM-DD or "
+                      "FROM/TO (days, both included)." % t, reason_code='bad_period')
+    return rng[0].isoformat(), rng[1].isoformat()
 
 
 def _period_args(o, inner, text):
@@ -957,7 +1293,7 @@ def _period_args(o, inner, text):
     # 스키마에 싣지 않는 처리기 인자도 기간을 받을 수 있다(새 인자 이름을 늘리지 않으려는 길 — 계약 검사도 같다).
     props |= handler_arg_names(inner)
     try:
-        vals, used = vocab.period_to(o.period_form, text, today=_today())
+        vals, used = vocab.period_to(o.period_form, text, today=today_at(FARM))
     except ValueError as exc:
         return _error("period %r: %s. Use now, today, yesterday, tomorrow, this_week, "
                       "24h, 7d, YYYY-MM-DD or FROM/TO." % (text, exc),
@@ -986,6 +1322,26 @@ _PERIOD_NOTES = {
 }
 
 
+#: `a|b|c` 낱말 나열뿐인 설명 — 그 op 가 받는 값의 목록이다(surface._PIPE_LIST 와 같은 꼴).
+_PIPE_WORDS = re.compile(r'^[a-z_]+(?:\|[a-z_]+)+$')
+
+
+def _rename_args(text, o):
+    """안쪽 도구 설명 속 안쪽 인자 이름 → 이 표면의 이름(`duration_seconds` → `duration`, `enabled` → `state`).
+
+    help 가 안쪽 설명을 그대로 보여, 목록의 인자는 state·duration 인데 설명은 enabled/duration_seconds 를
+    말했다(2026-11-09 claude.ai 점검). 밑줄 있는 이름은 낱말 경계로, 밑줄 없는 이름(enabled …)은 낱말이 흔해
+    `/`·`=`·`,` 로 다른 인자 이름과 나란히 적힌 자리만 바꾼다."""
+    for word, inner in (o.args or {}).items():
+        if not inner or inner == word:
+            continue
+        if '_' in inner:
+            text = re.sub(r'\b%s\b' % re.escape(inner), word, text)
+        else:
+            text = re.sub(r'(?<=[/,=])%s\b|\b%s(?=[/=,])' % (re.escape(inner), re.escape(inner)), word, text)
+    return text
+
+
 def _shared_doc(o, word, inner_doc):
     """공통 낱말의 도움말 — 목록의 설명과 같은 말에, 이 operation 이 그 낱말을 어떻게
     읽는지를 덧붙인다(안쪽 인자 설명을 그대로 보이면 목록과 어긋난다 — 2026-10-14:
@@ -1003,6 +1359,9 @@ def _shared_doc(o, word, inner_doc):
 
 #: `fields` 가 이 operation 에서 고르는 갈래 — 기본 응답은 요약이고 갈래를 청하면 그것을 더한다.
 _FIELDS_NOTES = {
+    ('detail', 'widget'): "the default answer leaves out option_schema; fields=['schema'] adds it, 'all' adds everything",
+    ('detail', 'map_equipment'): ("the default answer has counts, spacing, spec, drip pipes and pipe totals; "
+                                  "fields=['sprinklers'] adds head positions, ['pipes'] each pipe, or 'all'"),
     ('detail', 'device'): ("the default answer is a brief; add any of: options (option keys and current values, "
                            "secrets as set/unset), connection (communication fields), measurements (channel ids "
                            "and select values), bindings, constraints, location, outputs - or all"),
@@ -1027,8 +1386,8 @@ def _off_here(ctx):
     hidden = te._hidden_tools(role)
 
     def off(o):
-        names = set(o.inner.values())
-        if any(n not in hidden and (profile is None or R.tool_in_profile(n, profile))
+        names = set(o.inner_tools)
+        if any(n not in hidden and (profile is None or R.tool_in_profile(n, profile, via_domain=True))
                for n in names):
             return None
         if names <= hidden:
@@ -1094,19 +1453,26 @@ def _overview_card(ops, off, ctx):
     tools = {}
     shut = {}
     for x in ops:
+        if x.tool == 'help':                  # help 는 이 카드 자신 — 'op' 라는 가짜 operation 을 싣지 않는다
+            continue
         tools.setdefault(x.tool, []).append(x.op)
         d = off(x)
         if d:
             shut.setdefault(_off_label(d), []).append("%s.%s" % (x.tool, x.op))
+    from aot.tools.domain.surface import VOCAB_HELP
     card = {"status": "success", "tools": tools,
             "next": "help(target='<tool>') for one tool's operations; "
-                    "help(target='<tool>.<op>') for one operation's arguments"}
+                    "help(target='<tool>.<op>') for one operation's arguments",
+            "vocabulary": VOCAB_HELP}
     if shut:
         card["off_here"] = shut
     here = _this_connection(ctx)
     if here:
         card["this_connection"] = here
     return card
+
+
+VOCAB_SCHEMA_PERIOD = {"type": "string", "description": "now|24h|7d|today|yesterday|tomorrow|this_week|YYYY-MM-DD|FROM/TO"}
 
 
 def help_card(target, ops=None, ctx=None):
@@ -1119,7 +1485,7 @@ def help_card(target, ops=None, ctx=None):
     ops = ops if ops is not None else _ops()
     ref = str(target or '').strip()
     tool, _, op_name = ref.partition('.')
-    op_name = canonical_op(tool, op_name)
+    tool, op_name = canonical(tool, op_name)
     off = _off_here(ctx)
     if not ref:
         return _overview_card(ops, off, ctx)
@@ -1134,9 +1500,16 @@ def help_card(target, ops=None, ctx=None):
         return card
     o = find_op(ops, tool, op_name)
     if o is None:
-        names = ["%s.%s" % (x.tool, x.op) for x in ops if not tool or x.tool == tool]
-        return {"status": "error", "message": "Unknown operation %r." % ref,
-                "operations": names[:60]}
+        names, matched = _help_candidates(ref, tool, ops)
+        card = {"status": "error", "message": "Unknown operation %r." % ref}
+        if matched:
+            card["operations"] = names[:60]                  # 그 도구의 전부, 이름·설명 낱말이 맞은 것, 옛 이름이 가리키는 것 순
+            card["next"] = "help(target='tool.op') with one of operations; help(target='tool') lists a tool's ops"
+        else:
+            card["next"] = ("help(target='tool.op') with one of operations; help(target='tool') lists a tool's ops. "
+                            "To find a device by name: find.devices(query='<name>').")
+            card["operations"] = _ops_by_tool(ops)              # 전부 — 중간에서 자르면 control·record·… 가 빠진다
+        return card
     approval = set(R.approval_required_tools())
     from aot.tools.domain.contract import catalog
     cat = catalog()
@@ -1146,8 +1519,13 @@ def help_card(target, ops=None, ctx=None):
                            .get('properties') or {})
     def arg_doc(inner_name, why=None):
         d = dict(inner_props.get(inner_name) or {})
+        if isinstance(d.get('description'), str):       # 안쪽 설명의 옛 도구 이름(resolve_target …) → 이 표면의 operation
+            d['description'] = _rename_args(_rename_tools(d['description'], _inner_to_op()), o)
         if why:
             d['why_not_shared'] = why
+            if _PIPE_WORDS.match(why) and 'enum' in d:
+                # 안쪽 enum 에는 다른 op 몫의 값이 섞인다(screen.act 의 action 에 screen.card 의 post) — 이 op 의 목록으로.
+                d['enum'] = why.split('|')
         return d
     pairs = {}
     if o.kinds_by_arg:
@@ -1158,8 +1536,9 @@ def help_card(target, ops=None, ctx=None):
                                           "instead of target; or find.resolve first and pass the id.")}
     card = {
         **pairs,
-        "status": "success", "operation": "%s.%s" % (o.tool, o.op), "use": o.use, "effect": o.effect,
-        "needs_approval": any(n in approval for n in o.inner.values()),
+        "status": "success", "operation": "%s.%s" % (o.tool, o.op), "use": o.use,
+        "effect": _effect_label(o.effect),                    # 목록 표시([setup; approval])와 같은 이름
+        "needs_approval": any(n in approval for n in o.inner_tools),
         "target_kinds": [k for k in o.inner if k != 'none'],
         "target_optional": 'none' in o.inner,
         "required": list(o.required),
@@ -1170,15 +1549,87 @@ def help_card(target, ops=None, ctx=None):
         # 대상은 target 하나로 넘긴다 — 아래 칸 이름으로 넘겨도 되며, 그러면 그 종류로만 찾는다.
         "target_slots": {ta: sorted(kinds) for ta, kinds in _target_slots(o).items()},
     }
+    if o.period_pair:
+        card["shared_args"]["period"] = dict(
+            VOCAB_SCHEMA_PERIOD, here="a date range of days, both included: YYYY-MM-DD, FROM/TO, 'FROM/' (no end), "
+                                      "'/TO' (no start), or this_week|7d")
     card.update(off(o) or {})
+    if o.pick_by_arg is not None:
+        # 같은 op 안에서 값이 동작을 고른다 — 값마다 필수와 받는 인자가 다르다(목록에는 합집합뿐).
+        pk = o.pick_by_arg
+        card["choose_by"] = pk.arg
+        card["by_value"] = {
+            (k or '(not given)'): {
+                "use": b.use,
+                "needs": [r for r in b.required if r != 'target'] + (['target'] if 'target' in b.required else []),
+                "takes": sorted(set(b.args) | set(b.extra_args)),
+                "targets": [x for x in b.inner if x != 'none'] or 'none (arguments carry them)',
+            } for k, b in pk.branches.items()}
     if (o.tool, o.op) == ('configure', 'tool_profile_set'):
         card.update(_profile_card(ctx))
+    if o.help_extra:                       # 형식·예시 등 help 전용 칸(목록 고정비에는 안 들어간다)
+        card.update(o.help_extra)
     return card
+
+
+def _effect_label(effect):
+    from aot.tools.domain.surface import _EFFECT_MARK
+    return _EFFECT_MARK.get(effect, effect)
+
+
+def _ops_by_tool(ops):
+    """{도구: [op …]} 전부 — help 와 같은 모양(가짜 help.op 는 뺀다)."""
+    out = {}
+    for x in ops:
+        if x.tool != 'help':
+            out.setdefault(x.tool, []).append(x.op)
+    return out
+
+
+def _help_candidates(ref, tool, ops):
+    """help 가 모르는 말일 때의 후보 → (이름들, 실제로 맞은 것이 있는가). 그 도구의 operation, 옛 안쪽 도구 이름이 가리키는
+    operation, 낱말이 이름·설명에 들어 있는 operation 순. 아무것도 못 찾으면 ([], False) — 호출자가 전체를 보인다."""
+    import re
+    from aot.tools.domain.registry import DOMAIN_TOOLS
+    tags = lambda x: "%s.%s" % (x.tool, x.op)                # noqa: E731
+    got = []
+
+    def add(names):
+        for n in names:
+            if n not in got:
+                got.append(n)
+    if tool in DOMAIN_TOOLS:
+        add(tags(x) for x in ops if x.tool == tool)
+    word = ref.strip().lower()
+    inner = _inner_to_op()
+    if word in inner:
+        add([inner[word]])
+    terms = [t for t in re.split(r'[^a-z0-9]+', word) if len(t) > 2 and t not in ('get', 'list', 'set', 'the', 'tool')]
+    if terms:
+        scored = []
+        for x in ops:
+            hay = ("%s %s %s" % (x.tool, x.op, x.use)).lower()
+            hit = sum(t in hay for t in terms)
+            if hit:
+                scored.append((-hit, tags(x)))
+        add(n for _h, n in sorted(scored)[:8])
+    got = [n for n in got if not n.startswith('help.')]
+    return got, bool(got)
+
+
+def gate_identity_refusal(tool_name, role):
+    from aot.tools import mcp_safety_gate
+    return mcp_safety_gate.identity_refusal(tool_name, role)
 
 
 def run(app, tool, arguments, **ctx):
     """도메인 도구를 실행한다. 실행 경로는 `_execute_tool` 재귀 **하나뿐**이다."""
     if tool == 'help':
+        # AI 를 못 쓰는 역할(Guest·Kiosk)에는 도구 목록도 내주지 않는다(역할 거절이 앞).
+        refused = (gate_identity_refusal('get_tool_detail', ctx.get('role'))
+                   if ctx.get('role') is not None else None)
+        if refused is not None:
+            return [{"type": "text", "text": json.dumps(refused, ensure_ascii=False)}]
         a = arguments or {}
         card = help_card(a.get('target') or a.get('tool_name') or a.get('query')
                          or a.get('operation'), ctx=ctx)
@@ -1254,9 +1705,8 @@ def _run(app, tool, arguments, ctx):
 
 
 def _run_call(app, tool, arguments, ctx):
-    arguments = dict(arguments or {})
-    if arguments.get('op'):
-        arguments['op'] = canonical_op(tool, arguments['op'])
+    # 옛 op·인자 이름은 여기서 새 이름으로 — 이후(응답 계약·서버 카드·감사)는 정식 이름만 본다.
+    tool, arguments, renamed = renames.resolve_call(tool, arguments, _ops())
     # 화면 따라가기의 호출별 옵션 — 틀이 한 번만 따라가므로 여기서 뗀다. 안쪽 호출에는
     # 'off' 를 실어 안쪽 도구가 따로 따라가지 않게 한다(창이 두 번 열리지 않게).
     from aot.tools import screen_follow
@@ -1268,6 +1718,7 @@ def _run_call(app, tool, arguments, ctx):
             arguments['screen'] = show
     elif show is None and arguments.get('screen'):
         show = arguments.pop('screen')
+    show = effective_show(tool, arguments.get('op'), show)
     # 화면 도구에서 지정한 화면은 이 대화의 지정 화면으로 적어 둔다 — 이후 조회가 여러 화면 속에서도 그 화면을 따라간다.
     if tool == 'screen':
         screen_follow.remember_screen(ctx.get('scope_user_uuid'), ctx.get('session_key'), arguments.get('screen'))
@@ -1281,17 +1732,78 @@ def _run_call(app, tool, arguments, ctx):
         out = _run_call_inner(app, tool, arguments, ctx, show, answer_time)
     # 날씨·장소 요약 카드는 서버가 올린다(카드 결정 A, 2026-10-29) — 올렸으면 안내(card_hint)를 뗀다.
     out = server_card.post_for(app, tool, arguments.get('op'), out, ctx, show)
+    # 값 조회(measure.latest·history)는 게이지·미니그래프 카드를 서버가 올린다(2026-11-06, 같은 결정) — 텍스트는 병행.
+    out = server_viz.post_for(app, tool, arguments.get('op'), out, ctx, show)
     # 출구 한 곳 — 시범 op 는 행동(next)·말하기(say)·사실(data)로 나눈다(act_say, 설계 §2-4).
-    return act_say.shape(out, tool, arguments.get('op'))
+    out = act_say.shape(out, tool, arguments.get('op'))
+    # 꼭 할 호출이 있으면 그 하나만 맨 앞 `must` 한 줄로(F-16 ①) — 모든 op 에.
+    out = act_say.lead(out)
+    return _with_renamed(out, renamed)
+
+
+def _with_renamed(out, renamed):
+    """옛 이름이 실제 쓰인 호출에만 "새 이름은 이것" 한 줄 — status·say·next 다음, data 앞."""
+    if not renamed:
+        return out
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    if not isinstance(body, dict):
+        return out
+    head = {k: body[k] for k in ('must', 'status', 'say', 'next') if k in body}
+    body = {**head, 'renamed': renamed, **{k: v for k, v in body.items() if k not in head}}
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
+_FOCUS_SLOT = "<max|min|rain_start|HH:MM|range>"
+
+
+def _focus_required(tool, arguments, ctx, show, answer_time=None):
+    """도메인 예보는 화면 시간 따라가기가 가능할 때 `focus` 가 필수다(2026-11-10, 실측 0/10: AI 는 선택 인자를 안 채운다).
+
+    없거나 모르는 값이면 처리기를 부르지 않고 같은 인자 + focus 자리표시의 다시 보낼 호출을 돌려준다(`next.resend` → `must`).
+    화면이 없는 클라이언트·`_show_on_screen='off'`·인앱 AI·`_answer_time`(슬라이더 시각이 이미 정해짐)은 거절하지 않는다."""
+    from aot.tools import screen_follow
+    if screen_follow.focus_valid(arguments) or answer_time not in (None, ''):
+        return None
+    if not screen_follow.focus_required_here(ctx.get('scope_user_uuid'), ctx.get('tool_profile'),
+                                             ctx.get('transport'), show):
+        return None
+    parts = ["%s=%r" % (k, v) for k, v in arguments.items() if k != 'focus' and not str(k).startswith('_')]
+    how, screen = screen_follow._parse_show(show)
+    if how == 'screen':                           # 화면 지정은 다시 보낼 호출에도 남는다
+        parts.append("_show_on_screen=%r" % screen)
+    parts.append("focus=" + _FOCUS_SLOT)
+    given = str(arguments.get('focus') or '')
+    if '<' in given or '|' in given:
+        why = "focus was the placeholder; pick one value (max, min, rain_start, HH:MM or range), not the placeholder."
+    else:
+        why = ("forecast needs focus: what the answer points to - max, min, rain_start, an hour (HH:MM), or range "
+               "for the whole span.")
+    return _error(why + " Nothing was run.", reason_code='focus_required',
+                  next={"resend": "%s(%s)" % (tool, ", ".join(parts))})
 
 
 def _run_call_inner(app, tool, arguments, ctx, show, answer_time):
+    # 역할 거절이 가장 앞이다 — 모호한 이름의 후보 목록·"이미 그 상태" 성공·인자 오류가
+    # 권한 없는 호출자에게 먼저 나가면 안 된다(26-11-04 전수 실측 S1·S2). 대상 풀기·별칭
+    # 목록도 같다(26-11-05: Guest·Kiosk 가 이름·id 를 받던 것). 순서: 역할 → 묶음 → 그 밖.
+    refused = _role_refusal_first(tool, arguments, ctx)
+    if refused is not None:
+        _audit_refusal(tool, arguments, ctx, refused)
+        return refused
+    if tool == 'weather' and arguments.get('op') == 'forecast':
+        refused = _focus_required(tool, arguments, ctx, show, answer_time)
+        if refused is not None:
+            _audit_refusal(tool, arguments, ctx, refused)
+            return refused
     if tool == 'find' and arguments.get('op') == 'resolve':
         out = _resolve_card(arguments, ctx.get('scope_user_uuid'))
         return _follow(tool, out, _resolve_target_of(out), ctx, show, answer_time, arguments)
     if tool == 'find' and arguments.get('op') == 'aliases':
         return _aliases_card(arguments)
-    verdict = plan(tool, arguments, user=ctx.get('scope_user_uuid'))
+    verdict = plan(tool, arguments, user=ctx.get('scope_user_uuid'), session=ctx.get('session_key'))
     if verdict[0] == 'refuse':
         _audit_refusal(tool, arguments, ctx, verdict[1])
         return verdict[1]
@@ -1300,18 +1812,26 @@ def _run_call_inner(app, tool, arguments, ctx, show, answer_time):
         _f, inner, inner_args, meta = verdict
         extra = inner_args.pop(META_KEY, None) or {}
         follow_to = meta.get('target')
-        out = _execute_tool(app, inner, dict(inner_args, **_QUIET), **ctx)
-        out = _annotate(_filter_ids(out, meta), {k: v for k, v in extra.items()
-                                                 if k != 'target'})
+        out = _execute_tool(app, inner, dict(inner_args, **_QUIET), via_domain=True, **ctx)
+        out = _annotate(_filter_ids(out, meta), dict({k: v for k, v in extra.items() if k != 'target'},
+                                                     **{k: meta[k] for k in ('picked_by', 'picked') if k in meta}))
         return _follow(tool, out, follow_to, ctx, show, answer_time, arguments)
     if verdict[0] == 'fanout':
         # 읽기 펼치기 — 안의 대상마다 같은 안쪽 도구를 부른다(쓰기는 여기 오지 않는다).
         _f, inner, calls, meta = verdict
         results, period = [], None
+        per_target = meta.get('per_target')
+        o = find_op(_ops(), tool, arguments.get('op')) if per_target else None
         for child, args in calls:
             extra = args.pop(META_KEY, None) or {}
             period = period or extra.get('period')
-            out = _execute_tool(app, inner, dict(args, **_QUIET), **ctx)
+            slim_args = extra.pop('slim', None)
+            journal_range = extra.pop('journal_range', None)
+            by_period = bool(o is not None and o.period_field and arguments.get('period'))
+            out = _execute_tool(app, inner, dict(args, **_QUIET), via_domain=True,
+                                **dict(ctx, uncapped=True) if by_period else ctx)
+            if per_target:
+                out = _finish_read(out, tool, arguments, o, slim_args, journal_range, extra)
             text = out[0].get('text') if isinstance(out, list) and out else None
             try:
                 body = json.loads(text) if text else out
@@ -1323,7 +1843,7 @@ def _run_call_inner(app, tool, arguments, ctx, show, answer_time):
                 _domain_hints(body)
             results.append({"target": {k: child.get(k) for k in ('kind', 'name', 'path')},
                             "result": body})
-        env = dict(meta, status="success", results=results)
+        env = dict({k: v for k, v in meta.items() if k != 'per_target'}, status="success", results=results)
         if period:
             env["period"] = period
         out = [{"type": "text", "text": json.dumps(env, ensure_ascii=False, default=str)}]
@@ -1339,19 +1859,172 @@ def _run_call_inner(app, tool, arguments, ctx, show, answer_time):
     if same is not None:
         return same
     extra = inner_args.pop(META_KEY, None) or {}
+    slim_args = extra.pop('slim', None)
+    journal_range = extra.pop('journal_range', None)
     quiet = tool in READ_TOOLS
-    out = _execute_tool(app, inner, dict(inner_args, **_QUIET) if quiet else inner_args,
-                        **ctx)
     o = find_op(_ops(), tool, arguments.get('op'))
-    if o is not None and o.period_field and arguments.get('period'):
-        out = _filter_period(out, o, arguments['period'])
-    out = _annotate(out, extra)
+    # 기간을 거르는 읽기는 안쪽 응답을 크기 상한으로 자르지 않는다 — 앞 일부만 남기고 거르면 기간 안의
+    # 행이 사라져 count 0 에 results_truncated 가 같이 나온다(2026-11-03 시험 #2). 상한은 거른 뒤 바깥에서.
+    by_period = bool(o is not None and o.period_field and arguments.get('period'))
+    out = _execute_tool(app, inner, dict(inner_args, **_QUIET) if quiet else inner_args,
+                        via_domain=True, uncapped=by_period, **ctx)
+    out = _finish_read(out, tool, arguments, o, slim_args, journal_range, extra)
     if not quiet:
-        return _approval_next(out, tool, arguments)
+        return _approval_next(out, tool, arguments, ctx)
     return _follow(tool, out,
                    _crop_plot_target(out, tool, arguments.get('op'), extra.get('target'))
                    or _single_result(out, tool, arguments.get('op')),
                    ctx, show, answer_time, arguments)
+
+
+def _finish_read(out, tool, arguments, o, slim_args, journal_range, extra):
+    """안쪽 읽기 응답을 도메인 응답으로 다듬는다 — 기간 거르기·줄이기·op 별 손질·대상 이름 표시. 대상 하나짜리
+    호출과 대상별로 따로 부른 읽기(`per_target`)가 같은 길을 쓴다."""
+    by_period = bool(o is not None and o.period_field and arguments.get('period'))
+    if by_period:
+        out = _filter_period(out, o, arguments['period'], arguments.get('limit'))
+    if o is not None and o.slim:
+        out = slim.apply(out, o.slim, slim_args or {})
+    if journal_range:
+        out = _filter_journal_period(out, journal_range['range'], journal_range['limit'])
+    if (tool, arguments.get('op')) == ('measure', 'soil_forecast'):
+        out = _unavailable_next(out)
+    elif (tool, arguments.get('op')) == ('measure', 'water_estimate'):
+        out = _estimate_window_iso(out, arguments.get('duration'))
+    elif tool == 'weather':
+        out = _weather_origin(out)
+    elif (tool, arguments.get('op')) == ('measure', 'latest'):
+        out = _latest_tidy(out, bool(arguments.get('measurement')))
+    return _annotate(_name_resolved_ids(out, extra), extra)
+
+
+#: 주 채널이 아닌 보조 채널(배터리·전파 세기) — 대표값이 이것이면 "센서의 값"으로 읽히면 안 된다.
+_AUX_CHANNELS = frozenset({'electrical_potential', 'battery', 'battery_level', 'battery_voltage',
+                           'rssi', 'signal_strength', 'signal_quality', 'lqi', 'snr'})
+_REPRESENTATIVE = ('measurement', 'timestamp', 'value', 'unit')
+
+
+def _latest_tidy(out, asked_measurement):
+    """measure.latest 의 두 가지 손질(2026-11-03 라운드 2 #6).
+    1) 항목을 안 정했는데 주 채널(온도·습도 …)이 끊겨 `silent_channels` 가 있고 최상위 대표값이 보조 채널(배터리)이면,
+       대표값 칸을 비우고 `channels` 만 둔다 — 배터리 3.7 V 가 "온습도_1 의 값"으로 읽히지 않게. 끊긴 채널이 없는 센서
+       (진짜 배터리 채널뿐인 센서)는 그대로다.
+    2) 옛 키 `time_range` 는 이 표면의 이름 `period` 로(값이 없으면 뺀다). `period` 가 이미 있으면 그쪽이 이긴다."""
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    if not isinstance(body, dict) or body.get('status') == 'error':
+        return out
+    changed = False
+    if not asked_measurement and body.get('silent_channels') and body.get('measurement') in _AUX_CHANNELS:
+        for k in _REPRESENTATIVE:
+            body.pop(k, None)
+        if isinstance(body.get('note'), str):
+            body['note'] = body['note'].replace(
+                "The value above is from another channel of this device.",
+                "No main reading is given: only the other channels listed in `channels` reported.")
+        changed = True
+    if 'time_range' in body:
+        old = body.pop('time_range')
+        if old is not None and 'period' not in body:
+            body['period'] = old
+        changed = True
+    if not changed:
+        return out
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
+def _weather_origin(out):
+    """날씨 응답의 `weather_source` 는 그대로 두고, 값이 예보 모델이면 최상위에서 읽히게 `weather_data_origin` 을 더한다
+    (2026-11-03 라운드 2 #5 — `weather_device.data_origin` 은 한 겹 안이라 `weather_source: weather_station` 만 읽은 AI 가
+    모델 값을 관측으로 읽었다). 출처를 고르는 로직은 건드리지 않는다."""
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    dev = body.get('weather_device') if isinstance(body, dict) else None
+    origin = dev.get('data_origin') if isinstance(dev, dict) else None
+    if origin not in ('model', 'observed') or 'weather_data_origin' in body:
+        return out
+    pos = list(body).index('weather_source') + 1 if 'weather_source' in body else len(body)
+    items = list(body.items())
+    body = dict(items[:pos] + [('weather_data_origin', origin)] + items[pos:])
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
+def _estimate_window_iso(out, duration):
+    """`window` 의 유닉스 초(float) → 그 구획 시계의 ISO(+오프셋), 호출이 준 `duration` 을 돌려준다(2026-11-03 라운드 2 #4).
+    시각은 timekit 으로만 — aware UTC 에서 구획 시계로(`iso_at`), 고정 오프셋·naive 섞기 없음."""
+    from aot.utils.timekit import iso_at
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    if not isinstance(body, dict):
+        return out
+    changed = False
+    for one in [body] + [r for r in (body.get('results') or []) if isinstance(r, dict)]:
+        win = one.get('window')
+        if not isinstance(win, dict) or not all(isinstance(win.get(k), (int, float)) for k in ('from', 'to')):
+            continue
+        where = one.get('plot')
+        one['window'] = {k: iso_at(win[k], where) for k in ('from', 'to')}
+        if duration not in (None, ''):
+            one['duration'] = duration
+        changed = True
+    if not changed:
+        return out
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
+def _unavailable_next(out):
+    """트윈이 예측을 못 낸 응답(`unavailable`)에 막다른 길을 없앤다 — 지금 값과 비 예보로 답할 길(2026-11-03 라운드 2 #3)."""
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    if not isinstance(body, dict) or body.get('status') != 'unavailable' or 'next' in body:
+        return out
+    who = body.get('plot')
+    who = "'%s'" % who if who else '<plot>'
+    head = {'status': 'unavailable'}
+    head['next'] = {"call": "measure.latest(target=%s, measurement='soil moisture') for the current reading; "
+                            "weather.forecast(target=%s, measurement='rain') for coming rain" % (who, who)}
+    body = {**head, **{k: v for k, v in body.items() if k not in head}}
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
+def _role_refusal_first(tool, arguments, ctx):
+    """op 의 안쪽 도구가 **전부** 이 호출자의 역할로 거절되면 그 거절 본문(블록), 아니면 None.
+
+    판정은 게이트의 `role_refusal` 하나다(두 번째 판정자를 만들지 않는다). 가지가 여럿인 op 는
+    하나라도 쓸 수 있으면 통과시켜 안쪽 게이트가 가른다. 승인 응답(`respond_to_confirmation`)은
+    항목별 판정이라 여기서 보지 않는다."""
+    try:
+        from aot.tools import mcp_safety_gate as gate
+        from aot.tools import tool_execution as te
+        if ctx.get('role') is None:        # 인증을 끈 연결 — 안쪽 게이트가 같은 판정을 한다
+            return None
+        o = find_op(_ops(), tool, (arguments or {}).get('op'))
+        if o is None:
+            return None
+        inner = [t for t in o.inner_tools if t != 'respond_to_confirmation']
+        if not inner or len(inner) != len(o.inner_tools):
+            return None
+        bodies = [gate.identity_refusal(t, ctx.get('role')) for t in inner]
+        if not any(b is None for b in bodies):
+            return [{"type": "text", "text": json.dumps(bodies[0], ensure_ascii=False)}]
+        # 역할 다음은 도구 묶음 — "이미 그 상태" 단축·인자 오류가 묶음 밖 호출에 먼저 답하지 않게.
+        # 안쪽 도구가 전부 묶음 밖일 때만(하나라도 쓸 수 있으면 안쪽 판정에 맡긴다).
+        profiled = [te._profile_refusal(t, ctx.get('tool_profile'), ctx.get('transport'),
+                                        role=ctx.get('role'), via_domain=True) for t in inner]
+        if not any(b is None for b in profiled):
+            return [{"type": "text", "text": json.dumps(profiled[0], ensure_ascii=False)}]
+        return None
+    except Exception:                                       # noqa: BLE001
+        logger.exception('[domain] role-first check failed (passed on to the gate)')
+        return None
 
 
 def _already_so(inner, inner_args):
@@ -1380,7 +2053,7 @@ def _fan_write(app, tool, arguments, inner, calls, ctx):
     asked, refused = [], []
     for child, args in calls:
         args.pop(META_KEY, None)
-        out = _execute_tool(app, inner, args, **ctx)
+        out = _execute_tool(app, inner, args, via_domain=True, **ctx)
         try:
             body = json.loads(out[0]['text'])
         except (TypeError, ValueError, KeyError, IndexError):
@@ -1595,10 +2268,10 @@ def _single_result(out, tool=None, op=None):
 
 
 def _crop_plot_target(out, tool, op, target):
-    """overview.crops 를 시설로 물었는데 그 시설에 구획이 하나뿐이면 화면에는 시설이 아니라 그 작물 구획을 연다.
+    """find.plots(옛 overview.crops)를 시설로 물었는데 그 시설에 구획이 하나뿐이면 화면에는 시설이 아니라 그 작물 구획을 연다.
     작물을 물은 사람은 작물 상태를 보려는 것이다(2026-10-28 점검: 육묘장3 의 작물을 묻자 시설이 떴다).
     구획이 여럿이면 하나를 고르지 않고 시설 그대로 둔다."""
-    if (tool, op) != ('overview', 'crops') or not isinstance(target, dict) \
+    if (tool, op) not in (('overview', 'crops'), ('find', 'plots')) or not isinstance(target, dict) \
             or target.get('kind') != 'facility':
         return target
     try:
@@ -1652,6 +2325,29 @@ def _audit_refusal(tool, arguments, ctx, body):
         logger.exception('[domain] refusal audit failed')
 
 
+def _name_resolved_ids(out, extra):
+    """오류 문구에 서버가 푼 id 가 그대로 나오면 사용자가 준 이름으로 바꾼다 —
+    `could not locate '5133d6ca-…'` 는 사용자가 무엇을 말했는지 알 수 없다(2026-11-03 시험 #6)."""
+    target = (extra or {}).get('target')
+    if not isinstance(target, dict) or not target.get('id') or not target.get('name'):
+        return out
+    try:
+        body = json.loads(out[0]['text'])
+    except (TypeError, ValueError, KeyError, IndexError):
+        return out
+    if not isinstance(body, dict) or body.get('status') != 'error':
+        return out
+    changed = False
+    for key in ('message', 'error'):
+        text = body.get(key)
+        if isinstance(text, str) and str(target['id']) in text:
+            body[key] = text.replace(str(target['id']), str(target['name']))
+            changed = True
+    if not changed:
+        return out
+    return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
+
+
 def _annotate(out, extra):
     """안쪽 응답에 틀의 해석을 싣고, 안쪽 도구 이름으로 된 다음 단계 안내를 도메인
     operation 이름으로 바꾼다. JSON 이 아니면 그대로 둔다."""
@@ -1670,7 +2366,7 @@ def _annotate(out, extra):
     return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
 
 
-def _approval_next(out, tool, arguments):
+def _approval_next(out, tool, arguments, ctx=None):
     """승인 대기 응답에 이 표면의 다음 단계를 싣는다.
 
     게이트의 안내문은 안쪽 이름(`respond_to_confirmation`, "같은 도구를 다시")으로 적혀
@@ -1686,6 +2382,12 @@ def _approval_next(out, tool, arguments):
             or not body.get('confirmation_id'):
         return out
     cid = body['confirmation_id']
+    # 같은 요청의 대기가 이미 있었다(게이트가 새로 만들지 않고 돌려줌, F-16 ⑤) — 이 대화가 이미 되읽어 물었으면
+    # 다시 묻지 않게 표시를 남기고, 다른 대화가 만든 대기면 표시를 떼어 여기서 처음 되읽게 한다.
+    user, session = (ctx or {}).get('scope_user_uuid'), (ctx or {}).get('session_key')
+    if body.pop('already_asked', None) and session_rules.was_asked(user, session, cid):
+        body['already_asked'] = True
+    session_rules.remember_asked(user, session, cid)
     again = {k: v for k, v in (arguments or {}).items()
              if k not in ('op', '_confirmation_id')}
     body['next'] = {
@@ -1711,14 +2413,25 @@ _NOT_RUN = frozenset({'error', 'refused', 'rejected', 'expired'})
 #: 안쪽 응답의 다음 단계 안내 칸 — 안쪽 도구 이름(지금 표면)으로 적혀 있다.
 _HINT_KEYS = ('_more', 'hint', 'next_step', 'next_steps')
 _INNER_TO_OP = {}
+_INNER_PREFERRED = {'list_plots': 'find.plots', 'get_zone_sensor_summary': 'measure.latest'}
 
 
 def _inner_to_op():
     """안쪽 도구 이름 → 'tool.op'(읽기 operation 이 먼저)."""
+    import re
     if not _INNER_TO_OP:
         for o in sorted(_ops(), key=lambda x: x.tool not in READ_TOOLS):
-            for name in o.inner.values():
+            for name in o.inner_tools:
                 _INNER_TO_OP.setdefault(name, '%s.%s' % (o.tool, o.op))
+        # 한 안쪽 도구에 operation 이 여럿이면 명부 순서가 아니라 이 이름이 이긴다 — "남은 구획은 list_plots 로" 가
+        # 개요(overview.crops)가 아니라 목록(find.plots, offset·query 가 있다)을 가리키게.
+        _INNER_TO_OP.update(_INNER_PREFERRED)
+        # 합쳐져 따로 안 부르는 안쪽 도구(get_device_list …)도 그 일을 맡은 op 로 — 응답 문구에 옛 이름이 남지 않게.
+        from aot.tools.domain.contract import COVERED_ELSEWHERE
+        for name, why in COVERED_ELSEWHERE.items():
+            got = re.match(r'[a-z]+\.[a-z_]+', why)
+            if got:
+                _INNER_TO_OP.setdefault(name, got.group(0))
     return _INNER_TO_OP
 
 
@@ -1732,14 +2445,25 @@ def _domain_hints(body):
         if not isinstance(text, str) or not text:
             continue
         text = re.sub(r'\b(?:via )?use_tool:?\s*', '', text)
-        body[key] = re.sub(r'\b([a-z][a-z0-9_]+)\b',
-                           lambda m: names.get(m.group(1), m.group(1)), text)
+        body[key] = _domain_arg_words(re.sub(r'\b([a-z][a-z0-9_]+)\b',
+                                             lambda m: names.get(m.group(1), m.group(1)), text))
     # 그 밖의 안내문(매뉴얼 결과 본문·_reading·see·how_to_proceed …)에 남은 옛 도구 이름도
     # 같은 이름으로(2026-10-28 점검: get_device_detail·knowledge_search 를 AI 가 못 불렀다).
     # 일반 문장의 낱말과 겹치지 않게 밑줄이 든 이름만 바꾼다.
     for k, v in list(body.items()):
         if k not in _HINT_KEYS and k not in _NO_RENAME and isinstance(v, (str, list, dict)):
             body[k] = _rename_tools(v, names)
+
+
+#: 안쪽 도구의 안내문이 쓰는 인자 이름 → 이 표면의 이름(`time_range='7d'` → `period='7d'`). 안 바꾸면 안내대로
+#: 부른 호출이 "does not take time_range" 로 거절된다(2026-11-03 시험 #1).
+_ARG_WORDS = (('time_range', 'period'), ('sensor_type', 'measurement'), ('measurement_type', 'measurement'))
+
+
+def _domain_arg_words(text):
+    for old, new in _ARG_WORDS:
+        text = text.replace(old + '=', new + '=')
+    return text
 
 
 #: 이름을 바꾸지 않는 칸 — 대상·호출 기록·행 목록은 자료라 그대로 둔다.
@@ -1756,7 +2480,7 @@ def _rename_tools(value, names, depth=0):
     if isinstance(value, str):
         if '_' not in value:
             return value
-        return _TOOL_WORD.sub(lambda m: names.get(m.group(1), m.group(1)), value)
+        return _domain_arg_words(_TOOL_WORD.sub(lambda m: names.get(m.group(1), m.group(1)), value))
     if depth > 6:
         return value
     if isinstance(value, list):
@@ -1769,6 +2493,57 @@ def _rename_tools(value, names, depth=0):
 _ID_KEYS = ('id', 'device_id', 'unique_id', 'output_id', 'input_id')
 
 
+def _place_keys(resolved):
+    """장소 대상(과 그 안의 장소)의 id 모음 — 시설은 도형 id 와 시설 id 두 가지로 불린다(둘 다 같은 시설)."""
+    from aot.databases.models import GeoFacility
+    ids = set()
+    for t in resolved:
+        ids.add(t['id'])
+        ids.update(c['id'] for c in _descendants(t))
+    if ids:
+        for f in GeoFacility.query.filter(
+                (GeoFacility.unique_id.in_(ids)) | (GeoFacility.shape_uuid.in_(ids))).all():
+            ids.update((f.unique_id, f.shape_uuid))
+    return ids
+
+
+def _filter_place_rows(body, meta):
+    """묶음 목록(`{종류: [행]}`)에서 `place_key` 칸이 장소 id 안에 드는 행만 남기고, 거른 뒤 쪽을 나눈다."""
+    key, keep = meta.pop('place_key'), set(meta.pop('place_ids', ()) or ())
+    page = meta.pop('page', None) or {}
+    rows_by = body.get('functions')
+    if not isinstance(rows_by, dict):
+        return False
+    total = sum(len(v) for v in rows_by.values() if isinstance(v, list))
+    flat = [(g, r) for g, rows in rows_by.items() if isinstance(rows, list)
+            for r in rows if str(r.get(key) or '') in keep]
+    meta['not_tied_to_a_place'] = total - len(flat)
+    start = int(page.get('offset') or 0)
+    stop = start + int(page['limit']) if page.get('limit') else None
+    shown = flat[start:stop]
+    body['functions'] = {}
+    for g, r in shown:
+        body['functions'].setdefault(g, []).append(r)
+    body['count'] = len(shown)
+    if shown != flat:
+        body['page'] = {"total": len(flat), "shown": len(shown), "offset": start,
+                        **({"next_offset": start + len(shown)} if start + len(shown) < len(flat) else {})}
+    else:
+        body.pop('page', None)
+    names = [r['name'] for _g, r in shown]
+    dups = sorted({n for n in names if names.count(n) > 1})
+    if not dups:
+        body.pop('duplicate_names', None)
+        body.pop('note', None)
+    else:
+        body['duplicate_names'] = dups
+    meta['place_filter_note'] = (
+        "Only functions tied to this place through their facility (environment coordinators) are listed. "
+        "PID, conditional and trigger functions are not tied to a place, so they are not matched here "
+        "(not_tied_to_a_place counts the rest); find.functions without target lists them all.")
+    return True
+
+
 def _filter_ids(out, meta):
     """목록 결과에서 그 장소 안의 장치 행만 남긴다(행의 id 칸으로)."""
     ids = set(meta.pop('ids', ()) or ())
@@ -1777,6 +2552,13 @@ def _filter_ids(out, meta):
     except (TypeError, ValueError, KeyError, IndexError):
         return out
     if not isinstance(body, dict):
+        return out
+    if meta.get('place_key'):
+        if _filter_place_rows(body, meta):
+            for k in ('server_host', 'now', 'call_state'):
+                body.pop(k, None)
+            body.update({k: v for k, v in meta.items() if v is not None})
+            return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
         return out
     kept_any = False
     for key, rows in list(body.items()):
@@ -1789,17 +2571,24 @@ def _filter_ids(out, meta):
                 body['count'] = len(kept)
             kept_any = True
     if not kept_any:
-        return out
+        # 거를 칸이 없는 목록 — 조용히 전체를 주면 거른 줄 안다(2026-11-04: find.functions 에 육묘장3 을 줘도 25개 전체).
+        body['filter_not_applied'] = ("The place target could not be applied to this list (its rows carry no device "
+                                      "or place link), so everything is listed.")
+        return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
     for k in ('server_host', 'now', 'call_state'):
         body.pop(k, None)
     body.update({k: v for k, v in meta.items() if v is not None})
     return [dict(out[0], text=json.dumps(body, ensure_ascii=False, default=str))] + list(out[1:])
 
 
-def _filter_period(out, o, period_text):
-    """안쪽 도구가 기간을 못 받을 때 결과 행을 그 기간으로 거른다(명부의 period_field)."""
+#: 기간을 거르기 전에 안쪽 도구에서 읽는 행 수 — 사용자의 limit 는 거른 뒤에 적용한다.
+_PERIOD_SCAN = 500
+
+
+def _filter_period(out, o, period_text, limit=None):
+    """안쪽 도구가 기간을 못 받을 때 결과 행을 그 기간으로 거른 뒤 limit 로 자른다(명부의 period_field)."""
     from aot.tools.domain import vocab
-    rng = vocab.period(period_text, today=_today())
+    rng = vocab.period(period_text, today=today_at(FARM))
     try:
         body = json.loads(out[0]['text'])
     except (TypeError, ValueError, KeyError, IndexError):
@@ -1807,7 +2596,31 @@ def _filter_period(out, o, period_text):
     rows = body.get(o.rows_key) if isinstance(body, dict) else None
     if not isinstance(rows, list) or rng is None:
         return out
-    kept = [r for r in rows if isinstance(r, dict) and vocab.in_period(r.get(o.period_field), rng)]
+    def _where(r):
+        # 행이 장치·장소 id 를 들고 있으면 그곳 시계로, 없으면 농장 시계
+        for k in _ID_KEYS:
+            v = str(r.get(k) or '').split('::')[0]
+            if v:
+                return v
+        return FARM
+
+    kept = [r for r in rows if isinstance(r, dict)
+            and vocab.in_period(r.get(o.period_field), rng, _where(r))]
+    kept.sort(key=lambda r: str(r.get(o.period_field) or ''))
+    try:
+        cap = max(1, int(limit)) if limit not in (None, '') else 20
+    except (TypeError, ValueError):
+        cap = 20
+    # 안쪽 도구의 '앞 N건' 안내는 거르기 전 얘기라 틀리다 — 거른 결과 기준으로 다시 쓴다.
+    body.pop('truncated', None)
+    body.pop('note', None)
+    if len(kept) > cap:
+        kept = kept[:cap]
+        body['truncated'] = True
+        body['note'] = "Only the first %d in this period are shown (earliest first); raise limit for more." % cap
+    elif body.get('truncated') is None and len(rows) >= _PERIOD_SCAN:
+        body['truncated'] = True
+        body['note'] = "Only the %d most recent entries were searched; narrow with query or target." % _PERIOD_SCAN
     body[o.rows_key] = kept
     if 'count' in body:
         body['count'] = len(kept)

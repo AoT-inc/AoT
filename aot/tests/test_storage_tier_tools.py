@@ -14,12 +14,10 @@ from unittest.mock import MagicMock, patch
 
 from aot.tools import tool_registry as tr
 from aot.tools.aot_data_tool_service import AoTDataToolService
-# get_storage_tier_status lives in the 'system' drawer mixin, archive_note /
-# restore_note_from_archive / set_document_tier in 'record' -- `db`/`Notes`
-# are looked up in THOSE modules' globals at call time now (the class used to
-# be one file), so the `db`/`Notes` patches below target those module paths.
+# get_storage_tier_status lives in the 'system' drawer mixin -- `db` is looked
+# up in that module's globals at call time, so the patches below target it.
 
-_TOOLS = ('get_storage_tier_status', 'search_archives', 'get_archived_document')
+_TOOLS = ('get_storage_tier_status',)
 
 
 # ---------------------------------------------------------------------------
@@ -47,8 +45,6 @@ def test_tool_descriptions_separate_intent_from_reality():
     payloads = {v['tool_name']: v['description'] for v in tr.virtual_tools()}
     status_desc = payloads['get_storage_tier_status'].lower()
     assert 'intent' in status_desc and 'archive' in status_desc
-    # 아카이브에 없는 tier 3 문서는 검색되지 않는다는 사실이 명시돼야 한다.
-    assert 'not appear' in payloads['search_archives'].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -103,207 +99,6 @@ def test_status_has_no_warning_when_consistent():
     """tier 3 문서가 없으면 경고할 불일치도 없다 — 무조건 겁주지 않는다."""
     result = _run_status([(1, 5), (2, 40)], archived_rows=0, enabled=True)
     assert 'warning' not in result
-
-
-# ---------------------------------------------------------------------------
-# search_archives / get_archived_document
-# ---------------------------------------------------------------------------
-
-def test_search_archives_empty_is_success_not_error():
-    """빈 결과를 오류로 표현하면 AI 가 '검색 실패' 로 오해한다."""
-    svc = MagicMock()
-    svc.search_archives.return_value = {'archives': [], 'total': 0}
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        result = AoTDataToolService.search_archives(query='딸기')
-
-    assert result['status'] == 'success'
-    assert result['count'] == 0
-    assert 'note' in result
-
-
-def test_search_archives_clamps_limit():
-    """limit 을 무한정 키우면 조회가 통째로 무거워진다."""
-    svc = MagicMock()
-    svc.search_archives.return_value = {'archives': [], 'total': 0}
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        AoTDataToolService.search_archives(limit=99999, offset=-5)
-
-    kwargs = svc.search_archives.call_args[1]
-    assert kwargs['limit'] == 200
-    assert kwargs['offset'] == 0
-
-
-def test_get_archived_document_requires_id():
-    result = AoTDataToolService.get_archived_document(document_id=None)
-    assert result['status'] == 'error'
-
-
-def test_get_archived_document_not_found_explains_tier_flag():
-    """아카이브에 없을 때, tier 값이 의도일 뿐이라는 설명이 함께 가야 한다."""
-    svc = MagicMock()
-    svc.restore_document.return_value = None
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        result = AoTDataToolService.get_archived_document(document_id='doc-1')
-
-    assert result['status'] == 'not_found'
-    assert 'intent' in result['message'].lower()
-
-
-def test_get_archived_document_surfaces_missing_file():
-    """DB 행은 있는데 파일이 없는 불일치를 삼키면 안 된다."""
-    svc = MagicMock()
-    svc.restore_document.side_effect = FileNotFoundError('/var/aot/archives/x.archive')
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        result = AoTDataToolService.get_archived_document(document_id='doc-1')
-
-    assert result['status'] == 'error'
-    assert 'missing' in result['message'].lower()
-
-
-def test_get_archived_document_metadata_only_by_default():
-    """기본은 메타데이터만 — 본문 해제는 명시적으로 요청할 때만."""
-    svc = MagicMock()
-    svc.restore_document.return_value = {'document_id': 'doc-1', 'metadata': {}}
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        AoTDataToolService.get_archived_document(document_id='doc-1')
-
-    assert svc.restore_document.call_args[1]['decompress'] is False
-
-
-# ---------------------------------------------------------------------------
-# 쓰기 도구 — 승인 게이트 + "복사이지 이동이 아니다" 계약
-# ---------------------------------------------------------------------------
-
-_WRITE_TOOLS = ('archive_note', 'restore_note_from_archive',
-                'set_document_tier', 'delete_archive')
-
-
-def test_write_tools_require_approval():
-    """데이터를 옮기거나 지우는 도구가 승인 없이 실행되면 안 된다."""
-    approval = tr.approval_required_tools()
-    for name in _WRITE_TOOLS:
-        assert name in approval, f'{name} 이 승인 게이트를 타지 않는다'
-        assert tr._BY_NAME[name].mutating is True
-
-
-def test_write_tool_descriptions_state_original_is_kept():
-    """아카이브가 원본을 지운다고 오해하면 AI 가 사용자에게 잘못 안내한다."""
-    d = {v['tool_name']: v['description'] for v in tr.virtual_tools()}
-    assert 'not deleted' in d['archive_note'].lower()
-    assert 'moves no data' in d['set_document_tier'].lower()
-    assert 'irreversible' in d['delete_archive'].lower()
-
-
-def _note(tier=2, content='본문', unique_id='note-1'):
-    return MagicMock(unique_id=unique_id, note=content, name='메모',
-                     note_tags='', tier=tier)
-
-
-def _patch_notes(note):
-    """Notes.query.filter_by(...).first() 가 note 를 돌려주도록."""
-    notes_cls = MagicMock()
-    notes_cls.query.filter_by.return_value.first.return_value = note
-    return patch('aot.tools.data_tools.record.Notes', notes_cls)
-
-
-def test_archive_note_copies_and_marks_tier3():
-    note = _note()
-    svc = MagicMock()
-    svc.archive_document.return_value = {
-        'archive_path': '/var/aot/archives/2026/08/note-1.archive',
-        'compression_ratio': 88.0,
-    }
-    with _patch_notes(note), \
-         patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.tools.data_tools.record.db'):
-        result = AoTDataToolService.archive_note(note_id='note-1')
-
-    assert result['status'] == 'success'
-    assert note.tier == 3
-    # 본문은 그대로 남아야 한다 — 아카이브는 복사다.
-    assert note.note == '본문'
-    assert 'not deleted' in result['note'].lower()
-
-
-def test_archive_note_rejects_empty_content():
-    with _patch_notes(_note(content='   ')):
-        result = AoTDataToolService.archive_note(note_id='note-1')
-    assert result['status'] == 'error'
-
-
-def test_archive_note_surfaces_duplicate():
-    """이미 아카이브된 문서를 다시 넣으면 사본이 둘 생긴다 — 서비스가 막고, 도구가 전달."""
-    svc = MagicMock()
-    svc.archive_document.side_effect = ValueError('Document note-1 is already archived')
-    with _patch_notes(_note()), \
-         patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.tools.data_tools.record.db'):
-        result = AoTDataToolService.archive_note(note_id='note-1')
-
-    assert result['status'] == 'error'
-    assert 'already archived' in result['message']
-
-
-def test_restore_reports_orphan_archive():
-    """원본이 사라진 아카이브를 조용히 되살리면 안 된다 — 상태를 밝힌다."""
-    svc = MagicMock()
-    svc.restore_document.return_value = {'content': '보관된 본문'}
-    with _patch_notes(None), \
-         patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.tools.data_tools.record.db'):
-        result = AoTDataToolService.restore_note_from_archive(note_id='note-1')
-
-    assert result['status'] == 'orphan_archive'
-    assert result['content'] == '보관된 본문'
-
-
-def test_restore_moves_tier_back():
-    note = _note(tier=3)
-    svc = MagicMock()
-    svc.restore_document.return_value = {'content': '본문'}
-    with _patch_notes(note), \
-         patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc), \
-         patch('aot.tools.data_tools.record.db'):
-        result = AoTDataToolService.restore_note_from_archive(note_id='note-1')
-
-    assert result['status'] == 'success'
-    assert note.tier == 2
-    assert result['content_matches_original'] is True
-
-
-def test_set_document_tier_warns_that_nothing_moved():
-    """tier=3 만 찍고 끝나는데 '아카이브했다'로 읽히면 안 된다."""
-    note = _note(tier=2)
-    with _patch_notes(note), patch('aot.tools.data_tools.record.db'):
-        result = AoTDataToolService.set_document_tier(note_id='note-1', tier=3)
-
-    assert result['status'] == 'success'
-    assert result['previous_tier'] == 2 and result['tier'] == 3
-    assert 'nothing was moved' in result['note'].lower()
-
-
-def test_set_document_tier_rejects_bad_value():
-    for bad in (0, 4, 'cold', None):
-        result = AoTDataToolService.set_document_tier(note_id='note-1', tier=bad)
-        assert result['status'] == 'error', bad
-
-
-def test_delete_archive_says_original_untouched():
-    svc = MagicMock()
-    svc.delete_archive.return_value = True
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        result = AoTDataToolService.delete_archive(document_id='note-1', reason='정리')
-
-    assert result['status'] == 'success'
-    assert 'not touched' in result['note'].lower()
-
-
-def test_delete_archive_not_found():
-    svc = MagicMock()
-    svc.delete_archive.return_value = False
-    with patch.object(AoTDataToolService, '_cold_storage_service', return_value=svc):
-        result = AoTDataToolService.delete_archive(document_id='missing')
-    assert result['status'] == 'not_found'
 
 
 # ---------------------------------------------------------------------------

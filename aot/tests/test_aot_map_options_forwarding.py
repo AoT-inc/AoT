@@ -5,7 +5,7 @@
     위젯 JS는 모든 custom_option을 `vars.vars`(= maps.py
     `generate_page_variables_logic()`가 반환하는 widget_vars 딕셔너리)에서 읽는다.
     과거 widget_vars가 손으로 유지하는 화이트리스트였던 탓에, 새로 추가된 옵션
-    (sensor_label_*, facility_render_mode, enable_3d_terrain, popup_default_tab …)이
+    (sensor_label_*, facility_render_mode, popup_default_tab …)이
     저장은 되지만 클라이언트로 전달되지 않아 항상 JS 기본값으로 동작하는 버그가 있었다.
 
     근본 수정은 widget_vars 를 raw widget_options 위에 덮어쓰는 pass-through 병합으로

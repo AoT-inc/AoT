@@ -23,8 +23,12 @@ class AoTNativeToolEngine:
     #: 도구 스키마에 싣지 않는 처리기 인자 — 도메인 표면(find.controllable)만 쓴다. 스키마에 싣지 않는 것은
     #: 카탈로그 토큰을 늘리지 않으려는 것이고, 명부 계약 검사가 이 이름을 맞는 인자로 인정한다.
     HANDLER_PARAMS = {
+        # control.output_timed — 켜는 시간은 control.device_set 과 같은 이름(duration_seconds)으로 받는다.
+        'set_output_state': frozenset({'duration_seconds'}),
         'list_available_devices': frozenset(
             {'brief', 'detail', 'query', 'kind', 'place_id', 'limit', 'offset'}),
+        # measure.latest(장치 대상)가 항목·기간을 넘긴다 — 스키마에는 안 싣는다(토큰).
+        'get_sensor_reading': frozenset({'measurement_type', 'time_range'}),
     }
 
     #: find.controllable 한 쪽의 건수.
@@ -285,6 +289,10 @@ class AoTNativeToolEngine:
         out: Dict[str, Any] = {"status": "success", "next": nxt, "total": total, "counts": counts}
         if offset or more:
             out["page"] = {"offset": offset, "shown": len(page)}
+        if not (place_id or wanted_kind or tokens):
+            # find.devices 의 합과 다른 까닭 — 켜고 끄는 출력과 켜진 센서만 센다.
+            out["scope"] = ("outputs and switched-on sensors only; switched-off sensors, cameras and complex "
+                            "devices are not counted here - search_devices lists every device")
         if params.get("detail"):
             out["devices"] = page
             return out
@@ -302,7 +310,7 @@ class AoTNativeToolEngine:
     def _place_members(place_id):
         """장소(대지·구역·시설) id → 그 안 장치 id 집합. 모르는 id 면 None. 시설 행 id 도 받는다."""
         try:
-            from aot.aot_flask.geo import device_membership as dm
+            from aot.space import device_membership as dm
             from aot.databases.models import GeoFacility, GeoShape
             uid = str(place_id)
             fac = GeoFacility.query.filter_by(unique_id=uid).first()
@@ -326,12 +334,28 @@ class AoTNativeToolEngine:
             if err:
                 return dict({"status": "error",
                              "message": err.get("error")}, **err)
+            one = lambda t: AoTNativeToolEngine._sensor_reading_one(          # noqa: E731
+                t, params.get("measurement_type"), params.get("time_range"))
             if len(tokens) == 1:
-                return AoTNativeToolEngine._sensor_reading_one(tokens[0])
-            return S._for_each_target(tokens, AoTNativeToolEngine._sensor_reading_one)
+                return one(tokens[0])
+            return S._for_each_target(tokens, one)
+
+    #: 측정 항목을 말하지 않았을 때 대표값으로 먼저 고르는 주 채널(이름에 들어 있는 낱말, 앞이 우선).
+    _PRIMARY_CHANNELS = ("temperature", "humidity", "moisture", "co2", "illuminance", "ph")
 
     @staticmethod
-    def _sensor_reading_one(token) -> Dict:
+    def _representative_channel(channels, measurement=None):
+        """채널들 → 대표값 하나. 항목을 말했으면 첫 채널(이미 그 항목만 읽었다), 아니면 주 채널 먼저
+        (배터리·신호 세기가 대표값이 되지 않게) — 주 채널이 없으면 첫 채널."""
+        if not measurement:
+            for word in AoTNativeToolEngine._PRIMARY_CHANNELS:
+                for c in channels:
+                    if word in str(c.get("measurement") or "").lower():
+                        return c
+        return channels[0]
+
+    @staticmethod
+    def _sensor_reading_one(token, measurement=None, time_range=None) -> Dict:
         from flask import current_app
         with current_app.app_context():
             try:
@@ -349,26 +373,61 @@ class AoTNativeToolEngine:
                 # there is no SQLite Measurement.input_id/timestamp/value column;
                 # live readings live in InfluxDB, not in the measurement-type table.
                 from aot.tools.aot_data_tool_service import AoTDataToolService
-                result = AoTDataToolService.get_sensor_detail(device_id, time_range="1h", limit=1)
+                result = AoTDataToolService.get_sensor_detail(
+                    device_id, sensor_type=measurement or None,
+                    time_range=time_range or "1h", limit=1)
 
                 if isinstance(result, dict):
-                    return {"status": "error", "message": result.get("error") or result.get("message") or "No data available"}
+                    # 값이 없는 이유와 다음 걸음 — 그냥 "No data" 면 같은 호출을 되풀이한다(2026-11-03).
+                    msg = result.get("error") or result.get("message") or "No data available"
+                    out = dict({k: result[k] for k in ("reason_code",) if k in result},
+                               status="error", message=msg)
+                    if str(msg).startswith("No data"):
+                        out.setdefault("reason_code", "no_recent_data")
+                        out["next"] = {"call": "get_sensor_detail with time_range='7d' shows its last readings; "
+                                               "get_device_freshness lists sensors that went silent"}
+                    return out
                 if not result:
                     return {"status": "error", "message": f"No measurements found for device '{device_id}'"}
 
-                readings = result[0].get("readings") or []
-                if not readings:
+                # 채널마다 최근 값 하나 — 채널 이름 없이 첫 채널 값만 주면 다채널 장치에서
+                # "토양수분" 질문이 온도 값으로 답해진다(2026-11-03).
+                channels = []
+                for series in result:
+                    readings = (series or {}).get("readings") or []
+                    if readings:
+                        channels.append({"measurement": series.get("measurement"),
+                                         "timestamp": readings[-1]["t"],
+                                         "value": readings[-1]["v"],
+                                         "unit": readings[-1]["u"]})
+                if not channels:
                     return {"status": "error", "message": f"No measurements found for device '{device_id}'"}
 
-                latest = readings[-1]
-                return {
+                latest = AoTNativeToolEngine._representative_channel(channels, measurement)
+                out = {
                     "status": "success",
                     "device_id": device_id,
                     "name": getattr(row, "name", None),
-                    "timestamp": latest["t"],
-                    "value": latest["v"],
-                    "unit": latest["u"],
+                    "measurement": latest["measurement"],
+                    "timestamp": latest["timestamp"],
+                    "value": latest["value"],
+                    "unit": latest["unit"],
                 }
+                if len(channels) > 1:
+                    out["channels"] = channels
+                if not measurement:
+                    # 값이 있는 채널만 보면 온도·습도가 끊긴 센서가 배터리 값으로 답해진다 — 끊긴 채널을 말한다.
+                    try:
+                        seen = {c["measurement"] for c in channels}
+                        quiet = [n for n in S.channel_names(device_id) if n not in seen]
+                    except Exception:                                  # noqa: BLE001
+                        quiet = []
+                    if quiet:
+                        out["silent_channels"] = quiet
+                        out["note"] = ("No value in the last %s for: %s. The value above is from "
+                                       "another channel of this device."
+                                       % (time_range or "1h", ", ".join(quiet)))
+                return out
             except Exception as exc:
                 logger.error(f"[NativeToolEngine] get_sensor_reading error: {exc}")
                 return {"status": "error", "message": str(exc)}
@@ -378,6 +437,12 @@ class AoTNativeToolEngine:
         device_id = params.get("device_id")
         state = params.get("state")
         duration = params.get("duration", 0)
+        if not duration and params.get("duration_seconds") not in (None, ""):
+            # 도메인 틀의 이름. 숫자가 아니거나 0 이하면 승인 앞(validate_ai_control_target)에서 이미 거절됐다.
+            from aot.outputs.command_forms import parse_run_seconds
+            duration, _err = parse_run_seconds(params.get("duration_seconds"))
+            if _err:
+                return {"status": "error", "message": _err, "dispatched": False}
         # 실패 응답의 `dispatched`: False = 명령을 보내기 전의 확정 실패. 보낸 뒤의
         # 실패는 안쪽 operate_device 결과가 dispatched=True 를 싣는다(실행층이
         # "모름" 으로 알린다 — mcp_safety_gate.annotate_write_outcome).

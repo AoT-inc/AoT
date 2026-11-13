@@ -306,3 +306,65 @@ def test_apply_unchanged_touches_nothing(tree):
         "Notices", ["Notices#list"], state, _resp(changed=False, reason="리팩터링"))
     assert unchanged == [("Notices#list", "리팩터링")] and not applied and not failed
     assert (root / "docs" / "Notices.md").read_text() == PAGE_EN
+
+
+# ── post-commit 자동 갱신(autodraft) 범위 ─────────────────────────────────
+# 밀린 절 전체를 커밋마다·작업 폴더마다 다시 쓰면 호출이 불필요하게 늘어난다 — 이번 커밋이 건드린 절만.
+
+class _U(object):
+    def __init__(self, path):
+        self.path = path
+
+
+def _autodraft_env(monkeypatch, tmp_path, state, changed):
+    import subprocess as sp
+    launched = []
+    monkeypatch.setattr(ms, "ROOT", str(tmp_path))
+    monkeypatch.setattr(ms.shutil, "which", lambda exe: "/usr/bin/claude")
+    monkeypatch.setattr(ms, "_git_dir_busy", lambda: False)
+    monkeypatch.setattr(ms, "compute_state", lambda src: (state, []))
+    monkeypatch.setattr(ms, "_load_failed", lambda: {})
+    monkeypatch.setattr(ms, "_commit_changed_files", lambda: changed)
+    monkeypatch.delenv("AOT_SKIP_MANUAL_AUTODRAFT", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.setattr(sp, "Popen", lambda cmd, **kw: launched.append(cmd))
+    return launched
+
+
+def _stale(*paths):
+    return {"status": "stale", "problems": [], "code": "c", "units": {p: _U(p) for p in paths}}
+
+
+def test_autodraft_only_sections_linked_to_files_in_this_commit(monkeypatch, tmp_path):
+    state = {"a#x": _stale("aot/a.py"), "b#y": _stale("aot/b.py"), "c#z": _stale("aot/c.py")}
+    launched = _autodraft_env(monkeypatch, tmp_path, state, {"aot/b.py", "README.md"})
+    assert ms.cmd_autodraft(None) == 0
+    assert len(launched) == 1 and launched[0][-1:] == ["b#y"] and launched[0][-2] == "update"
+
+
+def test_autodraft_skips_backlog_when_commit_touches_no_linked_code(monkeypatch, tmp_path):
+    state = {"a#x": _stale("aot/a.py")}
+    launched = _autodraft_env(monkeypatch, tmp_path, state, {"docs/readme.md"})
+    assert ms.cmd_autodraft(None) == 0
+    assert launched == []
+
+
+def test_autodraft_skips_merge_commits(monkeypatch, tmp_path):
+    state = {"a#x": _stale("aot/a.py")}
+    launched = _autodraft_env(monkeypatch, tmp_path, state, None)
+    assert ms.cmd_autodraft(None) == 0
+    assert launched == []
+
+
+def test_autodraft_caps_sections_per_run(monkeypatch, tmp_path):
+    monkeypatch.setattr(ms, "AUTODRAFT_MAX", 2)
+    state = {f"p#{i}": _stale("aot/a.py") for i in range(5)}
+    launched = _autodraft_env(monkeypatch, tmp_path, state, {"aot/a.py"})
+    assert ms.cmd_autodraft(None) == 0
+    assert launched[0][-2:] == ["p#0", "p#1"]
+
+
+def test_claude_child_env_skips_claude_md_and_model_is_explicit(monkeypatch):
+    monkeypatch.delenv("CLAUDE_CODE_DISABLE_CLAUDE_MDS", raising=False)
+    assert ms._child_env()["CLAUDE_CODE_DISABLE_CLAUDE_MDS"] == "1"
+    assert ms.DEFAULT_MODEL == "sonnet"

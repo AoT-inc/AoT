@@ -59,7 +59,9 @@ ko·ja 쪽은 자동 슬러그가 영어와 달라 명시 앵커로만 같은 �
 환경변수:
   AOT_SKIP_MANUAL_AUTODRAFT=1   post-commit 자동 갱신 끄기
   AOT_MANUAL_SYNC_CLAUDE        claude 실행 파일(기본 'claude')
-  AOT_MANUAL_SYNC_MODEL         claude --model 값(기본: CLI 기본값)
+  AOT_MANUAL_SYNC_MODEL         claude --model 값(기본: sonnet, 빈 문자열이면 CLI 기본값)
+  AOT_MANUAL_SYNC_AUTODRAFT_MAX post-commit 한 번에 갱신할 절 수 상한(기본 6)
+  CLAUDE_CODE_DISABLE_CLAUDE_MDS 편집자 호출에는 기본 1 (프로젝트 지침 파일을 자동으로 읽히지 않음)
   AOT_MANUAL_SYNC_NOTIFY=0      macOS 알림 끄기
 """
 import argparse
@@ -622,6 +624,11 @@ def build_prompt(page, targets, state, docs):
 
 
 MAX_PROMPT_CHARS = int(os.environ.get("AOT_MANUAL_SYNC_MAX_PROMPT", "120000"))
+# CLI 기본 모델에 맡기면 상위 모델이 걸릴 수 있다 — 문서 갱신은 sonnet 으로 고정한다.
+# 다른 모델은 AOT_MANUAL_SYNC_MODEL, 빈 문자열이면 CLI 기본값.
+DEFAULT_MODEL = "sonnet"
+# autodraft 한 번에 맡길 절 수의 상한(넘으면 나머지는 직접 update 로).
+AUTODRAFT_MAX = int(os.environ.get("AOT_MANUAL_SYNC_AUTODRAFT_MAX", "6"))
 
 
 def _batches(page, targets, state, source):
@@ -646,6 +653,9 @@ def _child_env():
     # Claude Code 세션 안의 커밋에서 불려도 독립된 headless 실행이 되도록.
     for k in ("CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"):
         env.pop(k, None)
+    # 편집자는 읽기 전용이고 프롬프트에 규칙이 다 들어 있다 — 프로젝트 지침 파일을
+    # 호출마다 자동으로 읽히지 않는다(호출당 입력 토큰을 줄인다).
+    env.setdefault("CLAUDE_CODE_DISABLE_CLAUDE_MDS", "1")
     return env
 
 
@@ -654,7 +664,7 @@ def run_claude(prompt, timeout=1800):
     cmd = [exe, "-p", "--output-format", "json",
            "--allowedTools", "Read", "Grep", "Glob",
            "--disallowedTools", "Edit", "Write", "Bash", "NotebookEdit", "WebFetch", "WebSearch"]
-    model = os.environ.get("AOT_MANUAL_SYNC_MODEL")
+    model = os.environ.get("AOT_MANUAL_SYNC_MODEL", DEFAULT_MODEL)
     if model:
         cmd += ["--model", model]
     last_err = None
@@ -1077,6 +1087,15 @@ def _git_dir_busy():
                ("rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD"))
 
 
+def _commit_changed_files():
+    """HEAD 커밋이 바꾼 파일. 머지 커밋이면 None(머지로 들어온 변경은 각자의 커밋에서 처리됐다)."""
+    r = _git("rev-list", "--parents", "-n", "1", "HEAD")
+    if r.returncode != 0 or len(r.stdout.split()) > 2:
+        return None
+    r = _git("diff-tree", "--no-commit-id", "--name-only", "-r", "--root", "HEAD")
+    return set(r.stdout.split()) if r.returncode == 0 else None
+
+
 def cmd_autodraft(args):
     """post-commit 훅: 오래된 절이 있으면 update 를 백그라운드로 띄우고 바로 돌아온다."""
     if os.environ.get("AOT_SKIP_MANUAL_AUTODRAFT") or os.environ.get("CI"):
@@ -1097,6 +1116,23 @@ def cmd_autodraft(args):
             and failed.get(t, {}).get("code") != s["code"]]
     if not todo:
         return 0
+    # 밀린 절 전체가 아니라 이번 커밋이 바꾼 파일에 연결된 절만 다룬다. 초안은 커밋되지 않아
+    # 작업 폴더마다 같은 밀린 절을 처음부터 다시 쓰게 된다. 밀린 절은 `update` 를 직접 돌려
+    # 한 번에 처리한다.
+    changed = _commit_changed_files()
+    if changed is None:
+        return 0
+    backlog = len(todo)
+    todo = [t for t in todo if any(u.path in changed for u in state[t]["units"].values())]
+    if not todo:
+        print(f"[manual-sync] 이번 커밋과 연결된 절이 없어 건너뜁니다(밀린 절 {backlog}개는 "
+              "`manual_sync.py update` 로 직접).")
+        return 0
+    deferred = todo[AUTODRAFT_MAX:]
+    todo = todo[:AUTODRAFT_MAX]
+    if deferred:
+        print(f"[manual-sync] 한 번에 {AUTODRAFT_MAX}절까지만 갱신합니다 — {len(deferred)}절은 "
+              "`manual_sync.py update` 로 직접.")
     lock = os.path.join(ROOT, STATE_DIR, "lock")
     if os.path.exists(lock):
         print("[manual-sync] 이미 갱신이 진행 중이라 이번 커밋은 건너뜁니다.")
@@ -1105,7 +1141,7 @@ def cmd_autodraft(args):
     os.makedirs(d, exist_ok=True)
     logpath = os.path.join(d, datetime.datetime.now().strftime("run-%Y%m%d-%H%M%S.log"))
     with open(logpath, "w") as logf:
-        subprocess.Popen([sys.executable, os.path.abspath(__file__), "update"],
+        subprocess.Popen([sys.executable, os.path.abspath(__file__), "update", *todo],
                          cwd=ROOT, stdout=logf, stderr=subprocess.STDOUT,
                          stdin=subprocess.DEVNULL, start_new_session=True, env=_child_env())
     print(f"[manual-sync] 매뉴얼 {len(todo)}절을 백그라운드에서 갱신합니다 "

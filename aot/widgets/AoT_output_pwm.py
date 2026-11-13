@@ -146,6 +146,7 @@ window.AoTOutputPWM = window.AoTOutputPWM || (function () {
   // the slider is the only control (same interaction as the map widget's
   // actuator card).
   function onCommit(widgetId, outputId, channelId, val) {
+    if (!outputId || !channelId) return;   // 출력을 고르지 않은 위젯 — 빈 주소로 명령하지 않는다
     var duty = Math.round(val);
     var cmd = duty <= 0
       ? outputId + '/' + channelId + '/off/sec/0'
@@ -224,6 +225,8 @@ window.AoTOutputPWM = window.AoTOutputPWM || (function () {
 
   function start(widgetId, deviceId, channelId, refreshSec) {
     stop(widgetId);
+    // 출력을 고르지 않은 위젯은 폴링하지 않는다(빈 주소 404 — AoT_output_value 와 같은 이유).
+    if (!deviceId || !channelId) return;
     var tick = function () {
       _getState(widgetId, deviceId, channelId);
       _getRuntime(widgetId, deviceId, channelId);

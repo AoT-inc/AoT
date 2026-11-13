@@ -63,7 +63,8 @@ class TestOutputControlRuleSurvives(unittest.TestCase):
                 if key == 'output_control':
                     rule_text = ast.dump(node.value)
         self.assertTrue(rule_text, 'output_control 대입을 찾지 못했다')
-        for needed in ('operate_device', 'device_id', 'state', 'action_type',
+        # 인앱 AI 의 도구는 도메인 명부다(26-11 5단계) — 장치 제어는 control.device_set.
+        for needed in ("'control'", 'device_set', 'target', 'state', 'action_type',
                        'capabilities'):
             self.assertIn(needed, rule_text,
                           "규칙에 '%s' 가 없다 — 모델이 호출 형식을 알 수 없다"
@@ -97,37 +98,6 @@ class TestCatalogsAreNotShippedEveryCall(unittest.TestCase):
         from aot.tools import tool_registry as registry
         self.assertIn('list_device_types', registry.build_tool_map(),
                       'summary 가 가리키는 list_device_types 가 디스패치되지 않는다')
-
-
-class TestDrawerIndexNamesTheTools(unittest.TestCase):
-    """서랍 안내가 **도구 이름까지** 싣는가 (내부 AI 표면).
-
-    서랍 이름과 한 줄 설명만으로는 LLM 이 자기가 찾는 기능이 그 안에 있는지
-    확신하지 못해, 열어 보는 대신 "그런 기능은 없다" 로 결론짓는다. 그 실패는
-    에러가 아니라 조용한 오답이라 로그에도 안 남는다.
-    """
-
-    def test_index_lists_tool_names(self):
-        from aot.tools import tool_registry as registry
-        entry = registry._drawer_index_manifest()
-        desc = entry['description']
-        available = {t.name for t in registry.TOOLS if t.manifest}
-        named = [n for drawer in registry.DRAWERS
-                 for n in registry.tools_in_drawer(drawer, available=available)]
-        self.assertTrue(named, '서랍에 담긴 도구가 하나도 없다')
-        missing = [n for n in named if n not in desc]
-        self.assertEqual(missing[:5], [],
-                         '서랍 안내에 이름이 빠진 도구: %s' % missing[:5])
-
-    def test_index_does_not_advertise_tools_it_cannot_hand_out(self):
-        """`open_drawer` 는 manifest 가 있는 도구만 돌려준다. 그 밖의 이름을
-        광고하면 열어도 안 나와, 서랍에서 한 번 더 멀어지게 만든다."""
-        from aot.tools import tool_registry as registry
-        desc = registry._drawer_index_manifest()['description']
-        no_manifest = [t.name for t in registry.TOOLS if not t.manifest]
-        listed = [n for n in no_manifest if ', %s' % n in desc or ': %s' % n in desc]
-        self.assertEqual(listed, [],
-                         '매니페스트가 없어 열어도 안 나오는데 광고된 도구: %s' % listed)
 
 
 class TestContextIsNotShippedRaw(unittest.TestCase):

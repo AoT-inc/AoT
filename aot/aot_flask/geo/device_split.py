@@ -34,7 +34,8 @@
 import logging
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding, device_membership, plot_split
+from aot.aot_flask.geo import plot_split
+from aot.space import device_binding, device_membership
 from aot.databases.models import GeoShape
 
 logger = logging.getLogger(__name__)

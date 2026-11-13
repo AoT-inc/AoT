@@ -135,3 +135,43 @@ def test_manifest_capabilities_match_the_plan():
     for output_type in ('MATTER_ON_OFF', 'MATTER_LEVEL', 'MATTER_COVERING', 'MQTT_PAHO_VALUE'):
         for state in _output_capabilities(output_type):
             assert 'error' not in _plan(state, output_type, value=50), (output_type, state)
+
+
+# -- PWM / position level (2026-11-12: MCP AI said actuators only did on/off) --
+
+def test_pwm_module_takes_a_level():
+    assert _plan('set_value', 'python_pwm', value=40) == \
+        {'state': 'on', 'output_type': 'pwm', 'amount': 40.0}
+    assert _plan('set_value', 'python_pwm', value='40%')['amount'] == 40.0
+    assert _plan('on', 'python_pwm', value=55) == \
+        {'state': 'on', 'output_type': 'pwm', 'amount': 55.0}
+
+
+@pytest.mark.parametrize('value', [-1, 100.5, 150])
+def test_pwm_level_out_of_range_is_refused_not_dropped(value):
+    # pwm_python.output_switch returns without switching outside 0-100 and the daemon
+    # still answers success — refuse before sending.
+    assert 'error' in _plan('set_value', 'python_pwm', value=value)
+    if value > 100:
+        assert 'error' in _plan('on', 'python_pwm', value=value)
+
+
+def test_position_level_out_of_range_is_refused():
+    assert 'error' in _plan('set_value', 'MATTER_COVERING', value=120)
+
+
+def test_set_value_without_a_value_is_refused():
+    assert 'error' in _plan('set_value', 'python_pwm')
+    assert 'error' in _plan('set_value', 'python_pwm', value='abc')
+
+
+def test_plain_value_output_is_not_bounded():
+    assert _plan('set_value', 'MQTT_PAHO_VALUE', value=1500)['amount'] == 1500.0
+
+
+def test_value_range_is_shown_only_for_levels():
+    from aot.outputs.command_forms import value_range
+    assert value_range('python_pwm') == '0-100 %'
+    assert value_range('MATTER_COVERING') == '0-100 %'
+    assert value_range('MATTER_ON_OFF') is None
+    assert value_range('MQTT_PAHO_VALUE') is None

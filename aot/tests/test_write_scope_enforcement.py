@@ -73,8 +73,8 @@ class _WS(_Base):
         db.session.add(Dashboard(unique_id=self.dash, name=_PREFIX + 'Board'))
         db.session.add(Widget(unique_id=self.widget, name=_PREFIX + 'Widget',
                               tab_id=self.dash, graph_type='indicator'))
-        db.session.add(GeoShape(unique_id=self.shape, geo_id='ws-map',
-                                device_id=self.output_id, type='feature',
+        db.session.add(bound_shape(unique_id=self.shape, geo_id='ws-map',
+                                device_id=self.output_id, type='device',
                                 feature={'type': 'Feature', 'geometry': None,
                                          'properties': {}}))
         role = Role(name=_PREFIX + 'PlotOnly', edit_plots=True, edit_settings=False,
@@ -399,7 +399,8 @@ class TestApprovalPermissionPerTool(_WS):
 
     def test_respond_to_confirmation_visibility_and_key_role(self):
         self.assertNotIn('respond_to_confirmation', te._hidden_tools(self._role('PlotOnly')))
-        self.assertIn('respond_to_confirmation', te._hidden_tools(self._role('Monitor')))
+        # 결정 권한이 없어도 자기 키의 도구 묶음 요청은 결정한다 — 목록에 남는다.
+        self.assertNotIn('respond_to_confirmation', te._hidden_tools(self._role('Monitor')))
         self.assertIn('respond_to_confirmation',
                       te._hidden_tools(self._role('Editor', readonly=True)))
         cid = self._queue('modify_plot', {'plot_id': str(uuid.uuid4()), 'name': 'x'})
@@ -507,8 +508,6 @@ class TestHandlersEnforceAtWriteTime(_WS):
             ('modify_input', lambda: S.modify_input(input_id=self.inp, name='x')),
             ('activate_input', lambda: S.activate_input(input_id=self.inp, active=True)),
             ('delete_input', lambda: S.delete_input(input_id=self.inp)),
-            ('rebind_device', lambda: S.rebind_device(
-                old_device_id=self.output_id, new_device_id=self.inp)),
             ('modify_tab', lambda: S.modify_tab(tab_id=self._tab, name='x')),
             ('delete_tab', lambda: S.delete_tab(tab_id=self._tab)),
         )
@@ -665,12 +664,12 @@ _ENFORCED = {
     'delete_widget': 'write_scope.enforce',
     'modify_tab': 'write_scope.enforce',
     'delete_tab': 'write_scope.enforce',
-    'rebind_device': 'write_scope.enforce',
     'set_device_location': 'write_scope.enforce',
     'delete_geo_shape': 'write_scope.enforce',
     'create_note': 'write_scope.enforce',
     # 기존 노트 고치기·보관 — 노트가 붙은 대상(target_id)의 그룹 범위로 묻는다.
     'modify_note': 'write_scope.enforce',
+    'delete_note': 'write_scope.enforce',
     # 대상 별칭 — 별칭이 붙는(지울 때는 붙어 있던) 대상의 그룹 범위로 묻는다.
     'add_target_alias': 'write_scope.enforce',
     'delete_target_alias': 'write_scope.enforce',
@@ -694,6 +693,9 @@ _ENFORCING_RESOLVERS = {
 _UNSCOPED = {
     # 새로 만드는 행 — 탭·대시보드 없이 생긴다(웹 추가와 같다).
     'create_input': 'new row, no tab',
+    # 설비 묶음 행은 장치·탭에 묶이지 않는다(지도 단위 스코프는 구역 스코프와 함께 따로).
+    # 처리기는 그래도 쓰기 직전 행마다 write_scope.enforce 를 부른다.
+    'set_pipe_diameters': 'equipment bundle, no device/tab binding; map-level scope not defined',
     'create_output': 'new row, no tab',
     'create_tab': 'new tab',
     'create_ai_agent': 'AI settings, not a scoped resource',
@@ -707,9 +709,8 @@ _UNSCOPED = {
     # 기록 — 대상 없는 기록(노트 대상은 create_note 가 강제한다).
     'knowledge_shelve': 'knowledge record', 'note': 'in-app log record',
     'create_notice': 'notice board', 'modify_notice': 'notice board',
-    'delete_notice': 'notice board', 'archive_note': 'note archive',
-    'restore_note_from_archive': 'note archive', 'delete_archive': 'note archive',
-    'set_document_tier': 'library document', 'configure_library_source': 'library',
+    'delete_notice': 'notice board',
+    'configure_library_source': 'library',
     # 작기 운영 — 구획·프로그램·단계는 웹에서도 그룹 스코프 밖이다.
     'add_plot_stage': 'plot', 'apply_plot_resources': 'plot',
     'apply_plot_split': 'plot', 'confirm_plot_stage': 'plot', 'copy_plot': 'plot',
@@ -806,12 +807,11 @@ class TestEveryWriteToolIsCovered(_WS):
             'delete_widget': {'widget_id': self.widget},
             'modify_tab': {'tab_id': self._tab, 'name': 'x'},
             'delete_tab': {'tab_id': self._tab},
-            'rebind_device': {'old_device_id': self.output_id,
-                              'new_device_id': self.inp},
             'set_device_location': {'device_id': self.output_id, 'lat': 1, 'lng': 2},
             'delete_geo_shape': {'shape_id': self.shape},
             'create_note': {'note': 'ws', 'target_id': self.output_id},
             'modify_note': {'note_id': note_uid, 'name': 'x'},
+            'delete_note': {'note_id': note_uid},
             'add_target_alias': {'target_id': self.output_id, 'name': _PREFIX + 'alias'},
             'delete_target_alias': {'name': _PREFIX + 'alias', 'target_id': self.output_id},
             'create_function': {'function_type': 'conditional_conditional',
@@ -856,3 +856,4 @@ class TestEveryWriteToolIsCovered(_WS):
                      routes_scheduler.api_reject_job):
             self.assertIn('write_scope.acting_as_current_user(',
                           inspect.getsource(view))
+from aot.tests.geo._legacy_marker import bound_shape

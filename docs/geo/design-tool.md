@@ -158,9 +158,20 @@ Shows the physical location of your AoT Input, Output, and Function devices, and
 | + / − | Zoom in/out |
 | Compass | Shows which way the map faces; click to face north again |
 | Fullscreen | Toggle fullscreen |
-| Search | Address/coordinate search |
+| Search | Address search — opens the Location sheet in a right-hand drawer (see [Location Sheet](#location-sheet) below). Pressing it again while the drawer is open closes it. |
 | My location | Move to GPS position |
 | Reset | Return to default position |
+| 3D | Toggle 3D terrain on/off for this map. Only appears when the map has elevation data configured and your browser can render terrain. The on/off state is remembered per map in your browser, not on the server. |
+
+### Location Sheet { #location-sheet }
+
+The **Search** tool (magnifier) on the left toolbar opens the **Location sheet** in the same right-hand drawer as the settings drawers, instead of the old search overlay. The drawer pushes the map aside without covering it, and only one drawer is open at a time, so any other open drawer closes. The sheet is the same one the [map widget](map-widget.md#location-sheet) uses, and does these in one place:
+
+- **Search Address**: type an address and search (or press Enter) to get a result list; pasting a latitude/longitude pair skips the search and gives that spot as the result. Choosing a result flies the map there and makes it the "chosen spot".
+- **Chosen spot**: you can also set the spot with **My location** (device GPS), **Map center** (the center of the visible map area), or **Mark on the map** (the next place you click). The spot's address is shown with it.
+- **Favorites / Recent**: save a spot to your favorites and pick it again later. Recent remembers the last 5 spots chosen through search, in this browser only.
+
+The sheet's buttons are **icon pills** with no text. Hover to see the name in a tooltip; on touch screens, long-press. This screen's sheet has no **Add note here** button, which only the map widget has.
 
 ### Drawing Tools
 
@@ -177,6 +188,9 @@ Available tools depend on the mode: Site and Zone offer **Rectangle, Circle, and
 
 Shapes save automatically as you draw, edit, or delete them — there's no separate "commit" step. If you want to double-check that a change really persisted, reloading the page is a reliable way to confirm it.
 
+!!! note "A facility's own outline can't be reshaped here"
+    If a facility has a floor-plan model, its outline on the map is derived from that model rather than stored on its own. Dragging or reshaping it in the design tool appears to work, but the geometry change is dropped when it saves — reload and it snaps back to where the model puts it. Moving the facility itself means editing it on the [facility page](facility.md#facility-registration-flow), not here.
+
 ### Manual Save { #manual-save }
 
 The **Save** button at the top forces a full save of the current state. There is no keyboard shortcut for it.
@@ -185,7 +199,7 @@ The **Save** button at the top forces a full save of the current state. There is
 
 ## Parcel Import { #parcel-import }
 
-Use Korean land data (VWorld) to quickly import site boundaries instead of drawing them by hand. In **Site** mode, click **Search** next to **Add from Address** in the settings drawer — this opens a dialog with an **Address Input** tab (type one or more addresses, uses the VWorld PNU API) and a **CSV Batch** tab (one address per line, first column only). Either way you land on the same preview: matched parcels drawn on the map, an optional **Merge Adjacent Parcels** checkbox to union touching results into one Site (nothing is merged unless it is ticked), and a **Save as Site** button. Re-importing a parcel you already saved is skipped, not duplicated. Saving into a map that is assigned to another access group is refused — those parcels are counted as **failed** in the status line, with no reason given.
+Use Korean land data (VWorld) to quickly import site boundaries instead of drawing them by hand. In **Site** mode, click **Search** next to **Add from Address** in the settings drawer — this opens a right-hand drawer with an **Address Input** tab (type one or more addresses, uses the VWorld PNU API) and a **CSV Batch** tab (one address per line, first column only; a **CSV Format** card at the top of the tab states the rules the file is read by and how to write addresses for VWorld and Google Maps). The **Location** button at the right of an address row unfolds the Location sheet inside the drawer, so instead of typing the address you can pick the spot with the [Location sheet](#location-sheet) and fill that row with **Use this address**. This drawer's buttons are icon pills too: hover for the name (long-press on touch). Either way you land on the same preview: matched parcels drawn on the map, an optional **Merge Adjacent Parcels** checkbox to union touching results into one Site (nothing is merged unless it is ticked), and a **Save as Site** button. Re-importing a parcel you already saved is skipped, not duplicated. Saving into a map that is assigned to another access group is refused — those parcels are counted as **failed** in the status line, with no reason given.
 
 See [Parcel Import Details](parcel-import.md) for the full walkthrough and the underlying API.
 

@@ -27,6 +27,8 @@
 
 라이브 DB 를 쓰지 않는다(임시 sqlite · conftest 의 임시 DB).
 """
+from aot.tests.geo._legacy_marker import bound_shape
+from aot.utils.timekit import FARM, today_at
 import json
 import os
 import tempfile
@@ -81,7 +83,7 @@ class TestReadTargetsByName(unittest.TestCase):
         db.session.add(GeoMap(unique_id='map-a', name='김제'))
 
         def shape(uid, typ, name, geom, device_id=None):
-            db.session.add(GeoShape(
+            db.session.add(bound_shape(
                 unique_id=uid, geo_id='map-a', type=typ, device_id=device_id,
                 feature={'type': 'Feature', 'properties': {'name': name},
                          'geometry': geom}))
@@ -114,18 +116,18 @@ class TestReadTargetsByName(unittest.TestCase):
                                 ('pl-s2', '상추', 0.008)):
             db.session.add(GeoPlot(
                 unique_id=uid, geo_id='map-a', subject=subject,
-                started_on=date.today(),
+                started_on=today_at(FARM),
                 feature={'type': 'Feature', 'properties': {},
                          'geometry': _square(x, x, 0.001)}))
         # 리뷰 재현: 구획 **이름**이 다른 구획에서 기르는 작물 이름과 같다.
         db.session.add(GeoPlot(
             unique_id='pl-named', geo_id='map-a', name='고추', subject='옥수수',
-            started_on=date.today(),
+            started_on=today_at(FARM),
             feature={'type': 'Feature', 'properties': {},
                      'geometry': _square(0.010, 0.010, 0.001)}))
         db.session.add(GeoPlot(
             unique_id='pl-gochu', geo_id='map-a', subject='고추',
-            started_on=date.today(),
+            started_on=today_at(FARM),
             feature={'type': 'Feature', 'properties': {},
                      'geometry': _square(0.012, 0.012, 0.001)}))
         # 프로그램을 따르는 구획(단계 확인 날짜 검사용 — 제안은 모의한다).
@@ -144,7 +146,7 @@ class TestReadTargetsByName(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
         self._daemon = mock.patch('aot.aot_client.DaemonControl', _NoDaemon)
         self._daemon.start()
@@ -389,7 +391,8 @@ class TestReadTargetsByName(unittest.TestCase):
 
     # ── 단계 확인 날짜 — 제안이 없으면 오늘로 채우지 않는다 ─────────────
     def test_confirm_stage_without_date_or_proposal_asks(self):
-        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.aot_flask.geo import plot_io
+        from aot.space import plot_context
         with mock.patch.object(plot_context, 'stage_proposal', return_value=None), \
                 mock.patch.object(plot_io, 'accept_stage') as accept:
             out = self.S.confirm_plot_stage(plot_id='pl-prog', stage_key='s2')
@@ -401,7 +404,8 @@ class TestReadTargetsByName(unittest.TestCase):
         accept.assert_not_called()
 
     def test_confirm_stage_uses_the_proposal_date_or_the_given_one(self):
-        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.aot_flask.geo import plot_io
+        from aot.space import plot_context
         prop = {'stage_key': 's2', 'started_on': '2026-09-01'}
         with mock.patch.object(plot_context, 'stage_proposal', return_value=prop), \
                 mock.patch.object(plot_io, 'accept_stage',
@@ -425,7 +429,8 @@ class TestReadTargetsByName(unittest.TestCase):
 
         모델 행을 넘기면 .get 에서 터지고 그 예외가 삼켜져, 제안이 있어도 늘 날짜를
         되물었다(26-09-24 재검증에서 실데이터 20곳 중 12곳 재현)."""
-        from aot.aot_flask.geo import plot_context, plot_io
+        from aot.aot_flask.geo import plot_io
+        from aot.space import plot_context
         seen = {}
 
         def fake_proposal(row, program=None, **kw):
@@ -623,10 +628,9 @@ class TestArgumentsCheckedBeforeTheGate(_AppFixture):
                 agent_id='user:proftest', role=role, scope_user_uuid=None,
                 transport='mcp_http',
                 tool_profile=mcp_auth.tool_profile_of(role))[0]['text'])
-        self.assertEqual('invalid_arguments', out.get('reason_code'), out)
-        self.assertEqual('insufficient_role', out.get('also_refused'), out)
-        self.assertIn('would be refused', out['message'])
-        self.assertIn('write access', out['message'])
+        # 역할 거절이 인자 검사보다 먼저다(26-11-04) — 인자 사유가 권한 없는 호출자에게 나가지 않는다.
+        self.assertEqual('insufficient_role', out.get('reason_code'), out)
+        self.assertIn('control permission', out['message'])
         # 쓰기가 허용되고 역할도 되면 덧붙이지 않는다.
         ok = self._call('operate_device', {'state': 'on'}, write_enabled='1')
         self.assertEqual('invalid_arguments', ok.get('reason_code'), ok)

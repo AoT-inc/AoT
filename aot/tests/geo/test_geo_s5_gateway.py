@@ -36,6 +36,19 @@ def _make_app():
     return app
 
 
+def _markers(dev):
+    from aot.space.device_binding import marker_shapes
+    return _Q(marker_shapes(dev, 'm1'))
+
+
+class _Q(list):
+    def all(self):
+        return list(self)
+
+    def count(self):
+        return len(self)
+
+
 class TestPlacementGateway(unittest.TestCase):
     """Tier-1+2 트리거가 켜진 DB 에서 게이트웨이 계약을 검증한다."""
 
@@ -52,6 +65,9 @@ class TestPlacementGateway(unittest.TestCase):
         finally:
             raw.close()
         GeoMap(unique_id='m1', name='게이트웨이 검증', category='design').save()
+        from aot.databases.models import Output
+        for _d in ('dev-1', 'dev-2', 'dev-3', 'dev-4'):
+            Output(unique_id=_d, name=_d).save()
 
     def tearDown(self):
         db.session.remove()
@@ -75,7 +91,7 @@ class TestPlacementGateway(unittest.TestCase):
         from aot.aot_flask.geo.device_placement import place_device
         place_device('dev-1', 'm1', 35.8, 126.9, commit=True)
         place_device('dev-1', 'm1', 35.9, 127.0, commit=True)
-        rows = GeoShape.query.filter_by(geo_id='m1', device_id='dev-1').all()
+        rows = _markers('dev-1').all()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].feature['geometry']['coordinates'],
                          [127.0, 35.9])              # 이동 반영
@@ -85,22 +101,19 @@ class TestPlacementGateway(unittest.TestCase):
         from aot.aot_flask.geo.device_placement import place_device
         place_device('dev-2', 'm1', 35.8, 126.9, channel_id=None, commit=True)
         place_device('dev-2', 'm1', 35.8, 126.9, channel_id=0, commit=True)
-        self.assertEqual(GeoShape.query.filter_by(
-            geo_id='m1', device_id='dev-2').count(), 1)
+        self.assertEqual(_markers('dev-2').count(), 1)
 
     def test_separate_channels_are_separate_markers(self):
         from aot.aot_flask.geo.device_placement import place_device
         place_device('dev-3', 'm1', 35.8, 126.9, channel_id=0, commit=True)
         place_device('dev-3', 'm1', 35.8, 126.91, channel_id=1, commit=True)
-        self.assertEqual(GeoShape.query.filter_by(
-            geo_id='m1', device_id='dev-3').count(), 2)
+        self.assertEqual(_markers('dev-3').count(), 2)
 
     def test_missing_coords_unplaces(self):
         from aot.aot_flask.geo.device_placement import place_device
         place_device('dev-4', 'm1', 35.8, 126.9, commit=True)
         place_device('dev-4', 'm1', None, None, commit=True)
-        self.assertEqual(GeoShape.query.filter_by(
-            geo_id='m1', device_id='dev-4').count(), 0)
+        self.assertEqual(_markers('dev-4').count(), 0)
 
     def test_delete_shape_relies_on_trigger_cascade(self):
         # 호출자는 정리 순서를 몰라도 된다 — 그것이 이 문의 존재 이유다.

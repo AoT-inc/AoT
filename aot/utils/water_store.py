@@ -16,6 +16,7 @@ from typing import Dict, Iterable, List, Optional
 
 from aot.functions.utils.water_net import result as R
 from aot.utils.fc_store import Pt
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger('aot.water_store')
 
@@ -48,7 +49,7 @@ def run_points(plot_id, rows) -> List[Pt]:
 
 def write_runs(plot_id, rows, now=None) -> int:
     """실행들을 쓴다 → 쓴 점 수. 보존 밖의 오래된 실행은 건너뛴다."""
-    floor = (now if now is not None else datetime.now(timezone.utc).timestamp()) - run_keep_seconds()
+    floor = (now if now is not None else utc_now().timestamp()) - run_keep_seconds()
     return _write(run_points(plot_id, [r for r in rows if r['t0'] >= floor]))
 
 
@@ -102,6 +103,17 @@ def read_days(plot_id, t0, t1) -> Dict[int, dict]:
     return out
 
 
+def read_depths(plot_id, t0, t1):
+    """``t0 <= 날짜 0시 < t1`` 인 닫힌 날 → ``(0시 epoch 들, 일 깊이 mm 들)`` — 트윈의 관수 입력.
+
+    **점이 없는 날은 없다**(모름). 0 을 채우지 않는다. 깊이를 모르는 날도 뺀다(`R.day_depth`).
+    """
+    days = read_days(plot_id, t0, t1)
+    rows = sorted((ts, R.day_depth(box['values'])) for ts, box in days.items())
+    rows = [(ts, mm) for ts, mm in rows if mm is not None]
+    return [ts for ts, _mm in rows], [mm for _ts, mm in rows]
+
+
 def day_bounds(day, tz):
     """현지 날짜 → UTC epoch ``(0시, 다음 0시)``."""
     from aot.utils.timekit import local_day_bounds_utc
@@ -131,7 +143,7 @@ def local_days(t0, t1, tz) -> list:
 
 def covered_days(plot_id, t0, t1, tz) -> Dict[object, dict]:
     """``[t0, t1)`` 안의 닫힌 날 → ``{날짜: 일 합계}``. 보존 밖으로 지워진 실행의 날은 뺀다."""
-    now = datetime.now(timezone.utc).timestamp()
+    now = utc_now().timestamp()
     wanted = [d for d in local_days(t0, t1, tz) if day_bounds(d, tz)[0] >= now - run_keep_seconds()]
     if not wanted:
         return {}

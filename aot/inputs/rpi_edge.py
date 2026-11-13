@@ -8,6 +8,7 @@ from aot.inputs.base_input import AbstractInput
 from aot.aot_client import DaemonControl
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import write_influxdb_value
+from aot.utils.timekit import naive_utc, utc_now
 
 # Measurements
 measurements_dict = {
@@ -156,7 +157,7 @@ class InputModule(AbstractInput):
                 args=(self.unique_id, measurements_dict[0]['unit'], rising_or_falling,),
                 kwargs={'channel': 0,
                         'measure': measurements_dict[0]['measurement'],
-                        'timestamp': datetime.datetime.utcnow()})
+                        'timestamp': naive_utc(utc_now())})
             write_db.start()
 
             trigger = db_retrieve_table_daemon(Trigger)

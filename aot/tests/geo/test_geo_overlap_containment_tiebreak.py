@@ -8,7 +8,7 @@ zone 들의 면적 합(47,007 m²)이 site 면적(31,446 m²)을 넘는다 — z
 
   · `aot/utils/geo_hierarchy.py` `build_geo_parent_map()` — **가장 작은 면적**
     이 이긴다(가장 구체적인 부모). site/zone 을 가리지 않고 면적만 봤다.
-  · `aot/aot_flask/geo/device_membership.py` `_best_container()` — zone 이
+  · `aot/space/device_membership.py` `_best_container()` — zone 이
     site 를 이기는 것까지는 같았지만, zone 끼리 겹치면 `load_containers()`
     가 돌려준 순서에서 **먼저 나온 쪽**이 이겼다(면적과 무관) — 그 쿼리에
     `order_by` 가 없어 순서는 DB 반환 순서(대개 생성=PK 순서)일 뿐 기하가
@@ -35,6 +35,7 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
+from aot.tests.geo._legacy_marker import bound_shape
 from aot.databases.models import GeoMap, GeoShape
 
 
@@ -125,15 +126,16 @@ class TestDeviceMarkerZoneAgreesWithHierarchy(_Base):
     zone(더 작은 쪽)을 답해야 한다."""
 
     def test_marker_in_overlap_resolves_to_smallest_zone_on_both_paths(self):
-        from aot.aot_flask.geo.device_membership import zone_for_device
+        from aot.space.device_membership import zone_for_device
         from aot.utils.geo_hierarchy import build_geo_parent_map
 
         site, zone_big, zone_small = self._place_site_and_overlapping_zones()
         self._assert_overlap_is_real(zone_big, zone_small)
-        marker = GeoShape(unique_id='mk1', geo_id='m1', type='aot_device',
-                          device_id='dev-1', channel_id='0',
-                          feature=_point(*OVERLAP_POINT))
-        marker.save()
+        from aot.databases.models import Output     # 리졸버는 실존 장치만 푼다
+        Output(unique_id='dev-1', name='dev-1').save()
+        marker = bound_shape(unique_id='mk1', geo_id='m1', type='aot_device',
+                             device_id='dev-1', channel_id='0',
+                             feature=_point(*OVERLAP_POINT))
 
         membership_zone = zone_for_device('dev-1', 'm1')
         self.assertIsNotNone(membership_zone)
@@ -160,7 +162,7 @@ class TestPlotZoneAttributionAgreesWithHierarchy(_Base):
     ·plot_context 가 실제로 쓰는 것은 device_membership 쪽이다."""
 
     def test_plot_in_overlap_resolves_to_smallest_zone_on_both_paths(self):
-        from aot.aot_flask.geo.device_membership import container_for_geometry
+        from aot.space.device_membership import container_for_geometry
         from aot.utils.geo_hierarchy import build_geo_parent_map
 
         site, zone_big, zone_small = self._place_site_and_overlapping_zones()
@@ -207,7 +209,7 @@ class TestBestContainerTiebreakIsOrderIndependent(unittest.TestCase):
     def test_order_of_same_kind_candidates_no_longer_flips_the_answer(self):
         from shapely.geometry import shape as shapely_shape
 
-        from aot.aot_flask.geo.device_membership import _best_container
+        from aot.space.device_membership import _best_container
 
         big = shapely_shape(_poly(ZONE_BIG_RING)['geometry'])      # area 6000
         small = shapely_shape(_poly(ZONE_SMALL_RING)['geometry'])  # area 4000

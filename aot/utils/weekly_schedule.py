@@ -36,6 +36,7 @@ from typing import Optional, Tuple
 
 import pytz
 from flask_babel import gettext as _
+from aot.utils.timekit import naive_utc, tz_of, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -297,10 +298,10 @@ def active_entry_now(schedule: dict, tz) -> Optional[Tuple[int, dict]]:
     tz: pytz timezone object or IANA string — supplied by the caller via get_device_tz().
     """
     try:
-        tz_obj = pytz.timezone(str(tz)) if isinstance(tz, str) else tz
+        tz_obj = tz_of(tz)
         local_now = datetime.now(tz_obj)
     except Exception:
-        local_now = datetime.utcnow()
+        local_now = naive_utc(utc_now())
 
     today_idx = local_now.weekday()
     now_min = local_now.hour * 60 + local_now.minute
@@ -333,7 +334,7 @@ def _epoch_of_wall_minutes(minutes: int, tz, now_epoch: float) -> Optional[float
 
         from aot.utils.timekit import wall_to_utc
 
-        tz_obj = pytz.timezone(str(tz)) if isinstance(tz, str) else (tz or pytz.utc)
+        tz_obj = tz_of(tz)
         midnight = datetime.fromtimestamp(now_epoch, tz_obj).replace(
             hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
         return wall_to_utc(midnight + timedelta(minutes=int(minutes)), tz_obj).timestamp()
@@ -359,6 +360,37 @@ def window_bounds_epoch(entry: dict, tz, now_epoch: float):
     except (KeyError, TypeError, ValueError):
         pass
     return start, end
+
+
+def continuous_window_end_epoch(schedule: dict, day_idx: int, tz, now_epoch: float) -> Optional[float]:
+    """`day_idx` 요일 창이 **실제로** 닫히는 시각(epoch). 못 구하면 None.
+
+    창 끝이 24:00 이고 다음 요일이 00:00 에 이어 열리면(`is_continuity_boundary`)
+    자정은 창 끝이 아니다 — 루프는 그 경계에서 사이클을 끊지 않고 이어 간다. 여기서도
+    같은 규칙으로 다음 요일 창 끝까지(이어지는 동안 최대 7일) 늘린다.
+
+    자정을 창 끝으로 보면 "남은 창이 한 pass 에 부족하다" 고 자정 직전 사이클을
+    거부하고, 자정에 연속 판정으로 그 사이클을 **격자 위 늦은 자리에서** 이어 켜서
+    스텝이 잘린다(2026-11-11 재현: 1시간 주기·50분 스텝, 매일 밤 23:20 사이클이
+    00:00~00:10 으로 줄었다). 밤샘 창은 22:00~24:00 + 00:00~02:00 으로만 적을 수
+    있으므로 그 설정도 같은 길을 지난다.
+    """
+    days = (schedule or {}).get("days", {}) or {}
+    entry = days.get(str(day_idx))
+    if not entry:
+        return None
+    _, end = window_bounds_epoch(entry, tz, now_epoch)
+    d = int(day_idx)
+    for _ in range(7):
+        if end is None or not is_continuity_boundary(schedule, d, (d + 1) % 7):
+            break
+        d = (d + 1) % 7
+        # `end` 는 다음 날 자정이다 — 그 안쪽 한 순간으로 다음 요일의 날짜를 잡는다.
+        _, next_end = window_bounds_epoch(days.get(str(d)) or {}, tz, end + 1)
+        if next_end is None:
+            break
+        end = next_end
+    return end
 
 
 def window_start_epoch(entry: dict, tz, now_epoch: float) -> Optional[float]:
@@ -411,10 +443,10 @@ def is_continuity_boundary(schedule: dict, prev_day_idx: int, next_day_idx: int)
 def get_today_idx(tz) -> int:
     """Return today's weekday index (0=Mon...6=Sun) in device timezone."""
     try:
-        tz_obj = pytz.timezone(str(tz)) if isinstance(tz, str) else tz
+        tz_obj = tz_of(tz)
         return datetime.now(tz_obj).weekday()
     except Exception:
-        return datetime.utcnow().weekday()
+        return naive_utc(utc_now()).weekday()
 
 
 def to_legacy(schedule: dict) -> Tuple[str, str, str, float]:

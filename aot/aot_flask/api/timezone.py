@@ -16,7 +16,7 @@ from flask_restx import Resource
 from aot.aot_flask.api import api
 from aot.aot_flask.api import default_responses
 from aot.utils.device_tz import resolve_tz_from_coords
-from aot.utils.time_utils import get_timezone_name
+from aot.utils.timekit import FARM, tz_of
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class CoordsTimezone(Resource):
             lon = float(request.args.get('lon'))
         except (TypeError, ValueError):
             return {'error': 'lat and lon required'}, 400
-        tz = resolve_tz_from_coords(lat, lon) or get_timezone_name() or 'UTC'
+        tz = resolve_tz_from_coords(lat, lon) or str(tz_of(FARM)) or 'UTC'
         return {'lat': lat, 'lon': lon, 'timezone': tz}
 
 
@@ -89,10 +89,11 @@ class PlaceToday(Resource):
     @flask_login.login_required
     def get(self):
         from flask import request
-        from aot.utils.device_tz import resolve_location_tz_and_source
-        from aot.utils.timekit import utc_now
+        from aot.utils.timekit import SOURCE_SYSTEM, SOURCE_UTC, resolve_tz, utc_now
         target_id = (request.args.get('target_id') or '').strip() or None
-        tz, source = resolve_location_tz_and_source(target_id)
+        tz, source = resolve_tz(target_id)
+        # 응답 어휘는 둘뿐이다: 장소에서 풀렸으면 'device', 농장·UTC 로 떨어졌으면 'system'
+        source = 'system' if source in (SOURCE_SYSTEM, SOURCE_UTC) else 'device'
         return {'target_id': target_id, 'timezone': str(tz), 'source': source,
                 'today': utc_now().astimezone(tz).date().isoformat()}
 
@@ -103,4 +104,4 @@ class FallbackTimezone(Resource):
     """Return the system fallback timezone (Misc.timezone or UTC)."""
 
     def get(self):
-        return {'timezone': get_timezone_name() or 'UTC'}
+        return {'timezone': str(tz_of(FARM)) or 'UTC'}

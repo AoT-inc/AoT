@@ -8,8 +8,8 @@ from flask_login import UserMixin
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +97,9 @@ class User(UserMixin, CRUDMixin, db.Model):
     # 컴퓨터 화면 배율(%) — 90~150, 5 단위(계정 모달 "컴퓨터 화면 크기").
     # NULL = 기본 100(바꾸지 않음). 마우스 화면에만 걸린다.
     ui_zoom_desktop = db.Column(db.Integer, default=None)
+    # 경량 모드(계정 모달 "경량 모드", 자원 조절 R6) — NULL·'off' 끔 · 'phone' 폰·태블릿만 ·
+    # 'always' 항상. 켜지면 폴링 ×2·움직임 효과 끔·카메라 스냅숏. 적용은 templates/_lite_mode.html.
+    ui_lite_mode = db.Column(db.String(8), default=None)
     password_reset_code = db.Column(db.Text, default=None)
     password_reset_code_expiration = db.Column(db.DateTime, default=None)
     password_reset_last_request = db.Column(db.DateTime, default=None)

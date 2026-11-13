@@ -5,6 +5,7 @@
 import copy
 import datetime
 import threading
+import time
 
 from flask_babel import lazy_gettext
 
@@ -269,10 +270,9 @@ class OutputModule(AbstractOutput):
                         measure=each_dev_meas.measurement,
                         value='LAST')
                     if last_measurement:
-                        datetime_ts = datetime.datetime.fromtimestamp(last_measurement[0])
                         minutes_on = last_measurement[1]
-                        ts_pmp_off = datetime_ts + datetime.timedelta(minutes=minutes_on)
-                        is_on = bool(datetime.datetime.now() < ts_pmp_off)
+                        ts_pmp_off = last_measurement[0] + minutes_on * 60
+                        is_on = bool(time.time() < ts_pmp_off)
                         if is_on:
                             return True
             return False

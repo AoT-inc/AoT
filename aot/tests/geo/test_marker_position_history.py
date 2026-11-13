@@ -12,7 +12,8 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding, device_placement
+from aot.aot_flask.geo import device_placement
+from aot.space import device_binding
 from aot.databases.geo_integrity_ddl import apply_binding
 from aot.databases.models import GeoMarkerPosition, GeoShape, Input
 

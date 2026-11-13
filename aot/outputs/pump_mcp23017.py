@@ -18,6 +18,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.lockfile import LockFile
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import naive_utc, utc_now
 
 # Measurements
 measurements_dict = OrderedDict()
@@ -244,7 +245,7 @@ class OutputModule(AbstractOutput):
         self.logger.debug("Output turned on")
         self.turn_on_off(channel, "on")
         timer_dispense = time.time() + total_dispense_seconds
-        timestamp_start = datetime.datetime.utcnow()
+        timestamp_start = naive_utc(utc_now())
 
         while time.time() < timer_dispense and self.currently_dispensing[channel]:
             time.sleep(0.01)
@@ -278,7 +279,7 @@ class OutputModule(AbstractOutput):
 
         self.currently_dispensing[channel] = True
         timer_dispense = time.time() + total_dispense_seconds
-        timestamp_start = datetime.datetime.utcnow()
+        timestamp_start = naive_utc(utc_now())
 
         while time.time() < timer_dispense and self.currently_dispensing[channel]:
             # On for duration

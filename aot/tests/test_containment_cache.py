@@ -45,7 +45,7 @@ class TestCacheIsNotTheSourceOfTruth(unittest.TestCase):
     def test_parent_id_is_untouched(self):
         """정본 컬럼에 기계 추측을 섞지 않는다."""
         for parts in (('utils', 'geo_hierarchy.py'),
-                      ('aot_flask', 'geo', 'containment_cache.py')):
+                      ('space', 'containment_cache.py')):
             src = _read(*parts)
             self.assertNotIn('.parent_id =', src)
             self.assertNotIn('parent_id=', src.replace('s.parent_id', ''))
@@ -58,7 +58,7 @@ class TestCacheIsNotTheSourceOfTruth(unittest.TestCase):
         """지도 데이터는 geo 패키지가 소유한다(check_geo_writes). 캐시도
         지도 데이터라, 밖에서 각자 채우면 무효화 시점을 여러 벌 기억하게 된다."""
         self.assertTrue(os.path.exists(os.path.join(
-            _ROOT, 'aot_flask', 'geo', 'containment_cache.py')))
+            _ROOT, 'space', 'containment_cache.py')))
         gh = _read('utils', 'geo_hierarchy.py')
         # geo_hierarchy 는 소유자를 **경유**한다 — 직접 모델을 쓰지 않는다
         self.assertNotIn('GeoContainmentCache(', gh)
@@ -68,7 +68,7 @@ class TestCacheIsNotTheSourceOfTruth(unittest.TestCase):
 class TestCacheSemantics(unittest.TestCase):
 
     def setUp(self):
-        self.cc = _read('aot_flask', 'geo', 'containment_cache.py')
+        self.cc = _read('space', 'containment_cache.py')
         self.gh = _read('utils', 'geo_hierarchy.py')
 
     def test_null_parent_is_a_computed_answer(self):
@@ -105,7 +105,7 @@ class TestCacheSemantics(unittest.TestCase):
         """무효화를 빠뜨린 경로가 있어도 스스로 낫는다 — 이 레포는 "정리해야
         할 경로가 17곳인데 실제로 정리하는 곳은 4곳" 을 이미 겪었다."""
         self.assertIn('_TTL_S', self.cc)
-        self.assertIn('_naive_utc(r.computed_at) >= floor', _fn(self.cc, 'load'))
+        self.assertIn('naive_utc(r.computed_at) >= floor', _fn(self.cc, 'load'))
 
     def test_confirming_an_unchanged_row_refreshes_computed_at(self):
         """값이 같아도 확인 시각은 찍는다 — 안 찍으면 캐시가 영영 못 산다.
@@ -151,13 +151,13 @@ class TestInvalidationIsWired(unittest.TestCase):
         """프로세스 전역이면 각자 임시 DB 를 만드는 테스트끼리 서로의 도형을
         본다 — 단독 실행은 통과하고 스위트로 돌리면 깨지는, 원인을 찾기 어려운
         실패다(2026-08-18 실제로 그렇게 잡았다)."""
-        src = _read('aot_flask', 'geo', 'shape_index.py')
+        src = _read('space', 'shape_index.py')
         self.assertIn('def _scope_key', src)
         self.assertIn('db.engine.url', src)
 
     def test_invalidate_only_deletes(self):
         """지우는 방향으로만 동작하므로 과하게 불러도 손해는 재계산 비용뿐이다."""
-        body = _fn(_read('aot_flask', 'geo', 'containment_cache.py'),
+        body = _fn(_read('space', 'containment_cache.py'),
                    'invalidate')
         self.assertIn('.delete(', body)
         self.assertNotIn('db.session.add(', body)
@@ -174,14 +174,15 @@ class TestTimezoneNaiveComparison(unittest.TestCase):
     """
 
     def setUp(self):
-        self.src = _read('aot_flask', 'geo', 'containment_cache.py')
+        self.src = _read('space', 'containment_cache.py')
 
     def test_helper_exists_and_is_used_on_both_sides(self):
-        self.assertIn('def _naive_utc', self.src)
+        self.assertIn('from aot.utils.timekit import naive_utc', self.src)
+        self.assertNotIn('def _naive_utc', self.src)
         load = _fn(self.src, 'load')
-        self.assertIn('_naive_utc(utc_now())', load)
-        self.assertIn('_naive_utc(r.computed_at)', load)
-        self.assertIn('_naive_utc(utc_now())', _fn(self.src, 'store'))
+        self.assertIn('naive_utc(utc_now())', load)
+        self.assertIn('naive_utc(r.computed_at)', load)
+        self.assertIn('naive_utc(utc_now())', _fn(self.src, 'store'))
 
     def test_swallowed_exception_is_logged_loudly(self):
         """조용히 지나가면 캐시가 죽은 줄 모른다."""

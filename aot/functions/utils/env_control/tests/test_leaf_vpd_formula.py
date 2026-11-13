@@ -10,7 +10,7 @@ import math
 
 import pytest
 
-from aot.functions.utils.env_control import psychro
+from aot.utils import psychro
 
 
 # ─────────────────────────────────────────────────────────────────────────────

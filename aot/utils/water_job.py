@@ -29,7 +29,7 @@ CATCHUP_DAYS = 3
 # `runtime.get_operational_intervals`) 켜져 있는 동안의 실행은 아직 보이지 않는다. 자정 직후에 닫으면 그날 밤
 # 켜서 돌고 있던 실행이 나중에 도착해도 닫힌 날이 건너뛰어져 저장에서 영구히 빠진다. 실측(사본 60일 5,912건):
 # 최대 9.6시간, p99 1.5시간이라 12시간을 둔다. **그보다 오래 도는 실행이 자정을 넘기면 그 날에서 빠진다**(한계).
-CLOSE_GRACE_S = 12 * 3600
+CLOSE_GRACE_S = R.CLOSE_GRACE_S
 _run_lock = threading.Lock()
 
 
@@ -98,11 +98,11 @@ def process_plot(plot, now=None, since_day: Optional[date] = None, until_day: Op
                  write=True) -> List[dict]:
     """구획의 ``[since_day, until_day]`` 중 닫히지 않은 날을 차례로 푼다. 이미 닫힌 날은 건너뛴다."""
     from aot.utils import water_store
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz, to_tz
+    from aot.utils.timekit import tz_of
+    from aot.utils.timekit import to_tz
 
     now = time.time() if now is None else float(now)
-    tz = as_tz(resolve_location_tz(plot.unique_id))
+    tz = tz_of(plot.unique_id)
     today = to_tz(datetime.fromtimestamp(now, timezone.utc), tz).date()
     until_day = min(until_day or today, today)
     since_day = since_day or (today - timedelta(days=CATCHUP_DAYS))
@@ -136,10 +136,14 @@ def run_due(now=None, since_day: Optional[date] = None, plot_ids=None, write=Tru
         since = since_day or (datetime.fromtimestamp(now, timezone.utc).date()
                               - timedelta(days=CATCHUP_DAYS + 1))
         out = []
+        judged = False
         for plot in plots_to_store(since, plot_ids):
-            if skip_busy and load.busy():
-                logger.info('[water_job] 시스템 부하가 높아 다음 시간으로 미룸')
-                break
+            # 첫 구획 앞에서 한 번만 본다(구획마다 보면 이 작업 자신의 CPU 로 남은 구획을
+            # 미루고, 미룸 상한이 구획마다 새로 세어져 N 구획에 N×6시간이 걸린다).
+            if skip_busy and not judged:
+                judged = True
+                if load.busy('water_job'):
+                    break                               # 미룬 까닭은 resource_pressure 가 남긴다
             try:
                 out.extend(process_plot(plot, now, since_day, write=write))
             except Exception:                               # noqa: BLE001 — 한 구획의 오류가 다른 구획을 막지 않는다

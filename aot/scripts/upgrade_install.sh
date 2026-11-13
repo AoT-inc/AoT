@@ -122,10 +122,22 @@ runSelfUpgrade() {
     printf "Done.\n"
   fi
 
+  # The daemon is the only service stopped above; the web server and the MCP
+  # server keep the databases open in WAL mode. Stop them too so nothing writes
+  # while the files are copied (upgrade_post.sh starts them again).
+  printf "Stopping the web and MCP servers..."
+  systemctl stop aotflask aotmcp 2>/dev/null || service aotflask stop 2>/dev/null || true
+  printf "Done.\n"
+
+  # Commits since the last checkpoint live only in aot.db-wal. A plain
+  # `cp *.db` drops them silently (the 26.11.1 upgrade lost hours of edits on
+  # two servers that way), so copy through the SQLite backup API instead.
   printf "Copying databases..."
   mkdir -p "${THIS_AOT_DIRECTORY}"/aot/databases
-  if ! cp "${CURRENT_AOT_DIRECTORY}"/aot/databases/*.db "${THIS_AOT_DIRECTORY}"/aot/databases ; then
+  if ! "${THIS_AOT_DIRECTORY}"/env/bin/python3 "${THIS_AOT_DIRECTORY}"/aot/scripts/copy_sqlite_dbs.py \
+        "${CURRENT_AOT_DIRECTORY}"/aot/databases "${THIS_AOT_DIRECTORY}"/aot/databases ; then
     printf "Failed: Error while trying to copy databases."
+    systemctl start aotflask aotmcp 2>/dev/null || true
     error_found
   fi
   printf "Done.\n"

@@ -6,7 +6,7 @@
 """
 import pytest
 
-from aot.functions.utils.env_control import psychro as ps
+from aot.utils import psychro as ps
 from aot.functions.utils.env_control.situation import svp as situation_svp
 
 

@@ -24,13 +24,24 @@ Activation is what makes the VWorld map tiles appear. Parcel import itself only 
 
 This opens the **Import Site by Address** dialog, which has two tabs: **Address Input** and **CSV Batch**. It slides in as a drawer on the right and pushes the map aside instead of covering it, so you can keep entering addresses while watching the boundaries appear. Only one drawer is open at a time, so the Site settings drawer closes. On a phone it covers the screen instead, and the handle along its top edge lowers it to a peek and raises it again.
 
+The drawer is split into sections, each a **title + card**. The short per-row actions (Location and Delete on an address row, Add Address, Search, Close) are text-free **icon pills**: hover for the name in a tooltip, or long-press on a touch screen. Decisions that need words, such as upload and save, are text buttons.
+
 ---
 
 ## Address Input { #address-input }
 
-1. Type an address (e.g., `808 Yeoksam-dong, Gangnam-gu, Seoul`). Separate several addresses with commas, or click **Add Address** to add another input row.
-2. Click **Search**.
+1. Type an address (e.g., `808 Yeoksam-dong, Gangnam-gu, Seoul`). Separate several addresses with commas, or click **Add Address** (＋) to add another input row. You can also fill a row by picking the spot on the map instead of typing (see [Fill an Address from the Location Sheet](#pick-location) below).
+2. Click **Search** (magnifier).
 3. Matched parcels appear in the preview list below, each with its boundary drawn on the map; failed lookups are listed with the reason.
+
+### Fill an Address from the Location Sheet { #pick-location }
+
+If you do not know the address or do not want to type it, press the **Location** (pin) button at the right of an address row. The [Location sheet](design-tool.md#location-sheet) unfolds inside the drawer. The drawer stays open, so the row you were typing, the preview and the progress are untouched. Pick the spot in the sheet by address search, My location, Map center, Mark on the map, Favorites or Recent, then press **Use this address** to fill that row.
+
+- Pressing **Location** on the same row again folds the sheet; pressing it on another row only changes which row gets filled.
+- A filled row can be edited by hand, and Search and Enter work as before. A filled address counts as one address, so commas inside it do not split it into several.
+- The server finds the spot's address by reverse lookup from the coordinates. It can take a few seconds; meanwhile **Use this address** is disabled and its name reads **Looking up the address…**. If no address is found it stays disabled — pick another spot or type the address.
+- The address the sheet gives may not be a lot-number address, and addresses outside Korea cannot be resolved by VWorld. If the parcel lookup fails for such an address, the status line only adds a note ("Parcel lookup can only find addresses that VWorld can resolve. Edit the address and try again.") — nothing is converted for you, so edit the address and search again.
 
 ---
 
@@ -40,6 +51,8 @@ Use this to import multiple parcels at once.
 
 ### CSV File Format { #csv-file-format }
 
+The **CSV Format** card at the top of the **CSV Batch** tab states the same rules.
+
 Addresses only, one per row, in the **first column**. There is no header row and no name column — any extra columns are ignored, and a name for each imported Site comes from the address itself (or from the **Site Name** field at save time).
 
 ```csv
@@ -47,6 +60,13 @@ Addresses only, one per row, in the **first column**. There is no header row and
 124 Gojung-ri, Songsan-myeon, Hwaseong-si, Gyeonggi-do
 456 Ipbuk-dong, Gwonseon-gu, Suwon-si, Gyeonggi-do
 ```
+
+Save the file comma-separated and UTF-8 (in Excel, "CSV UTF-8"). No header row is skipped, so a header would be looked up as an address and listed as a failure.
+
+The card gives a note for each place the addresses may come from:
+
+- **VWorld** — use the lot-number (jibun) address. Parcels are matched by lot number, so road-name addresses can fail when the point falls on the road. Korean addresses only.
+- **Google Maps** — move the address column of the Google Maps / My Maps export to the first column. Google returns road-name addresses, so some rows may fail; check the failure list. Addresses outside Korea cannot be read.
 
 ### How to Import { #how-to-import }
 
@@ -101,7 +121,7 @@ Response:
   "pnu": "4159025300100230000"
 }
 ```
-On failure: `{"ok": false, "error": "..."}`.
+On failure: `{"ok": false, "error": "..."}`. When the address or parcel could not be found, the failure response also carries `upstream_failed`, which is `true` if every VWorld call that was made failed (the VWorld service itself is down or erroring) and `false` if VWorld answered but simply had no match.
 
 ### CSV Batch Import { #csv-batch-import_1 }
 

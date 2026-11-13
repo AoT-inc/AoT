@@ -11,6 +11,7 @@ from aot.utils.timekit import utc_now
 from aot.ai.services.ai_agent_service import AIAgentService
 from aot.ai.services.mcp_bridge_service import MCPBridgeService
 from aot.aot_flask.utils.utils_general import user_has_permission
+from aot.utils.timekit import naive_utc, parse_utc
 
 logger = logging.getLogger(__name__)
 blueprint = Blueprint('routes_ai_agent', __name__)
@@ -1336,12 +1337,12 @@ def ai_task_add_api():
     from datetime import datetime
     try:
         if data.get('start_date'):
-            new_task.start_date = datetime.fromisoformat(data['start_date'].replace('Z', '+00:00'))
+            new_task.start_date = naive_utc(parse_utc(data['start_date']))
         else:
             new_task.start_date = utc_now()
             
         if data.get('end_date'):
-            new_task.end_date = datetime.fromisoformat(data['end_date'].replace('Z', '+00:00'))
+            new_task.end_date = naive_utc(parse_utc(data['end_date']))
     except ValueError as e:
         return jsonify({"status": "error", "message": f"Invalid date format: {e}"}), 400
         
@@ -1485,11 +1486,11 @@ def ai_task_update():
             # Handle possible datetime objects or strings
             val = data['start_date']
             if isinstance(val, str):
-                task.start_date = datetime.fromisoformat(val.replace('Z', '+00:00'))
+                task.start_date = naive_utc(parse_utc(val))
         if 'end_date' in data and data['end_date']:
             val = data['end_date']
             if isinstance(val, str):
-                task.end_date = datetime.fromisoformat(val.replace('Z', '+00:00'))
+                task.end_date = naive_utc(parse_utc(val))
     except ValueError as e:
         return jsonify({"status": "error", "message": f"Invalid date format: {e}"}), 400
 

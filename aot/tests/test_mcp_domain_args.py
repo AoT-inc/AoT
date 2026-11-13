@@ -70,6 +70,9 @@ class RequiredArgumentTest(unittest.TestCase):
         self.assertEqual('missing_argument', body['reason_code'])
         self.assertIn('input_type', body['message'])
         self.assertIn('name', body['message'])
+        # help 인자 이름은 `target`(S1) — 옛 `tool_name` 을 안내하면 모델이 거절 루프에 빠진다
+        self.assertIn("help(target='configure.input_create')", body['message'])
+        self.assertNotIn('tool_name', body['message'])
 
     def test_complete_create_is_planned(self):
         v = _plan('configure', {'op': 'input_create', 'input_type': 'OPEN_METEO_FORECAST',
@@ -96,7 +99,8 @@ class RefusalWordingTest(unittest.TestCase):
     def test_unknown_argument_lists_target_only_when_taken(self):
         v = _plan('find', {'op': 'functions', 'name': '일일타이머'})
         msg = _text(v)['message']
-        self.assertNotIn('target', msg)
+        # find.functions 는 2026-11-04 부터 장소 대상을 받는다(place_filter) — 안내가 받는 인자를 그대로 적는다.
+        self.assertIn('op, target', msg)
         self.assertIn('function_type', msg)
         v = _plan('detail', {'op': 'function', 'target': 'f', 'bogus': 1}, kind='function')
         self.assertIn('op, target', _text(v)['message'])

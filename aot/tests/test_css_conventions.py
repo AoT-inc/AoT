@@ -524,7 +524,9 @@ _IMPORTANT_BUDGET = {
     # `td:last-child { width: var(--aot-col-w-actions) !important }` 가 그 표에도
     # 닿는데, 통합 표는 마지막 열이 동작이 아니라 값이라 폭을 내용에 맡겨야 한다.
     # 상대가 !important 라 같은 무게로만 벗어날 수 있다.
-    "pages/geo-facility.css": 37,
+    # 34: 폰 띠에서 3D 머리줄·표시 목록·조작 안내를 숨기던 세 줄은 그 요소가 캔버스 밖
+    # 툴바·상태줄로 옮겨 가며 필요 없어졌다(2026-11-07 S3 캔버스 비우기).
+    "pages/geo-facility.css": 16,
     "aot-base.css": 14,
     # 2: 동작 열 폭 한 쌍이다. 이 표 규칙은 pages/geo-facility.css 가 그대로
     # 쓰는데 그쪽에도 !important 가 있어(위 항목) 같은 무게가 아니면 진다.

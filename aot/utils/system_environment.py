@@ -119,6 +119,27 @@ def mem_total_gb(host_only=False):
     return round(host_gb, 2) if host_gb is not None else None
 
 
+def host_pi_model(cpuinfo_path='/proc/cpuinfo'):
+    """이 프로세스가 도는 **기기**가 라즈베리 파이면 그 모델 문자열, 아니면 None.
+
+    `pi_model()` 은 `/proc/device-tree/model` 을 읽는데, 도커는 기본으로 `/sys/firmware`
+    (그 실체)를 가려서 파이 위 컨테이너에서는 None 이다. 그래서 파이 위 도커가 일반 PC
+    규칙으로 워커 2~4개를 띄웠다(워커당 RSS 400~500MB). `/proc/cpuinfo` 의 `Model` 줄
+    (라즈베리 파이 OS 커널이 채운다)은 컨테이너에서도 보이므로 그것도 본다.
+
+    **자원 크기 판단(워커·스레드)에만** 쓴다. 파이 전용 기능(GPIO·디지털트윈 잠금)과
+    플랫폼 구분(`platform_type` — 도커 업데이트 등)은 그대로 `pi_model()`·`is_docker()` 를 쓴다.
+    """
+    model = pi_model()
+    if model:
+        return model
+    for line in (_read_file(cpuinfo_path) or '').splitlines():
+        key, _, value = line.partition(':')
+        if key.strip().lower() == 'model' and 'raspberry pi' in value.lower():
+            return value.strip()
+    return None
+
+
 def detect():
     """Return a snapshot dict describing the runtime environment."""
     model = pi_model()
@@ -134,6 +155,7 @@ def detect():
     return {
         'platform_type': platform_type,
         'pi_model': model,
+        'host_pi_model': host_pi_model(),
         'os_release': os_release_name(),
         'kernel': f'{uname.sysname} {uname.release} {uname.machine}',
         'hostname': uname.nodename,
@@ -151,6 +173,12 @@ def detect():
     }
 
 
+def _on_pi_hardware(env):
+    """자원 크기 판단용 — 베어메탈 파이이거나, 파이 위에서 도는 컨테이너인가."""
+    return (env.get('platform_type') == PLATFORM_RASPBERRY_PI
+            or bool(env.get('host_pi_model')))
+
+
 def _glob_i2c():
     import glob
     return glob.glob('/dev/i2c-*')
@@ -165,7 +193,7 @@ def recommended_threads(env=None):
         env = detect()
     threads = (env.get('cpu_cores') or 2) * 2
     mem_gb = env.get('mem_total_gb')
-    low_resource = (env.get('platform_type') == PLATFORM_RASPBERRY_PI
+    low_resource = (_on_pi_hardware(env)
                     or (mem_gb is not None and mem_gb < LOW_MEMORY_GB))
     if low_resource:
         threads = min(threads, THREADS_MAX_LOW_RESOURCE)
@@ -203,8 +231,7 @@ def recommended_workers(env=None):
     cores = env.get('cpu_cores') or 1
     mem_gb = env.get('mem_total_gb')
 
-    if (env.get('platform_type') == PLATFORM_RASPBERRY_PI
-            or (mem_gb is not None and mem_gb < LOW_MEMORY_GB)):
+    if _on_pi_hardware(env) or (mem_gb is not None and mem_gb < LOW_MEMORY_GB):
         return 1
 
     by_mem = WORKERS_MAX

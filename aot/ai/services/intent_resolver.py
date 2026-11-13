@@ -317,7 +317,7 @@ def propose_map_scoped_control(raw_cmd, mapctx, thread_id):
     exactly what's being controlled. Returns the proposal dict, or None to fall
     through to the normal pipeline (no location resolved / no devices there)."""
     from aot.databases.models import Output
-    from aot.aot_flask.geo import device_membership as dm
+    from aot.space import device_membership as dm
     # 화면 중심을 감싸는 가장 작은 장소, 그 안의 장치는 정본 소속으로
     # (2026-10-08). 예전에는 `device_zone_map`(장치 영역 폴리곤만 · 지도 무관 ·
     # 바인딩 안 봄)을 **구역 이름**으로 맞춰서, 이름이 같은 다른 지도의 구역

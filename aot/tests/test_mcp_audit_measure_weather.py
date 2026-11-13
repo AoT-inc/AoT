@@ -32,12 +32,13 @@ class TimedPeriodTest(unittest.TestCase):
 
 class HistoryAndFocusArgsTest(unittest.TestCase):
 
-    def test_history_takes_limit(self):
+    def test_history_takes_samples(self):
+        """채널당 읽은 건수는 `samples`(옛 이름 `limit` 은 별칭이 받는다 — test_mcp_domain_vocab)."""
         from aot.tools.domain import dispatch
         from aot.tools.domain.registry import find_op
         from aot.tools.domain.registry_data import OPS
         o = find_op(OPS, 'measure', 'history')
-        got = dispatch._inner_args(o, {'limit': 3, 'measurement': 'temperature'},
+        got = dispatch._inner_args(o, {'samples': 3, 'measurement': 'temperature'},
                                    'get_sensor_detail', 'loc_id', [], False)
         self.assertNotIsInstance(got, list, got)
         self.assertEqual(3, got['limit'])

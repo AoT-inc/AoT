@@ -59,7 +59,7 @@ class TestTheConverterIsTheSystemOne(unittest.TestCase):
 
     def test_it_walks_the_system_table(self):
         from aot.functions.utils.env_control import cumulative_tracker as ct
-        src = _read('functions', 'utils', 'env_control', 'cumulative_tracker.py')
+        src = _read('utils', 'light_units.py')
         body = _code_only(
             src.split('def light_to_wm2', 1)[1].split('\ndef ', 1)[0])
         self.assertIn('_convert_via_system', body,
@@ -97,7 +97,7 @@ class TestTheConverterIsTheSystemOne(unittest.TestCase):
 class TestTheReadPathAppliesIt(unittest.TestCase):
 
     def _src(self):
-        return _read('aot_flask', 'geo', 'facility_sensors.py')
+        return _read('space', 'facility_sensors.py')
 
     def test_both_read_branches_normalise(self):
         """채널 직접 조회와 이름 탐색 — **둘 다** 지나야 한다. 한쪽만 고치면
@@ -134,7 +134,7 @@ class TestTheRainUnitRecheckActuallyRuns(unittest.TestCase):
     """
 
     def test_the_broken_call_is_gone(self):
-        src = _code_only(_read('aot_flask', 'geo', 'facility_sensors.py'))
+        src = _code_only(_read('space', 'facility_sensors.py'))
         self.assertNotIn('return_measurement_info(dm.unique_id)', src,
                          '인자 하나짜리 호출이 되살아났다 — TypeError 가 난다')
 
@@ -146,7 +146,7 @@ class TestTheRainUnitRecheckActuallyRuns(unittest.TestCase):
         self.assertEqual(len(params), 2, str(list(params)))
 
     def test_it_now_uses_the_row_helper(self):
-        src = _read('aot_flask', 'geo', 'facility_sensors.py')
+        src = _read('space', 'facility_sensors.py')
         # ⚠ 원본에서 자른 **뒤에** 토큰화한다. 먼저 토큰화하면 `'rain'` 이
         #   문자열이라 사라져 자를 기준이 없어진다.
         block = _code_only(src.split("measurement_type == 'rain'", 1)[1][:400])
@@ -159,7 +159,7 @@ class TestTheRainUnitRecheckActuallyRuns(unittest.TestCase):
     def test_both_rain_paths_are_fixed(self):
         """같은 깨진 호출이 **두 곳**에 있었다. 한 곳만 고치면 이름이 원시
         그대로인 강수 채널이 나머지 경로에서 그대로 안 잡힌다."""
-        code = _code_only(_read('aot_flask', 'geo', 'facility_sensors.py'))
+        code = _code_only(_read('space', 'facility_sensors.py'))
         # 두 경로(측정 종류 지정 · 자동 스캔)가 같은 판정 함수를 부른다 — 정의 1 + 호출 2.
         # 단위 집합은 그 함수 한 곳에서만 읽는다(정의 1 + 사용 1).
         self.assertEqual(code.count('_is_rain_channel('), 3,

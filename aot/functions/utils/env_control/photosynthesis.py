@@ -125,7 +125,7 @@ def light_saturation_wm2(params: 'CropParams') -> Optional[float]:
       이 되어 정확히 위 사고가 재현된다.
 
     단위: `K_L` 은 PPFD(µmol/m²/s)이고 판정은 전천일사(W/m²)라 시스템 변환표를
-    지난다(`cumulative_tracker.light_to_wm2`). 여기서 계수를 직접 곱하지 말 것.
+    지난다(`aot.utils.light_units.light_to_wm2`). 여기서 계수를 직접 곱하지 말 것.
     """
     k_l = getattr(params, 'K_L', None)
     try:
@@ -134,7 +134,7 @@ def light_saturation_wm2(params: 'CropParams') -> Optional[float]:
         return None
     if k_l <= 0:
         return None
-    from aot.functions.utils.env_control.cumulative_tracker import light_to_wm2
+    from aot.utils.light_units import light_to_wm2
     return light_to_wm2(SAT_K_L_MULT * k_l, 'umol_m2_s')
 
 

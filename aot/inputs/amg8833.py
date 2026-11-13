@@ -10,6 +10,7 @@ from aot.config import PATH_CAMERAS
 from aot.inputs.base_input import AbstractInput
 from aot.utils.image import generate_thermal_image_from_pixels
 from aot.utils.system_pi import assure_path_exists
+from aot.utils.timekit import FARM, to_tz, utc_now
 
 # Measurements
 measurements_dict = OrderedDict()
@@ -103,7 +104,7 @@ class InputModule(AbstractInput):
             self.value_set(channel, pixels[channel])
 
         if self.save_image:
-            timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            timestamp = to_tz(utc_now(), FARM).strftime('%Y-%m-%d_%H-%M-%S')
             assure_path_exists(PATH_CAMERAS)
             camera_path = assure_path_exists(
                 os.path.join(PATH_CAMERAS, '{uid}'.format(uid=self.input_dev.unique_id)))

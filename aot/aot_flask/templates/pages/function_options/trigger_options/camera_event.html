@@ -1,0 +1,41 @@
+{# 트리거 "카메라 이벤트" — 줄 셋: 카메라 · 이벤트 종류(다중) · 최소 재발화 간격(설계 §9.4) #}
+{% set _cams = camera_event_choices() %}
+{% set _sel_kinds = each_function.event_kinds if each_function.event_kinds else [] %}
+{% set _sel_cam = each_function.unique_id_1 or session.get('camera_event_prefill') %}
+<div class="aot-modal-container">
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{_('Camera')}}</label>
+    <div class="aot-modal-option-control">
+      <select class="form-control aot-modern-select selectpicker aot-standard-select w-100" id="unique_id_1" name="unique_id_1" title="">
+        <option value="">{{dict_translation['select_one']['title']}}</option>
+      {% for c in _cams -%}
+        <option value="{{c.unique_id}}"{% if _sel_cam == c.unique_id %} selected{% endif %}>{{c.name}}{% if not c.events_enabled %} ({{_('Events are off')}}){% endif %}</option>
+      {% endfor -%}
+      {% if not _cams -%}
+        <option value="">{{dict_translation['none_available']['title']}}</option>
+      {% endif -%}
+      </select>
+      {% for c in _cams if c.unique_id == _sel_cam and not c.events_enabled %}
+      <div class="aot-option-tip">{{_('This camera is not receiving events. Turn on event subscription in the camera settings.')}}</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{_('Event kinds')}}</label>
+    <div class="aot-modal-option-control">
+      <select class="form-control aot-modern-select selectpicker aot-standard-select w-100" id="event_kinds" name="event_kinds" multiple title="{{_('Select event kinds')}}">
+      {% for k in camera_event_kinds -%}
+        <option value="{{k}}"{% if k in _sel_kinds %} selected{% endif %}>{{k}}</option>
+      {% endfor -%}
+      </select>
+      <div class="aot-option-tip">{{_('Kinds the camera does not support are never received.')}}</div>
+    </div>
+  </div>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{_('Minimum re-fire interval (sec)')}}</label>
+    <div class="aot-modal-option-control">
+      <input type="number" min="0" step="1" class="form-control aot-modern-input" id="period" name="period" value="{{ each_function.period|int if each_function.period is not none else 60 }}">
+      <div class="aot-option-tip">{{_('Runs at the time the server receives the event. Events missed while the subscription was down are not run.')}}</div>
+    </div>
+  </div>
+</div>

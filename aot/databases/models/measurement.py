@@ -3,8 +3,9 @@ from marshmallow_sqlalchemy.fields import Nested
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
+from aot.utils.timekit import naive_utc, utc_now
 
 
 class Measurement(CRUDMixin, db.Model):
@@ -201,7 +202,7 @@ def _register_removed_measurement_listeners():
                 continue
             session.expunge(obj)
             if obj.removed_at is None:
-                obj.removed_at = datetime.utcnow()
+                obj.removed_at = naive_utc(utc_now())
             session.add(obj)
 
     @event.listens_for(Session, 'do_orm_execute')

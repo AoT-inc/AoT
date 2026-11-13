@@ -429,7 +429,7 @@ class TestLogging:
 class TestGustPlumbing:
 
     def test_시설_실외_센서의_돌풍은_가장_센_값(self, monkeypatch):
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         monkeypatch.setattr(fs, '_freshness_by_device', lambda ids: {})
         vals = {'g1': {'wind_gust_ms': 11.0}, 'g2': {'wind_gust_ms': 16.5},
                 'wx': {'wind_ms': 8.0}}
@@ -445,7 +445,7 @@ class TestGustPlumbing:
         assert out['wind_gust_ms'] is None
 
     def test_채널_이름으로_돌풍을_가른다(self):
-        from aot.aot_flask.geo.facility_integration import _infer_mtype_from_dm
+        from aot.space.facility_integration import _infer_mtype_from_dm
         dm = lambda m: types.SimpleNamespace(measurement=m)   # noqa: E731
         assert _infer_mtype_from_dm(dm('wind_gusts_10m')) == 'wind_gust'
         assert _infer_mtype_from_dm(dm('peak_wind_gust')) == 'wind_gust'
@@ -454,7 +454,7 @@ class TestGustPlumbing:
         assert _infer_mtype_from_dm(dm('speed')) == 'wind_speed'
 
     def test_돌풍은_풍속과_같은_범위_검사(self):
-        from aot.aot_flask.geo import facility_sensors as fs
+        from aot.space import facility_sensors as fs
         res, probe = {}, {}
         fs._accept_reading(res, 'wind_gust_ms', 250.0, probe)
         assert res == {} and probe == {'wind_gust_ms': 'out_of_range'}

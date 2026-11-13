@@ -334,6 +334,10 @@
    빈 줄이 하나씩 붙었고, 시설이 몇 개만 모여도 그 빈 줄들이 지도를 가렸다.
    요소는 남겨 둔다(_updateBayChips 가 querySelector 로 찾아 쓴다). */
 .aot-bay-chip .aot-bay-chip-val:empty { display: none; }
+/* 3행 — 컬 줌(설비 모형이 숨는 축척) 아래에서만 "가동 n/m". 확대하면 비워지고
+   같은 이유로 :empty 로 접힌다(_applyRunSummaries, aot-map-modals.js). */
+.aot-bay-chip .aot-bay-chip-run  { font-size: 0.92em; opacity: 0.95; }
+.aot-bay-chip .aot-bay-chip-run:empty { display: none; }
 
 /* Bay modal — inline sensor chart (top, fixed) + actuator tabs (bottom, scroll).
    Popup box is a flex column (80vh, JS inline) — the chart keeps its natural
@@ -2114,4 +2118,11 @@ button.aot-center-modal-close {
   font-weight: 600;
   text-decoration: none;
   cursor: default;
+}
+
+/* 위층 구획 안내(`_upperFloorNoticeHtml`) — 구획 줄 아래·위치 카드 안에 한 줄로. */
+.aot-notice-box.aot-ov-upper-notice {
+    margin: 4px 0 0;
+    padding: 4px 8px;
+    font-size: var(--aot-font-size-sm);
 }

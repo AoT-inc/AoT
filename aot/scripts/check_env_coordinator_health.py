@@ -69,11 +69,12 @@ from aot.start_flask_ui import app
 from aot.databases.models import CustomController, Input, Output
 from aot.functions.utils.env_control import log_channels as LC
 from aot.functions.utils.env_control import heat_protect as HP
-from aot.functions.utils.env_control import sensor_status as SS
+from aot.utils import sensor_status as SS
 from aot.functions.utils.env_control import water_supply as WS
 from aot.functions.utils.env_control import leaf_vpd as LV
 from aot.functions.utils.env_control import humid_regime as HR
 from aot.functions.utils.env_control.types import ACTUATOR_DOMAIN, DEFAULT_DOMAIN
+from aot.utils.timekit import FARM, today_at, utc_now
 
 
 # ── 코드 → 사람 말 ──────────────────────────────────────────────────────────
@@ -284,7 +285,7 @@ def _actuator_directory(facility_uuid):
     directory = {}
     if facility_uuid:
         try:
-            from aot.aot_flask.geo.facility_integration import get_facility_integration
+            from aot.space.facility_integration import get_facility_integration
             data, err = get_facility_integration(facility_uuid)
             if not err and isinstance(data, dict):
                 for act in data.get('actuators_resolved') or []:
@@ -605,7 +606,7 @@ def _fetch_indoor_series(facility_uuid, hours):
     if not facility_uuid:
         return [], []
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.space.facility_integration import get_facility_integration
         from aot.utils.influx import get_past_measurements
         data, err = get_facility_integration(facility_uuid)
         if err or not isinstance(data, dict):
@@ -1023,7 +1024,7 @@ def _check_settings(opts, facility_uuid, row=None):
         except Exception:                                     # noqa: BLE001
             expected = None
         if expected:
-            left = (expected - date.today()).days
+            left = (expected - today_at(FARM)).days
             if 0 <= left <= 7:
                 findings.append(('warn',
                     f'구획 예상 종료일 {expected} 까지 {left}일 남았습니다 — '
@@ -1069,9 +1070,9 @@ def _check_vent_azimuth(facility_uuid):
     if not facility_uuid:
         return []
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
-        from aot.aot_flask.geo.device_binding import shapes_for_devices
-        from aot.aot_flask.geo.facility_geo_helpers import shape_azimuth_area
+        from aot.space.facility_integration import get_facility_integration
+        from aot.space.device_binding import shapes_for_devices
+        from aot.space.facility_geo_helpers import shape_azimuth_area
         data, err = get_facility_integration(facility_uuid)
         if err or not isinstance(data, dict):
             return []
@@ -1147,7 +1148,7 @@ def _check_shared_actuators(facility_uuid, row=None):
     if not facility_uuid:
         return []
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.space.facility_integration import get_facility_integration
         mine_integ, err = get_facility_integration(facility_uuid)
         if err or not isinstance(mine_integ, dict):
             return []
@@ -1229,7 +1230,7 @@ def _check_combinations(opts, facility_uuid, row=None):
     if not facility_uuid:
         return []
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.space.facility_integration import get_facility_integration
         data, err = get_facility_integration(facility_uuid)
         if err or not isinstance(data, dict):
             return []
@@ -1327,8 +1328,8 @@ def _check_light_band(opts, facility_uuid):
     if lmax <= 0.0 or lmin <= 0.0 or not facility_uuid:
         return []            # 한쪽을 껐으면 모순이 성립하지 않는다
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
-        from aot.aot_flask.geo.facility_calc import _shade_tau
+        from aot.space.facility_integration import get_facility_integration
+        from aot.space.facility_calc import _shade_tau
         data, err = get_facility_integration(facility_uuid)
         if err or not isinstance(data, dict):
             return []
@@ -1366,7 +1367,7 @@ def _check_sensor_freshness(opts, facility_uuid):
         return findings
 
     try:
-        from aot.aot_flask.geo.facility_integration import get_facility_integration
+        from aot.space.facility_integration import get_facility_integration
         data, err = get_facility_integration(facility_uuid)
         if err or not isinstance(data, dict):
             return findings
@@ -1676,7 +1677,7 @@ def main():
 
     if args.json:
         print(json.dumps({
-            'generated_at': datetime.now(timezone.utc).isoformat(),
+            'generated_at': utc_now().isoformat(),
             'hours': args.hours,
             'coordinators': results,
         }, ensure_ascii=False, indent=2))

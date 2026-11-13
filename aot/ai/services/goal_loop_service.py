@@ -110,7 +110,7 @@ def _close_goal(goal, result):
         proposed = result.get('proposed_actions') if isinstance(result, dict) else None
         goal.status = 'awaiting_approval' if proposed else 'done'
         try:
-            from aot.utils.time_utils import utc_now
+            from aot.utils.timekit import utc_now
             goal.end_date = utc_now() if goal.status == 'done' else None
         except Exception:
             pass

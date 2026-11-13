@@ -27,7 +27,7 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding as B
+from aot.space import device_binding as B
 from aot.aot_flask.utils import utils_series_stitch as S
 from aot.databases.geo_integrity_ddl import apply_binding
 from aot.databases.models import DeviceMeasurements, GeoShape, Input

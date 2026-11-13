@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import aot.aot_flask.geo.facility_sensors as fs
+import aot.space.facility_sensors as fs
 from aot.functions.custom_functions.env_coordinator import CustomModule
 from aot.functions.utils.env_control.situation import compute_vpd
 

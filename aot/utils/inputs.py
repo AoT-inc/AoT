@@ -549,6 +549,14 @@ def model_origin_device_ids(device_ids):
     return {uid for uid, dev in rows if dev in models}
 
 
+def input_devices_by_ids(ids):
+    """[(unique_id, device)] — `_input_devices` 의 공개 이름. 실패하면 None.
+
+    다른 모듈(예: 시설 센서 드라이버 조회)이 비공개 이름에 기대지 않게 하는 얇은 래퍼.
+    """
+    return _input_devices(ids)
+
+
 def forecast_time_device_ids(device_ids):
     """주어진 Input 중 값이 **미래 시각에 대한 것**(드라이버 `data_time='forecast'`)인
     장치의 unique_id 집합.

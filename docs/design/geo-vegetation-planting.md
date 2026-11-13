@@ -33,7 +33,7 @@
 
 | 자리 | 무엇을 아는가 |
 |------|---------------|
-| `facility.bays[].crop` ([facility_bays.py](../../aot/aot_flask/geo/facility_bays.py)) | 온실 동(棟)별 작물 이름 하나 |
+| `facility.bays[].crop` ([facility_bays.py](../../aot/space/facility_bays.py)) | 온실 동(棟)별 작물 이름 하나 |
 | `env_coordinator` 의 `crop_preset` | 시설 단위 제어 프리셋 |
 | `facility_registry.yaml` | `crop_type` + `planting_date` → 생육단계 (없는 설치가 정상) |
 | **노지 zone** | **아무것도 없다** |

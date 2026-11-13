@@ -63,6 +63,9 @@ from aot.tools.tool_registry import (
     virtual_tool_registry as _virtual_tool_registry,
     manifest_system_tools as _manifest_system_tools,
 )
+from aot.ai.services.in_app_tools import (
+    domain_tool_entries as _in_app_domain_tools,
+)
 VIRTUAL_TOOL_REGISTRY = _virtual_tool_registry()
 
 class AIActionService:
@@ -167,41 +170,23 @@ class AIActionService:
                 # @ANCHOR: system_tools — SSOT-derived (Phase 1). Was a ~180-line
                 # hand-written list; now generated verbatim from tool_registry so
                 # it can never drift from dispatch/approval. Byte-identical output.
-                "system_tools": _manifest_system_tools(),
+                # 인앱 AI 의 도구는 도메인 명부 하나다(26-11 5단계) — 옛 도구 112개
+                # 매니페스트(약 65,000자) 대신 도메인 도구 14개 + 제어 흐름 3개.
+                "system_tools": _manifest_system_tools() + _in_app_domain_tools(),
                 "system_context": AIActionService._load_system_context(),
             }
 
-            # [TASK_31][PATCH_A] Pre-fetch AoT MCP server for device-to-server binding.
-            # Resolves server_id=None gap at Phase 3 validation.
-            from aot.databases.models.mcp_server import MCPServer as _MCPSrv
-            _aot_srv = (
-                _MCPSrv.query.filter(
-                    _MCPSrv.is_activated == True,
-                    _MCPSrv.command.contains('aot_mcp_server')
-                ).first()
-                or _MCPSrv.query.filter(
-                    _MCPSrv.is_activated == True,
-                    _MCPSrv.scope == 'general'
-                ).first()
-                or _MCPSrv.query.filter(
-                    _MCPSrv.is_activated == True,
-                    _MCPSrv.name.ilike('%aot%')
-                ).first()
-            )
-            _aot_server_id = _aot_srv.unique_id if _aot_srv else None
-            if not _aot_server_id:
-                logger.warning("[TASK_31] No active AoT MCP server found. Using virtual_tool_call binding.")
-
-            # 출력 제어 방법 — 목록 전체에 한 번. `operate_device` 는 system_tools
-            # 매니페스트에 자기 항목이 없고(도구 선언 주석 참조) 여기서만 알려지므로,
-            # 인자 형식과 금지사항이 반드시 남아 있어야 한다.
+            # 출력 제어 방법 — 목록 전체에 한 번. 도메인 도구 `control` 의
+            # device_set 이 장치를 켜는 길이다. 도구 설명은 op 목록만 주므로
+            # 인자 형식과 금지사항은 여기에 반드시 남아 있어야 한다.
             manifest["output_control"] = {
-                "tool_name": "operate_device",
+                "tool_name": "control",
                 "applies_to": "every entry in 'outputs' below",
                 "arguments": {
-                    "device_id": "the entry's own unique_id",
+                    "op": "device_set",
+                    "target": "the entry's own unique_id",
                     "state": "one of the entry's 'capabilities'",
-                    "duration_seconds": "<seconds> (optional, on_off outputs)",
+                    "duration": "<seconds> (optional, on_off outputs)",
                     "value": "<number> (set_value; 0-100 % for a level or position)",
                 },
                 "rules": [
@@ -210,8 +195,6 @@ class AIActionService:
                     "On an open/close entry, off stops it where it is.",
                 ],
             }
-            if _aot_server_id:
-                manifest["output_control"]["server_id"] = _aot_server_id
 
             # v26: Only include AI-enabled outputs in manifest (Output model lacks is_activated field)
             outputs = Output.query.filter_by(is_ai_enabled=True).all()
@@ -488,32 +471,28 @@ class AIActionService:
                 # get_tools() → get_server_process() holds cls._lock for up to 30s
                 # (MCP_INIT_TIMEOUT). Calling it from ThreadPoolExecutor threads on
                 # stopped/cooldown servers starves the UI restart button HTTP request.
-                # AoT 자기 서버는 **프로세스가 없다** — 도구 구현이 이 프로세스
-                # 안에 있으므로 목록도 직접 만든다. 생사 검사를 그대로 태우면
-                # 늘 'stopped' 로 나와 매니페스트에서 통째로 빠진다.
-                _builtin = 'aot_mcp_server' in (server.command or '')
+                # AoT 자기 서버의 도구(도메인 명부)는 system_tools 에 이미 있다 —
+                # 인앱 AI 의 도구 표면은 그것 하나다(26-11 5단계). 여기서 또 실으면
+                # 같은 목록이 매 호출 두 번 나가고, 슬림 매니페스트가 설명을 100자로
+                # 잘라 operation 목록까지 잃는다.
+                if 'aot_mcp_server' in (server.command or ''):
+                    return []
 
-                if not _builtin:
-                    # [P3-FIX] Guard: only call get_tools() for already-running servers.
-                    # get_tools() → get_server_process() holds cls._lock for up to 30s
-                    # (MCP_INIT_TIMEOUT). Calling it from ThreadPoolExecutor threads on
-                    # stopped/cooldown servers starves the UI restart button HTTP request.
-                    status = MCPBridgeService.get_server_status(server_id)
-                    if status != 'running':
-                        logger.warning(f"MCP server '{server_id}' skipped in manifest: status is '{status}' (not running).")
-                        _MCP_HEALTH_CACHE.pop(server_id, None)
-                        return []
+                # [P3-FIX] Guard: only call get_tools() for already-running servers.
+                # get_tools() → get_server_process() holds cls._lock for up to 30s
+                # (MCP_INIT_TIMEOUT). Calling it from ThreadPoolExecutor threads on
+                # stopped/cooldown servers starves the UI restart button HTTP request.
+                status = MCPBridgeService.get_server_status(server_id)
+                if status != 'running':
+                    logger.warning(f"MCP server '{server_id}' skipped in manifest: status is '{status}' (not running).")
+                    _MCP_HEALTH_CACHE.pop(server_id, None)
+                    return []
 
                 try:
                     # [REFIX P3] Push app context for this thread; get_tools() calls
                     # MCPServer.query which requires SQLAlchemy app context.
                     # Explicit if/else avoids contextlib.nullcontext() version dependency.
                     def _fetch_tools():
-                        if _builtin:
-                            from aot.tools import tool_execution
-                            from flask import current_app as _ca
-                            return tool_execution.tools_for_agent(
-                                _ca._get_current_object())
                         return MCPBridgeService.get_tools(server_id)
 
                     if _fa:
@@ -855,7 +834,7 @@ class AIActionService:
             user = User.query.filter(User.unique_id == uid).first()
             role = Role.query.filter(Role.id == user.role_id).first() if user else None
             # 웹과 같은 함의 규칙(설정 편집 ⇒ 작기 운영)으로 본다.
-            if role is None or not role_row_allows(role, perm):
+            if role is None or (perm and not role_row_allows(role, perm)):
                 return ('insufficient_role', 'Insufficient permission: %s' % perm)
 
             if action_type == 'mcp_tool_call':
@@ -878,7 +857,7 @@ class AIActionService:
             return ('insufficient_role', 'permission check failed')
 
     @staticmethod
-    def requires_approval(tool_name: str) -> bool:
+    def requires_approval(tool_name: str, arguments: dict = None) -> bool:
         """True if `tool_name` is a physical-control or mutating tool that must
         never auto-execute — the single check any caller (an engine's own native
         tool-calling loop, AgentLoopService, _dispatch_actions, …) should use
@@ -888,6 +867,14 @@ class AIActionService:
         NOT independently gate — see GEMINI_NATIVE_APPROVAL_GATE)."""
         if not tool_name:
             return False
+        # 도메인 도구(인앱 AI 의 도구 표면)는 이름만으로는 모른다 — 호출이 풀리는
+        # 안쪽 도구로 판정한다(`in_app_tools.plan`). 인자를 모르면 쓰기 도구는 승인 쪽.
+        from aot.ai.services import in_app_tools
+        if in_app_tools.is_domain_tool(tool_name):
+            from aot.tools.domain.registry import WRITE_TOOLS
+            if arguments is None:
+                return tool_name in WRITE_TOOLS
+            return in_app_tools.requires_approval(tool_name, arguments)
         from aot.ai.services.resolvers.constants import PHYSICAL_TOOLS
         from aot.tools.tool_registry import approval_required_tools
         return tool_name in PHYSICAL_TOOLS or tool_name in approval_required_tools()
@@ -1238,7 +1225,7 @@ class AIActionService:
                     # Mandatory pre-flight check if TTL > 300s.
                     # [LBL_GATE_FIX] When _approved=True (human explicitly confirmed), skip TTL check.
                     # User approval is the highest authority — no need for re-discovery gate.
-                    from aot.utils.time_utils import utc_now
+                    from aot.utils.timekit import utc_now
                     _now_ts = utc_now().timestamp()
                     _last_seen = _ID_TTL_CACHE.get(target_id, 0)
 
@@ -1716,12 +1703,10 @@ class AIActionService:
                 # 2. Inject parameters and perform Spatial Mapping
                 if new_id:
                     try:
-                        model_map = {
-                            'input': Input, 
-                            'output': Output, 
-                            'function': Function,
-                            'custom_controller': CustomController
-                        }
+                        from aot.space.device_kind import models_for
+                        model_map = models_for(
+                            ('input', 'output', 'function',
+                             'custom_controller'))
                         model_cls = model_map.get(device_category)
                         record = model_cls.query.filter_by(unique_id=new_id).first() if model_cls else None
                         
@@ -1778,9 +1763,7 @@ class AIActionService:
                                         device_type=device_category, name=name)
 
 
-                                    # Update main record coordinates
-                                    if hasattr(record, 'latitude'): record.latitude = final_lat
-                                    if hasattr(record, 'longitude'): record.longitude = final_lng
+                                    # [L2] 장치 행 좌표 컬럼에는 쓰지 않는다(마커가 정본).
                                     # [P2] map_config_id 저장 폐지 — 마커가 정본
                                     # [S3] map_overlay_id 저장 폐지 — 소속은 위
                                     # 마커 좌표에서 파생된다 (device_membership.py)
@@ -1806,13 +1789,10 @@ class AIActionService:
                 category = params.get('category', 'input')
                 updates = params.get('updates', {})
                 
-                model_map = {
-                    'input': Input, 
-                    'output': Output, 
-                    'function': Function,
-                    'custom_controller': CustomController,
-                    'pid': PID
-                }
+                from aot.space.device_kind import models_for
+                model_map = models_for(
+                    ('input', 'output', 'function', 'custom_controller',
+                     'pid'))
                 model_cls = model_map.get(category, Input)
                 device = model_cls.query.filter_by(unique_id=target_id).first()
                 if not device:
@@ -1823,7 +1803,7 @@ class AIActionService:
                 
                 # B-1: 안전 필드 화이트리스트 적용
                 SAFE_FIELDS = {
-                    'name', 'period', 'latitude', 'longitude',
+                    'name', 'period', 'latitude', 'longitude',  # lat/lng 는 마커로만 반영(아래)
                     'pre_output_id', 'pre_output_duration',
                     'log_level_debug', 'is_activated',
                     'location', 'i2c_location', 'uart_location',
@@ -1833,6 +1813,10 @@ class AIActionService:
                 rejected_keys = [k for k in updates if k not in SAFE_FIELDS]
                 applied_keys = []
                 for key, val in updates.items():
+                    if key in ('latitude', 'longitude'):
+                        # [L2] 장치 행 컬럼에는 쓰지 않는다 — 마커 이동으로만 반영.
+                        applied_keys.append(key)
+                        continue
                     if key in SAFE_FIELDS and hasattr(device, key):
                         setattr(device, key, val)
                         applied_keys.append(key)
@@ -1847,7 +1831,7 @@ class AIActionService:
                         from aot.aot_flask.geo.device_placement import (
                             move_device_markers)
                         moved = move_device_markers(
-                            target_id, device.latitude, device.longitude)
+                            target_id, updates.get('latitude'), updates.get('longitude'))
                         if moved:
                             logger.info(
                                 f"[AI Sync] Moved {moved} map marker(s) for {target_id}")
@@ -1969,8 +1953,12 @@ class AIActionService:
                 value = params.get('value', 0)
 
                 op_kwargs = {}
+                # set_value 의 value 는 출력값(PWM 듀티·개도)이다 — 아래 옛 규칙처럼 가동 시간으로
+                # 읽으면 값 예약이 "40초 켜기" 가 된다.
+                if str(state).lower() == 'set_value':
+                    op_kwargs['value'] = params.get('value')
                 # 초가 정확한 값이다(예약은 둘 다 싣는다 — 분은 소수로 환산한 표시용).
-                if duration_seconds:
+                elif duration_seconds:
                     op_kwargs['duration_seconds'] = duration_seconds
                 elif duration_minutes:
                     op_kwargs['duration_minutes'] = duration_minutes

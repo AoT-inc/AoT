@@ -50,6 +50,7 @@ from aot.utils.inputs import parse_measurement
 from aot.utils.remote_aot_client import (
     RemoteAoTClient, RemoteAoTError, discover_measurements, parse_channel_value)
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import naive_utc, parse_utc, utc_now
 
 # Measurements
 measurements_dict = {}
@@ -313,7 +314,7 @@ class InputModule(AbstractInput):
         if not self.latest_datetime:
             return first_run_seconds
 
-        elapsed = (datetime.datetime.utcnow() - self.latest_datetime).total_seconds()
+        elapsed = (naive_utc(utc_now()) - self.latest_datetime).total_seconds()
         if elapsed <= 0:
             # 원격 시계가 앞서 있으면 elapsed 가 음수가 된다. 한 주기치만 본다.
             return max(1, int(self.period or 60))
@@ -439,7 +440,7 @@ class InputModule(AbstractInput):
                 if watermark is not None and timestamp <= watermark:
                     continue
 
-                datetime_utc = datetime.datetime.utcfromtimestamp(timestamp)
+                datetime_utc = naive_utc(parse_utc(timestamp))
                 self._store_point(channel, value, datetime_utc)
 
                 if newest_for_channel is None or timestamp > newest_for_channel:

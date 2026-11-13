@@ -32412,3 +32412,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Горизонтальна / по схилу"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} труб розраховано по горизонталі"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Горизонтальна"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Довжина труб (уся область)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Довжина труби"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Рельєф розраховується. Довжина по схилу з’явиться після завершення."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Деякі секції розраховано за горизонтальною довжиною. Рельєф їх не покриває."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Розраховано {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Комірка {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Довжини подано в порядку: горизонтальна / по схилу."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Ухил {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Розраховано за горизонтальною довжиною"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Витрата {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Втрати {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Горизонтальна {h} m, по схилу {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Горизонтальна {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Секція {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Секції ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Горизонтальна {h} m / По схилу {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Рельєф розраховується - показано лише горизонтальну довжину."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Довжини на карті горизонтальні."
+
+msgid "Terrain input"
+msgstr "Джерело рельєфу"
+
+msgid "Compare another terrain"
+msgstr "Порівняти з іншим рельєфом"
+
+msgid "Could not compare. Try again."
+msgstr "Не вдалося порівняти. Спробуйте ще раз."
+
+msgid "Changed sections ({n})"
+msgstr "Ділянки, що змінюються ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Рельєф «{name}» завантажується. Порівняння з’явиться після завершення."
+
+msgid "Calculation level"
+msgstr "Рівень розрахунку"
+
+msgid "Switch to this terrain"
+msgstr "Перемкнутися на цей рельєф"
+
+msgid "That terrain input is gone."
+msgstr "Цього джерела рельєфу вже немає."
+
+msgid "Weakest nozzle flow"
+msgstr "Витрата найслабшої форсунки"
+
+msgid "Revert to {name}"
+msgstr "Повернути «{name}»"
+
+msgid "Slant length total"
+msgstr "Сумарна похила довжина"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Це джерело рельєфу не має адреси тайлів. Перевірте його налаштування."
+
+msgid "Downloading took too long. Try again."
+msgstr "Завантаження тривало надто довго. Спробуйте ще раз."
+
+msgid "Terrain changed and recalculated"
+msgstr "Рельєф змінено, розрахунок виконано заново"
+
+msgid "Compare with"
+msgstr "Порівняти з"
+
+msgid "No terrain was on"
+msgstr "Рельєф не було ввімкнено"
+
+msgid "Undo change"
+msgstr "Скасувати зміну"
+
+msgid "Try again"
+msgstr "Повторити"
+
+msgid "This map has no pipes to compare."
+msgstr "На цій карті немає труб для порівняння."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Труби поза покриттям рельєфу"
+
+msgid "No terrain is on."
+msgstr "Рельєф не ввімкнено."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Не вдалося змінити рельєф. Спробуйте ще раз."

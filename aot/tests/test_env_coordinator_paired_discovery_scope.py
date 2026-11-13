@@ -11,6 +11,7 @@
 규칙: 시설을 정한 코디네이터는 내 시설 슬롯에 바인딩이 있거나 내 지도에 마커가
 있는 출력만 데려온다. 시설이 없는 코디네이터(수동 설치)는 예전 그대로다.
 """
+from aot.tests.geo._legacy_marker import bound_shape
 import logging
 import types
 import unittest
@@ -20,11 +21,11 @@ from flask import Flask
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import GeoBinding, GeoFacility, GeoShape, Output
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 # 앱 컨텍스트 밖에서 먼저 import — 번역 문자열을 평가하는 모듈이 딸려 온다.
-from aot.aot_flask.geo import device_binding as _device_binding  # noqa: F401
-from aot.aot_flask.geo import facility_integration as _facility_integration  # noqa: F401
+from aot.space import device_binding as _device_binding  # noqa: F401
+from aot.space import facility_integration as _facility_integration  # noqa: F401
 from aot.functions.custom_functions.env_coordinator_impl import (
     _profile_loader_mixin as _loader)
 from aot.functions.custom_functions.env_coordinator_impl._profile_loader_mixin \
@@ -62,7 +63,7 @@ def _bind(kind, spatial_id, dev, ended=False, role='actuator'):
 
 
 def _marker(uid, geo, dev):
-    GeoShape(unique_id=uid, geo_id=geo, type='aot_device', device_id=dev,
+    bound_shape(unique_id=uid, geo_id=geo, type='aot_device', device_id=dev,
              feature={'type': 'Feature', 'properties': {},
                       'geometry': {'type': 'Point', 'coordinates': [0, 0]}}).save()
     _bind('shape', uid, dev, role='marker')
@@ -167,7 +168,7 @@ class TestReloadProfilesDiscovery(_DB):
     def _loaded(self, facility_uuid, disabled=''):
         s = _stub(facility_uuid, disabled)
         with mock.patch.object(_loader, 'db_retrieve_table_daemon', _no_rows), \
-             mock.patch('aot.aot_flask.geo.facility_integration.'
+             mock.patch('aot.space.facility_integration.'
                         'get_facility_integration', return_value=(None, 'x')):
             s._reload_profiles()
         return {p.actuator_id for p in s._profiles}
@@ -194,7 +195,7 @@ class TestDisabledActuatorsApplyToDiscovery(_DB):
     def _run(self, facility_uuid, disabled):
         s = _stub(facility_uuid, disabled)
         with mock.patch.object(_loader, 'db_retrieve_table_daemon', _no_rows), \
-             mock.patch('aot.aot_flask.geo.facility_integration.'
+             mock.patch('aot.space.facility_integration.'
                         'get_facility_integration', return_value=(None, 'x')):
             s._reload_profiles()
         return s, {p.actuator_id for p in s._profiles}

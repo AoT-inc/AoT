@@ -30,14 +30,14 @@ def app(tmp_path, monkeypatch):
     from aot.aot_flask.app import create_app
     from aot.aot_flask.extensions import db
     import aot.aot_client
-    import aot.utils.device_tz
+    import aot.utils.timekit
 
     class _Config(ProdConfig):
         SQLALCHEMY_DATABASE_URI = f"sqlite:///{tmp_path / 'period_scope.db'}"
         TESTING = True
 
     monkeypatch.setattr(aot.aot_client, 'DaemonControl', MagicMock())
-    monkeypatch.setattr(aot.utils.device_tz, 'get_device_tz', lambda *a, **kw: 'UTC')
+    monkeypatch.setattr(aot.utils.timekit, 'tz_of', lambda *a, **kw: 'UTC')
     application = create_app(config=_Config)
     with application.app_context():
         db.create_all()

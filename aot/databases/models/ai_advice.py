@@ -18,7 +18,7 @@ mcp_confirmation(실행 승인 큐)과 목적이 다르다 — 여기에 쌓인 
 from datetime import datetime
 
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class AIAdvice(CRUDMixin, db.Model):

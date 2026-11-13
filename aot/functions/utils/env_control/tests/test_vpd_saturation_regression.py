@@ -496,7 +496,7 @@ class TestSprinklerFlowSplit:
     """드립은 뿌리로 간다 — 증발 유량에서 빠져야 한다."""
 
     def _sum(self, devices):
-        from aot.aot_flask.geo.irrigation_nozzles import summarize_nozzles
+        from aot.space.irrigation_nozzles import summarize_nozzles
         return summarize_nozzles(devices)
 
     def test_drip_only_has_no_evaporative_flow(self):

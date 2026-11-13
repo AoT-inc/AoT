@@ -14,6 +14,7 @@ import json
 import logging
 import time
 from datetime import datetime
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ def probe_entry(entry_id):
 def _save_probe_result(entry, result):
     from aot.aot_flask.extensions import db
     entry.capabilities_json = json.dumps(result)
-    entry.capabilities_probed_at = datetime.utcnow()
+    entry.capabilities_probed_at = naive_utc(utc_now())
     db.session.add(entry)
     db.session.commit()
 

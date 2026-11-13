@@ -24,7 +24,7 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding as B
+from aot.space import device_binding as B
 from aot.databases.geo_integrity_ddl import apply_binding
 from aot.databases.models import (
     GeoBinding, GeoMap, GeoShape, Output, OutputChannel)
@@ -77,13 +77,13 @@ class _Base(unittest.TestCase):
 
     def _zone(self, uid, device_id=None, channel='0'):
         GeoShape(unique_id=uid, geo_id=MAP_A, type='device',
-                 device_id=device_id, channel_id=channel,
+                 channel_id=channel,
                  feature={'type': 'Feature', 'properties': {'name': uid}}).save()
         return uid
 
     def _marker(self, uid, device_id, channel='0', geo_id=MAP_A):
         GeoShape(unique_id=uid, geo_id=geo_id, type='aot_device',
-                 device_id=device_id, channel_id=channel,
+                 channel_id=channel,
                  feature={'type': 'Feature',
                           'properties': {'name': uid,
                                          'unique_id': device_id}}).save()
@@ -194,6 +194,7 @@ class TestMarkerConflict(_Base):
         self._marker('marker-old', OLD)
         self._marker('marker-new', NEW)
         B.bind('shape', 'marker-old', 'marker', 'output', OLD, commit=True)
+        B.bind('shape', 'marker-new', 'marker', 'output', NEW, commit=True)
 
         with self.assertRaises(B.BindingConflict):
             B.rebind_device(OLD, NEW, commit=True)
@@ -204,6 +205,7 @@ class TestMarkerConflict(_Base):
         self._zone('zone-1')
         self._marker('marker-old', OLD)
         self._marker('marker-new', NEW)
+        B.bind('shape', 'marker-new', 'marker', 'output', NEW, commit=True)
         B.bind('shape', 'zone-1', 'area', 'output', OLD, commit=True)
         B.bind('shape', 'marker-old', 'marker', 'output', OLD, commit=True)
 
@@ -212,8 +214,9 @@ class TestMarkerConflict(_Base):
 
         self.assertEqual(B.current_one('shape', 'zone-1', role='area').device_id,
                          OLD)
+        # 새 장치의 기존 마커 바인딩 하나만 남고, 거부된 교체는 아무것도 더하지 않았다.
         self.assertEqual(GeoBinding.query.filter(
-            GeoBinding.device_id == NEW).count(), 0)
+            GeoBinding.device_id == NEW).count(), 1)
 
     def test_a_marker_on_a_different_map_is_not_a_conflict(self):
         """I2 유일성은 지도 단위다. 다른 지도의 마커까지 막으면 정상적인
@@ -239,13 +242,15 @@ class TestMarkerConflict(_Base):
 class TestLegacyColumnStaysInStep(_Base):
     """바인딩만 옮기면 마커가 둘로 갈린다 — 정합성 미학이 아니라 고장이다."""
 
-    def test_the_marker_column_follows_the_binding(self):
+    def test_the_marker_follows_the_binding(self):
         self._marker('marker-old', OLD)
         B.bind('shape', 'marker-old', 'marker', 'output', OLD, commit=True)
 
         B.rebind_device(OLD, NEW, commit=True)
 
-        self.assertEqual(self._shape('marker-old').device_id, NEW)
+        # L4: 컬럼은 더 쓰지 않는다 — 마커의 정체는 바인딩이다.
+        self.assertEqual(B.current_one('shape', 'marker-old',
+                                       role='marker').device_id, NEW)
 
     def test_the_front_end_entry_id_follows_too(self):
         """properties.unique_id 는 프런트가 엔트리를 식별하는 계약이다(GB-5b).
@@ -259,15 +264,6 @@ class TestLegacyColumnStaysInStep(_Base):
         props = self._shape('marker-old').feature['properties']
         self.assertEqual(props['unique_id'], '%s::2' % NEW)
 
-    def test_zone_polygons_keep_their_legacy_column_untouched(self):
-        """구역의 레거시 컬럼은 마커 조회에 쓰이지 않는다. 건드릴 이유가 없고,
-        건드리면 GB-6 명부만 늘어난다."""
-        self._zone('zone-1', device_id=OLD)
-        B.bind('shape', 'zone-1', 'area', 'output', OLD, commit=True)
-
-        B.rebind_device(OLD, NEW, commit=True)
-
-        self.assertEqual(self._shape('zone-1').device_id, OLD)
 
 
 class TestFacilitySlotsAreRefused(_Base):

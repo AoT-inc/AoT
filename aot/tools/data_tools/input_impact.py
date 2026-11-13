@@ -28,7 +28,7 @@ def _blob(value):
 def _facility_ids(input_id):
     """이 입력이 센서 역할로 매인 시설들의 id (통합 환경 제어가 시설로 센서를 읽는다)."""
     try:
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         rows = device_binding.bindings_for_device(input_id)
     except Exception:                                       # noqa: BLE001
         logger.warning('[input_impact] 바인딩 조회 실패 (%s)', input_id, exc_info=True)

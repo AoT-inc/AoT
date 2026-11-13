@@ -81,9 +81,8 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
       그려진 이미터가 0개**이고(겹침 100%인 사례가 실제로 있다 — 이미터를 아직
       안 그린 쪽에 가깝다), 거짓이면 유량 근거 자체가 없다.
     """
-    from aot.aot_flask.geo import plot_context
-    from aot.utils.device_tz import resolve_location_tz
-    from aot.utils.timekit import as_tz, local_day_bounds_utc
+    from aot.space import plot_context
+    from aot.utils.timekit import local_day_bounds_utc, to_tz, tz_of, utc_now
 
     empty = {'days': days, 'today': None, 'unassigned_areas': 0,
              'devices': [], 'totals': _fold([])}
@@ -98,8 +97,8 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
     if not actuators:
         return dict(empty, unassigned_areas=unassigned)
 
-    tz = as_tz(resolve_location_tz(getattr(plot, 'unique_id', None)))
-    today = _today_in(tz)
+    tz = tz_of(getattr(plot, 'unique_id', None))
+    today = to_tz(utc_now(), tz).date()    # 그 구획의 현지 오늘 — 서버 날짜로 판정하면 자정 전후가 어긋난다
     start = today - timedelta(days=max(int(days), 1) - 1)
     start_str, end_str = local_day_bounds_utc(start, today, tz)
 
@@ -130,22 +129,13 @@ def usage_for_plot(plot, days=WINDOW_DAYS):
             'devices': devices, 'totals': _fold(devices)}
 
 
-def _today_in(tz):
-    """그 구획의 **현지 오늘**. 서버 날짜로 판정하면 자정 전후가 어긋난다."""
-    from datetime import datetime
-
-    import pytz
-
-    return datetime.now(pytz.utc).astimezone(tz).date()
-
-
 def _roles_by_output(plot):
     """프로그램이 **선언한** 역할 → `{output_id: [역할, …]}`.
 
     판정이 아니라 선언이다 — "이 장치가 관수다" 가 아니라 "이 단계는 관수를
     요구하고, 이 자리에서 그 역할로 잡히는 것이 이 장치다". 못 찾으면 비운다.
     """
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
 
     try:
         stage = plot_context.stage_of(plot)

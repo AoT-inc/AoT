@@ -105,6 +105,8 @@ class TestTier2AppPathIntegration(unittest.TestCase):
 
     def test_feedback_loop_is_dead_end_to_end(self):
         from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
+        from aot.databases.models import Output
+        Output(unique_id='dev-1', name='dev-1').save()   # 바인딩은 실존 장치만(L4)
         # 1) 디자인 편집기가 type='device' 구역 도형을 만든다.
         result, err = GeoOverlayManager.save_overlays({
             'map_uuid': 'm1', 'type': 'device', 'device_id': 'dev-1',
@@ -114,7 +116,8 @@ class TestTier2AppPathIntegration(unittest.TestCase):
                                                  [5, 0], [0, 0]]]})],
         })
         self.assertIsNone(err, err)
-        row = GeoShape.query.filter_by(geo_id='m1', device_id='dev-1').first()
+        from aot.space.device_binding import shapes_for_device
+        row = shapes_for_device('dev-1')[0]
         self.assertEqual(row.type, 'device')
 
         # 2) 지도 위젯이 GET — 서버가 aot_type 을 주입하며
@@ -131,7 +134,8 @@ class TestTier2AppPathIntegration(unittest.TestCase):
         self.assertIsNone(err, err)
 
         # 4) (과거 사고 지점) type 이 바뀌지 않았어야 한다 — I7.
-        row = GeoShape.query.filter_by(geo_id='m1', device_id='dev-1').first()
+        from aot.space.device_binding import shapes_for_device
+        row = shapes_for_device('dev-1')[0]
         self.assertEqual(row.type, 'device')
         _, props = _stored_props(shape_id=row.id)
         self.assertNotIn('aot_type', props)
@@ -148,8 +152,7 @@ class TestTier2AppPathIntegration(unittest.TestCase):
         self.assertIsNone(err, err)
         self.assertEqual(result['stats']['updated'], 1)
         self.assertEqual(result['stats']['inserted'], 0)   # 이중화 없음
-        self.assertEqual(GeoShape.query.filter_by(
-            geo_id='m1', device_id='dev-1').count(), 1)
+        self.assertEqual(len(shapes_for_device('dev-1')), 1)
 
     def test_delta_insert_of_new_shape_still_works_under_tier2(self):
         from aot.aot_flask.geo.geo_overlays import GeoOverlayManager
@@ -164,7 +167,7 @@ class TestTier2AppPathIntegration(unittest.TestCase):
         self.assertNotIn('aot_type', props)      # 저장본은 스트립
 
     def test_facility_save_passes_i6(self):
-        from aot.aot_flask.geo.facility_io import FacilityManager
+        from aot.space.facility_io import FacilityManager
         data, err = FacilityManager.save_facility({
             'geo_id': 'm1', 'name': '육묘장',
             'outer_geometry': {'type': 'Polygon',

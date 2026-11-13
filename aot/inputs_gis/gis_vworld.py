@@ -308,7 +308,7 @@ class InputModule(AbstractGisInput):
         self.api_key = self.get_custom_option('api_key') or ''
         
         if not self.api_key:
-            return {'error': 'API Key Missing'}
+            return {'error': 'API Key Missing', 'code': 'no_key'}
 
         url = "https://api.vworld.kr/req/search"
         limit = kwargs.get('limit', 10)
@@ -439,12 +439,38 @@ class InputModule(AbstractGisInput):
         def _dp(d):
             return f'&domain={d}' if d else ''
 
+        # 상류(VWorld) 장애 판별용 집계. 아래 단계들은 예외를 삼키고 다음 시도로 넘어가므로,
+        # 실패한 호출이 전부 '호출 자체가 안 됨/응답이 깨짐/status=ERROR' 였는지를 따로 센다.
+        # 호출이 하나라도 정상 응답(NOT_FOUND 포함)이면 '주소를 못 찾음'이지 장애가 아니다.
+        _tally = {'calls': 0, 'fails': 0}
+
+        def _get(url, **kw):
+            _tally['calls'] += 1
+            try:
+                return requests.get(url, **kw)
+            except Exception:
+                _tally['fails'] += 1
+                raise
+
+        def _upstream_failed():
+            # 전부 실패했거나, 좌표를 얻은 뒤(역지오코딩·Data API) 단계의 호출이 전부 실패했으면 장애다.
+            # 앞 단계(지오코딩)가 정상 응답이었어도 그 뒤가 전부 죽었다면 '필지 없음' 이 아니라 상류 문제다.
+            if _tally['calls'] > 0 and _tally['fails'] == _tally['calls']:
+                return True
+            later_calls = _tally['calls'] - _tally.get('calls_at_coord', _tally['calls'])
+            later_fails = _tally['fails'] - _tally.get('fails_at_coord', _tally['fails'])
+            return later_calls > 0 and later_fails == later_calls
+
         def _safe_json(resp, label):
             try:
-                return resp.json()
+                data = resp.json()
             except Exception:
+                _tally['fails'] += 1
                 preview = resp.text[:300].replace('\n', ' ')
                 raise ValueError(f'{label} parsing failed (HTTP {resp.status_code}): {preview}')
+            if isinstance(data, dict) and (data.get('response') or {}).get('status') == 'ERROR':
+                _tally['fails'] += 1
+            return data
 
         def _build_pnu(level4ac, detail):
             """
@@ -479,7 +505,7 @@ class InputModule(AbstractGisInput):
                     f'&address={enc}&type={addr_type}&format=json'
                     f'&key={api_key}{_dp(domain)}'
                 )
-                resp = requests.get(url, timeout=10, verify=False)
+                resp = _get(url, timeout=10, verify=False)
                 data = _safe_json(resp, 'Geocode')
                 point = data.get('response', {}).get('result', {}).get('point', {})
                 x, y = point.get('x'), point.get('y')
@@ -501,7 +527,7 @@ class InputModule(AbstractGisInput):
                     }
                     if search_type == 'address':
                         params['category'] = 'parcel'
-                    resp = requests.get('https://api.vworld.kr/req/search',
+                    resp = _get('https://api.vworld.kr/req/search',
                                         params=params, timeout=10, verify=False)
                     data = _safe_json(resp, 'Search')
                     items = (data.get('response', {})
@@ -517,9 +543,11 @@ class InputModule(AbstractGisInput):
                     continue
 
         if not coord:
-            return {'ok': False, 'error': f'Address coordinate lookup failed: {address}'}
+            return {'ok': False, 'error': f'Address coordinate lookup failed: {address}',
+                    'upstream_failed': _upstream_failed()}
 
         lng, lat = coord['x'], coord['y']
+        _tally['calls_at_coord'], _tally['fails_at_coord'] = _tally['calls'], _tally['fails']
 
         # --- Stage 2: 역지오코딩 → PNU 생성 ---
         # getAddress 응답 result[].structure.level4LC (법정동코드 10자리, PNU용)
@@ -547,7 +575,7 @@ class InputModule(AbstractGisInput):
                     f'&point={px},{py}&type=parcel&zipcode=false&simple=false'
                     f'&format=json&key={api_key}{_dp(domain)}'
                 )
-                r = requests.get(url, timeout=10, verify=False)
+                r = _get(url, timeout=10, verify=False)
                 _last_rev_raw = r.text[:400]
                 d = _safe_json(r, 'RevGeocode')
                 status = d.get('response', {}).get('status', '')
@@ -593,7 +621,7 @@ class InputModule(AbstractGisInput):
                     f'?service=data&request=GetFeature&data=LP_PA_CBND_BUBUN'
                     f'&format=json&key={api_key}{_dp(domain)}{url_extra}'
                 )
-                r = requests.get(url, timeout=15, verify=False)
+                r = _get(url, timeout=15, verify=False)
                 d = _safe_json(r, 'Data API')
                 return (
                     d.get('response', {})
@@ -624,6 +652,7 @@ class InputModule(AbstractGisInput):
                     'ok': False,
                     'error': f'Parcel polygon not found (coordinates: {lat:.6f},{lng:.6f}). {stage3_error} {rev_info}',
                     'raw_preview': _last_rev_raw,
+                    'upstream_failed': _upstream_failed(),
                 }
 
         raw_feat = items[0]
@@ -640,6 +669,19 @@ class InputModule(AbstractGisInput):
             feature['properties']['pnu'] = pnu
 
         return {'ok': True, 'feature': feature, 'name': name, 'pnu': pnu or ''}
+
+    reverse_capabilities = ['address']
+
+    def reverse(self, lat, lng, **kwargs):
+        """위치 조회 문이 부르는 입구 — 키·도메인은 이 입력의 옵션에서 읽고, 조회는 reverse_geocode 가 한다."""
+        api_key = self.get_custom_option('api_key') or ''
+        if not api_key:
+            return {'error': 'API Key Missing', 'code': 'no_key'}
+        res = InputModule.reverse_geocode(float(lat), float(lng), api_key,
+                                          self.get_custom_option('vworld_domain') or '')
+        if res.get('ok'):
+            return {'address': res['address'], 'type': res.get('type')}
+        return {'error': res.get('error') or 'Reverse geocoding failed'}
 
     @staticmethod
     def reverse_geocode(lat, lng, api_key, domain=''):

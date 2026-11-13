@@ -23,6 +23,7 @@ from flask_babel import Babel
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import GeoMap, GeoShape, Output, Notes
+from aot.tests.geo._legacy_marker import bound_shape
 # Imported at module scope (collection time, before any app_context is
 # pushed) — importing this deep inside a test after setUp() has an app
 # context active hits flask_babel's get_babel() with no 'babel' extension
@@ -72,11 +73,10 @@ class TestSearchNotesSiteHierarchy(unittest.TestCase):
         # WITHOUT its own display name (mirrors the real report: some
         # markers carry no 'name' property, only device_id).
         self.output = Output(unique_id='out-v142', name='v142').save()
-        self.marker = GeoShape(
+        self.marker = bound_shape(
             unique_id='marker-v142', geo_id='map-1', type='aot_device',
             device_id='out-v142',
             feature=_feature(None, 'Point', [5, 5]))
-        self.marker.save()
 
         # A note written on the device panel — attaches to the OUTPUT's own
         # unique_id, not the marker shape's unique_id (the dual-identity
@@ -125,7 +125,7 @@ class TestFacilityNoteIdentity(unittest.TestCase):
         from flask_login import LoginManager
         lm = LoginManager(self.app)
         lm.user_loader(lambda _uid: None)
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()  # 프로세스 캐시(30s)가 앞 테스트의 도형을 들고 있다
         self.app_context = self.app.app_context()
         self.app_context.push()
@@ -145,7 +145,7 @@ class TestFacilityNoteIdentity(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
 
     def _mcp_names(self, **kw):

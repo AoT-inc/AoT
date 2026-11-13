@@ -17,7 +17,7 @@ audit는 "무엇이 잘못됐나"를 나열한 점검서이고, 이 문서는 "�
 | 요구 | 현재 상태 | 근거 |
 |---|---|---|
 | 장치별 tz로 예약 해석 | 저장은 하나 **예약 해석은 시스템 tz로 붕괴** | `_schedule_wall_to_utc`가 `get_user_tz()`=`Misc.timezone`으로 해석 ([aot_data_tool_service.py:1040](../../aot/ai/services/aot_data_tool_service.py:1040)) |
-| 사용자별 tz | **User 모델에 timezone 컬럼 없음.** `get_user_tz()`는 이름만 user, 실제는 시스템값 | [tz_utils.py:16](../../aot/utils/tz_utils.py:16) |
+| 사용자별 tz | **User 모델에 timezone 컬럼 없음.** `get_user_tz()`는 이름만 user, 실제는 시스템값 | `tz_utils.py`(S10 에서 삭제) |
 | 단일 해석 진입점 | 5개(`get_device_tz`·`resolve_location_tz`·`get_user_tz`·`get_timezone_name`·`GeoShape/GeoFacility.resolve_timezone`)가 유사하나 미묘히 다른 폴백 각자 구현 | device_tz.py, tz_utils.py, geo.py |
 | 표시 단일화 | 서버측 `serialize_ts`(시스템 tz 변환)와 클라이언트 `AoTTz`(뷰어/장치 tz) 두 갈래 공존 | [routes_scheduler.py:453](../../aot/aot_flask/routes_scheduler.py:453) vs [aot-tz.js](../../aot/aot_flask/static/js/common/aot-tz.js) |
 | 브라우저 벽시계 해석 | `datetime-local`(브라우저 로컬)을 `get_user_tz()`(시스템 tz)로 해석 → 브라우저≠시스템이면 어긋남 | [routes_scheduler.py:213](../../aot/aot_flask/routes_scheduler.py:213) |
@@ -45,7 +45,7 @@ audit는 "무엇이 잘못됐나"를 나열한 점검서이고, 이 문서는 "�
 여기서 "시스템 시간"이 모호함의 씨앗이므로 **두 개로 분해**한다.
 
 ### 3.1 호스트 OS 시계 = "지금"의 유일한 공급원 (tz 아님)
-Docker 컨테이너는 항상 UTC로 취급, OS tz 의존 금지([tz_utils.py:8](../../aot/utils/tz_utils.py:8)). OS 시계의
+Docker 컨테이너는 항상 UTC로 취급, OS tz 의존 금지([timekit.py](../../aot/utils/timekit.py) 머리말). OS 시계의
 유일한 역할은 `utc_now()`로 **현재 절대순간(UTC)**을 주는 것. 스케줄러는 `fire_utc <= utc_now()`로
 발화만 판정하며 **여기엔 tz가 개입하지 않는다.**
 
@@ -174,19 +174,37 @@ resolve_tz(entity=None, *, user=None) -> (ZoneInfo/pytz, source)
 
 ## 9. 통합 API 표면
 
-### 9.1 백엔드 — `aot/utils/timekit.py` (신설, 단일 모듈)
+### 9.1 백엔드 — `aot/utils/timekit.py` (단일 모듈)
+
+> **S10 이후 현재 표면.** 아래가 전부다. 옛 이름(`ensure_utc`·`now_utc`·`system_tz`·`current_user_tz`·`utc_to_wall`,
+> `device_tz.get_device_tz`·`resolve_location_tz`·`location_iso`, `tz_utils.*`, `time_utils.serialize_ts`·`to_local`·
+> `get_local_now`·`api_iso`)는 **삭제됐다** — 이 문서의 이력 절(§11·§14·§15)에 나오는 옛 이름은 당시 이름이다.
+> 대응은 `ensure_utc`→`parse_utc`/`naive_utc`, `system_tz`·`get_user_tz`→`tz_of(FARM)`, `current_user_tz`→`tz_of(VIEWER)`,
+> `get_device_tz`·`resolve_location_tz`→`tz_of(행·장소 id)`, `utc_to_wall`·`to_local`→`to_tz`, `serialize_ts`·`location_iso`→`iso_at`,
+> `api_iso`→`iso_utc`.
+
 ```
-utc_now() / now_utc()          # tz-aware UTC "지금"
-ensure_utc(dt)                 # naive→UTC 가정, aware→UTC 변환
-to_tz(dt, tz)                  # UTC(또는 naive=UTC) → 대상 tz
-iso_utc(dt)                    # API 직렬화 = 항상 UTC+offset ISO
-resolve_tz(entity=None, *, user=None) -> (tzinfo, source)   # §5 단일 체인
-system_tz()                    # Misc.timezone → tzinfo (농장 전역 폴백)
-wall_to_utc(wall, tz)          # 벽시계 문자열/naive + tz → UTC-aware (예약 저장)
-utc_to_wall(dt, tz)            # UTC → 대상 tz 벽시계 (예약 표시)
+utc_now()                       # tz-aware UTC "지금"
+naive_utc(dt)                   # DB naive 컬럼에 넣고 비교하는 UTC (tzinfo 제거)
+parse_utc(value)                # 문자열·epoch·naive(=UTC)·aware → UTC-aware
+resolve_tz(where=None, *, user=None) -> (tzinfo, source)    # §5 단일 체인(출처까지)
+tz_of(where, cache=None)        # 위의 tzinfo 만
+to_tz(value, where)             # 순간 → where 시계의 aware datetime
+iso_at(value, where, cache=None)# 순간 → where 시계의 ISO 문자열 (표시·AI 응답)
+iso_utc(value)                  # 저장·API = 항상 UTC+offset ISO
+wall_to_utc(wall, where)        # 벽시계 문자열/naive + where → UTC-aware (예약 저장, DST 정확)
+today_at(where)                 # where 시계의 오늘 날짜
+FARM, VIEWER                    # where 표식: 농장 전역 시계 / 보는 사람의 개인 시계
 ```
-기존 `device_tz.py`·`tz_utils.py`·`time_utils`의 tz 함수, `GeoShape/GeoFacility.resolve_timezone`은
-**얇은 wrapper로 전환 → 호출부 이관 → 삭제**의 3단계로 정리한다.
+`where` 는 장소 id·행·tz 이름·`FARM`·`VIEWER`·`None` 이고, 못 풀면 농장 시계, 그것도 못 풀 때만 UTC 다.
+옛 wrapper 는 호출부를 이관한 뒤 삭제했다(3단계 완료). `GeoShape/GeoFacility.resolve_timezone` 은 해석 체인의 바닥이라 남는다.
+
+**같은 트랜잭션의 미커밋 변경.** `tz_of(id)` 는 별도 DB 세션(`session_scope`)으로 읽어 flush 만 한 변경을 보지 못한다. 같은 트랜잭션에서 풀어야 하면 먼저 커밋하거나 행을 넘긴다(`tz_of(행)` 은 그 행의 미커밋 값을 보고, 부모 체인은 커밋된 값이다). `geo_overlays` 의 물질화는 커밋 뒤 별도 트랜잭션이라 해당 없다. 시험: `aot/tests/geo/test_geo_overlays_tz_in_transaction.py`.
+
+**가드 운영.** `aot/scripts/check_time_rules.py` 의 기준선(`aot/tests/time_rules_baseline.json`)은 0 이다. 구조상 못 바꾸는 곳만 같은
+파일의 `EXCEPTIONS` 표에 (파일, 규칙, 줄 안의 글자 조각 또는 None, **한 줄 사유**)로 올린다 — 줄 번호가 아니라 글자 조각으로 이어서
+파일이 움직여도 따라온다. 사유가 비면 실패하고, 고쳐서 맞는 위반이 없어진 죽은 예외도 실패한다(`--staged` 는 이 검사를 건너뛴다).
+새 예외를 올리는 것은 "이 위반은 괜찮다" 는 판단이니 사유에 왜 입구를 못 쓰는지를 적는다.
 
 ### 9.2 프론트 — `AoTTz` 단일 표시 모듈
 위젯에서 즉석 `new Date().toLocaleString()` 포맷 금지(audit P3). 서버는 UTC ISO만, 표시는 `AoTTz`.

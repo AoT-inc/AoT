@@ -32559,3 +32559,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Vízszintes / lejtős"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} cső vízszintesen számolva"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Vízszintes"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Csőhossz (teljes terület)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Csőhossz"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "A terep számítása folyamatban van. A lejtős hossz a végén jelenik meg."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Egyes szakaszok vízszintes hosszal lettek számolva. A terep nem fedi le őket."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Számolva: {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Cella {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "A hosszak sorrendje: vízszintes / lejtős."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Lejtés {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Vízszintes hosszal számolva"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Hozam {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Veszteség {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Vízszintes {h} m, lejtős {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Vízszintes {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Szakasz {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Szakaszok ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Vízszintes {h} m / Lejtős {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "A terep számítása folyamatban van - csak a vízszintes hossz látszik."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "A térképen a hosszak vízszintesek."
+
+msgid "Terrain input"
+msgstr "Domborzatbemenet"
+
+msgid "Compare another terrain"
+msgstr "Másik domborzat összehasonlítása"
+
+msgid "Could not compare. Try again."
+msgstr "Az összehasonlítás nem sikerült. Próbálja újra."
+
+msgid "Changed sections ({n})"
+msgstr "Változó szakaszok ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "A(z) {name} domborzat letöltése folyamatban. Az összehasonlítás a végén jelenik meg."
+
+msgid "Calculation level"
+msgstr "Számítási szint"
+
+msgid "Switch to this terrain"
+msgstr "Váltás erre a domborzatra"
+
+msgid "That terrain input is gone."
+msgstr "Ez a domborzatbemenet már nem létezik."
+
+msgid "Weakest nozzle flow"
+msgstr "A leggyengébb fúvóka hozama"
+
+msgid "Revert to {name}"
+msgstr "Vissza ide: {name}"
+
+msgid "Slant length total"
+msgstr "Ferde hossz összesen"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Ennek a domborzatbemenetnek nincs csempecíme. Ellenőrizze a beállításait."
+
+msgid "Downloading took too long. Try again."
+msgstr "A letöltés túl sokáig tartott. Próbálja újra."
+
+msgid "Terrain changed and recalculated"
+msgstr "A domborzat megváltozott, újraszámolva"
+
+msgid "Compare with"
+msgstr "Összehasonlítás ezzel"
+
+msgid "No terrain was on"
+msgstr "Nem volt aktív domborzat"
+
+msgid "Undo change"
+msgstr "Változtatás visszavonása"
+
+msgid "Try again"
+msgstr "Újra"
+
+msgid "This map has no pipes to compare."
+msgstr "Ezen a térképen nincs összehasonlítható cső."
+
+msgid "Pipes the terrain does not cover"
+msgstr "A domborzat által nem lefedett csövek"
+
+msgid "No terrain is on."
+msgstr "Nincs aktív domborzat."
+
+msgid "Could not change the terrain. Try again."
+msgstr "A domborzatot nem sikerült megváltoztatni. Próbálja újra."

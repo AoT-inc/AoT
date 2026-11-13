@@ -1,4 +1,5 @@
 import logging
+from ._shims import tz_scoped
 
 logger = logging.getLogger(__name__)
 
@@ -8,10 +9,11 @@ from aot.databases.models import AITask
 from aot.databases.models import GeoShape
 from aot.databases.models import Misc
 from aot.databases.models import Notes
-from aot.utils.time_utils import serialize_ts
+from aot.utils.timekit import iso_at, FARM, today_at
 from datetime import timedelta
 
 from aot.tools.data_tools import screen_map_look as _look
+from aot.utils.timekit import naive_utc as _tk_naive_utc, utc_now as _tk_utc_now
 
 
 def _hook_reads_form(hook):
@@ -42,33 +44,6 @@ def _hook_reads_form(hook):
                for n in ast.walk(fn))
 
 class SystemToolsMixin:
-
-    @classmethod
-    def open_drawer(cls, drawer=None, **extra):
-        """[읽기전용] 서랍을 열어 그 안 도구들의 정의를 돌려준다.
-
-        매니페스트에는 자주 쓰는 도구만 싣고 나머지는 서랍에 둔다. 이 도구가
-        그 서랍을 여는 유일한 수단이다 — 그래서 절대 서랍 안으로 내려가지
-        않는다(`never_demote`, 가드가 고정한다).
-
-        모르는 이름이면 **오류가 아니라 목록을 돌려준다.** 서랍 이름을 틀렸을
-        때 "없다" 로 끝내면 LLM 이 포기하는데, 목록을 주면 다시 고를 수 있다.
-        """
-        from aot.tools import tool_registry as registry
-
-        known = registry.DRAWERS
-        if not drawer or drawer not in known:
-            return {
-                "error": ("unknown drawer: %s" % drawer) if drawer
-                         else "drawer is required",
-                "drawers": registry.drawer_index(),
-            }
-
-        names = set(registry.tools_in_drawer(drawer))
-        tools = [dict(t.manifest) for t in registry.TOOLS
-                 if t.manifest and t.name in names]
-        return {"drawer": drawer, "description": known[drawer],
-                "count": len(tools), "tools": tools}
 
     @classmethod
     def get_system_update_status(cls, **kwargs):
@@ -182,7 +157,7 @@ class SystemToolsMixin:
         — 전역 설정을 무조건 가정하지 말 것.
         """
         try:
-            from aot.utils.device_tz import resolve_location_tz
+            from aot.utils.timekit import FARM, tz_of
             from datetime import datetime as _dt, timezone as _tzinfo
 
             resolved_name = None
@@ -197,12 +172,12 @@ class SystemToolsMixin:
                     tzs = {}
                     for c in amb:
                         try:
-                            c["timezone"] = str(resolve_location_tz(c["target_id"]))
+                            c["timezone"] = str(tz_of(c["target_id"]))
                         except Exception:
                             c["timezone"] = None
                         tzs.setdefault(c["timezone"], []).append(c)
                     if amb and len(tzs) == 1 and None not in tzs:
-                        tz = resolve_location_tz(amb[0]["target_id"])
+                        tz = tz_of(amb[0]["target_id"])
                         now_local = _dt.now(_tzinfo.utc).astimezone(tz)
                         return {
                             "status": "success",
@@ -234,13 +209,13 @@ class SystemToolsMixin:
                                     f"응답합니다."),
                         "available_targets": cls._geoshape_name_candidates(),
                         "location": "farm-wide (default)",
-                        "timezone": str(resolve_location_tz(None)),
+                        "timezone": str(tz_of(FARM)),
                         "local_time": _dt.now(_tzinfo.utc).astimezone(
-                            resolve_location_tz(None)).strftime('%Y-%m-%d %H:%M:%S'),
-                        "sun": cls._sun_block(None, resolve_location_tz(None)),
+                            tz_of(FARM)).strftime('%Y-%m-%d %H:%M:%S'),
+                        "sun": cls._sun_block(None, tz_of(FARM)),
                     }
 
-            tz = resolve_location_tz(target_id)
+            tz = tz_of(target_id)
             now_local = _dt.now(_tzinfo.utc).astimezone(tz)
             return {
                 "status": "success",
@@ -326,9 +301,9 @@ class SystemToolsMixin:
         """
         try:
             from aot.tools import providers
-            from aot.utils.time_utils import utc_now
+            from aot.utils.timekit import utc_now
 
-            cutoff = utc_now() - timedelta(minutes=int(lookback_minutes))
+            cutoff = _tk_naive_utc(utc_now() - timedelta(minutes=int(lookback_minutes)))  # DB 열은 naive UTC
 
             # 1. Query recent failed AITask records
             failed_q = AITask.query.filter(
@@ -350,7 +325,7 @@ class SystemToolsMixin:
                     "target_id": t.target_id,
                     "status": t.status,
                     "execution_result": (t.execution_result or '')[:300],
-                    "created_at": serialize_ts(t.created_at) if t.created_at else None,
+                    "created_at": iso_at(t.created_at, FARM) if t.created_at else None,
                 })
 
             # 2. Query MCP server status
@@ -363,12 +338,14 @@ class SystemToolsMixin:
                     # 자식 프로세스 목록은 프로세스마다 따로다 — MCP 컨테이너처럼 서버를 직접 띄우지 않는 곳은 목록이 비어
                     # 있어 멀쩡한 서버도 '오프라인' 이 된다(2026-10-29 점검). 이 프로세스가 아는 서버가 없으면 모름(None).
                     _is_degraded = (srv.unique_id not in active_ids) if active_ids else None
-                    mcp_status.append({
-                        "name": srv.name,
-                        "unique_id": srv.unique_id,
-                        "is_degraded": _is_degraded,
-                        "has_tool": tool_name in (srv.tool_names or []) if tool_name else None,
-                    })
+                    # 모르는 값(None)은 칸째 뺀다 — null 두 칸은 읽는 쪽이 '고장인가' 로 오해했다(2026-11-09 점검 6번).
+                    # 아래 판정은 .get 으로 읽어 칸이 없으면 None 과 같다.
+                    _row = {"name": srv.name, "unique_id": srv.unique_id}
+                    if _is_degraded is not None:
+                        _row["is_degraded"] = _is_degraded
+                    if tool_name:
+                        _row["has_tool"] = tool_name in (srv.tool_names or [])
+                    mcp_status.append(_row)
             except Exception as _mcp_err:
                 logger.warning(f"[031_STEP_3] Could not query MCP status: {_mcp_err}")
                 mcp_status = [{"error": str(_mcp_err)}]
@@ -415,22 +392,6 @@ class SystemToolsMixin:
             return {"error": f"Error while running diagnostic tool: {str(e)}"}
 
     @classmethod
-    def get_tool_detail_tool(cls, tool_name=None, **extra):
-        """@ANCHOR: AGENT_LOOP_GET_TOOL_DETAIL — full description + argument schema
-        for ONE tool by name (Phase 1 agent loop, docs/design/ai-agent-loop.md §4).
-        The lean catalog shown every step is name + one-line description only, to
-        keep prompts small; this expands one entry on demand."""
-        if not tool_name:
-            return {"error": "tool_name is required"}
-        from aot.tools.tool_registry import TOOLS
-        for t in TOOLS:
-            if t.name == tool_name.strip():
-                if not t.manifest:
-                    return {"tool_name": t.name, "detail": "No extended schema recorded for this tool."}
-                return {"tool_name": t.name, "detail": dict(t.manifest)}
-        return {"error": f"Unknown tool: {tool_name}"}
-
-    @classmethod
     def list_pending_confirmations(cls, **extra):
         """[읽기전용] 지금 사람 승인을 기다리는 쓰기/제어 요청 목록. 이전 도구 호출이
         'pending_approval'을 반환했을 때, confirmation_id를 다시 찾거나 사용자에게
@@ -438,7 +399,12 @@ class SystemToolsMixin:
         쓴다."""
         try:
             from aot.tools import mcp_safety_gate as gate
-            return {"pending": gate.list_pending()}
+            from aot.utils.timekit import FARM, iso_at
+            pending = gate.list_pending()
+            for item in pending:
+                # DB 의 naive UTC 를 그대로 내면 '08:12' 로 보여 농장 시각(17:12+09:00)과 어긋난다.
+                item["created_at"] = iso_at(item.get("created_at"), FARM)
+            return {"pending": pending}
         except Exception as e:
             return {"error": str(e)}
 
@@ -660,8 +626,8 @@ class SystemToolsMixin:
         child_ids = []
         if target_type in ('site', 'zone', 'facility'):
             try:
-                from aot.aot_flask.geo import device_membership as _dm
-                from aot.aot_flask.geo import plot_context as _pc
+                from aot.space import device_membership as _dm
+                from aot.space import plot_context as _pc
                 _idx = _dm.PlaceIndex()
                 _root = _idx.by_uid.get(target_id)
                 if _root is not None:
@@ -790,7 +756,7 @@ class SystemToolsMixin:
         from collections import Counter
         out = Counter()
         try:
-            from aot.aot_flask.geo import shape_index
+            from aot.space import shape_index
             for (_r, _n, nl) in shape_index.named_shapes():
                 out[nl] += 1
         except Exception:
@@ -824,6 +790,7 @@ class SystemToolsMixin:
             return False
 
     @classmethod
+    @tz_scoped
     def get_system_brief(cls, **extra):
         """[읽기전용] 이 시스템이 무엇이고 지금 어떤 상태인지 — 단일 진입점.
 
@@ -965,6 +932,7 @@ class SystemToolsMixin:
                 "comm_offline_list": full.get("comm_offline_list"),
                 "silent_level": full.get("silent_level"),
                 "silent_count": sil.get("count"),
+                "silent_partial_count": sil.get("partial_silent_count"),
                 "see": "get_anomalies for the metrics, definitions and silent devices",
             }.items() if v not in (None, [], "")}
 
@@ -977,13 +945,19 @@ class SystemToolsMixin:
         # Camera+복합장치 전부, 저기는 Input 만이다. 정의를 안 적어 두면 둘을
         # 나란히 본 AI 가 "장치 31개가 사라졌다" 로 읽는다(2026-08-17 실제 혼동).
         def _device_summary():
-            _res = (S.get_device_list_tool() or {}).get("results") or []
-            _by_type = {}
-            for _r in _res:
-                _t = _r.get("type") or "unknown"
-                _by_type[_t] = _by_type.get(_t, 0) + 1
+            _list = S.get_device_list_tool() or {}
+            _res = _list.get("results") or []
+            # 목록은 한 쪽(기본 40)만 싣는다 — 전체 수와 종류별 수는 자르기 전에 센
+            # page.total·count_by_type 이다(길이를 세면 129개가 40개로 보고된다).
+            _page = _list.get("page") or {}
+            _by_type = _list.get("count_by_type") if _page else None
+            if not _by_type:
+                _by_type = {}
+                for _r in _res:
+                    _t = _r.get("type") or "unknown"
+                    _by_type[_t] = _by_type.get(_t, 0) + 1
             return {
-                "device_count": len(_res),
+                "device_count": _page.get("total") or len(_res),
                 "count_by_type": _by_type,
                 "counts": ("device_count = every registered entity: inputs + "
                            "outputs + cameras + complex devices. get_anomalies' "
@@ -1066,8 +1040,7 @@ class SystemToolsMixin:
                     "Some documents are marked tier 3 (cold) but cold_documents is empty. "
                     "Tier migration is still a placeholder — the tier value records an "
                     "INTENT, not a completed move. Document content is still in its "
-                    "original table. Do not tell the user a document was archived unless "
-                    "it appears in search_archives.")
+                    "original table. Do not tell the user a document was archived.")
             return out
         except Exception as e:
             logger.exception("Error in get_storage_tier_status")
@@ -1369,17 +1342,17 @@ class SystemToolsMixin:
         화면이 실제로 보여 주는지는 모른다(사용자가 × 로 걷었을 수 있다). 닫기는 action=close_card."""
         from datetime import timedelta
         from aot.databases.models import AIScreenCard, User
-        from aot.utils.time_utils import utc_now
+        from aot.utils.timekit import utc_now
         user = User.query.filter(User.unique_id == user_id).first()
         if user is None:
             return []
-        since = utc_now() - timedelta(seconds=cls._CARD_ON_SCREEN_S)
+        since = _tk_naive_utc(utc_now() - timedelta(seconds=cls._CARD_ON_SCREEN_S))  # DB 열은 naive UTC
         rows = (AIScreenCard.query
                 .filter(AIScreenCard.user_id == user.id, AIScreenCard.dismissed_at.is_(None),
                         AIScreenCard.read_at.is_(None), AIScreenCard.created_at >= since)
                 .order_by(AIScreenCard.created_at.desc()).limit(cap).all())
         return [{"card": c.unique_id[:8], "title": c.title or '',
-                 "s_ago": max(0, int((utc_now() - c.created_at).total_seconds()))} for c in rows]
+                 "s_ago": max(0, int((_tk_naive_utc(utc_now()) - c.created_at).total_seconds()))} for c in rows]
 
     @classmethod
     def _screen_all_widgets(cls, dash, cap=24):
@@ -1533,7 +1506,7 @@ class SystemToolsMixin:
                 from aot.databases.models import GeoPlot
                 ps = GeoPlot.query.filter(GeoPlot.ended_on.is_(None)).all()
                 for p in ps[:cap]:
-                    days = (_dt.date.today() - p.started_on).days if p.started_on else None
+                    days = (today_at(p) - p.started_on).days if p.started_on else None
                     lines.append('%s%s%s' % (p.name or p.subject or 'plot',
                                              ' (%s)' % p.variety if p.variety else '',
                                              ', day %d' % days if days is not None else ''))
@@ -1631,34 +1604,89 @@ class SystemToolsMixin:
         """지금 화면에 열려 있는 장소 하나 → ({kind, name, id} | None, 사유 | None).
 
         예보 도구가 `place` 없이 불릴 때 쓴다. 신선한(20초) 화면 중 열린 지도 창이
-        하나로 풀릴 때만 돌려주고, 화면들의 열린 항목이 엇갈리거나 못 풀면
-        None + 'screen ambiguous'. 무거운 `_screen_live_state` 는 쓰지 않는다.
-        대시보드·지도의 보이는 범위는 근거로 쓰지 않는다."""
+        하나로 풀리면 그것, 화면들의 열린 항목이 엇갈리면 None + 'screen ambiguous'.
+        열린 창이 없으면 **보이는 지도가 비추는 대지**를 쓴다(2026-11-09 — 지도로 김제를
+        보는데 장소 없이 물으면 농장 기본 좌표(영양)로 답했다): 지도 가운데가 든 대지,
+        없으면 범위에 걸린 대지가 하나일 때만. 화면마다 다른 대지면 'screen ambiguous'.
+        무거운 `_screen_live_state` 는 쓰지 않는다."""
         if not user_id:
             return None, None
         import json as _json
         import time as _time
         from aot.utils import web_presence as wp
         now = _time.time()
-        fresh, opened, items = 0, 0, []
+        opened, items, seen = 0, [], []
         for row in wp.recent(user_id, now=now):
             if not row.get('client_state') or now - (row.get('client_at') or 0) > 20:
                 continue
-            fresh += 1
             try:
                 st = _json.loads(row['client_state'])
             except (TypeError, ValueError):
                 continue
-            if isinstance(st, dict) and st.get('dialog'):
+            if not isinstance(st, dict):
+                continue
+            if st.get('dialog'):
                 opened += 1
-            item = cls._screen_open_item(row, st.get('dialog')) \
-                if isinstance(st, dict) else None
+            item = cls._screen_open_item(row, st.get('dialog'))
             if item and item.get('id'):
                 items.append(item)
-        if items and len({i['id'] for i in items}) == 1:
-            return items[0], None
+            elif not st.get('dialog'):
+                site = cls._screen_map_site(st.get('maps'))
+                if site:
+                    seen.append(site)
+        if items:
+            if len({i['id'] for i in items}) == 1:
+                return items[0], None
+            return None, 'screen ambiguous'
+        if seen:
+            if len({i['id'] for i in seen}) == 1:
+                return seen[0], None
+            return None, 'screen ambiguous'
         # 신선한 화면이 있어도 열린 창이 하나도 없으면 엇갈린 게 아니다 — 사유 없음.
         return None, ('screen ambiguous' if opened else None)
+
+    @classmethod
+    def _screen_map_site(cls, maps):
+        """화면이 보고한 지도들(보이는 위젯만 온다)이 비추는 대지 하나 → {kind, name, id} | None.
+
+        지도 가운데가 든 대지가 먼저, 없으면 범위에 걸린 대지가 하나일 때만. 지도끼리
+        엇갈리거나 못 풀면 None — 추측하지 않는다."""
+        import json as _json
+        found = {}
+        for m in (maps if isinstance(maps, list) else [])[:2]:
+            if not isinstance(m, dict):
+                continue
+            view = m.get('view') if isinstance(m.get('view'), dict) else {}
+            try:
+                west, south, east, north = [float(v) for v in view.get('bounds')]
+            except (TypeError, ValueError):
+                continue
+            try:
+                from aot.databases.models import Widget
+                w = Widget.query.filter(Widget.unique_id == str(m.get('widget_id'))).first()
+                map_uuid = _json.loads((w.custom_options if w else None) or '{}').get('map_uuid')
+                if not map_uuid:
+                    continue
+                from shapely.geometry import Point, box
+                from aot.space import device_membership as dm
+                sites = [(sh, poly) for sh, kind, poly in dm.load_containers(map_uuid)
+                         if kind == 'site' and poly is not None]
+            except Exception:                               # noqa: BLE001
+                logger.debug("screen map site lookup failed", exc_info=True)
+                continue
+            center = Point((west + east) / 2.0, (south + north) / 2.0)
+            hit = [sh for sh, poly in sites if poly.contains(center)]
+            if not hit:
+                frame = box(west, south, east, north)
+                hit = [sh for sh, poly in sites if poly.intersects(frame)]
+            if len({sh.unique_id for sh in hit}) != 1:
+                if hit:
+                    return None
+                continue
+            sh = hit[0]
+            found[sh.unique_id] = {"kind": "site", "id": sh.unique_id,
+                                   "name": cls._shape_display_name(sh) or sh.unique_id}
+        return next(iter(found.values())) if len(found) == 1 else None
 
     @classmethod
     def _screen_live_state(cls, row, now, with_maps=False):
@@ -1775,7 +1803,57 @@ class SystemToolsMixin:
             maps.append(item)
         if maps:
             out['maps'] = maps
+        here = cls._screen_here(st.get('here'), row, now, widgets)
+        if here:
+            out['here'] = here
         return out or None
+
+    #: 사용자가 켠 '현재 위치'를 이 시간(초)이 지나면 읽지 않는다(화면도 10분에 스스로 끈다).
+    _SCREEN_HERE_MAX_AGE_S = 600
+
+    @classmethod
+    def _screen_here(cls, raw, row, now, widgets):
+        """화면이 보고한 현재 위치 → 서버가 푼 관계(이름·거리·오차). **좌표는 싣지 않는다.**
+
+        "AI 화면 조작 허용"을 켠 기기만, 20초 안의 보고(호출자가 이미 거른다)에서, 측정 뒤
+        10분 안일 때만. 기기 시계와 맞대지 않도록 화면은 측정 뒤 지난 시간(age_s)을 보낸다.
+        """
+        import json as _json
+        if not isinstance(raw, dict) or not row.get('ai_allowed'):
+            return None
+        try:
+            lat, lng = float(raw['lat']), float(raw['lng'])
+            acc = float(raw['acc'])
+            age = float(raw.get('age_s') or 0) + max(0.0, now - (row.get('client_at') or now))
+        except (KeyError, TypeError, ValueError):
+            return None
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180) or acc <= 0 or age > cls._SCREEN_HERE_MAX_AGE_S:
+            return None
+        map_uuid = None
+        try:
+            wid = str(raw.get('widget_id') or '')
+            w = widgets.get(wid)
+            if w is None and wid:
+                from aot.databases.models import Widget
+                w = Widget.query.filter(Widget.unique_id == wid).first()
+            if w is not None:
+                map_uuid = _json.loads(w.custom_options or '{}').get('map_uuid')
+            from aot.utils import geo_distance
+            around = geo_distance.around_point(lat, lng, acc, map_uuid=map_uuid)
+        except Exception:
+            logger.exception('screen here: 현재 위치 풀이 실패')
+            return None
+        out = dict(age_s=int(age), **around)
+        # 어떻게 정한 자리인가 — 'gps'(기기 위치) · 'center'(보던 지도의 중심) · 'pick'(지도를 눌러 고른 곳) ·
+        # 'search'(주소 검색 결과) · 'favorite'(즐겨찾기).
+        # 사람이 지도에서 고른 자리는 화면이 이미 푼 주소 한 줄을 같이 받는다(서버가 외부 지오코더를 부르지 않는다).
+        src = raw.get('src')
+        if src in ('center', 'pick', 'search', 'favorite'):
+            out['source'] = src
+            addr = str(raw.get('addr') or '').strip()[:160]
+            if addr:
+                out['address'] = addr
+        return out
 
     #: 위젯 설정에서 값을 가리키는 "장치 uuid,채널 uuid" 쌍.
     _WIDGET_VALUE_PAIR = None
@@ -2027,7 +2105,7 @@ class SystemToolsMixin:
                 p = None
             if p is not None:
                 import datetime as _dt
-                days = (_dt.date.today() - p.started_on).days if p.started_on else None
+                days = (today_at(p) - p.started_on).days if p.started_on else None
                 parts.append('%s%s%s' % (p.name or p.subject or 'plot',
                                          ' (%s)' % p.variety if p.variety else '',
                                          ', day %d' % days if days is not None else ''))
@@ -2037,7 +2115,7 @@ class SystemToolsMixin:
                 import datetime as _dt
                 n = MCPConfirmation.query.filter(
                     MCPConfirmation.status == 'pending',
-                    MCPConfirmation.expires_at > _dt.datetime.utcnow()).count()
+                    MCPConfirmation.expires_at > _tk_naive_utc(_tk_utc_now())).count()
                 parts.append('%d pending approval%s' % (n, '' if n == 1 else 's'))
             except Exception:                               # noqa: BLE001
                 pass
@@ -2093,9 +2171,9 @@ class SystemToolsMixin:
             return None
         from shapely.geometry import box
         from aot.databases.models import GeoFacility, GeoShape
-        from aot.aot_flask.geo import device_membership as dm
-        from aot.aot_flask.geo.plot_context import active_plots
-        from aot.aot_flask.geo.plot_geometry import geometry_of, _shapely
+        from aot.space import device_membership as dm
+        from aot.space.plot_context import active_plots
+        from aot.space.plot_geometry import geometry_of, _shapely
         # 위젯의 도형 토글 이름 → 이 요약의 종류
         off = {{'land': 'site'}.get(k, k) for k in (hidden if isinstance(hidden, list) else []) if isinstance(k, str)}
         frame = box(west, south, east, north)
@@ -2182,7 +2260,7 @@ class SystemToolsMixin:
         """지도 위젯이 띄운 지도와 그 지도의 대지 — "지도 '영양' (대지: 육묘장)".
         위젯 설정의 map_uuid 로 찾는다. 없으면 None(이름을 짐작하지 않는다)."""
         from aot.databases.models import GeoMap
-        from aot.aot_flask.geo.device_membership import place_label
+        from aot.space.device_membership import place_label
         mid = (opts or {}).get('map_uuid')
         if not mid:
             return None
@@ -2262,7 +2340,7 @@ class SystemToolsMixin:
                 user_id, title, message, extra.get('ai_key_id'),
                 extra.get('ai_link_id'), attach=attach,
                 screen=screen, page=page, dashboard=dashboard, widget=widget,
-                item=item, kind=kind, tab=tab, op=op, value=value, layer=layer,
+                item=card or item, kind=kind, tab=tab, op=op, value=value, layer=layer,
                 center=center)
 
         if action == 'read':
@@ -2439,6 +2517,11 @@ class SystemToolsMixin:
 
         has_attach = attach not in (None, '')
         text = cards.clean_body(message)
+        ref = unused.get('item')
+        ref = str(ref).strip() if ref not in (None, '') else ''
+        if ref and not text.strip() and not has_attach:
+            unused.pop('item', None)
+            return cls._screen_raise(user_id, ref, unused)
         if not text.strip() and not has_attach:
             return {"status": "error", "error": "message is required."}
         user = User.query.filter(User.unique_id == user_id).first()
@@ -2453,28 +2536,9 @@ class SystemToolsMixin:
         head = cards.clean_line(title, cards.TITLE_MAX) or cards.derive_title(text)
 
         now = _time.time()
-        rows = wp.recent(user_id, now=now)
-        allowed = [r for r in rows if r.get('ai_allowed')]
-        # 카드는 지정한 화면에만 띄운다. 지정이 없고 화면이 둘 이상이면 모두에 뿌리지 않고
-        # 아무것도 저장하기 전에 화면 목록과 함께 돌려보낸다.
-        picked = (unused.pop('screen', None) or '').strip()
-        if picked:
-            one = wp.resolve_screen(user_id, picked, now=now)
-            if one is None or not one.get('ai_allowed'):
-                return {"status": "error", "error": cls._screen_which_error(
-                    user_id, picked)}
-            allowed = [one]
-        else:
-            live = [r for r in allowed if wp.state_of(r, now) in ('viewing', 'open')]
-            if len(live) > 1:
-                return {"status": "error", "error": cls._screen_which_error(
-                    user_id, '').replace("Which screen? Several are open, so none was assumed.",
-                                         "Which screen should show the card? Several are open, "
-                                         "so it was not posted.")}
-        if rows and not allowed:
-            return {"status": "error", "error": (
-                "AI control is off on all of the user's screens. They can turn it "
-                "on: AoT menu Manage > 'AI settings'.")}
+        allowed, problem = cls._card_screens(user_id, unused.pop('screen', None), now)
+        if problem:
+            return {"status": "error", "error": problem}
 
         # 같은 제목·같은 본문이 방금 올라갔으면 다시 쌓지 않는다(자동 카드가 두 번 오르는 것 방지) —
         # 첨부가 있으면 다른 카드일 수 있어 건너뛴다. 사용자가 일부러 다시 보내려면 제목·본문을 바꾸면 된다.
@@ -2622,6 +2686,13 @@ class SystemToolsMixin:
                             'size': len(it['poster']) if it.get('poster') else 0,
                             'url': v.url, 'provider': v.provider, 'host': v.host,
                             'playable': bool(it.get('playable'))})
+                    elif it['kind'] == 'viz':
+                        # viz 는 파일이 없다(video 처럼) — 정규화된 스펙만 spec 칸에 담는다.
+                        att_rows.append({
+                            'kind': 'viz', 'path': None, 'thumb': None,
+                            'name': it['name'], 'mime': 'application/json',
+                            'size': len(it['data']),
+                            'spec': it['data'].decode('utf-8')})
                     else:
                         rel = files.store(it['ext'], it['data'], it['thumb'], stamp)
                         stored.append(rel)
@@ -2650,19 +2721,7 @@ class SystemToolsMixin:
             finish_all('store')
 
         atts = cards.attachments(card)
-        targets = [r for r in allowed if wp.state_of(r, now) in ('viewing', 'open')][:3]
-        args = {'card': card.unique_id, 'title': head, 'message': text,
-                'source': source, 'at': cards.iso_z(card.created_at),
-                'kind': card.kind or 'text', 'describe': "show an AI card"}
-        if atts:
-            args['file'] = cards.file_info(card, atts)
-            args['files'] = cards.file_items(atts)
-        for r in targets:
-            # 같은 호출이 화면을 다른 대시보드로 옮기는 중이면(날씨·예보 조회가 지도를 옮긴다) 카드는 그 대시보드에
-            # 도착한 뒤에 내보낸다 — 이동이 페이지를 다시 읽으므로 같이 보내면 카드가 떴다가 곧 사라진다(2026-10-30).
-            wp.add_command(user_id, r['browser_key'], 'ai_card', args,
-                           confirmed=True,
-                           hold_for=wp.pending_dashboard(r['browser_key'], include_queued=True))
+        targets = cls._send_card(user_id, card, atts, allowed, now)
 
         detail = "%s (%d chars) → %d screens" % (head[:80], len(text), len(targets))
         fl = cards.file_atts(atts)
@@ -2701,6 +2760,108 @@ class SystemToolsMixin:
             out["note_video"] = cls._NOTE_VIDEO
         if not targets:
             out["note"] = ("Saved to the user's AoT AI inbox; shown when they open "
+                           "AoT with AI control on.")
+        ignored = cls._screen_unused('post', **unused)
+        if ignored:
+            out["ignored"] = ignored
+        return out
+
+    @classmethod
+    def _card_screens(cls, user_id, picked, now):
+        """카드를 띄울 화면 → (화면 목록, 문제 문장). 카드는 지정한 화면에만 띄운다. 지정이 없고
+        화면이 둘 이상이면 모두에 뿌리지 않고 아무것도 저장하기 전에 화면 목록과 함께 돌려보낸다.
+        접속 기록이 없으면 ([], None) — 저장만 한다."""
+        from aot.utils import web_presence as wp
+        rows = wp.recent(user_id, now=now)
+        allowed = [r for r in rows if r.get('ai_allowed')]
+        picked = (picked or '').strip()
+        if picked:
+            one = wp.resolve_screen(user_id, picked, now=now)
+            if one is None or not one.get('ai_allowed'):
+                return None, cls._screen_which_error(user_id, picked, post=True)
+            allowed = [one]
+        else:
+            live = [r for r in allowed if wp.state_of(r, now) in ('viewing', 'open')]
+            if len(live) > 1:
+                # 읽기 경로(screen_follow.resolve)와 같게 — 지금 **보는 중** 화면이 정확히
+                # 하나면, 배경에 '열림' 화면이 더 있어도 그 화면으로 올린다(사용자가 눈으로
+                # 보고 있는 곳). 그래야 여러 기기·탭을 켜 둔 흔한 상황에서도 값 조회 카드가
+                # 조용히 사라지지 않는다. 보는 중이 0개거나 2개 이상일 때만 되묻는다.
+                viewing = [r for r in live if wp.state_of(r, now) == 'viewing']
+                if len(viewing) == 1:
+                    allowed = [viewing[0]]
+                else:
+                    return None, cls._screen_which_error(user_id, '', post=True)
+        if rows and not allowed:
+            return None, ("AI control is off on all of the user's screens. They can turn it "
+                          "on: AoT menu Manage > 'AI settings'.")
+        return allowed, None
+
+    @classmethod
+    def _send_card(cls, user_id, card, atts, allowed, now, raised=False):
+        """저장된 카드 한 장을 허용된 화면(보는 중·열림, 최대 3)에 자막으로 보낸다. 보낸 화면 목록."""
+        from aot.utils import web_presence as wp
+        from aot.utils import ai_screen_cards as cards
+        targets = [r for r in allowed if wp.state_of(r, now) in ('viewing', 'open')][:3]
+        args = {'card': card.unique_id, 'title': card.title or '', 'message': card.body or '',
+                'source': card.source_label or 'AI', 'at': cards.iso_z(card.created_at),
+                'kind': card.kind or 'text', 'describe': "show an AI card"}
+        if raised:
+            args['raised'] = True       # 화면은 이미 받은 카드라도 다시 띄우고 미읽음 수를 올리지 않는다
+        if atts:
+            args['file'] = cards.file_info(card, atts)
+            args['files'] = cards.file_items(atts)
+        for r in targets:
+            # 같은 호출이 화면을 다른 대시보드로 옮기는 중이면(날씨·예보 조회가 지도를 옮긴다) 카드는 그 대시보드에
+            # 도착한 뒤에 내보낸다 — 이동이 페이지를 다시 읽으므로 같이 보내면 카드가 떴다가 곧 사라진다(2026-10-30).
+            wp.add_command(user_id, r['browser_key'], 'ai_card', args,
+                           confirmed=True,
+                           hold_for=wp.pending_dashboard(r['browser_key'], include_queued=True))
+        return targets
+
+    @classmethod
+    def _screen_raise(cls, user_id, ref, unused):
+        """[AI 카드 다시 띄우기] 예전에 만든 카드(id 앞 8자 이상)를 수신함 맨 위로 끌어올리고 허용된
+        화면에 자막으로 다시 보낸다(P7-11). 새 카드를 만들지 않으므로 카드 수 제한(분당·일)은 타지
+        않고 화면 명령 제한만 탄다. 사용자가 닫은 카드도 되살린다(찾아 달라고 한 카드다)."""
+        import time as _time
+        from aot.databases.models import User
+        from aot.utils import audit, web_presence as wp
+        from aot.utils import ai_screen_cards as cards
+
+        user = User.query.filter(User.unique_id == user_id).first()
+        if user is None:
+            return {"status": "error", "error": (
+                "This connection is not tied to an AoT user, so there is no "
+                "inbox to post to.")}
+        card, why = cards.find_card(user.id, ref)
+        if card is None:
+            shown = cards.clean_line(ref, 40)
+            if why == 'ambiguous':
+                return {"status": "error", "error": (
+                    "AI card id '%s' is ambiguous. Use more characters." % shown)}
+            return {"status": "error", "error": (
+                "No AI card '%s' for this user. read with card=<words> finds one." % shown)}
+        now = _time.time()
+        allowed, problem = cls._card_screens(user_id, unused.pop('screen', None), now)
+        if problem is None and allowed and \
+                wp.recent_command_count(user_id) >= wp.RATE_PER_MIN:
+            problem = "Too many screen actions in a minute. Wait a moment."
+        if problem:
+            return {"status": "error", "error": problem}
+        card = cards.raise_card(user.id, card.unique_id, reopen=True)
+        if card is None:            # 그 사이 만료·삭제
+            return {"status": "error", "error": "No AI card '%s' for this user." % ref[:40]}
+        targets = cls._send_card(user_id, card, cards.attachments(card), allowed, now, raised=True)
+        audit.audit_log(
+            audit.AI_CARD_POST, target_type='AICard', target_id=card.unique_id,
+            target_name=card.source_label or 'AI',
+            detail="raise: %s → %d screens" % ((card.title or '')[:80], len(targets)),
+            user_id=user.id, username=user.name)
+        out = {"status": "raised", "card": card.unique_id[:8], "title": card.title or '',
+               "shown_on": [r.get('device') or 'Browser' for r in targets]}
+        if not targets:
+            out["note"] = ("Moved to the top of the user's AoT AI inbox; shown when they open "
                            "AoT with AI control on.")
         ignored = cls._screen_unused('post', **unused)
         if ignored:
@@ -2850,9 +3011,13 @@ class SystemToolsMixin:
                 "inbox to read.")}
         ignored = cls._screen_unused('read', **unused)
         ref = str(item).strip() if item not in (None, '') else ''
-        if not ref:
-            listed, more = cards.read_list(user.id)
+        if not ref or not cards.looks_like_card_id(ref):
+            # 카드 id 가 아닌 글은 찾기다("지난번에 만든 ○○ 찾아줘") — 제목·본문·파일 이름에 그 글이 든 카드 목록.
+            query = cards.clean_line(ref, cards.SEARCH_MAX) if ref else ''
+            listed, more = cards.read_list(user.id, q=query or None)
             out = {"status": "ok", "cards": listed, "more": more}
+            if query:
+                out["query"] = query
             if ignored:
                 out["ignored"] = ignored
             return out
@@ -2912,17 +3077,29 @@ class SystemToolsMixin:
                     action, ", ".join(names), hint)}
 
     @classmethod
-    def _screen_which_error(cls, user_id, screen):
+    def _screen_which_error(cls, user_id, screen, post=False):
         """screen 을 못 정했을 때의 오류 — 고를 수 있는 화면(후보)을 함께 준다.
-        후보가 없으면 get_screen 으로 알아내라고만 한다."""
+        후보가 없으면 get_screen 으로 알아내라고만 한다.
+
+        post=True(카드 올리기): 카드는 AI 조작이 **켜진** 화면에만 오른다 — 꺼진 화면을 후보로 주면 모델이 그
+        화면을 골라 다시 실패한다(2026-11-07 실측: screen_action post 59건 실패, 대부분 화면 미지정 뒤 재호출).
+        그래서 켜진 화면만 최근 순으로 싣고(첫째 = 가장 최근에 쓴 화면), 같은 호출을 `screen` 만 더해 다시 부르라고
+        말한다. 사용자에게 먼저 되묻도록 시키지 않는다 — 어느 쪽이든 카드는 수신함에 남는다."""
         import time as _time
         from aot.utils import web_presence as wp
         now = _time.time()
         rows = wp.recent(user_id, now=now)
+        if post:
+            rows = [r for r in rows if r.get('ai_allowed')]
         cands = ["%s = %s, %s, %s, ai_control %s" % (
             r['browser_key'][:12], r.get('device') or 'Browser',
             cls._screen_page_label(r), wp.state_of(r, now),
             'on' if r.get('ai_allowed') else 'off') for r in rows[:8]]
+        if post and cands:
+            head = ("Unknown screen, or AI control is off on it ('%s'). The card was not posted." % screen[:40]) \
+                if screen else "Which screen should show the card? Several are open, so it was not posted."
+            return (head + " Repeat the same call with `screen` set to one of (most recent first): "
+                    + "; ".join(cands) + ".")
         head = ("Unknown screen '%s'." % screen[:40]) if screen else \
             "Which screen? Several are open, so none was assumed."
         if not cands:
@@ -3470,7 +3647,7 @@ class SystemToolsMixin:
             name = name or ((shape.feature or {}).get('properties') or {}).get('name')
             if t in ('site', 'zone', 'facility'):
                 return t, shape.unique_id, name
-            from aot.aot_flask.geo.device_binding import device_for_shape
+            from aot.space.device_binding import device_for_shape
             dev = device_for_shape(shape)
             if dev:
                 return 'device', dev, name
@@ -3627,9 +3804,9 @@ class SystemToolsMixin:
         """지도 항목의 대표 좌표 [경도, 위도] — 못 찾으면 None.
 
         대지·구역·시설은 도형, 구획은 자기 도형, 장치는 매여 있는 지도 도형
-        (그 지도 것을 먼저), 없으면 장치 자체의 위·경도."""
-        from aot.databases.models import GeoPlot, GeoShape, Input, Output
-        from aot.aot_flask.geo import device_binding as db_
+        (그 지도 것만 — 없으면 좌표 없음)."""
+        from aot.databases.models import GeoPlot, GeoShape
+        from aot.space import device_binding as db_
 
         def lnglat(feature):
             c = db_._centroid(feature)          # [lat, lng]
@@ -3652,18 +3829,14 @@ class SystemToolsMixin:
                             shapes.append(sh)
                 # **이 지도의 도형만** 쓴다. 예전에는 이 지도 것을 앞에 둘 뿐 없으면
                 # 다른 지도(다른 현장)의 도형 중심으로 넘어가, 영양 지도에서 연 장치가
-                # 김제 쪽 좌표로 날아갔다. 이 지도에 매인 도형이 없으면 장치 자체 좌표다.
+                # 김제 쪽 좌표로 날아갔다. 이 지도에 매인 도형이 없으면 좌표가 없다
+                # (L4 S3c: 장치 행에 위치 컬럼이 없다 — 배치 도형만이 정본).
                 if map_uuid:
                     shapes = [sh for sh in shapes if sh.geo_id == map_uuid]
                 for sh in shapes:
                     got = lnglat(sh.feature)
                     if got:
                         return got
-                for model in (Input, Output):
-                    row = model.query.filter(model.unique_id == ident).first()
-                    lat, lng = getattr(row, 'latitude', None), getattr(row, 'longitude', None)
-                    if lat is not None and lng is not None:
-                        return [round(float(lng), 7), round(float(lat), 7)]
         except Exception:                                   # noqa: BLE001
             logger.debug("screen item position lookup failed", exc_info=True)
         return None
@@ -3696,7 +3869,11 @@ class SystemToolsMixin:
                 return None, "time offset is too far; the time slider covers about -2 hours to +7 days."
             return {'kind': 'offset', 'ms': ms, 'text': '%s from now' % text}, None
         try:
-            dt = _dt.datetime.fromisoformat(text[:-1] + '+00:00' if text.endswith(('Z', 'z')) else text)
+            if text.endswith(('Z', 'z')):
+                from aot.utils.timekit import parse_utc
+                dt = parse_utc(text)
+            else:
+                dt = _dt.datetime.fromisoformat(text)
         except ValueError:
             return None, ("time must be 'now', an offset like '+24h', or an ISO 8601 time "
                           "like '2026-10-24T15:00+09:00' (got %r)." % text[:40])
@@ -3812,7 +3989,7 @@ class SystemToolsMixin:
             return {sh.geo_id} if sh is not None and sh.geo_id else set()
         if kind == 'device':
             try:
-                from aot.aot_flask.geo import device_binding as db_
+                from aot.space import device_binding as db_
                 geos = set()
                 for b in db_.bindings_for_device(ident):
                     if b.spatial_kind == 'shape':
@@ -3988,7 +4165,7 @@ class SystemToolsMixin:
         """그 대상 안쪽·바깥쪽에서 탭을 가진 종류의 대상 이름 → (안쪽 목록, 바깥쪽 목록).
 
         "종류 '이름'" 모양. 안쪽은 구획·시설, 바깥은 감싸는 대지(소속 판정은 지도 창과 같은 PlaceIndex)."""
-        from aot.aot_flask.geo.device_membership import PLACE_TYPES, PlaceIndex, place_label
+        from aot.space.device_membership import PLACE_TYPES, PlaceIndex, place_label
         from aot.databases.models import GeoPlot
         idx = PlaceIndex()
         shape = idx.by_uid.get(ident)
@@ -4050,13 +4227,14 @@ class SystemToolsMixin:
             out = {"status": "success", "done": args.get('describe'), "message": msg}
             if row.get('action') in ('navigate', 'reload'):
                 # 화면은 떠나기 전에 결과부터 보낸다 — 새 페이지가 상태를 보고하기까지 몇 초는 이전 화면이 보인다.
-                out["note"] = ("The page is loading; get_screen may still show the old page "
-                               "for a few seconds (or a background tab). Wait, then read again.")
+                # B3(2026-11-07): "다시 읽어라" 로 끝나던 문구가 get_screen 재확인을 불렀다 — 이동은 끝났고 확인 호출은 필요 없다.
+                out["note"] = ("The move is done and the page is loading. Do not call get_screen to confirm it "
+                               "(it may show the old page for a few seconds); call it only to read the new page.")
             if args.get('op') == 'time':
                 # 슬라이더 이동은 답에 덧붙이는 일이라 "옮겼습니다" 를 되풀이 보고하면 소음이다. 다만 이 응답이
                 # 대화의 마지막 도구 결과라, "말하지 마라" 만 있으면 AI 가 답 전체를 비운다(2026-10-24 실측).
-                out["say"] = ("Done. Now answer with the forecast values themselves, in the user's language; "
-                              "never mention the slider move or this note.")
+                out["say"] = ("Done. The map time is already updated on the user's screen, so it needs no "
+                              "separate report; answer with the forecast values themselves, in the user's language.")
             if meta.get('highlighted') == 'widget' and args.get('pin'):
                 # 화면이 요청과 다른 것을 했다(핀이 없어 지도 위젯 전체를 강조) — '성공' 으로
                 # 읽히면 AI 는 그 장소를 가리켰다고 말한다(2026-10-14 사용자 시험).

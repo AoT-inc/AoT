@@ -152,9 +152,9 @@ Options:
   update-aotmcp-service-enable  Enable and start the AoT MCP Server service
   update-aotmcp-service-disable Disable and stop the AoT MCP Server service
   restart-aotmcp                Restart the AoT MCP Server service if enabled (run on every upgrade)
-  install-aottwin               Install and enable the Digital Twin service (experimental, off by default)
+  install-aottwin               Install, enable and (re)start the Digital Twin service (run on every upgrade and at setup; idle until the toggle is on)
   update-aottwin-service-disable Disable and stop the Digital Twin service
-  restart-aottwin               Restart the Digital Twin service if enabled (run on every upgrade)
+  restart-aottwin               Restart the Digital Twin service if enabled
   mosquitto-check               Warn if the mosquitto broker accepts anonymous network connections (read-only)
   update-packages               Ensure required apt packages are installed/up-to-date
   update-permissions            Set permissions for AoT directories/files
@@ -852,13 +852,16 @@ case "${1:-''}" in
         fi
     ;;
     'install-aottwin')
-        # 디지털트윈(실험) — 기본 설치에는 들어가지 않는다(setup.sh 가 부르지 않음). 사양이 낮은 기기에서는
-        # 서비스가 시작할 때 스스로 잠겨 일하지 않는다.
+        # 디지털트윈(실험) — 기본 구성이다(setup.sh·setup_unattended.sh 와 upgrade_post.sh 가 부른다).
+        # 토글이 꺼져 있으면 떠 있어도 일하지 않고, 사양이 낮은 기기에서는 서비스가 시작할 때 스스로 잠겨
+        # 하트비트 locked 를 쓰고 정상 종료한다(Restart=on-failure 라 되살리지 않고, 부팅 때는 enable 된 유닛이 다시 뜬다).
+        # 이미 설치된 기기에서도 쓴다: 먼저 내렸다가(update-aottwin-service-disable) 다시 설치·시작하므로
+        # 새 코드로 재시작하는 효과가 있다. 옛 설치(upgrade 가 부르지 않던 때)는 sudo 로 한 번 실행한다.
         printf "\n#### Installing AoT Digital Twin service (experimental)\n"
         /bin/bash "${AOT_PATH}"/aot/scripts/upgrade_commands.sh update-aottwin-service-disable
         systemctl enable "${AOT_PATH}"/install/aottwin.service
         systemctl start aottwin || true
-        printf "#### AoT Digital Twin installed — turn it on in Settings > General > Digital Twin\n"
+        printf "#### AoT Digital Twin installed (idle) — turn it on in Settings > General > Digital Twin\n"
     ;;
     'update-aottwin-service-disable')
         printf "\n#### Disabling AoT Digital Twin service\n"

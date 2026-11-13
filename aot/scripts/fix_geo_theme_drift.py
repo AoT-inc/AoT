@@ -49,13 +49,14 @@ import sys
 
 from aot.start_flask_ui import app
 from aot.aot_flask.extensions import db
+from aot.databases.geo_marker_kinds import MARKER_TYPES
 from aot.databases.models import (
     Conditional, CustomController, Function, GeoMap, GeoShape,
     Input, Output, PID, Trigger)
 
 
 # 장치 도형의 type 컬럼 값. 'device' 는 레거시(읽기 경로가 aot_device 로 정규화).
-DEVICE_SHAPE_TYPES = ('aot_device', 'device')
+DEVICE_SHAPE_TYPES = MARKER_TYPES
 
 # 도형에 각인돼 있던 스타일 키. 색의 정본이 아니므로 지운다.
 BAKED_STYLE_KEYS = ('color', 'fillColor')
@@ -140,7 +141,8 @@ def collect(map_uuid=None):
 
         if not props.get('device_type'):
             # device_id 는 채널 접미사 없는 base UUID 로 저장된다.
-            base_id = (shape.device_id or props.get('device_id') or '')
+            from aot.space.device_binding import device_for_shape
+            base_id = (device_for_shape(shape) or props.get('device_id') or '')
             base_id = str(base_id).split('::')[0]
             resolved = type_index.get(base_id)
             findings['device-type'].append({

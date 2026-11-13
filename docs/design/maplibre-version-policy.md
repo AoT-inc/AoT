@@ -69,14 +69,14 @@ if maplibre.supports_terrain(): ...
 
 | | MapLibre 4 | MapLibre 5 |
 |---|---|---|
-| `enable_3d_terrain` 옵션 | 설정 화면에 **안 나온다** | **안 나온다**(DEM 이 정해질 때까지) |
-| 저장된 값이 켜져 있으면 | 지도가 **무시한다** | 지도가 **무시한다** |
+| `/geo/design` 설정의 3D 지형 | **안 나온다** | 활성 DEM 입력이 있을 때만 나온다 |
+| 저장된 값이 켜져 있으면 | 지도가 **무시한다** | DEM 입력이 없으면 **무시한다** |
 | 저장된 값 자체 | **그대로 남는다** | **그대로 남는다** |
 
 판정은 두 단계다. `engine_supports_terrain()` 은 엔진 버전(5 이상)이고,
-`supports_terrain()` 은 거기에 `TERRAIN_DEM_READY` 를 더한 최종 답이다. DEM 이 정해지기
-전에는 `TERRAIN_DEM_READY = False` 라 5 에서도 꺼진다(서버 `aot/utils/maplibre.py`,
-브라우저 `AoTMapLibreCaps`, 두 곳을 함께 본다 — `test_maplibre_version.py` 가 일치를 지킨다).
+`supports_terrain(terrain_layer)` 은 거기에 활성 DEM 입력 유무를 더한 최종 답이다. 입력이
+없으면 5 에서도 꺼진다(서버 `aot/utils/maplibre.py`, 브라우저 `AoTMapLibreCaps` 는
+`AOT_GEO_CONFIG.terrain` 으로 같은 사실을 본다 — `test_maplibre_version.py` 가 지킨다).
 
 옵션을 지우는 대신 감추기만 하는 이유: 값을 지우면 5 를 반입한 뒤 사용자가
 다시 켜야 한다. 저장 경로 둘(`custom_options_return_json`,
@@ -99,54 +99,26 @@ if maplibre.supports_terrain(): ...
 
 ---
 
-## 4. ⚠ 지형을 5 에서 켜기 전에 반드시 할 것 — DEM 소스 교체
+## 4. DEM 은 운영자가 고르는 입력이다
 
-지금 코드가 가리키는 DEM 은 **쓸 수 없는 것**이다.
+`demotiles.maplibre.org/terrain-tiles` 는 알프스 한 구역짜리 데모 데이터라 국내 좌표가
+전부 404 이고 고도가 0 이었다(2026-09-06 실측). 이 주소는 코드에서 지웠다.
 
-```
-https://demotiles.maplibre.org/terrain-tiles/tiles.json
-```
-
-이 tiles.json 의 이름은 `jaxa_terrainrgb_N047E011` — **알프스 한 구역짜리 데모
-데이터**다. `bounds` 는 전 지구로 적혀 있지만 실제 타일은 그 구역뿐이다.
-
-| 위치 | z2~z12 타일 |
-|---|---|
-| 김제 (35.8N 126.9E) | 전부 **404** |
-| 영양 (36.7N 129.1E) | 전부 404 |
-| 알프스 (47.2N 11.4E) | 200 |
-
-`queryTerrainElevation` 을 z3·6·9·12·14·16 에서 재면 국내는 **전부 0m** 다.
-즉 지금 이 옵션을 켜면 고도는 1cm 도 생기지 않으면서, 쓰지도 않은 데이터에 대한
-"AW3D30 (JAXA)" 저작권 표시와 지형 렌더 비용만 붙는다.
-
-AoT 는 한국 전용이 아니다(22개 언어). 알프스 밖 **모든** 설치가 같은 상태다.
-
-그러므로 `TERRAIN_DEM_READY` 를 True 로 바꾸는 순간 이 옵션은 "동작하지 않는
-스위치" 가 된다. **DEM 을 먼저 정하고 나서** 켜야 한다. (5.23.0 은 이미 반입됐고
-지형 옵션은 꺼 둔 상태다.) 후보를 고를 때 함께 볼 것:
-
-- 전 지구 커버리지 (국내·일본·동남아 포함)
-- 라이선스와 저작권 표시 의무
-- 키 없이 쓸 수 있는가 (폐쇄망 설치에서 무엇을 할 것인가)
-- 트래픽이 어디로 나가는가
-
-교체 대상은 네 자리다 — `aot-map-widget-vector.js`,
-`dashboard-widget-live-preview.js`(둘 다 위 데모 URL),
-`aot-maplibre-loader.js`, `aot-vector-layer-manager.js`(둘 다 MapTiler 키 URL).
+고도 자료는 `aot/inputs_gis/gis_dem_*` 입력 중 운영자가 켠 것을 쓴다. 키와 약관은
+운영자가 해결하고, AoT 는 고도 자료를 호스팅하거나 재배포하지 않는다.
+DEM 타일은 약 60 KB 라 타일 프록시(RAM 캐시)를 거치지 않고 브라우저가 직접 받는다.
 
 ---
 
 ## 5. `setTerrain` 을 켜는 자리
 
-네 곳이고 **전부** 능력 질의 뒤에 있다. 새로 추가하면
-`test_every_setTerrain_call_site_is_gated` 가 잡는다.
+켜는 자리는 `geo/aot-maplibre-seam.js` 의 `AoTMapSeam.enableTerrain` 하나이고 능력 질의
+뒤에 있다. 새로 추가하면 `test_every_setTerrain_call_site_is_gated` 가 잡는다. 고도 소스는
+활성 DEM 입력(`aot/inputs_gis/gis_dem_*`)이 `AOT_GEO_CONFIG.terrain` 으로 내려 준다.
 
-| 파일 | 켜는 조건 |
+| 부르는 자리 | 켜는 조건 |
 |---|---|
-| `widgets/AoT_map/aot-map-widget-vector.js` | 위젯 옵션 `enable_3d_terrain` |
-| `app/dashboard-widget-live-preview.js` | 설정 드로어의 라이브 반영 |
-| `geo/aot-maplibre-loader.js` | `AOT_GEO_CONFIG.enable_terrain` |
+| `widgets/AoT_map/aot-map-widget-vector.js` | `AoTTerrainToggle` 의 `3D` 단추 (그 지도·그 브라우저만, `localStorage`) |
 | `geo/aot-vector-layer-manager.js` | `addTerrain()` 직접 호출 |
 
 (`setTerrain(null)` 은 끄는 쪽이라 게이트가 없다.)

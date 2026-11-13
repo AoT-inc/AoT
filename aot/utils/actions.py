@@ -173,6 +173,28 @@ def check_allowed_to_email():
     return smtp_wait_timer, allowed_to_send_notice
 
 
+def _condition_max_age(sql_condition):
+    """조건의 측정값 허용 나이(초). 양수가 아니면 None.
+
+    `max_age` 가 비었거나 0 이하이면 InfluxDB 질의가 구간 제한 없는 전체 이력을
+    훑어, "너무 오래된 값은 없는 값" 이라는 신선도 규칙이 조용히 사라진다
+    (오래전 마지막 값이 지금 값처럼 돌아온다). 설정 오류로 보고 값 없음(None)으로 답한다.
+    """
+    max_age = getattr(sql_condition, 'max_age', None)
+    try:
+        max_age = float(max_age)
+    except (TypeError, ValueError):
+        max_age = None
+    if max_age is None or not max_age > 0 or max_age == float('inf'):
+        logger.error(
+            "Condition %s: 허용 나이(max_age=%r)가 0보다 큰 숫자가 아니라 "
+            "값 없음으로 답한다. 조건의 '최대 나이'를 고치세요",
+            getattr(sql_condition, 'unique_id', '?'),
+            getattr(sql_condition, 'max_age', None))
+        return None
+    return max(1, int(max_age))
+
+
 def get_condition_value(condition_id):
     """
     Returns condition measurements for Conditional controllers
@@ -211,7 +233,9 @@ def get_condition_value(condition_id):
                 "{}".format(measurement_id))
             return {"time": None, "value": None}
 
-        max_age = sql_condition.max_age
+        max_age = _condition_max_age(sql_condition)
+        if max_age is None:
+            return {"time": None, "value": None}
 
         influx_return = get_last_measurement(
             device_id, measurement_id, max_age=max_age)
@@ -246,7 +270,9 @@ def get_condition_value(condition_id):
                 "{}".format(measurement_id))
             return
 
-        max_age = sql_condition.max_age
+        max_age = _condition_max_age(sql_condition)
+        if max_age is None:
+            return None
 
         if sql_condition.condition_type == 'measurement':
             influx_return = get_last_measurement(
@@ -259,15 +285,24 @@ def get_condition_value(condition_id):
             measurement_list = []
             past_measurements = get_past_measurements(
                 device_id, measurement_id, max_age=max_age)
-            for each_set in past_measurements:
+            for each_set in past_measurements or []:
                 measurement_list.append(float(each_set[1]))
-            return_measurement = sum(measurement_list) / len(measurement_list)
+            # 허용 나이 안에 값이 하나도 없으면(센서 정지·질의 실패) 0 으로 나누지
+            # 말고 값 없음(None)으로 답한다 — 신선하지 않은 측정값과 같은 답이다.
+            if measurement_list:
+                return_measurement = sum(measurement_list) / len(measurement_list)
+            else:
+                return_measurement = None
         elif sql_condition.condition_type == 'measurement_past_sum':
             measurement_list = []
             past_measurements = get_past_measurements(
                 device_id, measurement_id, max_age=max_age)
+            if past_measurements is None:
+                # 질의 실패 — 합계 0 과 구별되도록 값 없음으로 답한다.
+                return None
             for each_set in past_measurements:
                 measurement_list.append(float(each_set[1]))
+            # 값이 하나도 없는 창의 합계는 기존대로 0 (동작을 바꾸지 않는다).
             return_measurement = sum(measurement_list)
         else:
             return
@@ -351,7 +386,9 @@ def get_condition_value_dict(condition_id):
     if sql_condition.condition_type == 'measurement_dict':
         device_id = sql_condition.measurement.split(',')[0]
         measurement_id = sql_condition.measurement.split(',')[1]
-        max_age = sql_condition.max_age
+        max_age = _condition_max_age(sql_condition)
+        if max_age is None:
+            return None
 
         device_measurement = db_retrieve_table_daemon(
             DeviceMeasurements, unique_id=measurement_id)

@@ -14,6 +14,7 @@ logger = logging.getLogger("aot.database")
 _LOCK_PHRASES = ("database is locked", "unable to open database")
 _IO_PHRASES = ("disk i/o error",)
 _MISSING_TABLE_PHRASES = ("no such table",)
+_MISSING_COLUMN_PHRASES = ("no such column",)
 
 # 채널 활성/비활성 상태 캐시 (device_id -> (읽은 시각, 꺼진 채널 집합))
 DISABLED_CHANNEL_CACHE_SECONDS = 10.0
@@ -34,6 +35,11 @@ def _is_io_error(exc) -> bool:
 def _is_missing_table_error(exc) -> bool:
     msg = str(exc).lower()
     return any(p in msg for p in _MISSING_TABLE_PHRASES)
+
+
+def _is_missing_column_error(exc) -> bool:
+    msg = str(exc).lower()
+    return any(p in msg for p in _MISSING_COLUMN_PHRASES)
 
 
 def db_retrieve_table(table, entry=None, unique_id=None):
@@ -134,6 +140,19 @@ def db_retrieve_table_daemon(
                 logger.debug(
                     "AoT database table not yet created (fresh install or "
                     "mid-migration) — returning empty result: %s", exc)
+                return _empty
+            if _is_missing_column_error(exc):
+                # 이 프로세스가 들고 있는 모델이 DB 보다 낡았다 — 열을 지우는
+                # 마이그레이션이 돈 뒤 데몬을 다시 띄우지 않은 경우다. 재시도해도
+                # 열이 되살아나지 않으니 "잠겼다"로 5번 돌면서 원인을 가리지
+                # 말고 바로 물러난다. 2026-11-07 개발 서버 데몬이 p7_08(장치
+                # latitude/longitude 제거) 이전 모델로 47시간 돌면서 출력 조회가
+                # 전부 이 경로로 실패했고, 새로 등록한 장치는 "not found"
+                # 로만 보였다.
+                logger.error(
+                    "AoT database schema is newer than this process's models "
+                    "(%s). Restart this process (daemon) so it loads the "
+                    "current models.", exc.args[0] if exc.args else exc)
                 return _empty
             # lock/busy: retry with backoff
         except Exception:

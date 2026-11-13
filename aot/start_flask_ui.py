@@ -23,7 +23,7 @@ if os.environ.get("ALEMBIC_RUNNING") != "1":
         import logging
         logging.getLogger(__name__).warning("MCP warm-start scheduling failed: %s", _warm_err)
     try:
-        from aot.aot_flask.geo.forecast_series import start_prewarm
+        from aot.space.forecast_series import start_prewarm
         start_prewarm(app)
     except Exception as _warm_err:  # never block server startup
         import logging

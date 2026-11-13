@@ -483,7 +483,7 @@ def _used(user_id, now=None):
     base = AuditLog.query.filter(AuditLog.action == audit.AI_CARD_FETCH,
                                  AuditLog.user_id == user_id)
     held = _pending_count(user_id)
-    return (base.filter(AuditLog.timestamp >= now - datetime.timedelta(hours=1)).count() + held,
+    return (base.filter(AuditLog.timestamp >= now - datetime.timedelta(hours=1)).count() + held,  # tz-ok: 순간 비교의 창 길이
             base.filter(AuditLog.timestamp >= now - datetime.timedelta(days=1)).count() + held)
 
 

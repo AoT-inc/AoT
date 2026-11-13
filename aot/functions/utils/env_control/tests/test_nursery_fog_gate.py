@@ -11,7 +11,7 @@ VPD 우선 제어에서 포그는 T↓·RH↑ 를 동시에 만들어 dVPD 이�
 
 import pytest
 
-from aot.aot_flask.geo.irrigation_nozzles import (
+from aot.space.irrigation_nozzles import (
     summarize_nozzles, nozzles_by_actuator, compute_precipitation,
 )
 from aot.functions.utils.env_control.dispatch_adapters import (

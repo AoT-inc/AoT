@@ -106,12 +106,15 @@ OUTPUT_JOIN_TIMEOUT_S = 120
 
 
 
-# File handler — RotatingFileHandler: 50 MB × 5 파일 = 최대 250 MB 유지.
+# File handler — 50 MB × 5 파일 = 최대 250 MB 유지.
+# 같은 aot.log 를 gunicorn 워커·MCP 도 쓰므로 SharedRotatingFileHandler 여야 한다.
+# 표준 RotatingFileHandler 는 서로 상대가 옮긴 파일을 붙잡아 회전 폭주·
+# FileNotFoundError 를 낸다(utils/logging_setup.py 의 클래스 설명).
 # 핸들러 레벨은 INFO 기본. daemon_debug_mode=True 시 start() 에서 DEBUG로 전환.
 # (핸들러 레벨은 logger 레벨보다 세밀하게 조정 가능하지만, logger 레벨이 상위 필터이므로
 #  logger.setLevel(INFO) 만으로도 DEBUG 메시지는 파일에 기록되지 않는다.)
-from logging.handlers import RotatingFileHandler as _RotatingFileHandler
-logHandler = _RotatingFileHandler(
+from aot.utils.logging_setup import SharedRotatingFileHandler
+logHandler = SharedRotatingFileHandler(
     DAEMON_LOG_FILE,
     maxBytes=50 * 1024 * 1024,   # 50 MB
     backupCount=5,
@@ -256,6 +259,18 @@ class DaemonController:
             self.start_all_controllers()
         except Exception:
             self.logger.exception("Could not start all controllers")
+
+        # 자원 압박 단계 표본(5초) — 배경 작업 미루기가 정시 한 번의 표본으로 판정하지 않게.
+        try:
+            from aot.utils import resource_pressure
+            resource_pressure.start_sampler()
+        except Exception:
+            self.logger.exception("Could not start resource pressure sampler")
+
+        try:
+            self.start_camera_events()
+        except Exception:
+            self.logger.exception("Could not start camera event subscriptions")
 
         self.startup_time = timeit.default_timer() - self.startup_timer
         self.logger.info(
@@ -1484,6 +1499,15 @@ class DaemonController:
         except Exception:
             self.logger.exception("Docker auto-update ERROR")
 
+    def start_camera_events(self):
+        """VIGI 카메라 이벤트 구독(설계 §6.2). 켜져 있고 인증이 ok 인 카메라만 다시 붙는다."""
+        from aot.camera_drivers.event_hub import get_hub
+        from aot.camera_drivers.service import get_service
+        svc = get_service()
+        hub = get_hub(svc)
+        svc.events_hub = hub
+        hub.start_all()
+
     def check_all_timelapses(self, now):
         with session_scope(AOT_DB_PATH) as new_session:
             for each_camera in new_session.query(Camera).all():
@@ -1584,6 +1608,15 @@ class DaemonController:
             self.logger.debug("AI background operation inactive. Skipping periodic summary generation.")
             return
 
+        # 시스템이 바쁘면 이번 시간은 건너뛴다(요약은 한 시간 늦어도 무해하고, 이 호출은
+        # 데몬 메인 루프 안에서 돈다). 연속 3시간 미뤘으면 바빠도 한 번은 만든다.
+        try:
+            from aot.utils import resource_pressure
+            if resource_pressure.should_defer('ai_summary', 3 * 3600):
+                return
+        except Exception:
+            self.logger.debug("resource pressure check failed", exc_info=True)
+
         try:
             with self.flask_app.app_context():
                 from aot.ai.services.ai_summary_service import AISummaryService
@@ -1633,8 +1666,9 @@ class DaemonController:
                 self.output_usage_report_hour)
             if (self.output_usage_report_gen and
                     old_time != self.output_usage_report_next_gen):
-                str_next_report = time.strftime(
-                    '%c', time.localtime(self.output_usage_report_next_gen))
+                from aot.utils.timekit import FARM, parse_utc, to_tz
+                str_next_report = to_tz(
+                    parse_utc(self.output_usage_report_next_gen), FARM).strftime('%c')
                 self.logger.debug(f"Generating next output usage report {str_next_report}")
         except:
             self.logger.exception("Calculating next report time")
@@ -1853,6 +1887,31 @@ class PyroServer(object):
     def trigger_all_actions(self, function_id, message='', debug=False):
         """Trigger all actions."""
         return self.aot.trigger_all_actions(function_id, message=message, debug=debug)
+
+    def camera_driver_call(self, op, camera_id, arg=None):
+        """카메라 드라이버 서비스 호출(연결 확인·다시 연결·인증서 신뢰·기능 다시 읽기). 설계 §4.
+        Open API 인증은 데몬만 한다. 반환은 비밀 없는 dict."""
+        from aot.camera_drivers.service import get_service
+        return get_service().call(op, camera_id, arg)
+
+    def camera_scan_start(self, subnet):
+        """VIGI 네트워크 검색 시작(설계 §8). 호출하는 뷰가 edit_controllers 를 먼저 묻는다."""
+        from aot.camera_drivers.discovery import ScanError, get_manager
+        try:
+            return {'ok': True, 'scan_id': get_manager().start(subnet)}
+        except ScanError as e:
+            return {'ok': False, 'code': e.code, 'retry_after': e.retry_after}
+
+    def camera_scan_result(self, scan_id):
+        from aot.camera_drivers.discovery import get_manager
+        r = get_manager().result(scan_id)
+        return {'ok': False, 'code': 'unknown_scan'} if r is None else {'ok': True, 'scan': r}
+
+    def camera_control_call(self, op, camera_id, arg=None):
+        """카메라를 움직이거나 울리는 호출(PTZ·프리셋·주야·경보·알림 스위치). 설계 §4·§9.3.
+        호출하는 Flask 뷰는 역할·그룹 스코프를 먼저 물어야 한다(check_scope_gates)."""
+        from aot.camera_drivers.service import get_service
+        return get_service().call(op, camera_id, arg, control=True)
 
     def terminate_daemon(self):
         """Instruct the daemon to shut down."""

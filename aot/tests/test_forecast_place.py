@@ -45,6 +45,8 @@ def _fake_coords(entity=None, *, target_id=None):
 
 
 def _fake_tz(target_id):
+    if target_id in pytz.all_timezones_set:      # IANA 이름은 그대로(실제 tz_of 도 그렇다)
+        return pytz.timezone(target_id)
     return pytz.timezone(_SPOTS.get(target_id, _DEFAULT)[2])
 
 
@@ -101,6 +103,9 @@ class _Fixture(unittest.TestCase):
         shape('zone-twin-b', 'zone', '쌍둥이 구역', _square(129.2, 36.7))
         db.session.add(Input(unique_id='dev-th7', name='온습도_7',
                              device='OPEN_METEO_FORECAST'))
+        from aot.databases.models import Widget
+        db.session.add(Widget(unique_id='w-map', name='지도', graph_type='AoT_map',
+                              custom_options='{"map_uuid": "map-a"}'))
         db.session.commit()
 
     @classmethod
@@ -125,8 +130,7 @@ class _Fixture(unittest.TestCase):
             patch(_GET, side_effect=self._get_bundle),
             patch('aot.utils.timekit.utc_now', return_value=self.NOW),
             patch('aot.utils.timekit.resolve_coords', side_effect=self._coords),
-            patch('aot.utils.device_tz.resolve_location_tz_and_source',
-                  side_effect=lambda i: (_fake_tz(i), 'explicit')),
+            patch('aot.utils.timekit.tz_of', side_effect=_fake_tz),
         ]
         for p in self._patches:
             p.start()
@@ -265,6 +269,57 @@ class TestPlaceFromScreenAndDefault(_Fixture):
         self.assertEqual(r['answered_for']['basis'], 'default')
         self.assertNotIn('screen ambiguous', r['note'])
         self.assertNotIn('attribution', r)   # 출처는 화면이 표시한다
+
+    # ── 열린 창이 없을 때: 보이는 지도가 비추는 대지(2026-11-09 — 김제를 보는데 영양으로 답함)
+    def _map_rows(self, *views, dialog=None):
+        import json as _json
+        import time as _t
+        rows = []
+        for i, bounds in enumerate(views):
+            st = {'path': '/dashboard', 'visible_widgets': ['w-map'],
+                  'maps': [{'widget_id': 'w-map', 'view': {'bounds': bounds, 'zoom': 15}}]}
+            if dialog:
+                st['dialog'] = dialog
+            rows.append({'client_state': _json.dumps(st), 'client_at': _t.time() - 2,
+                         'browser_key': 'b%d' % i})
+        return rows
+
+    def _run_map(self, *views, dialog=None, item=None):
+        rows = self._map_rows(*views, dialog=dialog)
+        self.default = _SPOTS['site-yeongyang']      # 농장 기본 좌표 = 영양
+        with patch('aot.utils.web_presence.recent', return_value=rows), \
+                patch.object(S, '_screen_open_item', return_value=item):
+            return S.get_weather_forecast(user_id='u1')
+
+    _GIMJE_VIEW = [126.879, 35.799, 126.883, 35.803]
+
+    def test_map_looking_at_a_site_beats_the_farm_default(self):
+        r = self._run_map(self._GIMJE_VIEW)
+        self.assertEqual(r['answered_for']['basis'], 'screen')
+        self.assertEqual(r['answered_for']['name'], '김제 농장')
+        self.assertEqual(self.calls[0]['lat'], 35.80)
+
+    def test_map_center_decides_when_the_frame_touches_two_sites(self):
+        # 가운데는 김제 안, 범위 북동쪽 끝이 영양까지 걸친다
+        r = self._run_map([124.651, 34.931, 129.111, 36.671])
+        self.assertEqual(r['answered_for']['name'], '김제 농장')
+        self.assertEqual(r['answered_for']['basis'], 'screen')
+
+    def test_wide_map_over_several_sites_does_not_guess(self):
+        r = self._run_map([120.0, 30.0, 135.0, 40.0])
+        self.assertEqual(r['answered_for']['basis'], 'default')
+        self.assertEqual(self.calls[0]['lat'], 36.67)
+
+    def test_screens_on_different_sites_are_ambiguous(self):
+        r = self._run_map(self._GIMJE_VIEW, [129.109, 36.669, 129.113, 36.673])
+        self.assertEqual(r['answered_for']['basis'], 'default')
+        self.assertIn('screen ambiguous', r['note'])
+
+    def test_open_window_beats_the_map_view(self):
+        r = self._run_map(self._GIMJE_VIEW, dialog='영양 농장 (map)',
+                          item={'kind': 'site', 'name': '영양 농장', 'id': 'site-yeongyang'})
+        self.assertEqual(r['answered_for']['name'], '영양 농장')
+        self.assertEqual(r['answered_for']['basis'], 'screen')
 
     def test_no_user_id_skips_the_screen_step(self):
         with patch('aot.utils.web_presence.recent',

@@ -10,8 +10,8 @@ The default location shown when the map widget and design tool first open.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Latitude | 37.5665 | Center of Seoul |
-| Longitude | 126.9780 | Center of Seoul |
+| Latitude | Not set | Empty until you enter or capture a location |
+| Longitude | Not set | Empty until you enter or capture a location |
 | Zoom Level | 12 | Initial zoom (smaller = wider area, larger = closer in) |
 
 Move the map to the location and zoom you want, then click **Get Location** on the **Current View** row to fill the three fields from the current map view.
@@ -97,7 +97,7 @@ GET /api/geo/settings
 
 Returns the current global settings as JSON. It requires the Edit Settings permission; without it the request is refused.
 
-The response is `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "search_provider": "..."}`. `saved_state` carries the stored settings — note that the default start zoom comes back as `zoom` — along with the saved map provider keys.
+The response is `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "terrain_available": false, "search_provider": "..."}`. `saved_state` carries the stored settings — note that the default start zoom comes back as `zoom` — along with the saved map provider keys.
 
 ```http
 POST /api/geo/settings

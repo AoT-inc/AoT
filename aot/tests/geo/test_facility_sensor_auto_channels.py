@@ -36,7 +36,7 @@ temp1f~temp6f 를 한꺼번에 내보내는 기상 콘솔)에서 전부 끌어�
 """
 import pytest
 
-from aot.aot_flask.geo import facility_integration as fi
+from aot.space import facility_integration as fi
 
 
 class _DM:

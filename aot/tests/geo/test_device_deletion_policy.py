@@ -26,7 +26,7 @@ import unittest
 from flask import Flask
 
 from aot.aot_flask.extensions import db
-from aot.aot_flask.geo import device_binding as B
+from aot.space import device_binding as B
 from aot.databases.geo_integrity_ddl import apply_binding
 from aot.databases.models import GeoBinding, GeoMap, GeoShape, Output
 
@@ -299,11 +299,9 @@ class TestDeletionKeepsAssets(unittest.TestCase):
         GeoMap(unique_id=MAP, name='삭제 정책 검증', category='design').save()
         Output(unique_id=DEV, name='밸브').save()
 
-        self.marker = GeoShape(geo_id=MAP, type='aot_device', device_id=DEV,
-                               channel_id='0', feature={})
+        self.marker = GeoShape(geo_id=MAP, type='aot_device', channel_id='0', feature={})
         self.marker.save()
-        self.area = GeoShape(geo_id=MAP, type='device', device_id=DEV,
-                             channel_id='0', feature={})
+        self.area = GeoShape(geo_id=MAP, type='device', channel_id='0', feature={})
         self.area.save()
 
         B.bind('shape', self.marker.unique_id, 'marker', 'output', DEV,
@@ -345,8 +343,7 @@ class TestDeletionKeepsAssets(unittest.TestCase):
     def test_other_devices_are_untouched(self):
         other = 'dev-other-0002'
         Output(unique_id=other, name='다른 밸브').save()
-        shape = GeoShape(geo_id=MAP, type='device', device_id=other,
-                         channel_id='0', feature={})
+        shape = GeoShape(geo_id=MAP, type='device', channel_id='0', feature={})
         shape.save()
         B.bind('shape', shape.unique_id, 'area', 'output', other, commit=True)
 
@@ -354,18 +351,17 @@ class TestDeletionKeepsAssets(unittest.TestCase):
         self.assertIsNotNone(B.current_one('shape', shape.unique_id,
                                            role='area'))
 
-    def test_legacy_marker_without_binding_is_still_removed(self):
-        """바인딩 없이 컬럼만 가진 마커도 정리한다.
+    def test_legacy_marker_without_binding_is_left_alone(self):
+        """L4(C-4): 바인딩 없이 컬럼만 가진 마커는 장치 삭제가 건드리지 않는다.
 
-        백필이 죽은 참조에 바인딩을 만들지 않았고 쓰기 전환도 진행 중이라
-        이런 마커가 남아 있다. 바인딩만 보면 영원히 정리되지 않는다.
+        p7_05 가 살아 있는 장치의 마커를 바인딩으로 옮겼고, 남은 것은 죽은
+        참조라 장치 삭제의 대상이 아니다. 컬럼을 근거로 지우지 않는다.
         """
-        legacy = GeoShape(geo_id=MAP, type='aot_device', device_id=DEV,
-                          channel_id='7', feature={})
+        legacy = GeoShape(geo_id=MAP, type='aot_device', channel_id='7', feature={})
         legacy.save()
         uid = legacy.unique_id
         B.end_all_for_device(DEV, commit=True)
-        self.assertIsNone(GeoShape.query.filter_by(unique_id=uid).first())
+        self.assertIsNotNone(GeoShape.query.filter_by(unique_id=uid).first())
 
     def test_unknown_device_is_a_no_op(self):
         self.assertEqual(B.end_all_for_device('dev-nope'), 0)

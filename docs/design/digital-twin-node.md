@@ -2,8 +2,8 @@
 
 - 상태: **배포형 별도 서비스(S2, 2026-10-21)** + 노지 모델(물 수지 + EnKF) + 앞날 예보 입력. 시설 모델(그레이박스·UKF)은 아직 더미다. 배포형 전환 제안: `AoT_dev/plans/2026-10-21_twin_deploy_proposal.md`
 - 상위: `AoT_dev/plans/2026-10-19_digital_twin_plan.md` §4 · 출력 계약: `docs/design/digital-twin.md`
-- 정책(2026-10-21 개정): 공개 main 에 들어가는 '준비 중' 기능. 설정 > 일반 > 디지털트윈 (실험) 토글(기본 꺼짐)로 켜고, 데몬과 분리된 별도 서비스로 돈다. 낮은 사양 기기는 잠근다. (10-19 의 "비공개·main 병합 금지" 는 폐기)
-- 코드: `aot/twin/` · 시험: `aot/twin/tests/`, `aot/tests/test_twin_discovery_db.py` · 배포: compose `aot_twin`(profile `twin`), `install/aottwin.service`, 개발용 `docker/docker-compose.twin-nas.yml`
+- 정책(2026-10-21 개정): 공개 main 에 들어가는 '준비 중' 기능. 설정 > 일반 > 디지털트윈 (실험) 토글(기본 꺼짐)로 켜고, 데몬과 분리된 별도 서비스로 돈다. 서비스는 기본 구성에 항상 들어 있어 대기하고 토글이 실제 구동 스위치다(2026-11). 낮은 사양 기기(파이 모델·기기 메모리)는 잠그고 서비스는 `locked` 를 쓴 뒤 정상 종료한다. (10-19 의 "비공개·main 병합 금지" 는 폐기)
+- 코드: `aot/twin/` · 시험: `aot/twin/tests/`, `aot/tests/test_twin_discovery_db.py` · 배포: compose `aot_twin`(배포 compose 는 profile 없음, 개발용만 profile `twin`), `install/aottwin.service`, 개발용 `docker/docker-compose.twin-nas.yml`
 
 ## 1. 구조
 
@@ -58,11 +58,12 @@
 
 | 방식 | 파일 | 기동 |
 |---|---|---|
-| **배포형 서비스(기본)** — Docker | `docker/docker-compose.yml`·`docker-compose.prod.yml` 의 `aot_twin` (profile `twin`, 기본 꺼짐, 메모리 768 MB, `unless-stopped`) | `.env` 에 `COMPOSE_PROFILES=twin` → `up -d` → 설정 > 일반 토글 |
-| **배포형 서비스(기본)** — 직접 설치 | `install/aottwin.service` (`aotmcp.service` 와 같은 모양, 기본 비활성, `MemoryMax=768M`) | `upgrade_commands.sh install-aottwin` → 설정 > 일반 토글. 업그레이드 때 `restart-aottwin`(켠 기기만) |
+| **배포형 서비스(기본)** — Docker 배포 | `docker/docker-compose.prod.yml` 의 `aot_twin` (**profile 없음 — 기본 스택에 항상 포함**, 메모리 768 MB, `restart: unless-stopped`) | 기본 `up -d` 로 함께 뜨고 대기(꺼진 상태 약 94 MiB, 켜진 상태 약 174 MiB) → 설정 > 일반 토글이 구동 스위치. 업데이터(`AOT_UPDATE_SERVICES`)도 함께 재생성 |
+| 개발용 Docker | `docker/docker-compose.yml` 의 `aot_twin` (profile `twin` 유지 — 사본 스택 메모리를 늘리지 않으려고) | `docker compose --profile twin up -d` |
+| **배포형 서비스(기본)** — 직접 설치 | `install/aottwin.service` (`aotmcp.service` 와 같은 모양, `Restart=on-failure`, `MemoryMax=768M`) | 설치(`setup.sh`·`setup_unattended.sh`)와 업그레이드(`upgrade_post.sh`)가 `upgrade_commands.sh install-aottwin` 으로 항상 설치·활성화 → 설정 > 일반 토글 |
 | 개발용 JSON 노드 — NAS 원격 | `docker/docker-compose.twin-nas.yml` + `docker/twin/nas-dev.json` | 아래 §3.1 (`--config` 경로, 수신 API 필요 — **2026-10-24 수신 API 폐기, 원격 쓰기 비활성**) |
 
-모두 profile `twin` 이라 기본 `up` 에는 안 뜬다(`docker compose config --services` 로 확인함). 진입점은 하나(`python -m aot.twin`)다: `--config`/`$AOT_TWIN_CONFIG` 가 있으면 개발용 JSON 노드, 없으면 배포형 서비스(§3.4).
+개발용·NAS 노드 compose 는 profile `twin` 이라 기본 `up` 에는 안 뜬다. 배포 compose 는 `docker compose config --services` 에 `aot_twin` 이 들어 있다. 진입점은 하나(`python -m aot.twin`)다: `--config`/`$AOT_TWIN_CONFIG` 가 있으면 개발용 JSON 노드, 없으면 배포형 서비스(§3.4).
 
 ### 3.1 NAS 에서 개발서버(로컬 8084)에 붙이기 — **사용자 확인 후에만 기동**
 
@@ -113,7 +114,7 @@ docker compose -f docker-compose.twin-nas.yml --profile twin up -d              
                  실행: 내장 통로(로컬 Influx 읽기 · env_twin* 일괄 쓰기 write_influxdb_points)
 ```
 
-- **전역 설정은 S1 의 정본을 쓴다**(`aot/utils/twin_gate.py`, alembic p6_90): `twin_enabled()`(플래그 AND 안 잠김)·`twin_supported()`(설정 화면·저장 경로와 같은 잠금 판정 = 이중 잠금: `HARDWARE_PROFILE=LOW`·작은 파이·메모리 3.5 GB 미만, `AOT_TWIN_IGNORE_PROFILE=1` 이면 프로파일 항목만 건너뜀)·`run_times()`·`write_heartbeat()`. 모듈이 없으면 꺼짐·잠금. twin_gate 는 앱 문맥 없이 돈다 — 잠긴 기기에서는 flask 앱을 올리지 않는다(계획을 만들 때만 앱을 만든다).
+- **전역 설정은 S1 의 정본을 쓴다**(`aot/utils/twin_gate.py`, alembic p6_90): `twin_enabled()`(플래그 AND 안 잠김)·`twin_supported()`(설정 화면·저장 경로와 같은 잠금 판정 = 이중 잠금: 작은 파이·메모리 3.5 GB 미만뿐 — 기기 고정값이다. `HARDWARE_PROFILE=LOW` 잠금과 이를 푸는 옵션은 서버를 기본 포함하며 걷어 냈다. `misc.twin_ignore_profile` 열은 되돌리기 안전하도록 남았고 쓰지 않는다)·`run_times()`·`write_heartbeat()`. 모듈이 없으면 꺼짐·잠금. twin_gate 는 앱 문맥 없이 돈다 — 잠긴 기기에서는 flask 앱을 올리지 않는다(계획을 만들 때만 앱을 만든다).
 - **하트비트** `Misc.twin_heartbeat` = `{at, status, version, sites, plots, last_run_at, failures, locked_reason}` — `at`·`last_run_at` 은 ISO UTC(서비스 안에서는 epoch 초로 들고 `DbGate` 가 바꾼다), `status` ∈ running(켜짐 — 대기·계산 모두)·idle(꺼짐)·locked·error(마지막 회차 실패), `failures` = 대지별 마지막 회차의 실패 대상 수 합. 꺼져 있거나 잠겨 있어도 60 초마다(상태가 바뀌면 바로) — 화면은 180 초 넘게 낡으면 "실행 중이 아님".
 - **자동 포함**: 대지(지도의 site 도형, 대지 밖 구획은 지도 하나 = `map:<지도 id>`) 안의 지금 재배 중인 노지 식생 구획(지도와 같은 `plot_context.active_plots`, 시설 구획 제외). `planted_on` = 구획 시작일, `timezone` = 대지 시간대, `lat` = 구획 대표점.
 - **예보 사다리 자동**: 사람이 고르는 것은 예보 입력 id 하나(`forecast.input`). 입력 모듈이 채널마다 `forecast_lead_d`·`daily_stat` 을 밝히면(`OPEN_METEO_DAILY_FORECAST` 가 그렇게 한다) `(측정, 일 통계)` → 묶음(rain·et0·t_max·t_min)으로 사다리를 만든다. 꺼진 채널은 빈 리드, 사용자가 단위를 바꾼 묶음은 쓰지 않는다(모델은 mm·°C). 제공자·지역 이름은 보지 않는다.
@@ -208,3 +209,11 @@ docker compose -f docker-compose.twin-nas.yml --profile twin up -d              
 - **비용** (M1, 합성 쌍둥이 자료): 동기화 48 h@120 s 약 3 s, 멤버 50 × 48 h 예측 포함 약 12 s. NAS 는 약 2.8 배(벤치 §9.2 비율).
 - **전망 외기 (예보 단일 출처 3단계)**: `options.forecast_series.site`(대지 uuid)가 있으면 그 대지에 지정된 예보 입력의 시간별 시계열을 소스의 `read_forecast` 로 읽는다(원격: `GET /api/twin/forecast_series`, 내장: `geo.forecast_series.read` — 앱 컨텍스트 필요, 시설 대상이 DB 계획에 아직 없어 후속). 순간 값(기온·습도·풍속)은 직선 보간, 칸 값(일사)은 계단. 지평 밖·없는 변수·지정 없음·낡음은 일주기 지속으로 메우고(`degraded`, 이유는 `reason`) 머리말 `weather_src` 는 5(예보 사용)/4(지속만). 읽기 실패는 예보 없음과 같다(원칙 1). `RunResult.info["forecast"]` 에 출처·지평·변수별 예보 비율.
 - **아직 없는 것**: 예보 지평 7일(입력이 48 h — 서버 쪽 확장 결정 대기), 노지 트윈의 예보 연결(일 사다리 → 같은 시계열), 정책 포함 폐루프, 영양·kumamoto 대상 표.
+
+## 9. 기본 포함·대기 (2026-11, 브랜치 `claude/twin-standby`)
+
+- **왜**: 배포판의 일반 사용자는 설정 > 일반 토글만 볼 수 있어 서버를 띄울 방법이 없었고, 기본값 `HARDWARE_PROFILE=LOW` 가 토글까지 잠갔다. 앱에 Docker 소켓을 주는 방식과 업데이터에 기대는 방식은 쓰지 않는다(`docker-compose.updater.yml` 머리말).
+- **서버는 항상 떠 있다**: 배포 compose 는 profile 을 뺐고 직접 설치는 설치·업그레이드마다 `install-aottwin`. 꺼져 있는 동안 서비스는 flask 앱을 올리지 않고 플래그만 `poll_s`(60 초)마다 본다(`aot/twin/service.py`) — 8084 실측 꺼진 상태 최고 약 94 MiB, 켜진 상태 약 174 MiB.
+- **잠금은 기기 고정값**(파이 Zero·1·2·3, 기기 메모리 3.5 GB 미만): 잠긴 서비스는 하트비트 `locked` 를 쓴 뒤 `serve()` 가 돌아오고, 프로세스는 **직접 설치면 exit 0**(systemd `Restart=on-failure` 가 되살리지 않고 부팅 때는 enable 된 유닛이 다시 뜬다), **Docker 면 `sleep infinity` 로 바뀐다**(`aot/twin/__main__.py` `park_if_locked`, `is_docker()` 판정). Docker 의 `on-failure` 는 "데몬이 재시작하면 컨테이너를 다시 띄우지 않는다"(공식 문서)라 정전·재부팅 뒤 트윈이 안 돌아오므로 compose 는 `unless-stopped` 이고, 그러면 exit 0 도 되살아나 잠금 판정을 무한 반복하므로 종료하는 대신 대기한다(python:3.11-slim 에 `sleep infinity` 있음을 확인). `--once` 는 그대로다. 화면의 '잠김' 은 낡은 하트비트가 아니라 앱 쪽 `twin_supported()` 로만 판정한다(프로파일 잠금 시절에 남은 `locked` 하트비트가 지금은 supported 인 기기를 영원히 잠김으로 보이게 하지 않도록).
+- **토글 화면**: 토글 아래 상태 한 줄 `잠김 / 꺼짐 / 시작 중 / 실행 중 / 응답 없음` (`utils_settings.twin_service_state`, 새 DB 칸 없음). 플래그 꺼짐 = 꺼짐, 켜짐 + 하트비트 없음·낡음 = 응답 없음, 켜짐 + 신선 + 하트비트 status `idle`(플래그를 아직 못 봄) = 시작 중, status `running`·`error` = 실행 중. 시작 중·응답 없음에서는 화면이 `/settings/twin/state` 를 다시 물어 새로 고침 없이 바뀐다(깨우는 신호는 없다 — 켠 뒤 최대 약 60 초).
+- **기존 설치**: 구버전 compose(profile 있음)를 쓰는 설치는 응답 없음에서 안내하는 한 줄을 한 번 실행한다 — Docker `docker compose -f docker/docker-compose.prod.yml up -d aot_twin`(옛·새 compose 양쪽에서 동작, 명시한 서비스는 profile 이 있어도 뜬다), 직접 설치 `sudo <설치 경로>/aot/scripts/upgrade_commands.sh install-aottwin`. 새 compose 로 바꾼 뒤의 `up -d` 와 업데이터는 알아서 띄운다.

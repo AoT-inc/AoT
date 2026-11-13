@@ -1,0 +1,168 @@
+{# TP-Link VIGI 설정 구획 5(이벤트)·6(트리거로 쓰기) (설계 §9.2). 그리기는 vigiEventsRender()(아래)가 한다.
+   vigiRender()(camera.html)가 상태를 받을 때마다 vigiEventsRender 를 부른다. #}
+{% set uid = each_camera.unique_id %}
+<div class="aot-vigi-events" data-vigi-events-uid="{{ uid }}">
+  <div class="aot-modal-group-title">{{ _('Events') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Receive events') }}</label>
+      <div class="aot-modal-option-control">
+        <label class="btn-toggle mb-0">
+          <input type="checkbox" class="btn-toggle-input" id="vigi_ev_enabled_{{ uid }}" onchange="vigiEventsSave('{{ uid }}')">
+          <div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div>
+        </label>
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Subscription') }}</label>
+      <div class="aot-modal-option-control"><span class="aot-status-badge" id="vigi_ev_state_{{ uid }}"></span></div>
+    </div>
+    <div class="aot-option-tip" id="vigi_ev_note_{{ uid }}"></div>
+    <div id="vigi_ev_kinds_{{ uid }}"></div>
+    <div class="aot-option-tip" id="vigi_ev_nokinds_{{ uid }}" hidden>{{ _('Read the features first to choose event kinds.') }}</div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Recent events') }}</label>
+      <div class="aot-modal-option-control"><span id="vigi_ev_recent_{{ uid }}"></span></div>
+    </div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Use as trigger') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Trigger') }}</label>
+      <div class="aot-modal-option-control">
+        <a class="btn aot-pill-btn aot-pill-btn-secondary" href="{{ url_for('routes_function.page_function', prefill_camera=uid) }}">{{ _('Create an action from this camera\'s events') }}</a>
+      </div>
+    </div>
+    <div class="aot-option-tip">{{ _('Opens the Function page. Add a Trigger: Camera Event there; this camera is selected for you.') }}</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var T = {
+    states: {
+      off: {{ _("Off")|tojson }}, connecting: {{ _("Connecting")|tojson }},
+      subscribed: {{ _("Connected")|tojson }}, backoff: {{ _("Reconnecting")|tojson }},
+      stopped_auth: {{ _("Stopped: authentication")|tojson }}, stopped_limit: {{ _("Waiting: camera has too many clients")|tojson }}
+    },
+    authStopTip: {{ _("Fix the connection above, then press Reconnect. Events are not retried automatically after an authentication failure.")|tojson }},
+    gap: {{ _("No events were received for %(n)s minutes.", n="%(n)s")|tojson }},
+    skew: {{ _("The camera clock does not match (%(n)s seconds apart).", n="%(n)s")|tojson }},
+    rate: {{ _("Too many events: some were recorded but not run.")|tojson }},
+    dispatch: {
+      dispatched: {{ _("Trigger run requested")|tojson }}, dispatch_error: {{ _("Trigger run failed")|tojson }},
+      suppressed_cooldown: {{ _("Skipped (re-fire interval)")|tojson }}, suppressed_rate: {{ _("Skipped (too many)")|tojson }},
+      none: ''
+    },
+    none: {{ _("No events yet")|tojson }},
+    pushOff: {{ _("Notifications for this detection are off on the camera, so it cannot be received.")|tojson }},
+    pushBtn: {{ _("Turn on notifications")|tojson }},
+    detOff: {{ _("Turn this detection on in the camera web page first.")|tojson }},
+    pushOk: {{ _("Notifications are on")|tojson }}, pushFail: {{ _("Could not confirm that notifications are on")|tojson }},
+    saveFail: {{ _("Could not save")|tojson }}
+  };
+  var sw = {};   // uid -> {kind: {enabled, msg_push_enabled}}
+  function fmt(s, n) { return s.replace(/%\(n\)s/, n); }
+
+  window.vigiEventsRender = function(uid, d) {
+    d = d || {};
+    var $box = $('[data-vigi-events-uid="' + uid + '"]');
+    if (!$box.length) return;
+    var st = d.event_state || 'off', ok = d.auth_state === 'ok';
+    $('#vigi_ev_enabled_' + uid).prop('checked', !!d.events_enabled).prop('disabled', !ok);
+    $('#vigi_ev_state_' + uid).text(T.states[st] || st);
+    var note = d.event_note || '', tip = '';
+    var m;
+    if (st === 'stopped_auth') tip = T.authStopTip;
+    else if ((m = /^gap_s=(\d+)/.exec(note))) tip = fmt(T.gap, Math.max(1, Math.round(m[1] / 60)));
+    else if ((m = /^camera_clock_skew_s=(-?\d+)/.exec(note))) tip = fmt(T.skew, m[1]);
+    else if (note === 'dispatch_rate_limited') tip = T.rate;
+    $('#vigi_ev_note_' + uid).text(tip);
+    var kinds = ((d.capabilities || {}).features || []).filter(function(f) { return f.indexOf('event.') === 0 && f.indexOf('event.enhance') !== 0; })
+      .map(function(f) { return f.slice(6); });
+    var chosen = d.event_kinds || kinds;      // 비어 있으면 지원하는 종류 전부
+    var $k = $('#vigi_ev_kinds_' + uid).empty();
+    $('#vigi_ev_nokinds_' + uid).prop('hidden', kinds.length > 0);
+    var s = sw[uid] || {};
+    kinds.forEach(function(k) {
+      var on = chosen.indexOf(k) >= 0;
+      var $row = $('<div class="aot-modal-option-row"></div>');
+      $row.append($('<label class="aot-modal-option-label"></label>').text(k));
+      var $c = $('<div class="aot-modal-option-control"></div>');
+      var $lab = $('<label class="btn-toggle mb-0"><input type="checkbox" class="btn-toggle-input vigi-ev-kind"><div class="btn-toggle-slider"><div class="btn-toggle-thumb"></div></div></label>');
+      $lab.find('input').attr('data-kind', k).prop('checked', on).prop('disabled', !ok)
+        .on('change', function() { vigiEventsSave(uid); });
+      $c.append($lab);
+      $row.append($c);
+      $k.append($row);
+      var sk = s[k];
+      if (sk && !sk.enabled) {
+        $k.append($('<div class="aot-option-tip"></div>').text(T.detOff));
+      } else if (sk && !sk.msg_push_enabled) {
+        var $t = $('<div class="aot-option-tip"></div>').text(T.pushOff + ' ');
+        $t.append($('<button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"></button>').text(T.pushBtn)
+          .on('click', function() { vigiPushOn(uid, k, $(this)); }));
+        $k.append($t);
+      }
+    });
+    var rec = d.recent_events || [];
+    var $r = $('#vigi_ev_recent_' + uid).empty();
+    if (!rec.length) { $r.text(T.none); }
+    rec.forEach(function(e) {
+      var when = new Date(e.received_at);
+      var line = e.kind + ' · ' + (isNaN(when) ? e.received_at : when.toLocaleString());
+      var ds = T.dispatch[e.dispatch_state];
+      if (ds) line += ' · ' + ds;
+      $r.append($('<div></div>').text(line));
+    });
+  };
+
+  window.vigiEventsSave = function(uid) {
+    var kinds = [];
+    $('#vigi_ev_kinds_' + uid + ' .vigi-ev-kind:checked').each(function() { kinds.push($(this).attr('data-kind')); });
+    var body = {enabled: $('#vigi_ev_enabled_' + uid).prop('checked')};
+    var all = $('#vigi_ev_kinds_' + uid + ' .vigi-ev-kind').length;
+    body.kinds = kinds.length === all ? [] : kinds;     // 전부 고르면 "지원하는 전부"(빈 목록)로 저장
+    $.ajax({type: 'POST', url: '/camera/driver/' + uid + '/events', data: JSON.stringify(body),
+            contentType: 'application/json'})
+      .done(function(r) { if (typeof vigiRender === 'function') vigiRender(uid, r.driver); })
+      .fail(function(xhr) {
+        if (window.showToast) window.showToast((xhr.responseJSON && xhr.responseJSON.message) || T.saveFail, 'error');
+      });
+  };
+
+  function vigiPushOn(uid, kind, $btn) {
+    $btn.prop('disabled', true);
+    $.ajax({type: 'POST', url: '/camera/driver/' + uid + '/control/msg_push_on',
+            data: JSON.stringify({kind: kind}), contentType: 'application/json'})
+      .done(function(r) {
+        // 카메라가 다시 읽어 확인했을 때만(accepted) "켜졌습니다"라고 말한다
+        var ok = r.status === 'success' && r.result && r.result.state === 'accepted';
+        if (window.showToast) window.showToast(ok ? T.pushOk : T.pushFail, ok ? 'success' : 'error');
+        loadSwitches(uid);
+      })
+      .fail(function(xhr) {
+        if (window.showToast) window.showToast((xhr.responseJSON && xhr.responseJSON.message) || T.pushFail, 'error');
+        $btn.prop('disabled', false);
+      });
+  }
+
+  function loadSwitches(uid) {
+    $.ajax({type: 'POST', url: '/camera/driver/' + uid + '/event_switches'}).done(function(r) {
+      if (r.status === 'success') { sw[uid] = (r.result || {}).data || {}; }
+      var init = document.getElementById('vigi_init_' + uid);
+      if (init && typeof vigiRender === 'function') {
+        $.getJSON('/camera/driver/' + uid + '/status').done(function(s) { vigiRender(uid, s.driver); });
+      }
+    });
+  }
+
+  // 모달이 열릴 때 한 번: 카메라 쪽 알림 상태를 읽는다(인증이 ok 일 때만 — 자격 증명은 더 가지 않는다)
+  $(function() {
+    var init = document.getElementById('vigi_init_{{ uid }}');
+    var d = init ? JSON.parse(init.textContent) : {};
+    if (d.auth_state === 'ok') { loadSwitches('{{ uid }}'); }
+  });
+})();
+</script>

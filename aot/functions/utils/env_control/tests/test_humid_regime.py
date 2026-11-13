@@ -397,7 +397,7 @@ class TestNearOrBelowTarget:
 
 def test_morning_drying_is_not_masked_by_the_average():
     """쿠마모토 10:11 — 외기가 빠르게 건조해지는 중에도 평균이 환기 판단을 40분 늦추지 않는다."""
-    from aot.functions.utils.env_control.psychro import svp
+    from aot.utils.psychro import svp
     sm = OutdoorSmoother()
     for i, (T, RH) in enumerate([(23.6, 82)] * 6 + [(25.2, 72)] * 4):   # 10분 간격 10건
         out = sm.smooth({'T_ext': T, 'RH_ext': RH}, i * 600.0)

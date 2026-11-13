@@ -48,20 +48,6 @@ class Conditional(FlaskForm):
     pyro_timeout = DecimalField(
         lazy_gettext("Timeout (sec)"),
         widget=NumberInput(step='any'))
-    latitude = DecimalField(
-        lazy_gettext('Latitude'),
-        places=8,
-        rounding=None,
-        validators=[validators.Optional(),
-                    validators.NumberRange(min=-90, max=90)],
-        widget=NumberInput(step='any'))
-    longitude = DecimalField(
-        lazy_gettext('Longitude'),
-        places=8,
-        rounding=None,
-        validators=[validators.Optional(),
-                    validators.NumberRange(min=-180, max=180)],
-        widget=NumberInput(step='any'))
     condition_type = SelectField(
         lazy_gettext('Condition Type'),
         choices=[('', lazy_gettext('Please select'))] + CONDITIONAL_CONDITIONS)

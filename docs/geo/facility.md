@@ -1,76 +1,75 @@
 # Facility Management
 
-The `/geo/facility` page is where you perform 3D modeling, engineering calculations, sensor/actuator binding, and device checks for buildings such as greenhouses, growing houses, and equipment rooms. Pick a step from the step bar at the top (**Basics · Position & Structure · Envelope · Equipment Layout · Connections · Plot · Review**) to configure it.
+The `/geo/facility` page is where you perform 3D modeling, engineering calculations, sensor/actuator binding, and device checks for buildings such as greenhouses, growing houses, and equipment rooms. The model fills the window; the facility's settings are one settings panel, opened with **Settings**, in six tabs: **Position · Structure · Envelope · Components · Connections · Review**.
 
 ---
 
 ## Screen Layout
 
 ```
-Facility Design · <facility name> · [Unsaved changes] · [Save Facility]        ← title bar
-[Basics] [Position & Structure] [Envelope] [Equipment Layout] [Connections] [Plot] [Review]   [3D | Map]
-├── Stage: 3D or Map (one at a time)
-│     3D  — 3D Preview header · placement tools on the left · 3D view
-│     Map — [Place on Map] · [Clear]
-└── Settings drawer: opens on the right, titled with the current step
-      settings for that step · [Previous] [Next] [Cancel] [Save Facility]
+Facility Design · [Back to map] · <facility name> <still to do> · [Unsaved changes] · [Save Facility]   ← title bar
+[Map | 3D]  Add [Select] [Openings] [Fixtures] [Irrigation] [Sensor]  [View: Direction · Perspective | Isometric · Show in 3D]  [Tools & Export] [Undo]  [Settings]   ← toolbar
+┌── Stage: 3D or Map (one at a time, as tall as the window) ──┐   ┌── Settings panel (right-hand drawer; the stage stays in view) ──┐
+│                                                              │   │  Position · Structure · Envelope · Components · Connections · Review │
+│                                                              │   │  (content of the selected tab)                                     │
+└── status line (what is selected · tool hints) ───────────────┘   │  [New Facility] [Duplicate Facility] [Save Facility]               │
+                                                                   └────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Title bar** — **Facility Design**, the name of the facility that is open, an **Unsaved changes** badge while there are unsaved edits, and **Save Facility**. Nothing is saved automatically: changes are stored only when you click **Save Facility**.
-- **Step bar** — clicking a step opens its settings drawer on the right; the current step is shown as a filled button. There are no "done" marks. A step that is still missing something required tells you what when you hover over it (**Enter a name**, **Select a map and place the facility on it**, **Nothing placed yet**, **Not saved yet**).
-- **3D | Map** — switches the stage on every step. **Position & Structure**, **Envelope** and **Equipment Layout** open on the map first, the other steps on 3D; a view you pick by hand is remembered per step for the session.
-- **Stage — 3D** — the **3D Preview** header holds **Show in 3D** (display filter), **High Quality** / **Fast Preview** (rendering quality toggle), **Undo** and **Tools & Export** (Asset Library · Export PNG/Spec/GLB · Import Spec/GLB · Refresh). To the left of the 3D view are the placement tools: **Select**, **Openings**, **Fixtures**, **Irrigation**, **+ Sensor**, **Catalog**.
+- **Title bar** — **Facility Design**, **Back to map**, the name of the facility that is open with tags for what is **still to do** beside it, an **Unsaved changes** badge and **Save Facility**. The tags are not buttons and name only what is left: **Position to do** (a name, the map or the placement is missing) and **Not connected 3** (components with no device yet). Nothing is said about what is done, so the tags disappear once everything is filled in. Hovering **Position to do** says what is missing (**Enter a name**, **Select a map and place the facility on it**). Dimensions, plan, structure, position and envelope are stored only when you click **Save Facility**. On a saved facility, changes to components and to the **Connections** settings are saved by themselves about 1.5 seconds after you stop editing; the title bar then shows **Saved HH:MM**.
+- **Toolbar** — one line above the model. **Settings** at its right end opens the settings panel. **Map | 3D** switches the stage; **Position** opens on the map, the other tabs on 3D, and a view you pick by hand is remembered per tab for the session. On the map: **Clear placement** and **Place on Map**. In 3D: the add tools (**Select**, **Openings**, **Fixtures**, **Irrigation**, **Sensor**; **Fixtures › From the map…** adds components from what is drawn on the map), the **View** menu (**Direction** — the nine preset views, **Perspective | Isometric**, and **Show in 3D** — hide or show each kind in the model; when something is hidden, the count follows **View**), **Tools & Export** (Asset Library · Export PNG/Spec/GLB · Import Spec/GLB · High Quality / Fast Preview · **Rebuild 3D model**) and **Undo**. When the settings panel leaves the stage narrow, **Undo** moves to the top of the **Show more** (= **Tools & Export**) menu so the toolbar stays on one line.
+- **Stage — 3D** — the model fills the window down to the bottom and the page does not scroll. Nothing is laid over the model. The status line at the very bottom shows what is selected, the tool that is armed and how to finish it, and the mouse controls.
 - **Stage — Map** — click **Place on Map**, then click the facility center on the map. Drag the placed facility to move it; dimensions and rotation update the rectangle as you type.
-- **Settings drawer** — pushes the page aside instead of covering it, so you can watch the 3D view or map change while you edit. On a phone it opens as a sheet under the model, and **Hide model** gives the form the whole screen.
+- **Settings panel** — **Settings** slides it in from the right like a drawer; while it is open the stage stays visible and usable, so you change a value while watching the model. Clicking a component in 3D opens it too, and a new facility starts with it open. **Close** leaves the stage alone. At its top the six tabs sit in one row and only the selected tab's content shows; the tab row stays at the top while the content scrolls, and the arrow keys move between tabs. **Saved Facilities** is a button in the panel header, left of **Close**: it shows the list at the panel's full height, opened at the facility being edited, and pressing it again, or picking a facility, returns to the tab you came from.
+- **Components tab** — lists every component by type; rows without a device are tagged **No device** or **No input**. Pick a type next to **Add** above the list to add one at a default position. Selecting a row selects that component in 3D. Components generated together (the roof vents of every span, sharing one device) fold into one row such as **Roof vent ×6**; picking a device on that row applies it to the whole group, and clicking the row unfolds it to show each member. A member detached to use its own device is marked **detached** in the unfolded list and is not changed by the group's choice. A group in which every member uses its own device (the left and right side windows, for example) is not folded.
+- **Selected component** — selecting one in 3D or in the **Components** tab turns the panel into that component (name, device, position, size, rotation, opening method, delete); **Back to facility** returns. The **Connections** and **Review** tabs cannot be pressed until the facility is saved, and one line right under the tab row says so.
+- **On a phone** — view and small edits only. There is no title bar: one line under the menu holds **Back to map**, **Map | 3D** and **Settings** (the add tools, view menu, map placement and status line are left out), and the open facility's name is the settings panel's title. With the panel closed the model fills the screen; **Settings** opens the same panel covering the screen, and pulling its handle at the top drops it down so the model shows. While it is down the buttons on the line above still work, and **Settings** raises it again. The panel starts with **Placement and plan editing are on a wider screen.** and shows only the tabs **Position**, **Structure** (numbers and switches), **Envelope** and **Components** (**Connections** and **Review** are not shown), or, for a component picked in 3D or the list, its name and device. Progress is one line such as **3/4 steps · Not connected 2**.
 
-What each step's drawer holds:
+What each tab holds:
 
-| Step | Drawer contents |
+| Tab | Contents |
 |------|-----------------|
-| **Basics** | **Saved Facilities** (list · **+ New Facility** · **Duplicate Facility** · Delete), **Specification** (Name · Groups that can operate this facility · Preset · Span · Eave Height · Ridge Height · Length · Roof Type) |
-| **Position & Structure** | **Map & Site** (Map · Site), **Position & Structure** (Structure · Bays · Spacing · Zones · Rotation) |
-| **Envelope** | **Covering & Ventilation** (covering layers · Outer side vent · Outer roof vent), **Curtains** (Ceiling thermal curtain · Wall thermal curtain · Shade curtain) |
-| **Equipment Layout** | **Add Component**, the **Components** table (one tab per type; selecting a row opens its 3D placement right below it), **Places with no device** (only when a device was deleted but its component stayed) |
-| **Connections** | **Weather** (forecast Inputs), **Groups** (leader/follower groups of same-kind actuators), **Label Color** (color ranges per measurement item) |
-| **Plot** | What is grown in each zone — facility plots need no drawing; the zone itself is the location |
-| **Review** | **Capacity Preview**, **IEC Integration Summary**, **Device Check** — the last two are available once the facility is saved |
+| **Saved Facilities** (button in the header) | the list (select to open · Delete) — **New Facility** and **Duplicate Facility** are at the bottom of the column |
+| **Position** | **Map & Site** (Name · Map · Site), **Position** (Rotation) |
+| **Structure** | **Structure** (Structure · plan · Bays · Spacing · Zones), **Specification** (Groups that can operate this facility · Preset · Span · Eave Height · Ridge Height · Length · Roof Type), **Capacity Preview**, **Zones** (the zones of the plan, when one is drawn) |
+| **Envelope** | **Covering & Ventilation**, **Curtains** |
+| **Components** | the component list and **Add**, **Irrigation** (auto-generate pipes, irrigation devices and valves) — **Auto-generate…** in the toolbar's Irrigation menu opens this tab |
+| **Connections** | **Weather** (forecast Inputs), **Groups** (leader/follower groups of same-kind actuators), **Label Color** (color ranges per measurement item) — available once the facility is saved |
+| **Review** | **Device Check**, **IEC Integration Summary**, and the link line to the Plots page — available once the facility is saved |
+
+What is grown in each zone is recorded on the Plots page, not here — the last line of the **Review** tab links to it.
 
 ---
 
 ## Facility Registration Flow { #facility-registration-flow }
 
 ```
-Open /geo/facility  (Facility Design › Open in the Facility settings of /geo/design, or the address directly)
+Open /geo/facility  (Facility Design › Open in the Facility settings of /geo/design, a facility on the map, or the address directly)
          ↓
-Basics › + New Facility → Name and Specification
+Position › Name · Map (Site is optional) → Place on Map → click the facility center on the map · Rotation
          ↓
-Position & Structure › pick a Map (Site is optional) → Place on Map → click the facility center on the map
-                       → Structure · Bays · Rotation
+Structure › structure, dimensions, roof → Envelope › covering, vents and curtains → check it in 3D
          ↓
-Envelope › covering, vents and curtains → check it in 3D
+Toolbar › place sensors and actuators on the model → select each one → connect its device in the settings panel
          ↓
-Equipment Layout › place sensors and actuators and connect their devices
+Save Facility
          ↓
-Connections › weather services, actuator groups, label colors
-         ↓
-Plot › record what is in each zone
-         ↓
-Save Facility → Review › Device Check
+Connections › weather services, actuator groups, label colors → Review › Device Check
 ```
 
 - A facility is created on this page, by **Save Facility** — you do not draw it in `/geo/design` first. Saving also puts the facility's outline on the selected map.
-- Opened without a facility, the page starts on a blank new facility with the **Basics** drawer open. Saved facilities are opened from the **Saved Facilities** list; the address then carries `?facility_uuid=`, so a reload or bookmark reopens the same one.
-- Saving needs a map and a placement — without **Place on Map** the save is refused. The name can be left empty, but the **Basics** step keeps saying **Enter a name**.
+- Opened without a facility, the page starts on a blank new facility with the **Position** tab open on the map. Opened from a map, that map is already selected. Saved facilities are opened from the **Saved Facilities** list; the address then carries `?facility_uuid=`, so a reload or bookmark reopens the same one.
+- Saving needs a map and a placement — without **Place on Map** the save is refused. The name can be left empty, but the **Position to do** tag in the title bar keeps saying **Enter a name**.
 - **Duplicate Facility** copies the facility that is open; its connected sensors and outputs are not carried over.
-- **IEC Integration Summary** and **Device Check** in **Review** work only after the facility has been saved.
+- The **Connections** and **Review** tabs — and with them **IEC Integration Summary** and **Device Check** — work only after the facility has been saved.
 
 ---
 
 ## Envelope Configuration
 
-The building's shape is set in two earlier steps — dimensions in **Basics › Specification**, structure, bays and rotation in **Position & Structure** — and its skin in the **Envelope** step. All of it feeds the heating/cooling load calculation and the 3D model, which follows each change as you make it.
+The building's shape and skin are set in the **Structure** and **Envelope** tabs — structure, bays and plan under **Structure › Structure**, dimensions under **Structure › Specification**, then **Envelope › Covering & Ventilation** and **Envelope › Curtains**; its rotation is under **Position**. All of it feeds the heating/cooling load calculation and the 3D model, which follows each change as you make it.
 
-What the **Envelope** step holds:
+What the **Envelope** tab holds about the skin:
 
 - **Covering & Ventilation**
     - **Outer (full)** — the outer covering; it is always there, you only pick its material.
@@ -84,11 +83,11 @@ What the **Envelope** step holds:
     - **Wall thermal curtain** (toggle) — follows the side-vent stages.
     - **Shade curtain** (toggle) — **Transmittance**: the fraction of light that passes when fully closed (0.30 lets three tenths through). Left empty, 0.50 is assumed.
 
-Vents and curtains switched on here appear in the **Equipment Layout** step's **Components** table as rows marked **From envelope**, where you connect the actuators that drive them.
+Vents and curtains switched on here appear as components marked **From envelope** — in the settings panel's **Components** tab and in the panel when you select one — where you connect the actuators that drive them.
 
 ### Structure Type { #structure-type }
 
-Picked under **Structure** in the **Position & Structure** step.
+Picked under **Structure › Structure**.
 
 | On screen | Value | Description |
 |-----------|-------|-------------|
@@ -97,7 +96,7 @@ Picked under **Structure** in the **Position & Structure** step.
 
 ### Covering Materials { #covering-materials }
 
-The materials offered in the Envelope step's covering dropdowns, with the values the load calculation uses:
+The materials offered in the covering dropdowns of **Envelope › Covering & Ventilation**, with the values the load calculation uses:
 
 | Code | Name | U-value (W/m²K) | Light transmittance | Offered for |
 |------|------|----------------|---------------------|-------------|
@@ -118,37 +117,66 @@ The materials offered in the Envelope step's covering dropdowns, with the values
 
 ### Bay Configuration { #bay-configuration }
 
-- **Basics › Specification**
+- **Structure › Specification**
     - **Preset** — **Standard Arch**
     - **Span (m)** — width of one bay
     - **Eave Height (m)** — floor to eave
     - **Ridge Height (m)** — floor to ridge; the difference from the eave height is the height of the roof
     - **Length (m)** — length of the building
     - **Roof Type** — **Arch**, **Gable**, **Gable ×2** (two ridges on one bay) or **Flat**
-- **Position & Structure**
+- **Structure › Structure**
     - **Bays** (N) — 1 to 20
     - **Spacing (m)** — gap between bays; **Single-span** only
     - **Zones** — shown from two bays up. Click the boundary between bays to split or merge zones; the map widget and per-zone environment control use them.
-    - **Rotation** (°) — 0–359, with the slider or by typing a value
+- **Position › Position** — **Rotation** (°), 0–359, typed as a number (drag the facility on the map to move it)
+
+### Plan Drawing { #plan-drawing }
+
+For more than one floor, or a shape that is not a plain rectangle, open **Structure › Structure › Draw plan**. A facility with one rectangular floor can ignore this: nothing else on the screen changes.
+
+The stage turns into a plan seen from above, north up. The settings panel shows the floors, the tools and the values of what you selected; **Close plan** at its bottom leaves the plan.
+
+- **Add floor above** — a new floor starts empty with the outline of the floor below as a guide. **Copy floor below** starts it the same way: outlines, zones and boundaries are copied, crops and floor openings are not, and a curved or gable roof moves up to the new floor. You only enter the **Floor height (m)**; each floor's elevation follows from the floors below. Only the top floor can be deleted.
+- **Draw outline** — press two opposite corners. **Draw by points** places one point at a time; press the first point again to close the shape. Points snap to existing corners, then to right angles, then to a 0.5 m grid. An outline may not overlap another one on the same floor. An L-shaped greenhouse is two rectangles side by side. Curved and gable roofs need a rectangular outline.
+- **Split zone** — press one wall, then the opposite wall. The larger piece keeps the zone's identity, so plots placed there stay put.
+- Press a line between two zones to choose **Wall**, **Curtain** or **Open gap**, or to **Merge zones**. A line between two touching outlines works the same way.
+- **Floor opening** — for stairs or a double-height space, on any floor above the first. Press two opposite corners on that floor.
+- **Undo** steps back through the changes. Nothing is stored until you press **Save Facility**. If you only look at the plan and close it, the facility stays as it was.
+
+Fitting positions never move when the plan changes. If a change puts devices in a different zone, the editor says how many before saving.
+
+Once a plan is saved, the map shape is derived from the outlines of all floors, and the structure, bay count, span, length, heights and roof type above are locked: change them in the plan. **Structure › Zones** lists the zones you drew. **Environment control does not use these zones yet**: it keeps working from the stored dimensions and the zones it had. The capacity preview shows the floor area, volume, glazing and envelope of the plan (the zones add up to the floor total); heating, cooling and vent open stay reference values from the stored dimensions.
+
+To place a device on an upper floor, select that floor in **Show in 3D** (toolbar **View** menu) and place it on the floor. A spot outside that floor, or over a floor opening, is refused with a message.
+
+Coordinators and plots connect through the saved zones.
+
+- A crop in a split zone becomes a candidate for the coordinator of the saved zone that covers its width.
+- Upper-floor zones and zones outside the saved width have no coordinator to connect to. **Structure › Zones**, the plan, the save notice, and the zone choices for a plot all say so.
+- A plot in an upper-floor zone is not under environment control, even for a coordinator with no zone set: it is never a candidate, and the plot screens say so.
+- Upper-floor devices stay out of the environment control inputs. Upper-floor sensor values do not mix into the ground-floor control values, and coordinators do not move upper-floor devices. They still appear on screen and can be operated by hand.
+- A zone total stays with the original zone when you split it. When you merge zones, totals with the same unit are added.
 
 ---
 
 ## 3D Preview { #3d-preview }
 
-With the stage set to **3D**, the building is drawn with Three.js, and the model follows the values you change in the settings drawer as you edit them.
+With the stage set to **3D**, the building is drawn with Three.js, and the model follows the values you change in the settings panel as you edit them.
 
 - **Right mouse drag**: Rotate
 - **Left mouse drag**: Pan (click to select)
 - **Scroll**: Zoom
 
-The **N arrow** on the floor is this facility's true north (it follows the rotation set in the position step). The default view looks from the south toward the north, so right is east and far is north — the same left/right and front/back as a north-up map. The view cube's N views look from the north, so east appears on the left there.
+The **N arrow** on the floor is this facility's true north (it follows the rotation set under **Position**). The default view looks from the south toward the north, so right is east and far is north — the same left/right and front/back as a north-up map. In the toolbar's **View** menu, the northern views under **Direction** look from the north, so east appears on the left there.
+
+A facility saved with a multi-floor structure model shows its floors in the **Show in 3D** (toolbar **View** menu), topmost first. Pick a floor to hide everything above it and look at that floor as a section. A single-floor facility has no floor rows, and the 3D view on the map always shows the whole building.
 
 ### 3D Asset Mode { #3d-asset-mode }
 
 Instead of automatic parametric generation, you can apply a custom GLTF model.
 
 1. Upload a GLTF file at `/geo/model_assets`.
-2. In **3D Preview**, open **Tools & Export › Asset Library** and select the model.
+2. In the toolbar, open **Tools & Export › Asset Library** and select the model.
 3. To go back to the parametric model, click **Detach Asset**.
 
 ---
@@ -157,7 +185,7 @@ Instead of automatic parametric generation, you can apply a custom GLTF model.
 
 Calculates first-order reference values for heating/cooling and ventilation capacity based on the building envelope (±5–10% margin; for equipment estimation purposes only).
 
-The values are recalculated automatically whenever dimensions or materials change, and shown under **Capacity Preview** in the **Review** step:
+The values are recalculated automatically whenever dimensions or materials change, and shown under **Capacity Preview** in the **Structure** tab:
 
 | Item | Unit | Description |
 |------|------|-------------|
@@ -199,7 +227,7 @@ Connect AoT devices to their roles within the facility.
 
 ### Sensor Roles { #sensor-roles }
 
-A sensor has no separate role name to pick. What you set on its row in the **Components** table is its role:
+A sensor has no separate role name to pick. What you set on its row — select the sensor in 3D or in the settings panel's **Components** tab, and the panel shows that row — is its role:
 
 | Field | Choices | Meaning |
 |-------|---------|---------|
@@ -231,14 +259,14 @@ Every row that is not a sensor has an **Actuator** field (**— None —** or an
 
 **How to register:**
 
-1. Open the **Equipment Layout** step.
-2. Place components with the tools to the left of the 3D view (**+ Sensor**, **Openings**, **Fixtures**, **Irrigation**) by clicking a position, or choose a type under **Add Component** and click **+ Add**.
-3. In the **Components** table, pick the measurement channel for a sensor row with **— Select channel —** and set its measurement item and **Indoor**/**Outdoor**. For every other row, pick the actuator that drives it.
-4. Click **Save Facility**.
+1. Open the **3D** stage.
+2. Place components with the toolbar's **Add** menu (**Openings**, **Fixtures**, **Sensor**, **Irrigation**) by clicking a position, or open the settings panel's **Components** tab, choose a type next to **Add** and click **Add**.
+3. Select the component in 3D or in the Components tab. In the settings panel, pick the measurement channel for a sensor with **— Select channel —** and set its measurement item and **Indoor**/**Outdoor**. For every other component, pick the actuator that drives it.
+4. On a saved facility the change is saved by itself after a moment (**Saved HH:MM**); a new facility needs **Save Facility**.
 
 ### Weather Forecast Bindings { #weather-forecast-bindings }
 
-The facility's forecast values (used for pre-emptive control such as warming up before a cold night) come from the **Weather** tab under **Connections**. Each row ties one measurement item, such as **Temperature (°C)**, to one Input channel.
+The facility's forecast values (used for pre-emptive control such as warming up before a cold night) come from **Weather** in the **Connections** tab. Each row ties one measurement item, such as **Temperature (°C)**, to one Input channel.
 
 To use an **Open-Meteo Hourly Forecast** Input, click **Fill recommended connections from Open-Meteo forecast Input**. The table is filled with one channel per measurement item:
 
@@ -269,7 +297,7 @@ The `/api/geo/facility/<uuid>/integration` endpoint returns the current state of
 
 A diagnostic workflow that briefly runs the facility's actuators to confirm that commands reach them and the sensors respond. It is available once the facility is saved.
 
-1. Under **Device Check** in the **Review** step, select the devices to test (or **Select All**) and click **Start Check**.
+1. Under **Device Check** in the **Review** tab, select the devices to test (or **Select All**) and click **Start Check**.
 2. The system turns each selected actuator on and off in turn and records how the indoor sensors respond.
 3. The result status for each device is displayed:
    - **Normal**: the command was delivered and the sensors responded in the expected direction

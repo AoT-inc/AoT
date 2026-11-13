@@ -12,6 +12,9 @@ except ImportError:
 
 from aot.databases.models import GeoShape, Input, Output, OutputChannel, PID, Trigger, Conditional, CustomController, Function, GeoFacility, GeoFacilitySetpoint
 from aot.aot_flask.extensions import db
+from aot.databases.geo_marker_kinds import MARKER_TYPE, MARKER_TYPES
+from aot.space.device_kind import models_for
+from aot.utils.timekit import naive_utc, utc_now
 
 def _is_ephemeral_sprinkler_marker(feat):
     """스프링클러 점 마커(sub_type='sprinkler')인가.
@@ -68,10 +71,21 @@ def _drop_containment_cache():
     "왜 그 안 구획이 안 잡히지" 를 10분 동안 본다. 정상 경로는 즉시 버린다.
     """
     try:
-        from aot.aot_flask.geo import containment_cache
+        from aot.space import containment_cache
         containment_cache.invalidate()
     except Exception:
         pass
+
+
+
+def _device_shape_uids(device_id):
+    """이 장치에 현재 바인딩된 도형들의 unique_id 부분 쿼리(L4 — 컬럼 필터 대체)."""
+    from aot.databases.models import GeoBinding
+    dev = str(device_id).split('::')[0]
+    return db.session.query(GeoBinding.spatial_id).filter(
+        GeoBinding.spatial_kind == 'shape',
+        GeoBinding.device_id == dev,
+        GeoBinding.valid_to.is_(None))
 
 
 class GeoOverlayManager:
@@ -129,9 +143,9 @@ class GeoOverlayManager:
                 if target_type == 'equipment':
                     # Fetch both Individual (Legacy) and Collection (Bundle) types
                     query = query.filter(GeoShape.type.in_(['equipment', 'equipment_collection']))
-                elif target_type == 'aot_device':
+                elif target_type == MARKER_TYPE:
                     # Fetch both 'aot_device' (current) and legacy 'device' rows
-                    query = query.filter(GeoShape.type.in_(['aot_device', 'device']))
+                    query = query.filter(GeoShape.type.in_(list(MARKER_TYPES)))
                 else:
                     query = query.filter_by(type=target_type)
             
@@ -139,9 +153,9 @@ class GeoOverlayManager:
                 if hasattr(GeoShape, 'parent_id'):
                     query = query.filter_by(parent_id=parent_id)
             if device_id:
-                if hasattr(GeoShape, 'device_id'):
-                    query = query.filter_by(device_id=device_id)
-                
+                query = query.filter(GeoShape.unique_id.in_(
+                    _device_shape_uids(device_id)))
+
             shapes = query.all()
 
             # Pre-fetch GeoFacility rows in one query when shapes include facilities,
@@ -150,8 +164,8 @@ class GeoOverlayManager:
             # [Phase B] 도형↔장치 연결도 같은 이유로 한 번에 읽는다. 도형마다
             # 바인딩을 조회하면 지도 렌더가 도형 수만큼 쿼리를 낸다.
             try:
-                from .device_binding import (devices_for_shapes,
-                                             device_kinds_for_shapes)
+                from aot.space.device_binding import (devices_for_shapes,
+                                                      device_kinds_for_shapes)
                 bound_devices = devices_for_shapes(shapes)
                 bound_kinds = device_kinds_for_shapes(shapes)
             except Exception as exc:
@@ -231,15 +245,10 @@ class GeoOverlayManager:
                 # 조용히 동작하지 않았다).
                 feat['properties']['shape_uuid'] = s.unique_id
                 # [Fix] Inject Device/Channel IDs for Frontend Filtering (Strict Selection)
-                # [Phase B] 어느 장치인지는 geo_binding 이 정본이고, 바인딩이
-                # 없으면 device_id 컬럼으로 폴백한다(device_binding 리졸버가
-                # 그 순서를 담당). 마커·구역 외 종류는 리졸버가 None 을
-                # 돌려주므로 종전대로 컬럼 값을 쓴다.
+                # 어느 장치인지는 geo_binding 이 정본이다(L4 — 컬럼 폴백 제거).
                 resolved_device = bound_devices.get(s.unique_id)
                 if resolved_device:
                     feat['properties']['device_id'] = resolved_device
-                elif hasattr(s, 'device_id') and s.device_id:
-                    feat['properties']['device_id'] = s.device_id
                 if hasattr(s, 'channel_id') and s.channel_id:
                     feat['properties']['channel_id'] = s.channel_id
                 # 배정된 장치의 **종류**도 함께 내려준다 — 화면이 도형을 종류
@@ -256,7 +265,7 @@ class GeoOverlayManager:
                     feat['properties']['aot_type'] = s.type
                 # Normalize legacy 'device' → 'aot_device'
                 if feat['properties'].get('aot_type') == 'device':
-                    feat['properties']['aot_type'] = 'aot_device'
+                    feat['properties']['aot_type'] = MARKER_TYPE
                 feat['properties']['parent_id'] = getattr(s, 'parent_id', None)
 
                 # Facility extras for 3D extrusion (height_m, eave_h, name, preset, ...)
@@ -303,6 +312,27 @@ class GeoOverlayManager:
 
     # @manual geo/api-reference#details-post-apigeooverlays
     @staticmethod
+    def _keep_layout_geometry(row, feat):
+        """시설 모형(`layout`)이 있는 시설의 도형은 지도 설계 화면이 옮기지 못한다.
+
+        그 도형은 서버가 모형과 `geometry_3d` 중심에서 유도한다(`facility_io._derive_layout_shape`).
+        여기서 옮기면 3D·fitting 은 옛 자리에 남고, 다음 시설 저장이 도형을 되돌린다.
+        이름 같은 속성은 그대로 받는다. 시설을 옮기는 길은 시설 편집 화면이다.
+        """
+        if row.type != 'facility':
+            return feat
+        fac = GeoFacility.query.filter_by(shape_uuid=row.unique_id).first()
+        if fac is None or not fac.layout:
+            return feat
+        cur = row.feature
+        if isinstance(cur, str):
+            try:
+                cur = json.loads(cur)
+            except ValueError:
+                return feat
+        return dict(feat, geometry=(cur or {}).get('geometry')) if cur else feat
+
+    @staticmethod
     def _strip_structural_props(feat):
         """저장 직전 구조 필드를 제거한 사본을 반환한다. 원본 불변."""
         if not isinstance(feat, dict):
@@ -337,7 +367,7 @@ class GeoOverlayManager:
         그냥 삼키면 실패한 flush 가 세션을 오염시킨 채 남아 뒤이은 커밋이
         무관한 자리에서 죽는다.
         """
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
 
         role = device_binding.role_for_shape_type(target_type)
         if role is None or not pending:
@@ -443,7 +473,7 @@ class GeoOverlayManager:
         # [Safety Guard] Never allow bulk-delete of aot_device GeoShapes via save_overlays.
         # Device marker locations are managed exclusively by /api/geo/device/location.
         # An empty features list would delete ALL device placements, so we block it here.
-        if target_type == 'aot_device' and not new_features and not device_id:
+        if target_type == MARKER_TYPE and not new_features and not device_id:
             current_app.logger.warning(
                 f"[GeoOverlay] Blocked bulk-delete attempt on aot_device "
                 f"(map={map_uuid}, features=[], device_id=None). "
@@ -509,6 +539,11 @@ class GeoOverlayManager:
                 # 기하가 바뀌면 포함 관계 캐시는 낡는다. 지우기만 하므로
                 # 과하게 불러도 손해는 재계산 비용뿐이다.
                 _drop_containment_cache()
+                try:        # 설비가 바뀌면 지형 계보 키가 달라진다 — 선계산을 예약(DEM 이 없으면 아무 일도 없다)
+                    from aot.utils import water_terrain
+                    water_terrain.on_equipment_saved(map_uuid)
+                except Exception:   # noqa: BLE001
+                    pass
                 
                 _stats = {'deleted': 'all_legacy', 'inserted': 1, 'mode': 'bulk_bundle'}
                 if kept_cov:
@@ -525,7 +560,7 @@ class GeoOverlayManager:
                 return None, str(e)
 
         # --- Validation Phase ---
-        if target_type in ['zone', 'facility', 'equipment', 'aot_device', 'infra_blob']:
+        if target_type in ['zone', 'facility', 'equipment', MARKER_TYPE, 'infra_blob']:
              # 1. Fetch Parent Geometry Context if needed
              if parent_id:
                  pass # TODO: Implement strict DB fetch & validation if critical
@@ -551,9 +586,10 @@ class GeoOverlayManager:
                 if hasattr(GeoShape, 'parent_id'):
                     query = query.filter_by(parent_id=parent_id)
 
-            if device_id and hasattr(GeoShape, 'device_id'):
-                query = query.filter_by(device_id=device_id)
-                
+            if device_id:
+                query = query.filter(GeoShape.unique_id.in_(
+                    _device_shape_uids(device_id)))
+
             # 2. Fetch Existing IDs directly
             existing_rows = query.all()
             existing_map = {row.id: row for row in existing_rows}
@@ -671,21 +707,17 @@ class GeoOverlayManager:
             for db_id, feat in to_update:
                 row = existing_map[db_id]
                 # [I6] 구조 필드 제거 후 저장. 이름 동기화는 원본 페이로드로.
+                feat = GeoOverlayManager._keep_layout_geometry(row, feat)
                 row.feature = _strip_derived_bbox(
                     GeoOverlayManager._strip_structural_props(feat))
-                row.updated_at = datetime.utcnow()
+                row.updated_at = naive_utc(utc_now())
 
                 # [New] Sync Properties (Name, etc.) back to Source Models
                 GeoOverlayManager._sync_device_properties(feat)
 
                 # [Fix] Update device_id and channel_id columns for precise persistence
+                # 장치 연결은 바인딩(_record_bindings)이 기록한다(L4) — 컬럼은 쓰지 않는다.
                 feat_props = feat.get('properties', {})
-                if hasattr(row, 'device_id'):
-                    d_id = device_id or feat_props.get('device_id')
-                    if d_id:
-                        # [Fix] Strip channel suffix before storing in device_id column
-                        row.device_id = str(d_id).split('::')[0]
-                
                 if hasattr(row, 'channel_id'):
                     ch_id = feat_props.get('channel_id')
                     if ch_id is not None:
@@ -703,11 +735,7 @@ class GeoOverlayManager:
 
                 # Prioritize payload device_id, fallback to feature property
                 feat_props = feat.get('properties', {})
-                if hasattr(s, 'device_id'):
-                    d_id = device_id or feat_props.get('device_id')
-                    if d_id:
-                        # [Fix] Strip channel suffix before storing in device_id column
-                        s.device_id = str(d_id).split('::')[0]
+                # 장치 연결은 바인딩(_record_bindings)이 기록한다(L4) — 컬럼은 쓰지 않는다.
 
                 # [New] Save channel_id for per-channel coordinates
                 if hasattr(s, 'channel_id') and feat_props.get('channel_id'):
@@ -793,27 +821,8 @@ class GeoOverlayManager:
                     if bool(s.tz_boundary) != bool(b):
                         s.tz_boundary = b
                         changed = True
-            if changed:
-                db.session.flush()  # 장치 전파가 갱신된 도형 tz 를 보도록
-
-            # 연결 장치(device_id)에 전파 — explicit 핀 보존
-            device_models = (Input, Output, Function, Conditional, Trigger, PID, CustomController)
-            for s in shapes:
-                did = getattr(s, 'device_id', None)
-                if not did:
-                    continue
-                tz = s.resolve_timezone()
-                if tz is None:
-                    continue
-                tz_str = str(tz)
-                for Model in device_models:
-                    row = Model.query.filter_by(unique_id=did).first()
-                    if row is not None:
-                        if getattr(row, 'tz_source', None) != 'explicit' and row.timezone != tz_str:
-                            row.timezone = tz_str
-                            row.tz_source = 'inherited'
-                            changed = True
-                        break
+            # 장치 tz 는 더 이상 행에 물질화하지 않는다(L4, 결정 ①: 공간 상속).
+            # 장치의 시간대는 읽을 때 `timekit.tz_of` 가 배치 도형에서 해석한다.
             if changed:
                 db.session.commit()
                 # 기하가 바뀌면 포함 관계 캐시는 낡는다. 지우기만 하므로
@@ -871,7 +880,7 @@ class GeoOverlayManager:
                                     else:
                                         s.feature = bundle
                                         flag_modified(s, 'feature')
-                                        s.updated_at = datetime.utcnow()
+                                        s.updated_at = naive_utc(utc_now())
 
                         # Case B: Individual Row (Legacy or Delta-inserted)
                         else:
@@ -943,7 +952,7 @@ class GeoOverlayManager:
                 if bundle_row:
                     bundle_row.feature = bundle
                     flag_modified(bundle_row, 'feature')
-                    bundle_row.updated_at = datetime.utcnow()
+                    bundle_row.updated_at = naive_utc(utc_now())
                 else:
                     bundle_row = GeoShape(
                         geo_id=map_uuid, type='equipment_collection', feature=bundle)
@@ -1004,13 +1013,13 @@ class GeoOverlayManager:
                             f"[GeoOverlay][I7] delta upsert ignored client "
                             f"aot_type={target_type!r} for shape id={row.id} "
                             f"(type={row.type!r} kept).")
+                    feat = GeoOverlayManager._keep_layout_geometry(row, feat)
                     row.feature = _strip_derived_bbox(
                         GeoOverlayManager._strip_structural_props(feat))  # [I6]
                     # Update columns if needed
-                    if hasattr(row, 'device_id') and device_id: row.device_id = device_id
                     if hasattr(row, 'channel_id') and props.get('channel_id'): row.channel_id = str(props.get('channel_id'))
                     if hasattr(row, 'parent_id') and parent_id: row.parent_id = parent_id
-                    row.updated_at = datetime.utcnow()
+                    row.updated_at = naive_utc(utc_now())
 
                     # [New] Sync Properties (Name, etc.) back to Source Models
                     GeoOverlayManager._sync_device_properties(feat)
@@ -1021,7 +1030,6 @@ class GeoOverlayManager:
                         geo_id=map_uuid, type=target_type,
                         feature=_strip_derived_bbox(
                             GeoOverlayManager._strip_structural_props(feat)))  # [I6]
-                    if hasattr(row, 'device_id') and device_id: row.device_id = device_id
                     if hasattr(row, 'channel_id') and props.get('channel_id'): row.channel_id = str(props.get('channel_id'))
                     if hasattr(row, 'parent_id') and parent_id: row.parent_id = parent_id
                     db.session.add(row)
@@ -1330,6 +1338,13 @@ class GeoOverlayManager:
         if not feature or 'properties' not in feature:
             return
 
+        # 이름을 장치에 되돌려 쓰는 것은 마커(점)뿐이다. 장치에 묶인 구역·선(담당 구역 등)은
+        # 저마다 제 이름이 있다 — 지도를 저장할 때마다 그 이름이 장치 이름을 덮어 썼다
+        # (구역 'E2E Fan Area' 가 팬 출력·채널 이름이 됨, 나스 E2E run 3314).
+        geom_type = (feature.get('geometry') or {}).get('type')
+        if geom_type and geom_type != 'Point':
+            return
+
         props = feature['properties']
         aot_type = props.get('aot_type')
         device_id = props.get('device_id')
@@ -1371,16 +1386,11 @@ class GeoOverlayManager:
             # 2. Handle Primary Device Models (Input, CustomController, etc.)
             # For Channel 0 or non-channel devices, we also update the main record
             if channel_id is None or str(channel_id) == '0':
-                model_map = {
-                    'input': Input,
-                    'output': Output,
-                    'pid': PID,
-                    'trigger': Trigger,
-                    'conditional': Conditional,
-                    'function': CustomController,
-                    'custom': CustomController,
-                    'generic_function': Function
-                }
+                # 지도 어휘: 'function'=CustomController, 'generic_function'=Function
+                model_map = models_for(
+                    ('input', 'output', 'pid', 'trigger', 'conditional',
+                     'function', 'custom', 'generic_function'),
+                    vocabulary='geo')
                 
                 # Check both aot_type and device_type
                 dev_type = props.get('device_type') or aot_type

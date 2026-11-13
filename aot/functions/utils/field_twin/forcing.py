@@ -34,7 +34,19 @@ def hargreaves_et0(t_min: float, t_max: float, lat_deg: float, doy: int) -> floa
                * 0.408 * _ra(lat_deg, doy), 0.0)
 
 
-def daily_sum(points: Iterable[Tuple[float, float]], tz_offset_s: float = 9 * 3600,
+def offset_at(t: float, tz) -> float:
+    """순간 `t` 에서 현지 시계가 UTC 보다 앞선 초. `tz` 는 IANA 이름(점마다 그 시각의 오프셋 — 서머타임을 넘어도
+    하루가 밀리지 않는다) 또는 고정 오프셋 초(시험·합성 데이터). 정하지 않으면(None) 오류다 — 예전 기본값 +9h 는
+    다른 시간대의 장소를 조용히 한국 날짜로 접었다."""
+    if tz is None:
+        raise ValueError('tz 가 필요하다 (IANA 이름 또는 오프셋 초)')
+    if isinstance(tz, str):
+        from aot.utils.timekit import to_tz
+        return to_tz(float(t), tz).utcoffset().total_seconds()
+    return float(tz)
+
+
+def daily_sum(points: Iterable[Tuple[float, float]], tz_offset_s=None,
               scale: float = 1.0) -> Dict[int, Tuple[float, int]]:
     """(epoch, 값) 시간 계열 → 현지 날짜(에포크 일) → (합×scale, 시간 수).
 
@@ -44,7 +56,7 @@ def daily_sum(points: Iterable[Tuple[float, float]], tz_offset_s: float = 9 * 36
     for t, v in points:
         if v is None or not np.isfinite(v):
             continue
-        d = int(math.floor((t + tz_offset_s) / 86400.0))
+        d = int(math.floor((t + offset_at(t, tz_offset_s)) / 86400.0))
         acc.setdefault(d, []).append(v)
     return {d: (float(np.sum(a)) * scale, len(a)) for d, a in acc.items()}
 

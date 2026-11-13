@@ -172,7 +172,7 @@ def _parent_map_from_cache(all_shapes):
     하고, 그러면 아낀 것이 없다. 전부-아니면-전무가 판단도 단순하다.
     """
     try:
-        from aot.aot_flask.geo import containment_cache as cc
+        from aot.space import containment_cache as cc
     except Exception:
         return None
     by_uuid = {s.unique_id: s for s in all_shapes if s.unique_id}
@@ -201,7 +201,7 @@ def _parent_map_from_cache(all_shapes):
 
 def _store_parent_map(all_shapes, id_map):
     try:
-        from aot.aot_flask.geo import containment_cache as cc
+        from aot.space import containment_cache as cc
     except Exception:
         return
     uuid_by_id = {s.id: s.unique_id for s in all_shapes}
@@ -337,7 +337,7 @@ def geo_descendant_recs(root_shape, use_cache=True):
     """
     if use_cache:
         try:
-            from aot.aot_flask.geo import shape_index
+            from aot.space import shape_index
             recs = shape_index.all_shapes()
             pmap = _parent_map_from_cache(recs)
             if pmap is not None:
@@ -364,9 +364,12 @@ def geo_descendant_recs(root_shape, use_cache=True):
             pass
 
     # 폴백 — ORM. 반환 모양은 같게 맞춘다(호출자가 분기하지 않도록).
-    from aot.aot_flask.geo.shape_index import ShapeRec
+    from aot.space.shape_index import ShapeRec
+    from aot.space.device_binding import devices_for_shapes
+    descendants = list(geo_descendant_shapes(root_shape, use_cache=use_cache))
+    dev_of = devices_for_shapes(descendants)   # 바인딩이 정본 — 컬럼은 읽지 않는다
     out = []
-    for s in geo_descendant_shapes(root_shape, use_cache=use_cache):
+    for s in descendants:
         name = ''
         try:
             feat = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
@@ -376,7 +379,7 @@ def geo_descendant_recs(root_shape, use_cache=True):
         except Exception:
             pass
         out.append(ShapeRec(s.id, s.unique_id, s.type, s.parent_id,
-                            s.device_id, s.geo_id, name))
+                            dev_of.get(s.unique_id), s.geo_id, name))
     return out
 
 
@@ -415,7 +418,7 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
     """
     from shapely.geometry import shape as _shapely_shape
     from aot.databases.models import GeoShape, GeoPlot
-    from aot.aot_flask.geo import plot_context
+    from aot.space import plot_context
 
     if not shape_ids:
         return []
@@ -426,7 +429,7 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
     try:
         if not use_cache:
             raise RuntimeError('cache disabled')
-        from aot.aot_flask.geo import containment_cache as cc
+        from aot.space import containment_cache as cc
         cached = cc.load(kind=cc.KIND_PLANTING)
         actives = GeoPlot.query.filter(GeoPlot.ended_on.is_(None))
         if geo_ids:
@@ -508,7 +511,7 @@ def _plot_ids_inside(shape_ids, geo_ids=None, use_cache=True):
 
     try:
         if use_cache:
-            from aot.aot_flask.geo import containment_cache as cc
+            from aot.space import containment_cache as cc
             cc.store([(cc.KIND_PLANTING, u, p, g) for (u, p, g) in entries])
     except Exception:
         pass

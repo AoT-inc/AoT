@@ -28,8 +28,8 @@ Output(회로 공급) 몫이다. 노즐 하나는 정확히 한 액추에이터�
   레이어 몫: 없음 (모든 노즐이 V_main 아래에 있다)
 """
 
-from aot.aot_flask.geo.irrigation_nozzles import nozzles_by_actuator
-from aot.aot_flask.geo.irrigation_topology import resolve_nozzle_owners
+from aot.space.irrigation_nozzles import nozzles_by_actuator
+from aot.space.irrigation_topology import resolve_nozzle_owners
 
 H = 2.0
 

@@ -1,9 +1,11 @@
 [Unit]
 Description=AoT Digital Twin (experimental)
-# 디지털트윈(실험 · '준비 중' 기능) — 기본 비활성. 켜는 법:
+# 디지털트윈(실험 · '준비 중' 기능) — 기본 구성이다. 설치 스크립트(setup.sh)와 업그레이드(upgrade_post.sh)가
 #   sudo /opt/AoT/aot/scripts/upgrade_commands.sh install-aottwin
-# 그다음 설정 > 일반 > 디지털트윈 (실험) 토글. 토글이 꺼져 있으면 떠 있어도 일하지 않는다.
-# 사양이 낮은 기기(라즈베리파이 등)는 시작할 때 잠금을 판정해 일하지 않는다 — 설치하지 말 것.
+# 으로 설치·활성화한다(옛 설치는 이 명령을 한 번 실행). 실제 구동 스위치는 설정 > 일반 > 디지털트윈 (실험)
+# 토글이다 — 꺼져 있으면 떠 있어도 일하지 않고 플래그만 가끔 본다.
+# 사양이 낮은 기기(라즈베리파이 Zero·1·2·3, 기기 메모리 3.5 GB 미만)는 시작할 때 잠금을 판정해 하트비트
+# locked 를 쓰고 정상 종료(exit 0)한다 — Restart=on-failure 라 되살리지 않는다(부팅 때는 enable 된 유닛이 다시 뜬다).
 # 데몬과 분리된 프로세스라 죽거나 메모리가 불어도 제어에는 영향이 없다.
 After=aotflask.service influxdb.service
 Wants=influxdb.service

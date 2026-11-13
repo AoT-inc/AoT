@@ -181,7 +181,6 @@
      ~66% of the card. Full-width rows stack label over content, so the content
      should span the card. */
   .aot-modal-option-row.aot-full-width-row .fac-body { width: 100%; }
-  #modal_fac_step .aot-full-width-row #orientation-slider { width: 100%; }
 
   /* Curtain mini-cards were laid out three-across, which leaves ~150px each in
      a 520px drawer. One per row inside the drawer; the wider page layout can
@@ -218,6 +217,10 @@
      32px pills next to it in the "add measurement item" row. Height and pill
      shape are all this page has to say about it. */
   #modal_fac_step .bootstrap-select { width: auto !important; }
+  /* Outside an option row "auto" has nothing to size from — the button's label
+     is laid over it, so the picker shrank to its caret (48px, the component
+     kind read as blank). It keeps the shared control width as its floor. */
+  #modal_fac_step .bootstrap-select:not(.aot-modal-option-control *) { min-width: var(--aot-common-control-width); }
   /* Inside a shared option row the control column already fixes the width. A
      page-invented min-width:200px here made the button wider than its own
      wrapper (190px), and the popup — min-width:100% of that wrapper — came out
@@ -273,32 +276,33 @@
      but must never show — _renderInspector() would otherwise reveal them. */
   #facility-3d-inspector .fi-dup { display: none !important; }
 
-  /* Selected row in the component table — matches the placement panel above. */
+  /* ── Component tray (S4) — under the canvas, folds ───────────────────────────
+     Every component grouped by kind (no tabs — nothing selected can hide behind
+     another kind). Rows only find and pick; the selection inspector edits. */
+  /* Add control above the list (S7: the list is the "Components" group of the settings modal). */
+  .fac-tray-add { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .fac-tray-add .aot-modern-select { width: var(--aot-common-control-width); }
+  .fac-tray-body {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--aot-surface-card);
+    border-radius: var(--aot-radius-md);
+  }
+  .fac-tray-row { cursor: pointer; }
+  .fac-tray-row:hover { background: var(--aot-surface-body); }
   #sensor-config-tbody tr.is-selected { background: var(--aot-color-brand-accent); }
-
-  /* ── Component list: kind tabs + inline placement ──────────────────────────
-     The placement panel used to be its own section above the list, so adding
-     components meant scrolling back and forth. Now the list is grouped by type
-     and the selected row expands to hold its 3D placement. */
-  .fac-kind-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 8px 0 4px;
+  .fac-kind-head > th {
+    padding-top: 12px;
+    font-size: var(--aot-font-size-xs);
+    color: var(--aot-color-text-secondary);
   }
+  .fac-tray-link { color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-sm); }
+  /* Linked group (26-11-12): components generated together fold into one row that
+     carries their shared Output; unfolded, the members sit under it, indented by
+     one step so they read as its contents. */
+  #sensor-config-tbody tr.fac-group-member > td:first-child { padding-left: calc(var(--aot-space-4) + 0.5rem); }
+  #sensor-config-tbody tr.fac-group-row.is-open > td { border-bottom-color: transparent; }
 
-  .fac-place-row > td {
-    padding: 0 0 10px !important;
-    border-bottom: 1px solid var(--aot-border-light);
-  }
-  .fac-place-row #facility-3d-inspector {
-    margin: 0;
-    border-color: var(--aot-color-brand-primary);
-  }
-  #fac-place-home { display: none; }
-
-  /* Type glyph ([F], [T]…) — unreadable shorthand, and the tab already says
-     which type this is. */
 
   /* ── Segmented control ─────────────────────────────────────────────────────
      Page-owned class rather than Bootstrap's .btn-outline-*: those paint blue
@@ -431,8 +435,84 @@
   }
   .fac-page-actions {
     display: flex;
+    align-items: center;
     gap: 8px;
+    /* The row may shrink below the sum of its children: the name label gives
+       way (ellipsis) instead of the row pushing past the window. On a phone
+       this overflow widened the layout viewport, which made the full-screen
+       modal wider than the screen too (PR review, 2026-11-08). */
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
   }
+
+  /* ── Progress chips (S4) — status, not navigation ────────────────────────────
+     Shared tags with words (ui-guide §4-11): "Where done · Components 3 ·
+     Not connected 2". They sit on the title's alignment line. */
+  /* 26-11-12: in the title bar beside the facility name, only what is left to do. */
+  .fac-progress { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; margin-right: auto; }
+  .fac-progress:empty { display: none; }
+
+  /* ── Page frame (S7) — stage + settings drawer ──────────────────────────────
+     The stage (toolbar + model/map + status line) is the page: full width and
+     as tall as the window leaves it (the bridge measures where the stage
+     starts and writes --fac-stage-offset; the fallback is the usual title bar),
+     so the page never scrolls. Settings are the shared right-side drawer
+     (#modal_fac_step, aot-widget-drawer): it pushes the page by its own width,
+     so the whole stage stays visible — 1000 px of 1440 — while a value is
+     changed. No tray or sheet under the stage any more (S4~S6 left the page
+     scrolling and split the model from its controls on a phone). */
+  @media (min-width: 768px) {
+    .container.fac-editor { max-width: none; }
+    /* This page's drawer is narrower than the dashboard's 520px: the model needs
+       the width. Set on body, not :root — the shared sheet loads after this one
+       and would win a :root tie; everything that reads the token is inside body. */
+    /* 26-11-12: 424 at the low end so the six tabs fit one line in Korean
+       (they need 388px of the body's width); the stage keeps 2/3 of 1280. */
+    body { --aot-wdrawer-w: clamp(424px, calc(30 * var(--aot-vw)), 460px); }
+  }
+  .fac-stage {
+    display: flex;
+    flex-direction: column;
+    height: calc(100 * var(--aot-vh) - var(--fac-stage-offset, 170px));
+    min-height: 360px;
+  }
+  /* 하단 AI 창구(#aot-ai-dock — 승인 칩·설정 톱니)는 화면 맨 아래 가운데에 떠서 무대의
+     캔버스·상태줄을 덮는다. 공용 컴포넌트는 그대로 두고, 창구가 있을 때만 무대가 공용이
+     주는 자리(--aot-ai-dock-reserve)만큼 짧아져 그 띠를 비운다. 이 페이지의 무대에만 걸린다. */
+  body:has(#aot-ai-dock) .fac-stage {
+    height: calc(100 * var(--aot-vh) - var(--fac-stage-offset, 170px) - var(--aot-ai-dock-reserve));
+  }
+  .fac-stage-body { flex: 1 1 auto; min-height: 0; position: relative; }
+  .fac-drawer .modal-header { gap: 8px; }
+  .fac-drawer .modal-header .modal-title { flex: 1 1 auto; min-width: 0; }
+  .fac-drawer-close { margin-left: auto; }
+
+  /* ── Tabs (26-11-12) — six panes, one at a time ───────────────────────────────
+     The shared section tabs (.nav-tabs, ui-guide §4-4) — nothing here paints
+     them. The bar stays at the top of the drawer while a pane scrolls, on the
+     drawer floor's own surface so the pane does not show through it; the
+     negative top cancels the body's top padding (Bootstrap's 1rem) so it docks
+     flush under the header. A long language overflows sideways and drags (§4-6). */
+  #modal_fac_step .fac-tabs {
+    position: sticky;
+    top: -1rem;
+    z-index: 2;
+    background-color: var(--aot-surface-body);
+  }
+  /* Locked until saved: the reason stands right under the tabs (ui-guide §4-10). */
+  .fac-tab-lock { margin: 0 0 var(--aot-space-3); }
+  .fac-drawer .modal-header #fac-list-toggle { flex: 0 0 auto; }
+  .fac-plots-link { margin-top: 16px; }
+
+  /* ── Selection inspector row (S4) — the selected component's name and link ──
+     One row of the component table, stacked to the column's width. */
+  .fac-sel-table,
+  .fac-sel-table tbody,
+  .fac-sel-table tr,
+  .fac-sel-table td { display: block; width: 100%; }
+  .aot-module-table.fac-table.fac-sel-table td:last-child { width: 100%; }
+  .fac-sel-table { margin-bottom: 8px; }
 
   /* ── Section group title ───────────────────────────────────────────────────── */
 
@@ -510,38 +590,14 @@
   }
   .zone-name-row .zone-name-input { flex: 1 1 auto; }
 
-  /* ── Step bar ──────────────────────────────────────────────────────────────── */
-  /* Each step opens the drawer; the stage behind it stays visible. */
-  .fac-stepbar {
+
+  /* 3D/Map picker — the first group of the toolbar row (S3). Same pill as the
+     other toolbar buttons: this is a view choice, not a control of its own kind.
+     It sits inside the toolbar card, so it takes the card button height, not the
+     touch height of buttons standing bare on the page. */
+  .fac-stage-toggle {
     display: flex;
     gap: 8px;
-    margin: 0 0 0.75rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
-  }
-  .fac-stepbar::-webkit-scrollbar { height: 0; }
-  .fac-stepbar { scrollbar-width: none; }
-  /* The steps ARE the shared pill button (.btn.aot-pill-btn), selected state
-     included (.aot-pill-btn-primary, toggled in setStep). This class only says
-     how they sit in the scrolling bar — box, type and colour belong to the
-     component, not to this page. */
-  .fac-step {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-  }
-
-  /* 3D/Map picker — trails the steps, pushed to the far end while the bar has
-     room to spare. The bar scrolls when it does not, so it simply follows the
-     last step there. Same pill as the steps: this is a view choice, not a
-     control of its own kind. */
-  .fac-stage-toggle {
-    flex: 0 0 auto;
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
-    padding-left: 8px;
   }
   .fac-stage-toggle[hidden] { display: none; }
 
@@ -558,46 +614,85 @@
     padding: 2px 10px;
     white-space: nowrap;
   }
+  /* 마지막 저장 시각(자동 저장 포함) — 상태 글자, 누르는 것이 아니다. */
+  .fac-saved-at {
+    align-self: center;
+    font-size: var(--aot-font-size-sm);
+    color: var(--aot-color-text-secondary);
+    white-space: nowrap;
+  }
+  .fac-saved-at[hidden] { display: none; }
   body.fac-dirty #btn-save-facility,
   body.fac-dirty #btn-save-facility-bottom { box-shadow: 0 0 0 3px var(--aot-color-brand-accent); }
 
-  /* ── Stage — one view visible at a time ────────────────────────────────────── */
-  .fac-stage { margin-bottom: 16px; }
-  .fac-stage-view { display: none; }
+  /* ── Stage — one view visible at a time, each filling the stage body ──────── */
+  .fac-stage-view { display: none; height: 100%; }
   .fac-stage-view.active { display: block; }
 
-  #facility-map-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 0.4rem 0.75rem;
-    background: var(--aot-surface-body);
-    font-size: var(--aot-font-size-sm);
-    font-weight: 700;
-    color: var(--aot-color-text-primary);
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-md) var(--aot-radius-md) 0 0;
-    border-bottom: none;
-  }
-  .fac-map-hint { margin: 0.4rem 0 0; }
 
-  /* ── Step panes inside the drawer ──────────────────────────────────────────── */
-  .fac-step-pane { display: none; }
-  .fac-step-pane.active { display: block; }
-  /* The drawer is ~520px wide. Keep the label/control row side by side while it
-     fits, but let the control take the space it needs instead of the fixed
-     page-level width, and drop the outer card padding. */
+  /* ── 평면 그리기 (시설 모형 F3) ──────────────────────────────────────────
+     묶음이 아니라 "무엇을" 안의 상태다. 새 색·글자 크기·모서리 값은 없다. */
+  .fac-plan-pane,
+  #fac-plan-close { display: none; }
+  body.fac-plan-mode #fac-insp-facility,
+  body.fac-plan-mode #fac-insp-selection,
+  body.fac-plan-mode #fac-tray { display: none; }
+  body.fac-plan-mode .fac-plan-pane { display: block; }
+  body.fac-plan-mode #fac-plan-close { display: inline-flex; }
+  body.fac-plan-mode .fac-list-actions { display: none; }
+  body.fac-plan-mode #facility-3d-tools,
+  body.fac-plan-mode #facility-3d-hint,
+  body.fac-plan-mode #fac-3d-status-tool,
+  body.fac-plan-mode #fac-3d-status-counts,
+  body.fac-plan-mode .fac-viewcube { display: none; }
+  body.fac-plan-mode #facility-3d-canvas { touch-action: none; }
+  #zone-editor-container.fac-layout-hidden { display: none; }
+  /* The zone row's label carries a three-line explanation; in the label column
+     it wrapped to a 160px strip beside empty space. Here the label spans the
+     row and the bays sit under it. */
+  #zone-editor-container > .aot-modal-option-label { flex: 1 1 100%; max-width: none; }
+  #fac-zone-summary[hidden],
+  #fac-layout-zones-panel[hidden],
+  .fac-layout-lock[hidden] { display: none; }
+  .fac-plan-levels { flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 100%; }   /* 층이 많아도 가로로 잘리지 않게 줄을 바꾼다 */
+  .fac-plan-tools { display: flex; flex-wrap: wrap; gap: 8px; padding-block: 8px; }
+  /* 평면 그리기 안내 — 캔버스 위 안내상자였다가 상태줄 한 줄로 내려왔다(S3). */
+  #fac-plan-prompt {
+    display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    color: var(--aot-color-text-primary);
+  }
+  #fac-plan-prompt[hidden] { display: none; }
+  #fac-plan-prompt-text { flex: 1 1 10rem; min-width: 0; }
+  .fac-plan-prompt-btns { display: flex; gap: 8px; margin-left: auto; }
+  .fac-plan-overlay {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 10;
+  }
+  .fac-plan-overlay text {
+    font-family: inherit; text-anchor: middle;
+    paint-order: stroke; stroke: var(--aot-surface-card); stroke-width: 3px;
+  }
+  .fac-plan-zone-0 { fill: color-mix(in srgb, var(--aot-color-brand-primary) 8%, transparent); }
+  .fac-plan-zone-1 { fill: color-mix(in srgb, var(--aot-color-brand-primary) 20%, transparent); }
+  .fac-plan-outer { stroke: var(--aot-color-brand-primary); stroke-width: 3; stroke-linecap: square; }
+  .fac-plan-b-wall { stroke: var(--aot-color-brand-secondary); stroke-width: 3; }
+  .fac-plan-b-curtain { stroke: var(--aot-color-brand-secondary); stroke-width: 3; stroke-dasharray: 10 6; }
+  .fac-plan-b-open { stroke: var(--aot-color-brand-secondary); stroke-width: 2; stroke-dasharray: 2 6; stroke-linecap: round; }
+  .fac-plan-guide { fill: none; stroke: var(--aot-btn-border-primary); stroke-width: 2; stroke-dasharray: 7 5; }
+  .fac-plan-void { fill: var(--aot-surface-card); stroke: var(--aot-color-brand-secondary); stroke-width: 2; stroke-dasharray: 6 4; }
+  .fac-plan-sel { fill: none; stroke: var(--aot-color-brand-primary); stroke-width: 5; }
+  .fac-plan-handle { fill: var(--aot-surface-card); stroke: var(--aot-color-brand-primary); stroke-width: 2; }
+  .fac-plan-rubber { fill: none; stroke: var(--aot-color-brand-primary); stroke-width: 2; stroke-dasharray: 6 4; }
+  .fac-plan-name { fill: var(--aot-color-text-primary); font-size: var(--aot-font-size-xs); font-weight: 600; }
+  .fac-plan-sub,
+  .fac-plan-dim { fill: var(--aot-color-text-secondary); font-size: var(--aot-font-size-2xs); }
   /* Shared rows size their control by --aot-common-control-width (160px). A few
      of this page's selects carry longer wording ("Select a Map first"), which
-     the pill's caret padding then clips, so widen the column for this drawer
-     only — the token stays untouched everywhere else.
-     The drawer is no longer a fixed 520px (it narrows on small windows), so the
-     column follows it down instead of shoving the row's trailing button off the
-     card edge; at the full width it is still exactly 190px. */
+     the pill's caret padding then clips, so widen the column for the inspector
+     only — the token stays untouched everywhere else. The column follows the
+     inspector's width (400–440px) and stays clear of the label. */
   #modal_fac_step .aot-modal-option-row {
-    --aot-common-control-width: clamp(150px, calc(var(--aot-wdrawer-w, 520px) - 330px), 190px);
+    --aot-common-control-width: clamp(150px, calc(var(--aot-wdrawer-w, 420px) - 250px), 190px);
   }
 
   /* 다만 **숫자 칸은 그렇게 넓을 이유가 없다.** 이 드로어에서 다루는 수는
@@ -627,15 +722,94 @@
     padding-right: 0.45rem !important;
   }
 
-  /* 좁은 화면에서도 **한 줄에 [제목][컨트롤]** 이다.
-     예전에는 여기서 행을 세로로 쌓았다 — "긴 제목이 입력칸을 짓누른다" 는
-     이유였는데, 그 짓누름은 컨트롤이 남는 폭을 나눠 갖던 탓이었다. 컨트롤이
-     제 폭을 갖게 된 뒤로는(숫자 96px, 셀렉트 150–190px, 토글 60px) 제목이
-     길면 제목이 줄바꿈될 뿐 입력칸은 그대로다.
-     쌓으면 한 항목이 두 줄을 먹어 훑기 어렵고, 컨트롤을 행 전체 폭으로 펴는
-     바람에 "일본" 한 단어짜리 셀렉트가 306px 알약이 되기도 했다(실측 375px).
-     공용 행/컨트롤 규칙이 !important 라 여기서도 같은 무게로 말한다. */
-  @media (max-width: 620px) {
+  .fac-step-footer { justify-content: flex-start; gap: 8px; }
+  .fac-step-footer-gap { flex: 1 1 auto; }
+
+  /* Phone-only pieces are hidden on wide screens (S6). */
+  .fac-phone-note, .fac-progress-summary { display: none; }
+
+  /* ── Phone (≤767.98) — view and light edits only (S6, 02-plan §6; frame S7) ─
+     One breakpoint for the whole page (the old 620 / 900 ones are gone).
+     Not loaded on a phone: the add tools, the view menu, tools & export, undo,
+     map placement and the status line — the DOM stays, the toolbar only keeps
+     Map | 3D and Settings. With the modal closed the model fills the screen
+     below the toolbar; Settings opens the same modal covering the screen
+     (.aot-drawer-fullcover), and its handle drops it to a peek over the model.
+     The modal holds the facility's Where/What (read + numbers), the component
+     list and, for a component picked in 3D or the list, its name and device.
+     Progress is one summary line.
+     Every hidden piece is hidden by selector weight, not !important: the shared
+     option row and pill rules carry no !important any more. */
+  @media (max-width: 767.98px) {
+    /* Title bar: one row — the title and Back to map (S8). Saving lives in the
+       settings modal's footer (the same button there), so the title bar's copy
+       steps aside; the row is the 44px touch height plus a hairline. */
+    /* 26-11-12: the title bar folds into the toolbar — one row of Back to map,
+       Map | 3D and Settings under the menu bar. The facility's name is the
+       settings modal's title; saving is in its footer. */
+    .fac-page-title { display: none; }
+    #facility-3d-tools > .fac-tb-grp.fac-tb-phone-back { display: flex; }
+    #facility-3d-tools > .fac-tb-phone-back + .fac-tb-grp { padding-left: 8px; box-shadow: inset 1px 0 0 var(--aot-border-light); }
+
+    /* The full-screen settings modal already sits over the AI dock (z-index); say it
+       outright so the dock's chip and gear never share a rectangle with the modal's
+       title row or footer buttons. */
+    body:has(#modal_fac_step.show) .aot-ai-dock { visibility: hidden; }
+
+    /* Lowered with the handle, the modal's outer layer (transparent, the whole
+       screen) still sat over the toolbar, so Settings and Map | 3D could not be
+       tapped. Only the sheet takes touches while lowered. Scoped to this page:
+       the shared drawers keep their own behaviour. */
+    body.aot-drawer-lowered #modal_fac_step { pointer-events: none; }
+    body.aot-drawer-lowered #modal_fac_step .modal-dialog { pointer-events: auto; }
+
+    /* Toolbar: the stage switch and Settings only. */
+    #facility-3d-tools > .fac-tb-grp:not(:nth-child(-n+2)):not(.fac-tb-settings),
+    #facility-3d-tools .fac-tb-lbl { display: none; }
+    #facility-3d-tools { padding: 4px 8px; flex-wrap: nowrap; }
+    .fac-tb-settings { padding-left: 0; box-shadow: none; }
+
+    /* One line at the top of the modal, one summary line instead of the chips.
+       Everything inside the modal is scoped by its id, not the page class: the
+       shared modal scripts re-parent the dialog to <body>, so a `.fac-editor`
+       ancestor is not there at run time. */
+    #modal_fac_step .fac-phone-note { display: block; margin: 0 0 8px; }
+    #modal_fac_step .fac-progress-summary {
+      display: block; margin: 0 0 8px;
+      font-size: var(--aot-font-size-sm); color: var(--aot-color-text-secondary);
+    }
+    #modal_fac_step #fac-progress { display: none; }
+
+    /* The model (or the map) and nothing laid over it or under it. */
+    .fac-editor #facility-3d-panel { min-width: 0; }
+    .fac-editor #fac-3d-status,
+    #modal_fac_step .fac-tray-add,
+    #modal_fac_step .fac-item-del,
+    #modal_fac_step .fac-wide-only,
+    #modal_fac_step #fac-irr-pane,
+    #modal_fac_step #zone-editor-container,
+    #modal_fac_step .fac-wide-tab,
+    #modal_fac_step #fac-pane-connect,
+    #modal_fac_step #fac-pane-check,
+    #modal_fac_step #check-locked-hint,
+    #modal_fac_step #fac-place-home { display: none; }
+
+    /* Touch targets — 2.75rem (ui-guide §3-1). The title-bar and footer pills
+       get the shared 40px touch height from aot-modal-modern.css (0,3,0); the
+       page container class lifts this one rule above it. */
+    .container.fac-editor .btn.aot-pill-btn,
+    #modal_fac_step .modal-footer .btn.aot-pill-btn,
+    .fac-editor .btn.aot-pill-btn.aot-pill-btn-sm,
+    #modal_fac_step .btn.aot-pill-btn.aot-pill-btn-sm,
+    #modal_fac_step .form-control,
+    #modal_fac_step .bootstrap-select > .dropdown-toggle,
+    #modal_fac_step .facility-list-item { min-height: 2.75rem; }
+    #modal_fac_step .fac-tray-row > td { height: 2.75rem; }
+
+    /* Rows stay [label][control] on one line — a long label wraps, the control
+       keeps its width (stacking made a one-word select a 306px pill at 375).
+       The shared control rule was !important when this was written; kept at
+       the same weight (moved here from the old 620px block). */
     #modal_fac_step .aot-modal-option-label {
       max-width: none;
       flex: 0 1 auto;
@@ -647,133 +821,13 @@
       min-width: 0 !important;
     }
   }
-  .fac-step-footer { justify-content: flex-start; gap: 8px; }
-  .fac-step-footer-gap { flex: 1 1 auto; }
-  /* Band toggle is a phone affordance; the desktop drawer sits beside the stage */
-  .fac-band-toggle { display: none; }
-
-  /* ── Phone layout ──────────────────────────────────────────────────────────
-     A drawer that covers the screen is useless here — the whole point is to
-     watch the model while changing settings. So on a phone the stage is pinned
-     as a band under the navbar with the step bar beneath it, and the settings
-     become a bottom sheet filling the rest. Scoped by #id so the shared drawer
-     rules (which are !important) are outranked without touching other pages. */
-  @media (max-width: 767.98px) {
-    :root {
-      --fac-nav-h: 50px;
-      --fac-band-h: calc(34 * var(--aot-vh)); --fac-band-h: calc(34 * var(--aot-dvh));
-      --fac-stepbar-h: 46px;
-    }
-
-    .fac-editor { padding-top: 0 !important; }
-    /* Title scrolls away with the page; band + steps stay put. */
-    .fac-editor .fac-page-title { display: none; }
-
-    /* Step bar sits directly under the navbar so its position never depends on
-       how tall the band currently is. */
-    .fac-editor .fac-stepbar {
-      position: fixed;
-      top: var(--fac-nav-h);
-      left: 0; right: 0;
-      z-index: 1035;
-      height: var(--fac-stepbar-h);
-      margin: 0;
-      padding: 5px 8px;
-      background: var(--aot-surface-body);
-      border-bottom: 1px solid var(--aot-border-neutral);
-      box-sizing: border-box;
-    }
-    .fac-editor .fac-stage {
-      position: fixed;
-      top: calc(var(--fac-nav-h) + var(--fac-stepbar-h));
-      left: 0; right: 0;
-      /* With the sheet closed the model gets the whole screen */
-      height: calc(100 * var(--aot-dvh) - var(--fac-nav-h) - var(--fac-stepbar-h));
-      margin: 0;
-      z-index: 1034;
-      background: var(--aot-surface-card);
-      border-bottom: 1px solid var(--aot-border-neutral);
-    }
-    body.fac-sheet-open .fac-editor .fac-stage { height: var(--fac-band-h); }
-    .fac-editor .fac-stage-view.active { height: 100%; }
-    /* The panel is a fixed 540px on desktop; here it fills the band. */
-    #facility-3d-panel {
-      height: 100% !important;
-      min-height: 0 !important;
-      margin: 0 !important;
-      border: none !important;
-      border-radius: 0 !important;
-    }
-    /* !important throughout: these id rules are defined later in this sheet, so
-       equal specificity would otherwise let the desktop values win. */
-    #facility-3d-header, #facility-map-header { display: none !important; }
-    #facility-3d-resize-handle { display: none !important; }
-    #facility-map-canvas {
-      height: 100% !important;
-      border: none !important;
-      border-radius: 0 !important;
-    }
-    .fac-map-hint { display: none !important; }
-    /* A band this small cannot carry every overlay — keep the tool rail, drop
-       the view cube and the fitting list (both reachable on a larger screen). */
-    .fac-viewcube { display: none !important; }
-    #facility-3d-fittings-list { display: none !important; }
-    #facility-3d-hint { display: none !important; }
-    .fac-rail { padding: 3px; }
-    #facility-3d-tools .tool-btn,
-    #facility-3d-tools .fly-sec select,
-    #facility-3d-tools .rail-btn { font-size: var(--aot-font-size-xs); padding: 4px 5px; }
-
-    /* Bottom sheet. The modal layer spans the viewport, so it must not swallow
-       touches over the band — the shared sheet rule sets pointer-events:auto
-       with !important, hence the same here. */
-    #modal_fac_step { pointer-events: none; }
-    #modal_fac_step .modal-dialog {
-      pointer-events: auto;
-      position: fixed;
-      top: calc(var(--fac-nav-h) + var(--fac-stepbar-h) + var(--fac-band-h));
-      bottom: 0;
-      left: 0; right: 0;
-      width: 100% !important;
-      max-width: 100%;
-      height: auto !important;
-      margin: 0;
-      /* No transition: toggling display and .show together strands the dialog
-         mid-animation (documented stuck-sheet bug). */
-      transform: none;
-      transition: none;
-    }
-    #modal_fac_step .modal-content {
-      height: 100% !important;
-      max-height: 100%;
-      border-radius: 0 !important;
-      display: flex;
-      flex-direction: column;
-    }
-    #modal_fac_step .modal-body { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; }
-    #modal_fac_step .modal-header { padding: 0.5rem 0.75rem; }
-    #modal_fac_step .fac-band-toggle {
-      display: inline-block;
-      margin-left: auto;
-      margin-right: 0.5rem;
-      background: var(--aot-surface-body);
-      border: 1px solid var(--aot-border-neutral);
-      border-radius: var(--aot-btn-pill-radius);
-      font-size: var(--aot-font-size-xs);
-      padding: 3px 10px;
-      color: var(--aot-color-text-secondary);
-      cursor: pointer;
-    }
-
-    /* Collapsed: hand the band's height to the sheet */
-    body.fac-band-collapsed .fac-editor .fac-stage { display: none; }
-    body.fac-band-collapsed #modal_fac_step .modal-dialog {
-      top: calc(var(--fac-nav-h) + var(--fac-stepbar-h)) !important;
-    }
-  }
   .fac-name-label {
     align-self: center;
-    margin-right: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;   /* a long name is cut, not wrapped into a tall column (phone) */
     font-size: var(--aot-font-size-sm);
     color: var(--aot-color-text-secondary);
   }
@@ -781,16 +835,57 @@
   /* ── Map canvas ────────────────────────────────────────────────────────────── */
   #facility-map-canvas {
     width: 100%;
-    height: clamp(320px, calc(100 * var(--aot-vh) - 292px), 1360px);
+    height: 100%;
     border: 1px solid var(--aot-border-neutral);
     border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg);
     background: var(--aot-surface-body);
   }
 
+  /* ── Label colour ranges (sensor-ranges-ui.js) and device check (commissioning.js)
+     — these used to be inline styles in the rendered strings (S5). */
+  .fac-sr-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .fac-sr-label { font-weight: 600; font-size: var(--aot-font-size-sm); }
+  .fac-sr-unit, .fac-sr-unit code { font-weight: 400; font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); }
+  .fac-sr-stage { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); margin-bottom: 4px; }
+  .comm-muted { color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-sm); }
+  .comm-act-kind { color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-xs); margin-left: auto; }
+  .comm-warn-note { color: var(--aot-tint-warning-fg); font-size: var(--aot-font-size-xs); margin-top: 4px; }
+  .comm-verdict-submit { font-size: var(--aot-font-size-xs); }
+
+  /* ── Map layer switch (aot-facility-layer-panel.js) — a word pill, not an icon
+     disc (S5). Its colours and spacing used to be inline literals (#fff/#555/#444). */
+  .fac-map-layer-host { position: relative; }
+  /* Top-right: MapLibre's zoom/compass sit top-left, attribution bottom-right. */
+  #facility-map-canvas .fac-map-layer-btn {
+    position: absolute; top: 10px; right: 10px; z-index: var(--aot-z-fixed-panel);
+  }
+  #facility-map-canvas .fac-map-layer-panel {
+    position: absolute; top: 52px; right: 10px; z-index: var(--aot-z-fixed-panel);
+    min-width: 200px; max-height: 300px; overflow-y: auto;
+    padding: 8px 12px;
+    background: var(--aot-surface-card);
+    border-radius: var(--aot-radius-md);
+    box-shadow: var(--aot-shadow-dropdown);
+    font-size: var(--aot-font-size-sm);
+  }
+  #facility-map-canvas .fac-map-layer-panel[hidden] { display: none; }
+  .fac-map-layer-group + .fac-map-layer-group { margin-top: 8px; }
+  .fac-map-layer-title {
+    font-size: var(--aot-font-size-xs); font-weight: 700;
+    color: var(--aot-color-text-secondary);
+    padding: 4px 0;
+  }
+  .fac-map-layer-item label {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0; padding: 4px 0; cursor: pointer;
+  }
+  .fac-map-layer-empty { padding: 8px 0; color: var(--aot-color-text-secondary); }
+
   /* ── Facility list ─────────────────────────────────────────────────────────── */
+  /* The list is its own view of the drawer now (header button), so it runs the
+     drawer's height — a 200px box of its own showed 2½ of 30-odd facilities over
+     an empty drawer. The drawer body is the one scroll. */
   #facility-list {
-    max-height: 200px;
-    overflow-y: auto;
     border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-md);
     padding: 4px;
@@ -809,7 +904,7 @@
   }
   .facility-list-item:hover { background: var(--aot-surface-body); }
   .facility-list-item.active { background: var(--aot-color-brand-accent); font-weight: 600; }
-  .fac-list-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fac-list-actions { display: flex; gap: 8px; }
   .facility-list-item .fac-item-info { flex: 1; min-width: 0; }
   /* The button itself is the shared pill; the page only says it appears on row
      hover so the list stays quiet until you reach for it. */
@@ -895,242 +990,61 @@
   .comm-action-icon { color: var(--aot-color-brand-primary); flex-shrink: 0; margin-top: 4px; }
   .comm-progress { margin: 6px 0; font-size: var(--aot-font-size-sm); color: var(--aot-color-text-secondary); }
 
-  /* ── 3D tool palette (left side of panel) ─────────────────────────────────── */
-  /* Two parts: a slim always-visible rail, and flyout panels that only cover the
-   * viewport while a tool group is actually open. The irrigation forms in
-   * particular used to sit in the palette permanently and hid half the scene. */
-  /* top+bottom (not max-height) so the box has a resolved height — the flyout's
-   * percentage max-height needs it, otherwise the tall irrigation panel grows
-   * over the inspector strip. bottom clears the 100px inspector. */
+  /* ── 툴바 한 줄(S3) — 캔버스 밖, 스테이지 위 ─────────────────────────────────
+   * 예전에는 툴 레일·플라이아웃·뷰큐브·표시 목록이 캔버스 위에 떠 있어 모형을
+   * 4.9%(기본)~35.8%(관수·목록 열림) 가렸다. 이제 캔버스 안에는 모형과 선택
+   * 기즈모만 있고, 도구는 이 줄의 알약·공용 드롭다운이다. 새 색·크기 값은 없다. */
   #facility-3d-tools {
-    position: absolute;
-    top: 8px;
-    left: 6px;
-    bottom: 8px;
-    z-index: 12;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    pointer-events: none;   /* the gap between rail and flyout stays click-through */
-  }
-  #facility-3d-tools > * { pointer-events: auto; }
-  .fac-rail {
-    background: var(--aot-surface-card);
-    border: 1px solid var(--aot-border-light);
-    border-radius: var(--aot-radius-sm);
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    box-shadow: var(--aot-shadow-md);
-  }
-  #facility-3d-tools .rail-btn {
-    border: 1px solid var(--aot-border-neutral);
-    background: var(--aot-surface-card);
-    color: var(--aot-color-text-primary);
-    font-size: var(--aot-font-size-xs);
-    font-weight: 600;
-    padding: 5px 6px;
-    cursor: pointer;
-    border-radius: var(--aot-radius-xs);
-    line-height: 1;
-    text-align: left;
-    white-space: nowrap;
-    width: 100%;
-  }
-  #facility-3d-tools .rail-btn::after {
-    content: '›';
-    float: right;
-    margin-left: 6px;
-    opacity: 0.55;
-  }
-  #facility-3d-tools .rail-btn:hover { background: var(--aot-surface-body); border-color: var(--aot-color-brand-primary); color: var(--aot-color-brand-primary); }
-  #facility-3d-tools .rail-btn.open {
-    background: var(--aot-surface-body);
-    border-color: var(--aot-color-brand-primary);
-    color: var(--aot-color-brand-primary);
-  }
-  /* A group whose tool is currently armed stays marked even when collapsed */
-  #facility-3d-tools .rail-btn.has-active {
-    border-color: var(--aot-btn-bg-primary);
-    box-shadow: inset 2px 0 0 var(--aot-btn-bg-primary);
-  }
-  .fac-flyout {
-    display: none;
-    background: var(--aot-surface-card);
-    border: 1px solid var(--aot-border-light);
-    border-radius: var(--aot-radius-sm);
-    padding: 5px;
-    box-shadow: var(--aot-shadow-md);
-    min-width: 150px;
-    max-height: calc(100% - 4px);
-    overflow-y: auto;
-  }
-  .fac-flyout.open { display: block; }
-  .fac-flyout-wide { width: 272px; }
-  .fac-flyout .fly-title {
-    font-size: var(--aot-font-size-xs);
-    font-weight: 700;
-    color: var(--aot-color-text-secondary);
-    padding: 2px 4px 5px;
-    border-bottom: 1px solid var(--aot-border-light);
-    margin-bottom: 4px;
-  }
-  .fac-flyout .fly-sec {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 3px 4px 5px;
-  }
-  /* 도구 팔레트의 셀렉트는 이 팔레트의 버튼과 같은 얼굴을 쓴다. 앱의 알약
-     셀렉트(32px·9999px)를 여기 들이면 4px 모서리 버튼들 사이에서 혼자 크고
-     둥글어진다 — 이 패널은 3D 뷰 위에 얹는 조밀한 도구 판이라 자기 치수를
-     따로 갖는다. 예전에는 넷 다 클래스가 없어 **브라우저 기본 셀렉트**가
-     그대로 나왔고(회색 화살표·시스템 모서리), 치수는 템플릿 인라인
-     `style="font-size:…;padding:1px 4px"` 이 정하고 있었다. */
-  #facility-3d-tools .tool-btn,
-  #facility-3d-tools .fly-sec select {
-    border: 1px solid var(--aot-border-neutral);
-    background: var(--aot-surface-card);
-    color: var(--aot-color-text-primary);
-    font-size: var(--aot-font-size-xs);
-    font-weight: 600;
-    padding: 5px 6px;
-    cursor: pointer;
-    border-radius: var(--aot-radius-xs);
-    line-height: 1;
-    text-align: left;
-    min-width: 64px;
-    white-space: nowrap;
-    width: 100%;
-  }
-  /* 버튼은 rail 한 칸을 채우지만(width:100%), 셀렉트는 라벨 옆에 나란히 서므로
-     제 글자만큼만 차지한다. */
-  #facility-3d-tools .fly-sec select {
-    width: auto;
-    min-width: 0;
-    /* 높이는 입력 구획 공통값을 읽는다(아래 `--fac-tool-h`).
-       ⚠ 캐럿은 브라우저 것을 그대로 쓴다(appearance 를 끄지 않는다). 이만한
-       칸에 우리 화살표를 얹으려면 오른쪽 여백을 2rem 씩 비워야 해서, 도구
-       판에서는 글자가 들어갈 자리가 남지 않는다. */
-    height: var(--fac-tool-h);
-    padding: 0 6px;
-  }
-
-  /* ── 도구 판의 입력 구획 ──────────────────────────────────────────────
-     "관수" 판에는 버튼 줄 말고 **값을 적는 구획**이 넷 있다(자동 배관 생성 ·
-     자동 관수기 배치 · 밸브 추가 · 단위 삭제). 이 넷의 치수·글자·줄 배치가
-     전부 템플릿 인라인 style 로 적혀 있었다 — 같은 선언이 라벨에 아홉 번,
-     단위에 여섯 번, 버튼에 여섯 번, 줄에 여섯 번 되풀이됐다.
-     여기로 옮긴다. 값은 옮기기 전 그대로다. */
-  .fac-flyout .fly-sec-form {
-    align-items: flex-start;
-    padding: 6px 8px;
-  }
-  .fac-flyout .fly-sec-pad { padding: 6px 8px; }
-  /* 구획 사이 구분선. 첫 입력 구획(자동 배관 생성)에는 붙이지 않는다 —
-     바로 위 버튼 줄과 한 덩어리로 읽히는 자리다. */
-  .fac-flyout .fly-sec-divided { border-top: 1px solid var(--aot-border-light); }
-
-  /* 입력 구획의 컨트롤은 **한 높이**로 선다. 예전에는 같은 줄에서 버튼 18 ·
-     셀렉트 20 · 숫자칸 28 로 셋 다 달랐다(숫자칸은 크롬이 스피너 때문에
-     제 최소 높이를 갖는다). 값은 셀렉트가 저절로 서던 20px 을 쓴다. */
-  #facility-3d-tools { --fac-tool-h: 20px; }
-
-  /* 구획 안의 줄: [라벨][값][단위] … 가 가로로 서고 좁아지면 접힌다. */
-  #facility-3d-tools .fly-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    flex-wrap: wrap;
-  }
-  /* 버튼만 나란히 서는 줄은 더 좁게 붙인다. */
-  #facility-3d-tools .fly-row-btns {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-
-  #facility-3d-tools .fly-label {
-    font-size: var(--aot-font-size-xs);
-    font-weight: 600;
-    color: var(--aot-color-text-secondary);
-  }
-  /* 값 뒤에 붙는 단위(m · ° · L/h)는 라벨이 아니라 값의 꼬리라 굵게 하지 않는다. */
-  #facility-3d-tools .fly-unit {
-    font-size: var(--aot-font-size-xs);
-    color: var(--aot-color-text-secondary);
-  }
-
-  /* 숫자칸. 예전에는 칸마다 40·44·46·48·50·52px 여섯 가지 폭이 인라인으로
-     적혀 있었는데, 그 차이에 규칙이 없었다(모두 네 글자 이하를 받는 칸이다).
-     제일 넓던 52px 하나로 모은다 — 어느 칸도 지금보다 좁아지지 않는다. */
-  #facility-3d-tools .fly-sec input[type="number"] {
-    width: 52px;
-    height: var(--fac-tool-h);
-    font-size: var(--aot-font-size-xs);
-    padding: 2px 6px;
-    /* 셀렉트와 같은 얼굴을 준다. 앱의 입력칸은 밑줄인데(쓰는 것), 이 칸들은
-       밑줄조차 그려지지 않아 **글자만 떠 있었다** — 이 판은 `.frame-aot`
-       바깥이라 밑줄 규칙이 닿지 않는다. 옆의 셀렉트·버튼이 전부 상자인
-       자리에서 값 칸만 아무 테두리가 없으면 어디를 눌러야 하는지 알 수 없다. */
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-xs);
+    padding: 8px 12px;
+    margin-bottom: 8px;
     background: var(--aot-surface-card);
-    color: var(--aot-color-text-primary);
+    border-radius: var(--aot-radius-md);
   }
-
-  /* 입력 구획의 버튼은 rail 버튼보다 납작하다(줄이 여럿 쌓이는 자리라
-     세로를 아낀다). rail 쪽 `5px 6px` 과 구분되는 유일한 값이다. */
-  #facility-3d-tools .fly-sec-form .tool-btn,
-  #facility-3d-tools .fly-sec-pad .tool-btn {
-    height: var(--fac-tool-h);
-    padding: 0 7px;
-  }
-
-  /* 단위 삭제 모드가 켜졌을 때만 보이는 안내(JS 가 display 로 여닫는다). */
-  #facility-3d-tools .fly-note-warn {
-    font-size: var(--aot-font-size-xs);
-    color: var(--aot-tint-warning-fg);
-    margin-left: 8px;
-  }
-
-  #facility-3d-tools .tool-btn:hover { background: var(--aot-surface-body); border-color: var(--aot-color-brand-primary); color: var(--aot-color-brand-primary); }
-  #facility-3d-tools .tool-btn.active { background: var(--aot-btn-bg-primary); color: var(--aot-btn-color-primary); border-color: var(--aot-btn-bg-primary); }
-  /* Delete-unit mode active: danger action, so red emphasis */
-  #facility-3d-tools #btn-irr-delete-mode.active { background: var(--aot-btn-bg-primary); color: var(--aot-btn-color-primary); border-color: var(--aot-btn-bg-primary); }
-  #facility-3d-tools .tool-btn:disabled {
-    background: var(--aot-surface-body); color: var(--aot-color-text-secondary); cursor: not-allowed; border-color: var(--aot-border-light);
-  }
-  /* ── Right-side fittings list panel ───────────────────────────────────────── */
-  /* Hidden by default (toggled from the toolbar) so the viewport stays clear.
-   * When shown it starts below the view-cube controller, which sits at top:8px
-   * and is ~118px tall (3x3 of 28px buttons + 2px gaps + 23px projection
-   * toggle) — top:136px leaves a ~10px gap so the two never overlap. */
+  .fac-tb-grp { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .fac-tb-grp + .fac-tb-grp { padding-left: 16px; box-shadow: inset 1px 0 0 var(--aot-border-light); }
+  .fac-tb-grp[hidden] { display: none; }
+  .fac-tb-end { margin-left: auto; }
+  /* The phone's Back to map (the title bar holds it on wider screens). */
+  .fac-tb-phone-back { display: none; }
+  .fac-tb-phone-back + .fac-tb-grp { padding-left: 0; box-shadow: none; }
+  /* Toolbar too long for one line (the settings drawer open on a narrow stage):
+     the bridge sets .fac-tb-compact — Undo moves to the top of the tools menu,
+     which is then called "Show more". The menu opens outside the toolbar, so
+     nothing is clipped. */
+  #facility-3d-tools .fac-tb-compact-only { display: none; }
+  #facility-3d-tools.fac-tb-compact .fac-tb-compact-only { display: block; }
+  #facility-3d-tools.fac-tb-compact span.fac-tb-compact-only { display: inline; }
+  #facility-3d-tools.fac-tb-compact .fac-tb-full-only { display: none; }
+  /* …and the groups close up (the separators keep half their space). Still too
+     long: the hidden-count tail on View goes (.fac-tb-tight) — the menu's own
+     header still says it. */
+  #facility-3d-tools.fac-tb-compact { padding-left: 8px; padding-right: 8px; }
+  #facility-3d-tools.fac-tb-compact .fac-tb-grp:not(.fac-tb-phone-back) + .fac-tb-grp { padding-left: 8px; }
+  #facility-3d-tools.fac-tb-tight #fit-list-count-badge { display: none; }
+  #fit-list-count-badge:not(:empty) { margin-left: 4px; }
+  .fac-tb-lbl { font-size: var(--aot-font-size-xs); color: var(--aot-color-text-secondary); }
+  /* With the drawer open the stage is ~1000px wide and the full toolbar wrapped
+     to two rows (S4 note); the group labels are the slack — the pills name
+     themselves. One row keeps the model's height. */
+  body.aot-widget-drawer-open .fac-tb-lbl { display: none; }
+  /* 투영(원근/등각)은 보기 메뉴 안의 항목 둘 — 켜짐은 굵기로 말한다(색만으로 말하지 않는다). */
+  .fac-proj-toggle .dropdown-item[aria-pressed="true"] { font-weight: 700; }
+  /* 추가 메뉴는 길다(열기·설비·센서·관수) — 화면 높이 안에서 스크롤한다. */
+  .fac-add-menu { max-height: calc(70 * var(--aot-vh)); overflow-y: auto; }
+  /* 관수 메뉴 안의 토글(직교 스냅·단위 삭제)은 켜짐을 글자 굵기로도 말한다 —
+     색만으로 말하지 않는다(ui-guide §4-11). */
+  #facility-3d-tools .dropdown-item.active { font-weight: 700; }
+  /* 보기 메뉴 — 방향·투영 아래에 표시 필터까지 실려 길다(26-11-12). 화면 높이 안에서 스크롤한다. */
+  .fac-view-menu { min-width: 220px; max-height: calc(70 * var(--aot-vh)); overflow-y: auto; }
+  /* 표시 필터 — 보기 메뉴의 마지막 칸(예전에는 따로 있던 툴바 메뉴, 그 전에는 캔버스 위 목록). */
   #facility-3d-fittings-list {
-    display: none;
-    position: absolute;
-    top: 136px;
-    right: 8px;
-    /* Height follows the content. Anchoring both top and bottom stretched the
-     * box to the full viewport, which was fine when it listed every fitting but
-     * now leaves a column of empty card under three or four filter rows.
-     * max-height keeps a long list inside the viewport (overflow-y below). */
-    max-height: calc(100% - 152px);
-    width: 160px;
-    transition: width 0.2s ease;
-    z-index: 12;
-    background: var(--aot-surface-card);
-    border: 1px solid var(--aot-border-light);
-    border-radius: var(--aot-radius-sm);
-    padding: 5px;
-    box-shadow: var(--aot-shadow-md);
-    overflow-y: auto;
-    overflow-x: hidden;
+    padding: 0 8px 4px;
     font-size: var(--aot-font-size-sm);
   }
-  #facility-3d-fittings-list.open { display: block; }
   #facility-3d-fittings-list .fit-list-empty {
     color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-xs); padding: 6px 4px; line-height: 1.3;
   }
@@ -1146,48 +1060,30 @@
   }
   #facility-3d-fittings-list .fit-cat-row:hover { background: var(--aot-surface-body); }
   #facility-3d-fittings-list .fit-cat-row.is-off { color: var(--aot-color-text-secondary); }
-  #facility-3d-fittings-list .fit-cat-row.is-off .fit-cat-eye { opacity: 0.4; }
-  #facility-3d-fittings-list .fit-cat-eye { font-size: var(--aot-font-size-base); line-height: 1; }
+  #facility-3d-fittings-list .fit-cat-state { color: var(--aot-color-text-secondary); white-space: nowrap; }
   #facility-3d-fittings-list .fit-cat-name { flex: 1 1 auto; min-width: 0; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
   #facility-3d-fittings-list .fit-cat-count { color: var(--aot-color-text-secondary); }
-
-  /* ── Fitting list panel header ───────────────────────────────────────────── */
-  #fit-panel-tabs {
-    display: flex; gap: 4px; margin-bottom: 8px;
-    background: var(--aot-surface-body); border-radius: var(--aot-radius-sm); padding: 4px 6px;
-  }
-  .fit-panel-title {
-    font-size: var(--aot-font-size-xs); font-weight: 700; color: var(--aot-color-text-secondary);
+  /* 층 보기 행(시설 모형) — 기존 표시 필터 행을 그대로 쓰고, 아래 필터 구획과만 선으로 나눈다 */
+  #facility-3d-fittings-list #fit-level-items:not(:empty) {
+    border-bottom: 1px solid var(--aot-border-light); margin-bottom: 4px; padding-bottom: 4px;
   }
 
-  /* Header buttons (3D toolbar) — fitting list, fast mode */
-  #btn-3d-fitlist,
-  #btn-fast-mode {
-    font-size: var(--aot-font-size-xs); padding: 2px 10px;
-    border: 1px solid var(--aot-border-neutral); border-radius: var(--aot-btn-radius);
-    background: var(--aot-surface-card); color: var(--aot-color-text-primary); cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  #btn-3d-fitlist:hover,
-  #btn-fast-mode:hover { background: var(--aot-color-brand-accent); border-color: var(--aot-color-brand-primary); color: var(--aot-color-brand-primary); }
-  #btn-3d-fitlist.ctrl-active,
-  #btn-fast-mode.ctrl-active { background: var(--aot-color-brand-accent); border-color: var(--aot-color-brand-primary); color: var(--aot-color-brand-primary); font-weight: 700; }
-  #fit-list-count-badge { font-weight: 700; color: var(--aot-color-text-secondary); }
-  #btn-3d-fitlist.ctrl-active #fit-list-count-badge { color: inherit; }
+  /* ── Display filter header — the menu's own section header (.dropdown-header);
+     the menu's side padding is already on the section, so the header drops its own. */
+  #fit-panel-tabs .dropdown-header { padding-left: 6px; padding-right: 6px; }
 
-  /* ── Fitting inspector (lives in the drawer's equipment-layout step) ──────── */
+
+  /* ── Fitting inspector (the selection view of the inspector column) ───────── */
   #facility-3d-inspector {
     background: var(--aot-surface-card);
-    border: 1px solid var(--aot-border-neutral);
     border-radius: var(--aot-radius-md);
     padding: 10px 12px;
     margin-bottom: 16px;
     box-sizing: border-box;
   }
-  #facility-3d-inspector .fi-empty {
-    color: var(--aot-color-text-secondary); font-size: var(--aot-font-size-sm); padding: 10px 0; text-align: center;
-  }
+  /* Nothing-selected text is the facility view now — the column switches back. */
+  #facility-3d-inspector .fi-empty { display: none; }
   /* Rows, labels, controls, inputs and buttons are the shared modal components
      (.aot-modal-option-row / -label / -control, .aot-modern-input/-select,
      .aot-pill-btn). The only thing left for this page is the numeric triplet,
@@ -1245,7 +1141,7 @@
     margin: 0; cursor: pointer; white-space: nowrap;
   }
 
-  /* ── 3D viewport — now the full panel (the inspector moved to the drawer) ── */
+  /* ── 3D viewport — the full panel ──────────────────────────────────────── */
   #facility-3d-viewport {
     position: absolute;
     top: 0;
@@ -1258,44 +1154,6 @@
     height: 100%;
   }
 
-  /* The step drawer is a fixed 520px slice of the window — aot-modal-modern.css
-   * pushes the body aside by exactly that much. On every other page the space
-   * behind it is a scrollable list that survives being narrow; here it is the 3D
-   * preview, and on a 780px window it was squeezed to 213px: a 30 m greenhouse
-   * rendered into a sliver, with the step bar stacked one letter per line.
-   * So on narrow windows the drawer gives way instead, down to a phone-like
-   * 360px, keeping ~420px for the stage. Below 768px the drawer becomes a bottom
-   * sheet, the page switches to the band layout, and none of this applies. */
-  @media (min-width: 768px) {
-    body.aot-widget-drawer-open {
-      --aot-wdrawer-w: clamp(360px, calc(100 * var(--aot-vw) - 420px), 520px);
-    }
-  }
-
-  /* With the drawer down to 360px, "유형 [종류] [+ 추가]" no longer fits on one
-   * line and the button was clipped past the card edge. The label and the select
-   * give way; the button keeps its size, since a half-cut button is the one
-   * thing here that stops being usable. */
-  #fac-tab-sensors .aot-modal-option-row > .aot-modal-option-control {
-    min-width: 0;
-    flex-shrink: 1;
-  }
-  /* Only where the row truly cannot hold label(100) + select + button: below
-   * ~830px of window the drawer is at its 360px floor and the sum overflows.
-   * Above that the label keeps its 100px column so labels stay aligned down the
-   * card. min-width:auto restores the automatic minimum, and nowrap +
-   * word-break:normal make that minimum the whole word — so it shrinks to
-   * "유형" and stops. (min-width:0 lets it shrink past the text and clips it;
-   * the shared word-break:break-word splits it into 유/형 instead of yielding
-   * width.) */
-  @media (max-width: 900px) {
-    #fac-tab-sensors .aot-modal-option-row > .aot-modal-option-label {
-      min-width: auto;
-      white-space: nowrap;
-      word-break: normal;
-    }
-  }
-  #fac-tab-sensors .aot-modal-option-row > .aot-pill-btn { flex-shrink: 0; }
 
   /* ── 3D Preview panel ─────────────────────────────────────────────────────── */
   #facility-3d-panel {
@@ -1311,45 +1169,9 @@
     border-radius: 0 0 var(--aot-radius-lg) var(--aot-radius-lg);
     overflow: hidden;
     position: relative;
-    height: clamp(360px, calc(100 * var(--aot-vh) - 250px), 1400px);
-    min-height: 360px;
-    margin-bottom: 16px;
+    /* The stage body decides the height (S7): the window's, minus the title bar, toolbar and status line. */
+    height: 100%;
   }
-  #facility-3d-resize-handle {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 10px;
-    cursor: ns-resize;
-    z-index: 30;     /* above inspector */
-    background: linear-gradient(to bottom, transparent 30%, var(--aot-border-neutral) 40%, var(--aot-border-neutral) 60%, transparent 70%);
-  }
-  #facility-3d-resize-handle:hover {
-    background: linear-gradient(to bottom, transparent 30%, var(--aot-color-brand-secondary) 40%, var(--aot-color-brand-secondary) 60%, transparent 70%);
-  }
-  #facility-3d-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 0.4rem 0.75rem;
-    background: var(--aot-surface-body);
-    font-size: var(--aot-font-size-sm);
-    font-weight: 700;
-    color: var(--aot-color-text-primary);
-    border: 1px solid var(--aot-border-neutral);
-    border-radius: var(--aot-radius-md) var(--aot-radius-md) 0 0;
-    border-bottom: none;
-  }
-  /* 두 스테이지 헤더(지도·3D)의 오른쪽 동작 묶음. 같은 선언이 템플릿 인라인에
-     두 번 적혀 있었다. */
-  #facility-map-header .fac-head-actions,
-  #facility-3d-header .fac-head-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
   /* 3D 모델이 외부 자산에 연결돼 있을 때만 보이는 배지(JS 가 여닫는다). */
   #facility-3d-asset-badge {
     font-size: var(--aot-font-size-xs);
@@ -1371,17 +1193,22 @@
     pointer-events: none;
   }
 
-  /* ⚠ 아래 자리 값은 예전에 템플릿 인라인(`bottom:8px;right:12px`)이 덮고
-     있어서, 이 규칙이 적힌 대로 그려진 적이 없다. 인라인을 걷어내면서
-     여기 값이 제자리를 찾는다. */
-  #facility-3d-hint {
-    position: absolute;
-    bottom: 12px; right: 16px;
+  /* ── 상태줄(S3) — 캔버스 아래 한 줄, 글자만 ─────────────────────────────────
+     고른 것·구성요소 수·도구 상태·조작 안내. 예전에는 조작 안내가 캔버스 오른쪽
+     아래에, 도구 상태가 캔버스 위 말풍선으로 떠 있었다. */
+  .fac-status-line {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    padding: 6px 12px 0;
     font-size: var(--aot-font-size-xs);
     color: var(--aot-color-text-secondary);
-    pointer-events: none;
-    z-index: 10;
   }
+  .fac-status-line [hidden] { display: none; }
+  .fac-status-strong { color: var(--aot-color-text-primary); font-weight: 600; }
+  #facility-3d-hint { margin-left: auto; }
 
 /* ── Asset library / catalog pickers ────────────────────────────────────────
  * Both dialogs use the shared .aot-option-modal shell; only their list bodies

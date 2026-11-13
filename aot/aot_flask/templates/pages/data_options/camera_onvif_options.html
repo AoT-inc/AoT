@@ -1,0 +1,95 @@
+{# 범용 ONVIF 카메라 설정 구획 (범위 문서 O2). VIGI 모달과 같은 셸·같은 요소 id(vigi_*)를 쓰므로 상태 표시는 vigiRender()(camera.html)가 그린다.
+   OpenAPI·인증서 줄은 ONVIF 에 없어 그리지 않는다. PTZ·이벤트 구획은 O3·O4 에서 능력 기반으로 붙는다. #}
+{% set uid = each_camera.unique_id %}
+{% set vs = vigi_status.get(uid, {}) if vigi_status else {} %}
+<div class="aot-vigi" data-vigi-uid="{{ uid }}">
+  <script type="application/json" id="vigi_init_{{ uid }}">{{ vs|tojson }}</script>
+
+  <div class="aot-modal-group-title">{{ _('Group') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Tab') }}</label>
+      <div class="aot-modal-option-control">
+        <select name="vigi_tab_id" class="form-control aot-modern-select">
+          <option value="" {% if not each_camera.tab_id %}selected{% endif %}>{{ _('None') }}</option>
+          {% for tab in (tabs or []) %}
+          <option value="{{ tab.unique_id }}" {% if tab.unique_id == each_camera.tab_id %}selected{% endif %}>{{ tab.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="aot-option-tip">{{ _('If no tab is chosen, everyone with permission can operate this camera.') }}</div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Connection') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('IP Address') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.ip_address(class_='form-control aot-modern-input', value=vs.get('host', ''),
+          **{'placeholder': '192.168.x.x', 'title': _('IP Address')}) }}
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('ONVIF Port') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.onvif_port(class_='form-control aot-modern-input', value=vs.get('onvif_port', 80)) }}
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Username') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.username(class_='form-control aot-modern-input', value=vs.get('username', 'admin')) }}
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Password') }}</label>
+      <div class="aot-modal-option-control">
+        {{ form_mod_camera.password(class_='form-control aot-modern-input', value='', autocomplete='new-password',
+          **{'placeholder': _('Saved') if vs.get('has_password') else ''}) }}
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Status') }}</label>
+      <div class="aot-modal-option-control">
+        <span class="aot-status-badge" id="vigi_state_{{ uid }}"></span>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
+                id="vigi_btn_verify_{{ uid }}" onclick="vigiOp('{{ uid }}', 'verify')">{{ _('Check Connection') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" hidden
+                id="vigi_btn_reconnect_{{ uid }}" onclick="vigiOp('{{ uid }}', 'reconnect')">{{ _('Reconnect') }}</button>
+      </div>
+    </div>
+    <div class="aot-option-tip" id="vigi_tip_{{ uid }}"></div>
+    <div class="aot-option-tip">{{ _('Save the settings first, then press Check Connection. Live video starts only after the connection is checked.') }}</div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Video') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Live quality') }}</label>
+      <div class="aot-modal-option-control">
+        <select name="vigi_live_profile" class="form-control aot-modern-select">
+          <option value="main" {% if vs.get('live_profile') == 'main' %}selected{% endif %}>{{ _('Main (largest picture)') }}</option>
+          <option value="sub" {% if vs.get('live_profile', 'sub') != 'main' %}selected{% endif %}>{{ _('Sub') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="aot-option-tip">{{ _('The main stream puts a heavy load on the server.') }}</div>
+  </div>
+
+  <div class="aot-modal-group-title">{{ _('Features') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Supported features') }}</label>
+      <div class="aot-modal-option-control">
+        <span id="vigi_caps_{{ uid }}"></span>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" hidden
+                id="vigi_btn_caps_{{ uid }}" onclick="vigiOp('{{ uid }}', 'capabilities')">{{ _('Reload features') }}</button>
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Camera') }}</label>
+      <div class="aot-modal-option-control"><span id="vigi_info_{{ uid }}"></span></div>
+    </div>
+  </div>
+</div>

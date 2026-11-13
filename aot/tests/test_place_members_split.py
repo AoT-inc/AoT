@@ -37,12 +37,12 @@ class _SplitBase(_Base):
         # 구역 A 안의 실내 센서 둘(sensor-1 은 _Base 의 마커).
         _input('sensor-1', '온습도1', 'temperature')
         _input('sensor-2', '온습도2', 'temperature')
-        GeoShape(unique_id='mk-sensor-2', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk-sensor-2', geo_id='m1', type='aot_device',
                  device_id='sensor-2', channel_id='0',
                  feature=_point(20, 30)).save()
         # 대지 안·구역 밖의 기상대(마커) — 일사로 기상원임을 안다.
         _input('wx-1', '기상대', 'temperature', 'radiation')
-        GeoShape(unique_id='mk-wx', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk-wx', geo_id='m1', type='aot_device',
                  device_id='wx-1', channel_id='0',
                  feature=_point(50, 80)).save()
 
@@ -50,7 +50,7 @@ class _SplitBase(_Base):
 class TestPlaceMembersSplit(_SplitBase):
 
     def test_inferred_weather_station_is_outdoor(self):
-        from aot.aot_flask.geo.device_membership import place_members_split
+        from aot.space.device_membership import place_members_split
         sp = place_members_split('site')
         self.assertEqual(sp['outdoor'], {'wx-1'})
         self.assertEqual(sp['source'], 'inferred')
@@ -60,7 +60,7 @@ class TestPlaceMembersSplit(_SplitBase):
         self.assertEqual(sp['weather_place'], 'site')
 
     def test_zone_gets_the_enclosing_sites_weather(self):
-        from aot.aot_flask.geo.device_membership import (place_members,
+        from aot.space.device_membership import (place_members,
                                                          place_members_split)
         sp = place_members_split('zone-a')
         self.assertEqual(sp['weather_place'], 'site')
@@ -69,7 +69,7 @@ class TestPlaceMembersSplit(_SplitBase):
 
     def test_bound_weather_wins_over_inference(self):
         from aot.databases.models import GeoBinding
-        from aot.aot_flask.geo.device_membership import place_members_split
+        from aot.space.device_membership import place_members_split
         _input('wx-2', '지정 기상대', 'temperature')
         GeoBinding(spatial_kind='weather', spatial_id='site', role='weather',
                    device_kind='input', device_id='wx-2').save()
@@ -82,7 +82,7 @@ class TestPlaceMembersSplit(_SplitBase):
     def test_unplaced_station_bound_to_a_facility_fitting_is_outdoor(self):
         """미러-기상대처럼 지도 마커 없이 시설 설비에만 매인 기상대."""
         from aot.databases.models import GeoBinding, GeoFacility
-        from aot.aot_flask.geo.device_membership import place_members_split
+        from aot.space.device_membership import place_members_split
         GeoShape.query.filter(GeoShape.unique_id == 'mk-wx').delete()
         db.session.commit()
         GeoShape(unique_id='fac-shape', geo_id='m1', type='facility',
@@ -98,7 +98,7 @@ class TestPlaceMembersSplit(_SplitBase):
         self.assertEqual(place_members_split('fac-shape')['outdoor'], {'wx-1'})
 
     def test_place_members_is_unchanged(self):
-        from aot.aot_flask.geo.device_membership import (device_ids_in_area,
+        from aot.space.device_membership import (device_ids_in_area,
                                                          place_members)
         for uid in ('site', 'zone-a', 'zone-b'):
             self.assertEqual(place_members(uid), device_ids_in_area(uid))
@@ -106,7 +106,7 @@ class TestPlaceMembersSplit(_SplitBase):
         self.assertIsNone(place_members('no-such-place'))
 
     def test_unknown_place_is_none(self):
-        from aot.aot_flask.geo.device_membership import place_members_split
+        from aot.space.device_membership import place_members_split
         self.assertIsNone(place_members_split('no-such-place'))
 
 
@@ -185,11 +185,11 @@ class TestZonePickPrefersIndoor(_SplitBase):
     def setUp(self):
         super(TestZonePickPrefersIndoor, self).setUp()
         _input('wx-in', '가-기상대', 'temperature', 'humidity', 'radiation')
-        GeoShape(unique_id='mk-wx-in', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk-wx-in', geo_id='m1', type='aot_device',
                  device_id='wx-in', channel_id='0',
                  feature=_point(25, 35)).save()
         _input('sensor-1b', '나-온습도', 'temperature', 'humidity')
-        GeoShape(unique_id='mk-s1b', geo_id='m1', type='aot_device',
+        bound_shape(unique_id='mk-s1b', geo_id='m1', type='aot_device',
                  device_id='sensor-1b', channel_id='0',
                  feature=_point(22, 32)).save()
 
@@ -220,3 +220,4 @@ class TestZonePickPrefersIndoor(_SplitBase):
 
 if __name__ == '__main__':
     unittest.main()
+from aot.tests.geo._legacy_marker import bound_shape

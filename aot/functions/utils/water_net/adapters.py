@@ -192,8 +192,10 @@ def _pipe_of(feature, props, frame, pid):
     cs = [c for c in _coords(feature.get('geometry')) if len(c) >= 2]
     line = [frame.to_local(c[0], c[1]) for c in cs]
     sub = props.get('sub_type') or props.get('equipment_type')
+    dia = _fnum(props.get('diameter_mm'), 0.0)
     return Pipe(id=pid, line=line, sub_type='main' if sub in _MAIN_TYPES else 'branch',
-                name=props.get('label') or props.get('name'))
+                name=props.get('label') or props.get('name'),
+                diameter_mm=dia if dia > 0 else None, material=props.get('material') or None)
 
 
 def _drip_emitter(props, pipe):

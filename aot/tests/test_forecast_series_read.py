@@ -8,7 +8,7 @@ from unittest import mock
 
 from flask import Flask
 
-from aot.aot_flask.geo import forecast_series as fs
+from aot.space import forecast_series as fs
 
 H = 3600.0
 T0 = 1_800_000_000.0 - (1_800_000_000.0 % H)

@@ -1,7 +1,7 @@
 # coding=utf-8
 from aot import config
 from aot.databases import CRUDMixin
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class AlembicVersion(CRUDMixin, db.Model):

@@ -59,11 +59,11 @@ class TestWeatherPickFilter(unittest.TestCase):
 
         info = {}
         with patch.object(S, '_weather_inputs', return_value=cands), \
-             patch('aot.aot_flask.geo.device_membership.place_members',
+             patch('aot.space.device_membership.place_members',
                    return_value=set(placed)), \
-             patch('aot.aot_flask.geo.device_membership.site_for_geometry',
+             patch('aot.space.device_membership.site_for_geometry',
                    return_value=None), \
-             patch('aot.aot_flask.geo.device_membership.weather_device_ids',
+             patch('aot.space.device_membership.weather_device_ids',
                    return_value=(list(site), site_kind)), \
              patch('aot.utils.inputs.model_input_drivers',
                    return_value={MODEL_DRIVER}), \

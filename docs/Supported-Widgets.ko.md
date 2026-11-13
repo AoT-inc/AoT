@@ -86,8 +86,8 @@ Displays and controls a PWM output with a single slider.
 
 ### 모던 카메라
 
-- Libraries: aot.camera
-- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [python-onvif-zeep>=0.2.12](https://pypi.org/project/python-onvif-zeep>=0.2.12)
+- Libraries: aot.camera_drivers
+- Dependencies: [opencv-python>=4.8.0](https://pypi.org/project/opencv-python>=4.8.0), [onvif-zeep>=0.2.12](https://pypi.org/project/onvif-zeep>=0.2.12)
 
 종속성 자동 설치와 프로필을 지원하는 고급 카메라 위젯입니다.
 

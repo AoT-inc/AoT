@@ -51,7 +51,7 @@ class TestSameNameTargets(unittest.TestCase):
         db.session.add(GeoMap(unique_id='map-b', name='그린'))
 
         def shape(uid, geo, typ, name, geom, device_id=None):
-            db.session.add(GeoShape(unique_id=uid, geo_id=geo, type=typ, device_id=device_id,
+            db.session.add(bound_shape(unique_id=uid, geo_id=geo, type=typ, device_id=device_id,
                                     feature={'type': 'Feature', 'properties': {'name': name},
                                              'geometry': geom}))
 
@@ -97,7 +97,7 @@ class TestSameNameTargets(unittest.TestCase):
         cls._tmp.cleanup()
 
     def setUp(self):
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
 
     @property
@@ -230,3 +230,4 @@ class TestSameNameTargets(unittest.TestCase):
         for w in wheres.values():
             self.assertTrue(w.startswith('not on a map'), w)
             self.assertNotIn('tab', w)
+from aot.tests.geo._legacy_marker import bound_shape

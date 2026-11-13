@@ -123,8 +123,11 @@ TIMER_START_restart_aotmcp=$SECONDS
 ${INSTALL_CMD} restart-aotmcp
 TIMER_TOTAL_restart_aotmcp=$((SECONDS - TIMER_START_restart_aotmcp))
 
-# aottwin(디지털트윈, 실험)도 같은 이유로 — 설치·활성화한 기기에서만 다시 띄운다.
-${INSTALL_CMD} restart-aottwin
+# aottwin(디지털트윈, 실험)은 기본 구성에 항상 들어 있다 — 설정 > 일반의 토글이 실제 구동 스위치이고
+# 일반 사용자는 서버를 따로 설치할 방법이 없기 때문이다. 업그레이드마다 설치·활성화(이미 설치돼 있으면
+# 다시 설치해 새 코드로 재시작)한다. 토글이 꺼져 있으면 일하지 않고, 낮은 사양 기기는 스스로 잠겨
+# 정상 종료한다(Restart=on-failure 라 되살리지 않는다).
+${INSTALL_CMD} install-aottwin
 
 # SSL certificate validation and generation
 printf "\n#### Checking SSL certificates...\n"

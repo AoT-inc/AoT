@@ -34,7 +34,7 @@
           </div>
           <div class="aot-camera-preview-toggle">
             {% set cam_library = dict_cameras.get(each_camera.camera_type, {}).get('backend', '') %}
-            {% set stream_ok = cam_library in ('opencv', 'picamera', 'onvif') or each_camera.camera_type in ('stream_url', 'ip_camera') %}
+            {% set stream_ok = cam_library in ('opencv', 'picamera', 'onvif', 'vigi') or each_camera.camera_type in ('stream_url', 'ip_camera', 'vigi') %}
             <button type="button"
                     class="btn {% if stream_ok and each_camera.is_activated %}active{% endif %}"
                     {% if not stream_ok or not each_camera.is_activated %}disabled{% endif %}
@@ -53,6 +53,10 @@
         </div>
       </div>
     </div>
+
+    {% if each_camera.library == 'vigi' %}
+    {% include 'pages/data_options/camera_vigi_ptz.html' %}
+    {% endif %}
 
     <!-- Capture control buttons -->
     <div class="aot-modal-container">
@@ -104,6 +108,12 @@
     </div>
   </div>
 
+  {% if each_camera.library == 'vigi' %}
+  {% include 'pages/data_options/camera_vigi_options.html' %}
+  {% elif each_camera.library == 'onvif' %}
+  {% include 'pages/data_options/camera_onvif_options.html' %}
+  {% endif %}
+
   <!-- Per-camera settings options -->
   <div class="aot-modal-group-title">{{_('Camera Configuration')}}</div>
   <div class="aot-modal-container">
@@ -118,15 +128,21 @@
     {% endif %}
 
     <!-- IP camera / streaming URL settings -->
-    {% if each_camera.camera_type in ('ip', 'ip_camera', 'stream_url') %}
+    {% if each_camera.camera_type in ('ip', 'ip_camera', 'stream_url', 'ip_snapshot') %}
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label">
-        {% if each_camera.camera_type == 'stream_url' %}{{_('Stream URL')}}{% else %}{{_('Stream URL (RTSP)')}}{% endif %}
+        {% if each_camera.camera_type == 'ip_snapshot' %}{{_('Snapshot URL (JPEG)')}}{% elif each_camera.camera_type == 'stream_url' %}{{_('Stream URL')}}{% else %}{{_('Stream URL (RTSP)')}}{% endif %}
       </label>
       <div class="aot-modal-option-control">
+        {% if each_camera.camera_type == 'ip_snapshot' %}
+        {{form_mod_camera.ip_address(class_='form-control aot-modern-input',
+          value=each_camera.url_still,
+          **{'placeholder': 'http://192.168.x.x/snapshot.jpg', 'title': _('URL that returns one JPEG image')})}}
+        {% else %}
         {{form_mod_camera.ip_address(class_='form-control aot-modern-input',
           value=each_camera.url_stream,
           **{'placeholder': 'rtsp://192.168.x.x:554/stream  or  http://...', 'title': _('RTSP or HTTP stream URL')})}}
+        {% endif %}
       </div>
     </div>
 

@@ -10,7 +10,8 @@ ExtSmartfarmSetpoints — SQLite cache model for EXT-KR-01 data.
 """
 from datetime import datetime, timezone
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
+from aot.utils.timekit import utc_now
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +55,7 @@ class ExtSmartfarmSetpoints(db.Model):
     fetched_at = db.Column(
         db.DateTime,
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: utc_now(),
     )
 
     def __repr__(self) -> str:

@@ -1,8 +1,8 @@
 # coding=utf-8
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
 
 
 class PID(CRUDMixin, db.Model):
@@ -30,12 +30,6 @@ class PID(CRUDMixin, db.Model):
     is_paused = db.Column(db.Boolean, default=False)
     is_preset = db.Column(db.Boolean, default=False)  # Is config saved as a preset?
     log_level_debug = db.Column(db.Boolean, default=False)
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.String(32), default='manual')
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
     preset_name = db.Column(db.Text, default='')  # Name for preset
     period = db.Column(db.Float, default=30.0)

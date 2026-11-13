@@ -82,7 +82,7 @@ class WiringTest(unittest.TestCase):
     def test_model_default_and_config_head(self):
         from aot.config import ALEMBIC_VERSION
         from aot.databases.models import Misc
-        self.assertEqual('p7_00_target_alias_20261028', ALEMBIC_VERSION)
+        self.assertEqual('p7_11_ai_card_raised_at_20261109', ALEMBIC_VERSION)
         self.assertEqual(ai_shortcut.DEFAULT, Misc.__table__.c.ai_shortcut_url.default.arg)
 
 

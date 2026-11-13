@@ -22,12 +22,14 @@ import datetime
 import json
 import logging
 import os
+import time
 
 from flask import Response, flash
 from flask_babel import lazy_gettext
 from flask_login import current_user
 
 from aot.aot_client import DaemonControl
+from aot.utils.timekit import FARM, parse_utc, to_tz
 from aot.config import CAMERA_INFO
 from aot.databases.models import CustomController
 from aot.databases.models import Camera
@@ -81,10 +83,9 @@ def camera_img_acquire(image_type, camera_unique_id, max_age):
         return_values = f'["{msg}"]'
     else:
         image_path = os.path.join(path, filename)
-        time_max_age = datetime.datetime.now() - datetime.timedelta(seconds=int(max_age))
         timestamp = os.path.getctime(image_path)
-        if datetime.datetime.fromtimestamp(timestamp) > time_max_age:
-            date_time = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        if timestamp > time.time() - int(max_age):
+            date_time = to_tz(parse_utc(timestamp), FARM).strftime('%Y-%m-%d %H:%M:%S')
             return_values = f'["{filename}","{date_time}"]'
         else:
             return_values = '["max_age_exceeded"]'
@@ -122,9 +123,8 @@ def camera_img_latest_timelapse(camera_unique_id, max_age):
         timelapse_file_path = os.path.join(tl_path, str(timelapse_last_file))
 
     if timelapse_last_ts and os.path.exists(timelapse_file_path):
-        time_max_age = datetime.datetime.now() - datetime.timedelta(seconds=int(max_age))
-        if datetime.datetime.fromtimestamp(timelapse_last_ts) > time_max_age:
-            ts = datetime.datetime.fromtimestamp(timelapse_last_ts).strftime("%Y-%m-%d %H:%M:%S")
+        if timelapse_last_ts > time.time() - int(max_age):
+            ts = to_tz(parse_utc(timelapse_last_ts), FARM).strftime("%Y-%m-%d %H:%M:%S")
             return_values = f'["{timelapse_last_file}","{ts}"]'
         else:
             return_values = '["max_age_exceeded"]'
@@ -165,6 +165,14 @@ def capable_camera_type(cam_type, unique_id, error):
     except Exception as err:
         error.append("capable_camera_type() error: {}".format(err))
     return False, error
+
+
+def _ptz_widget_variables(widget_unique_id, widget_options):
+    """영상 위 PTZ 겹침 — 판정은 모던 카메라 위젯과 한 곳(AoT_camera.ptz_overlay_features)."""
+    from aot.widgets.AoT_camera import ptz_overlay_features
+    opts = widget_options or {}
+    return {'ptz_features': ptz_overlay_features(
+        opts.get('camera_id'), opts.get('show_ptz', True) not in (False, 'false', 'False', 0, '0'))}
 
 
 def execute_at_creation(error, new_widget, dict_widget):
@@ -291,19 +299,37 @@ WIDGET_INFORMATION = {
             'default_value': False,
             'name': lazy_gettext('Show Timestamp'),
             'phrase': lazy_gettext('Show the timestamp on the widget')
+        },
+        {
+            'id': 'show_ptz',
+            'type': 'bool',
+            'default_value': True,
+            'name': lazy_gettext('Show camera controls'),
+            'phrase': lazy_gettext(
+                'Show direction, zoom and preset controls over the video when the camera supports them '
+                'and you are allowed to operate it.')
         }
     ],
+
+    'generate_page_variables': _ptz_widget_variables,
 
     'widget_dashboard_head': """<!-- No head content -->""",
 
     'widget_dashboard_title_bar': """{#- 이름은 셸이 렌더한다. 여기는 이름 옆 촬영 시각(캡션)만. -#}{% if widget_options['enable_timestamp'] %}<span class="aot-w-caption" id="{{each_widget.id}}-timestamp"></span>{% endif %}""",
 
     'widget_dashboard_body': """
+{#- 영상 위 PTZ 겹침 — 모던 카메라 위젯과 같은 전역 부품(macros/aot_ptz.html). 그릴지 말지는 서버가 정한다. -#}
+<div class="aot-ptz-stage">
 <span id="{{each_widget.id}}-error"></span>
 <a id="{{each_widget.id}}-image-href" href="" target="_blank">
   <img id="{{each_widget.id}}-image-src" style="height: 100%; width: 100%" src="">
 </a>
 <video id="{{each_widget.id}}-video" style="height: 100%; width: 100%; display: none;" controls muted autoplay playsinline></video>
+{%- if widget_variables and widget_variables.ptz_features %}
+{%- from 'macros/aot_ptz.html' import ptz_controller %}
+{{ ptz_controller(widget_options['camera_id'], 'overlay', widget_variables.ptz_features) }}
+{%- endif %}
+</div>
 """,
 
     'widget_dashboard_js': """

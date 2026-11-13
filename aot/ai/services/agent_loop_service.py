@@ -674,7 +674,9 @@ class AgentLoopService:
                                                 steps=step + 1, tool_log=tool_log,
                                                 manual_ref=manual_ref)
 
-            write_actions = [a for a in actions if AIActionService.requires_approval(AgentLoopService._tool_name(a))]
+            from aot.ai.services.in_app_tools import action_arguments as _args_of
+            write_actions = [a for a in actions if AIActionService.requires_approval(
+                AgentLoopService._tool_name(a), _args_of(a) if isinstance(a, dict) else None)]
             if write_actions:
                 # Ask-user nudge: a schedule action naming an unresolvable location
                 # becomes a clarifying question (with candidate places) BEFORE the

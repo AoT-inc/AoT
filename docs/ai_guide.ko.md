@@ -22,7 +22,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 > **없다고 단정하기 전에 서랍을 열 것.** "그건 이 시스템에서 안 됩니다"라고 답하거나, 어중간하게 맞는 상시 도구로 우회하기 전에 목적에 맞는 서랍을 먼저 여세요. 서랍 도구도 보통 도구와 똑같이 동작합니다.
 
-**외부 MCP 연결은 이제 기본으로 서랍을 쓰지 않습니다:** `tools/list` 는 API 키의 도구 묶음(아래) 전체를 돌려주고, 위의 서랍 도구는 목록에 나오지 않습니다. `AOT_MCP_TOOL_TIERING=1`(또는 `true`·`yes`·`on`) 이면 서랍 구조로 돌아갑니다(키의 묶음 안에서 동작). 앱 안 AI 비서의 내장 목록은 서랍을 그대로 씁니다(`AOT_AI_BUILTIN_MCP_TIERING`, 기본 켬).
+**외부 MCP 연결은 이제 기본으로 서랍을 쓰지 않습니다:** `tools/list` 는 API 키의 도구 묶음(아래) 전체를 돌려주고, 위의 서랍 도구는 목록에 나오지 않습니다. `AOT_MCP_TOOL_TIERING=1`(또는 `true`·`yes`·`on`) 이면 서랍 구조로 돌아갑니다(키의 묶음 안에서 동작). 앱 안 AI 비서는 이 스위치들의 영향을 받지 않고 늘 도메인 도구를 씁니다.
 
 **이름으로, 여러 대상 한 번에.** 조회 도구는 id 가 필요하던 자리에 이름을 받습니다 — 장치(`get_output_state`·`get_device_measurements`·`get_sensor_detail`·`get_sensor_reading`), 구역·부지(`get_zone_sensor_summary`·`list_plots`), 재배 중인 구획(`get_plot`: 이름·작물·품종). 이름이 여럿에 걸리면 고르지 않고 후보를 돌려줍니다. `device_ids`·`loc_ids`·`plot_ids`·`target_names`·`zone_ids` 는 한 번에 최대 10개 대상을 받습니다. 쓰기 도구는 권한·승인 단계보다 먼저 빠진 인자와 오타로 보이는 인자를 알려 주고(`reason_code: invalid_arguments`, 맞는 이름 목록 포함), 그 밖의 모르는 인자는 무시하고 `_ignored_arguments` 로 알려 줍니다. 자세한 내용: [AI 기능 개요](ai/overview.md#tool-arguments).
 
@@ -39,13 +39,13 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 | 공간 | `get_map_equipment` | 지도에 놓인 설비·장치 | 불필요 |
 | 장치 | `get_device_list` / `search_devices` | 전체 목록 / 이름·유형·측정종류 검색 | 불필요 |
 | 장치 | `get_device_measurements` | 장치의 측정 채널 목록 | 불필요 |
-| 장치 | `get_device_detail` | 장치 하나의 정체·위치·측정·제어·통신·담당구역·제약을 한 번에 — search_devices + get_device_measurements + get_device_location 을 잇달아 부르지 않아도 됨 | 불필요 |
+| 장치 | `get_device_detail` | 장치 하나의 정체·위치·측정·제어·통신·담당구역·제약을 한 번에 — search_devices + get_device_measurements 를 잇달아 부르지 않아도 됨 | 불필요 |
 | 장치 | `get_output_state` | 출력(밸브·펌프·조명) 현재 상태. 모터로 여닫는 창·커튼은 몇 % 열려 있는지도 함께 | 불필요 |
 | 측정 | `get_sensor_detail` | 센서 이력(min/max/avg), Function 집계값 포함 | 불필요 |
 | 측정 | `get_zone_sensor_summary` | 구역 전체 최신값+기간 통계를 한 번에 | 불필요 |
 | 측정 | `get_weather` / `get_weather_forecast` | 현재 기상 / 예보 | 불필요 |
 | 구획 | `list_plots` / `get_plot` | 작물 구획 목록 / 구획 상세 | 불필요 |
-| 함수 | `get_function_list` / `get_active_functions_summary` | 함수 목록 / 작동 중 요약 | 불필요 |
+| 함수 | `get_function_list` | 함수 목록 / 작동 중 요약 | 불필요 |
 | 함수 | `activate_function` / `deactivate_function` | 함수 켜기/끄기 | **필요** |
 | 제어 | `operate_device` | 밸브·펌프·조명 즉시 제어 | **필요** |
 | 일정 | `search_schedule` | 일정 조회 | 불필요 |
@@ -65,8 +65,8 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 | `measurement` | 센서·환경·에너지 | `get_anomalies`, `get_cumulative_status`, `get_device_freshness`, `get_energy_report` |
 | `function` | 함수·제어기·시퀀스 | `get_function_detail`, `create_function`\*, `delete_function`\*, `create_sequence_function`, `modify_function_options`, `modify_sequence_schedule`, `modify_sequence_step`, `configure_sequence_day` |
 | `schedule` | 일정·예약 | `schedule_device_control`\*, `edit_schedule`\*, `delete_schedule`\*, `add_schedule_batch` |
-| `record` | 노트·공지·지식·조언 | `list_notices`, `get_note_attachment`, `search_archives`, `get_archived_document`, `knowledge_shelve`, `list_advice`, `submit_advice`, `list_lookup_sources`, `query_data_source`, `query_reference_table`, `list_library_source_types`, `smartfarmkorea_lookup`, `create_notice`\*, `modify_notice`\*, `delete_notice`\*, `archive_note`\*, `restore_note_from_archive`\*, `delete_archive`\*, `set_document_tier`\*, `configure_library_source`\* |
-| `space` | 지도·구역·시설·구획 | `list_geo_maps`, `get_crop_status`, `get_device_location`, `get_map_equipment_detail`, `get_facility_capacity`, `get_address`, `distance_between`, `nearest`, `get_plot_history`, `list_plot_journals`, `get_plot_journal`, `list_programs`, `get_program`, `propose_plot_split`, 구획 원장 쓰기 18종\*(`create_plot`, `modify_plot`, `end_plot`, `copy_plot`, `delete_plot`, `apply_plot_split`, `confirm_plot_stage`, `reschedule_plot_stage`, `add_plot_stage`, `remove_plot_stage`, `undo_plot_stage`, `set_plot_stage_guidance`, `apply_plot_resources`, `save_plot_schedule_as_program`, `create_plot_journal`, `delete_program`, `set_device_location`, `delete_geo_shape`), `create_program`, `modify_program` |
+| `record` | 노트·공지·지식·조언 | `list_notices`, `get_note_attachment`, `knowledge_shelve`, `list_advice`, `submit_advice`, `list_lookup_sources`, `query_data_source`, `query_reference_table`, `list_library_source_types`, `create_notice`\*, `modify_notice`\*, `delete_notice`\*, `configure_library_source`\* |
+| `space` | 지도·구역·시설·구획 | `get_crop_status`, `get_map_equipment_detail`, `get_facility_capacity`, `get_address`, `find_location`, `find_favorites`, `nearest`, `get_plot_history`, `list_plot_journals`, `get_plot_journal`, `list_programs`, `get_program`, `propose_plot_split`, 구획 원장 쓰기 18종\*(`create_plot`, `modify_plot`, `end_plot`, `copy_plot`, `delete_plot`, `apply_plot_split`, `confirm_plot_stage`, `reschedule_plot_stage`, `add_plot_stage`, `remove_plot_stage`, `undo_plot_stage`, `set_plot_stage_guidance`, `apply_plot_resources`, `save_plot_schedule_as_program`, `create_plot_journal`, `delete_program`, `set_device_location`, `delete_geo_shape`), `create_program`, `modify_program` |
 | `definition` | 장치 정의 CRUD | `get_device_type_options`, `list_gis_inputs`, `create_input`\*, `modify_input`\*, `delete_input`\*, `create_output`\*, `modify_output`\*, `delete_output`\*, `modify_gis_input`\*, `delete_gis_input`\*, `activate_gis_input`\*, `create_gis_input` |
 | `system` | AI 설정·상태·진단·화면 | `get_local_time`, `get_system_update_status`, `get_storage_tier_status`, `analyze_system_failure`, `list_ai_entries`, `list_dashboards`, `list_tabs`, `list_widget_types`, `get_widget`, 위젯·탭·에이전트 쓰기 8종\*, `create_ai_agent`, `screen_action`(사용자 화면 바꾸기 — 기기에서 "AI 화면 조작 허용" 을 켠 화면만, 오래 조용한 화면은 확인) |
 
@@ -74,7 +74,7 @@ AoT의 AI가 시설·포장을 관찰·진단·제어하는 방법을 설명합�
 
 ### 1.3 인앱 어시스턴트 전용
 
-인앱 어시스턴트는 위에 더해 `read_manual`(매뉴얼을 파일명+섹션으로 읽기), `get_detailed_manifest`, `ask_user`, `get_sensor_reading`, `list_available_devices`, `set_output_state`, `list_unbound_slots`, `rebind_device`, `get_function_doc`·`get_input_doc`·`get_output_doc`를 씁니다. 외부 MCP에서 매뉴얼을 찾을 때는 `read_manual` 대신 `knowledge_search`를 쓰세요 — 파일명을 몰라도 매뉴얼 전체에서 해당 섹션을 찾아 줍니다.
+인앱 어시스턴트는 외부 MCP 와 같은 도메인 도구에 더해 `read_manual`(매뉴얼을 파일명+섹션으로 읽기), `get_detailed_manifest`, `ask_user` 를 씁니다. 외부 MCP에서 매뉴얼을 찾을 때는 `read_manual` 대신 `knowledge_search`를 쓰세요 — 파일명을 몰라도 매뉴얼 전체에서 해당 섹션을 찾아 줍니다.
 
 > 도구의 단일 정본은 `aot/tools/tool_registry.py`입니다. 이 문서와 어긋나면 그 파일이 맞습니다.
 

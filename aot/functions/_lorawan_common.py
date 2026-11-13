@@ -30,6 +30,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import requests
+from aot.utils.timekit import naive_utc, utc_now
 
 # ----- Policy mode codes (firmware CFG byte) -----
 MODE_A = 1  # Ultra/low-power policy state  (LoRa Class A)
@@ -386,7 +387,7 @@ class ChirpStackClient:
         eui = normalize_deveui(dev_eui)
         if not self.ok() or not eui:
             return result
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         start = (now - timedelta(seconds=max_age)).strftime('%Y-%m-%dT%H:%M:%SZ')
         end = now.strftime('%Y-%m-%dT%H:%M:%SZ')
         # ChirpStack stores HOUR/DAY/MONTH (not MINUTE); use HOUR for any real window.

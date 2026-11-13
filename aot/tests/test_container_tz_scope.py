@@ -63,7 +63,7 @@ def test_class_scheduler_uses_location_tz_not_container_tz(container_tz, monkeyp
     import aot.functions.lorawan_class_scheduler as mod
 
     dhaka = pytz.timezone('Asia/Dhaka')
-    monkeypatch.setattr(mod, 'resolve_location_tz', lambda uid: dhaka)
+    monkeypatch.setattr(mod, 'tz_of', lambda uid: dhaka)
     sched = object.__new__(mod.CustomModule)
     sched.unique_id = 'x'
 

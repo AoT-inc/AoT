@@ -178,8 +178,8 @@ is warmer than the air and a leaf under a clear night sky is cooler, so a fixed 
 only rename an air target. If the leaf is so much warmer than the air that even saturated air
 cannot bring its VPD down to the target, the air target stops at 0.1 kPa.
 
-Binding the sensor is useful on the air basis too: leaf VPD is then shown next to air VPD in
-the [facility widget](../geo/facility-widget.md#b-environment) and recorded. Cycles that skip
+Binding the sensor is useful on the air basis too: leaf VPD is then recorded and given to the AI tools, and the
+[facility widget](../geo/facility-widget.md#b-environment) shows it next to air VPD while the target is applied on the leaf basis. Cycles that skip
 the target step (a safety gate, outside working hours) make no new judgement; once the last one
 is more than three cycles old (at least 5 minutes) the widget stops showing it. While the sensor
 is bound or the leaf basis is chosen, the coordinator records, every cycle and with or without
@@ -505,7 +505,7 @@ move without waiting out their actuation profile interval.
 |-------|---------|-------------|
 | Linked Facility | (none) | Which facility this coordinator runs. Actuators and sensors come from it — envelope, side/roof vents, curtains, fans, indoor and outdoor sensors. GIS metadata (azimuth, area, U-value) is attached to each actuator profile so wind direction and facility geometry can be considered. Without this, the remaining settings have nothing to act on. |
 | Bay Scope (optional) | (empty) | Limits this coordinator to one bay. Only sensors and actuators inside that bay are used — a device that belongs to no single bay is left out, so it stays with the facility-wide coordinator — and facility volume, envelope and vent area are scaled to that bay's share of the combined width of all bays (by bay count instead, with a warning, when the widths are unknown). Leave blank for the whole facility; create one coordinator per bay to control several bays independently. A coordinator left blank steps around the bays that sibling coordinators on the same facility have already claimed, so one device never takes orders from two of them. This is a **dropdown** of the linked facility's bays — a saved value that no longer exists in the facility is kept and marked, rather than silently dropped; while it points at a bay that is not there, this coordinator takes on **no devices at all** instead of widening to the whole facility. |
-| Devices under automatic control | (none excluded) | A folded box just under the facility settings lists every actuator of the linked facility with a toggle. Switching one off removes it from automatic control entirely — no commands, and the safety gates stop forcing it too, which is what a device under repair or held by hand needs. It is an exclusion list, so a device added to the facility later is controlled from the start. A device switched off that later disappears from the facility keeps its off state. If the list cannot be read, the box says so and the stored setting is left as it is rather than overwritten with an empty one. |
+| Devices under automatic control | (none excluded) | A folded box just under the facility settings lists every actuator of the linked facility with a toggle, except a device on an upper floor of a multi-floor facility model — this coordinator never controls those, so they are left off the list rather than shown and forced on (see [Facility — Plan Drawing](../geo/facility.md#plan-drawing)). Switching one off removes it from automatic control entirely — no commands, and the safety gates stop forcing it too, which is what a device under repair or held by hand needs. It is an exclusion list, so a device added to the facility later is controlled from the start. A device switched off that later disappears from the facility keeps its off state. If the list cannot be read, the box says so and the stored setting is left as it is rather than overwritten with an empty one. |
 
 ### Working Hours { #time-control }
 
@@ -529,13 +529,13 @@ included. Protection continues:
   it is cooler outside, shade drawn in the sun, coolers and circulation fans on, heating
   and misting off.
 - Every device that received none of these protective commands gets its end behaviour. The window is judged
-in the facility's local time, falling back to server time when the facility's timezone
-is unknown.
+in the facility's local time, falling back to the farm's time zone when the facility's is unknown, and to
+UTC only if that is unknown too.
 
 | Field | Default | Description |
 |-------|---------|-------------|
 | Enable Time Window | Off | When enabled, target tracking only runs between Start and End. |
-| Start Time (HH:MM) | 06:00 | When the coordinator starts working each day. |
+| Start Time (HH:MM) | 06:00 | When the coordinator starts working each day. Start and End must be entered as HH:MM; any other format is rejected when saving. |
 | End Time (HH:MM) | 20:00 | When it stops. An end time earlier than the start time is read as a window that crosses midnight. What each device does outside the window is set in its Action (On Time Window End). |
 | Photoperiod Method | (none) | Sets the window from a day-length curve instead of fixed times. Careful: a short day length means the coordinator runs only for those hours, so nothing is heated overnight. |
 | Photoperiod Anchor (HH:MM) | 12:00 | Solar-noon equivalent — the window is centred on this time. |
@@ -577,7 +577,8 @@ for rain or strong wind, for example) reaches **that device** immediately regard
 vents that are not being forced keep this interval. The interval is skipped altogether
 only when indoor temperature changes fast, or when a deviation exceeds the emergency
 threshold **and is still widening** — merely staying far from the target is not an
-emergency — and for the one cycle in which [Extreme Heat Protection](#heat-protect) goes
+emergency — for the one cycle right after the function is reloaded or told to run now,
+and for the one cycle in which [Extreme Heat Protection](#heat-protect) goes
 up a stage (staying in protection is not an emergency either).
 
 ### Ventilation { #settings-ventilation }
@@ -611,7 +612,8 @@ up a stage (staying in protection is not an emergency either).
   everything is handed back to heating and cooling — the prediction was wrong. While
   rain or wind readings are lost and the vents cannot open further, or while rain has put
   a cap on them (reason 52), this judgement is switched off entirely — heating and cooling must not back off counting on a vent that
-  cannot open.
+  cannot open. It is switched off as well while [Extreme Heat Protection](#heat-protect)
+  is active — that is not a time to rest the cooling.
 - **Keep Vents Closed While Heating or Cooling Runs** — venting against a running unit
   throws that heat or cold straight outside. In a season where outdoor air could help
   toward the target, this throws that help away too.
@@ -692,8 +694,8 @@ Shorter outages change nothing (the weather source routinely skips up to half an
 do a hard temperature limit, Extreme Heat Protection and any daytime opening. The moment the
 reading returns, normal control resumes — nothing stays latched. The 30-minute clock survives a
 restart (it is kept with the other cycle memory, which expires after 30 minutes without a
-cycle). Times are read in the
-facility's local timezone, not the server's. On the facility popup, a device parked by
+cycle). Times are read in the facility's local timezone — falling back to the farm's timezone
+when the facility's own cannot be determined — never the server's. On the facility popup, a device parked by
 this option reads *Closed for the night — heating and cooling take over*, kept separate
 from *Nothing this device can change right now*.
 
@@ -1207,9 +1209,13 @@ per device. Manual actions are merged with the facility-derived list.
 Paired actuator modules are picked up automatically too, but only those that belong to the
 linked facility: bound to one of its slots, or placed on its map. A module that no facility
 uses and that is not on the map (a test unit, a device whose bindings have all ended) is
-ignored, as is anything under another facility. A device switched off under *Devices under
-automatic control* stays off however it is discovered. A fan's rated airflow is read from
-the actuator's *Airflow* spec or from its fan fitting's airflow; when neither is set a default is used (3000 m³/h for an exhaust or intake fan, 1500 m³/h for a circulation fan).
+ignored, as is anything under another facility. A device on an upper floor of a multi-floor
+facility model is left out the same way and does not appear in the *Devices under automatic
+control* list either — this coordinator has no notion of floors, so neither its sensors nor
+its actuators take part in control; it still shows on screen and can be operated by hand
+(see [Facility — Plan Drawing](../geo/facility.md#plan-drawing)). A device switched off under
+*Devices under automatic control* stays off however it is discovered. A fan's rated airflow is
+read from the actuator's *Airflow* spec or from its fan fitting's airflow; when neither is set a default is used (3000 m³/h for an exhaust or intake fan, 1500 m³/h for a circulation fan).
 
 | Action option | Default | Description |
 |---------------|---------|-------------|

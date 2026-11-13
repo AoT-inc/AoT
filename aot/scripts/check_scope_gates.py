@@ -51,6 +51,8 @@ DAEMON_CONTROL_CALLS = {
     'pid_set', 'pid_mod', 'pid_hold', 'pid_pause', 'pid_resume',
     'widget_execute',
     'trigger_action', 'trigger_all_actions',
+    # 카메라(VIGI) — PTZ·프리셋·주야·수동 경보·알림 스위치 쓰기. 실제 장비를 움직이거나 울린다.
+    'camera_control_call',
 }
 
 #: 스코프를 물었다고 인정하는 호출.
@@ -77,6 +79,7 @@ GATED_CONTROL_VIEWS = {
     ('aot/widgets/AoT_timer.py', 'aot_timer_cycle_stop'),
     ('aot/widgets/widget_trigger_sequence.py', 'sequence_func_activate_toggle'),
     ('aot/aot_flask/routes_function.py', 'sequence_activate_toggle'),
+    ('aot/aot_flask/routes_camera_driver.py', 'driver_control'),
 }
 
 #: 제어 호출이 있지만 스코프를 묻지 않아도 되는 자리. **근거를 함께 적을 것** —

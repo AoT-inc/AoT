@@ -238,7 +238,12 @@ class TestSecretsNeverLeak:
             out = _output('밸브A', output_type='modbus_relay',
                           parent_device_id=plc.unique_id)
 
-            result = S.get_device_detail(device_id=out.unique_id)
+            # 기본 응답은 연결 값을 아예 싣지 않는다(2026-11-03) — 청했을 때(fields=['connection'])도 비밀은 set/unset 뿐이다.
+            plain = S.get_device_detail(device_id=out.unique_id)
+            assert 'fields' not in (plain['communication'] or {})
+            assert 'FAKE-PASSWORD-FOR-TEST' not in json.dumps(plain, ensure_ascii=False)
+
+            result = S.get_device_detail(device_id=out.unique_id, fields=['connection'])
             dumped = json.dumps(result, ensure_ascii=False)
 
             assert 'FAKE-PASSWORD-FOR-TEST' not in dumped
@@ -272,14 +277,11 @@ class TestSecretsNeverLeak:
 
 class TestRegistryWiring:
     def test_registered_in_virtual_tool_registry_and_tier(self):
-        from aot.tools.tool_registry import (
-            _TIER_ASSIGNMENT, virtual_tool_registry, manifest_system_tools)
+        from aot.tools.tool_registry import _TIER_ASSIGNMENT, virtual_tool_registry
 
         assert 'get_device_detail' in virtual_tool_registry()
         assert _TIER_ASSIGNMENT['get_device_detail'] == ('device', 'core', False)
-        names = {m['tool_name'] for m in manifest_system_tools()
-                if 'tool_name' in m}
-        assert 'get_device_detail' in names
+        # 인앱 매니페스트는 26-11 5단계에서 도메인 명부로 바뀌었다(detail.device).
 
     def test_dispatched_via_build_tool_map(self, app):
         from aot.aot_flask.extensions import db

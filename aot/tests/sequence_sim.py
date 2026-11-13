@@ -428,7 +428,7 @@ class SequenceSim:
         # 러너까지 영향을 받으므로 base_output 의 이름만 갈아 끼운다.
         mp.setattr(base_output_mod, 'threading', SimpleNamespace(Thread=MagicMock()))
         mp.setattr(seq_mod, 'db_retrieve_table_daemon', self._fake_db)
-        mp.setattr(seq_mod, 'get_device_tz', lambda *a, **kw: 'UTC')
+        mp.setattr(seq_mod, 'tz_of', lambda *a, **kw: 'UTC')
         mp.setattr(seq_mod, 'parse_action_information', lambda: {})
         mp.setattr(seq_mod, 'trigger_action', self._trigger_action)
         mp.setattr(seq_mod, 'AOT_DB_PATH', runtime_db)

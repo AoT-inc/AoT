@@ -15,7 +15,7 @@ ARCHITECTURE.md §4 의 규칙 1~4. 이 경계가 무너지면 daemon 을 web �
 (반대로 하면 안 된다 — 코드는 그대로 두고 baseline 만 지우면 다음 실행에서
 바로 실패한다).
 
-검사 5종(rule id → 대상 → 금지 import):
+검사 8종(rule id → 대상 → 금지 import):
   web-no-controllers  aot/aot_flask/**                              → aot.controllers
   daemon-no-flask     aot/{controllers,functions,inputs,outputs,actions}/** → flask, aot.aot_flask
   mcp-no-ai           aot/mcp_server/**, aot/aot_mcp_server.py       → aot.ai
@@ -24,6 +24,18 @@ ARCHITECTURE.md §4 의 규칙 1~4. 이 경계가 무너지면 daemon 을 web �
                                                                         aot.aot_flask.utils, aot.ai,
                                                                         aot.services, aot.controllers,
                                                                         aot.functions
+  daemon-no-ai        aot/{controllers,functions,inputs,outputs,actions}/** → aot.ai
+  services-no-web     aot/services/**                                → aot.aot_flask.routes*, aot.aot_flask.app
+  twin-no-routes      aot/twin/**                                    → aot.aot_flask.routes*
+
+금지 접두가 `*` 로 끝나면 점 경계 없이 앞부분만 비교한다 — `aot.aot_flask.routes*`
+는 `routes_geo_iec` 같은 라우트 모듈 전부에 걸린다. 이때는 `from aot.aot_flask
+import routes_x` 처럼 이름으로 가져오는 형태도 `aot.aot_flask.routes_x` 로 펼쳐
+본다. 점 경계 규칙도 펼친 이름을 본다 — `from aot.aot_flask import app` 이나
+`from aot import ai` 처럼 금지 모듈을 이름으로 가져오는 형태를 잡기 위해서다.
+다만 `from 금지모듈 import 이름` 은 모듈 하나로만 센다(펼친 이름은 그 모듈이 이미
+걸렸으면 버린다 — baseline 이 이름 수만큼 불어나지 않게).
+`importlib.import_module("...")` 같은 동적 import 는 문자열이라 보지 않는다.
 
 판정은 `ast` 로 각 파일을 파싱해 모든 `import`/`from ... import`(함수 안
 지연 import 포함)를 본다. 상대 import(`from . import x`)는 항상 대상 밖 —
@@ -94,10 +106,47 @@ RULES = [
     },
     {
         'id': 'models-no-app',
-        'paths': ['aot/databases/models'],
-        'forbidden': ['aot.aot_flask.routes', 'aot.aot_flask.utils',
+        # db·ma 는 aot.databases.sqla 에서 가져온다(아키텍처 4a) — 웹 패키지의
+        # extensions 를 거치면 모델을 import 할 때 웹 패키지가 다시 딸려 온다.
+        'paths': ['aot/databases'],
+        'forbidden': ['aot.aot_flask.routes*', 'aot.aot_flask.utils',
+                      'aot.aot_flask.extensions', 'aot.aot_flask.app',
                       'aot.ai', 'aot.services', 'aot.controllers',
                       'aot.functions'],
+    },
+    {
+        # 데몬 쪽 코드가 in-app 어시스턴트에 기대면 AI 계층을 끄거나 바꿀 때
+        # 제어 경로가 함께 흔들린다(ARCHITECTURE.md §4 규칙 2).
+        'id': 'daemon-no-ai',
+        'paths': ['aot/controllers', 'aot/functions', 'aot/inputs',
+                  'aot/outputs', 'aot/actions'],
+        'forbidden': ['aot.ai'],
+    },
+    {
+        # 웹·도구·AI 가 함께 쓰는 공용층. 라우트와 앱 조립은 웹의 것이다.
+        # extensions·access·geo·utils 는 공간 도메인 이동 전까지 허용한다
+        # (services 가 aot.aot_flask.utils 아래 모듈을 여럿 쓴다).
+        'id': 'services-no-web',
+        'paths': ['aot/services'],
+        'forbidden': ['aot.aot_flask.routes*', 'aot.aot_flask.app'],
+    },
+    {
+        # 트윈은 별도 프로세스다. 앱은 지연 생성(twin/gate.py)이라 막지 않고,
+        # 라우트 모듈의 함수를 빌려 쓰는 것만 막는다.
+        'id': 'twin-no-routes',
+        'paths': ['aot/twin'],
+        'forbidden': ['aot.aot_flask.routes*'],
+    },
+    {
+        # 공간 도메인(아키텍처 3단계)은 데몬·트윈·웹이 모두 아래에서 쓴다.
+        # 웹 앱·AI 를 끌어오면 그 사람들이 다시 웹 계층을 띄우게 된다.
+        # `flask`·`flask_babel` 은 금지하지 않는다(아키텍처 4c-1) — A안은
+        # Flask-SQLAlchemy 와 앱 컨텍스트 의존을 받아들였고, 공간 모듈이 쓰는
+        # 것은 앱 컨텍스트 원시 기능(`current_app.logger`, `has_app_context`)과
+        # `gettext` 뿐이다. 로그인·웹 패키지·AI·도구층은 그대로 막는다.
+        'id': 'space-no-web',
+        'paths': ['aot/space'],
+        'forbidden': ['flask_login', 'aot.aot_flask', 'aot.ai', 'aot.tools'],
     },
 ]
 
@@ -208,10 +257,21 @@ def _imported_modules(text, path):
                 continue  # 상대 import — 패키지 경계를 못 벗어난다.
             if node.module:
                 modules.append(node.module)
+                for alias in node.names:
+                    if alias.name != '*':
+                        modules.append(_FROM_NAME + node.module + '.' + alias.name)
     return modules
 
 
+# `from a.b import c` 에서 펼친 `a.b.c` 앞에 붙는 표시. rule_hits 가 모듈 자체의
+# 적중과 펼친 이름의 적중을 가르는 데 쓴다.
+_FROM_NAME = '\x00'
+
+
 def _violates(module, forbidden_prefix):
+    if forbidden_prefix.endswith('*'):
+        return module.lstrip(_FROM_NAME).startswith(forbidden_prefix[:-1])
+    module = module.lstrip(_FROM_NAME)
     return module == forbidden_prefix or module.startswith(forbidden_prefix + '.')
 
 
@@ -229,14 +289,27 @@ def find_violations(staged=False):
             text = read(path)
             if text is None:
                 continue
-            modules = _imported_modules(text, path)
-            if modules is None:
-                continue
-            for module in modules:
-                for forbidden in rule['forbidden']:
-                    if _violates(module, forbidden):
-                        violations.add((rule['id'], path, module))
+            for module in rule_hits(text, path, rule):
+                violations.add((rule['id'], path, module))
     return violations
+
+
+def rule_hits(text, path, rule):
+    """파일 하나(text)에서 rule 이 금지하는 import 모듈명 집합. 파싱 실패면 빈 집합."""
+    modules = _imported_modules(text, path)
+    if modules is None:
+        return set()
+    plain, expanded = set(), set()
+    for module in modules:
+        for forbidden in rule['forbidden']:
+            if _violates(module, forbidden):
+                if module.startswith(_FROM_NAME):
+                    expanded.add(module.lstrip(_FROM_NAME))
+                else:
+                    plain.add(module)
+    # `from 금지모듈 import 이름` 은 모듈 하나로만 센다 — 펼친 이름은 그 모듈
+    # 자체가 이미 걸렸으면 버린다.
+    return plain | {m for m in expanded if m.rsplit('.', 1)[0] not in plain}
 
 
 def load_baseline():

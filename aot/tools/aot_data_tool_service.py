@@ -1,6 +1,5 @@
 import logging
 import re
-from aot.utils.time_utils import serialize_ts
 from datetime import datetime
 
 
@@ -113,20 +112,20 @@ def _devices_on_map_p2(map_uuid):
     """[P2] 지도에 배치된 장치 uuid 집합. map_config_id 조회의 대체.
 
     지도 소속의 정본은 배치(마커)다 — device_membership 이 정본이며,
-    map_config_id 는 사망 컬럼이다.
+    장치 행의 map_config_id 컬럼은 더 이상 읽지 않는다.
     """
     try:
-        from aot.aot_flask.geo.device_membership import devices_on_map
+        from aot.space.device_membership import devices_on_map
         return devices_on_map(map_uuid)
     except Exception:
         return set()
 
 
-def _map_for_device_p2(device_uuid, prefer=None):
+def _map_for_device_p2(device_uuid):
     """[P2] 장치가 배치된 대표 지도 uuid. map_config_id 읽기의 대체."""
     try:
-        from aot.aot_flask.geo.device_membership import map_for_device
-        return map_for_device(device_uuid, prefer=prefer)
+        from aot.space.device_membership import map_for_device
+        return map_for_device(device_uuid)
     except Exception:
         return None
 
@@ -204,21 +203,6 @@ def _plot_ended_on(controller):
         return (expected.isoformat() if expected else None), False
     except Exception:                                       # noqa: BLE001
         return None, False
-
-
-def _local_iso(value):
-    """UTC ISO 문자열 → 농장 현지시각 ISO 문자열. 못 읽으면 원래 값 그대로.
-
-    `serialize_ts` 는 datetime 을 받는데, 여기 오는 값은 이미 다른 층에서
-    문자열로 굳은 뒤다(요약 스냅샷의 timestamp 처럼). 그 층은 UTC 로 저장하는
-    것이 맞으므로 저장을 건드리지 않고 **내보낼 때만** 현지시각으로 돌린다.
-    """
-    if not value:
-        return value
-    try:
-        return serialize_ts(datetime.fromisoformat(str(value)))
-    except Exception:                                       # noqa: BLE001
-        return value
 
 
 

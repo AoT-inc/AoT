@@ -31985,3 +31985,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "Horizontal / miring"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} pipa dihitung secara horizontal"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "Horizontal"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "Panjang pipa (seluruh area)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "Panjang pipa"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "Medan sedang dihitung. Panjang miring muncul setelah selesai."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "Beberapa rentang dihitung dengan panjang horizontal. Medan tidak mencakupnya."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "Dihitung {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "Sel {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "Panjang berurutan horizontal / miring."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "Kemiringan {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "Dihitung dengan panjang horizontal"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "Aliran {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "Kehilangan {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "Horizontal {h} m, miring {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "Horizontal {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "Rentang {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "Rentang ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "Horizontal {h} m / Miring {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "Medan sedang dihitung - hanya panjang horizontal yang ditampilkan."
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "Panjang pada peta adalah horizontal."
+
+msgid "Terrain input"
+msgstr "Input medan"
+
+msgid "Compare another terrain"
+msgstr "Bandingkan medan lain"
+
+msgid "Could not compare. Try again."
+msgstr "Tidak dapat membandingkan. Coba lagi."
+
+msgid "Changed sections ({n})"
+msgstr "Ruas yang berubah ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "Medan {name} sedang diunduh. Perbandingan muncul setelah selesai."
+
+msgid "Calculation level"
+msgstr "Tingkat perhitungan"
+
+msgid "Switch to this terrain"
+msgstr "Beralih ke medan ini"
+
+msgid "That terrain input is gone."
+msgstr "Input medan itu sudah tidak ada."
+
+msgid "Weakest nozzle flow"
+msgstr "Debit nosel terlemah"
+
+msgid "Revert to {name}"
+msgstr "Kembali ke {name}"
+
+msgid "Slant length total"
+msgstr "Total panjang miring"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "Input medan ini tidak punya alamat ubin. Periksa pengaturannya."
+
+msgid "Downloading took too long. Try again."
+msgstr "Pengunduhan terlalu lama. Coba lagi."
+
+msgid "Terrain changed and recalculated"
+msgstr "Medan berubah dan dihitung ulang"
+
+msgid "Compare with"
+msgstr "Bandingkan dengan"
+
+msgid "No terrain was on"
+msgstr "Tidak ada medan yang aktif"
+
+msgid "Undo change"
+msgstr "Urungkan perubahan"
+
+msgid "Try again"
+msgstr "Coba lagi"
+
+msgid "This map has no pipes to compare."
+msgstr "Peta ini tidak punya pipa untuk dibandingkan."
+
+msgid "Pipes the terrain does not cover"
+msgstr "Pipa yang tidak tercakup medan"
+
+msgid "No terrain is on."
+msgstr "Tidak ada medan yang aktif."
+
+msgid "Could not change the terrain. Try again."
+msgstr "Tidak dapat mengubah medan. Coba lagi."

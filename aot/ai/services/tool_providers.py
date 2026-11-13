@@ -194,6 +194,21 @@ class _DataSourceQuery:
 
 
     @staticmethod
+    def queryable_presets():
+        from aot.ai.services import data_source_query_service as dsq
+        return dsq.queryable_presets()
+
+    @staticmethod
+    def operations_of(preset_key):
+        from aot.ai.services import data_source_query_service as dsq
+        return dsq.operations_of(preset_key)
+
+    @property
+    def DISCOVERY_OPERATIONS(self):
+        from aot.ai.services import data_source_query_service as dsq
+        return dsq.DISCOVERY_OPERATIONS
+
+    @staticmethod
     def source_api_key(source_id):
         from aot.ai.services import data_source_query_service as dsq
         return dsq.source_api_key(source_id)

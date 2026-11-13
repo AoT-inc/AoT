@@ -64,7 +64,7 @@ def _slot_of(device_id):
     임의로 첫 행을 집으면 같은 장치가 실행마다 다른 자리를 기준으로 접합될 수
     있다 — 정렬 순서에 기대는 결과는 재현되지 않는다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
 
     rows = device_binding.bindings_for_device(device_id)
     if not rows:
@@ -115,7 +115,7 @@ def slot_segments(device_id, measurement_id):
             'has_data'}]
     구간이 하나 이하이면 **빈 목록**을 돌려준다(접합할 것이 없다는 뜻).
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
 
     want = _measurement_info(measurement_id)
     if want is None:

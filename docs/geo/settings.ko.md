@@ -10,8 +10,8 @@
 
 | 항목 | 기본값 | 설명 |
 |------|--------|------|
-| 위도 (Latitude) | 37.5665 | 서울 중심 좌표 |
-| 경도 (Longitude) | 126.9780 | 서울 중심 좌표 |
+| 위도 (Latitude) | 설정 안 됨 | 위치를 입력하거나 가져오기 전까지 비어 있음 |
+| 경도 (Longitude) | 설정 안 됨 | 위치를 입력하거나 가져오기 전까지 비어 있음 |
 | 줌 레벨 (Zoom Level) | 12 | 초기 줌 (작을수록 넓은 범위, 클수록 가까이) |
 
 지도에서 원하는 위치와 줌으로 이동한 뒤 **현재 화면(Current View)** 행의 **위치 가져오기** 버튼을 누르면 세 항목이 현재 지도 화면 값으로 채워집니다.
@@ -97,7 +97,7 @@ GET /api/geo/settings
 
 현재 전역 설정을 JSON으로 반환합니다. 설정 편집 권한이 필요하며, 권한이 없으면 요청이 거부됩니다.
 
-응답은 `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "search_provider": "..."}` 형태입니다. `saved_state`에는 저장된 설정이 담기며(기본 시작 줌은 `zoom` 키로 돌아옵니다), 저장된 지도 제공자 키도 함께 포함됩니다.
+응답은 `{"ok": true, "saved_state": { ... }, "geo_layers": [...], "search_inputs": [...], "terrain_available": false, "search_provider": "..."}` 형태입니다. `saved_state`에는 저장된 설정이 담기며(기본 시작 줌은 `zoom` 키로 돌아옵니다), 저장된 지도 제공자 키도 함께 포함됩니다.
 
 ```http
 POST /api/geo/settings

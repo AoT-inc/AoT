@@ -71,8 +71,8 @@ def _require_camera_permission():
 @login_required
 def page_camera():
     """카메라 페이지"""
-    from aot.camera.platform import PlatformDetector
-    from aot.camera.types import CAMERA_TYPES
+    from aot.utils.camera_platform import PlatformDetector
+    from aot.utils.camera_types import CAMERA_TYPES
     
     form_add_camera = forms_camera.CameraAdd()
     form_mod_camera = forms_camera.CameraMod()
@@ -106,8 +106,30 @@ def page_camera():
 
     misc = Misc.query.first()
 
+    # VIGI 카메라의 드라이버 상태(비밀 없음)와 탭 목록 — 설정 모달이 쓴다
+    from aot.camera_drivers.status import build_status, recent_events
+    from aot.aot_flask.extensions import db
+    from aot.databases.models import CameraDriver, Tab
+    vigi_ids = [c.unique_id for c in cameras if c.library in ('vigi', 'onvif')]   # 상태 dict 이름은 템플릿 호환
+    vigi_status = {}
+    if vigi_ids:
+        rows = {r.camera_id: r for r in CameraDriver.query.filter(
+            CameraDriver.camera_id.in_(vigi_ids)).all()}
+        vigi_status = {cid: build_status(rows.get(cid), recent_events(db.session, cid))
+                       for cid in vigi_ids}
+
+    # 카메라 조작 패널(PTZ·주야·경보)은 조작할 수 있는 사람에게만 그린다 —
+    # 제어 경로(/camera/driver/<id>/control/*)와 같은 두 문: 역할 → 그 카메라의 탭 스코프.
+    vigi_can_control = {}
+    if vigi_ids and utils_general.user_has_permission('edit_controllers', silent=True):
+        from aot.aot_flask.access import scope
+        vigi_can_control = {cid: scope.can_operate_device(cid) for cid in vigi_ids}
+
     return render_template(
         'pages/camera.html',
+        vigi_status=vigi_status,
+        vigi_can_control=vigi_can_control,
+        tabs=Tab.query.order_by(Tab.name).all(),
         cameras=cameras,
         dict_cameras=CAMERA_TYPES,
         available_camera_types=available_camera_types,
@@ -124,7 +146,7 @@ def page_camera():
 @login_required
 def camera_detect():
     """카메라 자동 감지 API"""
-    from aot.camera.platform import PlatformDetector
+    from aot.utils.camera_platform import PlatformDetector
     try:
         platform = PlatformDetector.detect_platform()
         detected = PlatformDetector.detect_available_cameras()
@@ -164,11 +186,12 @@ def camera_capture(camera_id):
 
     path, filename = camera_record('photo', camera_id)
     if path and filename:
-        from aot.utils.time_utils import utc_now, serialize_ts
+        from aot.utils.timekit import utc_now
+        from aot.utils.timekit import iso_at, FARM
         return jsonify({
             'status': 'success',
             'filename': filename,
-            'timestamp': serialize_ts(utc_now())
+            'timestamp': iso_at(utc_now(), FARM)
         })
     return jsonify({'status': 'error', 'message': 'Capture failed'}), 500
 
@@ -190,22 +213,68 @@ def camera_last_image(camera_id):
     if not os.path.isdir(image_dir):
         return jsonify({'status': 'error', 'message': 'No images'}), 404
 
-    # 가장 최근 파일 찾기
-    files = [f for f in os.listdir(image_dir)
-             if os.path.isfile(os.path.join(image_dir, f))
-             and f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-
-    if not files:
+    image_path = _latest_still(image_dir)
+    if not image_path:
         return jsonify({'status': 'error', 'message': 'No images'}), 404
-
-    files.sort(key=lambda f: os.path.getmtime(os.path.join(image_dir, f)), reverse=True)
-    image_path = os.path.join(image_dir, files[0])
 
     # 경로 탈출 방지
     if not os.path.abspath(image_path).startswith(os.path.abspath(image_dir)):
         return jsonify({'status': 'error', 'message': 'Invalid path'}), 403
 
-    return send_file(image_path, mimetype='image/jpeg')
+    # 대시보드 카메라 위젯이 이 주소를 몇 초마다 다시 부른다. 앱 기본값
+    # (SEND_FILE_MAX_AGE_DEFAULT = 1년, public)을 그대로 쓰면 브라우저가 서버에 묻지도
+    # 않으므로 위젯이 `?t=` 로 캐시를 깨야 했고, 그 결과 같은 사진을 매번 통째로 받았다.
+    # max_age=0 이면 `no-cache`(매번 재검증) + ETag 라, 사진이 그대로일 때는 304 한 줄로
+    # 끝난다. 로그인한 사람만 보는 사진이므로 공유 캐시에는 남기지 않는다(private).
+    mimetype = 'image/png' if image_path.lower().endswith('.png') else 'image/jpeg'
+    response = send_file(image_path, mimetype=mimetype, max_age=0)
+    response.cache_control.private = True
+    response.cache_control.public = False
+    return response
+
+
+#: 사진 폴더 → (폴더 mtime_ns, 가장 최근 파일 이름).
+#: 폴더의 mtime 은 파일이 추가·삭제·이름 변경될 때 바뀐다. 그대로면 "가장 최근 파일"도
+#: 그대로라, 폴링마다 폴더 전체를 훑고 정렬하지 않아도 된다(사진이 쌓일수록 그 비용이
+#: SD 카드에서 선형으로 커진다). 같은 이름에 덮어쓰는 카메라는 이름이 같으므로 맞다.
+#: 워커마다 따로 들고 있어도 무해하다 — 어긋나면 한 번 다시 훑을 뿐이다.
+_LATEST_STILL_CACHE = {}
+_STILL_SUFFIXES = ('.jpg', '.jpeg', '.png')
+
+
+def _latest_still(image_dir):
+    """`image_dir` 에서 가장 최근 사진의 전체 경로. 없으면 None."""
+    try:
+        dir_mtime = os.stat(image_dir).st_mtime_ns
+    except OSError:
+        return None
+    hit = _LATEST_STILL_CACHE.get(image_dir)
+    if hit and hit[0] == dir_mtime:
+        cached = os.path.join(image_dir, hit[1])
+        if os.path.isfile(cached):
+            return cached
+
+    newest = None  # (mtime_ns, name)
+    try:
+        with os.scandir(image_dir) as entries:
+            for entry in entries:
+                if not entry.name.lower().endswith(_STILL_SUFFIXES):
+                    continue
+                try:
+                    if not entry.is_file():
+                        continue
+                    mtime = entry.stat().st_mtime_ns
+                except OSError:
+                    continue
+                if newest is None or mtime > newest[0]:
+                    newest = (mtime, entry.name)
+    except OSError:
+        return None
+    if newest is None:
+        _LATEST_STILL_CACHE.pop(image_dir, None)
+        return None
+    _LATEST_STILL_CACHE[image_dir] = (dir_mtime, newest[1])
+    return os.path.join(image_dir, newest[1])
 
 
 @blueprint.route('/camera/timelapse/<camera_id>', methods=['POST'])

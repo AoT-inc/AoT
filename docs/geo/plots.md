@@ -14,7 +14,7 @@ A plot has a **kind** — Vegetation, Livestock, Facility, Other — the same vo
 A plot's location comes from where it sits, not from a field you fill in:
 
 - **Ground plots** — drawn on a map, inside a [zone](design-tool.md#editing-modes). Their area comes from the drawn shape.
-- **Facility plots** — assigned to a bay of a [facility](facility.md), with no shape to draw. A single-span house has one bay by default; a multi-span house has one per span, and leaving the bay as **Whole facility** means the whole house is this one plot.
+- **Facility plots** — assigned to a bay of a [facility](facility.md), with no shape to draw. A single-span house has one bay by default; a multi-span house has one per span, and leaving the bay as **Whole facility** means the whole house is this one plot. A facility with a [drawn plan](facility.md#plan-drawing) offers the zones of that plan, floor by floor.
 
 You never pick the enclosing zone or facility yourself — like equipment and devices, it is derived from the plot's position (ground) or its bay assignment (facility).
 

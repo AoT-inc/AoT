@@ -209,11 +209,7 @@ P5    컬럼 드롭                 map_config_id + (사망 처리된) map_overl
 `device_membership` 의 `map_for_device` / `maps_for_device` /
 `devices_on_map` 이 정본이다.
 
-`map_for_device(uuid, prefer=...)` 의 `prefer` 는 **전환기 전용 안전장치**다.
-같은 장치가 여러 지도에 마커를 가지면(미사용 사본 지도에 옛 마커가 남은
-경우) 단순 "첫 배치"가 실사용 지도를 놓친다 — koat 실측 28건. 힌트는
-**실제 배치 목록에 있을 때만** 채택되므로 정본은 여전히 배치다. P4 에서
-사본 지도를 정리하면 다중 배치가 사라지고, P5 컬럼 드롭 때 인자도 제거한다.
+**L3 이후 상태 (2026-11-05)**: `map_for_device` 의 `prefer` 인자와 지도 팩토리 모듈(`utils_map_config`)은 제거했다. 앱 코드는 `map_config_id`·`location_source`·`location_updated_utc` 를 읽지도 쓰지도 않는다(`check_geo_writes.py` 의 `scan_dead_device_columns` 가 막는다). 컬럼 정의·DDL 은 다음 단계에서 걷어낸다. 대표 지도는 첫 배치 하나다.
 
 ## 잔여 위험 (구조로 소멸 불가 — 탐지 계층 담당)
 

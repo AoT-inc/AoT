@@ -1,0 +1,114 @@
+{# TP-Link VIGI "카메라 찾기" (설계 §8·§9.1). 연결 구획 안에 들어간다. 주소를 직접 입력해도 된다.
+   누를 때만 검색한다(주기 검색 없음). 마지막 서브넷 입력은 이 브라우저에 기억한다. #}
+{% set uid = each_camera.unique_id %}
+<div class="aot-modal-option-row">
+  <label class="aot-modal-option-label">{{ _('Find cameras') }}</label>
+  <div class="aot-modal-option-control">
+    <input type="text" class="form-control aot-modern-input" id="vigi_find_subnet_{{ uid }}"
+           placeholder="192.168.0.0/24" title="{{ _('Subnet to search') }}" autocomplete="off">
+    <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
+            id="vigi_find_btn_{{ uid }}">{{ _('Find cameras') }}</button>
+  </div>
+</div>
+<div class="aot-option-tip" id="vigi_find_tip_{{ uid }}">{{ _('Searches only the subnet above (a /24 or narrower private range). No password is sent.') }}</div>
+<div id="vigi_find_results_{{ uid }}"></div>
+<div id="vigi_find_suggest_{{ uid }}" hidden>
+  <div class="aot-modal-option-row">
+    <label class="aot-modal-option-label">{{ _('Address changed?') }}</label>
+    <div class="aot-modal-option-control">
+      <span id="vigi_find_suggest_text_{{ uid }}"></span>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
+              id="vigi_find_apply_{{ uid }}">{{ _('Change address') }}</button>
+    </div>
+  </div>
+  <div class="aot-option-tip">{{ _('This is only a guess: the camera cannot be confirmed before it is signed in. After the address is changed, press Check Connection and compare the model shown with your camera.') }}</div>
+</div>
+<script>
+(function() {
+  var uid = {{ uid|tojson }}, KEY = 'aot.vigi.scan.subnet';
+  var T = {
+    wait: {{ _("Searching...")|tojson }},
+    none: {{ _("No camera was found.")|tojson }},
+    vigi: {{ _("TP-Link VIGI (OpenAPI on)")|tojson }},
+    rtsp: {{ _("RTSP device - may be a VIGI (OpenAPI may be off)")|tojson }},
+    rtspTip: {{ _("If this is a VIGI, turn on OpenAPI in the camera web page under Settings > Network Settings, then search again.")|tojson }},
+    reg: {{ _("Already added")|tojson }},
+    use: {{ _("Use this address")|tojson }},
+    cut: {{ _("The search stopped at the time limit. Some addresses were not checked.")|tojson }},
+    fail: {{ _("The search could not be started.")|tojson }},
+    suggest: {{ _("The camera at %(old)s did not answer, and a VIGI answered at %(new)s.", old="%(old)s", new="%(new)s")|tojson }},
+    confirm: {{ _("Change the address to %(new)s? The password is sent only when you press Check Connection.", new="%(new)s")|tojson }},
+    saved: {{ _("The address was changed. Press Check Connection.")|tojson }}
+  };
+  var scanId = null, sug = null, timer = null;
+  function $id(n) { return $('#vigi_find_' + n + '_' + uid); }
+  function msg(m, kind) { if (window.showToast) window.showToast(m, kind || 'error'); }
+  try {
+    var last = window.localStorage.getItem(KEY);
+    if (last) { $id('subnet').val(last); }
+  } catch (e) {}
+  if (!$id('subnet').val()) {
+    $.getJSON('/camera/scan/defaults').done(function(d) {
+      if (d.subnet && !$id('subnet').val()) { $id('subnet').val(d.subnet); }
+    });
+  }
+  function render(scan) {
+    var $box = $id('results').empty(), any = false;
+    $.each(scan.results || [], function(_i, r) {
+      any = true;
+      var $row = $('<div class="aot-modal-option-row"></div>');
+      $row.append($('<label class="aot-modal-option-label"></label>').text(r.host));
+      var $c = $('<div class="aot-modal-option-control"></div>');
+      $c.append($('<span></span>').text(r.kind === 'vigi' ? T.vigi : T.rtsp));
+      if (r.registered) {
+        $c.append($('<span class="aot-status-badge"></span>').text(T.reg));
+      } else {
+        $c.append($('<button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"></button>')
+          .text(T.use).on('click', function() { $('input[name=ip_address]', $row.closest('.aot-vigi')).val(r.host).trigger('change'); }));
+      }
+      $row.append($c);
+      $box.append($row);
+      if (r.kind === 'rtsp_only' && !r.registered) { $box.append($('<div class="aot-option-tip"></div>').text(T.rtspTip)); }
+    });
+    if (!any && scan.state === 'done') { $box.append($('<div class="aot-option-tip"></div>').text(T.none)); }
+    if (scan.truncated) { $box.append($('<div class="aot-option-tip"></div>').text(T.cut)); }
+    sug = null;
+    $.each(scan.suggestions || [], function(_i, s) { if (s.camera_id === uid) { sug = s; } });
+    $id('suggest').prop('hidden', !sug);
+    if (sug) { $id('suggest_text').text(T.suggest.replace('%(old)s', sug.old_host).replace('%(new)s', sug.new_host)); }
+  }
+  function poll() {
+    $.getJSON('/camera/scan/' + scanId).done(function(d) {
+      render(d.scan);
+      if (d.scan.state === 'running') { timer = setTimeout(poll, 700); }
+      else { $id('btn').prop('disabled', false); $id('tip').text(''); }
+    }).fail(function() { $id('btn').prop('disabled', false); });
+  }
+  $id('btn').on('click', function() {
+    var subnet = $.trim($id('subnet').val());
+    $id('btn').prop('disabled', true);
+    $id('results').empty();
+    $.ajax({type: 'POST', url: '/camera/scan/start', data: JSON.stringify({subnet: subnet}),
+            contentType: 'application/json'})
+      .done(function(r) {
+        try { window.localStorage.setItem(KEY, subnet); } catch (e) {}
+        scanId = r.scan_id; $id('tip').text(T.wait); poll();
+      })
+      .fail(function(xhr) {
+        $id('btn').prop('disabled', false);
+        msg((xhr.responseJSON && xhr.responseJSON.message) || T.fail);
+      });
+  });
+  $id('apply').on('click', function() {
+    if (!sug || !window.confirm(T.confirm.replace('%(new)s', sug.new_host))) { return; }
+    $.ajax({type: 'POST', url: '/camera/driver/' + uid + '/apply_host',
+            data: JSON.stringify({host: sug.new_host, scan_id: scanId}), contentType: 'application/json'})
+      .done(function(r) {
+        $('input[name=ip_address]', $id('btn').closest('.aot-vigi')).val(sug.new_host);
+        if (typeof vigiRender === 'function') { vigiRender(uid, r.driver); }
+        $id('suggest').prop('hidden', true); msg(T.saved, 'success');
+      })
+      .fail(function(xhr) { msg((xhr.responseJSON && xhr.responseJSON.message) || T.fail); });
+  });
+})();
+</script>

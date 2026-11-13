@@ -19,6 +19,8 @@ from typing import Dict, Iterable, List, Sequence, Tuple
 
 import numpy as np
 
+from .forcing import offset_at
+
 VWC_RANGE_PCT: Tuple[float, float] = (0.0, 70.0)
 SOIL_T_RANGE_C: Tuple[float, float] = (-30.0, 60.0)
 FLAT_STD_PCT = 0.1
@@ -31,13 +33,13 @@ REASON_SPARSE = 'sparse'
 REASON_NAN = 'nan'
 
 
-def _day_key(t: float, tz_offset_s: float) -> int:
-    return int(math.floor((t + tz_offset_s) / 86400.0))
+def _day_key(t: float, tz_offset_s) -> int:
+    return int(math.floor((t + offset_at(t, tz_offset_s)) / 86400.0))
 
 
 def screen_series(times: Sequence[float], values: Sequence[float],
                   value_range: Tuple[float, float] = VWC_RANGE_PCT,
-                  flat_std: float = FLAT_STD_PCT, tz_offset_s: float = 9 * 3600,
+                  flat_std: float = FLAT_STD_PCT, tz_offset_s=None,
                   min_points: int = MIN_POINTS_PER_DAY) -> Tuple[np.ndarray, List[str]]:
     """점마다 (유효 여부, 사유). 사유는 ok·range·flat·sparse·nan 중 하나."""
     t = np.asarray(times, dtype=float)
@@ -82,7 +84,7 @@ def channel_verdict(times, values, value_range=VWC_RANGE_PCT, min_valid_frac=0.5
 
 
 def daily_means(times: Iterable[float], values: Iterable[float], mask=None,
-                tz_offset_s: float = 9 * 3600, min_points: int = 12) -> Dict[int, Tuple[float, int]]:
+                tz_offset_s=None, min_points: int = 12) -> Dict[int, Tuple[float, int]]:
     """현지 날짜(에포크 일 번호) → (유효 점 평균, 점 수). 점이 min_points 미만인 날은 뺀다."""
     t = np.asarray(list(times), dtype=float)
     v = np.asarray(list(values), dtype=float)
@@ -93,7 +95,7 @@ def daily_means(times: Iterable[float], values: Iterable[float], mask=None,
     return {d: (float(np.mean(a)), len(a)) for d, a in acc.items() if len(a) >= min_points}
 
 
-def placement_changes(times, soil_t, tz_offset_s: float = 9 * 3600, ratio: float = 2.0,
+def placement_changes(times, soil_t, tz_offset_s=None, ratio: float = 2.0,
                       min_range_c: float = 15.0, lookback_d: int = 7) -> List[int]:
     """토양온도 일교차가 갑자기 커진 날(에포크 일 번호) — 센서가 얕아졌거나 드러난 신호.
 
@@ -125,7 +127,7 @@ def _by_day(times, values, tz_offset_s):
 
 
 def boundary_means(times: Iterable[float], values: Iterable[float], mask=None,
-                   tz_offset_s: float = 9 * 3600, half_window_s: float = 7200.0,
+                   tz_offset_s=None, half_window_s: float = 7200.0,
                    min_points: int = 2) -> Dict[int, Tuple[float, int]]:
     """현지 날짜 d 의 00:00 앞뒤 half_window_s 안 유효 점 평균 → {d: (평균, 점 수)}.
 
@@ -137,7 +139,7 @@ def boundary_means(times: Iterable[float], values: Iterable[float], mask=None,
     m = np.isfinite(v) if mask is None else (np.asarray(mask, dtype=bool) & np.isfinite(v))
     acc: Dict[int, List[float]] = {}
     for ti, vi in zip(t[m], v[m]):
-        local = ti + tz_offset_s
+        local = ti + offset_at(ti, tz_offset_s)
         d = int(math.floor(local / 86400.0 + 0.5))      # 가장 가까운 자정
         if abs(local - d * 86400.0) <= half_window_s:
             acc.setdefault(d, []).append(vi)

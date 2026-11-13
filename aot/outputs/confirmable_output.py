@@ -25,7 +25,7 @@ Synchronous outputs never call begin_command and are completely unaffected
 import threading
 from datetime import timedelta
 
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 # System default optimistic window (seconds) applied to a confirmation-capable
 # output when the user leaves 'command_timeout_s' unset. Wired/synchronous

@@ -1,0 +1,507 @@
+{
+ "samples": [
+  {
+   "key": "two_story_nursery",
+   "title": "2층 육묘동",
+   "layout": {
+    "schema": 1,
+    "levels": [
+     {
+      "id": "L1",
+      "name": "1층",
+      "elevation_m": 0,
+      "height_m": 4.0
+     },
+     {
+      "id": "L2",
+      "name": "2층",
+      "elevation_m": 4.2,
+      "height_m": 3.2
+     }
+    ],
+    "blocks": [
+     {
+      "id": "B1",
+      "level_id": "L1",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        12,
+        0
+       ],
+       [
+        12,
+        30
+       ],
+       [
+        0,
+        30
+       ]
+      ],
+      "roof": {
+       "type": "flat"
+      },
+      "walls": {
+       "cover": "sandwich_panel"
+      }
+     },
+     {
+      "id": "B2",
+      "level_id": "L2",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        12,
+        0
+       ],
+       [
+        12,
+        20
+       ],
+       [
+        0,
+        20
+       ]
+      ],
+      "roof": {
+       "type": "gable",
+       "ridge_axis": "z",
+       "rise_m": 2.5,
+       "runs": 1
+      },
+      "walls": {
+       "cover": "polycarbonate"
+      }
+     }
+    ],
+    "spaces": [
+     {
+      "id": "sp_prep",
+      "block_id": "B1",
+      "name": "준비실",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        12,
+        0
+       ],
+       [
+        12,
+        10
+       ],
+       [
+        0,
+        10
+       ]
+      ]
+     },
+     {
+      "id": "sp_nursery1",
+      "block_id": "B1",
+      "name": "육묘실 1층",
+      "outline": [
+       [
+        0,
+        10
+       ],
+       [
+        12,
+        10
+       ],
+       [
+        12,
+        30
+       ],
+       [
+        0,
+        30
+       ]
+      ]
+     },
+     {
+      "id": "sp_nursery2",
+      "block_id": "B2",
+      "name": "육묘실 2층"
+     }
+    ],
+    "boundaries": [
+     {
+      "between": [
+       "sp_prep",
+       "sp_nursery1"
+      ],
+      "type": "wall"
+     }
+    ],
+    "voids": [
+     {
+      "level_id": "L2",
+      "outline": [
+       [
+        1,
+        1
+       ],
+       [
+        3,
+        1
+       ],
+       [
+        3,
+        4
+       ],
+       [
+        1,
+        4
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "key": "l_shaped_connected",
+   "title": "ㄱ자 연동 온실",
+   "layout": {
+    "schema": 1,
+    "levels": [
+     {
+      "id": "L1",
+      "name": "1층",
+      "elevation_m": 0,
+      "height_m": 3.0
+     }
+    ],
+    "blocks": [
+     {
+      "id": "B1",
+      "level_id": "L1",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        24,
+        0
+       ],
+       [
+        24,
+        12
+       ],
+       [
+        0,
+        12
+       ]
+      ],
+      "roof": {
+       "type": "arch",
+       "ridge_axis": "z",
+       "rise_m": 2.5,
+       "runs": 3
+      },
+      "walls": {
+       "cover": "polycarbonate"
+      }
+     },
+     {
+      "id": "B2",
+      "level_id": "L1",
+      "outline": [
+       [
+        0,
+        12
+       ],
+       [
+        12,
+        12
+       ],
+       [
+        12,
+        30
+       ],
+       [
+        0,
+        30
+       ]
+      ],
+      "roof": {
+       "type": "arch",
+       "ridge_axis": "z",
+       "rise_m": 2.5,
+       "runs": 2
+      },
+      "walls": {
+       "cover": "polycarbonate"
+      }
+     }
+    ],
+    "spaces": [
+     {
+      "id": "gh_ew",
+      "block_id": "B1",
+      "name": "동서동"
+     },
+     {
+      "id": "gh_ns",
+      "block_id": "B2",
+      "name": "남북동"
+     }
+    ],
+    "boundaries": [
+     {
+      "between": [
+       "gh_ew",
+       "gh_ns"
+      ],
+      "type": "open"
+     }
+    ],
+    "voids": []
+   }
+  },
+  {
+   "key": "stepped_building",
+   "title": "층별 평면이 다른 건물",
+   "layout": {
+    "schema": 1,
+    "levels": [
+     {
+      "id": "L1",
+      "name": "1층",
+      "elevation_m": 0,
+      "height_m": 4.0
+     },
+     {
+      "id": "L2",
+      "name": "2층",
+      "elevation_m": 4.2,
+      "height_m": 3.2
+     },
+     {
+      "id": "L3",
+      "name": "3층",
+      "elevation_m": 7.6,
+      "height_m": 3.0
+     }
+    ],
+    "blocks": [
+     {
+      "id": "B1",
+      "level_id": "L1",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        24,
+        0
+       ],
+       [
+        24,
+        16
+       ],
+       [
+        0,
+        16
+       ]
+      ],
+      "roof": {
+       "type": "flat"
+      },
+      "walls": {
+       "cover": "sandwich_panel"
+      }
+     },
+     {
+      "id": "B2",
+      "level_id": "L2",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        24,
+        0
+       ],
+       [
+        24,
+        8
+       ],
+       [
+        12,
+        8
+       ],
+       [
+        12,
+        16
+       ],
+       [
+        0,
+        16
+       ]
+      ],
+      "roof": {
+       "type": "flat"
+      },
+      "walls": {
+       "cover": "concrete"
+      }
+     },
+     {
+      "id": "B3",
+      "level_id": "L3",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        12,
+        0
+       ],
+       [
+        12,
+        16
+       ],
+       [
+        0,
+        16
+       ]
+      ],
+      "roof": {
+       "type": "gable",
+       "ridge_axis": "z",
+       "rise_m": 2.0,
+       "runs": 1
+      },
+      "walls": {
+       "cover": "polycarbonate"
+      }
+     }
+    ],
+    "spaces": [
+     {
+      "id": "sp_hall",
+      "block_id": "B1",
+      "name": "작업장",
+      "outline": [
+       [
+        0,
+        0
+       ],
+       [
+        16,
+        0
+       ],
+       [
+        16,
+        16
+       ],
+       [
+        0,
+        16
+       ]
+      ]
+     },
+     {
+      "id": "sp_lab",
+      "block_id": "B1",
+      "name": "실험실",
+      "outline": [
+       [
+        16,
+        0
+       ],
+       [
+        24,
+        0
+       ],
+       [
+        24,
+        16
+       ],
+       [
+        16,
+        16
+       ]
+      ]
+     },
+     {
+      "id": "sp_floor2",
+      "block_id": "B2",
+      "name": "2층 재배실"
+     },
+     {
+      "id": "sp_floor3",
+      "block_id": "B3",
+      "name": "3층 재배실"
+     }
+    ],
+    "boundaries": [
+     {
+      "between": [
+       "sp_hall",
+       "sp_lab"
+      ],
+      "type": "curtain"
+     }
+    ],
+    "voids": [
+     {
+      "level_id": "L2",
+      "outline": [
+       [
+        2,
+        2
+       ],
+       [
+        5,
+        2
+       ],
+       [
+        5,
+        5
+       ],
+       [
+        2,
+        5
+       ]
+      ]
+     },
+     {
+      "level_id": "L3",
+      "outline": [
+       [
+        2,
+        2
+       ],
+       [
+        5,
+        2
+       ],
+       [
+        5,
+        5
+       ],
+       [
+        2,
+        5
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

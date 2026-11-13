@@ -31,6 +31,7 @@ import uuid
 from aot.config import (DOCKER_UPDATE_HEARTBEAT_FILE, DOCKER_UPDATE_LOG_FILE,
                         DOCKER_UPDATE_PATH, DOCKER_UPDATE_REQUEST_FILE,
                         DOCKER_UPDATE_STATUS_FILE)
+from aot.utils.timekit import wall_to_utc
 
 logger = logging.getLogger("aot.docker_update")
 
@@ -195,23 +196,14 @@ def _resolve_tz(tz_name):
     a silent way to get the wrong answer.
     """
     if tz_name:
-        try:
-            import pytz
-            return pytz.timezone(tz_name)
-        except Exception:
-            logger.warning(f"Unknown timezone {tz_name!r}; using the "
-                           f"configured local zone instead")
-    from aot.utils.time_utils import get_local_now
-    return get_local_now().tzinfo
-
-
-def _localize(naive, tz):
-    """Attach `tz` to a naive local wall time. pytz needs localize() -- passing
-    a pytz zone to replace(tzinfo=...) yields the zone's 19th-century LMT
-    offset, which is minutes off."""
-    if hasattr(tz, 'localize'):
-        return tz.localize(naive)
-    return naive.replace(tzinfo=tz)
+        from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+        _tz, _src = resolve_tz(tz_name)
+        if _src == SOURCE_EXPLICIT:
+            return _tz
+        logger.warning(f"Unknown timezone {tz_name!r}; using the "
+                       f"configured local zone instead")
+    from aot.utils.timekit import to_tz, FARM, utc_now
+    return to_tz(utc_now(), FARM).tzinfo
 
 
 def next_scheduled_run(schedule, after=None, tz_name=None):
@@ -243,7 +235,7 @@ def next_scheduled_run(schedule, after=None, tz_name=None):
     candidate = wall.replace(hour=hour, minute=minute, second=0, microsecond=0)
     if candidate <= wall:
         candidate += datetime.timedelta(days=1)
-    return _localize(candidate, tz).timestamp()
+    return wall_to_utc(candidate, tz).timestamp()
 
 
 def format_local(timestamp, tz_name=None):

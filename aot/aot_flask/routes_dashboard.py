@@ -92,7 +92,7 @@ def _geo_scope_choices():
     (`plot_context._shape_name`)을 쓴다. 다르게 뽑으면 설정의 이름과 화면의
     이름이 갈린다.
     """
-    from aot.aot_flask.geo.plot_context import _shape_name
+    from aot.space.plot_context import _shape_name
     from aot.databases.models import GeoShape
     sites = {}
     for shape in GeoShape.query.filter_by(type='site').all():
@@ -704,9 +704,49 @@ def _build_dashboard_render_context(this_dashboard, dashboard_id, form_base, for
                            use_unit=use_unit,
                            widgets_dash=widgets_dash,
                            widget_types_on_dashboard=widget_types_on_dashboard,
+                           needs_map=dashboard_needs_map(widget_types_on_dashboard),
+                           poll_scale_exempt_widgets=POLL_SCALE_EXEMPT_WIDGETS,
                            form_base=form_base,
                            form_dashboard=form_dashboard,
                            widget=widget)
+
+
+#: 지도 전역 스택(layout 의 `needs_map` 블록: maplibre-gl + map-shim + geo 번들 +
+#: map-modal)을 **페이지가 미리 실어 두기를 전제하는** 내장 위젯.
+#: - AoT_map: "maplibregl 은 페이지가 제공한다"(AoT_map.py 머리 주석). 없으면 시작 실패.
+#: - widget_calendar: 일정 상세 모달의 지도. 없으면 오류 없이 지도만 빠진다.
+#: 새 위젯이 `maplibregl` 을 쓰면 여기에 넣는다 — test_dashboard_needs_map 이
+#: 위젯 소스를 훑어 빠진 것을 잡는다.
+MAP_STACK_WIDGETS = frozenset({'AoT_map', 'widget_calendar'})
+
+#: 서버가 바쁠 때 폴링을 늦추라는 지시(`X-AoT-Poll-Scale`, 자원 조절 R4a)를 **받지 않는**
+#: 위젯 — 출력·PID·작동기·타이머·시퀀스·표시등처럼 조작한 결과나 장치 상태를 곧바로
+#: 보여 줘야 하는 화면이다. 늦게 보이면 이미 바뀐 것을 또 누르게 된다.
+#: 나머지(측정값·차트·지도·카메라·조언 등)는 몇 초 늦어도 판단이 바뀌지 않는다.
+POLL_SCALE_EXEMPT_WIDGETS = frozenset({
+    'AoT_output_pwm', 'AoT_output_value', 'AoT_pid', 'AoT_controller_act_deact',
+    'AoT_timer', 'widget_trigger_sequence', 'widget_indicator',
+})
+
+
+def dashboard_needs_map(widget_types):
+    """이 대시보드가 지도 전역 스택을 실어야 하는가.
+
+    지도 스택은 head 에서 동기로 실리는 약 1MB 이다(빈 대시보드 첫 로드의 가장 큰
+    공통 비용, 저사양 폰 LCP). 지도가 없는 대시보드에서는 끈다.
+    사용자 정의 위젯은 무엇을 쓰는지 알 수 없으므로 하나라도 있으면 켜 둔다
+    (기본은 켬 — `routes_static` 의 needs_map 과 같은 원칙).
+    """
+    if not widget_types:
+        return False
+    try:
+        builtin = parse_widget_information(exclude_custom=True)
+    except Exception:
+        return True
+    for widget_type in widget_types:
+        if widget_type in MAP_STACK_WIDGETS or widget_type not in builtin:
+            return True
+    return False
 
 
 def _render_widget_fragments(this_dashboard, dashboard_id, widget,

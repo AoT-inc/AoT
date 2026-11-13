@@ -132,7 +132,8 @@ def test_build_plan_includes_only_enabled_sites_and_auto_fills_options():
     assert t.options["forecast_series"] == {"site": "site-A"}
     assert "forecast" not in t.options
     assert any("forecast.input" in n for n in p.notes)                 # 옛 설정 값은 쓰지 않는다고 알린다
-    assert set(t.inputs) == {"rain", "theta"} and t.inputs["theta"].channel == 2
+    assert set(t.inputs) == {"rain", "theta", "irrigation"} and t.inputs["theta"].channel == 2
+    assert (t.inputs["irrigation"].unique_id, t.inputs["irrigation"].unit, t.inputs["irrigation"].channel) == ("plot-1", "water_day", 2)
 
 
 def test_build_plan_star_default_plot_override_wins_and_bad_wiring_drops_one_plot():
@@ -192,15 +193,26 @@ def test_flag_off_does_no_work_and_only_polls_flag():
 
 
 def test_locked_at_start_never_reads_flag_or_db():
-    gate = G.FakeGate(is_supported=False, locked_reason="HARDWARE_PROFILE=LOW", is_enabled=True)
+    gate = G.FakeGate(is_supported=False, locked_reason="low_memory", is_enabled=True)
     svc, made = _service(gate, sites=lambda: pytest.fail("잠긴 기기에서 DB 를 읽었다"))
     assert svc.start() is False
     for _ in range(3):
         assert svc.step() == svc.s.heartbeat_s
     assert "enabled" not in gate.calls and not made
     hb = gate.beats[-1]
-    assert hb["status"] == G.HB_LOCKED and hb["locked_reason"] == "HARDWARE_PROFILE=LOW"
+    assert hb["status"] == G.HB_LOCKED and hb["locked_reason"] == "low_memory"
     assert svc.run_all_once() == []
+
+
+def test_serve_returns_right_after_locked_beat_so_the_process_exits_zero():
+    """잠긴 기기는 하트비트 locked 를 쓴 뒤 루프에 들어가지 않고 돌아온다 — 되살려도 같은 결과라
+    직접 설치는 exit 0 으로 끝나 systemd `Restart=on-failure` 가 되살리지 않는다(Docker 는 아래 park 시험)."""
+    gate = G.FakeGate(is_supported=False, locked_reason="pi_model", is_enabled=True)
+    svc, made = _service(gate, sites=lambda: pytest.fail("잠긴 기기에서 DB 를 읽었다"))
+    assert svc.serve() == 0
+    assert "enabled" not in gate.calls and not made
+    assert gate.beats[-1]["status"] == G.HB_LOCKED and gate.beats[-1]["locked_reason"] == "pi_model"
+    assert svc.step() == svc.s.heartbeat_s          # 직접 한 걸음을 부르는 쪽(시험·--once)은 여전히 안전
 
 
 def _service_with_prewarm(gate, prewarm):
@@ -230,7 +242,7 @@ def test_prewarm_never_runs_when_disabled_or_locked():
     svc = _service_with_prewarm(off, lambda: pytest.fail("꺼진 트윈이 미리 채웠다"))
     svc.start()
     svc.step()
-    locked = G.FakeGate(is_supported=False, locked_reason="HARDWARE_PROFILE=LOW", is_enabled=True)
+    locked = G.FakeGate(is_supported=False, locked_reason="low_memory", is_enabled=True)
     svc = _service_with_prewarm(locked, lambda: pytest.fail("잠긴 기기가 미리 채웠다"))
     assert svc.start() is False
     svc.step()
@@ -395,3 +407,29 @@ def test_db_gate_retries_twin_gate_inside_app_context(monkeypatch):
     import aot.utils as pkg
     monkeypatch.setattr(pkg, "twin_gate", tg, raising=False)
     assert G.DbGate(G.LazyApp(App)).enabled() is True and App.entered == 1
+
+
+def test_park_if_locked_replaces_the_docker_process_with_sleep_infinity():
+    """Docker 의 `unless-stopped` 는 exit 0 도 되살린다(`on-failure` 는 재부팅 뒤 안 돌아와 쓸 수 없다).
+    잠긴 컨테이너가 종료하면 잠금 판정을 무한 반복하므로 `sleep infinity` 로 바뀐다. 직접 설치·안 잠김은 건드리지 않는다."""
+    from aot.twin import __main__ as M
+    calls = []
+    locked = types.SimpleNamespace(locked_reason="low_memory")
+    M.park_if_locked(locked, exec_fn=lambda *a: calls.append(a), docker=True)
+    assert calls == [("sleep", ["sleep", "infinity"])]
+    calls.clear()
+    M.park_if_locked(locked, exec_fn=lambda *a: calls.append(a), docker=False)             # 직접 설치: exit 0
+    M.park_if_locked(types.SimpleNamespace(locked_reason=None), exec_fn=lambda *a: calls.append(a), docker=True)
+    assert calls == []
+
+
+def test_main_parks_a_locked_service_but_not_run_once(monkeypatch):
+    """`--once` 경로는 그대로(잠겨도 종료), 상주 경로만 잠기면 park 를 부른다."""
+    from aot.twin import __main__ as M, service as S
+    svc = types.SimpleNamespace(locked_reason="pi_model", serve=lambda: 0, run_all_once=lambda: [])
+    monkeypatch.setattr(S, "build_db_service", lambda *a, **k: svc)
+    parked = []
+    monkeypatch.setattr(M, "park_if_locked", lambda s, **k: parked.append(s))
+    assert M.main([]) == 0 and parked == [svc]
+    parked.clear()
+    assert M.main(["--once"]) == 0 and parked == []

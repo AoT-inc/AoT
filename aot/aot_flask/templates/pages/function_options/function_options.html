@@ -26,10 +26,8 @@
         each_function.unique_id,
         form_function_base.latitude,
         form_function_base.longitude,
-        form_function_base.location_source,
         each_function.latitude,
         each_function.longitude,
-        each_function.location_source,
         'function_mod',
         'modal_config_' ~ each_function.unique_id,
         '280px',
@@ -124,7 +122,6 @@
         </div>
         {% endif %}
         {% set form = form_function_base %}
-        {% include 'pages/form_options/Coordinates.html' %}
     </div>
   </form>
 

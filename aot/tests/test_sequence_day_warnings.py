@@ -107,7 +107,7 @@ class TestSequenceScheduleDayWarnings:
     def _patch_plan_for_day(self, monkeypatch, plans_by_day):
         import aot.controllers.controller_trigger_sequence as seq_mod
 
-        def _fake(unique_id, day_idx):
+        def _fake(unique_id, day_idx, **_kw):
             return plans_by_day[day_idx]
 
         monkeypatch.setattr(seq_mod.SequenceTriggerController, 'plan_for_day',
@@ -124,6 +124,27 @@ class TestSequenceScheduleDayWarnings:
 
         assert per_day == {}
         assert flat == []
+
+    def test_day_badges_do_not_resolve_device_names(self, app, monkeypatch):
+        """배지는 warning_codes 만 쓴다 — 이름 조회(요일 x 스텝 x 표)를 하지 않는다.
+
+        대시보드 첫 HTML 에서 이 조회가 view 시간의 절반을 차지했다.
+        """
+        import aot.controllers.controller_trigger_sequence as seq_mod
+        from aot.utils.sequence_warnings import sequence_schedule_day_warnings
+
+        seen = []
+
+        def _fake(unique_id, day_idx, labels=True):
+            seen.append(labels)
+            return {"runs": False}
+
+        monkeypatch.setattr(seq_mod.SequenceTriggerController, 'plan_for_day',
+                            staticmethod(_fake))
+        with app.test_request_context():
+            sequence_schedule_day_warnings(_FakeTrigger())
+
+        assert seen == [False] * 7
 
     def test_skips_days_with_no_warnings(self, app, monkeypatch):
         from aot.utils.sequence_warnings import sequence_schedule_day_warnings
@@ -168,7 +189,7 @@ class TestSequenceScheduleDayWarnings:
         from aot.utils.sequence_warnings import sequence_schedule_day_warnings
         import aot.controllers.controller_trigger_sequence as seq_mod
 
-        def _fake(unique_id, day_idx):
+        def _fake(unique_id, day_idx, **_kw):
             if day_idx == 2:
                 raise RuntimeError("boom")
             return {"runs": True, "warning_codes": [{"code": "empty"}]} if day_idx == 0 else {"runs": False}

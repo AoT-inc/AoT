@@ -6,7 +6,7 @@ OpenWeather 3시간 블록 보간이 거의 그친 비를 계속 내리는 모�
 """
 import time
 
-from aot.aot_flask.geo import weather_state as ws
+from aot.space import weather_state as ws
 
 
 class TestAccumulatedMmFromDriver:

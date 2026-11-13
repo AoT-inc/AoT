@@ -12,6 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 # @ANCHOR: TIER0_CLASSIFIER
+
+def _is_builtin_mcp(server_id):
+    """그 MCP 서버 행이 AoT 자기 자신인가(판별 기준은 mcp_tool_call_resolver 와 같다)."""
+    from aot.ai.services.resolvers.mcp_tool_call_resolver import _is_builtin_server
+    return _is_builtin_server(server_id)
+
 class Tier0Classifier:
     """
     Zero-token pre-classifier for trivially resolvable queries.
@@ -59,8 +65,8 @@ class Tier0Classifier:
 
     @classmethod
     def _load_patterns(cls, category, fallback):
-        from aot.utils.time_utils import get_local_now
-        now = get_local_now().timestamp()
+        from aot.utils.timekit import to_tz, FARM, utc_now
+        now = to_tz(utc_now(), FARM).timestamp()
 
         # [PHASE 1.1] TTL Cache check to eliminate redundant DB calls
         if category in cls._PATTERN_CACHE:
@@ -131,9 +137,9 @@ class Tier0Classifier:
         if any(p in clean for p in TIME_PATTERNS):
             # 묻는 사람의 시계로, 어느 시계인지 붙여 답한다 — 라벨 없는
             # 시스템 시각은 다른 시간대의 사람이 자기 시각으로 오독한다.
-            from aot.utils.timekit import current_user_tz, format_labeled, utc_now
+            from aot.utils.timekit import format_labeled, utc_now, tz_of, VIEWER
             from flask_babel import gettext as _
-            now = format_labeled(utc_now(), current_user_tz())
+            now = format_labeled(utc_now(), tz_of(VIEWER))
             return cls._make_response(_("The current time is %(time)s.", time=now))
 
         # --- Greeting (exact + fuzzy) ---
@@ -636,6 +642,21 @@ class AIRoutingService:
             tool_name = action['params']['tool_name']
             logger.info(f"[Normalize] Unwrapped action envelope used as a tool name "
                         f"→ '{tool_name}'")
+
+        # @ANCHOR: IN_APP_DOMAIN_TOOLS — 인앱 AI 의 도구는 도메인 명부다(26-11 5단계).
+        # 승인이 필요한 쓰기는 안쪽 도구 호출로 바꿔 아래 보통 정규화·인앱 승인을
+        # 그대로 타고, 나머지는 도구 실행층으로 간다(`in_app_tools.normalize`).
+        # 사용자가 등록한 다른 MCP 서버의 같은 이름 도구는 건드리지 않는다.
+        from aot.ai.services import in_app_tools as _in_app
+        if _in_app.is_domain_tool(tool_name) and not (
+                action.get('action_type') == 'mcp_tool_call'
+                and action.get('target_id')
+                and action.get('target_id') != 'system_internal'
+                and not _is_builtin_mcp(action.get('target_id'))):
+            _done = _in_app.normalize(action, tool_name)
+            if _done is not None:
+                return _done
+            tool_name = action['params']['tool_name']
 
         # [VIRTUAL_TOOL_MISCLASSIFY_FIX] The SSOT virtual registry is authoritative
         # about what is an internal tool. The LLM sometimes emits

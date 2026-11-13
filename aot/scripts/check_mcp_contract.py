@@ -81,9 +81,9 @@ def _walk(obj, path=''):
 
 def _farm_is_utc():
     from datetime import datetime
-    from aot.utils.device_tz import resolve_location_tz
+    from aot.utils.timekit import FARM, tz_of
     try:
-        return datetime.now(resolve_location_tz(None)).utcoffset().total_seconds() == 0
+        return datetime.now(tz_of(FARM)).utcoffset().total_seconds() == 0
     except Exception:                                       # noqa: BLE001
         return False
 
@@ -152,9 +152,11 @@ def check_id_agreement(S, rep, M):
     tree = M.tree(full=True).get('hierarchy') or []
     dev_nodes, fac_nodes = [], []
 
+    from aot.databases.geo_marker_kinds import MARKER_TYPES
+
     def walk(ns):
         for n in ns:
-            if n.get('type') in ('aot_device', 'device'):
+            if n.get('type') in MARKER_TYPES:
                 dev_nodes.append(n)
             elif n.get('type') == 'facility':
                 fac_nodes.append(n)

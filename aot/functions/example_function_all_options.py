@@ -34,6 +34,7 @@ from aot.aot_client import DaemonControl
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import utc_now
 
 FUNCTION_INFORMATION = {
     'function_name_unique': 'example_function_generic',
@@ -424,7 +425,7 @@ class CustomModule(AbstractFunction):
 
     def function_status(self):
         return_dict = {
-            'string_status': f"Current time: {datetime.datetime.now()} ({time.time()})"
+            'string_status': f"Current time: {utc_now()} ({time.time()})"
                              f"\ntext: {self.text_1}"
                              f"\ninteger: {self.integer_1}"
                              f"\nfloat: {self.float_1}"

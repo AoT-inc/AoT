@@ -109,6 +109,8 @@ An **Emergency Stop** button sits under the grid when **Show Emergency Stop** is
 |--------|-------------|---------|
 | Render Mode | `Default` (semi-transparent cover), `Solid` (opaque, lower overdraw), `Wireframe` (outlines only), or `Performance` (simplified shading + reduced resolution for mobile). | Default |
 
+If the facility has a multi-floor structure model configured (see `/geo/facility`), the 3D view renders that model's floors and walls directly instead of a simple box. Unlike the design editor, the widget always shows the whole building — there's no way to isolate a single floor here.
+
 ### Sensor Labels
 
 Real-time measurement values shown next to each sensor in the 3D scene.

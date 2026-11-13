@@ -36,13 +36,13 @@ logger = logging.getLogger(__name__)
 #: 컨테이너가 늘어난다고 조작 권한이 넓어지지 않는다 — 합집합으로 판정하면
 #: 감춘 장치의 위젯을 공개 대시보드에 얹는 것만으로 스코프가 샌다.
 _DEVICE_MODEL_NAMES = ('Input', 'Output', 'Function', 'Conditional',
-                       'Trigger', 'PID', 'CustomController')
+                       'Trigger', 'PID', 'CustomController', 'Camera')
 
 
 def _models():
     """모델을 늦게 import 한다 — 이 모듈이 모델 패키지 import 사슬에 끼면
     순환이 생긴다(`extensions` → 모델 → 라우트 → 여기)."""
-    from aot.databases.models import (Conditional, CustomController, Function,
+    from aot.databases.models import (Camera, Conditional, CustomController, Function,
                                       GroupGrant, Input, Output, PID, Role,
                                       Trigger, User, UserGroupMember)
     return {
@@ -51,7 +51,7 @@ def _models():
         'Role': Role,
         'User': User,
         'devices': (Input, Output, Function, Conditional, Trigger, PID,
-                    CustomController),
+                    CustomController, Camera),
     }
 
 
@@ -109,6 +109,14 @@ def _resolve_user(user):
         import flask_login
         current = flask_login.current_user
         if not current or not current.is_authenticated:
+            # MCP·AI 가 연 가짜 요청에는 로그인한 사람이 없다. 실행층이 호출 동안
+            # 묶어 둔 사람(`write_scope.acting_as`)이 있으면 그 사람이 호출자다 —
+            # 웹용 삭제 유틸(`output_del` 등)이 같은 대상의 수정과 같은 판정을 받는다
+            # (26-11-04 실측 S1: 관리자·구성원도 묶인 출력 삭제가 거부됐다).
+            from aot.aot_flask.access import write_scope
+            principal = write_scope.current()
+            if principal is not None and not principal.anonymous:
+                return principal.user()
             return None
         models = _models()
         return models['User'].query.filter(
@@ -565,7 +573,7 @@ def _shape_container(shape):
 def shape_resources(shape):
     """지도 도형 하나가 걸리는 스코프 대상 전부 — [(kind, uuid)].
 
-    연결된 장치(`GeoShape.device_id` — 그 장치의 탭으로 판정)와, 도형을 담은
+    연결된 장치(바인딩 — 그 장치의 탭으로 판정)와, 도형을 담은
     시설 또는 지도(`_shape_container`). **둘 다** 통과해야 그 도형에 쓸 수
     있다. 쓰기 시점 강제(`write_scope.enforce`)와 앞 판정
     (`can_operate_uuid` → `can_operate_tool_call`)이 이 함수 하나를 쓴다 —
@@ -578,7 +586,10 @@ def shape_resources(shape):
     if key in cache:
         return list(cache[key])
     out = []
-    device_id = getattr(shape, 'device_id', None)
+    # 연결된 장치는 바인딩이 정본이다(L4 — 컬럼은 읽지 않는다). 컬럼을 보면
+    # 컬럼이 비어도 되는 날부터 이 판정이 조용히 빠진다(권한 구멍).
+    from aot.space.device_binding import device_for_shape
+    device_id = device_for_shape(shape)
     if isinstance(device_id, str) and device_id.strip():
         found = _resource_of_uuid(device_id.strip())
         if found is not None:

@@ -19,7 +19,8 @@ import pytest
 from aot.functions.utils.env_control import basis
 from aot.functions.utils.env_control import effect_functions as ef
 from aot.functions.utils.env_control import humid_regime as HR
-from aot.functions.utils.env_control import psychro, situation
+from aot.functions.utils.env_control import situation
+from aot.utils import psychro
 
 REL = 1e-9
 
@@ -260,7 +261,7 @@ def test_condensation_escape_decisions_unchanged():
 
 def test_facility_sensors_vpd_fallback_unchanged(monkeypatch):
     """센서가 VPD 를 안 줄 때 T/RH 평균으로 계산하는 값(`compute_spatial_internal`)."""
-    from aot.aot_flask.geo import facility_sensors as fs
+    from aot.space import facility_sensors as fs
     state = {}
     monkeypatch.setattr(fs, '_freshness_by_device', lambda ids: {})
     monkeypatch.setattr(fs, '_read_one_sensor',
@@ -316,7 +317,7 @@ def test_condensation_margins_defined_once_in_humid_regime(monkeypatch):
 
 _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), *(['..'] * 4)))
 _SKIP_DIRS = ('/tests/', '/greybox/', '/aot/inputs/', '/__pycache__/')
-_SKIP_FILES = ('/env_control/psychro.py', '/aot/utils/auto_vpd.py')
+_SKIP_FILES = ('/aot/utils/psychro.py', '/env_control/psychro.py', '/aot/utils/auto_vpd.py')
 
 
 def test_no_magnus_literals_outside_psychro():

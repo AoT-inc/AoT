@@ -34,7 +34,7 @@ DEF_DAYS = 365                         # 곡선이 만료된 뒤에도 정의를
 LABEL_MAX = 120
 OVERRIDES_MAX_BYTES = 64 * 1024
 OVERRIDE_KEYS = ('actuators', 'weather', 'supply')
-EFFECT_STATUSES = ('modeled', 'partial', 'unmodeled', 'unknown')
+EFFECT_STATUSES = ('modeled', 'partial', 'unmodeled', 'unknown', 'supply')
 EFFECT_SOURCES = ('measured', 'estimated', 'unknown')
 SCENARIO_MEASUREMENTS = tuple(sorted(L.PINNABLE_MEASUREMENTS))
 RUN_FIT_KEYS = ('sync_rmse_T', 'sync_rmse_RH', 'sync_rmse_T_1h', 'sync_rmse_theta_1d', 'sync_rmse_Ts_1d',
@@ -79,7 +79,7 @@ def validate_overrides(overrides):
 
 
 def validate_effects(effects):
-    """`effects` = [{kind, channel, status, source}] — 목록표에 없는 종류는 status=unknown, channel=null."""
+    """`effects` = [{kind, channel, status, source, caveats?}] — 목록표에 없는 종류는 status=unknown, channel=null."""
     if effects is None:
         return []
     if not isinstance(effects, list):
@@ -92,7 +92,10 @@ def validate_effects(effects):
         source = e.get('source', 'unknown')
         if status not in EFFECT_STATUSES or source not in EFFECT_SOURCES:
             raise StoreError('invalid effects status/source')
-        out.append({'kind': e.get('kind'), 'channel': e.get('channel'), 'status': status, 'source': source})
+        row = {'kind': e.get('kind'), 'channel': e.get('channel'), 'status': status, 'source': source}
+        if e.get('caveats'):                                # 밸브 가정의 공급 주의 — 메모는 저장되지 않으니 여기에 남긴다
+            row['caveats'] = [str(c) for c in e['caveats']]
+        out.append(row)
     return out
 
 
@@ -221,7 +224,7 @@ def scenario_dict(row, base_t0=None):
         'base_run': row.base_run, 'base_t0': base_t0,
         'base_mode': row.base_mode, 'future_input_mode': row.future_input_mode,
         'overrides': overrides, 'weather_assumption': weather, 'actuator_plan': plan, 'effects': effects,
-        'effects_unmodeled': sum(1 for e in effects if e.get('status') != 'modeled'),
+        'effects_unmodeled': sum(1 for e in effects if e.get('status') not in ('modeled', 'supply')),
         'model_rev': row.model_rev, 'cal_rev': row.cal_rev, 'fc_issue_epoch': row.fc_issue_epoch,
         'weather_src': row.weather_src, 'obs_origin': row.obs_origin, 'fail_reason': row.fail_reason,
         'layer': 'L3', 'schema_version': row.schema_version or 1,

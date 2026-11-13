@@ -9,8 +9,8 @@ All Outputs should inherit from this class and overwrite methods that raise
 NotImplementedErrors
 """
 from datetime import datetime, timezone, timedelta
-from aot.utils.time_utils import utc_now
-from aot.utils.timekit import resolve_tz, system_tz, to_tz
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import FARM, resolve_tz, to_tz, tz_of
 
 import logging
 import threading
@@ -75,9 +75,16 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         self.running = True
 
         # Geo location info for mapping
-        self.latitude = getattr(output, 'latitude', None)
-        self.longitude = getattr(output, 'longitude', None)
-        self.location_source = getattr(output, 'location_source', 'manual')
+        # [L2] 위치의 정본은 배치 — locate/resolve_coords 우선, 행 컬럼은 리졸버의
+        # 레거시 폴백 안에서만 읽힌다(배치가 없을 때 대지 기준 파생 포함).
+        self.latitude = self.longitude = None
+        try:
+            from aot.utils.timekit import resolve_coords
+            _lat, _lng, _src = resolve_coords(output)
+            if _lat is not None and _lng is not None:
+                self.latitude, self.longitude = _lat, _lng
+        except Exception:
+            pass
 
         if not testing:
             self.output_types = output_types()
@@ -348,6 +355,78 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
             # Don't interrupt main flow if metrics fail
             pass
 
+    def _track_pwm_session(self, output_channel, duty, current_time):
+        """PWM 의 작동 구간을 **듀티 0 <-> 양수 전환 시점에만** 열고 닫는다.
+
+        on/off 출력은 켜짐·꺼짐이 명령 자체에 있어 장부(`output_time_turned_on`)가
+        자연히 열리고 닫힌다. PWM 은 "켜기" 가 곧 "듀티 설정" 이라 이 장부를 아예
+        쓰지 않았고, 그 결과 (2026-11-11 점검) 켰다 꺼도 `duration_time` 이 남지
+        않았으며, 자동화(PID·bang-bang·트리거)가 끌 때 보내는 `on pwm 0` 은 시작
+        표지를 초기화하지 못해 꺼져 있던 시간까지 "N시간째 작동" 으로 이어졌다.
+
+        - 듀티 > 0 이고 열린 구간이 없으면: 구간을 열고 시작 표지를 새로 쓴다.
+        - 듀티 > 0 이고 열린 구간이 있으면: 아무것도 하지 않는다. PID 가 주기마다
+          같은(또는 다른 양수) 듀티를 다시 보내도 기록·표지가 늘면 안 된다.
+        - 듀티 <= 0 이고 열린 구간이 있으면: 구간을 닫아 개방 시간을 기록한다.
+          `off` 명령과 같은 취급이다.
+        - 듀티 <= 0 이고 열린 구간이 없으면: 아무것도 하지 않는다(0% 출력에
+          시작 표지를 쓰지 않는다).
+
+        열림 여부는 하드웨어 `is_on()` 이 아니라 이 장부로 판단한다 — 반전
+        (Invert Signal) 채널은 물리 듀티가 100 - 요청값이라 `is_on()` 으로는
+        전환을 가릴 수 없다. 확인형 출력은 확인 시점에 장부를 직접 다루므로
+        (`confirm_command`) 손대지 않는다.
+        """
+        try:
+            if self.confirmation_capable():
+                return
+            is_open = self.output_time_turned_on.get(output_channel) is not None
+            if duty is not None and duty > 0:
+                if not is_open:
+                    self._begin_pwm_session(output_channel, current_time)
+                else:
+                    # 구간은 열려 있지만 시작 표지가 아직 없는 경우(표지 쓰기가
+                    # 실패했었다)에 대비해 멱등 호출은 그대로 둔다.
+                    self._ensure_started_marked(output_channel)
+            elif is_open:
+                self._record_on_duration(output_channel, current_time)
+                self._started_at_written[output_channel] = False
+        except Exception:
+            # 지표 기록이 제어 흐름을 막아서는 안 된다.
+            self.logger.exception(
+                f"Could not track PWM session for Output {self.unique_id} CH{output_channel}")
+
+    def _begin_pwm_session(self, output_channel, current_time):
+        """PWM 작동 구간을 연다 — 장부 시작 시각을 적고 시작 표지를 새로 쓴다."""
+        self.output_time_turned_on[output_channel] = current_time
+        self._started_at_written[output_channel] = False
+        self._ensure_started_marked(output_channel)
+
+    def adopt_running_pwm(self):
+        """기동 직후 이미 듀티가 걸려 있는 PWM 채널의 작동 구간을 연다.
+
+        드라이버는 시작 상태(Startup State)의 듀티를 `output_on_off()` 를 거치지
+        않고 직접 건다. 그러면 시작 표지가 없어, 이후 **첫 듀티 변경이 "새 시작"**
+        으로 기록되고 그 전까지는 재시작 전의 옛 표지가 경과를 이어 간다
+        (2026-11-11 점검 R4). 기동이 끝난 지금이 실제 시작이므로 여기서 연다.
+        PWM 이 아니거나 듀티가 0 이면 아무것도 하지 않는다.
+        """
+        try:
+            if self.output_type not in self.output_types.get('pwm', []):
+                return
+            if self.confirmation_capable():
+                return
+            current_time = utc_now()
+            for output_channel in list(self.output_states):
+                duty = self.is_on(output_channel)
+                if (isinstance(duty, (int, float)) and not isinstance(duty, bool)
+                        and duty > 0
+                        and self.output_time_turned_on.get(output_channel) is None):
+                    self._begin_pwm_session(output_channel, current_time)
+        except Exception:
+            self.logger.exception(
+                f"Could not adopt running PWM for Output {self.unique_id}")
+
     def _record_on_duration(self, output_channel, current_time):
         """켜져 있던 시간을 기록하고 세션 장부를 닫는다.
 
@@ -522,7 +601,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
         try:
             tz, _source = resolve_tz(getattr(self, 'output', None))
         except Exception:
-            tz = system_tz()
+            tz = tz_of(FARM)
         return to_tz(dt, tz).replace(microsecond=0).isoformat()
 
     def output_on_off(self,
@@ -706,7 +785,7 @@ class AbstractOutput(AbstractBaseController, ConfirmableOutputMixin):
                         f"failed to set duty cycle: {fail_msg}")
                     return 1, fail_msg
 
-                self._ensure_started_marked(output_channel)
+                self._track_pwm_session(output_channel, amount, current_time)
 
                 msg = f"Command sent: Output {self.unique_id} CH{output_channel} ({self.output_name}) " \
                       f"duty cycle: {amount:.2f} %. Output returned: {out_ret}"

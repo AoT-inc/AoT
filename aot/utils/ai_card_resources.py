@@ -172,9 +172,7 @@ def _list(user, params):
         if anchor is None:                    # 남의 것·없는 것 모두 같은 오류
             raise RpcError(-32602, 'Invalid cursor')
         query = query.filter(AIScreenCard.id < anchor.id)
-    rows = query.order_by(AIScreenCard.id.desc()).limit(LIST_LIMIT + 1).all()
-    more = len(rows) > LIST_LIMIT
-    rows = rows[:LIST_LIMIT]
+    rows = query.order_by(AIScreenCard.id.desc()).limit(LIST_LIMIT).all()
     amap = cards.attachments_map(rows)
     resources = []
     for c in rows:
@@ -186,10 +184,10 @@ def _list(user, params):
                               "name": (att.name or 'file')[:120],
                               "mimeType": file_mime(att), "size": int(att.size or 0),
                               "annotations": dict(ann)})
-    out = {"resources": resources}
-    if more and rows:
-        out["nextCursor"] = rows[-1].unique_id
-    return out
+    # 다음 쪽(nextCursor)은 내지 않는다 — 최근 카드 한 쪽만 준다(2026-11-07). claude.ai 는 연결할 때마다
+    # 목록을 끝까지(최대 8쪽) 넘겨 받아, 카드 263장이면 연결 준비에만 왕복 8회·약 9초가 들었다(맥 음성 모드
+    # 연결 실패와 겹친 시각). 오래된 카드도 uri 로는 그대로 읽힌다. cursor 인자는 옛 클라이언트를 위해 받는다.
+    return {"resources": resources}
 
 
 def _read(user, params):

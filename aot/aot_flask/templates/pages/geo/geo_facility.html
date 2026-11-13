@@ -8,8 +8,6 @@
 {#- map.css 는 layout.html 이 이 페이지에도 싣는다 — 여기서 또 걸면
     같은 파일이 두 번 내려가고 두 번 파싱된다(실측: /geo/design 에서
     map.css 318 규칙이 두 벌이었다). -#}
-{#- 공용 구획 폼(`common/aot-plot-form.js`)의 스타일 — 지도 위젯·/plots 와 **같은 파일**이다. -#}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components/aot-plot-form.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/geo-facility.css') }}" />
 
 <script src="/static/js/widgets/AoT_facility/three.min.js?v=2"></script>
@@ -19,7 +17,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" crossorigin="anonymous"></script>
 
 {% endblock %}
-
 {% block body %}
 <div class="container py-3 fac-editor">
   {% include 'flash_messages.html' %}
@@ -28,280 +25,298 @@
   <div class="fac-page-title">
     <h3>{{ _('Facility Design') }}</h3>
     <div class="fac-page-actions">
+      <button type="button" class="btn btn-sm aot-pill-btn aot-pill-btn-secondary" id="btn-back-to-map">{{ _('Back to map') }}</button>
       <span id="fac-facility-name-label" class="fac-name-label"></span>
-      <span id="fac-dirty-badge" class="fac-dirty-badge" style="display:none;">{{ _('Unsaved changes') }}</span>
-      <button type="button" class="btn btn-sm btn-primary" id="btn-save-facility">{{ _('Save Facility') }}</button>
+      {#- 진행 꼬리표(26-11-12) — 시설 이름 옆에 **할 일이 남은 것만**("위치 남음"·"연결 안 됨 3").
+          끝난 것은 말하지 않는다. 무엇이 남았는지는 예전 단계 막대의 미완료 판정(_groupIncomplete)과
+          문구(data-issue)를 그대로 쓴다. 폰은 제목 줄이 없어 설정 창의 한 줄 요약이 대신한다. -#}
+      {# @manual geo/facility#facility-registration-flow #}
+      <span class="fac-progress aot-tag-list" id="fac-progress" role="status" aria-live="polite"
+            aria-label="{{ _('Progress') }}"></span>
+      {# @manual-end #}
+      <span id="fac-dirty-badge" class="fac-dirty-badge" hidden>{{ _('Unsaved changes') }}</span>
+      <span id="fac-saved-at" class="fac-saved-at" role="status" hidden></span>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-save-facility">{{ _('Save Facility') }}</button>
     </div>
   </div>
-
-  <!-- ── Step bar ───────────────────────────────────────────────────────────
-       Each step opens the settings drawer on the right while the stage (3D or
-       map) stays visible, so a change can be watched as it is made. -->
-  {# @manual geo/facility#facility-registration-flow #}
-  <div class="fac-stepbar" role="tablist" aria-label="{{ _('Setup steps') }}">
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="basic"    role="tab"
-            data-issue="{{ _('Enter a name') }}">{{ _('Basics') }}</button>
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="position" role="tab"
-            data-issue="{{ _('Select a map and place the facility on it') }}">{{ _('Position & Structure') }}</button>
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="envelope" role="tab">{{ _('Envelope') }}</button>
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="fittings" role="tab"
-            data-issue="{{ _('Nothing placed yet') }}">{{ _('Equipment Layout') }}</button>
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="connect"  role="tab">{{ _('Connections') }}</button>
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="plot" role="tab">{{ _('Plot') }}</button>
-    <button type="button" class="btn aot-pill-btn fac-step" data-step="check"    role="tab"
-            data-issue="{{ _('Not saved yet') }}">{{ _('Review') }}</button>
-
-  {# @manual-end #}
-    <!-- Stage picker — on every step. Which view opens first is per step
-         (see _DEFAULT_STAGE); the choice is remembered for the session. -->
-    <div class="fac-stage-toggle" id="fac-stage-toggle" role="group"
-         aria-label="{{ _('Preview view') }}" hidden>
-      <button type="button" class="btn aot-pill-btn" data-stage="3d">{{ _('3D') }}</button>
-      <button type="button" class="btn aot-pill-btn" data-stage="map">{{ _('Map') }}</button>
-    </div>
-  </div>
-
-  <!-- ── Stage — the 3D scene and the placement map. One is visible at a time;
-       the active step decides which. ──────────────────────────────────────── -->
+  {#- 두 벌 구조(S7, 2026-11-08): 스테이지(툴바 한 줄 + 모형/지도)가 가로 전체를 쓰고 창 높이에 맞으며,
+      시설 설정은 오른쪽 드로어형 모달 #modal_fac_step 하나다(폰에서는 전체 화면). 스테이지 아래에는
+      아무것도 두지 않는다 — 진행 칩·구성요소 목록은 모달 안으로 들어갔다. 인스펙터 열(S4, 안 A)은
+      스테이지 아래 트레이·폰 시트 때문에 스크롤과 시각 차이가 생겨 되돌렸다. -#}
   <div class="fac-stage">
-
-  <div class="fac-stage-view" id="fac-stage-map">
-    <div id="facility-map-header">
-      <span>{{ _('Place on Map') }}</span>
-      <div class="fac-head-actions">
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-clear-shape">{{ _('Clear') }}</button>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-place-on-map">{{ _('Place on Map') }}</button>
+  {#- ── 툴바 한 줄(S3) — 캔버스 **밖**, 스테이지 위. 캔버스 안에는 모형과 선택 기즈모만 남는다.
+       id 는 예전 툴 레일(`#facility-3d-tools`)·스테이지 토글·3D 머리줄의 것을 그대로 옮겨 왔다 —
+       번들 배선(`#facility-3d-tools .tool-btn` 등)이 그 id 로 찾는다. -#}
+  <div id="facility-3d-tools" class="fac-toolbar" role="toolbar" aria-label="{{ _('Facility tools') }}">
+    {#- 폰(26-11-12): 제목 줄을 접고 이 줄 하나에 "지도로 · 지도|3D · 설정"을 둔다. 넓은 화면에서는 숨는다
+        (제목 줄의 같은 단추가 있다). 시설 이름은 설정 창 제목이 말한다. -#}
+    <div class="fac-tb-grp fac-tb-phone-back">
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary" id="btn-back-to-map-tb">{{ _('Back to map') }}</button>
+    </div>
+    <div class="fac-tb-grp">
+      <span class="fac-tb-lbl">{{ _('Stage view') }}</span>
+      <!-- Stage picker — which view opens first is per step (see _DEFAULT_STAGE);
+           the choice is remembered for the session. -->
+      <div class="fac-stage-toggle" id="fac-stage-toggle" role="group"
+           aria-label="{{ _('Preview view') }}" hidden>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm" data-stage="map">{{ _('Map') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm" data-stage="3d">{{ _('3D') }}</button>
       </div>
     </div>
+
+    <!-- Map stage only -->
+    <div class="fac-tb-grp" data-stage-only="map" hidden>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary" id="btn-clear-shape">{{ _('Clear placement') }}</button>
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-primary" id="btn-place-on-map">{{ _('Place on Map') }}</button>
+    </div>
+
+    <!-- 3D stage only — add tools. Each group is a shared Bootstrap dropdown;
+         its menu keeps the old flyout hooks (.fac-flyout / data-flyout-panel). -->
+    <div class="fac-tb-grp" data-stage-only="3d">
+      <button type="button" data-tool="" data-action="select" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-primary tool-btn active" title="{{ _('Select (Esc)') }}">{{ _('Select') }}</button>
+
+      {#- 추가 계열은 메뉴 하나다(S8) — 열기·설비·관수·센서가 한 메뉴의 묶음이고, 켜진 도구가 있으면
+          메뉴 단추가 켜짐 모양이 된다(브리지 `_syncRailActive`). 메뉴가 길어 화면 높이에서 스크롤한다. -#}
+      <div class="dropdown">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm dropdown-toggle rail-btn" data-flyout="add"
+                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="{{ _('Add') }}">{{ _('Add') }}</button>
+        <div class="dropdown-menu fac-flyout fac-add-menu" data-flyout-panel="add">
+          <h6 class="dropdown-header">{{ _('Openings') }}</h6>
+          <button type="button" data-tool="window"      data-action="face" class="dropdown-item tool-btn" title="{{ _('Add window — click an envelope face') }}">{{ _('Window') }}</button>
+          <button type="button" data-tool="side_window" data-action="face" class="dropdown-item tool-btn" title="{{ _('Add side window — click a side-wall face') }}">{{ _('Side Window') }}</button>
+          <button type="button" data-tool="door"        data-action="face" class="dropdown-item tool-btn" title="{{ _('Add door — click an envelope face') }}">{{ _('Door') }}</button>
+          <button type="button" data-kind="curtain"     data-action="add"  class="dropdown-item tool-btn" title="{{ _('Add curtain (ceiling center)') }}">{{ _('Curtain') }}</button>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ _('Fixtures') }}</h6>
+          <button type="button" data-tool="fan"     data-action="place" class="dropdown-item tool-btn" title="{{ _('Fan — click a position to place') }}">{{ _('Fan') }}</button>
+          <button type="button" data-tool="heater"  data-action="place" class="dropdown-item tool-btn" title="{{ _('Heater/AC — click a position to place') }}">{{ _('Heater/AC') }}</button>
+          <button type="button" data-tool="fogger"  data-action="place" class="dropdown-item tool-btn" title="{{ _('Humidifier/fogger — click a position to place') }}">{{ _('Humidifier') }}</button>
+          <button type="button" data-tool="fixture" data-action="place" class="dropdown-item tool-btn" title="{{ _('Fixture — click a position to place') }}">{{ _('Fixture') }}</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" data-action="catalog" class="dropdown-item tool-btn" title="{{ _('Add components from what is drawn on the map') }}">{{ _('From the map…') }}</button>
+          <button type="button" data-tool="sensor" data-action="place" class="dropdown-item tool-btn" title="{{ _('Sensor — click a position to place') }}">{{ _('Sensor') }}</button>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ _('Irrigation') }}</h6>
+          <button type="button" data-action="irr-add-layer" class="dropdown-item tool-btn" title="{{ _('Add new irrigation layer') }}">{{ _('Add Layer') }}</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" data-tool="irr_main_pipe"   data-action="irr-pipe"  class="dropdown-item tool-btn" id="btn-irr-main"   title="{{ _('Main pipe — click to add points, double-click/Enter to finish') }}" disabled>{{ _('Main Pipe') }}</button>
+          <button type="button" data-tool="irr_branch_pipe" data-action="irr-pipe"  class="dropdown-item tool-btn" id="btn-irr-branch" title="{{ _('Branch pipe — auto-trim and tee insertion when crossing the main') }}" disabled>{{ _('Branch Pipe') }}</button>
+          <button type="button" data-tool="irr_vpipe"       data-action="irr-vpipe" class="dropdown-item tool-btn" id="btn-irr-vpipe"  title="{{ _('Vertical pipe — from floor to layer height') }}" disabled>{{ _('Vertical Pipe') }}</button>
+          <button type="button" data-tool="irr_vconnect"    data-action="irr-vconnect" class="dropdown-item tool-btn" id="btn-irr-vconnect" title="{{ _('Connect levels — click two pipes on different levels to auto-connect with a vertical pipe') }}" disabled>{{ _('Connect Levels') }}</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" data-action="irr-ortho"     class="dropdown-item tool-btn active" id="btn-irr-ortho" title="{{ _('Ortho snap — align pipes to the X/Z axes. Hold Shift while drawing to disable temporarily') }}">{{ _('Ortho Snap') }}</button>
+          <button type="button" id="btn-irr-delete-mode" data-action="irr-delete-mode" class="dropdown-item tool-btn" disabled
+                  title="{{ _('After enabling, click pipes/nozzles/joints to delete them individually') }}">{{ _('Delete Unit') }}</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item" id="btn-irr-open-forms">{{ _('Auto-generate…') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D stage only — view: direction + projection in one menu, display filter -->
+    <div class="fac-tb-grp" data-stage-only="3d">
+      {#- 뷰큐브(캔버스 위 3×3 단추)를 대신한다. 방향 9개와 원근/등각이 한 메뉴다(S8). -#}
+      <div class="dropdown">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm dropdown-toggle" id="fac3d-view-menu"
+                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ _('View') }} <span id="fit-list-count-badge"></span></button>
+        <div class="dropdown-menu fac-view-menu" aria-labelledby="fac3d-view-menu" id="fac3d-view-items">
+          <h6 class="dropdown-header">{{ _('Direction') }}</h6>
+          <button type="button" class="dropdown-item" data-view="iso">{{ _('Default isometric') }}</button>
+          <button type="button" class="dropdown-item" data-view="top">{{ _('Top (plan, north up)') }}</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item" data-view="front">{{ _('South side') }}</button>
+          <button type="button" class="dropdown-item" data-view="left">{{ _('West side') }}</button>
+          <button type="button" class="dropdown-item" data-view="right">{{ _('East side') }}</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item" data-view="front-left">{{ _('Southwest isometric') }}</button>
+          <button type="button" class="dropdown-item" data-view="front-right">{{ _('Southeast isometric') }}</button>
+          <button type="button" class="dropdown-item" data-view="back-left">{{ _('Northwest isometric') }}</button>
+          <button type="button" class="dropdown-item" data-view="back-right">{{ _('Northeast isometric') }}</button>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ _('Projection') }}</h6>
+          <div class="fac-proj-toggle" id="fac3d-proj-toggle" role="group" aria-label="{{ _('Projection') }}">
+            <button type="button" class="dropdown-item" data-proj="persp" aria-pressed="true">{{ _('Perspective') }}</button>
+            <button type="button" class="dropdown-item" data-proj="iso" aria-pressed="false">{{ _('Isometric') }}</button>
+          </div>
+          {#- 표시 필터 — 예전 "3D에 표시" 목록(26-11-12, 따로 있던 "표시 필터" 메뉴를 보기 메뉴로 합쳤다 —
+              설정 창을 열면 1280 에서 툴바가 두 줄이 됐다). 행을 눌러도 메뉴가 닫히지 않는다(브리지가
+              이 칸에서 클릭을 멈춘다). 숨긴 종류 수는 보기 단추 옆 꼬리에 남는다. -#}
+          <div class="dropdown-divider"></div>
+          <div id="facility-3d-fittings-list" class="fac-fitlist-menu">
+            <div id="fit-panel-tabs">
+              <h6 class="dropdown-header fit-panel-title">{{ _('Show in 3D') }} <span id="fit-list-count"></span></h6>
+            </div>
+            <div id="fit-level-items" role="radiogroup"></div>
+            <div id="fit-list-items"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3D stage only — asset, tools & export, undo (commit-like action last) -->
+    <div class="fac-tb-grp" data-stage-only="3d">
+      <!-- Asset link status (JS shows/hides) -->
+      <span id="facility-3d-asset-badge" hidden></span>
+      <button id="btn-3d-asset-detach" type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-danger" hidden>{{ _('Detach Asset') }}</button>
+      <div class="dropdown">
+        {#- 툴바가 한 줄을 넘으면(설정 창을 연 좁은 무대) 실행 취소가 이 메뉴 맨 위로 들어가고 메뉴 이름이
+            "더 보기"가 된다(브리지 _fitToolbar, .fac-tb-compact). 메뉴는 툴바 밖으로 열려 잘리지 않는다. -#}
+        <button class="btn aot-pill-btn aot-pill-btn-sm dropdown-toggle" type="button"
+                id="fac3d-action-menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span class="fac-tb-full-only">{{ _('Tools & Export') }}</span><span class="fac-tb-compact-only">{{ _('Show more') }}</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="fac3d-action-menu">
+          <button id="btn-3d-undo-menu" class="dropdown-item fac-tb-compact-only" type="button" disabled>{{ _('Undo') }}</button>
+          <div class="dropdown-divider fac-tb-compact-only"></div>
+          <h6 class="dropdown-header">{{ _('Asset') }}</h6>
+          <button id="btn-3d-asset-lib" class="dropdown-item" type="button">{{ _('Asset Library') }}</button>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ _('Export') }}</h6>
+          <button id="btn-3d-export-png" class="dropdown-item" type="button">{{ _('Export PNG') }}</button>
+          <button id="btn-3d-export-spec" class="dropdown-item" type="button">{{ _('Export Spec') }}</button>
+          <button id="btn-3d-export-glb" class="dropdown-item" type="button">{{ _('Export GLB') }}</button>
+          <div class="dropdown-divider"></div>
+          <h6 class="dropdown-header">{{ _('Import') }}</h6>
+          <button id="btn-3d-import-spec" class="dropdown-item" type="button">{{ _('Import Spec') }}</button>
+          <button id="btn-3d-import-glb" class="dropdown-item" type="button">{{ _('Import GLB') }}</button>
+          <div class="dropdown-divider"></div>
+          <!-- Fast preview mode — a render setting, kept with the other occasional tools -->
+          <button id="btn-fast-mode" type="button" class="dropdown-item" title="{{ _('Fast preview mode — simplifies materials to reduce CPU load') }}">{{ _('High Quality') }}</button>
+          <button id="btn-3d-refresh" class="dropdown-item" type="button">{{ _('Rebuild 3D model') }}</button>
+        </div>
+      </div>
+      <!-- Undo the most recent component move — disabled with nothing to undo -->
+      <button id="btn-3d-undo" type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary fac-tb-full-only" title="{{ _('Undo last move (Ctrl+Z)') }}" disabled>{{ _('Undo') }}</button>
+    </div>
+
+    {#- 설정 모달을 여는 단추 — 어느 스테이지에서든, 폰에서도 남는 단추다(S7). -#}
+    <div class="fac-tb-grp fac-tb-end fac-tb-settings">
+      <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-primary" id="btn-fac-settings"
+              aria-controls="modal_fac_step">{{ _('Settings') }}</button>
+    </div>
+  </div><!-- /#facility-3d-tools -->
+
+  <!-- ── Stage body — the 3D scene and the placement map. One is visible at a time;
+       the open group decides which. Fills the stage below the toolbar. ──────── -->
+  <div class="fac-stage-body">
+
+  <div class="fac-stage-view" id="fac-stage-map">
     <div id="facility-map-canvas"></div>
-    <p class="aot-modal-body-text fac-map-hint">
-      {{ _('Click "Place on Map" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time.') }}
-    </p>
   </div>
 
 
   <!-- ── 3D stage view ────────────────────────────────────────────────────── -->
   <div class="fac-stage-view active" id="fac-stage-3d">
-  <!-- Toolbar row sits OUTSIDE the canvas panel so buttons are never overlaid -->
-  <div id="facility-3d-header">
-    <span>§ {{ _('3D Preview') }}</span>
-    <div class="fac-head-actions">
-      <!-- Asset link status (JS shows/hides) -->
-      <span id="facility-3d-asset-badge" style="display:none;"></span>
-      <button id="btn-3d-asset-detach" class="btn btn-sm btn-outline-danger" style="display:none;" onclick="facilityDetachAsset()">{{ _('Detach Asset') }}</button>
-      <!-- Fitting list panel toggle — the list is hidden by default so it does
-           not cover the viewport; the count badge keeps it discoverable. -->
-      <button id="btn-3d-fitlist" type="button" title="{{ _('Show/hide the display filter') }}">{{ _('Show in 3D') }} <span id="fit-list-count-badge"></span></button>
-      <!-- Fast preview mode (moved out of the viewport into this toolbar) -->
-      <button id="btn-fast-mode" type="button" title="{{ _('Fast preview mode — simplifies materials to reduce CPU load') }}">{{ _('High Quality') }}</button>
-      <!-- Undo the most recent component move — disabled with nothing to undo -->
-      <button id="btn-3d-undo" type="button" title="{{ _('Undo last move (Ctrl+Z)') }}" disabled>{{ _('Undo') }}</button>
-      <!-- Live actuator control lives in the dashboard facility widget, which
-           has the fuller panel (grouping, ordering, e-stop). This page is for
-           building the facility, not running it. -->
-      <!-- Actions dropdown -->
-      <div class="dropdown">
-        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
-                id="fac3d-action-menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          {{ _('Tools & Export') }}
-        </button>
-        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="fac3d-action-menu">
-          <h6 class="dropdown-header">{{ _('Asset') }}</h6>
-          <button id="btn-3d-asset-lib" class="dropdown-item" type="button" onclick="facilityOpenAssetLib()">{{ _('Asset Library') }}</button>
-          <div class="dropdown-divider"></div>
-          <h6 class="dropdown-header">{{ _('Export') }}</h6>
-          <button class="dropdown-item" type="button" onclick="facilityExportPNG()">{{ _('Export PNG') }}</button>
-          <button class="dropdown-item" type="button" onclick="facilityExportSpec()">{{ _('Export Spec') }}</button>
-          <button id="btn-3d-export-glb" class="dropdown-item" type="button" onclick="facilityExportGLB()">{{ _('Export GLB') }}</button>
-          <div class="dropdown-divider"></div>
-          <h6 class="dropdown-header">{{ _('Import') }}</h6>
-          <button class="dropdown-item" type="button" onclick="document.getElementById('import-spec-input').click()">{{ _('Import Spec') }}</button>
-          <button class="dropdown-item" type="button" onclick="document.getElementById('import-gltf-input').click()">{{ _('Import GLB') }}</button>
-          <div class="dropdown-divider"></div>
-          <button id="btn-3d-refresh" class="dropdown-item text-primary font-weight-bold" type="button">{{ _('Refresh') }}</button>
-        </div>
-      </div>
-    </div>
-  </div>
   <div id="facility-3d-panel">
-    <!-- Vertical tool palette (left): grouped by element category.
-         Group 1 (windows): openings with variable area — window/side window/door/curtain
-         Group 2 (fixtures): fixed size — fan/heater/irrigation/equipment
-         Group 3 (sensors): position only — sensor
-    -->
-    <div id="facility-3d-tools">
-      <!-- Rail: always visible, one button per tool category. Groups open a
-           flyout panel next to the rail instead of expanding in place, so the
-           viewport is only covered while a group is actually in use. -->
-      <div class="fac-rail">
-        <button type="button" data-tool=""            data-action="select" class="tool-btn active" title="{{ _('Select (Esc)') }}">{{ _('Select') }}</button>
-        <button type="button" class="rail-btn" data-flyout="openings"   title="{{ _('Windows, doors and curtains') }}">{{ _('Openings') }}</button>
-        <button type="button" class="rail-btn" data-flyout="fixtures"   title="{{ _('Fans, heaters and other fixtures') }}">{{ _('Fixtures') }}</button>
-        <button type="button" class="rail-btn" data-flyout="irrigation" title="{{ _('Irrigation layers, pipes and devices') }}">{{ _('Irrigation') }}</button>
-        <button type="button" data-tool="sensor" data-action="place" class="tool-btn" title="{{ _('Sensor — click a position to place') }}">+ {{ _('Sensor') }}</button>
-        <button type="button" data-action="catalog" class="tool-btn" title="{{ _('Import from the geo/design catalog') }}">{{ _('Catalog') }}</button>
-      </div>
-
-      <div class="fac-flyout" data-flyout-panel="openings">
-        <div class="fly-title">{{ _('Openings') }}</div>
-        <div class="fly-sec">
-          <button type="button" data-tool="window"      data-action="face" class="tool-btn" title="{{ _('Add window — click an envelope face') }}">+ {{ _('Window') }}</button>
-          <button type="button" data-tool="side_window" data-action="face" class="tool-btn" title="{{ _('Add side window — click a side-wall face') }}">+ {{ _('Side Window') }}</button>
-          <button type="button" data-tool="door"        data-action="face" class="tool-btn" title="{{ _('Add door — click an envelope face') }}">+ {{ _('Door') }}</button>
-          <button type="button" data-kind="curtain"     data-action="add"  class="tool-btn" title="{{ _('Add curtain (ceiling center)') }}">+ {{ _('Curtain') }}</button>
-        </div>
-      </div>
-
-      <div class="fac-flyout" data-flyout-panel="fixtures">
-        <div class="fly-title">{{ _('Fixtures') }}</div>
-        <div class="fly-sec">
-          <button type="button" data-tool="fan"     data-action="place" class="tool-btn" title="{{ _('Fan — click a position to place') }}">+ {{ _('Fan') }}</button>
-          <button type="button" data-tool="heater"  data-action="place" class="tool-btn" title="{{ _('Heater/AC — click a position to place') }}">+ {{ _('Heater/AC') }}</button>
-          <button type="button" data-tool="fogger"  data-action="place" class="tool-btn" title="{{ _('Humidifier/fogger — click a position to place') }}">+ {{ _('Humidifier') }}</button>
-          <button type="button" data-tool="fixture" data-action="place" class="tool-btn" title="{{ _('Fixture — click a position to place') }}">+ {{ _('Fixture') }}</button>
-        </div>
-      </div>
-
-      <div class="fac-flyout fac-flyout-wide" data-flyout-panel="irrigation" id="irr-tool-group">
-        <div class="fly-title">{{ _('Irrigation') }}</div>
-        <div class="fly-sec">
-          <button type="button" data-action="irr-add-layer" class="tool-btn" title="{{ _('Add new irrigation layer') }}">+ {{ _('Add Layer') }}</button>
-          <button type="button" data-tool="irr_main_pipe"   data-action="irr-pipe"  class="tool-btn" id="btn-irr-main"   title="{{ _('Main pipe — click to add points, double-click/Enter to finish') }}" disabled>+ {{ _('Main Pipe') }}</button>
-          <button type="button" data-tool="irr_branch_pipe" data-action="irr-pipe"  class="tool-btn" id="btn-irr-branch" title="{{ _('Branch pipe — auto-trim and tee insertion when crossing the main') }}" disabled>+ {{ _('Branch Pipe') }}</button>
-          <button type="button" data-tool="irr_vpipe"       data-action="irr-vpipe" class="tool-btn" id="btn-irr-vpipe"  title="{{ _('Vertical pipe — from floor to layer height') }}" disabled>+ {{ _('Vertical Pipe') }}</button>
-          <button type="button" data-tool="irr_vconnect"    data-action="irr-vconnect" class="tool-btn" id="btn-irr-vconnect" title="{{ _('Connect levels — click two pipes on different levels to auto-connect with a vertical pipe') }}" disabled>{{ _('Connect Levels') }}</button>
-          <button type="button" data-action="irr-ortho"     class="tool-btn active" id="btn-irr-ortho" title="{{ _('Ortho snap — align pipes to the X/Z axes. Hold Shift while drawing to disable temporarily') }}">{{ _('Ortho Snap') }}</button>
-        </div>
-        <!-- Auto pipe generation -->
-        <div class="fly-sec fly-sec-form">
-          <div class="fly-row">
-            <span class="fly-label">{{ _('Spacing') }}</span>
-            <input type="number" id="irr-pipe-spacing" value="3" min="0.5" max="100" step="0.5" title="{{ _('Branch pipe spacing (m)') }}">
-            <span class="fly-unit">m</span>
-            <span class="fly-label">{{ _('Angle') }}</span>
-            <input type="number" id="irr-pipe-angle" value="0" min="-180" max="180" step="5" title="{{ _('Pipe direction angle (deg)') }}">
-            <span class="fly-unit">°</span>
-            <span class="fly-label">{{ _('Offset') }}</span>
-            <input type="number" id="irr-pipe-offset" value="1.5" min="-50" max="50" step="0.5" title="{{ _('Parallel shift of pipe pattern (m, perpendicular) — default = spacing/2') }}">
-            <span class="fly-unit">m</span>
-          </div>
-          <div class="fly-row-btns">
-            <button type="button" id="btn-gen-pipe"  data-action="irr-gen-pipe"       class="tool-btn" disabled>{{ _('Auto-generate Pipes') }}</button>
-            <button type="button" id="btn-clear-irr" data-action="irr-clear"          class="tool-btn" disabled>{{ _('Clear') }}</button>
-          </div>
-        </div>
-        <!-- Auto sprinkler placement -->
-        <div class="fly-sec fly-sec-form fly-sec-divided">
-          <div class="fly-row">
-            <span class="fly-label">{{ _('Type') }}</span>
-            <select id="irr-sp-subtype" title="{{ _('Irrigation device type') }}">
-              <option value="sprinkler" selected>{{ _('Sprinkler') }}</option>
-              <option value="drip">{{ _('Drip') }}</option>
-            </select>
-            <span class="fly-label">{{ _('Direction') }}</span>
-            <select id="irr-sp-orientation" title="{{ _('Spray direction (sprinkler)') }}">
-              <option value="down" selected>{{ _('Down') }}</option>
-              <option value="up">{{ _('Up') }}</option>
-            </select>
-          </div>
-          <div class="fly-row">
-            <span class="fly-label">{{ _('Interval') }}</span>
-            <input type="number" id="irr-sp-interval" value="1.5" min="0.5" max="50" step="0.5" title="{{ _('Sprinkler interval (m)') }}">
-            <span class="fly-unit">m</span>
-            <span class="fly-label">{{ _('Radius') }}</span>
-            <input type="number" id="irr-sp-radius" value="2" min="0.5" max="50" step="0.5" title="{{ _('Spray radius (m)') }}">
-            <span class="fly-unit">m</span>
-            <span class="fly-label">{{ _('Flow') }}</span>
-            <input type="number" id="irr-sp-flow" value="40" min="1" max="9999" step="10" title="{{ _('Flow per device (L/h)') }}">
-            <span class="fly-unit">L/h</span>
-          </div>
-          <div class="fly-row-btns">
-            <button type="button" id="btn-gen-irrigation"  data-action="irr-gen-irrigation"  class="tool-btn" disabled>{{ _('Place Irrigation Devices') }}</button>
-            <button type="button" id="btn-clear-sprinkler" data-action="irr-clear-sprinkler" class="tool-btn" disabled>{{ _('Clear') }}</button>
-          </div>
-        </div>
-        <!-- Add valve -->
-        <div class="fly-sec fly-sec-form fly-sec-divided">
-          <div class="fly-row">
-            <span class="fly-label">{{ _('Valve') }}</span>
-            <select id="irr-valve-type" title="{{ _('Valve type') }}">
-              <option value="on_off" selected>{{ _('ON/OFF (Solenoid)') }}</option>
-              <option value="proportional">{{ _('Proportional') }}</option>
-            </select>
-            <select id="irr-valve-default" title="{{ _('Default state') }}">
-              <option value="closed" selected>{{ _('Default Closed') }}</option>
-              <option value="open">{{ _('Default Open') }}</option>
-            </select>
-            <button type="button" id="btn-irr-add-valve" data-action="irr-add-valve" class="tool-btn"
-                    title="{{ _('Add valve to selected pipe (layer center if no pipe selected)') }}" disabled>+ {{ _('Add Valve') }}</button>
-          </div>
-        </div>
-        <!-- Delete-unit mode -->
-        <div class="fly-sec fly-sec-pad fly-sec-divided">
-          <button type="button" id="btn-irr-delete-mode" data-action="irr-delete-mode" class="tool-btn" disabled
-                  title="{{ _('After enabling, click pipes/nozzles/joints to delete them individually') }}">{{ _('Delete Unit') }}</button>
-          <span id="irr-delete-mode-hint" class="fly-note-warn" style="display:none;">{{ _('Delete mode: click an item to remove it') }}</span>
-        </div>
-        <!-- Flow statistics shown in 5. IEC integration summary panel -->
-      </div>
-    </div>
-
-    <!-- Right-side fittings list (toggled from the toolbar) -->
-    <div id="facility-3d-fittings-list">
-      <div id="fit-panel-tabs">
-        <span class="fit-panel-title">{{ _('Show in 3D') }} <span id="fit-list-count"></span></span>
-      </div>
-      <div id="fit-list-items"></div>
-    </div>
-
-    <!-- Viewport (canvas wrapper — only this area sizes the WebGL canvas) -->
+    <!-- Viewport (canvas wrapper — only this area sizes the WebGL canvas).
+         Nothing else is laid over the model: tools are in the toolbar above,
+         hints and tool state in the status line below. -->
     {# @manual geo/facility#3d-preview #}
     <div id="facility-3d-viewport">
       <canvas id="facility-3d-canvas"></canvas>
       <div class="aot-3d-asset-status"></div>
-      <div id="facility-3d-hint">{{ _('Right-click: rotate · Left-click: pan/select · Scroll: zoom') }}</div>
     </div>
     {# @manual-end #}
 
-
-    <input type="file" id="import-spec-input" accept=".json" style="display:none" onchange="facilityImportSpec(this.files[0]);this.value=''">
-    <input type="file" id="import-gltf-input" accept=".glb,.gltf" style="display:none" onchange="facilityImportGLTF(this.files[0]);this.value=''">
-
-    <!-- Drag handle at the bottom edge to resize the 3D panel vertically -->
-    <div id="facility-3d-resize-handle" title="{{ _('Drag to resize height') }}"></div>
+    <input type="file" id="import-spec-input" accept=".json" hidden>
+    <input type="file" id="import-gltf-input" accept=".glb,.gltf" hidden>
   </div>
   </div><!-- /#fac-stage-3d -->
 
-  </div><!-- /.fac-stage -->
-</div><!-- /.container.fac-editor -->
+  </div><!-- /.fac-stage-body -->
 
-<!-- ── Step drawer ──────────────────────────────────────────────────────────
-     Shared drawer shell (same as input/output/function pages): slides in from
-     the right, pushes the page instead of covering it, and has no backdrop —
-     so the stage stays visible and clickable while settings are edited.
-     Panes carry data-step; several sections can share one step. -->
-<!-- No .aot-drawer-fullcover: on a phone this must stay a bottom sheet under
-     the pinned stage band, not a full-screen cover that hides the model. -->
-<div class="modal fade aot-option-modal aot-widget-drawer"
-     id="modal_fac_step" tabindex="-1" role="dialog"
-     data-backdrop="false" aria-hidden="true">
-  <div class="modal-dialog" role="document">
+  {#- 상태줄 — 스테이지 틀의 아랫단 한 줄, 글자만(캔버스를 덮지 않는다). 고른 것·구성요소 수·도구 상태·조작 안내가
+      여기 선다. 평면 그리기(F3) 안내(#fac-plan-prompt)도 이 줄이다. 도면 SVG 덧층은 plan-ui.js 가
+      뷰포트 안에 그대로 그린다(모형의 일부다). 지도 스테이지의 배치 안내도 같은 줄에 선다(data-stage-only). -#}
+  <div id="fac-3d-status" class="fac-status-line" role="status" aria-live="polite">
+    <span id="fac-3d-status-tool" class="fac-status-strong" hidden></span>
+    <span id="irr-delete-mode-hint" class="fac-status-strong" hidden>{{ _('Delete mode: click an item to remove it') }}</span>
+    <span id="fac-3d-status-counts"></span>
+    <span id="fac-plan-prompt" hidden>
+      <span id="fac-plan-prompt-text"></span>
+      <span class="fac-plan-prompt-btns">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary" id="fac-plan-prompt-alt" hidden>{{ _('Draw by points') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary" id="fac-plan-prompt-cancel">{{ _('Cancel') }}</button>
+      </span>
+    </span>
+    <span id="facility-3d-hint" data-stage-only="3d">{{ _('Right-click: rotate · Left-click: pan/select · Scroll: zoom') }}</span>
+    <span id="fac-map-hint" class="fac-map-hint" data-stage-only="map" hidden>{{ _('Click "Place on Map" then click the facility center on the map. Drag the placed facility to move it. Form dimensions and rotation update the rectangle in real time.') }}</span>
+  </div>
+
+  </div><!-- /.fac-stage -->
+
+  <!-- ── Settings modal ───────────────────────────────────────────────────────
+       The shared right-side drawer (aot-widget-drawer: pushes the page, no
+       backdrop) so the stage stays visible and usable while a value is changed;
+       on a phone it covers the screen (.aot-drawer-fullcover) and the raise/lower
+       handle drops it to a peek. It keeps the shared modal parts (header, body,
+       footer, .aot-modal-container, .aot-modal-option-row) and the old id, so
+       every handler that looks inside #modal_fac_step still finds its fields.
+       Nothing selected → the facility itself (accordion); a component selected
+       in 3D or in the component list → that component. -->
+  <div class="modal fade aot-option-modal aot-widget-drawer aot-drawer-fullcover fac-drawer"
+       id="modal_fac_step" tabindex="-1" role="dialog" data-backdrop="false"
+       aria-labelledby="fac-step-title" aria-hidden="true">
+    <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="fac-step-title">{{ _('Basics') }}</h5>
-        <!-- Phone only: give the form the whole screen when the model is not
-             needed for the step at hand. -->
-        <button type="button" class="fac-band-toggle" id="fac-band-toggle"
-                data-label-hide="{{ _('Hide model') }}" data-label-show="{{ _('Show model') }}">{{ _('Hide model') }}</button>
-        <button type="button" class="close" data-dismiss="modal" aria-label="{{ _('Close') }}">
-          <span aria-hidden="true">&times;</span>
-        </button>
+        <button type="button" id="fac-insp-back" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary d-none">{{ _('Back to facility') }}</button>
+        <h5 class="modal-title" id="fac-step-title" data-label-facility="{{ _('Facility') }}">{{ _('Facility') }}</h5>
+        <button type="button" id="fac-list-toggle" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary"
+                data-group-toggle="list" aria-controls="fac-pane-list" aria-pressed="false">{{ _('Saved Facilities') }}</button>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-sm aot-pill-btn-secondary fac-drawer-close" data-dismiss="modal">{{ _('Close') }}</button>
       </div>
       <div class="modal-body">
 
-  <!-- ── Step 1 · Basics — map & site ──────────────────────────────────────── -->
-  <div class="fac-step-pane" data-step="basic">
-  <div class="aot-modal-group-title">{{ _('Saved Facilities') }}</div>
+  {#- 폰(S6)에서는 열람·소폭 수정만 — 배치 도구·보기·평면은 싣지 않는다. -#}
+  <p class="aot-modal-body-text fac-phone-note">{{ _('Placement and plan editing are on a wider screen.') }}</p>
+
+  {#- 폰(S6): 진행은 한 줄 요약 "3/4 단계 · 연결 안 됨 2". 넓은 화면에서는 숨는다(꼬리표가 제목 줄에 있다). -#}
+  <p class="fac-progress-summary" id="fac-progress-summary" role="status" aria-live="polite"></p>
+
+  <div id="fac-insp-facility">
+
+  {#- 탭 여섯(26-11-12, 아코디언 4묶음을 되돌림 — 묶음이 길어 스크롤이 늘었다). 한 번에 한 판만 보이고
+      판마다 길이가 드로어 높이 안팎이다. 공용 구획 탭(ui-guide §4-4) 그대로 — 넘치면 끌어서 넘긴다.
+      "저장된 시설"은 설계 판이 아니라 고르는 자리라 탭이 아니라 머리줄 단추가 연다. -#}
+  <ul class="nav nav-tabs fac-tabs" id="fac-tabs" role="tablist" aria-label="{{ _('Facility') }}">
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" id="fac-tab-where" data-group-toggle="where"
+              aria-controls="fac-pane-where" aria-selected="false"
+              data-issue="{{ _('Select a map and place the facility on it') }}">{{ _('Position') }}</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" id="fac-tab-what" data-group-toggle="what"
+              aria-controls="fac-pane-what" aria-selected="false"
+              data-issue="{{ _('Enter a name') }}">{{ _('Structure') }}</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" id="fac-tab-envelope" data-group-toggle="envelope"
+              aria-controls="fac-pane-envelope" aria-selected="false">{{ _('Envelope') }}</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button type="button" class="nav-link" role="tab" id="fac-tab-parts" data-group-toggle="parts"
+              aria-controls="fac-pane-parts" aria-selected="false">{{ _('Components') }}</button>
+    </li>
+    <li class="nav-item fac-wide-tab" role="presentation">
+      <button type="button" class="nav-link" role="tab" id="fac-tab-connect" data-group-toggle="connect"
+              aria-controls="fac-pane-connect" aria-selected="false" aria-describedby="check-locked-hint"
+              data-issue="{{ _('Not saved yet') }}">{{ _('Connections') }}</button>
+    </li>
+    <li class="nav-item fac-wide-tab" role="presentation">
+      <button type="button" class="nav-link" role="tab" id="fac-tab-check" data-group-toggle="check"
+              aria-controls="fac-pane-check" aria-selected="false" aria-describedby="check-locked-hint"
+              data-issue="{{ _('Not saved yet') }}">{{ _('Review') }}</button>
+    </li>
+  </ul>
+  {#- 저장 전에는 연결·검토 탭이 눌리지 않는다 — 왜 그런지 탭 줄 바로 아래에 적는다(ui-guide §4-10). -#}
+  <p id="check-locked-hint" class="aot-modal-body-text fac-tab-lock d-none">
+    {{ _('Save the facility first to connect weather and groups, see the integration summary and run a device check.') }}
+  </p>
+
+  <!-- ── Saved facilities — a picker, opened from the header, not a tab ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-list" role="tabpanel" aria-labelledby="fac-tab-list" data-pane="list">
+  <div class="fac-group-pane">
   <div class="aot-modal-container">
 
     {#- 카드 밖 구획 제목이 이미 "저장된 시설" 이라 행 라벨로 한 번 더 적지
@@ -311,39 +326,39 @@
         <div id="facility-list">
           {% for f in facilities %}
             <div class="facility-list-item{% if f.unique_id == request.args.get('facility_uuid') %} active{% endif %}"
-                 data-uuid="{{ f.unique_id }}"
-                 onclick="FacilityIO.select(this.dataset.uuid)">
+                 data-uuid="{{ f.unique_id }}">
               <div class="fac-item-info">
                 <div class="fac-item-name">{{ f.name }}</div>
                 <small class="text-muted fac-item-sub">{% if f.preset == 'standard_arch' %}{{ _('Standard Arch') }}{% else %}{{ f.preset }}{% endif %} · {% if f.structure == 'connected' %}{{ _('Multi-span') }}{% elif f.structure == 'single' %}{{ _('Single-span') }}{% else %}{{ f.structure }}{% endif %}{% if f.structure == 'connected' %} (N={{ f.bay_count }}){% endif %}</small>
               </div>
-              <button class="btn aot-pill-btn aot-pill-btn-danger fac-item-del"
+              <button type="button" class="btn aot-pill-btn aot-pill-btn-danger fac-item-del"
                       data-uuid="{{ f.unique_id }}"
                       data-name="{{ f.name }}"
-                      onclick="event.stopPropagation(); facilityDelete(this.dataset.uuid, this.dataset.name)"
                       title="{{ _('Delete facility') }}">{{ _('Delete') }}</button>
             </div>
           {% else %}
             <div class="text-muted small p-2">{{ _('No facilities yet.') }}</div>
           {% endfor %}
         </div>
-        <div class="fac-list-actions">
-          <button class="btn aot-pill-btn aot-pill-btn-primary"
-                  onclick="FacilityIO.create()">+ {{ _('New Facility') }}</button>
-          <button class="btn aot-pill-btn"
-                  onclick="FacilityIO.clone()"
-                  title="{{ _('Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over.') }}">{{ _('Duplicate Facility') }}</button>
-        </div>
       </div>
     </div>
 
   </div>
-  </div><!-- /step basic (facility list) -->
+  </div>
+  </div><!-- /#fac-pane-list -->
 
-  <!-- ── Step 2 · Position & structure ─────────────────────────────────────── -->
-  <div class="fac-step-pane" data-step="position">
+  <!-- ── Position — map, site, centre, rotation (map stage) ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-where" role="tabpanel" aria-labelledby="fac-tab-where" data-pane="where">
+  <div class="fac-group-pane">
   <div class="aot-modal-group-title">{{ _('Map & Site') }}</div>
   <div class="aot-modal-container">
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label">{{ _('Name') }}</label>
+      <div class="aot-modal-option-control">
+        <input type="text" id="facility-name" class="form-control aot-modern-input" placeholder="GH-001">
+      </div>
+    </div>
 
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label">{{ _('Map') }}</label>
@@ -376,9 +391,27 @@
     </div>
 
   </div>
+  <div class="aot-modal-group-title">{{ _('Position') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-option-row">
+      {#- 회전은 숫자 칸 하나다(S5). 예전에는 숫자 칸 + 슬라이더 + 라벨 값이 같은 수를
+          세 번 보였다. 지도에서 끌어 돌리는 것은 지도 쪽이 맡는다. -#}
+      <label class="aot-modal-option-label" for="orientation-input">{{ _('Rotation') }} (°)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="orientation-input" class="form-control aot-modern-input" min="0" max="359" step="1" value="0">
+      </div>
+      <div class="aot-modal-body-text">{{ _('Use "Place on Map" above the map to set the facility center, then drag the facility on the map to adjust it.') }}</div>
+    </div>
 
+  </div>
+  </div>
+  </div><!-- /#fac-pane-where -->
+
+  <!-- ── Structure — type, zones, dimensions, roof, capacity (3D stage) ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-what" role="tabpanel" aria-labelledby="fac-tab-what" data-pane="what">
+  <div class="fac-group-pane">
   {# @manual geo/facility#structure-type #}
-  <div class="aot-modal-group-title">{{ _('Position & Structure') }}</div>
+  <div class="aot-modal-group-title">{{ _('Structure') }}</div>
   <div class="aot-modal-container">
 
     <div class="aot-modal-option-row">
@@ -395,6 +428,21 @@
       </div>
     </div>
   {# @manual-end #}
+
+    {# @manual geo/facility#plan-drawing #}
+    <div class="aot-modal-option-row fac-wide-only">
+      <div class="aot-modal-option-label">{{ _('Floors or plan shape') }}</div>
+      <div class="aot-modal-option-control">
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-fac-plan">{{ _('Draw plan') }}</button>
+      </div>
+      <div class="aot-modal-body-text">{{ _('Use this to add floors or to change the shape, such as an L shape.') }}</div>
+    </div>
+    <div class="aot-modal-body-text fac-layout-lock" hidden>{{ _('Change this in the plan.') }}</div>
+    <div class="aot-modal-option-row" id="fac-zone-summary" hidden>
+      <div class="aot-modal-option-label">{{ _('Zones') }}</div>
+      <div class="aot-modal-body-text" id="fac-zone-summary-text"></div>
+    </div>
+    {# @manual-end #}
 
     {# @manual geo/facility#bay-configuration #}
     <div class="aot-modal-option-row" id="bay-count-container">
@@ -427,42 +475,12 @@
         <div id="zone-name-list" class="zone-name-list"></div>
       </div>
     </div>
-
-    <div class="aot-modal-option-row">
-      {#- 라벨은 이름만 갖는다. 값은 바로 옆 입력칸과 아래 슬라이더가 이미
-          보여 주므로, 라벨에 또 적으면 같은 수가 한 줄에 두 번 나온다.
-          (읽던 JS 는 `if (orientValue)` 로 감싸 있어 없어도 안전하다.) -#}
-      <div class="aot-modal-option-label">{{ _('Rotation') }} (°)</div>
-      <div class="aot-modal-option-control">
-        <input type="number" id="orientation-input" class="form-control aot-modern-input" min="0" max="359" step="1" value="0">
-      </div>
-      <div class="aot-modal-body-text">{{ _('Drag the slider or type a value (0–359°)') }}</div>
-    </div>
-
-    <div class="aot-modal-option-row aot-full-width-row">
-      <div class="fac-body">
-        <input type="range" id="orientation-slider" min="0" max="359" step="1" value="0"
-               class="form-control-range mb-2">
-        <p class="aot-modal-body-text mb-0">
-          {{ _('Use "Place on Map" above the map to set the facility center, then drag the facility on the map to adjust it.') }}
-        </p>
-      </div>
-    </div>
-
   </div>
-  </div><!-- /step position -->
-
+  </div>
   <!-- ── Step 1 · Basics — spec ── -->
-  <div id="fac-tab-spec" class="fac-step-pane" data-step="basic" role="tabpanel">
+  <div id="fac-tab-spec" class="fac-group-pane">
   <div class="aot-modal-group-title">{{ _('Specification') }}</div>
   <div class="aot-modal-container">
-
-    <div class="aot-modal-option-row">
-      <label class="aot-modal-option-label">{{ _('Name') }}</label>
-      <div class="aot-modal-option-control">
-        <input type="text" id="facility-name" class="form-control aot-modern-input" placeholder="GH-001">
-      </div>
-    </div>
 
     {# 그룹 부여 — 관리자에게만. 내용은 시설을 고른 뒤 받아 온다.
 
@@ -474,7 +492,7 @@
 
        그쪽 작업이 커밋되면 시설 저장에 합치는 것이 정리다.
        정본 설계: docs/design/access-scope-groups.md #}
-    <div class="aot-fac-scope" style="display: none;">
+    <div class="aot-fac-scope fac-wide-only" hidden>
       <div class="aot-modal-option-row">
         <div class="aot-modal-option-label">{{ _('Groups that can operate this facility') }}</div>
       <div class="aot-modal-option-control">
@@ -500,6 +518,7 @@
       </div>
     </div>
 
+    <div class="aot-modal-body-text fac-layout-lock" hidden>{{ _('Change this in the plan.') }}</div>
     {# @manual geo/facility#bay-configuration #}
     <div class="aot-modal-option-row">
       <label class="aot-modal-option-label">{{ _('Span (m)') }}</label>
@@ -546,9 +565,43 @@
 
   </div>
   </div><!-- /#fac-tab-spec -->
+  <div class="fac-group-pane">
+  {# @manual geo/facility#engineering-calculations #}
+  <div class="aot-modal-group-title">{{ _('Capacity Preview') }}</div>
+  <div class="aot-modal-container">
+    <div class="aot-modal-detail-fields">
+      <div class="aot-modal-detail-field"><label>{{ _('Floor') }}</label><div class="preview-value" id="pv-floor">— m²</div></div>
+      <div class="aot-modal-detail-field"><label>{{ _('Volume') }}</label><div class="preview-value" id="pv-volume">— m³</div></div>
+      <div class="aot-modal-detail-field"><label>{{ _('Glazing') }}</label><div class="preview-value" id="pv-glazing">— m²</div></div>
+      <div class="aot-modal-detail-field"><label>{{ _('Vent open') }}</label><div class="preview-value" id="pv-vent">— m²</div></div>
+      <div class="aot-modal-detail-field"><label>{{ _('Heating') }}</label><div class="preview-value" id="pv-heating">— kW</div></div>
+      <div class="aot-modal-detail-field"><label>{{ _('Cooling') }}</label><div class="preview-value" id="pv-cooling">— kW</div></div>
+      <div class="aot-modal-detail-field"><label>{{ _('ACH') }}</label><div class="preview-value" id="pv-ach">— /h</div></div>
+    </div>
+    <div id="pv-summary" class="aot-modal-body-text"></div>
+    <div class="aot-modal-body-text">
+      {{ _('Reference values for mechanical equipment sizing') }} (±5–10%).
+      {{ _('Hover heating/cooling for nameplate vs theoretical comparison.') }}
+    </div>
+  </div>
+  {# @manual-end #}
+  </div>
+  <div class="fac-group-pane">
+  {#- 시설 모형(F3)의 구역. 위 바닥·체적·외피는 모형 합계(`layout_totals`)이고 난방·냉방·환기 면적은 저장된 치수(`computed`) 값이다. -#}
+  <div id="fac-layout-zones-panel" hidden>
+    <div class="aot-modal-group-title">{{ _('Zones') }}</div>
+    <div class="aot-modal-container">
+      <div id="fac-layout-zones-body"></div>
+      <div class="aot-modal-body-text">{{ _('Floor, volume, glazing and envelope come from the plan, and the zones add up to the floor above. Heating, cooling and vent open are reference values from the stored dimensions, and control keeps its existing zones.') }}</div>
+    </div>
+  </div>
 
-  <!-- ── Envelope tab ── -->
-  <div id="fac-tab-envelope" class="fac-step-pane" data-step="envelope" role="tabpanel">
+  </div>
+  </div><!-- /#fac-pane-what -->
+
+  <!-- ── Envelope — covering, ventilation, curtains (3D stage) ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-envelope" role="tabpanel" aria-labelledby="fac-tab-envelope" data-pane="envelope">
+  <div id="fac-tab-envelope" class="fac-group-pane">
   <div class="aot-modal-group-title">{{ _('Covering & Ventilation') }}</div>
   <div class="aot-modal-container">
 
@@ -563,13 +616,13 @@
       <div class="aot-modal-option-label">{{ _('Outer side vent') }}</div>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
-          <input type="checkbox" class="btn-toggle-input" id="outer-side-vent" onchange="EnvelopeUI.onVentToggle()">
+          <input type="checkbox" class="btn-toggle-input" id="outer-side-vent">
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
       <div class="aot-modal-body-text">{{ _('Can be split into 2 stages for tall side walls') }}</div>
     </div>
-    <div id="outer-side-vent-detail" class="fac-detail" style="display:none;">
+    <div id="outer-side-vent-detail" class="fac-detail" hidden>
       <div class="aot-modal-option-row">
         <span class="aot-modal-option-label">{{ _('Stages') }}</span>
         <div class="aot-modal-option-control">
@@ -591,12 +644,12 @@
       <span class="aot-modal-option-label">{{ _('Outer roof vent') }}</span>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
-          <input type="checkbox" class="btn-toggle-input" id="outer-roof-vent" onchange="EnvelopeUI.onRoofVentToggle()">
+          <input type="checkbox" class="btn-toggle-input" id="outer-roof-vent">
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
     </div>
-    <div id="outer-roof-vent-detail" class="fac-detail" style="display:none;">
+    <div id="outer-roof-vent-detail" class="fac-detail" hidden>
       <div class="aot-modal-option-row">
         <span class="aot-modal-option-label">{{ _('Position') }}</span>
         <div class="aot-modal-option-control">
@@ -634,13 +687,12 @@
       <span class="aot-modal-option-label">{{ _('Ceiling thermal curtain') }}</span>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
-          <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-ceiling"
-                 onchange="EnvelopeUI.onCurtainCeilingToggle()">
+          <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-ceiling">
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
     </div>
-    <div id="curtain-ceiling-detail" class="fac-detail" style="display:none;">
+    <div id="curtain-ceiling-detail" class="fac-detail" hidden>
       <div class="aot-modal-option-row">
         <span class="aot-modal-option-label">{{ _('Layers') }}</span>
         <div class="aot-modal-option-control">
@@ -660,8 +712,7 @@
       <span class="aot-modal-option-label">{{ _('Wall thermal curtain') }}</span>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
-          <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-wall"
-                 onchange="EnvelopeUI.onCurtainWallToggle()">
+          <input type="checkbox" class="btn-toggle-input" id="curtain-thermal-wall">
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
@@ -671,14 +722,14 @@
       <span class="aot-modal-option-label">{{ _('Shade curtain') }}</span>
       <div class="aot-modal-option-control">
         <label class="btn-toggle mb-0">
-          <input type="checkbox" class="btn-toggle-input" id="curtain-shade" onchange="EnvelopeUI.onCurtainShadeToggle()">
+          <input type="checkbox" class="btn-toggle-input" id="curtain-shade">
           <span class="btn-toggle-slider"><span class="btn-toggle-thumb"></span></span>
         </label>
       </div>
     </div>
     {#- 차광막의 물성이라 여기 있다 — 시설이 아는 값이고, 예전에는 냉방
         부하 계산에 0.50 이 박혀 있었다(설계문서 D9). -#}
-    <div id="curtain-shade-detail" class="fac-detail" style="display:none;">
+    <div id="curtain-shade-detail" class="fac-detail" hidden>
       <div class="aot-modal-option-row">
         <span class="aot-modal-option-label"
               title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">{{ _('Transmittance') }}</span>
@@ -686,36 +737,375 @@
           <input type="number" id="curtain-shade-tau"
                  class="form-control aot-modern-input"
                  min="0.01" max="1" step="0.01" placeholder="0.50"
-                 title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}"
-                 onchange="EnvelopeUI.onCurtainShadeToggle()">
+                 title="{{ _('Fraction of light that passes through the shade cloth when fully closed. 0.30 lets three tenths through.') }}">
         </div>
       </div>
     </div>
 
   </div>
   </div><!-- /#fac-tab-envelope -->
+  </div><!-- /#fac-pane-envelope -->
 
-  <!-- ── Sensors tab ── -->
-  <div id="fac-tab-sensors" class="fac-step-pane" data-step="fittings" role="tabpanel">
-  
-  <!-- Parking spot: the placement panel lives here while nothing is selected,
-       and is moved under the selected row of the component list otherwise. -->
-  <div id="fac-place-home"></div>
+  <!-- ── Components — every placed component by kind, the add control, irrigation forms.
+       Rows only find and pick (3D selection); editing is the selection inspector ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-parts" role="tabpanel" aria-labelledby="fac-tab-parts" data-pane="parts">
+  {#- 구성요소 목록(S4 의 트레이) — 종류별로 묶고(탭 없음), 행을 누르면 3D 선택과 같다.
+      고친 것은 선택 인스펙터에서 한다 — 이 목록은 찾고 고르는 자리다. id 는 예전 표 그대로다. -#}
+  {# @manual geo/facility#sensor-actuator-binding #}
+  <section id="fac-tray" class="fac-tray fac-group-pane" data-section="fittings" aria-labelledby="fac-tab-parts">
+    <div class="fac-tray-head fac-tray-add">
+      <select id="fac-add-kind" class="form-control aot-modern-select" aria-label="{{ _('Type') }}"></select>
+      <button type="button" id="btn-sensor-add" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add') }}</button>
+    </div>
+    <div id="fac-tray-body" class="fac-tray-body">
+  {# 장치를 지워도 도형·설비는 남는다(삭제 정책 B4). 남은 자리를 사람이 볼 수
+     없으면 재배정할 수단이 없어 그 정책이 성립하지 않는다.
+     이 목록에서 바인딩을 직접 만들지 않는다 — 설비의 장치 배정은 시설 JSON 이
+     정본이라 여기서 만든 바인딩은 다음 시설 저장이 지운다. 행을 누르면 그
+     설비를 인스펙터에서 열어 드롭다운으로 고치게 한다. #}
+  <div class="aot-modal-container" id="fac-unbound-box" hidden>
+    <div class="d-flex justify-content-between align-items-center">
+      <span class="aot-modal-group-title mb-0">{{ _('Places with no device') }}</span>
+      <button type="button" id="fac-unbound-toggle" class="btn aot-pill-btn aot-pill-btn-secondary">
+        <span id="fac-unbound-count">0</span>
+      </button>
+    </div>
+    <p class="aot-modal-body-text fac-section-desc mb-0">
+      {{ _('A device was removed here but the component stayed. Select a row to open it and pick a device.') }}
+    </p>
+    <div id="fac-unbound-list" hidden></div>
+  </div>
+      <table id="sensor-config-table" class="aot-module-table fac-table">
+        <thead>
+          <tr>
+            <th>{{ _('Name') }}</th>
+            <th>{{ _('Device') }}</th>
+          </tr>
+        </thead>
+        <tbody id="sensor-config-tbody">
+          <tr id="sensor-config-empty">
+            <td colspan="2" class="fac-table-empty">{{ _('Nothing placed yet — add one above, or use the 3D tools') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {# @manual-end #}
+  {#- 관수 자동 생성 폼은 예전 "설비 배치" 단계에 있었다. 그리는 도구는 툴바 "관수" 메뉴, 값을 고르고 한꺼번에
+      만드는 폼은 여기 — 바꾸면 구성요소가 생기므로 저장 묶음은 구성요소다(data-section). -#}
+  <div class="fac-group-pane" data-section="fittings" id="fac-irr-pane">
+  <div class="aot-modal-group-title">{{ _('Irrigation') }}</div>
+  <div class="aot-modal-container fac-irr-forms" id="irr-tool-group">
+    <div class="aot-modal-body-text">{{ _('Add a layer from the Irrigation menu above the model first. These fill the active layer.') }}</div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-pipe-spacing">{{ _('Spacing') }} (m)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="irr-pipe-spacing" class="form-control aot-modern-input" value="3" min="0.5" max="100" step="0.5" title="{{ _('Branch pipe spacing (m)') }}">
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-pipe-angle">{{ _('Angle') }} (°)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="irr-pipe-angle" class="form-control aot-modern-input" value="0" min="-180" max="180" step="5" title="{{ _('Pipe direction angle (deg)') }}">
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-pipe-offset">{{ _('Offset') }} (m)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="irr-pipe-offset" class="form-control aot-modern-input" value="1.5" min="-50" max="50" step="0.5" title="{{ _('Parallel shift of pipe pattern (m, perpendicular) — default = spacing/2') }}">
+      </div>
+    </div>
+    <div class="fac-irr-btns">
+      <button type="button" id="btn-clear-irr" data-action="irr-clear"    class="btn aot-pill-btn aot-pill-btn-secondary tool-btn" disabled>{{ _('Clear pipes') }}</button>
+      <button type="button" id="btn-gen-pipe"  data-action="irr-gen-pipe" class="btn aot-pill-btn aot-pill-btn-primary tool-btn" disabled>{{ _('Auto-generate Pipes') }}</button>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-sp-subtype">{{ _('Type') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="irr-sp-subtype" class="form-control aot-modern-select" title="{{ _('Irrigation device type') }}">
+          <option value="sprinkler" selected>{{ _('Sprinkler') }}</option>
+          <option value="drip">{{ _('Drip') }}</option>
+          <option value="mist">{{ _('Mist') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-sp-orientation">{{ _('Direction') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="irr-sp-orientation" class="form-control aot-modern-select" title="{{ _('Spray direction (sprinkler)') }}">
+          <option value="down" selected>{{ _('Down') }}</option>
+          <option value="up">{{ _('Up') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-sp-interval">{{ _('Interval') }} (m)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="irr-sp-interval" class="form-control aot-modern-input" value="1.5" min="0.5" max="50" step="0.5" title="{{ _('Sprinkler interval (m)') }}">
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-sp-radius">{{ _('Radius') }} (m)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="irr-sp-radius" class="form-control aot-modern-input" value="2" min="0.5" max="50" step="0.5" title="{{ _('Spray radius (m)') }}">
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-sp-flow">{{ _('Flow') }} (L/h)</label>
+      <div class="aot-modal-option-control">
+        <input type="number" id="irr-sp-flow" class="form-control aot-modern-input" value="40" min="1" max="9999" step="10" title="{{ _('Flow per device (L/h)') }}">
+      </div>
+    </div>
+    <div class="fac-irr-btns">
+      <button type="button" id="btn-clear-sprinkler" data-action="irr-clear-sprinkler" class="btn aot-pill-btn aot-pill-btn-secondary tool-btn" disabled>{{ _('Clear irrigation devices') }}</button>
+      <button type="button" id="btn-gen-irrigation"  data-action="irr-gen-irrigation"  class="btn aot-pill-btn aot-pill-btn-primary tool-btn" disabled>{{ _('Place Irrigation Devices') }}</button>
+    </div>
+
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-valve-type">{{ _('Valve') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="irr-valve-type" class="form-control aot-modern-select" title="{{ _('Valve type') }}">
+          <option value="on_off" selected>{{ _('ON/OFF (Solenoid)') }}</option>
+          <option value="proportional">{{ _('Proportional') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="aot-modal-option-row">
+      <label class="aot-modal-option-label" for="irr-valve-default">{{ _('Default state') }}</label>
+      <div class="aot-modal-option-control">
+        <select id="irr-valve-default" class="form-control aot-modern-select" title="{{ _('Default state') }}">
+          <option value="closed" selected>{{ _('Default Closed') }}</option>
+          <option value="open">{{ _('Default Open') }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="fac-irr-btns">
+      <button type="button" id="btn-irr-add-valve" data-action="irr-add-valve" class="btn aot-pill-btn aot-pill-btn-primary tool-btn"
+              title="{{ _('Add valve to selected pipe (layer center if no pipe selected)') }}" disabled>{{ _('Add Valve') }}</button>
+    </div>
+  </div>
+  </div>
+  </div><!-- /#fac-pane-parts -->
+
+  <!-- ── Connections — weather, groups, label colours. Needs a saved facility ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-connect" role="tabpanel" aria-labelledby="fac-tab-connect" data-pane="connect">
+  <!-- ── Weather tab ── -->
+  {# @manual geo/facility#weather-forecast-bindings #}
+  <div id="fac-tab-weather" class="fac-group-pane" data-section="connections">
+  <div class="aot-modal-group-title">{{ _('Weather') }}</div>
+  <p class="aot-modal-body-text fac-section-desc">
+    {{ _('Connect forecast Input devices. Any service (OpenWeatherMap, Open-Meteo, KMA …) works as long as it has an Input plugin that writes values to InfluxDB.') }}
+  </p>
+  <div class="aot-modal-container">
+
+
+    <div class="aot-table-scroll">
+    <table id="weather-config-table" class="aot-module-table fac-table fac-table-weather">
+      <thead>
+        <tr>
+          <th>{{ _('Name') }}</th>
+          <th>{{ _('Measurement Item') }}</th>
+          <th>{{ _('Input Channel') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="weather-config-tbody">
+        <tr id="weather-config-empty">
+          <td colspan="4" class="fac-table-empty">{{ _('No weather services connected — use Add Connection below') }}</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="fac-card-actions">
+      <button type="button" id="btn-weather-add" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add Connection') }}</button>
+      <select id="weather-recommend-pick" class="form-control aot-modern-select fac-inline-select" hidden aria-label="{{ _('Open-Meteo forecast Input') }}"></select>
+      <button type="button" id="btn-weather-recommend" class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Fill recommended connections from Open-Meteo forecast Input') }}</button>
+    </div>
+    <div id="weather-recommend-msg" class="fac-table-empty fac-below-row" hidden role="status"></div>
+
+    <div class="aot-modal-body-text aot-modal-desc">
+      <strong>{{ _('Measurement Item Guide') }}</strong><br>
+      forecast_temperature — {{ _('Forecast temperature (°C)') }}<br>
+      forecast_humidity — {{ _('Forecast humidity (%%)') }}<br>
+      forecast_wind_speed — {{ _('Forecast wind speed (m/s)') }}<br>
+      forecast_precipitation_prob — {{ _('Precipitation probability (%% 0-100)') }}<br>
+      forecast_precipitation — {{ _('Precipitation (mm)') }}<br>
+      forecast_solar — {{ _('Forecast solar radiation (W/m²)') }}
+    </div>
+
+  </div>
+  </div><!-- /#fac-tab-weather -->
+  {# @manual-end #}
+
+  <!-- ── Groups tab ── -->
+  <div id="fac-tab-groups" class="fac-group-pane" data-section="connections">
+  <div class="aot-modal-group-title">{{ _('Groups') }}</div>
+  <p class="aot-modal-body-text fac-section-desc">
+    {{ _('Grouping actuators of the same kind lets the coordinator command only the leader and automatically copy the same command to followers according to the mode.') }}
+  </p>
+  <div class="aot-modal-container">
+    <div class="aot-table-scroll">
+    <table id="group-config-table" class="aot-module-table fac-table fac-table-groups">
+      <thead>
+        <tr>
+          <th>{{ _('Group Name') }}</th>
+          <th>{{ _('Mode') }}</th>
+          <th>{{ _('Leader') }}</th>
+          <th>{{ _('Follower') }}</th>
+          <th>{{ _('Threshold (%%)') }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="group-config-tbody">
+        <tr id="group-config-empty">
+          <td colspan="6" class="fac-table-empty">{{ _('No groups. Add one with the button below.') }}</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="fac-card-actions">
+      <button type="button" id="btn-add-group" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add Group') }}</button>
+    </div>
+  </div>
+  </div><!-- /#fac-tab-groups -->
+
+  <!-- ── Label color tab ── -->
+  <div id="fac-tab-labelcolor" class="fac-group-pane" data-section="connections">
+  <div class="aot-modal-group-title">{{ _('Label Color') }}</div>
+  <p class="aot-modal-body-text fac-section-desc">
+    {{ _("A facility-wide setting <strong>independent</strong> of sensor devices/channels. Define a color range once per measurement <strong>item</strong>, and every sensor label in the widgets automatically references the range matching its measurement type. You can freely change each stage’s <strong>color</strong> and <strong>upper limit</strong>, and add measurement items you want.") | safe }}
+  </p>
+  <div class="aot-modal-container">
+
+
+    <div id="sensor-ranges-list"></div>
+
+    <!-- Add measurement item -->
+    <div class="fac-add-item">
+      <div class="fac-inline-row">
+        <span class="aot-modal-group-title">{{ _('Add Measurement Item') }}</span>
+        <select id="sensor-ranges-add-select" class="form-control aot-modern-select fac-inline-select"></select>
+        <button type="button" id="btn-sensor-ranges-add" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add') }}</button>
+      </div>
+      <!-- Custom entry (user-defined measurement item) -->
+      <div id="sensor-ranges-custom" class="aot-modal-container" hidden>
+        <div class="fac-inline-row">
+          <span>{{ _('Match Key') }}</span>
+          <input type="text" id="sr-custom-key" placeholder="{{ _('e.g. CO2') }}" class="form-control aot-modern-input">
+          <span>{{ _('Name') }}</span>
+          <input type="text" id="sr-custom-label" placeholder="{{ _('e.g. Carbon Dioxide') }}" class="form-control aot-modern-input">
+          <span>{{ _('Unit') }}</span>
+          <input type="text" id="sr-custom-unit" placeholder="{{ _('e.g. ppm') }}" class="form-control aot-modern-input">
+          <button type="button" id="btn-sr-custom-add" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add') }}</button>
+        </div>
+        <p class="aot-modal-body-text fac-below-row">
+          {{ _('The match key is the measurement-type identifier of the sensor channel (e.g. T, RH, CO2, VPD, light, wind_ms, wind_deg, rain_mm). The color range is applied only when the channel and key match.') }}
+        </p>
+      </div>
+    </div>
+
+    <div class="fac-card-actions">
+      <button type="button" id="btn-sensor-ranges-reset" class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Reset All to Default') }}</button>
+    </div>
+  </div>
+  </div><!-- /#fac-tab-labelcolor -->
+  </div><!-- /#fac-pane-connect -->
+
+  <!-- ── Review — device check, integration summary. Needs a saved facility ── -->
+  <div class="fac-tab-pane d-none" id="fac-pane-check" role="tabpanel" aria-labelledby="fac-tab-check" data-pane="check">
+  <div class="fac-group-pane">
+  <!-- ── Device Check ─────────────────────────────────────────────────────── -->
+  {# @manual geo/facility#device-check #}
+  <div id="comm-panel" hidden>
+    <div class="aot-modal-group-title">{{ _('Device Check') }}</div>
+    <div class="aot-modal-container">
+
+      <div id="comm-setup">
+        <p class="comm-intro">
+          {{ _('Select devices to run a short automated test sequence.') }}<br>
+          {{ _('After the test, enter your judgment and the result will be applied to algorithm settings immediately.') }}
+        </p>
+        <div id="comm-act-list" class="comm-act-list">
+          <span class="aot-modal-body-text">{{ _('Select a facility first') }}</span>
+        </div>
+        <div class="fac-card-actions">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
+                  id="btn-comm-select-all">{{ _('Select All') }}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
+                  id="btn-comm-start" disabled>{{ _('Start Check') }}</button>
+        </div>
+      </div>
+
+      <div id="comm-running" hidden>
+        <div id="comm-progress-info" class="comm-progress">
+          <span id="comm-progress-text">{{ _('Preparing...') }}</span>
+          <div class="aot-progress">
+            <div class="aot-progress-fill" id="comm-progress-fill"></div>
+          </div>
+        </div>
+        <div id="comm-results-list"></div>
+        <div class="fac-inline-row fac-below-row">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
+                  id="btn-comm-reset">{{ _('Reset') }}</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  {# @manual-end #}
+  <!-- ── IEC integration summary ─────────────────────────────────────────── -->
+  <div id="integ-panel" hidden>
+    {#- 제목과 그 구획의 동작이 한 줄에 선다. 예전에는 인라인 flex 를 제목에
+        직접 박아 두었다 — 같은 짝이 여러 곳에 있으므로 클래스로 뺀다. -#}
+    <div class="aot-modal-group-title fac-group-title-row">
+      <span>{{ _('IEC Integration Summary') }}</span>
+      <button type="button" id="btn-integ-refresh"
+              class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Reload summary') }}</button>
+    </div>
+    <div class="aot-modal-container">
+      <div id="integ-body">
+        <span class="integ-loading">{{ _('Loading integration data…') }}</span>
+      </div>
+    </div>
+  </div>
+
+  {#- 구획(plot)은 운영 자료라 설계 흐름에서 뺐다(결정 D3, 2026-11-07). 기록은 구획 페이지·지도에서 한다. -#}
+  <p class="aot-modal-body-text fac-plots-link">
+    {{ _('Record what is in each zone on the Plots page.') }}
+    <a href="{{ url_for('routes_geo.page_plots') }}" id="fac-plots-link">{{ _('Open Plots') }}</a>
+  </p>
+  </div>
+  </div><!-- /#fac-pane-check -->
+
+  </div><!-- /#fac-insp-facility -->
+
+  {#- 평면 그리기(F3). 묶음이 아니라 "무엇을" 안의 상태다 — body.fac-plan-mode 일 때만 보인다.
+      내용은 plan-ui.js 가 그린다. -#}
+  <div class="fac-plan-pane" id="fac-plan-pane"></div>
+
+  {#- 선택 인스펙터 — 3D 나 트레이에서 고른 구성요소. 이름·연결(위 표 한 줄)과 위치·크기(아래)가 스크롤 없이 선다. -#}
+  <div id="fac-insp-selection" class="d-none" data-section="fittings">
+    <table id="fac-sel-table" class="aot-module-table fac-table fac-sel-table" aria-label="{{ _('Selected component') }}">
+      <tbody id="fac-sel-tbody"></tbody>
+    </table>
+  <div id="fac-place-home">
   <!-- Fitting inspector — moved out of the 3D panel: it used to sit in a
        100px strip across the bottom of the viewport at all times. Selecting
        something in the scene switches to this step (see wireInspectorFocus). -->
   <div id="facility-3d-inspector">
-      <div id="fi-empty" class="fi-empty">{{ _('No fitting selected — add one with the tools on the left, or select from the list/3D on the right.') }}</div>
-      <div id="fi-content" class="fi-content" style="display:none;">
+      <div id="fi-empty" class="fi-empty">{{ _('No component selected — add one from the toolbar above the model, or select one in 3D or in the component list.') }}</div>
+      <div id="fi-content" class="fi-content" hidden>
         <!-- Identity/wiring rows are duplicated by the components table; they stay
              in the DOM because existing handlers read/write them (.fi-dup hides them). -->
-        <div class="aot-modal-option-row fi-dup" style="display:none;">
+        <div class="aot-modal-option-row fi-dup">
           <label class="aot-modal-option-label">{{ _('Name') }}</label>
           <div class="aot-modal-option-control">
             <input id="fi-name" type="text" class="form-control aot-modern-input" placeholder="{{ _('Name') }}">
           </div>
         </div>
-        <div class="aot-modal-option-row fi-dup" style="display:none;">
+        <div class="aot-modal-option-row fi-dup">
           <label class="aot-modal-option-label">{{ _('Type') }}</label>
           <div class="aot-modal-option-control">
             <select id="fi-kind" class="form-control aot-modern-select">
@@ -728,6 +1118,19 @@
               <option value="fogger">{{ _('Humidifier') }}</option>
               <option value="sensor">{{ _('Sensor') }}</option>
               <option value="fixture">{{ _('Fixture') }}</option>
+            </select>
+          </div>
+        </div>
+        {# 창·측창·문만. 값이 없는 설비는 힌지(기존 모형과 같다). 3D 자세는
+           widgets/AoT_facility/aot-facility-3d.js 의 applyRuntime 이 이 값으로 정한다. #}
+        <div class="aot-modal-option-row d-none" id="fi-group-open-mode">
+          <label class="aot-modal-option-label" for="fi-open-mode">{{ _('Opening method') }}</label>
+          <div class="aot-modal-option-control">
+            <select id="fi-open-mode" class="form-control aot-modern-select">
+              <option value="hinge">{{ _('Hinged (swings open)') }}</option>
+              <option value="slide">{{ _('Sliding') }}</option>
+              <option value="roll">{{ _('Roll-up') }}</option>
+              <option value="lift">{{ _('Lift (moves up)') }}</option>
             </select>
           </div>
         </div>
@@ -806,7 +1209,7 @@
           <label class="aot-modal-option-label">{{ _('Actuator') }}</label>
           <div class="aot-modal-option-control">
             <select id="fi-actuator" class="form-control aot-modern-select"
-                    title="{{ _('Actuator that operates this fitting (one can drive multiple fittings)') }}">
+                    title="{{ _('Actuator that operates this component (one can drive several components)') }}">
               <option value="">{{ _('— None —') }}</option>
             </select>
             {# 고장 교체는 장치를 갈아치우는 것이 아니라 접속정보만 갈면 된다.
@@ -855,8 +1258,6 @@
           </div>
         </div>
         {# @manual-end #}
-        <!-- measurement_type: auto-set on channel selection — hidden, keeps data only -->
-        <select id="fi-measurement-type" style="display:none;" aria-hidden="true"></select>
         <div class="aot-modal-option-row">
           <label class="aot-modal-option-label">{{ _('Delete') }}</label>
           <div class="aot-modal-option-control">
@@ -865,303 +1266,25 @@
         </div>
       </div>
     </div>
-  {# @manual geo/facility#sensor-actuator-binding #}
-  <div class="aot-modal-group-title">{{ _('Add Component') }}</div>
-  <div class="aot-modal-container">
-    <div class="aot-modal-option-row">
-      <label class="aot-modal-option-label">{{ _('Type') }}</label>
-      <div class="aot-modal-option-control">
-        <select id="fac-add-kind" class="form-control aot-modern-select" aria-label="{{ _('Type') }}"></select>
-      </div>
-      <button type="button" id="btn-sensor-add" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add') }}</button>
-    </div>
   </div>
-
-  <div class="aot-modal-group-title">{{ _('Components') }}</div>
-  <p class="aot-modal-body-text fac-section-desc">
-    {{ _('Everything placed in this facility, grouped by type. Select a row to open its 3D placement right below it.') }}
-  </p>
-  {# 장치를 지워도 도형·설비는 남는다(삭제 정책 B4). 남은 자리를 사람이 볼 수
-     없으면 재배정할 수단이 없어 그 정책이 성립하지 않는다.
-     이 목록에서 바인딩을 직접 만들지 않는다 — 설비의 장치 배정은 시설 JSON 이
-     정본이라 여기서 만든 바인딩은 다음 시설 저장이 지운다. 행을 누르면 그
-     설비를 인스펙터에서 열어 드롭다운으로 고치게 한다. #}
-  <div class="aot-modal-container" id="fac-unbound-box" style="display:none;">
-    <div class="d-flex justify-content-between align-items-center">
-      <span class="aot-modal-group-title mb-0">{{ _('Places with no device') }}</span>
-      <button type="button" id="fac-unbound-toggle" class="btn aot-pill-btn">
-        <span id="fac-unbound-count">0</span>
-      </button>
-    </div>
-    <p class="aot-modal-body-text fac-section-desc mb-0">
-      {{ _('A device was removed here but the fitting stayed. Select a row to open it and pick a device.') }}
-    </p>
-    <div id="fac-unbound-list" style="display:none;"></div>
-  </div>
-
-  <div class="aot-modal-container">
-    <div id="fac-kind-tabs" class="fac-kind-tabs" role="tablist"></div>
-    <table id="sensor-config-table" class="aot-module-table fac-table">
-      <thead>
-        <tr>
-          <th>{{ _('Name') }}</th>
-          <th>{{ _('Settings') }}</th>
-        </tr>
-      </thead>
-      <tbody id="sensor-config-tbody">
-        <tr id="sensor-config-empty">
-          <td colspan="2" class="fac-table-empty">{{ _('Nothing placed yet — add one above, or use the 3D tools') }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  {# @manual-end #}
-  </div><!-- /#fac-tab-sensors -->
-
-  <!-- ── Weather tab ── -->
-  {# @manual geo/facility#weather-forecast-bindings #}
-  <div id="fac-tab-weather" class="fac-step-pane" data-step="connect" role="tabpanel">
-  <div class="aot-modal-group-title">{{ _('Weather') }}</div>
-  <p class="aot-modal-body-text fac-section-desc">
-    {{ _('Connect forecast Input devices. Any service (OpenWeatherMap, Open-Meteo, KMA …) works as long as it has an Input plugin that writes values to InfluxDB.') }}
-  </p>
-  <div class="aot-modal-container">
-
-
-    <div class="aot-table-scroll">
-    <table id="weather-config-table" class="aot-module-table fac-table fac-table-weather">
-      <thead>
-        <tr>
-          <th>{{ _('Name') }}</th>
-          <th>{{ _('Measurement Item') }}</th>
-          <th>{{ _('Input Channel') }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="weather-config-tbody">
-        <tr id="weather-config-empty">
-          <td colspan="4" class="fac-table-empty">{{ _('No weather services connected — use [+ Add Connection] below') }}</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-    <div class="fac-card-actions">
-      <button type="button" id="btn-weather-add" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add Connection') }}</button>
-      <select id="weather-recommend-pick" style="display:none;font-size:var(--aot-font-size-sm);" aria-label="{{ _('Open-Meteo forecast Input') }}"></select>
-      <button type="button" id="btn-weather-recommend" class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Fill recommended connections from Open-Meteo forecast Input') }}</button>
-    </div>
-    <div id="weather-recommend-msg" class="fac-table-empty" style="display:none;margin-top:6px;" role="status"></div>
-
-    <div class="aot-modal-body-text aot-modal-desc">
-      <strong>{{ _('Measurement Item Guide') }}</strong><br>
-      forecast_temperature — {{ _('Forecast temperature (°C)') }}<br>
-      forecast_humidity — {{ _('Forecast humidity (%%)') }}<br>
-      forecast_wind_speed — {{ _('Forecast wind speed (m/s)') }}<br>
-      forecast_precipitation_prob — {{ _('Precipitation probability (%% 0-100)') }}<br>
-      forecast_precipitation — {{ _('Precipitation (mm)') }}<br>
-      forecast_solar — {{ _('Forecast solar radiation (W/m²)') }}
-    </div>
-
-  </div>
-  </div><!-- /#fac-tab-weather -->
-  {# @manual-end #}
-
-  <!-- ── Groups tab ── -->
-  <div id="fac-tab-groups" class="fac-step-pane" data-step="connect" role="tabpanel">
-  <div class="aot-modal-group-title">{{ _('Groups') }}</div>
-  <p class="aot-modal-body-text fac-section-desc">
-    {{ _('Grouping actuators of the same kind lets the coordinator command only the leader and automatically copy the same command to followers according to the mode.') }}
-  </p>
-  <div class="aot-modal-container">
-    <div class="aot-table-scroll">
-    <table id="group-config-table" class="aot-module-table fac-table fac-table-groups">
-      <thead>
-        <tr>
-          <th>{{ _('Group Name') }}</th>
-          <th>{{ _('Mode') }}</th>
-          <th>{{ _('Leader') }}</th>
-          <th>{{ _('Follower') }}</th>
-          <th>{{ _('Threshold (%%)') }}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="group-config-tbody">
-        <tr id="group-config-empty">
-          <td colspan="6" class="fac-table-empty">{{ _('No groups. Add one with the button below.') }}</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-    <div class="fac-card-actions">
-      <button type="button" id="btn-add-group" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add Group') }}</button>
-    </div>
-  </div>
-  </div><!-- /#fac-tab-groups -->
-
-  <!-- ── Label color tab ── -->
-  <div id="fac-tab-labelcolor" class="fac-step-pane" data-step="connect" role="tabpanel">
-  <div class="aot-modal-group-title">{{ _('Label Color') }}</div>
-  <p class="aot-modal-body-text fac-section-desc">
-    {{ _("A facility-wide setting <strong>independent</strong> of sensor devices/channels. Define a color range once per measurement <strong>item</strong>, and every sensor label in the widgets automatically references the range matching its measurement type. You can freely change each stage’s <strong>color</strong> and <strong>upper limit</strong>, and add measurement items you want.") | safe }}
-  </p>
-  <div class="aot-modal-container">
-
-
-    <div id="sensor-ranges-list"></div>
-
-    <!-- Add measurement item -->
-    <div class="fac-add-item">
-      <div class="fac-inline-row">
-        <span class="aot-modal-group-title">{{ _('Add Measurement Item') }}</span>
-        <select id="sensor-ranges-add-select" class="form-control aot-modern-select fac-inline-select"></select>
-        <button type="button" id="btn-sensor-ranges-add" class="btn aot-pill-btn aot-pill-btn-primary">+ {{ _('Add') }}</button>
-      </div>
-      <!-- Custom entry (user-defined measurement item) -->
-      <div id="sensor-ranges-custom" class="aot-modal-container" style="display:none;">
-        <div class="fac-inline-row">
-          <span>{{ _('Match Key') }}</span>
-          <input type="text" id="sr-custom-key" placeholder="{{ _('e.g. CO2') }}" class="form-control aot-modern-input">
-          <span>{{ _('Name') }}</span>
-          <input type="text" id="sr-custom-label" placeholder="{{ _('e.g. Carbon Dioxide') }}" class="form-control aot-modern-input">
-          <span>{{ _('Unit') }}</span>
-          <input type="text" id="sr-custom-unit" placeholder="{{ _('e.g. ppm') }}" class="form-control aot-modern-input">
-          <button type="button" id="btn-sr-custom-add" class="btn aot-pill-btn aot-pill-btn-primary">{{ _('Add') }}</button>
-        </div>
-        <p class="aot-modal-body-text fac-below-row">
-          {{ _('The match key is the measurement-type identifier of the sensor channel (e.g. T, RH, CO2, VPD, light, wind_ms, wind_deg, rain_mm). The color range is applied only when the channel and key match.') }}
-        </p>
-      </div>
-    </div>
-
-    <div class="fac-card-actions">
-      <button type="button" id="btn-sensor-ranges-reset" class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Reset All to Default') }}</button>
-    </div>
-  </div>
-  </div><!-- /#fac-tab-labelcolor -->
-
-  <!-- actuator-list: hidden container required by ActuatorUI.fill() / read() -->
-  <div id="actuator-list" style="display:none;"></div>
-
-  <!-- ── Step 6 · Review ───────────────────────────────────────────────────── -->
-  <!-- ── Plot — what is growing in each zone ───────────────────────────
-       시설 구획은 기하를 그리지 않는다: 위치의 정본이 구역 자체다
-       (docs/design/geo-vegetation-planting.md). 그래서 여기에는 그리기 도구가
-       없고, 구역을 고르고 작물을 적는 것이 전부다.
-
-       면적·식재량은 **일부러 보여주지 않는다** — 시설은 노지형·베드형·수직형에
-       따라 같은 바닥 면적의 재배 규모가 전혀 다르다. 배치는 구획 노트에 적는다.
-
-       운영 정보(노트·이력·센서 값·제어)는 여기가 아니라 대시보드 위젯의 구획
-       모달이 맡는다. geo/design 과 같은 분담이다. -->
-  <div id="fac-tab-plot" class="fac-step-pane" data-step="plot" role="tabpanel">
-  {#- 다른 탭과 같은 골격이다 — 구획 제목은 카드 밖에 서고, 안내는 제목 아래
-      카드 밖에 놓인다. 예전에는 제목이 없고 안내만 카드 하나에 담겨 있어,
-      문장 한 줄짜리 흰 상자가 덩그러니 떠 있었다. -#}
-  <div class="aot-modal-group-title">{{ _('Plot') }}</div>
-  <p class="aot-modal-body-text fac-section-desc">
-    {{ _('Record what is in each zone. Facility plots need no drawing — the zone itself is the location.') }}
-  </p>
-  <div id="fac-plot-body"></div>
-  </div>
-
-  <div class="fac-step-pane" data-step="check">
-
-  <!-- Shown until the facility is saved — the integration summary and device
-       check below need a saved facility, so say so instead of hiding them. -->
-  <div id="check-locked-hint" class="aot-modal-body-text aot-modal-desc" style="display:none;">
-    {{ _('Save the facility first to see the integration summary and run a device check.') }}
-  </div>
-
-  {# @manual geo/facility#engineering-calculations #}
-  <div class="aot-modal-group-title">{{ _('Capacity Preview') }}</div>
-  <div class="aot-modal-container">
-    <div class="aot-modal-detail-fields">
-      <div class="aot-modal-detail-field"><label>{{ _('Floor') }}</label><div class="preview-value" id="pv-floor">— m²</div></div>
-      <div class="aot-modal-detail-field"><label>{{ _('Volume') }}</label><div class="preview-value" id="pv-volume">— m³</div></div>
-      <div class="aot-modal-detail-field"><label>{{ _('Glazing') }}</label><div class="preview-value" id="pv-glazing">— m²</div></div>
-      <div class="aot-modal-detail-field"><label>{{ _('Vent open') }}</label><div class="preview-value" id="pv-vent">— m²</div></div>
-      <div class="aot-modal-detail-field"><label>{{ _('Heating') }}</label><div class="preview-value" id="pv-heating">— kW</div></div>
-      <div class="aot-modal-detail-field"><label>{{ _('Cooling') }}</label><div class="preview-value" id="pv-cooling">— kW</div></div>
-      <div class="aot-modal-detail-field"><label>{{ _('ACH') }}</label><div class="preview-value" id="pv-ach">— /h</div></div>
-    </div>
-    <div id="pv-summary" class="aot-modal-body-text"></div>
-    <div class="aot-modal-body-text">
-      {{ _('Reference values for mechanical equipment sizing') }} (±5–10%).
-      {{ _('Hover heating/cooling for nameplate vs theoretical comparison.') }}
-    </div>
-  </div>
-  {# @manual-end #}
-
-  <!-- ── IEC integration summary ─────────────────────────────────────────── -->
-  <div id="integ-panel" style="display:none;">
-    {#- 제목과 그 구획의 동작이 한 줄에 선다. 예전에는 인라인 flex 를 제목에
-        직접 박아 두었다 — 같은 짝이 여러 곳에 있으므로 클래스로 뺀다. -#}
-    <div class="aot-modal-group-title fac-group-title-row">
-      <span>{{ _('IEC Integration Summary') }}</span>
-      <button type="button" id="btn-integ-refresh"
-              class="btn aot-pill-btn aot-pill-btn-secondary">{{ _('Refresh') }}</button>
-    </div>
-    <div class="aot-modal-container">
-      <div id="integ-body">
-        <span class="integ-loading">{{ _('Loading integration data…') }}</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Device Check ─────────────────────────────────────────────────────── -->
-  {# @manual geo/facility#device-check #}
-  <div id="comm-panel" style="display:none;">
-    <div class="aot-modal-group-title">{{ _('Device Check') }}</div>
-    <div class="aot-modal-container">
-
-      <div id="comm-setup">
-        <p class="comm-intro">
-          {{ _('Select devices to run a short automated test sequence.') }}<br>
-          {{ _('After the test, enter your judgment and the result will be applied to algorithm settings immediately.') }}
-        </p>
-        <div id="comm-act-list" class="comm-act-list">
-          <span class="aot-modal-body-text">{{ _('Select a facility first') }}</span>
-        </div>
-        <div class="fac-card-actions">
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
-                  id="btn-comm-select-all">{{ _('Select All') }}</button>
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-primary"
-                  id="btn-comm-start" disabled>{{ _('Start Check') }}</button>
-        </div>
-      </div>
-
-      <div id="comm-running" style="display:none;">
-        <div id="comm-progress-info" class="comm-progress">
-          <span id="comm-progress-text">{{ _('Preparing...') }}</span>
-          <div class="aot-progress">
-            <div class="aot-progress-fill" id="comm-progress-fill"></div>
-          </div>
-        </div>
-        <div id="comm-results-list"></div>
-        <div class="fac-inline-row fac-below-row">
-          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
-                  id="btn-comm-reset">{{ _('Reset') }}</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-  {# @manual-end #}
-
-  </div><!-- /step check -->
+  </div><!-- /#fac-insp-selection -->
 
       </div><!-- /.modal-body -->
       <div class="modal-footer fac-step-footer">
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" id="fac-step-prev">{{ _('Previous') }}</button>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" id="fac-step-next">{{ _('Next') }}</button>
+        {#- 새 시설·복제는 접힌 "저장된 시설" 목록 안이 아니라 늘 보이는 푸터에 둔다(시안 A). -#}
+        <span class="fac-list-actions fac-wide-only">
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-fac-new">{{ _('New Facility') }}</button>
+          <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary" id="btn-fac-clone"
+                  title="{{ _('Duplicate the facility currently open in the editor. Connected sensors/outputs are not carried over.') }}">{{ _('Duplicate Facility') }}</button>
+        </span>
+        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary fac-wide-only" id="fac-plan-close">{{ _('Close plan') }}</button>
         <span class="fac-step-footer-gap"></span>
-        <button type="button" class="btn aot-pill-btn aot-pill-btn-secondary"
-                onclick="window.location.href='/geo/design'">{{ _('Cancel') }}</button>
         <button type="button" class="btn aot-pill-btn aot-pill-btn-primary" id="btn-save-facility-bottom">{{ _('Save Facility') }}</button>
       </div>
     </div><!-- /.modal-content -->
-  </div><!-- /.modal-dialog -->
-</div><!-- /#modal_fac_step -->
+    </div><!-- /.modal-dialog -->
+  </div><!-- /#modal_fac_step -->
+</div><!-- /.container.fac-editor -->
 
 <script>
   // 모달 JS 는 번역을 모르므로 문구를 넘겨준다.
@@ -1179,7 +1302,9 @@
 
 <script type="application/json" id="facility-page-vars">
 {{ {
-    'facility_uuid': request.args.get('facility_uuid', '')
+    'facility_uuid': request.args.get('facility_uuid', ''),
+    'geo_id': request.args.get('geo_id', ''),
+    'site': request.args.get('site', '')
 } | tojson | safe }}
 </script>
 
@@ -1198,6 +1323,68 @@ window.FAC_INPUT_DEVICES    = {{ input_devices    | tojson | safe }};
 window.FAC_FUNCTION_DEVICES = {{ function_devices | tojson | safe }};
 </script>
 
+<script>
+  // 평면 그리기(F3) 문구
+  window.AoTFacilityPlanI18n = {
+    plan_title:{{ _('Draw plan')|tojson }}, plan_failed:{{ _('Could not open the plan. Try again.')|tojson }},
+    floors:{{ _('Floors')|tojson }}, floor_view:{{ _('Floor in view')|tojson }}, add_floor:{{ _('Add floor above')|tojson }},
+    level_name:{{ _('{n}F')|tojson }}, floor_empty:{{ _('{name} is empty')|tojson }},
+    floor_empty_hint:{{ _('Start the same as the floor below, or draw it yourself.')|tojson }},
+    draw_it:{{ _('Draw it')|tojson }}, copy_below:{{ _('Copy floor below')|tojson }},
+    drawing:{{ _('Drawing')|tojson }}, tool_block:{{ _('Draw outline')|tojson }}, tool_split:{{ _('Split zone')|tojson }},
+    tool_void:{{ _('Floor opening')|tojson }}, undo:{{ _('Undo')|tojson }},
+    name:{{ _('Name')|tojson }}, floor_area:{{ _('Floor area')|tojson }}, zone:{{ _('Zone')|tojson }},
+    zone_outline:{{ _('Outline of this zone')|tojson }}, pick_outline:{{ _('Select outline')|tojson }},
+    outline:{{ _('Outline')|tojson }}, width:{{ _('Width (m)')|tojson }}, depth:{{ _('Depth (m)')|tojson }},
+    resize_locked_note:{{ _('Merge the zones to change the size.')|tojson }},
+    roof_type:{{ _('Roof Type')|tojson }}, roof_flat:{{ _('Flat')|tojson }}, roof_arch:{{ _('Arch')|tojson }},
+    roof_gable:{{ _('Gable')|tojson }}, roof_gable2:{{ _('Gable ×2')|tojson }},
+    roof_flat_reason:{{ _('Only a rectangular shape can have a curved or gable roof.')|tojson }},
+    roof_rise:{{ _('Roof height (m)')|tojson }}, roof_runs:{{ _('Bays')|tojson }}, cover:{{ _('Cover')|tojson }}, cover_inherit:{{ _('Same as envelope')|tojson }},
+    delete_outline:{{ _('Delete this outline')|tojson }}, delete:{{ _('Delete')|tojson }},
+    boundary:{{ _('Boundary')|tojson }}, b_wall:{{ _('Wall')|tojson }}, b_curtain:{{ _('Curtain')|tojson }}, b_open:{{ _('Open gap')|tojson }},
+    merge_note:{{ _('Become one zone')|tojson }}, merge:{{ _('Merge zones')|tojson }},
+    size:{{ _('Size')|tojson }}, delete_void:{{ _('Delete this opening')|tojson }},
+    floor_height:{{ _('Floor height (m)')|tojson }}, delete_floor:{{ _('Delete this floor')|tojson }},
+    prompt_rect1:{{ _('Press the first corner')|tojson }}, prompt_rect2:{{ _('Press the opposite corner')|tojson }},
+    prompt_poly1:{{ _('Press the first point')|tojson }}, prompt_poly2:{{ _('Press the next point. Press the first point to close')|tojson }},
+    prompt_split1:{{ _('Press one wall of the zone to split')|tojson }}, prompt_split2:{{ _('Press the opposite wall')|tojson }},
+    prompt_void1:{{ _('Press the first corner of the opening')|tojson }}, prompt_void2:{{ _('Press the opposite corner')|tojson }},
+    by_points:{{ _('Draw by points')|tojson }}, by_corners:{{ _('Draw by two corners')|tojson }},
+    zone_default:{{ _('Zone {n}')|tojson }}, zone_count:{{ _('{n} zones. Change them in the plan.')|tojson }},
+    roof_moved:{{ _('The roof moved up. The floor below now has a flat roof.')|tojson }},
+    moved_devices:{{ _('{n} devices change zone. Their positions stay the same. Save anyway?')|tojson }},
+    moved_devices_note:{{ _('{n} devices change zone. Their positions stay the same.')|tojson }},
+    empty_level_dropped:{{ _('Empty floors were left out: {list}')|tojson }},
+    plan_cannot_save:{{ _('The plan cannot be saved:')|tojson }},
+    place_outside:{{ _('This spot is outside {name}. Choose a spot on that floor.')|tojson }},
+    place_in_void:{{ _('This spot is over a floor opening. Choose another spot.')|tojson }},
+    err_generic:{{ _('This change is not possible here.')|tojson }},
+    err_bad_name:{{ _('A name is too long or is not text.')|tojson }},
+    note_unlinked:{{ _('Environment control does not cover these zones yet: {list}')|tojson }},
+    note_upper:{{ _('Upper-floor devices stay out of environment control: {list}')|tojson }},
+    note_outside:{{ _('These devices are outside the saved zones, so a zone coordinator does not use them: {list}')|tojson }},
+    err_block_overlap:{{ _('This overlaps another shape on the same floor.')|tojson }},
+    err_too_small:{{ _('Too small. Each side needs at least 0.5 m.')|tojson }},
+    err_self_intersecting:{{ _('The outline crosses itself.')|tojson }},
+    err_curved_roof:{{ _('Curved and gable roofs need a rectangular shape, so this one stays flat.')|tojson }},
+    err_resize_locked:{{ _('Merge the zones first, then change the width and depth.')|tojson }},
+    err_split_no_space:{{ _('Press the two walls of the zone to split.')|tojson }},
+    err_split_multi:{{ _('This zone spans several buildings and cannot be split.')|tojson }},
+    err_split_many:{{ _('This line would make three or more pieces. Split near the end instead.')|tojson }},
+    err_split_small:{{ _('A piece would be too small.')|tojson }},
+    err_merge_other:{{ _('Only zones inside the same shape can be merged.')|tojson }},
+    err_merge_complex:{{ _('These zones cannot be merged into one outline.')|tojson }},
+    err_void_ground:{{ _('The ground floor cannot have a floor opening.')|tojson }},
+    err_void_outside:{{ _('A floor opening has to sit on this floor.')|tojson }},
+    err_void_overlap:{{ _('This overlaps another floor opening.')|tojson }},
+    err_level_spanned:{{ _('A shape below reaches this floor, so it cannot be deleted.')|tojson }},
+    err_no_below:{{ _('The floor below has nothing to copy.')|tojson }},
+    err_bad_number:{{ _('Enter a number above zero.')|tojson }},
+    err_no_blocks:{{ _('Draw at least one shape.')|tojson }}
+  };
+</script>
+
 <!-- IEC summary / fitting-kind i18n dict (must load before aot-facility-design.js) -->
 <script>
 window._IEC = {
@@ -1206,10 +1393,16 @@ window._IEC = {
   conn_update:{{ _('Update connection settings')|tojson }},
   loading:{{ _('Loading...')|tojson }}, saving:{{ _('Saving...')|tojson }},
   saved:{{ _('Saved.')|tojson }},
+  saved_at:{{ _('Saved %(time)s', time='{time}')|tojson }},
+  autosave_failed:{{ _('Auto-save failed. Your changes are kept — use Save to try again.')|tojson }},
+  prog_todo:{{ _('%(name)s to do', name='{name}')|tojson }},
+  prog_unlinked:{{ _('Not connected %(n)s', n='{n}')|tojson }},
+  prog_summary:{{ _('%(done)s/%(total)s steps', done='{done}', total='{total}')|tojson }},
+  insp_component:{{ _('Component')|tojson }},
+  tray_no_input:{{ _('No input')|tojson }}, tray_no_device:{{ _('No device')|tojson }},
   clone_select_first:{{ _('Select a facility to duplicate first.')|tojson }},
   cloned:{{ _('Facility duplicated. Sensors and outputs were not carried over.')|tojson }},
   clone_failed:{{ _('Duplicate failed: ')|tojson }},
-  unbound_none:{{ _('Every fitting has a device.')|tojson }},
   unbound_never:{{ _('device was deleted')|tojson }},
   place_center_hint:{{ _('Click on the map to set the facility center')|tojson }},
   no_facilities:{{ _('No facilities yet.')|tojson }},
@@ -1226,7 +1419,7 @@ window._IEC = {
   th_flow_lph:{{ _('Flow (L/h)')|tojson }}, th_flow_lpm:{{ _('Flow (L/min)')|tojson }}, subtotal:{{ _('Subtotal')|tojson }},
   tot_length:{{ _('Total pipe length')|tojson }}, tot_nozzle:{{ _('Total nozzles')|tojson }},
   tot_flow:{{ _('Total flow')|tojson }}, per_min:{{ _('Per minute')|tojson }},
-  empty:{{ _('No linked actuators/sensors. Place fittings and save to reflect them.')|tojson }},
+  empty:{{ _('No linked actuators or sensors. Place components and save to show them here.')|tojson }},
   note:{{ _('IEC integration data is reflected after saving.')|tojson }},
   k_opening:{{ _('Opening')|tojson }}, k_circ_fan:{{ _('Circulation fan')|tojson }}, k_exhaust_fan:{{ _('Exhaust fan')|tojson }},
   k_heater:{{ _('Heater')|tojson }}, k_cooler:{{ _('Cooler')|tojson }}, k_fogger:{{ _('Humidifier')|tojson }},
@@ -1237,7 +1430,7 @@ window._IEC = {
   m_heater:{{ _('Heater')|tojson }}, m_sensor:{{ _('Sensor')|tojson }}, m_fixture:{{ _('Fixture')|tojson }},
   m_irr_layer:{{ _('Irrigation Layer')|tojson }}, m_irr_pipe:{{ _('Pipe')|tojson }}, m_irr_conn:{{ _('Pipe Connection')|tojson }},
   m_irr_device:{{ _('Irrigation Device')|tojson }}, m_irr_valve:{{ _('Irrigation Valve')|tojson }},
-  installed:{{ _('Installed')|tojson }}, actuators_word:{{ _('Actuators')|tojson }},
+  installed:{{ _('Installed')|tojson }}, actuators_word:{{ _('Actuators')|tojson }}, envelope_word:{{ _('Envelope')|tojson }},
   am_side_window_motor:{{ _('Side window motor')|tojson }}, am_roof_vent_motor:{{ _('Roof vent motor')|tojson }},
   am_thermal_curtain_motor:{{ _('Thermal curtain motor')|tojson }}, am_exhaust_fan:{{ _('Exhaust fan')|tojson }},
   am_circ_fan:{{ _('Circulation fan')|tojson }}, am_cooler:{{ _('Cooler')|tojson }},
@@ -1245,30 +1438,10 @@ window._IEC = {
   am_shade_curtain_motor:{{ _('Shade curtain motor')|tojson }},
   zone_bay:{{ _('Bay')|tojson }}, zone_split:{{ _('Split zones')|tojson }},
   zone_merge:{{ _('Merge zones')|tojson }},
-  {#- 식생 스텝. 면적·식재량 문구가 없는 것은 의도한 것이다(위 pane 주석 참조). -#}
-  {#- 라벨 어휘는 지도 모달과 같다 — '작물' 은 용도를 농업으로 좁힌다
-     (test_geo_plot.TestVocabularyIsNotAgricultureOnly). -#}
-  plot_kind:{{ _('Kind')|tojson }},
-  kind_vegetation:{{ _('Vegetation')|tojson }}, kind_livestock:{{ _('Livestock')|tojson }},
-  kind_facility:{{ _('Facility')|tojson }}, kind_other:{{ _('Other')|tojson }},
-  plot_subject:{{ _('What is here')|tojson }}, plot_variety:{{ _('Variety')|tojson }},
-  plot_started_on:{{ _('Start date')|tojson }},
-  plot_expected_end:{{ _('Expected end')|tojson }},
-  plot_add:{{ _('Add a plot')|tojson }},
-  plot_end:{{ _('End')|tojson }},
-  plot_empty:{{ _('Nothing recorded here yet.')|tojson }},
-  plot_whole_facility:{{ _('Whole facility')|tojson }},
-  plot_program:{{ _('Program')|tojson }},
-  plot_program_none:{{ _('No program')|tojson }},
-  plot_stage_unit:{{ _(' stages')|tojson }},
-  plot_day_n:{{ _('Day {n}')|tojson }},
-  plot_subject_required:{{ _('Enter what is here.')|tojson }},
-  plot_save_first:{{ _('Save the facility first, then record what is in each zone.')|tojson }},
-  plot_end_confirm:{{ _('End this plot? The record stays as history.')|tojson }},
+  {#- 저장 전 "갈 곳을 잃는 구획" 경고(aot-facility-design.js). 구획 입력 폼은 설계 페이지에서 뺐다(D3). -#}
   plot_orphan_confirm:{{ _('These plots sit in zones this change removes: {list}. They stay recorded but lose their zone. Save anyway?')|tojson }},
   plot_orphan_warn:{{ _('Plots without a zone after this change: {list}')|tojson }},
-  plot_delete_confirm:{{ _('Delete this record? Use "End" instead if it was actually grown — deleting removes it from the history.')|tojson }},
-  plot_delete_twin_history:{{ _('The Digital Twin results for this plot are kept until the retention ends. Erase them now too?')|tojson }},
+  plot_unlinked_warn:{{ _('Environment control does not cover the zone of these plots: {list}')|tojson }},
   edit:{{ _('Edit')|tojson }}, delete:{{ _('Delete')|tojson }},
   cancel:{{ _('Cancel')|tojson }}, save:{{ _('Save')|tojson }},
   save_failed:{{ _('Save failed')|tojson }}, delete_failed:{{ _('Delete failed')|tojson }},
@@ -1328,21 +1501,21 @@ window._IEC = {
   irr_valve_word:{{ _('Valve')|tojson }},
   irr_prop:{{ _('Proportional')|tojson }},
   irr_up_spr:{{ _('Up sprinkler')|tojson }},
+  irr_mist:{{ _('Mist nozzle')|tojson }},
   irr_layer_abbr:{{ _('Layer')|tojson }},
   irr_main_abbr:{{ _('M')|tojson }},
   irr_vpipe_abbr:{{ _('V')|tojson }},
-  catalog_title:{{ _('Equipment Catalog')|tojson }},
+  catalog_title:{{ _('Add components from the map')|tojson }},
   import_btn:{{ _('Import')|tojson }},
   catalog_fail:{{ _('Catalog load failed: ')|tojson }},
-  catalog_empty:{{ _('No equipment in catalog.')|tojson }},
+  catalog_empty:{{ _('Nothing on this map to add.')|tojson }},
   cat_show:{{ _('Show category')|tojson }},
   cat_hide:{{ _('Hide category')|tojson }},
-  catalog_hint:{{ _('Select equipment from the current map to add as a fitting.')|tojson }},
+  catalog_hint:{{ _('Select what is drawn on the current map to add it as a component.')|tojson }},
   select_map_first:{{ _('Please select a map first.')|tojson }},
   place_first:{{ _('Use "Place on Map" to set the facility location first.')|tojson }},
   save_error:{{ _('Save error')|tojson }},
-  no_fittings:{{ _('No fittings added yet.')|tojson }},
-  no_actuators:{{ _('No actuators. Add one below.')|tojson }},
+  no_fittings:{{ _('No components added yet.')|tojson }},
   load_fail:{{ _('Load failed: ')|tojson }},
   integ_error:{{ _('Error: ')|tojson }},
   no_outputs:{{ _('— No outputs (add at Setup → Output) —')|tojson }},

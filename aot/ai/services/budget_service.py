@@ -23,6 +23,7 @@ Flag-gated (t3_budget_governance_enabled); fully dormant when off.
 """
 import logging
 from datetime import datetime, timezone
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ def is_enabled():
 
 
 def _period():
-    return datetime.now(timezone.utc).strftime('%Y-%m')
+    return utc_now().strftime('%Y-%m')
 
 
 def _price_for(model_type, model_name):

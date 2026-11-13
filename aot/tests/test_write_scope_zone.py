@@ -14,6 +14,7 @@
 **사람이 시킨 쓰기가 들어오는 입구마다** 실제 처리기까지 돌려 본다:
 외부 MCP, 인앱 AI, 계획 실행기 워커, 예약 발화, 승인 후 재호출, 웹 화면.
 """
+from aot.tests.geo._legacy_marker import bound_shape
 import json
 import uuid
 from unittest import mock
@@ -43,7 +44,7 @@ def _square(cx, cy, half):
 
 def _invalidate_shape_caches():
     try:
-        from aot.aot_flask.geo import shape_index
+        from aot.space import shape_index
         shape_index.invalidate()
     except Exception:
         pass
@@ -544,7 +545,7 @@ class TestSameJudgement(_Zone):
     def test_shape_linked_to_a_device_needs_both(self):
         """장치가 연결된 도형은 장치(탭)와 담은 지도 **둘 다** 통과해야 한다."""
         marker = str(uuid.uuid4())
-        db.session.add(GeoShape(unique_id=marker, geo_id=self.map, type='aot_device',
+        db.session.add(bound_shape(unique_id=marker, geo_id=self.map, type='aot_device',
                                 device_id=self.output_id,
                                 feature={'type': 'Feature', 'properties': {},
                                          'geometry': {'type': 'Point',

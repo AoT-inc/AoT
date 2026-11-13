@@ -131,7 +131,7 @@ class TestCollapsedZoneConsumers(unittest.TestCase):
         self.assertEqual(collapsed_zone_site_map(), {})
 
     def test_path_skips_collapsed_zone(self):
-        from aot.aot_flask.geo.device_membership import PlaceIndex
+        from aot.space.device_membership import PlaceIndex
         idx = PlaceIndex()
         self.assertEqual(idx.path(self.zone), '우리 밭')
         self.zone.meta_json = {'rep_key': 'a|b'}
@@ -184,7 +184,7 @@ class TestCollapsedZoneConsumers(unittest.TestCase):
     def test_plot_dict_and_mcp_list_follow_flag(self):
         from datetime import date
         from aot.databases.models import GeoPlot
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         ring = _ring(20, 20, 30, 30)
         GeoPlot(unique_id='plot1', geo_id='m1', subject='콩',
                 started_on=date(2026, 6, 15),

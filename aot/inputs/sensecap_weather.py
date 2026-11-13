@@ -18,6 +18,7 @@ from flask_babel import lazy_gettext
 
 from aot.inputs.base_input import AbstractInput
 from aot.utils.constraints_pass import constraints_pass_positive_value
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger("aot.inputs.sensecap_weather")
 
@@ -179,7 +180,7 @@ def _sync_channels(device_id, device_type):
     part of the current Device Type are not merely disabled - they don't exist as
     rows at all, so they can't appear in Function/dashboard measurement pickers
     (those list every DeviceMeasurements row for a device with no is_enabled filter)."""
-    from aot.aot_flask.extensions import db
+    from aot.databases.sqla import db
     from aot.databases.models import DeviceMeasurements
 
     wanted_channels = _channels_for_device_type(device_type)
@@ -391,7 +392,7 @@ class InputModule(AbstractInput):
             self.logger.error("SenseCAP backfill: no channels active for the selected Device Type")
             return
 
-        now_ms = int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)
+        now_ms = int(utc_now().timestamp() * 1000)
         floor_ms = now_ms - BACKFILL_MAX_LOOKBACK_MS
 
         self.logger.info("SenseCAP backfill: checking existing coverage")

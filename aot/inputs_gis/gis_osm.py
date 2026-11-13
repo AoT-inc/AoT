@@ -57,6 +57,27 @@ class InputModule(AbstractGisInput):
     # Nominatim Search Implementation
     search_capabilities = ['address', 'place']
 
+    reverse_capabilities = ['address']
+
+    def reverse(self, lat, lng, **kwargs):
+        """Nominatim /reverse — 키가 필요 없고 세계 어디서나 된다(검색과 같은 이용 약관·머리말)."""
+        headers = {
+            'User-Agent': 'AoT-Embedded-System/1.0 (Project: AoT; contact: admin@aotsystem.com)',
+            'Referer': 'https://aot-system.local'
+        }
+        try:
+            resp = requests.get("https://nominatim.openstreetmap.org/reverse",
+                                params={'lat': lat, 'lon': lng, 'format': 'jsonv2', 'zoom': 18},
+                                headers=headers, timeout=30)
+            if resp.status_code != 200:
+                return {'error': f"Nominatim API Error ({resp.status_code}): {(resp.text or resp.reason)[:100]}"}
+            data = resp.json()
+        except Exception as e:
+            return {'error': str(e)}
+        if not isinstance(data, dict) or data.get('error') or not data.get('display_name'):
+            return {'error': 'Nominatim reverse geocoding: %s' % (data.get('error') if isinstance(data, dict) else 'no result')}
+        return {'address': data['display_name'], 'type': data.get('category') or data.get('type')}
+
     def search(self, query, search_type='address', **kwargs):
         """
         OpenStreetMap Nominatim API

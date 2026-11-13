@@ -131,11 +131,29 @@ class InputModule(AbstractGisInput):
     # Search: Mapbox Geocoding API
     search_capabilities = ['address', 'place']
 
+    reverse_capabilities = ['address']
+
+    def reverse(self, lat, lng, **kwargs):
+        self.api_key = self.get_custom_option('api_key') or ''
+        if not self.api_key:
+            return {'error': 'Mapbox Access Token Missing', 'code': 'no_key'}
+        try:
+            resp = requests.get("https://api.mapbox.com/geocoding/v5/mapbox.places/%s,%s.json" % (lng, lat),
+                                params={'access_token': self.api_key, 'limit': 1}, timeout=10)
+            if resp.status_code != 200:
+                return {'error': f"Mapbox API Error: {resp.status_code}"}
+            feats = resp.json().get('features', [])
+        except Exception as e:
+            return {'error': str(e)}
+        if not feats:
+            return {'error': 'Mapbox reverse geocoding: no result'}
+        return {'address': feats[0].get('place_name', ''), 'type': (feats[0].get('place_type') or [None])[0]}
+
     def search(self, query, search_type='address', **kwargs):
         self.api_key = self.get_custom_option('api_key') or ''
         
         if not self.api_key:
-             return {'error': 'Mapbox Access Token Missing'}
+             return {'error': 'Mapbox Access Token Missing', 'code': 'no_key'}
 
         url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{query}.json"
         params = {

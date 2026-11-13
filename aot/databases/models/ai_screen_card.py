@@ -10,9 +10,9 @@ HTML 은 서버에서 바꾸지 않고 원문 그대로 저장한다 — 표시�
 
 @phase active
 """
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
 
@@ -60,6 +60,9 @@ class AIScreenCard(CRUDMixin, db.Model):
     #: 사용자가 [공지로 게시] 한 공지(NoticePost)의 unique_id(P2). 게시 멱등은 이 칸에
     #: 조건부 UPDATE(notice_id IS :old)로 자리를 잡아 여러 워커에서도 한 번만 일어난다.
     notice_id = db.Column(db.String(36), default=None)
+    #: 끌어올린 시각(P7-11) — 사람이 [맨 위로] 누르거나 AI 가 이 카드를 다시 띄우면 남긴다.
+    #: 수신함 정렬은 이 값(없으면 created_at)의 최신순이다(ai_screen_cards.sort_key).
+    raised_at = db.Column(db.DateTime, default=None)
 
     def __repr__(self):
         return "<{cls}(id={s.id})>".format(s=self, cls=self.__class__.__name__)

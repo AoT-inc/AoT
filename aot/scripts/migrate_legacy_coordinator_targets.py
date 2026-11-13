@@ -91,6 +91,8 @@ import re
 import sys
 from datetime import date, timedelta
 
+from aot.utils.timekit import FARM, today_at
+
 MARKER_PREFIX = 'legacy-coordinator-targets:'
 
 # 분류 — 화면에 찍는 말과 1:1 이다.
@@ -290,7 +292,7 @@ def _started_on(fn, lt):
             if start is not None:
                 notes.append('시작일이 없어 곡선 첫 평가일(method_start_time)로 둠')
     if start is None:
-        start = date.today()
+        start = today_at(FARM)
         notes.append('시작일이 없어 오늘로 둠 — 주차 곡선이면 구획 시작일을 확인할 것')
     off = lt.get('week_offset') or 0.0
     if off:
@@ -368,7 +370,7 @@ def build_payloads(item):
 def apply_one(item):
     """프로그램 → 구획. 구획이 실패하면 프로그램을 지운다 → error|None."""
     from aot.aot_flask.geo.plot_io import save_plot
-    from aot.aot_flask.geo.program_io import create_program, delete_program
+    from aot.space.program_io import create_program, delete_program
 
     prog_payload, plot_payload = build_payloads(item)
     prog, err = create_program(prog_payload, source='user')

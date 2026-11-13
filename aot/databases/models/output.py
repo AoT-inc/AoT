@@ -3,8 +3,8 @@ from sqlalchemy.dialects.mysql import LONGTEXT
 
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
-from aot.aot_flask.extensions import db
-from aot.aot_flask.extensions import ma
+from aot.databases.sqla import db
+from aot.databases.sqla import ma
 from marshmallow import fields
 
 
@@ -38,14 +38,7 @@ class Output(CRUDMixin, db.Model):
     log_level_debug = db.Column(db.Boolean, default=False)
 
     # Geo location for mapping (optional)
-    latitude = db.Column(db.Float, default=None)
-    longitude = db.Column(db.Float, default=None)
-    timezone = db.Column(db.String(64), default=None)  # IANA tz, derived from coords
-    tz_source = db.Column(db.String(16), default=None)  # explicit | inherited | coords (see docs/design/timezone-management.md)
-    location_source = db.Column(db.Text, default='manual')  # manual/device/remote
-    map_config_id = db.Column(db.String(36), default=None)
     map_overlay_id = db.Column(db.Integer, default=None) # [New] Zone Grouping
-    location_updated_utc = db.Column(db.DateTime, default=None)
     marker_icon = db.Column(db.Text, default=None)  # e.g., valve/motor/temp...
     marker_color = db.Column(db.Text, default=None)
     marker_size = db.Column(db.Integer, default=3)

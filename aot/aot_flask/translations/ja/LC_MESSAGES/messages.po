@@ -14001,10 +14001,24 @@ msgid "Add Address"
 msgstr "住所を追加"
 
 #: aot_flask/templates/pages/geo/geo_design.html:824
-msgid ""
-"Enter addresses in the first column of the CSV file. To merge adjacent "
-"parcels, check Merge Adjacent Parcels."
-msgstr "CSVファイルの最初の列に住所を入力してください。隣接する筆を統合するには「隣接する筆を統合」にチェックを入れてください。"
+msgid "To merge adjacent parcels, check Merge Adjacent Parcels."
+msgstr "隣接する筆を統合するには「隣接する筆を統合」にチェックを入れてください。"
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "CSV Format"
+msgstr "CSV の形式"
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "One address per row, in the first column. Only the first column is read, comma-separated, UTF-8 (in Excel, save as \"CSV UTF-8\"). There is no header row: a header would be looked up as an address and listed as a failure."
+msgstr "1行に1つの住所を最初の列に書きます。読み取るのは最初の列だけで、カンマ区切り・UTF-8 です(Excel は「CSV UTF-8」で保存)。ヘッダー行はありません。ヘッダーを入れると住所として検索され、失敗一覧に表示されます。"
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "Use the lot-number (jibun) address. Parcels are matched by lot number, so road-name addresses can fail when the point falls on the road. Korean addresses only."
+msgstr "地番住所を使ってください。筆は地番で照合するため、道路名住所は座標が道路上になると失敗することがあります。韓国の住所のみ対応します。"
+
+#: aot_flask/templates/pages/geo/geo_design.html
+msgid "Move the address column of the Google Maps / My Maps export to the first column. Google returns road-name addresses, so some rows may fail; check the failure list. Addresses outside Korea cannot be read."
+msgstr "Google マップ / マイマップで書き出したファイルの住所列を最初の列に移してください。Google は道路名住所を返すため一部の行が失敗することがあります。失敗一覧を確認してください。韓国国外の住所は読み取れません。"
 
 #: aot_flask/templates/pages/geo/geo_design.html:828
 msgid "Choose CSV File"
@@ -14179,7 +14193,7 @@ msgstr "PNGをエクスポート"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:110
 msgid "Export Spec"
-msgstr "Specエクスポート"
+msgstr "仕様ファイルをエクスポート"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:111
 msgid "Export GLB"
@@ -14187,7 +14201,7 @@ msgstr "GLBエクスポート"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:114
 msgid "Import Spec"
-msgstr "Specインポート"
+msgstr "仕様ファイルをインポート"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:115
 msgid "Import GLB"
@@ -14881,9 +14895,7 @@ msgid ""
 "Grouping actuators of the same kind lets the coordinator command only the"
 " leader and automatically copy the same command to followers according to"
 " the mode."
-msgstr ""
-"同じ種類のアクチュエーターをグループ化すると、coordinator "
-"はリーダーのみに命令を出し、モードに応じてフォロワーへ同じ命令を自動的に複製します。"
+msgstr "同じ種類のアクチュエーターをグループ化すると、コーディネーターはリーダーのみに命令を出し、モードに応じてフォロワーへ同じ命令を自動的に複製します。"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:963
 msgid "Leader"
@@ -15545,11 +15557,11 @@ msgstr "読み込みに失敗しました:"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1314
 msgid "— No outputs (add at Setup → Output) —"
-msgstr "— Outputがありません（Setup → Outputで追加）—"
+msgstr "— 出力がありません（設定 → 出力で追加）—"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1315
 msgid "— No devices (add at Setup → Input/Function) —"
-msgstr "— デバイスがありません（Setup → Input/Functionで追加）—"
+msgstr "— デバイスがありません（設定 → 入力・機能で追加）—"
 
 #: aot_flask/templates/pages/geo/geo_facility.html:1316
 msgid "— Unlinked —"
@@ -37196,6 +37208,12 @@ msgstr "揚程"
 msgid "Base height"
 msgstr "底面の高さ"
 
+msgid "Reservoir"
+msgstr "貯水池"
+
+msgid "Surface height"
+msgstr "水面の高さ"
+
 msgid "Pressure loss"
 msgstr "圧力損失"
 
@@ -37280,6 +37298,42 @@ msgstr "この回路の点滴ラインにはエミッター間隔か流量の設
 msgid "Run records for this water line could not be read, so volumes are not limited by the supply."
 msgstr "この回路の稼働記録を読めなかったため、供給の上限をかけていません。"
 
+msgid "3D Terrain"
+msgstr "3D地形"
+
+msgid "(show map widgets over the elevation input)"
+msgstr "(標高入力で地図ウィジェットを立体表示)"
+
+msgid "Elevation Encoding"
+msgstr "標高エンコーディング"
+
+msgid "Tile URL"
+msgstr "タイルURL"
+
+msgid "Tile Size"
+msgstr "タイルサイズ"
+
+msgid "Maximum Zoom"
+msgstr "最大ズーム"
+
+msgid "Plain text shown on the map"
+msgstr "地図に表示するプレーンテキスト"
+
+msgid "XYZ tile URL with {z}, {x}, {y}, or a TileJSON URL"
+msgstr "{z}, {x}, {y} を含むXYZタイルURL、またはTileJSON URL"
+
+msgid "Elevation tiles for 3D terrain. No API key. Check the provider terms before use; the operator is responsible for them. Attribution for each data source is listed on the provider site."
+msgstr "3D地形用の標高タイルです。APIキーは不要です。使用前に提供元の規約を確認してください。規約の遵守は運営者の責任です。データごとの出典は提供元のサイトにあります。"
+
+msgid "Elevation tiles for 3D terrain from the AWS Open Data registry. No API key. The data has not been updated since 2017. The operator is responsible for the provider terms."
+msgstr "AWS Open Dataの3D地形用標高タイルです。APIキーは不要です。データは2017年以降更新されていません。規約の遵守は運営者の責任です。"
+
+msgid "Elevation tiles for 3D terrain from MapTiler. Uses the MapTiler key and counts against its usage. The operator is responsible for the provider terms."
+msgstr "MapTilerの3D地形用標高タイルです。MapTilerキーを使い、利用量に含まれます。規約の遵守は運営者の責任です。"
+
+msgid "Elevation tiles for 3D terrain from a tile server you choose, such as your own copy. The operator is responsible for the data license and attribution."
+msgstr "自分で選んだタイルサーバー(自前のコピーなど)の3D地形用標高タイルです。データのライセンスと表記は運営者の責任です。"
+
 msgid "Design"
 msgstr "設計値"
 
@@ -37349,6 +37403,22 @@ msgstr "タンク時間は満水で補充なしの場合です。"
 msgid "Water volumes are estimated from the sprinklers drawn on the map inside the area each valve covers, and how long that valve ran — not measured by a flow meter. Only the part that overlaps this plot is counted, so no share is guessed."
 msgstr "水量は、各バルブが受け持つ範囲内に地図上で描いたスプリンクラーの流量と、そのバルブの稼働時間から推定した値で、流量計で測った値ではありません。この区画と重なる部分だけを数えるため、割合は仮定していません。"
 
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "Water supply limit - already counted in the water the twin receives."
+msgstr "供給上限 — ツインが受け取る水に既に含まれています。"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "lowered to the water supply limit"
+msgstr "供給上限まで下げた値"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "Water supply limit"
+msgstr "供給上限"
+
+#: aot/aot_flask/static/js/widgets/AoT_map/aot-map-twin-tab.js
+msgid "Tank level inputs you can bind as the water supply signal"
+msgstr "給水信号に割り当てられるタンク水位入力"
+
 msgid "Forecast Model"
 msgstr "予報モデル"
 
@@ -37369,3 +37439,1568 @@ msgstr "時間枠 (時間)"
 
 msgid "Write Hourly Forecast File"
 msgstr "時間別予報ファイルを書き出す"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw plan"
+msgstr "平面を描く"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Could not open the plan. Try again."
+msgstr "平面を開けませんでした。もう一度お試しください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floors or plan shape"
+msgstr "階や平面の形"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Use this to add floors or to change the shape, such as an L shape."
+msgstr "階を分けたり、L字のように形を変えたりするときに使います。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Change this in the plan."
+msgstr "平面を描く画面で変更します。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Close plan"
+msgstr "平面を閉じる"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floors"
+msgstr "階"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor in view"
+msgstr "表示中の階"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Add floor above"
+msgstr "上の階を追加"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n}F"
+msgstr "{n}階"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{name} is empty"
+msgstr "{name}は空です"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Start the same as the floor below, or draw it yourself."
+msgstr "下の階と同じに始めるか、自分で描きます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw it"
+msgstr "自分で描く"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Copy floor below"
+msgstr "下の階をコピー"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Drawing"
+msgstr "描画"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw outline"
+msgstr "外形を描く"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Split zone"
+msgstr "ゾーンを分ける"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor opening"
+msgstr "床の開口"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor area"
+msgstr "床面積"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Outline of this zone"
+msgstr "このゾーンの外形"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Select outline"
+msgstr "外形を選ぶ"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Outline"
+msgstr "外形"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Width (m)"
+msgstr "横幅 (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Depth (m)"
+msgstr "奥行き (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Merge the zones to change the size."
+msgstr "サイズを変えるにはゾーンを統合してください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Only a rectangular shape can have a curved or gable roof."
+msgstr "曲面・切妻の屋根は長方形の外形にだけ付けられます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Roof height (m)"
+msgstr "屋根の高さ (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Cover"
+msgstr "被覆材"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this outline"
+msgstr "この外形を削除"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Wall"
+msgstr "壁"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Open gap"
+msgstr "開放"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Become one zone"
+msgstr "一つのゾーンにします"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this opening"
+msgstr "この開口を削除"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor height (m)"
+msgstr "階高 (m)"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Delete this floor"
+msgstr "この階を削除"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the first corner"
+msgstr "最初の角を押してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the opposite corner"
+msgstr "反対側の角を押してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the first point"
+msgstr "最初の点を押してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the next point. Press the first point to close"
+msgstr "次の点を押してください。最初の点を押すと閉じます"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press one wall of the zone to split"
+msgstr "分けるゾーンの壁を一方押してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the opposite wall"
+msgstr "反対側の壁を押してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the first corner of the opening"
+msgstr "開口の最初の角を押してください"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw by points"
+msgstr "点で描く"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw by two corners"
+msgstr "二つの角で描く"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Zone {n}"
+msgstr "ゾーン {n}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n} zones. Change them in the plan."
+msgstr "ゾーン {n} 個。平面を描く画面で変更します。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The roof moved up. The floor below now has a flat roof."
+msgstr "屋根を上の階へ移しました。下の階は陸屋根になりました。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n} devices change zone. Their positions stay the same. Save anyway?"
+msgstr "ゾーンが変わる機器 {n} 個。位置はそのままです。保存しますか?"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "{n} devices change zone. Their positions stay the same."
+msgstr "ゾーンが変わる機器 {n} 個。位置はそのままです。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Empty floors were left out: {list}"
+msgstr "空の階は除きました: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The plan cannot be saved:"
+msgstr "平面を保存できません:"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This spot is outside {name}. Choose a spot on that floor."
+msgstr "この場所は{name}の床の外です。その階の床を選んでください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This spot is over a floor opening. Choose another spot."
+msgstr "この場所は床の開口です。別の場所を選んでください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This change is not possible here."
+msgstr "ここではできない変更です。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This overlaps another shape on the same floor."
+msgstr "同じ階の別の外形と重なります。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Too small. Each side needs at least 0.5 m."
+msgstr "小さすぎます。各辺は 0.5 m 以上必要です。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The outline crosses itself."
+msgstr "外形線が交差しています。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Curved and gable roofs need a rectangular shape, so this one stays flat."
+msgstr "曲面・切妻の屋根は長方形の外形にだけ付けられるため、陸屋根のままにします。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Merge the zones first, then change the width and depth."
+msgstr "先にゾーンを統合してから横幅と奥行きを変えてください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Press the two walls of the zone to split."
+msgstr "分けるゾーンの両側の壁を押してください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This zone spans several buildings and cannot be split."
+msgstr "複数の棟にまたがるゾーンなので分けられません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This line would make three or more pieces. Split near the end instead."
+msgstr "この線では三つ以上に分かれます。端の方で分けてください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A piece would be too small."
+msgstr "分けた部分が小さすぎます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Only zones inside the same shape can be merged."
+msgstr "同じ外形の中のゾーンだけ統合できます。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "These zones cannot be merged into one outline."
+msgstr "これらのゾーンは一つの外形に統合できません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The ground floor cannot have a floor opening."
+msgstr "1階の床には開口を設けられません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A floor opening has to sit on this floor."
+msgstr "床の開口はこの階の床の上に置いてください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "This overlaps another floor opening."
+msgstr "別の床の開口と重なります。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A shape below reaches this floor, so it cannot be deleted."
+msgstr "下の階の外形がこの階まで続いているため削除できません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "The floor below has nothing to copy."
+msgstr "下の階にコピーするものがありません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Enter a number above zero."
+msgstr "0 より大きい数を入力してください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Draw at least one shape."
+msgstr "外形を一つ以上描いてください。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Floor, volume, glazing and envelope come from the plan, and the zones add up to the floor above. Heating, cooling and vent open are reference values from the stored dimensions, and control keeps its existing zones."
+msgstr "床・体積・透光・外皮は平面の値で、ゾーンを合計すると上の床面積と一致します。暖房・冷房・換気面積は保存された寸法に基づく参考値で、制御は既存のゾーンをそのまま使います。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Same as envelope"
+msgstr "外皮設定と同じ"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "A name is too long or is not text."
+msgstr "名前が長すぎるか、文字ではありません。"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Environment control does not cover these zones yet: {list}"
+msgstr "環境制御がまだ担当していないゾーンです: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Upper-floor devices stay out of environment control: {list}"
+msgstr "上の階の機器は環境制御に使いません: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "These devices are outside the saved zones, so a zone coordinator does not use them: {list}"
+msgstr "保存されたゾーンの外にある機器なので、ゾーンのコーディネーターは使いません: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "Environment control does not cover the zone of these plots: {list}"
+msgstr "これらの区画のゾーンは環境制御の対象外です: {list}"
+
+#: aot/aot_flask/templates/pages/geo/geo_facility.html
+msgid "not in environment control"
+msgstr "環境制御なし"
+
+#: aot/aot_flask/static/js/common/aot-map-popup.js
+msgid "Upper-floor plots are not under environment control"
+msgstr "上階の区画は環境制御の対象外です"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Diameter"
+msgstr "管径"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Sort"
+msgstr "並べ替え"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Pipe diameters"
+msgstr "配管の管径"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Applied to the main pipe you draw. Leave empty to add it later."
+msgstr "描く主配管に入れる値です。空欄なら後で入れます。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "{n} pipes without diameter"
+msgstr "管径が未入力の配管 {n} 本"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Empty only"
+msgstr "未入力のみ"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Longest first"
+msgstr "長い順"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Empty first"
+msgstr "未入力を先に"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Pipe check not loaded yet - showing pipes with no diameter entered."
+msgstr "配管の点検をまだ読み込めていません。管径が未入力の配管を表示しています。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select all empty"
+msgstr "未入力をすべて選択"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select connected pipes"
+msgstr "つながった配管を選択"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Pick one pipe in the list or on the map first, then press Select connected pipes."
+msgstr "先に一覧か地図で配管を1本選び、「つながった配管を選択」を押します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Apply to {n} selected"
+msgstr "選択した {n} 本に適用"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Used in the pressure calculation."
+msgstr "圧力計算に使われる値です。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Check the pipes to apply to first."
+msgstr "適用する配管を先にチェックしてください。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Enter a number of 1 or more (mm). Leave empty if unknown."
+msgstr "1以上の数値(mm)を入力してください。不明なら空欄のままにします。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "No pipes to show."
+msgstr "表示する配管がありません。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select {name}"
+msgstr "{name} を選択"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Diameter of {name}"
+msgstr "{name} の管径"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "{n} more pipes - narrow the list with the filter."
+msgstr "さらに {n} 本あります。表示条件で絞り込んでください。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Select one pipe first."
+msgstr "先に配管を1本選択してください。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "{n} connected pipes selected ({len} m). Uncheck any that do not belong."
+msgstr "つながった配管 {n} 本({len} m)を選択しました。違うものはチェックを外してください。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Applied a diameter of {mm} mm to {n} pipes."
+msgstr "配管 {n} 本に管径 {mm} mm を適用しました。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Bulk apply"
+msgstr "一括適用"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "Find on map"
+msgstr "地図で探す"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "No pipes are missing a diameter. Switch to All to see every pipe."
+msgstr "管径が未入力の配管はありません。「すべて」に切り替えると全体を表示します。"
+
+#: aot/aot_flask/static/js/geo/aot-geo-panel.js
+msgid "No pipes drawn yet. Draw a main pipe first."
+msgstr "まだ配管がありません。先に主配管を描いてください。"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Locked"
+msgstr "ロック中"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Switched off"
+msgstr "オフ"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Starting"
+msgstr "起動中"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "Not responding"
+msgstr "応答なし"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "The service picks up the switch within a minute. This page updates by itself."
+msgstr "サービスは1分以内にスイッチを確認します。この画面は自動で切り替わります。"
+
+#: aot/aot_flask/utils/utils_settings.py
+msgid "The Digital Twin service is not answering. If AoT was installed before the service became part of the default setup, an administrator needs to run this once:"
+msgstr "デジタルツインサービスが応答しません。サービスが標準構成に含まれる前にインストールしたAoTの場合は、管理者が次のコマンドを一度実行してください:"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Runs the Digital Twin service, which predicts soil water and similar values from the forecast and your sensors. The service is separate from the main program; it waits ready and starts working within a minute after you turn this on."
+msgstr "予報とセンサーの値から土壌水分などを予測するデジタルツインサービスを実行します。このサービスは本体とは別に動いて待機しており、オンにすると1分以内に動き始めます。"
+
+#: aot/aot_flask/templates/settings/general.html
+msgid "Run times, forecast inputs and the site table are on the Digital Twin settings page."
+msgstr "実行時刻、予報入力、圃場の表はデジタルツイン設定ページにあります。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pressure (all nozzles open)"
+msgstr "圧力（すべてのノズルを開いたとき）"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated"
+msgstr "計算済み"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Partly calculated"
+msgstr "一部のみ計算"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Could not calculate"
+msgstr "計算できませんでした"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "No pipe diameters are entered. Enter pipe diameters."
+msgstr "配管の口径が未入力のため計算できません。口径を入力してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "No water reaches this circuit. Check that the source and pipes are connected."
+msgstr "この回路には水が供給されていません。水源と配管がつながっているか確認してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "This circuit has no pump. Place a pump part on the pipe."
+msgstr "この回路にはポンプがありません。ポンプ部品を配管に置いてください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "More than one pump; not calculated. Keep one pump per circuit."
+msgstr "ポンプが2台以上のため計算しません。1回路につきポンプは1台にしてください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pump rated flow or head is missing. Enter it on the pump part."
+msgstr "ポンプの定格流量・揚程が未入力です。ポンプ部品で入力してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Nozzle flow is missing. Enter it in the zone sprinkler settings."
+msgstr "ノズルの流量が未入力です。ゾーンの散水設定で入力してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Nozzle pressure is missing. Enter pressure (bar) in the zone sprinkler settings."
+msgstr "ノズルの圧力が未入力です。ゾーンの散水設定で圧力（bar）を入力してください。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "The pipes form a loop; not calculated."
+msgstr "配管がループ状のため計算しません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "There are no nozzles to open in this area."
+msgstr "このエリアには開けるノズルがありません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Could not calculate for another reason."
+msgstr "別の理由で計算できませんでした。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "and {n} more"
+msgstr "ほか {n} 件"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Nozzle pressure"
+msgstr "ノズル圧力"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "head {m} m"
+msgstr "揚程 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "May drop once diameters are entered."
+msgstr "口径を入力すると小さくなることがあります。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Weakest nozzle"
+msgstr "最も不利なノズル"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{pct} of design flow"
+msgstr "設計流量の {pct}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Enter diameters"
+msgstr "口径を入力"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "The water source falls short: {source} L/min for {need} L/min needed."
+msgstr "水源が不足しています。必要な {need} L/min に対して {source} L/min です。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipes without a diameter ({n}; {m} m, {pct} of the total) were calculated as lossless. Actual pressure may differ."
+msgstr "口径のない配管 {n} 本（{m} m、全体の {pct}）は損失なしとして計算しました。実際の圧力は異なる場合があります。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Moved to the weakest nozzle."
+msgstr "最も不利なノズルへ移動しました。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "That nozzle is not on the map."
+msgstr "そのノズルは地図上にありません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Circuit {n}"
+msgstr "回路 {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "The pump does not reach any nozzle here. Check where the pump sits on the pipe."
+msgstr "ポンプから水が届くノズルがありません。ポンプが配管のどこに置かれているか確認してください。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "This address (http) cannot use location. Open it over https, or tap the map to mark the spot."
+msgstr "このアドレス(http)では位置情報を使えません。https で接続するか、地図上で直接タップしてください。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "This browser does not support location."
+msgstr "このブラウザは位置情報に対応していません。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Location is blocked. Allow it in the browser settings, or tap the map to mark the spot."
+msgstr "位置情報がブロックされています。ブラウザの設定で許可するか、地図上で直接タップしてください。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Could not determine the location. Move to an open area and try again."
+msgstr "位置を特定できません。空が開けた場所でもう一度お試しください。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Locating timed out. Try again."
+msgstr "位置の取得がタイムアウトしました。もう一度お試しください。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Current location"
+msgstr "現在地"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Locating…"
+msgstr "位置を確認中…"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Low accuracy"
+msgstr "誤差が大きい"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "The position is rough. Marking the spot on the map is more reliable."
+msgstr "位置が大まかです。地図上で直接指定する方が正確です。"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "AI can see this location"
+msgstr "AI がこの位置を見られます"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Mark on the map"
+msgstr "地図上で指定"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Add note here"
+msgstr "ここにノート"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Locate again"
+msgstr "再取得"
+
+#: aot_flask/static/js/geo/aot-map-here.js
+msgid "Location turned off after 10 minutes."
+msgstr "10分経過したため位置情報をオフにしました。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "水平 / 斜面"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} 本を水平長で計算"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "水平"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "配管長 (全体)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "配管長"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "地形を計算中です。完了すると斜面長が表示されます。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "一部の区間は水平長で計算されました。地形がその区間を含んでいません。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "{date} に計算"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "セル {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "長さは 水平 / 斜面 の順です。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "勾配 {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "水平長で計算"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "流量 {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "損失 {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "水平 {h} m、斜面 {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "水平 {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "区間 {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "区間 ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "水平 {h} m / 斜面 {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "地形を計算中 - 水平長のみ表示しています。"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "地図上の長さは水平長です。"
+
+msgid "Choose a spot below"
+msgstr "下から場所を選んでください"
+
+msgid "Map center"
+msgstr "地図の中心"
+
+msgid "Picked on the map"
+msgstr "地図で選んだ場所"
+
+msgid "Looking up the address…"
+msgstr "住所を検索中…"
+
+msgid "Address unavailable"
+msgstr "住所が見つかりません"
+
+msgid "My location"
+msgstr "現在地"
+
+msgid "Tap the map to choose the spot."
+msgstr "地図をタップして場所を選んでください。"
+
+msgid "Use Map Center"
+msgstr "地図の中心から開始"
+
+msgid "Searching…"
+msgstr "検索中…"
+
+msgid "No results."
+msgstr "結果がありません。"
+
+msgid "In favorites"
+msgstr "お気に入りに登録済み"
+
+msgid "Add to favorites"
+msgstr "お気に入りに追加"
+
+msgid "Chosen spot"
+msgstr "選んだ場所"
+
+msgid "Favorites"
+msgstr "お気に入り"
+
+msgid "Added to favorites."
+msgstr "お気に入りに追加しました。"
+
+msgid "Removed from favorites."
+msgstr "お気に入りから外しました。"
+
+msgid "Could not save the favorite."
+msgstr "お気に入りを保存できませんでした。"
+
+msgid "Could not load favorites."
+msgstr "お気に入りを読み込めませんでした。"
+
+msgid "No favorites yet."
+msgstr "お気に入りはまだありません。"
+
+msgid "Only me"
+msgstr "自分だけ"
+
+msgid "Share with all"
+msgstr "全員と共有"
+
+msgid "Only you can see this favorite."
+msgstr "このお気に入りはあなただけに表示されます。"
+
+msgid "Inside"
+msgstr "内側"
+
+msgid "Near the edge of"
+msgstr "境界付近"
+
+msgid "Nearby devices"
+msgstr "近くの機器"
+
+msgid "Recent"
+msgstr "最近"
+
+msgid "Terrain input"
+msgstr "地形入力"
+
+msgid "Compare another terrain"
+msgstr "別の地形と比較"
+
+msgid "Could not compare. Try again."
+msgstr "比較できませんでした。もう一度お試しください。"
+
+msgid "Changed sections ({n})"
+msgstr "変わる区間 ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "{name} の地形を取得中です。完了すると比較が表示されます。"
+
+msgid "Calculation level"
+msgstr "計算レベル"
+
+msgid "Switch to this terrain"
+msgstr "この地形に切り替え"
+
+msgid "That terrain input is gone."
+msgstr "その地形入力はなくなりました。"
+
+msgid "Weakest nozzle flow"
+msgstr "最も弱いノズルの流量"
+
+msgid "Revert to {name}"
+msgstr "{name} に戻す"
+
+msgid "Slant length total"
+msgstr "傾斜長の合計"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "この地形入力にはタイルのアドレスがありません。設定を確認してください。"
+
+msgid "Downloading took too long. Try again."
+msgstr "取得に時間がかかりすぎました。もう一度お試しください。"
+
+msgid "Terrain changed and recalculated"
+msgstr "地形が変わったため再計算しました"
+
+msgid "Compare with"
+msgstr "比較先"
+
+msgid "No terrain was on"
+msgstr "地形はオフでした"
+
+msgid "Undo change"
+msgstr "変更を取り消す"
+
+msgid "Try again"
+msgstr "再試行"
+
+msgid "This map has no pipes to compare."
+msgstr "この地図には比較する配管がありません。"
+
+msgid "Pipes the terrain does not cover"
+msgstr "地形が覆っていない配管"
+
+msgid "No terrain is on."
+msgstr "地形はオンになっていません。"
+
+msgid "Could not change the terrain. Try again."
+msgstr "地形を変更できませんでした。もう一度お試しください。"
+
+msgid "Insufficient permission: view_camera"
+msgstr "権限が不足しています: view_camera"
+
+msgid "Insufficient permission: edit_controllers"
+msgstr "権限が不足しています: edit_controllers"
+
+msgid "Not checked"
+msgstr "未確認"
+
+msgid "Authentication failed"
+msgstr "認証に失敗しました"
+
+msgid "The camera has locked login"
+msgstr "カメラがログインをロックしました"
+
+msgid "OpenAPI is off"
+msgstr "OpenAPI がオフです"
+
+msgid "The camera certificate has changed"
+msgstr "カメラの証明書が変わりました"
+
+msgid "Check the password, then save it again or press Reconnect. It will try only once."
+msgstr "パスワードを確認してから保存し直すか、[再接続] を押してください。試行は1回だけです。"
+
+msgid "The camera has locked login. Restart the camera or wait until the lock is released."
+msgstr "カメラがログインをロックしました。カメラを再起動するか、ロックが解除されるまでお待ちください。"
+
+msgid "Credentials were not sent. Check the new fingerprint below."
+msgstr "認証情報は送信していません。下の新しいフィンガープリントを確認してください。"
+
+msgid "Automatic retries are never made after an authentication failure."
+msgstr "認証に失敗しても自動では再試行しません。"
+
+msgid "Pan/Tilt"
+msgstr "パン・チルト"
+
+msgid "Presets"
+msgstr "プリセット"
+
+msgid "Day/Night mode"
+msgstr "昼夜モード"
+
+msgid "Manual alarm"
+msgstr "手動アラーム"
+
+msgid "SD card"
+msgstr "SDカード"
+
+msgid "Event push"
+msgstr "イベント通知"
+
+msgid "No features read yet"
+msgstr "読み取った機能はまだありません"
+
+msgid "Connection check failed"
+msgstr "接続確認に失敗しました"
+
+msgid "If no tab is chosen, everyone with permission can operate this camera."
+msgstr "タブを選ばない場合、操作権限のある全員がこのカメラを操作できます。"
+
+msgid "Reconnect"
+msgstr "再接続"
+
+msgid "Previous fingerprint"
+msgstr "以前のフィンガープリント"
+
+msgid "New fingerprint"
+msgstr "新しいフィンガープリント"
+
+msgid "Trust new certificate"
+msgstr "新しい証明書を信頼する"
+
+msgid "This is normal if the camera was reset or its firmware changed. If neither happened, do not press this."
+msgstr "カメラを初期化したりファームウェアを変更した場合は正常です。そうでなければ押さないでください。"
+
+msgid "OpenAPI"
+msgstr "OpenAPI"
+
+msgid "To use features such as PTZ and events, turn on OpenAPI in the camera web page under Settings > Network Settings and apply. Video works without it."
+msgstr "PTZ やイベントなどの機能を使うには、カメラのWeb画面の「設定 → ネットワーク設定」で OpenAPI をオンにして適用してください。オンにしなくても映像は見られます。"
+
+msgid "Live quality"
+msgstr "ライブ画質"
+
+msgid "Main (2560x1440)"
+msgstr "メイン (2560x1440)"
+
+msgid "Sub"
+msgstr "サブ"
+
+msgid "MJPEG (640x360)"
+msgstr "MJPEG (640x360)"
+
+msgid "The main stream puts a heavy load on the server."
+msgstr "メインストリームはサーバーの負荷が大きくなります。"
+
+msgid "Features"
+msgstr "機能"
+
+msgid "Supported features"
+msgstr "対応機能"
+
+msgid "Reload features"
+msgstr "機能を再読み込み"
+
+msgid "Camera control"
+msgstr "カメラ操作"
+
+msgid "Move"
+msgstr "移動"
+
+msgid "Zoom out"
+msgstr "ズームアウト"
+
+msgid "Zoom in"
+msgstr "ズームイン"
+
+msgid "The camera moves only while a button is held. It stops by itself about 2 seconds after the signal is lost."
+msgstr "ボタンを押している間だけ動きます。信号が途切れると約2秒後に自動で止まります。"
+
+msgid "Go to"
+msgstr "移動"
+
+msgid "Save position"
+msgstr "現在位置を保存"
+
+msgid "Save the current position as this preset? The existing position will be overwritten."
+msgstr "現在位置をこのプリセットに保存しますか？既存の位置は上書きされます。"
+
+msgid "Delete this preset?"
+msgstr "このプリセットを削除しますか？"
+
+msgid "The number of presets may differ from the camera app (up to 300). Only 1 to 8 can be used here."
+msgstr "カメラアプリのプリセット数（最大300）と異なる場合があります。ここでは1〜8番のみ使えます。"
+
+msgid "The camera will sound its alarm and flash its light. Continue?"
+msgstr "カメラの警報音が鳴り、ライトが点灯します。続行しますか？"
+
+msgid "Sound alarm"
+msgstr "警報を鳴らす"
+
+msgid "Stop alarm"
+msgstr "警報を止める"
+
+msgid "The camera accepted the command"
+msgstr "カメラがコマンドを受け付けました"
+
+msgid "The camera did not accept the command"
+msgstr "カメラがコマンドを受け付けませんでした"
+
+msgid "This camera does not support that"
+msgstr "このカメラは対応していません"
+
+msgid "The camera's reply could not be confirmed"
+msgstr "カメラの応答を確認できませんでした"
+
+msgid "Could not reach the camera"
+msgstr "カメラに接続できません"
+
+msgid "Move left"
+msgstr "左へ"
+
+msgid "Move right"
+msgstr "右へ"
+
+msgid "Auto mode"
+msgstr "自動"
+
+msgid "Day mode"
+msgstr "昼"
+
+msgid "Night mode"
+msgstr "夜"
+
+msgid "Preset actions"
+msgstr "プリセット操作"
+
+msgid "Events"
+msgstr "イベント"
+
+msgid "Receive events"
+msgstr "イベントを受信"
+
+msgid "Subscription"
+msgstr "購読"
+
+msgid "Read the features first to choose event kinds."
+msgstr "先に機能を読み込むと、イベントの種類を選べます。"
+
+msgid "Recent events"
+msgstr "最近のイベント"
+
+msgid "Use as trigger"
+msgstr "トリガーとして使う"
+
+msgid "Create an action from this camera's events"
+msgstr "このカメラのイベントで動作を作る"
+
+msgid "Opens the Function page. Add a Trigger: Camera Event there; this camera is selected for you."
+msgstr "Function 画面が開きます。そこで「トリガー: カメライベント」を追加すると、このカメラが選択済みになります。"
+
+msgid "Connecting"
+msgstr "接続中"
+
+msgid "Reconnecting"
+msgstr "再接続中"
+
+msgid "Stopped: authentication"
+msgstr "停止: 認証"
+
+msgid "Waiting: camera has too many clients"
+msgstr "待機中: カメラの接続数超過"
+
+msgid "Fix the connection above, then press Reconnect. Events are not retried automatically after an authentication failure."
+msgstr "上の接続を直してから「再接続」を押してください。認証失敗の後は、イベントを自動では再受信しません。"
+
+#, python-format
+msgid "No events were received for %(n)s minutes."
+msgstr "%(n)s 分間、イベントを受信できませんでした。"
+
+#, python-format
+msgid "The camera clock does not match (%(n)s seconds apart)."
+msgstr "カメラの時計が合っていません(%(n)s 秒のずれ)。"
+
+msgid "Too many events: some were recorded but not run."
+msgstr "イベントが多すぎるため、一部は記録のみで実行しませんでした。"
+
+msgid "Trigger run requested"
+msgstr "トリガー実行を要求済み"
+
+msgid "Trigger run failed"
+msgstr "トリガー実行に失敗"
+
+msgid "Skipped (re-fire interval)"
+msgstr "スキップ(再発火間隔)"
+
+msgid "Skipped (too many)"
+msgstr "スキップ(過多)"
+
+msgid "No events yet"
+msgstr "まだイベントはありません"
+
+msgid "Notifications for this detection are off on the camera, so it cannot be received."
+msgstr "カメラでこの検知の通知がオフのため、受信できません。"
+
+msgid "Turn on notifications"
+msgstr "通知をオンにする"
+
+msgid "Turn this detection on in the camera web page first."
+msgstr "先にカメラのウェブ画面でこの検知をオンにしてください。"
+
+msgid "Notifications are on"
+msgstr "通知がオンになりました"
+
+msgid "Could not confirm that notifications are on"
+msgstr "通知がオンになったことを確認できませんでした"
+
+msgid "Could not save"
+msgstr "保存できませんでした"
+
+msgid "Events are off"
+msgstr "イベントはオフ"
+
+msgid "This camera is not receiving events. Turn on event subscription in the camera settings."
+msgstr "このカメラはイベントを受信していません。カメラ設定でイベント受信をオンにしてください。"
+
+msgid "Event kinds"
+msgstr "イベントの種類"
+
+msgid "Select event kinds"
+msgstr "イベントの種類を選択"
+
+msgid "Kinds the camera does not support are never received."
+msgstr "カメラが対応していない種類は受信できません。"
+
+msgid "Minimum re-fire interval (sec)"
+msgstr "最小再発火間隔(秒)"
+
+msgid "Runs at the time the server receives the event. Events missed while the subscription was down are not run."
+msgstr "サーバーがイベントを受信した時刻に実行します。購読が切れていた間のイベントは実行されません。"
+
+msgid "Camera must be set"
+msgstr "カメラを選択してください"
+
+msgid "Select at least one event kind"
+msgstr "イベントの種類を1つ以上選択してください"
+
+msgid "Unsupported event kind"
+msgstr "対応していないイベントの種類です"
+
+msgid "Minimum re-fire interval must be 0 or more seconds"
+msgstr "最小再発火間隔は0秒以上にしてください"
+
+msgid "Select a camera and at least one event kind before activating."
+msgstr "有効にする前に、カメラとイベントの種類を1つ以上選択してください。"
+
+msgid "Camera Event"
+msgstr "カメライベント"
+
+msgid "A Camera Event Trigger runs its Actions when a camera reports one of the selected event kinds (motion, line crossing, and so on). It runs at the time the server receives the event; events missed while the subscription was down are not replayed."
+msgstr "カメライベントトリガーは、カメラが選択した種類のイベント(動き、ライン通過など)を送ってきたときにアクションを実行します。サーバーがイベントを受信した時刻に実行し、購読が切れていた間のイベントは再実行しません。"
+
+msgid "Find cameras"
+msgstr "カメラを探す"
+
+msgid "Subnet to search"
+msgstr "検索するサブネット"
+
+msgid "Searches only the subnet above (a /24 or narrower private range). No password is sent."
+msgstr "上のサブネット(/24以下のプライベート範囲)のみ検索します。パスワードは送信しません。"
+
+msgid "Address changed?"
+msgstr "アドレスが変わりましたか?"
+
+msgid "Change address"
+msgstr "アドレスを変更"
+
+msgid "This is only a guess: the camera cannot be confirmed before it is signed in. After the address is changed, press Check Connection and compare the model shown with your camera."
+msgstr "推測にすぎません。ログインする前は同じカメラか確認できません。アドレス変更後に接続確認を押し、表示されたモデルがお使いのカメラと一致するか確認してください。"
+
+msgid "No camera was found."
+msgstr "カメラが見つかりませんでした。"
+
+msgid "TP-Link VIGI (OpenAPI on)"
+msgstr "TP-Link VIGI (OpenAPI オン)"
+
+msgid "RTSP device - may be a VIGI (OpenAPI may be off)"
+msgstr "RTSPデバイス - VIGIか不明 (OpenAPIがオフの可能性)"
+
+msgid "If this is a VIGI, turn on OpenAPI in the camera web page under Settings > Network Settings, then search again."
+msgstr "VIGIの場合は、カメラのWeb画面の設定 → ネットワーク設定でOpenAPIをオンにして、もう一度検索してください。"
+
+msgid "Already added"
+msgstr "追加済み"
+
+msgid "The search stopped at the time limit. Some addresses were not checked."
+msgstr "制限時間に達したため検索を停止しました。確認できていないアドレスがあります。"
+
+msgid "The search could not be started."
+msgstr "検索を開始できませんでした。"
+
+msgid "The camera at %(old)s did not answer, and a VIGI answered at %(new)s."
+msgstr "%(old)s のカメラが応答せず、%(new)s でVIGIが応答しました。"
+
+msgid "Change the address to %(new)s? The password is sent only when you press Check Connection."
+msgstr "アドレスを %(new)s に変更しますか? パスワードは接続確認を押したときだけ送信します。"
+
+msgid "The address was changed. Press Check Connection."
+msgstr "アドレスを変更しました。接続確認を押してください。"
+
+msgid "Enter a subnet such as 192.168.0.0/24."
+msgstr "192.168.0.0/24 のようなサブネットを入力してください。"
+
+msgid "Only private network addresses (10.x, 172.16-31.x, 192.168.x) can be searched."
+msgstr "プライベートネットワークのアドレス(10.x、172.16-31.x、192.168.x)のみ検索できます。"
+
+msgid "The range is too wide. Enter a range of /24 or narrower."
+msgstr "範囲が広すぎます。/24以下の範囲を入力してください。"
+
+msgid "A search is already running."
+msgstr "すでに検索中です。"
+
+msgid "This subnet was searched just now. Try again in %(n)s seconds."
+msgstr "このサブネットは先ほど検索しました。%(n)s 秒後にもう一度お試しください。"
+
+msgid "This address is no longer suggested. Search again."
+msgstr "このアドレスはもう提案されません。もう一度検索してください。"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Pan and tilt"
+msgstr "上下左右の移動"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Hold to move. It stops when you let go."
+msgstr "押している間だけ動き、離すと止まります。"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Go to preset %(n)s"
+msgstr "プリセット %(n)s へ移動"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Save current position"
+msgstr "現在の位置を保存"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Choose a number, then save the current position or delete it."
+msgstr "番号を選んでから、現在の位置を保存するか削除してください。"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Save the current position as preset %(n)s? The position saved there now will be replaced."
+msgstr "現在の位置をプリセット %(n)s に保存しますか？今保存されている位置は置き換わります。"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+#, python-format
+msgid "Delete preset %(n)s?"
+msgstr "プリセット %(n)s を削除しますか？"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Sound"
+msgstr "鳴らす"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Show camera controls"
+msgstr "カメラ操作部を表示"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Show direction, zoom and preset controls over the video when the camera supports them and you are allowed to operate it."
+msgstr "カメラが対応していて操作権限がある場合、映像の上に方向・ズーム・プリセットの操作部を表示します。"
+
+#: aot/aot_flask/templates/macros/aot_ptz.html
+msgid "Camera zoom"
+msgstr "ズーム"
+
+msgid "Use this address"
+msgstr "この住所を使う"
+
+msgid "Parcel lookup can only find addresses that VWorld can resolve. Edit the address and try again."
+msgstr "筆(区画)の検索は VWorld が解決できる住所のみ対応しています。住所を修正して、もう一度お試しください。"
+
+msgid "Closed"
+msgstr "閉"
+
+#, python-format
+msgid "Saved %(time)s"
+msgstr "保存済み %(time)s"
+
+msgid "Auto-save failed. Your changes are kept — use Save to try again."
+msgstr "自動保存できませんでした。変更はそのまま残っています。保存ボタンでもう一度お試しください。"
+
+msgid "Back to map"
+msgstr "地図へ戻る"
+
+msgid "There are unsaved changes. Leave without saving?"
+msgstr "保存されていない変更があります。保存せずに移動しますか?"
+
+msgid "Open selected facility design"
+msgstr "選択した施設の設計を開く"
+
+msgid "New facility on this map"
+msgstr "この地図に新しい施設"
+
+msgid "Design a new facility on this map. The map and site carry over."
+msgstr "この地図に新しい施設を設計します。地図と敷地が引き継がれます。"
+
+msgid "Opened"
+msgstr "開"
+
+msgid "Facility tools"
+msgstr "施設ツール"
+
+msgid "Stage view"
+msgstr "画面"
+
+msgid "Auto-generate…"
+msgstr "自動生成…"
+
+msgid "Default isometric"
+msgstr "標準アイソメ"
+
+msgid "Top (plan, north up)"
+msgstr "上(平面、北が上)"
+
+msgid "South side"
+msgstr "南側(正面)"
+
+msgid "West side"
+msgstr "西側"
+
+msgid "East side"
+msgstr "東側"
+
+msgid "Southwest isometric"
+msgstr "南西アイソメ"
+
+msgid "Southeast isometric"
+msgstr "南東アイソメ"
+
+msgid "Northwest isometric"
+msgstr "北西アイソメ"
+
+msgid "Northeast isometric"
+msgstr "北東アイソメ"
+
+msgid "Projection"
+msgstr "投影"
+
+msgid "Perspective"
+msgstr "透視"
+
+msgid "Isometric"
+msgstr "アイソメ"
+
+msgid "Display filter"
+msgstr "表示フィルター"
+
+msgid "Add a layer from the Irrigation menu above the model first. These fill the active layer."
+msgstr "モデル上の「灌水」メニューで先にレイヤーを追加してください。以下の値は選択中のレイヤーに適用されます。"
+
+msgid "Placing %s"
+msgstr "%s を配置中"
+
+msgid "click a face"
+msgstr "面をクリック"
+
+msgid "click a position"
+msgstr "置く位置をクリック"
+
+msgid "click to add points · Enter to finish"
+msgstr "クリックで点を追加 · Enter で終了"
+
+msgid "click two pipes"
+msgstr "配管を2本クリック"
+
+msgid "Keeps placing · Esc to finish"
+msgstr "続けて配置 · Esc で終了"
+
+msgid "Selected"
+msgstr "選択"
+
+msgid "Unconnected spots"
+msgstr "未接続の位置"
+
+msgid "Where it stands"
+msgstr "どこに"
+
+msgid "What it is"
+msgstr "何を"
+
+msgid "Connect & check"
+msgstr "接続・点検"
+
+msgid "Back to facility"
+msgstr "施設へ"
+
+msgid "Save the facility first to connect weather and groups, see the integration summary and run a device check."
+msgstr "施設を先に保存すると、天気・グループの接続、統合サマリーの確認、機器点検ができます。"
+
+msgid "Record what is in each zone on the Plots page."
+msgstr "各ゾーンに何があるかは区画ページで記録します。"
+
+msgid "Open Plots"
+msgstr "区画を開く"
+
+msgid "Selected component"
+msgstr "選択した構成要素"
+
+#, python-format
+msgid "%(name)s done"
+msgstr "%(name)s 完了"
+
+#, python-format
+msgid "%(name)s to do"
+msgstr "%(name)s 未完了"
+
+#, python-format
+msgid "%(name)s after saving"
+msgstr "%(name)s 保存後"
+
+#, python-format
+msgid "Components %(n)s"
+msgstr "構成要素 %(n)s"
+
+#, python-format
+msgid "Not connected %(n)s"
+msgstr "未接続 %(n)s"
+
+msgid "Component"
+msgstr "構成要素"
+
+msgid "No input"
+msgstr "入力なし"
+
+msgid "No device"
+msgstr "機器なし"
+
+msgid "Opening method"
+msgstr "開閉方式"
+
+msgid "Hinged (swings open)"
+msgstr "開き戸(ヒンジ)"
+
+msgid "Sliding"
+msgstr "引き戸"
+
+msgid "Roll-up"
+msgstr "巻き上げ"
+
+msgid "Lift (moves up)"
+msgstr "持ち上げ(上に動く)"
+
+msgid "Mist nozzle"
+msgstr "ミストノズル"
+
+# ── 施設設計 S5 文言整理 ──
+msgid "Clear placement"
+msgstr "配置を消去"
+
+msgid "Add components from what is drawn on the map"
+msgstr "地図に描いたものを構成要素として追加します"
+
+msgid "From the map…"
+msgstr "地図から追加…"
+
+msgid "Rebuild 3D model"
+msgstr "3Dモデルを再構築"
+
+msgid "A device was removed here but the component stayed. Select a row to open it and pick a device."
+msgstr "ここにあった装置は削除されましたが構成要素は残っています。行を選ぶとその構成要素を開いて装置を選べます。"
+
+msgid "Clear pipes"
+msgstr "配管を消去"
+
+msgid "Clear irrigation devices"
+msgstr "灌水装置を消去"
+
+msgid "No weather services connected — use Add Connection below"
+msgstr "接続された気象サービスがありません — 下の「接続を追加」を押してください"
+
+msgid "Reload summary"
+msgstr "概要を再読み込み"
+
+msgid "No component selected — add one from the toolbar above the model, or select one in 3D or in the component list."
+msgstr "構成要素が選択されていません — モデル上のツールバーから追加するか、3D・構成要素一覧から選んでください。"
+
+msgid "Actuator that operates this component (one can drive several components)"
+msgstr "この構成要素を作動させるアクチュエーター(1台で複数の構成要素を駆動可能)"
+
+msgid "No linked actuators or sensors. Place components and save to show them here."
+msgstr "連動しているアクチュエーター・センサーがありません。構成要素を配置して保存するとここに表示されます。"
+
+msgid "Add components from the map"
+msgstr "地図から構成要素を追加"
+
+msgid "Nothing on this map to add."
+msgstr "この地図には追加できるものがありません。"
+
+msgid "Select what is drawn on the current map to add it as a component."
+msgstr "現在の地図に描いたものを選んで構成要素として追加します。"
+
+msgid "No components added yet."
+msgstr "まだ構成要素が追加されていません。"
+
+# ── 施設設計 S5 表示フィルターの状態 ──
+msgid "Shown"
+msgstr "表示"
+
+msgid "Hidden"
+msgstr "非表示"
+
+msgid "Viewing"
+msgstr "表示中の階"
+
+# ── 施設設計 S6 スマートフォン ──
+msgid "Placement and plan editing are on a wider screen."
+msgstr "配置と平面の編集は広い画面で行います。"
+
+msgid "%(done)s/%(total)s steps"
+msgstr "%(done)s/%(total)s ステップ"
+
+# ── 자원 조절 R6 경량 모드 ──
+msgid "Lightweight Mode"
+msgstr "軽量モード"
+
+msgid "Phones and tablets only"
+msgstr "スマートフォン・タブレットのみ"
+
+msgid "Makes the screen lighter on slow devices and connections: refreshes less often, turns off motion effects, and shows camera snapshots instead of live video."
+msgstr "遅い端末や回線で画面を軽くします。更新の間隔を長くし、動きのある効果を止め、カメラはライブ映像の代わりに静止画を表示します。"
+
+#: aot/aot_flask/static/js/common/aot-ai-caption.js
+msgid "Move to top"
+msgstr "先頭へ"
+
+#: aot/aot_flask/static/js/common/aot-ai-caption.js
+msgid "Moved to the top."
+msgstr "先頭に移動しました。"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Card text size"
+msgstr "カードの文字サイズ"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Small text"
+msgstr "小"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Normal text"
+msgstr "標準"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Large text"
+msgstr "大"
+
+#: aot/aot_flask/static/js/common/aot-ai-settings.js
+msgid "Extra large text"
+msgstr "特大"
+
+#: aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "PID: %(state)s"
+msgstr "PID: %(state)s"
+
+#: aot_flask/utils/utils_function_status.py
+#, python-format
+msgid "Control variable: %(total)s = %(p)s (P), %(i)s (I), %(d)s (D)"
+msgstr "制御変数: %(total)s = %(p)s (P), %(i)s (I), %(d)s (D)"

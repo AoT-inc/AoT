@@ -23,6 +23,7 @@
 
 라이브 DB 를 쓰지 않는다(임시 sqlite).
 """
+from aot.utils.timekit import FARM, today_at
 import json
 import os
 import tempfile
@@ -102,7 +103,7 @@ class TestListPlotsDefaultLimit(_DBTestCase):
         for i in range(cls.N_PLOTS):
             db.session.add(GeoPlot(
                 unique_id='plot-%03d' % i, geo_id='map-many',
-                subject='작물%03d' % i, started_on=date.today(),
+                subject='작물%03d' % i, started_on=today_at(FARM),
                 feature={'type': 'Feature', 'properties': {},
                          'geometry': _square(i * 0.001, 0.0, 0.0005)}))
 
@@ -142,10 +143,13 @@ class TestListPlotsDefaultLimit(_DBTestCase):
         self.assertNotIn('INCOMPLETE', out['summary'])
 
     def test_tool_description_exposes_filters_and_offset(self):
-        from aot.tools.tool_registry import TOOLS
-        t = next(x for x in TOOLS if x.name == 'list_plots')
-        txt = t.manifest['description'] + t.manifest['usage_hint']
-        for k in ('zone_id', 'map_id', 'offset', 'limit'):
+        # 옛 인앱 매니페스트는 걷어냈다(26-11 5단계) — 도구 정의(MCP 카탈로그)로 본다.
+        import json
+        from aot.tools.tool_registry import virtual_tools
+        t = next(x for x in virtual_tools() if x['tool_name'] == 'list_plots')
+        txt = t['description'] + json.dumps(t['input_schema'])
+        # offset 은 옛 인앱 매니페스트에만 있던 안내였다 — 도메인 표면은 공통 어휘로 넘긴다.
+        for k in ('zone_id', 'map_id', 'limit'):
             self.assertIn(k, txt)
 
 
@@ -161,7 +165,7 @@ class TestCropStatusDefaultLimit(_DBTestCase):
         for i in range(cls.N_PLOTS):
             db.session.add(GeoPlot(
                 unique_id='cplot-%03d' % i, geo_id='map-crop',
-                subject='작물%03d' % i, started_on=date.today(),
+                subject='작물%03d' % i, started_on=today_at(FARM),
                 feature={'type': 'Feature', 'properties': {},
                          'geometry': _square(i * 0.001, 0.5, 0.0005)}))
 
@@ -534,6 +538,168 @@ class TestSensorDetailMultiChannelDefault(_DBTestCase):
                                   return_value=(True, 'OK')):
             out = self.S.get_sensor_detail(loc_id='multi-1', limit=12)
         self.assertEqual(12, len(out[0]['readings']))
+
+
+class TestBigListsStayUnderTheResponseCap(_DBTestCase):
+    """B1(2026-11-07 실측): search_schedule limit=500 → 53,877토큰 → 캡에 잘려 모델이 3번 재조회.
+    한 번의 최대 건수를 안쪽 도구에서 막고, 잘리면 이어 받을 offset 을 싣는다."""
+    N_JOBS = 130
+    N_NOTES = 45
+
+    @classmethod
+    def seed(cls):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import Notes
+        from aot.databases.models.scheduler import SchedulerJobMeta
+
+        base = datetime.utcnow() + timedelta(days=2)
+        for i in range(cls.N_JOBS):
+            db.session.add(SchedulerJobMeta(
+                unique_id='bigjob-%03d' % i, action_type='human',
+                state='PENDING', schedule_time=base + timedelta(hours=i),
+                anchor_tz='Asia/Seoul', target_id='none',
+                params_json=json.dumps({'content': '큰목록 %03d' % i}),
+                is_editable=True, is_deletable=True))
+        for i in range(cls.N_NOTES):
+            db.session.add(Notes(
+                unique_id='bignote-%03d' % i, name='큰노트%03d' % i, note='본문',
+                category='b1page', is_archived=False,
+                date_time=datetime.utcnow() - timedelta(minutes=i)))
+
+    def test_schedule_limit_500_is_clamped_and_says_where_to_continue(self):
+        out = self.S.search_schedule_tool(limit=500)
+        self.assertEqual(self.S._SCHEDULE_MAX_LIMIT, len(out['results']))
+        self.assertTrue(out['truncated'])
+        self.assertEqual(self.S._SCHEDULE_MAX_LIMIT, out['next_offset'])
+        self.assertIn('offset=%d' % out['next_offset'], out['note'])
+
+    def test_schedule_offset_continues_without_overlap(self):
+        first = self.S.search_schedule_tool(limit=500)
+        second = self.S.search_schedule_tool(limit=500, offset=first['next_offset'])
+        a = {r['job_id'] if 'job_id' in r else r.get('id') for r in first['results']}
+        b = {r['job_id'] if 'job_id' in r else r.get('id') for r in second['results']}
+        self.assertFalse(a & b)
+        self.assertEqual(self.S._SCHEDULE_MAX_LIMIT, len(second['results']))
+
+    def test_schedule_last_page_has_no_next_offset(self):
+        out = self.S.search_schedule_tool(limit=60, offset=self.N_JOBS - 5)
+        self.assertFalse(out.get('truncated'))
+        self.assertNotIn('next_offset', out)
+
+    def test_schedule_small_limit_and_junk_are_respected(self):
+        self.assertEqual(3, len(self.S.search_schedule_tool(limit=3)['results']))
+        self.assertEqual(20, len(self.S.search_schedule_tool(limit='x')['results']))
+        self.assertEqual(1, len(self.S.search_schedule_tool(limit=0)['results']))
+
+    def test_notes_limit_is_clamped_and_continues_with_offset(self):
+        out = self.S.search_notes_tool(category='b1page', limit=500)
+        self.assertEqual(self.S._NOTES_MAX_LIMIT, len(out['results']))
+        self.assertTrue(out['truncated'])
+        self.assertEqual(self.S._NOTES_MAX_LIMIT, out['next_offset'])
+        rest = self.S.search_notes_tool(category='b1page', limit=500, offset=out['next_offset'])
+        self.assertEqual(self.N_NOTES - self.S._NOTES_MAX_LIMIT, len(rest['results']))
+        self.assertNotIn('truncated', rest)
+
+    def test_notes_default_page_still_ten(self):
+        out = self.S.search_notes_tool(category='b1page')
+        self.assertEqual(10, len(out['results']))
+        self.assertEqual(10, out['next_offset'])
+
+    def test_search_devices_pages_by_default_and_clamps_limit(self):
+        rows = [{'id': 'd%03d' % i, 'name': '장치%03d' % i} for i in range(250)]
+        with mock.patch.object(self.S, '_search_devices_all',
+                               return_value={'results': rows, 'count': len(rows)}):
+            first = self.S.search_devices(query='장치')
+            self.assertEqual(40, len(first['results']))
+            self.assertEqual(40, first['page']['next_offset'])
+            self.assertEqual(250, first['page']['total'])
+            big = self.S.search_devices(query='장치', limit=500)
+            self.assertEqual(100, len(big['results']))
+            nxt = self.S.search_devices(query='장치', limit=500, offset=100)
+            self.assertEqual('d100', nxt['results'][0]['id'])
+
+    def test_domain_ops_pass_offset_through(self):
+        from aot.tools.domain import dispatch
+        for op in ('schedule', 'notes'):
+            v = dispatch.plan('records', {'op': op, 'limit': 500, 'offset': 60})
+            self.assertEqual('call', v[0], (op, v))
+            self.assertEqual(60, v[2]['offset'])
+
+
+class TestCumulativeTakesAFacility(_DBTestCase):
+    """B5: measure.cumulative 는 함수만 받아 시설을 주면 거절했다(2026-10-24~11-02 5건). 시설 id 를 환경제어 함수로 푼다."""
+
+    @classmethod
+    def seed(cls):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import CustomController, GeoFacility
+
+        for fid, shape in (('cfac-one', 'cshape-one'), ('cfac-two', 'cshape-two'),
+                           ('cfac-none', 'cshape-none')):
+            db.session.add(GeoFacility(unique_id=fid, shape_uuid=shape, geo_id='cmap', name='시설 ' + fid))
+
+        def coord(uid, fid, on, bay=None):
+            opts = {'geo_facility_id': fid}
+            if bay:
+                opts['bay_scope'] = bay
+            db.session.add(CustomController(unique_id=uid, name='코디 ' + uid, device='env_coordinator',
+                                            is_activated=on, custom_options=json.dumps(opts)))
+        coord('cfn-one', 'cfac-one', True)
+        coord('cfn-two-a', 'cfac-two', False, 'A')
+        coord('cfn-two-b', 'cfac-two', False, 'B')
+
+    def _call(self, ident):
+        with mock.patch('aot.functions.utils.env_control.cumulative_tracker.load_recent_state',
+                        side_effect=lambda fid, days=7: [{'function_id': fid}]) as m:
+            out = self.S.get_cumulative_status(ident)
+        return out, m
+
+    def test_function_id_is_unchanged(self):
+        out, m = self._call('cfn-one')
+        self.assertEqual('cfn-one', out['function_id'])
+
+    def test_facility_id_and_its_shape_id_resolve_to_the_only_coordinator(self):
+        for ident in ('cfac-one', 'cshape-one'):
+            out, _m = self._call(ident)
+            self.assertEqual('cfn-one', out['function_id'], ident)
+
+    def test_several_coordinators_return_candidates_not_a_guess(self):
+        out, m = self._call('cfac-two')
+        self.assertIn('2 environment coordinator', out['error'])
+        self.assertEqual({'cfn-two-a', 'cfn-two-b'}, {c['function_id'] for c in out['candidates']})
+        m.assert_not_called()
+
+    def test_one_active_among_several_is_chosen(self):
+        from aot.aot_flask.extensions import db
+        from aot.databases.models import CustomController
+        row = CustomController.query.filter_by(unique_id='cfn-two-b').first()
+        row.is_activated = True
+        db.session.commit()
+        try:
+            out, _m = self._call('cfac-two')
+            self.assertEqual('cfn-two-b', out['function_id'])
+        finally:
+            row.is_activated = False
+            db.session.commit()
+
+    def test_facility_without_a_coordinator_says_so(self):
+        out, m = self._call('cfac-none')
+        self.assertIn('No environment coordinator', out['error'])
+        m.assert_not_called()
+
+    def test_cumulative_accepts_a_facility_target(self):
+        # 대상 종류 명부: cumulative=facility. (latest·summary 가 출력을 거절하는 것은 의도다 — measure.output_state 가 읽는다.)
+        from aot.tools.domain import dispatch
+        from aot.tools.domain.registry_data import OPS
+
+        def one(kind):
+            return lambda ref, **kw: ('ok', {'kind': kind, 'id': kind + '-1', 'name': ref,
+                                       'path': 'm > ' + ref, 'matched': 'exact'})
+        for op, kind, inner in (('cumulative', 'facility', 'get_cumulative_status'),):
+            with mock.patch.object(dispatch.targets, 'resolve', one(kind)):
+                v = dispatch.plan('measure', {'op': op, 'target': 'x'}, ops=OPS)
+            self.assertEqual('call', v[0], (op, kind, v))
+            self.assertEqual(inner, v[1], (op, kind))
 
 
 if __name__ == '__main__':

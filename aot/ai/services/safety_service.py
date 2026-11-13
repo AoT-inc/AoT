@@ -13,13 +13,6 @@ from aot.aot_flask.extensions import db
 logger = logging.getLogger(__name__)
 
 
-def _as_utc(dt):
-    """Naive datetimes out of the DB are UTC; make that explicit."""
-    if dt is not None and dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
 def _shape_name(shape):
     """Human label for a GeoShape — there is no name column, it lives in the
     GeoJSON properties."""
@@ -126,7 +119,8 @@ class SafetyService:
             return violations # Abstract plans don't conflict with each other for now
 
         try:
-            from aot.utils.time_utils import utc_now, to_local
+            from aot.utils.timekit import utc_now
+            from aot.utils.timekit import to_tz, FARM, parse_utc
 
             # Cheap gate first: no plan is scheduled anywhere, so nothing can
             # conflict and we skip the (expensive) spatial resolution entirely.
@@ -150,11 +144,11 @@ class SafetyService:
                 elif c.schedule_time and c.end_time:
                     # Stored naive = UTC; now is aware. Compare in one frame or
                     # every comparison raises and the whole check dies silently.
-                    if _as_utc(c.schedule_time) <= now <= _as_utc(c.end_time):
+                    if parse_utc(c.schedule_time) <= now <= parse_utc(c.end_time):
                         is_active = True
 
                 if is_active:
-                    until = to_local(c.end_time).strftime('%H:%M') if c.end_time else 'completed'
+                    until = to_tz(c.end_time, FARM).strftime('%H:%M') if c.end_time else 'completed'
                     violations.append(
                         f"Conflict with plan '{(c.reasoning or '')[:30]}' in "
                         f"{area.type} '{_shape_name(area)}' (Active until {until})"
@@ -188,7 +182,7 @@ class SafetyService:
         server id, for instance) simply resolve to no shapes.
         """
         from aot.databases.models import GeoShape
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         from aot.utils.geo_hierarchy import build_geo_parent_map
 
         own = device_binding.shapes_for_device(target_id)
@@ -259,11 +253,11 @@ class SafetyService:
         violations = []
         try:
             from aot.databases.models.scheduler import SchedulerJobMeta
-            from aot.utils.time_utils import get_local_now
+            from aot.utils.timekit import to_tz, FARM, utc_now
             import pytz
             
             # Use local today start (midnight in user's timezone)
-            local_now = get_local_now()
+            local_now = to_tz(utc_now(), FARM)
             today_start_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
             # Convert to UTC naive for database comparison (standard storage format)
             today_start_utc = today_start_local.astimezone(pytz.utc).replace(tzinfo=None)

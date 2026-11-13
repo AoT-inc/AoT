@@ -40,7 +40,8 @@ class TestTruncationHintArgsAreAdvertised(unittest.TestCase):
             if 'limit' not in props:
                 missing.append(name)
         # 이 검사가 아무것도 안 보는 상태로 조용히 통과하지 않게 한다.
-        self.assertGreaterEqual(checked, 3, '안내 문구를 가진 도구를 못 찾았다')
+        # (2026-11-07: search_schedule 의 잘림 안내가 "limit 을 올려라" 에서 "offset=N 으로 이어 받아라" 로 바뀌어 3 → 2.)
+        self.assertGreaterEqual(checked, 2, '안내 문구를 가진 도구를 못 찾았다')
         self.assertEqual(missing, [],
                          '응답이 limit 을 올리라고 안내하는데 스키마에 limit 이 '
                          '없다: %s' % missing)

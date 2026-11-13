@@ -24,11 +24,12 @@ import logging
 from datetime import datetime
 
 from aot.aot_flask.extensions import db
+from aot.databases.geo_marker_kinds import MARKER_TYPE, MARKER_TYPES  # noqa: F401
 from aot.databases.models import GeoShape
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
-MARKER_TYPE = 'aot_device'
 
 
 def _entry_uid(device_id, channel_id):
@@ -76,14 +77,23 @@ def place_device(device_id, map_uuid, lat, lng, channel_id=0,
     if lat is None or lng is None:
         return unplace_device(device_id, map_uuid, channel_id, commit=commit)
 
+    from aot.space import device_binding
+
     ch = str(channel_id if channel_id is not None else 0)
-    marker = GeoShape.query.filter_by(
-        geo_id=map_uuid, device_id=device_id, channel_id=ch).first()
+    # 바인딩이 마커의 정체다(L4) — 컬럼으로 찾지도, 쓰지도 않는다. 바인딩을 만들
+    # 수 없는 장치(어느 표에도 없음)는 마커를 만들지 않는다: 바인딩 없는 마커는
+    # 어느 장치의 것도 아니라 화면에서 주인 없는 점이 된다.
+    kind = device_binding.resolve_device_kind(device_id)
+    if kind is None:
+        logger.warning('place_device: 장치 %s 를 어느 테이블에서도 찾지 못해 '
+                       '배치하지 않는다', device_id)
+        return None
+    found = device_binding.marker_shapes(device_id, map_uuid, ch)
+    marker = found[0] if found else None
     feature = build_marker_feature(device_id, ch, lat, lng,
                                    device_type=device_type, name=name)
     if marker is None:
-        marker = GeoShape(geo_id=map_uuid, device_id=device_id,
-                          channel_id=ch, type=MARKER_TYPE,
+        marker = GeoShape(geo_id=map_uuid, channel_id=ch, type=MARKER_TYPE,
                           feature=feature)   # feature 는 NOT NULL
         db.session.add(marker)
         logger.info('place_device: 마커 생성 device=%s ch=%s map=%s',
@@ -92,56 +102,33 @@ def place_device(device_id, map_uuid, lat, lng, channel_id=0,
         marker.feature = feature
         logger.info('place_device: 마커 이동 device=%s ch=%s map=%s',
                     device_id, ch, map_uuid)
-    marker.updated_at = datetime.utcnow()
-    _record_marker_binding(marker, device_id, ch)
+    marker.updated_at = naive_utc(utc_now())
+    _record_marker_binding(marker, device_id, ch, kind)
     if commit:
         db.session.commit()
         # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
         try:
-            from aot.aot_flask.geo import containment_cache
+            from aot.space import containment_cache
             containment_cache.invalidate()
         except Exception:
             pass
     return marker
 
 
-def _record_marker_binding(marker, device_id, channel_id):
-    """마커 배치를 바인딩에도 남긴다 — 레거시 컬럼 쓰기는 유지한다(Phase C).
+def _record_marker_binding(marker, device_id, channel_id, kind):
+    """마커 배치를 바인딩에 남긴다 — 바인딩이 마커의 정체이므로 **실패하면 올린다**.
 
-    이 호출이 없으면 UI 로 배치할 때마다 `check_geo_integrity` 의
-    binding-drift 가 늘어난다. 레거시 저장처에만 있고 바인딩에 없는 연결이
-    새로 생기는 것이고, 그건 정확히 Phase C 의 게이팅 신호를 망가뜨리는
-    방향이다 — 전환이 진행될수록 드리프트가 줄어야 한다.
-
-    쓰기 실패로 배치 자체를 막지는 않는다. 마커는 이미 레거시 컬럼에
-    저장됐고 백필이 나중에 같은 행을 만들 수 있는 반면, 여기서 예외를
-    올리면 사용자는 장치를 지도에 놓지 못한다. 대신 **SAVEPOINT 안에서**
-    쓴다 — 그냥 삼키면 실패한 flush 가 세션을 오염시킨 채로 남아 뒤이은
-    커밋이 무관한 자리에서 죽는다.
+    예전에는 컬럼이 정본이라 바인딩 기록 실패를 삼켰다. 이제 바인딩 없는
+    마커는 주인 없는 점이다 — 삼키면 사용자는 놓았다고 믿는데 어느 화면에도
+    장치가 없다. 호출자의 트랜잭션이 롤백되도록 예외를 그대로 올린다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
 
-    # 마커 자체의 flush 는 try 밖이다 — 여기서 실패하면 그건 바인딩 문제가
-    # 아니라 배치 실패(I2·I8 트리거 등)이고, 삼키면 호출자의 commit 이
-    # 무관한 자리에서 죽으면서 로그에는 "바인딩 기록 실패"만 남는다.
     db.session.flush()              # 새 도형의 unique_id 는 flush 때 생긴다
     if not marker.unique_id:
         return
-
-    try:
-        kind = device_binding.resolve_device_kind(device_id)
-        if kind is None:
-            # 실존하지 않는 장치에 바인딩을 만들지 않는다 — 고아를 정본으로
-            # 승격시키지 않는 백필과 같은 정책.
-            logger.warning('place_device: 장치 %s 를 어느 테이블에서도 찾지 '
-                           '못해 바인딩을 남기지 않는다', device_id)
-            return
-        with db.session.begin_nested():
-            device_binding.rebind('shape', marker.unique_id, 'marker',
-                                  kind, device_id, channel_id=channel_id)
-    except Exception as exc:
-        logger.warning('place_device: 바인딩 기록 실패 device=%s ch=%s — %s',
-                       device_id, channel_id, exc)
+    device_binding.rebind('shape', marker.unique_id, 'marker',
+                          kind, device_id, channel_id=channel_id)
 
 
 # @manual geo/design-tool#device-a
@@ -152,11 +139,15 @@ def unplace_device(device_id, map_uuid, channel_id=0, commit=False):
     # 종료 사유는 'spatial_deleted'(도형이 사라진 결과)가 아니라 'unbound'
     # 다: 사람이 "이 지도에서 이 장치를 내린다"고 한 것이고, 마커 삭제는 그
     # 결정의 귀결이다(미배정 마커는 의미가 없다 — 설계의 마커 예외).
-    _end_marker_binding(device_id, map_uuid, ch)
+    # 바인딩을 끝내면 마커를 바인딩으로 더는 못 찾으므로 uid 를 먼저 잡는다.
+    from aot.space import device_binding
+    uids = [m.unique_id for m in
+            device_binding.marker_shapes(device_id, map_uuid, ch)
+            if m.unique_id]
+    _end_marker_binding(uids)
     # delete_shape 와 같은 이유로 bulk delete (관계 우회 + 트리거 연쇄).
-    n = GeoShape.query.filter_by(
-        geo_id=map_uuid, device_id=device_id, channel_id=ch).delete(
-            synchronize_session=False)
+    n = (GeoShape.query.filter(GeoShape.unique_id.in_(uids)).delete(
+        synchronize_session=False) if uids else 0)
     if n:
         db.session.expire_all()
         logger.info('unplace_device: 마커 제거 device=%s ch=%s map=%s',
@@ -165,7 +156,7 @@ def unplace_device(device_id, map_uuid, channel_id=0, commit=False):
         db.session.commit()
         # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
         try:
-            from aot.aot_flask.geo import containment_cache
+            from aot.space import containment_cache
             containment_cache.invalidate()
         except Exception:
             pass
@@ -185,7 +176,7 @@ def move_device_markers(device_id, lat, lng, commit=False):
     "이미 놓인 것들을 새 좌표로 따라오게 한다"다. 어느 지도에 몇 개가 놓여
     있는지는 호출자가 알 필요가 없다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
 
     if lat is None or lng is None:
         return 0
@@ -205,7 +196,7 @@ def move_device_markers(device_id, lat, lng, commit=False):
         new_geom['coordinates'] = [float(lng), float(lat)]
         new_feat['geometry'] = new_geom
         shape.feature = new_feat
-        shape.updated_at = datetime.utcnow()
+        shape.updated_at = naive_utc(utc_now())
         moved += 1
 
     if moved:
@@ -215,7 +206,7 @@ def move_device_markers(device_id, lat, lng, commit=False):
             db.session.commit()
             # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
             try:
-                from aot.aot_flask.geo import containment_cache
+                from aot.space import containment_cache
                 containment_cache.invalidate()
             except Exception:
                 pass
@@ -235,7 +226,7 @@ def sync_device_name(device_id, new_name, channel_id=None, commit=True):
     읽는다. 여기서 고치는 `name` 은 사람이 이름을 안 지었을 때의 폴백이고,
     그 폴백이 교체 뒤에도 옛 장치 이름으로 남는 것이 오히려 거짓말이다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
 
     if not device_id or not new_name:
         return 0
@@ -259,31 +250,28 @@ def sync_device_name(device_id, new_name, channel_id=None, commit=True):
         db.session.commit()
         # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
         try:
-            from aot.aot_flask.geo import containment_cache
+            from aot.space import containment_cache
             containment_cache.invalidate()
         except Exception:
             pass
     return updated
 
 
-def _end_marker_binding(device_id, map_uuid, channel_id):
-    """제거될 마커의 현재 바인딩을 종료한다. 실패해도 제거를 막지 않는다."""
-    from aot.aot_flask.geo import device_binding
+def _end_marker_binding(uids):
+    """제거될 마커들의 현재 바인딩을 종료한다. 실패해도 제거를 막지 않는다."""
+    from aot.space import device_binding
 
+    if not uids:
+        return
     try:
-        markers = GeoShape.query.filter_by(
-            geo_id=map_uuid, device_id=device_id, channel_id=channel_id).all()
-        uids = [m.unique_id for m in markers if m.unique_id]
-        if not uids:
-            return
         with db.session.begin_nested():
             for uid in uids:
                 row = device_binding.current_one('shape', uid, role='marker')
                 if row is not None:
                     device_binding.unbind(row.unique_id, 'unbound')
     except Exception as exc:
-        logger.warning('unplace_device: 바인딩 종료 실패 device=%s ch=%s — %s',
-                       device_id, channel_id, exc)
+        logger.warning('unplace_device: 바인딩 종료 실패 uids=%s — %s',
+                       uids, exc)
 
 
 def delete_shape(shape_unique_id, commit=False):
@@ -311,7 +299,7 @@ def delete_shape(shape_unique_id, commit=False):
         db.session.commit()
         # 기하가 바뀌면 포함 관계 캐시는 낡는다(지우기만 한다).
         try:
-            from aot.aot_flask.geo import containment_cache
+            from aot.space import containment_cache
             containment_cache.invalidate()
         except Exception:
             pass

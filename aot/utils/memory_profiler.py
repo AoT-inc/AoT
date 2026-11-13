@@ -7,6 +7,7 @@ import logging
 import psutil
 import os
 from datetime import datetime
+from aot.utils.timekit import FARM, iso_at, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class MemoryProfiler:
         mem_info = process.memory_info()
 
         report = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': iso_at(utc_now(), FARM),
             'rss_mb': mem_info.rss / 1024 / 1024,
             'vms_mb': mem_info.vms / 1024 / 1024,
             'top_allocations': []

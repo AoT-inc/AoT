@@ -218,9 +218,9 @@ def test_service_and_node_channels_read_the_site_series_through_one_shared_app(m
         "available": True, "source_basis": "designated", "source": {"name": "일별", "input_id": "d"},
         "rows": [], "daily": [{"date": "2026-11-01", "time": 1.0, "end": 2.0, "precip_mm": 10.8}],
         "segments": [{"kind": "daily", "source": {"name": "일별"}}]})
-    import aot.aot_flask.geo as geo_pkg
-    monkeypatch.setattr(geo_pkg, "forecast_series", fake, raising=False)
-    monkeypatch.setitem(sys.modules, "aot.aot_flask.geo.forecast_series", fake)
+    import aot.space as space_pkg       # 정본 자리(아키텍처 4c) — 트윈은 여기서 가져간다
+    monkeypatch.setattr(space_pkg, "forecast_series", fake, raising=False)
+    monkeypatch.setitem(sys.modules, "aot.space.forecast_series", fake)
 
     src, _sink = service._embedded_channel(type("P", (), {"targets": []})())
     fs = src.read_forecast("site", 0.0, 3.0)
@@ -247,10 +247,10 @@ def test_embedded_read_forecast_calls_the_server_function_in_app_context(monkeyp
         def get(self):
             return App()
 
-    mod = _t.ModuleType("aot.aot_flask.geo.forecast_series")
+    mod = _t.ModuleType("aot.space.forecast_series")
     mod.read = lambda site, t0, t1, variables=None: (seen.update(args=(site, t0, t1, variables)) or _resp(1.8e9, hours=2))
-    monkeypatch.setitem(sys.modules, "aot.aot_flask.geo.forecast_series", mod)
-    import aot.aot_flask.geo as geo_pkg
-    monkeypatch.setattr(geo_pkg, "forecast_series", mod, raising=False)
+    monkeypatch.setitem(sys.modules, "aot.space.forecast_series", mod)
+    import aot.space as space_pkg       # 정본 자리(아키텍처 4c) — 트윈은 여기서 가져간다
+    monkeypatch.setattr(space_pkg, "forecast_series", mod, raising=False)
     fs = EmbeddedSource("local", [], app=Lazy()).read_forecast("site-1", 1.0, 2.0, ["temp_c"])
     assert fs.available and len(fs.rows) == 2 and seen["ctx"] and seen["args"] == ("site-1", 1.0, 2.0, ["temp_c"])

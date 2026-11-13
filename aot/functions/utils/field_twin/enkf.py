@@ -28,7 +28,7 @@ from typing import Dict, List, Mapping, Optional, Sequence
 
 import numpy as np
 
-from .model import FieldBucketModel
+from .model import FieldBucketModel, _amount
 from .params import FieldPrior, SensorSpec
 
 # 하루당 잡음 표준편차. 파라미터 중 양수 배율류는 로그 공간에서 걷는다.
@@ -144,7 +144,8 @@ class FieldEnKF:
         sd = self.rain_log_sd if sd is None else float(sd)
         if rain_noise and rain > 0 and sd > 0:
             w['rain_mm'] = rain * np.exp(self.rng.normal(-0.5 * sd ** 2, sd, self.n_members))
-        self._last_rain = rain
+        # 아는 관수도 '물이 들어온 날'이다 — 그날의 혁신을 센서 계단으로 오판하지 않는다(모르면 0)
+        self._last_rain = rain + float(np.mean(_amount((u or {}).get('irr_mm'))))
         n = self.model.n
         self.X[:, :n] = self.model.step(self.X[:, :n], u, w, dt_s)
         if noise:

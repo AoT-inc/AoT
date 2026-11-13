@@ -14,6 +14,7 @@ from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.inputs import parse_measurement
 from aot.utils.utils import random_alphanumeric
+from aot.utils.timekit import naive_utc, utc_now
 
 # Measurements
 measurements_dict = {}
@@ -459,7 +460,7 @@ class InputModule(AbstractInput):
 
         allowed = self._allowed_json_names
 
-        datetime_utc = datetime.datetime.utcnow()
+        datetime_utc = naive_utc(utc_now())
         measurement = {}
         for each_channel in self.channels_measurement:
             json_name = self.options_channels['json_name'][each_channel]

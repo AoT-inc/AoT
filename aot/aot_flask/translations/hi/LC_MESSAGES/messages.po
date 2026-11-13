@@ -32226,3 +32226,153 @@ msgstr ""
 
 msgid "The map cannot be displayed. Browser graphics acceleration (WebGL) may be off, or all available map views are in use. Close other map windows or reload the page."
 msgstr ""
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal / slant"
+msgstr "क्षैतिज / ढलान"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "{n} pipes calculated horizontally"
+msgstr "{n} पाइप क्षैतिज रूप से गणना किए गए"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal"
+msgstr "क्षैतिज"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length (whole area)"
+msgstr "पाइप की लंबाई (पूरा क्षेत्र)"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Pipe length"
+msgstr "पाइप की लंबाई"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated. The slant length appears when it finishes."
+msgstr "टेरेन की गणना हो रही है। पूरी होने पर ढलान की लंबाई दिखेगी।"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Some sections were calculated with horizontal length. The terrain does not cover them."
+msgstr "कुछ खंडों की गणना क्षैतिज लंबाई से की गई। टेरेन उन्हें कवर नहीं करता।"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated {date}"
+msgstr "गणना {date}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Cell {m} m"
+msgstr "सेल {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths are in horizontal / slant order."
+msgstr "लंबाइयाँ क्षैतिज / ढलान क्रम में हैं।"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Grade {g}"
+msgstr "ढाल {g}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Calculated with horizontal length"
+msgstr "क्षैतिज लंबाई से गणना की गई"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Flow {q} L/min"
+msgstr "प्रवाह {q} L/min"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Loss {m} m"
+msgstr "हानि {m} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m, slant {s} m"
+msgstr "क्षैतिज {h} m, ढलान {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m"
+msgstr "क्षैतिज {h} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Section {n}"
+msgstr "खंड {n}"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Sections ({n})"
+msgstr "खंड ({n})"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Horizontal {h} m / Slant {s} m"
+msgstr "क्षैतिज {h} m / ढलान {s} m"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Terrain is being calculated - showing horizontal length only."
+msgstr "टेरेन की गणना हो रही है - केवल क्षैतिज लंबाई दिख रही है।"
+
+#: aot/aot_flask/static/js/geo/design/aot-geo-water-pressure.js
+msgid "Lengths on the map are horizontal."
+msgstr "मानचित्र पर लंबाइयाँ क्षैतिज हैं।"
+
+msgid "Terrain input"
+msgstr "भू-आकृति इनपुट"
+
+msgid "Compare another terrain"
+msgstr "दूसरी भू-आकृति से तुलना करें"
+
+msgid "Could not compare. Try again."
+msgstr "तुलना नहीं हो सकी। फिर कोशिश करें।"
+
+msgid "Changed sections ({n})"
+msgstr "बदलने वाले खंड ({n})"
+
+msgid "{name} terrain is being downloaded. The comparison appears when it finishes."
+msgstr "{name} भू-आकृति डाउनलोड हो रही है। पूरा होने पर तुलना दिखेगी।"
+
+msgid "Calculation level"
+msgstr "गणना स्तर"
+
+msgid "Switch to this terrain"
+msgstr "इस भू-आकृति पर जाएँ"
+
+msgid "That terrain input is gone."
+msgstr "वह भू-आकृति इनपुट अब मौजूद नहीं है।"
+
+msgid "Weakest nozzle flow"
+msgstr "सबसे कमज़ोर नोज़ल का प्रवाह"
+
+msgid "Revert to {name}"
+msgstr "{name} पर वापस जाएँ"
+
+msgid "Slant length total"
+msgstr "ढलान लंबाई कुल"
+
+msgid "This terrain input has no tile address. Check its settings."
+msgstr "इस भू-आकृति इनपुट में टाइल पता नहीं है। इसकी सेटिंग जाँचें।"
+
+msgid "Downloading took too long. Try again."
+msgstr "डाउनलोड में बहुत समय लगा। फिर कोशिश करें।"
+
+msgid "Terrain changed and recalculated"
+msgstr "भू-आकृति बदली और दोबारा गणना हुई"
+
+msgid "Compare with"
+msgstr "इससे तुलना करें"
+
+msgid "No terrain was on"
+msgstr "कोई भू-आकृति चालू नहीं थी"
+
+msgid "Undo change"
+msgstr "बदलाव पूर्ववत करें"
+
+msgid "Try again"
+msgstr "फिर कोशिश करें"
+
+msgid "This map has no pipes to compare."
+msgstr "इस नक्शे में तुलना के लिए कोई पाइप नहीं है।"
+
+msgid "Pipes the terrain does not cover"
+msgstr "भू-आकृति से न ढके पाइप"
+
+msgid "No terrain is on."
+msgstr "कोई भू-आकृति चालू नहीं है।"
+
+msgid "Could not change the terrain. Try again."
+msgstr "भू-आकृति बदली नहीं जा सकी। फिर कोशिश करें।"

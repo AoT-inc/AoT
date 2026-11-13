@@ -260,7 +260,7 @@ def _deadline(inst):
 
 
 def test_window_is_extended_by_the_queue_wait():
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
     base = _FakeConfirmable()
     base.begin_command(0, 'on', False, dispatched_ok=True)
     plain = _deadline(base) - utc_now().timestamp()
@@ -276,7 +276,7 @@ def test_window_is_extended_by_the_queue_wait():
 
 def test_synchronous_outputs_are_unaffected():
     """동기 전송(GPIO 등)은 대기가 없으므로 창이 그대로여야 한다."""
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
     inst = _FakeConfirmable()
     inst.begin_command(0, 'on', False, dispatched_ok=True, extra_window_s=0.0)
     assert _deadline(inst) - utc_now().timestamp() == pytest.approx(8.0, abs=0.5)

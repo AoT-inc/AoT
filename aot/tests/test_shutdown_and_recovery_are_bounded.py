@@ -105,6 +105,20 @@ def test_the_output_join_fits_inside_the_container_stop_grace_period():
         "SIGKILL lands before the join can finish")
 
 
+def test_the_daemon_is_not_the_first_oom_victim():
+    """A host-wide OOM kill ignores container limits and skips the graceful
+    stop above, so both deployable composes must protect the daemon."""
+    from pathlib import Path
+
+    import yaml
+
+    docker_dir = Path(__file__).resolve().parents[2] / 'docker'
+    for name in ('docker-compose.yml', 'docker-compose.prod.yml'):
+        compose = yaml.safe_load((docker_dir / name).read_text())
+        assert compose['services']['aot_daemon'].get('oom_score_adj', 0) < 0, (
+            f"aot_daemon lost its oom_score_adj in {name}")
+
+
 def test_startup_aborts_when_shutdown_is_requested():
     """A SIGTERM during boot used to be ignored until SIGKILL, because
     _graceful_stop only lowers daemon_run and nothing on the startup path

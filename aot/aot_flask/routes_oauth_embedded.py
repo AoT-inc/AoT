@@ -184,6 +184,11 @@ def authorize():
 
     from aot.tools import mcp_auth
     role = mcp_auth._role_for(user)
+    if not mcp_auth.role_can_use_mcp(role):
+        # AI 채팅 권한이 없는 역할 — 동의 화면 없이 이유만 알린다(읽기 범위도 주지 않는다).
+        audit_log('mcp.oauth_deny', target_type='OAuthClient', target_name=req.client.client_name,
+                  detail=_detail(client_id=req.client.client_id, reason='role_without_ai_chat'))
+        return _page(cfg, status=403, error_message=gettext("This account's role is not allowed to use AI connections. Ask an administrator."))
     hidden = {key: values.get(key, '') for key in (
         'response_type', 'client_id', 'redirect_uri', 'code_challenge', 'code_challenge_method', 'state', 'scope',
         'resource') if values.get(key)}

@@ -95,7 +95,7 @@
 
     async function collectPlots(id, inst) {
         var feats = inst.map.getSource('aot-plot-src-' + id);
-        feats = feats && feats._data && feats._data.features || [];
+        feats = (feats && window.AoTMapSeam.sourceGeoJSON(feats) || {}).features || [];   // 5 는 _data 가 { geojson } 로 감싸여 있다
         var out = [];
         for (var i = 0; i < feats.length; i++) {
             var u = feats[i].properties.plot_uuid;

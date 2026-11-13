@@ -4,6 +4,7 @@ import logging
 import os
 
 import sqlalchemy
+from flask import flash
 from flask_babel import gettext
 
 from aot.config_translations import TRANSLATIONS
@@ -19,12 +20,9 @@ from aot.aot_flask.utils.utils_general import custom_options_return_json
 from aot.aot_flask.utils.utils_general import delete_entry_with_id
 from aot.aot_flask.utils.utils_general import sync_geo_device_name
 from aot.utils.functions import device_module_names
+from aot.utils.module_hooks import drain_flash
 from aot.utils.functions import parse_function_information
 from aot.utils.system_pi import parse_custom_option_values
-from aot.aot_flask.utils.utils_map_config import (
-    ensure_map_config,
-    clone_map_config,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -83,9 +81,7 @@ def controller_mod(form_mod, request_form):
                 mod_controller.tab_id = new_tab_id
                 messages["tab_id"] = new_tab_id
         mod_controller.log_level_debug = form_mod.log_level_debug.data
-        mod_controller.latitude = form_mod.latitude.data if form_mod.latitude.data not in [None, ''] else None
-        mod_controller.longitude = form_mod.longitude.data if form_mod.longitude.data not in [None, ''] else None
-        mod_controller.location_source = form_mod.location_source.data
+        # [L2] 위치 필드는 저장하지 않는다 — 배치(지도)가 정본.
 
         # 채널 활성화/비활성화 처리
         measurements = DeviceMeasurements.query.filter(
@@ -212,6 +208,9 @@ def controller_mod(form_mod, request_form):
                 custom_options_channels_dict_presave,
                 custom_options_dict_postsave,
                 custom_options_channels_dict_postsave)
+            # 훅이 담아 둔 메시지(채널 삭제 등)는 웹 쪽인 여기서 띄운다 (module_hooks)
+            for category, msg in drain_flash(messages):
+                flash(gettext("%(msg)s", msg=msg), category)
             custom_options = json.dumps(custom_options_dict)  # 딕셔너리를 JSON 문자열로 변환
             custom_channel_options = custom_options_channels_dict
             if refresh_page:
@@ -268,7 +267,6 @@ def controller_del(cond_id):
 
     cond = CustomController.query.filter(
         CustomController.unique_id == cond_id).first()
-    map_config_id = cond.map_config_id if cond else None
 
     # Matter 장치: 비활성화·행 삭제보다 먼저 본다. 하위가 아직 쓰이고 있으면
     # 아무것도 바꾸지 않고 멈춘다. 아니면 장치에서 AoT Fabric 을 빼고(안 그러면
@@ -301,7 +299,7 @@ def controller_del(cond_id):
             # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
             # 남는다(위치 마커만 예외). 예전에는 이 경로가 도형을 아무것도
             # 정리하지 않아 고아 도형을 만들었다.
-            from aot.aot_flask.geo.device_binding import end_all_for_device
+            from aot.space.device_binding import end_all_for_device
             end_all_for_device(cond_id)
             delete_entry_with_id(
                 CustomController, cond_id, flash_message=False)

@@ -3,11 +3,12 @@ import json
 import logging
 from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime
 from datetime import datetime
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
+from aot.utils.timekit import naive_utc as _tk_naive_utc, utc_now as _tk_utc_now
 
 # Base imports for AoT models
 def utc_now():
-    return datetime.utcnow()
+    return _tk_naive_utc(_tk_utc_now())
 
 class CRUDMixin(object):
     """Mixin that adds convenience methods for CRUD operations."""

@@ -338,7 +338,7 @@ def test_modify_program_returns_content_to_review(app, daemon):
     검토 대기로 돌아간다."""
     from aot.aot_flask.extensions import db
     from aot.tools.aot_data_tool_service import AoTDataToolService
-    from aot.utils.time_utils import utc_now
+    from aot.utils.timekit import utc_now
 
     with app.test_request_context():
         created = _make_program()

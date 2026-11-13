@@ -22,7 +22,7 @@
 # WHY THE UPDATER IS IN A SEPARATE FILE
 #
 # When it applies an update the updater runs `docker compose -f
-# docker-compose.prod.yml up -d aot-app aot_daemon aot_mcp` -- the base file
+# docker-compose.prod.yml up -d aot-app aot_daemon aot_mcp aot_twin` -- the base file
 # only. Its own service is not in that file, so compose leaves it alone and it
 # survives the recreation it is performing. Do not move this service into the
 # base compose file: it would recreate itself mid-update and the update would

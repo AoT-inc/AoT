@@ -21,7 +21,7 @@ DB 트리거(p6_22/p6_23)가 '잘못된 데이터'를 막는다면, 이 검사�
   - 그 밖의 모듈은 geo 패키지의 공개 함수를 쓴다:
       장치 배치      aot.aot_flask.geo.device_placement.place_device
       배치 해제      aot.aot_flask.geo.device_placement.unplace_device
-      소속 조회      aot.aot_flask.geo.device_membership
+      소속 조회      aot.space.device_membership
       도형 저장      aot.aot_flask.geo.geo_overlays.GeoOverlayManager
 
 새 위반을 추가하지 말 것. 기존 예외를 늘려야 한다면 그 모듈이 정말 지도
@@ -49,11 +49,11 @@ SCAN_ROOT = os.path.join(ROOT, 'aot')
 # 지도 데이터를 소유하는 모듈들(저장소 루트 기준, '/' 구분).
 ALLOWED_PREFIXES = (
     'aot/aot_flask/geo/',              # geo 패키지 전체 — 정당한 소유자
+    'aot/space/',                      # geo 패키지에서 옮긴 공간 도메인(아키텍처 3단계·4c)
     'aot/aot_flask/api/geo.py',        # geo REST 리소스
     'aot/aot_flask/routes_geo.py',     # geo 페이지·API 라우트(핵심 — blueprint·전역 훅)
     'aot/aot_flask/routes_geo_map.py', # routes_geo 형제 — GeoSetting·parcel·site_order·design
     'aot/aot_flask/cli_geo.py',        # geo 스키마 마이그레이션 CLI
-    'aot/aot_flask/utils/utils_map_config.py',   # 지도 설정 수명주기
     'aot/databases/',                  # 모델 정의·DDL
     'aot/scripts/',                    # 진단·점검 스크립트
     'aot/tests/',                      # 테스트
@@ -94,13 +94,12 @@ WRITE_CLASSES = ('GeoShape', 'GeoFacility', 'GeoBinding')
 LEGACY_COLUMN_ATTRS = ('device_id', 'channel_id')
 LEGACY_COLUMN_USERS = {
     # geo 패키지 — 폴백 읽기와 마커 경로. 폴백 제거와 함께 사라진다.
-    'aot/aot_flask/geo/device_binding.py',
-    'aot/aot_flask/geo/device_membership.py',
+    'aot/space/device_binding.py',
+    'aot/space/device_membership.py',
     'aot/aot_flask/geo/device_placement.py',
     'aot/aot_flask/geo/geo_overlays.py',
     # 지도 데이터를 만드는 쪽 — 마커 좌표 수집(collect_devices).
     'aot/aot_flask/utils/utils_geo.py',
-    'aot/aot_flask/utils/utils_map_config.py',   # 지도 복제 시 마커 사본
     # 진단·이행 도구. 레거시를 봐야 하는 것이 존재 이유라 마지막까지 남는다.
     'aot/scripts/backfill_geo_binding.py',
     'aot/scripts/check_geo_integrity.py',
@@ -261,6 +260,119 @@ def scan_legacy_columns():
     return new_users, ghosts
 
 
+# [L2] 장치 행의 위치 컬럼 쓰기 금지 — 위치의 정본은 배치(마커 + geo_binding)이고
+# 읽는 쪽은 device_location.locate 다. 장치 모델(Input·Output·PID·Trigger·
+# Conditional·CustomController·Function)의 latitude/longitude/timezone 에
+# 대입하면 두 번째 정본이 생긴다. 컬럼 삭제는 L3·L4.
+# 면제는 "장치가 아닌 모델"과 geo 소유 모듈, 그리고 L3 에서 사라질 아래 2건뿐이다.
+# **늘리지 말 것.**
+#   - twin_config.py: 예보 지점 입력은 지도에 놓지 않는 임의 좌표라 배치가 없다.
+#     컬럼이 유일한 저장소(legacy_column 폴백) — L3 에서 지점 전용 자리를 정한 뒤 제거.
+#   - device_tz.py: 신규 장치의 시스템 시간대 폴백(tz_source='system') — L4 승격 뒤 제거.
+# 장치가 아닌 모델의 timezone 컬럼을 쓰는 파일(사용자·Misc 시간대 설정). 장치 행 쓰기가
+# 섞이면 안 되는 파일이므로 늘리지 말 것.
+DEVICE_COLUMN_NON_DEVICE_FILES = {
+    'aot/aot_flask/utils/utils_settings.py',
+}
+DEVICE_COLUMN_TRANSITIONAL = {
+    'aot/utils/twin_config.py',
+    'aot/utils/device_tz.py',
+}
+DEVICE_COLUMN_ATTRS = ('latitude', 'longitude', 'timezone')
+DEVICE_COLUMN_EXEMPT_PREFIXES = (
+    'aot/aot_flask/geo/', 'aot/space/',     # geo 소유 모듈(공간 도메인으로 옮긴 것 포함, 아키텍처 4c)
+    'aot/databases/', 'aot/scripts/', 'aot/tests/')
+# 변수 이름으로는 모델 종류를 알 수 없다(타입 추적 불가) — 면제는 이름이 아니라
+# 파일 단위 명부(DEVICE_COLUMN_NON_DEVICE_FILES)로만 한다.
+
+
+def scan_device_columns():
+    """장치 행 위치 컬럼 대입을 찾는다. (rel, lineno, snippet) 목록."""
+    hits = []
+    for path in iter_py():
+        rel = _rel(path)
+        if rel.startswith(DEVICE_COLUMN_EXEMPT_PREFIXES) \
+                or rel in DEVICE_COLUMN_TRANSITIONAL \
+                or rel in DEVICE_COLUMN_NON_DEVICE_FILES:
+            continue
+        try:
+            text = open(path, encoding='utf-8').read()
+            tree = ast.parse(text)
+        except Exception:
+            continue
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                targets = list(node.targets)
+            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)):
+                targets = [node.target]
+            else:
+                continue
+            flat = []
+            for t in targets:
+                flat.extend(t.elts if isinstance(t, (ast.Tuple, ast.List)) else [t])
+            for t in flat:
+                if isinstance(t, ast.Attribute) and t.attr in DEVICE_COLUMN_ATTRS \
+                        and isinstance(t.value, ast.Name) \
+                        and t.value.id not in ('self', 'cls'):
+                    hits.append((rel, node.lineno,
+                                 lines[node.lineno - 1].strip()[:90]))
+    return hits
+
+
+# [L3] 장치 행의 죽은 컬럼 3개 — 앱 코드는 읽지도 쓰지도 않는다. 위치는 배치가
+# 정본이고(device_location.locate / device_membership.map_for_device), 컬럼 정의·DDL
+# 은 다음 PR 에서 걷어낸다. 속성 접근(읽기·쓰기, self/cls 포함)·getattr·키워드 인자
+# (filter_by/모델 생성자)만 잡는다 — dict 키·문자열은 보지 않으므로, 다른 뜻의
+# `location_source`(실외 분류 출처, 구획 도형 출처)는 dict 키라 걸리지 않는다.
+DEAD_DEVICE_COLUMNS = ('map_config_id', 'location_source', 'location_updated_utc')
+DEAD_COLUMN_EXEMPT_PREFIXES = (
+    'aot/databases/', 'aot/tests/', 'alembic_db/', 'aot/alembic', 'migrations/')
+# 줄 단위 예외 명부 {(rel, 소스 줄 일부): 사유}. 비어 있어야 정상이다.
+DEAD_COLUMN_ALLOWLIST = {}
+
+
+def scan_dead_device_columns(root=None):
+    """죽은 장치 컬럼 3개를 다루는 코드를 찾는다. (rel, lineno, snippet) 목록."""
+    hits = []
+    for path in iter_py():
+        rel = _rel(path)
+        if rel.startswith(DEAD_COLUMN_EXEMPT_PREFIXES):
+            continue
+        try:
+            text = open(path, encoding='utf-8').read()
+            tree = ast.parse(text)
+        except Exception:
+            continue
+        lines = text.splitlines()
+        found = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and node.attr in DEAD_DEVICE_COLUMNS:
+                found.append(node.lineno)
+            elif isinstance(node, ast.Call):
+                fn = node.func
+                fname = (fn.id if isinstance(fn, ast.Name)
+                         else fn.attr if isinstance(fn, ast.Attribute) else '')
+                if (fname in ('getattr', 'setattr', 'hasattr')
+                        and len(node.args) >= 2
+                        and isinstance(node.args[1], ast.Constant)
+                        and node.args[1].value in DEAD_DEVICE_COLUMNS):
+                    found.append(node.lineno)
+                # 키워드 인자는 질의·모델 생성자일 때만 — render_template(map_config_id=…)
+                # 같은 템플릿 컨텍스트 변수는 컬럼이 아니다.
+                if fname == 'filter_by' or fname[:1].isupper():
+                    for kw in node.keywords:
+                        if kw.arg in DEAD_DEVICE_COLUMNS:
+                            found.append(getattr(kw.value, 'lineno', node.lineno))
+        for lineno in sorted(set(found)):
+            snippet = lines[lineno - 1].strip()[:90]
+            if any(r == rel and frag in snippet
+                   for (r, frag) in DEAD_COLUMN_ALLOWLIST):
+                continue
+            hits.append((rel, lineno, snippet))
+    return hits
+
+
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__,
@@ -283,8 +395,27 @@ def main():
 
     violations = scan()
     legacy, ghosts = scan_legacy_columns()
+    dev_cols = scan_device_columns()
+    dead_cols = scan_dead_device_columns()
+    if dead_cols:
+        print('FAIL: [L3] 장치 행의 죽은 컬럼(map_config_id/location_source/'
+              'location_updated_utc)을 읽거나 씁니다 — %d건\n' % len(dead_cols))
+        for rel, lineno, snippet in dead_cols:
+            print('  %s:%d' % (rel, lineno))
+            print('      %s' % snippet)
+        print('\n위치는 device_location.locate / 지도는 device_membership.map_for_device'
+              ' 를 쓰세요. 컬럼 정의는 다음 PR 에서 삭제됩니다.\n')
+    if dev_cols:
+        print('FAIL: [L2] 장치 행의 latitude/longitude/timezone 에 대입합니다 — %d건\n'
+              % len(dev_cols))
+        for rel, lineno, snippet in dev_cols:
+            print('  %s:%d' % (rel, lineno))
+            print('      %s' % snippet)
+        print('\n위치는 배치가 정본입니다: aot.aot_flask.geo.device_placement.place_device'
+              ' / 읽기는 device_location.locate. 컬럼 삭제는 L3·L4.\n')
 
-    if not violations and not legacy and not ghosts:
+    if not violations and not legacy and not ghosts and not dev_cols \
+            and not dead_cols:
         print('OK: geo 패키지 밖의 지도 데이터 쓰기 없음. '
               'GeoShape.device_id 신규 참조 없음.')
         return 0
@@ -296,7 +427,7 @@ def main():
             print('  %s:%d' % (rel, lineno))
             print('      %s' % snippet)
         print('\n공간↔장치 연결의 정본은 geo_binding 입니다. 읽기는')
-        print('  aot.aot_flask.geo.device_binding'
+        print('  aot.space.device_binding'
               ' (device_for_shape / devices_for_shapes / current)')
         print('쓰기는 bind / rebind / unbind / end_all_for_device 를 쓰세요.')
         print('배경: docs/design/geo-device-binding.md (GB-6)\n')
@@ -319,7 +450,7 @@ def main():
     print('\n지도 데이터는 geo 패키지가 소유합니다. 다음 문을 사용하세요:')
     print('  장치 배치/해제  aot.aot_flask.geo.device_placement'
           ' (place_device / unplace_device)')
-    print('  소속 조회       aot.aot_flask.geo.device_membership')
+    print('  소속 조회       aot.space.device_membership')
     print('  도형 저장       aot.aot_flask.geo.geo_overlays.GeoOverlayManager')
     print('배경: docs/design/geo-data-integrity.md')
     return 1

@@ -6,7 +6,8 @@ import time
 import uuid as _uuid_module
 from aot.databases.models import db
 from datetime import datetime, timedelta
-from aot.utils.time_utils import get_local_now, utc_now
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import to_tz, FARM
 import importlib
 import os
 import inspect
@@ -20,6 +21,7 @@ from collections import OrderedDict, deque
 import threading
 from aot.databases.models.ai import AIAgent
 from aot.databases.models.ai_task import AITask
+from aot.utils.timekit import naive_utc as _tk_naive_utc, utc_now as _tk_utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -850,7 +852,7 @@ class AIAgentService:
                 pass  # Outside request context — omit user filter (daemon/batch calls)
 
         try:
-            from aot.utils.time_utils import utc_now
+            from aot.utils.timekit import utc_now
             cutoff = utc_now() - timedelta(days=months * 30)
             _q = AIHistory.query.filter(
                 AIHistory.thread_id == thread_id,
@@ -1089,8 +1091,8 @@ class AIAgentService:
                             full_history = AIAgentService.get_thread_history(thread_id)
                             # [OPTION_D] Strip legacy action_type field from history
                             chat_history = [AIAgentService._strip_action_type_from_history(m) for m in full_history]
-                            from aot.utils.time_utils import get_local_now
-                            current_time_str = get_local_now().strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
+                            from aot.utils.timekit import to_tz, FARM, utc_now
+                            current_time_str = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
                             chat_result = chat_engine.run_reasoning(
                                 {"chat_history": chat_history, "current_time": current_time_str},
                                 command_text
@@ -1245,7 +1247,7 @@ class AIAgentService:
                 "chat_history": history, # Memory of previous turns
                 "user_command": command_text,
                 "page_context": page_context, # Current page/device context
-                "current_time": get_local_now().strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
+                "current_time": to_tz(utc_now(), FARM).strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
             }
 
             # Instructions for the LLM to focus on the specific user command
@@ -2034,7 +2036,7 @@ class AIAgentService:
                 "chat_history": history, # Injected memory
                 "worker_perspectives": worker_insights,
                 "page_context": page_context,
-                "current_time": get_local_now().strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
+                "current_time": to_tz(utc_now(), FARM).strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
             })
             # [Conversation memory] Recently-controlled devices in this thread, so
             # "모두 꺼줘 / turn them off" targets what was just acted on.
@@ -2550,7 +2552,7 @@ class AIAgentService:
             except Exception:
                 logger.exception('[chat-approval] 권한 분류 실패 — 제어 권한으로 본다')
                 _perm = 'edit_controllers'
-            if not user_has_permission(_perm, silent=True):
+            if _perm and not user_has_permission(_perm, silent=True):
                 return 'Insufficient permission: %s' % _perm
 
             # 그룹 스코프 — 대상은 인자 안에 있다(도구 호출은 겉 target_id 가
@@ -2755,7 +2757,7 @@ class AIAgentService:
                 'mcp_used': _is_physical,
                 'physical_outcome': result.get('physical_outcome', 'success' if _exec_success else 'failed'),
                 'history_id': history_id,
-                'executed_at': datetime.utcnow().isoformat() + 'Z',
+                'executed_at': _tk_naive_utc(_tk_utc_now()).isoformat() + 'Z',
             }
 
             # NOTE: A synchronous goal-continuation call used to run here (Phase B-2),
@@ -3380,7 +3382,7 @@ class AIAgentService:
                 "chat_history": history,
                 "user_command": command_text,
                 "page_context": page_context,
-                "current_time": get_local_now().strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
+                "current_time": to_tz(utc_now(), FARM).strftime("%Y-%m-%d %A %H:%M:%S %Z (UTC%z)")
             })
             # [Conversation memory] Devices controlled in this thread's recent turns, so
             # a follow-up like "모두 꺼줘 / 그거 꺼 / turn them off" targets what was JUST

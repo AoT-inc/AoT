@@ -10,6 +10,7 @@ from datetime import datetime
 from aot.aot_flask.extensions import db
 from aot.databases.models import AIContextRecord
 from aot.ai.services.ai_facility_learning_service import AIFacilityLearningService
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def context_record_confirm(record_id, user_id, new_value=None):
 
         record.context_state = "user_confirmed"
         record.confirmed_by = user_id
-        record.confirmed_at = datetime.utcnow()
+        record.confirmed_at = naive_utc(utc_now())
 
         db.session.commit()
 

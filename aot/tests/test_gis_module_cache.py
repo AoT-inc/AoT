@@ -73,7 +73,8 @@ class LoadModuleCachedTest(unittest.TestCase):
 
 class GisLayerDefTest(unittest.TestCase):
     def setUp(self):
-        from aot.aot_flask import routes_geo_layer as rgl
+        # 정본은 `aot.inputs_gis.layer_instance`(아키텍처 4c-1) — 라우트는 같은 객체를 다시 내보낸다.
+        from aot.inputs_gis import layer_instance as rgl
         self.rgl = rgl
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -91,6 +92,14 @@ class GisLayerDefTest(unittest.TestCase):
         patcher = mock.patch.object(rgl, 'parse_input_information', parse)
         patcher.start()
         self.addCleanup(patcher.stop)
+
+    def test_the_route_module_re_exports_the_same_objects(self):
+        from aot.aot_flask import routes_geo_layer
+        from aot.aot_flask.utils import utils_geo
+        self.assertIs(routes_geo_layer._GIS_LAYER_DEFS, self.rgl._GIS_LAYER_DEFS)
+        self.assertIs(routes_geo_layer._gis_layer_def, self.rgl._gis_layer_def)
+        self.assertIs(routes_geo_layer._load_gis_layer_instance, self.rgl._load_gis_layer_instance)
+        self.assertIs(utils_geo.MockInputDev, self.rgl.MockInputDev)
 
     def test_the_definition_is_parsed_once_while_the_file_is_unchanged(self):
         first = self.rgl._gis_layer_def('gis_x')

@@ -74,10 +74,14 @@ class Wiring(unittest.TestCase):
 
     def test_crops_op_defaults_to_compact_for_every_inner_tool(self):
         from aot.tools.domain.registry_data import OPS
-        o = {(x.tool, x.op): x for x in OPS}[('overview', 'crops')]
+        """overview.crops 는 find.plots 로 합쳐졌다(재설계 PR 3): 옛 이름은 `detail=false` 고정으로 예전 압축 모양을 지키고,
+        find.plots 자신의 기본은 그대로이며 시설(get_crop_status)만 압축이 기본이다."""
+        from aot.tools.domain import renames
+        o = {(x.tool, x.op): x for x in OPS}[('find', 'plots')]
         self.assertIn('detail', o.extra_args)
-        self.assertEqual(set(o.inner), set(o.defaults_by_kind))
-        self.assertTrue(all(v == {'detail': False} for v in o.defaults_by_kind.values()))
+        self.assertEqual({'detail': False}, o.defaults_by_kind['facility'])
+        alias = renames.OP_ALIASES[('overview', 'crops')]
+        self.assertEqual(({'detail': False}, 'find', 'plots'), (alias.fixed, alias.tool, alias.op))
 
 
 if __name__ == '__main__':

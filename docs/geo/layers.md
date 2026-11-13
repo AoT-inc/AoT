@@ -143,6 +143,21 @@ Values are read through the server (`/api/geo/proxy/agromonitoring/<unique_id>`)
 
 ---
 
+## Elevation Inputs (3D Terrain) { #elevation }
+
+An elevation input is not a visible map layer. It supplies the heights for 3D terrain and does not appear in the layer panel. Add and turn on the one source you want to use.
+
+| Input | Key | Notes |
+| :--- | :--- | :--- |
+| Mapterhorn Terrain | None | 30 m in Korea |
+| AWS Terrain Tiles | None | Not updated since 2017 |
+| MapTiler Terrain | MapTiler key | Counts against MapTiler usage |
+| Custom Terrain Tiles | Depends on the server | A tile server you choose. Enter the URL, encoding (terrarium or mapbox), tile size, maximum zoom, and attribution |
+
+- If several are on, the first in layer page order is used.
+- **3D Terrain** appears in the [GIS settings](settings.md#performance-rendering) only while an elevation input is on. Without one, the map stays 2D.
+- AoT does not supply elevation data. The operator checks the terms and attribution for each source.
+
 ## WMS Layers { #wms-layers }
 
 Some providers deliver their overlays over WMS (Web Map Service) instead of ready-made tiles — the VWorld data overlays (cadastral map, agricultural promotion area, ecological naturalness, development restriction zone, individual official land price) and ISRIC SoilGrids. There is no separate WMS entry to fill in: register the provider and pick the channel you want in its settings.

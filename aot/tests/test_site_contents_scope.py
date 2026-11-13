@@ -29,7 +29,7 @@ import inspect
 import re
 import unittest
 
-from aot.aot_flask.geo import device_membership
+from aot.space import device_membership
 
 
 class TestTheSwitchExists(unittest.TestCase):
@@ -126,8 +126,7 @@ class TestOnlyTheSiteEndpointTurnsItOff(unittest.TestCase):
                                                    node.lineno))
         self.assertEqual(len(hits), 1,
                          '끄는 자리는 화면 규칙(screen_members) 하나여야 합니다: %s' % hits)
-        self.assertTrue(hits[0].startswith(os.path.join('aot_flask', 'geo',
-                                                        'device_membership.py')),
+        self.assertTrue(hits[0].startswith(os.path.join('space', 'device_membership.py')),
                         hits)
 
 

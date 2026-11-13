@@ -9,6 +9,7 @@
 
 라이브 DB 를 쓰지 않는다(임시 sqlite, 임시 첨부 디렉터리).
 """
+from aot.utils.timekit import FARM, today_at
 import os
 import tempfile
 import unittest
@@ -53,7 +54,7 @@ def setUpModule():
     for i in range(14):
         db.session.add(GeoPlot(
             unique_id='cp-%02d' % i, geo_id='map-cp', subject='콩%02d' % i,
-            started_on=date.today(),
+            started_on=today_at(FARM),
             feature={'type': 'Feature', 'properties': {},
                      'geometry': _square(i * 0.001, 0.5, 0.0005)}))
     db.session.add(Notes(unique_id='note-one', name='하나', files='solo.png'))

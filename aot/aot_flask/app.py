@@ -10,7 +10,7 @@ import threading
 import time
 
 import flask_login
-from flask import Flask, flash, jsonify, redirect, request, url_for
+from flask import Flask, flash, has_request_context, jsonify, redirect, request, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import event
 from flask_babel import Babel, gettext
@@ -29,7 +29,7 @@ from aot.aot_flask import (routes_admin, routes_authentication,
                                  routes_method, routes_output, routes_page,
                                  routes_password_reset, routes_remote_admin,
                                  routes_settings, routes_static, routes_notes_api,
-                                 routes_ai_agent, routes_tab, routes_access, routes_camera, routes_orch_api, routes_mcp_api,
+                                 routes_ai_agent, routes_tab, routes_access, routes_camera, routes_camera_driver, routes_orch_api, routes_mcp_api,
                                  routes_ai_monitoring)
 from aot.aot_flask.api import api_blueprint, init_api
 from aot.aot_flask.extensions import db
@@ -176,7 +176,11 @@ def create_app(config=ProdConfig, run_scheduler=False):
 
     # ProxyFix for Docker/Nginx environments
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
-    
+    # 도커처럼 웹 앞에 nginx 가 없을 때 `/mcp` 를 MCP 서버로 넘긴다(AOT_MCP_UPSTREAM 이 있을 때만).
+    # ProxyFix 보다 바깥이라 받은 헤더를 고치지 않은 채 넘긴다 — nginx 와 같은 자리.
+    from aot.aot_flask import mcp_forward
+    mcp_forward.install(app)
+
     app.config['TEMPLATES_AUTO_RELOAD'] = app.debug
     # 1년 캐시 (버전 쿼리스트링으로 캐시 무효화)
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000
@@ -275,7 +279,21 @@ def create_app(config=ProdConfig, run_scheduler=False):
 
     register_response_guards(app)
     register_web_presence(app)
+    register_web_latency(app)
+    register_poll_scale(app)
+    register_heavy_guard(app)
     register_slow_request_log(app)
+
+    @app.context_processor
+    def inject_device_placement_summary():
+        """옵션 모달 배치 요약 — 위치의 정본은 리졸버(device_location.locate)."""
+        def device_placement_summary(device_id):
+            try:
+                from aot.space.device_location import placement_summary
+                return placement_summary(device_id)
+            except Exception:
+                return None
+        return {'device_placement_summary': device_placement_summary}
 
     @app.context_processor
     def inject_current_locale():
@@ -300,8 +318,8 @@ def create_app(config=ProdConfig, run_scheduler=False):
         aot-fallback-tz meta 용. 개인 tz(current_user.timezone)가 우선이고
         이건 미로그인/미설정 + 브라우저 tz 불가일 때의 최후 폴백."""
         try:
-            from aot.utils.timekit import system_tz_name
-            return {'system_timezone': system_tz_name() or 'UTC'}
+            from aot.utils.timekit import FARM, tz_of
+            return {'system_timezone': str(tz_of(FARM))}
         except Exception:
             return {'system_timezone': 'UTC'}
 
@@ -316,8 +334,8 @@ def create_app(config=ProdConfig, run_scheduler=False):
         다르다).
         """
         def viewer_tz_label():
-            from aot.utils.timekit import current_user_tz, tz_label
-            return tz_label(current_user_tz())
+            from aot.utils.timekit import tz_label, tz_of, VIEWER
+            return tz_label(tz_of(VIEWER))
 
         from aot.aot_flask.utils.utils_notes import utc_to_wall_str
         return {'viewer_tz_label': viewer_tz_label,
@@ -398,6 +416,16 @@ def create_app(config=ProdConfig, run_scheduler=False):
     _ASSET_BUILD_ID = '%s-%x' % (_AOT_VERSION, int(time.time()))
 
     @app.context_processor
+    def inject_camera_event_choices():
+        """trigger_camera_event 설정 줄이 쓰는 카메라·종류 선택지(필요할 때만 조회)."""
+        def camera_event_choices():
+            from aot.camera_drivers.trigger_camera_event import camera_choices
+            return camera_choices()
+        from aot.camera_drivers.capabilities import EVENT_KINDS
+        return {'camera_event_choices': camera_event_choices,
+                'camera_event_kinds': EVENT_KINDS}
+
+    @app.context_processor
     def inject_user_i18n_fingerprint():
         """사용자 지정 이름 번역 사전의 캐시 지문.
 
@@ -431,6 +459,7 @@ def create_app(config=ProdConfig, run_scheduler=False):
         return {'maplibre_version': _maplibre.bundled_version(),
                 'maplibre_major': _maplibre.bundled_major(),
                 'maplibre_vendor_dir': _maplibre.vendor_dir()}
+
 
     # ── Bundle asset() — content-hash cache-busting for built JS bundles ──
     # Reads static/js/dist/manifest.json (bundle name -> content hash, written by
@@ -580,19 +609,13 @@ def register_extensions(app, run_scheduler=False):
     except Exception as _ekg_init_err:
         logger.warning("[EKG] Signal listener registration failed: %s", _ekg_init_err)
 
-    # Auto-populate device.timezone from latitude/longitude on insert/update
-    try:
-        from aot.databases.device_tz_listeners import register_device_tz_listeners
-        register_device_tz_listeners()
-    except Exception as _tz_init_err:
-        logger.warning("[device_tz] Listener registration failed: %s", _tz_init_err)
-
     # P3: invalidate the AI system-knowledge snapshot whenever the user adds/edits/
     # removes a device/function/zone, so answers reflect the change immediately
     # instead of a stale pre-change snapshot.
     try:
         from aot.databases.change_tracking import register_change_listeners
-        register_change_listeners()
+        from aot.ai.services import system_knowledge_service as _sk
+        register_change_listeners(_sk.mark_dirty)
     except Exception as _ct_init_err:
         logger.warning("[change_tracking] Listener registration failed: %s", _ct_init_err)
 
@@ -944,6 +967,7 @@ def register_blueprints(app):
     app.register_blueprint(routes_tab.blueprint)  # register tab routes
     app.register_blueprint(routes_access.blueprint)  # 그룹 부여(자원 쪽 편집)
     app.register_blueprint(routes_camera.blueprint)  # register camera routes
+    app.register_blueprint(routes_camera_driver.blueprint)  # camera driver (VIGI) routes
     app.register_blueprint(routes_orch_api.blueprint)  # register orch api routes
     app.register_blueprint(routes_mcp_api.blueprint)   # register mcp api routes
     app.register_blueprint(routes_ai_monitoring.ai_monitoring_bp)  # register ai monitoring routes
@@ -1053,8 +1077,11 @@ def extension_babel(app):
         except:
             pass
 
+        # 요청 밖(트윈·데몬처럼 앱 문맥만 있는 곳)에는 Accept-Language 가 없다 — None 이면 Babel 이 기본 언어를 쓴다.
+        if not has_request_context():
+            return None
         return request.accept_languages.best_match(LANGUAGES.keys())
-    
+
     def get_timezone():
         # Check if a timezone is set in the Misc database
         try:
@@ -1107,6 +1134,9 @@ def extension_limiter(app):
     limiter.limit("1000/hour")(routes_authentication.remote_auth)
     limiter.limit("20/hour")(routes_password_reset.blueprint)
     limiter.limit("200/minute")(api_blueprint)
+    # 상담용 필지 조회는 호출 한 번이 외부(VWorld) 호출을 3~7번 부른다 — 블루프린트 기본보다 촘촘히.
+    from aot.aot_flask.api.consult import limit_consult_parcel
+    limit_consult_parcel(limiter, app)
     # 내장 인가 서버는 인터넷에 열리는 경로다. 서비스(claude.ai)가 대신 부르는 경로는 키가 서비스의 공유 주소라
     # 넉넉히, 등록은 한 번이면 되니 촘촘히 둔다. 로그인 시도 횟수는 위 routes_authentication 의 제한이 그대로 맡는다.
     from aot.aot_flask import routes_oauth_embedded
@@ -1189,9 +1219,12 @@ _SAFE_METHODS = frozenset(('GET', 'HEAD', 'OPTIONS'))
 #: 필요해 POST 일 뿐, 아무것도 바꾸지 않는다(routes_general.py 참조). 원격 AoT
 #: 수집도 이 경로로 값을 받아오므로 여기서 막으면 수집 전용 키가 성립하지 않는다.
 #:
+#: `/api/consult/parcel` 은 주소 하나로 필지 도형을 외부(VWorld)에서 받아 응답으로만
+#: 돌려준다. 본문이 필요해 POST 일 뿐 DB 에 쓰지 않는다(api/consult.py).
+#:
 #: **경로를 추가할 때는 그 핸들러가 정말 아무것도 쓰지 않는지 본문을 읽고 확인할
 #: 것.** 이 목록이 스코프의 유일한 구멍이다.
-_READONLY_POST_PATHS = frozenset(('/data_batch',))
+_READONLY_POST_PATHS = frozenset(('/data_batch', '/api/consult/parcel'))
 
 
 def _raw_api_keys_from_request(req):
@@ -1363,6 +1396,180 @@ def register_slow_request_log(app):
     return app
 
 
+def register_web_latency(app):
+    """모든 요청의 소요 시간을 워커별로 모아 최근 1분 p50·p95 를 남긴다.
+
+    자원 압박 판정(`utils.resource_pressure`)의 웹 쪽 신호다. 느린 요청 로그와 달리
+    끌 수 없게 따로 건다(그 로그는 `AOT_SLOW_REQUEST_MS=0` 이면 등록조차 안 된다).
+    요청마다 하는 일은 사전에 시작 시각을 넣고 빼는 것뿐이고, 파일은 워커의 배경
+    스레드가 5초에 한 번 쓴다. 끝은 teardown 에서 잡는다 — 예외로 끝난 요청도 센다.
+
+    재는 것은 폴링·API 처럼 "가벼워야 할" 요청뿐이다. 페이지(문서) 렌더와 로그인은
+    원래 느려서(대시보드 렌더 수백 ms, 비밀번호 해시 0.5~1초) 넣으면 한 사람이 화면을
+    열기만 해도 '주의' 가 된다(S2 실측, 26-11-08). 시작 때 요청 머리로 거르고
+    (`web_latency.is_excluded`), 끝날 때 응답이 페이지 크기의 HTML 이면 마저 버린다
+    (`web_latency.is_page_response` — 문자열을 돌려주는 폴링도 text/html 이라 크기로 가른다).
+    """
+    from aot.utils import web_latency
+
+    @app.before_request
+    def _web_latency_start():
+        try:
+            if not web_latency.is_excluded(request.path, request.headers):
+                request.environ['aot.web_latency_token'] = web_latency.begin()
+                request.environ['aot.web_latency_fetch'] = web_latency.is_fetch(request.headers)
+        except Exception:
+            pass
+
+    @app.after_request
+    def _web_latency_mark_page(response):
+        try:
+            if web_latency.is_page_response(request.environ.get('aot.web_latency_fetch'),
+                                            response.mimetype, response.content_length):
+                request.environ['aot.web_latency_page'] = True
+        except Exception:
+            pass
+        return response
+
+    @app.teardown_request
+    def _web_latency_end(_exc):
+        try:
+            web_latency.end(request.environ.pop('aot.web_latency_token', None),
+                            keep=not request.environ.get('aot.web_latency_page'))
+        except Exception:
+            pass
+    return app
+
+
+def register_poll_scale(app):
+    """응답마다 서버의 압박 단계를 폴링 배율로 알린다(`X-AoT-Poll-Scale: 1|2|4`).
+
+    화면의 전역 폴링 관리자(aot-poll-visibility.js)가 이 값을 반복 타이머 전부에 곱한다
+    — 위젯을 고치지 않고 서버가 바쁠 때 요청 수 자체를 줄인다(R4a). 출력·PID 처럼
+    조작 결과를 곧바로 보여야 하는 위젯은 화면 쪽에서 뺀다.
+
+    요청 스레드에서는 판정을 **계산하지 않는다**(`resource_pressure.peek`) — 파이에서는
+    vcgencmd 가 최대 2초 걸릴 수 있다. 판정은 워커마다 첫 요청 때 띄우는 표본 스레드가
+    5초마다 이어 간다(gunicorn 은 fork 하므로 워커에서 띄워야 산다).
+    """
+    from aot.utils import resource_pressure
+
+    @app.before_request
+    def _poll_scale_sampler():
+        try:
+            resource_pressure.start_sampler()
+        except Exception:
+            pass
+
+    @app.after_request
+    def _poll_scale_header(response):
+        try:
+            if not request.path.startswith('/static/'):
+                snap = resource_pressure.peek()
+                if snap is not None:
+                    response.headers[resource_pressure.POLL_SCALE_HEADER] = \
+                        str(resource_pressure.poll_scale(snap))
+        except Exception:
+            pass
+        return response
+    return app
+
+
+#: 과부하일 때 동시 처리 수를 제한하는 무거운 요청(자원 조절 R4b) — 엔드포인트 이름.
+#: 사람이 누르는 긴 구간 조회·내보내기만 넣는다. 제어·출력·알람·인증·설정 저장·
+#: `/data_batch`(거절하면 낱개 요청으로 되물어 부하가 는다 — 대신 병렬 수를 줄인다)·
+#: 지도 타일(캐시 적중까지 막게 된다)·AI 채팅·로그 폴링(503 이 화면에 오류 문구로
+#: 그대로 보인다)은 넣지 않는다.
+HEAVY_ENDPOINTS = frozenset({
+    'routes_general.export_data',
+    'routes_general.async_data',
+    'routes_general.async_usage_data',
+    'routes_page.page_logview_download',
+    'routes_page.page_audit_log_export',
+})
+#: `/past/...` 는 이 길이(초)를 넘을 때만 무겁다고 본다 — 지도 팝업 스파크라인(6시간)·
+#: 센서 라벨(24시간 기본)보다 긴, 사람이 고른 긴 구간.
+HEAVY_PAST_SECONDS = 86400
+#: 과부하일 때 워커 하나가 동시에 받는 무거운 요청 수.
+HEAVY_MAX_WHEN_OVERLOAD = 1
+#: 거절할 때 알리는 재시도 시각(초).
+HEAVY_RETRY_AFTER_S = 30
+
+
+def _is_heavy_request(endpoint, view_args):
+    if endpoint in HEAVY_ENDPOINTS:
+        return True
+    if endpoint == 'routes_general.past_data':
+        try:
+            return int((view_args or {}).get('past_seconds')) > HEAVY_PAST_SECONDS
+        except (TypeError, ValueError):
+            return False
+    return False
+
+
+def register_heavy_guard(app):
+    """서버가 과부하일 때만 무거운 요청의 동시 처리 수를 워커당 제한한다(R4b).
+
+    정상·주의에서는 아무것도 막지 않는다. 과부하에서 이미 무거운 요청이 돌고 있으면 새
+    것은 503 + `Retry-After` 로 돌려보낸다 — 대기열에 쌓아 두면 스레드(파이 6개)를 다
+    물고, 그 뒤에 선 폴링·조작까지 함께 느려진다. 화면은 Retry-After 동안 폴링도 늦춘다
+    (aot-data-batch.js readServerHints).
+    판정은 `resource_pressure.peek()`(계산하지 않음)이고, 판정이 없으면 막지 않는다.
+    """
+    import threading as _threading
+    from aot.utils import resource_pressure
+
+    state = {'inflight': 0}
+    lock = _threading.Lock()
+
+    @app.before_request
+    def _heavy_guard_enter():
+        try:
+            if not _is_heavy_request(request.endpoint, request.view_args):
+                return None
+            # 로그인 전이면 뷰의 login_required 가 로그인 화면으로 보내게 둔다(503 이 아니라).
+            from flask_login import current_user as _cu
+            if not getattr(_cu, 'is_authenticated', False):
+                return None
+            snap = resource_pressure.peek()
+            overloaded = (snap is not None and
+                          snap.get('stage', 0) >= resource_pressure.STAGE_OVERLOAD)
+            with lock:
+                if overloaded and state['inflight'] >= HEAVY_MAX_WHEN_OVERLOAD:
+                    reject = True
+                else:
+                    reject = False
+                    state['inflight'] += 1
+                    request.environ['aot.heavy_slot'] = True
+        except Exception:
+            return None
+        if not reject:
+            return None
+        from flask import jsonify as _jsonify
+        logger.info('[heavy-guard] 과부하 — %s 거절(Retry-After %ds)',
+                    request.endpoint, HEAVY_RETRY_AFTER_S)
+        try:
+            from flask_babel import gettext as _gettext
+            message = _gettext('Please try again in a moment.')
+        except Exception:                   # 번역을 못 불러도 거절은 나가야 한다
+            message = 'Please try again in a moment.'
+        resp = _jsonify({'status': 'busy', 'retry_after': HEAVY_RETRY_AFTER_S,
+                         'message': message})
+        resp.status_code = 503
+        resp.headers['Retry-After'] = str(HEAVY_RETRY_AFTER_S)
+        return resp
+
+    @app.teardown_request
+    def _heavy_guard_leave(_exc):
+        try:
+            if request.environ.pop('aot.heavy_slot', False):
+                with lock:
+                    state['inflight'] = max(0, state['inflight'] - 1)
+        except Exception:
+            pass
+    return app
+
+
 def register_web_presence(app):
     """사용자가 어느 기기로 어느 화면을 보고 있는지 남긴다(MCP get_screen 용).
 
@@ -1470,7 +1677,10 @@ def extension_login_manager(app):
     @login_manager.unauthorized_handler
     def unauthorized():
         if request.path.startswith('/api/'):
-            response = jsonify({'error': 'Unauthorized'})
+            # 상담용 경로는 성공·실패 모두 {ok, error:<코드>} 모양이다(api/consult.py).
+            body = ({'ok': False, 'error': 'unauthorized'}
+                    if request.path.startswith('/api/consult/') else {'error': 'Unauthorized'})
+            response = jsonify(body)
             response.headers['Access-Control-Allow-Origin'] = '*'
             return response, 401
         # 안내 메시지는 사람이 보는 화면 이동(문서 탐색)일 때만 남긴다. 위젯 폴링

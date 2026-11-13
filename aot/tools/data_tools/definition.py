@@ -18,11 +18,29 @@ class DefinitionToolsMixin:
         from aot.utils.outputs import parse_output_information
         return parse_output_information()
 
+    @staticmethod
+    def _plain(value):
+        """종류 정의의 이름·옵션 문구는 `lazy_gettext` 라 그대로는 JSON 으로 못 나간다
+        (`Object of type LazyString is not JSON serializable` — 응답 전체가 실패한다).
+        위젯 목록과 같은 규칙(`SystemToolsMixin._jsonable`)으로 lazy 값만 문자열로 푼다."""
+        from aot.tools.data_tools.system import SystemToolsMixin
+        return SystemToolsMixin._jsonable(value)
+
     @classmethod
-    def list_device_types(cls, kind=None, **extra):
+    def list_device_types(cls, kind=None, query=None, **extra):
         """List valid device TYPES available for creation.
         kind: 'input' | 'output' | 'function'. Call this BEFORE create_* so the
-        chosen type is real (never invent a type). Returns {kind, types:[{type,name}]}."""
+        chosen type is real (never invent a type). query: part of a type or its
+        name (case-insensitive). Returns {kind, types:[{type,name}]}."""
+        out = cls._plain(cls._list_device_types(kind))
+        q = str(query or '').strip().lower()
+        if q and isinstance(out, dict) and isinstance(out.get('types'), list):
+            out['types'] = [t for t in out['types']
+                            if q in str(t.get('type') or '').lower() or q in str(t.get('name') or '').lower()]
+        return out
+
+    @classmethod
+    def _list_device_types(cls, kind):
         k = (kind or '').lower().strip()
         try:
             if k == 'function':
@@ -47,6 +65,10 @@ class DefinitionToolsMixin:
     def get_device_type_options(cls, kind=None, device_type=None, **extra):
         """Return the configurable OPTION schema (id/type/name/default) for a device
         type, so the AI knows what to pass to modify_*. kind: 'input'|'output'|'function'."""
+        return cls._plain(cls._device_type_options(kind, device_type))
+
+    @classmethod
+    def _device_type_options(cls, kind, device_type):
         k = (kind or '').lower().strip()
         try:
             if k == 'function':

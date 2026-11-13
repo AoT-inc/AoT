@@ -735,6 +735,14 @@ class CustomModule(
         }
 
     # ─────────────────────────────────────────────────────────────────────────
+    def seconds_until_due(self):
+        """다음 주기까지 — 긴급정지 보류 중이면 보류가 풀리는 때까지(loop 와 같은 규칙)."""
+        try:
+            due = max(float(self.timer_loop), float(self._emergency_hold_until))
+        except (AttributeError, TypeError, ValueError):
+            return None
+        return due - time.time()
+
     def loop(self) -> None:
         now = time.time()
         # 긴급정지 보류는 timer_loop 와 별개로 지킨다 — timer_loop 를 0 으로

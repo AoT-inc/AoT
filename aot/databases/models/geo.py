@@ -7,7 +7,7 @@ from datetime import datetime
 import json
 from sqlalchemy import JSON
 from aot.databases import CRUDMixin, set_uuid
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 def _flatten_coords(coords):
@@ -150,8 +150,8 @@ class GeoSetting(CRUDMixin, db.Model):
     digital_zoom = db.Column(db.Boolean, default=True)
     smooth_zoom = db.Column(db.Boolean, default=True)
 
-    default_lat = db.Column(db.Float, default=37.5665)
-    default_lng = db.Column(db.Float, default=126.9780)
+    default_lat = db.Column(db.Float, default=None)
+    default_lng = db.Column(db.Float, default=None)
     tile_fade_animation = db.Column(db.Boolean, default=True)
     prefer_canvas = db.Column(db.Boolean, default=False)
 
@@ -221,8 +221,8 @@ class GeoShape(CRUDMixin, db.Model):
     # Links to GeoMap (unified to 'geo_id' as per migration plan)
     geo_id = db.Column(db.String(64), nullable=False, index=True)
     
-    device_id = db.Column(db.String(64), nullable=True, index=True)
-    
+    # 장치 연결은 geo_binding 이 정본이다 — 레거시 `device_id` 컬럼은 p7_06 에서 지웠다(L4).
+
     # Hierarchy
     type = db.Column(db.String(32), nullable=False, default='feature', index=True) # site, zone, feature
     channel_id = db.Column(db.String(64), nullable=True, index=True)
@@ -295,6 +295,14 @@ class GeoShape(CRUDMixin, db.Model):
 
         `_seen` guards against parent_id cycles.
         """
+        from flask import has_app_context
+        if not has_app_context():
+            # 데몬: 아래 `.query` 는 컨텍스트가 없으면 실패한다 → 같은 순서를 `_db_row` 로.
+            # (Flask 안에서는 세션의 미커밋 변경을 봐야 해서 아래 경로를 그대로 둔다 —
+            #  geo_overlays 의 tz 물질화가 같은 트랜잭션에서 부모를 바꾼다.)
+            from aot.utils.timekit import _shape_tz
+            return _shape_tz(self, _seen)
+
         import pytz
 
         # 1. materialized value on this shape
@@ -521,6 +529,11 @@ class GeoFacility(CRUDMixin, db.Model):
     #   실측 기상 장치(AWS): 300~900, 예보 서비스(KMA/OpenMeteo): 3600~10800
     weather_bindings = db.Column(JSON, nullable=True)
 
+    # 시설 모형(층·덩어리·공간, 시설 모형 확장 F2). NULL 이면 지금 경로(geometry_3d 의 직사각형 동)를
+    # 그대로 쓴다. 기존 행은 변환하지 않고, 사용자가 구조 편집을 저장한 시설에만 쓴다.
+    # 스키마·검증: aot/space/facility_layout.py (`validate_layout`). 좌표는 fitting 로컬 미터 [x, z].
+    layout = db.Column(JSON(none_as_null=True), nullable=True)
+
     sort_order = db.Column(db.Integer, default=0)
     notes = db.Column(db.Text, default='')
 
@@ -578,6 +591,11 @@ class GeoFacility(CRUDMixin, db.Model):
           2. centroid of linked GeoShape → timezonefinder lookup
           3. None (caller must handle UTC fallback)
         """
+        from flask import has_app_context
+        if not has_app_context():
+            from aot.utils.timekit import _facility_tz
+            return _facility_tz(self)
+
         import pytz
         from aot.utils.device_tz import resolve_tz_from_coords
 

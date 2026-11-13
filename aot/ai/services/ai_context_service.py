@@ -4,7 +4,8 @@ import json
 import copy
 import math
 from datetime import datetime, timedelta, timezone
-from aot.utils.time_utils import get_local_now, utc_now, to_local, serialize_ts
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import iso_at, FARM, to_tz
 from sqlalchemy import or_, func
 
 from aot.databases.models import GeoMap, GeoShape, Input, Camera, EnergyUsage, Notes, DeviceMeasurements, Conversion, Actions, Misc, db
@@ -205,6 +206,10 @@ class AIContextService:
             from aot.utils.geo_hierarchy import (
                 build_geo_parent_map, collapsed_zones_by_site)
             parent_map = build_geo_parent_map(all_shapes)
+            # 마커 → 장치는 장치 위치 게이트웨이(바인딩 우선, 이력 없을 때만 레거시)로
+            # 한 번에 — 도형 컬럼 `device_id` 를 직접 읽지 않는다(N+1 없음).
+            from aot.space.device_binding import devices_for_shapes
+            dev_of = devices_for_shapes(all_shapes)
             # 접힌 zone(site 와 같은 땅의 유일한 기본 이름 zone)은 트리에서 한 겹
             # 건너뛴다 — 판정은 geo_hierarchy 한 곳(docs: collapse-single-zone).
             # zone 자체는 DB 에 그대로고, site 노드의 `collapsed_zone` 으로 id 만 남긴다.
@@ -242,7 +247,7 @@ class AIContextService:
                                 meta.get('name') or props.get('label_name') or 
                                 (s.type.capitalize() + " " + str(s.id)))
 
-                d_id = (s.device_id or 
+                d_id = (dev_of.get(s.unique_id) or 
                         meta.get('unique_id') or meta.get('node_id') or meta.get('device_id') or
                         props.get('unique_id') or props.get('node_id') or props.get('device_id'))
                 
@@ -314,7 +319,7 @@ class AIContextService:
                     child_props = child_feat.get('properties', {}) if isinstance(child_feat, dict) else {}
 
                     # Define what constitutes an 'Equipment' (No device_id usually means it's a passive asset)
-                    is_equipment = (child.type == 'feature' and not child.device_id) or \
+                    is_equipment = (child.type == 'feature' and not dev_of.get(child.unique_id)) or \
                                    child_props.get('is_equipment')
 
                     if is_equipment and tier in ['lightweight', 'standard']:
@@ -541,7 +546,7 @@ class AIContextService:
         try:
             supply_ctx = []
 
-            # 1. Irrigation (Moisture) — 구획마다 최근 7일 물량. 옛 `IrrigationDesign` 표가 아니라 물 회로의
+            # 1. Irrigation (Moisture) — 구획마다 최근 7일 물량. 물 회로의
             #    닫힌 날 결과(`water_day`)를 읽는다(일지·지도·MCP 와 같은 숫자). 저장된 날이 없으면 비어 있다.
             try:
                 from aot.utils import water_net_link
@@ -639,7 +644,14 @@ class AIContextService:
             
             settings = Misc.query.first()
             sensor_ctx = []
-            
+            # 위치는 리졸버(일괄)로 — 입력 행의 latitude/longitude 를 직접 읽지 않는다.
+            from aot.space.device_location import locate_many
+            _located = locate_many([('input', i.unique_id) for i in active_inputs])
+
+            def _pt_of(dev):
+                pl = _located.get(('input', dev.unique_id))
+                return pl.point if pl is not None and pl.point is not None else (None, None)
+
             for input_dev in active_inputs:
                 try:
                     dev_measurements = DeviceMeasurements.query.filter_by(
@@ -697,8 +709,8 @@ class AIContextService:
                                             # the location-aware time work (age_seconds/status carry the
                                             # freshness signal the AI actually reasons on; this is display).
                                             try:
-                                                from aot.utils.device_tz import resolve_location_tz
-                                                _display_time = val_time.astimezone(resolve_location_tz(input_dev.unique_id))
+                                                from aot.utils.timekit import tz_of
+                                                _display_time = val_time.astimezone(tz_of(input_dev.unique_id))
                                             except Exception:
                                                 _display_time = val_time
                                             readings.append({
@@ -723,8 +735,8 @@ class AIContextService:
                             "input_id": input_dev.unique_id,
                             "name": input_dev.name or input_dev.device,
                             "device": input_dev.device,
-                            "latitude": input_dev.latitude,
-                            "longitude": input_dev.longitude,
+                            "latitude": _pt_of(input_dev)[0],
+                            "longitude": _pt_of(input_dev)[1],
                             "readings": readings
                         })
                 except Exception as e:
@@ -806,7 +818,7 @@ class AIContextService:
                     # bare isoformat() shows the UTC hour as if it were local
                     # wall-clock time (e.g. Output.on_until/off_until, a live
                     # control window the AI may reason about directly).
-                    val = serialize_ts(val)
+                    val = iso_at(val, FARM)
                 elif isinstance(val, timedelta):
                     # timedelta has no .isoformat() — would raise AttributeError
                     val = str(val)
@@ -849,7 +861,7 @@ class AIContextService:
                     # DB DateTime columns come back naive (SQLite strips tzinfo);
                     # values are always written in UTC, so tag them explicitly.
                     t_start = t_start.replace(tzinfo=timezone.utc)
-                if t_start and t_start <= limit and t_start >= (now - timedelta(hours=1)): # Include current/recent
+                if t_start and t_start <= limit and t_start >= (now - timedelta(hours=1)):  # Include current/recent  # tz-ok: 순간 비교의 창 길이
                     upcoming.append({
                         "id": t.unique_id,
                         "title": t.title,
@@ -909,12 +921,12 @@ class AIContextService:
                 return 'N/A'
             try:
                 dt = datetime.fromisoformat(iso_str)
-                from aot.utils.device_tz import resolve_location_tz
-                tz = resolve_location_tz(target_id)
+                from aot.utils.timekit import tz_of
+                tz = tz_of(target_id)
                 return dt.astimezone(tz).strftime('%Y-%m-%d %H:%M')
             except Exception:
                 try:
-                    return to_local(datetime.fromisoformat(iso_str)).strftime('%Y-%m-%d %H:%M')
+                    return to_tz(datetime.fromisoformat(iso_str), FARM).strftime('%Y-%m-%d %H:%M')
                 except Exception:
                     return iso_str
 
@@ -1132,10 +1144,13 @@ class AIContextService:
                     continue
 
             out = {}
-            for s in GeoShape.query.filter_by(type='device').all():
+            from aot.space.device_binding import devices_for_shapes
+            _dev_shapes = GeoShape.query.filter_by(type='device').all()
+            _bound = devices_for_shapes(_dev_shapes)   # 바인딩이 정본(L4)
+            for s in _dev_shapes:
                 f = _feat(s)
                 pr = f.get('properties', {}) or {}
-                did = pr.get('device_id') or pr.get('aot_device_id') or pr.get('unique_id') or s.device_id
+                did = pr.get('device_id') or pr.get('aot_device_id') or pr.get('unique_id') or _bound.get(s.unique_id)
                 geom = f.get('geometry')
                 if not did or not geom or did in out:
                     continue
@@ -1202,7 +1217,7 @@ class AIContextService:
         AI should use virtual_tool_call / get_sensor_detail for actual data.
         """
         try:
-            now = get_local_now().isoformat()
+            now = to_tz(utc_now(), FARM).isoformat()
 
             # Lightweight spatial hierarchy (names/types only, no sensor data)
             hierarchy = AIContextService.get_spatial_hierarchy()
@@ -1233,7 +1248,7 @@ class AIContextService:
             }
         except Exception as e:
             logger.error(f"get_mini_context error: {e}")
-            return {"timestamp": get_local_now().isoformat(), "mode": "fast_path", "error": str(e)}
+            return {"timestamp": to_tz(utc_now(), FARM).isoformat(), "mode": "fast_path", "error": str(e)}
 
     @staticmethod
     def get_master_context(include_keys=None, is_slim=False, tier='standard', focused_target=None):
@@ -1263,7 +1278,7 @@ class AIContextService:
             # v13.0: Propagation of tier for static helpers
             AIContextService._current_tier = tier
             
-            now = get_local_now().isoformat()
+            now = to_tz(utc_now(), FARM).isoformat()
             
             # v12.6: Tier-based key masking (Pre-emptive diet)
             if tier == 'lightweight':
@@ -1556,6 +1571,8 @@ class AIContextService:
             geo_ctx = []
             for m in maps:
                 shapes = GeoShape.query.filter_by(geo_id=m.unique_id).all()
+                from aot.space.device_binding import devices_for_shapes
+                _drawn = devices_for_shapes(shapes)   # 바인딩이 정본(L4)
                 shape_info = []
                 for s in shapes:
                     feat = s.feature or {}
@@ -1577,7 +1594,7 @@ class AIContextService:
                         # 실으면 도형 수만큼 곱해진다(실측 128개 = 약 4.9KB).
                         "type": s.type, # 'site', 'zone', 'feature'
                         "name": name,
-                        "drawn_device_id": s.device_id,
+                        "drawn_device_id": _drawn.get(s.unique_id),
                         "layer_group": s.layer_group,
                         "geometry": AIContextService.simplify_geometry(feat.get('geometry'), tier=getattr(AIContextService, '_current_tier', 'standard'))
                     })
@@ -1692,21 +1709,27 @@ class AIContextService:
                             if misc_settings and misc_settings.map_latitude and misc_settings.map_longitude:
                                 lat, lng = misc_settings.map_latitude, misc_settings.map_longitude
                             else:
-                                first_input = Input.query.filter(Input.latitude.isnot(None), Input.longitude.isnot(None)).first()
-                                if first_input:
-                                    lat, lng = first_input.latitude, first_input.longitude
-                                else:
-                                    first_output = Output.query.filter(Output.latitude.isnot(None), Output.longitude.isnot(None)).first()
-                                    if first_output:
-                                        lat, lng = first_output.latitude, first_output.longitude
-                                    else:
-                                        lat, lng = 37.5665, 126.9780
+                                from aot.space.device_location import locate_many
+                                lat = lng = None
+                                for _kind, _model in (('input', Input), ('output', Output)):
+                                    _rows = _model.query.order_by(_model.id).all()
+                                    _loc = locate_many([(_kind, r.unique_id) for r in _rows])
+                                    for r in _rows:
+                                        _pl = _loc.get((_kind, r.unique_id))
+                                        if _pl is not None and _pl.point is not None \
+                                                and _pl.basis == 'device':
+                                            lat, lng = _pl.point
+                                            break
+                                    if lat is not None:
+                                        break
+                                if lat is None:
+                                    lat, lng = 37.5665, 126.9780
                         else:
                             lat, lng = center[0], center[1]
                         
                         # Dynamic plugin call — each GIS module reports its own data
                         try:
-                            from aot.inputs.satellite_analysis import discover_and_query_for_ai
+                            from aot.ai.services.gis_enrichment import discover_and_query_for_ai
                             wms_data = discover_and_query_for_ai(active_layers, lat, lng)
                             if wms_data:
                                 w_info['wms_readings'] = wms_data

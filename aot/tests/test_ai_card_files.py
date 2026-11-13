@@ -214,6 +214,20 @@ class ValidationTest(_FilesBase):
         self.assertEqual(self._cards(), [])
         self.assertEqual(self._files_on_disk(), [])
 
+    def test_svg_or_canvas_html_posts_as_artifact(self):
+        # HTML 카드는 내용을 가리지 않는다 — SVG·canvas 를 품은 HTML 도 그대로 아티팩트로
+        # 받는다. 값·추세는 .viz 로 유도하지만(help·지침), 손으로 짠 그림을 서버가 거부하지는
+        # 않는다(2026-11-06, 안전망 제거 결정). 리다이렉트만 막는다.
+        svg = ('<svg viewBox="0 0 100 60"><path d="M10 50 A40 40 0 0 1 90 50" '
+               'stroke="#ccc" fill="none"/><circle cx="20" cy="50" r="4"/></svg>'
+               '<div>11%</div>')
+        canvas = ('<html><body><canvas id="c" width="200" height="80"></canvas>'
+                  '<div>CO2</div></body></html>')
+        for html in (svg, canvas):
+            out = self._file_post({'name': 'g.html', 'text': html})
+            self.assertEqual((out['status'], out['file']['kind']),
+                             ('posted', 'artifact'), html[:40])
+
     def test_server_decides_mime_and_ignores_client_mime(self):
         out = self._file_post({'name': 'a.csv', 'text': 'a,b', 'mime': 'text/html',
                                'type': 'image/svg+xml'})
@@ -725,12 +739,16 @@ class ReadPinSearchTest(_FilesBase):
 
     def test_read_errors_other_users_cards_and_ambiguity(self):
         theirs = self.C.create(self.other.id, 'theirs', 'secret', 'AI')
-        for item in (theirs.unique_id, theirs.unique_id[:8], 'deadbeef', 'zz', '%_%_%_%_',
-                     "x' OR '1'='1"):
+        for item in (theirs.unique_id, theirs.unique_id[:8], 'deadbeef'):
             out = self._act({'action': 'read', 'item': item})
             self.assertEqual(out['status'], 'error', item)
             self.assertTrue(out['error'].startswith("No AI card '"), (item, out))
             self.assertNotIn('secret', json.dumps(out))
+        # P7-11: 카드 id 모양이 아닌 글은 찾기다 — 내 카드만 찾고, LIKE 문자·따옴표는 글자 그대로다.
+        for item in ('zz', '%_%_%_%_', "x' OR '1'='1", 'secret', 'theirs'):
+            out = self._act({'action': 'read', 'item': item})
+            self.assertEqual((out['status'], out['cards']), ('ok', []), (item, out))
+            self.assertNotIn('secret', json.dumps(out['cards']))
         # 앞자리가 같은 카드가 둘이면 ambiguous
         a = self.C.create(self.pk, 'a', 'x', 'AI')
         b = self.C.create(self.pk, 'b', 'y', 'AI')

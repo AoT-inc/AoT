@@ -19,6 +19,7 @@ SRC_DEVICE = "device"        # 장치(Output) 설정
 SRC_GEOMETRY = "geometry"    # 시설 형상·피팅(면적·노즐 …)
 SRC_SENSOR = "sensor"        # 측정
 SRC_USER = "user"            # 사용자가 트윈 탭에서 적음
+SRC_SUPPLY = "supply"        # 물 회로의 공급 한계로 낮춘 값
 SRC_DEFAULT = "default"      # 종류 기본값 — '추정' 으로 표시한다
 SRC_UNKNOWN = "unknown"      # 모름
 
@@ -29,10 +30,13 @@ MERGE_MEAN_OPEN = "mean_open"        # 개도 평균 (차광·커튼)
 MERGE_SUM_MM = "sum_mm"              # 물 깊이 합 (노지 관수)
 MERGE_NONE = "none"
 
-# 모델 상태
-MODELED, PARTIAL, UNMODELED = "modeled", "partial", "unmodeled"
+# 모델 상태. SUPPLY 는 효과가 아니라 **공급 제약**이다 — 물 회로가 깊이·유량에 이미 넣었으니 '미반영'이 아니다.
+MODELED, PARTIAL, UNMODELED, SUPPLY = "modeled", "partial", "unmodeled", "supply"
 
 FACILITY, FIELD = "facility", "field"
+
+# 위치로 풀린 관수 출력의 역할. 노즐이 전부 점적이면 점적, 나머지는 살수다 — 사용자가 고른 역할이 이긴다.
+IRRIGATION_DEFAULT, IRRIGATION_DRIP = "irrigation_sprinkler", "irrigation_drip"
 
 
 @dataclass(frozen=True)
@@ -56,9 +60,12 @@ class EffectRow:
     ratings: Tuple[Rating, ...] = ()
     slot: str = ""                           # 못 담는 효과를 나중에 담을 자리(측정 이름 등)
     note: str = ""
+    supply: bool = False                     # 공급 제약 부품(펌프·탱크) — 효과 채널이 없다
 
     @property
     def status(self) -> str:
+        if self.supply:
+            return SUPPLY
         if not self.modeled_effects or self.channel is None:
             return UNMODELED
         return PARTIAL if self.unmodeled_effects else MODELED
@@ -108,6 +115,8 @@ _ROWS: Tuple[EffectRow, ...] = (
               unmodeled_effects=("dehumidification",)),
     EffectRow("co2_scrubber", FACILITY, ("co2_scrubber",), None, MERGE_NONE,
               unmodeled_effects=("air_CO2_removal",)),
+    EffectRow("water_supply", FACILITY, ("pump", "tank"), None, MERGE_NONE, supply=True,
+              note="공급 제약 — 분무 유량 상한으로 읽는다(`reader`). 트윈은 펌프를 모른다"),
 
     # ── 노지 — 출력 종류가 범용이라 **역할**로 묶는다(사용자가 고르거나 자동 제안) ──────────
     EffectRow("irrigation_sprinkler", FIELD, ("irrigation_sprinkler",), "irrigation_mm", MERGE_SUM_MM,
@@ -129,6 +138,8 @@ _ROWS: Tuple[EffectRow, ...] = (
               ratings=(Rating("flow_lpm", "L/min", (SRC_GEOMETRY, SRC_DEVICE, SRC_USER)),
                        Rating("area_m2", "m2", (SRC_GEOMETRY, SRC_USER))),
               slot="measurement:env_twin_field_h"),
+    EffectRow("water_supply_field", FIELD, ("pump", "tank"), None, MERGE_NONE, supply=True,
+              note="공급 제약 — 물 회로가 구획별 깊이에 넣는다. 트윈은 깊이만 받는다"),
     EffectRow("frost_fan", FIELD, ("frost_fan",), None, MERGE_NONE,
               unmodeled_effects=("night_min_T",),
               slot="measurement:env_twin_field_h", note="서리 겨울 검증 뒤 시간 격자 모듈로"),
@@ -171,12 +182,12 @@ def channels(domain: str) -> Tuple[str, ...]:
 
 
 def summarize(kinds: Iterable[Optional[str]], domain: str = FACILITY) -> Dict[str, object]:
-    """연결된 종류들의 반영 현황: modeled/partial/unmodeled 개수와 미반영 종류·효과."""
-    out = {"modeled": 0, "partial": 0, "unmodeled": 0, "unmodeled_kinds": [], "unmodeled_effects": []}
+    """연결된 종류들의 반영 현황: modeled/partial/unmodeled/supply 개수와 미반영 종류·효과."""
+    out = {"modeled": 0, "partial": 0, "unmodeled": 0, "supply": 0, "unmodeled_kinds": [], "unmodeled_effects": []}
     for k in kinds:
         r = row_for(k, domain)
         out[r.status] += 1
-        if r.status != MODELED:
+        if r.status not in (MODELED, SUPPLY):
             out["unmodeled_kinds"].append(str(k))
             out["unmodeled_effects"].extend(e for e in r.unmodeled_effects if e not in out["unmodeled_effects"])
     return out

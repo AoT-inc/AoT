@@ -13,10 +13,10 @@
 시간대·좌표 상속과 DB 트리거가 읽는 정본이다. 기계가 추측한 값을 거기 섞으면
 둘을 가를 수 없게 되고, 잠들어 있던 상속 경로가 예고 없이 깨어난다.
 """
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 from aot.databases import CRUDMixin
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class GeoContainmentCache(CRUDMixin, db.Model):

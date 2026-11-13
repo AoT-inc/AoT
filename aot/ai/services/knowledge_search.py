@@ -26,9 +26,11 @@ a deliberate later add (§12-5), not built here.
 """
 import logging
 import os
+import math
 import re
 import threading
 from datetime import datetime, timedelta
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +113,15 @@ _STOPWORDS = frozenset({
     'do', 'does', 'did', 'can', 'could', 'would', 'should', 'will', 'i', 'you',
     'my', 'me', 'it', 'this', 'that', 'and', 'or', 'with', 'about', 'from',
     'please', 'want', 'need', 'like', 'get', 'have', 'be',
+})
+
+# 한국어 의문·보조 낱말 — 문장형 질문에서 어간(앞 두 글자)으로 줄어 어느 문서
+# 본문에나 걸린다('어떻게'→'어떻', '언제부터'→'언제'). 한 번 걸러 내는 것이
+# IDF 가중과 함께 문장형 질문이 매뉴얼로 새는 것을 막는다.
+_KO_QUESTION_WORDS = frozenset({
+    '어떻게', '어떤', '어디', '언제', '언제부터', '무엇', '무슨', '왜', '누가', '얼마',
+    '하나', '하나요', '인가요', '일까요', '있나요', '되나요', '할까요', '해야', '해야하나',
+    '어떻게해야', '알려줘', '알려주세요', '해주세요', '있어요', '같은',
 })
 
 # Domain vocabulary bridge: a user's everyday word for a feature ('센서') is not
@@ -275,7 +286,6 @@ def _source_name(source_id):
         name = None
     _source_name_cache[sid] = name
     return name
-
 
 
 # @ANCHOR: PROGRAM_STAGE_SECTIONS
@@ -552,17 +562,6 @@ def _normalize_tags(tags):
     return {t.strip().lower() for t in tags if t and t.strip()}
 
 
-def _naive_utc(dt):
-    """Strip tzinfo if present. ExtPestAlerts.fetched_at is written as
-    tz-aware (datetime.now(timezone.utc)); everything else in this module
-    compares against datetime.utcnow() (naive) — mixing the two raises
-    TypeError, so every external timestamp is normalized to naive UTC here
-    before use."""
-    if dt is not None and dt.tzinfo is not None:
-        return dt.replace(tzinfo=None)
-    return dt
-
-
 # Ext-authority cache (P3, docs/design/ai-library-redesign.md §7/§10). Same
 # process-cache pattern as _load_library_sections: these tables only change
 # on a scheduled sync (minutes-to-days interval, see AIContextSource.
@@ -609,7 +608,7 @@ def _load_external_authority_sections():
         for model in (ExtSmartfarmSetpoints, ExtNongsaroGuides, ExtPestAlerts):
             s = _db.session.query(func.max(model.fetched_at)).scalar()
             if s:
-                stamps.append(_naive_utc(s))
+                stamps.append(naive_utc(s))
         stamp_key = max(stamps).isoformat() if stamps else None
 
         with _ext_authority_lock:
@@ -633,7 +632,7 @@ def _load_external_authority_sections():
                     'origin': 'library',
                     'provenance': 'external_authority',
                     'trust_state': 'corroborated',
-                    'attribution': f'RDA SmartFarm API, 갱신 {_naive_utc(row.fetched_at).date()}',
+                    'attribution': f'RDA SmartFarm API, 갱신 {naive_utc(row.fetched_at).date()}',
                     'content_kind': 'structured',
                     'tags': [row.crop_type.lower(), row.growth_stage.lower()],
                     'entity_ref': None,
@@ -665,7 +664,7 @@ def _load_external_authority_sections():
                     f"심각도: {row.severity or '정보없음'} · 지역: {row.region or '전국'}\n"
                     f"방제법: {row.control_method or '정보없음'}"
                 )
-                fetched = _naive_utc(row.fetched_at)
+                fetched = naive_utc(row.fetched_at)
                 out.append({
                     'file': 'NCPMS (EXT-KR-03)',
                     'heading': f'{row.crop_type} 병해충 경보 — {row.pest_name or row.pest_code}',
@@ -694,6 +693,24 @@ def _load_external_authority_sections():
         return []
 
 
+# 한국어 조사 — 문장형 질문의 낱말 끝에 붙어('가지치기는', '녹병이') 문서 본문의
+# 원형과 어긋난다. 어간(앞 두 글자)만으로 맞추면 '가지'가 '세 가지' 같은 셈 낱말에
+# 걸리므로, 조사를 뗀 온전한 낱말도 질의 토큰으로 더한다(원래 토큰은 그대로 둔다).
+_KO_PARTICLES = (
+    '에서는', '으로는', '에서', '으로', '에게', '부터', '까지', '에는', '처럼', '보다',
+    '마다', '이란', '라고', '은', '는', '이', '가', '을', '를', '에', '의', '로', '와',
+    '과', '도', '만',
+)
+
+
+def _strip_particle(token):
+    """한글 토큰 끝의 조사를 뗀다. 남는 글자가 둘 미만이면 떼지 않는다."""
+    for p_ in _KO_PARTICLES:
+        if token.endswith(p_) and len(token) - len(p_) >= 2:
+            return token[:-len(p_)]
+    return token
+
+
 def _tokenize(text):
     """Query → scoring tokens. Drops English stopwords (generic words that match
     everything), and for inflected Korean adds a 2-char stem prefix so '추가하는'
@@ -703,6 +720,8 @@ def _tokenize(text):
     out = []
     for t in raw:
         is_hangul = bool(_HANGUL.search(t))
+        if t in _KO_QUESTION_WORDS:
+            continue
         # 띄어쓰기가 없는 문자(일본어·중국어·태국어 등)는 문장 전체가 토큰
         # 하나로 들어온다 — `_NO_WORD_BREAK` 주석 참조. **한글은 여기 해당하지
         # 않는다**(띄어쓰기를 쓰므로 아래 어간 경로가 그대로 맞다).
@@ -711,6 +730,11 @@ def _tokenize(text):
             continue
         if t not in out:
             out.append(t)
+        if is_hangul and not unsegmented:
+            base = _strip_particle(t)
+            if base != t and base not in out:
+                out.append(base)
+            t = base
         if unsegmented:
             # 자를 근거가 없으니 인접 두 글자로 훑는다. 통째 토큰도 위에서
             # 이미 넣었으므로, 원문에 그 문장이 그대로 있으면 더 높게 잡힌다.
@@ -783,14 +807,22 @@ def search(query, top_k=3, max_chars=1400, tags=None):
             s for s in lib_sections
             if not s.get('tags') or (req_tags & set(s['tags']))
         ]
-    now = datetime.utcnow()
+    now = naive_utc(utc_now())
     lib_sections = [s for s in lib_sections if not s.get('ttl') or s['ttl'] > now]
     sections = _build_index() + lib_sections
     q_tokens = _tokenize(query)
     if not q_tokens:
         return []
 
-    scored = []
+    # 점수는 토큰별 득점에 **희귀도 가중**(IDF)을 곱해 합한다. 예전에는 득점을
+    # 그냥 더해서, 문장형 질문의 흔한 어간('어떻'·'해야'·'언제')이 긴 매뉴얼
+    # 본문 어디서나 1점씩 쌓여 도메인 메모의 희귀 낱말('녹병') 한 번을 이겼다
+    # (실측 2026-11-02: "잎 뒷면에 녹병 언제부터 생기고 어떻게 해야 하나" 가
+    # 캘린더 동기화 문서를 1위로 냈다). 어느 섹션에나 있는 낱말은 구별하는 힘이
+    # 없으므로 가중이 0 에 가깝고, 몇 개 섹션에만 있는 낱말이 순위를 정한다.
+    n_sections = len(sections)
+    per_section = []  # [(section, {tok: raw_points})]
+    df = {}
     for s in sections:
         heading_l = s['heading'].lower()
         content_l = s['content'].lower()
@@ -801,33 +833,50 @@ def search(query, top_k=3, max_chars=1400, tags=None):
         # strip a trailing 3 chars off it.
         fname_raw = s['file'][:-3] if s['file'].endswith('.md') else s['file']
         fname_l = fname_raw.replace('-', ' ').replace('_', ' ').lower()
-        score = 0
+        pts = {}
         for tok in q_tokens:
+            p_ = 0
             if _splits_on_spaces(tok):
                 # 낱말 경계가 없는 문자 — 부분문자열로 맞춘다. 한글뿐 아니라
                 # 일본어·중국어·태국어도 여기다(예전에는 한글만 이 갈래로 와서,
                 # 나머지는 `\b` 로 매칭돼 영영 못 찾았다).
                 if tok in heading_l:
-                    score += 3
+                    p_ += 3
                 if tok in content_l:
-                    score += 1
+                    p_ += 1
                 if tok in fname_l:
-                    score += 2
+                    p_ += 2
                 if kw_l and tok in kw_l:
-                    score += 2
+                    p_ += 2
             else:
                 # Latin token: word-boundary match so 'how'⊄'however', 'add'⊄'address'.
                 pat = r'\b' + re.escape(tok) + r'\b'
                 if re.search(pat, heading_l):
-                    score += 3
+                    p_ += 3
                 if re.search(pat, content_l):
-                    score += 1
+                    p_ += 1
                 if re.search(pat, fname_l):
-                    score += 2
+                    p_ += 2
                 if kw_l and re.search(pat, kw_l):
-                    score += 2
+                    p_ += 2
+            if p_:
+                pts[tok] = p_
+                df[tok] = df.get(tok, 0) + 1
+        if pts:
+            per_section.append((s, pts))
+
+    weight = {
+        tok: max(0.05, math.log((n_sections + 1) / (n + 0.5)))
+        for tok, n in df.items()
+    }
+    absent = _absent_terms(q_tokens, df)
+    scored = []
+    matched_by_id = {}
+    for s, pts in per_section:
+        score = round(sum(p_ * weight[tok] for tok, p_ in pts.items()), 3)
         if score > 0:
             scored.append((score, s))
+            matched_by_id[id(s)] = tuple(pts)
 
     scored.sort(key=lambda x: (-x[0], len(x[1]['content'])))
     results = []
@@ -841,6 +890,8 @@ def search(query, top_k=3, max_chars=1400, tags=None):
             'file': s['file'],
             'heading': s['heading'],
             'score': score,
+            'matched': sorted(matched_by_id.get(id(s), ())),
+            'absent': absent,
             'content': content,
             'origin': origin,
             # Manual sections have no provenance/trust concept — they're the
@@ -956,6 +1007,26 @@ def library_is_populated():
         return True
 
 
+def _absent_terms(q_tokens, df):
+    """질문의 핵심어 중 말뭉치 어디에도 없는 것. 온전한 낱말도, 앞 두 글자도 어느
+    절에 걸리지 않아야 한다 — 동사 활용형('알아보려면')은 앞 두 글자가 흔해 걸러진다."""
+    out = []
+    for t in q_tokens:
+        if (len(t) >= 3 and _HANGUL.search(t) and not _NO_WORD_BREAK.search(t)
+                and _strip_particle(t) == t and t not in _QUERY_ALIASES
+                and not df.get(t) and not df.get(t[:2])):
+            out.append(t)
+    return out
+
+
+def lacks_core_match(query, hits):
+    """질문의 핵심어가 말뭉치에 아예 없는가(= 아래 결과는 흔한 낱말만 걸린 헛걸림).
+
+    실측 2026-11-02: 자료가 없는 "초피나무 가지치기는 언제 하나요" 에 '세 가지' 가
+    든 매뉴얼 절이 같은 점수로 나왔다 → bool."""
+    return bool(hits and hits[0].get('absent'))
+
+
 # @manual ai/overview#where-knowledge-comes-from
 def search_as_text(query, top_k=3, max_chars=1400, tags=None):
     """Search and format the result as a compact text block for injection into
@@ -972,4 +1043,8 @@ def search_as_text(query, top_k=3, max_chars=1400, tags=None):
         tag = _format_hit_tag(h)
         attribution = f" — {h['attribution']}" if h.get('attribution') else ''
         blocks.append(f"### {tag}{h['heading']}  ({h['file']}{attribution})\n{h['content']}")
-    return f"[Knowledge search: '{query}' — {len(hits)} section(s)]\n\n" + "\n\n---\n\n".join(blocks)
+    head = f"[Knowledge search: '{query}' — {len(hits)} section(s)]"
+    if lacks_core_match(query, hits):
+        head += (f"\n(주의: 자료에 '{', '.join(hits[0]['absent'])}' 에 대한 내용이 없습니다. "
+                 "아래는 다른 흔한 낱말만 걸린 관련성 낮은 결과이니 근거로 쓰지 마세요.)")
+    return head + "\n\n" + "\n\n---\n\n".join(blocks)

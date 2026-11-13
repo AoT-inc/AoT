@@ -6,7 +6,7 @@ RH 가 내려간다. v1 은 수분을 상대습도 차로 섞어 이 셋을 틀�
 """
 import pytest
 
-from aot.functions.utils.env_control import psychro as ps
+from aot.utils import psychro as ps
 from aot.functions.utils.env_control.greybox.model import predict_horizon, step
 from aot.functions.utils.env_control.greybox.params import GreyboxParams
 

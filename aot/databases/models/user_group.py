@@ -36,7 +36,7 @@ grant 가 **하나도 없는** 자원은 지금과 똑같이 누구나 조작한
 """
 from datetime import datetime
 
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 from aot.databases import CRUDMixin
 from aot.databases import set_uuid
 

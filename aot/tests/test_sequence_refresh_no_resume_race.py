@@ -67,7 +67,7 @@ def make_controller(monkeypatch, trigger):
 
     monkeypatch.setattr(seq_mod, 'db_retrieve_table_daemon',
                         lambda *a, **kw: trigger)
-    monkeypatch.setattr(seq_mod, 'get_device_tz', lambda *a, **kw: 'UTC')
+    monkeypatch.setattr(seq_mod, 'tz_of', lambda *a, **kw: 'UTC')
     monkeypatch.setattr(seq_mod, 'parse_action_information', lambda: {})
     monkeypatch.setattr(seq_mod, 'parse_schedule', lambda *a, **kw: None)
     monkeypatch.setattr(

@@ -22,7 +22,8 @@ from flask_babel import gettext
 # (AoT 버전 형식 7종으로 두 구현의 비교 결과가 동일함을 확인).
 from packaging.version import parse as parse_version
 
-from aot.utils.time_utils import utc_now, to_local
+from aot.utils.timekit import utc_now
+from aot.utils.timekit import to_tz, FARM
 from aot.config import (BACKUP_LOG_FILE, BACKUP_PATH, CAMERA_INFO,
                            DEPENDENCIES_GENERAL, DEPENDENCY_INIT_FILE,
                            DEPENDENCY_LOG_FILE, DOCKER_CONTAINER, DOCKER_IMAGE,
@@ -124,13 +125,13 @@ def admin_backup():
                 # against BACKUP_PATH's own filesystem.
                 backup_size, free_before, free_after = docker_can_perform_backup()
                 if free_after / 1000000 > 50:
-                    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                     with open(BACKUP_LOG_FILE, 'a+') as f:
                         f.write(f"\n{now} Backup initiated (Docker)\n")
 
                     def _run_backup():
                         status, result = docker_backup_create()
-                        now2 = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                        now2 = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                         with open(BACKUP_LOG_FILE, 'a+') as log_f:
                             if status:
                                 log_f.write(f"\n{now2} Backup failed: {result}\n")
@@ -156,7 +157,7 @@ def admin_backup():
             else:
                 backup_size, free_before, free_after = can_perform_backup()
                 if free_after / 1000000 > 50:
-                    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                     cmd = "{pth}/aot/scripts/aot_wrapper backup-create" \
                           " >> {log} 2>&1".format(pth=INSTALL_DIRECTORY,
                                                   log=BACKUP_LOG_FILE)
@@ -258,13 +259,13 @@ def admin_backup():
             elif not os.path.isdir(full_path):
                 flash(gettext("Directory not found: %(dir)s", dir=full_path), "error")
             elif DOCKER_CONTAINER:
-                now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                 with open(RESTORE_LOG_FILE, 'a+') as f:
                     f.write(f"\n{now} Restore initiated from {full_path} (Docker)\n")
 
                 def _run_restore(src_dir=full_path):
                     status, result = docker_backup_restore(src_dir)
-                    now2 = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    now2 = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                     with open(RESTORE_LOG_FILE, 'a+') as log_f:
                         if status:
                             log_f.write(f"\n{now2} Restore failed: {result}\n")
@@ -274,7 +275,7 @@ def admin_backup():
                 threading.Thread(target=_run_restore).start()
                 flash(gettext("Restore in progress"), "success")
             else:
-                now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                 cmd = ["{pth}/aot/scripts/aot_wrapper".format(pth=INSTALL_DIRECTORY),
                        "backup-restore",
                        full_path]
@@ -292,7 +293,7 @@ def admin_backup():
 
 
 def install_dependencies(dependencies):
-    now = to_local(utc_now()).strftime("%Y-%m-%d %H:%M:%S %Z")
+    now = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M:%S %Z")
     dependency_list = []
     for each_dependency in dependencies:
         if each_dependency[0] not in dependency_list:
@@ -319,7 +320,7 @@ def install_dependencies(dependencies):
                 continue
             for each_command in each_dep[1]:
                 try:
-                    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+                    now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
                     command = "{cmd} >> {log} 2>&1".format(
                         cmd=each_command,
                         log=DEPENDENCY_LOG_FILE)
@@ -331,7 +332,7 @@ def install_dependencies(dependencies):
                         command, user='root', timeout=600, cwd="/tmp")
 
                     with open(DEPENDENCY_LOG_FILE, 'a+') as f:
-                        now = to_local(utc_now()).strftime("%Y-%m-%d %H:%M:%S %Z")
+                        now = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M:%S %Z")
                         f.write(f"\n[{now}] Command returned: out: {cmd_out}, error: {cmd_err}, status: {cmd_status}\n")
 
                     if cmd_status != 0:
@@ -339,7 +340,7 @@ def install_dependencies(dependencies):
                 except:
                     logger.exception("Executing command")
         else:
-            now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+            now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
             cmd = "{pth}/aot/scripts/aot_wrapper install_dependency {dep}" \
                   " >> {log} 2>&1".format(
                     pth=INSTALL_DIRECTORY,
@@ -351,13 +352,13 @@ def install_dependencies(dependencies):
             dep.wait()
             if dep.returncode:
                 failures.append(each_dep[1])
-            now = to_local(utc_now()).strftime("%Y-%m-%d %H:%M:%S %Z")
+            now = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M:%S %Z")
             with open(DEPENDENCY_LOG_FILE, 'a+') as f:
                 f.write("\n[{time}] End install of {dep}\n\n".format(
                     time=now, dep=each_dep[0]))
 
     if failures:
-        now = to_local(utc_now()).strftime("%Y-%m-%d %H:%M:%S %Z")
+        now = to_tz(utc_now(), FARM).strftime("%Y-%m-%d %H:%M:%S %Z")
         with open(DEPENDENCY_LOG_FILE, 'a+') as f:
             f.write("\n[{time}] #### Dependency install encountered errors. Failed items: {fails}\n\n".format(
                 time=now, fails=", ".join(failures)))
@@ -365,7 +366,7 @@ def install_dependencies(dependencies):
             f.write('0')
         return
 
-    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+    now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
     
     if IS_DOCKER:
         # In Docker, skip Pi-specific commands (chown, systemctl, etc.)
@@ -381,7 +382,7 @@ def install_dependencies(dependencies):
         init = subprocess.Popen(cmd, shell=True)
         init.wait()
 
-    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+    now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
     with open(DEPENDENCY_LOG_FILE, 'a+') as f:
         f.write(f"\n{now} #### Dependencies installed. Restarting services...\n")
 
@@ -390,14 +391,14 @@ def install_dependencies(dependencies):
 
     for action_func, label in [(restart_daemon, "Restarting daemon"),
                                (reload_frontend, "Reloading frontend")]:
-        now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+        now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
         with open(DEPENDENCY_LOG_FILE, 'a+') as f:
             f.write(f"\n{now} {label}\n")
         # Frontend reload is deferred so the dependency-install thread can
         # finish writing its log before the web server goes down.
         action_func(delay_sec=3, logger=logger)
 
-    now = to_local(utc_now()).strftime("[%Y-%m-%d %H:%M:%S %Z]")
+    now = to_tz(utc_now(), FARM).strftime("[%Y-%m-%d %H:%M:%S %Z]")
     with open(DEPENDENCY_LOG_FILE, 'a+') as f:
         f.write(f"\n{now} #### Dependency install complete.\n\n")
 
@@ -474,17 +475,7 @@ def admin_dependencies(device):
     if dep:
         install_in_progress = True
 
-    list_dependencies = [
-        parse_function_information(),
-        parse_action_information(),
-        parse_input_information(),
-        parse_output_information(),
-        parse_widget_information(),
-        CAMERA_INFO,
-        FUNCTION_INFO,
-        METHOD_INFO,
-        DEPENDENCIES_GENERAL
-    ]
+    list_dependencies = utils_general.dependency_sections()
     for each_section in list_dependencies:
         for each_device in each_section:
 
@@ -506,7 +497,8 @@ def admin_dependencies(device):
             # Only get all dependencies when not loading a single dependency page
             if device == '0':
                 # Determine if there are any unmet dependencies for every device
-                dep_unmet, dep_met, _ = utils_general.return_dependencies(each_device)
+                dep_unmet, dep_met, _ = utils_general.return_dependencies(
+                    each_device, sections=list_dependencies)
 
                 unmet_dependencies.update({
                     each_device: dep_unmet

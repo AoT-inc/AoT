@@ -12,7 +12,7 @@
 """
 import pytest
 
-from aot.functions.utils.env_control import sensor_status as SS
+from aot.utils import sensor_status as SS
 from aot.functions.utils.env_control.situation import compute_vpd
 
 from .test_sensor_status_flow import (   # noqa: F401 — 하니스와 autouse 픽스처 재사용

@@ -73,6 +73,7 @@ from aot.utils.system_pi import add_custom_measurements
 from aot.utils.system_pi import return_measurement_info
 from aot.utils.system_pi import str_is_float
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ def past_data(unique_id, measure_type, measurement_id, past_seconds):
 
         tag = NoteTags.query.filter(NoteTags.unique_id == unique_id).first()
         notes = Notes.query.filter(
-            Notes.date_time >= (datetime.datetime.utcnow() - datetime.timedelta(seconds=int(past_seconds)))).all()
+            Notes.date_time >= (naive_utc(utc_now()) - datetime.timedelta(seconds=int(past_seconds)))).all()
 
         for each_note in notes:
             if tag.unique_id in each_note.tags.split(','):

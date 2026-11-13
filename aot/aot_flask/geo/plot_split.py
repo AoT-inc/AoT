@@ -65,7 +65,7 @@ axis)으로 그대로 쓴다 — `info['orientation_deg']` 와 같은 좌표계(
 import logging
 import math
 
-from aot.aot_flask.geo import plot_context
+from aot.space import plot_context
 
 logger = logging.getLogger(__name__)
 

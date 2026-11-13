@@ -8,20 +8,23 @@ from aot.databases.models import GeoShape
 from aot.databases.models import Input
 from aot.databases.models import Notes
 from aot.databases.models import Output
-from aot.utils.time_utils import serialize_ts
-from aot.utils.time_utils import to_local
+from aot.utils.timekit import iso_at, FARM, to_tz
 from datetime import datetime
 from datetime import timedelta
 from sqlalchemy import or_
 import json
+from aot.utils.timekit import naive_utc, utc_now
 
 
 class RecordToolsMixin:
 
+    #: search_notes 한 번의 최대 건수 — 노트 본문이 건당 최대 2,000자라 30건이 응답 캡(15,000토큰) 근처다.
+    _NOTES_MAX_LIMIT = 30
+
     @classmethod
     def search_notes_tool(cls, query=None, category=None, limit=10,
                           target_name=None, target_id=None, target_names=None,
-                          **extra):
+                          archived=None, note_id=None, offset=None, **extra):
         """
         [분류 C - 노트/일정 읽기 도구]
         노트(메모, 일정, 작업 기록)를 조회합니다. 두 가지 모드:
@@ -35,11 +38,15 @@ class RecordToolsMixin:
         Args:
             query (str): 검색 키워드. target_name과 함께 주면 그 엔티티 내에서 추가 필터.
             category (str): 카테고리 필터. None이면 전체.
-            limit (int): 최대 반환 건수(기본 10).
+            limit (int): 최대 반환 건수(기본 10, 최대 30 — 노트 본문이 길어 넘으면 응답 캡에 잘린다).
+            offset (int): 건너뛸 건수(이어 받기). 잘렸으면 응답의 next_offset.
             target_name (str): 노트가 붙은 위치/장치 이름(예: '3-1', '1포장 1-1', '밸브1').
             target_id (str): 대상 unique_id(이미 아는 경우 target_name 대신).
             target_names (list): 여러 곳을 한 번에(최대 MAX_READ_TARGETS, 3-F).
                 곳마다 target_name 하나로 부른 응답을 results 에 담는다.
+            archived (str): 숨긴(보관 표시) 노트 — 'include'=함께, 'only'=숨긴 것만.
+                비우면 숨기지 않은 노트만(예전 그대로). 스키마에 싣지 않는 처리기 인자.
+            note_id (str): 노트 한 건(방금 쓴 노트를 확인할 때). 숨긴 노트도 읽는다.
         """
         if target_names:
             tokens, err = cls._targets_arg(target_name, target_names,
@@ -122,12 +129,20 @@ class RecordToolsMixin:
 
             # query·대상이 모두 없으면 가장 최근 노트(최근 순, limit 건)다 — 오류로 막지 않는다
             # (2026-10-28 점검: 최근 노트를 보는 길이 없었다).
-            db_query = Notes.query.filter(Notes.is_archived == False)  # noqa: E712
+            _arch = str(archived or '').strip().lower()
+            if note_id:
+                db_query = Notes.query.filter(Notes.unique_id == str(note_id).strip())
+            elif _arch == 'only':
+                db_query = Notes.query.filter(Notes.is_archived == True)  # noqa: E712
+            elif _arch in ('include', 'all', 'true'):
+                db_query = Notes.query
+            else:
+                db_query = Notes.query.filter(Notes.is_archived == False)  # noqa: E712
 
             if candidate_ids:
                 # 시설은 id 가 둘(GeoFacility·GeoShape)이다 — 웹은 시설 id, 예전
                 # MCP 는 도형 id 에 붙였으니 둘 다 읽는다.
-                from aot.aot_flask.geo.device_membership import \
+                from aot.space.device_membership import \
                     facility_identity_ids
                 _before = len(candidate_ids)
                 candidate_ids = facility_identity_ids(candidate_ids)
@@ -144,7 +159,14 @@ class RecordToolsMixin:
             if category:
                 db_query = db_query.filter(Notes.category == category)
 
-            rows = db_query.order_by(Notes.date_time.desc()).limit(limit).all()
+            _lim = cls._bounded_limit(limit, 10, cls._NOTES_MAX_LIMIT)
+            _off = cls._offset(offset)
+            _q = db_query.order_by(Notes.date_time.desc())
+            if _off:
+                _q = _q.offset(_off)
+            rows = _q.limit(_lim + 1).all()      # 하나 더 읽어 "더 있는가" 를 안다
+            _more_notes = len(rows) > _lim
+            rows = rows[:_lim]
 
             if not rows:
                 _where = (f"location/device '{resolved_name or target_name}'"
@@ -154,6 +176,10 @@ class RecordToolsMixin:
                     "status": "success", "count": 0, "results": [],
                     "message": f"No notes found for {_where}.",
                 }
+                if not note_id and _arch not in ('only', 'include', 'all', 'true'):
+                    # 숨긴 노트는 기본 읽기에서 빠진다 — "없다" 와 "숨겼다" 를 가른다(2026-11-03 시험 #11).
+                    out["message"] += (" Hidden (archived) notes are left out; "
+                                       "archived='include' lists them too.")
                 # 무엇을 훑고 0건인지 말한다 — 그래야 "정말 없다" 와 "못
                 # 찾았다" 가 구분된다.
                 if scope is not None:
@@ -175,8 +201,8 @@ class RecordToolsMixin:
                     return None
                 if tid not in _tz_by_target:
                     try:
-                        from aot.utils.device_tz import resolve_location_tz
-                        _tz_by_target[tid] = str(resolve_location_tz(tid))
+                        from aot.utils.timekit import tz_of
+                        _tz_by_target[tid] = str(tz_of(tid))
                     except Exception:
                         _tz_by_target[tid] = None
                 return _tz_by_target[tid]
@@ -220,13 +246,32 @@ class RecordToolsMixin:
                             if pl is not None:
                                 _nm = pl.name or pl.subject
                             else:
-                                fac = GeoFacility.query.filter_by(unique_id=tid).first()
+                                fac = GeoFacility.query.filter(
+                                    (GeoFacility.unique_id == tid) |
+                                    (GeoFacility.shape_uuid == tid)).first()
                                 if fac is not None:
                                     _nm = getattr(fac, 'name', None)
                         except Exception:
                             pass
                     _name_by_target[tid] = _nm
                 return _name_by_target[tid]
+
+            # 시설 노트는 웹이 GeoFacility.unique_id 로 붙이고, 예전 도구 경로는 도형 id 로 붙였다 — 같은 시설인데 id 가 둘이다.
+            # 정본(웹 쓰기)은 시설 id 이므로 도형 id 로 붙은 노트에는 그것을 알려 준다(데이터는 건드리지 않는다).
+            _canon_by_target = {}
+
+            def _facility_canonical(tid):
+                if tid not in _canon_by_target:
+                    _c = None
+                    try:
+                        from aot.databases.models import GeoFacility
+                        fac = GeoFacility.query.filter_by(shape_uuid=tid).first() if tid else None
+                        if fac is not None and fac.unique_id != tid:
+                            _c = fac.unique_id
+                    except Exception:
+                        _c = None
+                    _canon_by_target[tid] = _c
+                return _canon_by_target[tid]
 
             results = []
             for r in rows:
@@ -237,7 +282,7 @@ class RecordToolsMixin:
                     if _ntz:
                         _date = to_tz(r.date_time, _ntz).strftime("%Y-%m-%d %H:%M")
                     else:
-                        _date = to_local(r.date_time).strftime("%Y-%m-%d %H:%M")
+                        _date = to_tz(r.date_time, FARM).strftime("%Y-%m-%d %H:%M")
                 else:
                     _date = None
                 entry = {
@@ -246,7 +291,7 @@ class RecordToolsMixin:
                     "date_tz": _ntz,
                     "name": r.name,
                     "category": r.category,
-                    "tags": r.tags,
+                    "tags": cls._note_tag_names(r.tags),
                     # Full content (up to 2000 chars) so the AI can SUMMARIZE — a
                     # 300-char cut dropped photos/plans and made summaries wrong.
                     "note": (r.note or "")[:2000],
@@ -254,15 +299,20 @@ class RecordToolsMixin:
                     "target_type": r.target_type,
                     "target_name": _note_target_name(r.target_id),
                 }
+                _canon = _facility_canonical(r.target_id)
+                if _canon:
+                    entry["facility_id"] = _canon
                 # 첨부파일. 예전에는 이 줄이 없어서, 사진이 붙은 노트도 AI 에게는
                 # 텍스트만 보였다 — 사진 캡션만 남은 노트("왼쪽부터 산포, 채흔
                 # ...")를 AI 가 영영 해석할 수 없었던 원인이다. 첨부가 없을 때는
                 # 키 자체를 넣지 않는다(대부분의 노트가 그렇고, 빈 배열이 결과마다
                 # 붙으면 그게 곧 응답 비대화다).
+                if r.is_archived:
+                    entry["archived"] = True
                 _files = [f.strip() for f in (r.files or "").split(",") if f.strip()]
                 if _files:
                     entry["files"] = _files
-                # 본문에 적힌 영상·사진·링크(note_add attach 가 붙이는 줄 포함)는 종류·제목을 나눠 싣는다.
+                # 본문에 적힌 영상·사진·링크(record.note attach 가 붙이는 줄 포함)는 종류·제목을 나눠 싣는다.
                 _media = cls._note_media(r.note)
                 if _media:
                     entry["media"] = _media
@@ -275,6 +325,9 @@ class RecordToolsMixin:
                 "query": query,
                 "target": resolved_name or target_name or target_id,
             }
+            if _more_notes:
+                out["truncated"] = True
+                out["next_offset"] = _off + len(results)
             # 파일명만으로는 AI 가 "사진이 있다"는 사실까지만 알고 내용을 못 본다.
             # 실제 픽셀을 가져오는 경로를 결과에 실어 준다 — 설명(고정비)이 아니라
             # 첨부가 실제로 있을 때만 나가는 조건부 안내다.
@@ -458,7 +511,7 @@ class RecordToolsMixin:
                      .limit(int(limit) if limit else 10).all())
             return {"notices": [
                 {"notice_id": p.unique_id, "title": p.title, "pinned": bool(p.pinned),
-                 "date_time": serialize_ts(p.date_time) if p.date_time else None}
+                 "date_time": iso_at(p.date_time, FARM) if p.date_time else None}
                 for p in posts
             ]}
         except Exception as e:
@@ -478,7 +531,7 @@ class RecordToolsMixin:
             pinned=bool(pinned),
         )
         try:
-            errors, post = notice_add(form)
+            errors, post = notice_add(form, actor=cls._acting_user())
         except Exception as e:
             logger.error(f"[create_notice] notice_add raised: {e}")
             return {"error": str(e)}
@@ -492,10 +545,30 @@ class RecordToolsMixin:
         return r
 
     @classmethod
+    def notice_manage_denial(cls, notice_id):
+        """공지 수정·삭제를 이 호출자가 할 수 없으면 거절 문구, 아니면 None.
+
+        승인 큐에 넣기 전에 게이트가 묻는다 — 어차피 실패할 요청을 사람이
+        승인한 뒤에야 알리지 않는다. 규칙은 웹과 같은 `may_manage_post`.
+        글이 없거나 호출자를 모르면 None(처리기가 오류를 돌려준다)."""
+        from aot.aot_flask.utils.utils_notice import may_manage_post
+        from aot.databases.models import NoticePost
+        if not isinstance(notice_id, str) or not notice_id.strip():
+            return None
+        post = NoticePost.query.filter_by(unique_id=notice_id.strip()).first()
+        actor = cls._acting_user()
+        if post is None or actor is None:
+            return None
+        if may_manage_post(post, actor):
+            return None
+        return ("Only the notice's author (with settings permission) or an "
+                "administrator can change or delete this notice.")
+
+    @classmethod
     def modify_notice(cls, notice_id=None, title=None, body=None, pinned=None, **extra):
         """Update an existing notice post's title/body/pinned state. Requires
-        the calling user to be the post's author or an admin (enforced by
-        utils_notice.can_manage_post() on the caller's real session)."""
+        the calling user to be the post's author or an admin (utils_notice.
+        may_manage_post(), judged on the user bound for this call)."""
         from aot.aot_flask.utils.utils_notice import notice_mod
         from aot.databases.models import NoticePost
         if not notice_id:
@@ -514,7 +587,7 @@ class RecordToolsMixin:
             pinned=(bool(pinned) if pinned is not None else existing.pinned),
         )
         try:
-            errors, post = notice_mod(form)
+            errors, post = notice_mod(form, actor=cls._acting_user())
         except Exception as e:
             logger.error(f"[modify_notice] notice_mod raised: {e}")
             return {"error": str(e)}
@@ -533,7 +606,7 @@ class RecordToolsMixin:
         if not notice_id:
             return {"error": "notice_id is required"}
         try:
-            errors = notice_del(notice_id)
+            errors = notice_del(notice_id, actor=cls._acting_user())
         except Exception as e:
             logger.error(f"[delete_notice] notice_del raised: {e}")
             return {"error": str(e)}
@@ -569,14 +642,35 @@ class RecordToolsMixin:
         return lines, skipped
 
     @staticmethod
+    def _note_tag_names(tags_csv):
+        """노트의 태그 칸(태그 id CSV) → 사람이 읽는 이름 CSV. 이름을 못 찾은 항목은 그대로(이름으로 직접 쓴 태그).
+
+        예전에는 id 가 그대로 나가 AI 가 uuid 를 태그라고 읽었다(2026-11-03 점검 F16)."""
+        ids = [t.strip() for t in (tags_csv or '').split(',') if t.strip()]
+        if not ids:
+            return tags_csv
+        try:
+            from aot.databases.models import NoteTags
+            names = {t.unique_id: t.name for t in
+                     NoteTags.query.filter(NoteTags.unique_id.in_(ids)).all()}
+        except Exception:
+            logger.exception('[note] 태그 이름 읽기 실패 — id 그대로')
+            return tags_csv
+        return ','.join(names.get(i) or i for i in ids)
+
+    @staticmethod
     def _note_media(text):
-        """노트 본문의 영상·사진·링크 → [{kind, title?, url}] (최대 8). 첨부 종류와 제목을 AI 가 다시 인용하게."""
+        """노트 본문의 영상·사진·링크 → [{kind, title?}] (최대 8). 첨부 종류와 제목을 AI 가 다시 인용하게.
+
+        주소(url)는 본문에 이미 그대로 있다 — 같은 주소를 한 번 더 싣지 않는다(점검 F16, 한 건 약 800토큰)."""
         try:
             from aot.utils import ai_card_video as video_links
             found = video_links.find_body_media(text or '', 8, 8, (), 8)
             out = []
             for pos, kind, url in found[:8]:
-                entry = {"kind": kind, "url": url}
+                entry = {"kind": kind}
+                if url not in (text or ''):
+                    entry["url"] = url
                 title = video_links.label_near(text, pos, url)
                 if title:
                     entry["title"] = title
@@ -585,6 +679,44 @@ class RecordToolsMixin:
         except Exception:
             logger.exception('[note] 본문 미디어 읽기 실패')
             return []
+
+    @classmethod
+    def _note_target_failure(cls, target_name, resolved_type):
+        """노트를 붙일 이름이 안 풀렸을 때의 거절 — 모호하면 후보를, 아니면 쓸 수 있는 이름을 돌려준다."""
+        _amb = cls._ambiguous_places(target_name) if resolved_type == 'ambiguous' else None
+        if _amb:
+            return cls._ambiguity_refusal(target_name, _amb)
+        # Fail LOUD with candidates rather than silently create an
+        # invisible floating note (the exact bug the user hit).
+        candidates = []
+        import json as _json
+        for shape in GeoShape.query.limit(40).all():
+            try:
+                f = shape.feature if isinstance(shape.feature, dict) else _json.loads(shape.feature or '{}')
+                nm = (f.get('properties') or {}).get('name')
+                if nm:
+                    candidates.append(nm)
+            except Exception:
+                continue
+        return {
+            "error": "target_not_found",
+            "message": (
+                f"Location/device '{target_name}' was not found, so there is "
+                f"nothing to attach the note to. Retry with an exact name from "
+                f"available_targets."
+            ),
+            "available_targets": candidates[:20],
+        }
+
+    @staticmethod
+    def _title_from_body(note):
+        """제목이 없을 때 본문의 첫 줄로 — 웹(utils_notes)·note_factory 와 같은 규칙(50자 넘으면 47자+...).
+        예전엔 본문 앞 50자를 줄바꿈째 잘라 제목에 본문 줄이 섞였다(2026-11-04)."""
+        for line in (note or '').splitlines():
+            line = line.strip()
+            if line:
+                return line[:47] + '...' if len(line) > 50 else line
+        return 'Note'
 
     @classmethod
     def create_note(cls, name=None, note=None, tags=None, category='general',
@@ -638,30 +770,7 @@ class RecordToolsMixin:
         if not target_id and target_name:
             _tid, _tt, resolved_name, _lat, _lng = cls._resolve_note_target(target_name)
             if not _tid:
-                _amb = cls._ambiguous_places(target_name) if _tt == 'ambiguous' else None
-                if _amb:
-                    return cls._ambiguity_refusal(target_name, _amb)
-                # Fail LOUD with candidates rather than silently create an
-                # invisible floating note (the exact bug the user hit).
-                candidates = []
-                import json as _json
-                for s in GeoShape.query.limit(40).all():
-                    try:
-                        f = s.feature if isinstance(s.feature, dict) else _json.loads(s.feature or '{}')
-                        nm = (f.get('properties') or {}).get('name')
-                        if nm:
-                            candidates.append(nm)
-                    except Exception:
-                        continue
-                return {
-                    "error": "target_not_found",
-                    "message": (
-                        f"Location/device '{target_name}' was not found, so there is "
-                        f"nothing to attach the note to. Retry with an exact name from "
-                        f"available_targets."
-                    ),
-                    "available_targets": candidates[:20],
-                }
+                return cls._note_target_failure(target_name, _tt)
             target_id = _tid
             if not target_type:
                 target_type = _tt
@@ -672,7 +781,7 @@ class RecordToolsMixin:
 
         # 시설이면 웹과 같이 GeoFacility.unique_id / 'GeoFacility' 로 붙인다
         # (도형 id 든 시설 id 든, 이름으로 풀렸든 직접 줬든). 시설이 아니면 그대로.
-        from aot.aot_flask.geo.device_membership import \
+        from aot.space.device_membership import \
             normalize_facility_note_target
         target_id, target_type = normalize_facility_note_target(
             target_id, target_type)
@@ -695,7 +804,7 @@ class RecordToolsMixin:
         # 으로 다룬다.
         _author = cls._acting_user()
         n = Notes(
-            name=name or (note[:50] if note else 'Note'),
+            name=name or cls._title_from_body(note),
             note=note or '', tags=_tags, category=category or 'general',
             target_id=target_id or None,
             target_type=target_type or None,
@@ -782,11 +891,12 @@ class RecordToolsMixin:
 
     @classmethod
     def modify_note(cls, note_id=None, name=None, note=None, tags=None,
-                    archive=None, **extra):
-        """Edit a note's name/body/tags and/or archive it (archive=true) or bring
-        it back (archive=false). Notes are never deleted here — archiving hides
-        the note, the web page keeps the permanent delete. Before/after values
-        go to the audit log so an edit can be undone by hand."""
+                    archive=None, target_name=None, target_id=None, **extra):
+        """Edit a note's name/body/tags, move it to another place or device
+        (target_name or target_id), and/or archive it (archive=true) or bring
+        it back (archive=false). Archiving only hides the note (reversible);
+        deleting is delete_note. Before/after values go to the audit log so an
+        edit can be undone by hand."""
         from aot.databases.models import Notes
         if not isinstance(note_id, str) or not note_id.strip():
             return {"error": "note_id is required (from search_notes)"}
@@ -804,14 +914,34 @@ class RecordToolsMixin:
                 want_archive = False
             else:
                 return {"error": "archive must be true or false"}
+        moving = bool((isinstance(target_id, str) and target_id.strip())
+                      or (isinstance(target_name, str) and target_name.strip()))
         if name is None and note is None and tags is None \
-                and want_archive is None:
-            return {"error": "nothing to change — pass name, note, tags or archive"}
+                and want_archive is None and not moving:
+            return {"error": "nothing to change — pass name, note, tags, archive or a new place"}
 
         # 그룹 스코프 — 노트가 붙은 대상으로 묻는다(웹 노트 고치기와 같은 판정).
         if isinstance(n.target_id, str) and n.target_id.strip():
             from aot.aot_flask.access import write_scope
             write_scope.enforce(n.target_id.strip())
+
+        # 옮길 곳 — 이름이면 만들 때와 같은 리졸버로 푼다(모호하면 거절, 아무것도 안 바꾼다).
+        new_target = None
+        if moving:
+            if not (isinstance(target_id, str) and target_id.strip()):
+                _tid, _tt, _rname, _lat, _lng = cls._resolve_note_target(target_name.strip())
+                if not _tid:
+                    return cls._note_target_failure(target_name, _tt)
+                target_id = _tid
+            else:
+                target_id, _tt, _rname = target_id.strip(), None, None
+            from aot.space.device_membership import \
+                normalize_facility_note_target
+            target_id, _tt = normalize_facility_note_target(target_id, _tt)
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(target_id)           # 옮겨 갈 곳에도 쓸 수 있어야 한다
+            if target_id != n.target_id:
+                new_target = (target_id, _tt, _rname)
 
         # 두 번째 방어선 — 게이트가 승인 대기로 보냈어야 할 호출이 승인 없이
         # 여기까지 왔다(승인 게이트를 거치지 않는 경로, 예: 인앱 AI 직접 호출).
@@ -827,8 +957,27 @@ class RecordToolsMixin:
                         "note_id": n.unique_id}
 
         before = {"name": n.name, "note": n.note, "tags": n.tags,
-                  "is_archived": bool(n.is_archived)}
+                  "is_archived": bool(n.is_archived),
+                  "target_id": n.target_id, "target_type": n.target_type}
         changed = []
+        if new_target is not None:
+            # 옛 대상의 태그는 걷고 새 대상의 태그를 붙인다 — 노트 화면은 태그로 묶는다.
+            old_tags = n.tags or ''
+            try:
+                from aot.aot_flask.routes_notes_api import _display_name_for_target
+                from aot.databases.models import NoteTags
+                old_name = (_display_name_for_target(n.target_id) or '').strip() \
+                    if n.target_id else ''
+                old_tag = NoteTags.query.filter_by(name=old_name).first() if old_name else None
+                if old_tag is not None:
+                    old_tags = ','.join(t for t in old_tags.split(',')
+                                        if t.strip() and t.strip() != old_tag.unique_id)
+            except Exception:
+                logger.exception('[note] 옛 대상 태그 걷기 실패 — 태그는 그대로')
+            n.target_id, n.target_type = new_target[0], new_target[1]
+            from aot.aot_flask.utils import utils_notes as _un
+            n.tags = _un.ensure_target_tag(old_tags, n.target_id)
+            changed.append('target')
         if name is not None and name != n.name:
             n.name = name
             changed.append('name')
@@ -848,7 +997,8 @@ class RecordToolsMixin:
             return {"note_id": n.unique_id, "status": "done", "changed": [],
                     "message": "The note was already in that state."}
         after = {"name": n.name, "note": n.note, "tags": n.tags,
-                 "is_archived": bool(n.is_archived)}
+                 "is_archived": bool(n.is_archived),
+                 "target_id": n.target_id, "target_type": n.target_type}
         try:
             db.session.commit()
         except Exception as e:
@@ -870,7 +1020,81 @@ class RecordToolsMixin:
             status = 'modified'
         r = {"note_id": n.unique_id, "status": status, "changed": changed,
              "name": n.name,
-             "undo": "Previous name/body/tags are kept in the audit log."}
+             "undo": "Previous name/body/tags/place are kept in the audit log."}
+        if new_target is not None:
+            r["target_id"] = n.target_id
+            r["attached_to"] = new_target[2] or n.target_id
+        if extra:
+            r["ignored_args"] = list(extra.keys())
+        return r
+
+    @classmethod
+    def note_brief(cls, note_id):
+        """승인 문구용 — 어느 노트인지(제목·붙은 곳·첫 줄·첨부 수). 노트가 없으면 None.
+
+        사용자가 '이 노트를 지우는 게 맞다' 를 알아보게 서버가 id 에서 찾은 값만 쓴다(AI 가 쓴 글 아님)."""
+        n = Notes.query.filter_by(unique_id=str(note_id or '').strip()).first()
+        if n is None:
+            return None
+        where = None
+        if n.target_id:
+            try:
+                from aot.aot_flask.routes_notes_api import _display_name_for_target
+                where = (_display_name_for_target(n.target_id) or '').strip() or None
+            except Exception:
+                logger.exception('[note] 붙은 곳 이름 읽기 실패')
+        first = next((ln.strip() for ln in (n.note or '').splitlines() if ln.strip()), '')
+        files = [f for f in (n.files or '').split(',') if f.strip()]
+        return {"title": n.name, "place": where, "first_line": first[:80],
+                "files": len(files), "hidden": bool(n.is_archived)}
+
+    @classmethod
+    def delete_note(cls, note_id=None, **extra):
+        """Permanently delete one note (and its attached files). Always needs a person's
+        approval — to only hide a note use modify_note(archive=true), which can be undone.
+        The note's title, body, tags and place go to the audit log before it is removed."""
+        if not isinstance(note_id, str) or not note_id.strip():
+            return {"error": "note_id is required (from search_notes)"}
+        n = Notes.query.filter_by(unique_id=note_id.strip()).first()
+        if n is None:
+            return {"error": f"Note not found: {note_id}"}
+        if isinstance(n.target_id, str) and n.target_id.strip():
+            from aot.aot_flask.access import write_scope
+            write_scope.enforce(n.target_id.strip())
+        before = {"name": n.name, "note": n.note, "tags": n.tags,
+                  "category": n.category, "files": n.files,
+                  "is_archived": bool(n.is_archived),
+                  "target_id": n.target_id, "target_type": n.target_type}
+        title, uid = n.name, n.unique_id
+        # 링크를 함께 걷는다(웹 노트 지우기와 같다) — 노트가 없으면 링크는 아무 데서도 안 읽힌다.
+        try:
+            from aot.aot_flask import note_links
+            note_links.drop_for_note(uid)
+        except Exception:
+            db.session.rollback()
+            logger.exception('[delete_note] 예정 링크 정리 실패')
+        if n.files:
+            import glob
+            import os
+            from aot.config import PATH_NOTE_ATTACHMENTS
+            for path in glob.glob("{dir}/{id}*".format(dir=PATH_NOTE_ATTACHMENTS, id=uid)):
+                try:
+                    os.remove(path)
+                except OSError:
+                    logger.exception('[delete_note] 첨부 파일 지우기 실패: %s', path)
+        try:
+            db.session.delete(n)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}
+        from aot.utils.audit import audit_log
+        actor = cls._acting_user()
+        audit_log('note.delete', target_type='Notes', target_id=uid, target_name=title,
+                  detail='deleted', before=before,
+                  user_id=getattr(actor, 'id', None), username=getattr(actor, 'name', None))
+        r = {"note_id": uid, "status": "deleted", "name": title,
+             "undo": "The deleted note's text is kept in the audit log; nothing else is restorable."}
         if extra:
             r["ignored_args"] = list(extra.keys())
         return r
@@ -1200,12 +1424,12 @@ class RecordToolsMixin:
             }
 
         if not attribution:
-            attribution = f"AI 대화 비치 ({datetime.utcnow().date()})"
+            attribution = f"AI 대화 비치 ({naive_utc(utc_now()).date()})"
 
         ttl = None
         try:
             if ttl_hours is not None and float(ttl_hours) > 0:
-                ttl = datetime.utcnow() + timedelta(hours=float(ttl_hours))
+                ttl = naive_utc(utc_now()) + timedelta(hours=float(ttl_hours))
         except (TypeError, ValueError):
             ttl = None
 
@@ -1293,7 +1517,14 @@ class RecordToolsMixin:
                 params = json.loads(params)
             except (ValueError, TypeError):
                 return {"error": "params must be an object, e.g. {\"userId\": \"PF_0000001\"}"}
-        payload, err = providers.get('data_source_query').query(
+        svc = providers.get('data_source_query')
+        if operation in svc.DISCOVERY_OPERATIONS:
+            # 출처가 가진 탐색 동작(농가·작기 찾기) — 저장된 키로 부른다(별도 도구·키 인자 없음).
+            p = params if isinstance(params, dict) else {}
+            return cls.smartfarmkorea_lookup_tool(
+                source_id=source_id, mode=operation, user_id=p.get('userId') or p.get('user_id'),
+                query=p.get('query'), crop=p.get('crop'), limit=limit if limit else 20)
+        payload, err = svc.query(
             source_id, operation, params=params, limit=limit, columns=columns)
         if err:
             return {"error": err}
@@ -1415,21 +1646,61 @@ class RecordToolsMixin:
         }
 
     @classmethod
-    def smartfarmkorea_lookup_tool(cls, dataset=None, api_key=None, mode='farms',
+    def _source_key(cls, preset_key=None, source_id=None):
+        """등록된 출처에 **저장된** API 키 → (키, 프리셋, 오류). 키는 사용자가 AI 라이브러리 화면에서만 넣는다 —
+        AI 인자로는 받지 않는다(대화 기록·호스트에 키가 남지 않게, 2026-11-03 사용자 결정).
+
+        source_id 가 있으면 그 출처, 없으면 그 프리셋으로 등록된(비활성 포함) 출처가 **하나**일 때 그것."""
+        from aot.databases.models import AIContextSource
+        found = []
+        for row in AIContextSource.query.filter_by(is_active=True).all():
+            try:
+                cfg = json.loads(row.config_json or '{}')
+            except (ValueError, TypeError):
+                continue
+            if source_id and row.source_id != source_id:
+                continue
+            if preset_key and cfg.get('preset_key') != preset_key:
+                continue
+            if not cfg.get('preset_key'):
+                continue
+            found.append((row, cfg))
+        if not found:
+            return None, preset_key, ("no registered source%s — the user adds it (with the API key) on the AI "
+                                      "Library page; keys are never passed through the assistant."
+                                      % (" %r" % source_id if source_id else ""))
+        if len(found) > 1:
+            return None, preset_key, ("several sources match — pass source_id: %s"
+                                      % ", ".join("%s (%s)" % (r.source_id, r.source_name) for r, _c in found[:8]))
+        row, cfg = found[0]
+        key = (cfg.get('api_key') or '').strip()
+        if not key:
+            return None, cfg.get('preset_key'), ("source %s has no API key yet — the user enters it on the AI "
+                                                 "Library page." % row.source_id)
+        return key, cfg.get('preset_key'), None
+
+    @classmethod
+    def smartfarmkorea_lookup_tool(cls, dataset=None, source_id=None, mode='farms',
                                    user_id=None, query=None, crop=None, limit=20, **extra):
         """Discover SmartFarmKorea farms or cropping seasons (read-only) so the
         AI can resolve userId/facilityId/croppingSerlNo without asking the user
-        for codes. Wraps resolve_farms/resolve_seasons. `crop` filters to farms/
-        seasons of that crop (딸기/토마토/…) — use it so a 딸기 request never
-        returns a 토마토 farm. Only 시설/노지 have a discovery chain — 축산
-        returns a clear no-op error."""
+        for codes. The API key is the one stored on the registered source (the
+        user enters it on the AI Library page; it is never an argument here).
+        `crop` filters to farms/seasons of that crop (딸기/토마토/…) — use it so
+        a 딸기 request never returns a 토마토 farm. Only 시설/노지 have a
+        discovery chain — 축산 returns a clear no-op error."""
         from aot.tools import providers
         sfk = providers.get('smartfarmkorea')
-        if not api_key or not str(api_key).strip():
-            return {"error": "api_key is required (the SmartFarmKorea service key)"}
+        if extra.get('api_key'):
+            return {"error": "api_key is not accepted here — the user enters the key on the AI Library "
+                             "page; pass source_id (or dataset when only one source of it exists)."}
+        key, dataset, err = cls._source_key(str(dataset or '').strip() or None, source_id)
+        if err:
+            return {"error": err}
+        if not str(dataset or '').startswith('smartfarmkorea'):
+            return {"error": "this source has no farm/season discovery operation"}
         ops = sfk.operations_for_preset(str(dataset or '').strip())
         mode = str(mode or 'farms').strip().lower()
-        key = str(api_key).strip()
 
         if mode == 'farms':
             items, err = sfk.resolve_farms(key, operations=ops)
@@ -1472,26 +1743,49 @@ class RecordToolsMixin:
         return {"mode": mode, "total": total, "returned": len(shown), "note": note, "items": shown}
 
     @classmethod
-    def configure_library_source_tool(cls, preset_key=None, api_key=None, operations=None,
-                                      source_id=None, activate=True, sync=True,
-                                      farm_label=None, season_label=None, **params):
-        """Create or update a SmartFarmKorea library source with resolved
-        config, then (default) activate + sync so its measured data enters the
-        knowledge layer. Mutating → approval-gated (registers a source and
-        fetches external data). `params` carries the per-operation values
-        (userId/facilityId/croppingSerlNo/itemCode/measDate/startDate/endDate/
-        fldCode/sectCode/fatrCode) — pass whatever the selected operations need
-        (resolve IDs via smartfarmkorea_lookup, don't ask the user for codes)."""
+    def configure_library_source_tool(cls, preset_key=None, operations=None, source_id=None,
+                                      activate=True, sync=True, params=None,
+                                      farm_label=None, season_label=None, **flat):
+        """Register or update a data-API library source with the operations to sync and each operation's
+        parameter values, then (default) activate + sync so its data enters the knowledge layer. Mutating →
+        approval-gated (registers a source and fetches external data).
+
+        The API key is NEVER an argument: the user types it on the AI Library page (the key then stays on the
+        source). A source created here without a stored key stays inactive until the user adds one; an existing
+        `source_id` keeps its key and is only re-configured. `params` is an object with whatever the chosen
+        operations need (names come from list_lookup_sources / the operation's `params`); flat keyword values
+        are accepted too. Resolve codes through the source's discovery operations, never ask the user for a code."""
         import json as _json
         import uuid as _uuid
         from aot.tools import providers
         from aot.databases.models import AIContextSource, Misc
 
-        _SFK_PRESETS = ('smartfarmkorea', 'smartfarmkorea_outdoor', 'smartfarmkorea_livestock')
-        if preset_key not in _SFK_PRESETS:
-            return {"error": f"preset_key must be one of {_SFK_PRESETS}"}
-        if not api_key or not str(api_key).strip():
-            return {"error": "api_key is required"}
+        if flat.pop('api_key', None):
+            return {"error": "api_key is not accepted here — the user enters it on the AI Library page "
+                             "(source add/edit form); then pass its source_id."}
+        if isinstance(params, str):
+            try:
+                params = _json.loads(params)
+            except (ValueError, TypeError):
+                return {"error": "params must be an object, e.g. {\"userId\": \"PF_0000001\"}"}
+        values = dict(params or {})
+        values.update({k: v for k, v in flat.items() if v is not None})
+        farm_label = farm_label or values.pop('farm_label', None)
+        season_label = season_label or values.pop('season_label', None)
+
+        existing, old_cfg = None, {}
+        if source_id:
+            existing = AIContextSource.query.filter_by(source_id=source_id).first()
+            if not existing:
+                return {"error": f"source_id not found: {source_id}"}
+            try:
+                old_cfg = _json.loads(existing.config_json or '{}')
+            except (ValueError, TypeError):
+                old_cfg = {}
+            preset_key = preset_key or old_cfg.get('preset_key')
+        queryable = providers.get('data_source_query').queryable_presets()
+        if preset_key not in queryable:
+            return {"error": f"preset_key must be one of {tuple(queryable)}"}
 
         ops_list = operations or []
         if isinstance(ops_list, str):
@@ -1499,18 +1793,24 @@ class RecordToolsMixin:
         if not ops_list:
             return {"error": "operations is required (at least one operation key)"}
 
-        dataset_ops = providers.get('smartfarmkorea').operations_for_preset(preset_key)
+        dataset_ops = providers.get('data_source_query').operations_of(preset_key)
         unknown = [o for o in ops_list if o not in dataset_ops]
         if unknown:
             return {"error": f"unknown operations for {preset_key}: {unknown}",
                     "valid_operations": list(dataset_ops.keys())}
 
-        _ALL_PARAMS = ['userId', 'facilityId', 'croppingSerlNo', 'itemCode', 'measDate',
-                       'startDate', 'endDate', 'fldCode', 'sectCode', 'fatrCode']
-        config = {'preset_key': preset_key, 'api_key': str(api_key).strip(), 'operations': ops_list}
-        for p in _ALL_PARAMS:
-            if params.get(p) is not None:
-                config[p] = str(params.get(p)).strip()
+        # 받는 값의 이름은 이 프리셋의 동작 표가 정한다 — 이름을 코드에 박아 두지 않는다.
+        known = {p for op in dataset_ops.values() for p in op['params'] if p != 'serviceKey'}
+        known |= {p for op in dataset_ops.values()
+                  for p in list((op.get('optional') or {})) + list((op.get('client_optional') or {}))}
+        stray = sorted(k for k in values if k not in known)
+        if stray:
+            return {"error": f"unknown parameters for {preset_key}: {stray}",
+                    "valid_parameters": sorted(known)}
+        config = dict(old_cfg)                      # 저장된 키·옛 값을 지키며 덮어쓴다
+        config.update({'preset_key': preset_key, 'operations': ops_list})
+        for k, v in values.items():
+            config[k] = str(v).strip()
         if farm_label:
             config['_farmLabel'] = str(farm_label)
         if season_label:
@@ -1522,19 +1822,19 @@ class RecordToolsMixin:
             op = dataset_ops[op_key]
             miss = [p for p in op['params'] if p != 'serviceKey' and not (config.get(p) or '').strip()]
             if miss:
-                missing_report.append({"operation": op['label_ko'], "missing": miss})
+                missing_report.append({"operation": op.get('label_ko') or op_key, "missing": miss})
         if missing_report:
             return {"error": "missing required params for some operations", "details": missing_report,
-                    "hint": "Resolve userId/croppingSerlNo via smartfarmkorea_lookup; ask the user for "
-                            "date ranges and any classification codes (fldCode/sectCode/fatrCode)."}
+                    "hint": "Resolve ids through the source's discovery operations (records.data_source); "
+                            "ask the user only for date ranges and classification choices."}
 
         from aot.aot_flask.routes_ai_library import LIBRARY_PRESETS  # lazy: avoid import cycle
         preset = LIBRARY_PRESETS.get(preset_key, {})
+        key_needed = preset.get('needs_api_key', True)
+        has_key = bool((config.get('api_key') or '').strip())
 
-        if source_id:
-            source = AIContextSource.query.filter_by(source_id=source_id).first()
-            if not source:
-                return {"error": f"source_id not found: {source_id}"}
+        if existing is not None:
+            source = existing
             source.config_json = _json.dumps(config)
             action = 'updated'
         else:
@@ -1552,16 +1852,21 @@ class RecordToolsMixin:
             db.session.add(source)
             action = 'created'
 
-        if activate:
+        needs_key = bool(key_needed and not has_key)
+        activated = bool(activate) and not needs_key
+        if activated:
             source.is_enabled = True
         db.session.commit()
 
         result = {"status": action, "source_id": source.source_id,
                   "source_name": source.source_name, "operations": ops_list,
-                  "activated": bool(activate)}
+                  "activated": activated}
+        if needs_key:
+            result["needs_api_key"] = True
+            result["next_for_user"] = ("Open the AI Library page, edit this source and enter the API key; it "
+                                       "stays inactive until then.")
 
-        if sync and activate:
-            from aot.tools import providers
+        if sync and activated:
             msgs = providers.get('source_sync')(source.source_id)
             result["synced"] = not bool(msgs.get('error'))
             result["sync_error"] = msgs.get('error')
@@ -1635,7 +1940,7 @@ class RecordToolsMixin:
                 severity=severity,
                 confidence=conf,
                 status='pending',
-                created_at=_dt.utcnow(),
+                created_at=naive_utc(utc_now()),
             )
             row.save()
 
@@ -1676,8 +1981,19 @@ class RecordToolsMixin:
             q = AIAdvice.query
             if scope_type:
                 q = q.filter(AIAdvice.scope_type == scope_type)
+            scope_ids = None
             if scope_id:
-                q = q.filter(AIAdvice.scope_id == scope_id)
+                # 시설은 도형 id 와 시설 id 두 가지로 불린다 — 한쪽으로만 찾으면 다른 쪽으로 낸 의견이 빠진다.
+                scope_ids = [scope_id]
+                try:
+                    from aot.databases.models import GeoFacility
+                    fac = GeoFacility.query.filter(
+                        (GeoFacility.unique_id == scope_id) | (GeoFacility.shape_uuid == scope_id)).first()
+                    if fac is not None:
+                        scope_ids = [scope_id] + [i for i in (fac.unique_id, fac.shape_uuid) if i != scope_id]
+                except Exception:
+                    pass
+                q = q.filter(AIAdvice.scope_id.in_(scope_ids))
             if status:
                 q = q.filter(AIAdvice.status == status)
             if agent_id:
@@ -1696,7 +2012,7 @@ class RecordToolsMixin:
                 # UTC 로 저장되므로 그대로 내보내면 **오프셋이 아예 없는** 문자열이
                 # 되고, 읽는 쪽은 그것을 현지시각으로 읽는다 — 한국이면 9시간
                 # 어긋난 채 "방금 낸 의견" 이 오전으로 보인다.
-                "created_at": serialize_ts(r.created_at),
+                "created_at": iso_at(r.created_at, FARM),
                 "agent_id": r.agent_id,
                 "agent_kind": r.agent_kind,
                 "scope": {"type": r.scope_type, "id": r.scope_id, "name": r.scope_name},
@@ -1708,7 +2024,7 @@ class RecordToolsMixin:
                 "confidence": r.confidence,
                 "status": r.status,
                 "review_note": r.review_note,
-                "reviewed_at": serialize_ts(r.reviewed_at),
+                "reviewed_at": iso_at(r.reviewed_at, FARM),
             } for r in rows]
 
             # 같은 대상에 여러 주체가 의견을 냈으면 알려준다 — 상충 가능 신호.
@@ -1721,6 +2037,12 @@ class RecordToolsMixin:
             multi = [k for k, v in contested.items() if len(v) > 1]
 
             out = {"status": "success", "count": len(results), "results": results}
+            # 어떤 거름이 걸렸는지 — 0건일 때 "없다" 인지 "거르다 비었다" 인지 알 수 있어야 한다(노트·일정의 scope 와 같은 역할).
+            applied = {k: v for k, v in (("scope_type", scope_type), ("scope_ids", scope_ids),
+                                         ("status", status), ("agent_id", agent_id),
+                                         ("severity", severity)) if v}
+            if applied or not results:
+                out["scope"] = {"filters": applied or "none", "limit": lim}
             if multi:
                 out["multiple_agents_on_same_scope"] = multi
                 out["note"] = ("More than one AI has advised on the same target. Where "
@@ -1730,253 +2052,6 @@ class RecordToolsMixin:
         except Exception as e:
             logger.exception("Error in list_advice")
             return {"status": "error", "message": str(e)}
-
-    @classmethod
-    def _cold_storage_service(cls):
-        from aot.services.cold_storage_service import ColdStorageService
-        return ColdStorageService()
-
-    @classmethod
-    def search_archives(cls, query=None, limit=50, offset=0):
-        """아카이브된 문서를 메타데이터로 검색한다. 실제 아카이브 실물만 조회된다.
-
-        **검색 대상은 저장된 메타데이터뿐이다** — 제목과 태그(그리고 이후
-        아카이브된 것에 한해 노트가 매달렸던 대상). 본문도, 날짜도, 위치도
-        색인돼 있지 않다. 그래서 "3-1 구역 아카이브 노트" 같은 질문은 제목에
-        그 말이 우연히 들어 있지 않으면 0건이 된다 — 없는 것이 아니라 이
-        검색으로는 못 찾는 것이다. 빈 결과의 note 가 그 둘을 구분해 말한다.
-        """
-        try:
-            try:
-                limit = max(1, min(int(limit), 200))
-                offset = max(0, int(offset))
-            except (TypeError, ValueError):
-                limit, offset = 50, 0
-
-            svc = cls._cold_storage_service()
-            result = svc.search_archives(query=query or None, limit=limit, offset=offset)
-            # 서비스 반환 키는 'results' 다 — 'archives' 로 읽으면 아카이브가
-            # 있어도 항상 빈 목록이 되어 "보관된 문서 없음" 으로 보고된다.
-            archives = result.get('results', [])
-            out = {
-                "status": "success",
-                "count": len(archives),
-                "total": result.get('total', len(archives)),
-                "results": archives,
-            }
-            if not archives:
-                # 예전에는 무조건 "아카이브된 문서가 없다" 고 단정했다. 검색어를
-                # 준 경우에도 그렇게 답하므로, **검색어가 안 맞은 것**을 "아무것도
-                # 아카이브되지 않았다" 로 보고하는 자리였다. 둘을 갈라 말한다.
-                # 검색어가 없었다면 방금 받은 total 이 곧 전체 개수다 — 다시
-                # 묻지 않는다. 전체를 따로 세어야 하는 경우는 "검색어를 줬고
-                # 0건" 일 때뿐이다(그때의 total 은 '조건에 맞는 수'라 0이다).
-                total_archived = int(result.get('total') or 0)
-                if query:
-                    try:
-                        total_archived = int(
-                            svc.search_archives(query=None, limit=1, offset=0)
-                            .get('total', 0))
-                    except Exception:
-                        logger.debug("[ARCHIVE] total count probe failed",
-                                     exc_info=True)
-
-                if not total_archived:
-                    out["note"] = ("No archived documents at all. This is the "
-                                   "expected state until tier migration is wired "
-                                   "— it does not mean a search failed.")
-                elif query:
-                    out["note"] = (
-                        "%d archived document(s) exist but none matched this "
-                        "query. Only the title and tags are indexed — not the "
-                        "body, the date, or the location/zone the note was "
-                        "attached to. Do not report this as 'nothing archived "
-                        "for that place'; retry with a word from the title, or "
-                        "search the live notes with search_notes."
-                        % total_archived)
-                else:
-                    out["note"] = ("%d archived document(s) exist but this page "
-                                   "is empty — check offset/limit."
-                                   % total_archived)
-            return out
-        except Exception as e:
-            logger.exception("Error in search_archives")
-            return {"status": "error", "message": str(e)}
-
-    @classmethod
-    def get_archived_document(cls, document_id=None, include_content=False):
-        """아카이브 문서 하나를 조회한다. include_content=True 면 본문까지 해제한다."""
-        try:
-            if not document_id or not isinstance(document_id, str):
-                return {"status": "error", "message": "document_id is required"}
-
-            svc = cls._cold_storage_service()
-            result = svc.restore_document(document_id,
-                                          decompress=bool(include_content))
-            if result is None:
-                return {
-                    "status": "not_found",
-                    "document_id": document_id,
-                    "message": ("Not in the archive. If the document is marked tier 3, that "
-                                "is an intent flag only — its content is still in the "
-                                "original table."),
-                }
-            return {"status": "success", "document": result}
-        except FileNotFoundError as e:
-            # DB 행은 있는데 파일이 없다 — 조용히 넘기면 안 되는 불일치다.
-            logger.error("Archive file missing for %s: %s", document_id, e)
-            return {
-                "status": "error",
-                "document_id": document_id,
-                "message": f"Archive record exists but its file is missing: {e}",
-            }
-        except Exception as e:
-            logger.exception("Error in get_archived_document")
-            return {"status": "error", "message": str(e)}
-
-    @classmethod
-    def archive_note(cls, note_id=None, retention_policy='default'):
-        """노트 본문을 아카이브에 복사하고 tier 를 3(cold)으로 표시한다."""
-        try:
-            if not note_id or not isinstance(note_id, str):
-                return {"status": "error", "message": "note_id is required"}
-
-            note = Notes.query.filter_by(unique_id=note_id).first()
-            if note is None:
-                return {"status": "not_found", "message": f"Note {note_id} not found"}
-
-            content = note.note or ''
-            if not content.strip():
-                return {"status": "error",
-                        "message": "Note has no content to archive"}
-
-            # 대상(구역·구획 등)을 함께 남긴다. 예전에는 제목과 태그만 남겨서,
-            # 아카이브를 위치로 되찾을 방법이 **원리적으로** 없었다 —
-            # search_archives 가 메타데이터만 뒤지기 때문이다. 이후 아카이브분
-            # 부터 위치로 좁힐 수 있다(기존 것은 소급되지 않는다).
-            meta = {"name": note.name, "note_tags": note.note_tags,
-                    "target_type": note.target_type, "target_id": note.target_id}
-            svc = cls._cold_storage_service()
-            result = svc.archive_document(
-                document_id=note_id, content=content, metadata=meta,
-                retention_policy=retention_policy, archived_by='ai')
-
-            note.tier = 3
-            db.session.commit()
-
-            return {
-                "status": "success",
-                "document_id": note_id,
-                "archive_path": result['archive_path'],
-                "compression_ratio": result['compression_ratio'],
-                "note": ("A copy was archived and the note was marked tier 3. "
-                         "The original note text was NOT deleted — deletion is "
-                         "handled by the retention policy, not by archiving."),
-            }
-        except ValueError as e:      # 이미 아카이브됨
-            return {"status": "error", "message": str(e)}
-        except Exception as e:
-            db.session.rollback()
-            logger.exception("Error in archive_note")
-            return {"status": "error", "message": str(e)}
-
-    @classmethod
-    def restore_note_from_archive(cls, note_id=None, target_tier=2):
-        """아카이브 본문을 확인하고 노트를 지정 티어로 되돌린다."""
-        try:
-            if not note_id or not isinstance(note_id, str):
-                return {"status": "error", "message": "note_id is required"}
-            try:
-                target_tier = int(target_tier)
-            except (TypeError, ValueError):
-                target_tier = 2
-            if target_tier not in (1, 2, 3):
-                return {"status": "error", "message": "target_tier must be 1, 2 or 3"}
-
-            svc = cls._cold_storage_service()
-            archived = svc.restore_document(note_id, decompress=True)
-            if archived is None:
-                return {"status": "not_found",
-                        "message": f"{note_id} is not in the archive"}
-
-            note = Notes.query.filter_by(unique_id=note_id).first()
-            if note is None:
-                # 아카이브만 남고 원본이 사라진 경우 — 본문을 돌려주되 상태를 밝힌다.
-                return {
-                    "status": "orphan_archive",
-                    "document_id": note_id,
-                    "content": archived.get('content'),
-                    "message": ("The archive exists but the original note is gone. "
-                                "Returning the archived text; recreating the note is "
-                                "a separate action."),
-                }
-
-            note.tier = target_tier
-            db.session.commit()
-            return {
-                "status": "success",
-                "document_id": note_id,
-                "tier": target_tier,
-                "content_matches_original": (note.note or '') == archived.get('content'),
-            }
-        except Exception as e:
-            db.session.rollback()
-            logger.exception("Error in restore_note_from_archive")
-            return {"status": "error", "message": str(e)}
-
-    @classmethod
-    def set_document_tier(cls, note_id=None, tier=None):
-        """노트의 티어 값만 바꾼다 — 내용은 옮기지 않는다."""
-        try:
-            if not note_id or not isinstance(note_id, str):
-                return {"status": "error", "message": "note_id is required"}
-            try:
-                tier = int(tier)
-            except (TypeError, ValueError):
-                return {"status": "error", "message": "tier must be 1, 2 or 3"}
-            if tier not in (1, 2, 3):
-                return {"status": "error", "message": "tier must be 1, 2 or 3"}
-
-            note = Notes.query.filter_by(unique_id=note_id).first()
-            if note is None:
-                return {"status": "not_found", "message": f"Note {note_id} not found"}
-
-            previous, note.tier = note.tier, tier
-            db.session.commit()
-
-            out = {"status": "success", "document_id": note_id,
-                   "previous_tier": previous, "tier": tier}
-            if tier == 3:
-                out["note"] = ("Marked cold, but nothing was moved. Use archive_note "
-                               "to actually place a copy in the archive.")
-            return out
-        except Exception as e:
-            db.session.rollback()
-            logger.exception("Error in set_document_tier")
-            return {"status": "error", "message": str(e)}
-
-    @classmethod
-    def delete_archive(cls, document_id=None, reason=''):
-        """아카이브 사본을 삭제한다. 원본 노트는 건드리지 않는다."""
-        try:
-            if not document_id or not isinstance(document_id, str):
-                return {"status": "error", "message": "document_id is required"}
-
-            svc = cls._cold_storage_service()
-            deleted = svc.delete_archive(document_id, deletion_reason=reason or 'ai request')
-            if not deleted:
-                return {"status": "not_found",
-                        "message": f"{document_id} is not in the archive"}
-            return {
-                "status": "success",
-                "document_id": document_id,
-                "note": ("The archived copy was deleted. The original note was not "
-                         "touched; its tier value is unchanged and may still read 3."),
-            }
-        except Exception as e:
-            logger.exception("Error in delete_archive")
-            return {"status": "error", "message": str(e)}
-
 
     # --- 대상 별칭 (MCP 점검 2026-10-28 세션 E) --------------------------------
     # 사용자가 대상을 부르는 다른 이름을 서버에 남긴다 — 규칙은 aot/tools/domain/aliases.py.

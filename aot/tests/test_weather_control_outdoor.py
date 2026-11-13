@@ -54,13 +54,13 @@ def _run(place='site-3', chosen_id='sim', facs=None, integ=None, chans=None,
                   'ts': '2026-10-13T10:00:00Z', 'valid': True}]
     ro = ro or (lambda outs: {'T_ext': 21.34, 'backup_keys': []})
     with patch('aot.databases.models.GeoFacility') as GF, \
-         patch('aot.aot_flask.geo.facility_sensors.read_outdoor_sensors',
+         patch('aot.space.facility_sensors.read_outdoor_sensors',
                side_effect=ro), \
-         patch('aot.aot_flask.geo.device_membership.PlaceIndex',
+         patch('aot.space.device_membership.PlaceIndex',
                return_value=_Idx()), \
-         patch('aot.aot_flask.geo.facility_integration.get_facility_integration',
+         patch('aot.space.facility_integration.get_facility_integration',
                side_effect=lambda u: ({'sensors_outdoor': integ.get(u, [])}, None)), \
-         patch('aot.aot_flask.geo.facility_sensors.read_fitting_sensors',
+         patch('aot.space.facility_sensors.read_fitting_sensors',
                return_value=[{'channels': chans}]):
         GF.query.all.return_value = facs
         return S._control_outdoor(sh, chosen_id, weather)

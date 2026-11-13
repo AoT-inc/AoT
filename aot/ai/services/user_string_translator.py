@@ -22,6 +22,7 @@ from aot.aot_flask.extensions import db
 from aot.databases.models.user_string_translation import (
     STATUS_DONE, STATUS_FAILED, STATUS_PENDING, STATUS_SKIPPED,
     UserStringTranslation)
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -640,7 +641,7 @@ def _parse_response(raw, expected_count):
 
 def _daily_used():
     """오늘 번역한 건수."""
-    since = datetime.utcnow() - timedelta(days=1)
+    since = naive_utc(utc_now()) - timedelta(days=1)
     try:
         return UserStringTranslation.query.filter(
             UserStringTranslation.status == STATUS_DONE,

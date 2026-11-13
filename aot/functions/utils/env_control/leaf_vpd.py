@@ -44,8 +44,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from . import psychro
-from . import sensor_status as _ss
+from aot.utils import psychro
+from aot.utils import sensor_status as _ss
 
 BASIS_AIR = 'air'
 BASIS_LEAF = 'leaf'

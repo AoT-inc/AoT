@@ -137,7 +137,7 @@ def resolve_entity(device_id):
     종류 판별은 `device_binding.resolve_device_kind` 하나만 쓴다 — 호출자가
     들고 있는 종류 문자열을 믿으면 UI 어휘와 DB 어휘가 갈리는 자리다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
     from aot.databases.models import CustomController, Input, Output
 
     uid = str(device_id or '').split('::')[0]
@@ -152,7 +152,8 @@ def resolve_entity(device_id):
             "%(kind)s entries have no connection settings to change.",
             kind=kind))
 
-    model = {'input': Input, 'output': Output, 'device': CustomController}[kind]
+    from aot.space.device_kind import models_for
+    model = models_for(('input', 'output', 'device'))[kind]
     entity = model.query.filter(model.unique_id == uid).first()
     if entity is None:
         raise ConnectionSettingError(_t("That device no longer exists."))

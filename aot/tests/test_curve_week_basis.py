@@ -227,7 +227,7 @@ class TestPlotModalUsesSharedBasis(unittest.TestCase):
         spy = _SpyHandler()
         prog = mock.Mock(targets_methods={'vpd': 'curve-1'})
         with mock.patch('aot.databases.models.GeoProgram') as geo_program, \
-                mock.patch('aot.utils.device_tz.resolve_location_tz',
+                mock.patch('aot.utils.timekit.tz_of',
                            return_value=SEOUL), \
                 mock.patch('aot.utils.method.load_method_handler',
                            return_value=spy):
@@ -287,7 +287,7 @@ class TestPlotModalUsesSharedBasis(unittest.TestCase):
 
         prog = mock.Mock(targets_methods={'vpd': 'curve-1'})
         with mock.patch('aot.databases.models.GeoProgram') as geo_program, \
-                mock.patch('aot.utils.device_tz.resolve_location_tz',
+                mock.patch('aot.utils.timekit.tz_of',
                            return_value=SEOUL), \
                 mock.patch('aot.utils.method.load_method_handler',
                            return_value=_handler()):
@@ -370,7 +370,7 @@ class TestThreePathsAgree(unittest.TestCase):
         spy = _SpyHandler()
         prog = mock.Mock(targets_methods={'vpd': 'curve-1'})
         with mock.patch('aot.databases.models.GeoProgram') as geo_program, \
-                mock.patch('aot.utils.device_tz.resolve_location_tz',
+                mock.patch('aot.utils.timekit.tz_of',
                            return_value=SEOUL), \
                 mock.patch('aot.utils.method.load_method_handler',
                            return_value=spy):

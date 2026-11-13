@@ -37,7 +37,8 @@ class TestSpatialTreeMapHint(unittest.TestCase):
         out = {}
         self.S._add_map_hint(out, None)
         self.assertEqual(out['maps'], ['김제', '영양'])
-        self.assertIn("map='<name>'", out['_map_hint'])
+        self.assertIn('for that map only', out['_map_hint'])
+        self.assertNotIn('cannot be a target', out['_map_hint'])   # 도메인 표면에서는 지도가 target 이다(26-11-09 재점검)
 
     def test_map_given_or_single_map_adds_nothing(self):
         db.session.add(GeoMap(unique_id='m1', name='김제'))

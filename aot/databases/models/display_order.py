@@ -1,6 +1,6 @@
 # coding=utf-8
 from aot.databases import CRUDMixin
-from aot.aot_flask.extensions import db
+from aot.databases.sqla import db
 
 
 class DisplayOrder(CRUDMixin, db.Model):

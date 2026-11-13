@@ -74,10 +74,9 @@ def inject_dictionary():
 @flask_login.login_required
 def inject_functions():
     def epoch_to_time_string(epoch):
-        from aot.utils.time_utils import get_timezone_name
-        import pytz
+        from aot.utils.timekit import FARM, tz_of
         try:
-            tz = pytz.timezone(get_timezone_name())
+            tz = tz_of(FARM)
             return datetime.datetime.fromtimestamp(epoch, tz).strftime(
                 "%Y-%m-%d %H:%M:%S")
         except:
@@ -190,7 +189,7 @@ def page_notes():
             notes, data = utils_notes.export_notes(form_note_show)
             if data:
                 # ⚠ 이 이름은 이 함수에 없었다 — 노트 내보내기가 NameError 로 죽었다.
-                from aot.utils.time_utils import get_local_now
+                from aot.utils.timekit import to_tz, FARM, utc_now
                 # Send zip file to user
                 return send_file(
                     data,
@@ -200,7 +199,7 @@ def page_notes():
                     'AoT_Notes_{mv}_{host}_{dt}.zip'.format(
                         mv=AOT_VERSION,
                         host=socket.gethostname().replace(' ', ''),
-                        dt=get_local_now().strftime("%Y-%m-%d_%H-%M-%S"))
+                        dt=to_tz(utc_now(), FARM).strftime("%Y-%m-%d_%H-%M-%S"))
                 )
         elif form_note_show.notes_export_pdf.data:
             from aot.aot_flask.utils import utils_notes_report
@@ -417,10 +416,11 @@ def page_export():
                       'and metastore', 'error')
 
     # Generate start end end times for date/time picker
-    from aot.utils.time_utils import get_local_now
-    now = get_local_now()
+    # 시계 주의: 구간 선택 칸 기본값은 농장 시계(FARM) — 아래 감사 로그 표시는 보는 사람 시계(VIEWER).
+    from aot.utils.timekit import to_tz, FARM, utc_now
+    now = to_tz(utc_now(), FARM)
     end_picker = now.strftime('%m/%d/%Y %H:%M')
-    start_picker = now - datetime.timedelta(hours=6)
+    start_picker = to_tz(now - datetime.timedelta(hours=6), FARM)  # tz-ok: 순간에서 뺀 창 길이, 표시는 농장 시계로 다시 맞춘다
     start_picker = start_picker.strftime('%m/%d/%Y %H:%M')
 
     return render_template('tools/export.html',
@@ -512,7 +512,7 @@ def page_graph_async():
     area_filter = ''
     choices_area = []
     try:
-        from aot.aot_flask.geo import device_membership
+        from aot.space import device_membership
         choices_area = device_membership.area_choices()
     except Exception:
         logger.exception("[graph-async] 구역 목록을 읽지 못했다")
@@ -551,8 +551,8 @@ def page_graph_async():
         }.get(period, 0)
 
         if seconds:
-            from aot.utils.time_utils import get_local_now
-            now = get_local_now()
+            from aot.utils.timekit import to_tz, FARM, utc_now
+            now = to_tz(utc_now(), FARM)
             start_time_epoch = (now -
                                 datetime.timedelta(seconds=seconds)).timestamp()
         selected_raw = request.form.getlist('selected_measure')
@@ -565,7 +565,7 @@ def page_graph_async():
     allowed_ids = None
     if area_filter:
         try:
-            from aot.aot_flask.geo import device_membership
+            from aot.space import device_membership
             allowed_ids = device_membership.device_ids_in_area(area_filter)
         except Exception:
             logger.exception("[graph-async] 구역 필터 해석 실패")
@@ -578,7 +578,7 @@ def page_graph_async():
         # 태그 자체는 구역에 속하지 않는다("관수"는 농장 전체의 어휘다).
         # 구역에 속하는 것은 노트이므로, 그 구역에 노트가 있는 태그만 남긴다.
         try:
-            from aot.aot_flask.geo import device_membership
+            from aot.space import device_membership
             note_ids = device_membership.note_ids_in_area(
                 area_filter, device_ids=allowed_ids)
             tag_ids = device_membership.tag_ids_for_notes(note_ids or set())
@@ -1175,6 +1175,7 @@ def page_audit_log():
     # 라벨이 없어, 다른 시간대의 관리자가 자기 시각으로 읽었다.
     # (docs/design/timezone-management.md §15)
     from aot.aot_flask.utils.utils_general import utc_to_local_time
+    # 시계 주의: 이 목록은 보는 사람 시계(VIEWER) — 위 구간 선택 칸 기본값(FARM)과 다르다.
     for entry in entries:
         entry.local_timestamp = utc_to_local_time(entry.timestamp) or entry.timestamp
 
@@ -1312,10 +1313,11 @@ def page_energy_usage_input_amps():
         picker_start = {}
         picker_end = {}
 
-    from aot.utils.time_utils import utc_now, to_local
-    _local_now = to_local(utc_now())
+    from aot.utils.timekit import utc_now
+    from aot.utils.timekit import to_tz, FARM
+    _local_now = to_tz(utc_now(), FARM)
     picker_end['default'] = _local_now.strftime('%m/%d/%Y %H:%M')
-    picker_start['default'] = (_local_now - datetime.timedelta(hours=6)).strftime('%m/%d/%Y %H:%M')
+    picker_start['default'] = to_tz(_local_now - datetime.timedelta(hours=6), FARM).strftime('%m/%d/%Y %H:%M')  # tz-ok: 순간에서 뺀 창 길이, 표시는 농장 시계로 다시 맞춘다
 
     return render_template('pages/energy_usage_input_amps.html',
                            calculate_usage=calculate_usage,

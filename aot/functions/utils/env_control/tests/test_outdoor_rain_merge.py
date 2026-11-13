@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-import aot.aot_flask.geo.facility_sensors as fs
+import aot.space.facility_sensors as fs
 import aot.utils.inputs as ui
 from aot.functions.utils.env_control.safety_gates import (
     RAIN_LEVEL_CLOSE, RAIN_LEVEL_HOLD_ROOF, RAIN_LEVEL_NONE, classify_rain)

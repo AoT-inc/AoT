@@ -224,9 +224,8 @@ class SettingsEmail(FlaskForm):
 #
 
 class SettingsTwin(FlaskForm):
-    """설정 > 디지털트윈(settings/twin) — 실행 시각과 두 옵션."""
+    """설정 > 디지털트윈(settings/twin) — 실행 시각과 옵션."""
     twin_run_times = StringField(lazy_gettext('Digital Twin Run Times'))
-    twin_ignore_profile = BooleanField(lazy_gettext('Allow on low-spec profile'))
     twin_auto_forecast = BooleanField(lazy_gettext('Create forecast inputs automatically'))
 
 
@@ -622,6 +621,8 @@ class AccountSelf(FlaskForm):
     ui_zoom_phone = StringField(lazy_gettext('Mobile Screen Size'))
     # 컴퓨터 화면 배율(%) — 같은 규칙, 빈 값 = 기본(100).
     ui_zoom_desktop = StringField(lazy_gettext('Computer Screen Size'))
+    # 경량 모드 — 모달 셀렉트가 ''(끔)·'phone'·'always' 만 보낸다. 검사는 account_self_update().
+    ui_lite_mode = StringField(lazy_gettext('Lightweight Mode'))
     user_account_save = SubmitField(lazy_gettext('Save'))
 
 

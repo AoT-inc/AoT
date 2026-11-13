@@ -86,7 +86,7 @@ class DateRangeTest(unittest.TestCase):
     def test_window_is_local_and_includes_the_end_day(self):
         import pytz
         from aot.tools.aot_data_tool_service import AoTDataToolService as S
-        with mock.patch('aot.utils.device_tz.resolve_location_tz',
+        with mock.patch('aot.utils.timekit.tz_of',
                         lambda _id: pytz.timezone('Asia/Seoul')):
             w, err = S._detail_window('2026-10-01', '2026-10-07', 'x')
             self.assertIsNone(err)
@@ -109,7 +109,7 @@ class DateRangeTest(unittest.TestCase):
         with mock.patch.object(dispatch.targets, 'resolve', lambda ref, **kw: (
                 'ok', {'kind': 'zone', 'id': 'Z', 'name': ref, 'path': ref})), \
                 mock.patch('aot.tools.domain.contract.catalog', cat), \
-                mock.patch.object(dispatch, '_today', lambda: date(2026, 10, 14)):
+                mock.patch.object(dispatch, 'today_at', lambda *_a: date(2026, 10, 14)):
             v = dispatch.plan('measure', {'op': 'history', 'target': '3-1',
                                           'period': '2026-10-01/2026-10-07'}, ops=[op])
         self.assertEqual('2026-10-01/2026-10-07', v[2]['time_range'])
@@ -187,7 +187,7 @@ class DispatchShapeTest(unittest.TestCase):
         res = lambda ref, **kw: ('ok', {'kind': kind, 'id': 'T', 'name': ref,
                                   'path': '영양 > ' + ref})
         with mock.patch.object(dispatch.targets, 'resolve', res), \
-                mock.patch.object(dispatch, '_today', lambda: date(2026, 10, 14)), \
+                mock.patch.object(dispatch, 'today_at', lambda *_a: date(2026, 10, 14)), \
                 mock.patch.multiple(dispatch, **(patches or {'_LIST_CHUNK': 10})):
             return dispatch.plan(tool, args, ops=[_FORECAST, _STATE, _SCREEN])
 
@@ -326,7 +326,8 @@ class DispatchShapeTest(unittest.TestCase):
         self.assertEqual(('call', 'screen_action'), v[:2])
         v, _ = plan({'op': 'act', 'action': 'navigate', 'target': 'x'},
                     lambda ref, only: ('none', {"error": "No dashboard or tab named 'x'."}))
-        self.assertNotIn('next', json.loads(v[1][0]['text']))
+        # 없는 대상에는 찾는 길 한 줄을 싣는다(2026-11-07 오류 안내) — 고쳐서 다시 보낼 호출(`resend`)은 아니다.
+        self.assertEqual({'call'}, set(json.loads(v[1][0]['text'])['next']))
 
     def test_write_drops_candidates_of_kinds_it_cannot_take(self):
         cands = [{'kind': 'map', 'id': 'M', 'name': '영양', 'path': '영양'},
@@ -452,7 +453,7 @@ class DispatchShapeTest(unittest.TestCase):
         with mock.patch('aot.tools.tool_execution._execute_tool', fake_execute), \
                 mock.patch.object(dispatch.targets, 'resolve', res), \
                 mock.patch.object(dispatch, '_ops', lambda: [_FORECAST, _STATE]), \
-                mock.patch.object(dispatch, '_today', lambda: date(2026, 10, 14)):
+                mock.patch.object(dispatch, 'today_at', lambda *_a: date(2026, 10, 14)):
             dispatch._INNER_TO_OP.clear()
             dispatch._INNER_TO_OP['get_plot'] = 'detail.plot'
             try:
@@ -518,10 +519,10 @@ class SchemaCarriesNeededArgsTest(unittest.TestCase):
         from aot.tools.domain.registry_data import OPS
         ops = {(o.tool, o.op): o for o in OPS}
         self.assertTrue({'action', 'page', 'confirm_token'} <= set(ops[('screen', 'act')].shown))
-        for key, arg in ((('record', 'note_edit'), 'note'),
-                         (('configure', 'input_edit'), 'params'),
-                         (('configure', 'widget_edit'), 'options')):
-            self.assertIn(arg, ops[key].shown, key)
+        for arg in ('kind', 'params', 'options'):
+            self.assertIn(arg, ops[('configure', 'edit')].shown, arg)
+        # 노트 고치기의 바꿀 본문은 공통 어휘 `text` 라 스키마에 늘 실린다(2026-11-03 재설계 PR 2).
+        self.assertEqual('note', ops[('record', 'note')].args['text'])
 
     def test_shown_must_name_an_extra_arg(self):
         from aot.tools.domain import contract

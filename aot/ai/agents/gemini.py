@@ -290,7 +290,7 @@ class GeminiAI(AbstractAI):
                             # the caller never sees the structured question/options). Hand
                             # it back so the orchestrator (AgentLoopService) can turn it
                             # into the actual clarification turn — same as an approval tool.
-                            if tool_name == 'ask_user' or AIActionService.requires_approval(tool_name):
+                            if tool_name == 'ask_user' or AIActionService.requires_approval(tool_name, raw_args):
                                 logger.info(f"[GeminiAI] tool={tool_name} is control-flow/approval — "
                                             f"returning as an action instead of auto-executing.")
                                 return {"insight": "", "actions": [action]}

@@ -932,6 +932,20 @@ input:checked+.slider:before {
     white-space: nowrap;
 }
 
+/* 배관 관경 목록 — 틀린 값은 밑줄 색만 바꾼다(ui-guide §4-10). */
+.aot-modern-input.aot-geo-input-error {
+    border-bottom-color: var(--aot-color-danger);
+}
+.aot-geo-input-error-text {
+    color: var(--aot-color-danger);
+}
+#pd-apply:disabled,
+#pd-select-none:disabled {
+    background: none;
+    box-shadow: none;
+    color: var(--aot-color-text-secondary, #5E6B64);
+}
+
 /* 슬라이더 현재값 — 라벨 옆에 붙어 드래그 중에도 숫자가 보인다. */
 .aot-geo-slider-value {
     font-weight: 700;

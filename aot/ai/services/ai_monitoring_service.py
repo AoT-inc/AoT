@@ -26,7 +26,7 @@ from aot.databases.models import (
     AIFeedbackEvent,
 )
 from aot.ai.services.ai_facility_learning_service import AIFacilityLearningService
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 

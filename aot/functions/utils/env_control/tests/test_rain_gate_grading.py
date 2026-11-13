@@ -284,7 +284,7 @@ class TestSourceClassification:
         assert ui.model_origin_device_ids([]) == set()
 
     def test_시설_센서_강우에_출처가_실린다(self, monkeypatch):
-        import aot.aot_flask.geo.facility_sensors as fs
+        import aot.space.facility_sensors as fs
         import aot.utils.inputs as ui
         monkeypatch.setattr(fs, '_freshness_by_device', lambda ids: {})
         monkeypatch.setattr(fs, '_read_one_sensor',

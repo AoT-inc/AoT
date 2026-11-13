@@ -110,9 +110,9 @@ def _today_period(trigger):
     그렇게 저장한 값은 **다음 날 낡는다.**
     """
     from aot.utils import sequence_schedule
-    from aot.utils.device_tz import get_device_tz
+    from aot.utils.timekit import tz_of
     try:
-        tz = get_device_tz(trigger)
+        tz = tz_of(trigger)
     except Exception:
         tz = 'UTC'
     return sequence_schedule.today_period(
@@ -292,10 +292,10 @@ def execute_at_modification(mod_widget, request_form, custom_options_presave, cu
                 if _sub_p is not None and str(_sub_p) != str(_stored_p):
                     try:
                         from aot.utils import sequence_schedule
-                        from aot.utils.device_tz import get_device_tz
+                        from aot.utils.timekit import tz_of
                         from aot.utils.weekly_schedule import get_today_idx
                         _sched = sequence_schedule.load(trigger)
-                        _day = (get_today_idx(str(get_device_tz(trigger)))
+                        _day = (get_today_idx(str(tz_of(trigger)))
                                 if _sched.get('mode') == 'per_day' else None)
                         sequence_schedule.set_window(_sched, period=float(_sub_p), day=_day)
                         _errs = sequence_schedule.save(trigger, _sched)

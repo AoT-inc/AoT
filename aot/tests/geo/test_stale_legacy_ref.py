@@ -28,14 +28,14 @@ from flask import Flask
 
 from aot.aot_flask.extensions import db
 from aot.databases.models import GeoBinding, GeoFacility, Output
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 # ⚠ **앱 컨텍스트 밖에서 먼저 import 한다.** `aot.aot_flask.geo` 패키지는
 #   처음 import 될 때 번역 문자열을 평가하는 모듈을 끌어오는데, 이 테스트의
 #   sqlite 앱에는 babel 이 없다. 컨텍스트 안에서 처음 부르면 KeyError('babel')
 #   로 죽는다 — 검사 대상과 무관한 실패라 원인을 헷갈리게 만든다.
-from aot.aot_flask.geo import device_binding as _device_binding  # noqa: F401
-from aot.aot_flask.geo import facility_integration as _facility_integration  # noqa: F401
+from aot.space import device_binding as _device_binding  # noqa: F401
+from aot.space import facility_integration as _facility_integration  # noqa: F401
 from aot.functions.custom_functions.env_coordinator_impl._profile_loader_mixin \
     import ProfileLoaderMixin
 
@@ -184,7 +184,7 @@ class TestCoordinatorWarnsOnSharedActuator(_DB):
 
     def _call(self, fake, rows):
         with mock.patch(self.MOD + '.db_retrieve_table_daemon', return_value=rows), \
-                mock.patch('aot.aot_flask.geo.facility_integration'
+                mock.patch('aot.space.facility_integration'
                            '.get_facility_integration', side_effect=self._integ):
             ProfileLoaderMixin._warn_shared_actuators(fake, FAC_A)
 
@@ -249,7 +249,7 @@ class TestHealthCheckReportsSharedActuator(unittest.TestCase):
             return {'actuators_resolved': [
                 {'output_uuid': DEV, 'output_name': '측창: 좌', 'kind': 'opening'}]}, None
 
-        with mock.patch('aot.aot_flask.geo.facility_integration'
+        with mock.patch('aot.space.facility_integration'
                         '.get_facility_integration', side_effect=integ):
             return ns['_check_shared_actuators'](
                 FAC_A, types.SimpleNamespace(unique_id='coord-me'))
@@ -283,9 +283,9 @@ class TestHealthCheckReportsSharedActuator(unittest.TestCase):
 # `facility.actuators` 를 직접 읽으면 원장이 끊은 연결을 되살린다.
 _RAW_READ_ALLOWED = {
     # 정본 출구 — 여기서 원장을 입힌다.
-    'aot/aot_flask/geo/device_binding.py',
+    'aot/space/device_binding.py',
     # 저장 경로(쓰기 전 원본을 읽는다)와 `_to_dict` 의 원본 적재.
-    'aot/aot_flask/geo/facility_io.py',
+    'aot/space/facility_io.py',
     # 레거시 → 원장 백필. 원본을 읽는 것이 목적이다.
     'aot/scripts/backfill_geo_binding.py',
 }

@@ -31,6 +31,7 @@ from aot.functions.base_function import AbstractFunction
 from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import utc_now
 
 FUNCTION_INFORMATION = {
     'function_name_unique': 'example_function_loop_with_status',
@@ -148,7 +149,7 @@ class CustomModule(AbstractFunction):
             'string_status': "This info is being returned from the Function Module."
                              "\nCurrent time: {}"
                              "\nLoop count: {}".format(
-                datetime.datetime.now(),
+                utc_now(),
                 self.loop_count),
             'error': []
         }

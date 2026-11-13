@@ -212,7 +212,8 @@ class AnthropicAI(AbstractAI):
                 # gated tool alongside auto-executable ones in the same turn.
                 from aot.ai.services.ai_action_service import AIActionService
                 gated = [_to_action(b) for b in tool_use_blocks
-                         if b.get("name") == 'ask_user' or AIActionService.requires_approval(b.get("name"))]
+                         if b.get("name") == 'ask_user' or AIActionService.requires_approval(
+                             b.get("name"), _to_action(b)['params']['arguments'])]
                 if gated:
                     logger.info(f"[AnthropicAI] tool(s) {[g['tool_name'] for g in gated]} are "
                                 f"control-flow/approval — returning as actions instead of auto-executing.")

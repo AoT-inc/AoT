@@ -68,7 +68,7 @@ class TestProgramApprovalContract(unittest.TestCase):
         with app.app_context():
             db.create_all()
             try:
-                from aot.aot_flask.geo import program_io
+                from aot.space import program_io
                 from aot.databases.models import GeoProgram
                 row, err = program_io.create_program({
                     'name': '테스트 프로그램', 'subject': '무', 'kind': 'vegetation',
@@ -94,7 +94,7 @@ class TestProgramApprovalContract(unittest.TestCase):
         with app.app_context():
             db.create_all()
             try:
-                from aot.aot_flask.geo import program_io
+                from aot.space import program_io
                 from aot.databases.models import GeoProgram
                 row, err = program_io.create_program({
                     'name': 'T', 'subject': '무', 'kind': 'vegetation',

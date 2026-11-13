@@ -39,7 +39,7 @@ def _outputs_from_facility(facility_uuid):
         logger.debug('[irrigation] 시설 조회 실패: %s', exc)
         return set()
     out = set()
-    from aot.aot_flask.geo.device_binding import resolved_refs
+    from aot.space.device_binding import resolved_refs
     for f in resolved_refs(fac)[0]:
         if not isinstance(f, dict):
             continue
@@ -59,7 +59,7 @@ def _outputs_from_plot_program(plot):
     if plot is None:
         return set()
     try:
-        from aot.aot_flask.geo import plot_context
+        from aot.space import plot_context
         from aot.databases.models import Actions
     except Exception:                                       # noqa: BLE001
         return set()
@@ -157,11 +157,11 @@ def last_irrigation(facility_uuid=None, plot=None):
     best['wetting'] = False
     try:
         from aot.databases.models import GeoFacility
-        from aot.aot_flask.geo.irrigation_nozzles import nozzles_by_actuator
+        from aot.space.irrigation_nozzles import nozzles_by_actuator
         fac = (GeoFacility.query.filter_by(unique_id=facility_uuid).first()
                if facility_uuid else None)
         if fac:
-            from aot.aot_flask.geo.device_binding import resolved_refs
+            from aot.space.device_binding import resolved_refs
             summary = nozzles_by_actuator(resolved_refs(fac)[0]).get(
                 best['output_uuid']) or {}
             best['wetting'] = bool(summary.get('wetting'))

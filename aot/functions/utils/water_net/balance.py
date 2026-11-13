@@ -69,6 +69,14 @@ def source_limit(sources: Sequence[Source]) -> float:
     return sum(s.max_lpm for s in sources)
 
 
+def rated_limit(circuit: Circuit) -> float:
+    """회로가 낼 수 있는 유량 상한 L/min — 실행과 무관한 정격이다. 탱크가 있으면 수원은 한계가 아니고 펌프만 한계다
+    (`_advance` 와 같다). 정격을 모르면 INF."""
+    pumps = circuit.pumps
+    cap = sum(p.rated_lpm for p in pumps) if pumps and all(p.rated_lpm for p in pumps) else INF
+    return min(cap, INF if circuit.tanks else source_limit(circuit.sources))
+
+
 def _merged(spans: Iterable[Span]) -> List[List[float]]:
     out: List[List[float]] = []
     for a, b in sorted(spans):

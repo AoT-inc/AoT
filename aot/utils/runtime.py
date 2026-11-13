@@ -8,6 +8,7 @@ from pytz import timezone
 from aot.databases.models import Output, OutputChannel
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import read_influxdb_list, query_string, read_influxdb_single
+from aot.utils.outputs import get_pwm_invert_signal, pwm_logical_state
 from aot.aot_client import DaemonControl
 
 logger = logging.getLogger("aot.runtime")
@@ -103,6 +104,15 @@ def get_elapsed_seconds(device_unique_id, channel_id=0):
         # 현재 장치 상태 확인 (DaemonControl 활용)
         control = DaemonControl()
         state = control.output_state(device_unique_id, output_channel=channel_id)
+
+        # 반전(Invert Signal) 채널은 물리 듀티가 100 - 요청값이다. 화면의 상태
+        # (`/outputstate_unique_id`)와 같은 기준으로 맞춰야 "0%" 인데 경과가
+        # 흐르는 모순이 없다. 숫자가 아닌 채널(on/off)은 그대로 지나간다.
+        try:
+            state = pwm_logical_state(
+                state, get_pwm_invert_signal(device_unique_id, channel_id))
+        except Exception:
+            pass
 
         # binary 출력은 'on' 문자열이지만, PWM/value 출력은 듀티·개방률 같은
         # 숫자를 그대로 돌려준다(base_output.output_state 참고) — 'on' 문자열만

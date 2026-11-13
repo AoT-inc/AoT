@@ -17,11 +17,12 @@ from aot.functions.utils.env_control import (
 )
 from aot.functions.utils.env_control import humid_regime as HR
 from aot.functions.utils.env_control.log_channels import REASON_FROST_PROTECT
-from aot.functions.utils.env_control import psychro
+from aot.utils import clock_hhmm as _clock
+from aot.utils import psychro
 from aot.functions.utils.env_control.dispatch_adapters import (
     PulsedDoseAdapter, screen_partial_ok)
 from aot.functions.utils.env_control import pulse_fog as _PF
-from aot.functions.utils.env_control import sensor_status as _sensor_status
+from aot.utils import sensor_status as _sensor_status
 from aot.functions.utils.env_control.types import SituationReport
 from aot.utils import measurement_freshness as _freshness
 from aot.utils.database import db_retrieve_table_daemon
@@ -301,25 +302,19 @@ class HelpersMixin:
             return cached
 
         import pytz
-        from aot.utils.device_tz import resolve_tz_from_coords
         from aot.utils.database import db_retrieve_table_daemon
 
         def _tz_from_row(row: Any) -> 'Any | None':
-            """Return a pytz object from a row (having a timezone column or latitude/longitude columns)."""
+            """행(장치)의 시간대를 **배치에서** 해석한다(L4, 결정 ①: 공간 상속).
+            장치는 더 이상 자기 timezone 컬럼을 두지 않는다 — `resolve_tz` 가
+            배치 도형에서 상속 tz 를 푼다. 자리 기반(explicit 승격분 포함)으로
+            풀리면 그 tz, 농장 전역 폴백뿐이면 None 으로 체인의 다음 링크로 내려간다.
+            """
             if row is None:
                 return None
-            tz_name = getattr(row, 'timezone', None)
-            if not tz_name:
-                tz_name = resolve_tz_from_coords(
-                    getattr(row, 'latitude', None),
-                    getattr(row, 'longitude', None),
-                )
-            if tz_name:
-                try:
-                    return pytz.timezone(tz_name)
-                except Exception:
-                    pass
-            return None
+            from aot.utils.timekit import resolve_tz, SOURCE_SYSTEM, SOURCE_UTC
+            _tz, _src = resolve_tz(row)
+            return None if _src in (SOURCE_SYSTEM, SOURCE_UTC) else _tz
 
         # ── 1. Function itself (CustomController record) ────────────────────
         try:
@@ -414,8 +409,8 @@ class HelpersMixin:
                  'started_on': None, 'plot_uuid': None, 'plot_name': None,
                  'stage': None, 'reason': 'unavailable'}
         try:
-            from flask import has_app_context
-            from aot.aot_flask.geo import coordinator_plot
+            from aot.space import coordinator_plot
+            from aot.databases.app_holder import run_in_app
             from aot.databases.models import CustomController
 
             def _read():
@@ -423,16 +418,7 @@ class HelpersMixin:
                     unique_id=self.unique_id).first()
                 return coordinator_plot.control_targets(fn) if fn else empty
 
-            if has_app_context():
-                return _read()
-            try:
-                from aot.ai.services.ai_scheduler_service import _flask_app as _app
-            except Exception:                                   # noqa: BLE001
-                _app = None
-            if _app is None:
-                return empty
-            with _app.app_context():
-                return _read()
+            return run_in_app(_read, default=empty)
         except Exception as exc:                                # noqa: BLE001
             self.logger.debug('_load_plot_targets failed: %s', exc)
             return empty
@@ -592,7 +578,7 @@ class HelpersMixin:
             try:
                 from aot.utils.method import load_method_handler, parse_db_time
                 from aot.databases.models import CustomController
-                from aot.utils.time_utils import utc_now
+                from aot.utils.timekit import utc_now
                 from aot.config import AOT_DB_PATH
                 from aot.databases.utils import session_scope
 
@@ -709,14 +695,32 @@ class HelpersMixin:
         둘이 어긋난다.
         """
         try:
-            now   = self._facility_local_now().strftime('%H:%M')
+            now = _clock.minutes_of_day(self._facility_local_now())
             start, end = self._get_time_window()
-            if start <= end:
-                return start <= now <= end
-            else:
-                return now >= start or now <= end   # overnight window
+            # ⚠ **분 단위 정수로 비교한다.** 예전에는 `'HH:MM'` 문자열끼리 사전식
+            #   비교라 `'6:00'` 처럼 자리를 안 맞춘 값이면 창이 뒤집혔다. 못 읽는
+            #   값(옛 설치에 남은 것)은 그 칸의 기본값으로 대신한다 — 저장 단계가
+            #   이제 그런 값을 거부하므로(`constraints_pass_hhmm`) 새로 생기지 않는다.
+            start_min = _clock.parse_hhmm(start)
+            end_min = _clock.parse_hhmm(end)
+            if start_min is None or end_min is None:
+                self._log_unreadable_clock_once('time_start/time_end', start, end)
+                start_min = 6 * 60 if start_min is None else start_min
+                end_min = 20 * 60 if end_min is None else end_min
+            # start > end 이면 자정을 넘는 창(overnight)이다.
+            return _clock.in_window(now, start_min, end_min)
         except Exception:
             return True
+
+    def _log_unreadable_clock_once(self, what, *values) -> None:
+        """읽을 수 없는 시각 옵션을 한 번만 알린다(매 사이클이면 로그를 밀어낸다)."""
+        seen = self.__dict__.setdefault('_unreadable_clock_logged', set())
+        if what in seen:
+            return
+        seen.add(what)
+        self.logger.error(
+            '%s: 시각(HH:MM)으로 읽을 수 없는 값 %r — 기본값으로 대신한다. '
+            '옵션을 HH:MM 로 다시 저장하세요.', what, values)
 
     # ── 야간 개구부 파킹 ───────────────────────────────────────────────────────
 
@@ -815,27 +819,27 @@ class HelpersMixin:
         """
         basis = str(getattr(self, 'night_vent_basis', 'sun') or 'sun')
         if basis == 'clock':
-            start = str(getattr(self, 'night_vent_start', '') or '18:00')
-            end   = str(getattr(self, 'night_vent_end', '') or '06:00')
+            raw_start = getattr(self, 'night_vent_start', '') or '18:00'
+            raw_end = getattr(self, 'night_vent_end', '') or '06:00'
+            # 같은 파서(`aot.utils.clock_hhmm`) — `'6:00'` 같은 값도 분 단위로 바르게 읽는다.
+            start_min = _clock.parse_hhmm(raw_start)
+            end_min = _clock.parse_hhmm(raw_end)
+            if start_min is None or end_min is None:
+                self._log_unreadable_clock_once('night_vent_start/night_vent_end',
+                                                raw_start, raw_end)
+                start_min = 18 * 60 if start_min is None else start_min
+                end_min = 6 * 60 if end_min is None else end_min
             try:
                 now_dt = self._facility_local_now()
-                now = now_dt.strftime('%H:%M')
             except Exception as exc:
                 self.logger.debug('야간 파킹 현지시각 실패 (파킹 안 함): %s', exc)
                 return False, None
             # 자정을 넘는 구간이 정상이다 — 18:00~06:00 이 하룻밤이다.
-            if start <= end:
-                in_night = start <= now <= end
-            else:
-                in_night = now >= start or now <= end
+            in_night = _clock.in_window(_clock.minutes_of_day(now_dt), start_min, end_min)
             if in_night:
                 return True, None
-            try:
-                h, m = start.split(':')[:2]
-                until = (int(h) * 3600 + int(m) * 60 - (
-                    now_dt.hour * 3600 + now_dt.minute * 60 + now_dt.second)) % 86400
-            except (TypeError, ValueError):
-                return False, None
+            until = (start_min * 60 - (
+                now_dt.hour * 3600 + now_dt.minute * 60 + now_dt.second)) % 86400
             return False, (float(until) if 0 < until <= NIGHT_VENT_TAPER_S else None)
 
         try:
@@ -863,17 +867,18 @@ class HelpersMixin:
 
     # @manual ai/env-control#time-control, ai/env-control#settings-ventilation
     def _facility_local_now(self):
-        """시설 현지 시각. 시간대를 모르면 서버 시각으로 물러난다.
+        """시설 현지 시각. 시간대를 모르면 농장 시각(그것도 모르면 UTC)으로 물러난다.
 
         같은 서버가 여러 지역의 시설을 돌리므로 서버 시각을 쓰면 쿠마모토
         온실이 서울 시각으로 밤을 맞는다. 운전 시간대(`_in_time_window`)와
-        야간 파킹이 모두 이 시각을 쓴다.
+        야간 파킹이 모두 이 시각을 쓴다. 예전에는 시설 시간대를 못 풀면 서버
+        시계(`datetime.now()`, naive)로 물러났다 — 컨테이너 `TZ` 에 따라 값이 달랐다.
+        물러나는 길은 timekit 의 폴백 사슬(장소 → 농장 → UTC) 하나다.
+        이 메서드는 시험이 갈아끼우는 자리라 이름을 남긴다.
         """
+        from aot.utils.timekit import FARM, to_tz, utc_now
         fac_tz = self._get_facility_tz()
-        if fac_tz is None:
-            return datetime.now()
-        from aot.utils.timekit import utc_now
-        return utc_now().astimezone(fac_tz)
+        return to_tz(utc_now(), fac_tz if fac_tz is not None else FARM)
 
     # @manual ai/env-control#settings-screen
     def _warn_inert_options_once(self) -> None:
@@ -1276,7 +1281,7 @@ class HelpersMixin:
         cached = getattr(self, '_shade_tau_cache', None)
         if cached is not None:
             return cached
-        from aot.aot_flask.geo.facility_calc import (
+        from aot.space.facility_calc import (
             DEFAULT_SHADE_TRANSMITTANCE, _shade_tau)
         tau = DEFAULT_SHADE_TRANSMITTANCE
         facility_id = getattr(self, 'geo_facility_id_device_id', None) or ''
@@ -1486,7 +1491,7 @@ class HelpersMixin:
             cache = self._leaf_unit_cache = {}
         if meas_id not in cache:
             try:
-                from aot.aot_flask.geo.facility_sensors import _dm_row, _effective_raw_unit
+                from aot.space.facility_sensors import _dm_row, _effective_raw_unit
                 dm = _dm_row(meas_id)
                 cache[meas_id] = _effective_raw_unit(dm) if dm is not None else ''
             except Exception:                                   # noqa: BLE001
@@ -1533,7 +1538,7 @@ class HelpersMixin:
         _sr = getattr(self, '_sensors_resolved', [])
         if _sr:
             try:
-                from aot.aot_flask.geo.facility_sensors import compute_spatial_internal
+                from aot.space.facility_sensors import compute_spatial_internal
                 spatial = compute_spatial_internal(
                     _sr, max_age=_freshness.as_seconds(max_age), with_status=True,
                     frozen=_frozen)
@@ -1565,7 +1570,7 @@ class HelpersMixin:
         # (all sensors expired, full MAD rejection, etc.) -> substitute a role-based weighted average.
         if not any(k in result for k in ('T', 'RH', 'CO2')) and _sr:
             try:
-                from aot.aot_flask.geo.facility_sensors import read_facility_sensors
+                from aot.space.facility_sensors import read_facility_sensors
                 role_data = read_facility_sensors(
                     _sr, max_age=_freshness.as_seconds(max_age), frozen=_frozen)
                 indoor = role_data.get('indoor') or {}
@@ -1596,7 +1601,7 @@ class HelpersMixin:
             od = outdoor_data
             if od is None:
                 try:
-                    from aot.aot_flask.geo.facility_sensors import read_outdoor_sensors
+                    from aot.space.facility_sensors import read_outdoor_sensors
                     od = read_outdoor_sensors(
                         _sr_out, max_age=_freshness.as_seconds(max_age), frozen=_frozen)
                 except Exception as _se:

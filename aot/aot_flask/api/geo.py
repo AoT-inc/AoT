@@ -9,11 +9,13 @@ from flask_restx import Resource, abort, fields
 from flask_login import login_required
 from sqlalchemy import or_
 
+from flask_babel import gettext as _
 from aot.databases.models import GeoMap, GeoShape, GeoSetting, Input, Output, GeoLayer, PID, Trigger, Conditional, CustomController, Function
 from aot.aot_flask.api import api, default_responses
 from aot.aot_flask.extensions import db
 from aot.aot_flask.utils import utils_general, utils_geo
 from aot.utils.inputs import parse_input_information
+from aot.utils.timekit import naive_utc, utc_now
 
 ns_geo = api.namespace('geo', description='Geo Information Services')
 
@@ -55,9 +57,10 @@ class GeoDesigns(Resource):
                 result.append({
                     'unique_id': m.unique_id,
                     'name': m.name,
-                    'latitude': lat if lat is not None else 37.5665,
-                    'longitude': lng if lng is not None else 126.9780,
-                    'zoom': zoom if zoom is not None else 13
+                    # 시작 위치가 없으면 세계 전도(0,0 줌 2) — 도시 리터럴 없음.
+                    'latitude': lat if lat is not None else 0,
+                    'longitude': lng if lng is not None else 0,
+                    'zoom': zoom if zoom is not None else (13 if lat is not None else 2)
                 })
             return result
         except Exception as e:
@@ -213,7 +216,12 @@ class GeoOverlays(Resource):
         result, error = GeoOverlayManager.get_overlays(map_uuid, target_type, parent_id, device_id=device_id)
         if error:
             abort(500, message=error)
-        return result
+        # 지도 하나의 도형은 한 화면에서 여러 위젯이 거듭 읽는다(실측: 대시보드
+        # 한 번에 3회, 호출당 95KB). 본문 해시를 ETag 로 달아 브라우저가 재검증만
+        # 하고 본문은 304 로 건너뛰게 한다 — 서버 계산은 그대로라 줄이는 것은 회선이다.
+        from flask import jsonify
+        from aot.aot_flask.utils import utils_http
+        return utils_http.json_conditional(jsonify(result), request)
 
     # @manual geo/design-tool#manual-save, geo/api-reference#details-post-apigeooverlays
     @ns_geo.doc(responses=default_responses)
@@ -260,84 +268,12 @@ class GeoSearch(Resource):
             if not query:
                 return {'ok': False, 'message': 'Missing query'}, 400
                 
-            if not layer_id:
-                settings = GeoSetting.query.first()
-                if settings and settings.providers:
-                    try:
-                        provs = json.loads(settings.providers)
-                        layer_id = provs.get('search_provider')
-                    except:
-                        pass
-                
-                if not layer_id:
-                    layer_id = 'gis_osm' # Default Fallback (Nominatim)
-                
-            layer = GeoLayer.query.filter_by(unique_id=layer_id).first()
-            file_path = None
-            custom_opts = {}
-            
-            if layer:
-                dict_inputs = parse_input_information()
-                layer_def = dict_inputs.get(layer.type, {})
-                file_path = layer_def.get('file_path')
-                try:
-                    custom_opts = json.loads(layer.options) if layer.options else {}
-                except:
-                    custom_opts = {}
-            else:
-                dict_inputs = parse_input_information()
-                if layer_id in dict_inputs:
-                    file_path = dict_inputs[layer_id].get('file_path')
-                # Native type: inherit options (incl. API key) from any existing layer of that type
-                existing_of_type = GeoLayer.query.filter_by(type=layer_id).first()
-                if existing_of_type:
-                    try:
-                        custom_opts = json.loads(existing_of_type.options) if existing_of_type.options else {}
-                    except:
-                        custom_opts = {}
+            from aot.aot_flask.geo import geo_lookup
+            try:
+                result = geo_lookup.raw_search(query, provider=layer_id, search_type=search_type)
+            except geo_lookup.GeoLookupError as e:
+                return {'ok': False, 'message': e.message}, e.status
 
-            if not file_path:
-                return {'ok': False, 'message': 'Provider not found'}, 404
-
-            from aot.utils.modules import load_module_from_file
-            from aot.aot_flask.utils.utils_geo import MockInputDev
-
-            mod, status = load_module_from_file(file_path, 'inputs')
-            if not mod or not hasattr(mod, 'InputModule'):
-                return {'ok': False, 'message': 'Invalid Provider Module'}, 500
-
-            global_settings = GeoSetting.query.first()
-            global_api_keys = {}
-            if global_settings and global_settings.keys:
-                try:
-                    global_api_keys = json.loads(global_settings.keys)
-                except:
-                    global_api_keys = {}
-
-            dict_inputs = parse_input_information()
-            layer_def = dict_inputs.get(layer.type if layer else layer_id, {})
-
-            if 'key_field' in layer_def:
-                kf = layer_def['key_field']
-                gkf = layer_def.get('global_key_field', kf)
-                if not custom_opts.get(kf):
-                    global_val = global_api_keys.get(gkf)
-                    if global_val:
-                        custom_opts[kf] = global_val
-
-            mock_dev = MockInputDev(type('obj', (object,), {'unique_id': layer_id, 'name': 'SearchProxy'})())
-            inst = mod.InputModule(mock_dev)
-            inst.custom_options = custom_opts
-            
-            def mock_get_option(opt, default=None):
-                return inst.custom_options.get(opt, default)
-            inst.get_custom_option = mock_get_option
-
-            if not hasattr(inst, 'search'):
-                return {'ok': False, 'message': 'Search not supported by this provider'}, 400
-                 
-            result = inst.search(query, search_type=search_type)
-            
             if isinstance(result, dict) and 'error' in result:
                 return {'ok': False, 'message': result['error']}, 200
                  
@@ -346,6 +282,163 @@ class GeoSearch(Resource):
         except Exception as e:
             current_app.logger.error(f" [GeoAPI] Search Exception: {e}")
             return {'ok': False, 'message': str(e)}, 500
+
+#: 좌표 → 주소 응답을 잠깐 담아 둔다 — 같은 자리를 다시 묻거나 시트를 다시 열 때 외부 지오코더를 또 부르지 않게
+#: (Nominatim 은 초당 1건 정책). 좌표는 소수 5자리(약 1m)로 묶고, 성공한 것만 담는다.
+_ADDRESS_CACHE = {}
+_ADDRESS_CACHE_TTL_S = 3600
+_ADDRESS_CACHE_MAX = 256
+
+
+@ns_geo.route('/address')
+class GeoAddress(Resource):
+    # @manual geo/api-reference#search
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def get(self):
+        """Reverse geocode (lat, lng -> address) through the GIS Input lookup gate."""
+        import time
+        from aot.aot_flask.geo import geo_lookup
+        try:
+            lat = float(request.args.get('lat'))
+            lng = float(request.args.get('lng'))
+        except (TypeError, ValueError):
+            return {'ok': False, 'message': 'lat and lng are required numbers'}, 400
+        key = (round(lat, 5), round(lng, 5))
+        now = time.time()
+        hit = _ADDRESS_CACHE.get(key)
+        if hit and now - hit[0] < _ADDRESS_CACHE_TTL_S:
+            return hit[1]
+        found = geo_lookup.find_address(lat, lng)
+        if found.get('status') != 'ok':
+            return {'ok': False, 'code': found.get('code'), 'message': found.get('error')}, 200
+        out = {'ok': True, 'address': found['address'], 'type': found.get('type'),
+               'provider': found['provider']['type']}
+        if len(_ADDRESS_CACHE) >= _ADDRESS_CACHE_MAX:
+            _ADDRESS_CACHE.clear()
+        _ADDRESS_CACHE[key] = (now, out)
+        return out
+
+
+def _fav_user():
+    import flask_login
+    return flask_login.current_user.name
+
+
+def _fav_write_guard():
+    if not utils_general.user_has_permission('edit_settings'):
+        return {'ok': False, 'message': 'Insufficient permission'}, 403
+    return None
+
+
+def _fav_error(e):
+    return {'ok': False, 'code': e.code, 'message': e.message}, e.status
+
+
+@ns_geo.route('/favorites')
+class GeoFavorites(Resource):
+    # @manual geo/api-reference#search
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def get(self):
+        """List the map favorites visible to this user (shared ones and the user's own)."""
+        from aot.aot_flask.geo import geo_favorites
+        return {'ok': True, 'favorites': geo_favorites.listing(_fav_user())}
+
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def post(self):
+        """Save a place: {name, lat, lng, address, shared}. The same spot (about 1 m) is not added twice."""
+        from aot.aot_flask.geo import geo_favorites
+        denied = _fav_write_guard()
+        if denied:
+            return denied
+        data = request.get_json(silent=True) or {}
+        try:
+            row, created = geo_favorites.add(data.get('name'), data.get('lat'), data.get('lng'),
+                                             data.get('address'), created_by=_fav_user(),
+                                             shared=data.get('shared', True))
+        except geo_favorites.FavoriteError as e:
+            return _fav_error(e)
+        return {'ok': True, 'created': created, 'favorite': geo_favorites.to_dict(row, _fav_user())}
+
+
+@ns_geo.route('/favorites/<int:favorite_id>')
+class GeoFavoriteItem(Resource):
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def patch(self, favorite_id):
+        """Rename a favorite and/or change its sharing: {name?, shared?} (sharing: owner only)."""
+        from aot.aot_flask.geo import geo_favorites
+        denied = _fav_write_guard()
+        if denied:
+            return denied
+        data = request.get_json(silent=True) or {}
+        try:
+            row = geo_favorites.update(favorite_id, _fav_user(), name=data.get('name'), shared=data.get('shared'))
+        except geo_favorites.FavoriteError as e:
+            return _fav_error(e)
+        return {'ok': True, 'favorite': geo_favorites.to_dict(row, _fav_user())}
+
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def delete(self, favorite_id):
+        """Remove a favorite."""
+        from aot.aot_flask.geo import geo_favorites
+        denied = _fav_write_guard()
+        if denied:
+            return denied
+        try:
+            geo_favorites.remove(favorite_id, _fav_user())
+        except geo_favorites.FavoriteError as e:
+            return _fav_error(e)
+        return {'ok': True}
+
+
+@ns_geo.route('/favorites/<int:favorite_id>/move')
+class GeoFavoriteMove(Resource):
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def post(self, favorite_id):
+        """Move a favorite one step in the list: {direction: 'up'|'down'}."""
+        from aot.aot_flask.geo import geo_favorites
+        denied = _fav_write_guard()
+        if denied:
+            return denied
+        data = request.get_json(silent=True) or {}
+        try:
+            geo_favorites.move(favorite_id, _fav_user(), data.get('direction'))
+        except geo_favorites.FavoriteError as e:
+            return _fav_error(e)
+        return {'ok': True, 'favorites': geo_favorites.listing(_fav_user())}
+
+
+@ns_geo.route('/around')
+class GeoAround(Resource):
+    @ns_geo.doc(responses=default_responses)
+    @login_required
+    def get(self):
+        """Which zone/plot a point is in and which devices are near it (names only) — the same reading the AI gets."""
+        from aot.databases.models import Widget
+        from aot.utils import geo_distance
+        try:
+            lat = float(request.args.get('lat'))
+            lng = float(request.args.get('lng'))
+        except (TypeError, ValueError):
+            return {'ok': False, 'message': 'lat and lng are required numbers'}, 400
+        map_uuid = None
+        wid = request.args.get('widget_id')
+        if wid:
+            w = Widget.query.filter(Widget.unique_id == wid).first()
+            if w is not None:
+                try:
+                    map_uuid = json.loads(w.custom_options or '{}').get('map_uuid')
+                except ValueError:
+                    map_uuid = None
+        around = geo_distance.around_point(lat, lng, 1, map_uuid=map_uuid)
+        return {'ok': True, 'inside': around.get('inside', []), 'edge': around.get('edge', []),
+                'near': around.get('near', [])}
+
 
 geo_binding_model = ns_geo.model('GeoBinding', {
     'spatial_kind': fields.String(required=True,
@@ -409,7 +502,7 @@ def _binding_args(data):
     바인딩 어휘와 다르다('function' 이 UI 에서는 CustomController 다).
     그대로 저장하면 바인딩의 종류가 실제 테이블과 어긋난 채 조용히 남는다.
     """
-    from aot.aot_flask.geo import device_binding
+    from aot.space import device_binding
 
     # device_id 는 `<uuid>::<channel>` 접미사를 받는다. 명시적 channel_id 가
     # 없으면 그 접미사가 채널이다 — 떼기만 하고 버리면 채널 3 배정이 채널 0
@@ -476,7 +569,7 @@ class GeoBindingResource(Resource):
     @login_required
     def get(self):
         """Current bindings (and history) for one spatial slot"""
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         spatial_kind = request.args.get('spatial_kind')
         spatial_id = request.args.get('spatial_id')
         role = request.args.get('role') or None
@@ -502,7 +595,7 @@ class GeoBindingResource(Resource):
         """Bind a device to an unoccupied slot"""
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         data = request.get_json() or {}
         try:
             row = device_binding.bind(commit=True, **_binding_args(data))
@@ -527,7 +620,7 @@ class GeoBindingResource(Resource):
         """Replace the device on a slot (ends the old binding, keeps history)"""
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         data = request.get_json() or {}
         try:
             row = device_binding.rebind(commit=True, **_binding_args(data))
@@ -552,7 +645,7 @@ class GeoBindingUnbound(Resource):
         `kinds` 로 반드시 좁혀서 부를 것(예: `kinds=shape`). 구역 폴리곤은
         지도가, 시설 설비는 시설 편집기가 관할이라 한 화면에 섞으면 안 된다.
         """
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         raw = (request.args.get('kinds') or '').strip()
         kinds = tuple(k for k in raw.split(',') if k) or None
         try:
@@ -575,7 +668,7 @@ class GeoBindingDetail(Resource):
         """End a binding. The row is kept — history is the point (B3)."""
         if not utils_general.user_has_permission('edit_settings'):
             abort(403)
-        from aot.aot_flask.geo import device_binding
+        from aot.space import device_binding
         data = request.get_json(silent=True) or {}
         reason = data.get('reason') or request.args.get('reason') or 'unbound'
         try:
@@ -599,7 +692,7 @@ class GeoDeviceLocation(Resource):
     @ns_geo.doc(responses=default_responses)
     @login_required
     def post(self):
-        """Saves device location directly to SQL columns (latitude, longitude)"""
+        """Places (or moves/unplaces) a device marker via the placement gateway"""
         # 지도 편집 쓰기 — 형제 쓰기(/overlays·/binding·/designs)와 MCP
         # set_device_location 과 같은 edit_settings.
         if not utils_general.user_has_permission('edit_settings'):
@@ -624,20 +717,15 @@ class GeoDeviceLocation(Resource):
                 if not data.get('channel_id') and len(parts) > 1:
                     channel_id = parts[1]
 
-            model_map = {
-                'input': Input,
-                'output': Output,
-                'pid': PID,
-                'trigger': Trigger,
-                'conditional': Conditional,
-                # 복합장치(Device)와 Custom Function 은 같은 테이블이지만 지도
-                # 에서는 따로 배치한다(collect_devices 가 is_device 로 가른다).
-                # 여기 'device' 가 없으면 장치 마커 저장이 400 으로 튕긴다.
-                'device': CustomController,
-                'function': CustomController,
-                'custom': CustomController,
-                'generic_function': Function
-            }
+            # 복합장치(Device)와 Custom Function 은 같은 테이블이지만 지도
+            # 에서는 따로 배치한다(collect_devices 가 is_device 로 가른다).
+            # 여기 'device' 가 없으면 장치 마커 저장이 400 으로 튕긴다.
+            # 지도 어휘: 'function'=CustomController, 'generic_function'=Function.
+            from aot.space.device_kind import models_for
+            model_map = models_for(
+                ('input', 'output', 'pid', 'trigger', 'conditional',
+                 'device', 'function', 'custom', 'generic_function'),
+                vocabulary='geo')
             
             ModelClass = model_map.get(dev_type.lower())
             if not ModelClass:
@@ -669,22 +757,27 @@ class GeoDeviceLocation(Resource):
                     (map_uuid and not scope.can_operate('geo_map', map_uuid)):
                 return {'ok': False, 'message': scope.deny_message()}, 403
 
-            if str(channel_id) in ['0', 'None', '']:
-                if hasattr(target_device, 'latitude'):
-                    target_device.latitude = float(lat) if lat not in [None, ''] else None
-                if hasattr(target_device, 'longitude'):
-                    target_device.longitude = float(lng) if lng not in [None, ''] else None
-                
-            if hasattr(target_device, 'location_updated_utc'):
-                target_device.location_updated_utc = datetime.utcnow()
-                
+            # [L2] 장치 행의 좌표 컬럼에는 쓰지 않는다 — 위치의 정본은 배치
+            # (마커 + geo_binding)이고 읽는 쪽은 device_location.locate 다.
+            if not map_uuid and lat not in [None, ''] and lng not in [None, '']:
+                # 옵션 모달의 지도는 map_uuid 를 보내지 않는다 — 장치의 현재 지도, 없으면
+                # 지도가 하나뿐일 때 그 지도. 여러 개인데 미배치면 배치하지 않는다.
+                from aot.space.device_membership import map_for_device
+                map_uuid = map_for_device(unique_id)
+                if not map_uuid:
+                    _maps = GeoMap.query.all()
+                    if len(_maps) == 1:
+                        map_uuid = _maps[0].unique_id
+                    elif len(_maps) > 1:
+                        return {'ok': False,
+                                'message': _('Select a map to place this device on.')}, 400
             if map_uuid:
                 # [P2] map_config_id 저장 폐지 — 아래에서 만드는 마커의
                 # geo_id 가 곧 '이 장치가 속한 지도'다(device_membership).
 
                 # [S3] map_overlay_id 는 더 이상 쓰지 않는다. 소속은 아래에서
                 # 만드는 위치 마커의 좌표로부터 실시간 파생된다
-                # (aot/aot_flask/geo/device_membership.py — 유일한 정본).
+                # (aot/space/device_membership.py — 유일한 정본).
                 # 저장하지 않으면 복제·zone 재생성·도형 삭제가 오염시킬 수 없다.
 
                 # [S5] 마커 쓰기는 단일 게이트웨이를 통해서만 — 채널 정규화·
@@ -733,7 +826,7 @@ class GeoDeviceLocation(Resource):
             derived_overlay_id = None
             if map_uuid:
                 try:
-                    from aot.aot_flask.geo.device_membership import zone_for_device
+                    from aot.space.device_membership import zone_for_device
                     _z = zone_for_device(unique_id, map_uuid)
                     derived_overlay_id = _z.id if _z is not None else None
                 except Exception:

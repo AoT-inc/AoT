@@ -54,6 +54,11 @@ class AbstractController(AbstractBaseController):
         # asleep, and every output's actual teardown took 15 ms in total.
         # Shutdown after this change: 1.84 s.
         self._stop_event = threading.Event()
+        # 루프 사이 대기를 **끝내는** 신호. stop 도 이것을 세운다. 다른 스레드가
+        # 새 일정을 만들었을 때(출력을 N초 켬 등) `wake()` 로 세워, 점검 주기
+        # (sample_rate)를 다 기다리지 않고 다음 할 일 시각을 다시 계산하게 한다.
+        self._wake_event = threading.Event()
+        self._overdue_last_wait = False
 
         logger_name = f"{name}"
         if self.unique_id:
@@ -126,8 +131,8 @@ class AbstractController(AbstractBaseController):
                     # sample_rate later. wait(None) would block forever, which
                     # is a worse failure than the TypeError sleep(None) raised,
                     # so fall back to the constructor default.
-                    period = self.sample_rate if self.sample_rate is not None else 0.25
-                    self._stop_event.wait(period)
+                    self._wake_event.wait(self._loop_wait())
+                    self._wake_event.clear()
 
         except Exception:
             self.logger.exception("Run Error")
@@ -152,6 +157,64 @@ class AbstractController(AbstractBaseController):
         # Wake the loop out of its inter-iteration wait. Set after running=False
         # so the woken thread always re-reads the flag as already cleared.
         self._stop_event.set()
+        self._wake_event.set()
+
+    # 다음 할 일 시각에 맞춰 깨어날 때의 하한(초). 0 으로 기다리면 바쁜 대기가
+    # 되므로 아주 작게 둔다 — 할 일 시각 바로 뒤에 깨어나 `< now` 비교가 참이 된다.
+    MIN_LOOP_WAIT_S = 0.01
+
+    def _base_wait(self):
+        """점검 주기(sample_rate). 없거나 양수가 아니면 생성자 기본 0.25초."""
+        try:
+            rate = float(self.sample_rate)
+        except (TypeError, ValueError):
+            return 0.25
+        return rate if rate > 0 and rate == rate else 0.25
+
+    def seconds_until_due(self):
+        """다음 할 일까지 남은 초. 없으면 None — 하위 클래스가 덮어쓴다.
+
+        점검 주기는 "얼마나 자주 상태를 둘러보나" 이지 "약속한 시각을 얼마나
+        어길 수 있나" 가 아니다. 예전에는 루프가 늘 sample_rate 만큼 잤으므로,
+        점검 주기를 15초로 올린 설치(2026-11-12 맥북·맥미니 실측)에서는 시간
+        트리거가 최대 15초 늦게 발화하고 출력의 '5초 켜짐' 이 15초가 됐다.
+        """
+        return None
+
+    def _loop_wait(self):
+        """이번 대기 길이: 점검 주기와 '다음 할 일까지' 중 짧은 쪽."""
+        base = self._base_wait()
+        try:
+            due = self.seconds_until_due()
+        except Exception:
+            self.logger.exception("seconds_until_due() Error")
+            due = None
+        if due is None:
+            return base
+        try:
+            due = float(due)
+        except (TypeError, ValueError):
+            return base
+        if due != due:     # NaN
+            return base
+        if due <= 0:
+            # 할 일 시각이 지났는데 직전 바퀴에서도 지나 있었다면 `loop()` 가 그
+            # 시각을 앞으로 밀지 못하는 상태다(주기 0 으로 저장된 설정 등).
+            # 바로 다시 깨우면 0.01초마다 도는 바쁜 대기가 되므로 예전처럼 점검
+            # 주기로 물러선다.
+            if getattr(self, '_overdue_last_wait', False):
+                self._overdue_last_wait = False
+                return base
+            self._overdue_last_wait = True
+            return self.MIN_LOOP_WAIT_S
+        self._overdue_last_wait = False
+        return max(self.MIN_LOOP_WAIT_S, min(base, due + self.MIN_LOOP_WAIT_S))
+
+    def wake(self):
+        """기다리는 루프를 바로 깨운다(다음 할 일 시각을 다시 계산하게)."""
+        event = getattr(self, '_wake_event', None)    # __init__ 전(시험의 object.__new__)
+        if event is not None:
+            event.set()
 
     def set_log_level_debug(self, log_level_debug):
         if log_level_debug:

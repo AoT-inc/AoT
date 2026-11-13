@@ -12,6 +12,13 @@ from aot.tools.aot_data_tool_service import AoTDataToolService as S
 _FEED = 'aot.functions.utils.env_control.forecast_feedforward._load_forecast'
 
 
+def _located(inp):
+    """locate_many 가 이 입력을 (latitude, longitude) 자리에 둔 것처럼 낸 결과."""
+    from types import SimpleNamespace
+    return {('input', inp.unique_id):
+            SimpleNamespace(point=(inp.latitude, inp.longitude))}
+
+
 def _provider(describe, query_result):
     svc = MagicMock()
     svc.describe_all.return_value = describe
@@ -141,8 +148,10 @@ class TestGetWeatherForecast:
         inp = MagicMock(latitude=35.8, longitude=126.9, is_activated=True)
         prov, _ = _provider([], (None, None))
         with patch('aot.tools.providers', prov), \
-             patch('aot.tools.data_tools.measurement.Input') as I:
-            I.query.filter.return_value.first.return_value = inp
+             patch('aot.tools.data_tools.measurement.Input') as I, \
+             patch('aot.space.device_location.locate_many',
+                   return_value=_located(inp)):
+            I.query.filter.return_value.order_by.return_value.all.return_value = [inp]
             assert S._open_meteo_forecast_source()['kind'] == 'input'
 
 
@@ -186,8 +195,10 @@ class TestForecastHintFreshness:
         inp = MagicMock(latitude=35.8, longitude=126.9, is_activated=False)
         prov, _ = _provider([], (None, None))
         with patch('aot.tools.providers', prov), \
-             patch('aot.tools.data_tools.measurement.Input') as I:
-            I.query.filter.return_value.first.return_value = inp
+             patch('aot.tools.data_tools.measurement.Input') as I, \
+             patch('aot.space.device_location.locate_many',
+                   return_value=_located(inp)):
+            I.query.filter.return_value.order_by.return_value.all.return_value = [inp]
             hint = S.forecast_input_hint()
         assert hint and '꺼져' in hint and '예보 입력 없음' not in hint
 
@@ -195,8 +206,10 @@ class TestForecastHintFreshness:
         inp = MagicMock(latitude=35.8, longitude=126.9, is_activated=True)
         prov, _ = _provider([], (None, None))
         with patch('aot.tools.providers', prov), \
-             patch('aot.tools.data_tools.measurement.Input') as I:
-            I.query.filter.return_value.first.return_value = inp
+             patch('aot.tools.data_tools.measurement.Input') as I, \
+             patch('aot.space.device_location.locate_many',
+                   return_value=_located(inp)):
+            I.query.filter.return_value.order_by.return_value.all.return_value = [inp]
             assert S.forecast_input_hint() is None
 
 

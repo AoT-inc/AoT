@@ -10,7 +10,7 @@ import math
 import pytest
 
 from aot.functions.utils.env_control import log_channels as LC
-from aot.functions.utils.env_control import sensor_status as SS
+from aot.utils import sensor_status as SS
 
 
 class TestCheckValueBoundaries:

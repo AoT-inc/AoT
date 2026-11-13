@@ -63,14 +63,16 @@ def _seen():
                              return_value=(42.0, '2026-10-30T09:00:00+09:00', 'temperature (ch0)'))
 
 
-def test_without_fields_the_inner_tool_still_returns_everything(app):
+def test_without_fields_the_inner_tool_returns_everything_but_settings_and_connection_values(app):
+    # 2026-11-03: 옵션·연결 값(호스트·사용자명 …)은 기본 응답에서 빼고 fields 로 청한다.
     with app.test_request_context():
         inp = _input()
         out = _svc().get_device_detail(device_id=inp.unique_id)
         for key in ('what', 'location', 'measurements', 'communication', 'geo_bindings',
-                    'constraints', 'options'):
+                    'constraints'):
             assert key in out
-        assert 'last_seen' not in out and 'more' not in out
+        assert 'options' not in out and 'fields' not in (out['communication'] or {})
+        assert 'last_seen' not in out and 'fields=[options, connection]' in out['more']
 
 
 def test_the_brief_has_name_state_place_last_seen_and_channel_names_and_units(app):
@@ -128,7 +130,8 @@ def test_all_is_the_whole_answer_and_unknown_names_are_reported(app):
             whole = _svc().get_device_detail(device_id=inp.unique_id)
             allf = _svc().get_device_detail(device_id=inp.unique_id, fields=['all'])
             odd = _svc().get_device_detail(device_id=inp.unique_id, fields=['Options', 'bogus'])
-        assert set(allf) >= set(whole)
+        assert set(allf) >= set(whole) - {'more'}
+        assert 'options' in allf and 'options' not in whole
         assert 'options' in odd and odd['unknown_fields'] == ['bogus']      # 대소문자는 가리지 않는다
 
 

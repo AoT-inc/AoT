@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-from . import psychro
+from aot.utils import psychro
 from .types import (
     EnvContext, EnvTarget, SituationReport, TargetVar,
     MODE_COOLING, MODE_HEATING, MODE_HUMIDIFY, MODE_DEHUMIDIFY,

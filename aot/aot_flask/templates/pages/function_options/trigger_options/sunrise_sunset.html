@@ -42,14 +42,14 @@
   </div>
 
   <!-- Location is GIS-managed: coordinates are auto-assigned from this trigger's
-       position on the map above. The latitude/longitude form fields are rendered
-       as hidden inputs by the map widget, so no manual entry is needed here. -->
+       position on the map above. Position comes from the placement (locate), not from form fields. -->
   <div class="aot-modal-option-row">
     <label class="aot-modal-option-label">{{_('Location (Auto)')}}</label>
     <div class="aot-modal-option-control">
       <span class="form-control-plaintext aot-modal-body-text pl-0">
-        {% if each_function.latitude is not none and each_function.longitude is not none %}
-          {{ '%.5f'|format(each_function.latitude) }}, {{ '%.5f'|format(each_function.longitude) }}
+        {% set _pl = device_placement_summary(each_function.unique_id) if device_placement_summary is defined else none %}
+        {% if _pl and _pl.point %}
+          {{ '%.5f'|format(_pl.point[0]) }}, {{ '%.5f'|format(_pl.point[1]) }}
           <small class="text-muted d-block">{{_('Set automatically from the map above. Move the marker to change location.')}}</small>
         {% else %}
           <small class="text-muted">{{_('Not set — place this trigger on the map above.')}}</small>

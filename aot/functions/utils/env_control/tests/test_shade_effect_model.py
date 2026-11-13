@@ -11,7 +11,7 @@ import types
 import pytest
 
 from aot.functions.utils.env_control import effect_functions as ef
-from aot.functions.utils.env_control import psychro as ps
+from aot.utils import psychro as ps
 
 
 def _env(T=30.0, RH=50.0, solar=600.0, **kw):

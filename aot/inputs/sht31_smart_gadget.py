@@ -9,6 +9,7 @@ from aot.inputs.sensorutils import calculate_vapor_pressure_deficit
 from aot.utils.inputs import parse_measurement
 from aot.utils.influx import write_influxdb_value
 from aot.utils.lockfile import LockFile
+from aot.utils.timekit import naive_utc, parse_utc
 
 
 def constraints_pass_logging_interval(mod_input, value):
@@ -269,7 +270,7 @@ class InputModule(AbstractInput):
             list_timestamps_temp.append(each_ts)
 
             if self.is_enabled(0):
-                datetime_ts = datetime.datetime.utcfromtimestamp(each_ts / 1000)
+                datetime_ts = naive_utc(parse_utc(each_ts / 1000))
                 measurement_single = {
                     0: {
                         'measurement': 'temperature',
@@ -303,7 +304,7 @@ class InputModule(AbstractInput):
             list_timestamps_humi.append(each_ts)
 
             if self.is_enabled(1):
-                datetime_ts = datetime.datetime.utcfromtimestamp(each_ts / 1000)
+                datetime_ts = naive_utc(parse_utc(each_ts / 1000))
                 measurement_single = {
                     1: {
                         'measurement': 'humidity',
@@ -340,7 +341,7 @@ class InputModule(AbstractInput):
             if (-200 > temperature or temperature > 200) or (0 > humidity or humidity > 100):
                 continue  # Measurement outside acceptable range
 
-            datetime_ts = datetime.datetime.utcfromtimestamp(each_ts / 1000)
+            datetime_ts = naive_utc(parse_utc(each_ts / 1000))
             # Calculate and store dew point
             if self.is_enabled(3) and self.is_enabled(0) and self.is_enabled(1):
                 dewpoint = calculate_dewpoint(temperature, humidity)

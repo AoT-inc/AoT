@@ -16,6 +16,7 @@ from aot.utils.constraints_pass import constraints_pass_positive_value
 from aot.utils.database import db_retrieve_table_daemon
 from aot.utils.influx import add_measurements_influxdb
 from aot.utils.lazy_text import lazy_format
+from aot.utils.timekit import naive_utc, utc_now
 
 # Measurements
 measurements_dict = {
@@ -199,7 +200,7 @@ class OutputModule(AbstractOutput):
         self.logger.debug("Output turned on")
         self.GPIO.output(self.options_channels['pin'][0], self.options_channels['on_state'][0])
         timer_dispense = time.time() + total_dispense_seconds
-        timestamp_start = datetime.datetime.utcnow()
+        timestamp_start = naive_utc(utc_now())
 
         while time.time() < timer_dispense and self.currently_dispensing:
             time.sleep(0.01)
@@ -231,7 +232,7 @@ class OutputModule(AbstractOutput):
 
         self.currently_dispensing = True
         timer_dispense = time.time() + total_dispense_seconds
-        timestamp_start = datetime.datetime.utcnow()
+        timestamp_start = naive_utc(utc_now())
 
         while time.time() < timer_dispense and self.currently_dispensing:
             # On for duration

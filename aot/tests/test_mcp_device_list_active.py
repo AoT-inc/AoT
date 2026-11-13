@@ -91,7 +91,7 @@ def test_ai_excluded_devices_are_not_counted(app):
 def test_the_domain_op_returns_it_within_its_budget(app):
     from aot.tools.domain.registry import find_op
     from aot.tools.domain.registry_data import OPS
-    o = find_op(OPS, 'find', 'device_list')
+    o = find_op(OPS, 'find', 'devices')        # device_list 는 devices 로 합쳐졌다(재설계 PR 3)
     assert o.budget == 6000
     from aot.databases.models import Input
     with app.test_request_context():

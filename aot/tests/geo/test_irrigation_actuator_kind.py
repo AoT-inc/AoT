@@ -13,10 +13,10 @@ VPD 관리를 별도 PID Function 으로 분리해 운영할 수밖에 없었다
 전용이면 여전히 제외.
 """
 
-from aot.aot_flask.geo.facility_integration import (
+from aot.space.facility_integration import (
     _fitting_actuator_kind, _irrigation_actuator_kind,
 )
-from aot.aot_flask.geo.irrigation_nozzles import nozzles_by_actuator
+from aot.space.irrigation_nozzles import nozzles_by_actuator
 
 
 def _fittings(sub_type='sprinkler', flow_lph=40.0, radius_m=2.0):
@@ -89,7 +89,7 @@ class TestFixtureFittingKinds:
         과거 'irrigation' 처럼 존재하지 않는 이름을 넣으면 프로필은 만들어지되
         효과 모델이 비어 조율 대상에서 조용히 빠진다.
         """
-        from aot.aot_flask.geo.facility_integration import (
+        from aot.space.facility_integration import (
             _FITTING_KIND_TO_ACTUATOR_KIND,
         )
         from aot.functions.utils.env_control.types import ACTUATOR_KINDS

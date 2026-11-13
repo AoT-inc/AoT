@@ -22,6 +22,12 @@ def _dev(i, kind=None, channel=None, status='unknown', applied=True, excluded=Fa
 
 
 class LaneStatus(unittest.TestCase):
+    def test_supply_parts_are_not_a_lane(self):
+        rows = [{'id': 'v1', 'name': 'v1', 'channel': 'irrigation_mm', 'status': 'partial', 'applied': True},
+                {'id': 'p', 'name': 'pump', 'channel': None, 'status': 'supply', 'applied': True}]
+        lanes = C.build_lanes('field', [], None, rows, {'effects_unmodeled': 0.0})
+        self.assertEqual([x['effect'] for x in lanes], ['irrigation_mm'])
+
     def test_all_modeled(self):
         self.assertEqual(C.lane_status(['modeled', 'modeled']), 'modeled')
 

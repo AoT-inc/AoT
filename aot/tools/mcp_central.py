@@ -20,6 +20,7 @@ import secrets
 import threading
 from collections import namedtuple
 from urllib.parse import urlencode, urlsplit
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -347,7 +348,7 @@ def link_account(cfg, user, claims):
     mine.subject = subject
     mine.label = (claims.get('email') or claims.get('name') or '')[:255]
     from datetime import datetime
-    mine.linked_at = datetime.utcnow()
+    mine.linked_at = naive_utc(utc_now())
     db.session.commit()
     return mine
 

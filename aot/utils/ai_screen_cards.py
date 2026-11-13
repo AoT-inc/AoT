@@ -26,6 +26,7 @@ P5(2026-10-21): 카드당 첨부 최대 8개(파일+영상 링크) — 테이블
 제한: 사용자당 분당 6장, 24시간 100장(created_at 으로 센다 — 닫아도 줄지 않는다).
 """
 import datetime
+import json
 import logging
 import os
 import re
@@ -35,7 +36,7 @@ from aot.aot_flask.extensions import db
 from aot.databases.models.ai_card_attachment import AICardAttachment
 from aot.databases.models.ai_screen_card import AIScreenCard
 from aot.utils import ai_card_files
-from aot.utils.time_utils import utc_now
+from aot.utils.timekit import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,8 @@ def derive_title(message):
 #: 클라이언트용으로 설정 > 일반에서 복사할 수도 있다. 도구 설명이 아니라 연결마다 한 번 가는 지침이다.
 #: 2026-10-29(카드 결정 A): 날씨·장소 요약 카드는 도메인 틀이 직접 올린다(`domain.server_card`) — 규칙은 그 밖의 결과만 시킨다.
 AUTO_CARD_RULE = (
-    "AI CARDS — the server posts weather and place-summary cards itself (result card); do not repeat them. "
+    "AI CARDS — the server posts weather, place-summary and value-reading cards itself; "
+    "do not repeat or hand-build them. "
     "Show another result worth keeping (recommendation, plan, comparison, report, image, link list) once with "
     "the screen card op: one-line conclusion, max 5 lines, links [text](url), files via attach."
 )
@@ -121,6 +123,8 @@ CARD_HINT_EVERY = 300.0
 #: 안내가 소용없는 조회 도구(시각·대기 승인·옵션 목록·첨부 파일·참조표) — 결과를 정리해 줄 일이 아니다.
 _CARD_HINT_SKIP = frozenset({'get_local_time', 'list_pending_confirmations', 'get_device_type_options',
                              'get_note_attachment', 'query_reference_table'})
+#: 도메인 표면에서 find 로 옮겨 간 작물 조회(overview.crops → find.plots, 재설계 PR 3) — 안내는 예전처럼 붙인다.
+_CARD_HINT_MOVED = frozenset({'list_plots', 'get_crop_status'})
 _card_hint_tools = None
 _card_hint_always = None
 _card_hint_seen = {}
@@ -133,8 +137,8 @@ def card_hint_tools():
     if _card_hint_tools is None:
         from aot.tools.domain.registry_data import OPS
         _card_hint_tools = frozenset(
-            i for o in OPS if o.tool in ('overview', 'measure', 'weather', 'detail', 'records')
-            for i in o.inner.values()) - _CARD_HINT_SKIP
+            {i for o in OPS if o.tool in ('overview', 'measure', 'weather', 'detail', 'records')
+             for i in o.inner.values()} | _CARD_HINT_MOVED) - _CARD_HINT_SKIP
     return _card_hint_tools
 
 
@@ -230,6 +234,15 @@ def files_left_today(user_id, now=None):
     return max(0, FILES_PER_DAY - files_used_today(user_id, now))
 
 
+def sort_key():
+    """수신함 정렬 기준 — 끌어올린 시각(raised_at)이 있으면 그것, 없으면 만든 시각(P7-11)."""
+    return db.func.coalesce(AIScreenCard.raised_at, AIScreenCard.created_at)
+
+
+def _sort_value(card):
+    return card.raised_at or card.created_at
+
+
 def _alive(user_id, now):
     """만료되지 않은 카드(닫힘 포함). 고정 카드는 만료와 무관하게 산다."""
     return AIScreenCard.query.filter(
@@ -282,13 +295,14 @@ def purge(user_id=None, now=None):
     now = now or _now()
     n = _delete_with_files(_expired_rows(now))
     if user_id is not None:
+        # 남길 것은 목록 순서(끌어올림 포함)로 앞쪽 300장 — 끌어올린 예전 카드가 정리에 먼저 걸리지 않게.
         keep = [r[0] for r in db.session.query(AIScreenCard.id).filter(
             AIScreenCard.user_id == user_id, AIScreenCard.pinned_at.is_(None))
-            .order_by(AIScreenCard.id.desc()).limit(MAX_PER_USER).all()]
+            .order_by(sort_key().desc(), AIScreenCard.id.desc()).limit(MAX_PER_USER).all()]
         if len(keep) >= MAX_PER_USER:
             n += _delete_with_files(AIScreenCard.query.filter(
                 AIScreenCard.user_id == user_id, AIScreenCard.pinned_at.is_(None),
-                AIScreenCard.id < min(keep)))
+                AIScreenCard.id.notin_(keep)))
     db.session.commit()
     return n
 
@@ -343,7 +357,7 @@ def create(user_id, title, body, source_label=None, source_key_id=None, now=None
         title=(title or '')[:TITLE_MAX], body=body,
         source_label=(source_label or 'AI')[:SOURCE_MAX],
         source_key_id=(str(source_key_id)[:36] if source_key_id else None))
-    first = next((a for a in atts if a.get('kind') != 'video'), None)
+    first = next((a for a in atts if a.get('kind') not in ('video', 'viz')), None)
     if first:
         card.file_path, card.file_name = first['path'], first['name'][:120]
         card.file_mime, card.file_size = first.get('mime'), int(first.get('size') or 0)
@@ -358,7 +372,7 @@ def create(user_id, title, body, source_label=None, source_key_id=None, now=None
             card_id=card.id, user_id=user_id, position=pos, kind=a.get('kind'),
             path=a.get('path'), thumb=a.get('thumb'), name=(a.get('name') or '')[:120],
             mime=a.get('mime'), size=int(a.get('size') or 0), url=a.get('url'),
-            provider=a.get('provider'), host=a.get('host'),
+            provider=a.get('provider'), host=a.get('host'), spec=a.get('spec'),
             playable=bool(a.get('playable')), created_at=now))
     db.session.commit()
     uid = card.unique_id
@@ -473,7 +487,7 @@ def attachments_map(cards_):
 
 
 def file_atts(atts):
-    return [a for a in atts if a.kind != 'video']
+    return [a for a in atts if a.kind not in ('video', 'viz')]
 
 
 def first_file(card, atts=None):
@@ -510,6 +524,11 @@ def get_alive_card(user_id, card_uuid, now=None):
 _PREFIX = re.compile(r'^[0-9a-f-]{8,36}$')
 
 
+def looks_like_card_id(ref):
+    """카드 id(unique_id 앞 8자 이상) 모양인가 — 아니면 read 는 그 글로 카드를 찾는다."""
+    return bool(_PREFIX.match(str(ref or '').strip().lower()))
+
+
 def find_card(user_id, ref, now=None):
     """unique_id 앞자리(8자 이상)로 이 사람의 만료되지 않은 카드(닫힘 포함)를 찾는다.
     (카드, None) / (None, 'none') / (None, 'ambiguous'). LIKE 문자는 이스케이프한다."""
@@ -535,7 +554,8 @@ def _like(text):
 
 
 def list_cards(user_id, limit=LIST_DEFAULT, before=None, now=None, q=None, pinned=False):
-    """최신순 목록. (카드 목록, more). before 는 그 카드보다 오래된 것부터.
+    """최신순 목록(끌어올린 카드는 끌어올린 시각으로 — `sort_key`). (카드 목록, more).
+    before 는 그 카드보다 목록에서 뒤(오래된 쪽)인 것부터 — 정렬 기준이 같으면 id 로 가른다.
     before 가 이 사람의 카드가 아니면 None 을 돌려준다(호출자가 404).
     q: 제목·본문·파일 이름에 들어 있는 글(대소문자 무시, % _ 는 글자 그대로, ≤50자).
     pinned: 고정한 것만."""
@@ -550,7 +570,9 @@ def list_cards(user_id, limit=LIST_DEFAULT, before=None, now=None, q=None, pinne
         anchor = get_card(user_id, before)
         if anchor is None:
             return None
-        query = query.filter(AIScreenCard.id < anchor.id)
+        at = _sort_value(anchor)
+        query = query.filter(db.or_(
+            sort_key() < at, db.and_(sort_key() == at, AIScreenCard.id < anchor.id)))
     needle = clean_line(q, SEARCH_MAX)
     if needle:
         pat = '%' + _like(needle) + '%'
@@ -561,8 +583,28 @@ def list_cards(user_id, limit=LIST_DEFAULT, before=None, now=None, q=None, pinne
                 AICardAttachment.name.ilike(pat, escape='\\'))))
     if pinned:
         query = query.filter(AIScreenCard.pinned_at.isnot(None))
-    rows = query.order_by(AIScreenCard.id.desc()).limit(limit + 1).all()
+    rows = query.order_by(sort_key().desc(), AIScreenCard.id.desc()).limit(limit + 1).all()
     return rows[:limit], len(rows) > limit
+
+
+def raise_card(user_id, card_uuid, now=None, reopen=False):
+    """카드를 수신함 맨 위로 끌어올린다(P7-11) — raised_at=now, 만료는 최소 30일 뒤로 미룬다.
+    사람의 [맨 위로]는 보이는 카드만(reopen=False), AI 가 예전 카드를 다시 띄울 때는 닫은
+    카드도 되살린다(reopen=True — 사용자가 그 카드를 찾아 달라고 했다). 만료된 카드는 없다.
+    끌어올린 카드 또는 None(이 사람의 카드가 아님)."""
+    now = now or _now()
+    base = _alive(user_id, now) if reopen else _visible(user_id, now)
+    card = base.filter(AIScreenCard.unique_id == str(card_uuid or '')).first()
+    if card is None:
+        return None
+    card.raised_at = now
+    if reopen:
+        card.dismissed_at = None
+    floor = now + datetime.timedelta(days=AI_CARD_KEEP_DAYS)
+    if card.expires_at is None or card.expires_at < floor:
+        card.expires_at = floor
+    db.session.commit()
+    return card
 
 
 def mark_read(user_id, card_uuid, now=None):
@@ -736,9 +778,9 @@ def file_label(card, atts=None):
     return label + (' +%d' % more if more > 0 else '')
 
 
-def read_list(user_id, now=None):
-    """read(목록) — 보이는 최신 10장."""
-    rows, more = list_cards(user_id, limit=READ_LIST, now=now)
+def read_list(user_id, now=None, q=None):
+    """read(목록) — 보이는 최신 10장. q 가 있으면 제목·본문·파일 이름에 그 글이 든 것만(목록 검색과 같다)."""
+    rows, more = list_cards(user_id, limit=READ_LIST, now=now, q=q)
     amap = attachments_map(rows)
     return [{'card': c.unique_id[:8], 'title': c.title or '', 'kind': c.kind or 'text',
              'file': file_label(c, amap[c.id]), 'pinned': c.pinned_at is not None,
@@ -777,6 +819,13 @@ def file_items(atts):
             item['playable'] = bool(a.playable)       # post 때 판정해 저장한 값 — DNS 없음
             if ai_card_video.AI_CARD_VIDEO_EMBED and a.provider == 'youtube':
                 item['embed'] = True
+        elif a.kind == 'viz':
+            # 정규화된 스펙(숫자+짧은 문자열)을 그대로 실어 수신함이 AoTViz 로 인라인 렌더한다.
+            try:
+                spec = json.loads(a.spec) if a.spec else None
+            except ValueError:
+                spec = None
+            item = {'i': a.position, 'kind': 'viz', 'spec': spec}
         else:
             info = att_info(a)
             item = {'i': a.position, 'kind': a.kind, 'name': info['name'],
@@ -884,7 +933,9 @@ def to_item(card, live_notices=None, atts=None):
             notice_id = None
     return {'id': card.unique_id, 'title': card.title or '',
             'message': card.body or '', 'source': card.source_label or 'AI',
-            'created_at': iso_z(card.created_at), 'read': card.read_at is not None,
+            'created_at': iso_z(card.created_at),
+            'raised_at': iso_z(card.raised_at) if card.raised_at else None,
+            'read': card.read_at is not None,
             'kind': card.kind or 'text', 'pinned': card.pinned_at is not None,
             'note_id': card.note_id, 'notice_id': notice_id,
             'file': file_info(card, atts), 'files': file_items(atts)}
@@ -914,7 +965,7 @@ def _notice_rate_problem(user_id, now):
     from aot.utils import audit
     n = AuditLog.query.filter(
         AuditLog.action == audit.AI_CARD_TO_NOTICE, AuditLog.user_id == user_id,
-        AuditLog.timestamp >= now - datetime.timedelta(hours=1)).count()
+        AuditLog.timestamp >= now - datetime.timedelta(hours=1)).count()  # tz-ok: 순간 비교의 창 길이
     return n >= NOTICE_PER_HOUR
 
 

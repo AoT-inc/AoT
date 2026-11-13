@@ -29,6 +29,7 @@ from aot.databases.models.cold_storage import (
     DEFAULT_COMPRESSION,
     RETENTION_POLICIES,
 )
+from aot.utils.timekit import naive_utc, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ class ColdStorageService:
         Returns:
             List of document IDs that have expired retention.
         """
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         expired = ArchiveIndex.query.filter(
             ArchiveIndex.status == 'active',
             ArchiveIndex.deletion_date <= now,
@@ -202,7 +203,7 @@ class ColdStorageService:
         compressed_content, compressed_size = self._compress_content(content, compression)
 
         # Generate archive path (year/month structure)
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         archive_path = self._generate_archive_path(document_id, now)
 
         # Ensure directory exists
@@ -298,7 +299,7 @@ class ColdStorageService:
             return None
 
         # Update access metadata
-        cold_doc.last_accessed = datetime.utcnow()
+        cold_doc.last_accessed = naive_utc(utc_now())
         cold_doc.restore_count += 1
         cold_doc.save()
 
@@ -555,7 +556,7 @@ class ColdStorageService:
         Returns:
             dict with 'purged', 'pending_deletion', and 'active' counts.
         """
-        now = datetime.utcnow()
+        now = naive_utc(utc_now())
         expired_archives = ArchiveIndex.query.filter(
             ArchiveIndex.status == 'active',
             ArchiveIndex.deletion_date <= now,
@@ -668,7 +669,7 @@ class ColdStorageService:
         policy_distribution = {policy: count for policy, count in policy_dist}
 
         # Recent operations (last 24h)
-        day_ago = datetime.utcnow() - timedelta(days=1)
+        day_ago = naive_utc(utc_now()) - timedelta(days=1)
         recent_ops = ArchiveAuditLog.query.filter(
             ArchiveAuditLog.timestamp >= day_ago
         ).count()

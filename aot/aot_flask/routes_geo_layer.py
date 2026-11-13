@@ -18,6 +18,8 @@ from aot.aot_flask.forms import forms_geo
 from aot.aot_flask.utils import utils_geo
 from aot.aot_flask.access import scope
 from aot.aot_flask.routes_geo import blueprint  # noqa: E402
+from aot.utils.kma_clock import kma_wall
+from aot.utils.timekit import utc_now
 
 
 
@@ -144,6 +146,31 @@ def _tile_cache():
                     threshold=800,
                     default_timeout=_WMS_TILE_SERVER_TTL)
     return _tile_cache_store[0]
+
+
+_tile_http_lock = threading.Lock()
+_tile_http_store = [None]
+
+
+def _tile_http():
+    """타일 상류 요청 전용 `requests.Session` — 연결을 재사용한다.
+
+    `requests.get` 은 호출마다 새 연결을 맺는다. 타일 하나에 DNS·TCP·TLS 왕복이 매번
+    붙는다는 뜻인데, 이 프록시는 지도를 열 때 타일 수십 장을 한꺼번에 받는다.
+    실측(2026-11-02, 개발서버 컨테이너 → OpenWeatherMap 타일 8장 연속):
+    `requests.get` 장당 918ms ↔ 세션 재사용 장당 300ms. 첫 장만 연결 비용을 치른다.
+    출처를 가리지 않는다 — 호스트별 연결 풀은 어댑터가 알아서 나눈다.
+    """
+    if _tile_http_store[0] is None:
+        with _tile_http_lock:
+            if _tile_http_store[0] is None:
+                from requests.adapters import HTTPAdapter
+                sess = requests.Session()
+                adapter = HTTPAdapter(pool_connections=16, pool_maxsize=16)
+                sess.mount('https://', adapter)
+                sess.mount('http://', adapter)
+                _tile_http_store[0] = sess
+    return _tile_http_store[0]
 
 
 def _tile_cache_key(base_url, params):
@@ -492,10 +519,10 @@ def api_geo_proxy_kma():
             g._proxy_error = True
             return jsonify({'error': 'KMA API key not configured'}), 400
 
-        # kma_weather_500과 동일: 5분 윈도우, KST naive datetime
-        now_kst = _dt.datetime.utcnow() + _dt.timedelta(hours=9)
-        tm2 = now_kst.strftime('%Y%m%d%H%M')
-        tm1 = (now_kst - _dt.timedelta(minutes=5)).strftime('%Y%m%d%H%M')
+        # kma_weather_500과 동일: 5분 윈도우, 기상청 시계(kma_clock) naive
+        kma_now = kma_wall(utc_now())
+        tm2 = kma_now.strftime('%Y%m%d%H%M')
+        tm1 = (kma_now - _dt.timedelta(minutes=5)).strftime('%Y%m%d%H%M')
 
         url = (
             'https://apihub.kma.go.kr/api/typ01/url/sfc_nc_var.php'
@@ -747,7 +774,7 @@ def api_geo_proxy_wms(unique_id):
 
         cached = _tile_cache_get(base_url, wms_params)
         if cached is None:
-            resp = requests.get(base_url, params=wms_params, timeout=15,
+            resp = _tile_http().get(base_url, params=wms_params, timeout=15,
                                 headers={'Referer': request.host_url})
 
             content_type = resp.headers.get('Content-Type', 'image/png')
@@ -825,7 +852,7 @@ def api_geo_tile_xyz(layer_id, z, x, y):
         cache_params = {'z': z, 'x': x, 'y': y}
         cached = _tile_cache_get(url, cache_params)
         if cached is None:
-            resp = requests.get(url, timeout=8, headers={'Referer': request.host_url})
+            resp = _tile_http().get(url, timeout=8, headers={'Referer': request.host_url})
             content_type = resp.headers.get('Content-Type', 'image/png')
             if resp.status_code != 200 or 'image' not in content_type:
                 current_app.logger.warning(
@@ -856,121 +883,11 @@ _SH_SETTINGS_TTL = 60.0
 _sh_settings_cache = {}     # {unique_id: (settings, expires_at)}
 
 
-#: 레이어 종류 → (파일 지문, 입력 정의). `parse_input_information()` 은 부를 때마다 입력 모듈 200여 개를 다시 실행해 한 번에
-#: 0.1초 남짓 걸린다 — 시간 칸마다 인스턴스를 만드는 예보 조회에서 수 초가 됐다. 그 종류의 파일이 그대로면 정의도 그대로다.
-_GIS_LAYER_DEFS = {}
-
-
-def _gis_layer_def(layer_type):
-    """레이어 종류의 입력 정의(복사본). 파일이 바뀌었거나 처음이면 `parse_input_information()` 으로 다시 읽는다.
-    못 찾은 종류는 캐시하지 않는다(새로 올린 커스텀 모듈이 바로 보이게)."""
-    import copy
-    hit = _GIS_LAYER_DEFS.get(layer_type)
-    if hit is not None:
-        try:
-            st = os.stat(hit[0])
-            if (st.st_mtime_ns, st.st_size) == hit[1]:
-                return copy.deepcopy(hit[2])
-        except OSError:
-            pass
-    layer_def = parse_input_information().get(layer_type, {})
-    path = layer_def.get('file_path')
-    if path:
-        try:
-            st = os.stat(path)
-            _GIS_LAYER_DEFS[layer_type] = (path, (st.st_mtime_ns, st.st_size), copy.deepcopy(layer_def))
-        except OSError:
-            pass
-    return layer_def
-
-
-def _load_gis_layer_instance(unique_id):
-    """GeoLayer 하나를 그 입력 모듈 인스턴스로 만든다. 못 찾으면 None.
-
-    api/geo.py 의 검색 프록시가 하던 것과 같은 조립(옵션 기본값 채우기 →
-    전역 키 폴백 → `get_custom_option` 대체)을 한 곳에 모은 것이다.
-    """
-    import re as _re
-    from aot.utils.modules import load_module_cached
-    from aot.aot_flask.utils.utils_geo import MockInputDev
-
-    channel_id = None
-    layer = GeoLayer.query.filter_by(unique_id=unique_id).first()
-    if not layer:
-        # WMS 프록시와 같은 관례: 채널마다 레이어를 나눠 그릴 때 `<uid>_<채널>`.
-        m = _re.match(r'^(.+)_(\d+)$', unique_id)
-        if m:
-            layer = GeoLayer.query.filter_by(unique_id=m.group(1)).first()
-            if layer:
-                channel_id = int(m.group(2))
-    if not layer:
-        return None
-
-    layer_def = _gis_layer_def(layer.type)
-    if not layer_def.get('file_path'):
-        return None
-
-    # 같은 파일이면 같은 모듈 객체 — 모듈 전역 캐시(예보 10분·토큰 …)가 인스턴스를 넘어 살아남는다.
-    mod, _status = load_module_cached(layer_def['file_path'], 'inputs')
-    if not mod or not hasattr(mod, 'InputModule'):
-        return None
-
-    try:
-        opts = json.loads(layer.options) if layer.options else {}
-    except Exception:
-        opts = {}
-
-    required_ids = []
-    for opt_def in layer_def.get('custom_options', []):
-        opt_id = opt_def.get('id')
-        if not opt_id:
-            continue
-        if opt_id not in opts and 'default' in opt_def:
-            opts[opt_id] = opt_def['default']
-        if opt_def.get('required'):
-            required_ids.append(opt_id)
-
-    # 키 필드는 전역 키 저장소를 따른다(다른 GIS 입력과 같은 규칙).
-    key_field = layer_def.get('key_field')
-    if key_field and not opts.get(key_field):
-        settings_row = GeoSetting.query.first()
-        if settings_row and settings_row.keys:
-            try:
-                global_keys = json.loads(settings_row.keys)
-            except Exception:
-                global_keys = {}
-            global_val = global_keys.get(layer_def.get('global_key_field', key_field))
-            if global_val:
-                opts[key_field] = global_val
-
-    # 전역 저장소에는 키 필드 자리가 **하나뿐**이라 두 값짜리 자격증명
-    # (예: Sentinel Hub 의 client_id + client_secret)은 절반만 채워진다.
-    # 같은 종류의 다른 레이어에 이미 적어 둔 필수값을 물려받게 한다 —
-    # 지수마다 레이어를 나눠 두는 것이 보통인데, 그때마다 같은 비밀값을
-    # 다시 적게 하지 않기 위해서다.
-    missing = [opt_id for opt_id in required_ids if not opts.get(opt_id)]
-    if missing:
-        for sibling in GeoLayer.query.filter_by(type=layer.type).all():
-            if not missing:
-                break
-            if sibling.unique_id == layer.unique_id or not sibling.options:
-                continue
-            try:
-                sib_opts = json.loads(sibling.options)
-            except Exception:
-                continue
-            for opt_id in list(missing):
-                if sib_opts.get(opt_id):
-                    opts[opt_id] = sib_opts[opt_id]
-                    missing.remove(opt_id)
-
-    if channel_id is not None:
-        opts['active_channels'] = [channel_id]
-
-    inst = mod.InputModule(MockInputDev(layer))
-    inst.custom_options = opts
-    inst.get_custom_option = lambda opt, default=None: opts.get(opt, default)
-    return inst
+# GIS 레이어 → 입력 모듈 인스턴스 조립은 `aot/inputs_gis` 로 내렸다(아키텍처 4c-1).
+# 데몬의 예보 폴백(`weather_state`)도 이 길을 쓰는데, 라우트 파일을 import 하면
+# 웹 계층 전체가 딸려 온다. 옛 이름은 같은 객체로 다시 내보낸다.
+from aot.inputs_gis.layer_instance import (  # noqa: E402,F401
+    _GIS_LAYER_DEFS, _gis_layer_def, _load_gis_layer_instance)
 
 
 # 지도 위젯 시간 슬라이더가 시간을 지원하는 타일 레이어(time_enabled)의 프레임 목록을 읽는 경로.
@@ -1224,8 +1141,7 @@ def api_geo_tile_proxy():
 
         if cached is None:
             # Fetch the tile
-            import requests
-            resp = requests.get(target_url, headers=headers, timeout=10)
+            resp = _tile_http().get(target_url, headers=headers, timeout=10)
 
             if resp.status_code != 200:
                 current_app.logger.warning(f'[Tile Proxy] Non-200 status: {resp.status_code} for {target_url}')

@@ -54,7 +54,7 @@ def _handler(rows, target_id=None):
 @pytest.fixture(autouse=True)
 def _farm_tz(monkeypatch):
     """위치 해석은 항상 Asia/Seoul 로 — DB 없이 결정적으로."""
-    monkeypatch.setattr('aot.utils.device_tz.resolve_location_tz',
+    monkeypatch.setattr('aot.utils.method.tz_of',
                         lambda *_a, **_k: KST)
 
 

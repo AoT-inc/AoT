@@ -79,6 +79,8 @@ RUN_FIELDS = ('litres', 'design_litres', 'mm', 'delivered_ratio', 'seconds', 'de
 DAY_FIELDS = ('litres', 'design_litres', 'mm', 'delivered_ratio', 'seconds', 'runs', 'fed_runs',
               'kwh', 'kwh_measured', 'pump_hours')
 CAVEAT_BASE = 16
+# 하루를 닫기 전에 기다리는 시간 — 저장 쪽(`water_job`)과, 어느 날까지 점이 있어야 하는지 따지는 트윈이 같은 값을 읽는다.
+CLOSE_GRACE_S = 12 * 3600
 RUN_TAGS = ('output_id', 'network_rev', 'level', 'basis', 'fed')
 MIXED_REV = 'mixed'
 
@@ -117,6 +119,18 @@ def totals(runs, tally=None, area_m2=None) -> dict:
             'kwh_basis': None if tally is None else tally.kwh_basis(),
             'pump_hours': None if tally is None or tally.pump_hours is None
             else round(tally.pump_hours, 3)}
+
+
+def day_depth(values) -> Optional[float]:
+    """닫힌 하루의 ``{채널: 값}`` → 트윈이 읽는 일 깊이 mm. 모르면 None.
+
+    실행이 없는 날은 ``mm`` 칸이 없다(`totals`) — 점이 있으니 **아는 0** 이다. 물이 나갔는데 ``mm`` 이 없으면
+    구획 면적을 모르는 날이라 0 으로 치지 않는다.
+    """
+    mm = values.get(DAY_FIELDS.index('mm'))
+    if mm is not None:
+        return float(mm)
+    return 0.0 if values.get(DAY_FIELDS.index('litres')) == 0 else None
 
 
 def run_values(row) -> dict:

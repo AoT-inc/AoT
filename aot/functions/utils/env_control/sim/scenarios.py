@@ -6,7 +6,7 @@ env_control/sim/scenarios.py — 폐루프 시뮬레이터의 외기 시나리�
 고장 목록 + 시설 파라미터 덮어쓰기. 같은 이름·같은 씨앗이면 **언제나 같은 값**이
 나온다(A/B 비교의 전제). 난수는 `random.Random(seed)` 하나만 쓴다.
 
-시각은 KST(UTC+9) 로 적는다. 합성 시나리오는 **2027 년** 날짜를 쓴다 — 김제 DB 스냅숏
+시각은 시나리오 `tz`(기본 김제의 Asia/Seoul) 벽시계로 적는다. 합성 시나리오는 **2027 년** 날짜를 쓴다 — 김제 DB 스냅숏
 (2026-10-08)에 저장된 런타임 상태의 시각보다 뒤여야 시계가 거꾸로 가지 않는다(태양
 위치는 연도와 무관하다). `recorded` 만 실측 날짜(2026-10)다. 일사는 위도·경도에서 맑은 하늘 전천일사(Haurwitz)를
 구하고 운량으로 깎는다 — 제어기가 쓰는 `aot.utils.solar` 를 쓰지 않는다(독립성).
@@ -38,7 +38,10 @@ import random
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 
-KST = _dt.timezone(_dt.timedelta(hours=9))
+from aot.utils.timekit import to_tz, wall_to_utc
+
+# 기본 대지(DEFAULT_LAT/LON = 김제)의 시계. 시나리오가 `tz` 로 다른 대지의 시계를 고른다.
+DEFAULT_TZ = 'Asia/Seoul'  # tz-ok: 시나리오 데이터의 기본 대지(김제) 시계
 DEFAULT_LAT = 35.86
 DEFAULT_LON = 126.88
 GRID_S = 300.0
@@ -137,7 +140,7 @@ class Fault:
 class Scenario:
     name: str
     description: str
-    start: str                                  # 'YYYY-MM-DD HH:MM' KST
+    start: str                                  # 'YYYY-MM-DD HH:MM' — `tz` 의 벽시계
     hours: float
     build: Callable[['Scenario'], WeatherSeries] = field(repr=False, default=None)
     faults: List[Fault] = field(default_factory=list)
@@ -147,6 +150,7 @@ class Scenario:
     seed: int = 1
     lat: float = DEFAULT_LAT
     lon: float = DEFAULT_LON
+    tz: str = DEFAULT_TZ                        # 이 대지의 시간대(start·날짜 구분의 시계)
     params: Dict[str, object] = field(default_factory=dict)
     # 시설에 덧붙이는 실외 센서(하네스가 컨테이너 DB 사본에 넣는다) — 예보 모델 입력 같은 것.
     # 항목: {'device': 'OPEN_METEO_FORECAST', 'name': …, 'tier': 'primary'|'backup',
@@ -155,8 +159,7 @@ class Scenario:
 
     @property
     def t0(self) -> float:
-        d = _dt.datetime.strptime(self.start, '%Y-%m-%d %H:%M').replace(tzinfo=KST)
-        return d.timestamp()
+        return wall_to_utc(_dt.datetime.strptime(self.start, '%Y-%m-%d %H:%M'), self.tz).timestamp()
 
     @property
     def t_end(self) -> float:
@@ -213,12 +216,12 @@ def synth(sc: Scenario) -> WeatherSeries:
             return v[min(day, len(v) - 1)]
         return v
 
-    d0 = _dt.datetime.fromtimestamp(t0, KST).date()
+    d0 = to_tz(t0, sc.tz).date()
     gust = 0.0
     wdir = float(p.get('wind_dir', 225.0))
     rains = list(p.get('rain', []))
     for t in ts:
-        local = _dt.datetime.fromtimestamp(t, KST)
+        local = to_tz(t, sc.tz)
         h_rel = (t - t0) / 3600.0
         day = (local.date() - d0).days
         lh = local.hour + local.minute / 60.0
@@ -606,4 +609,4 @@ BASELINE = [
 ]
 
 __all__ = ['Scenario', 'Fault', 'WeatherSeries', 'synth', 'recorded', 'get', 'names', 'group',
-           'BASELINE', 'STORM', 'GROUP_NAMES', 'clear_sky_ghi', 'sun_sin_elevation', 'KST']
+           'BASELINE', 'STORM', 'GROUP_NAMES', 'clear_sky_ghi', 'sun_sin_elevation', 'DEFAULT_TZ']

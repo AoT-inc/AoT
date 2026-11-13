@@ -108,6 +108,10 @@ API 버전을 결정하기 위해 벤더 특정 콘텐츠 유형 헤더가 포�
 
 https://{RASPBERRY_PI_IP_ADDRESS}/api를 방문하여 AoT 설치의 현재 API 엔드포인트 문서를 확인하십시오.
 
+**변경 (장치 위치 필드):** 입력·출력·PID·트리거 응답(`inputs`, `outputs`, `pid`, `settings/*` 엔드포인트)에서 `map_config_id`, `location_source`, `location_updated_utc` 가 빠졌습니다. 장치의 위치는 지도에 배치한 결과이므로, 장치 레코드의 이 필드 대신 `/api/geo/device/location` 이나 배치 조회를 사용하세요.
+
+**상담용 (필지 조회):** `POST /api/consult/parcel` 에 `{"address": "..."}` 를 보내면 `{ok, feature, pnu, area_m2, centroid:[lon,lat], address_normalized}`(WGS84 GeoJSON Feature 필지 다각형) 또는 `{ok:false, error}` 를 돌려줍니다. `error` 는 `invalid_address`(400), `not_found`(404), `vworld_unavailable`(503), `forbidden`(403), `unauthorized`(401), `rate_limited`(429) 입니다. 읽기 전용이라 아무것도 저장하지 않으며, 그래서 읽기 전용 API 키로도 호출할 수 있고 CSRF 토큰도 필요 없습니다(`/api/geo/parcel/from_address` 는 API 키 클라이언트에서 막힙니다). VWorld GIS 입력이 등록돼 있어야 하고, API 키마다 분당 30회로 제한됩니다(환경 변수 `AOT_CONSULT_PARCEL_LIMIT`, 예: `60/minute` 로 바꿈). 고객별 한도는 호출하는 쪽 몫입니다.
+
 최신 API 버전에 대한 문서는 HTML 형식으로도 제공됩니다: `AoT API 문서 <https://aot-inc.github.io/AoT/aot-api.html>`__
 
 ## 데몬 제어 객체 { #daemon-control-object }

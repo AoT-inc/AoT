@@ -177,3 +177,29 @@ def test_unrelated_empty_field_does_not_set_met(tmp_path):
 
 if __name__ == '__main__':
     sys.exit(pytest.main([__file__, '-v']))
+
+
+# ---------------------------------------------------------------------------
+# sections= (요청 안 파싱 재사용)
+# ---------------------------------------------------------------------------
+
+def test_sections_reuses_parse_once_and_matches_default():
+    """/admin/dependencies 는 장치마다 호출한다. sections 를 넘기면 parse_*_information
+    을 다시 부르지 않고, 결과는 넘기지 않았을 때와 같아야 한다."""
+    calls = []
+
+    def counting():
+        calls.append(1)
+        return {}
+
+    with only([APT]), patch.object(utils_general, 'dpkg_package_exists',
+                                   return_value=None):
+        with patch.object(utils_general, 'parse_input_information', counting):
+            sections = utils_general.dependency_sections()
+            assert len(calls) == 1
+            reused = [utils_general.return_dependencies(DEVICE, sections=sections)
+                      for _ in range(5)]
+            assert len(calls) == 1  # 재사용: 늘지 않는다
+            fresh = utils_general.return_dependencies(DEVICE)
+            assert len(calls) == 2  # 인자 없으면 예전처럼 매번 읽는다
+    assert all(r == fresh for r in reused)

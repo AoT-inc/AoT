@@ -551,12 +551,10 @@ def change_preferences(form):
         if hasattr(form, 'timezone'):
             tz_val = (form.timezone.data or '').strip()
             if tz_val:
-                try:
-                    import pytz
-                    pytz.timezone(tz_val)
+                from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+                if resolve_tz(tz_val)[1] == SOURCE_EXPLICIT:
                     mod_user.timezone = tz_val
-                except Exception:
-                    pass  # invalid zone — leave unchanged
+                # invalid zone — leave unchanged
             else:
                 mod_user.timezone = None
         db.session.commit()
@@ -570,6 +568,20 @@ def change_preferences(form):
 
     flash_success_errors(
         error, action, url_for('routes_settings.settings_users'))
+
+
+#: 경량 모드에서 저장하는 값(빈 값·'off' = 끔 → None). templates/_lite_mode.html 과 같은 목록.
+LITE_MODES = ('phone', 'always')
+#: `lite_mode_value` 가 "저장값을 그대로 둘 것" 을 알리는 표시.
+LITE_KEEP = object()
+
+
+def lite_mode_value(raw):
+    """계정 모달이 보낸 경량 모드 값 → 저장할 값(None = 끔) 또는 LITE_KEEP(모르는 값)."""
+    value = (raw or '').strip()
+    if not value or value == 'off':
+        return None
+    return value if value in LITE_MODES else LITE_KEEP
 
 
 def account_self_update(form):
@@ -648,12 +660,9 @@ def account_self_update(form):
             if hasattr(form, 'timezone'):
                 tz_val = (form.timezone.data or '').strip()
                 if tz_val:
-                    try:
-                        import pytz
-                        pytz.timezone(tz_val)
+                    from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+                    if resolve_tz(tz_val)[1] == SOURCE_EXPLICIT:
                         user.timezone = tz_val
-                    except Exception:
-                        pass
                 else:
                     user.timezone = None
 
@@ -669,6 +678,16 @@ def account_self_update(form):
                 elif (zoom_val.isdigit() and 90 <= int(zoom_val) <= 150
                         and int(zoom_val) % 5 == 0):
                     setattr(user, zoom_field, int(zoom_val))
+
+            # 경량 모드 — 빈 값 = 끔(None), 'phone'·'always' 만 받는다. 모르는 값은 무시
+            # (저장값 유지). 적용은 templates/_lite_mode.html.
+            # 요청에 칸이 있을 때만 — WTForms 필드는 늘 있으므로 hasattr 로는 못 가른다.
+            # 경량 모드 칸이 없는 옛 화면(배포 전에 열어 둔 탭)이 저장하면 끔으로 덮어쓰게 된다.
+            from flask import request as _req
+            if 'ui_lite_mode' in _req.form:
+                lite_val = lite_mode_value(form.ui_lite_mode.data)
+                if lite_val is not LITE_KEEP:
+                    user.ui_lite_mode = lite_val
             db.session.commit()
     except Exception as except_msg:
         error.append(except_msg)
@@ -1081,10 +1100,7 @@ def _twin_run_times_apply(mod_misc, raw, messages, audit_before):
 
 
 def settings_twin_mod(form):
-    """설정 > 디지털트윈 저장 — 실행 시각, 낮은 사양 잠금 해제, 예보 입력 자동 만들기.
-
-    낮은 사양 잠금 해제는 HARDWARE_PROFILE 항목만 건너뛴다(파이 모델·기기 메모리 잠금은 그대로).
-    """
+    """설정 > 디지털트윈 저장 — 실행 시각, 예보 입력 자동 만들기."""
     messages = {"success": [], "info": [], "warning": [], "error": []}
     if not form.validate():
         for field, errors in form.errors.items():
@@ -1095,11 +1111,11 @@ def settings_twin_mod(form):
     mod_misc = Misc.query.first()
     before = {}
     _twin_run_times_apply(mod_misc, form.twin_run_times.data, messages, before)
-    for col in ('twin_ignore_profile', 'twin_auto_forecast'):
-        want = bool(getattr(form, col).data)
-        if want != bool(getattr(mod_misc, col) if getattr(mod_misc, col) is not None else col == 'twin_auto_forecast'):
-            before[col] = getattr(mod_misc, col)
-            setattr(mod_misc, col, want)
+    want = bool(form.twin_auto_forecast.data)
+    have = True if mod_misc.twin_auto_forecast is None else bool(mod_misc.twin_auto_forecast)
+    if want != have:
+        before['twin_auto_forecast'] = mod_misc.twin_auto_forecast
+        mod_misc.twin_auto_forecast = want
     if messages["error"]:
         db.session.rollback()
         return messages
@@ -1175,9 +1191,8 @@ def retention_panel_context():
 def _local_stamp(misc, epoch):
     try:
         import datetime
-        import pytz
-        at = datetime.datetime.fromtimestamp(float(epoch), pytz.utc)
-        at = at.astimezone(pytz.timezone(getattr(misc, 'timezone', None) or 'UTC'))
+        from aot.utils.timekit import FARM, to_tz
+        at = to_tz(float(epoch), getattr(misc, 'timezone', None) or FARM)
         return at.strftime('%Y-%m-%d %H:%M')
     except Exception:
         return ''
@@ -1186,8 +1201,8 @@ def _local_stamp(misc, epoch):
 def twin_panel_context():
     """설정 > 일반 '디지털트윈 (실험)' 그룹이 그리는 값. 판정은 twin_gate 가 정본.
 
-    running 은 하트비트가 신선할 때만 True — 서비스가 설치되지 않았거나 멈췄으면 False 이고
-    화면이 설치 안내를 보인다. 시각은 Misc.timezone 으로 바꿔 보인다.
+    running 은 하트비트가 신선할 때만 True — 서비스가 설치되지 않았거나 멈췄으면 False.
+    `state` 는 토글 아래에 보일 다섯 상태(`twin_service_state`). 시각은 Misc.timezone 으로 바꿔 보인다.
     """
     from aot.utils import twin_gate
 
@@ -1201,8 +1216,8 @@ def twin_panel_context():
         if at is None:
             return ''
         try:
-            import pytz
-            at = at.astimezone(pytz.timezone(getattr(misc, 'timezone', None) or 'UTC'))
+            from aot.utils.timekit import FARM, tz_of
+            at = at.astimezone(tz_of(getattr(misc, 'timezone', None) or FARM))
         except Exception:
             pass
         return at.strftime('%Y-%m-%d %H:%M')
@@ -1213,10 +1228,10 @@ def twin_panel_context():
         'enabled': bool(misc is not None and misc.twin_enabled),
         'run_times': (misc.twin_run_times if misc is not None and misc.twin_run_times
                       else twin_gate.DEFAULT_RUN_TIMES),
-        'ignore_profile': bool(misc is not None and getattr(misc, 'twin_ignore_profile', False)),
         'auto_forecast': (True if misc is None or getattr(misc, 'twin_auto_forecast', None) is None
                           else bool(misc.twin_auto_forecast)),
         'running': running,
+        'state': twin_state_info(supported, bool(misc is not None and misc.twin_enabled), hb),
         'status': hb.get('status') if running else None,
         'version': hb.get('version') or '',
         'last_run_at': _local(hb.get('last_run_at')),
@@ -1227,11 +1242,66 @@ def twin_panel_context():
     }
 
 
+# 서비스가 하트비트에 쓰는 status 중 "플래그가 켜져 일하는 중" 인 것 — aot/twin/gate.py 의 HB_IDLE·
+# HB_RUNNING('running')·HB_ERROR('error'). 'idle' 은 떠 있으나 플래그를 아직 못 본(꺼짐·대기) 상태다.
+_TWIN_WORKING = ('running', 'error')
+# 하트비트가 끊긴 서비스를 기다리며 화면이 다시 묻는 간격(ms). 시작 중은 서비스가 플래그를 보는 간격
+# (poll_s 60 초) 안에 바뀌므로 짧게, 응답 없음은 관리자가 명령을 실행하길 기다리므로 길게.
+_TWIN_POLL_MS = {'starting': 5000, 'unresponsive': 20000}
+
+
+def twin_service_state(supported, flag, hb, now=None):
+    """토글 아래에 보일 상태 코드 — 새 DB 칸 없이 플래그·잠금·하트비트로만 판정한다.
+
+    locked        이 기기는 잠겨 있다(파이 모델·기기 메모리) — 앱의 `twin_supported()` 만으로 판정한다.
+                  하트비트의 `locked` 는 보지 않는다: 프로파일 잠금 시절에 남은 낡은 `locked` 하트비트가 지금은
+                  supported 인 기기를 영원히 '잠김' 으로 보여 설치 명령 안내를 가리기 때문이다. 앱과 서비스는
+                  같은 판정 함수를 쓰므로 실제 잠금은 놓치지 않는다.
+    off           플래그 꺼짐
+    unresponsive  플래그 켜짐 + 하트비트가 없거나 낡았다(서비스가 안 떠 있다)
+    starting      플래그 켜짐 + 하트비트 신선 + 아직 일하는 중이 아님(서비스가 플래그를 보기 전)
+    running       플래그 켜짐 + 하트비트 신선 + 일하는 중(대기·계산·실패 회차 모두)
+    """
+    from aot.utils import twin_gate
+    hb = hb or {}
+    if not supported:
+        return 'locked'
+    if not flag:
+        return 'off'
+    if twin_gate.heartbeat_stale(heartbeat=hb, now=now):
+        return 'unresponsive'
+    return 'running' if hb.get('status') in _TWIN_WORKING else 'starting'
+
+
+def twin_install_command():
+    """하트비트가 없는 기존 설치에서 관리자가 한 번 실행할 명령(Docker / 직접 설치). 새 구성에서는 필요 없다."""
+    from aot.config import DOCKER_CONTAINER
+    if DOCKER_CONTAINER:
+        return 'docker compose -f docker/docker-compose.prod.yml up -d aot_twin'
+    return 'sudo %s/aot/scripts/upgrade_commands.sh install-aottwin' % INSTALL_DIRECTORY
+
+
+def twin_state_info(supported, flag, hb):
+    """`twin_service_state` + 화면 문구(번역됨). 일반·디지털트윈 설정 화면과 상태 조회 API 가 같이 쓴다.
+    잠김의 사유는 화면이 `lock_reason` 으로 따로 보인다."""
+    code = twin_service_state(supported, flag, hb)
+    text = {'locked': gettext('Locked'), 'off': gettext('Switched off'), 'starting': gettext('Starting'),
+            'running': gettext('Running'), 'unresponsive': gettext('Not responding')}[code]
+    hint = ''
+    command = ''
+    if code == 'starting':
+        hint = gettext('The service picks up the switch within a minute. This page updates by itself.')
+    elif code == 'unresponsive':
+        hint = gettext('The Digital Twin service is not answering. If AoT was installed before the service '
+                       'became part of the default setup, an administrator needs to run this once:')
+        command = twin_install_command()
+    return {'code': code, 'text': text, 'hint': hint, 'command': command,
+            'poll_ms': _TWIN_POLL_MS.get(code, 0)}
+
+
 def twin_lock_text(reason):
     """잠금 reason 코드(twin_gate.twin_supported) → 사용자에게 보일 번역 문구."""
     from aot.utils import twin_gate
-    if reason == twin_gate.REASON_PROFILE_LOW:
-        return gettext('This device runs with the LOW hardware profile.')
     if reason == twin_gate.REASON_PI_MODEL:
         return gettext('This Raspberry Pi model is too small.')
     if reason == twin_gate.REASON_LOW_MEMORY:
@@ -1322,27 +1392,18 @@ def settings_general_mod(form):
                 # 저장하지 않고 오류로 돌려준다 — 잘못된 tz 가 들어가면 모든
                 # 예약의 벽시계 해석이 한꺼번에 틀어진다.
                 #
-                # 위치 없는 장치에 복사해 둔 시스템 시간대(tz_source='system')는
-                # 여기서 새 값을 따른다 — **값이 같아도** 맞춘다. 예전 값을 복사해
-                # 둔 채 남은 행(이행 전 설치)을 사용자가 저장 한 번으로 바로잡을
-                # 수 있어야 한다. 사람이 정했거나 좌표·도형에서 온 값은 그대로.
-                # (docs/design/timezone-management.md §15.4)
-                _tz_synced = 0
+                # 장치는 시간대 사본을 갖지 않는다 — 배치 없는 장치는 읽을 때 이 값으로 푼다.
                 if hasattr(form, 'system_timezone'):
                     tz_val = (form.system_timezone.data or '').strip()
                     if tz_val:
-                        try:
-                            import pytz
-                            pytz.timezone(tz_val)
-                        except Exception:
+                        from aot.utils.timekit import resolve_tz, SOURCE_EXPLICIT
+                        if resolve_tz(tz_val)[1] != SOURCE_EXPLICIT:
                             messages["error"].append(gettext(
                                 "Unknown timezone: %(tz)s", tz=tz_val))
                         else:
                             if tz_val != mod_misc.timezone:
                                 _audit_before['timezone'] = mod_misc.timezone
                                 mod_misc.timezone = tz_val
-                            from aot.utils.device_tz import sync_system_tz_copies
-                            _tz_synced = sync_system_tz_copies(tz_val)
 
                 mod_misc.rpyc_timeout = form.rpyc_timeout.data
                 mod_misc.daemon_debug_mode = form.daemon_debug_mode.data
@@ -1433,9 +1494,6 @@ def settings_general_mod(form):
                                  # 조용하다).
                                  **({'timezone': mod_misc.timezone}
                                     if 'timezone' in _audit_before else {}),
-                                 # 시스템 시간대를 따라 값이 바뀐 장치 수
-                                 **({'devices_following_system_tz': _tz_synced}
-                                    if _tz_synced else {}),
                                  **({'matter_enabled': bool(mod_misc.matter_enabled)}
                                     if 'matter_enabled' in _audit_before else {}),
                                  **({'twin_enabled': bool(mod_misc.twin_enabled)}
@@ -2931,7 +2989,7 @@ def settings_diagnostic_delete_inputs():
                 # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
                 # 남는다(위치 마커만 예외). 이 일괄 삭제는 raw db.session.delete 라
                 # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
-                from aot.aot_flask.geo.device_binding import end_all_for_device
+                from aot.space.device_binding import end_all_for_device
                 end_all_for_device(each_input.unique_id)
                 from aot.utils.code_verification import delete_python_file
                 delete_python_file('input', each_input.unique_id)
@@ -3018,7 +3076,7 @@ def settings_diagnostic_delete_outputs():
                 # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
                 # 남는다(위치 마커만 예외). 이 일괄 삭제는 raw db.session.delete 라
                 # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
-                from aot.aot_flask.geo.device_binding import end_all_for_device
+                from aot.space.device_binding import end_all_for_device
                 end_all_for_device(each_output.unique_id)
                 from aot.utils.code_verification import delete_python_file
                 delete_python_file('output', each_output.unique_id)
@@ -3047,7 +3105,7 @@ def settings_diagnostic_delete_functions():
                 # [Phase C] 장치가 사라지면 바인딩을 끝낸다 — 도형은 미배정 슬롯으로
                 # 남는다(위치 마커만 예외). 이 일괄 삭제는 raw db.session.delete 라
                 # 예전에는 도형·바인딩을 하나도 정리하지 않았다.
-                from aot.aot_flask.geo.device_binding import end_all_for_device
+                from aot.space.device_binding import end_all_for_device
                 end_all_for_device(each_func.unique_id)
                 db.session.delete(each_func)
                 db.session.commit()

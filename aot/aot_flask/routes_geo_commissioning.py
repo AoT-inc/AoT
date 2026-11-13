@@ -48,7 +48,7 @@ def api_commissioning_start(facility_uuid):
 
     # 시설 액추에이터 목록 구성
     # 원장 기준 — 끊긴 연결의 장치를 이 시설 시운전에 끌어들이지 않는다.
-    from aot.aot_flask.geo.device_binding import resolved_refs
+    from aot.space.device_binding import resolved_refs
     actuators_raw = resolved_refs(facility)[1] or {}
     all_acts = []
     if isinstance(actuators_raw, list):
