@@ -1,14 +1,31 @@
-<html>
+<!doctype html>
+<html lang="ko">
   <head>
-    <title>{{_('Error 502: Bad Gateway Error')}}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="10">
+    <title>AoT 502</title>
+    <!-- nginx 가 error_page 로 이 파일을 그대로 내보낸다(install/aotflask_nginx.conf). Jinja 가
+         렌더링하지 않으므로 번역 구문 같은 템플릿 문법을 넣지 말 것. 업그레이드 중에는 웹 서버(aotflask)가
+         꺼져 있어 평소의 진행 화면 대신 이 페이지가 나온다. -->
+    <style>
+      :root { color-scheme: light dark; }
+      body { margin: 0; padding: 48px 16px; font: 16px/1.6 system-ui, sans-serif; }
+      main { max-width: 560px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 12px; }
+      p { margin: 0 0 12px; }
+      small, pre { opacity: .75; }
+      pre { padding: 12px; overflow-x: auto; background: rgba(127,127,127,.15); border-radius: 6px; }
+    </style>
   </head>
   <body>
-    <h2>{{_('Error 502: Bad Gateway Error')}}</h2>
-
-    <p>{{_('Something went wrong, but it is probably not your fault. Try refreshing the page to see if it loads normally. If refreshing does not solve it, please reboot your system and try again. If the problem persists, please')}} <a href="https://github.com/AoT-inc/AoT/issues/new?template=problem-bug-report.md" target="_blank">{{_('submit a new issue on GitHub')}}</a> {{_('with useful information to help identify the cause.')}}</p>
-    
-    <p>{{_('The last 50 lines of the AoT frontend web log can be checked with the following command')}}: <pre>journalctl -u aotflask | tail -n 50</pre></p>
-    
-    <p>{{_('If you create an issue on GitHub, please provide this log snippet for diagnostic purposes.')}}</p>
+    <main>
+      <h1>서버를 준비하고 있습니다</h1>
+      <p>업그레이드 또는 재시작 중일 수 있습니다. 보통 몇 분 안에 끝나며, 이 페이지는 10초마다 자동으로 다시 불러옵니다. 끝나면 저절로 평소 화면으로 돌아갑니다.</p>
+      <p>The server is starting up or being upgraded. This usually takes a few minutes, and this page reloads every 10 seconds.</p>
+      <p><small>10분 넘게 계속되면 서버에서 아래 명령으로 로그를 확인해 주세요. If it lasts more than 10 minutes, check the log with:</small></p>
+      <pre>journalctl -u aotflask | tail -n 50</pre>
+      <p><small><a href="https://github.com/AoT-inc/AoT/issues/new?template=problem-bug-report.md" target="_blank" rel="noopener">GitHub issue</a></small></p>
+    </main>
   </body>
 </html>

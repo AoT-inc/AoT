@@ -11,6 +11,30 @@ if [ "$EUID" -ne 0 ] ; then
   exit 1
 fi
 
+# 웹 화면의 업그레이드 버튼은 이 스크립트를 aotflask 서비스의 자식으로 띄운다. 아래에서
+# `systemctl stop aotflask` 를 하면 systemd 가 그 서비스의 cgroup 에 든 프로세스를 전부
+# 죽여, 스크립트가 "Moving env directory...Done." 직후 스스로 사라진다(aot-005, 26.11.2
+# 업그레이드: 서비스는 꺼지고 env 는 /tmp 에 남고 .upgrade=1 로 표시가 굳음).
+# 그래서 서비스 밖의 독립 scope 로 한 번만 다시 실행한다. 출력은 서비스 안의 파이프(tee)로
+# 보낼 수 없으므로(그 파이프도 함께 죽어 SIGPIPE) 로그 파일에 직접 쓴다 — 웹 화면은
+# 이 파일들을 읽는다(config.UPGRADE_LOG_FILE·UPGRADE_TMP_LOG_FILE).
+if [ -z "$AOT_UPGRADE_DETACHED" ] && command -v systemd-run >/dev/null 2>&1 \
+   && [ -d /run/systemd/system ] && systemd-run --scope --quiet --collect true >/dev/null 2>&1 ; then
+  export AOT_UPGRADE_DETACHED=1
+  # 배열은 자식 셸로 넘어가지 않으므로 공백으로 나눈 문자열로 export 한다(경로에 공백 없음).
+  export UPGRADE_LOG_TARGETS="/tmp/aotupgrade.log"
+  if [ -d /var/aot-root/logs ] ; then
+    UPGRADE_LOG_TARGETS="${UPGRADE_LOG_TARGETS} /var/aot-root/logs/aotupgrade.log"
+  fi
+  systemd-run --scope --quiet --collect --unit="aot-upgrade-$$" \
+    /bin/bash -c 'set -o pipefail
+      "$0" "$@" 2>&1 | while IFS= read -r line ; do
+        printf "[%s] %s\n" "$(date +"%Y-%m-%d %H:%M:%S")" "$line"
+      done | tee -a $UPGRADE_LOG_TARGETS >/dev/null' \
+    "${BASH_SOURCE[0]}" "$@"
+  exit $?
+fi
+
 runSelfUpgrade() {
   function error_found {
     echo '2' > "${INSTALL_DIRECTORY}"/AoT/.upgrade

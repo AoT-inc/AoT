@@ -19,7 +19,7 @@ from config_translations import TRANSLATIONS as T
 
 MYCODO_VERSION = '8.16.0'
 ALEMBIC_VERSION = 'p7_11_ai_card_raised_at_20261109'
-AOT_VERSION = '26.11.2'
+AOT_VERSION = '26.11.3'
 
 # FORCE UPGRADE MASTER
 # Set True to enable upgrading to the master branch of the AoT repository.
